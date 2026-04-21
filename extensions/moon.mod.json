@@ -2,7 +2,7 @@
   "name": "extensions",
   "version": "0.1.0",
   "deps": {
-    "justjavac/ffi": "0.2.0",
+    "justjavac/ffi": "0.2.1",
     "moonbitlang/x": "0.4.41",
     "justjavac/clipboard": "0.1.2",
     "justjavac/notification": {
@@ -22,7 +22,10 @@
     },
     "justjavac/lepus": {
       "path": ".."
-    }
+    },
+    "justjavac/microphone": "0.1.0",
+    "justjavac/auto_launch": "0.1.3",
+    "justjavac/keepawake": "0.1.0"
   },
   "readme": "README.md",
   "repository": "https://github.com/justjavac/lepus/tree/main/extensions",
@@ -34,7 +37,7 @@
   ],
   "description": "Extensions for lepus examples and applications.",
   "source": ".",
+  "supported_targets": "+native",
   "warn-list": "",
-  "preferred-target": "native",
-  "supported_targets": "+native"
+  "preferred-target": "native"
 }
