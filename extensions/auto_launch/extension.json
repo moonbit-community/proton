@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "id": "justjavac/lepus-auto-launch",
+  "version": "0.1.0",
+  "display_name": "Auto Launch",
+  "description": "Manage native desktop startup entries through the justjavac/auto_launch package.",
+  "namespace": "autoLaunch",
+  "package": "extensions/auto_launch",
+  "spec_symbol": "spec",
+  "manifest_key": "justjavac/lepus-auto-launch",
+  "platforms": ["windows", "macos", "linux"],
+  "dependencies": [],
+  "capabilities": ["auto_launch.support", "auto_launch.describe", "auto_launch.is_enabled", "auto_launch.enable", "auto_launch.disable", "auto_launch.activity"],
+  "permissions": ["startup.read", "startup.write"],
+  "risk_level": "medium",
+  "options_schema": "./options.schema.json"
+}

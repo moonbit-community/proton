@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "extensions/auto_launch"
+
+import {
+  "justjavac/lepus_core",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn extension() -> @lepus_core.Extension
+
+pub fn spec() -> @lepus_core.ExtensionSpec
+
+// Errors
+
+// Types and methods
+type AutoLaunchActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type AutoLaunchPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type AutoLaunchReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EnabledReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type MutationReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SupportReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

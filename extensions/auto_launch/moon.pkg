@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/auto_launch" @sys_auto_launch,
+  "justjavac/lepus_core" @core,
+}
+
+supported_targets = "native"
+
+options(
+  targets: {
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
+)
