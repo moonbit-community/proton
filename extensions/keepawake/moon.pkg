@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/keepawake" @sys_keepawake,
+  "justjavac/lepus_core" @core,
+}
+
+supported_targets = "native"
+
+options(
+  targets: {
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
+)
