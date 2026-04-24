@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "id": "justjavac/lepus-microphone",
+  "version": "0.1.0",
+  "display_name": "Microphone",
+  "description": "Native microphone device discovery and capture configuration helpers.",
+  "namespace": "microphone",
+  "package": "extensions/microphone",
+  "spec_symbol": "spec",
+  "manifest_key": "justjavac/lepus-microphone",
+  "platforms": ["windows", "macos", "linux"],
+  "dependencies": [],
+  "capabilities": ["microphone.list_devices", "microphone.parse_listing", "microphone.config", "microphone.activity"],
+  "permissions": ["microphone.read_devices"],
+  "risk_level": "medium",
+  "options_schema": "./options.schema.json"
+}

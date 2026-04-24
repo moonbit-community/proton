@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "extensions/microphone"
+
+import {
+  "justjavac/lepus_core",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn extension() -> @lepus_core.Extension
+
+pub fn spec() -> @lepus_core.ExtensionSpec
+
+// Errors
+
+// Types and methods
+type CaptureConfigPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type CaptureConfigReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type MicrophoneActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type MicrophoneDeviceReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type MicrophoneDevicesReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ParseListingPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/lepus_core" @core,
+  "justjavac/microphone" @sys_microphone,
+}
+
+supported_targets = "native"
+
+options(
+  targets: {
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
+)
