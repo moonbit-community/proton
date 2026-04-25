@@ -60,6 +60,13 @@ fn assert_metadata_matches_spec(
 ///|
 test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_spec(
+    load_descriptor("auto_launch"),
+    @auto_launch.spec(),
+    "extensions/auto_launch",
+    "justjavac/lepus-auto-launch",
+    "autoLaunch",
+  )
+  assert_metadata_matches_spec(
     load_descriptor("clipboard"),
     @clipboard.spec(),
     "extensions/clipboard",
@@ -86,6 +93,20 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "extensions/global_hotkey",
     "justjavac/lepus-global-hotkey",
     "globalHotkey",
+  )
+  assert_metadata_matches_spec(
+    load_descriptor("keepawake"),
+    @keepawake.spec(),
+    "extensions/keepawake",
+    "justjavac/lepus-keepawake",
+    "keepAwake",
+  )
+  assert_metadata_matches_spec(
+    load_descriptor("microphone"),
+    @microphone.spec(),
+    "extensions/microphone",
+    "justjavac/lepus-microphone",
+    "microphone",
   )
   assert_metadata_matches_spec(
     load_descriptor("notification"),
