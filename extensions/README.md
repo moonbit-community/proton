@@ -12,15 +12,21 @@ package exposes a `spec()` builder for registry-driven installation.
 - `path/`: path transforms such as `resolve`, `join`, and `dirname`
 - `dialog/`: native message and file dialogs
 - `clipboard/`: adapter over the published `justjavac/clipboard` package
+- `auto_launch/`: startup-entry management through `justjavac/auto_launch`
 - `shell/`: open external targets and reveal files
+- `keepawake/`: native keep-awake guards through `justjavac/keepawake`
+- `microphone/`: native microphone discovery and capture-config helpers
 - `notification/`: native notification helpers
 - `tray/`: native tray icon helpers
 - `global_hotkey/`: native global hotkey helpers
 
 For host-agnostic desktop features, prefer the sibling standalone modules
 [`notification/`](../notification), [`tray/`](../tray), and
-[`global_hotkey/`](../global_hotkey), plus the published Mooncakes package
-[`justjavac/clipboard`](https://mooncakes.io/docs/justjavac/clipboard). The
+[`global_hotkey/`](../global_hotkey), plus the published Mooncakes packages
+[`justjavac/clipboard`](https://mooncakes.io/docs/justjavac/clipboard),
+[`justjavac/auto_launch`](https://mooncakes.io/docs/justjavac/auto_launch),
+[`justjavac/keepawake`](https://mooncakes.io/docs/justjavac/keepawake), and
+[`justjavac/microphone`](https://mooncakes.io/docs/justjavac/microphone). The
 extensions in this workspace adapt those capabilities into the webview runtime.
 
 ## Usage
@@ -118,6 +124,12 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 - These extensions currently target `native`.
 - `fs.open(...)` and `fs.openFile(...)` return a resource id in the `rid` field.
 - `path` is pure and side-effect free.
+- `autoLaunch` manages host startup entries and should be linked only for apps
+  that explicitly expose that desktop integration.
+- `keepAwake` owns one active native guard per installed extension instance.
+- `microphone` currently exposes device discovery and capture configuration
+  helpers; capture-session streaming can be layered on once the package exposes
+  that as public API.
 - `dialog`, `shell`, `notification`, `tray`, and `globalHotkey` currently ship
   Windows-native implementations in this repository.
 - `clipboard` follows the upstream
