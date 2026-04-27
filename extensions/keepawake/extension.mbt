@@ -68,10 +68,11 @@ fn emit_activity(
 fn release_guard(
   keep_guard : @sys_keepawake.Guard,
 ) -> Result[KeepAwakeReply, String] {
+  let scope_name = scope_label(keep_guard.scope())
   let result : Result[Unit, @sys_keepawake.KeepAwakeError] = try? keep_guard.release()
   result
   .map_err(keepawake_error)
-  .map(fn(_) { KeepAwakeReply::{ active: false, scope: None } })
+  .map(fn(_) { KeepAwakeReply::{ active: false, scope: Some(scope_name) } })
 }
 
 ///|
@@ -128,13 +129,12 @@ pub fn extension() -> @core.Extension {
 
       extension.op_result("release", fn(_payload : EmptyPayload) {
         match active_guard_ref {
-          Some(active_guard) => {
-            active_guard_ref = None
+          Some(active_guard) =>
             release_guard(active_guard).map(fn(reply) {
-              emit_activity(extension, "release", None)
+              active_guard_ref = None
+              emit_activity(extension, "release", reply.scope)
               reply
             })
-          }
           None => Ok(KeepAwakeReply::{ active: false, scope: None })
         }
       })
