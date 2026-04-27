@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "extensions/devtools"
+
+import {
+  "justjavac/lepus_core",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn extension() -> @lepus_core.Extension
+
+pub fn spec() -> @lepus_core.ExtensionSpec
+
+// Errors
+
+// Types and methods
+type DevtoolsActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type DevtoolsReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/lepus" @webview,
+  "justjavac/lepus_core" @core,
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "devtools_native.c" ],
+  targets: {
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
+)

@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "id": "justjavac/lepus-devtools",
+  "version": "0.1.0",
+  "display_name": "DevTools",
+  "description": "Open the native webview developer tools window from trusted JavaScript.",
+  "namespace": "devtools",
+  "package": "extensions/devtools",
+  "spec_symbol": "spec",
+  "manifest_key": "justjavac/lepus-devtools",
+  "platforms": ["windows"],
+  "dependencies": [],
+  "capabilities": ["devtools.open", "devtools.activity"],
+  "permissions": ["debug.devtools"],
+  "risk_level": "medium",
+  "options_schema": "./options.schema.json"
+}
