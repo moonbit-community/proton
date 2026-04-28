@@ -74,6 +74,13 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "clipboard",
   )
   assert_metadata_matches_spec(
+    load_descriptor("devtools"),
+    @devtools.spec(),
+    "extensions/devtools",
+    "justjavac/lepus-devtools",
+    "devtools",
+  )
+  assert_metadata_matches_spec(
     load_descriptor("dialog"),
     @dialog.spec(),
     "extensions/dialog",
