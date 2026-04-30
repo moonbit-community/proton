@@ -1,0 +1,287 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>__MoonBit__ Microphone Runtime</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f1f5f9;
+        --panel: #ffffff;
+        --ink: #172033;
+        --muted: #64748b;
+        --accent: #0f766e;
+        --accent-2: #7c3aed;
+        --line: rgba(23, 32, 51, 0.14);
+        --field: #ffffff;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #10151d;
+          --panel: #161d28;
+          --ink: #eef2ff;
+          --muted: #aab4c3;
+          --accent: #34d399;
+          --accent-2: #a78bfa;
+          --line: rgba(238, 242, 255, 0.13);
+          --field: #0d131c;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: var(--bg);
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+
+      main {
+        width: min(1120px, calc(100vw - 36px));
+        margin: 26px auto 40px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: clamp(2rem, 4vw, 3.6rem);
+        line-height: 1;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+        gap: 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        color: var(--accent);
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: var(--field);
+        color: var(--ink);
+        padding: 10px 11px;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 128px;
+        resize: vertical;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      button {
+        border: 0;
+        background: var(--accent);
+        color: white;
+        padding: 10px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: var(--accent-2);
+      }
+
+      pre,
+      code {
+        font-family: "Cascadia Code", monospace;
+      }
+
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .devices {
+        display: grid;
+        gap: 10px;
+      }
+
+      .device {
+        border: 1px solid var(--line);
+        padding: 12px;
+      }
+
+      .device strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .device span {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Microphone inventory.</h1>
+      <section class="layout">
+        <div class="stack">
+          <article class="panel">
+            <h2>Devices</h2>
+            <div class="actions" style="margin-top: 0;">
+              <button id="list">List Devices</button>
+              <button class="secondary" id="parse">Parse Listing Text</button>
+            </div>
+            <label style="margin-top: 14px;">
+              Listing text
+              <textarea id="listing">alsa_input.usb-mic
+monitor-source
+USB Studio Mic</textarea>
+            </label>
+          </article>
+
+          <article class="panel">
+            <h2>Capture Config</h2>
+            <div class="grid">
+              <label>
+                Channels
+                <input id="channels" type="number" value="1" min="1" />
+              </label>
+              <label>
+                Sample rate
+                <input id="sample-rate" type="number" value="48000" min="8000" />
+              </label>
+              <label>
+                Format
+                <select id="sample-format">
+                  <option value="f32">f32</option>
+                  <option value="i16">i16</option>
+                  <option value="u16">u16</option>
+                </select>
+              </label>
+            </div>
+            <div class="grid" style="margin-top: 12px;">
+              <label>
+                Echo cancellation
+                <select id="echo">
+                  <option value="false">false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+              <label>
+                Noise suppression
+                <select id="noise">
+                  <option value="false">false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+            </div>
+            <div class="actions">
+              <button id="config">Normalize Config</button>
+            </div>
+          </article>
+        </div>
+
+        <aside class="panel">
+          <h2>Devices</h2>
+          <div class="devices" id="devices"></div>
+          <h2 style="margin-top: 18px;">Result</h2>
+          <pre id="result">Waiting for microphone calls.</pre>
+        </aside>
+      </section>
+    </main>
+    <script>
+      const api = window.__MoonBit__.microphone;
+      const result = document.getElementById("result");
+      const devices = document.getElementById("devices");
+
+      function show(label, value) {
+        result.textContent = label + "\n" + JSON.stringify(value, null, 2);
+        if (value.devices) {
+          devices.innerHTML = "";
+          for (const device of value.devices) {
+            const node = document.createElement("div");
+            node.className = "device";
+            node.innerHTML = "<strong></strong><span></span>";
+            node.querySelector("strong").textContent = device.name;
+            node.querySelector("span").textContent =
+              device.id + " · " + device.state + " · " + device.session_label;
+            devices.appendChild(node);
+          }
+        }
+      }
+
+      async function run(label, callback) {
+        try {
+          show(label, await callback());
+        } catch (error) {
+          result.textContent = label + "\n" + String(error);
+        }
+      }
+
+      function configPayload() {
+        return {
+          channels: Number(document.getElementById("channels").value),
+          sample_rate_hz: Number(document.getElementById("sample-rate").value),
+          sample_format: document.getElementById("sample-format").value,
+          echo_cancellation: document.getElementById("echo").value === "true",
+          noise_suppression: document.getElementById("noise").value === "true",
+        };
+      }
+
+      window.__MoonBit__.events.on("microphone.activity", (event) => {
+        result.textContent = "microphone.activity\n" + JSON.stringify(event, null, 2);
+      });
+
+      document.getElementById("list").onclick = () => run("listDevices", () => api.listDevices({}));
+      document.getElementById("parse").onclick = () => run("parseListing", () => api.parseListing({
+        listing: document.getElementById("listing").value,
+      }));
+      document.getElementById("config").onclick = () => run("config", () => api.config(configPayload()));
+    </script>
+  </body>
+</html>

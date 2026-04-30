@@ -1,0 +1,20 @@
+import {
+  "extensions/microphone" @microphone,
+  "justjavac/lepus_app" @app,
+  "justjavac/lepus_manifest" @manifest,
+  "justjavac/lepus_runtime" @wvrt,
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  "pre-build": [
+    {
+      "command": ":embed -i $input -o $output",
+      "input": "app.html",
+      "output": "app.mbt",
+    },
+  ],
+  targets: { "main.mbt": [ "native" ] },
+)
