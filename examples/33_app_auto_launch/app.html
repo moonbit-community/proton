@@ -1,0 +1,246 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>__MoonBit__ Auto Launch Runtime</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f6f1;
+        --panel: #fffffb;
+        --ink: #1d211b;
+        --muted: #687062;
+        --accent: #2563eb;
+        --accent-2: #a16207;
+        --line: rgba(29, 33, 27, 0.14);
+        --field: #ffffff;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111715;
+          --panel: #17201c;
+          --ink: #eef6ef;
+          --muted: #a7b4a9;
+          --accent: #60a5fa;
+          --accent-2: #facc15;
+          --line: rgba(238, 246, 239, 0.13);
+          --field: #0e1412;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: var(--bg);
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+
+      main {
+        width: min(1040px, calc(100vw - 36px));
+        margin: 26px auto 40px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        line-height: 1;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.76fr);
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        color: var(--accent);
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: var(--field);
+        color: var(--ink);
+        padding: 10px 11px;
+        font: inherit;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .check input {
+        width: auto;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      button {
+        border: 0;
+        background: var(--accent);
+        color: white;
+        padding: 10px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: var(--accent-2);
+        color: #111;
+      }
+
+      pre,
+      code {
+        font-family: "Cascadia Code", monospace;
+      }
+
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      ol {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      @media (max-width: 860px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Auto launch control surface.</h1>
+      <section class="layout">
+        <article class="panel">
+          <h2>Startup Entry</h2>
+          <div class="grid">
+            <label>
+              Name
+              <input id="entry-name" value="MoonBit Auto Launch Example" />
+            </label>
+            <label>
+              Identifier
+              <input id="entry-id" value="io.moonbit.lepus.examples.auto_launch" />
+            </label>
+            <label>
+              App path
+              <input id="entry-path" placeholder="Leave empty for current executable" />
+            </label>
+            <label>
+              Extra arguments
+              <input id="entry-args" value="--from-lepus-example" />
+            </label>
+          </div>
+          <label class="check">
+            <input id="entry-background" type="checkbox" checked />
+            Launch in background
+          </label>
+          <div class="actions">
+            <button id="support">Support</button>
+            <button id="describe">Describe</button>
+            <button id="is-enabled">Is Enabled</button>
+            <button id="enable">Enable</button>
+            <button class="secondary" id="disable">Disable</button>
+          </div>
+        </article>
+
+        <aside class="panel">
+          <h2>Result</h2>
+          <pre id="result">Waiting for autoLaunch calls.</pre>
+          <h2 style="margin-top: 18px;">Activity</h2>
+          <ol id="events"></ol>
+        </aside>
+      </section>
+    </main>
+    <script>
+      const api = window.__MoonBit__.autoLaunch;
+      const result = document.getElementById("result");
+      const events = document.getElementById("events");
+
+      function payload() {
+        const args = document.getElementById("entry-args").value
+          .split(" ")
+          .map((item) => item.trim())
+          .filter(Boolean);
+        const path = document.getElementById("entry-path").value.trim();
+        const identifier = document.getElementById("entry-id").value.trim();
+        return {
+          name: document.getElementById("entry-name").value,
+          path: path || undefined,
+          identifier: identifier || undefined,
+          launch_in_background: document.getElementById("entry-background").checked,
+          extra_arguments: args,
+        };
+      }
+
+      function show(label, value) {
+        result.textContent = label + "\n" + JSON.stringify(value, null, 2);
+      }
+
+      async function run(label, callback) {
+        try {
+          show(label, await callback());
+        } catch (error) {
+          result.textContent = label + "\n" + String(error);
+        }
+      }
+
+      window.__MoonBit__.events.on("autoLaunch.activity", (event) => {
+        const item = document.createElement("li");
+        item.textContent = JSON.stringify(event);
+        events.prepend(item);
+      });
+
+      document.getElementById("support").onclick = () => run("support", () => api.support({}));
+      document.getElementById("describe").onclick = () => run("describe", () => api.describe(payload()));
+      document.getElementById("is-enabled").onclick = () => run("isEnabled", () => api.isEnabled(payload()));
+      document.getElementById("enable").onclick = () => run("enable", () => api.enable(payload()));
+      document.getElementById("disable").onclick = () => run("disable", () => api.disable(payload()));
+    </script>
+  </body>
+</html>
