@@ -60,6 +60,15 @@ const loaded = await window.__MoonBit__.fs.readFile("demo.txt");
 const stat = await window.__MoonBit__.fs.stat("demo.txt");
 ```
 
+For binary payloads on Windows/WebView2, use the SharedArrayBuffer-backed
+helpers. They avoid serializing file contents through JSON and return/copy
+`Uint8Array` values through a native shared buffer:
+
+```js
+const binary = await window.__MoonBit__.fs.readFileBuffer("asset.bin");
+await window.__MoonBit__.fs.writeFileBuffer("copy.bin", binary.content);
+```
+
 If you want the native absolute path before opening a file, ask `stat` not to
 throw on missing entries:
 
@@ -81,6 +90,12 @@ const stat = await window.__MoonBit__.fs.stat("demo.txt", {
   Tauri-style alias for `writeFile`.
 - `fs.appendFile(path, content, options?)`
   Returns `{ path, written, bytes_written }`.
+- `fs.sharedBufferSupport()`
+  Returns WebView2 SharedArrayBuffer capability flags for the current webview.
+- `fs.readFileBuffer(path)`
+  Uses WebView2 SharedBuffer transfer and returns `{ path, content, bytes_read, capacity }`, where `content` is a `Uint8Array`.
+- `fs.writeFileBuffer(path, content, options?)`
+  Uses WebView2 SharedBuffer transfer to write `Uint8Array`, `ArrayBuffer`, `SharedArrayBuffer`, typed-array, or string content.
 - `fs.stat(path, options?)`
   Returns `{ path, exists, size, is_file, is_dir, is_readonly }`.
 - `fs.readdir(path, options?)`
@@ -156,8 +171,12 @@ Event payload shape:
 - Installing `fs` grants direct host filesystem access for that webview or app.
 - `read` and `write` use UTF-8 text payloads.
 - `readFile`, `writeFile`, and `appendFile` are UTF-8 text helpers. For
-  streaming or binary-oriented workflows, keep using the rid-based API with
-  `open`, `read`, `write`, `seek`, and `flush`.
+  streaming workflows, keep using the rid-based API with `open`, `read`,
+  `write`, `seek`, and `flush`.
+- `readFileBuffer` and `writeFileBuffer` use SharedArrayBuffer/WebView2
+  transfer where available. They currently require Windows WebView2 with
+  `sharedbufferreceived` support; other platforms report an unsupported
+  capability through `sharedBufferSupport()`.
 - The path API is intentionally closer to Node.js `fs/promises`, with a few
   Tauri-style aliases such as `readTextFile`, `writeTextFile`, and `remove`.
 - `openFile` currently supports common Node-style flags and read/write/append
