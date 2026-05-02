@@ -114,6 +114,39 @@
     }
     return payload;
   }
+  function normalizeAdditionalData(value) {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return Object.create(null);
+      }
+    }
+    return value && typeof value === 'object' ? value : Object.create(null);
+  }
+  function releaseSharedBuffer(buffer) {
+    if (buffer && window.chrome?.webview?.releaseBuffer) {
+      window.chrome.webview.releaseBuffer(buffer);
+    }
+  }
+  function toUint8Array(content) {
+    if (content instanceof Uint8Array) {
+      return content;
+    }
+    if (
+      content instanceof ArrayBuffer ||
+      (typeof SharedArrayBuffer === 'function' && content instanceof SharedArrayBuffer)
+    ) {
+      return new Uint8Array(content);
+    }
+    if (ArrayBuffer.isView(content)) {
+      return new Uint8Array(content.buffer, content.byteOffset, content.byteLength);
+    }
+    if (typeof content === 'string') {
+      return new TextEncoder().encode(content);
+    }
+    throw new TypeError('MoonBit fs.writeFileBuffer expects Uint8Array, ArrayBuffer, SharedArrayBuffer, typed array, or string');
+  }
   function ridPayload(rid, extra) {
     if (typeof rid !== 'number') {
       throw new TypeError('MoonBit fs rid APIs expect a numeric rid');
@@ -132,6 +165,10 @@
   }
   const extensionApi = root['@@ensureExtension'](extensionName);
   const api = Object.create(null);
+  let sharedSequence = 0;
+  let sharedBufferQueue = Promise.resolve();
+  let sharedBufferListenerInstalled = false;
+  const pendingSharedBuffers = new Map();
   Object.defineProperty(api, '@@nodeStyleFs', { value: true });
   Object.defineProperty(api, 'name', { value: extensionName, enumerable: true });
   api.invoke = function(apiName, payload) {
@@ -139,6 +176,155 @@
   };
   api.on = function(eventName, listener) {
     return extensionApi.on(eventName, listener);
+  };
+  function ensureSharedBufferListener() {
+    if (sharedBufferListenerInstalled) {
+      return true;
+    }
+    if (!window.chrome?.webview?.addEventListener) {
+      return false;
+    }
+    window.chrome.webview.addEventListener('sharedbufferreceived', function(event) {
+      const data = normalizeAdditionalData(event.additionalData);
+      if (
+        data.kind !== 'lepus-fs-read-buffer' &&
+        data.kind !== 'lepus-fs-write-buffer'
+      ) {
+        return;
+      }
+      const sequence = Number(data.sequence);
+      const pending = pendingSharedBuffers.get(sequence);
+      if (!pending || pending.kind !== data.kind) {
+        return;
+      }
+      pendingSharedBuffers.delete(sequence);
+      try {
+        const buffer = event.getBuffer();
+        const size = Number(data.size);
+        const capacity = Number(data.capacity || buffer.byteLength);
+        if (buffer.byteLength < size || buffer.byteLength !== capacity) {
+          releaseSharedBuffer(buffer);
+          pending.reject(
+            new Error(
+              'fs SharedArrayBuffer size mismatch for #' +
+                sequence +
+                ': size=' +
+                size +
+                ', capacity=' +
+                capacity +
+                ', buffer=' +
+                buffer.byteLength,
+            ),
+          );
+          return;
+        }
+        pending.resolve({ buffer: buffer, size: size, capacity: capacity });
+      } catch (error) {
+        pending.reject(error);
+      }
+    });
+    sharedBufferListenerInstalled = true;
+    return true;
+  }
+  function waitForSharedBuffer(kind, sequence) {
+    if (!ensureSharedBufferListener()) {
+      return Promise.reject(
+        new Error('fs SharedArrayBuffer transfer requires WebView2 sharedbufferreceived events'),
+      );
+    }
+    return new Promise(function(resolve, reject) {
+      const timeout = window.setTimeout(function() {
+        pendingSharedBuffers.delete(sequence);
+        reject(new Error('Timed out waiting for fs SharedArrayBuffer #' + sequence));
+      }, 5000);
+      pendingSharedBuffers.set(sequence, {
+        kind: kind,
+        resolve: function(value) {
+          window.clearTimeout(timeout);
+          resolve(value);
+        },
+        reject: function(error) {
+          window.clearTimeout(timeout);
+          reject(error);
+        },
+      });
+    });
+  }
+  function enqueueSharedBufferTask(callback) {
+    const next = sharedBufferQueue.then(callback, callback);
+    sharedBufferQueue = next.catch(function() {});
+    return next;
+  }
+  function nextSharedSequence() {
+    sharedSequence += 1;
+    if (sharedSequence > 0x3fffffff) {
+      sharedSequence = 1;
+    }
+    return sharedSequence;
+  }
+  api.sharedBufferSupport = function() {
+    return extensionApi.sharedBufferSupport({});
+  };
+  api.readFileBuffer = function(path) {
+    return enqueueSharedBufferTask(async function() {
+      const sequence = nextSharedSequence();
+      const wait = waitForSharedBuffer('lepus-fs-read-buffer', sequence);
+      let received = null;
+      try {
+        const [reply, nextReceived] = await Promise.all([
+          extensionApi.readFileBuffer({ path: path, sequence: sequence }),
+          wait,
+        ]);
+        received = nextReceived;
+        const source = new Uint8Array(received.buffer, 0, reply.bytes_read);
+        const content = new Uint8Array(reply.bytes_read);
+        content.set(source);
+        return {
+          path: reply.path,
+          content: content,
+          bytes_read: reply.bytes_read,
+          capacity: received.capacity,
+        };
+      } finally {
+        if (received) {
+          releaseSharedBuffer(received.buffer);
+        } else {
+          pendingSharedBuffers.delete(sequence);
+        }
+      }
+    });
+  };
+  api.writeFileBuffer = function(path, content, options) {
+    return enqueueSharedBufferTask(async function() {
+      const bytes = toUint8Array(content);
+      const sequence = nextSharedSequence();
+      const normalized = normalizeOptions(options);
+      const wait = waitForSharedBuffer('lepus-fs-write-buffer', sequence);
+      let received = null;
+      try {
+        const [, nextReceived] = await Promise.all([
+          extensionApi.writeFileBufferPrepare({
+            path: path,
+            sequence: sequence,
+            size: bytes.byteLength,
+            flush: typeof normalized.flush === 'boolean' ? normalized.flush : undefined,
+          }),
+          wait,
+        ]);
+        received = nextReceived;
+        new Uint8Array(received.buffer, 0, bytes.byteLength).set(bytes);
+        return await extensionApi.writeFileBufferCommit({
+          sequence: sequence,
+          size: bytes.byteLength,
+        });
+      } finally {
+        if (received) {
+          releaseSharedBuffer(received.buffer);
+        } else {
+          pendingSharedBuffers.delete(sequence);
+        }
+      }
+    });
   };
   api.readFile = function(path, options) {
     return extensionApi.readFile(readPayload(path, options));
