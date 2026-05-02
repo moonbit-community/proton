@@ -44,8 +44,12 @@ fn build_extension() -> @core.Extension {
       register_file_text_ops(extension)
       register_path_ops(extension)
       register_stream_ops(extension, handles, paths)
+      register_shared_buffer_ops(extension)
     },
-    on_destroy=fn(_extension) { close_all_open_files(handles, paths) },
+    on_destroy=fn(_extension) {
+      close_all_open_files(handles, paths)
+      shared_buffer_release_ffi()
+    },
     scripts=[fs_helper_script()],
   )
 }

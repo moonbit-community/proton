@@ -57,6 +57,18 @@ type SeekPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type SeekReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+type SharedBufferReadPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SharedBufferReadReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SharedBufferSupportReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SharedBufferWriteCommitPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SharedBufferWritePreparePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type SharedBufferWritePrepareReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 type WritePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type WriteReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
