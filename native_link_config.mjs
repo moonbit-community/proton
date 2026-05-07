@@ -19,6 +19,10 @@ function requireFile(filePath) {
   return filePath;
 }
 
+function linkDir(vendoredLibDir, target) {
+  return nativeLinkPath(path.join(vendoredLibDir, target, "static"));
+}
+
 function splitFlags(rawFlags) {
   return rawFlags
     .split(/\s+/)
@@ -52,15 +56,15 @@ function main() {
   const vendoredLibDir = path.join(rootDir, "lib");
 
   if (isWindows) {
-    const platformLibDir = nativeLinkPath(path.join(vendoredLibDir, "windows-x64"));
-    requireFile(path.join(vendoredLibDir, "windows-x64", "webview.lib"));
-    const webviewStaticLib = nativeLinkPath(path.join(platformLibDir, "webview"));
+    const platformLibDir = linkDir(vendoredLibDir, "windows-x64");
+    requireFile(path.join(vendoredLibDir, "windows-x64", "static", "webview.lib"));
+    const webviewLib = nativeLinkPath(path.join(platformLibDir, "webview"));
     process.stdout.write(JSON.stringify({
       link_configs: [
         {
           package: "justjavac/lepus",
           link_libs: [
-            webviewStaticLib,
+            webviewLib,
             "advapi32",
             "ole32",
             "shell32",
@@ -75,30 +79,32 @@ function main() {
   }
 
   if (process.platform === "darwin") {
-    const platformLibDir = nativeLinkPath(path.join(vendoredLibDir, "macos-universal"));
-    requireFile(path.join(vendoredLibDir, "macos-universal", "libwebview.a"));
+    const platformLibDir = linkDir(vendoredLibDir, "macos-universal");
+    requireFile(path.join(vendoredLibDir, "macos-universal", "static", "libwebview.a"));
+    const linkFlags = ["-framework", "WebKit"];
     process.stdout.write(JSON.stringify({
       link_configs: [
         {
           package: "justjavac/lepus",
           link_search_paths: [platformLibDir],
           link_libs: ["webview", "dl"],
-          link_flags: ["-framework", "WebKit"],
+          link_flags: linkFlags,
         },
       ],
     }));
     return;
   }
 
-  const platformLibDir = nativeLinkPath(path.join(vendoredLibDir, "linux-x64"));
-  requireFile(path.join(vendoredLibDir, "linux-x64", "libwebview.a"));
+  const platformLibDir = linkDir(vendoredLibDir, "linux-x64");
+  requireFile(path.join(vendoredLibDir, "linux-x64", "static", "libwebview.a"));
+  const linkFlags = linuxSystemLinkFlags();
   process.stdout.write(JSON.stringify({
     link_configs: [
       {
         package: "justjavac/lepus",
         link_search_paths: [platformLibDir],
-        link_libs: ["webview"],
-        link_flags: linuxSystemLinkFlags(),
+        link_libs: ["webview", "dl"],
+        link_flags: linkFlags,
       },
     ],
   }));

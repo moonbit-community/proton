@@ -153,7 +153,7 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 
 This repo targets `native` only.
 
-- Windows uses vendored static `webview.lib`
+- The default webview linkage is static and uses vendored `lib/<platform>/static`
 - macOS uses system `WebKit`
 - Linux needs `pkg-config`, `libgtk-3-dev`, and `libwebkit2gtk-4.1-dev`
 - Windows users still need Microsoft WebView2 Runtime installed
