@@ -19,8 +19,27 @@ function requireFile(filePath) {
   return filePath;
 }
 
-function linkDir(vendoredLibDir, target) {
-  return nativeLinkPath(path.join(vendoredLibDir, target, "static"));
+function configuredLinkMode(env) {
+  const rawValue =
+    env.LEPUS_WEBVIEW_LINK ??
+    process.env.LEPUS_WEBVIEW_LINK ??
+    env.WEBVIEW_LINK ??
+    process.env.WEBVIEW_LINK ??
+    "static";
+  const value = String(rawValue).trim().toLowerCase();
+  if (value === "static") {
+    return "static";
+  }
+  if (value === "shared" || value === "dynamic") {
+    return "shared";
+  }
+  throw new Error(
+    `Unsupported LEPUS_WEBVIEW_LINK value "${rawValue}". Use "static" or "shared".`,
+  );
+}
+
+function linkDir(vendoredLibDir, target, mode) {
+  return nativeLinkPath(path.join(vendoredLibDir, target, mode));
 }
 
 function splitFlags(rawFlags) {
@@ -54,10 +73,14 @@ function main() {
   const isWindows = process.platform === "win32" || env.OS === "Windows_NT";
   const rootDir = path.dirname(fileURLToPath(import.meta.url));
   const vendoredLibDir = path.join(rootDir, "lib");
+  const mode = configuredLinkMode(env);
 
   if (isWindows) {
-    const platformLibDir = linkDir(vendoredLibDir, "windows-x64");
-    requireFile(path.join(vendoredLibDir, "windows-x64", "static", "webview.lib"));
+    const platformLibDir = linkDir(vendoredLibDir, "windows-x64", mode);
+    requireFile(path.join(vendoredLibDir, "windows-x64", mode, "webview.lib"));
+    if (mode === "shared") {
+      requireFile(path.join(vendoredLibDir, "windows-x64", mode, "webview.dll"));
+    }
     const webviewLib = nativeLinkPath(path.join(platformLibDir, "webview"));
     process.stdout.write(JSON.stringify({
       link_configs: [
@@ -79,9 +102,19 @@ function main() {
   }
 
   if (process.platform === "darwin") {
-    const platformLibDir = linkDir(vendoredLibDir, "macos-universal");
-    requireFile(path.join(vendoredLibDir, "macos-universal", "static", "libwebview.a"));
+    const platformLibDir = linkDir(vendoredLibDir, "macos-universal", mode);
+    requireFile(
+      path.join(
+        vendoredLibDir,
+        "macos-universal",
+        mode,
+        mode === "static" ? "libwebview.a" : "libwebview.dylib",
+      ),
+    );
     const linkFlags = ["-framework", "WebKit"];
+    if (mode === "shared") {
+      linkFlags.push(`-Wl,-rpath,${platformLibDir}`);
+    }
     process.stdout.write(JSON.stringify({
       link_configs: [
         {
@@ -95,9 +128,19 @@ function main() {
     return;
   }
 
-  const platformLibDir = linkDir(vendoredLibDir, "linux-x64");
-  requireFile(path.join(vendoredLibDir, "linux-x64", "static", "libwebview.a"));
+  const platformLibDir = linkDir(vendoredLibDir, "linux-x64", mode);
+  requireFile(
+    path.join(
+      vendoredLibDir,
+      "linux-x64",
+      mode,
+      mode === "static" ? "libwebview.a" : "libwebview.so",
+    ),
+  );
   const linkFlags = linuxSystemLinkFlags();
+  if (mode === "shared") {
+    linkFlags.push(`-Wl,-rpath,${platformLibDir}`);
+  }
   process.stdout.write(JSON.stringify({
     link_configs: [
       {

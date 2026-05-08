@@ -154,9 +154,11 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 This repo targets `native` only.
 
 - The default webview linkage is static and uses vendored `lib/<platform>/static`
+- Set `LEPUS_WEBVIEW_LINK=shared` (or `dynamic`) to link against vendored `lib/<platform>/shared`
 - macOS uses system `WebKit`
 - Linux needs `pkg-config`, `libgtk-3-dev`, and `libwebkit2gtk-4.1-dev`
 - Windows users still need Microsoft WebView2 Runtime installed
+- Windows shared builds need `lib/windows-x64/shared/webview.dll` beside the final executable or on `PATH`
 - `clipboard` comes from the published Mooncakes package `justjavac/clipboard`.
 - WIP: `dialog`, `shell`, `notification`, `tray`, and `globalHotkey` are currently Windows-native in this repository.
 
