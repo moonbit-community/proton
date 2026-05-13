@@ -1,0 +1,21 @@
+{
+  "name": "justjavac/lepus_cef",
+  "version": "0.1.0",
+  "deps": {
+    "justjavac/ffi": "0.2.0"
+  },
+  "readme": "README.md",
+  "repository": "https://github.com/justjavac/lepus",
+  "license": "MIT",
+  "keywords": [
+    "cef",
+    "chromium",
+    "webview",
+    "desktop-app"
+  ],
+  "description": "Opt-in CEF backend prototype for Lepus.",
+  "source": "",
+  "warn-list": "",
+  "preferred-target": "native",
+  "supported_targets": "+native"
+}

@@ -30,3 +30,6 @@ Desktop.ini
 moonbit-coverage-*.txt
 _coverage
 bisect.coverage
+
+# Optional local CEF binary distributions
+.cef-cache/
