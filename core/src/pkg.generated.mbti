@@ -41,6 +41,8 @@ pub fn[Payload : ToJson] ExtensionContext::emit(Self, String, Payload) -> Unit
 pub fn ExtensionContext::id(Self) -> String
 pub fn ExtensionContext::js_namespace(Self) -> String
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_async(Self, String, async (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
 pub fn ExtensionContext::webview(Self) -> @lepus.Webview
 

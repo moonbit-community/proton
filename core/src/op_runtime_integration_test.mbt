@@ -3,6 +3,7 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
   let expected_report = OpsRuntimeReport::{
     direct: MultiplyReply::{ total: 42 },
     extension: MultiplyReply::{ total: 42 },
+    async_extension: MultiplyReply::{ total: 13 },
     event_count: 2,
   }
   let mut seen_report : OpsRuntimeReport? = None
@@ -17,6 +18,9 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
           message: "MoonBit computed " + reply.total.to_string(),
         })
         reply
+      })
+      extension.op_async_result("sumAsync", fn(payload : MultiplyPayload) {
+        Ok(MultiplyReply::{ total: payload.left + payload.right })
       })
     }),
   )
@@ -90,6 +94,7 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
       #|               window.reportOpsRuntime({
       #|                 direct: results.direct,
       #|                 extension: results.extension,
+      #|                 async_extension: results.asyncExtension,
       #|                 event_count: eventCount,
       #|               })
       #|                 .then(() => {
@@ -106,9 +111,10 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
       #|             Promise.all([
       #|               moonbit.core.invokeOp("ext:math/multiply", { left: 6, right: 7 }),
       #|               moonbit.math.multiply({ left: 6, right: 7 }),
+      #|               moonbit.math.sumAsync({ left: 6, right: 7 }),
       #|             ])
-      #|               .then(([direct, extension]) => {
-      #|                 results = { direct, extension };
+      #|               .then(([direct, extension, asyncExtension]) => {
+      #|                 results = { direct, extension, asyncExtension };
       #|                 maybeFinish();
       #|               })
       #|               .catch((error) => {

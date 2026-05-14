@@ -1,12 +1,13 @@
 ///|
 priv struct OpRegistry {
   handlers : Map[String, (Json) -> Result[Json, String]]
+  async_handlers : Map[String, (Json, (Result[Json, String]) -> Unit) -> Unit]
 }
 
 ///|
 /// Creates an empty op handler registry.
 fn OpRegistry::new() -> OpRegistry {
-  OpRegistry::{ handlers: {} }
+  OpRegistry::{ handlers: {}, async_handlers: {} }
 }
 
 ///|
@@ -39,6 +40,49 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_result(
 }
 
 ///|
+/// Registers a typed async op handler that cannot fail explicitly.
+fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async(
+  self : OpRegistry,
+  name : String,
+  callback : async (Payload) -> Reply,
+) -> Unit {
+  self.handle_async_result(name, async fn(payload) { Ok(callback(payload)) })
+}
+
+///|
+/// Registers a typed async op handler that can return a string error.
+fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result(
+  self : OpRegistry,
+  name : String,
+  callback : async (Payload) -> Result[Reply, String],
+) -> Unit {
+  guard self.handlers.get(name) is None && self.async_handlers.get(name) is None else {
+    abort("OpRegistry::handle_async_result: op already registered: " + name)
+  }
+  self.async_handlers.set(name, fn(payload_json, complete) {
+    run_async_task(async fn() noraise {
+      let result = try {
+        let payload : Result[Payload, _] = try? @json.from_json(payload_json)
+        match payload {
+          Ok(payload) =>
+            callback(payload).map(fn(reply) { ToJson::to_json(reply) })
+          Err(err) => Err(err.to_string())
+        }
+      } catch {
+        err => Err(err.to_string())
+      }
+      complete(result)
+    })
+  })
+}
+
+///|
+/// Returns whether an op name has been registered as an async handler.
+fn OpRegistry::has_async(self : OpRegistry, name : String) -> Bool {
+  self.async_handlers.get(name) is Some(_)
+}
+
+///|
 /// Invokes a previously registered op handler with raw JSON payload.
 fn OpRegistry::call(
   self : OpRegistry,
@@ -48,5 +92,19 @@ fn OpRegistry::call(
   match self.handlers.get(name) {
     Some(handler) => handler(payload)
     None => Err("Unknown op: " + name)
+  }
+}
+
+///|
+/// Starts a previously registered async op handler with raw JSON payload.
+fn OpRegistry::call_async(
+  self : OpRegistry,
+  name : String,
+  payload : Json,
+  complete : (Result[Json, String]) -> Unit,
+) -> Unit {
+  match self.async_handlers.get(name) {
+    Some(handler) => handler(payload, complete)
+    None => complete(self.call(name, payload))
   }
 }

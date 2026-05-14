@@ -1,5 +1,6 @@
 import {
   "moonbitlang/core/json",
+  "moonbitlang/async" @async,
   "justjavac/ffi",
   "justjavac/lepus" @webview,
 }
@@ -26,6 +27,7 @@ options(
     },
   ],
   targets: {
+    "async_runtime.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
     "core_js_wbtest.mbt": [ "native" ],
     "extension_host.mbt": [ "native" ],

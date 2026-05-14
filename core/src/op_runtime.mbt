@@ -120,6 +120,28 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRuntime::handle_result(
 }
 
 ///|
+/// Registers an async op handler and exposes it to JavaScript.
+fn[Payload : @json.FromJson, Reply : ToJson] OpRuntime::handle_async(
+  self : OpRuntime,
+  name : String,
+  callback : async (Payload) -> Reply,
+) -> Unit {
+  self.registry.handle_async(name, callback)
+  register_moonbit_op(self.webview, name)
+}
+
+///|
+/// Registers an async op handler with explicit string error support and exposes it to JavaScript.
+fn[Payload : @json.FromJson, Reply : ToJson] OpRuntime::handle_async_result(
+  self : OpRuntime,
+  name : String,
+  callback : async (Payload) -> Result[Reply, String],
+) -> Unit {
+  self.registry.handle_async_result(name, callback)
+  register_moonbit_op(self.webview, name)
+}
+
+///|
 /// Handles one raw binding request from JavaScript and returns the serialized reply.
 fn OpRuntime::handle_request(
   self : OpRuntime,
@@ -127,14 +149,37 @@ fn OpRuntime::handle_request(
   raw_req : Bytes,
 ) -> Unit {
   let id = @ffi.from_cstr(raw_id)
-  let reply = parse_op_request(@ffi.from_cstr(raw_req)).bind(fn(request) {
-    self.registry.call(request.name, request.payload)
-  })
-  match reply {
-    Ok(reply) => self.webview.response(id, 0, reply.stringify())
+  match parse_op_request(@ffi.from_cstr(raw_req)) {
+    Ok(request) =>
+      if self.registry.has_async(request.name) {
+        self.handle_async_request(id, request)
+      } else {
+        let reply = self.registry.call(request.name, request.payload)
+        match reply {
+          Ok(reply) => self.webview.response(id, 0, reply.stringify())
+          Err(message) =>
+            self.webview.response(id, 1, Json::string(message).stringify())
+        }
+      }
     Err(message) =>
       self.webview.response(id, 1, Json::string(message).stringify())
   }
+}
+
+///|
+/// Starts one async op and completes the JS binding promise when it returns.
+fn OpRuntime::handle_async_request(
+  self : OpRuntime,
+  id : String,
+  request : OpInvocation,
+) -> Unit {
+  self.registry.call_async(request.name, request.payload, fn(reply) {
+    match reply {
+      Ok(reply) => self.webview.response(id, 0, reply.stringify())
+      Err(message) =>
+        self.webview.response(id, 1, Json::string(message).stringify())
+    }
+  })
 }
 
 ///|
