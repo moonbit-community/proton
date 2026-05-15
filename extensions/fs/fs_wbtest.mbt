@@ -40,23 +40,63 @@ test "fs shared buffer helpers validate transfer sizes" {
 }
 
 ///|
-test "fs path api can read write and append text files" {
-  let path = "lepus-fs-path-api.txt"
-  match write_text_file(path, "hello", None) {
+fn write_text_fixture(path : String, content : String) -> Unit {
+  let write_result : Result[Unit, _] = try? @xfs.write_string_to_file(
+    path, content,
+  )
+  match write_result {
+    Ok(_) => ()
+    Err(error) => abort("Failed to write fixture file: " + error.to_string())
+  }
+}
+
+///|
+struct FsRuntimeReport {
+  content : String
+  bytes_read : Int
+} derive(FromJson, Eq, Debug)
+
+///|
+fn[Payload : @json.FromJson] decode_single_argument(
+  raw_req : Bytes,
+) -> Result[Payload, String] {
+  let request_json : Result[Json, _] = try? @json.parse(@ffi.from_cstr(raw_req))
+  request_json
+  .map_err(fn(err) { err.to_string() })
+  .bind(fn(request_json) {
+    let request_args : Result[Array[Payload], _] = try? @json.from_json(
+      request_json,
+    )
+    request_args
+    .map_err(fn(err) { err.to_string() })
+    .bind(fn(request_args) {
+      if request_args.length() == 1 {
+        Ok(request_args[0])
+      } else {
+        Err("Expected exactly one argument")
+      }
+    })
+  })
+}
+
+///|
+async test "fs async path api can read write and append text files" {
+  let path = "lepus-fs-async-path-api.txt"
+  match write_text_file_async(path, "hello", None) {
     Ok(reply) => {
       assert_true(reply.written)
       assert_eq(reply.bytes_written, 5)
     }
     Err(error) => abort(error)
   }
-  match append_text_file(path, " world", None) {
+  match append_text_file_async(path, " world", None) {
     Ok(reply) => {
       assert_true(reply.written)
       assert_eq(reply.bytes_written, 6)
     }
     Err(error) => abort(error)
   }
-  match read_text_file(path, None) {
+  match read_text_file_async(path, None) {
     Ok(reply) => {
       assert_eq(reply.content, "hello world")
       assert_eq(reply.bytes_read, 11)
@@ -67,11 +107,118 @@ test "fs path api can read write and append text files" {
 }
 
 ///|
+test "fs extension text ops complete through WebView async bridge" {
+  let path = "lepus-fs-webview-async.txt"
+  if native_path_exists(path) {
+    ignore(native_remove_file(path))
+  }
+  let expected_report = FsRuntimeReport::{
+    content: "hello world",
+    bytes_read: 11,
+  }
+  let mut seen_report : FsRuntimeReport? = None
+  let mut js_error : String? = None
+  let webview = @webview.Webview::new()
+  @core.install_extension(webview, extension())
+  webview.bind("reportFsFailure", fn(id, req) {
+    let request_id = @ffi.from_cstr(id)
+    let message_result : Result[String, String] = decode_single_argument(req)
+    match message_result {
+      Ok(message) => js_error = Some(message)
+      Err(message) =>
+        js_error = Some("Failed to decode fs failure payload: " + message)
+    }
+    webview.response(request_id, 0, "null")
+    webview.terminate()
+  })
+  webview.bind("reportFsRuntime", fn(id, req) {
+    let request_id = @ffi.from_cstr(id)
+    let report_result : Result[FsRuntimeReport, String] = decode_single_argument(
+      req,
+    )
+    match report_result {
+      Ok(report) => seen_report = Some(report)
+      Err(message) =>
+        js_error = Some("Failed to decode fs runtime report: " + message)
+    }
+    webview.response(request_id, 0, "null")
+    webview.terminate()
+  })
+  webview.set_html(
+    (
+      #| <html>
+      #|   <body>
+      #|     <script>
+      #|       const path = "lepus-fs-webview-async.txt";
+      #|       const reportFailure = (message) =>
+      #|         window.reportFsFailure(message).catch(() => {});
+      #|       const waitFor = (predicate, onReady, label, attempts = 0) => {
+      #|         if (predicate()) {
+      #|           onReady();
+      #|           return;
+      #|         }
+      #|         if (attempts >= 50) {
+      #|           void reportFailure(label + " timeout");
+      #|           return;
+      #|         }
+      #|         window.setTimeout(() => {
+      #|           waitFor(predicate, onReady, label, attempts + 1);
+      #|         }, 20);
+      #|       };
+      #|       window.addEventListener("error", (event) => {
+      #|         void reportFailure("window error: " + String(event.message));
+      #|       });
+      #|       window.addEventListener("unhandledrejection", (event) => {
+      #|         void reportFailure("unhandled rejection: " + String(event.reason));
+      #|       });
+      #|       window.addEventListener("load", () => {
+      #|         waitFor(
+      #|           () => {
+      #|             const moonbit = window.__MoonBit__;
+      #|             return !!moonbit && !!moonbit.fs;
+      #|           },
+      #|           () => {
+      #|             const timeoutId = window.setTimeout(() => {
+      #|               void reportFailure("fs async report timeout");
+      #|             }, 1000);
+      #|             const fs = window.__MoonBit__.fs;
+      #|             fs.writeFile(path, "hello")
+      #|               .then(() => fs.appendFile(path, " world"))
+      #|               .then(() => fs.readFile(path))
+      #|               .then((reply) => {
+      #|                 window.clearTimeout(timeoutId);
+      #|                 return window.reportFsRuntime({
+      #|                   content: reply.content,
+      #|                   bytes_read: reply.bytes_read,
+      #|                 });
+      #|               })
+      #|               .catch((error) => {
+      #|                 window.clearTimeout(timeoutId);
+      #|                 void reportFailure("fs async transport error: " + String(error));
+      #|               });
+      #|           },
+      #|           "__MoonBit__.fs",
+      #|         );
+      #|       });
+      #|     </script>
+      #|   </body>
+      #| </html>,
+    ),
+  )
+  webview.run()
+  if native_path_exists(path) {
+    ignore(native_remove_file(path))
+  }
+  assert_true(js_error is None)
+  assert_true(seen_report == Some(expected_report))
+}
+
+///|
 test "fs path api can stat rename and copy files" {
   let path = "lepus-fs-stat-source.txt"
   let renamed = "lepus-fs-stat-renamed.txt"
   let copied = "lepus-fs-stat-copy.txt"
-  ignore(write_text_file(path, "abc123", None))
+  write_text_fixture(path, "abc123")
 
   match stat_path(path, true) {
     Ok(stat) => {
@@ -135,7 +282,7 @@ test "fs path api can list directories recursively" {
     Ok(_) => ()
     Err(error) => abort(error)
   }
-  ignore(write_text_file(file, "demo", None))
+  write_text_fixture(file, "demo")
 
   match readdir_entries(root, true) {
     Ok(entries) => {
@@ -164,7 +311,7 @@ test "fs path api can remove directories recursively" {
     Ok(_) => ()
     Err(error) => abort(error)
   }
-  ignore(write_text_file(file, "demo", None))
+  write_text_fixture(file, "demo")
 
   match remove_path(root, true, false) {
     Ok(removed) => assert_true(removed)
@@ -179,7 +326,7 @@ test "fs path api can remove directories recursively" {
 ///|
 test "fs path api can truncate files and measure size" {
   let path = "lepus-fs-truncate.txt"
-  ignore(write_text_file(path, "abcdef", None))
+  write_text_fixture(path, "abcdef")
 
   match truncate_path(path, 3) {
     Ok(size) => assert_eq(size, 3)

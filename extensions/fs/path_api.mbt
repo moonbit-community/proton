@@ -175,14 +175,6 @@ extern "C" fn native_copy_file_ffi(
 ) -> Int = "extensions_fs_copy_file_ffi"
 
 ///|
-#borrow(path, content)
-extern "C" fn native_append_bytes_ffi(
-  path : Bytes,
-  content : Bytes,
-  content_len : Int,
-) -> Int = "extensions_fs_append_bytes_ffi"
-
-///|
 #borrow(path)
 extern "C" fn native_realpath_ffi(path : Bytes) -> Bytes = "extensions_fs_realpath_ffi"
 
@@ -274,47 +266,78 @@ fn read_text_file(
 }
 
 ///|
-/// Writes a full text file and returns its byte length metadata.
-fn write_text_file(
+/// Reads a text file through `moonbitlang/async/fs`.
+async fn read_text_file_async(
+  path : String,
+  encoding : String?,
+) -> Result[ReadFileReply, String] {
+  match resolve_text_encoding(encoding) {
+    Err(message) => Err(message)
+    Ok(_) =>
+      try {
+        let content = @async_fs.read_file(path).text()
+        Ok(ReadFileReply::{
+          path,
+          content,
+          bytes_read: bytes_written_for_text(content),
+        })
+      } catch {
+        err => Err("Failed to read file: " + err.to_string())
+      }
+  }
+}
+
+///|
+/// Writes a full text file through `moonbitlang/async/fs`.
+async fn write_text_file_async(
   path : String,
   content : String,
   encoding : String?,
 ) -> Result[WriteFileReply, String] {
-  with_supported_text_encoding(encoding, fn() {
-    let write_result : Result[Unit, _] = try? @xfs.write_string_to_file(
-      path, content,
-    )
-    write_result
-    .map_err(fn(error) { "Failed to write file: " + error.to_string() })
-    .map(fn(_) {
-      WriteFileReply::{
-        path,
-        written: true,
-        bytes_written: bytes_written_for_text(content),
+  match resolve_text_encoding(encoding) {
+    Err(message) => Err(message)
+    Ok(_) =>
+      try {
+        @async_fs.write_file(path, content, create_mode=CreateOrTruncate)
+        Ok(WriteFileReply::{
+          path,
+          written: true,
+          bytes_written: bytes_written_for_text(content),
+        })
+      } catch {
+        err => Err("Failed to write file: " + err.to_string())
       }
-    })
-  })
+  }
 }
 
 ///|
-/// Appends UTF-8 text to an existing file through the native append helper.
-fn append_text_file(
+/// Appends UTF-8 text to an existing file through `moonbitlang/async/fs`.
+async fn append_text_file_async(
   path : String,
   content : String,
   encoding : String?,
 ) -> Result[AppendFileReply, String] {
-  with_supported_text_encoding(encoding, fn() {
-    let bytes = encode_string_bytes(content)
-    let written = native_append_bytes_ffi(
-      encode_native_path_bytes(path),
-      bytes,
-      bytes.length(),
-    )
-    guard written >= 0 else {
-      return Err("Failed to append file: " + native_last_error_message())
-    }
-    Ok(AppendFileReply::{ path, written: true, bytes_written: written })
-  })
+  match resolve_text_encoding(encoding) {
+    Err(message) => Err(message)
+    Ok(_) =>
+      try {
+        let file = @async_fs.open(
+          path,
+          mode=WriteOnly,
+          append=true,
+          create_mode=OpenOrCreate,
+        )
+        defer file.close()
+        file.write(content)
+        Ok(AppendFileReply::{
+          path,
+          written: true,
+          bytes_written: bytes_written_for_text(content),
+        })
+      } catch {
+        err => Err("Failed to append file: " + err.to_string())
+      }
+  }
 }
 
 ///|

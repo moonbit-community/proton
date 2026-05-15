@@ -14,9 +14,11 @@ fn register_read_text_op(
   extension : @core.ExtensionContext,
   api_name : String,
 ) -> Unit {
-  extension.op_result(api_name, fn(payload : ReadFilePayload) {
-    with_resolved_path(payload.path, resolve_read_path, fn(resolved_path) {
-      read_text_file(resolved_path, payload.encoding).map(fn(reply) {
+  extension.op_async_result(api_name, async fn(payload : ReadFilePayload) {
+    with_resolved_path_async(payload.path, resolve_read_path, async fn(
+      resolved_path,
+    ) {
+      read_text_file_async(resolved_path, payload.encoding).map(fn(reply) {
         emit_activity(
           extension,
           api_name,
@@ -35,20 +37,23 @@ fn register_write_text_op(
   extension : @core.ExtensionContext,
   api_name : String,
 ) -> Unit {
-  extension.op_result(api_name, fn(payload : WriteFilePayload) {
+  extension.op_async_result(api_name, async fn(payload : WriteFilePayload) {
     ignore(option_bool(payload.flush, false))
-    with_resolved_path(payload.path, resolve_write_path, fn(resolved_path) {
-      write_text_file(resolved_path, payload.content, payload.encoding).map(fn(
-        reply,
-      ) {
-        emit_activity(
-          extension,
-          api_name,
-          path=Some(resolved_path),
-          bytes=Some(reply.bytes_written),
-        )
-        reply
-      })
+    with_resolved_path_async(payload.path, resolve_write_path, async fn(
+      resolved_path,
+    ) {
+      write_text_file_async(resolved_path, payload.content, payload.encoding).map(fn(
+          reply,
+        ) {
+          emit_activity(
+            extension,
+            api_name,
+            path=Some(resolved_path),
+            bytes=Some(reply.bytes_written),
+          )
+          reply
+        },
+      )
     })
   })
 }
@@ -59,20 +64,23 @@ fn register_append_text_op(
   extension : @core.ExtensionContext,
   api_name : String,
 ) -> Unit {
-  extension.op_result(api_name, fn(payload : AppendFilePayload) {
+  extension.op_async_result(api_name, async fn(payload : AppendFilePayload) {
     ignore(option_bool(payload.flush, false))
-    with_resolved_path(payload.path, resolve_write_path, fn(resolved_path) {
-      append_text_file(resolved_path, payload.content, payload.encoding).map(fn(
-        reply,
-      ) {
-        emit_activity(
-          extension,
-          api_name,
-          path=Some(resolved_path),
-          bytes=Some(reply.bytes_written),
-        )
-        reply
-      })
+    with_resolved_path_async(payload.path, resolve_write_path, async fn(
+      resolved_path,
+    ) {
+      append_text_file_async(resolved_path, payload.content, payload.encoding).map(fn(
+          reply,
+        ) {
+          emit_activity(
+            extension,
+            api_name,
+            path=Some(resolved_path),
+            bytes=Some(reply.bytes_written),
+          )
+          reply
+        },
+      )
     })
   })
 }
