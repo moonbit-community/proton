@@ -1,0 +1,3 @@
+Hello from the __MoonBit__ App runtime.
+
+This page talks to the native fs extension through window.__MoonBit__.

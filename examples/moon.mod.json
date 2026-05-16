@@ -15,6 +15,7 @@
       "path": "../manifest"
     },
     "justjavac/ffi": "0.2.0",
+    "moonbitlang/async": "0.18.1",
     "extensions": {
       "path": "../extensions"
     },
@@ -23,6 +24,9 @@
     },
     "justjavac/lepus": {
       "path": ".."
+    },
+    "justjavac/lepus_cef": {
+      "path": "../cef"
     }
   },
   "readme": "README.md",

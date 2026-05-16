@@ -57,6 +57,7 @@ moon -C examples build --target native
 | 34_app_keepawake | Platform-dependent | Focused `keepAwake` extension example |
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
 | 36_app_devtools | Windows-only | Focused `devtools` extension example |
+| 37_cef_mvp | OK | Optional CEF probe with system webview fallback |
 
 ## Notes
 
