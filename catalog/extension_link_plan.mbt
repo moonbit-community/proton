@@ -131,7 +131,7 @@ fn visit_linked_extension(
 ///|
 /// Rejects blank selected extension ids before dependency resolution starts.
 fn normalize_selected_extension_id(id : String) -> Result[String, String] {
-  let normalized = id.trim().to_string()
+  let normalized = id.trim().to_owned()
   if normalized == "" {
     Err(
       CatalogDiagnostic::new(

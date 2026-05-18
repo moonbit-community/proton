@@ -15,7 +15,7 @@ fn replace_template_token(
   }
   template
   .split(replacement.token)
-  .map(part => part.to_string())
+  .map(part => part.to_owned())
   .to_array()
   .join(replacement.value)
 }

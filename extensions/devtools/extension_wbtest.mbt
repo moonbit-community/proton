@@ -10,9 +10,9 @@ test "devtools metadata constants match public spec" {
 test "devtools support check reports current native platform support" {
   let result = ensure_supported()
   if is_windows_ffi() {
-    inspect(result, content="Ok(())")
+    debug_inspect(result, content="Ok(())")
   } else {
-    inspect(
+    debug_inspect(
       result,
       content="Err(\"devtools extension currently supports Windows WebView2 native builds only\")",
     )
@@ -45,7 +45,7 @@ test "devtools native open statuses map to stable replies" {
     Ok(reply) => assert_true(reply.opened)
     Err(error) => fail(error)
   }
-  inspect(
+  debug_inspect(
     open_reply_from_status(open_status_invalid_handle).map(fn(reply) {
       reply.opened
     }),

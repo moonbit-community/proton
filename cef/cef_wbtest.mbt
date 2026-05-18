@@ -2,7 +2,7 @@
 test "cef backend advertises stable id and unavailable shim" {
   inspect(backend_id(), content="cef")
   inspect(is_available(), content="false")
-  inspect(
+  debug_inspect(
     ensure_available(),
     content=(
       #|Err("CEF backend is not linked. Add the CEF SDK/native shim and build an app that explicitly imports justjavac/lepus_cef.")

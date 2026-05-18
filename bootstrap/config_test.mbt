@@ -65,7 +65,7 @@ test "load_app_manifest_from_json applies defaults" {
       assert_eq(manifest.window.size_hint, @manifest.WindowSizeHint::None)
       assert_eq(manifest.debug, 0)
       assert_eq(manifest.windows.length(), 0)
-      assert_eq(loaded.base_dir(), None)
+      @debug.assert_eq(loaded.base_dir(), None)
       match manifest.entry {
         Html(html) => assert_eq(html, "<html></html>")
         _ => abort("expected html entry")
@@ -98,19 +98,19 @@ test "load_app_manifest_document_from_file rebases file entry and preserves sett
             normalize_test_slashes(base_dir).has_suffix("bootstrap/testdata"),
           )
       }
-      assert_eq(
+      @debug.assert_eq(
         document.extension_setting("justjavac/lepus-fs"),
         Some(
           @manifest.ExtensionSetting::enabled(options=Some(Json::object({}))),
         ),
       )
-      assert_eq(
+      @debug.assert_eq(
         document.extension_setting("justjavac/lepus-path"),
         Some(
           @manifest.ExtensionSetting::enabled(options=Some(Json::object({}))),
         ),
       )
-      assert_eq(
+      @debug.assert_eq(
         document.extension_setting("justjavac/lepus-notification"),
         None,
       )
@@ -266,11 +266,11 @@ test "load_app_manifest_document preserves extension settings" {
   match document_result {
     Err(error) => abort(error)
     Ok(document) => {
-      assert_eq(
+      @debug.assert_eq(
         document.extension_setting("justjavac/lepus-path"),
         Some(@manifest.ExtensionSetting::enabled()),
       )
-      assert_eq(
+      @debug.assert_eq(
         document.extension_setting("vendor/echo"),
         Some(
           @manifest.ExtensionSetting::enabled(
@@ -278,7 +278,7 @@ test "load_app_manifest_document preserves extension settings" {
           ),
         ),
       )
-      assert_eq(
+      @debug.assert_eq(
         document.extension_setting("justjavac/lepus-tray"),
         Some(@manifest.ExtensionSetting::disabled()),
       )
@@ -317,8 +317,11 @@ test "app manifest document updates keep previous documents detached" {
     Err(error) => abort(error)
   }
 
-  assert_eq(document.extension_setting("justjavac/lepus-notification"), None)
-  assert_eq(
+  @debug.assert_eq(
+    document.extension_setting("justjavac/lepus-notification"),
+    None,
+  )
+  @debug.assert_eq(
     with_extension.extension_setting("justjavac/lepus-notification"),
     Some(
       @manifest.ExtensionSetting::enabled(
@@ -328,14 +331,14 @@ test "app manifest document updates keep previous documents detached" {
   )
 
   match manifest_document_json(document) {
-    Object(object) => assert_eq(object.get("extensions"), None)
+    Object(object) => @debug.assert_eq(object.get("extensions"), None)
     _ => abort("expected manifest object")
   }
   match manifest_document_json(with_extension) {
     Object(object) =>
       match object.get("extensions") {
         Some(Object(extension_object)) =>
-          assert_eq(
+          @debug.assert_eq(
             extension_object.get("justjavac/lepus-notification"),
             Some(Json::object({ "level": Json::string("info") })),
           )
@@ -375,13 +378,16 @@ test "app manifest document remove_extension_setting clears empty object" {
     Err(error) => abort(error)
   }
 
-  assert_eq(
+  @debug.assert_eq(
     document.extension_setting("justjavac/lepus-notification"),
     Some(@manifest.ExtensionSetting::enabled(options=Some(Json::object({})))),
   )
-  assert_eq(updated.extension_setting("justjavac/lepus-notification"), None)
+  @debug.assert_eq(
+    updated.extension_setting("justjavac/lepus-notification"),
+    None,
+  )
   match manifest_document_json(updated) {
-    Object(object) => assert_eq(object.get("extensions"), None)
+    Object(object) => @debug.assert_eq(object.get("extensions"), None)
     _ => abort("expected manifest object")
   }
 }
@@ -447,24 +453,36 @@ test "app manifest document can replace window entry and debug" {
     Object(object) => {
       match object.get("window") {
         Some(Object(window_object)) => {
-          assert_eq(window_object.get("title"), Some(Json::string("Settings")))
-          assert_eq(window_object.get("width"), Some(ToJson::to_json(420)))
-          assert_eq(window_object.get("height"), Some(ToJson::to_json(320)))
-          assert_eq(window_object.get("size_hint"), Some(Json::string("fixed")))
+          @debug.assert_eq(
+            window_object.get("title"),
+            Some(Json::string("Settings")),
+          )
+          @debug.assert_eq(
+            window_object.get("width"),
+            Some(ToJson::to_json(420)),
+          )
+          @debug.assert_eq(
+            window_object.get("height"),
+            Some(ToJson::to_json(320)),
+          )
+          @debug.assert_eq(
+            window_object.get("size_hint"),
+            Some(Json::string("fixed")),
+          )
         }
         _ => abort("expected window object")
       }
       match object.get("entry") {
         Some(Object(entry_object)) => {
-          assert_eq(entry_object.get("kind"), Some(Json::string("file")))
-          assert_eq(
+          @debug.assert_eq(entry_object.get("kind"), Some(Json::string("file")))
+          @debug.assert_eq(
             entry_object.get("value"),
             Some(Json::string("settings.html")),
           )
         }
         _ => abort("expected entry object")
       }
-      assert_eq(object.get("debug"), Some(ToJson::to_json(2)))
+      @debug.assert_eq(object.get("debug"), Some(ToJson::to_json(2)))
     }
     _ => abort("expected manifest object")
   }
@@ -506,8 +524,11 @@ test "app manifest document persists asset entry kind" {
     Object(object) =>
       match object.get("entry") {
         Some(Object(entry_object)) => {
-          assert_eq(entry_object.get("kind"), Some(Json::string("asset")))
-          assert_eq(
+          @debug.assert_eq(
+            entry_object.get("kind"),
+            Some(Json::string("asset")),
+          )
+          @debug.assert_eq(
             entry_object.get("value"),
             Some(Json::string("frontend/index.html")),
           )
@@ -605,7 +626,7 @@ test "app manifest document can upsert and remove secondary windows" {
   }
 
   match manifest_document_json(without_settings) {
-    Object(object) => assert_eq(object.get("windows"), None)
+    Object(object) => @debug.assert_eq(object.get("windows"), None)
     _ => abort("expected manifest object")
   }
 }
@@ -638,7 +659,7 @@ test "app manifest document to_json returns a detached copy" {
   }
 
   match manifest_document_json(document) {
-    Object(object) => assert_eq(object.get("debug"), None)
+    Object(object) => @debug.assert_eq(object.get("debug"), None)
     _ => abort("expected manifest object")
   }
 }
@@ -668,11 +689,11 @@ test "load_app_manifest_from_json accepts boolean extension settings" {
     Err(error) => abort(error)
     Ok(loaded) => {
       let manifest = loaded.manifest()
-      assert_eq(
+      @debug.assert_eq(
         manifest.extension_setting("justjavac/lepus-fs"),
         Some(@manifest.ExtensionSetting::enabled()),
       )
-      assert_eq(
+      @debug.assert_eq(
         manifest.extension_setting("justjavac/lepus-tray"),
         Some(@manifest.ExtensionSetting::disabled()),
       )

@@ -57,10 +57,10 @@ pub fn ExtensionHost::install(
   self : ExtensionHost,
   extension : Extension,
 ) -> Unit {
-  guard extension.id.trim().to_string() != "" else {
+  guard extension.id.trim().to_owned() != "" else {
     abort("ExtensionHost::install: extension id must not be empty")
   }
-  guard extension.js_namespace.trim().to_string() != "" else {
+  guard extension.js_namespace.trim().to_owned() != "" else {
     abort("ExtensionHost::install: extension namespace must not be empty")
   }
   guard !extension_namespace_is_reserved(extension.js_namespace) else {

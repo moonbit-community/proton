@@ -7,6 +7,10 @@ import {
   "justjavac/lepus_runtime" @wvrt,
 }
 
+import {
+  "moonbitlang/core/debug" @debug,
+} for "wbtest"
+
 supported_targets = "native"
 
 options(

@@ -72,10 +72,10 @@ test "prepare_app expands dependencies in deterministic order" {
   match prepare_app(manifest, registry, base_dir=Some("D:/workspace/app")) {
     Err(error) => abort(error)
     Ok(prepared) => {
-      assert_eq(prepared_extension_ids(prepared), [
+      @debug.assert_eq(prepared_extension_ids(prepared), [
         "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
       ])
-      assert_eq(prepared.base_dir(), Some("D:/workspace/app"))
+      @debug.assert_eq(prepared.base_dir(), Some("D:/workspace/app"))
       let runtime_config = prepared.runtime_config()
       assert_eq(runtime_config.window.title, "Planner")
       assert_eq(runtime_config.window.width, 960)

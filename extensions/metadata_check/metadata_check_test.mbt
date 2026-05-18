@@ -47,7 +47,7 @@ fn assert_metadata_matches_spec(
 ) -> Unit raise {
   assert_eq(descriptor.id(), spec.id())
   assert_eq(descriptor.id(), expected_id)
-  assert_eq(descriptor.dependencies(), spec.dependencies())
+  @debug.assert_eq(descriptor.dependencies(), spec.dependencies())
   assert_eq(descriptor.package_path(), package_path)
   assert_eq(descriptor.spec_symbol(), "spec")
   assert_eq(descriptor.manifest_key(), expected_id)

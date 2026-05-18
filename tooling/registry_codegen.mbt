@@ -178,7 +178,7 @@ fn build_generated_registry_bindings(
 ///|
 /// Validates that the generated function name is a non-empty snake_case identifier.
 fn validate_generated_function_name(name : String) -> Result[String, String] {
-  let normalized = name.trim().to_string()
+  let normalized = name.trim().to_owned()
   guard normalized != "" else {
     return Err("generated registry function name must not be empty")
   }

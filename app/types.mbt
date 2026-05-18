@@ -38,13 +38,13 @@ pub fn ExtensionRegistry::register(
   spec : @core.ExtensionSpec,
 ) -> ExtensionRegistry {
   let id = spec.id()
-  guard id.trim().to_string() != "" else {
+  guard id.trim().to_owned() != "" else {
     abort("ExtensionRegistry::register: extension id must not be empty")
   }
   guard self.specs.get(id) is None else {
     abort("ExtensionRegistry::register: duplicate extension id: " + id)
   }
-  guard spec.js_namespace().trim().to_string() != "" else {
+  guard spec.js_namespace().trim().to_owned() != "" else {
     abort("ExtensionRegistry::register: extension namespace must not be empty")
   }
   self.specs.set(id, spec)

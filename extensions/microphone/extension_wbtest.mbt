@@ -1,9 +1,9 @@
 ///|
 test "microphone sample format labels parse from JavaScript values" {
-  inspect(parse_sample_format(Some("i16")), content="Ok(Some(I16))")
-  inspect(parse_sample_format(Some("u16")), content="Ok(Some(U16))")
-  inspect(parse_sample_format(Some("f32")), content="Ok(Some(F32))")
-  inspect(
+  debug_inspect(parse_sample_format(Some("i16")), content="Ok(Some(I16))")
+  debug_inspect(parse_sample_format(Some("u16")), content="Ok(Some(U16))")
+  debug_inspect(parse_sample_format(Some("f32")), content="Ok(Some(F32))")
+  debug_inspect(
     parse_sample_format(Some("pcm")),
     content="Err(\"unknown microphone sample format: pcm\")",
   )

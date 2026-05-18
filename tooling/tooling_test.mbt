@@ -46,7 +46,7 @@ test "query_extension_catalog lists built-in and third-party extensions" {
     ids.push(summary.id)
   }
   ids.sort()
-  assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/lepus-path"])
+  @debug.assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/lepus-path"])
 
   let json = match
     query_extension_catalog_json([
@@ -89,10 +89,10 @@ test "declared_extension_ids keeps manifest order and filters disabled entries" 
     Err(error) => abort(error)
   }
 
-  assert_eq(declared_extension_ids(document), [
+  @debug.assert_eq(declared_extension_ids(document), [
     "vendor/echo", "justjavac/lepus-path",
   ])
-  assert_eq(declared_extension_ids(document, enabled_only=false), [
+  @debug.assert_eq(declared_extension_ids(document, enabled_only=false), [
     "vendor/echo", "justjavac/lepus-tray", "justjavac/lepus-path",
   ])
 }
@@ -134,7 +134,7 @@ test "generate_registry_module_from_document emits explicit imports and dependen
 
   assert_eq(generated.function_name(), "build_vendor_registry")
   assert_eq(generated.recommended_file_name(), "build_vendor_registry.mbt")
-  assert_eq(generated.extension_ids(), ["vendor/base", "vendor/echo"])
+  @debug.assert_eq(generated.extension_ids(), ["vendor/base", "vendor/echo"])
   assert_true(
     generated
     .moon_pkg_import_block()

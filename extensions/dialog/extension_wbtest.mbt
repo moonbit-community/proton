@@ -7,6 +7,9 @@ test "dialog level maps to native code" {
 
 ///|
 test "dialog empty wide string becomes None path" {
-  assert_eq(optional_path_from_wstr(@ffi.to_wstr("")), None)
-  assert_eq(optional_path_from_wstr(@ffi.to_wstr("demo.txt")), Some("demo.txt"))
+  @debug.assert_eq(optional_path_from_wstr(@ffi.to_wstr("")), None)
+  @debug.assert_eq(
+    optional_path_from_wstr(@ffi.to_wstr("demo.txt")),
+    Some("demo.txt"),
+  )
 }

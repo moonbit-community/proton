@@ -254,7 +254,9 @@ fn read_text_file(
   with_supported_text_encoding(encoding, fn() {
     let content : Result[String, _] = try? @xfs.read_file_to_string(path)
     content
-    .map_err(fn(error) { "Failed to read file: " + error.to_string() })
+    .map_err(fn(error) {
+      "Failed to read file: " + @debug.render(@debug.to_repr(error))
+    })
     .map(fn(content) {
       ReadFileReply::{
         path,
@@ -407,7 +409,7 @@ fn trim_trailing_slash(path : String) -> String {
   while end > 1 && path[end - 1] == '/' {
     end -= 1
   }
-  path[:end].to_string()
+  path[:end].to_owned()
 }
 
 ///|
@@ -426,9 +428,9 @@ fn native_parent_path(path : String) -> String {
   } else if separator == 0 {
     "/"
   } else if separator == 2 && normalized[1] == ':' {
-    normalized[:3].to_string()
+    normalized[:3].to_owned()
   } else {
-    normalized[:separator].to_string()
+    normalized[:separator].to_owned()
   }
 }
 
@@ -518,7 +520,10 @@ fn native_create_dir(path : String) -> Result[Bool, String] {
     let result : Result[Unit, _] = try? @xfs.create_dir(path)
     match result {
       Ok(_) => Ok(true)
-      Err(error) => Err("Failed to create directory: " + error.to_string())
+      Err(error) =>
+        Err(
+          "Failed to create directory: " + @debug.render(@debug.to_repr(error)),
+        )
     }
   }
 }
@@ -548,7 +553,8 @@ fn native_remove_dir(path : String) -> Result[Bool, String] {
   let removed : Result[Unit, _] = try? @xfs.remove_dir(path)
   match removed {
     Ok(_) => Ok(true)
-    Err(error) => Err("Failed to remove directory: " + error.to_string())
+    Err(error) =>
+      Err("Failed to remove directory: " + @debug.render(@debug.to_repr(error)))
   }
 }
 

@@ -36,13 +36,13 @@ test "fs extension native helpers can round-trip a file" {
     Err(error) => abort(error)
   }
   assert_true(native_path_exists(path))
-  assert_eq(native_remove_file(path), Ok(true))
+  @debug.assert_eq(native_remove_file(path), Ok(true))
   assert_false(native_path_exists(path))
 }
 
 ///|
 test "fs extension can map openFile options to native modes" {
-  assert_eq(
+  @debug.assert_eq(
     build_open_mode_from_options(OpenFilePayload::{
       path: "demo.txt",
       flags: Some("rb"),
@@ -55,7 +55,7 @@ test "fs extension can map openFile options to native modes" {
     }),
     Ok("rb"),
   )
-  assert_eq(
+  @debug.assert_eq(
     build_open_mode_from_options(OpenFilePayload::{
       path: "demo.txt",
       flags: None,
@@ -68,7 +68,7 @@ test "fs extension can map openFile options to native modes" {
     }),
     Ok("w+b"),
   )
-  assert_eq(
+  @debug.assert_eq(
     build_open_mode_from_options(OpenFilePayload::{
       path: "demo.txt",
       flags: None,
@@ -108,7 +108,7 @@ test "fs extension native helpers can list a directory" {
     Err(error) => abort(error)
   }
   assert_true(entries.contains(file_name))
-  assert_eq(native_remove_file(path), Ok(true))
+  @debug.assert_eq(native_remove_file(path), Ok(true))
 }
 
 ///|
@@ -139,7 +139,7 @@ test "fs extension append mode writes at the end after seek" {
     Err(error) => abort(error)
   }
   assert_eq(@utf8.decode_lossy(reloaded[:]), "first second")
-  assert_eq(native_remove_file(path), Ok(true))
+  @debug.assert_eq(native_remove_file(path), Ok(true))
 }
 
 ///|
@@ -159,11 +159,11 @@ test "fs extension flushes open handles during destroy cleanup" {
   }
   close_all_open_files(handles, paths)
   assert_false(handles.contains(rid))
-  assert_eq(paths.get(rid), None)
+  @debug.assert_eq(paths.get(rid), None)
   let reply = match read_text_file(path, None) {
     Ok(reply) => reply
     Err(error) => abort(error)
   }
   assert_eq(reply.content, "persist me")
-  assert_eq(native_remove_file(path), Ok(true))
+  @debug.assert_eq(native_remove_file(path), Ok(true))
 }

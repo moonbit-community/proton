@@ -296,7 +296,7 @@ fn parse_accelerator(raw : String) -> Result[ParsedGlobalHotkey, String] {
   let mut key_code : Int? = None
 
   for part in parts {
-    let token = part.to_string().trim().to_string()
+    let token = part.to_owned().trim().to_owned()
     if token.is_empty() {
       return Err("globalHotkey accelerator contains an empty segment")
     }
@@ -437,7 +437,7 @@ fn normalize_accelerator_name(
 ///|
 /// Decodes a key token into its canonical name and native virtual-key code.
 fn decode_virtual_key(raw : String) -> Result[(String, Int), String] {
-  let upper = raw.trim().to_string().to_upper()
+  let upper = raw.trim().to_owned().to_upper()
   if upper.length() == 1 {
     match upper.get_char(0) {
       Some(ch) =>
@@ -492,5 +492,5 @@ fn decode_virtual_key(raw : String) -> Result[(String, Int), String] {
 ///|
 /// Trims and lowercases accelerator tokens before comparison.
 fn normalize_keyword(raw : String) -> String {
-  raw.trim().to_string().to_lower()
+  raw.trim().to_owned().to_lower()
 }

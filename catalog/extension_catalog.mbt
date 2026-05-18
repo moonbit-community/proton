@@ -23,7 +23,7 @@ pub fn ExtensionCatalog::from_descriptors(
   let catalog = ExtensionCatalog::new()
   for descriptor in descriptors {
     let id = descriptor.id()
-    guard id.trim().to_string() != "" else {
+    guard id.trim().to_owned() != "" else {
       return Err(
         CatalogDiagnostic::new(
           InvalidMetadata,
@@ -189,7 +189,8 @@ fn collect_extension_descriptor_files(
     CatalogDiagnostic::new(
       InvalidSearchRoot,
       root,
-      "failed to inspect extension search root: " + error.to_string(),
+      "failed to inspect extension search root: " +
+      @debug.render(@debug.to_repr(error)),
     ).to_error_string()
   })
   .bind(fn(is_dir) {
@@ -259,7 +260,8 @@ fn read_extension_search_directory(
     CatalogDiagnostic::new(
       DirectoryReadFailed,
       directory,
-      "failed to read extension search root: " + error.to_string(),
+      "failed to read extension search root: " +
+      @debug.render(@debug.to_repr(error)),
     ).to_error_string()
   })
 }
@@ -272,7 +274,8 @@ fn is_extension_search_directory(path : String) -> Result[Bool, String] {
     CatalogDiagnostic::new(
       InvalidSearchRoot,
       path,
-      "failed to inspect extension search entry: " + error.to_string(),
+      "failed to inspect extension search entry: " +
+      @debug.render(@debug.to_repr(error)),
     ).to_error_string()
   })
 }

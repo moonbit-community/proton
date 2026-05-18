@@ -3,11 +3,11 @@ test "extension setting helpers preserve enabled state and options" {
   let options = Json::object({ "scope": Json::string("read") })
   let enabled = ExtensionSetting::enabled(options=Some(options))
   assert_true(enabled.is_enabled())
-  assert_eq(enabled.options(), Some(options))
+  @debug.assert_eq(enabled.options(), Some(options))
 
   let disabled = ExtensionSetting::disabled()
   assert_false(disabled.is_enabled())
-  assert_eq(disabled.options(), None)
+  @debug.assert_eq(disabled.options(), None)
 }
 
 ///|
@@ -36,8 +36,8 @@ test "app manifest stores windows and extension settings" {
   assert_eq(manifest.window.height, 720)
   assert_eq(manifest.window.size_hint, None)
   assert_eq(manifest.debug, 2)
-  assert_eq(manifest.windows, [settings_window])
-  assert_eq(
+  @debug.assert_eq(manifest.windows, [settings_window])
+  @debug.assert_eq(
     manifest.extension_setting("justjavac/lepus-fs"),
     Some(
       ExtensionSetting::enabled(
@@ -45,11 +45,11 @@ test "app manifest stores windows and extension settings" {
       ),
     ),
   )
-  assert_eq(
+  @debug.assert_eq(
     manifest.extension_setting("justjavac/lepus-dialog"),
     Some(ExtensionSetting::disabled()),
   )
-  assert_eq(manifest.extension_setting("justjavac/lepus-path"), None)
+  @debug.assert_eq(manifest.extension_setting("justjavac/lepus-path"), None)
   assert_eq(manifest.extension_settings().length(), 2)
 }
 

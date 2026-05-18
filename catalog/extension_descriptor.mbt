@@ -200,7 +200,7 @@ fn read_json_file(path : String) -> Result[Json, String] {
     CatalogDiagnostic::new(
       MissingFile,
       path,
-      "failed to read JSON file: " + error.to_string(),
+      "failed to read JSON file: " + @debug.render(@debug.to_repr(error)),
     ).to_error_string()
   })
   .bind(fn(text) {

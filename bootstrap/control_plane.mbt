@@ -29,7 +29,7 @@ pub fn write_document(
     render_document(document),
   )
   write_result.map_err(fn(error) {
-    "failed to write app manifest: " + error.to_string()
+    "failed to write app manifest: " + @debug.render(@debug.to_repr(error))
   })
 }
 

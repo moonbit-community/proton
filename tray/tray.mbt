@@ -29,10 +29,7 @@ extern "C" fn tray_hide_ffi(state : TrayState) -> Bool = "desktop_tray_hide"
 
 ///|
 #borrow(tooltip)
-extern "C" fn tray_set_tooltip_ffi(
-  state : TrayState,
-  tooltip : Bytes,
-) -> Bool = "desktop_tray_set_tooltip"
+extern "C" fn tray_set_tooltip_ffi(state : TrayState, tooltip : Bytes) -> Bool = "desktop_tray_set_tooltip"
 
 ///|
 /// Returns whether the tray package supports the current platform.

@@ -23,11 +23,11 @@ fn lexical_normalize_native_path(path : String) -> String {
   let (prefix, remainder) = if normalized.length() >= 3 &&
     normalized[1] == ':' &&
     normalized[2] == '/' {
-    (normalized[:3].to_string(), normalized[3:].to_string())
+    (normalized[:3].to_owned(), normalized[3:].to_owned())
   } else if normalized.has_prefix("//") {
-    ("//", normalized[2:].to_string())
+    ("//", normalized[2:].to_owned())
   } else if normalized.has_prefix("/") {
-    ("/", normalized[1:].to_string())
+    ("/", normalized[1:].to_owned())
   } else {
     ("", normalized)
   }
@@ -35,12 +35,12 @@ fn lexical_normalize_native_path(path : String) -> String {
   let mut segments : Array[String] = []
 
   for part in remainder.split("/") {
-    let segment = part.to_string()
+    let segment = part.to_owned()
     if segment == "" || segment == "." {
       ()
     } else if segment == ".." {
       if segments.length() > 0 && segments[segments.length() - 1] != ".." {
-        segments = segments[:segments.length() - 1].to_array()
+        segments = segments[:segments.length() - 1].to_owned()
       } else if !absolute {
         segments.push(segment)
       }
@@ -125,13 +125,13 @@ fn decode_read_bytes(bytes : BytesView) -> String {
 fn overwrite_bytes(original : Bytes, position : Int, patch : Bytes) -> Bytes {
   let original_len = original.length()
   let prefix = if position <= original_len {
-    original[:position].to_bytes()
+    original[:position].to_owned()
   } else {
     original + Bytes::make(position - original_len, b'\x00')
   }
   let suffix_start = position + patch.length()
   let suffix = if suffix_start < original_len {
-    original[suffix_start:].to_bytes()
+    original[suffix_start:].to_owned()
   } else {
     empty_bytes()
   }
@@ -240,7 +240,8 @@ fn read_path_bytes(path : String) -> Result[Bytes, String] {
   let bytes : Result[Bytes, _] = try? @xfs.read_file_to_bytes(path)
   match bytes {
     Ok(bytes) => Ok(bytes)
-    Err(error) => Err("Failed to read file: " + error.to_string())
+    Err(error) =>
+      Err("Failed to read file: " + @debug.render(@debug.to_repr(error)))
   }
 }
 
@@ -252,7 +253,8 @@ fn write_path_bytes(path : String, content : Bytes) -> Result[Unit, String] {
   )
   match write_result {
     Ok(_) => Ok(())
-    Err(error) => Err("Failed to write file: " + error.to_string())
+    Err(error) =>
+      Err("Failed to write file: " + @debug.render(@debug.to_repr(error)))
   }
 }
 
@@ -466,7 +468,8 @@ fn native_remove_file(path : String) -> Result[Bool, String] {
   let removed : Result[Unit, _] = try? @xfs.remove_file(path)
   match removed {
     Ok(_) => Ok(true)
-    Err(error) => Err("Failed to remove file: " + error.to_string())
+    Err(error) =>
+      Err("Failed to remove file: " + @debug.render(@debug.to_repr(error)))
   }
 }
 
@@ -476,7 +479,8 @@ fn native_read_dir(path : String) -> Result[Array[String], String] {
   let entries : Result[Array[String], _] = try? @xfs.read_dir(path)
   match entries {
     Ok(entries) => Ok(entries)
-    Err(error) => Err("Failed to read directory: " + error.to_string())
+    Err(error) =>
+      Err("Failed to read directory: " + @debug.render(@debug.to_repr(error)))
   }
 }
 

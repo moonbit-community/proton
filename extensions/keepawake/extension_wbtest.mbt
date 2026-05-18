@@ -1,14 +1,24 @@
 ///|
+fn parsed_scope_label(scope : String?) -> Result[String?, String] {
+  parse_scope(scope).map(fn(parsed) {
+    match parsed {
+      Some(scope) => Some(scope_label(scope))
+      None => None
+    }
+  })
+}
+
+///|
 test "keep awake scopes parse from JavaScript labels" {
-  inspect(parse_scope(Some("system")), content="Ok(Some(PreventSystemSleep))")
-  inspect(parse_scope(Some("display")), content="Ok(Some(PreventDisplaySleep))")
-  inspect(
-    parse_scope(Some("systemAndDisplay")),
-    content="Ok(Some(PreventSystemAndDisplaySleep))",
+  @debug.assert_eq(parsed_scope_label(Some("system")), Ok(Some("system")))
+  @debug.assert_eq(parsed_scope_label(Some("display")), Ok(Some("display")))
+  @debug.assert_eq(
+    parsed_scope_label(Some("systemAndDisplay")),
+    Ok(Some("systemAndDisplay")),
   )
-  inspect(
-    parse_scope(Some("unknown")),
-    content="Err(\"unknown keepAwake scope: unknown\")",
+  @debug.assert_eq(
+    parsed_scope_label(Some("unknown")),
+    Err("unknown keepAwake scope: unknown"),
   )
 }
 

@@ -4,6 +4,10 @@ import {
   "justjavac/lepus_core" @core,
 }
 
+import {
+  "moonbitlang/core/debug" @debug,
+} for "wbtest"
+
 supported_targets = "native"
 
 options(

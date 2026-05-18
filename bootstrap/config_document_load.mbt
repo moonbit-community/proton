@@ -61,7 +61,10 @@ fn read_app_manifest_text(path : String) -> Result[String, String] {
   let manifest_text : Result[String, _] = try? @mbfs.read_file_to_string(path)
   match manifest_text {
     Ok(text) => Ok(text)
-    Err(error) => Err("failed to read app manifest: " + error.to_string())
+    Err(error) =>
+      Err(
+        "failed to read app manifest: " + @debug.render(@debug.to_repr(error)),
+      )
   }
 }
 

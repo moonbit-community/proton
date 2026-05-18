@@ -21,13 +21,13 @@ fn prepare_native_path(path : String) -> String {
 /// Returns the last path segment, optionally trimming a matching suffix.
 fn basename_path(path : String, suffix? : String? = None) -> String {
   let normalized = normalize_path(path)
-  let name = native_path(normalized).basename().to_string()
+  let name = native_path(normalized).basename().to_owned()
   match suffix {
     Some(suffix) =>
       if suffix != "" &&
         name.length() >= suffix.length() &&
         name.has_suffix(suffix) {
-        name[:name.length() - suffix.length()].to_string()
+        name[:name.length() - suffix.length()].to_owned()
       } else {
         name
       }
@@ -46,7 +46,7 @@ fn dirname_path(path : String) -> String {
 /// Returns the file extension portion of a path.
 fn extname_path(path : String) -> String {
   let normalized = normalize_path(path)
-  native_path(normalized).extname().to_string()
+  native_path(normalized).extname().to_owned()
 }
 
 ///|
@@ -125,7 +125,7 @@ fn root_path(path : String) -> String {
   if normalized.length() >= 3 &&
     normalized[1] == ':' &&
     (normalized[2] == '/' || normalized[2] == '\\') {
-    return normalized[:3].to_string()
+    return normalized[:3].to_owned()
   }
   if normalized.has_prefix("//") || normalized.has_prefix("\\\\") {
     let mut slash_count = 0
@@ -133,14 +133,14 @@ fn root_path(path : String) -> String {
       if normalized[index] == '/' || normalized[index] == '\\' {
         slash_count += 1
         if slash_count == 2 {
-          return normalized[:index + 1].to_string()
+          return normalized[:index + 1].to_owned()
         }
       }
     }
-    return normalized[:2].to_string()
+    return normalized[:2].to_owned()
   }
   if normalized.has_prefix("/") || normalized.has_prefix("\\") {
-    normalized[:1].to_string()
+    normalized[:1].to_owned()
   } else {
     ""
   }
@@ -154,7 +154,7 @@ fn parse_path(path : String) -> ParseReply {
   let name = if ext != "" &&
     base.length() >= ext.length() &&
     base.has_suffix(ext) {
-    base[:base.length() - ext.length()].to_string()
+    base[:base.length() - ext.length()].to_owned()
   } else {
     base
   }

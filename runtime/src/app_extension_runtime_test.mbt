@@ -108,7 +108,7 @@ test "App::extension_host and App::emit_extension deliver runtime events" {
   })
   app.run()
   assert_true(seen_event == Some(expected_event))
-  assert_eq(js_error, None)
+  @debug.assert_eq(js_error, None)
 }
 
 ///|
@@ -250,7 +250,7 @@ test "App runtime exposes __MoonBit__ extensions before page load" {
   app.run()
   assert_true(seen_response == Some(expected_response))
   assert_true(seen_event == Some(expected_event))
-  assert_eq(js_error, None)
+  @debug.assert_eq(js_error, None)
 }
 
 ///|
@@ -385,5 +385,5 @@ test "__MoonBit__ root exposes consolidated extension runtime surfaces" {
   })
   app.run()
   assert_true(seen_report == Some(expected_report))
-  assert_eq(js_error, None)
+  @debug.assert_eq(js_error, None)
 }

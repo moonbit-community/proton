@@ -2,6 +2,10 @@ import {
   "justjavac/ffi" @ffi,
 }
 
+import {
+  "moonbitlang/core/debug" @debug,
+} for "wbtest"
+
 supported_targets = "native"
 
 options(

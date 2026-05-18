@@ -1,7 +1,7 @@
 ///|
 test "notification requires a body" {
-  assert_eq(ensure_body(""), Err("notification body must not be empty"))
-  assert_eq(ensure_body("ready"), Ok("ready"))
+  @debug.assert_eq(ensure_body(""), Err("notification body must not be empty"))
+  @debug.assert_eq(ensure_body("ready"), Ok("ready"))
 }
 
 ///|

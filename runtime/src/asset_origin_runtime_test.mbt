@@ -61,6 +61,6 @@ test "AppEntry::Asset loads through a secure isolated origin" {
     webview.terminate()
   })
   app.run()
-  assert_eq(js_error, None)
+  @debug.assert_eq(js_error, None)
   assert_true(report == Some(expected))
 }

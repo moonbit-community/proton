@@ -130,6 +130,6 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
     ),
   )
   webview.run()
-  assert_eq(js_error, None)
+  @debug.assert_eq(js_error, None)
   assert_true(seen_report == Some(expected_report))
 }

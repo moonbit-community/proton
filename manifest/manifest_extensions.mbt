@@ -3,7 +3,7 @@
 pub(all) enum ExtensionSetting {
   Disabled
   Enabled(Json?)
-} derive(Eq)
+} derive(Debug, Eq)
 
 ///|
 pub impl Show for ExtensionSetting with output(self, logger) {
@@ -11,7 +11,7 @@ pub impl Show for ExtensionSetting with output(self, logger) {
     Disabled => logger.write_string("Disabled")
     Enabled(options) => {
       logger.write_string("Enabled(")
-      logger.write_object(options)
+      logger.write_string(@debug.render(@debug.to_repr(options)))
       logger.write_string(")")
     }
   }

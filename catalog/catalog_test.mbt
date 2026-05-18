@@ -72,7 +72,7 @@ test "discover_extension_descriptor_files can target one extension package" {
     Err(error) => abort(error)
   }
 
-  assert_eq(catalog.descriptor_ids(), ["justjavac/lepus-path"])
+  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/lepus-path"])
 }
 
 ///|
@@ -88,7 +88,7 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
 
   let ids = catalog.descriptor_ids()
   ids.sort()
-  assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/lepus-path"])
+  @debug.assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/lepus-path"])
 
   let schema = match catalog.load_schema("vendor/echo") {
     Ok(schema) => schema
@@ -99,7 +99,10 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
   assert_true(schema.path().has_suffix("options.schema.json"))
   match schema.json() {
     Object(object) =>
-      assert_eq(object.get("title"), Some(Json::string("vendor echo options")))
+      @debug.assert_eq(
+        object.get("title"),
+        Some(Json::string("vendor echo options")),
+      )
     _ => abort("expected schema object")
   }
 }
@@ -126,7 +129,7 @@ test "build_extension_link_plan expands metadata dependencies in order" {
     Err(error) => abort(error)
   }
 
-  assert_eq(plan.extension_ids(), [
+  @debug.assert_eq(plan.extension_ids(), [
     "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
   ])
   assert_eq(plan.inputs()[0].package_path(), "extensions/path")

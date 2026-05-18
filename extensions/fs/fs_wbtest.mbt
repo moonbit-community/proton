@@ -46,7 +46,10 @@ fn write_text_fixture(path : String, content : String) -> Unit {
   )
   match write_result {
     Ok(_) => ()
-    Err(error) => abort("Failed to write fixture file: " + error.to_string())
+    Err(error) =>
+      abort(
+        "Failed to write fixture file: " + @debug.render(@debug.to_repr(error)),
+      )
   }
 }
 
@@ -103,7 +106,7 @@ async test "fs async path api can read write and append text files" {
     }
     Err(error) => abort(error)
   }
-  assert_eq(native_remove_file(path), Ok(true))
+  @debug.assert_eq(native_remove_file(path), Ok(true))
 }
 
 ///|
@@ -241,8 +244,8 @@ test "fs path api can stat rename and copy files" {
   assert_false(native_path_exists(path))
   assert_true(native_path_exists(renamed))
   assert_true(native_path_exists(copied))
-  assert_eq(native_remove_file(renamed), Ok(true))
-  assert_eq(native_remove_file(copied), Ok(true))
+  @debug.assert_eq(native_remove_file(renamed), Ok(true))
+  @debug.assert_eq(native_remove_file(copied), Ok(true))
 }
 
 ///|
@@ -264,8 +267,8 @@ test "fs path api can create directories recursively" {
   assert_true(native_path_exists(child))
   assert_true(is_path_dir(child))
 
-  assert_eq(native_remove_dir(child), Ok(true))
-  assert_eq(native_remove_dir(root), Ok(true))
+  @debug.assert_eq(native_remove_dir(child), Ok(true))
+  @debug.assert_eq(native_remove_dir(root), Ok(true))
 }
 
 ///|
@@ -292,9 +295,9 @@ test "fs path api can list directories recursively" {
     Err(error) => abort(error)
   }
 
-  assert_eq(native_remove_file(file), Ok(true))
-  assert_eq(native_remove_dir(child), Ok(true))
-  assert_eq(native_remove_dir(root), Ok(true))
+  @debug.assert_eq(native_remove_file(file), Ok(true))
+  @debug.assert_eq(native_remove_dir(child), Ok(true))
+  @debug.assert_eq(native_remove_dir(root), Ok(true))
 }
 
 ///|
@@ -340,5 +343,5 @@ test "fs path api can truncate files and measure size" {
     Ok(size) => assert_eq(size, 3)
     Err(error) => abort(error)
   }
-  assert_eq(native_remove_file(path), Ok(true))
+  @debug.assert_eq(native_remove_file(path), Ok(true))
 }

@@ -44,7 +44,7 @@ fn config_base_dir(path : String) -> String {
 ///|
 /// Trims and lowercases config keywords before comparison.
 fn normalize_keyword(raw : String) -> String {
-  raw.trim().to_string().to_lower()
+  raw.trim().to_owned().to_lower()
 }
 
 ///|

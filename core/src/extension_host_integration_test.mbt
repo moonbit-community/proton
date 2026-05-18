@@ -103,5 +103,5 @@ test "Webview::emit_extension delivers events to JavaScript listeners" {
   )
   webview.run()
   assert_true(seen_event == Some(expected_event))
-  assert_eq(js_error, None)
+  @debug.assert_eq(js_error, None)
 }
