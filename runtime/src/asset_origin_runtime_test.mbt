@@ -9,8 +9,28 @@ struct AssetOriginReport {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+/// Resolves one fixture path by searching the current directory and its parents.
+fn resolve_fixture_path(candidates : Array[String]) -> String {
+  let mut prefix = ""
+  let mut depth = 0
+  while depth < 8 {
+    for candidate in candidates {
+      let resolved = prefix + candidate
+      if @mbfs.path_exists(resolved) {
+        return resolved
+      }
+    }
+    prefix = prefix + "../"
+    depth = depth + 1
+  }
+  abort("missing runtime asset origin fixture: " + candidates[0])
+}
+
+///|
 fn asset_origin_test_path(relative_path : String) -> String {
-  let root : @path.Path = "testdata/asset_origin"
+  let root : @path.Path = resolve_fixture_path([
+    "testdata/asset_origin", "runtime/testdata/asset_origin",
+  ])
   root.join(relative_path).resolve().to_string()
 }
 
