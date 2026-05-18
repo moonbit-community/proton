@@ -11,6 +11,7 @@ priv struct OpInvocation {
 priv struct OpRuntime {
   webview : @webview.Webview
   registry : OpRegistry
+  executor : AsyncExecutor
   binding_name : String
   destroy_hook_name : String
   default_registry_key : Int64?
@@ -53,6 +54,7 @@ fn make_op_runtime(
   let runtime = OpRuntime::{
     webview,
     registry: OpRegistry::new(),
+    executor: AsyncExecutor::new(),
     binding_name,
     destroy_hook_name,
     default_registry_key,
@@ -72,6 +74,7 @@ fn OpRuntime::destroy(self : OpRuntime) -> Unit {
     None => ()
   }
   self.extension_host = None
+  self.executor.close()
   self.webview.unregister_destroy_hook(self.destroy_hook_name)
   self.webview.unbind(self.binding_name)
 }
@@ -173,7 +176,9 @@ fn OpRuntime::handle_async_request(
   id : String,
   request : OpInvocation,
 ) -> Unit {
-  self.registry.call_async(request.name, request.payload, fn(reply) {
+  self.registry.call_async(self.executor, request.name, request.payload, fn(
+    reply,
+  ) {
     match reply {
       Ok(reply) => self.webview.response(id, 0, reply.stringify())
       Err(message) =>
