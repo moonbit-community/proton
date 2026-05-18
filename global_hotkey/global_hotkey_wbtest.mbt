@@ -1,15 +1,15 @@
 ///|
 test "globalHotkey parses modifier shortcuts" {
-  inspect(
+  debug_inspect(
     parse_accelerator("ctrl+shift+k"),
-    content="Ok({normalized: \"Ctrl+Shift+K\", modifiers: 6, key: 75})",
+    content="Ok({ normalized: \"Ctrl+Shift+K\", modifiers: 6, key: 75 })",
   )
 }
 
 ///|
 test "globalHotkey parses function keys" {
-  inspect(
+  debug_inspect(
     parse_accelerator("Alt+F12"),
-    content="Ok({normalized: \"Alt+F12\", modifiers: 1, key: 123})",
+    content="Ok({ normalized: \"Alt+F12\", modifiers: 1, key: 123 })",
   )
 }

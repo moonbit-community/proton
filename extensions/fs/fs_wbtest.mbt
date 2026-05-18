@@ -28,12 +28,12 @@ test "fs helper script stays with fs extension assets" {
 test "fs shared buffer helpers validate transfer sizes" {
   assert_eq(shared_buffer_capacity(0), 1)
   assert_eq(shared_buffer_capacity(8), 8)
-  inspect(validate_shared_buffer_size(0), content="Ok(())")
-  inspect(
+  debug_inspect(validate_shared_buffer_size(0), content="Ok(())")
+  debug_inspect(
     validate_shared_buffer_size(-1),
     content="Err(\"fs SharedArrayBuffer size must be non-negative\")",
   )
-  inspect(
+  debug_inspect(
     validate_shared_buffer_size(shared_buffer_max_transfer_size + 1),
     content="Err(\"fs SharedArrayBuffer size exceeds the 64 MiB transfer limit: 67108865\")",
   )
