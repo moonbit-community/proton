@@ -15,6 +15,7 @@ import {
 supported_targets = "+native"
 
 options(
+  "native-stub": [ "async_executor_native.c" ],
   "pre-build": [
     {
       "command": "node $mod_dir/../scripts/embed_asset.mjs $input $output moonbit_core_template_resource",
@@ -28,6 +29,7 @@ options(
     },
   ],
   targets: {
+    "async_executor_native.c": [ "native" ],
     "async_runtime.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
     "core_js_wbtest.mbt": [ "native" ],
