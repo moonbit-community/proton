@@ -2,7 +2,7 @@
   "name": "justjavac/lepus_app",
   "version": "0.1.0",
   "deps": {
-    "moonbitlang/x": "0.4.41",
+    "moonbitlang/x": "0.4.43",
     "justjavac/lepus_bootstrap": {
       "path": "../bootstrap"
     },
