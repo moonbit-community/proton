@@ -30,6 +30,22 @@ struct OpsRuntimeReport {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+struct SleepPayload {
+  ms : Int
+} derive(ToJson, FromJson, Eq, Debug)
+
+///|
+struct SleepReply {
+  done : Bool
+} derive(ToJson, FromJson, Eq, Debug)
+
+///|
+struct AsyncSleepReport {
+  reply : SleepReply
+  timer_fired_before_reply : Bool
+} derive(ToJson, FromJson, Eq, Debug)
+
+///|
 /// Decodes the single callback argument payload used by the integration tests.
 fn[Payload : @json.FromJson] decode_single_argument(
   raw_req : Bytes,

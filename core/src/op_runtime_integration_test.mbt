@@ -133,3 +133,108 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
   @debug.assert_eq(js_error, None)
   assert_true(seen_report == Some(expected_report))
 }
+
+///|
+test "async extension ops run away from the webview event loop" {
+  let expected_report = AsyncSleepReport::{
+    reply: SleepReply::{ done: true },
+    timer_fired_before_reply: true,
+  }
+  let mut seen_report : AsyncSleepReport? = None
+  let mut js_error : String? = None
+  let webview = @webview.Webview::new()
+  @lepus_core.install_extension(
+    webview,
+    @lepus_core.Extension::new("tests/sleep", "sleep", fn(extension) {
+      extension.op_async_result("wait", async fn(payload : SleepPayload) {
+        @async.sleep(payload.ms)
+        Ok(SleepReply::{ done: true })
+      })
+    }),
+  )
+  webview.bind("reportSleepFailure", fn(id, req) {
+    let request_id = @ffi.from_cstr(id)
+    let message_result : Result[String, String] = decode_single_argument(req)
+    match message_result {
+      Ok(message) => js_error = Some(message)
+      Err(message) =>
+        js_error = Some("Failed to decode sleep failure payload: " + message)
+    }
+    webview.response(request_id, 0, "null")
+    webview.terminate()
+  })
+  webview.bind("reportSleepRuntime", fn(id, req) {
+    let request_id = @ffi.from_cstr(id)
+    let report_result : Result[AsyncSleepReport, String] = decode_single_argument(
+      req,
+    )
+    match report_result {
+      Ok(report) => seen_report = Some(report)
+      Err(message) =>
+        js_error = Some("Failed to decode sleep runtime report: " + message)
+    }
+    webview.response(request_id, 0, "null")
+    webview.terminate()
+  })
+  webview.set_html(
+    (
+      #| <html>
+      #|   <body>
+      #|     <script>
+      #|       const reportFailure = (message) =>
+      #|         window.reportSleepFailure(message).catch(() => {});
+      #|       const waitFor = (predicate, onReady, label, attempts = 0) => {
+      #|         if (predicate()) {
+      #|           onReady();
+      #|           return;
+      #|         }
+      #|         if (attempts >= 50) {
+      #|           void reportFailure(label + " timeout");
+      #|           return;
+      #|         }
+      #|         window.setTimeout(() => {
+      #|           waitFor(predicate, onReady, label, attempts + 1);
+      #|         }, 20);
+      #|       };
+      #|       window.addEventListener("error", (event) => {
+      #|         void reportFailure("window error: " + String(event.message));
+      #|       });
+      #|       window.addEventListener("unhandledrejection", (event) => {
+      #|         void reportFailure("unhandled rejection: " + String(event.reason));
+      #|       });
+      #|       window.addEventListener("load", () => {
+      #|         waitFor(
+      #|           () => !!window.__MoonBit__?.sleep,
+      #|           () => {
+      #|             let timerFired = false;
+      #|             window.setTimeout(() => {
+      #|               timerFired = true;
+      #|             }, 50);
+      #|             const timeoutId = window.setTimeout(() => {
+      #|               void reportFailure("sleep op timeout");
+      #|             }, 1200);
+      #|             window.__MoonBit__.sleep.wait({ ms: 250 })
+      #|               .then((reply) => {
+      #|                 window.clearTimeout(timeoutId);
+      #|                 return window.reportSleepRuntime({
+      #|                   reply,
+      #|                   timer_fired_before_reply: timerFired,
+      #|                 });
+      #|               })
+      #|               .catch((error) => {
+      #|                 window.clearTimeout(timeoutId);
+      #|                 void reportFailure("sleep op transport error: " + String(error));
+      #|               });
+      #|           },
+      #|           "sleep extension",
+      #|         );
+      #|       });
+      #|     </script>
+      #|   </body>
+      #| </html> ,
+    ),
+  )
+  webview.run()
+  @debug.assert_eq(js_error, None)
+  assert_true(seen_report == Some(expected_report))
+}
