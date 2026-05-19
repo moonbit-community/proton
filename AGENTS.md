@@ -11,7 +11,6 @@
 - `catalog/`: discovery, indexing, schema validation, and linking-plan helpers for metadata-driven tooling.
 - `tooling/`: AI- and developer-facing catalog queries plus generated registry-module edits; future expansion can add scaffold, install, doctor, and manifest mutation workflows.
 - `examples/`: runnable demos; prefer keeping [examples/Readme.md](examples/Readme.md) in sync with the actual examples.
-- `test/`: root integration tests.
 - `lib/`, `build/`, `_build/`, `target/`: generated or vendored artifacts.
 
 ## Build And Test
@@ -24,7 +23,6 @@
 - `moon -C catalog check --target native`
 - `moon -C tooling check --target native`
 - `moon -C extensions test --target native`
-- `moon -C test test --target native`
 - `moon -C examples build --target native`
 - `moon fmt` or `moon fmt --check`
 - `moon info --target native`, `moon -C manifest info --target native`, `moon -C core info --target native`, `moon -C runtime info --target native`, `moon -C bootstrap info --target native`, `moon -C app info --target native`, `moon -C catalog info --target native`, `moon -C tooling info --target native`, `moon -C extensions info --target native`

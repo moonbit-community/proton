@@ -2,8 +2,11 @@ name: ci
 
 on: [push, pull_request]
 
+env:
+  WEBVIEW2_SDK_VERSION: 1.0.3967.48
+
 jobs:
-  stable:
+  moonbit:
     strategy:
       matrix:
         os:
@@ -16,13 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: install
+      - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
-      - name: install on windows
+      - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
@@ -46,202 +49,97 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: format check
+      - name: Install WebView2 SDK headers
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "webview2.zip"
+          $extractDir = Join-Path $env:RUNNER_TEMP "webview2"
+          $includeDir = "build\_deps\microsoft_web_webview2-src\build\native\include"
+          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/$env:WEBVIEW2_SDK_VERSION" -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $extractDir -Force
+          New-Item -ItemType Directory -Force -Path $includeDir | Out-Null
+          Copy-Item -Path (Join-Path $extractDir "build\native\include\*") -Destination $includeDir -Recurse -Force
+
+      - name: Format check
         run: |
           moon fmt --check
 
-      - name: moon check
+      - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
-        run: moon check --target native --deny-warn
+        run: |
+          moon check --target native --deny-warn
+          moon -C manifest check --target native --deny-warn
+          moon -C core check --target native --deny-warn
+          moon -C runtime check --target native --deny-warn
+          moon -C bootstrap check --target native --deny-warn
+          moon -C app check --target native --deny-warn
+          moon -C catalog check --target native --deny-warn
+          moon -C tooling check --target native --deny-warn
+          moon -C cef check --target native --deny-warn
 
-      - name: moon check (windows)
+      - name: Check framework modules on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
-        run: moon check --target native --deny-warn
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          moon check --target native --deny-warn
+          moon -C manifest check --target native --deny-warn
+          moon -C core check --target native --deny-warn
+          moon -C runtime check --target native --deny-warn
+          moon -C bootstrap check --target native --deny-warn
+          moon -C app check --target native --deny-warn
+          moon -C catalog check --target native --deny-warn
+          moon -C tooling check --target native --deny-warn
+          moon -C cef check --target native --deny-warn
 
-      - name: runtime check
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: moon -C runtime check --target native --deny-warn
-
-      - name: runtime check (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-        run: moon -C runtime check --target native --deny-warn
-
-      - name: extensions check
+      - name: Check extension catalog on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: moon -C extensions check --target native
 
-      - name: extensions test (windows)
+      - name: Test extensions on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
           PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
         run: moon -C extensions test --target native
 
-      - name: Run root integration tests (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-          PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
-        run: |
-          moon -C test test --target native
-
-      - name: Compile root integration package (non-windows)
+      - name: Check standalone native packages on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon -C test check --target native
+          moon -C notification check --target native
+          moon -C tray check --target native
+          moon -C global_hotkey check --target native
 
-      - name: Run standalone Windows-native module tests
+      - name: Test standalone native packages on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
           PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           moon -C notification test --target native
           moon -C tray test --target native
           moon -C global_hotkey test --target native
 
-      - name: examples build
+      - name: Build examples
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon -C examples build --target native
 
-      - name: examples build (windows)
+      - name: Build examples on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
         run: |
           moon -C examples build --target native
 
-      - name: check core size on windows
+      - name: List Windows example binaries
         if: ${{ matrix.os == 'windows-latest' }}
         run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
 
-      - name: check native binary size on unix
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: find ./examples/target -type f | xargs ls -lh
-
-  nightly:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
-    continue-on-error: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: install
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
-          echo "$HOME/.moon/bin" >> $GITHUB_PATH
-
-      - name: install on windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          MOONBIT_INSTALL_VERSION: nightly
-        run: |
-          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
-          "C:\Users\runneradmin\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-
-      - name: Install Linux native dependencies
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
-
-      - name: moon version
-        run: |
-          moon version --all
-
-      - name: moon update
-        run: |
-          moon update
-
-      - name: Setup MSVC
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: moon check
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: moon check --target native
-
-      - name: moon check (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-        run: |
-          moon check --target native
-
-      - name: runtime check
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: moon -C runtime check --target native
-
-      - name: runtime check (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-        run: moon -C runtime check --target native
-
-      - name: extensions check
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: moon -C extensions check --target native
-
-      - name: extensions test (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-          PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
-        run: moon -C extensions test --target native
-
-      - name: Run root integration tests (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-          PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
-        run: |
-          moon -C test test --target native
-
-      - name: Compile root integration package (non-windows)
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: moon -C test check --target native
-
-      - name: Run standalone Windows-native module tests
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-          PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
-        run: |
-          moon -C notification test --target native
-          moon -C tray test --target native
-          moon -C global_hotkey test --target native
-
-      - name: format check
-        run: |
-          moon fmt --check
-
-      - name: examples build
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          moon -C examples build --target native
-
-      - name: examples build (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-        run: |
-          moon -C examples build --target native
-
-      - name: check core size on windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
-
-      - name: check native binary size on unix
+      - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
         run: find ./examples/target -type f | xargs ls -lh
