@@ -58,6 +58,22 @@ function linuxSystemLinkFlags() {
   }
 }
 
+function parsePkgConfigLibs(rawFlags) {
+  const libs = [];
+  const searchPaths = [];
+  const otherFlags = [];
+  for (const flag of rawFlags.split(/\s+/).map((value) => value.trim()).filter(Boolean)) {
+    if (flag.startsWith("-l") && flag.length > 2) {
+      libs.push(flag.slice(2));
+    } else if (flag.startsWith("-L") && flag.length > 2) {
+      searchPaths.push(nativeLinkPath(flag.slice(2)));
+    } else {
+      otherFlags.push(flag);
+    }
+  }
+  return { libs, searchPaths, otherFlags };
+}
+
 function main() {
   const payload = JSON.parse(fs.readFileSync(0, "utf8"));
   const env = payload.env ?? {};
@@ -111,7 +127,7 @@ function main() {
         {
           package: "justjavac/lepus",
           link_search_paths: [platformLibDir],
-          link_libs: ["webview", "dl"],
+          link_libs: ["webview", "c++", "dl"],
           link_flags: linkFlags,
         },
       ],
@@ -128,7 +144,8 @@ function main() {
       mode === "static" ? "libwebview.a" : "libwebview.so",
     ),
   );
-  const linkFlags = linuxSystemLinkFlags();
+  const pkgConfig = parsePkgConfigLibs(linuxSystemLinkFlags());
+  let linkFlags = pkgConfig.otherFlags.join(" ");
   if (mode === "shared") {
     linkFlags += ` -Wl,-rpath,${platformLibDir}`;
   }
@@ -136,9 +153,9 @@ function main() {
     link_configs: [
       {
         package: "justjavac/lepus",
-        link_search_paths: [platformLibDir],
-        link_libs: ["webview", "dl"],
-        link_flags: linkFlags,
+        link_search_paths: [platformLibDir, ...pkgConfig.searchPaths],
+        link_libs: ["webview", "stdc++", "dl", ...pkgConfig.libs],
+        ...(linkFlags.length > 0 ? { link_flags: linkFlags } : {}),
       },
     ],
   }));
