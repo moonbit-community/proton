@@ -9,6 +9,7 @@ fn main {
     ),
     @manifest.AppEntry::Html(resource),
     debug=1,
+    extensions={ "justjavac/lepus-tray": @manifest.ExtensionSetting::enabled() },
   )
   let registry = @app.ExtensionRegistry::new()
   let _ = registry.register(@tray.spec())
