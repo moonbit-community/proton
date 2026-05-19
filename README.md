@@ -160,7 +160,8 @@ This repo targets `native` only.
 - Windows users still need Microsoft WebView2 Runtime installed
 - Windows shared builds need `lib/windows-x64/shared/webview.dll` beside the final executable or on `PATH`
 - `clipboard` comes from the published Mooncakes package `justjavac/clipboard`.
-- WIP: `dialog`, `shell`, `notification`, `tray`, and `globalHotkey` are currently Windows-native in this repository.
+- WIP: `dialog`, `shell`, `notification`, and `globalHotkey` are currently Windows-native in this repository.
+- `tray` is provided by the published Mooncakes package `justjavac/tray`.
 
 ## License
 

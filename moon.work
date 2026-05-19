@@ -9,7 +9,6 @@ members = [
   "./examples",
   "./extensions",
   "./notification",
-  "./tray",
   "./global_hotkey",
   "./runtime",
   "./cef",
