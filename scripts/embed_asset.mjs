@@ -3,10 +3,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
+const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+function fail(message) {
+  console.error(message);
+  process.exit(1);
+}
+
 function usage() {
-  throw new Error(
-    "Usage: node embed_asset.mjs <input> <output> <identifier>",
-  );
+  fail("Usage: node ./scripts/embed_asset.mjs <input> <output> <identifier>");
 }
 
 function escapeMoonBitLine(line) {
@@ -17,6 +22,9 @@ function main() {
   const [, , inputArg, outputArg, identifier] = process.argv;
   if (!inputArg || !outputArg || !identifier) {
     usage();
+  }
+  if (!IDENTIFIER_PATTERN.test(identifier)) {
+    fail(`Invalid MoonBit identifier: ${identifier}`);
   }
 
   const inputPath = path.resolve(inputArg);
@@ -33,6 +41,7 @@ function main() {
     "",
   ].join("\n");
 
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, output);
 }
 

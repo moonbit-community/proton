@@ -2,9 +2,25 @@
 
 This directory holds small repository maintenance scripts.
 
+## `embed_asset.mjs`
+
+Embeds a text asset into a generated MoonBit source file as a multiline
+`String`. It is used by `moon.pkg` pre-build steps in `core/` and built-in
+extensions.
+
+### Usage
+
+```sh
+node ./scripts/embed_asset.mjs <input> <output> <identifier>
+```
+
+The identifier must be a lower-snake-case MoonBit binding name. The script
+creates the output directory when needed.
+
 ## `sync_libwebview.mjs`
 
-Refreshes the vendored native libraries under [`lib/`](lib) from a GitHub Actions run in [`justjavac/libwebview`](https://github.com/justjavac/libwebview).
+Refreshes the vendored native libraries under [`lib/`](../lib) from a GitHub
+Actions run in [`justjavac/libwebview`](https://github.com/justjavac/libwebview).
 
 ### Requirements
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -29,12 +31,21 @@ function fail(message) {
   process.exit(1);
 }
 
+function usage() {
+  console.log(
+    "Usage: node ./scripts/sync_libwebview.mjs [--repo owner/name] [--run-id 123]",
+  );
+}
+
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: "utf8",
     stdio: options.captureOutput ? "pipe" : "inherit",
     ...options,
   });
+  if (result.error) {
+    fail(`${command} failed: ${result.error.message}`);
+  }
   if (result.status !== 0) {
     const details = options.captureOutput
       ? (result.stderr || result.stdout || "").trim()
@@ -51,22 +62,35 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--repo") {
-      repo = argv[index + 1] ?? fail("Missing value for --repo.");
+      repo = readOptionValue(argv, index, "--repo");
       index += 1;
     } else if (arg === "--run-id") {
-      runId = argv[index + 1] ?? fail("Missing value for --run-id.");
+      runId = readOptionValue(argv, index, "--run-id");
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
-      console.log(
-        "Usage: node ./scripts/sync_libwebview.mjs [--repo owner/name] [--run-id 123]",
-      );
+      usage();
       process.exit(0);
     } else {
       fail(`Unknown argument: ${arg}`);
     }
   }
 
+  if (!/^[^/\s]+\/[^/\s]+$/.test(repo)) {
+    fail(`Invalid repository name: ${repo}`);
+  }
+  if (runId && !/^\d+$/.test(runId)) {
+    fail(`Invalid run id: ${runId}`);
+  }
+
   return { repo, runId };
+}
+
+function readOptionValue(argv, index, optionName) {
+  const value = argv[index + 1];
+  if (!value || value.startsWith("-")) {
+    fail(`Missing value for ${optionName}.`);
+  }
+  return value;
 }
 
 function repoRoot() {
@@ -93,7 +117,12 @@ function latestSuccessfulRunId(repo) {
     ],
     { captureOutput: true },
   );
-  const runs = JSON.parse(output);
+  let runs;
+  try {
+    runs = JSON.parse(output);
+  } catch (error) {
+    fail(`Could not parse GitHub CLI output: ${error.message}`);
+  }
   const successful = runs.find((run) => run.conclusion === "success");
   if (!successful) {
     fail(`No successful libwebview workflow run found in ${repo}.`);
@@ -106,18 +135,20 @@ function copyArtifact(downloadRoot, libRoot, artifact) {
   if (!existsSync(artifactRoot)) {
     fail(`Downloaded artifact is missing: ${artifact.name}`);
   }
+  const sourceLibrary = path.join(artifactRoot, ...artifact.sourceLibrary);
+  const sourceBuildInfo = path.join(artifactRoot, "BUILD_INFO.txt");
+  if (!existsSync(sourceLibrary)) {
+    fail(`Downloaded artifact is missing library: ${sourceLibrary}`);
+  }
+  if (!existsSync(sourceBuildInfo)) {
+    fail(`Downloaded artifact is missing build info: ${sourceBuildInfo}`);
+  }
 
   const targetDir = path.join(libRoot, artifact.targetDir);
   mkdirSync(targetDir, { recursive: true });
 
-  copyFileSync(
-    path.join(artifactRoot, ...artifact.sourceLibrary),
-    path.join(targetDir, artifact.targetLibrary),
-  );
-  copyFileSync(
-    path.join(artifactRoot, "BUILD_INFO.txt"),
-    path.join(targetDir, "BUILD_INFO.txt"),
-  );
+  copyFileSync(sourceLibrary, path.join(targetDir, artifact.targetLibrary));
+  copyFileSync(sourceBuildInfo, path.join(targetDir, "BUILD_INFO.txt"));
 }
 
 function main() {
