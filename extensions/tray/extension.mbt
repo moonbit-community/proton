@@ -35,11 +35,11 @@ fn ensure_supported() -> Result[Unit, String] {
 }
 
 ///|
-/// Creates the native tray handle for the current app window when supported.
-fn init_tray(extension : @core.ExtensionContext) -> @sys_tray.Tray? {
+/// Creates the native tray handle for this extension when supported.
+fn init_tray() -> @sys_tray.Tray? {
   match ensure_supported() {
     Ok(_) =>
-      match @sys_tray.create(extension.webview().get_window()) {
+      match @sys_tray.create(identifier="justjavac.lepus.tray") {
         Ok(handle) => Some(handle)
         Err(_) => None
       }
@@ -90,7 +90,7 @@ pub fn extension() -> @core.Extension {
     extension_id,
     extension_namespace,
     fn(extension) {
-      tray_handle = init_tray(extension)
+      tray_handle = init_tray()
 
       extension.op_result("show", fn(payload : TrayShowPayload) {
         with_tray_handle(tray_handle, fn(handle) {
