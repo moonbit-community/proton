@@ -8,7 +8,6 @@ members = [
   "./tooling",
   "./examples",
   "./extensions",
-  "./notification",
   "./global_hotkey",
   "./runtime",
   "./cef",
