@@ -58,10 +58,15 @@ moon -C examples build --target native
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
 | 36_app_devtools | Windows-only | Focused `devtools` extension example |
 | 37_cef_mvp | OK | Optional CEF probe with system webview fallback |
+| 38_async_executor_queue | OK | Low-level custom native executor queue |
+| 39_async_extension_add | OK | Recommended async extension op using `op_async_result` |
+| 40_event_broadcast | OK | Event-only broadcast flow with `extension.emit(...)` |
 
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
 - Examples `19` through `36` show app-style startup with `justjavac/lepus_app`.
+- Example `39` shows the preferred async extension shape: no custom queue in extension code.
+- Example `40` separates event broadcast from request/response returns.
 - App examples declare extensions in MoonBit code and keep per-extension options in `app.json.extensions`.
 - Frontend code should use `window.__MoonBit__` throughout.
