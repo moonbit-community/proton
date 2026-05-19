@@ -9,6 +9,9 @@ fn main {
     ),
     @manifest.AppEntry::Html(resource),
     debug=1,
+    extensions={
+      "justjavac/lepus-notification": @manifest.ExtensionSetting::enabled(),
+    },
   )
   let registry = @app.ExtensionRegistry::new()
   let _ = registry.register(@notification.spec())

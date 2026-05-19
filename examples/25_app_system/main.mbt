@@ -4,6 +4,11 @@ fn main {
     @manifest.WindowManifest::new("MoonBit System Runtime", 1080, 760),
     @manifest.AppEntry::Html(resource),
     debug=1,
+    extensions={
+      "justjavac/lepus-notification": @manifest.ExtensionSetting::enabled(),
+      "justjavac/lepus-tray": @manifest.ExtensionSetting::enabled(),
+      "justjavac/lepus-global-hotkey": @manifest.ExtensionSetting::enabled(),
+    },
   )
   let registry = @app.ExtensionRegistry::new()
   let _ = registry.register(@notification.spec())
