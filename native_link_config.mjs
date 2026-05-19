@@ -42,22 +42,13 @@ function linkDir(vendoredLibDir, target, mode) {
   return nativeLinkPath(path.join(vendoredLibDir, target, mode));
 }
 
-function splitFlags(rawFlags) {
-  return rawFlags
-    .split(/\s+/)
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
 function linuxSystemLinkFlags() {
   try {
-    return splitFlags(
-      execFileSync(
-        "pkg-config",
-        ["--libs", "gtk+-3.0", "webkit2gtk-4.1"],
-        { encoding: "utf8" },
-      ),
-    );
+    return execFileSync(
+      "pkg-config",
+      ["--libs", "gtk+-3.0", "webkit2gtk-4.1"],
+      { encoding: "utf8" },
+    ).trim();
   } catch (error) {
     throw new Error(
       "Failed to resolve Linux system link flags via pkg-config for gtk+-3.0 and webkit2gtk-4.1. " +
@@ -111,9 +102,9 @@ function main() {
         mode === "static" ? "libwebview.a" : "libwebview.dylib",
       ),
     );
-    const linkFlags = ["-framework", "WebKit"];
+    let linkFlags = "-framework WebKit";
     if (mode === "shared") {
-      linkFlags.push(`-Wl,-rpath,${platformLibDir}`);
+      linkFlags += ` -Wl,-rpath,${platformLibDir}`;
     }
     process.stdout.write(JSON.stringify({
       link_configs: [
@@ -139,7 +130,7 @@ function main() {
   );
   const linkFlags = linuxSystemLinkFlags();
   if (mode === "shared") {
-    linkFlags.push(`-Wl,-rpath,${platformLibDir}`);
+    linkFlags += ` -Wl,-rpath,${platformLibDir}`;
   }
   process.stdout.write(JSON.stringify({
     link_configs: [

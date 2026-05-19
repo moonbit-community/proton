@@ -54,12 +54,8 @@ function macosConfig(root) {
     "Release/Chromium Embedded Framework.framework/Chromium Embedded Framework",
   );
   return {
-    link_flags: [
-      "-F",
-      nativeLinkPath(frameworkDir),
-      "-framework",
-      "Chromium Embedded Framework",
-    ],
+    link_flags:
+      `-F ${nativeLinkPath(frameworkDir)} -framework "Chromium Embedded Framework"`,
   };
 }
 
@@ -71,7 +67,7 @@ function linuxConfig(root) {
   return {
     link_search_paths: [nativeLinkPath(libDir)],
     link_libs: ["cef", "dl", "pthread"],
-    link_flags: [`-Wl,-rpath,${nativeLinkPath(libDir)}`],
+    link_flags: `-Wl,-rpath,${nativeLinkPath(libDir)}`,
   };
 }
 
