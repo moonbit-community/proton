@@ -21,10 +21,10 @@ package exposes a `spec()` builder for registry-driven installation.
 - `tray/`: native tray icon helpers
 - `global_hotkey/`: native global hotkey helpers
 
-For host-agnostic desktop features, prefer the sibling standalone modules
-[`notification/`](../notification) and [`global_hotkey/`](../global_hotkey),
-plus the published Mooncakes packages
+For host-agnostic desktop features, prefer the sibling standalone module
+[`global_hotkey/`](../global_hotkey), plus the published Mooncakes packages
 [`justjavac/clipboard`](https://mooncakes.io/docs/justjavac/clipboard),
+[`justjavac/notification`](https://mooncakes.io/docs/justjavac/notification),
 [`justjavac/tray`](https://mooncakes.io/docs/justjavac/tray),
 [`justjavac/auto_launch`](https://mooncakes.io/docs/justjavac/auto_launch),
 [`justjavac/keepawake`](https://mooncakes.io/docs/justjavac/keepawake), and
@@ -134,8 +134,11 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 - `microphone` currently exposes device discovery and capture configuration
   helpers; capture-session streaming can be layered on once the package exposes
   that as public API.
-- `devtools`, `dialog`, `shell`, `notification`, and `globalHotkey`
+- `devtools`, `dialog`, `shell`, and `globalHotkey`
   currently ship Windows-native implementations in this repository.
+- `notification` follows the upstream
+  [`justjavac/notification`](https://mooncakes.io/docs/justjavac/notification)
+  platform matrix.
 - `tray` follows the upstream
   [`justjavac/tray`](https://mooncakes.io/docs/justjavac/tray)
   platform matrix.
