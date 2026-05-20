@@ -267,6 +267,14 @@ fn decode_descriptor_object(
     guard manifest_key == id else {
       return Err("metadata manifest_key must match id: " + id)
     }
+    match validate_metadata_package_path(package_path) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    match validate_metadata_spec_symbol(spec_symbol) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
     Ok(
       ExtensionDescriptor::new(
         schema_version,
@@ -338,6 +346,87 @@ fn descriptor_required_field(
     Some(value) => Ok(value)
     None => Err("missing required metadata field: " + key)
   }
+}
+
+///|
+/// Validates that a metadata package path can be emitted as one moon.pkg import.
+fn validate_metadata_package_path(
+  package_path : String,
+) -> Result[Unit, String] {
+  guard package_path != "" else {
+    return Err("metadata package must not be empty")
+  }
+  guard !package_path.has_prefix("/") && !package_path.has_suffix("/") else {
+    return Err("metadata package must not start or end with /: " + package_path)
+  }
+  let mut previous_slash = false
+  for _, ch in package_path {
+    if ch == '/' {
+      guard !previous_slash else {
+        return Err(
+          "metadata package must not contain empty path segments: " +
+          package_path,
+        )
+      }
+      previous_slash = true
+    } else {
+      guard is_metadata_package_char(ch) else {
+        return Err(
+          "metadata package contains invalid character: " + package_path,
+        )
+      }
+      previous_slash = false
+    }
+  }
+  Ok(())
+}
+
+///|
+/// Returns whether a package-path character is safe for generated imports.
+fn is_metadata_package_char(ch : Char) -> Bool {
+  ('a' <= ch && ch <= 'z') ||
+  ('A' <= ch && ch <= 'Z') ||
+  ('0' <= ch && ch <= '9') ||
+  ch == '_' ||
+  ch == '-'
+}
+
+///|
+/// Validates that a metadata spec symbol can be emitted as a MoonBit function.
+fn validate_metadata_spec_symbol(spec_symbol : String) -> Result[Unit, String] {
+  guard spec_symbol != "" else {
+    return Err("metadata spec_symbol must not be empty")
+  }
+  for index, ch in spec_symbol {
+    if index == 0 {
+      guard is_metadata_identifier_start(ch) else {
+        return Err(
+          "metadata spec_symbol must start with a lowercase letter or _: " +
+          spec_symbol,
+        )
+      }
+    } else {
+      guard is_metadata_identifier_continue(ch) else {
+        return Err(
+          "metadata spec_symbol must use only lowercase letters, digits, or _: " +
+          spec_symbol,
+        )
+      }
+    }
+  }
+  Ok(())
+}
+
+///|
+/// Returns whether one character can start a generated function identifier.
+fn is_metadata_identifier_start(ch : Char) -> Bool {
+  ('a' <= ch && ch <= 'z') || ch == '_'
+}
+
+///|
+/// Returns whether one character can continue a generated function identifier.
+fn is_metadata_identifier_continue(ch : Char) -> Bool {
+  is_metadata_identifier_start(ch) || ('0' <= ch && ch <= '9')
 }
 
 ///|

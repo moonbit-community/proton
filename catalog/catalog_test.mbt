@@ -76,6 +76,31 @@ test "discover_extension_descriptor_files can target one extension package" {
 }
 
 ///|
+test "decode_extension_descriptor rejects unsafe codegen metadata fields" {
+  match
+    load_extension_descriptor_from_file(
+      catalog_test_path("testdata/invalid_codegen_package/extension.json"),
+    ) {
+    Ok(_) => abort("expected invalid package path")
+    Err(error) =>
+      assert_true(error.contains("metadata package contains invalid character"))
+  }
+
+  match
+    load_extension_descriptor_from_file(
+      catalog_test_path("testdata/invalid_codegen_symbol/extension.json"),
+    ) {
+    Ok(_) => abort("expected invalid spec symbol")
+    Err(error) =>
+      assert_true(
+        error.contains(
+          "metadata spec_symbol must use only lowercase letters, digits, or _",
+        ),
+      )
+  }
+}
+
+///|
 test "load_extension_catalog_from_search_roots treats built-in and external roots the same" {
   let catalog = match
     load_extension_catalog_from_search_roots([
