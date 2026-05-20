@@ -28,6 +28,7 @@ pub(all) enum CefNativeHandleKind {
 /// natural place to attach.
 pub struct CefRuntime {
   handle : CefRuntimeHandle
+  mut destroyed : Bool
 }
 
 ///|
@@ -36,6 +37,7 @@ pub struct CefView {
   handle : CefViewHandle
   bindings : Map[String, CefBindingHandle]
   destroy_hooks : Map[String, () -> Unit]
+  mut destroyed : Bool
 }
 
 ///|
@@ -80,7 +82,7 @@ pub fn CefRuntime::initialize(
   )
   let status = cef_runtime_status(handle)
   if status == cef_status_ok {
-    Ok(CefRuntime::{ handle, })
+    Ok(CefRuntime::{ handle, destroyed: false })
   } else {
     ignore(cef_runtime_destroy(handle))
     Err(status_error("CefRuntime::initialize", status))
@@ -90,6 +92,10 @@ pub fn CefRuntime::initialize(
 ///|
 /// Shuts down the CEF runtime.
 pub fn CefRuntime::destroy(self : CefRuntime) -> Result[Unit, String] {
+  if self.destroyed {
+    return Ok(())
+  }
+  self.destroyed = true
   unit_from_status("CefRuntime::destroy", cef_runtime_destroy(self.handle))
 }
 
@@ -119,7 +125,7 @@ pub fn CefRuntime::create_view(
   )
   let status = cef_view_status(handle)
   if status == cef_status_ok {
-    Ok(CefView::{ handle, bindings: {}, destroy_hooks: {} })
+    Ok(CefView::{ handle, bindings: {}, destroy_hooks: {}, destroyed: false })
   } else {
     ignore(cef_view_destroy(handle))
     Err(status_error("CefRuntime::create_view", status))
@@ -129,6 +135,10 @@ pub fn CefRuntime::create_view(
 ///|
 /// Destroys this browser view and releases binding callbacks.
 pub fn CefView::destroy(self : CefView) -> Result[Unit, String] {
+  if self.destroyed {
+    return Ok(())
+  }
+  self.destroyed = true
   let hooks : Array[() -> Unit] = []
   for _, hook in self.destroy_hooks {
     hooks.push(hook)

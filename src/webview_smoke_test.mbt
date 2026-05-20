@@ -18,6 +18,13 @@ test "Create a window, run app and terminate it" {
 }
 
 ///|
+test "Webview destroy is idempotent" {
+  let webview = @lepus.Webview::new()
+  webview.destroy()
+  webview.destroy()
+}
+
+///|
 test "Bind callback marshals C strings safely" {
   let mut called = false
   let mut callback_id = ""

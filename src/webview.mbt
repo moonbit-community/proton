@@ -40,6 +40,7 @@ struct Webview {
   handle : Webview_t
   bindings : Map[String, BindingHandle]
   destroy_hooks : Map[String, () -> Unit]
+  mut destroyed : Bool
 }
 
 ///|
@@ -53,6 +54,7 @@ pub fn Webview::new(debug? : Int = 0) -> Webview {
     handle: webview_create(debug, window),
     bindings: {},
     destroy_hooks: {},
+    destroyed: false,
   }
   webview
 }
@@ -61,6 +63,10 @@ pub fn Webview::new(debug? : Int = 0) -> Webview {
 /// Destroys the webview and closes the window. It is safe to call this
 /// function from another background thread.
 pub fn Webview::destroy(self : Webview) -> Unit {
+  if self.destroyed {
+    return
+  }
+  self.destroyed = true
   let hooks : Array[() -> Unit] = []
   for _, hook in self.destroy_hooks {
     hooks.push(hook)
@@ -72,6 +78,7 @@ pub fn Webview::destroy(self : Webview) -> Unit {
   for name, binding in self.bindings {
     let _ = webview_unbind(self.handle, @ffi.to_cstr(name), binding)
   }
+  self.bindings.clear()
   let _ = webview_destroy(self.handle)
 }
 
