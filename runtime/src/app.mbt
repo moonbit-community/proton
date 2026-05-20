@@ -14,7 +14,7 @@ pub struct App {
   main_window : AppWindow
   config : AppConfig
   mut windows : Array[AppWindow]
-  installed_extensions : Array[@core.Extension]
+  installed_extensions : Array[InstalledExtension]
   installed_extension_ids : Map[String, Bool]
   installed_extension_namespaces : Map[String, Bool]
 }
@@ -105,7 +105,10 @@ pub fn App::create_window(self : App, config : AppWindowConfig) -> AppWindow {
     config.entry,
     self.config.debug,
   )
-  install_existing_extensions(window.webview, self.installed_extensions())
+  install_existing_extensions_or_abort(
+    window.webview,
+    self.installed_extensions(),
+  )
   self.register_window(window)
   window
 }
@@ -140,7 +143,29 @@ pub fn App::destroy(self : App) -> Unit {
 /// The extension is also tracked so later windows created through `create_window`
 /// receive the same install automatically.
 pub fn App::install_extension(self : App, extension : @core.Extension) -> Unit {
-  install_app_extension_on_app(self, extension)
+  match
+    install_app_extension_on_app(
+      self,
+      InstalledExtension::from_extension(extension),
+    ) {
+    Ok(_) => ()
+    Err(error) => abort(error)
+  }
+}
+
+///|
+/// Builds and installs one extension spec across every current app window.
+/// A fresh runtime extension is built per window so stateful extensions do not
+/// accidentally share per-window handles or cleanup state.
+pub fn App::install_extension_spec(
+  self : App,
+  spec : @core.ExtensionSpec,
+  context : @core.ExtensionBuildContext,
+) -> Result[Unit, String] {
+  install_app_extension_on_app(
+    self,
+    InstalledExtension::from_spec(spec, context),
+  )
 }
 
 ///|

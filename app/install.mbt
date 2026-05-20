@@ -33,35 +33,20 @@ fn install_prepared_extensions(
 }
 
 ///|
-/// Builds and installs one prepared extension, validating the declared spec name.
+/// Builds and installs one prepared extension spec across the runtime app.
 fn install_prepared_extension(
   app : @wvrt.App,
   prepared_extension : PreparedExtension,
   base_dir : String?,
 ) -> Result[Unit, String] {
   let prepared_id = prepared_extension.id()
-  let prepared_namespace = prepared_extension.js_namespace()
-  let extension = match prepared_extension.build(base_dir) {
-    Ok(extension) => extension
+  let context = @core.ExtensionBuildContext::new(
+    options=prepared_extension.options(),
+    base_dir~,
+  )
+  match app.install_extension_spec(prepared_extension.spec(), context) {
+    Ok(_) => Ok(())
     Err(error) =>
       return Err("failed to build extension " + prepared_id + ": " + error)
   }
-  guard extension.id() == prepared_id else {
-    return Err(
-      "extension spec id mismatch: declared " +
-      prepared_id +
-      " but built " +
-      extension.id(),
-    )
-  }
-  guard extension.js_namespace() == prepared_namespace else {
-    return Err(
-      "extension spec namespace mismatch: declared " +
-      prepared_namespace +
-      " but built " +
-      extension.js_namespace(),
-    )
-  }
-  app.install_extension(extension)
-  Ok(())
 }

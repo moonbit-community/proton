@@ -102,20 +102,15 @@ fn PreparedExtension::id(self : PreparedExtension) -> String {
 }
 
 ///|
-/// Returns the prepared extension JavaScript namespace.
-fn PreparedExtension::js_namespace(self : PreparedExtension) -> String {
-  self.spec.js_namespace()
+/// Returns the prepared extension spec.
+fn PreparedExtension::spec(self : PreparedExtension) -> @core.ExtensionSpec {
+  self.spec
 }
 
 ///|
-/// Builds the runtime extension using the prepared app base directory.
-fn PreparedExtension::build(
-  self : PreparedExtension,
-  base_dir : String?,
-) -> Result[@core.Extension, String] {
-  self.spec.build_extension(
-    @core.ExtensionBuildContext::new(options=self.options, base_dir~),
-  )
+/// Returns the manifest-provided extension options.
+fn PreparedExtension::options(self : PreparedExtension) -> Json? {
+  self.options
 }
 
 ///|

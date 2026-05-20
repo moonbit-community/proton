@@ -13,13 +13,27 @@ fn create_app_window(
 }
 
 ///|
-/// Installs every already-known extension onto a newly created webview.
-fn install_existing_extensions(
+/// Installs one configured extension onto a webview.
+fn install_extension_on_webview(
   webview : @webview.Webview,
-  extensions : Array[@core.Extension],
+  installed_extension : InstalledExtension,
+) -> Result[Unit, String] {
+  installed_extension
+  .build_extension()
+  .map(fn(extension) { @core.install_extension(webview, extension) })
+}
+
+///|
+/// Installs every already-known extension onto a newly created webview.
+fn install_existing_extensions_or_abort(
+  webview : @webview.Webview,
+  extensions : Array[InstalledExtension],
 ) -> Unit {
-  for extension in extensions {
-    @core.install_extension(webview, extension)
+  for installed_extension in extensions {
+    match install_extension_on_webview(webview, installed_extension) {
+      Ok(_) => ()
+      Err(error) => abort(error)
+    }
   }
 }
 
