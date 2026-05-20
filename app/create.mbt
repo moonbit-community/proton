@@ -5,6 +5,10 @@ fn prepare_app(
   registry : ExtensionRegistry,
   base_dir? : String? = None,
 ) -> Result[PreparedApp, String] {
+  match validate_manifest_windows(manifest) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
   match plan_extensions(manifest, registry) {
     Err(error) => Err(error)
     Ok(extensions) =>
@@ -16,6 +20,26 @@ fn prepare_app(
         ),
       )
   }
+}
+
+///|
+/// Validates secondary window ids before runtime app construction can abort.
+fn validate_manifest_windows(
+  manifest : @manifest.AppManifest,
+) -> Result[Unit, String] {
+  let ids : Map[String, Bool] = {}
+  for window in manifest.windows {
+    let id = window.id
+    guard id.trim().to_owned() != "" else {
+      return Err("window id must not be empty")
+    }
+    guard id != "main" else {
+      return Err("window id \"main\" is reserved for the primary window")
+    }
+    guard ids.get(id) is None else { return Err("duplicate window id: " + id) }
+    ids.set(id, true)
+  }
+  Ok(())
 }
 
 ///|

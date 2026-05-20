@@ -172,3 +172,49 @@ test "prepare_app rejects dependency cycles" {
     Ok(_) => abort("expected dependency cycle error")
   }
 }
+
+///|
+test "prepare_app rejects reserved secondary window ids" {
+  let registry = ExtensionRegistry::new()
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Planner", 960, 720),
+    @manifest.AppEntry::Html("<html></html>"),
+    windows=[
+      @manifest.AppWindowManifest::new(
+        "main",
+        @manifest.WindowManifest::new("Settings", 420, 320),
+        @manifest.AppEntry::File("settings.html"),
+      ),
+    ],
+  )
+  match prepare_app(manifest, registry) {
+    Err(error) =>
+      assert_eq(error, "window id \"main\" is reserved for the primary window")
+    Ok(_) => abort("expected reserved window id error")
+  }
+}
+
+///|
+test "prepare_app rejects duplicate secondary window ids" {
+  let registry = ExtensionRegistry::new()
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Planner", 960, 720),
+    @manifest.AppEntry::Html("<html></html>"),
+    windows=[
+      @manifest.AppWindowManifest::new(
+        "settings",
+        @manifest.WindowManifest::new("Settings", 420, 320),
+        @manifest.AppEntry::File("settings.html"),
+      ),
+      @manifest.AppWindowManifest::new(
+        "settings",
+        @manifest.WindowManifest::new("Settings Again", 420, 320),
+        @manifest.AppEntry::File("settings-again.html"),
+      ),
+    ],
+  )
+  match prepare_app(manifest, registry) {
+    Err(error) => assert_eq(error, "duplicate window id: settings")
+    Ok(_) => abort("expected duplicate window id error")
+  }
+}
