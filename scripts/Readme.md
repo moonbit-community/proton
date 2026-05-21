@@ -58,3 +58,31 @@ node ./scripts/sync_libwebview.mjs --repo owner/name
 - `lib/linux-x64/BUILD_INFO.txt`
 
 Downloaded artifacts are staged through `target/libwebview-sync/` and removed before each sync.
+
+## `install_webview2_headers.ps1`
+
+Downloads the Microsoft WebView2 SDK NuGet package and installs its native
+headers into the CMake-compatible layout expected by Windows native stubs:
+
+```text
+build/_deps/microsoft_web_webview2-src/build/native/include
+```
+
+This only installs SDK headers. Windows users still need the WebView2 Runtime
+installed to run WebView2-based applications.
+
+### Usage
+
+Install the default SDK version used by CI:
+
+```powershell
+.\scripts\install_webview2_headers.ps1
+```
+
+Install a specific SDK version:
+
+```powershell
+.\scripts\install_webview2_headers.ps1 -Version 1.0.3967.48
+```
+
+The generated `build/` directory is ignored by git.

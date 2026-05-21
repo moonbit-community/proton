@@ -51,14 +51,7 @@ jobs:
 
       - name: Install WebView2 SDK headers
         if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          $archive = Join-Path $env:RUNNER_TEMP "webview2.zip"
-          $extractDir = Join-Path $env:RUNNER_TEMP "webview2"
-          $includeDir = "build\_deps\microsoft_web_webview2-src\build\native\include"
-          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/$env:WEBVIEW2_SDK_VERSION" -OutFile $archive
-          Expand-Archive -Path $archive -DestinationPath $extractDir -Force
-          New-Item -ItemType Directory -Force -Path $includeDir | Out-Null
-          Copy-Item -Path (Join-Path $extractDir "build\native\include\*") -Destination $includeDir -Recurse -Force
+        run: .\scripts\install_webview2_headers.ps1
 
       - name: Format check
         run: |
