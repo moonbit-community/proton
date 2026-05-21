@@ -12,6 +12,10 @@ pub fn create_app(@lepus_manifest.AppManifest, ExtensionRegistry, base_dir? : St
 
 pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@lepus_runtime.App, String]
 
+pub fn create_app_from_file_with_mbt_process(String, ExtensionRegistry, MbtProcessBackendConfig) -> Result[@lepus_runtime.App, String]
+
+pub fn create_app_with_mbt_process(@lepus_manifest.AppManifest, ExtensionRegistry, MbtProcessBackendConfig, base_dir? : String?) -> Result[@lepus_runtime.App, String]
+
 // Errors
 
 // Types and methods
@@ -20,6 +24,15 @@ pub fn ExtensionRegistry::get(Self, String) -> @lepus_core.ExtensionSpec?
 pub fn ExtensionRegistry::new() -> Self
 pub fn ExtensionRegistry::register(Self, @lepus_core.ExtensionSpec) -> Self
 pub fn ExtensionRegistry::registered_ids(Self) -> Array[String]
+
+pub struct MbtProcessBackendConfig {
+  command : String
+  op_names : Array[String]
+  args : Array[String]
+  cwd : String?
+  extensions : Array[@lepus_core.IpcExtensionDescriptor]
+}
+pub fn MbtProcessBackendConfig::new(String, Array[String], args? : Array[String], cwd? : String?, extensions? : Array[@lepus_core.IpcExtensionDescriptor]) -> Self
 
 // Type aliases
 

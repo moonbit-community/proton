@@ -58,6 +58,23 @@ pub fn create_app(
 }
 
 ///|
+/// Creates a runtime app and installs one explicit MBT backend process.
+///
+/// This keeps manifest-driven window and extension composition intact while
+/// placing application ops in a separate process.
+pub fn create_app_with_mbt_process(
+  manifest : @manifest.AppManifest,
+  registry : ExtensionRegistry,
+  backend : MbtProcessBackendConfig,
+  base_dir? : String? = None,
+) -> Result[@wvrt.App, String] {
+  match prepare_app(manifest, registry, base_dir~) {
+    Err(error) => Err(error)
+    Ok(prepared) => build_prepared_app(prepared, mbt_backend=Some(backend))
+  }
+}
+
+///|
 /// Builds an app from one parsed control-plane manifest document.
 /// The document's preserved base directory is forwarded so relative file paths
 /// and extension build contexts resolve the same way they would on disk.
@@ -66,6 +83,21 @@ fn create_app_from_document(
   registry : ExtensionRegistry,
 ) -> Result[@wvrt.App, String] {
   create_app(document.manifest(), registry, base_dir=document.base_dir())
+}
+
+///|
+/// Builds an app from one parsed document and installs one MBT backend process.
+fn create_app_from_document_with_mbt_process(
+  document : @bootstrap.AppManifestDocument,
+  registry : ExtensionRegistry,
+  backend : MbtProcessBackendConfig,
+) -> Result[@wvrt.App, String] {
+  create_app_with_mbt_process(
+    document.manifest(),
+    registry,
+    backend,
+    base_dir=document.base_dir(),
+  )
 }
 
 ///|
@@ -79,5 +111,23 @@ pub fn create_app_from_file(
   match @bootstrap.load_document(path) {
     Err(error) => Err(error)
     Ok(document) => create_app_from_document(document, registry)
+  }
+}
+
+///|
+/// Loads a manifest document from disk, creates a runtime app, and installs one
+/// explicit MBT backend process.
+///
+/// When `backend.cwd` is not set, the manifest file's parent directory is used
+/// as the backend working directory.
+pub fn create_app_from_file_with_mbt_process(
+  path : String,
+  registry : ExtensionRegistry,
+  backend : MbtProcessBackendConfig,
+) -> Result[@wvrt.App, String] {
+  match @bootstrap.load_document(path) {
+    Err(error) => Err(error)
+    Ok(document) =>
+      create_app_from_document_with_mbt_process(document, registry, backend)
   }
 }

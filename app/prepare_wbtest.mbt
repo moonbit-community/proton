@@ -218,3 +218,52 @@ test "prepare_app rejects duplicate secondary window ids" {
     Ok(_) => abort("expected duplicate window id error")
   }
 }
+
+///|
+test "mbt backend config preserves process fields" {
+  let descriptor = @core.IpcExtensionDescriptor::new("vendor/demo", "demo", [
+    @core.IpcExtensionApi::new("ping"),
+  ])
+  let backend = MbtProcessBackendConfig::new(
+    "backend.exe",
+    ["app:ping"],
+    args=["--dev"],
+    cwd=Some("D:/workspace/app"),
+    extensions=[descriptor],
+  )
+  assert_eq(backend.command(), "backend.exe")
+  @debug.assert_eq(backend.op_names(), ["app:ping"])
+  @debug.assert_eq(backend.args(), ["--dev"])
+  @debug.assert_eq(backend.cwd(), Some("D:/workspace/app"))
+  assert_eq(backend.extensions().length(), 1)
+}
+
+///|
+test "mbt backend config rejects empty command" {
+  let backend = MbtProcessBackendConfig::new("", ["app:ping"])
+  match validate_mbt_process_backend_config(backend) {
+    Err(error) =>
+      assert_eq(error, "MBT process backend command must not be empty")
+    Ok(_) => abort("expected empty command error")
+  }
+}
+
+///|
+test "mbt backend config rejects missing ops" {
+  let backend = MbtProcessBackendConfig::new("backend.exe", [])
+  match validate_mbt_process_backend_config(backend) {
+    Err(error) =>
+      assert_eq(error, "MBT process backend must expose at least one op")
+    Ok(_) => abort("expected missing op error")
+  }
+}
+
+///|
+test "mbt backend config rejects empty op names" {
+  let backend = MbtProcessBackendConfig::new("backend.exe", ["app:ping", ""])
+  match validate_mbt_process_backend_config(backend) {
+    Err(error) =>
+      assert_eq(error, "MBT process backend op name must not be empty")
+    Ok(_) => abort("expected empty op name error")
+  }
+}

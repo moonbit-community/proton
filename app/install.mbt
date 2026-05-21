@@ -1,6 +1,9 @@
 ///|
 /// Builds a runtime app from previously prepared internal app state.
-fn build_prepared_app(prepared : PreparedApp) -> Result[@wvrt.App, String] {
+fn build_prepared_app(
+  prepared : PreparedApp,
+  mbt_backend? : MbtProcessBackendConfig? = None,
+) -> Result[@wvrt.App, String] {
   let app = @wvrt.App::new(prepared.runtime_config())
   match
     install_prepared_extensions(
@@ -8,11 +11,19 @@ fn build_prepared_app(prepared : PreparedApp) -> Result[@wvrt.App, String] {
       prepared.prepared_extensions(),
       prepared.base_dir(),
     ) {
-    Ok(_) => Ok(app)
     Err(error) => {
       app.destroy()
       Err(error)
     }
+    Ok(_) =>
+      match
+        install_prepared_mbt_backend(app, mbt_backend, prepared.base_dir()) {
+        Ok(_) => Ok(app)
+        Err(error) => {
+          app.destroy()
+          Err(error)
+        }
+      }
   }
 }
 
@@ -48,5 +59,86 @@ fn install_prepared_extension(
     Ok(_) => Ok(())
     Err(error) =>
       return Err("failed to build extension " + prepared_id + ": " + error)
+  }
+}
+
+///|
+/// Installs one optional prepared MBT process backend into the runtime app.
+fn install_prepared_mbt_backend(
+  app : @wvrt.App,
+  backend : MbtProcessBackendConfig?,
+  base_dir : String?,
+) -> Result[Unit, String] {
+  match backend {
+    None => Ok(())
+    Some(backend) => install_mbt_process_backend_config(app, backend, base_dir)
+  }
+}
+
+///|
+fn install_mbt_process_backend_config(
+  app : @wvrt.App,
+  backend : MbtProcessBackendConfig,
+  base_dir : String?,
+) -> Result[Unit, String] {
+  match validate_mbt_process_backend_config(backend) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  install_valid_mbt_process_backend_config(app, backend, base_dir)
+  Ok(())
+}
+
+///|
+fn validate_mbt_process_backend_config(
+  backend : MbtProcessBackendConfig,
+) -> Result[Unit, String] {
+  guard backend.command().trim().to_owned() != "" else {
+    return Err("MBT process backend command must not be empty")
+  }
+  guard backend.op_names().length() > 0 else {
+    return Err("MBT process backend must expose at least one op")
+  }
+  for op_name in backend.op_names() {
+    guard op_name.trim().to_owned() != "" else {
+      return Err("MBT process backend op name must not be empty")
+    }
+  }
+  Ok(())
+}
+
+///|
+fn install_valid_mbt_process_backend_config(
+  app : @wvrt.App,
+  backend : MbtProcessBackendConfig,
+  base_dir : String?,
+) -> Unit {
+  match backend.cwd() {
+    Some(cwd) =>
+      app.install_mbt_process_backend(
+        backend.command(),
+        backend.op_names(),
+        args=backend.args(),
+        cwd~,
+        extensions=backend.extensions(),
+      )
+    None =>
+      match base_dir {
+        Some(cwd) =>
+          app.install_mbt_process_backend(
+            backend.command(),
+            backend.op_names(),
+            args=backend.args(),
+            cwd~,
+            extensions=backend.extensions(),
+          )
+        None =>
+          app.install_mbt_process_backend(
+            backend.command(),
+            backend.op_names(),
+            args=backend.args(),
+            extensions=backend.extensions(),
+          )
+      }
   }
 }

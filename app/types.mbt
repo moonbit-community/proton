@@ -22,6 +22,18 @@ priv struct PreparedApp {
 }
 
 ///|
+/// Explicit MBT backend process configuration for high-level app composition.
+///
+/// The backend executable is expected to run `@core.MbtProcessHost::run_stdio`.
+pub struct MbtProcessBackendConfig {
+  command : String
+  op_names : Array[String]
+  args : Array[String]
+  cwd : String?
+  extensions : Array[@core.IpcExtensionDescriptor]
+}
+
+///|
 /// Creates an empty extension registry.
 /// Registration order is preserved so later planning and generated registry
 /// output stay deterministic.
@@ -128,6 +140,54 @@ fn PreparedApp::new(
 fn PreparedApp::prepared_extensions(
   self : PreparedApp,
 ) -> Array[PreparedExtension] {
+  self.extensions
+}
+
+///|
+/// Creates one explicit MBT backend process configuration.
+pub fn MbtProcessBackendConfig::new(
+  command : String,
+  op_names : Array[String],
+  args? : Array[String] = [],
+  cwd? : String? = None,
+  extensions? : Array[@core.IpcExtensionDescriptor] = [],
+) -> MbtProcessBackendConfig {
+  MbtProcessBackendConfig::{ command, op_names, args, cwd, extensions }
+}
+
+///|
+/// Returns the backend executable command.
+fn MbtProcessBackendConfig::command(self : MbtProcessBackendConfig) -> String {
+  self.command
+}
+
+///|
+/// Returns the op names forwarded to the MBT backend.
+fn MbtProcessBackendConfig::op_names(
+  self : MbtProcessBackendConfig,
+) -> Array[String] {
+  self.op_names
+}
+
+///|
+/// Returns the backend process arguments.
+fn MbtProcessBackendConfig::args(
+  self : MbtProcessBackendConfig,
+) -> Array[String] {
+  self.args
+}
+
+///|
+/// Returns the backend process working directory override.
+fn MbtProcessBackendConfig::cwd(self : MbtProcessBackendConfig) -> String? {
+  self.cwd
+}
+
+///|
+/// Returns IPC extension descriptors exposed by the backend.
+fn MbtProcessBackendConfig::extensions(
+  self : MbtProcessBackendConfig,
+) -> Array[@core.IpcExtensionDescriptor] {
   self.extensions
 }
 

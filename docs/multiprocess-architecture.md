@@ -99,15 +99,26 @@ it wants, while the webview side stays a small shell.
 
 At the app layer, callers can install the same backend across all windows. The
 app owns the backend process lifetime, while each window only owns its JS
-binding:
+binding. Apps can either install the backend on a runtime app directly, or use
+the high-level manifest composition helper:
+
+```moonbit
+fn main {
+  let backend = @app.MbtProcessBackendConfig::new(
+    "my_app_backend.exe",
+    ["app:ping", "app:sleep"],
+  )
+  match @app.create_app_with_mbt_process(manifest, registry, backend) {
+    Ok(app) => app.run()
+    Err(error) => abort(error)
+  }
+}
+```
 
 ```moonbit
 fn main {
   let app = @runtime.App::new(config)
-  app.install_mbt_process_backend(
-    "my_app_backend.exe",
-    ["app:ping", "app:sleep"],
-  )
+  app.install_mbt_process_backend("my_app_backend.exe", ["app:ping"])
   app.run()
 }
 ```
