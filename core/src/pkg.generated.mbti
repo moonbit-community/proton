@@ -17,6 +17,8 @@ pub fn ensure_core_runtime(@lepus.Webview) -> Unit
 
 pub fn extension_host(@lepus.Webview) -> ExtensionHost
 
+pub fn install_core_bridge(@lepus.Webview) -> Unit
+
 pub fn install_extension(@lepus.Webview, Extension) -> Unit
 
 pub fn install_ipc_extension(@lepus.Webview, IpcExtensionDescriptor) -> Unit
@@ -123,7 +125,9 @@ pub fn IpcOpTransport::stdio_process(String, args? : Array[String], cwd? : Strin
 type MbtProcessHost
 pub fn MbtProcessHost::close(Self) -> Unit
 pub fn MbtProcessHost::dispatch(Self, IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit
+pub async fn MbtProcessHost::dispatch_async(Self, IpcOpRequest) -> IpcOpResponse
 pub fn MbtProcessHost::dispatch_json(Self, String, (IpcOpResponse) -> Unit) -> Unit
+pub async fn MbtProcessHost::dispatch_json_async(Self, String) -> IpcOpResponse
 pub fn MbtProcessHost::new(worker_count? : Int) -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit

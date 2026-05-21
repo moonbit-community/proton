@@ -1,14 +1,72 @@
 ///|
-priv struct PendingIpcRequest {
-  request : IpcOpRequest
-  complete : (IpcOpResponse) -> Unit
-}
+#external
+priv type NativePendingIpcRequest
+
+///|
+priv type NativeIpcRequestQueue
+
+///|
+extern "C" fn native_ipc_request_queue_new(
+  call_complete : FuncRef[((IpcOpResponse) -> Unit, IpcOpResponse) -> Unit],
+) -> NativeIpcRequestQueue = "lepus_core_ipc_request_queue_new"
+
+///|
+#borrow(queue, id, request_json)
+#owned(complete)
+extern "C" fn native_ipc_request_queue_push(
+  queue : NativeIpcRequestQueue,
+  id : Bytes,
+  request_json : Bytes,
+  complete : (IpcOpResponse) -> Unit,
+) -> Bool = "lepus_core_ipc_request_queue_push"
+
+///|
+#borrow(queue)
+extern "C" fn native_ipc_request_queue_pop(
+  queue : NativeIpcRequestQueue,
+) -> NativePendingIpcRequest = "lepus_core_ipc_request_queue_pop"
+
+///|
+#borrow(queue)
+extern "C" fn native_ipc_request_queue_close(
+  queue : NativeIpcRequestQueue,
+) -> Unit = "lepus_core_ipc_request_queue_close"
+
+///|
+extern "C" fn native_pending_ipc_request_is_stop(
+  pending : NativePendingIpcRequest,
+) -> Bool = "lepus_core_ipc_pending_request_is_stop"
+
+///|
+extern "C" fn native_pending_ipc_request_id(
+  pending : NativePendingIpcRequest,
+) -> Bytes = "lepus_core_ipc_pending_request_id"
+
+///|
+extern "C" fn native_pending_ipc_request_json(
+  pending : NativePendingIpcRequest,
+) -> Bytes = "lepus_core_ipc_pending_request_json"
+
+///|
+#borrow(queue, pending, response)
+extern "C" fn native_pending_ipc_request_complete(
+  queue : NativeIpcRequestQueue,
+  pending : NativePendingIpcRequest,
+  response : IpcOpResponse,
+) -> Unit = "lepus_core_ipc_pending_request_complete"
+
+///|
+extern "C" fn native_pending_ipc_request_destroy(
+  pending : NativePendingIpcRequest,
+) -> Unit = "lepus_core_ipc_pending_request_destroy"
 
 ///|
 priv struct StdioProcessTransportState {
-  requests : @aqueue.Queue[PendingIpcRequest]
+  queue : NativeIpcRequestQueue
   executor : AsyncExecutor
-  mut child : @process.Process?
+  command : String
+  args : Array[String]
+  cwd : String?
   mut closed : Bool
 }
 
@@ -23,16 +81,20 @@ pub fn IpcOpTransport::stdio_process(
   args? : Array[String] = [],
   cwd? : String,
 ) -> IpcOpTransport {
+  let queue = native_ipc_request_queue_new(fn(complete, response) {
+    complete(response)
+  })
   let state = StdioProcessTransportState::{
-    requests: @aqueue.Queue(kind=Unbounded),
+    queue,
     executor: AsyncExecutor::new(worker_count=1),
-    child: None,
+    command,
+    args,
+    cwd,
     closed: false,
   }
   let accepted = state.executor.submit(async fn() noraise {
-    run_stdio_process_transport(state, command, args, cwd?) catch {
-      err =>
-        state.fail_transport("stdio IPC transport failed: " + err.to_string())
+    state.run_loop() catch {
+      _ => state.fail_pending("stdio IPC transport failed")
     }
   })
   guard accepted else {
@@ -54,62 +116,30 @@ fn StdioProcessTransportState::enqueue(
     complete(IpcOpResponse::err(request.id, "stdio IPC transport is closed"))
     return
   }
-  try {
-    if !self.requests.try_put(PendingIpcRequest::{ request, complete }) {
-      complete(IpcOpResponse::err(request.id, "stdio IPC transport is closed"))
-    }
-  } catch {
-    _ =>
-      complete(IpcOpResponse::err(request.id, "stdio IPC transport is closed"))
+  let pushed = native_ipc_request_queue_push(
+    self.queue,
+    @ffi.to_cstr(request.id),
+    @ffi.to_cstr(request.stringify()),
+    complete,
+  )
+  if !pushed {
+    complete(IpcOpResponse::err(request.id, "stdio IPC transport is closed"))
   }
 }
 
 ///|
-fn StdioProcessTransportState::close(self : StdioProcessTransportState) -> Unit {
-  guard !self.closed else { return }
-  self.closed = true
-  self.requests.close(clear=false)
-  match self.child {
-    Some(child) => child.cancel()
-    None => ()
-  }
-  self.executor.close()
-}
-
-///|
-fn StdioProcessTransportState::fail_transport(
+async fn StdioProcessTransportState::run_loop(
   self : StdioProcessTransportState,
-  message : String,
 ) -> Unit {
-  self.closed = true
-  while true {
-    let pending = self.requests.try_get() catch { _ => None }
-    match pending {
-      Some(pending) =>
-        (pending.complete)(IpcOpResponse::err(pending.request.id, message))
-      None => break
-    }
-  }
-  self.requests.close(clear=true)
-}
-
-///|
-async fn run_stdio_process_transport(
-  state : StdioProcessTransportState,
-  command : String,
-  args : Array[String],
-  cwd? : String,
-) -> Unit {
-  guard !state.closed else { return }
   let (child_stdin, parent_writer) = @process.write_to_process()
   let (parent_reader, child_stdout) = @process.read_from_process()
   @async.with_task_group(group => {
-    let child = match cwd {
+    let child = match self.cwd {
       Some(cwd) =>
         @process.spawn(
           group,
-          command,
-          args,
+          self.command,
+          self.args,
           stdin=child_stdin,
           stdout=child_stdout,
           cwd~,
@@ -118,80 +148,100 @@ async fn run_stdio_process_transport(
       None =>
         @process.spawn(
           group,
-          command,
-          args,
+          self.command,
+          self.args,
           stdin=child_stdin,
           stdout=child_stdout,
           no_wait=true,
         )
     }
-    state.child = Some(child)
-    if state.closed {
-      child.cancel()
-      parent_writer.close()
-    }
-    let pending_by_id : Map[String, (IpcOpResponse) -> Unit] = {}
-    group.spawn_bg(() => {
-      write_stdio_ipc_requests(state, parent_writer, pending_by_id)
-    })
-    read_stdio_ipc_responses(parent_reader, pending_by_id)
-    state.closed = true
-    state.requests.close(clear=true)
+    self.process_pending(parent_writer, parent_reader)
     parent_writer.close()
+    parent_reader.close()
     child.cancel()
   })
 }
 
 ///|
-async fn write_stdio_ipc_requests(
-  state : StdioProcessTransportState,
+async fn StdioProcessTransportState::process_pending(
+  self : StdioProcessTransportState,
   writer : @process.WriteToProcess,
-  pending_by_id : Map[String, (IpcOpResponse) -> Unit],
+  reader : @process.ReadFromProcess,
 ) -> Unit {
   while true {
-    let pending = Some(state.requests.get()) catch { _ => None }
-    match pending {
-      Some(pending) => {
-        pending_by_id[pending.request.id] = pending.complete
-        writer.write(pending.request.stringify() + "\n") catch {
-          err => {
-            pending_by_id.remove(pending.request.id)
-            (pending.complete)(
-              IpcOpResponse::err(
-                pending.request.id,
-                "failed to write IPC request: " + err.to_string(),
-              ),
-            )
-          }
-        }
-      }
-      None => break
+    let pending = native_ipc_request_queue_pop(self.queue)
+    if native_pending_ipc_request_is_stop(pending) {
+      native_pending_ipc_request_destroy(pending)
+      break
     }
+    self.process_one_pending(pending, writer, reader) catch {
+      err => {
+        let id = @ffi.from_cstr(native_pending_ipc_request_id(pending))
+        native_pending_ipc_request_complete(
+          self.queue,
+          pending,
+          IpcOpResponse::err(id, err.to_string()),
+        )
+      }
+    }
+    native_pending_ipc_request_destroy(pending)
   }
-  writer.close()
 }
 
 ///|
-async fn read_stdio_ipc_responses(
+async fn StdioProcessTransportState::process_one_pending(
+  self : StdioProcessTransportState,
+  pending : NativePendingIpcRequest,
+  writer : @process.WriteToProcess,
   reader : @process.ReadFromProcess,
-  pending_by_id : Map[String, (IpcOpResponse) -> Unit],
 ) -> Unit {
-  while reader.read_until("\n") is Some(line) {
-    match parse_ipc_op_response(line.trim(chars="\r\n").to_owned()) {
-      Ok(response) =>
-        match pending_by_id.get(response.id) {
-          Some(complete) => {
-            pending_by_id.remove(response.id)
-            complete(response)
+  let id = @ffi.from_cstr(native_pending_ipc_request_id(pending))
+  let request_json = @ffi.from_cstr(native_pending_ipc_request_json(pending))
+  writer.write(request_json + "\n")
+  let response = match reader.read_until("\n") {
+    Some(line) =>
+      match parse_ipc_op_response(line.trim(chars="\r\n").to_owned()) {
+        Ok(response) =>
+          if response.id == id {
+            response
+          } else {
+            IpcOpResponse::err(
+              id,
+              "stdio IPC response id mismatch: " + response.id,
+            )
           }
-          None => ()
-        }
-      Err(_) => ()
+        Err(message) => IpcOpResponse::err(id, message)
+      }
+    None => IpcOpResponse::err(id, "stdio IPC transport closed")
+  }
+  native_pending_ipc_request_complete(self.queue, pending, response)
+}
+
+///|
+fn StdioProcessTransportState::fail_pending(
+  self : StdioProcessTransportState,
+  message : String,
+) -> Unit {
+  while true {
+    let pending = native_ipc_request_queue_pop(self.queue)
+    if native_pending_ipc_request_is_stop(pending) {
+      native_pending_ipc_request_destroy(pending)
+      break
     }
+    let id = @ffi.from_cstr(native_pending_ipc_request_id(pending))
+    native_pending_ipc_request_complete(
+      self.queue,
+      pending,
+      IpcOpResponse::err(id, message),
+    )
+    native_pending_ipc_request_destroy(pending)
   }
-  for id, complete in pending_by_id {
-    complete(IpcOpResponse::err(id, "stdio IPC transport closed"))
-  }
-  pending_by_id.clear()
-  reader.close()
+}
+
+///|
+fn StdioProcessTransportState::close(self : StdioProcessTransportState) -> Unit {
+  guard !self.closed else { return }
+  self.closed = true
+  native_ipc_request_queue_close(self.queue)
+  self.executor.close()
 }

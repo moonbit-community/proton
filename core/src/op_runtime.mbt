@@ -41,6 +41,15 @@ pub fn ensure_core_runtime(webview : @webview.Webview) -> Unit {
 }
 
 ///|
+/// Installs the core JavaScript bridge without creating a local op runtime.
+///
+/// App windows use this as their baseline so they can later choose either the
+/// local op runtime or the multiprocess IPC runtime.
+pub fn install_core_bridge(webview : @webview.Webview) -> Unit {
+  install_moonbit_core_runtime(webview)
+}
+
+///|
 /// Creates an op runtime, binds the dispatch bridge, and installs cleanup hooks.
 fn make_op_runtime(
   webview : @webview.Webview,

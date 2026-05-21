@@ -26,16 +26,7 @@ pub async fn[R : @io.Reader, W : @io.Writer] MbtProcessHost::run_io(
   output : W,
 ) -> Unit {
   while input.read_until("\n") is Some(line) {
-    let response_queue : @aqueue.Queue[IpcOpResponse] = @aqueue.Queue(
-      kind=Unbounded,
-    )
-    self.dispatch_json(line.trim(chars="\r\n").to_owned(), fn(response) {
-      ignore(response_queue.try_put(response)) catch {
-        _ => ()
-      }
-    })
-    let response = response_queue.get()
+    let response = self.dispatch_json_async(line.trim(chars="\r\n").to_owned())
     output.write(response.stringify() + "\n")
-    response_queue.close(clear=true)
   }
 }

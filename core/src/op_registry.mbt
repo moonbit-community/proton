@@ -1,10 +1,7 @@
 ///|
 priv struct OpRegistry {
   handlers : Map[String, (Json) -> Result[Json, String]]
-  async_handlers : Map[
-    String,
-    (AsyncExecutor, Json, (Result[Json, String]) -> Unit) -> Unit,
-  ]
+  async_handlers : Map[String, async (Json) -> Result[Json, String]]
 }
 
 ///|
@@ -62,24 +59,55 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result(
   guard self.handlers.get(name) is None && self.async_handlers.get(name) is None else {
     abort("OpRegistry::handle_async_result: op already registered: " + name)
   }
-  self.async_handlers.set(name, fn(executor, payload_json, complete) {
-    let accepted = executor.submit(async fn() noraise {
-      let result = try {
-        let payload : Result[Payload, _] = try? @json.from_json(payload_json)
-        match payload {
-          Ok(payload) =>
-            callback(payload).map(fn(reply) { ToJson::to_json(reply) })
-          Err(err) => Err(err.to_string())
-        }
-      } catch {
-        err => Err(err.to_string())
+  self.async_handlers.set(name, async fn(payload_json) {
+    let result = try {
+      let payload : Result[Payload, _] = try? @json.from_json(payload_json)
+      match payload {
+        Ok(payload) =>
+          callback(payload).map(fn(reply) { ToJson::to_json(reply) })
+        Err(err) => Err(err.to_string())
       }
-      complete(result)
-    })
-    if !accepted {
-      complete(Err("Async executor is closed"))
+    } catch {
+      err => Err(err.to_string())
     }
+    result
   })
+}
+
+///|
+/// Runs a previously registered async op handler on the current async loop.
+async fn OpRegistry::call_async_direct(
+  self : OpRegistry,
+  name : String,
+  payload : Json,
+) -> Result[Json, String] {
+  match self.async_handlers.get(name) {
+    Some(handler) => handler(payload) catch { err => Err(err.to_string()) }
+    None => self.call(name, payload)
+  }
+}
+
+///|
+/// Starts a previously registered async op handler on an executor.
+fn OpRegistry::call_async(
+  self : OpRegistry,
+  executor : AsyncExecutor,
+  name : String,
+  payload : Json,
+  complete : (Result[Json, String]) -> Unit,
+) -> Unit {
+  match self.async_handlers.get(name) {
+    Some(handler) => {
+      let accepted = executor.submit(async fn() noraise {
+        let result = handler(payload) catch { err => Err(err.to_string()) }
+        complete(result)
+      })
+      if !accepted {
+        complete(Err("Async executor is closed"))
+      }
+    }
+    None => complete(self.call(name, payload))
+  }
 }
 
 ///|
@@ -98,20 +126,5 @@ fn OpRegistry::call(
   match self.handlers.get(name) {
     Some(handler) => handler(payload)
     None => Err("Unknown op: " + name)
-  }
-}
-
-///|
-/// Starts a previously registered async op handler with raw JSON payload.
-fn OpRegistry::call_async(
-  self : OpRegistry,
-  executor : AsyncExecutor,
-  name : String,
-  payload : Json,
-  complete : (Result[Json, String]) -> Unit,
-) -> Unit {
-  match self.async_handlers.get(name) {
-    Some(handler) => handler(executor, payload, complete)
-    None => complete(self.call(name, payload))
   }
 }

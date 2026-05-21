@@ -11,6 +11,7 @@
 #endif
 
 typedef void (*lepus_core_call_closure_t)(void *closure);
+typedef void (*lepus_core_call_ipc_complete_t)(void *closure, void *response);
 
 struct lepus_core_async_task {
   void *closure;
@@ -36,6 +37,28 @@ struct lepus_core_async_executor {
 #endif
 };
 
+struct lepus_core_ipc_pending_request {
+  int32_t stop;
+  char *id;
+  char *request;
+  void *complete;
+  struct lepus_core_ipc_pending_request *next;
+};
+
+struct lepus_core_ipc_request_queue {
+  lepus_core_call_ipc_complete_t call_complete;
+  int32_t closed;
+  struct lepus_core_ipc_pending_request *head;
+  struct lepus_core_ipc_pending_request *tail;
+#ifdef _WIN32
+  CRITICAL_SECTION lock;
+  CONDITION_VARIABLE ready;
+#else
+  pthread_mutex_t lock;
+  pthread_cond_t ready;
+#endif
+};
+
 void lepus_core_async_executor_close(
     struct lepus_core_async_executor *executor);
 
@@ -49,6 +72,44 @@ static void lepus_core_async_task_free(struct lepus_core_async_task *task) {
     moonbit_decref(task->closure);
   }
   free(task);
+}
+
+static char *lepus_core_strdup(const char *value) {
+  size_t len;
+  char *copy;
+  if (value == NULL) {
+    value = "";
+  }
+  len = strlen(value) + 1;
+  copy = (char *)malloc(len);
+  if (copy == NULL) {
+    return NULL;
+  }
+  memcpy(copy, value, len);
+  return copy;
+}
+
+static void lepus_core_ipc_pending_request_free(
+    struct lepus_core_ipc_pending_request *request) {
+  if (request == NULL) {
+    return;
+  }
+  free(request->id);
+  free(request->request);
+  if (request->complete != NULL) {
+    moonbit_decref(request->complete);
+  }
+  free(request);
+}
+
+static struct lepus_core_ipc_pending_request *
+lepus_core_ipc_pending_request_new_stop(void) {
+  struct lepus_core_ipc_pending_request *request =
+      (struct lepus_core_ipc_pending_request *)calloc(1, sizeof(*request));
+  if (request != NULL) {
+    request->stop = 1;
+  }
+  return request;
 }
 
 static void lepus_core_async_executor_lock(
@@ -93,6 +154,78 @@ static void lepus_core_async_executor_broadcast(
   WakeAllConditionVariable(&executor->ready);
 #else
   pthread_cond_broadcast(&executor->ready);
+#endif
+}
+
+static void lepus_core_ipc_queue_lock(
+    struct lepus_core_ipc_request_queue *queue) {
+#ifdef _WIN32
+  EnterCriticalSection(&queue->lock);
+#else
+  pthread_mutex_lock(&queue->lock);
+#endif
+}
+
+static void lepus_core_ipc_queue_unlock(
+    struct lepus_core_ipc_request_queue *queue) {
+#ifdef _WIN32
+  LeaveCriticalSection(&queue->lock);
+#else
+  pthread_mutex_unlock(&queue->lock);
+#endif
+}
+
+static void lepus_core_ipc_queue_wait(
+    struct lepus_core_ipc_request_queue *queue) {
+#ifdef _WIN32
+  SleepConditionVariableCS(&queue->ready, &queue->lock, INFINITE);
+#else
+  pthread_cond_wait(&queue->ready, &queue->lock);
+#endif
+}
+
+static void lepus_core_ipc_queue_signal(
+    struct lepus_core_ipc_request_queue *queue) {
+#ifdef _WIN32
+  WakeConditionVariable(&queue->ready);
+#else
+  pthread_cond_signal(&queue->ready);
+#endif
+}
+
+static void lepus_core_ipc_queue_broadcast(
+    struct lepus_core_ipc_request_queue *queue) {
+#ifdef _WIN32
+  WakeAllConditionVariable(&queue->ready);
+#else
+  pthread_cond_broadcast(&queue->ready);
+#endif
+}
+
+static void lepus_core_ipc_request_queue_finalize(void *raw_queue) {
+  struct lepus_core_ipc_request_queue *queue =
+      (struct lepus_core_ipc_request_queue *)raw_queue;
+  struct lepus_core_ipc_pending_request *request;
+  if (queue == NULL) {
+    return;
+  }
+  lepus_core_ipc_queue_lock(queue);
+  request = queue->head;
+  queue->head = NULL;
+  queue->tail = NULL;
+  queue->closed = 1;
+  lepus_core_ipc_queue_broadcast(queue);
+  lepus_core_ipc_queue_unlock(queue);
+  while (request != NULL) {
+    struct lepus_core_ipc_pending_request *next = request->next;
+    lepus_core_ipc_pending_request_free(request);
+    request = next;
+  }
+#ifdef _WIN32
+  DeleteCriticalSection(&queue->lock);
+#else
+  pthread_cond_destroy(&queue->ready);
+  pthread_mutex_destroy(&queue->lock);
 #endif
 }
 
@@ -286,4 +419,144 @@ void lepus_core_async_executor_close(
     lepus_core_async_task_free(task);
     task = next;
   }
+}
+
+void *lepus_core_ipc_request_queue_new(
+    lepus_core_call_ipc_complete_t call_complete) {
+  struct lepus_core_ipc_request_queue *queue;
+  if (call_complete == NULL) {
+    return NULL;
+  }
+  queue = (struct lepus_core_ipc_request_queue *)moonbit_make_external_object(
+      lepus_core_ipc_request_queue_finalize, sizeof(*queue));
+  if (queue == NULL) {
+    return NULL;
+  }
+  memset(queue, 0, sizeof(*queue));
+  queue->call_complete = call_complete;
+#ifdef _WIN32
+  InitializeCriticalSection(&queue->lock);
+  InitializeConditionVariable(&queue->ready);
+#else
+  pthread_mutex_init(&queue->lock, NULL);
+  pthread_cond_init(&queue->ready, NULL);
+#endif
+  return queue;
+}
+
+int32_t lepus_core_ipc_request_queue_push(
+    struct lepus_core_ipc_request_queue *queue,
+    moonbit_bytes_t id,
+    moonbit_bytes_t request_json,
+    void *complete) {
+  struct lepus_core_ipc_pending_request *request;
+  if (queue == NULL || complete == NULL) {
+    if (complete != NULL) {
+      moonbit_decref(complete);
+    }
+    return 0;
+  }
+  request =
+      (struct lepus_core_ipc_pending_request *)calloc(1, sizeof(*request));
+  if (request == NULL) {
+    moonbit_decref(complete);
+    return 0;
+  }
+  request->id = lepus_core_strdup((const char *)id);
+  request->request = lepus_core_strdup((const char *)request_json);
+  request->complete = complete;
+  if (request->id == NULL || request->request == NULL) {
+    lepus_core_ipc_pending_request_free(request);
+    return 0;
+  }
+  lepus_core_ipc_queue_lock(queue);
+  if (queue->closed) {
+    lepus_core_ipc_queue_unlock(queue);
+    lepus_core_ipc_pending_request_free(request);
+    return 0;
+  }
+  if (queue->tail == NULL) {
+    queue->head = request;
+    queue->tail = request;
+  } else {
+    queue->tail->next = request;
+    queue->tail = request;
+  }
+  lepus_core_ipc_queue_signal(queue);
+  lepus_core_ipc_queue_unlock(queue);
+  return 1;
+}
+
+struct lepus_core_ipc_pending_request *lepus_core_ipc_request_queue_pop(
+    struct lepus_core_ipc_request_queue *queue) {
+  struct lepus_core_ipc_pending_request *request;
+  if (queue == NULL) {
+    return lepus_core_ipc_pending_request_new_stop();
+  }
+  lepus_core_ipc_queue_lock(queue);
+  while (queue->head == NULL && !queue->closed) {
+    lepus_core_ipc_queue_wait(queue);
+  }
+  if (queue->head == NULL && queue->closed) {
+    lepus_core_ipc_queue_unlock(queue);
+    return lepus_core_ipc_pending_request_new_stop();
+  }
+  request = queue->head;
+  queue->head = request->next;
+  if (queue->head == NULL) {
+    queue->tail = NULL;
+  }
+  request->next = NULL;
+  lepus_core_ipc_queue_unlock(queue);
+  return request;
+}
+
+void lepus_core_ipc_request_queue_close(
+    struct lepus_core_ipc_request_queue *queue) {
+  if (queue == NULL) {
+    return;
+  }
+  lepus_core_ipc_queue_lock(queue);
+  queue->closed = 1;
+  lepus_core_ipc_queue_broadcast(queue);
+  lepus_core_ipc_queue_unlock(queue);
+}
+
+int32_t lepus_core_ipc_pending_request_is_stop(
+    struct lepus_core_ipc_pending_request *request) {
+  return request == NULL || request->stop != 0;
+}
+
+moonbit_bytes_t lepus_core_ipc_pending_request_id(
+    struct lepus_core_ipc_pending_request *request) {
+  const char *id = request == NULL || request->id == NULL ? "" : request->id;
+  size_t len = strlen(id) + 1;
+  moonbit_bytes_t bytes = moonbit_make_bytes_raw((int32_t)len);
+  memcpy(bytes, id, len);
+  return bytes;
+}
+
+moonbit_bytes_t lepus_core_ipc_pending_request_json(
+    struct lepus_core_ipc_pending_request *request) {
+  const char *request_json =
+      request == NULL || request->request == NULL ? "" : request->request;
+  size_t len = strlen(request_json) + 1;
+  moonbit_bytes_t bytes = moonbit_make_bytes_raw((int32_t)len);
+  memcpy(bytes, request_json, len);
+  return bytes;
+}
+
+void lepus_core_ipc_pending_request_complete(
+    struct lepus_core_ipc_request_queue *queue,
+    struct lepus_core_ipc_pending_request *request,
+    void *response) {
+  if (queue == NULL || request == NULL || request->complete == NULL) {
+    return;
+  }
+  queue->call_complete(request->complete, response);
+}
+
+void lepus_core_ipc_pending_request_destroy(
+    struct lepus_core_ipc_pending_request *request) {
+  lepus_core_ipc_pending_request_free(request);
 }

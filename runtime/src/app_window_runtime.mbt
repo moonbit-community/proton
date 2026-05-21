@@ -7,7 +7,7 @@ fn create_app_window(
   debug : Int,
 ) -> AppWindow {
   let webview = @webview.Webview::new(debug~)
-  @core.ensure_core_runtime(webview)
+  @core.install_core_bridge(webview)
   apply_window_config(webview, config)
   AppWindow::{ id, webview, config, entry }
 }
