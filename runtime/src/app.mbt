@@ -17,6 +17,7 @@ pub struct App {
   installed_extensions : Array[InstalledExtension]
   installed_extension_ids : Map[String, Bool]
   installed_extension_namespaces : Map[String, Bool]
+  ipc_backends : Array[AppIpcBackend]
 }
 
 ///|
@@ -37,6 +38,7 @@ pub fn App::new(config : AppConfig) -> App {
     installed_extensions: [],
     installed_extension_ids: {},
     installed_extension_namespaces: {},
+    ipc_backends: [],
   }
   for window in config.windows {
     let _ = app.create_window(window)
@@ -109,6 +111,7 @@ pub fn App::create_window(self : App, config : AppWindowConfig) -> AppWindow {
     window.webview,
     self.installed_extensions(),
   )
+  install_existing_ipc_backends(window, self.installed_ipc_backends())
   self.register_window(window)
   window
 }
@@ -122,6 +125,7 @@ pub fn App::run(self : App) -> Unit {
     load_app_entry(window.webview, window.entry)
   }
   self.main_window.webview.run()
+  self.close_ipc_backends()
 }
 
 ///|
@@ -136,6 +140,7 @@ pub fn App::destroy(self : App) -> Unit {
   for window in windows {
     window.webview.destroy()
   }
+  self.close_ipc_backends()
 }
 
 ///|

@@ -21,7 +21,7 @@ pub fn install_extension(@lepus.Webview, Extension) -> Unit
 
 pub fn install_ipc_extension(@lepus.Webview, IpcExtensionDescriptor) -> Unit
 
-pub fn install_ipc_op_runtime(@lepus.Webview, IpcOpTransport, Array[String], binding_name? : String) -> Unit
+pub fn install_ipc_op_runtime(@lepus.Webview, IpcOpTransport, Array[String], binding_name? : String, close_transport_on_destroy? : Bool) -> Unit
 
 pub fn moonbit_global_name() -> String
 

@@ -22,6 +22,7 @@ options(
   targets: {
     "app.mbt": [ "native" ],
     "app_extension_runtime.mbt": [ "native" ],
+    "app_ipc_runtime.mbt": [ "native" ],
     "app_window_runtime.mbt": [ "native" ],
     "asset_origin_runtime.mbt": [ "native" ],
     "config.mbt": [ "native" ],

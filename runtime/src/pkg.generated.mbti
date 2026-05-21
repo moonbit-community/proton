@@ -16,15 +16,19 @@ pub struct App {
   main_window : AppWindow
   config : AppConfig
   mut windows : Array[AppWindow]
-  installed_extensions : Array[@lepus_core.Extension]
+  installed_extensions : Array[InstalledExtension]
   installed_extension_ids : Map[String, Bool]
   installed_extension_namespaces : Map[String, Bool]
+  ipc_backends : Array[AppIpcBackend]
 }
 pub fn App::config(Self) -> AppConfig
 pub fn App::create_window(Self, AppWindowConfig) -> AppWindow
 pub fn App::destroy(Self) -> Unit
 pub fn[Payload : ToJson] App::emit_extension(Self, String, String, Payload) -> Unit
 pub fn App::install_extension(Self, @lepus_core.Extension) -> Unit
+pub fn App::install_extension_spec(Self, @lepus_core.ExtensionSpec, @lepus_core.ExtensionBuildContext) -> Result[Unit, String]
+pub fn App::install_ipc_backend(Self, @lepus_core.IpcOpTransport, Array[String], extensions? : Array[@lepus_core.IpcExtensionDescriptor]) -> Unit
+pub fn App::install_mbt_process_backend(Self, String, Array[String], args? : Array[String], cwd? : String, extensions? : Array[@lepus_core.IpcExtensionDescriptor]) -> Unit
 pub fn App::main_window(Self) -> AppWindow
 pub fn App::new(AppConfig) -> Self
 pub fn App::run(Self) -> Unit
@@ -47,6 +51,8 @@ pub(all) enum AppEntry {
   Asset(String)
 }
 
+type AppIpcBackend
+
 pub struct AppWindow {
   id : String
   webview : @lepus.Webview
@@ -64,6 +70,8 @@ pub struct AppWindowConfig {
   entry : AppEntry
 }
 pub fn AppWindowConfig::new(String, WindowConfig, AppEntry) -> Self
+
+type InstalledExtension
 
 pub struct WindowConfig {
   title : String

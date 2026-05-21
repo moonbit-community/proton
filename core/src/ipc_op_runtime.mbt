@@ -18,6 +18,7 @@ priv struct IpcOpRuntime {
   binding_name : String
   destroy_hook_name : String
   registry_key : Int64
+  close_transport_on_destroy : Bool
 }
 
 ///|
@@ -56,6 +57,7 @@ pub fn install_ipc_op_runtime(
   transport : IpcOpTransport,
   op_names : Array[String],
   binding_name? : String = moonbit_op_binding_name_value,
+  close_transport_on_destroy? : Bool = true,
 ) -> Unit {
   let key = webview.runtime_handle_id()
   guard ipc_op_runtime_by_webview.get(key) is None else {
@@ -76,6 +78,7 @@ pub fn install_ipc_op_runtime(
     binding_name,
     destroy_hook_name,
     registry_key: key,
+    close_transport_on_destroy,
   }
   install_moonbit_core_runtime(webview)
   webview.bind(binding_name, fn(id, req) { runtime.handle_request(id, req) })
@@ -137,7 +140,9 @@ pub fn emit_ipc_extension_event(
 ///|
 fn IpcOpRuntime::destroy(self : IpcOpRuntime) -> Unit {
   ipc_op_runtime_by_webview.remove(self.registry_key)
-  self.transport.close()
+  if self.close_transport_on_destroy {
+    self.transport.close()
+  }
   self.webview.unregister_destroy_hook(self.destroy_hook_name)
   self.webview.unbind(self.binding_name)
 }
