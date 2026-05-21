@@ -3,11 +3,15 @@ package "justjavac/lepus_core"
 
 import {
   "justjavac/lepus",
+  "moonbitlang/async/io",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
 pub fn[Payload : ToJson] emit_extension(@lepus.Webview, String, String, Payload) -> Unit
+
+pub fn emit_ipc_extension_event(@lepus.Webview, IpcExtensionEvent) -> Unit
 
 pub fn ensure_core_runtime(@lepus.Webview) -> Unit
 
@@ -15,9 +19,17 @@ pub fn extension_host(@lepus.Webview) -> ExtensionHost
 
 pub fn install_extension(@lepus.Webview, Extension) -> Unit
 
+pub fn install_ipc_extension(@lepus.Webview, IpcExtensionDescriptor) -> Unit
+
+pub fn install_ipc_op_runtime(@lepus.Webview, IpcOpTransport, Array[String], binding_name? : String) -> Unit
+
 pub fn moonbit_global_name() -> String
 
 pub fn moonbit_op_binding_name() -> String
+
+pub fn parse_ipc_op_request(String) -> Result[IpcOpRequest, String]
+
+pub fn parse_ipc_op_response(String) -> Result[IpcOpResponse, String]
 
 pub fn render_js_template(String, Array[TemplateReplacement]) -> String
 
@@ -60,6 +72,66 @@ pub fn ExtensionSpec::dependencies(Self) -> Array[String]
 pub fn ExtensionSpec::id(Self) -> String
 pub fn ExtensionSpec::js_namespace(Self) -> String
 pub fn ExtensionSpec::new(String, String, (ExtensionBuildContext) -> Result[Extension, String], dependencies? : Array[String]) -> Self
+
+pub(all) struct IpcExtensionApi {
+  api_name : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IpcExtensionApi::new(String) -> Self
+
+pub(all) struct IpcExtensionDescriptor {
+  id : String
+  js_namespace : String
+  apis : Array[IpcExtensionApi]
+  scripts : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IpcExtensionDescriptor::new(String, String, Array[IpcExtensionApi], scripts? : Array[String]) -> Self
+
+pub(all) struct IpcExtensionEvent {
+  version : Int
+  extension_namespace : String
+  event_name : String
+  payload : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IpcExtensionEvent::new(String, String, Json) -> Self
+
+pub(all) struct IpcOpRequest {
+  version : Int
+  id : String
+  name : String
+  payload : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IpcOpRequest::new(String, String, Json) -> Self
+pub fn IpcOpRequest::stringify(Self) -> String
+
+pub(all) struct IpcOpResponse {
+  version : Int
+  id : String
+  status : Int
+  body : Json
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IpcOpResponse::err(String, String) -> Self
+pub fn IpcOpResponse::is_ok(Self) -> Bool
+pub fn IpcOpResponse::ok(String, Json) -> Self
+pub fn IpcOpResponse::stringify(Self) -> String
+
+type IpcOpTransport
+pub fn IpcOpTransport::close(Self) -> Unit
+pub fn IpcOpTransport::dispatch(Self, IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit
+pub fn IpcOpTransport::new((IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit, close? : () -> Unit) -> Self
+pub fn IpcOpTransport::stdio_process(String, args? : Array[String], cwd? : String) -> Self
+
+type MbtProcessHost
+pub fn MbtProcessHost::close(Self) -> Unit
+pub fn MbtProcessHost::dispatch(Self, IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit
+pub fn MbtProcessHost::dispatch_json(Self, String, (IpcOpResponse) -> Unit) -> Unit
+pub fn MbtProcessHost::new(worker_count? : Int) -> Self
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn MbtProcessHost::registered_ops(Self) -> Array[String]
+pub async fn[R : @io.Reader, W : @io.Writer] MbtProcessHost::run_io(Self, R, W) -> Unit
+pub async fn MbtProcessHost::run_stdio(Self) -> Unit
 
 type ResourceTable[T]
 pub fn[T] ResourceTable::add(Self[T], T) -> Int
