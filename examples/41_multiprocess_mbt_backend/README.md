@@ -1,0 +1,30 @@
+# Multiprocess MBT Backend
+
+This example runs Lepus as two processes:
+
+- `webview/`: owns the native window, JavaScript bridge, and WebView2 event loop.
+- `backend/`: owns MoonBit command handlers and async work through
+  `MbtProcessHost::run_stdio()`.
+
+The two processes communicate with line-delimited JSON IPC over stdio. The
+webview process uses `create_app_with_mbt_process(...)` and exposes:
+
+- `app:ping`
+- `app:slowAdd`
+- `app:fail`
+
+## Run
+
+Build both executables first so the webview process can find the backend:
+
+```sh
+moon -C examples build 41_multiprocess_mbt_backend/backend --target native
+moon -C examples run 41_multiprocess_mbt_backend/webview --target native
+```
+
+Or build all examples:
+
+```sh
+moon -C examples build --target native
+moon -C examples run 41_multiprocess_mbt_backend/webview --target native
+```
