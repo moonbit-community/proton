@@ -59,9 +59,9 @@ moon -C examples build --target native
 | 36_app_devtools | Windows-only | Focused `devtools` extension example |
 | 37_cef_mvp | OK | Optional CEF probe with system webview fallback |
 | 38_async_executor_queue | OK | Low-level custom native executor queue |
-| 39_async_extension_add | OK | Remote extension API backed by an MBT child process using `op_async_result` |
-| 40_event_broadcast | OK | Remote ticker API backed by an MBT child process |
-| 41_multiprocess_mbt_backend | OK | Webview process plus MBT backend process over MoonBit-managed IPC |
+| 39_async_extension_add | OK | Async extension API implemented by an app service |
+| 40_event_broadcast | OK | Ticker extension implemented by an app service |
+| 41_app_commands | OK | App-level commands implemented by an app service |
 
 ## Notes
 

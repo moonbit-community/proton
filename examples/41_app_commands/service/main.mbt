@@ -6,7 +6,7 @@ struct PingPayload {
 ///|
 struct PingReply {
   message : String
-  process : String
+  source : String
 } derive(ToJson)
 
 ///|
@@ -20,7 +20,7 @@ struct SlowAddPayload {
 struct SlowAddReply {
   total : Int
   waited_ms : Int
-  process : String
+  source : String
 } derive(ToJson)
 
 ///|
@@ -30,12 +30,12 @@ struct FailPayload {
 
 ///|
 async fn main {
-  let host = @core.MbtProcessHost::new(worker_count=2)
+  let host = @core.AppServiceHost::new(worker_count=2)
   host.op("app:ping", fn(payload : PingPayload) {
-    let name = payload.name.unwrap_or("webview")
+    let name = payload.name.unwrap_or("app")
     PingReply::{
-      message: "Hello " + name + " from the MBT process",
-      process: "mbt",
+      message: "Hello " + name + " from the app service",
+      source: "service",
     }
   })
   host.op_async_result("app:slowAdd", async fn(payload : SlowAddPayload) {
@@ -44,14 +44,14 @@ async fn main {
     Ok(SlowAddReply::{
       total: payload.left + payload.right,
       waited_ms: delay_ms,
-      process: "mbt",
+      source: "service",
     })
   })
   host.op_result("app:fail", fn(payload : FailPayload) {
-    let message = payload.message.unwrap_or("Intentional backend failure")
+    let message = payload.message.unwrap_or("Intentional service failure")
     let result : Result[String, String] = Err(message)
     result
   })
-  host.run_stdio()
+  host.run()
   host.close()
 }

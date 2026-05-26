@@ -63,27 +63,27 @@ frames and are emitted into `window.__MoonBit__.events`.
 
 ## Current API Sketch
 
-The webview executable installs the JavaScript bridge and forwards ops to a
-backend child process:
+The app executable installs the JavaScript bridge and forwards ops to an app
+service:
 
 ```moonbit
 fn main {
-  let webview = @webview.Webview::new(debug=1)
-  let transport = @core.IpcOpTransport::stdio_process(
-    "my_app_backend.exe",
-    args=[],
+  let service = @app.AppServiceConfig::new(
+    "my_app_service.exe",
+    ["app:ping", "app:sleep"],
   )
-  @core.install_ipc_op_runtime(webview, transport, ["app:ping"])
-  webview.set_html("<html></html>")
-  webview.run()
+  match @app.create_app_with_service(manifest, registry, service) {
+    Ok(app) => app.run()
+    Err(error) => abort(error)
+  }
 }
 ```
 
-The backend executable runs normal MoonBit code and async handlers:
+The service executable runs normal MoonBit code and async handlers:
 
 ```moonbit
 async fn main {
-  let host = @core.MbtProcessHost::new()
+  let host = @core.AppServiceHost::new()
   host.op("app:ping", fn(_payload : PingPayload) {
     PingReply::{ ok: true }
   })
@@ -91,31 +91,28 @@ async fn main {
     @async.sleep(payload.ms)
     Ok(SleepReply::{ done: true })
   })
-  host.run_stdio()
+  host.run()
 }
 ```
 
-The default webview-side transport starts the backend with a local file IPC
-directory passed through the process environment. `run_stdio()` keeps the
-backend entrypoint stable: it auto-detects that file IPC mode when launched by
-the webview process, and otherwise can still serve line-delimited JSON over
-stdin/stdout for tests or custom launchers.
+The default app-side transport starts the service with a local file IPC
+directory passed through the process environment. `AppServiceHost::run()` keeps
+the service entrypoint stable while the runtime chooses the concrete transport.
 
-This is intentionally explicit: the application links and launches the backend
-it wants, while the webview side stays a small shell.
+This is intentionally explicit: the application links the service it wants,
+while the runtime owns the transport and lifecycle details.
 
-At the app layer, callers can install the same backend across all windows. The
-app owns the backend process lifetime, while each window only owns its JS
-binding. Apps can either install the backend on a runtime app directly, or use
-the high-level manifest composition helper:
+At the app layer, callers can install the same service across all windows. Apps
+can either install the service on a runtime app directly, or use the high-level
+manifest composition helper:
 
 ```moonbit
 fn main {
-  let backend = @app.MbtProcessBackendConfig::new(
-    "my_app_backend.exe",
+  let service = @app.AppServiceConfig::new(
+    "my_app_service.exe",
     ["app:ping", "app:sleep"],
   )
-  match @app.create_app_with_mbt_process(manifest, registry, backend) {
+  match @app.create_app_with_service(manifest, registry, service) {
     Ok(app) => app.run()
     Err(error) => abort(error)
   }
@@ -125,7 +122,7 @@ fn main {
 ```moonbit
 fn main {
   let app = @runtime.App::new(config)
-  app.install_mbt_process_backend("my_app_backend.exe", ["app:ping"])
+  app.install_service("my_app_service.exe", ["app:ping"])
   app.run()
 }
 ```

@@ -30,10 +30,10 @@ pub fn App::install_ipc_backend(
 }
 
 ///|
-/// Starts and installs the default stdio child-process MBT backend.
+/// Installs an app service using the runtime's default execution mechanism.
 ///
-/// The child executable is expected to run `MbtProcessHost::run_stdio()`.
-pub fn App::install_mbt_process_backend(
+/// The service command is expected to run `AppServiceHost::run()`.
+pub fn App::install_service(
   self : App,
   command : String,
   op_names : Array[String],
@@ -46,6 +46,21 @@ pub fn App::install_mbt_process_backend(
     None => @core.IpcOpTransport::stdio_process(command, args~)
   }
   self.install_ipc_backend(transport, op_names, extensions~)
+}
+
+///|
+/// Starts and installs the default stdio child-process MBT backend.
+///
+/// The child executable is expected to run `MbtProcessHost::run_stdio()`.
+pub fn App::install_mbt_process_backend(
+  self : App,
+  command : String,
+  op_names : Array[String],
+  args? : Array[String] = [],
+  cwd? : String,
+  extensions? : Array[@core.IpcExtensionDescriptor] = [],
+) -> Unit {
+  self.install_service(command, op_names, args~, cwd?, extensions~)
 }
 
 ///|

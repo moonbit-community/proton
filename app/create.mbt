@@ -58,6 +58,23 @@ pub fn create_app(
 }
 
 ///|
+/// Creates a runtime app and installs one explicit app service.
+///
+/// This keeps manifest-driven window and extension composition intact while
+/// letting the runtime choose how service commands are executed.
+pub fn create_app_with_service(
+  manifest : @manifest.AppManifest,
+  registry : ExtensionRegistry,
+  service : AppServiceConfig,
+  base_dir? : String? = None,
+) -> Result[@wvrt.App, String] {
+  match prepare_app(manifest, registry, base_dir~) {
+    Err(error) => Err(error)
+    Ok(prepared) => build_prepared_app(prepared, app_service=Some(service))
+  }
+}
+
+///|
 /// Creates a runtime app and installs one explicit MBT backend process.
 ///
 /// This keeps manifest-driven window and extension composition intact while
@@ -86,6 +103,21 @@ fn create_app_from_document(
 }
 
 ///|
+/// Builds an app from one parsed document and installs one app service.
+fn create_app_from_document_with_service(
+  document : @bootstrap.AppManifestDocument,
+  registry : ExtensionRegistry,
+  service : AppServiceConfig,
+) -> Result[@wvrt.App, String] {
+  create_app_with_service(
+    document.manifest(),
+    registry,
+    service,
+    base_dir=document.base_dir(),
+  )
+}
+
+///|
 /// Builds an app from one parsed document and installs one MBT backend process.
 fn create_app_from_document_with_mbt_process(
   document : @bootstrap.AppManifestDocument,
@@ -111,6 +143,24 @@ pub fn create_app_from_file(
   match @bootstrap.load_document(path) {
     Err(error) => Err(error)
     Ok(document) => create_app_from_document(document, registry)
+  }
+}
+
+///|
+/// Loads a manifest document from disk, creates a runtime app, and installs one
+/// app service.
+///
+/// When `service.cwd` is not set, the manifest file's parent directory is used
+/// as the service working directory.
+pub fn create_app_from_file_with_service(
+  path : String,
+  registry : ExtensionRegistry,
+  service : AppServiceConfig,
+) -> Result[@wvrt.App, String] {
+  match @bootstrap.load_document(path) {
+    Err(error) => Err(error)
+    Ok(document) =>
+      create_app_from_document_with_service(document, registry, service)
   }
 }
 

@@ -40,6 +40,16 @@ pub fn replacement(String, String) -> TemplateReplacement
 // Errors
 
 // Types and methods
+type AppServiceHost
+pub fn AppServiceHost::close(Self) -> Unit
+pub fn AppServiceHost::new(worker_count? : Int) -> Self
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppServiceHost::op(Self, String, (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppServiceHost::op_async(Self, String, async (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppServiceHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppServiceHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn AppServiceHost::registered_ops(Self) -> Array[String]
+pub async fn AppServiceHost::run(Self) -> Unit
+
 type Extension
 pub fn Extension::id(Self) -> String
 pub fn Extension::js_namespace(Self) -> String
@@ -150,3 +160,4 @@ type TemplateReplacement
 // Type aliases
 
 // Traits
+

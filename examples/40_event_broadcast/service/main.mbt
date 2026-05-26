@@ -38,7 +38,7 @@ fn clamp(value : Int, min : Int, max : Int) -> Int {
 
 ///|
 async fn main {
-  let host = @core.MbtProcessHost::new()
+  let host = @core.AppServiceHost::new()
   host.op_async_result("ext:ticker/start", async fn(payload : StartPayload) {
     let count = clamp(payload.count, 1, 20)
     let interval_ms = clamp(payload.interval_ms, 100, 2000)
@@ -57,6 +57,6 @@ async fn main {
       done: DoneEvent::{ run_id: payload.run_id, total: count },
     })
   })
-  host.run_stdio()
+  host.run()
   host.close()
 }

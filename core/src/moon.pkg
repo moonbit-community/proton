@@ -37,6 +37,7 @@ options(
     },
   ],
   targets: {
+    "app_service_host.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
     "core_js_wbtest.mbt": [ "native" ],
     "extension_host.mbt": [ "native" ],

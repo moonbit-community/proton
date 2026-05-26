@@ -173,9 +173,7 @@ fn spawn_file_ipc_backend(
 ) -> Result[Int, String] {
   let extra_env : Map[String, String] = {}
   extra_env.set(file_ipc_env_name, ipc_dir)
-  let mut result : Result[Int, String] = Err(
-    "MBT process backend was not started",
-  )
+  let mut result : Result[Int, String] = Err("app service was not started")
   @async.run_async_main(async fn() {
     result = try {
       let pid = match cwd {

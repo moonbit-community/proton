@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MoonBit Multiprocess Backend</title>
+    <title>MoonBit App Commands</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -128,22 +128,22 @@
   </head>
   <body>
     <main>
-      <h1>MoonBit multiprocess backend</h1>
+      <h1>MoonBit app commands</h1>
       <p>
-        The window process owns WebView2 and JavaScript. The MBT process owns
-        commands, state, and async work over MoonBit-managed IPC.
+        The app owns the window and JavaScript. The service owns commands,
+        state, and async work.
       </p>
 
       <div class="toolbar">
-        <button id="run">Run IPC probe</button>
+        <button id="run">Run command probe</button>
         <button id="fail" class="secondary">Call failing op</button>
       </div>
 
       <dl>
         <dt>Bridge</dt>
         <dd id="bridge">Waiting</dd>
-        <dt>Backend</dt>
-        <dd id="backend">Waiting</dd>
+        <dt>Service</dt>
+        <dd id="service">Waiting</dd>
         <dt>Async timer</dt>
         <dd id="timer">Waiting</dd>
       </dl>
@@ -153,7 +153,7 @@
 
     <script>
       const bridgeEl = document.querySelector("#bridge");
-      const backendEl = document.querySelector("#backend");
+      const serviceEl = document.querySelector("#service");
       const timerEl = document.querySelector("#timer");
       const logEl = document.querySelector("#log");
       const runButton = document.querySelector("#run");
@@ -174,12 +174,12 @@
       }
 
       async function runProbe() {
-        logEl.textContent = "Running IPC probe...";
+        logEl.textContent = "Running command probe...";
         setStatus(bridgeEl, "Ready", "ok");
-        setStatus(backendEl, "Calling", "");
+        setStatus(serviceEl, "Calling", "");
         setStatus(timerEl, "Checking", "");
         const watchdog = window.setTimeout(() => {
-          void window.reportMultiprocessProbe?.({
+          void window.reportCommandProbe?.({
             ok: false,
             stage: "probe-timeout",
             has_moonbit: !!window.__MoonBit__,
@@ -207,12 +207,12 @@
           window.clearTimeout(watchdog);
           log(`slowAdd -> ${JSON.stringify(sum)}`);
 
-          setStatus(backendEl, `${sum.total} from ${sum.process}`, "ok");
+          setStatus(serviceEl, `${sum.total} from ${sum.source}`, "ok");
           if (!timerFiredBeforeReply) {
             setStatus(timerEl, "Timer fired after reply", "err");
           }
 
-          void window.reportMultiprocessProbe?.({
+          void window.reportCommandProbe?.({
             ok: true,
             ping,
             sum,
@@ -221,9 +221,9 @@
         } catch (error) {
           window.clearTimeout(timer);
           window.clearTimeout(watchdog);
-          setStatus(backendEl, "Failed", "err");
+          setStatus(serviceEl, "Failed", "err");
           log(String(error), "error");
-          void window.reportMultiprocessProbe?.({
+          void window.reportCommandProbe?.({
             ok: false,
             error: String(error),
           });
@@ -232,7 +232,7 @@
 
       async function callFailure() {
         try {
-          await invoke("app:fail", { message: "Failure crossed process IPC" });
+          await invoke("app:fail", { message: "Failure crossed service boundary" });
           log("Expected app:fail to reject", "error");
         } catch (error) {
           log(`app:fail rejected as expected -> ${String(error)}`, "ok");
@@ -247,7 +247,7 @@
         }
         if (attempt > 80) {
           setStatus(bridgeEl, "Timed out", "err");
-          void window.reportMultiprocessProbe?.({
+          void window.reportCommandProbe?.({
             ok: false,
             stage: "bridge-timeout",
             has_moonbit: !!window.__MoonBit__,

@@ -129,9 +129,9 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
 }
 
 ///|
-test "local async extension ops require a multiprocess backend" {
+test "local async extension ops require an app service" {
   let expected_report = AsyncSleepReport::{
-    error: "Async op requires a multiprocess IPC backend: ext:sleep/wait",
+    error: "Async op requires an app service: ext:sleep/wait",
     timer_fired_before_reply: false,
   }
   let mut seen_report : AsyncSleepReport? = None

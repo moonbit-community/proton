@@ -1,7 +1,6 @@
 import {
   "moonbitlang/x/fs" @mbfs,
   "justjavac/lepus_app" @app,
-  "justjavac/lepus_core" @core,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime",
 }

@@ -182,7 +182,7 @@ fn OpRuntime::handle_async_request(
   id : String,
   request : OpInvocation,
 ) -> Unit {
-  let message = "Async op requires a multiprocess IPC backend: " + request.name
+  let message = "Async op requires an app service: " + request.name
   self.webview.response(id, 1, Json::string(message).stringify())
 }
 

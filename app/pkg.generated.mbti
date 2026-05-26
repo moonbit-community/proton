@@ -14,11 +14,24 @@ pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@lepus_runtime.
 
 pub fn create_app_from_file_with_mbt_process(String, ExtensionRegistry, MbtProcessBackendConfig) -> Result[@lepus_runtime.App, String]
 
+pub fn create_app_from_file_with_service(String, ExtensionRegistry, AppServiceConfig) -> Result[@lepus_runtime.App, String]
+
 pub fn create_app_with_mbt_process(@lepus_manifest.AppManifest, ExtensionRegistry, MbtProcessBackendConfig, base_dir? : String?) -> Result[@lepus_runtime.App, String]
+
+pub fn create_app_with_service(@lepus_manifest.AppManifest, ExtensionRegistry, AppServiceConfig, base_dir? : String?) -> Result[@lepus_runtime.App, String]
 
 // Errors
 
 // Types and methods
+type AppServiceApi
+pub fn AppServiceApi::new(String) -> Self
+
+type AppServiceConfig
+pub fn AppServiceConfig::new(String, Array[String], args? : Array[String], cwd? : String?, extensions? : Array[AppServiceExtension]) -> Self
+
+type AppServiceExtension
+pub fn AppServiceExtension::new(String, String, Array[AppServiceApi], scripts? : Array[String]) -> Self
+
 type ExtensionRegistry
 pub fn ExtensionRegistry::get(Self, String) -> @lepus_core.ExtensionSpec?
 pub fn ExtensionRegistry::new() -> Self

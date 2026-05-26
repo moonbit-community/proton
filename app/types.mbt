@@ -22,6 +22,34 @@ priv struct PreparedApp {
 }
 
 ///|
+/// One JavaScript-facing API exposed by an app service extension.
+struct AppServiceApi {
+  api_name : String
+}
+
+///|
+/// JavaScript bridge metadata exposed by an app service extension.
+struct AppServiceExtension {
+  id : String
+  js_namespace : String
+  apis : Array[AppServiceApi]
+  scripts : Array[String]
+}
+
+///|
+/// App service configuration for high-level app composition.
+///
+/// The service command is connected by the runtime. Callers configure commands
+/// and JavaScript-facing extension APIs without choosing a concurrency model.
+struct AppServiceConfig {
+  command : String
+  op_names : Array[String]
+  args : Array[String]
+  cwd : String?
+  extensions : Array[@core.IpcExtensionDescriptor]
+}
+
+///|
 /// Explicit MBT backend process configuration for high-level app composition.
 ///
 /// The backend executable is expected to run `@core.MbtProcessHost::run_stdio`.
@@ -144,6 +172,41 @@ fn PreparedApp::prepared_extensions(
 }
 
 ///|
+/// Creates one JavaScript-facing app service API descriptor.
+pub fn AppServiceApi::new(api_name : String) -> AppServiceApi {
+  AppServiceApi::{ api_name, }
+}
+
+///|
+/// Creates one app service extension descriptor.
+pub fn AppServiceExtension::new(
+  id : String,
+  js_namespace : String,
+  apis : Array[AppServiceApi],
+  scripts? : Array[String] = [],
+) -> AppServiceExtension {
+  AppServiceExtension::{ id, js_namespace, apis, scripts }
+}
+
+///|
+/// Creates one app service configuration.
+pub fn AppServiceConfig::new(
+  command : String,
+  op_names : Array[String],
+  args? : Array[String] = [],
+  cwd? : String? = None,
+  extensions? : Array[AppServiceExtension] = [],
+) -> AppServiceConfig {
+  AppServiceConfig::{
+    command,
+    op_names,
+    args,
+    cwd,
+    extensions: extensions.map(fn(extension) { extension.to_ipc_descriptor() }),
+  }
+}
+
+///|
 /// Creates one explicit MBT backend process configuration.
 pub fn MbtProcessBackendConfig::new(
   command : String,
@@ -153,6 +216,50 @@ pub fn MbtProcessBackendConfig::new(
   extensions? : Array[@core.IpcExtensionDescriptor] = [],
 ) -> MbtProcessBackendConfig {
   MbtProcessBackendConfig::{ command, op_names, args, cwd, extensions }
+}
+
+///|
+fn AppServiceApi::to_ipc_api(self : AppServiceApi) -> @core.IpcExtensionApi {
+  @core.IpcExtensionApi::new(self.api_name)
+}
+
+///|
+fn AppServiceExtension::to_ipc_descriptor(
+  self : AppServiceExtension,
+) -> @core.IpcExtensionDescriptor {
+  @core.IpcExtensionDescriptor::new(
+    self.id,
+    self.js_namespace,
+    self.apis.map(fn(api) { api.to_ipc_api() }),
+    scripts=self.scripts,
+  )
+}
+
+///|
+fn AppServiceConfig::command(self : AppServiceConfig) -> String {
+  self.command
+}
+
+///|
+fn AppServiceConfig::op_names(self : AppServiceConfig) -> Array[String] {
+  self.op_names
+}
+
+///|
+fn AppServiceConfig::args(self : AppServiceConfig) -> Array[String] {
+  self.args
+}
+
+///|
+fn AppServiceConfig::cwd(self : AppServiceConfig) -> String? {
+  self.cwd
+}
+
+///|
+fn AppServiceConfig::extensions(
+  self : AppServiceConfig,
+) -> Array[@core.IpcExtensionDescriptor] {
+  self.extensions
 }
 
 ///|
