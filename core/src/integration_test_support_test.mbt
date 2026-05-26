@@ -25,7 +25,6 @@ struct MultiplyReply {
 struct OpsRuntimeReport {
   direct : MultiplyReply
   extension : MultiplyReply
-  async_extension : MultiplyReply
   event_count : Int
 } derive(ToJson, FromJson, Eq, Debug)
 
@@ -41,7 +40,7 @@ struct SleepReply {
 
 ///|
 struct AsyncSleepReport {
-  reply : SleepReply
+  error : String
   timer_fired_before_reply : Bool
 } derive(ToJson, FromJson, Eq, Debug)
 

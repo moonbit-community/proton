@@ -97,7 +97,7 @@ pub fn ExtensionHost::install(
 ///|
 /// Emits an extension-scoped event from the host to JavaScript.
 /// The payload is converted to JSON and dispatched on the owning webview's main
-/// thread so JavaScript observers receive it safely.
+/// event loop so JavaScript observers receive it safely.
 pub fn[Payload : ToJson] ExtensionHost::emit(
   self : ExtensionHost,
   extension_namespace : String,

@@ -200,11 +200,6 @@ let resource : String =
   #|
   #|        try {
   #|          const ping = await invoke("app:ping", { name: "webview" });
-  #|          await window.reportMultiprocessProbe({
-  #|            ok: false,
-  #|            stage: "ping-ok",
-  #|            ping,
-  #|          });
   #|          log(`ping -> ${JSON.stringify(ping)}`);
   #|
   #|          const sum = await invoke("app:slowAdd", {
@@ -221,7 +216,7 @@ let resource : String =
   #|            setStatus(timerEl, "Timer fired after reply", "err");
   #|          }
   #|
-  #|          await window.reportMultiprocessProbe({
+  #|          void window.reportMultiprocessProbe?.({
   #|            ok: true,
   #|            ping,
   #|            sum,
@@ -232,7 +227,7 @@ let resource : String =
   #|          window.clearTimeout(watchdog);
   #|          setStatus(backendEl, "Failed", "err");
   #|          log(String(error), "error");
-  #|          await window.reportMultiprocessProbe({
+  #|          void window.reportMultiprocessProbe?.({
   #|            ok: false,
   #|            error: String(error),
   #|          });
@@ -271,14 +266,6 @@ let resource : String =
   #|      runButton.addEventListener("click", () => void runProbe());
   #|      failButton.addEventListener("click", () => void callFailure());
   #|      window.addEventListener("load", () => {
-  #|        try {
-  #|          void window.reportMultiprocessProbe?.({
-  #|            ok: false,
-  #|            stage: "loaded",
-  #|          });
-  #|        } catch (_) {
-  #|          // The probe binding is diagnostic only; keep the demo running.
-  #|        }
   #|        waitForBridge();
   #|      });
   #|    </script>

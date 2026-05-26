@@ -3,7 +3,6 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
   let expected_report = OpsRuntimeReport::{
     direct: MultiplyReply::{ total: 42 },
     extension: MultiplyReply::{ total: 42 },
-    async_extension: MultiplyReply::{ total: 13 },
     event_count: 2,
   }
   let mut seen_report : OpsRuntimeReport? = None
@@ -18,9 +17,6 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
           message: "MoonBit computed " + reply.total.to_string(),
         })
         reply
-      })
-      extension.op_async_result("sumAsync", fn(payload : MultiplyPayload) {
-        Ok(MultiplyReply::{ total: payload.left + payload.right })
       })
     }),
   )
@@ -94,7 +90,6 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
       #|               window.reportOpsRuntime({
       #|                 direct: results.direct,
       #|                 extension: results.extension,
-      #|                 async_extension: results.asyncExtension,
       #|                 event_count: eventCount,
       #|               })
       #|                 .then(() => {
@@ -111,10 +106,9 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
       #|             Promise.all([
       #|               moonbit.core.invokeOp("ext:math/multiply", { left: 6, right: 7 }),
       #|               moonbit.math.multiply({ left: 6, right: 7 }),
-      #|               moonbit.math.sumAsync({ left: 6, right: 7 }),
       #|             ])
-      #|               .then(([direct, extension, asyncExtension]) => {
-      #|                 results = { direct, extension, asyncExtension };
+      #|               .then(([direct, extension]) => {
+      #|                 results = { direct, extension };
       #|                 maybeFinish();
       #|               })
       #|               .catch((error) => {
@@ -131,14 +125,14 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
   )
   webview.run()
   @debug.assert_eq(js_error, None)
-  assert_true(seen_report == Some(expected_report))
+  @debug.assert_eq(seen_report, Some(expected_report))
 }
 
 ///|
-test "async extension ops run away from the webview event loop" {
+test "local async extension ops require a multiprocess backend" {
   let expected_report = AsyncSleepReport::{
-    reply: SleepReply::{ done: true },
-    timer_fired_before_reply: true,
+    error: "Async op requires a multiprocess IPC backend: ext:sleep/wait",
+    timer_fired_before_reply: false,
   }
   let mut seen_report : AsyncSleepReport? = None
   let mut js_error : String? = None
@@ -146,8 +140,8 @@ test "async extension ops run away from the webview event loop" {
   @lepus_core.install_extension(
     webview,
     @lepus_core.Extension::new("tests/sleep", "sleep", fn(extension) {
-      extension.op_async_result("wait", async fn(payload : SleepPayload) {
-        @async.sleep(payload.ms)
+      extension.op_async_result("wait", fn(payload : SleepPayload) {
+        ignore(payload)
         Ok(SleepReply::{ done: true })
       })
     }),
@@ -214,16 +208,16 @@ test "async extension ops run away from the webview event loop" {
       #|               void reportFailure("sleep op timeout");
       #|             }, 1200);
       #|             window.__MoonBit__.sleep.wait({ ms: 250 })
-      #|               .then((reply) => {
+      #|               .then(() => {
       #|                 window.clearTimeout(timeoutId);
-      #|                 return window.reportSleepRuntime({
-      #|                   reply,
-      #|                   timer_fired_before_reply: timerFired,
-      #|                 });
+      #|                 void reportFailure("local async op unexpectedly resolved");
       #|               })
       #|               .catch((error) => {
       #|                 window.clearTimeout(timeoutId);
-      #|                 void reportFailure("sleep op transport error: " + String(error));
+      #|                 return window.reportSleepRuntime({
+      #|                   error: String(error),
+      #|                   timer_fired_before_reply: timerFired,
+      #|                 });
       #|               });
       #|           },
       #|           "sleep extension",
@@ -236,5 +230,5 @@ test "async extension ops run away from the webview event loop" {
   )
   webview.run()
   @debug.assert_eq(js_error, None)
-  assert_true(seen_report == Some(expected_report))
+  @debug.assert_eq(seen_report, Some(expected_report))
 }

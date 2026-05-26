@@ -6,7 +6,6 @@
 /// process.
 struct MbtProcessHost {
   registry : OpRegistry
-  executor : AsyncExecutor
   op_names : Array[String]
   mut closed : Bool
 }
@@ -14,12 +13,8 @@ struct MbtProcessHost {
 ///|
 /// Creates an empty MBT-side command host.
 pub fn MbtProcessHost::new(worker_count? : Int = 4) -> MbtProcessHost {
-  MbtProcessHost::{
-    registry: OpRegistry::new(),
-    executor: AsyncExecutor::new(worker_count~),
-    op_names: [],
-    closed: false,
-  }
+  ignore(worker_count)
+  MbtProcessHost::{ registry: OpRegistry::new(), op_names: [], closed: false }
 }
 
 ///|
@@ -87,11 +82,12 @@ pub fn MbtProcessHost::dispatch(
     return
   }
   if self.registry.has_async(request.name) {
-    self.registry.call_async(self.executor, request.name, request.payload, fn(
-      reply,
-    ) {
-      complete(make_ipc_response(request.id, reply))
-    })
+    complete(
+      IpcOpResponse::err(
+        request.id,
+        "Async MBT process ops require dispatch_async() or run_stdio()",
+      ),
+    )
   } else {
     complete(
       make_ipc_response(
@@ -106,8 +102,7 @@ pub fn MbtProcessHost::dispatch(
 /// Dispatches one decoded IPC request on the current async loop.
 ///
 /// MBT process stdio hosts use this path so async ops run inside the backend
-/// process event loop instead of creating a nested event loop on a worker
-/// thread.
+/// process event loop instead of creating a nested event loop elsewhere.
 pub async fn MbtProcessHost::dispatch_async(
   self : MbtProcessHost,
   request : IpcOpRequest,
@@ -154,11 +149,10 @@ pub async fn MbtProcessHost::dispatch_json_async(
 }
 
 ///|
-/// Closes the async executor owned by this host.
+/// Closes this host and rejects future dispatches.
 pub fn MbtProcessHost::close(self : MbtProcessHost) -> Unit {
   guard !self.closed else { return }
   self.closed = true
-  self.executor.close()
 }
 
 ///|

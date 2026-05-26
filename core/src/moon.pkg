@@ -1,8 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbitlang/async" @async,
   "moonbitlang/async/io",
-  "moonbitlang/async/process",
   "moonbitlang/async/stdio",
   "justjavac/ffi",
   "justjavac/lepus" @webview,
@@ -16,13 +14,14 @@ import {
 } for "test"
 
 import {
+  "moonbitlang/async" @async,
   "moonbitlang/core/debug" @debug,
 } for "wbtest"
 
 supported_targets = "+native"
 
 options(
-  "native-stub": [ "async_executor_native.c" ],
+  "native-stub": [ "stdio_transport_native.c" ],
   "pre-build": [
     {
       "command": "node $mod_dir/../scripts/embed_asset.mjs $input $output moonbit_core_template_resource",
@@ -36,8 +35,6 @@ options(
     },
   ],
   targets: {
-    "async_executor_native.c": [ "native" ],
-    "async_runtime.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
     "core_js_wbtest.mbt": [ "native" ],
     "extension_host.mbt": [ "native" ],
@@ -56,5 +53,6 @@ options(
     "op_runtime.mbt": [ "native" ],
     "resource_table.mbt": [ "native" ],
     "runtime_script_install.mbt": [ "native" ],
+    "stdio_transport_native.c": [ "native" ],
   },
 )

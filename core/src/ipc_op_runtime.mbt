@@ -9,6 +9,7 @@ let ipc_op_runtime_by_webview : Map[Int64, IpcOpRuntime] = {}
 struct IpcOpTransport {
   send_request : (IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit
   close_transport : () -> Unit
+  poll_transport : () -> Bool
 }
 
 ///|
@@ -16,6 +17,7 @@ priv struct IpcOpRuntime {
   webview : @webview.Webview
   transport : IpcOpTransport
   binding_name : String
+  poll_binding_name : String
   destroy_hook_name : String
   registry_key : Int64
   close_transport_on_destroy : Bool
@@ -27,7 +29,23 @@ pub fn IpcOpTransport::new(
   send_request : (IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit,
   close? : () -> Unit = fn() {  },
 ) -> IpcOpTransport {
-  IpcOpTransport::{ send_request, close_transport: close }
+  IpcOpTransport::{
+    send_request,
+    close_transport: close,
+    poll_transport: fn() { false },
+  }
+}
+
+///|
+fn IpcOpTransport::with_poll(
+  self : IpcOpTransport,
+  poll : () -> Bool,
+) -> IpcOpTransport {
+  IpcOpTransport::{
+    send_request: self.send_request,
+    close_transport: self.close_transport,
+    poll_transport: poll,
+  }
 }
 
 ///|
@@ -44,6 +62,11 @@ pub fn IpcOpTransport::dispatch(
 /// Closes this transport.
 pub fn IpcOpTransport::close(self : IpcOpTransport) -> Unit {
   (self.close_transport)()
+}
+
+///|
+fn IpcOpTransport::poll(self : IpcOpTransport) -> Bool {
+  (self.poll_transport)()
 }
 
 ///|
@@ -72,16 +95,19 @@ pub fn install_ipc_op_runtime(
     )
   }
   let destroy_hook_name = "ipc-op-runtime:" + binding_name
+  let poll_binding_name = binding_name + "_poll"
   let runtime = IpcOpRuntime::{
     webview,
     transport,
     binding_name,
+    poll_binding_name,
     destroy_hook_name,
     registry_key: key,
     close_transport_on_destroy,
   }
   install_moonbit_core_runtime(webview)
   webview.bind(binding_name, fn(id, req) { runtime.handle_request(id, req) })
+  webview.bind(poll_binding_name, fn(id, _req) { runtime.handle_poll(id) })
   webview.register_destroy_hook(destroy_hook_name, fn() { runtime.destroy() })
   ipc_op_runtime_by_webview.set(key, runtime)
   for op_name in op_names {
@@ -144,6 +170,7 @@ fn IpcOpRuntime::destroy(self : IpcOpRuntime) -> Unit {
     self.transport.close()
   }
   self.webview.unregister_destroy_hook(self.destroy_hook_name)
+  self.webview.unbind(self.poll_binding_name)
   self.webview.unbind(self.binding_name)
 }
 
@@ -170,5 +197,18 @@ fn IpcOpRuntime::complete_response(
   self : IpcOpRuntime,
   response : IpcOpResponse,
 ) -> Unit {
-  self.webview.response(response.id, response.status, response.body.stringify())
+  self.webview.dispatch(fn() {
+    self.webview.response(
+      response.id,
+      response.status,
+      response.body.stringify(),
+    )
+  })
+}
+
+///|
+fn IpcOpRuntime::handle_poll(self : IpcOpRuntime, raw_id : Bytes) -> Unit {
+  let id = @ffi.from_cstr(raw_id)
+  let has_pending = self.transport.poll()
+  self.webview.response(id, 0, Json::boolean(has_pending).stringify())
 }

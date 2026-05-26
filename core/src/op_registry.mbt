@@ -88,29 +88,6 @@ async fn OpRegistry::call_async_direct(
 }
 
 ///|
-/// Starts a previously registered async op handler on an executor.
-fn OpRegistry::call_async(
-  self : OpRegistry,
-  executor : AsyncExecutor,
-  name : String,
-  payload : Json,
-  complete : (Result[Json, String]) -> Unit,
-) -> Unit {
-  match self.async_handlers.get(name) {
-    Some(handler) => {
-      let accepted = executor.submit(async fn() noraise {
-        let result = handler(payload) catch { err => Err(err.to_string()) }
-        complete(result)
-      })
-      if !accepted {
-        complete(Err("Async executor is closed"))
-      }
-    }
-    None => complete(self.call(name, payload))
-  }
-}
-
-///|
 /// Returns whether an op name has been registered as an async handler.
 fn OpRegistry::has_async(self : OpRegistry, name : String) -> Bool {
   self.async_handlers.get(name) is Some(_)

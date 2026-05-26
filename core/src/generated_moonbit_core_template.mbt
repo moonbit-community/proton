@@ -14,6 +14,23 @@ let moonbit_core_template_resource : String =
   #|    const binding = window[bindingName];
   #|    return typeof binding === 'function' ? binding : null;
   #|  }
+  #|  function startIpcPoll() {
+  #|    const pollName = bindingName + '_poll';
+  #|    const poll = window[pollName];
+  #|    if (typeof poll !== 'function') {
+  #|      return;
+  #|    }
+  #|    const tick = function() {
+  #|      poll()
+  #|        .then(function(hasPending) {
+  #|          if (hasPending) {
+  #|            window.setTimeout(tick, 10);
+  #|          }
+  #|        })
+  #|        .catch(function() {});
+  #|    };
+  #|    window.setTimeout(tick, 0);
+  #|  }
   #|  const core = root.core && typeof root.core === 'object' ? root.core : (root.core = Object.create(null));
   #|  core.registerOp = function(name) {
   #|    opNames[name] = true;
@@ -27,7 +44,9 @@ let moonbit_core_template_resource : String =
   #|    if (!binding) {
   #|      return Promise.reject(new Error('MoonBit op runtime is not available'));
   #|    }
-  #|    return binding({ name: name, payload: payload === undefined ? null : payload });
+  #|    const result = binding({ name: name, payload: payload === undefined ? null : payload });
+  #|    startIpcPoll();
+  #|    return result;
   #|  };
   #|  core.ops = core.ops && typeof core.ops === 'object' ? core.ops : new Proxy(Object.create(null), {
   #|    get(target, property) {

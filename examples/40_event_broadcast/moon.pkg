@@ -1,8 +1,9 @@
 import {
-  "moonbitlang/core/json",
-  "moonbitlang/async" @async,
+  "moonbitlang/x/fs" @mbfs,
+  "justjavac/lepus_app" @app,
   "justjavac/lepus_core" @core,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus_manifest" @manifest,
+  "justjavac/lepus_runtime",
 }
 
 supported_targets = "native"
@@ -16,5 +17,5 @@ options(
       "output": "app.mbt",
     },
   ],
-  targets: { "main.mbt": [ "native" ], "ticker_extension.mbt": [ "native" ] },
+  targets: { "main.mbt": [ "native" ] },
 )
