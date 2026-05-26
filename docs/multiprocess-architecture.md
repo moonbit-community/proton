@@ -10,8 +10,9 @@ MoonBit native process.
 - **MBT process** owns application commands, stateful business logic, extension
   command handlers, and `moonbitlang/async`.
 - **IPC transport** carries JSON frames between the two processes. The protocol
-  is transport-neutral so stdio, named pipes, Unix domain sockets, and later
-  platform-specific app service transports can share the same runtime contracts.
+  is transport-neutral so the current MoonBit-managed file IPC transport,
+  stdio, named pipes, Unix domain sockets, and later platform-specific app
+  service transports can share the same runtime contracts.
 
 This matches the Tauri/Electron split at a high level: the renderer/webview is
 not where privileged MoonBit application code runs.
@@ -52,7 +53,7 @@ frames and are emitted into `window.__MoonBit__.events`.
    and async ops.
 2. Add a webview-side `IpcOpTransport` and `install_ipc_op_runtime(...)` that
    forwards JS op invocations to any transport implementation.
-3. Add a native stdio child-process transport as the default local development
+3. Add a MoonBit child-process transport as the default local development
    transport.
 4. Teach `runtime` and `app` to manage an app-wide backend transport shared by
    every current and future window.
@@ -94,6 +95,12 @@ async fn main {
 }
 ```
 
+The default webview-side transport starts the backend with a local file IPC
+directory passed through the process environment. `run_stdio()` keeps the
+backend entrypoint stable: it auto-detects that file IPC mode when launched by
+the webview process, and otherwise can still serve line-delimited JSON over
+stdin/stdout for tests or custom launchers.
+
 This is intentionally explicit: the application links and launches the backend
 it wants, while the webview side stays a small shell.
 
@@ -125,8 +132,9 @@ fn main {
 
 ## Open Decisions
 
-- Default transport per platform: stdio is simplest; named pipes or Unix domain
-  sockets are better for long-running bidirectional event streams.
+- Default transport per platform: MoonBit file IPC is enough for local
+  development without project-owned native C; named pipes or Unix domain sockets
+  are better future options for high-throughput bidirectional event streams.
 - Packaging contract: callers can provide a backend executable path, or tooling
   can generate both entrypoints.
 - Which built-in extensions live in the webview process versus MBT process.

@@ -61,7 +61,7 @@ moon -C examples build --target native
 | 38_async_executor_queue | OK | Low-level custom native executor queue |
 | 39_async_extension_add | OK | Remote extension API backed by an MBT child process using `op_async_result` |
 | 40_event_broadcast | OK | Remote ticker API backed by an MBT child process |
-| 41_multiprocess_mbt_backend | OK | Webview process plus MBT backend process over stdio IPC |
+| 41_multiprocess_mbt_backend | OK | Webview process plus MBT backend process over MoonBit-managed IPC |
 
 ## Notes
 

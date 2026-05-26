@@ -6,7 +6,9 @@ This example runs Lepus as two processes:
 - `backend/`: owns MoonBit command handlers and async work through
   `MbtProcessHost::run_stdio()`.
 
-The two processes communicate with line-delimited JSON IPC over stdio. The
+When launched by the webview process, `run_stdio()` auto-detects the local file
+IPC directory passed by the transport environment. The same backend entrypoint
+can still run line-delimited JSON over stdin/stdout for custom launchers. The
 webview process uses `create_app_with_mbt_process(...)` and exposes:
 
 - `app:ping`
