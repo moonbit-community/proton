@@ -1,0 +1,33 @@
+import {
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/json",
+  "moonbitlang/async" @async,
+  "moonbitlang/async/http",
+  "moonbitlang/async/io",
+  "moonbitlang/async/semaphore",
+  "moonbitlang/async/socket",
+  "moonbitlang/async/websocket",
+  "moonbitlang/x/crypto" @crypto,
+  "justjavac/lepus_ipc" @ipc,
+}
+
+import {
+  "moonbitlang/async" @async,
+  "moonbitlang/async/http",
+  "moonbitlang/async/socket",
+  "moonbitlang/async/websocket",
+  "moonbitlang/core/debug" @debug,
+  "justjavac/lepus_ipc" @ipc,
+} for "wbtest"
+
+supported_targets = "+native"
+
+options(
+  targets: {
+    "bridge_script.mbt": [ "native" ],
+    "launch.mbt": [ "native" ],
+    "server.mbt": [ "native" ],
+    "url_encoding.mbt": [ "native" ],
+    "ws_wbtest.mbt": [ "native" ],
+  },
+)
