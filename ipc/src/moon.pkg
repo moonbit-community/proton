@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/core/json",
+}
+
+supported_targets = "+native"
+
+options(
+  targets: { "protocol.mbt": [ "native" ], "protocol_wbtest.mbt": [ "native" ] },
+)
