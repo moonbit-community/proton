@@ -68,5 +68,12 @@ pub fn AppConfig::new(
   debug? : Int = 0,
   windows? : Array[AppWindowConfig] = [],
 ) -> AppConfig {
-  AppConfig::{ window, entry, windows, debug }
+  AppConfig::{ window, entry, windows: copy_app_window_configs(windows), debug }
+}
+
+///|
+fn copy_app_window_configs(
+  windows : Array[AppWindowConfig],
+) -> Array[AppWindowConfig] {
+  windows.map(fn(window) { window })
 }

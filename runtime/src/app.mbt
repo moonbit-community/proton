@@ -25,6 +25,7 @@ pub struct App {
 /// The main window is created immediately and any additional configured windows
 /// are registered before the runtime loop starts.
 pub fn App::new(config : AppConfig) -> App {
+  let config_snapshot = copy_app_config(config)
   let main_window = create_app_window(
     "main",
     config.window,
@@ -33,7 +34,7 @@ pub fn App::new(config : AppConfig) -> App {
   )
   let app = App::{
     main_window,
-    config,
+    config: config_snapshot,
     windows: [main_window],
     installed_extensions: [],
     installed_extension_ids: {},
@@ -67,7 +68,7 @@ pub fn App::webview(self : App) -> @webview.Webview {
 /// The returned value reflects the original app-level settings rather than any
 /// later runtime mutation.
 pub fn App::config(self : App) -> AppConfig {
-  self.config
+  copy_app_config(self.config)
 }
 
 ///|
@@ -75,7 +76,7 @@ pub fn App::config(self : App) -> AppConfig {
 /// The array order always starts with the primary window followed by additional
 /// windows in registration order.
 pub fn App::windows(self : App) -> Array[AppWindow] {
-  self.windows
+  copy_app_windows(self.windows)
 }
 
 ///|
@@ -214,4 +215,19 @@ pub fn AppWindow::config(self : AppWindow) -> WindowConfig {
 /// This is the app entry that will be or has been loaded into the window.
 pub fn AppWindow::entry(self : AppWindow) -> AppEntry {
   self.entry
+}
+
+///|
+fn copy_app_config(config : AppConfig) -> AppConfig {
+  AppConfig::{
+    window: config.window,
+    entry: config.entry,
+    windows: copy_app_window_configs(config.windows),
+    debug: config.debug,
+  }
+}
+
+///|
+fn copy_app_windows(windows : Array[AppWindow]) -> Array[AppWindow] {
+  windows.map(fn(window) { window })
 }

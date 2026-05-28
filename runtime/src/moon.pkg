@@ -3,6 +3,7 @@ import {
   "moonbitlang/x/path",
   "justjavac/ffi",
   "justjavac/lepus_core" @core,
+  "justjavac/lepus_ipc" @ipc,
   "justjavac/lepus" @webview,
 }
 

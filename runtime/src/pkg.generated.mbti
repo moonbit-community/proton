@@ -4,6 +4,7 @@ package "justjavac/lepus_runtime"
 import {
   "justjavac/lepus",
   "justjavac/lepus_core",
+  "justjavac/lepus_ipc",
   "moonbitlang/core/debug",
 }
 
@@ -27,9 +28,7 @@ pub fn App::destroy(Self) -> Unit
 pub fn[Payload : ToJson] App::emit_extension(Self, String, String, Payload) -> Unit
 pub fn App::install_extension(Self, @lepus_core.Extension) -> Unit
 pub fn App::install_extension_spec(Self, @lepus_core.ExtensionSpec, @lepus_core.ExtensionBuildContext) -> Result[Unit, String]
-pub fn App::install_ipc_backend(Self, @lepus_core.IpcOpTransport, Array[String], extensions? : Array[@lepus_core.IpcExtensionDescriptor]) -> Unit
-pub fn App::install_mbt_process_backend(Self, String, Array[String], args? : Array[String], cwd? : String, extensions? : Array[@lepus_core.IpcExtensionDescriptor]) -> Unit
-pub fn App::install_service(Self, String, Array[String], args? : Array[String], cwd? : String, extensions? : Array[@lepus_core.IpcExtensionDescriptor]) -> Unit
+pub fn App::install_ipc_bridge(Self, String, Array[String], extensions? : Array[@lepus_ipc.IpcExtensionDescriptor]) -> Unit
 pub fn App::main_window(Self) -> AppWindow
 pub fn App::new(AppConfig) -> Self
 pub fn App::run(Self) -> Unit

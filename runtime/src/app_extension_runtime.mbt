@@ -93,6 +93,15 @@ fn install_app_extension_on_app(
       extension_namespace,
     )
   }
+  guard !ipc_extension_namespace_is_installed(
+    app.installed_ipc_backends(),
+    extension_namespace,
+  ) else {
+    return Err(
+      "App::install_extension: extension namespace already installed by IPC bridge: " +
+      extension_namespace,
+    )
+  }
 
   let built_extensions : Array[(AppWindow, @core.Extension)] = []
   for window in app.windows() {

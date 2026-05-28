@@ -25,6 +25,55 @@ test "App registers additional windows before run" {
 }
 
 ///|
+test "AppConfig and App accessors expose window snapshots" {
+  let configured_windows = [
+    @lepus_runtime.AppWindowConfig::new(
+      "docs",
+      @lepus_runtime.WindowConfig::new("Docs", 640, 480),
+      @lepus_runtime.AppEntry::Html("<html>Docs</html>"),
+    ),
+  ]
+  let config = @lepus_runtime.AppConfig::new(
+    @lepus_runtime.WindowConfig::new("runtime-main", 800, 600),
+    @lepus_runtime.AppEntry::Html("<html>Main</html>"),
+    windows=configured_windows,
+  )
+  configured_windows.push(
+    @lepus_runtime.AppWindowConfig::new(
+      "late",
+      @lepus_runtime.WindowConfig::new("Late", 320, 240),
+      @lepus_runtime.AppEntry::Html("<html>Late</html>"),
+    ),
+  )
+
+  let app = @lepus_runtime.App::new(config)
+  config.windows.push(
+    @lepus_runtime.AppWindowConfig::new(
+      "external",
+      @lepus_runtime.WindowConfig::new("External", 320, 240),
+      @lepus_runtime.AppEntry::Html("<html>External</html>"),
+    ),
+  )
+  assert_eq(app.windows().length(), 2)
+  assert_eq(app.config().windows.length(), 1)
+
+  let snapshot = app.windows()
+  snapshot.push(app.main_window())
+  assert_eq(app.windows().length(), 2)
+
+  let config_snapshot = app.config()
+  config_snapshot.windows.push(
+    @lepus_runtime.AppWindowConfig::new(
+      "mutated",
+      @lepus_runtime.WindowConfig::new("Mutated", 320, 240),
+      @lepus_runtime.AppEntry::Html("<html>Mutated</html>"),
+    ),
+  )
+  assert_eq(app.config().windows.length(), 1)
+  app.destroy()
+}
+
+///|
 test "App::install_extension_spec builds one extension instance per window" {
   let mut build_count = 0
   let config = @lepus_runtime.AppConfig::new(
