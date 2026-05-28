@@ -27,7 +27,10 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_result(
   name : String,
   callback : (Payload) -> Result[Reply, String],
 ) -> Unit {
-  guard self.handlers.get(name) is None else {
+  guard validate_op_name(name) is Ok(_) else {
+    abort("OpRegistry::handle_result: op name must not be empty")
+  }
+  guard self.handlers.get(name) is None && self.async_handlers.get(name) is None else {
     abort("OpRegistry::handle_result: op already registered: " + name)
   }
   self.handlers.set(name, fn(payload_json) {
@@ -56,6 +59,9 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result(
   name : String,
   callback : async (Payload) -> Result[Reply, String],
 ) -> Unit {
+  guard validate_op_name(name) is Ok(_) else {
+    abort("OpRegistry::handle_async_result: op name must not be empty")
+  }
   guard self.handlers.get(name) is None && self.async_handlers.get(name) is None else {
     abort("OpRegistry::handle_async_result: op already registered: " + name)
   }
@@ -104,4 +110,12 @@ fn OpRegistry::call(
     Some(handler) => handler(payload)
     None => Err("Unknown op: " + name)
   }
+}
+
+///|
+fn validate_op_name(name : String) -> Result[Unit, String] {
+  guard name.trim().to_owned() != "" else {
+    return Err("op name must not be empty")
+  }
+  Ok(())
 }

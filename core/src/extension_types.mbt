@@ -40,7 +40,14 @@ pub fn Extension::new(
   on_destroy? : (ExtensionContext) -> Unit = fn(_context) {  },
   scripts? : Array[String] = [],
 ) -> Extension {
-  Extension::{ id, js_namespace, register, on_install, on_destroy, scripts }
+  Extension::{
+    id,
+    js_namespace,
+    register,
+    on_install,
+    on_destroy,
+    scripts: scripts.map(fn(script) { script }),
+  }
 }
 
 ///|
@@ -121,31 +128,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(
 }
 
 ///|
-/// Registers a typed async extension op exposed through `window.__MoonBit__`.
-/// The JavaScript promise is resolved after the async callback completes.
-pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_async(
-  self : ExtensionContext,
-  api_name : String,
-  callback : async (Payload) -> Reply,
-) -> Unit {
-  let op_name = self.register_api(api_name)
-  op_runtime(self.host.webview).handle_async(op_name, callback)
-}
-
-///|
-/// Registers a typed async extension op with explicit string error support.
-/// Returning `Err(message)` rejects the JavaScript promise with that message.
-pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_async_result(
-  self : ExtensionContext,
-  api_name : String,
-  callback : async (Payload) -> Result[Reply, String],
-) -> Unit {
-  let op_name = self.register_api(api_name)
-  op_runtime(self.host.webview).handle_async_result(op_name, callback)
-}
-
-///|
 /// Returns the installed JavaScript helper scripts owned by this extension.
 fn Extension::scripts(self : Extension) -> Array[String] {
-  self.scripts
+  self.scripts.map(fn(script) { script })
 }

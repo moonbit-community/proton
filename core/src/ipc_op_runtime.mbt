@@ -1,115 +1,27 @@
 ///|
-let ipc_op_runtime_by_webview : Map[Int64, IpcOpRuntime] = {}
-
-///|
-/// Transport contract used by the webview process to reach the MBT process.
+/// Installs a remote-op bridge script on one webview.
 ///
-/// The transport may be backed by stdio, named pipes, sockets, or an in-memory
-/// loopback in tests. It owns request correlation below this layer.
-struct IpcOpTransport {
-  send_request : (IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit
-  close_transport : () -> Unit
-  poll_transport : () -> Bool
-}
-
-///|
-priv struct IpcOpRuntime {
-  webview : @webview.Webview
-  transport : IpcOpTransport
-  binding_name : String
-  poll_binding_name : String
-  destroy_hook_name : String
-  registry_key : Int64
-  close_transport_on_destroy : Bool
-}
-
-///|
-/// Creates a transport from a request sender.
-pub fn IpcOpTransport::new(
-  send_request : (IpcOpRequest, (IpcOpResponse) -> Unit) -> Unit,
-  close? : () -> Unit = fn() {  },
-) -> IpcOpTransport {
-  IpcOpTransport::{
-    send_request,
-    close_transport: close,
-    poll_transport: fn() { false },
-  }
-}
-
-///|
-fn IpcOpTransport::with_poll(
-  self : IpcOpTransport,
-  poll : () -> Bool,
-) -> IpcOpTransport {
-  IpcOpTransport::{
-    send_request: self.send_request,
-    close_transport: self.close_transport,
-    poll_transport: poll,
-  }
-}
-
-///|
-/// Forwards one request through this transport.
-pub fn IpcOpTransport::dispatch(
-  self : IpcOpTransport,
-  request : IpcOpRequest,
-  complete : (IpcOpResponse) -> Unit,
-) -> Unit {
-  (self.send_request)(request, complete)
-}
-
-///|
-/// Closes this transport.
-pub fn IpcOpTransport::close(self : IpcOpTransport) -> Unit {
-  (self.close_transport)()
-}
-
-///|
-fn IpcOpTransport::poll(self : IpcOpTransport) -> Bool {
-  (self.poll_transport)()
-}
-
-///|
-/// Installs a remote op runtime on one webview.
-///
-/// Unlike `ensure_core_runtime`, this does not create local MoonBit op handlers.
-/// It only installs the JS bridge and forwards op calls to the provided IPC
-/// transport.
-pub fn install_ipc_op_runtime(
+/// `core` only knows how to expose the JavaScript runtime surface. The concrete
+/// IPC transport is supplied as script text by another module, for example
+/// `lepus_ipc_ws`.
+pub fn install_ipc_bridge_runtime(
   webview : @webview.Webview,
-  transport : IpcOpTransport,
+  bridge_script : String,
   op_names : Array[String],
-  binding_name? : String = moonbit_op_binding_name_value,
-  close_transport_on_destroy? : Bool = true,
+  extensions? : Array[@ipc.IpcExtensionDescriptor] = [],
 ) -> Unit {
-  let key = webview.runtime_handle_id()
-  guard ipc_op_runtime_by_webview.get(key) is None else {
-    abort("install_ipc_op_runtime: IPC runtime already installed")
+  match
+    validate_ipc_bridge_runtime_config(bridge_script, op_names, extensions) {
+    Err(error) => abort(error)
+    Ok(_) => ()
   }
-  guard default_op_runtimes.get(key) is None else {
-    abort("install_ipc_op_runtime: local op runtime already installed")
-  }
-  guard !webview.has_binding(binding_name) else {
-    abort(
-      "install_ipc_op_runtime: binding name already in use: " + binding_name,
-    )
-  }
-  let destroy_hook_name = "ipc-op-runtime:" + binding_name
-  let poll_binding_name = binding_name + "_poll"
-  let runtime = IpcOpRuntime::{
-    webview,
-    transport,
-    binding_name,
-    poll_binding_name,
-    destroy_hook_name,
-    registry_key: key,
-    close_transport_on_destroy,
-  }
+  // 先建立扩展 namespace，再让 IPC bridge 接管 core.invokeOp；否则后续安装
+  // extension metadata 会把远程 bridge 覆盖成本地 op runtime。
   install_moonbit_core_runtime(webview)
-  webview.bind(binding_name, fn(id, req) { runtime.handle_request(id, req) })
-  webview.bind(poll_binding_name, fn(id, _req) { runtime.handle_poll(id) })
-  webview.register_destroy_hook(destroy_hook_name, fn() { runtime.destroy() })
-  ipc_op_runtime_by_webview.set(key, runtime)
+  for descriptor in extensions {
+    install_ipc_extension(webview, descriptor)
+  }
+  install_runtime_script(webview, bridge_script)
   for op_name in op_names {
     register_moonbit_op(webview, op_name)
   }
@@ -118,29 +30,19 @@ pub fn install_ipc_op_runtime(
 ///|
 /// Installs JavaScript metadata for one remote extension.
 ///
-/// The actual command handlers live in the MBT process; this function only
+/// The actual command handlers live in the user process; this function only
 /// exposes `window.__MoonBit__.<namespace>.*` helper methods in the webview.
 pub fn install_ipc_extension(
   webview : @webview.Webview,
-  descriptor : IpcExtensionDescriptor,
+  descriptor : @ipc.IpcExtensionDescriptor,
 ) -> Unit {
-  guard descriptor.id.trim().to_owned() != "" else {
-    abort("install_ipc_extension: extension id must not be empty")
+  match validate_ipc_extension_install_descriptor(descriptor) {
+    Err(error) => abort(error)
+    Ok(_) => ()
   }
-  guard descriptor.js_namespace.trim().to_owned() != "" else {
-    abort("install_ipc_extension: extension namespace must not be empty")
-  }
-  guard !extension_namespace_is_reserved(descriptor.js_namespace) else {
-    abort(
-      "install_ipc_extension: reserved extension namespace: " +
-      descriptor.js_namespace,
-    )
-  }
+  install_moonbit_core_runtime(webview)
   install_extension_namespace(webview, descriptor.js_namespace)
   for api in descriptor.apis {
-    guard !extension_is_reserved_api_name(api.api_name) else {
-      abort("install_ipc_extension: reserved API name: " + api.api_name)
-    }
     register_moonbit_op(
       webview,
       extension_op_name(descriptor.js_namespace, api.api_name),
@@ -150,10 +52,167 @@ pub fn install_ipc_extension(
 }
 
 ///|
-/// Emits one extension event received from the MBT process into JavaScript.
+fn validate_ipc_bridge_runtime_config(
+  bridge_script : String,
+  op_names : Array[String],
+  extensions : Array[@ipc.IpcExtensionDescriptor],
+) -> Result[Unit, String] {
+  guard bridge_script.trim().to_owned() != "" else {
+    return Err("install_ipc_bridge_runtime: bridge script must not be empty")
+  }
+  let ops : Map[String, Bool] = {}
+  for op_name in op_names {
+    guard op_name.trim().to_owned() != "" else {
+      return Err("install_ipc_bridge_runtime: op name must not be empty")
+    }
+    guard ops.get(op_name) is None else {
+      return Err("install_ipc_bridge_runtime: duplicate op name: " + op_name)
+    }
+    ops[op_name] = true
+  }
+  let ids : Map[String, Bool] = {}
+  let namespaces : Map[String, Bool] = {}
+  for descriptor in extensions {
+    match validate_ipc_extension_descriptor(descriptor, ops, ids, namespaces) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+  }
+  Ok(())
+}
+
+///|
+fn validate_ipc_extension_install_descriptor(
+  descriptor : @ipc.IpcExtensionDescriptor,
+) -> Result[Unit, String] {
+  guard descriptor.id.trim().to_owned() != "" else {
+    return Err("install_ipc_extension: extension id must not be empty")
+  }
+  guard descriptor.js_namespace.trim().to_owned() != "" else {
+    return Err("install_ipc_extension: extension namespace must not be empty")
+  }
+  guard !extension_namespace_is_reserved(descriptor.js_namespace) else {
+    return Err(
+      "install_ipc_extension: reserved extension namespace: " +
+      descriptor.js_namespace,
+    )
+  }
+  guard descriptor.apis.length() > 0 else {
+    return Err(
+      "install_ipc_extension: extension must expose at least one API: " +
+      descriptor.id,
+    )
+  }
+  let api_names : Map[String, Bool] = {}
+  for api in descriptor.apis {
+    guard api.api_name.trim().to_owned() != "" else {
+      return Err(
+        "install_ipc_extension: extension API name must not be empty: " +
+        descriptor.id,
+      )
+    }
+    guard !extension_is_reserved_api_name(api.api_name) else {
+      return Err("install_ipc_extension: reserved API name: " + api.api_name)
+    }
+    guard api_names.get(api.api_name) is None else {
+      return Err(
+        "install_ipc_extension: duplicate extension API: " +
+        descriptor.id +
+        "." +
+        api.api_name,
+      )
+    }
+    api_names[api.api_name] = true
+  }
+  Ok(())
+}
+
+///|
+fn validate_ipc_extension_descriptor(
+  descriptor : @ipc.IpcExtensionDescriptor,
+  op_names : Map[String, Bool],
+  ids : Map[String, Bool],
+  namespaces : Map[String, Bool],
+) -> Result[Unit, String] {
+  guard descriptor.id.trim().to_owned() != "" else {
+    return Err("install_ipc_bridge_runtime: extension id must not be empty")
+  }
+  guard ids.get(descriptor.id) is None else {
+    return Err(
+      "install_ipc_bridge_runtime: duplicate extension id: " + descriptor.id,
+    )
+  }
+  ids[descriptor.id] = true
+  guard descriptor.js_namespace.trim().to_owned() != "" else {
+    return Err(
+      "install_ipc_bridge_runtime: extension namespace must not be empty: " +
+      descriptor.id,
+    )
+  }
+  guard !extension_namespace_is_reserved(descriptor.js_namespace) else {
+    return Err(
+      "install_ipc_bridge_runtime: reserved extension namespace: " +
+      descriptor.js_namespace,
+    )
+  }
+  guard namespaces.get(descriptor.js_namespace) is None else {
+    return Err(
+      "install_ipc_bridge_runtime: duplicate extension namespace: " +
+      descriptor.js_namespace,
+    )
+  }
+  namespaces[descriptor.js_namespace] = true
+  validate_ipc_extension_descriptor_apis(descriptor, op_names)
+}
+
+///|
+fn validate_ipc_extension_descriptor_apis(
+  descriptor : @ipc.IpcExtensionDescriptor,
+  op_names : Map[String, Bool],
+) -> Result[Unit, String] {
+  guard descriptor.apis.length() > 0 else {
+    return Err(
+      "install_ipc_bridge_runtime: extension must expose at least one API: " +
+      descriptor.id,
+    )
+  }
+  let api_names : Map[String, Bool] = {}
+  for api in descriptor.apis {
+    guard api.api_name.trim().to_owned() != "" else {
+      return Err(
+        "install_ipc_bridge_runtime: extension API name must not be empty: " +
+        descriptor.id,
+      )
+    }
+    guard !extension_is_reserved_api_name(api.api_name) else {
+      return Err(
+        "install_ipc_bridge_runtime: reserved API name: " + api.api_name,
+      )
+    }
+    guard api_names.get(api.api_name) is None else {
+      return Err(
+        "install_ipc_bridge_runtime: duplicate extension API: " +
+        descriptor.id +
+        "." +
+        api.api_name,
+      )
+    }
+    api_names[api.api_name] = true
+    let op_name = extension_op_name(descriptor.js_namespace, api.api_name)
+    guard op_names.get(op_name) is Some(_) else {
+      return Err(
+        "install_ipc_bridge_runtime: extension API is missing op: " + op_name,
+      )
+    }
+  }
+  Ok(())
+}
+
+///|
+/// Emits one remote extension event into JavaScript.
 pub fn emit_ipc_extension_event(
   webview : @webview.Webview,
-  event : IpcExtensionEvent,
+  event : @ipc.IpcExtensionEvent,
 ) -> Unit {
   let script = make_extension_emit_script(
     event.extension_namespace,
@@ -161,54 +220,4 @@ pub fn emit_ipc_extension_event(
     event.payload.stringify(),
   )
   webview.dispatch(fn() { webview.eval(script) })
-}
-
-///|
-fn IpcOpRuntime::destroy(self : IpcOpRuntime) -> Unit {
-  ipc_op_runtime_by_webview.remove(self.registry_key)
-  if self.close_transport_on_destroy {
-    self.transport.close()
-  }
-  self.webview.unregister_destroy_hook(self.destroy_hook_name)
-  self.webview.unbind(self.poll_binding_name)
-  self.webview.unbind(self.binding_name)
-}
-
-///|
-fn IpcOpRuntime::handle_request(
-  self : IpcOpRuntime,
-  raw_id : Bytes,
-  raw_req : Bytes,
-) -> Unit {
-  let id = @ffi.from_cstr(raw_id)
-  match parse_op_request(@ffi.from_cstr(raw_req)) {
-    Ok(request) =>
-      self.transport.dispatch(
-        IpcOpRequest::new(id, request.name, request.payload),
-        fn(response) { self.complete_response(response) },
-      )
-    Err(message) =>
-      self.webview.response(id, 1, Json::string(message).stringify())
-  }
-}
-
-///|
-fn IpcOpRuntime::complete_response(
-  self : IpcOpRuntime,
-  response : IpcOpResponse,
-) -> Unit {
-  self.webview.dispatch(fn() {
-    self.webview.response(
-      response.id,
-      response.status,
-      response.body.stringify(),
-    )
-  })
-}
-
-///|
-fn IpcOpRuntime::handle_poll(self : IpcOpRuntime, raw_id : Bytes) -> Unit {
-  let id = @ffi.from_cstr(raw_id)
-  let has_pending = self.transport.poll()
-  self.webview.response(id, 0, Json::boolean(has_pending).stringify())
 }

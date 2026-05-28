@@ -1,24 +1,20 @@
 import {
-  "moonbitlang/core/debug" @debug,
   "moonbitlang/core/json",
-  "moonbitlang/async" @async,
-  "moonbitlang/async/io",
-  "moonbitlang/async/process",
-  "moonbitlang/async/stdio",
-  "moonbitlang/x/fs" @mbfs,
-  "moonbitlang/x/sys" @sys,
   "justjavac/ffi",
+  "justjavac/lepus_ipc" @ipc,
   "justjavac/lepus" @webview,
 }
 
 import {
+  "moonbitlang/core/debug" @debug,
   "moonbitlang/core/json",
   "justjavac/ffi",
   "justjavac/lepus" @webview,
 } for "test"
 
 import {
-  "moonbitlang/async" @async,
+  "moonbitlang/core/debug" @debug,
+  "justjavac/lepus_ipc" @ipc,
 } for "wbtest"
 
 supported_targets = "+native"
@@ -37,7 +33,8 @@ options(
     },
   ],
   targets: {
-    "app_service_host.mbt": [ "native" ],
+    "app_command_host.mbt": [ "native" ],
+    "app_command_host_wbtest.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
     "core_js_wbtest.mbt": [ "native" ],
     "extension_host.mbt": [ "native" ],
@@ -45,13 +42,11 @@ options(
     "extension_spec.mbt": [ "native" ],
     "extension_types.mbt": [ "native" ],
     "ipc_op_runtime.mbt": [ "native" ],
-    "ipc_protocol.mbt": [ "native" ],
     "ipc_protocol_wbtest.mbt": [ "native" ],
-    "ipc_stdio_process_transport.mbt": [ "native" ],
+    "json_helpers.mbt": [ "native" ],
     "js_runtime.mbt": [ "native" ],
     "js_template_render.mbt": [ "native" ],
     "mbt_process_host.mbt": [ "native" ],
-    "mbt_process_stdio.mbt": [ "native" ],
     "op_registry.mbt": [ "native" ],
     "op_runtime.mbt": [ "native" ],
     "resource_table.mbt": [ "native" ],

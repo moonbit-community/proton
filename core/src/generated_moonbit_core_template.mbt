@@ -14,7 +14,7 @@ let moonbit_core_template_resource : String =
   #|    const binding = window[bindingName];
   #|    return typeof binding === 'function' ? binding : null;
   #|  }
-  #|  function startIpcPoll() {
+  #|  function startBindingPoll() {
   #|    const pollName = bindingName + '_poll';
   #|    const poll = window[pollName];
   #|    if (typeof poll !== 'function') {
@@ -45,7 +45,7 @@ let moonbit_core_template_resource : String =
   #|      return Promise.reject(new Error('MoonBit op runtime is not available'));
   #|    }
   #|    const result = binding({ name: name, payload: payload === undefined ? null : payload });
-  #|    startIpcPoll();
+  #|    startBindingPoll();
   #|    return result;
   #|  };
   #|  core.ops = core.ops && typeof core.ops === 'object' ? core.ops : new Proxy(Object.create(null), {

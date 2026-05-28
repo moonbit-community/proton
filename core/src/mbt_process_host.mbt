@@ -7,14 +7,19 @@
 struct MbtProcessHost {
   registry : OpRegistry
   op_names : Array[String]
+  mut registration_sealed : Bool
   mut closed : Bool
 }
 
 ///|
 /// Creates an empty MBT-side command host.
-pub fn MbtProcessHost::new(worker_count? : Int = 4) -> MbtProcessHost {
-  ignore(worker_count)
-  MbtProcessHost::{ registry: OpRegistry::new(), op_names: [], closed: false }
+pub fn MbtProcessHost::new() -> MbtProcessHost {
+  MbtProcessHost::{
+    registry: OpRegistry::new(),
+    op_names: [],
+    registration_sealed: false,
+    closed: false,
+  }
 }
 
 ///|
@@ -24,6 +29,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(
   name : String,
   callback : (Payload) -> Reply,
 ) -> Unit {
+  self.ensure_open_for_register()
   self.registry.handle(name, callback)
   self.op_names.push(name)
 }
@@ -35,6 +41,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_result(
   name : String,
   callback : (Payload) -> Result[Reply, String],
 ) -> Unit {
+  self.ensure_open_for_register()
   self.registry.handle_result(name, callback)
   self.op_names.push(name)
 }
@@ -46,6 +53,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(
   name : String,
   callback : async (Payload) -> Reply,
 ) -> Unit {
+  self.ensure_open_for_register()
   self.registry.handle_async(name, callback)
   self.op_names.push(name)
 }
@@ -57,6 +65,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result
   name : String,
   callback : async (Payload) -> Result[Reply, String],
 ) -> Unit {
+  self.ensure_open_for_register()
   self.registry.handle_async_result(name, callback)
   self.op_names.push(name)
 }
@@ -64,7 +73,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result
 ///|
 /// Returns registered op names in registration order.
 pub fn MbtProcessHost::registered_ops(self : MbtProcessHost) -> Array[String] {
-  self.op_names
+  copy_strings(self.op_names)
 }
 
 ///|
@@ -74,18 +83,26 @@ pub fn MbtProcessHost::registered_ops(self : MbtProcessHost) -> Array[String] {
 /// before this function returns.
 pub fn MbtProcessHost::dispatch(
   self : MbtProcessHost,
-  request : IpcOpRequest,
-  complete : (IpcOpResponse) -> Unit,
+  request : @ipc.IpcOpRequest,
+  complete : (@ipc.IpcOpResponse) -> Unit,
 ) -> Unit {
+  let fallback_id = ipc_request_fallback_response_id(request)
+  let request = match request.validate() {
+    Ok(request) => request
+    Err(message) => {
+      complete(@ipc.IpcOpResponse::err(fallback_id, message))
+      return
+    }
+  }
   guard !self.closed else {
-    complete(IpcOpResponse::err(request.id, "MBT process host is closed"))
+    complete(@ipc.IpcOpResponse::err(request.id, "MBT process host is closed"))
     return
   }
   if self.registry.has_async(request.name) {
     complete(
-      IpcOpResponse::err(
+      @ipc.IpcOpResponse::err(
         request.id,
-        "Async MBT process ops require dispatch_async() or run_stdio()",
+        "Async MBT process ops require dispatch_async()",
       ),
     )
   } else {
@@ -101,14 +118,19 @@ pub fn MbtProcessHost::dispatch(
 ///|
 /// Dispatches one decoded IPC request on the current async loop.
 ///
-/// MBT process stdio hosts use this path so async ops run inside the backend
-/// process event loop instead of creating a nested event loop elsewhere.
+/// User command hosts use this path so async ops run inside the user process
+/// event loop instead of creating a nested event loop elsewhere.
 pub async fn MbtProcessHost::dispatch_async(
   self : MbtProcessHost,
-  request : IpcOpRequest,
-) -> IpcOpResponse {
+  request : @ipc.IpcOpRequest,
+) -> @ipc.IpcOpResponse {
+  let fallback_id = ipc_request_fallback_response_id(request)
+  let request = match request.validate() {
+    Ok(request) => request
+    Err(message) => return @ipc.IpcOpResponse::err(fallback_id, message)
+  }
   guard !self.closed else {
-    return IpcOpResponse::err(request.id, "MBT process host is closed")
+    return @ipc.IpcOpResponse::err(request.id, "MBT process host is closed")
   }
   if self.registry.has_async(request.name) {
     make_ipc_response(
@@ -128,11 +150,11 @@ pub async fn MbtProcessHost::dispatch_async(
 pub fn MbtProcessHost::dispatch_json(
   self : MbtProcessHost,
   raw : String,
-  complete : (IpcOpResponse) -> Unit,
+  complete : (@ipc.IpcOpResponse) -> Unit,
 ) -> Unit {
-  match parse_ipc_op_request(raw) {
+  match @ipc.parse_ipc_op_request(raw) {
     Ok(request) => self.dispatch(request, complete)
-    Err(message) => complete(IpcOpResponse::err("invalid", message))
+    Err(message) => complete(@ipc.IpcOpResponse::err("invalid", message))
   }
 }
 
@@ -141,11 +163,18 @@ pub fn MbtProcessHost::dispatch_json(
 pub async fn MbtProcessHost::dispatch_json_async(
   self : MbtProcessHost,
   raw : String,
-) -> IpcOpResponse {
-  match parse_ipc_op_request(raw) {
+) -> @ipc.IpcOpResponse {
+  match @ipc.parse_ipc_op_request(raw) {
     Ok(request) => self.dispatch_async(request)
-    Err(message) => IpcOpResponse::err("invalid", message)
+    Err(message) => @ipc.IpcOpResponse::err("invalid", message)
   }
+}
+
+///|
+/// Prevents later registrations while keeping existing ops dispatchable.
+fn MbtProcessHost::seal_registrations(self : MbtProcessHost) -> Unit {
+  guard !self.closed else { return }
+  self.registration_sealed = true
 }
 
 ///|
@@ -156,12 +185,36 @@ pub fn MbtProcessHost::close(self : MbtProcessHost) -> Unit {
 }
 
 ///|
+fn MbtProcessHost::ensure_open_for_register(self : MbtProcessHost) -> Unit {
+  guard !self.closed else {
+    abort("MbtProcessHost: cannot register op after close")
+  }
+  guard !self.registration_sealed else {
+    abort("MbtProcessHost: cannot register op after registration is sealed")
+  }
+}
+
+///|
 fn make_ipc_response(
   id : String,
   reply : Result[Json, String],
-) -> IpcOpResponse {
+) -> @ipc.IpcOpResponse {
   match reply {
-    Ok(body) => IpcOpResponse::ok(id, body)
-    Err(message) => IpcOpResponse::err(id, message)
+    Ok(body) => @ipc.IpcOpResponse::ok(id, body)
+    Err(message) => @ipc.IpcOpResponse::err(id, message)
   }
+}
+
+///|
+fn ipc_request_fallback_response_id(request : @ipc.IpcOpRequest) -> String {
+  if request.id.trim().to_owned() == "" {
+    "invalid"
+  } else {
+    request.id
+  }
+}
+
+///|
+fn copy_strings(values : Array[String]) -> Array[String] {
+  values.map(fn(value) { value })
 }

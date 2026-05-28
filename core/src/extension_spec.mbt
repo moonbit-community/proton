@@ -22,7 +22,7 @@ pub fn ExtensionBuildContext::new(
   options? : Json? = None,
   base_dir? : String? = None,
 ) -> ExtensionBuildContext {
-  ExtensionBuildContext::{ options, base_dir }
+  ExtensionBuildContext::{ options: clone_json_option(options), base_dir }
 }
 
 ///|
@@ -30,7 +30,7 @@ pub fn ExtensionBuildContext::new(
 /// Specs can read this to interpret manifest-time configuration before
 /// constructing their runtime behavior.
 pub fn ExtensionBuildContext::options(self : ExtensionBuildContext) -> Json? {
-  self.options
+  clone_json_option(self.options)
 }
 
 ///|
@@ -51,7 +51,12 @@ pub fn ExtensionSpec::new(
   build : (ExtensionBuildContext) -> Result[Extension, String],
   dependencies? : Array[String] = [],
 ) -> ExtensionSpec {
-  ExtensionSpec::{ id, js_namespace, dependencies, build }
+  ExtensionSpec::{
+    id,
+    js_namespace,
+    dependencies: dependencies.map(fn(dependency) { dependency }),
+    build,
+  }
 }
 
 ///|
@@ -73,7 +78,7 @@ pub fn ExtensionSpec::js_namespace(self : ExtensionSpec) -> String {
 /// App planning and tooling use this metadata to expand transitive dependencies
 /// deterministically.
 pub fn ExtensionSpec::dependencies(self : ExtensionSpec) -> Array[String] {
-  self.dependencies
+  self.dependencies.map(fn(dependency) { dependency })
 }
 
 ///|
