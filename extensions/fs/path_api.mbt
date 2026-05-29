@@ -268,78 +268,66 @@ fn read_text_file(
 }
 
 ///|
-/// Reads a text file through `moonbitlang/async/fs`.
-async fn read_text_file_async(
-  path : String,
-  encoding : String?,
-) -> Result[ReadFileReply, String] {
-  match resolve_text_encoding(encoding) {
-    Err(message) => Err(message)
-    Ok(_) =>
-      try {
-        let content = @async_fs.read_file(path).text()
-        Ok(ReadFileReply::{
-          path,
-          content,
-          bytes_read: bytes_written_for_text(content),
-        })
-      } catch {
-        err => Err("Failed to read file: " + err.to_string())
-      }
-  }
-}
-
-///|
-/// Writes a full text file through `moonbitlang/async/fs`.
-async fn write_text_file_async(
+/// Writes a full text file with the synchronous filesystem backend.
+fn write_text_file(
   path : String,
   content : String,
   encoding : String?,
 ) -> Result[WriteFileReply, String] {
-  match resolve_text_encoding(encoding) {
-    Err(message) => Err(message)
-    Ok(_) =>
-      try {
-        @async_fs.write_file(path, content, create_mode=CreateOrTruncate)
-        Ok(WriteFileReply::{
-          path,
-          written: true,
-          bytes_written: bytes_written_for_text(content),
-        })
-      } catch {
-        err => Err("Failed to write file: " + err.to_string())
+  with_supported_text_encoding(encoding, fn() {
+    let written : Result[Unit, _] = try? @xfs.write_string_to_file(
+      path, content,
+    )
+    written
+    .map_err(fn(error) {
+      "Failed to write file: " + @debug.render(@debug.to_repr(error))
+    })
+    .map(fn(_) {
+      WriteFileReply::{
+        path,
+        written: true,
+        bytes_written: bytes_written_for_text(content),
       }
-  }
+    })
+  })
 }
 
 ///|
-/// Appends UTF-8 text to an existing file through `moonbitlang/async/fs`.
-async fn append_text_file_async(
+/// Appends UTF-8 text using the synchronous filesystem backend.
+fn append_text_file(
   path : String,
   content : String,
   encoding : String?,
 ) -> Result[AppendFileReply, String] {
-  match resolve_text_encoding(encoding) {
-    Err(message) => Err(message)
-    Ok(_) =>
-      try {
-        let file = @async_fs.open(
-          path,
-          mode=WriteOnly,
-          append=true,
-          create_mode=OpenOrCreate,
-        )
-        defer file.close()
-        file.write(content)
-        Ok(AppendFileReply::{
+  with_supported_text_encoding(encoding, fn() {
+    let existing = if native_path_exists(path) {
+      let read_result : Result[String, _] = try? @xfs.read_file_to_string(path)
+      match read_result {
+        Ok(text) => Ok(text)
+        Err(error) =>
+          Err("Failed to append file: " + @debug.render(@debug.to_repr(error)))
+      }
+    } else {
+      Ok("")
+    }
+    existing.bind(fn(existing) {
+      let written : Result[Unit, _] = try? @xfs.write_string_to_file(
+        path,
+        existing + content,
+      )
+      written
+      .map_err(fn(error) {
+        "Failed to append file: " + @debug.render(@debug.to_repr(error))
+      })
+      .map(fn(_) {
+        AppendFileReply::{
           path,
           written: true,
           bytes_written: bytes_written_for_text(content),
-        })
-      } catch {
-        err => Err("Failed to append file: " + err.to_string())
-      }
-  }
+        }
+      })
+    })
+  })
 }
 
 ///|
