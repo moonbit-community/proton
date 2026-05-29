@@ -9,9 +9,14 @@ runtime `App`.
 - `create_app_from_file(...)` builds from the bootstrap control plane and keeps
   manifest file loading aligned with the same `app.json` editing backend used
   by tooling
-- `create_app_with_service(...)` and
-  `create_app_from_file_with_service(...)` build the same runtime while
-  installing an explicit app service for application ops
+- `run_app_command_extensions_with_framework_process(...)` runs user command
+  extensions in the current process and starts a framework/webview child
+  process
+- `run_app_command_host_with_framework_process(...)` is the lower-level API for
+  user processes that register an `AppCommandHost`, start a local IPC server,
+  and launch a framework/webview child process
+- `run_framework_process_from_cli(...)` is the framework-child entrypoint used
+  by reusable or single-binary framework processes
 
 The package no longer treats `AppPlan` as a public concept. Planning remains an
 internal implementation detail so the user-facing API stays focused on app

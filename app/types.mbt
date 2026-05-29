@@ -22,43 +22,26 @@ priv struct PreparedApp {
 }
 
 ///|
-/// One JavaScript-facing API exposed by an app service extension.
-struct AppServiceApi {
+/// One JavaScript-facing API descriptor exposed by a user app command extension.
+struct AppCommandApiDescriptor {
   api_name : String
 }
 
 ///|
-/// JavaScript bridge metadata exposed by an app service extension.
-struct AppServiceExtension {
+/// JavaScript bridge metadata exposed by a user app command extension.
+struct AppCommandExtensionDescriptor {
   id : String
   js_namespace : String
-  apis : Array[AppServiceApi]
+  apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
 }
 
 ///|
-/// App service configuration for high-level app composition.
-///
-/// The service command is connected by the runtime. Callers configure commands
-/// and JavaScript-facing extension APIs without choosing a concurrency model.
-struct AppServiceConfig {
-  command : String
+/// Commands exposed by the user app process to the framework runtime.
+struct AppCommandsConfig {
   op_names : Array[String]
-  args : Array[String]
-  cwd : String?
-  extensions : Array[@core.IpcExtensionDescriptor]
-}
-
-///|
-/// Explicit MBT backend process configuration for high-level app composition.
-///
-/// The backend executable is expected to run `@core.MbtProcessHost::run_stdio`.
-pub struct MbtProcessBackendConfig {
-  command : String
-  op_names : Array[String]
-  args : Array[String]
-  cwd : String?
-  extensions : Array[@core.IpcExtensionDescriptor]
+  extensions : Array[@ipc.IpcExtensionDescriptor]
+  framework_extension_ids : Array[String]
 }
 
 ///|
@@ -71,8 +54,6 @@ pub fn ExtensionRegistry::new() -> ExtensionRegistry {
 
 ///|
 /// Registers one extension spec and returns the same registry for chaining.
-/// Duplicate or blank ids abort immediately because app composition depends on
-/// each registered extension having one stable unique key.
 pub fn ExtensionRegistry::register(
   self : ExtensionRegistry,
   spec : @core.ExtensionSpec,
@@ -94,8 +75,6 @@ pub fn ExtensionRegistry::register(
 
 ///|
 /// Returns one registered extension spec by id, if present.
-/// This is useful for optional lookups before surfacing a higher-level app or
-/// tooling error to the caller.
 pub fn ExtensionRegistry::get(
   self : ExtensionRegistry,
   id : String,
@@ -105,12 +84,10 @@ pub fn ExtensionRegistry::get(
 
 ///|
 /// Returns the registered extension ids in deterministic registration order.
-/// The returned array matches the order in which specs were registered on the
-/// registry instance.
 pub fn ExtensionRegistry::registered_ids(
   self : ExtensionRegistry,
 ) -> Array[String] {
-  self.registration_order
+  copy_strings(self.registration_order)
 }
 
 ///|
@@ -132,7 +109,7 @@ fn PreparedExtension::new(
   spec : @core.ExtensionSpec,
   options : Json?,
 ) -> PreparedExtension {
-  PreparedExtension::{ id, spec, options }
+  PreparedExtension::{ id, spec, options: clone_json_option(options) }
 }
 
 ///|
@@ -150,7 +127,7 @@ fn PreparedExtension::spec(self : PreparedExtension) -> @core.ExtensionSpec {
 ///|
 /// Returns the manifest-provided extension options.
 fn PreparedExtension::options(self : PreparedExtension) -> Json? {
-  self.options
+  clone_json_option(self.options)
 }
 
 ///|
@@ -160,7 +137,11 @@ fn PreparedApp::new(
   extensions : Array[PreparedExtension],
   base_dir? : String? = None,
 ) -> PreparedApp {
-  PreparedApp::{ runtime_config, extensions, base_dir }
+  PreparedApp::{
+    runtime_config,
+    extensions: copy_prepared_extensions(extensions),
+    base_dir,
+  }
 }
 
 ///|
@@ -168,134 +149,104 @@ fn PreparedApp::new(
 fn PreparedApp::prepared_extensions(
   self : PreparedApp,
 ) -> Array[PreparedExtension] {
-  self.extensions
+  copy_prepared_extensions(self.extensions)
 }
 
 ///|
-/// Creates one JavaScript-facing app service API descriptor.
-pub fn AppServiceApi::new(api_name : String) -> AppServiceApi {
-  AppServiceApi::{ api_name, }
+/// Creates one JavaScript-facing app command API descriptor.
+pub fn AppCommandApiDescriptor::new(
+  api_name : String,
+) -> AppCommandApiDescriptor {
+  AppCommandApiDescriptor::{ api_name, }
 }
 
 ///|
-/// Creates one app service extension descriptor.
-pub fn AppServiceExtension::new(
+/// Creates one app command extension bridge descriptor.
+pub fn AppCommandExtensionDescriptor::new(
   id : String,
   js_namespace : String,
-  apis : Array[AppServiceApi],
+  apis : Array[AppCommandApiDescriptor],
   scripts? : Array[String] = [],
-) -> AppServiceExtension {
-  AppServiceExtension::{ id, js_namespace, apis, scripts }
-}
-
-///|
-/// Creates one app service configuration.
-pub fn AppServiceConfig::new(
-  command : String,
-  op_names : Array[String],
-  args? : Array[String] = [],
-  cwd? : String? = None,
-  extensions? : Array[AppServiceExtension] = [],
-) -> AppServiceConfig {
-  AppServiceConfig::{
-    command,
-    op_names,
-    args,
-    cwd,
-    extensions: extensions.map(fn(extension) { extension.to_ipc_descriptor() }),
+) -> AppCommandExtensionDescriptor {
+  AppCommandExtensionDescriptor::{
+    id,
+    js_namespace,
+    apis: copy_command_api_descriptors(apis),
+    scripts: copy_strings(scripts),
   }
 }
 
 ///|
-/// Creates one explicit MBT backend process configuration.
-pub fn MbtProcessBackendConfig::new(
-  command : String,
+/// Creates one user-process app commands configuration.
+pub fn AppCommandsConfig::new(
   op_names : Array[String],
-  args? : Array[String] = [],
-  cwd? : String? = None,
-  extensions? : Array[@core.IpcExtensionDescriptor] = [],
-) -> MbtProcessBackendConfig {
-  MbtProcessBackendConfig::{ command, op_names, args, cwd, extensions }
-}
-
-///|
-fn AppServiceApi::to_ipc_api(self : AppServiceApi) -> @core.IpcExtensionApi {
-  @core.IpcExtensionApi::new(self.api_name)
-}
-
-///|
-fn AppServiceExtension::to_ipc_descriptor(
-  self : AppServiceExtension,
-) -> @core.IpcExtensionDescriptor {
-  @core.IpcExtensionDescriptor::new(
-    self.id,
-    self.js_namespace,
-    self.apis.map(fn(api) { api.to_ipc_api() }),
-    scripts=self.scripts,
+  extensions? : Array[AppCommandExtensionDescriptor] = [],
+  framework_extension_ids? : Array[String] = [],
+) -> AppCommandsConfig {
+  AppCommandsConfig::from_ipc_descriptors(
+    op_names,
+    extensions.map(fn(extension) { extension.to_ipc_descriptor() }),
+    framework_extension_ids,
   )
 }
 
 ///|
-fn AppServiceConfig::command(self : AppServiceConfig) -> String {
-  self.command
+fn AppCommandsConfig::from_ipc_descriptors(
+  op_names : Array[String],
+  extensions : Array[@ipc.IpcExtensionDescriptor],
+  framework_extension_ids : Array[String],
+) -> AppCommandsConfig {
+  AppCommandsConfig::{
+    op_names: copy_strings(op_names),
+    extensions: copy_ipc_extension_descriptors(extensions),
+    framework_extension_ids: copy_strings(framework_extension_ids),
+  }
 }
 
 ///|
-fn AppServiceConfig::op_names(self : AppServiceConfig) -> Array[String] {
-  self.op_names
+fn AppCommandApiDescriptor::to_ipc_api(
+  self : AppCommandApiDescriptor,
+) -> @ipc.IpcExtensionApi {
+  @ipc.IpcExtensionApi::new(self.api_name)
 }
 
 ///|
-fn AppServiceConfig::args(self : AppServiceConfig) -> Array[String] {
-  self.args
+fn AppCommandExtensionDescriptor::to_ipc_descriptor(
+  self : AppCommandExtensionDescriptor,
+) -> @ipc.IpcExtensionDescriptor {
+  @ipc.IpcExtensionDescriptor::new(
+    self.id,
+    self.js_namespace,
+    self.apis.map(fn(api) { api.to_ipc_api() }),
+    scripts=copy_strings(self.scripts),
+  )
 }
 
 ///|
-fn AppServiceConfig::cwd(self : AppServiceConfig) -> String? {
-  self.cwd
+fn app_command_js_property_is_reserved(name : String) -> Bool {
+  name.has_prefix("@@") ||
+  name == "__proto__" ||
+  name == "prototype" ||
+  name == "constructor"
 }
 
 ///|
-fn AppServiceConfig::extensions(
-  self : AppServiceConfig,
-) -> Array[@core.IpcExtensionDescriptor] {
-  self.extensions
+fn AppCommandsConfig::op_names(self : AppCommandsConfig) -> Array[String] {
+  copy_strings(self.op_names)
 }
 
 ///|
-/// Returns the backend executable command.
-fn MbtProcessBackendConfig::command(self : MbtProcessBackendConfig) -> String {
-  self.command
+fn AppCommandsConfig::extensions(
+  self : AppCommandsConfig,
+) -> Array[@ipc.IpcExtensionDescriptor] {
+  copy_ipc_extension_descriptors(self.extensions)
 }
 
 ///|
-/// Returns the op names forwarded to the MBT backend.
-fn MbtProcessBackendConfig::op_names(
-  self : MbtProcessBackendConfig,
+fn AppCommandsConfig::framework_extension_ids(
+  self : AppCommandsConfig,
 ) -> Array[String] {
-  self.op_names
-}
-
-///|
-/// Returns the backend process arguments.
-fn MbtProcessBackendConfig::args(
-  self : MbtProcessBackendConfig,
-) -> Array[String] {
-  self.args
-}
-
-///|
-/// Returns the backend process working directory override.
-fn MbtProcessBackendConfig::cwd(self : MbtProcessBackendConfig) -> String? {
-  self.cwd
-}
-
-///|
-/// Returns IPC extension descriptors exposed by the backend.
-fn MbtProcessBackendConfig::extensions(
-  self : MbtProcessBackendConfig,
-) -> Array[@core.IpcExtensionDescriptor] {
-  self.extensions
+  copy_strings(self.framework_extension_ids)
 }
 
 ///|
@@ -310,4 +261,39 @@ fn ExtensionRegistry::spec_map(
 /// Returns the internal registry order.
 fn ExtensionRegistry::ordered_names(self : ExtensionRegistry) -> Array[String] {
   self.registration_order
+}
+
+///|
+fn copy_strings(values : Array[String]) -> Array[String] {
+  values.map(fn(value) { value })
+}
+
+///|
+fn copy_command_api_descriptors(
+  values : Array[AppCommandApiDescriptor],
+) -> Array[AppCommandApiDescriptor] {
+  values.map(fn(value) { value })
+}
+
+///|
+fn copy_prepared_extensions(
+  values : Array[PreparedExtension],
+) -> Array[PreparedExtension] {
+  values.map(fn(value) {
+    PreparedExtension::new(value.id, value.spec, value.options)
+  })
+}
+
+///|
+fn copy_ipc_extension_descriptors(
+  values : Array[@ipc.IpcExtensionDescriptor],
+) -> Array[@ipc.IpcExtensionDescriptor] {
+  values.map(fn(value) {
+    @ipc.IpcExtensionDescriptor::new(
+      value.id,
+      value.js_namespace,
+      value.apis,
+      scripts=value.scripts,
+    )
+  })
 }
