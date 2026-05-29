@@ -34,7 +34,7 @@ pub fn ExtensionSetting::is_enabled(self : ExtensionSetting) -> Bool {
 pub fn ExtensionSetting::options(self : ExtensionSetting) -> Json? {
   match self {
     Disabled => None
-    Enabled(options) => options
+    Enabled(options) => clone_json_option(options)
   }
 }
 
@@ -43,7 +43,7 @@ pub fn ExtensionSetting::options(self : ExtensionSetting) -> Json? {
 /// Pass `Some(json)` when the extension needs structured manifest-time
 /// configuration.
 pub fn ExtensionSetting::enabled(options? : Json? = None) -> ExtensionSetting {
-  Enabled(options)
+  Enabled(clone_json_option(options))
 }
 
 ///|

@@ -19,7 +19,13 @@ pub fn AppManifest::new(
   windows? : Array[AppWindowManifest] = [],
   extensions? : Map[String, ExtensionSetting] = {},
 ) -> AppManifest {
-  AppManifest::{ window, entry, windows, debug, extensions }
+  AppManifest::{
+    window,
+    entry,
+    windows: windows.map(fn(window) { window }),
+    debug,
+    extensions: copy_extension_settings(extensions),
+  }
 }
 
 ///|
@@ -29,7 +35,7 @@ pub fn AppManifest::extension_setting(
   self : AppManifest,
   name : String,
 ) -> ExtensionSetting? {
-  self.extensions.get(name)
+  self.extensions.get(name).map(copy_extension_setting)
 }
 
 ///|
@@ -41,7 +47,26 @@ pub fn AppManifest::extension_settings(
 ) -> Array[(String, ExtensionSetting)] {
   let entries : Array[(String, ExtensionSetting)] = []
   for name, setting in self.extensions {
-    entries.push((name, setting))
+    entries.push((name, copy_extension_setting(setting)))
   }
   entries
+}
+
+///|
+fn copy_extension_settings(
+  settings : Map[String, ExtensionSetting],
+) -> Map[String, ExtensionSetting] {
+  let copied : Map[String, ExtensionSetting] = {}
+  for name, setting in settings {
+    copied[name] = copy_extension_setting(setting)
+  }
+  copied
+}
+
+///|
+fn copy_extension_setting(setting : ExtensionSetting) -> ExtensionSetting {
+  match setting {
+    Disabled => Disabled
+    Enabled(options) => Enabled(clone_json_option(options))
+  }
 }

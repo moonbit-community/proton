@@ -41,7 +41,7 @@ pub fn ExtensionCatalog::from_descriptors(
         ).to_error_string(),
       )
     }
-    catalog.descriptors.set(id, descriptor)
+    catalog.descriptors.set(id, copy_extension_descriptor(descriptor))
     catalog.discovery_order.push(id)
   }
   Ok(catalog)
@@ -54,7 +54,7 @@ pub fn ExtensionCatalog::get(
   self : ExtensionCatalog,
   id : String,
 ) -> ExtensionDescriptor? {
-  self.descriptors.get(id)
+  self.descriptors.get(id).map(copy_extension_descriptor)
 }
 
 ///|
@@ -66,7 +66,7 @@ pub fn ExtensionCatalog::require(
   id : String,
 ) -> Result[ExtensionDescriptor, String] {
   match self.descriptors.get(id) {
-    Some(descriptor) => Ok(descriptor)
+    Some(descriptor) => Ok(copy_extension_descriptor(descriptor))
     None =>
       Err(
         CatalogDiagnostic::new(
@@ -85,7 +85,7 @@ pub fn ExtensionCatalog::require(
 pub fn ExtensionCatalog::descriptor_ids(
   self : ExtensionCatalog,
 ) -> Array[String] {
-  self.discovery_order
+  copy_strings(self.discovery_order)
 }
 
 ///|
@@ -98,7 +98,8 @@ pub fn ExtensionCatalog::descriptors(
   let descriptors : Array[ExtensionDescriptor] = []
   for id in self.discovery_order {
     match self.descriptors.get(id) {
-      Some(descriptor) => descriptors.push(descriptor)
+      Some(descriptor) =>
+        descriptors.push(copy_extension_descriptor(descriptor))
       None => ()
     }
   }
