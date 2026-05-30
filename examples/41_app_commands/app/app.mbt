@@ -134,8 +134,8 @@ let resource : String =
   #|    <main>
   #|      <h1>MoonBit app commands</h1>
   #|      <p>
-  #|        The app owns the window and JavaScript. The service owns commands,
-  #|        state, and async work.
+  #|        The app owns commands, state, and async work. The framework owns the
+  #|        window and JavaScript bridge.
   #|      </p>
   #|
   #|      <div class="toolbar">
@@ -146,8 +146,8 @@ let resource : String =
   #|      <dl>
   #|        <dt>Bridge</dt>
   #|        <dd id="bridge">Waiting</dd>
-  #|        <dt>Service</dt>
-  #|        <dd id="service">Waiting</dd>
+  #|        <dt>Commands</dt>
+  #|        <dd id="commands">Waiting</dd>
   #|        <dt>Async timer</dt>
   #|        <dd id="timer">Waiting</dd>
   #|      </dl>
@@ -157,7 +157,7 @@ let resource : String =
   #|
   #|    <script>
   #|      const bridgeEl = document.querySelector("#bridge");
-  #|      const serviceEl = document.querySelector("#service");
+  #|      const commandsEl = document.querySelector("#commands");
   #|      const timerEl = document.querySelector("#timer");
   #|      const logEl = document.querySelector("#log");
   #|      const runButton = document.querySelector("#run");
@@ -177,13 +177,23 @@ let resource : String =
   #|        return window.__MoonBit__.core.invokeOp(name, payload);
   #|      }
   #|
+  #|      async function reportCommandProbe(report) {
+  #|        try {
+  #|          await invoke("app:reportProbe", {
+  #|            report: JSON.stringify(report),
+  #|          });
+  #|        } catch (error) {
+  #|          log(`probe report failed -> ${String(error)}`, "error");
+  #|        }
+  #|      }
+  #|
   #|      async function runProbe() {
   #|        logEl.textContent = "Running command probe...";
   #|        setStatus(bridgeEl, "Ready", "ok");
-  #|        setStatus(serviceEl, "Calling", "");
+  #|        setStatus(commandsEl, "Calling", "");
   #|        setStatus(timerEl, "Checking", "");
   #|        const watchdog = window.setTimeout(() => {
-  #|          void window.reportCommandProbe?.({
+  #|          void reportCommandProbe({
   #|            ok: false,
   #|            stage: "probe-timeout",
   #|            has_moonbit: !!window.__MoonBit__,
@@ -211,12 +221,12 @@ let resource : String =
   #|          window.clearTimeout(watchdog);
   #|          log(`slowAdd -> ${JSON.stringify(sum)}`);
   #|
-  #|          setStatus(serviceEl, `${sum.total} from ${sum.source}`, "ok");
+  #|          setStatus(commandsEl, `${sum.total} from ${sum.source}`, "ok");
   #|          if (!timerFiredBeforeReply) {
   #|            setStatus(timerEl, "Timer fired after reply", "err");
   #|          }
   #|
-  #|          void window.reportCommandProbe?.({
+  #|          void reportCommandProbe({
   #|            ok: true,
   #|            ping,
   #|            sum,
@@ -225,9 +235,9 @@ let resource : String =
   #|        } catch (error) {
   #|          window.clearTimeout(timer);
   #|          window.clearTimeout(watchdog);
-  #|          setStatus(serviceEl, "Failed", "err");
+  #|          setStatus(commandsEl, "Failed", "err");
   #|          log(String(error), "error");
-  #|          void window.reportCommandProbe?.({
+  #|          void reportCommandProbe({
   #|            ok: false,
   #|            error: String(error),
   #|          });
@@ -236,7 +246,7 @@ let resource : String =
   #|
   #|      async function callFailure() {
   #|        try {
-  #|          await invoke("app:fail", { message: "Failure crossed service boundary" });
+  #|          await invoke("app:fail", { message: "Failure crossed command boundary" });
   #|          log("Expected app:fail to reject", "error");
   #|        } catch (error) {
   #|          log(`app:fail rejected as expected -> ${String(error)}`, "ok");
@@ -251,13 +261,6 @@ let resource : String =
   #|        }
   #|        if (attempt > 80) {
   #|          setStatus(bridgeEl, "Timed out", "err");
-  #|          void window.reportCommandProbe?.({
-  #|            ok: false,
-  #|            stage: "bridge-timeout",
-  #|            has_moonbit: !!window.__MoonBit__,
-  #|            has_core: !!window.__MoonBit__?.core,
-  #|            has_invoke_op: !!window.__MoonBit__?.core?.invokeOp,
-  #|          });
   #|          return;
   #|        }
   #|        window.setTimeout(() => waitForBridge(attempt + 1), 25);

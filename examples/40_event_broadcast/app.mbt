@@ -285,10 +285,7 @@ let resource : String =
   #|        addEntry("start", `run #${payload.run_id}`);
   #|        void window.__MoonBit__.ticker.start(payload)
   #|          .then((result) => {
-  #|            for (const tickPayload of result.ticks) {
-  #|              applyTick(tickPayload);
-  #|            }
-  #|            applyDone(result.done);
+  #|            addEntry("reply", `run #${result.done.run_id} completed`);
   #|          })
   #|          .catch((error) => {
   #|            start.disabled = false;
@@ -296,6 +293,12 @@ let resource : String =
   #|          });
   #|      });
   #|
+  #|      window.__MoonBit__.ticker.on("tick", (event) => {
+  #|        applyTick(event.payload);
+  #|      });
+  #|      window.__MoonBit__.ticker.on("done", (event) => {
+  #|        applyDone(event.payload);
+  #|      });
   #|      addEntry("ready", "listeners attached");
   #|    </script>
   #|  </body>

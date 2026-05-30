@@ -1,36 +1,95 @@
 ///|
-let service_exe_candidates : Array[String] = [
-  "_build/native/debug/build/justjavac/lepus/examples/41_app_commands/service/service.exe",
-  "_build/native/debug/build/justjavac/lepus/examples/41_app_commands/service/service",
-]
+struct PingPayload {
+  name : String?
+} derive(FromJson)
 
 ///|
-fn resolve_service_executable() -> Result[String, String] {
-  let mut prefix = ""
-  let mut depth = 0
-  while depth < 8 {
-    for candidate in service_exe_candidates {
-      let resolved = prefix + candidate
-      if @mbfs.path_exists(resolved) {
-        return Ok(resolved)
-      }
+struct PingReply {
+  message : String
+  source : String
+} derive(ToJson)
+
+///|
+struct SlowAddPayload {
+  left : Int
+  right : Int
+  delay_ms : Int?
+} derive(FromJson)
+
+///|
+struct SlowAddReply {
+  total : Int
+  waited_ms : Int
+  source : String
+} derive(ToJson)
+
+///|
+struct FailPayload {
+  message : String?
+} derive(FromJson)
+
+///|
+struct ReportProbePayload {
+  report : String
+} derive(FromJson)
+
+///|
+struct ReportProbeReply {
+  ok : Bool
+} derive(ToJson)
+
+///|
+fn register_app_commands(host : @core.AppCommandHost) -> Unit {
+  // 用户进程只注册业务命令，窗口和 JS bridge 由 framework 进程处理。
+  host.op("app:ping", fn(payload : PingPayload) {
+    let name = payload.name.unwrap_or("app")
+    PingReply::{
+      message: "Hello " + name + " from the app command layer",
+      source: "commands",
     }
-    prefix = prefix + "../"
-    depth = depth + 1
-  }
-  Err(
-    "Could not find the app command service executable. Run `moon -C examples build --target native` first.",
-  )
+  })
+  host.op_async_result("app:slowAdd", async fn(payload : SlowAddPayload) {
+    let delay_ms = payload.delay_ms.unwrap_or(500)
+    @async.sleep(delay_ms)
+    Ok(SlowAddReply::{
+      total: payload.left + payload.right,
+      waited_ms: delay_ms,
+      source: "commands",
+    })
+  })
+  host.op_result("app:fail", fn(payload : FailPayload) {
+    let message = payload.message.unwrap_or("Intentional command failure")
+    let result : Result[String, String] = Err(message)
+    result
+  })
+  host.op("app:reportProbe", fn(payload : ReportProbePayload) {
+    println("[app-commands] " + payload.report)
+    // smoke 测试用这个文件确认 async command 和 UI 回调已经跑通。
+    @mbfs.create_dir("target") catch {
+      _ => ()
+    }
+    @mbfs.write_string_to_file("target/app-commands.probe.json", payload.report) catch {
+      _ => ()
+    }
+    ReportProbeReply::{ ok: true }
+  })
 }
 
 ///|
 fn main {
-  let service_command = match resolve_service_executable() {
-    Ok(path) => path
+  if @lepus_app.is_framework_process() {
+    match @lepus_app.run_framework_process_from_cli() {
+      Ok(_) => ()
+      Err(error) => abort(error)
+    }
+    return
+  }
+  let framework_command = match @lepus_app.current_executable_command() {
+    Ok(command) => command
     Err(error) => abort(error)
   }
-  let service = @lepus_app.AppServiceConfig::new(service_command, [
-    "app:ping", "app:slowAdd", "app:fail",
+  let commands = @lepus_app.AppCommandsConfig::new([
+    "app:ping", "app:slowAdd", "app:fail", "app:reportProbe",
   ])
   let manifest = @manifest.AppManifest::new(
     @manifest.WindowManifest::new(
@@ -42,27 +101,17 @@ fn main {
     @manifest.AppEntry::Html(resource),
     debug=1,
   )
-  let app : @wvrt.App = match
-    @lepus_app.create_app_with_service(
+  let host = @core.AppCommandHost::new()
+  register_app_commands(host)
+  match
+    @lepus_app.run_app_command_host_with_framework_process(
       manifest,
-      @lepus_app.ExtensionRegistry::new(),
-      service,
+      framework_command,
+      host,
+      commands,
+      framework_args=[@lepus_app.framework_process_arg()],
     ) {
-    Ok(app) => app
+    Ok(_) => ()
     Err(error) => abort(error)
   }
-  let webview : @lepus.Webview = app.webview()
-  webview.bind("reportCommandProbe", fn(id, req) {
-    let request_id = @ffi.from_cstr(id)
-    let report = @ffi.from_cstr(req)
-    println("[app-commands] " + report)
-    @mbfs.create_dir("target") catch {
-      _ => ()
-    }
-    @mbfs.write_string_to_file("target/app-commands.probe.json", report) catch {
-      _ => ()
-    }
-    webview.response(request_id, 0, "null")
-  })
-  app.run()
 }
