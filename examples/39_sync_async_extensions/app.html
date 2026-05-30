@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MoonBit Sync + Async Extensions</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px;
+      }
+
+      main {
+        max-width: 720px;
+        display: grid;
+        gap: 18px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      section {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+        border-radius: 8px;
+      }
+
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: end;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 14px;
+      }
+
+      input {
+        width: 120px;
+        padding: 8px;
+      }
+
+      button {
+        padding: 8px 14px;
+      }
+
+      button:disabled {
+        opacity: 0.68;
+      }
+
+      output {
+        display: block;
+        min-height: 24px;
+        font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sync + Async Extensions</h1>
+
+      <section>
+        <h2>Sync command extension</h2>
+        <div class="row">
+          <label>
+            Value
+            <input id="doubleValue" type="number" value="21" />
+          </label>
+          <button id="runDouble">Run math.double</button>
+        </div>
+        <output id="doubleStatus">Ready</output>
+      </section>
+
+      <section>
+        <h2>Async command extension</h2>
+        <div class="row">
+          <label>
+            Left
+            <input id="left" type="number" value="19" />
+          </label>
+          <label>
+            Right
+            <input id="right" type="number" value="23" />
+          </label>
+          <button id="runAdd">Run add.slowAdd</button>
+        </div>
+        <output id="addStatus">Ready</output>
+      </section>
+    </main>
+
+    <script>
+      const doubleValue = document.getElementById("doubleValue");
+      const runDouble = document.getElementById("runDouble");
+      const doubleStatus = document.getElementById("doubleStatus");
+      const left = document.getElementById("left");
+      const right = document.getElementById("right");
+      const runAdd = document.getElementById("runAdd");
+      const addStatus = document.getElementById("addStatus");
+
+      runDouble.addEventListener("click", async () => {
+        const value = Number(doubleValue.value || "0");
+        doubleStatus.textContent = "Calling math.double...";
+        try {
+          const reply = await window.__MoonBit__.math.double({ value });
+          doubleStatus.textContent = JSON.stringify(reply);
+        } catch (error) {
+          doubleStatus.textContent = String(error);
+        }
+      });
+
+      runAdd.addEventListener("click", async () => {
+        const payload = {
+          left: Number(left.value || "0"),
+          right: Number(right.value || "0"),
+          delay_ms: 800,
+        };
+
+        runAdd.disabled = true;
+        addStatus.textContent = "Waiting for async command...";
+        try {
+          const reply = await window.__MoonBit__.add.slowAdd(payload);
+          addStatus.textContent = JSON.stringify(reply);
+        } catch (error) {
+          addStatus.textContent = String(error);
+        } finally {
+          runAdd.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
