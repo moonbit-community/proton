@@ -86,3 +86,28 @@ Install a specific SDK version:
 ```
 
 The generated `build/` directory is ignored by git.
+
+## `e2e_cdp_smoke.mjs`
+
+Starts the multi-process examples with WebView2 remote debugging enabled,
+connects through CDP, and verifies that JavaScript calls can cross the
+user-process/framework-process boundary.
+
+### Usage
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs
+```
+
+By default it runs examples `38` through `41`. Pass one or more scenario names
+to run a subset:
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs 41_app_commands/app
+```
+
+Run startup smoke coverage for every runnable example:
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs --all-examples
+```
