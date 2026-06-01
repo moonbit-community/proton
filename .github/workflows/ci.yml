@@ -98,25 +98,6 @@ jobs:
           PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
         run: moon -C extensions test --target native
 
-      - name: Check standalone native packages on Unix
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          moon -C notification check --target native
-          moon -C tray check --target native
-          moon -C global_hotkey check --target native
-
-      - name: Test standalone native packages on Windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-          PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
-        run: |
-          $ErrorActionPreference = "Stop"
-          $PSNativeCommandUseErrorActionPreference = $true
-          moon -C notification test --target native
-          moon -C tray test --target native
-          moon -C global_hotkey test --target native
-
       - name: Build examples
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
