@@ -17,6 +17,7 @@ pub struct App {
   installed_extensions : Array[InstalledExtension]
   installed_extension_ids : Map[String, Bool]
   installed_extension_namespaces : Map[String, Bool]
+  ipc_backends : Array[AppIpcBackend]
 }
 
 ///|
@@ -24,6 +25,7 @@ pub struct App {
 /// The main window is created immediately and any additional configured windows
 /// are registered before the runtime loop starts.
 pub fn App::new(config : AppConfig) -> App {
+  let config_snapshot = copy_app_config(config)
   let main_window = create_app_window(
     "main",
     config.window,
@@ -32,11 +34,12 @@ pub fn App::new(config : AppConfig) -> App {
   )
   let app = App::{
     main_window,
-    config,
+    config: config_snapshot,
     windows: [main_window],
     installed_extensions: [],
     installed_extension_ids: {},
     installed_extension_namespaces: {},
+    ipc_backends: [],
   }
   for window in config.windows {
     let _ = app.create_window(window)
@@ -65,7 +68,7 @@ pub fn App::webview(self : App) -> @webview.Webview {
 /// The returned value reflects the original app-level settings rather than any
 /// later runtime mutation.
 pub fn App::config(self : App) -> AppConfig {
-  self.config
+  copy_app_config(self.config)
 }
 
 ///|
@@ -73,7 +76,7 @@ pub fn App::config(self : App) -> AppConfig {
 /// The array order always starts with the primary window followed by additional
 /// windows in registration order.
 pub fn App::windows(self : App) -> Array[AppWindow] {
-  self.windows
+  copy_app_windows(self.windows)
 }
 
 ///|
@@ -109,6 +112,7 @@ pub fn App::create_window(self : App, config : AppWindowConfig) -> AppWindow {
     window.webview,
     self.installed_extensions(),
   )
+  install_existing_ipc_backends(window, self.installed_ipc_backends())
   self.register_window(window)
   window
 }
@@ -122,6 +126,7 @@ pub fn App::run(self : App) -> Unit {
     load_app_entry(window.webview, window.entry)
   }
   self.main_window.webview.run()
+  self.close_ipc_backends()
 }
 
 ///|
@@ -136,6 +141,7 @@ pub fn App::destroy(self : App) -> Unit {
   for window in windows {
     window.webview.destroy()
   }
+  self.close_ipc_backends()
 }
 
 ///|
@@ -209,4 +215,19 @@ pub fn AppWindow::config(self : AppWindow) -> WindowConfig {
 /// This is the app entry that will be or has been loaded into the window.
 pub fn AppWindow::entry(self : AppWindow) -> AppEntry {
   self.entry
+}
+
+///|
+fn copy_app_config(config : AppConfig) -> AppConfig {
+  AppConfig::{
+    window: config.window,
+    entry: config.entry,
+    windows: copy_app_window_configs(config.windows),
+    debug: config.debug,
+  }
+}
+
+///|
+fn copy_app_windows(windows : Array[AppWindow]) -> Array[AppWindow] {
+  windows.map(fn(window) { window })
 }

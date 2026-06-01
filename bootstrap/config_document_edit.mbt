@@ -163,6 +163,32 @@ fn app_window_manifest_to_json(window : @manifest.AppWindowManifest) -> Json {
 }
 
 ///|
+/// Converts a typed app manifest into the canonical JSON document shape.
+///
+/// This keeps programmatic framework config generation on the same persisted
+/// schema as the editable bootstrap document helpers.
+pub fn app_manifest_to_json(manifest : @manifest.AppManifest) -> Json {
+  let object : Map[String, Json] = {
+    "window": window_manifest_to_json(manifest.window),
+    "entry": app_entry_to_json(manifest.entry),
+    "debug": ToJson::to_json(manifest.debug),
+  }
+  if manifest.windows.length() > 0 {
+    object["windows"] = ToJson::to_json(
+      manifest.windows.map(fn(window) { app_window_manifest_to_json(window) }),
+    )
+  }
+  if manifest.extensions.length() > 0 {
+    let extensions : Map[String, Json] = {}
+    for name, setting in manifest.extensions {
+      extensions[name] = extension_setting_to_json(setting)
+    }
+    object["extensions"] = Json::object(extensions)
+  }
+  Json::object(object)
+}
+
+///|
 /// Returns the mutable `windows` array, creating it when necessary.
 fn ensure_windows_json_array(object : Map[String, Json]) -> Array[Json] {
   match object.get("windows") {

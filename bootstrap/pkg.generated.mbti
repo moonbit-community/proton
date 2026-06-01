@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn app_manifest_to_json(@lepus_manifest.AppManifest) -> Json
+
 pub fn disable_extension(AppManifestDocument, String) -> Result[AppManifestDocument, String]
 
 pub fn enable_extension(AppManifestDocument, String, options? : Json?) -> Result[AppManifestDocument, String]
@@ -73,4 +75,3 @@ pub fn LoadedAppManifest::new(@lepus_manifest.AppManifest, base_dir? : String?) 
 // Type aliases
 
 // Traits
-

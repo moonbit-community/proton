@@ -135,6 +135,9 @@ test "generate_registry_module_from_document emits explicit imports and dependen
   assert_eq(generated.function_name(), "build_vendor_registry")
   assert_eq(generated.recommended_file_name(), "build_vendor_registry.mbt")
   @debug.assert_eq(generated.extension_ids(), ["vendor/base", "vendor/echo"])
+  let bindings = generated.bindings()
+  bindings.push(bindings[0])
+  @debug.assert_eq(generated.extension_ids(), ["vendor/base", "vendor/echo"])
   assert_true(
     generated
     .moon_pkg_import_block()

@@ -665,6 +665,67 @@ test "app manifest document to_json returns a detached copy" {
 }
 
 ///|
+test "app_manifest_to_json roundtrips typed manifest" {
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new(
+      "Roundtrip",
+      900,
+      640,
+      size_hint=@manifest.WindowSizeHint::Min,
+    ),
+    @manifest.AppEntry::Asset("frontend/index.html"),
+    debug=1,
+    windows=[
+      @manifest.AppWindowManifest::new(
+        "settings",
+        @manifest.WindowManifest::new(
+          "Settings",
+          420,
+          320,
+          size_hint=@manifest.WindowSizeHint::Fixed,
+        ),
+        @manifest.AppEntry::Html("<html>Settings</html>"),
+      ),
+    ],
+    extensions={
+      "justjavac/lepus-fs": @manifest.ExtensionSetting::enabled(
+        options=Some(Json::object({ "scope": Json::string("read") })),
+      ),
+      "justjavac/lepus-tray": @manifest.ExtensionSetting::disabled(),
+    },
+  )
+  let text = app_manifest_to_json(manifest).stringify(indent=2)
+  let loaded = match load_app_manifest_from_json(text) {
+    Ok(loaded) => loaded
+    Err(error) => abort(error)
+  }
+  let roundtripped = loaded.manifest()
+  assert_eq(roundtripped.window.title, "Roundtrip")
+  assert_eq(roundtripped.window.size_hint, @manifest.WindowSizeHint::Min)
+  match roundtripped.entry {
+    Asset(path) => assert_eq(path, "frontend/index.html")
+    _ => abort("expected asset entry")
+  }
+  assert_eq(roundtripped.windows.length(), 1)
+  assert_eq(
+    roundtripped.windows[0].window.size_hint,
+    @manifest.WindowSizeHint::Fixed,
+  )
+  @debug.assert_eq(
+    roundtripped.extension_setting("justjavac/lepus-fs"),
+    Some(
+      @manifest.ExtensionSetting::enabled(
+        options=Some(Json::object({ "scope": Json::string("read") })),
+      ),
+    ),
+  )
+  @debug.assert_eq(
+    roundtripped.extension_setting("justjavac/lepus-tray"),
+    Some(@manifest.ExtensionSetting::disabled()),
+  )
+}
+
+///|
 test "load_app_manifest_from_json accepts boolean extension settings" {
   let result = load_app_manifest_from_json(
     (

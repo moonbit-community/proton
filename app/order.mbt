@@ -72,6 +72,10 @@ fn visit_extension(
     Ok(options) => options
     Err(error) => return Err(error)
   }
+  match validate_extension_dependencies(id, spec.dependencies()) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
 
   visit_state.set(id, 1)
   match
@@ -136,6 +140,29 @@ fn resolve_extension_options(
     Some(setting) => Ok(setting.options())
     None => Ok(None)
   }
+}
+
+///|
+fn validate_extension_dependencies(
+  owner_id : String,
+  dependencies : Array[String],
+) -> Result[Unit, String] {
+  let seen : Map[String, Bool] = {}
+  for dependency in dependencies {
+    guard dependency.trim().to_owned() != "" else {
+      return Err("extension dependency must not be empty: " + owner_id)
+    }
+    guard dependency != owner_id else {
+      return Err("extension must not depend on itself: " + owner_id)
+    }
+    guard seen.get(dependency) is None else {
+      return Err(
+        "duplicate extension dependency: " + owner_id + " -> " + dependency,
+      )
+    }
+    seen[dependency] = true
+  }
+  Ok(())
 }
 
 ///|

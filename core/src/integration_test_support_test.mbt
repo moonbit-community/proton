@@ -25,24 +25,20 @@ struct MultiplyReply {
 struct OpsRuntimeReport {
   direct : MultiplyReply
   extension : MultiplyReply
-  async_extension : MultiplyReply
   event_count : Int
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
-struct SleepPayload {
-  ms : Int
+struct MixedRuntimeReport {
+  local_reply : MultiplyReply
+  remote : Bool
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
-struct SleepReply {
-  done : Bool
-} derive(ToJson, FromJson, Eq, Debug)
-
-///|
-struct AsyncSleepReport {
-  reply : SleepReply
-  timer_fired_before_reply : Bool
+struct StandaloneIpcExtensionReport {
+  has_core : Bool
+  has_extension : Bool
+  has_op : Bool
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|

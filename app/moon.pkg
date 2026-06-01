@@ -1,7 +1,14 @@
 import {
+  "moonbitlang/async" @async,
+  "moonbitlang/async/process" @process,
+  "moonbitlang/core/debug" @debug,
   "moonbitlang/core/json",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/sys" @sys,
   "justjavac/lepus_bootstrap" @bootstrap,
   "justjavac/lepus_core" @core,
+  "justjavac/lepus_ipc" @ipc,
+  "justjavac/lepus_ipc_ws" @ipc_ws,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus" @webview,
   "justjavac/lepus_runtime" @wvrt,
@@ -15,9 +22,14 @@ supported_targets = "native"
 
 options(
   targets: {
+    "command_extension.mbt": [ "native" ],
+    "command_extension_order.mbt": [ "native" ],
     "config_bridge.mbt": [ "native" ],
     "create.mbt": [ "native" ],
+    "framework_ipc_transport.mbt": [ "native" ],
+    "framework_process.mbt": [ "native" ],
     "install.mbt": [ "native" ],
+    "json_helpers.mbt": [ "native" ],
     "order.mbt": [ "native" ],
     "prepare_wbtest.mbt": [ "native" ],
     "types.mbt": [ "native" ],

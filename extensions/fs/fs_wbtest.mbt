@@ -83,23 +83,23 @@ fn[Payload : @json.FromJson] decode_single_argument(
 }
 
 ///|
-async test "fs async path api can read write and append text files" {
-  let path = "lepus-fs-async-path-api.txt"
-  match write_text_file_async(path, "hello", None) {
+test "fs path api can read write and append text files" {
+  let path = "lepus-fs-path-api.txt"
+  match write_text_file(path, "hello", None) {
     Ok(reply) => {
       assert_true(reply.written)
       assert_eq(reply.bytes_written, 5)
     }
     Err(error) => abort(error)
   }
-  match append_text_file_async(path, " world", None) {
+  match append_text_file(path, " world", None) {
     Ok(reply) => {
       assert_true(reply.written)
       assert_eq(reply.bytes_written, 6)
     }
     Err(error) => abort(error)
   }
-  match read_text_file_async(path, None) {
+  match read_text_file(path, None) {
     Ok(reply) => {
       assert_eq(reply.content, "hello world")
       assert_eq(reply.bytes_read, 11)
@@ -110,8 +110,8 @@ async test "fs async path api can read write and append text files" {
 }
 
 ///|
-test "fs extension text ops complete through WebView async bridge" {
-  let path = "lepus-fs-webview-async.txt"
+test "fs extension text ops complete through WebView promise bridge" {
+  let path = "lepus-fs-webview-promise.txt"
   if native_path_exists(path) {
     ignore(native_remove_file(path))
   }
@@ -152,7 +152,7 @@ test "fs extension text ops complete through WebView async bridge" {
       #| <html>
       #|   <body>
       #|     <script>
-      #|       const path = "lepus-fs-webview-async.txt";
+      #|       const path = "lepus-fs-webview-promise.txt";
       #|       const reportFailure = (message) =>
       #|         window.reportFsFailure(message).catch(() => {});
       #|       const waitFor = (predicate, onReady, label, attempts = 0) => {
@@ -182,7 +182,7 @@ test "fs extension text ops complete through WebView async bridge" {
       #|           },
       #|           () => {
       #|             const timeoutId = window.setTimeout(() => {
-      #|               void reportFailure("fs async report timeout");
+      #|               void reportFailure("fs promise report timeout");
       #|             }, 1000);
       #|             const fs = window.__MoonBit__.fs;
       #|             fs.writeFile(path, "hello")
@@ -197,7 +197,7 @@ test "fs extension text ops complete through WebView async bridge" {
       #|               })
       #|               .catch((error) => {
       #|                 window.clearTimeout(timeoutId);
-      #|                 void reportFailure("fs async transport error: " + String(error));
+      #|                 void reportFailure("fs promise transport error: " + String(error));
       #|               });
       #|           },
       #|           "__MoonBit__.fs",

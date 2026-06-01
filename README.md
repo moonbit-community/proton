@@ -158,6 +158,8 @@ This repo targets `native` only.
 - macOS uses system `WebKit`
 - Linux needs `pkg-config`, `libgtk-3-dev`, and `libwebkit2gtk-4.1-dev`
 - Windows users still need Microsoft WebView2 Runtime installed
+- Windows native tests and examples that include WebView2 COM headers need the
+  SDK headers installed with `.\scripts\install_webview2_headers.ps1`
 - Windows shared builds need `lib/windows-x64/shared/webview.dll` beside the final executable or on `PATH`
 - `clipboard` comes from the published Mooncakes package `justjavac/clipboard`.
 - `notification` comes from the published Mooncakes package `justjavac/notification`.

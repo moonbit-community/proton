@@ -8,11 +8,11 @@ fn build_prepared_app(prepared : PreparedApp) -> Result[@wvrt.App, String] {
       prepared.prepared_extensions(),
       prepared.base_dir(),
     ) {
-    Ok(_) => Ok(app)
     Err(error) => {
       app.destroy()
       Err(error)
     }
+    Ok(_) => Ok(app)
   }
 }
 

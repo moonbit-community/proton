@@ -97,13 +97,17 @@ pub fn ExtensionHost::install(
 ///|
 /// Emits an extension-scoped event from the host to JavaScript.
 /// The payload is converted to JSON and dispatched on the owning webview's main
-/// thread so JavaScript observers receive it safely.
+/// event loop so JavaScript observers receive it safely.
 pub fn[Payload : ToJson] ExtensionHost::emit(
   self : ExtensionHost,
   extension_namespace : String,
   event_name : String,
   payload : Payload,
 ) -> Unit {
+  match validate_extension_event_target(extension_namespace, event_name) {
+    Err(error) => abort(error)
+    Ok(_) => ()
+  }
   guard self.extension_namespaces.get(extension_namespace) is Some(_) else {
     abort(
       "ExtensionHost::emit: extension namespace is not installed: " +
@@ -151,13 +155,9 @@ fn ExtensionContext::register_api(
   self : ExtensionContext,
   api_name : String,
 ) -> String {
-  guard !extension_is_reserved_api_name(api_name) else {
-    abort(
-      "ExtensionContext::register_api: reserved API name: " +
-      self.extension_namespace +
-      "." +
-      api_name,
-    )
+  match validate_extension_api_name(self.extension_namespace, api_name) {
+    Err(error) => abort(error)
+    Ok(_) => ()
   }
   let registry_key = extension_api_registry_key(
     self.extension_namespace,
@@ -209,6 +209,42 @@ fn extension_api_registry_key(
 /// Converts an extension namespace/API pair into the runtime op binding name.
 fn extension_op_name(extension_namespace : String, api_name : String) -> String {
   "ext:" + extension_namespace + "/" + api_name
+}
+
+///|
+fn validate_extension_api_name(
+  extension_namespace : String,
+  api_name : String,
+) -> Result[Unit, String] {
+  guard api_name.trim().to_owned() != "" else {
+    return Err(
+      "ExtensionContext::register_api: API name must not be empty: " +
+      extension_namespace,
+    )
+  }
+  guard !extension_is_reserved_api_name(api_name) else {
+    return Err(
+      "ExtensionContext::register_api: reserved API name: " +
+      extension_namespace +
+      "." +
+      api_name,
+    )
+  }
+  Ok(())
+}
+
+///|
+fn validate_extension_event_target(
+  extension_namespace : String,
+  event_name : String,
+) -> Result[Unit, String] {
+  guard extension_namespace.trim().to_owned() != "" else {
+    return Err("extension event namespace must not be empty")
+  }
+  guard event_name.trim().to_owned() != "" else {
+    return Err("extension event name must not be empty: " + extension_namespace)
+  }
+  Ok(())
 }
 
 ///|

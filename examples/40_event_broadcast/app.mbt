@@ -251,8 +251,7 @@ let resource : String =
   #|        stream.prepend(entry);
   #|      }
   #|
-  #|      window.__MoonBit__.events.on("ticker.tick", (event) => {
-  #|        const payload = event.payload;
+  #|      function applyTick(payload) {
   #|        if (payload.run_id !== currentRun) {
   #|          addEntry("stale", `run #${payload.run_id} tick ${payload.index}`);
   #|          return;
@@ -261,16 +260,15 @@ let resource : String =
   #|        remaining.textContent = String(payload.remaining);
   #|        fill.style.width = `${Math.round((payload.index / payload.total) * 100)}%`;
   #|        addEntry("tick", `run #${payload.run_id} ${payload.index}/${payload.total}`);
-  #|      });
+  #|      }
   #|
-  #|      window.__MoonBit__.events.on("ticker.done", (event) => {
-  #|        const payload = event.payload;
+  #|      function applyDone(payload) {
   #|        if (payload.run_id !== currentRun) {
   #|          return;
   #|        }
   #|        start.disabled = false;
   #|        addEntry("done", `run #${payload.run_id} emitted ${payload.total} ticks`);
-  #|      });
+  #|      }
   #|
   #|      start.addEventListener("click", () => {
   #|        currentRun += 1;
@@ -285,12 +283,22 @@ let resource : String =
   #|        fill.style.width = "0%";
   #|        start.disabled = true;
   #|        addEntry("start", `run #${payload.run_id}`);
-  #|        void window.__MoonBit__.ticker.start(payload).catch((error) => {
-  #|          start.disabled = false;
-  #|          addEntry("error", String(error));
-  #|        });
+  #|        void window.__MoonBit__.ticker.start(payload)
+  #|          .then((result) => {
+  #|            addEntry("reply", `run #${result.done.run_id} completed`);
+  #|          })
+  #|          .catch((error) => {
+  #|            start.disabled = false;
+  #|            addEntry("error", String(error));
+  #|          });
   #|      });
   #|
+  #|      window.__MoonBit__.ticker.on("tick", (event) => {
+  #|        applyTick(event.payload);
+  #|      });
+  #|      window.__MoonBit__.ticker.on("done", (event) => {
+  #|        applyDone(event.payload);
+  #|      });
   #|      addEntry("ready", "listeners attached");
   #|    </script>
   #|  </body>

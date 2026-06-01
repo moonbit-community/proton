@@ -58,15 +58,20 @@ moon -C examples build --target native
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
 | 36_app_devtools | Windows-only | Focused `devtools` extension example |
 | 37_cef_mvp | OK | Optional CEF probe with system webview fallback |
-| 38_async_executor_queue | OK | Low-level custom native executor queue |
-| 39_async_extension_add | OK | Recommended async extension op using `op_async_result` |
-| 40_event_broadcast | OK | Event-only broadcast flow with `extension.emit(...)` |
+| 38_async_extension_add | OK | Async extension API implemented by a user process that starts a framework child |
+| 39_sync_async_extensions | OK | Sync and async command extensions registered through the same manifest/registry style |
+| 40_event_broadcast | OK | Ticker extension implemented in the user process with a framework child |
+| 41_app_commands | OK | App-level commands implemented in the user process with a framework child |
 
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
 - Examples `19` through `36` show app-style startup with `justjavac/lepus_app`.
-- Example `39` shows the preferred async extension shape: no custom queue in extension code.
-- Example `40` separates event broadcast from request/response returns.
+- Example `38` shows async extension-style APIs with the user process starting a framework child process.
+- Example `39` shows sync and async extension-style APIs registered through one command extension registry.
+- Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
+- Example `41` demonstrates the multiprocess runtime split: MoonBit ops and
+  async handlers stay in the user parent process while WebView2 runs in a
+  framework/webview child process.
 - App examples declare extensions in MoonBit code and keep per-extension options in `app.json.extensions`.
 - Frontend code should use `window.__MoonBit__` throughout.

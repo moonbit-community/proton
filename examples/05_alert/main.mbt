@@ -33,7 +33,7 @@ let html =
   #|   </head>
   #|   <body>
   #|     <p>Alert demo is running.</p>
-  #|     <script>alert("Hello Moonbit!")</script>
+  #|     <script>setTimeout(() => alert("Hello Moonbit!"), 250)</script>
   #|   </body>
   #| </html>
 

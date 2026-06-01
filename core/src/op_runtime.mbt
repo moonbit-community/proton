@@ -11,7 +11,6 @@ priv struct OpInvocation {
 priv struct OpRuntime {
   webview : @webview.Webview
   registry : OpRegistry
-  executor : AsyncExecutor
   binding_name : String
   destroy_hook_name : String
   default_registry_key : Int64?
@@ -41,6 +40,15 @@ pub fn ensure_core_runtime(webview : @webview.Webview) -> Unit {
 }
 
 ///|
+/// Installs the core JavaScript bridge without creating a local op runtime.
+///
+/// App windows use this as their baseline so they can later choose either the
+/// local op runtime or the multiprocess IPC runtime.
+pub fn install_core_bridge(webview : @webview.Webview) -> Unit {
+  install_moonbit_core_runtime(webview)
+}
+
+///|
 /// Creates an op runtime, binds the dispatch bridge, and installs cleanup hooks.
 fn make_op_runtime(
   webview : @webview.Webview,
@@ -54,7 +62,6 @@ fn make_op_runtime(
   let runtime = OpRuntime::{
     webview,
     registry: OpRegistry::new(),
-    executor: AsyncExecutor::new(),
     binding_name,
     destroy_hook_name,
     default_registry_key,
@@ -74,7 +81,6 @@ fn OpRuntime::destroy(self : OpRuntime) -> Unit {
     None => ()
   }
   self.extension_host = None
-  self.executor.close()
   self.webview.unregister_destroy_hook(self.destroy_hook_name)
   self.webview.unbind(self.binding_name)
 }
@@ -123,28 +129,6 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRuntime::handle_result(
 }
 
 ///|
-/// Registers an async op handler and exposes it to JavaScript.
-fn[Payload : @json.FromJson, Reply : ToJson] OpRuntime::handle_async(
-  self : OpRuntime,
-  name : String,
-  callback : async (Payload) -> Reply,
-) -> Unit {
-  self.registry.handle_async(name, callback)
-  register_moonbit_op(self.webview, name)
-}
-
-///|
-/// Registers an async op handler with explicit string error support and exposes it to JavaScript.
-fn[Payload : @json.FromJson, Reply : ToJson] OpRuntime::handle_async_result(
-  self : OpRuntime,
-  name : String,
-  callback : async (Payload) -> Result[Reply, String],
-) -> Unit {
-  self.registry.handle_async_result(name, callback)
-  register_moonbit_op(self.webview, name)
-}
-
-///|
 /// Handles one raw binding request from JavaScript and returns the serialized reply.
 fn OpRuntime::handle_request(
   self : OpRuntime,
@@ -153,38 +137,17 @@ fn OpRuntime::handle_request(
 ) -> Unit {
   let id = @ffi.from_cstr(raw_id)
   match parse_op_request(@ffi.from_cstr(raw_req)) {
-    Ok(request) =>
-      if self.registry.has_async(request.name) {
-        self.handle_async_request(id, request)
-      } else {
-        let reply = self.registry.call(request.name, request.payload)
-        match reply {
-          Ok(reply) => self.webview.response(id, 0, reply.stringify())
-          Err(message) =>
-            self.webview.response(id, 1, Json::string(message).stringify())
-        }
+    Ok(request) => {
+      let reply = self.registry.call(request.name, request.payload)
+      match reply {
+        Ok(reply) => self.webview.response(id, 0, reply.stringify())
+        Err(message) =>
+          self.webview.response(id, 1, Json::string(message).stringify())
       }
+    }
     Err(message) =>
       self.webview.response(id, 1, Json::string(message).stringify())
   }
-}
-
-///|
-/// Starts one async op and completes the JS binding promise when it returns.
-fn OpRuntime::handle_async_request(
-  self : OpRuntime,
-  id : String,
-  request : OpInvocation,
-) -> Unit {
-  self.registry.call_async(self.executor, request.name, request.payload, fn(
-    reply,
-  ) {
-    match reply {
-      Ok(reply) => self.webview.response(id, 0, reply.stringify())
-      Err(message) =>
-        self.webview.response(id, 1, Json::string(message).stringify())
-    }
-  })
 }
 
 ///|

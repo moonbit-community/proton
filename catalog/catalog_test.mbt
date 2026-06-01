@@ -56,6 +56,28 @@ fn builtin_extension_root(name : String) -> String {
 }
 
 ///|
+test "extension descriptor constructor and accessors copy mutable arrays" {
+  let platforms = ["windows"]
+  let dependencies = ["vendor/base"]
+  let capabilities = ["vendor.demo"]
+  let descriptor = ExtensionDescriptor::new(
+    2, "vendor/demo", "0.1.0", "Demo", "Demo extension", "demo", "vendor/demo", "vendor/extensions/demo",
+    "spec", platforms, dependencies, capabilities, "./options.schema.json", "vendor/extensions/demo",
+  )
+
+  platforms.push("linux")
+  dependencies.push("vendor/mutated")
+  capabilities.push("vendor.mutated")
+  @debug.assert_eq(descriptor.platforms(), ["windows"])
+  @debug.assert_eq(descriptor.dependencies(), ["vendor/base"])
+  @debug.assert_eq(descriptor.capabilities(), ["vendor.demo"])
+
+  let exposed_dependencies = descriptor.dependencies()
+  exposed_dependencies.push("vendor/changed")
+  @debug.assert_eq(descriptor.dependencies(), ["vendor/base"])
+}
+
+///|
 test "discover_extension_descriptor_files can target one extension package" {
   let descriptor_paths = match
     discover_extension_descriptor_files([builtin_extension_root("path")]) {
@@ -72,6 +94,9 @@ test "discover_extension_descriptor_files can target one extension package" {
     Err(error) => abort(error)
   }
 
+  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/lepus-path"])
+  let ids = catalog.descriptor_ids()
+  ids.push("mutated")
   @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/lepus-path"])
 }
 
@@ -134,17 +159,19 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
 
 ///|
 test "build_extension_link_plan expands metadata dependencies in order" {
+  let fs_descriptor = stub_descriptor("justjavac/lepus-fs", "fs", dependencies=[
+    "justjavac/lepus-path",
+  ])
   let catalog = match
     ExtensionCatalog::from_descriptors([
       stub_descriptor("justjavac/lepus-path", "path"),
-      stub_descriptor("justjavac/lepus-fs", "fs", dependencies=[
-        "justjavac/lepus-path",
-      ]),
+      fs_descriptor,
       stub_descriptor("justjavac/lepus-dialog", "dialog"),
     ]) {
     Ok(catalog) => catalog
     Err(error) => abort(error)
   }
+  fs_descriptor.dependencies.push("vendor/mutated")
 
   let plan = match
     build_extension_link_plan(catalog, [
@@ -159,6 +186,12 @@ test "build_extension_link_plan expands metadata dependencies in order" {
   ])
   assert_eq(plan.inputs()[0].package_path(), "extensions/path")
   assert_eq(plan.inputs()[1].spec_symbol(), "spec")
+
+  let inputs = plan.inputs()
+  inputs.push(inputs[0])
+  @debug.assert_eq(plan.extension_ids(), [
+    "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
+  ])
 }
 
 ///|

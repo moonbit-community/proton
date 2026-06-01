@@ -3,6 +3,7 @@ name = "justjavac/lepus/examples"
 version = "0.1.0"
 
 import {
+  "moonbitlang/x@0.4.43",
   "justjavac/lepus_bootstrap@0.1.0",
   "justjavac/lepus_app@0.1.0",
   "justjavac/lepus_core@0.1.0",

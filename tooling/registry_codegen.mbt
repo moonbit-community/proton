@@ -63,7 +63,7 @@ pub fn GeneratedRegistryModule::source(
 pub fn GeneratedRegistryModule::bindings(
   self : GeneratedRegistryModule,
 ) -> Array[GeneratedRegistryBinding] {
-  self.bindings
+  copy_generated_registry_bindings(self.bindings)
 }
 
 ///|
@@ -97,7 +97,7 @@ pub fn build_generated_registry_module(
         recommended_file_name: function_name + ".mbt",
         moon_pkg_import_block: render_moon_pkg_import_block(bindings),
         source: render_generated_registry_source(bindings, function_name),
-        bindings,
+        bindings: copy_generated_registry_bindings(bindings),
       })
     }
   }

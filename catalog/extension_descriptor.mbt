@@ -47,9 +47,9 @@ pub fn ExtensionDescriptor::new(
     manifest_key,
     package_path,
     spec_symbol,
-    platforms,
-    dependencies,
-    capabilities,
+    platforms: copy_strings(platforms),
+    dependencies: copy_strings(dependencies),
+    capabilities: copy_strings(capabilities),
     options_schema_path,
     root_dir,
   }
@@ -130,7 +130,7 @@ pub fn ExtensionDescriptor::spec_symbol(self : ExtensionDescriptor) -> String {
 pub fn ExtensionDescriptor::platforms(
   self : ExtensionDescriptor,
 ) -> Array[String] {
-  self.platforms
+  copy_strings(self.platforms)
 }
 
 ///|
@@ -139,7 +139,7 @@ pub fn ExtensionDescriptor::platforms(
 pub fn ExtensionDescriptor::dependencies(
   self : ExtensionDescriptor,
 ) -> Array[String] {
-  self.dependencies
+  copy_strings(self.dependencies)
 }
 
 ///|
@@ -149,7 +149,7 @@ pub fn ExtensionDescriptor::dependencies(
 pub fn ExtensionDescriptor::capabilities(
   self : ExtensionDescriptor,
 ) -> Array[String] {
-  self.capabilities
+  copy_strings(self.capabilities)
 }
 
 ///|

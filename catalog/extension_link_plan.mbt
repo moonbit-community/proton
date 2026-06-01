@@ -19,7 +19,7 @@ pub struct ExtensionLinkPlan {
 pub fn ExtensionLinkPlan::inputs(
   self : ExtensionLinkPlan,
 ) -> Array[ExtensionLinkInput] {
-  self.ordered_inputs
+  copy_link_inputs(self.ordered_inputs)
 }
 
 ///|
@@ -77,7 +77,7 @@ pub fn build_extension_link_plan(
       Err(error) => return Err(error)
     }
   }
-  Ok(ExtensionLinkPlan::{ ordered_inputs: inputs })
+  Ok(ExtensionLinkPlan::{ ordered_inputs: copy_link_inputs(inputs) })
 }
 
 ///|

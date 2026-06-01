@@ -1,15 +1,16 @@
 import {
+  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/core/json",
   "moonbitlang/async" @async,
-  "justjavac/ffi",
-  "justjavac/lepus" @webview,
+  "justjavac/lepus_core" @core,
+  "justjavac/lepus_app" @lepus_app,
+  "justjavac/lepus_manifest" @manifest,
 }
 
 supported_targets = "native"
 
 options(
   "is-main": true,
-  "native-stub": [ "async_executor_native.c" ],
   "pre-build": [
     {
       "command": ":embed -i $input -o $output",

@@ -58,3 +58,56 @@ node ./scripts/sync_libwebview.mjs --repo owner/name
 - `lib/linux-x64/BUILD_INFO.txt`
 
 Downloaded artifacts are staged through `target/libwebview-sync/` and removed before each sync.
+
+## `install_webview2_headers.ps1`
+
+Downloads the Microsoft WebView2 SDK NuGet package and installs its native
+headers into the CMake-compatible layout expected by Windows native stubs:
+
+```text
+build/_deps/microsoft_web_webview2-src/build/native/include
+```
+
+This only installs SDK headers. Windows users still need the WebView2 Runtime
+installed to run WebView2-based applications.
+
+### Usage
+
+Install the default SDK version used by CI:
+
+```powershell
+.\scripts\install_webview2_headers.ps1
+```
+
+Install a specific SDK version:
+
+```powershell
+.\scripts\install_webview2_headers.ps1 -Version 1.0.3967.48
+```
+
+The generated `build/` directory is ignored by git.
+
+## `e2e_cdp_smoke.mjs`
+
+Starts the multi-process examples with WebView2 remote debugging enabled,
+connects through CDP, and verifies that JavaScript calls can cross the
+user-process/framework-process boundary.
+
+### Usage
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs
+```
+
+By default it runs examples `38` through `41`. Pass one or more scenario names
+to run a subset:
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs 41_app_commands/app
+```
+
+Run startup smoke coverage for every runnable example:
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs --all-examples
+```

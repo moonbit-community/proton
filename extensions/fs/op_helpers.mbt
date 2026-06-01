@@ -9,19 +9,6 @@ fn[Reply] with_resolved_path(
 }
 
 ///|
-/// Resolves one path before running the supplied async callback.
-async fn[Reply] with_resolved_path_async(
-  path : String,
-  resolver : (String) -> Result[String, String],
-  callback : async (String) -> Result[Reply, String],
-) -> Result[Reply, String] {
-  match resolver(path) {
-    Ok(resolved_path) => callback(resolved_path)
-    Err(message) => Err(message)
-  }
-}
-
-///|
 /// Resolves two paths before running the supplied callback.
 fn[Reply] with_resolved_paths(
   left_path : String,
