@@ -133,6 +133,22 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
 
+      - name: Setup Node.js for examples e2e
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Run examples CDP e2e on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        env:
+          _CL_: /utf-8
+          LEPUS_CDP_E2E_TIMEOUT_MS: 60000
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          node .\scripts\e2e_cdp_smoke.mjs
+
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
         run: find ./examples/target -type f | xargs ls -lh
