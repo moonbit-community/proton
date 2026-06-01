@@ -279,7 +279,7 @@ fn validate_ws_ipc_path(kind : String, path : String) -> Result[Unit, String] {
 fn generate_ws_ipc_token() -> String {
   let now = @async.now()
   ws_ipc_token_counter.val += 1L
-  let seed = @buffer.new()
+  let seed = Buffer()
   seed.write_string_utf8("lepus-ipc-ws-v1")
   seed.write_int64_le(now)
   seed.write_int64_le(ws_ipc_token_counter.val)

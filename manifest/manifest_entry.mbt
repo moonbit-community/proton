@@ -8,7 +8,7 @@ pub(all) enum AppEntry {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for AppEntry with output(self, logger) {
+pub impl Show for AppEntry with fn output(self, logger) {
   match self {
     Html(value) => {
       logger.write_string("Html(")

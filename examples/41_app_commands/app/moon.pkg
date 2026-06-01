@@ -1,9 +1,9 @@
 import {
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/core/json",
-  "moonbitlang/async" @async,
+  "moonbitlang/async",
   "justjavac/lepus_core" @core,
-  "justjavac/lepus_app" @lepus_app,
+  "justjavac/lepus_app",
   "justjavac/lepus_manifest" @manifest,
 }
 

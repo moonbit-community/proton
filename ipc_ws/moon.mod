@@ -8,12 +8,17 @@ import {
   "justjavac/lepus_ipc@0.1.0",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/ipc_ws"
+
+license = "MIT"
+
+keywords = [ "webview", "ipc", "websocket" ]
+
+description = "HTTP/WebSocket IPC transport for lepus."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/ipc_ws",
-  license: "MIT",
-  keywords: [ "webview", "ipc", "websocket" ],
-  description: "HTTP/WebSocket IPC transport for lepus.",
   source: "src",
   warn_list: "",
   preferred_target: "native",

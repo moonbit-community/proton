@@ -93,6 +93,9 @@ Starts the multi-process examples with WebView2 remote debugging enabled,
 connects through CDP, and verifies that JavaScript calls can cross the
 user-process/framework-process boundary.
 
+This script requires Windows, WebView2 Runtime, WebView2 SDK headers, and
+Node.js 24 or newer.
+
 ### Usage
 
 ```sh

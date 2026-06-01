@@ -6,14 +6,14 @@ import {
 }
 
 import {
-  "moonbitlang/core/debug" @debug,
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "justjavac/ffi",
   "justjavac/lepus" @webview,
 } for "test"
 
 import {
-  "moonbitlang/core/debug" @debug,
+  "moonbitlang/core/debug",
   "justjavac/lepus_ipc" @ipc,
 } for "wbtest"
 

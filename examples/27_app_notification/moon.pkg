@@ -1,5 +1,5 @@
 import {
-  "extensions/notification" @notification,
+  "extensions/notification",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime" @wvrt,

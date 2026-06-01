@@ -8,7 +8,7 @@ import {
 }
 
 import {
-  "moonbitlang/core/debug" @debug,
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",

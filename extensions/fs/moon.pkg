@@ -1,16 +1,16 @@
 import {
-  "moonbitlang/core/debug" @debug,
-  "justjavac/ffi" @ffi,
+  "moonbitlang/core/debug",
+  "justjavac/ffi",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @xfs,
-  "moonbitlang/x/path" @path,
+  "moonbitlang/x/path",
   "justjavac/lepus" @webview,
   "justjavac/lepus_core" @core,
 }
 
 import {
-  "moonbitlang/core/debug" @debug,
+  "moonbitlang/core/debug",
 } for "wbtest"
 
 supported_targets = "native"

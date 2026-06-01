@@ -6,12 +6,17 @@ import {
   "moonbitlang/x@0.4.43",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/manifest"
+
+license = "MIT"
+
+keywords = [ "webview", "manifest", "config", "desktop-app" ]
+
+description = "Declarative manifest types for lepus applications."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/manifest",
-  license: "MIT",
-  keywords: [ "webview", "manifest", "config", "desktop-app" ],
-  description: "Declarative manifest types for lepus applications.",
   source: ".",
   warn_list: "",
   preferred_target: "native",

@@ -16,12 +16,17 @@ import {
   "justjavac/lepus_cef@0.1.0",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/examples"
+
+license = "MIT"
+
+keywords = [ "webview", "webui", "gui", "web", "desktop-app" ]
+
+description = "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/examples",
-  license: "MIT",
-  keywords: [ "webview", "webui", "gui", "web", "desktop-app" ],
-  description: "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs.",
   source: "",
   warn_list: "",
   preferred_target: "native",

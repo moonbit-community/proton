@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbitlang/async" @async,
+  "moonbitlang/async",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
 }

@@ -14,12 +14,17 @@ import {
   "justjavac/lepus_runtime@0.1.0",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/app"
+
+license = "MIT"
+
+keywords = [ "webview", "app", "manifest", "desktop-app" ]
+
+description = "High-level manifest and registry based app composition for lepus."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/app",
-  license: "MIT",
-  keywords: [ "webview", "app", "manifest", "desktop-app" ],
-  description: "High-level manifest and registry based app composition for lepus.",
   source: "",
   warn_list: "",
   preferred_target: "native",

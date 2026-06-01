@@ -6,12 +6,17 @@ import {
   "justjavac/ffi@0.2.1",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus"
+
+license = "MIT"
+
+keywords = [ "cef", "chromium", "webview", "desktop-app" ]
+
+description = "Opt-in CEF backend prototype for Lepus."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus",
-  license: "MIT",
-  keywords: [ "cef", "chromium", "webview", "desktop-app" ],
-  description: "Opt-in CEF backend prototype for Lepus.",
   source: "",
   warn_list: "",
   preferred_target: "native",

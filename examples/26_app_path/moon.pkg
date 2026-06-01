@@ -1,5 +1,5 @@
 import {
-  "extensions/path" @path,
+  "extensions/path",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime" @wvrt,

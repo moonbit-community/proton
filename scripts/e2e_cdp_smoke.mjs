@@ -139,6 +139,21 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
+function describeExit({ code, signal }) {
+  if (signal) {
+    return `signal ${signal}`;
+  }
+  return `exit code ${code}`;
+}
+
+function prematureExitError(example, phase, exit, output) {
+  const trimmed = output.trim();
+  return new Error(
+    `example ${example} exited during ${phase} before e2e completed (${describeExit(exit)})` +
+      (trimmed ? `\n\nOutput:\n${trimmed}` : ""),
+  );
+}
+
 async function reservePort() {
   const server = net.createServer();
   await new Promise((resolve, reject) => {
@@ -314,19 +329,38 @@ async function runExample(example) {
   child.stderr.on("data", (chunk) => {
     output += chunk.toString();
   });
+  const childExit = new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      resolve({ code, signal });
+    });
+  });
+  const withChildRunning = (promise, phase) =>
+    Promise.race([
+      promise,
+      childExit.then((exit) => {
+        throw prematureExitError(example, phase, exit, output);
+      }),
+    ]);
 
   try {
     const deadline = Date.now() + timeoutMs;
-    const target = await waitForTarget(port, deadline);
-    const cdp = await withTimeout(openCdp(target.webSocketDebuggerUrl), 5000, "CDP connect");
+    const target = await withChildRunning(
+      waitForTarget(port, deadline),
+      "CDP target discovery",
+    );
+    const cdp = await withChildRunning(
+      withTimeout(openCdp(target.webSocketDebuggerUrl), 5000, "CDP connect"),
+      "CDP connect",
+    );
     await cdp.call("Runtime.enable");
     await cdp.call("Page.enable").catch(() => {});
     cdp.on("Page.javascriptDialogOpening", () => {
       cdp.call("Page.handleJavaScriptDialog", { accept: true }).catch(() => {});
     });
-    await waitForBridge(cdp, scenario, deadline);
+    await withChildRunning(waitForBridge(cdp, scenario, deadline), "bridge wait");
     if (functional) {
-      const probe = await evaluateProbe(cdp, scenario);
+      const probe = await withChildRunning(evaluateProbe(cdp, scenario), "probe evaluation");
       const value = probe.result?.value;
       if (!scenario.validate(value)) {
         throw new Error(`unexpected probe result: ${JSON.stringify({ value, probe })}`);
@@ -350,6 +384,9 @@ async function runExample(example) {
 }
 
 async function main() {
+  if (process.platform !== "win32") {
+    throw new Error("CDP e2e currently requires Windows WebView2.");
+  }
   for (const example of examples) {
     await runExample(example);
   }

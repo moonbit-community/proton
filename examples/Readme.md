@@ -12,6 +12,12 @@ Build every runnable example with:
 moon -C examples build --target native
 ```
 
+Run the default Windows/WebView2 e2e smoke scenarios:
+
+```sh
+node ../scripts/e2e_cdp_smoke.mjs
+```
+
 ## Core Webview
 
 | Name            | Status | Note |

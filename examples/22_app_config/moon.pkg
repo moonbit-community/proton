@@ -1,6 +1,6 @@
 import {
-  "extensions/fs" @fs,
-  "extensions/path" @path,
+  "extensions/fs",
+  "extensions/path",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_runtime" @wvrt,
 }

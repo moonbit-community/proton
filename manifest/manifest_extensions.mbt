@@ -6,7 +6,7 @@ pub(all) enum ExtensionSetting {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for ExtensionSetting with output(self, logger) {
+pub impl Show for ExtensionSetting with fn output(self, logger) {
   match self {
     Disabled => logger.write_string("Disabled")
     Enabled(options) => {
