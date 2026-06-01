@@ -9,12 +9,17 @@ import {
   "justjavac/lepus_catalog@0.1.0",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/tooling"
+
+license = "MIT"
+
+keywords = [ "webview", "tooling", "extension", "metadata" ]
+
+description = "AI- and developer-facing catalog query and registry code generation helpers for lepus."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/tooling",
-  license: "MIT",
-  keywords: [ "webview", "tooling", "extension", "metadata" ],
-  description: "AI- and developer-facing catalog query and registry code generation helpers for lepus.",
   source: "",
   warn_list: "",
   preferred_target: "native",

@@ -1,5 +1,5 @@
 import {
-  "extensions/auto_launch" @auto_launch,
+  "extensions/auto_launch",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime" @wvrt,

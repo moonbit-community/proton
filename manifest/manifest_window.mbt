@@ -8,7 +8,7 @@ pub(all) enum WindowSizeHint {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for WindowSizeHint with output(self, logger) {
+pub impl Show for WindowSizeHint with fn output(self, logger) {
   match self {
     None => logger.write_string("None")
     Fixed => logger.write_string("Fixed")
@@ -27,7 +27,7 @@ pub struct WindowManifest {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for WindowManifest with output(self, logger) {
+pub impl Show for WindowManifest with fn output(self, logger) {
   logger.write_string("WindowManifest::{ title: ")
   logger.write_object(self.title)
   logger.write_string(", width: ")
@@ -48,7 +48,7 @@ pub struct AppWindowManifest {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for AppWindowManifest with output(self, logger) {
+pub impl Show for AppWindowManifest with fn output(self, logger) {
   logger.write_string("AppWindowManifest::{ id: ")
   logger.write_object(self.id)
   logger.write_string(", window: ")

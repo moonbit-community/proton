@@ -1,6 +1,6 @@
 import {
-  "extensions/clipboard" @clipboard,
-  "extensions/dialog" @dialog,
+  "extensions/clipboard",
+  "extensions/dialog",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime" @wvrt,

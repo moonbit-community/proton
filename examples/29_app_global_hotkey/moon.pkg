@@ -1,5 +1,5 @@
 import {
-  "extensions/global_hotkey" @global_hotkey,
+  "extensions/global_hotkey",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime" @wvrt,

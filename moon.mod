@@ -7,12 +7,17 @@ import {
   "moonbitlang/x@0.4.43",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus"
+
+license = "MIT"
+
+keywords = [ "webview", "webui", "gui", "web", "desktop-app" ]
+
+description = "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus",
-  license: "MIT",
-  keywords: [ "webview", "webui", "gui", "web", "desktop-app" ],
-  description: "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs.",
   source: "src",
   "--moonbit-unstable-prebuild": "native_link_config.mjs",
   warn_list: "",

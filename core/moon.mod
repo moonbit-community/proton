@@ -10,12 +10,17 @@ import {
   "justjavac/lepus@0.1.10",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/core"
+
+license = "MIT"
+
+keywords = [ "webview", "runtime", "extension", "bridge" ]
+
+description = "Core bridge and extension host for lepus."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/core",
-  license: "MIT",
-  keywords: [ "webview", "runtime", "extension", "bridge" ],
-  description: "Core bridge and extension host for lepus.",
   source: "src",
   warn_list: "",
   preferred_target: "native",

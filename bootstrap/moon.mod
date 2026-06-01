@@ -7,12 +7,17 @@ import {
   "justjavac/lepus_manifest@0.1.0",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/bootstrap"
+
+license = "MIT"
+
+keywords = [ "webview", "bootstrap", "manifest", "desktop-app" ]
+
+description = "Bootstrap helpers for loading declarative lepus manifests."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/bootstrap",
-  license: "MIT",
-  keywords: [ "webview", "bootstrap", "manifest", "desktop-app" ],
-  description: "Bootstrap helpers for loading declarative lepus manifests.",
   source: "",
   warn_list: "",
   preferred_target: "native",

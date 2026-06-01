@@ -10,12 +10,17 @@ import {
   "justjavac/lepus@0.1.10",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/runtime"
+
+license = "MIT"
+
+keywords = [ "webview", "runtime", "extension", "desktop-app" ]
+
+description = "Ops runtime and app framework for lepus."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/runtime",
-  license: "MIT",
-  keywords: [ "webview", "runtime", "extension", "desktop-app" ],
-  description: "Ops runtime and app framework for lepus.",
   source: "src",
   warn_list: "",
   preferred_target: "native",

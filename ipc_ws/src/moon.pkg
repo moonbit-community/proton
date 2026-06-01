@@ -1,22 +1,22 @@
 import {
   "moonbitlang/core/buffer",
   "moonbitlang/core/json",
-  "moonbitlang/async" @async,
+  "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/async/io",
   "moonbitlang/async/semaphore",
   "moonbitlang/async/socket",
   "moonbitlang/async/websocket",
-  "moonbitlang/x/crypto" @crypto,
+  "moonbitlang/x/crypto",
   "justjavac/lepus_ipc" @ipc,
 }
 
 import {
-  "moonbitlang/async" @async,
+  "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/async/socket",
   "moonbitlang/async/websocket",
-  "moonbitlang/core/debug" @debug,
+  "moonbitlang/core/debug",
   "justjavac/lepus_ipc" @ipc,
 } for "wbtest"
 

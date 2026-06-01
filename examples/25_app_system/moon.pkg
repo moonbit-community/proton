@@ -1,7 +1,7 @@
 import {
-  "extensions/global_hotkey" @global_hotkey,
-  "extensions/notification" @notification,
-  "extensions/tray" @tray,
+  "extensions/global_hotkey",
+  "extensions/notification",
+  "extensions/tray",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus_runtime" @wvrt,

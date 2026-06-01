@@ -18,12 +18,17 @@ import {
   "justjavac/keepawake@0.1.0",
 }
 
+readme = "README.md"
+
+repository = "https://github.com/justjavac/lepus/tree/main/extensions"
+
+license = "MIT"
+
+keywords = [ "webview", "extension", "filesystem" ]
+
+description = "Extensions for lepus examples and applications."
+
 options(
-  readme: "README.md",
-  repository: "https://github.com/justjavac/lepus/tree/main/extensions",
-  license: "MIT",
-  keywords: [ "webview", "extension", "filesystem" ],
-  description: "Extensions for lepus examples and applications.",
   source: ".",
   warn_list: "",
   preferred_target: "native",
