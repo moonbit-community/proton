@@ -168,6 +168,27 @@ test "attribute codegen rejects unsupported attribute arguments" {
 }
 
 ///|
+test "attribute codegen rejects unsupported command parameter type" {
+  match
+    generate_app_commands_from_source(
+      (
+        #|#lepus.command
+        #|fn ping(callback : (Int) -> Int) -> Unit {}
+        #|
+      ),
+      "examples/bad-param",
+      "badParam",
+    ) {
+    Ok(_) => abort("expected unsupported parameter type error")
+    Err(error) =>
+      inspect(
+        error,
+        content="unsupported command parameter type in #lepus.command: ping.callback",
+      )
+  }
+}
+
+///|
 test "attribute codegen rejects event-only input" {
   match
     generate_app_commands_from_source(
@@ -186,6 +207,38 @@ test "attribute codegen rejects event-only input" {
       inspect(
         error,
         content="#lepus.command codegen requires at least one command",
+      )
+  }
+}
+
+///|
+test "attribute codegen file scan reports target parse errors" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/lepus-codegen-bad-target") catch {
+    _ => ()
+  }
+  let input = "target/lepus-codegen-bad-target/input.mbt"
+  @mbfs.write_string_to_file(
+    input,
+    (
+      #|#lepus.command
+      #|fn broken( -> Unit {}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match generate_app_commands_from_file(input, "examples/bad-target", "bad") {
+    Ok(_) => abort("expected target parse error")
+    Err(error) =>
+      inspect(
+        error,
+        content=(
+          #|failed to parse MoonBit source for #lepus codegen: target/lepus-codegen-bad-target/input.mbt
+        ),
       )
   }
 }

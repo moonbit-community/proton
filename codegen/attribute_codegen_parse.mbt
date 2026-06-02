@@ -69,16 +69,23 @@ fn collect_package_lepus_module(
     guard is_codegen_source_file(entry) else { continue }
     let path = path_join(dir, entry)
     guard @mbfs.is_file(path) else { continue }
+    let is_target = normalize_path(path) == input_path ||
+      entry == path_basename(input_file)
     let source = @mbfs.read_file_to_string(path)
     let (ast, reports) = @parser.parse_file(path)
     if !reports.is_empty() {
+      guard !is_target else {
+        return Err(
+          "failed to parse MoonBit source for #lepus codegen: " + input_file,
+        )
+      }
       continue
     }
     let parsed = match parse_lepus_ast(ast, source) {
       Ok(parsed) => parsed
       Err(error) => return Err(error)
     }
-    if normalize_path(path) == input_path || entry == path_basename(input_file) {
+    if is_target {
       target.commands.append(parsed.commands)
       target.events.append(parsed.events)
     } else {
@@ -169,7 +176,15 @@ fn parse_command_from_func(
     None => []
   }
   let return_type = match func.return_type {
-    Some(ty) => type_expr_text(ty)
+    Some(ty) =>
+      match type_expr_text(ty) {
+        Ok(text) => text
+        Err(_) =>
+          return Err(
+            "unsupported command return type in #lepus.command: " +
+            function_name,
+          )
+      }
     None => "Unit"
   }
   let js_name = match attr.name_override {
@@ -322,19 +337,21 @@ fn parse_ast_params(
     }
     match param {
       Positional(binder={ name, .. }, ty=Some(ty)) =>
-        if name == "context" &&
-          type_expr_text(ty) == "@app.AppCommandExtensionContext" {
-          out.push(ParsedLepusParam::{
-            name,
-            param_type: type_expr_text(ty),
-            is_context: true,
-          })
-        } else {
-          out.push(ParsedLepusParam::{
-            name,
-            param_type: type_expr_text(ty),
-            is_context: false,
-          })
+        match type_expr_text(ty) {
+          Err(_) =>
+            first_error = Some(
+              "unsupported command parameter type in #lepus.command: " +
+              function_name +
+              "." +
+              name,
+            )
+          Ok(param_type) =>
+            out.push(ParsedLepusParam::{
+              name,
+              param_type,
+              is_context: name == "context" &&
+              param_type == "@app.AppCommandExtensionContext",
+            })
         }
       DiscardPositional(..) =>
         first_error = Some(
@@ -359,17 +376,30 @@ fn parse_ast_params(
 }
 
 ///|
-fn type_expr_text(ty : @moonbitlang/parser/syntax.Type) -> String {
+fn type_expr_text(
+  ty : @moonbitlang/parser/syntax.Type,
+) -> Result[String, String] {
   match ty {
     Name(constr_id~, tys~, ..) =>
       if tys is Empty {
-        long_ident_text(constr_id.id)
+        Ok(long_ident_text(constr_id.id))
       } else {
-        "\{long_ident_text(constr_id.id)}[\{type_list_text(tys)}]"
+        match type_list_text(tys) {
+          Ok(text) => Ok("\{long_ident_text(constr_id.id)}[\{text}]")
+          Err(error) => Err(error)
+        }
       }
-    Option(ty=inner, ..) => type_expr_text(inner) + "?"
-    Tuple(tys~, ..) => "(\{type_list_text(tys)})"
-    _ => "String"
+    Option(ty=inner, ..) =>
+      match type_expr_text(inner) {
+        Ok(text) => Ok(text + "?")
+        Err(error) => Err(error)
+      }
+    Tuple(tys~, ..) =>
+      match type_list_text(tys) {
+        Ok(text) => Ok("(\{text})")
+        Err(error) => Err(error)
+      }
+    _ => Err("unsupported type")
   }
 }
 
@@ -382,10 +412,24 @@ fn long_ident_text(id : @moonbitlang/parser/syntax.LongIdent) -> String {
 }
 
 ///|
-fn type_list_text(tys : @list.List[@moonbitlang/parser/syntax.Type]) -> String {
+fn type_list_text(
+  tys : @list.List[@moonbitlang/parser/syntax.Type],
+) -> Result[String, String] {
   let parts : Array[String] = []
-  tys.each(fn(ty) { parts.push(type_expr_text(ty)) })
-  parts.join(", ")
+  let mut first_error : String? = None
+  tys.each(fn(ty) {
+    if first_error is Some(_) {
+      return
+    }
+    match type_expr_text(ty) {
+      Ok(text) => parts.push(text)
+      Err(error) => first_error = Some(error)
+    }
+  })
+  match first_error {
+    Some(error) => Err(error)
+    None => Ok(parts.join(", "))
+  }
 }
 
 ///|

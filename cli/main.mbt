@@ -8,6 +8,18 @@ fn print_usage() -> Unit {
 }
 
 ///|
+fn print_error(error : String) -> Unit {
+  if error.has_prefix("error: ") {
+    println(error)
+  } else {
+    println("error: " + error)
+  }
+  if !error.contains("Usage:") {
+    print_usage()
+  }
+}
+
+///|
 fn codegen_commands_arg_parser() -> @argparse.Command {
   @argparse.Command(
     "lepus codegen commands",
@@ -95,9 +107,8 @@ fn main {
   match result {
     Ok(_) => ()
     Err(error) => {
-      println("error: " + error)
-      print_usage()
-      abort(error)
+      print_error(error)
+      @sys.exit(1)
     }
   }
 }
