@@ -8,14 +8,17 @@ fn print_usage() -> Unit {
 }
 
 ///|
-fn print_error(error : String) -> Unit {
-  if error.has_prefix("error: ") {
-    println(error)
+priv enum CliError {
+  UsageError(String, Bool)
+  CommandError(String)
+}
+
+///|
+fn print_error_message(message : String) -> Unit {
+  if message.has_prefix("error: ") {
+    println(message)
   } else {
-    println("error: " + error)
-  }
-  if !error.contains("Usage:") {
-    print_usage()
+    println("error: " + message)
   }
 }
 
@@ -53,33 +56,38 @@ fn match_value(matches : @argparse.Matches, name : String) -> String? {
 }
 
 ///|
-fn run_codegen_commands(args : Array[String]) -> Result[Unit, String] {
+fn run_codegen_commands(args : Array[String]) -> Result[Unit, CliError] {
   let cmd = codegen_commands_arg_parser()
   let matches = cmd.parse(argv=args, env={}) catch {
-    err => return Err(err.to_string())
+    err => return Err(CliError::UsageError(err.to_string(), true))
   }
   let input = match match_value(matches, "input_file") {
     Some(input) => input
-    None => return Err("missing input file")
+    None => return Err(CliError::UsageError("missing input file", false))
   }
   let output = match match_value(matches, "output-file") {
     Some(output) => output
-    None => return Err("missing -o <output.g.mbt>")
+    None => return Err(CliError::UsageError("missing -o <output.g.mbt>", false))
   }
   let extension_id = match match_value(matches, "id") {
     Some(id) => id
-    None => return Err("missing --id <manifest-id>")
+    None =>
+      return Err(CliError::UsageError("missing --id <manifest-id>", false))
   }
   let js_namespace = match match_value(matches, "namespace") {
     Some(value) => value
-    None => return Err("missing --namespace <jsNamespace>")
+    None =>
+      return Err(
+        CliError::UsageError("missing --namespace <jsNamespace>", false),
+      )
   }
   match
     @codegen.generate_app_commands_from_file(input, extension_id, js_namespace) {
-    Err(error) => Err(error)
+    Err(error) => Err(CliError::CommandError(error))
     Ok(result) => {
       @mbfs.write_string_to_file(output, result.source, encoding="utf8") catch {
-        err => return Err(@debug.render(@debug.to_repr(err)))
+        err =>
+          return Err(CliError::CommandError(@debug.render(@debug.to_repr(err))))
       }
       for warning in result.warnings {
         println("warning: " + warning)
@@ -102,12 +110,19 @@ fn main {
     args[1] == "commands" {
     run_codegen_commands(args[2:].to_owned())
   } else {
-    Err("unknown command")
+    Err(CliError::UsageError("unknown command", false))
   }
   match result {
     Ok(_) => ()
-    Err(error) => {
-      print_error(error)
+    Err(CliError::UsageError(message, usage_is_embedded)) => {
+      print_error_message(message)
+      if !usage_is_embedded {
+        print_usage()
+      }
+      @sys.exit(1)
+    }
+    Err(CliError::CommandError(message)) => {
+      print_error_message(message)
       @sys.exit(1)
     }
   }

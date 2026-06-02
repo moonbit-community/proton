@@ -1,4 +1,8 @@
 ///|
+/// Generates Lepus command extension MoonBit source from one source string.
+///
+/// This entry point parses only `source`; it is intended for unit tests and
+/// callers that already have the full package context in memory.
 pub fn generate_app_commands_from_source(
   source : String,
   extension_id : String,
@@ -26,6 +30,10 @@ pub fn generate_app_commands_from_source(
 }
 
 ///|
+/// Generates Lepus command extension MoonBit source from one input file.
+///
+/// The input file's package directory is scanned for ordinary `.mbt` files so
+/// duplicate command and event names can be checked against sibling sources.
 pub fn generate_app_commands_from_file(
   input_file : String,
   extension_id : String,
@@ -157,7 +165,8 @@ fn parse_command_from_func(
     Ok(attrs) => attrs
     Err(error) => return Err(error)
   }
-  let command_attr = match select_single_lepus_attribute(attrs, "command") {
+  let command_attr = match
+    select_single_lepus_attribute(attrs, LepusAttributeKind::Command) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -217,7 +226,8 @@ fn parse_event_from_type_def(
     Ok(attrs) => attrs
     Err(error) => return Err(error)
   }
-  let event_attr = match select_single_lepus_attribute(attrs, "event") {
+  let event_attr = match
+    select_single_lepus_attribute(attrs, LepusAttributeKind::Event) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -260,12 +270,12 @@ fn collect_lepus_attributes(
     }
     let raw = recover_attr_raw(source, attr)
     if raw.has_prefix("#lepus.command") {
-      match parse_lepus_attribute("command", raw) {
+      match parse_lepus_attribute(LepusAttributeKind::Command, raw) {
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
     } else if raw.has_prefix("#lepus.event") {
-      match parse_lepus_attribute("event", raw) {
+      match parse_lepus_attribute(LepusAttributeKind::Event, raw) {
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
@@ -279,26 +289,27 @@ fn collect_lepus_attributes(
 
 ///|
 fn parse_lepus_attribute(
-  kind : String,
+  kind : LepusAttributeKind,
   raw : String,
 ) -> Result[LepusAttribute, String] {
-  let prefix = "#lepus." + kind
+  let label = lepus_attribute_kind_label(kind)
+  let prefix = "#lepus." + label
   if raw == prefix {
     return Ok(LepusAttribute::{ kind, name_override: None })
   }
   guard raw.has_prefix(prefix + "(") && raw.has_suffix(")") else {
-    return Err("unsupported #lepus." + kind + " attribute syntax: " + raw)
+    return Err("unsupported #lepus." + label + " attribute syntax: " + raw)
   }
   let inner = raw
     .unsafe_substring(start=prefix.length() + 1, end=raw.length() - 1)
     .trim()
     .to_owned()
   guard inner.has_prefix("name=\"") && inner.has_suffix("\"") else {
-    return Err("unsupported #lepus." + kind + " attribute arguments: " + raw)
+    return Err("unsupported #lepus." + label + " attribute arguments: " + raw)
   }
   let name = inner.unsafe_substring(start=6, end=inner.length() - 1)
   guard name != "" else {
-    return Err("#lepus." + kind + " name must not be empty")
+    return Err("#lepus." + label + " name must not be empty")
   }
   Ok(LepusAttribute::{ kind, name_override: Some(name) })
 }
@@ -306,14 +317,15 @@ fn parse_lepus_attribute(
 ///|
 fn select_single_lepus_attribute(
   attrs : Array[LepusAttribute],
-  kind : String,
+  kind : LepusAttributeKind,
 ) -> Result[LepusAttribute?, String] {
   let mut selected : LepusAttribute? = None
+  let label = lepus_attribute_kind_label(kind)
   for attr in attrs {
     if attr.kind == kind {
       guard selected is None else {
         return Err(
-          "only one #lepus." + kind + " attribute can be attached to one item",
+          "only one #lepus." + label + " attribute can be attached to one item",
         )
       }
       selected = Some(attr)
@@ -322,6 +334,14 @@ fn select_single_lepus_attribute(
     }
   }
   Ok(selected)
+}
+
+///|
+fn lepus_attribute_kind_label(kind : LepusAttributeKind) -> String {
+  match kind {
+    LepusAttributeKind::Command => "command"
+    LepusAttributeKind::Event => "event"
+  }
 }
 
 ///|

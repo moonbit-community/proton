@@ -1,4 +1,8 @@
 ///|
+/// Generated MoonBit source and diagnostics returned by Lepus attribute codegen.
+///
+/// `source` is the complete `.g.mbt` file content. `warnings` contains
+/// non-fatal messages that the CLI should show after writing the file.
 pub(all) struct LepusCommandCodegenOutput {
   source : String
   warnings : Array[String]
@@ -30,8 +34,14 @@ priv struct ParsedLepusEvent {
 }
 
 ///|
+priv enum LepusAttributeKind {
+  Command
+  Event
+} derive(Eq)
+
+///|
 priv struct LepusAttribute {
-  kind : String
+  kind : LepusAttributeKind
   name_override : String?
 }
 
