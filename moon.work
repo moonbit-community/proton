@@ -7,7 +7,6 @@ members = [
   "./bootstrap",
   "./catalog",
   "./codegen",
-  "./tooling",
   "./cli",
   "./examples",
   "./extensions",

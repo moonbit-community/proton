@@ -92,7 +92,6 @@ fn main {
 In this model:
 
 - MoonBit code registers which extensions are available.
-- `justjavac/lepus_tooling` can generate the same explicit registry-module edits from metadata when you do not want to hand-maintain the registry.
 - `app.json.extensions` enables or disables registered extensions and can pass options.
 - JavaScript talks to one global object: `window.__MoonBit__`.
 - Each extension owns `extension.json` and `options.schema.json` for machine-readable metadata.

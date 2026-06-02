@@ -11,7 +11,8 @@ The repository is organized into these layers:
 - `justjavac/lepus_bootstrap`: `app.json` loading, editing, and validation helpers
 - `justjavac/lepus_app`: high-level app composition and runtime construction
 - `justjavac/lepus_catalog`: metadata discovery, schema loading, and explicit link planning
-- `justjavac/lepus_tooling`: catalog queries plus generated registry-module edits
+- `justjavac/lepus_codegen`: build-time command/event code generation
+- `justjavac/lepus_cli`: developer CLI entry point
 - `extensions/*`: built-in extensions such as `fs`, `path`, `dialog`, `clipboard`, `shell`, `notification`, `tray`, and `globalHotkey`
 
 The product direction is:
@@ -60,8 +61,6 @@ fn main {
 ```
 
 App-style startup now goes through `justjavac/lepus_app`:
-
-Explicit linking can still be written by hand with `ExtensionRegistry`, or generated through `justjavac/lepus_tooling` as explicit `moon.pkg` imports plus a checked-in registry module.
 
 ```moonbit
 import {
