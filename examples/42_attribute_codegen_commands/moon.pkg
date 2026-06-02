@@ -1,0 +1,25 @@
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/async",
+  "justjavac/lepus_app" @app,
+  "justjavac/lepus_manifest" @manifest,
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  "pre-build": [
+    {
+      "command": ":embed -i $input -o $output",
+      "input": "app.html",
+      "output": "app.mbt",
+    },
+  ],
+  targets: {
+    "app.mbt": [ "native" ],
+    "commands.g.mbt": [ "native" ],
+    "commands.mbt": [ "native" ],
+    "main.mbt": [ "native" ],
+  },
+)

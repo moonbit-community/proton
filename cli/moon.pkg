@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/debug",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/sys",
+  "justjavac/lepus_codegen" @codegen,
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  "bin-name": "lepus",
+  targets: { "main.mbt": [ "native" ] },
+)

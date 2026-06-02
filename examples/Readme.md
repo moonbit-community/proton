@@ -68,6 +68,7 @@ node ../scripts/e2e_cdp_smoke.mjs
 | 39_sync_async_extensions | OK | Sync and async command extensions registered through the same manifest/registry style |
 | 40_event_broadcast | OK | Ticker extension implemented in the user process with a framework child |
 | 41_app_commands | OK | App-level commands implemented in the user process with a framework child |
+| 42_attribute_codegen_commands | OK | App command extension generated from `#lepus.command` and `#lepus.event` attributes |
 
 ## Notes
 
@@ -79,5 +80,8 @@ node ../scripts/e2e_cdp_smoke.mjs
 - Example `41` demonstrates the multiprocess runtime split: MoonBit ops and
   async handlers stay in the user parent process while WebView2 runs in a
   framework/webview child process.
+- Example `42` shows the generated-command workflow. Regenerate its command
+  bridge with `moon -C cli run . --target native -- codegen commands ../examples/42_attribute_codegen_commands/commands.mbt -o ../examples/42_attribute_codegen_commands/commands.g.mbt --id examples/attribute-codegen --namespace add`
+  followed by `moonfmt -w examples/42_attribute_codegen_commands/commands.g.mbt`.
 - App examples declare extensions in MoonBit code and keep per-extension options in `app.json.extensions`.
 - Frontend code should use `window.__MoonBit__` throughout.

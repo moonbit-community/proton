@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lepus Attribute Codegen</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #f6f7f9;
+        color: #17202a;
+      }
+      main {
+        width: min(560px, calc(100vw - 32px));
+      }
+      form {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr auto;
+        align-items: end;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+        color: #5c6670;
+      }
+      input,
+      button,
+      pre {
+        font: inherit;
+      }
+      input {
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid #cfd6de;
+        border-radius: 8px;
+        background: white;
+      }
+      button {
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: #176b87;
+        color: white;
+        cursor: pointer;
+      }
+      pre {
+        margin: 18px 0 0;
+        min-height: 160px;
+        padding: 14px;
+        border: 1px solid #d9e0e7;
+        border-radius: 8px;
+        background: white;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <form id="form">
+        <label>
+          Left
+          <input id="left" type="number" value="2" />
+        </label>
+        <label>
+          Right
+          <input id="right" type="number" value="3" />
+        </label>
+        <button type="submit">Run</button>
+      </form>
+      <pre id="log">Waiting for generated command.</pre>
+    </main>
+    <script>
+      const form = document.getElementById("form");
+      const log = document.getElementById("log");
+      window.__MoonBit__.events.on("add.addFinished", (event) => {
+        log.textContent += "\nevent: " + JSON.stringify(event.payload);
+      });
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const payload = {
+          left: Number(document.getElementById("left").value),
+          right: Number(document.getElementById("right").value),
+          delay_ms: 250,
+        };
+        const reply = await window.__MoonBit__.add.slowAdd(payload);
+        log.textContent = "reply: " + JSON.stringify(reply);
+      });
+    </script>
+  </body>
+</html>
+
