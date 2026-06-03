@@ -12,7 +12,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/justjavac/lepus/tree/main/runtime"
+repository = "https://github.com/moonbit-community/lepus/tree/main/runtime"
 
 license = "MIT"
 

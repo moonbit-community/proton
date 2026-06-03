@@ -9,7 +9,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/justjavac/lepus/tree/main/cli"
+repository = "https://github.com/moonbit-community/lepus/tree/main/cli"
 
 license = "MIT"
 

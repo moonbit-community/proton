@@ -9,7 +9,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/justjavac/lepus/tree/main/bootstrap"
+repository = "https://github.com/moonbit-community/lepus/tree/main/bootstrap"
 
 license = "MIT"
 

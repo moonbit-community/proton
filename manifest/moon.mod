@@ -8,7 +8,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/justjavac/lepus/tree/main/manifest"
+repository = "https://github.com/moonbit-community/lepus/tree/main/manifest"
 
 license = "MIT"
 

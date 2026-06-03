@@ -20,7 +20,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/justjavac/lepus/tree/main/extensions"
+repository = "https://github.com/moonbit-community/lepus/tree/main/extensions"
 
 license = "MIT"
 
