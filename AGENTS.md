@@ -9,8 +9,7 @@
 - `app/`: `justjavac/lepus_app`; owns high-level app composition from manifests plus explicitly linked extensions. `create_app(...)` and `create_app_from_file(...)` are the preferred public story; planning helpers do not need to remain public in future breaking refactors.
 - `extensions/`: built-in webview extensions such as `fs`, `path`, `dialog`, `clipboard`; each extension owns its own metadata plus JS/MBT binding and is intended for opt-in linking so apps only ship the capabilities they use.
 - `catalog/`: discovery, indexing, schema validation, and linking-plan helpers for metadata-driven tooling.
-- `codegen/`: build-time command/event code generation used by the `lepus` CLI.
-- `cli/`: native developer CLI entry point.
+- `cli/`: native developer CLI entry point plus `cli/codegen/` command/event code generation helpers.
 - `examples/`: runnable demos; prefer keeping [examples/Readme.md](examples/Readme.md) in sync with the actual examples.
 - `lib/`, `build/`, `_build/`, `target/`: generated or vendored artifacts.
 
@@ -22,12 +21,12 @@
 - `moon -C bootstrap check --target native`
 - `moon -C app check --target native`
 - `moon -C catalog check --target native`
-- `moon -C codegen check --target native`
 - `moon -C cli check --target native`
+- `moon test cli/codegen --target native`
 - `moon -C extensions test --target native`
 - `moon -C examples build --target native`
 - `moon fmt` or `moon fmt --check`
-- `moon info --target native`, `moon -C manifest info --target native`, `moon -C core info --target native`, `moon -C runtime info --target native`, `moon -C bootstrap info --target native`, `moon -C app info --target native`, `moon -C catalog info --target native`, `moon -C codegen info --target native`, `moon -C cli info --target native`, `moon -C extensions info --target native`
+- `moon info --target native`, `moon -C manifest info --target native`, `moon -C core info --target native`, `moon -C runtime info --target native`, `moon -C bootstrap info --target native`, `moon -C app info --target native`, `moon -C catalog info --target native`, `moon -C cli info --target native`, `moon -C extensions info --target native`
 
 Use the smallest relevant validation set while iterating, then run the broader native checks before handing off larger refactors.
 

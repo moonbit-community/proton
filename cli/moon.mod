@@ -4,7 +4,7 @@ version = "0.1.0"
 
 import {
   "moonbitlang/x@0.4.43",
-  "justjavac/lepus_codegen@0.1.0",
+  "moonbitlang/parser@0.3.2",
 }
 
 readme = "README.md"

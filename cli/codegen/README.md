@@ -1,6 +1,6 @@
-# lepus_codegen
+# lepus_cli/codegen
 
-Build-time code generation helpers for Lepus.
+Build-time command/event code generation helpers for the Lepus CLI.
 
 This package owns the `#lepus.command` and `#lepus.event` parser, validation,
 and MoonBit source renderer used by the `lepus` CLI.

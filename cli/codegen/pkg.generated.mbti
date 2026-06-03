@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_codegen"
+package "justjavac/lepus_cli/codegen"
 
 import {
   "moonbitlang/core/debug",

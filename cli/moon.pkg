@@ -3,7 +3,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/sys",
-  "justjavac/lepus_codegen" @codegen,
+  "justjavac/lepus_cli/codegen",
 }
 
 supported_targets = "native"
