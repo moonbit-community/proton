@@ -8,7 +8,7 @@ import {
   "justjavac/lepus_bootstrap" @bootstrap,
   "justjavac/lepus_core" @core,
   "justjavac/lepus_ipc" @ipc,
-  "justjavac/lepus_ipc_ws" @ipc_ws,
+  "justjavac/lepus_ipc/ws" @ipc_ws,
   "justjavac/lepus_manifest" @manifest,
   "justjavac/lepus" @webview,
   "justjavac/lepus_runtime" @wvrt,

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ipc_ws"
+package "justjavac/lepus_ipc/ws"
 
 import {
   "justjavac/lepus_ipc",
@@ -33,3 +33,4 @@ pub fn WsIpcLaunchConfig::new(String, Array[Int], host? : String, health_path? :
 // Type aliases
 
 // Traits
+

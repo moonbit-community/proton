@@ -2,7 +2,6 @@ members = [
   ".",
   "./manifest",
   "./ipc",
-  "./ipc_ws",
   "./core",
   "./app",
   "./bootstrap",

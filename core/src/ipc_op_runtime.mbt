@@ -3,7 +3,7 @@
 ///
 /// `core` only knows how to expose the JavaScript runtime surface. The concrete
 /// IPC transport is supplied as script text by another module, for example
-/// `lepus_ipc_ws`.
+/// `lepus_ipc/ws`.
 pub fn install_ipc_bridge_runtime(
   webview : @webview.Webview,
   bridge_script : String,
