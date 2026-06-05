@@ -81,7 +81,8 @@ node ../scripts/e2e_cdp_smoke.mjs
   async handlers stay in the user parent process while WebView2 runs in a
   framework/webview child process.
 - Example `42` shows the generated-command workflow. Regenerate its command
-  bridge with `moon -C cli run . --target native -- codegen commands ../examples/42_attribute_codegen_commands/commands.mbt -o ../examples/42_attribute_codegen_commands/commands.g.mbt --id examples/attribute-codegen --namespace add`
-  followed by `moonfmt -w examples/42_attribute_codegen_commands/commands.g.mbt`.
+  bridge by first installing the CLI with
+  `moon install ./cli --bin target/lepus-tools`. The package pre-build then
+  calls `target/lepus-tools/lepus_cli` directly before compiling the example.
 - App examples declare extensions in MoonBit code and keep per-extension options in `app.json.extensions`.
 - Frontend code should use `window.__MoonBit__` throughout.
