@@ -11,7 +11,7 @@ options(
   "is-main": true,
   "pre-build": [
     {
-      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen commands $input -o $output --id examples/attribute-codegen --namespace add",
+      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
       "input": "commands.mbt",
       "output": "commands.g.mbt",
     },

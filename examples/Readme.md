@@ -83,6 +83,7 @@ node ../scripts/e2e_cdp_smoke.mjs
 - Example `42` shows the generated-command workflow. Regenerate its command
   bridge by first installing the CLI with
   `moon install ./cli --bin target/lepus-tools`. The package pre-build then
-  calls `target/lepus-tools/lepus_cli` directly before compiling the example.
+  calls `target/lepus-tools/lepus_cli codegen`; extension id and namespace come
+  from `42_attribute_codegen_commands/extension.json`.
 - App examples declare extensions in MoonBit code and keep per-extension options in `app.json.extensions`.
 - Frontend code should use `window.__MoonBit__` throughout.
