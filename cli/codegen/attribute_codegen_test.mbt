@@ -336,7 +336,7 @@ test "attribute codegen reads extension json and infers namespace" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let generated = generate_app_commands_from_file_with_config(input, None, None).unwrap()
+  let generated = generate_app_commands_from_file_with_metadata(input).unwrap()
   inspect(generated.source.contains("\"company/user-profile\""), content="true")
   inspect(generated.source.contains("\"userProfile\""), content="true")
 }
@@ -374,19 +374,19 @@ test "attribute codegen extension json namespace overrides inference" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let generated = generate_app_commands_from_file_with_config(input, None, None).unwrap()
+  let generated = generate_app_commands_from_file_with_metadata(input).unwrap()
   inspect(generated.source.contains("\"profile\""), content="true")
 }
 
 ///|
-test "attribute codegen uses cli fallback without extension json" {
+test "attribute codegen requires extension json metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/lepus-codegen-extension-fallback") catch {
+  @mbfs.create_dir("target/lepus-codegen-missing-extension-json") catch {
     _ => ()
   }
-  let input = "target/lepus-codegen-extension-fallback/commands.mbt"
+  let input = "target/lepus-codegen-missing-extension-json/commands.mbt"
   @mbfs.write_string_to_file(
     input,
     (
@@ -398,11 +398,9 @@ test "attribute codegen uses cli fallback without extension json" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let generated = generate_app_commands_from_file_with_config(
-    input,
-    Some("company/user-profile"),
-    None,
-  ).unwrap()
-  inspect(generated.source.contains("\"company/user-profile\""), content="true")
-  inspect(generated.source.contains("\"userProfile\""), content="true")
+  match generate_app_commands_from_file_with_metadata(input) {
+    Ok(_) => abort("expected missing extension metadata error")
+    Err(error) =>
+      inspect(error, content="missing extension.json next to input file")
+  }
 }

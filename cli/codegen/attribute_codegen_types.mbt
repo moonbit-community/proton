@@ -9,18 +9,6 @@ pub(all) struct LepusCommandCodegenOutput {
 } derive(Eq, Debug, ToJson)
 
 ///|
-priv struct LepusCodegenExtensionConfig {
-  id : String
-  js_namespace : String
-}
-
-///|
-priv struct LepusRawExtensionConfig {
-  id : String
-  js_namespace : String?
-}
-
-///|
 priv struct ParsedLepusCommand {
   function_name : String
   js_name : String

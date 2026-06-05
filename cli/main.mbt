@@ -3,7 +3,6 @@ fn print_usage() -> Unit {
   let usage =
     #|Usage:
     #|  lepus codegen <input.mbt> -o <output.g.mbt>
-    #|  lepus codegen commands <input.mbt> -o <output.g.mbt> [--id <extension-id>] [--namespace <jsNamespace>]
     #|
   println(usage)
 }
@@ -24,9 +23,9 @@ fn print_error_message(message : String) -> Unit {
 }
 
 ///|
-fn codegen_arg_parser(name : String) -> @argparse.Command {
+fn codegen_arg_parser() -> @argparse.Command {
   @argparse.Command(
-    name,
+    "lepus codegen",
     about="Generate Lepus command extension code from #lepus attributes",
     options=[
       OptionArg(
@@ -35,11 +34,6 @@ fn codegen_arg_parser(name : String) -> @argparse.Command {
         about="Output .g.mbt file",
         required=true,
       ),
-      OptionArg(
-        "id",
-        about="Extension id fallback when extension.json is absent",
-      ),
-      OptionArg("namespace", about="JavaScript namespace fallback"),
     ],
     positionals=[
       PositionArg(
@@ -60,11 +54,8 @@ fn match_value(matches : @argparse.Matches, name : String) -> String? {
 }
 
 ///|
-fn run_codegen(
-  args : Array[String],
-  command_name : String,
-) -> Result[Unit, CliError] {
-  let cmd = codegen_arg_parser(command_name)
+fn run_codegen(args : Array[String]) -> Result[Unit, CliError] {
+  let cmd = codegen_arg_parser()
   let matches = cmd.parse(argv=args, env={}) catch {
     err => return Err(CliError::UsageError(err.to_string(), true))
   }
@@ -76,12 +67,7 @@ fn run_codegen(
     Some(output) => output
     None => return Err(CliError::UsageError("missing -o <output.g.mbt>", false))
   }
-  let extension_id = match_value(matches, "id")
-  let js_namespace = match_value(matches, "namespace")
-  match
-    @codegen.generate_app_commands_from_file_with_config(
-      input, extension_id, js_namespace,
-    ) {
+  match @codegen.generate_app_commands_from_file_with_metadata(input) {
     Err(error) => Err(CliError::CommandError(error))
     Ok(result) => {
       @mbfs.write_string_to_file(output, result.source, encoding="utf8") catch {
@@ -104,12 +90,8 @@ fn main {
     print_usage()
     return
   }
-  let result = if args.length() >= 2 &&
-    args[0] == "codegen" &&
-    args[1] == "commands" {
-    run_codegen(args[2:].to_owned(), "lepus codegen commands")
-  } else if args.length() >= 1 && args[0] == "codegen" {
-    run_codegen(args[1:].to_owned(), "lepus codegen")
+  let result = if args.length() >= 1 && args[0] == "codegen" {
+    run_codegen(args[1:].to_owned())
   } else {
     Err(CliError::UsageError("unknown command", false))
   }

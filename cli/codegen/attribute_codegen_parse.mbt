@@ -60,79 +60,47 @@ pub fn generate_app_commands_from_file(
 ///
 /// The codegen input's package directory must contain `extension.json` with an
 /// `id` field. `namespace` is optional and is inferred from the id when absent.
-/// Fallback arguments keep the old CLI form working for callers that have not
-/// added extension metadata yet.
-pub fn generate_app_commands_from_file_with_config(
+pub fn generate_app_commands_from_file_with_metadata(
   input_file : String,
-  fallback_extension_id : String?,
-  fallback_js_namespace : String?,
 ) -> Result[LepusCommandCodegenOutput, String] {
-  let config_result = resolve_extension_config(
-    input_file, fallback_extension_id, fallback_js_namespace,
-  ) catch {
+  let config_result = read_package_extension_config(input_file) catch {
     err => return Err(@debug.render(@debug.to_repr(err)))
   }
-  let config = match config_result {
+  let (extension_id, js_namespace) = match config_result {
     Ok(config) => config
     Err(error) => return Err(error)
   }
-  generate_app_commands_from_file(input_file, config.id, config.js_namespace)
+  generate_app_commands_from_file(input_file, extension_id, js_namespace)
 }
 
 ///|
-fn resolve_extension_config(
+fn read_package_extension_config(
   input_file : String,
-  fallback_extension_id : String?,
-  fallback_js_namespace : String?,
-) -> Result[LepusCodegenExtensionConfig, String] raise @mbfs.IOError {
+) -> Result[(String, String), String] raise @mbfs.IOError {
   let extension_path = path_join(path_dirname(input_file), "extension.json")
   let has_metadata = @mbfs.is_file(extension_path) catch { _ => false }
-  let metadata = if has_metadata {
-    match read_extension_codegen_config(extension_path) {
-      Ok(config) => Some(config)
-      Err(error) => return Err(error)
-    }
-  } else {
-    None
+  guard has_metadata else {
+    return Err("missing extension.json next to input file")
   }
-  let id = match metadata {
-    Some(config) => config.id
-    None =>
-      match fallback_extension_id {
-        Some(id) => id
-        None =>
-          return Err(
-            "missing extension.json next to input file and missing --id fallback",
-          )
-      }
-  }
-  let resolved_namespace = match metadata {
-    Some(raw) =>
-      match raw.js_namespace {
-        Some(value) => value
-        None => lower_camel_from_id(id)
-      }
-    None =>
-      match fallback_js_namespace {
-        Some(value) => value
-        None => lower_camel_from_id(id)
-      }
+  let (id, js_namespace) = match read_extension_codegen_config(extension_path) {
+    Ok(config) => config
+    Err(error) => return Err(error)
   }
   match validate_extension_id(id) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  match validate_js_part("extension namespace", resolved_namespace) {
+  match validate_js_part("extension namespace", js_namespace) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  Ok(LepusCodegenExtensionConfig::{ id, js_namespace: resolved_namespace })
+  Ok((id, js_namespace))
 }
 
 ///|
 fn read_extension_codegen_config(
   path : String,
-) -> Result[LepusRawExtensionConfig, String] raise @mbfs.IOError {
+) -> Result[(String, String), String] raise @mbfs.IOError {
   let text = @mbfs.read_file_to_string(path)
   let parsed : Result[Json, _] = try? @json.parse(text)
   match parsed {
@@ -144,7 +112,7 @@ fn read_extension_codegen_config(
 ///|
 fn decode_extension_codegen_config(
   json : Json,
-) -> Result[LepusRawExtensionConfig, String] {
+) -> Result[(String, String), String] {
   match json {
     Object(object) => {
       let id = match object.get("id") {
@@ -153,12 +121,12 @@ fn decode_extension_codegen_config(
         None => return Err("extension.json must contain string field `id`")
       }
       let js_namespace = match object.get("namespace") {
-        Some(String(value)) => Some(value)
+        Some(String(value)) => value
         Some(_) =>
           return Err("extension.json field `namespace` must be a string")
-        None => None
+        None => lower_camel_from_id(id)
       }
-      Ok(LepusRawExtensionConfig::{ id, js_namespace })
+      Ok((id, js_namespace))
     }
     _ => Err("extension.json must contain a JSON object")
   }
