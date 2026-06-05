@@ -65,6 +65,21 @@ fn validate_js_part(label : String, value : String) -> Result[Unit, String] {
 }
 
 ///|
+fn validate_extension_id(value : String) -> Result[Unit, String] {
+  match validate_non_empty("extension id", value) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  guard value.find("\\") is None else {
+    return Err("extension id must not contain \\")
+  }
+  guard value.find(" ") is None else {
+    return Err("extension id must not contain spaces")
+  }
+  Ok(())
+}
+
+///|
 fn is_identifier_start_char(ch : Char) -> Bool {
   ('a' <= ch && ch <= 'z') || ch == '_'
 }
@@ -91,6 +106,17 @@ fn lower_camel_from_snake(name : String) -> String {
     }
   }
   builder.to_string()
+}
+
+///|
+fn lower_camel_from_id(id : String) -> String {
+  let parts = id.split("/").collect()
+  let base = if parts.length() == 0 {
+    id
+  } else {
+    parts[parts.length() - 1].to_owned()
+  }
+  @case.camel_case(base)
 }
 
 ///|

@@ -5,6 +5,7 @@ version = "0.1.0"
 import {
   "moonbitlang/x@0.4.43",
   "moonbitlang/parser@0.3.2",
+  "justjavac/case@0.2.0",
 }
 
 readme = "README.md"

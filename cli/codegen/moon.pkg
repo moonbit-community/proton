@@ -3,6 +3,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/list",
   "moonbitlang/core/string",
+  "justjavac/case",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
