@@ -15,6 +15,7 @@ options(
     },
   ],
   targets: {
+    "auto_launch.mbt": [ "native" ],
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
