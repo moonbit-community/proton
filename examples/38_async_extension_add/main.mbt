@@ -19,7 +19,7 @@ fn main {
     extensions={ "examples/async-add": @manifest.ExtensionSetting::enabled() },
   )
   let registry = @app.AppCommandExtensionRegistry::new()
-  let _ = registry.register(async_add_extension())
+  let _ = registry.register(generated_app_command_extension())
   let framework_command = match @app.current_executable_command() {
     Ok(command) => command
     Err(error) => abort(error)
