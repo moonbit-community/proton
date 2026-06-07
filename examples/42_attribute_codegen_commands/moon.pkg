@@ -22,6 +22,7 @@ options(
     },
   ],
   targets: {
+    "app.mbt": [ "native" ],
     "commands.g.mbt": [ "native" ],
     "commands.mbt": [ "native" ],
     "main.mbt": [ "native" ],

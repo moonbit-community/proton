@@ -9,7 +9,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/justjavac/lepus/tree/main/ipc"
+repository = "https://github.com/moonbit-community/lepus/tree/main/ipc"
 
 license = "MIT"
 

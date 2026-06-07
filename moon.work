@@ -6,7 +6,7 @@ members = [
   "./app",
   "./bootstrap",
   "./catalog",
-  "./tooling",
+  "./cli",
   "./examples",
   "./extensions",
   "./runtime",

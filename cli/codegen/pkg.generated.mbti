@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus_cli/codegen"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn generate_app_commands_from_file(String, String, String) -> Result[LepusCommandCodegenOutput, String]
+
+pub fn generate_app_commands_from_source(String, String, String) -> Result[LepusCommandCodegenOutput, String]
+
+// Errors
+
+// Types and methods
+pub(all) struct LepusCommandCodegenOutput {
+  source : String
+  warnings : Array[String]
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

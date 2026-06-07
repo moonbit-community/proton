@@ -9,14 +9,16 @@ fn main {
   }
   let manifest = @manifest.AppManifest::new(
     @manifest.WindowManifest::new(
-      "MoonBit Async Add Extension",
+      "Lepus Attribute Codegen",
       840,
       560,
       size_hint=@manifest.WindowSizeHint::None,
     ),
     @manifest.AppEntry::Html(resource),
     debug=1,
-    extensions={ "examples/async-add": @manifest.ExtensionSetting::enabled() },
+    extensions={
+      "examples/attribute-codegen": @manifest.ExtensionSetting::enabled(),
+    },
   )
   let registry = @app.AppCommandExtensionRegistry::new()
   let _ = registry.register(generated_app_command_extension())

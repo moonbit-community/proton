@@ -1,0 +1,25 @@
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/core/list",
+  "moonbitlang/core/string",
+  "justjavac/case",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/parser",
+  "moonbitlang/parser/attribute",
+  "moonbitlang/parser/syntax",
+}
+
+warnings = "-29"
+
+supported_targets = "native"
+
+options(
+  targets: {
+    "attribute_codegen_names.mbt": [ "native" ],
+    "attribute_codegen_parse.mbt": [ "native" ],
+    "attribute_codegen_render.mbt": [ "native" ],
+    "attribute_codegen_test.mbt": [ "native" ],
+    "attribute_codegen_types.mbt": [ "native" ],
+  },
+)
