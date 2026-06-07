@@ -53,6 +53,10 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: .\scripts\install_webview2_headers.ps1
 
+      - name: Install Lepus CLI for pre-build codegen
+        run: |
+          moon install ./cli --bin target/lepus-tools
+
       - name: Format check
         run: |
           moon fmt --check
@@ -67,8 +71,9 @@ jobs:
           moon -C bootstrap check --target native --deny-warn
           moon -C app check --target native --deny-warn
           moon -C catalog check --target native --deny-warn
-          moon -C tooling check --target native --deny-warn
+          moon -C cli check --target native --deny-warn
           moon -C cef check --target native --deny-warn
+          moon test cli/codegen --target native
 
       - name: Check framework modules on Windows
         if: ${{ matrix.os == 'windows-latest' }}
@@ -84,8 +89,9 @@ jobs:
           moon -C bootstrap check --target native --deny-warn
           moon -C app check --target native --deny-warn
           moon -C catalog check --target native --deny-warn
-          moon -C tooling check --target native --deny-warn
+          moon -C cli check --target native --deny-warn
           moon -C cef check --target native --deny-warn
+          moon test cli/codegen --target native
 
       - name: Check extension catalog on Unix
         if: ${{ matrix.os != 'windows-latest' }}
