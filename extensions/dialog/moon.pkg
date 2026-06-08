@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/json",
   "justjavac/ffi",
+  "justjavac/lepus_app" @app,
   "justjavac/lepus_core" @core,
   "justjavac/lepus",
 }
@@ -13,7 +14,16 @@ supported_targets = "native"
 
 options(
   "native-stub": [ "dialog_native.c" ],
+  "pre-build": [
+    {
+      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "input": "extension.mbt",
+      "output": "extension.g.mbt",
+    },
+  ],
   targets: {
+    "dialog.mbt": [ "native" ],
+    "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
   },

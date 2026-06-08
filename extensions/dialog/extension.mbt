@@ -5,187 +5,8 @@ let extension_id = "justjavac/lepus-dialog"
 let extension_namespace = "dialog"
 
 ///|
-struct MessagePayload {
-  message : String
-  title : String?
-  level : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct MessageReply {
-  acknowledged : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct ConfirmReply {
-  confirmed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct FileDialogPayload {
-  title : String?
-  path : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct FileDialogReply {
-  path : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct DialogActivity {
-  operation : String
-  path : String?
-  level : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-extern "C" fn is_windows_ffi() -> Bool = "extensions_dialog_is_windows"
-
-///|
-#borrow(title, message)
-extern "C" fn message_dialog_ffi(
-  window : Int64,
-  title : Bytes,
-  message : Bytes,
-  level : Int,
-) -> Int = "extensions_dialog_message"
-
-///|
-#borrow(title, message)
-extern "C" fn confirm_dialog_ffi(
-  window : Int64,
-  title : Bytes,
-  message : Bytes,
-  level : Int,
-) -> Bool = "extensions_dialog_confirm"
-
-///|
-#borrow(title, path)
-extern "C" fn open_file_dialog_ffi(
-  window : Int64,
-  title : Bytes,
-  path : Bytes,
-) -> Bytes = "extensions_dialog_open_file"
-
-///|
-#borrow(title, path)
-extern "C" fn save_file_dialog_ffi(
-  window : Int64,
-  title : Bytes,
-  path : Bytes,
-) -> Bytes = "extensions_dialog_save_file"
-
-///|
-/// Verifies that native dialog support is available on the current platform.
-fn ensure_supported() -> Result[Unit, String] {
-  if is_windows_ffi() {
-    Ok(())
-  } else {
-    Err("dialog extension currently supports Windows native builds only")
-  }
-}
-
-///|
-/// Runs a dialog operation only when native dialog support is available.
-fn[Reply] with_supported(
-  callback : () -> Result[Reply, String],
-) -> Result[Reply, String] {
-  match ensure_supported() {
-    Err(error) => Err(error)
-    Ok(_) => callback()
-  }
-}
-
-///|
-/// Encodes an optional string as a UTF-16 buffer expected by the native dialog API.
-fn to_wstr(value : String?) -> Bytes {
-  match value {
-    Some(value) => @ffi.to_wstr(value)
-    None => @ffi.to_wstr("")
-  }
-}
-
-///|
-/// Returns the encoded optional dialog title.
-fn message_title_bytes(payload : MessagePayload) -> Bytes {
-  to_wstr(payload.title)
-}
-
-///|
-/// Returns the encoded dialog body text.
-fn message_body_bytes(payload : MessagePayload) -> Bytes {
-  @ffi.to_wstr(payload.message)
-}
-
-///|
-/// Decodes an empty wide-string dialog path as `None`.
-fn optional_path_from_wstr(bytes : Bytes) -> String? {
-  let value = @ffi.from_wstr_lossy(bytes)
-  if value.is_empty() {
-    None
-  } else {
-    Some(value)
-  }
-}
-
-///|
-/// Maps the public dialog level string to the native integer code.
-fn level_to_int(level : String?) -> Int {
-  match level {
-    Some("warning") => 1
-    Some("error") => 2
-    _ => 0
-  }
-}
-
-///|
-/// Extracts the native dialog level code from a message payload.
-fn message_level(payload : MessagePayload) -> Int {
-  level_to_int(payload.level)
-}
-
-///|
-/// Shows a message dialog and converts the native result into a reply payload.
-fn show_message(window : Int64, payload : MessagePayload) -> MessageReply {
-  ignore(
-    message_dialog_ffi(
-      window,
-      message_title_bytes(payload),
-      message_body_bytes(payload),
-      message_level(payload),
-    ),
-  )
-  MessageReply::{ acknowledged: true }
-}
-
-///|
-/// Shows a confirmation dialog and converts the native result into a reply payload.
-fn confirm_message(window : Int64, payload : MessagePayload) -> ConfirmReply {
-  let confirmed = confirm_dialog_ffi(
-    window,
-    message_title_bytes(payload),
-    message_body_bytes(payload),
-    message_level(payload),
-  )
-  ConfirmReply::{ confirmed, }
-}
-
-///|
-/// Runs an open/save file dialog callback and normalizes its optional path result.
-fn file_dialog_path(
-  window : Int64,
-  payload : FileDialogPayload,
-  callback : (Int64, Bytes, Bytes) -> Bytes,
-) -> String? {
-  optional_path_from_wstr(
-    callback(window, to_wstr(payload.title), to_wstr(payload.path)),
-  )
-}
-
-///|
 /// Emits a dialog activity event for JavaScript listeners.
-fn emit_activity(
+fn emit_core_activity(
   extension : @core.ExtensionContext,
   operation : String,
   path? : String? = None,
@@ -193,6 +14,103 @@ fn emit_activity(
 ) -> Unit {
   extension.emit("activity", DialogActivity::{ operation, path, level })
 }
+
+///|
+/// Emits a dialog activity event for generated app-command listeners.
+async fn emit_command_activity(
+  context : @app.AppCommandExtensionContext,
+  operation : String,
+  path? : String? = None,
+  level? : String? = None,
+) -> Unit {
+  emit_dialog_activity(context, DialogActivity::{ operation, path, level })
+}
+
+///|
+/// Shows a message dialog from a generated app-command extension.
+#lepus.command(name="message")
+async fn message(
+  context : @app.AppCommandExtensionContext,
+  message : String,
+  title : String?,
+  level : String?,
+) -> Result[MessageReply, String] {
+  let payload = MessagePayload::{ message, title, level }
+  match ensure_supported() {
+    Err(error) => Err(error)
+    Ok(_) => {
+      let reply = show_message(0, payload)
+      emit_command_activity(context, "message", level=payload.level)
+      Ok(reply)
+    }
+  }
+}
+
+///|
+/// Shows a confirmation dialog from a generated app-command extension.
+#lepus.command(name="confirm")
+async fn confirm(
+  context : @app.AppCommandExtensionContext,
+  message : String,
+  title : String?,
+  level : String?,
+) -> Result[ConfirmReply, String] {
+  let payload = MessagePayload::{ message, title, level }
+  match ensure_supported() {
+    Err(error) => Err(error)
+    Ok(_) => {
+      let reply = confirm_message(0, payload)
+      emit_command_activity(context, "confirm", level=payload.level)
+      Ok(reply)
+    }
+  }
+}
+
+///|
+/// Shows an open-file dialog from a generated app-command extension.
+#lepus.command(name="openFile")
+async fn open_file(
+  context : @app.AppCommandExtensionContext,
+  title : String?,
+  path : String?,
+) -> Result[FileDialogReply, String] {
+  let payload = FileDialogPayload::{ title, path }
+  match ensure_supported() {
+    Err(error) => Err(error)
+    Ok(_) => {
+      let path = file_dialog_path(0, payload, open_file_dialog_ffi)
+      emit_command_activity(context, "openFile", path~)
+      Ok(FileDialogReply::{ path, })
+    }
+  }
+}
+
+///|
+/// Shows a save-file dialog from a generated app-command extension.
+#lepus.command(name="saveFile")
+async fn save_file(
+  context : @app.AppCommandExtensionContext,
+  title : String?,
+  path : String?,
+) -> Result[FileDialogReply, String] {
+  let payload = FileDialogPayload::{ title, path }
+  match ensure_supported() {
+    Err(error) => Err(error)
+    Ok(_) => {
+      let path = file_dialog_path(0, payload, save_file_dialog_ffi)
+      emit_command_activity(context, "saveFile", path~)
+      Ok(FileDialogReply::{ path, })
+    }
+  }
+}
+
+///|
+#lepus.event(name="activity")
+struct DialogActivity {
+  operation : String
+  path : String?
+  level : String?
+} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 /// Builds the native `dialog` extension for direct installation.
@@ -206,7 +124,7 @@ pub fn extension() -> @core.Extension {
     extension.op_result("message", fn(payload : MessagePayload) {
       with_supported(fn() {
         let reply = show_message(window, payload)
-        emit_activity(extension, "message", level=payload.level)
+        emit_core_activity(extension, "message", level=payload.level)
         Ok(reply)
       })
     })
@@ -214,7 +132,7 @@ pub fn extension() -> @core.Extension {
     extension.op_result("confirm", fn(payload : MessagePayload) {
       with_supported(fn() {
         let reply = confirm_message(window, payload)
-        emit_activity(extension, "confirm", level=payload.level)
+        emit_core_activity(extension, "confirm", level=payload.level)
         Ok(reply)
       })
     })
@@ -222,7 +140,7 @@ pub fn extension() -> @core.Extension {
     extension.op_result("openFile", fn(payload : FileDialogPayload) {
       with_supported(fn() {
         let path = file_dialog_path(window, payload, open_file_dialog_ffi)
-        emit_activity(extension, "openFile", path~)
+        emit_core_activity(extension, "openFile", path~)
         Ok(FileDialogReply::{ path, })
       })
     })
@@ -230,7 +148,7 @@ pub fn extension() -> @core.Extension {
     extension.op_result("saveFile", fn(payload : FileDialogPayload) {
       with_supported(fn() {
         let path = file_dialog_path(window, payload, save_file_dialog_ffi)
-        emit_activity(extension, "saveFile", path~)
+        emit_core_activity(extension, "saveFile", path~)
         Ok(FileDialogReply::{ path, })
       })
     })

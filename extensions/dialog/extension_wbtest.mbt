@@ -13,3 +13,9 @@ test "dialog empty wide string becomes None path" {
     Some("demo.txt"),
   )
 }
+
+///|
+test "dialog metadata constants match generated app command extension" {
+  assert_eq(generated_app_command_extension().id(), "justjavac/lepus-dialog")
+  assert_eq(generated_app_command_extension().js_namespace(), "dialog")
+}
