@@ -5,82 +5,17 @@ let extension_id = "justjavac/lepus-global-hotkey"
 let extension_namespace = "globalHotkey"
 
 ///|
-struct GlobalHotkeyPayload {
-  accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct GlobalHotkeyReply {
-  registered : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct GlobalHotkeyListReply {
-  accelerators : Array[String]
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
+#lepus.event(name="activity")
 struct GlobalHotkeyActivity {
   operation : String
   accelerator : String
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-/// Verifies that global hotkeys are available on the current platform.
-fn ensure_supported() -> Result[Unit, String] {
-  @sys_global_hotkey.ensure_supported()
-}
-
-///|
-/// Creates the native hotkey manager when support is available.
-fn init_manager() -> @sys_global_hotkey.GlobalHotkeyManager? {
-  match ensure_supported() {
-    Ok(_) =>
-      match @sys_global_hotkey.create() {
-        Ok(handle) => Some(handle)
-        Err(_) => None
-      }
-    Err(_) => None
-  }
-}
-
-///|
-/// Runs a hotkey operation with the initialized manager when available.
-fn[Reply] with_manager(
-  manager : @sys_global_hotkey.GlobalHotkeyManager?,
-  callback : (@sys_global_hotkey.GlobalHotkeyManager) -> Result[Reply, String],
-) -> Result[Reply, String] {
-  ensure_supported().bind(fn(_) {
-    match manager {
-      Some(handle) => callback(handle)
-      None => Err("globalHotkey extension failed to initialize")
-    }
-  })
-}
-
-///|
-/// Returns the selected accelerator list or an empty result when the manager is unavailable.
-fn list_or_empty(
-  manager : @sys_global_hotkey.GlobalHotkeyManager?,
-  selector : (@sys_global_hotkey.GlobalHotkeyManager) -> Array[String],
-) -> GlobalHotkeyListReply {
-  match manager {
-    Some(handle) => GlobalHotkeyListReply::{ accelerators: selector(handle) }
-    None => GlobalHotkeyListReply::{ accelerators: [] }
-  }
-}
-
-///|
-/// Destroys the native manager when it was initialized successfully.
-fn destroy_manager(manager : @sys_global_hotkey.GlobalHotkeyManager?) -> Unit {
-  match manager {
-    Some(handle) => handle.destroy()
-    None => ()
-  }
-}
+#lepus.event(name="triggered")
+struct GlobalHotkeyTriggered {
+  accelerator : String
+} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 /// Emits a global-hotkey activity event for JavaScript listeners.
@@ -89,7 +24,83 @@ fn emit_activity(
   operation : String,
   accelerator : String,
 ) -> Unit {
-  extension.emit("activity", GlobalHotkeyActivity::{ operation, accelerator })
+  extension.emit("activity", { operation, accelerator })
+}
+
+///|
+async fn emit_command_activity(
+  context : @app.AppCommandExtensionContext,
+  operation : String,
+  accelerator : String,
+) -> Unit {
+  emit_global_hotkey_activity(context, { operation, accelerator })
+}
+
+///|
+async fn[Reply] emit_command_result(
+  context : @app.AppCommandExtensionContext,
+  result : Result[Reply, String],
+  operation : String,
+  accelerator : String,
+) -> Result[Reply, String] {
+  match result {
+    Err(error) => Err(error)
+    Ok(reply) => {
+      emit_command_activity(context, operation, accelerator)
+      Ok(reply)
+    }
+  }
+}
+
+///|
+/// Registers one global hotkey from a generated app-command extension.
+#lepus.command(name="register")
+async fn register(
+  context : @app.AppCommandExtensionContext,
+  accelerator : String,
+) -> Result[GlobalHotkeyReply, String] {
+  emit_command_result(
+    context,
+    register_hotkey(app_command_manager_handle(), accelerator),
+    "register",
+    accelerator,
+  )
+}
+
+///|
+/// Unregisters one global hotkey from a generated app-command extension.
+#lepus.command(name="unregister")
+async fn unregister(
+  context : @app.AppCommandExtensionContext,
+  accelerator : String,
+) -> Result[GlobalHotkeyReply, String] {
+  emit_command_result(
+    context,
+    unregister_hotkey(app_command_manager_handle(), accelerator),
+    "unregister",
+    accelerator,
+  )
+}
+
+///|
+/// Lists registered global hotkeys from a generated app-command extension.
+#lepus.command(name="list")
+fn list(_payload : EmptyPayload?) -> GlobalHotkeyListReply {
+  list_hotkeys(app_command_manager_handle())
+}
+
+///|
+/// Drains triggered global hotkeys from a generated app-command extension.
+#lepus.command(name="drainTriggered")
+async fn drain_triggered(
+  context : @app.AppCommandExtensionContext,
+  _payload : EmptyPayload?,
+) -> GlobalHotkeyListReply {
+  let reply = drain_triggered_hotkeys(app_command_manager_handle())
+  for accelerator in reply.accelerators {
+    emit_global_hotkey_triggered(context, { accelerator, })
+  }
+  reply
 }
 
 ///|
@@ -130,8 +141,6 @@ fn trigger_poller_script() -> String {
 }
 
 ///|
-
-///|
 /// Builds the `globalHotkey` extension for direct installation.
 /// Install it manually when trusted local content needs runtime hotkey
 /// registration without going through an app registry.
@@ -144,33 +153,25 @@ pub fn extension() -> @core.Extension {
       manager = init_manager()
 
       extension.op_result("register", fn(payload : GlobalHotkeyPayload) {
-        with_manager(manager, fn(handle) {
-          handle
-          .register(payload.accelerator)
-          .map(fn(registered) {
-            emit_activity(extension, "register", payload.accelerator)
-            GlobalHotkeyReply::{ registered, }
-          })
+        register_hotkey(manager, payload.accelerator).map(fn(reply) {
+          emit_activity(extension, "register", payload.accelerator)
+          reply
         })
       })
 
       extension.op_result("unregister", fn(payload : GlobalHotkeyPayload) {
-        with_manager(manager, fn(handle) {
-          handle
-          .unregister(payload.accelerator)
-          .map(fn(registered) {
-            emit_activity(extension, "unregister", payload.accelerator)
-            GlobalHotkeyReply::{ registered, }
-          })
+        unregister_hotkey(manager, payload.accelerator).map(fn(reply) {
+          emit_activity(extension, "unregister", payload.accelerator)
+          reply
         })
       })
 
       extension.op_result("list", fn(_payload : EmptyPayload) {
-        Ok(list_or_empty(manager, fn(handle) { handle.list() }))
+        Ok(list_hotkeys(manager))
       })
 
       extension.op_result("drainTriggered", fn(_payload : EmptyPayload) {
-        Ok(list_or_empty(manager, fn(handle) { handle.drain_triggered() }))
+        Ok(drain_triggered_hotkeys(manager))
       })
     },
     on_destroy=fn(_extension) {
