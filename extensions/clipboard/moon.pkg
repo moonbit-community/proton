@@ -1,11 +1,23 @@
 import {
   "moonbitlang/core/json",
   "justjavac/clipboard" @sys_clipboard,
-  "justjavac/lepus_core" @core,
+  "justjavac/lepus_app" @app,
 }
 
 supported_targets = "native"
 
 options(
-  targets: { "extension.mbt": [ "native" ] },
+  "pre-build": [
+    {
+      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "input": "extension.mbt",
+      "output": "extension.g.mbt",
+    },
+  ],
+  targets: {
+    "clipboard.mbt": [ "native" ],
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
 )
