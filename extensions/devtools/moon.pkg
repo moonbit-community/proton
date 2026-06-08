@@ -9,6 +9,7 @@ supported_targets = "native"
 options(
   "native-stub": [ "devtools_native.c" ],
   targets: {
+    "devtools.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
   },
