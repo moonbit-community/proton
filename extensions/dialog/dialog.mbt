@@ -94,18 +94,6 @@ fn to_wstr(value : String?) -> Bytes {
 }
 
 ///|
-/// Returns the encoded optional dialog title.
-fn message_title_bytes(payload : MessagePayload) -> Bytes {
-  to_wstr(payload.title)
-}
-
-///|
-/// Returns the encoded dialog body text.
-fn message_body_bytes(payload : MessagePayload) -> Bytes {
-  @ffi.to_wstr(payload.message)
-}
-
-///|
 /// Decodes an empty wide-string dialog path as `None`.
 fn optional_path_from_wstr(bytes : Bytes) -> String? {
   let value = @ffi.from_wstr_lossy(bytes)
@@ -127,35 +115,37 @@ fn level_to_int(level : String?) -> Int {
 }
 
 ///|
-/// Extracts the native dialog level code from a message payload.
-fn message_level(payload : MessagePayload) -> Int {
-  level_to_int(payload.level)
+fn show_message_dialog(
+  window : Int64,
+  payload : MessagePayload,
+) -> Result[MessageReply, String] {
+  with_supported(fn() {
+    ignore(
+      message_dialog_ffi(
+        window,
+        to_wstr(payload.title),
+        @ffi.to_wstr(payload.message),
+        level_to_int(payload.level),
+      ),
+    )
+    Ok({ acknowledged: true })
+  })
 }
 
 ///|
-/// Shows a message dialog and converts the native result into a reply payload.
-fn show_message(window : Int64, payload : MessagePayload) -> MessageReply {
-  ignore(
-    message_dialog_ffi(
+fn confirm_message_dialog(
+  window : Int64,
+  payload : MessagePayload,
+) -> Result[ConfirmReply, String] {
+  with_supported(fn() {
+    let confirmed = confirm_dialog_ffi(
       window,
-      message_title_bytes(payload),
-      message_body_bytes(payload),
-      message_level(payload),
-    ),
-  )
-  MessageReply::{ acknowledged: true }
-}
-
-///|
-/// Shows a confirmation dialog and converts the native result into a reply payload.
-fn confirm_message(window : Int64, payload : MessagePayload) -> ConfirmReply {
-  let confirmed = confirm_dialog_ffi(
-    window,
-    message_title_bytes(payload),
-    message_body_bytes(payload),
-    message_level(payload),
-  )
-  ConfirmReply::{ confirmed, }
+      to_wstr(payload.title),
+      @ffi.to_wstr(payload.message),
+      level_to_int(payload.level),
+    )
+    Ok({ confirmed, })
+  })
 }
 
 ///|
@@ -168,4 +158,26 @@ fn file_dialog_path(
   optional_path_from_wstr(
     callback(window, to_wstr(payload.title), to_wstr(payload.path)),
   )
+}
+
+///|
+fn open_file_dialog(
+  window : Int64,
+  payload : FileDialogPayload,
+) -> Result[FileDialogReply, String] {
+  with_supported(fn() {
+    let path = file_dialog_path(window, payload, open_file_dialog_ffi)
+    Ok({ path, })
+  })
+}
+
+///|
+fn save_file_dialog(
+  window : Int64,
+  payload : FileDialogPayload,
+) -> Result[FileDialogReply, String] {
+  with_supported(fn() {
+    let path = file_dialog_path(window, payload, save_file_dialog_ffi)
+    Ok({ path, })
+  })
 }

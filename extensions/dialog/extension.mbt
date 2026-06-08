@@ -5,25 +5,42 @@ let extension_id = "justjavac/lepus-dialog"
 let extension_namespace = "dialog"
 
 ///|
-/// Emits a dialog activity event for JavaScript listeners.
-fn emit_core_activity(
+fn[Reply] emit_core_result(
+  result : Result[Reply, String],
   extension : @core.ExtensionContext,
   operation : String,
   path? : String? = None,
   level? : String? = None,
-) -> Unit {
-  extension.emit("activity", DialogActivity::{ operation, path, level })
+) -> Result[Reply, String] {
+  result.map(fn(reply) {
+    extension.emit("activity", { operation, path, level })
+    reply
+  })
 }
 
 ///|
-/// Emits a dialog activity event for generated app-command listeners.
-async fn emit_command_activity(
+fn file_dialog_result_path(result : Result[FileDialogReply, String]) -> String? {
+  match result {
+    Ok(reply) => reply.path
+    Err(_) => None
+  }
+}
+
+///|
+async fn[Reply] emit_command_result(
   context : @app.AppCommandExtensionContext,
+  result : Result[Reply, String],
   operation : String,
   path? : String? = None,
   level? : String? = None,
-) -> Unit {
-  emit_dialog_activity(context, DialogActivity::{ operation, path, level })
+) -> Result[Reply, String] {
+  match result {
+    Err(error) => Err(error)
+    Ok(reply) => {
+      emit_dialog_activity(context, { operation, path, level })
+      Ok(reply)
+    }
+  }
 }
 
 ///|
@@ -36,14 +53,12 @@ async fn message(
   level : String?,
 ) -> Result[MessageReply, String] {
   let payload = MessagePayload::{ message, title, level }
-  match ensure_supported() {
-    Err(error) => Err(error)
-    Ok(_) => {
-      let reply = show_message(0, payload)
-      emit_command_activity(context, "message", level=payload.level)
-      Ok(reply)
-    }
-  }
+  emit_command_result(
+    context,
+    show_message_dialog(0, payload),
+    "message",
+    level=payload.level,
+  )
 }
 
 ///|
@@ -56,14 +71,12 @@ async fn confirm(
   level : String?,
 ) -> Result[ConfirmReply, String] {
   let payload = MessagePayload::{ message, title, level }
-  match ensure_supported() {
-    Err(error) => Err(error)
-    Ok(_) => {
-      let reply = confirm_message(0, payload)
-      emit_command_activity(context, "confirm", level=payload.level)
-      Ok(reply)
-    }
-  }
+  emit_command_result(
+    context,
+    confirm_message_dialog(0, payload),
+    "confirm",
+    level=payload.level,
+  )
 }
 
 ///|
@@ -75,14 +88,9 @@ async fn open_file(
   path : String?,
 ) -> Result[FileDialogReply, String] {
   let payload = FileDialogPayload::{ title, path }
-  match ensure_supported() {
-    Err(error) => Err(error)
-    Ok(_) => {
-      let path = file_dialog_path(0, payload, open_file_dialog_ffi)
-      emit_command_activity(context, "openFile", path~)
-      Ok(FileDialogReply::{ path, })
-    }
-  }
+  let result = open_file_dialog(0, payload)
+  let path = file_dialog_result_path(result)
+  emit_command_result(context, result, "openFile", path~)
 }
 
 ///|
@@ -94,14 +102,9 @@ async fn save_file(
   path : String?,
 ) -> Result[FileDialogReply, String] {
   let payload = FileDialogPayload::{ title, path }
-  match ensure_supported() {
-    Err(error) => Err(error)
-    Ok(_) => {
-      let path = file_dialog_path(0, payload, save_file_dialog_ffi)
-      emit_command_activity(context, "saveFile", path~)
-      Ok(FileDialogReply::{ path, })
-    }
-  }
+  let result = save_file_dialog(0, payload)
+  let path = file_dialog_result_path(result)
+  emit_command_result(context, result, "saveFile", path~)
 }
 
 ///|
@@ -122,35 +125,33 @@ pub fn extension() -> @core.Extension {
     let window = extension.webview().get_window()
 
     extension.op_result("message", fn(payload : MessagePayload) {
-      with_supported(fn() {
-        let reply = show_message(window, payload)
-        emit_core_activity(extension, "message", level=payload.level)
-        Ok(reply)
-      })
+      emit_core_result(
+        show_message_dialog(window, payload),
+        extension,
+        "message",
+        level=payload.level,
+      )
     })
 
     extension.op_result("confirm", fn(payload : MessagePayload) {
-      with_supported(fn() {
-        let reply = confirm_message(window, payload)
-        emit_core_activity(extension, "confirm", level=payload.level)
-        Ok(reply)
-      })
+      emit_core_result(
+        confirm_message_dialog(window, payload),
+        extension,
+        "confirm",
+        level=payload.level,
+      )
     })
 
     extension.op_result("openFile", fn(payload : FileDialogPayload) {
-      with_supported(fn() {
-        let path = file_dialog_path(window, payload, open_file_dialog_ffi)
-        emit_core_activity(extension, "openFile", path~)
-        Ok(FileDialogReply::{ path, })
-      })
+      let result = open_file_dialog(window, payload)
+      let path = file_dialog_result_path(result)
+      emit_core_result(result, extension, "openFile", path~)
     })
 
     extension.op_result("saveFile", fn(payload : FileDialogPayload) {
-      with_supported(fn() {
-        let path = file_dialog_path(window, payload, save_file_dialog_ffi)
-        emit_core_activity(extension, "saveFile", path~)
-        Ok(FileDialogReply::{ path, })
-      })
+      let result = save_file_dialog(window, payload)
+      let path = file_dialog_result_path(result)
+      emit_core_result(result, extension, "saveFile", path~)
     })
   })
 }
