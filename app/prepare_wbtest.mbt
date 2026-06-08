@@ -679,6 +679,7 @@ test "command extension spec exposes dependency snapshots" {
 
 ///|
 test "command extension registry and prepared entries copy specs" {
+  let destroy_count = Ref(0)
   let spec = AppCommandExtensionSpec::new(
     "vendor/demo",
     "demo",
@@ -686,6 +687,7 @@ test "command extension registry and prepared entries copy specs" {
     fn(_context) { Ok(()) },
     scripts=["window.__demo = true;"],
     dependencies=["vendor/base"],
+    on_destroy=fn(_context) { destroy_count.val += 1 },
   )
   let registry = AppCommandExtensionRegistry::new().register(spec)
   spec.apis.push(AppCommandApiDescriptor::new("changed"))
@@ -711,6 +713,11 @@ test "command extension registry and prepared entries copy specs" {
   @debug.assert_eq(fresh.op_names(), ["ext:demo/ping"])
   @debug.assert_eq(fresh.dependencies(), ["vendor/base"])
   assert_eq(fresh.to_ipc_descriptor().scripts.length(), 1)
+  let host = @core.AppCommandHost::new()
+  let context = AppCommandExtensionContext::new(host, "vendor/demo", "demo")
+  fresh.destroy(context)
+  assert_eq(destroy_count.val, 1)
+  host.close()
 
   let prepared = PreparedAppCommandExtension::new(
     "vendor/demo",

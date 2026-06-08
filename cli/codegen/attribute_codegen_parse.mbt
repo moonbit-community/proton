@@ -18,6 +18,8 @@ pub fn generate_app_commands_from_source(
         let parsed = ParsedLepusModule::{
           commands: base.commands,
           events: base.events,
+          scripts: base.scripts,
+          destroy: base.destroy,
           package_commands: [],
           package_events: [],
         }
@@ -141,12 +143,16 @@ fn collect_package_lepus_module(
   let target = ParsedLepusModule::{
     commands: [],
     events: [],
+    scripts: [],
+    destroy: None,
     package_commands: [],
     package_events: [],
   }
   let context = ParsedLepusModule::{
     commands: [],
     events: [],
+    scripts: [],
+    destroy: None,
     package_commands: [],
     package_events: [],
   }
@@ -173,6 +179,10 @@ fn collect_package_lepus_module(
     if is_target {
       target.commands.append(parsed.commands)
       target.events.append(parsed.events)
+      target.scripts.append(parsed.scripts)
+      if parsed.destroy is Some(destroy) {
+        target.destroy = Some(destroy)
+      }
     } else {
       context.commands.append(parsed.commands)
       context.events.append(parsed.events)
@@ -181,6 +191,8 @@ fn collect_package_lepus_module(
   Ok(ParsedLepusModule::{
     commands: target.commands,
     events: target.events,
+    scripts: target.scripts,
+    destroy: target.destroy,
     package_commands: context.commands,
     package_events: context.events,
   })
@@ -201,6 +213,8 @@ fn parse_lepus_ast(
 ) -> Result[ParsedLepusModule, String] {
   let commands : Array[ParsedLepusCommand] = []
   let events : Array[ParsedLepusEvent] = []
+  let scripts : Array[ParsedLepusScript] = []
+  let mut destroy : ParsedLepusDestroy? = None
   let mut first_error : String? = None
   ast.each(fn(item) {
     if first_error is Some(_) {
@@ -208,9 +222,18 @@ fn parse_lepus_ast(
     }
     match item {
       TopFuncDef(fun_decl~, ..) =>
-        match parse_command_from_func(fun_decl, source) {
-          Ok(Some(command)) => commands.push(command)
-          Ok(None) => ()
+        match parse_func_codegen_item(fun_decl, source) {
+          Ok(FunctionCodegenItem::None) => ()
+          Ok(Command(command)) => commands.push(command)
+          Ok(Script(script)) => scripts.push(script)
+          Ok(Destroy(next_destroy)) =>
+            match destroy {
+              Some(_) =>
+                first_error = Some(
+                  "only one #lepus.destroy attribute is supported",
+                )
+              None => destroy = Some(next_destroy)
+            }
           Err(error) => first_error = Some(error)
         }
       TopTypeDef(type_decl) =>
@@ -228,26 +251,58 @@ fn parse_lepus_ast(
   Ok(ParsedLepusModule::{
     commands,
     events,
+    scripts,
+    destroy,
     package_commands: [],
     package_events: [],
   })
 }
 
 ///|
-fn parse_command_from_func(
+priv enum FunctionCodegenItem {
+  None
+  Command(ParsedLepusCommand)
+  Script(ParsedLepusScript)
+  Destroy(ParsedLepusDestroy)
+}
+
+///|
+fn parse_func_codegen_item(
   func : @moonbitlang/parser/syntax.FunDecl,
   source : String,
-) -> Result[ParsedLepusCommand?, String] {
+) -> Result[FunctionCodegenItem, String] {
   let attrs = match collect_lepus_attributes(func.attrs, source) {
     Ok(attrs) => attrs
     Err(error) => return Err(error)
   }
-  let command_attr = match
-    select_single_lepus_attribute(attrs, LepusAttributeKind::Command) {
-    Ok(value) => value
-    Err(error) => return Err(error)
+  match select_single_lepus_attribute(attrs) {
+    Err(error) => Err(error)
+    Ok(None) => Ok(FunctionCodegenItem::None)
+    Ok(Some(attr)) =>
+      match attr.kind {
+        LepusAttributeKind::Command =>
+          parse_command_from_func(func, attr).map(fn(command) {
+            FunctionCodegenItem::Command(command)
+          })
+        LepusAttributeKind::Script =>
+          parse_script_from_func(func).map(fn(script) {
+            FunctionCodegenItem::Script(script)
+          })
+        LepusAttributeKind::Destroy =>
+          parse_destroy_from_func(func).map(fn(destroy) {
+            FunctionCodegenItem::Destroy(destroy)
+          })
+        LepusAttributeKind::Event =>
+          Err("#lepus.event can only annotate a struct")
+      }
   }
-  guard command_attr is Some(attr) else { return Ok(None) }
+}
+
+///|
+fn parse_command_from_func(
+  func : @moonbitlang/parser/syntax.FunDecl,
+  attr : LepusAttribute,
+) -> Result[ParsedLepusCommand, String] {
   let function_name = func.name.name
   match validate_identifier("command function name", function_name) {
     Err(error) => return Err(error)
@@ -281,17 +336,103 @@ fn parse_command_from_func(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  Ok(
-    Some(ParsedLepusCommand::{
+  Ok(ParsedLepusCommand::{
+    function_name,
+    js_name,
+    params,
+    return_type,
+    is_async: func.is_async is Some(_),
+    has_context: params.any(fn(param) { param.is_context }),
+    returns_result: result_ok_type(return_type) is Some(_),
+  })
+}
+
+///|
+fn parse_script_from_func(
+  func : @moonbitlang/parser/syntax.FunDecl,
+) -> Result[ParsedLepusScript, String] {
+  let function_name = func.name.name
+  match validate_identifier("script function name", function_name) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  guard func.is_async is None else {
+    return Err("#lepus.script function must be synchronous: " + function_name)
+  }
+  let params = match func.decl_params {
+    Some(value) =>
+      match parse_ast_params(function_name, value) {
+        Ok(params) => params
+        Err(error) => return Err(error)
+      }
+    None => []
+  }
+  guard params.length() == 0 else {
+    return Err(
+      "#lepus.script function must not take parameters: " + function_name,
+    )
+  }
+  let return_type = match func.return_type {
+    Some(ty) =>
+      match type_expr_text(ty) {
+        Ok(text) => text
+        Err(_) =>
+          return Err("unsupported #lepus.script return type: " + function_name)
+      }
+    None => "Unit"
+  }
+  guard return_type == "String" else {
+    return Err("#lepus.script function must return String: " + function_name)
+  }
+  Ok(ParsedLepusScript::{ function_name, })
+}
+
+///|
+fn parse_destroy_from_func(
+  func : @moonbitlang/parser/syntax.FunDecl,
+) -> Result[ParsedLepusDestroy, String] {
+  let function_name = func.name.name
+  match validate_identifier("destroy function name", function_name) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  guard func.is_async is None else {
+    return Err("#lepus.destroy function must be synchronous: " + function_name)
+  }
+  let params = match func.decl_params {
+    Some(value) =>
+      match parse_ast_params(function_name, value) {
+        Ok(params) => params
+        Err(error) => return Err(error)
+      }
+    None => []
+  }
+  let return_type = match func.return_type {
+    Some(ty) =>
+      match type_expr_text(ty) {
+        Ok(text) => text
+        Err(_) =>
+          return Err("unsupported #lepus.destroy return type: " + function_name)
+      }
+    None => "Unit"
+  }
+  guard return_type == "Unit" else {
+    return Err("#lepus.destroy function must return Unit: " + function_name)
+  }
+  guard params.length() <= 1 else {
+    return Err(
+      "#lepus.destroy function accepts at most one context parameter: " +
       function_name,
-      js_name,
-      params,
-      return_type,
-      is_async: func.is_async is Some(_),
-      has_context: params.any(fn(param) { param.is_context }),
-      returns_result: result_ok_type(return_type) is Some(_),
-    }),
-  )
+    )
+  }
+  let has_context = params.any(fn(param) { param.is_context })
+  guard params.length() == 0 || has_context else {
+    return Err(
+      "#lepus.destroy parameter must be `context : @app.AppCommandExtensionContext`: " +
+      function_name,
+    )
+  }
+  Ok(ParsedLepusDestroy::{ function_name, has_context })
 }
 
 ///|
@@ -303,12 +444,23 @@ fn parse_event_from_type_def(
     Ok(attrs) => attrs
     Err(error) => return Err(error)
   }
-  let event_attr = match
-    select_single_lepus_attribute(attrs, LepusAttributeKind::Event) {
+  let event_attr = match select_single_lepus_attribute(attrs) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  guard event_attr is Some(attr) else { return Ok(None) }
+  let attr = match event_attr {
+    None => return Ok(None)
+    Some(attr) =>
+      match attr.kind {
+        LepusAttributeKind::Event => attr
+        _ =>
+          return Err(
+            "#lepus." +
+            lepus_attribute_kind_label(attr.kind) +
+            " can only annotate a function",
+          )
+      }
+  }
   guard type_decl.components is Record(..) else {
     return Err("#lepus.event can only annotate a struct")
   }
@@ -356,6 +508,16 @@ fn collect_lepus_attributes(
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
+    } else if raw.has_prefix("#lepus.script") {
+      match parse_lepus_attribute(LepusAttributeKind::Script, raw) {
+        Ok(attr) => parsed.push(attr)
+        Err(error) => first_error = Some(error)
+      }
+    } else if raw.has_prefix("#lepus.destroy") {
+      match parse_lepus_attribute(LepusAttributeKind::Destroy, raw) {
+        Ok(attr) => parsed.push(attr)
+        Err(error) => first_error = Some(error)
+      }
     }
   })
   match first_error {
@@ -394,21 +556,13 @@ fn parse_lepus_attribute(
 ///|
 fn select_single_lepus_attribute(
   attrs : Array[LepusAttribute],
-  kind : LepusAttributeKind,
 ) -> Result[LepusAttribute?, String] {
   let mut selected : LepusAttribute? = None
-  let label = lepus_attribute_kind_label(kind)
   for attr in attrs {
-    if attr.kind == kind {
-      guard selected is None else {
-        return Err(
-          "only one #lepus." + label + " attribute can be attached to one item",
-        )
-      }
-      selected = Some(attr)
-    } else {
+    guard selected is None else {
       return Err("only one #lepus attribute can be attached to one item")
     }
+    selected = Some(attr)
   }
   Ok(selected)
 }
@@ -418,6 +572,8 @@ fn lepus_attribute_kind_label(kind : LepusAttributeKind) -> String {
   match kind {
     LepusAttributeKind::Command => "command"
     LepusAttributeKind::Event => "event"
+    LepusAttributeKind::Script => "script"
+    LepusAttributeKind::Destroy => "destroy"
   }
 }
 

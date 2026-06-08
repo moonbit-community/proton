@@ -34,10 +34,23 @@ priv struct ParsedLepusEvent {
 }
 
 ///|
+priv struct ParsedLepusScript {
+  function_name : String
+}
+
+///|
+priv struct ParsedLepusDestroy {
+  function_name : String
+  has_context : Bool
+}
+
+///|
 priv enum LepusAttributeKind {
   Command
   Event
-} derive(Eq)
+  Script
+  Destroy
+}
 
 ///|
 priv struct LepusAttribute {
@@ -49,6 +62,8 @@ priv struct LepusAttribute {
 priv struct ParsedLepusModule {
   commands : Array[ParsedLepusCommand]
   events : Array[ParsedLepusEvent]
+  scripts : Array[ParsedLepusScript]
+  mut destroy : ParsedLepusDestroy?
   package_commands : Array[ParsedLepusCommand]
   package_events : Array[ParsedLepusEvent]
 }

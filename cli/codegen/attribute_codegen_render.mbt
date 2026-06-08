@@ -12,7 +12,14 @@ fn render_lepus_command_codegen(
   builder.write_string("\n")
   render_event_helpers(builder, parsed.events)
   render_payloads_and_wrappers(builder, parsed.commands)
-  render_extension_spec(builder, parsed.commands, extension_id, js_namespace)
+  render_extension_spec(
+    builder,
+    parsed.commands,
+    parsed.scripts,
+    parsed.destroy,
+    extension_id,
+    js_namespace,
+  )
   LepusCommandCodegenOutput::{
     source: builder.to_string(),
     warnings: codegen_warnings(parsed),
@@ -96,6 +103,8 @@ fn render_payloads_and_wrappers(
 fn render_extension_spec(
   builder : StringBuilder,
   commands : Array[ParsedLepusCommand],
+  scripts : Array[ParsedLepusScript],
+  destroy : ParsedLepusDestroy?,
   extension_id : String,
   js_namespace : String,
 ) -> Unit {
@@ -146,6 +155,29 @@ fn render_extension_spec(
   }
   builder.write_string("      Ok(())\n")
   builder.write_string("    },\n")
+  if scripts.length() > 0 {
+    builder.write_string("    scripts=[\n")
+    for script in scripts {
+      builder.write_string("      ")
+      builder.write_string(script.function_name)
+      builder.write_string("(),\n")
+    }
+    builder.write_string("    ],\n")
+  }
+  match destroy {
+    Some(destroy) => {
+      builder.write_string("    on_destroy=fn(context) {\n")
+      builder.write_string("      ")
+      builder.write_string(destroy.function_name)
+      if destroy.has_context {
+        builder.write_string("(context)\n")
+      } else {
+        builder.write_string("()\n")
+      }
+      builder.write_string("    },\n")
+    }
+    None => ()
+  }
   builder.write_string("  )\n")
   builder.write_string("}\n")
 }

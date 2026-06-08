@@ -8,6 +8,8 @@ import {
 // Values
 pub fn generate_app_commands_from_file(String, String, String) -> Result[LepusCommandCodegenOutput, String]
 
+pub fn generate_app_commands_from_file_with_metadata(String) -> Result[LepusCommandCodegenOutput, String]
+
 pub fn generate_app_commands_from_source(String, String, String) -> Result[LepusCommandCodegenOutput, String]
 
 // Errors

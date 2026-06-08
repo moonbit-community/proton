@@ -20,6 +20,7 @@ struct AppCommandExtensionSpec {
   scripts : Array[String]
   dependencies : Array[String]
   register : (AppCommandExtensionContext) -> Result[Unit, String]
+  on_destroy : (AppCommandExtensionContext) -> Unit
 }
 
 ///|
@@ -161,6 +162,7 @@ pub fn AppCommandExtensionSpec::new(
   register : (AppCommandExtensionContext) -> Result[Unit, String],
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
+  on_destroy? : (AppCommandExtensionContext) -> Unit = fn(_context) {  },
 ) -> AppCommandExtensionSpec {
   AppCommandExtensionSpec::{
     id,
@@ -169,6 +171,7 @@ pub fn AppCommandExtensionSpec::new(
     scripts: copy_strings(scripts),
     dependencies: copy_strings(dependencies),
     register,
+    on_destroy,
   }
 }
 
@@ -271,6 +274,7 @@ pub fn run_app_command_extensions_with_framework_process(
     return Err("app command extension registry did not enable any extension")
   }
   let host = @core.AppCommandHost::new()
+  let registered : Array[(AppCommandExtensionSpec, AppCommandExtensionContext)] = []
   for extension in prepared {
     let spec = extension.spec()
     let context = AppCommandExtensionContext::new(
@@ -282,22 +286,24 @@ pub fn run_app_command_extensions_with_framework_process(
     )
     match spec.register(context) {
       Err(error) => {
+        destroy_registered_command_extensions(registered)
         host.close()
         return Err(
           "failed to register command extension " + spec.id() + ": " + error,
         )
       }
-      Ok(_) => ()
+      Ok(_) => registered.push((spec, context))
     }
   }
   match validate_registered_command_extension_handlers(prepared, host) {
     Err(error) => {
+      destroy_registered_command_extensions(registered)
       host.close()
       return Err(error)
     }
     Ok(_) => ()
   }
-  run_app_command_host_with_framework_process(
+  let result = run_app_command_host_with_framework_process(
     manifest,
     framework_command,
     host,
@@ -309,6 +315,20 @@ pub fn run_app_command_extensions_with_framework_process(
     ipc_token~,
     framework_config_path~,
   )
+  destroy_registered_command_extensions(registered)
+  host.close()
+  result
+}
+
+///|
+fn destroy_registered_command_extensions(
+  registered : Array[(AppCommandExtensionSpec, AppCommandExtensionContext)],
+) -> Unit {
+  for i = registered.length(); i > 0; {
+    let entry = registered[i - 1]
+    entry.0.destroy(entry.1)
+    continue i - 1
+  }
 }
 
 ///|
@@ -544,6 +564,14 @@ fn AppCommandExtensionSpec::register(
 }
 
 ///|
+fn AppCommandExtensionSpec::destroy(
+  self : AppCommandExtensionSpec,
+  context : AppCommandExtensionContext,
+) -> Unit {
+  (self.on_destroy)(context)
+}
+
+///|
 fn PreparedAppCommandExtension::new(
   id : String,
   spec : AppCommandExtensionSpec,
@@ -610,5 +638,6 @@ fn copy_app_command_extension_spec(
     spec.register,
     scripts=spec.scripts,
     dependencies=spec.dependencies,
+    on_destroy=spec.on_destroy,
   )
 }
