@@ -12,6 +12,7 @@ import {
   "justjavac/global_hotkey@0.1.0",
   "justjavac/lepus_catalog@0.1.0",
   "justjavac/lepus_core@0.1.0",
+  "justjavac/lepus_app@0.1.0",
   "justjavac/lepus@0.1.10",
   "justjavac/microphone@0.1.0",
   "justjavac/auto_launch@0.1.3",
