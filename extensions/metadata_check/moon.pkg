@@ -3,7 +3,6 @@ import {
   "moonbitlang/x/fs" @mbfs,
   "justjavac/lepus_catalog" @catalog,
   "justjavac/lepus_core" @core,
-  "extensions/clipboard",
   "extensions/devtools",
   "extensions/dialog",
   "extensions/fs",
