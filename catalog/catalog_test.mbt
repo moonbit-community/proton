@@ -126,6 +126,38 @@ test "decode_extension_descriptor rejects unsafe codegen metadata fields" {
 }
 
 ///|
+test "decode minimal app-command extension metadata uses defaults" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/minimal_extension") catch {
+    _ => ()
+  }
+  let metadata_path = "target/minimal_extension/extension.json"
+  @mbfs.write_string_to_file(
+    metadata_path,
+    (
+      #|{
+      #|  "schema_version": 2,
+      #|  "id": "vendor/minimal",
+      #|  "namespace": "minimal"
+      #|}
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let descriptor = match load_extension_descriptor_from_file(metadata_path) {
+    Ok(descriptor) => descriptor
+    Err(error) => abort(error)
+  }
+  assert_eq(descriptor.manifest_key(), "vendor/minimal")
+  assert_eq(descriptor.package_path(), "extensions/minimal_extension")
+  assert_eq(descriptor.spec_symbol(), "generated_app_command_extension")
+  @debug.assert_eq(descriptor.dependencies(), [])
+}
+
+///|
 test "load_extension_catalog_from_search_roots treats built-in and external roots the same" {
   let catalog = match
     load_extension_catalog_from_search_roots([

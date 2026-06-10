@@ -74,8 +74,6 @@ fn assert_metadata_matches_app_command_spec(
   assert_eq(descriptor.manifest_key(), expected_id)
   assert_eq(spec.js_namespace(), expected_namespace)
   assert_eq(descriptor.js_namespace(), expected_namespace)
-  assert_true(descriptor.platforms().length() > 0)
-  assert_true(descriptor.capabilities().length() > 0)
 }
 
 ///|
