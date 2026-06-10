@@ -6,7 +6,7 @@
   "description": "Register system-wide hotkeys and receive trigger events in JavaScript.",
   "namespace": "globalHotkey",
   "package": "extensions/global_hotkey",
-  "spec_symbol": "spec",
+  "spec_symbol": "generated_app_command_extension",
   "manifest_key": "justjavac/lepus-global-hotkey",
   "platforms": ["windows"],
   "dependencies": [],

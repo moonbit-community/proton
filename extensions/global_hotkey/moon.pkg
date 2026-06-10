@@ -2,7 +2,6 @@ import {
   "moonbitlang/core/json",
   "justjavac/global_hotkey" @sys_global_hotkey,
   "justjavac/lepus_app" @app,
-  "justjavac/lepus_core" @core,
 }
 
 supported_targets = "native"

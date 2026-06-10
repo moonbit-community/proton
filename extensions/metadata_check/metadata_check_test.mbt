@@ -58,6 +58,27 @@ fn assert_metadata_matches_spec(
 }
 
 ///|
+/// Asserts that metadata fields stay aligned with the exported app-command extension spec.
+fn assert_metadata_matches_app_command_spec(
+  descriptor : @catalog.ExtensionDescriptor,
+  spec : @app.AppCommandExtensionSpec,
+  package_path : String,
+  expected_id : String,
+  expected_namespace : String,
+) -> Unit raise {
+  assert_eq(descriptor.id(), spec.id())
+  assert_eq(descriptor.id(), expected_id)
+  @debug.assert_eq(descriptor.dependencies(), spec.dependencies())
+  assert_eq(descriptor.package_path(), package_path)
+  assert_eq(descriptor.spec_symbol(), "generated_app_command_extension")
+  assert_eq(descriptor.manifest_key(), expected_id)
+  assert_eq(spec.js_namespace(), expected_namespace)
+  assert_eq(descriptor.js_namespace(), expected_namespace)
+  assert_true(descriptor.platforms().length() > 0)
+  assert_true(descriptor.capabilities().length() > 0)
+}
+
+///|
 test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_spec(
     load_descriptor("devtools"),
@@ -80,9 +101,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/lepus-fs",
     "fs",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("global_hotkey"),
-    @global_hotkey.spec(),
+    @global_hotkey.generated_app_command_extension(),
     "extensions/global_hotkey",
     "justjavac/lepus-global-hotkey",
     "globalHotkey",

@@ -90,5 +90,8 @@ pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
       })
       Ok(())
     },
+    scripts=[
+      trigger_poller_script(),
+    ],
   )
 }

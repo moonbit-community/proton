@@ -79,15 +79,6 @@ fn list_or_empty(
 }
 
 ///|
-/// Destroys the native manager when it was initialized successfully.
-fn destroy_manager(manager : @sys_global_hotkey.GlobalHotkeyManager?) -> Unit {
-  match manager {
-    Some(handle) => handle.destroy()
-    None => ()
-  }
-}
-
-///|
 fn register_hotkey(
   manager : @sys_global_hotkey.GlobalHotkeyManager?,
   accelerator : String,
