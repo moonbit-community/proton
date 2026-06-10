@@ -60,15 +60,13 @@ fn[Payload : @json.FromJson] decode_single_argument(
 fn[Payload : @json.FromJson] decode_arguments(
   raw_req : Bytes,
 ) -> Result[Array[Payload], String] {
-  let request_json : Result[Json, _] = try? @json.parse(@ffi.from_cstr(raw_req))
-  request_json
-  .map_err(fn(err) { err.to_string() })
-  .bind(fn(request_json) {
-    let request_args : Result[Array[Payload], _] = try? @json.from_json(
-      request_json,
-    )
-    request_args.map_err(fn(err) { err.to_string() })
-  })
+  try {
+    let request_json : Json = @json.parse(@ffi.from_cstr(raw_req))
+    let request_args : Array[Payload] = @json.from_json(request_json)
+    Ok(request_args)
+  } catch {
+    err => Err(err.to_string())
+  }
 }
 
 ///|

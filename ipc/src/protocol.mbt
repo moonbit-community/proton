@@ -115,8 +115,11 @@ pub fn IpcFrame::stringify(self : IpcFrame) -> String {
 /// Parses one JSON IPC operation request.
 pub fn parse_ipc_op_request(raw : String) -> Result[IpcOpRequest, String] {
   parse_json(raw).bind(fn(json) {
-    let request : Result[IpcOpRequest, _] = try? @json.from_json(json)
-    request.map_err(fn(err) { err.to_string() }).bind(validate_ipc_op_request)
+    try @json.from_json(json) catch {
+      err => Err(err.to_string())
+    } noraise {
+      request => validate_ipc_op_request(request)
+    }
   })
 }
 
@@ -124,8 +127,11 @@ pub fn parse_ipc_op_request(raw : String) -> Result[IpcOpRequest, String] {
 /// Parses one JSON IPC operation response.
 pub fn parse_ipc_op_response(raw : String) -> Result[IpcOpResponse, String] {
   parse_json(raw).bind(fn(json) {
-    let response : Result[IpcOpResponse, _] = try? @json.from_json(json)
-    response.map_err(fn(err) { err.to_string() }).bind(validate_ipc_op_response)
+    try @json.from_json(json) catch {
+      err => Err(err.to_string())
+    } noraise {
+      response => validate_ipc_op_response(response)
+    }
   })
 }
 
@@ -133,8 +139,11 @@ pub fn parse_ipc_op_response(raw : String) -> Result[IpcOpResponse, String] {
 /// Parses one JSON IPC transport frame.
 pub fn parse_ipc_frame(raw : String) -> Result[IpcFrame, String] {
   parse_json(raw).bind(fn(json) {
-    let frame : Result[IpcFrame, _] = try? @json.from_json(json)
-    frame.map_err(fn(err) { err.to_string() }).bind(validate_ipc_frame)
+    try @json.from_json(json) catch {
+      err => Err(err.to_string())
+    } noraise {
+      frame => validate_ipc_frame(frame)
+    }
   })
 }
 
@@ -245,8 +254,11 @@ pub fn IpcFrame::as_request(self : IpcFrame) -> Result[IpcOpRequest, String] {
   guard self.kind == "request" else {
     return Err("IPC frame kind is not request: " + self.kind)
   }
-  let request : Result[IpcOpRequest, _] = try? @json.from_json(self.payload)
-  request.map_err(fn(err) { err.to_string() }).bind(validate_ipc_op_request)
+  try @json.from_json(self.payload) catch {
+    err => Err(err.to_string())
+  } noraise {
+    request => validate_ipc_op_request(request)
+  }
 }
 
 ///|
@@ -259,8 +271,11 @@ pub fn IpcFrame::as_response(self : IpcFrame) -> Result[IpcOpResponse, String] {
   guard self.kind == "response" else {
     return Err("IPC frame kind is not response: " + self.kind)
   }
-  let response : Result[IpcOpResponse, _] = try? @json.from_json(self.payload)
-  response.map_err(fn(err) { err.to_string() }).bind(validate_ipc_op_response)
+  try @json.from_json(self.payload) catch {
+    err => Err(err.to_string())
+  } noraise {
+    response => validate_ipc_op_response(response)
+  }
 }
 
 ///|
@@ -273,14 +288,20 @@ pub fn IpcFrame::as_event(self : IpcFrame) -> Result[IpcExtensionEvent, String] 
   guard self.kind == "event" else {
     return Err("IPC frame kind is not event: " + self.kind)
   }
-  let event : Result[IpcExtensionEvent, _] = try? @json.from_json(self.payload)
-  event.map_err(fn(err) { err.to_string() }).bind(validate_ipc_extension_event)
+  try @json.from_json(self.payload) catch {
+    err => Err(err.to_string())
+  } noraise {
+    event => validate_ipc_extension_event(event)
+  }
 }
 
 ///|
 fn parse_json(raw : String) -> Result[Json, String] {
-  let parsed : Result[Json, _] = try? @json.parse(raw)
-  parsed.map_err(fn(err) { err.to_string() })
+  try @json.parse(raw) catch {
+    err => Err(err.to_string())
+  } noraise {
+    parsed => Ok(parsed)
+  }
 }
 
 ///|

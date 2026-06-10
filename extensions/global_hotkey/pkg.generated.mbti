@@ -2,15 +2,17 @@
 package "extensions/global_hotkey"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus_app",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub async fn emit_global_hotkey_activity(@lepus_app.AppCommandExtensionContext, GlobalHotkeyActivity) -> Unit
 
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub async fn emit_global_hotkey_triggered(@lepus_app.AppCommandExtensionContext, GlobalHotkeyTriggered) -> Unit
+
+pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
 
 // Errors
 
@@ -24,6 +26,16 @@ type GlobalHotkeyListReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 type GlobalHotkeyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type GlobalHotkeyReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type GlobalHotkeyTriggered derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type LepusDrainTriggeredPayload derive(@json.FromJson)
+
+type LepusListPayload derive(@json.FromJson)
+
+type LepusRegisterPayload derive(@json.FromJson)
+
+type LepusUnregisterPayload derive(@json.FromJson)
 
 // Type aliases
 

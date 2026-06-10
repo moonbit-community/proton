@@ -153,17 +153,13 @@ fn OpRuntime::handle_request(
 ///|
 /// Decodes the single op invocation payload expected by the JavaScript bridge.
 fn parse_op_request(raw_req : String) -> Result[OpInvocation, String] {
-  let request_json : Result[Json, _] = try? @json.parse(raw_req)
-  request_json
-  .map_err(fn(err) { err.to_string() })
-  .bind(fn(request_json) {
-    let request_args : Result[Array[OpInvocation], _] = try? @json.from_json(
-      request_json,
-    )
-    request_args
-    .map_err(fn(err) { err.to_string() })
-    .bind(expect_single_op_invocation)
-  })
+  try {
+    let request_json : Json = @json.parse(raw_req)
+    let request_args : Array[OpInvocation] = @json.from_json(request_json)
+    expect_single_op_invocation(request_args)
+  } catch {
+    err => Err(err.to_string())
+  }
 }
 
 ///|

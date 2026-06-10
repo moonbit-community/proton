@@ -194,25 +194,30 @@ pub fn load_extension_descriptor_from_file(
 ///|
 /// Reads and parses one JSON file for catalog metadata use.
 fn read_json_file(path : String) -> Result[Json, String] {
-  let text : Result[String, _] = try? @mbfs.read_file_to_string(path)
-  text
-  .map_err(fn(error) {
-    CatalogDiagnostic::new(
-      MissingFile,
-      path,
-      "failed to read JSON file: " + @debug.render(@debug.to_repr(error)),
-    ).to_error_string()
-  })
-  .bind(fn(text) {
-    let parsed : Result[Json, _] = try? @json.parse(text)
-    parsed.map_err(fn(error) {
-      CatalogDiagnostic::new(
-        InvalidJson,
-        path,
-        "failed to parse JSON: " + error.to_string(),
-      ).to_error_string()
-    })
-  })
+  try @mbfs.read_file_to_string(path) catch {
+    error =>
+      Err(
+        CatalogDiagnostic::new(
+          MissingFile,
+          path,
+          "failed to read JSON file: " + @debug.render(@debug.to_repr(error)),
+        ).to_error_string(),
+      )
+  } noraise {
+    text =>
+      try @json.parse(text) catch {
+        error =>
+          Err(
+            CatalogDiagnostic::new(
+              InvalidJson,
+              path,
+              "failed to parse JSON: " + error.to_string(),
+            ).to_error_string(),
+          )
+      } noraise {
+        json => Ok(json)
+      }
+  }
 }
 
 ///|
@@ -244,20 +249,65 @@ fn decode_descriptor_object(
   path : String,
 ) -> Result[ExtensionDescriptor, String] {
   zip3(
-    decode_descriptor_identity_fields(object),
-    decode_descriptor_runtime_fields(object),
-    decode_descriptor_collection_fields(object),
-  ).bind(fn(values) {
-    let (identity, runtime, collections) = values
-    let (schema_version, id, version, display_name, description) = identity
-    let (
-      js_namespace,
-      manifest_key,
-      package_path,
-      spec_symbol,
-      options_schema_path,
-    ) = runtime
-    let (platforms, dependencies, capabilities) = collections
+    descriptor_required_int(object, "schema_version"),
+    descriptor_required_string(object, "id"),
+    descriptor_required_string(object, "namespace"),
+  ).bind(fn(required) {
+    let (schema_version, id, js_namespace) = required
+    let root_dir = path_dirname(path)
+    let version = match descriptor_optional_string(object, "version", "0.1.0") {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let display_name = match
+      descriptor_optional_string(object, "display_name", id) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let description = match
+      descriptor_optional_string(object, "description", "") {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let manifest_key = match
+      descriptor_optional_string(object, "manifest_key", id) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let package_path = match
+      descriptor_optional_string(object, "package", default_package_path(path)) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let spec_symbol = match
+      descriptor_optional_string(
+        object, "spec_symbol", "generated_app_command_extension",
+      ) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let options_schema_path = match
+      descriptor_optional_string(
+        object, "options_schema", "options.schema.json",
+      ) {
+      Ok(value) => normalize_metadata_relative_path(value)
+      Err(error) => return Err(error)
+    }
+    let platforms = match
+      descriptor_optional_string_array(object, "platforms", []) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let dependencies = match
+      descriptor_optional_string_array(object, "dependencies", []) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let capabilities = match
+      descriptor_optional_string_array(object, "capabilities", []) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
     guard schema_version == 2 else {
       return Err(
         "unsupported extension metadata schema_version: " +
@@ -277,63 +327,12 @@ fn decode_descriptor_object(
     }
     Ok(
       ExtensionDescriptor::new(
-        schema_version,
-        id,
-        version,
-        display_name,
-        description,
-        js_namespace,
-        manifest_key,
-        package_path,
-        spec_symbol,
-        platforms,
-        dependencies,
-        capabilities,
-        options_schema_path,
-        path_dirname(path),
+        schema_version, id, version, display_name, description, js_namespace, manifest_key,
+        package_path, spec_symbol, platforms, dependencies, capabilities, options_schema_path,
+        root_dir,
       ),
     )
   })
-}
-
-///|
-/// Decodes the required identity and display fields for one descriptor.
-fn decode_descriptor_identity_fields(
-  object : Map[String, Json],
-) -> Result[(Int, String, String, String, String), String] {
-  zip5(
-    descriptor_required_int(object, "schema_version"),
-    descriptor_required_string(object, "id"),
-    descriptor_required_string(object, "version"),
-    descriptor_required_string(object, "display_name"),
-    descriptor_required_string(object, "description"),
-  )
-}
-
-///|
-/// Decodes the required runtime linking fields for one descriptor.
-fn decode_descriptor_runtime_fields(
-  object : Map[String, Json],
-) -> Result[(String, String, String, String, String), String] {
-  zip5(
-    descriptor_required_string(object, "namespace"),
-    descriptor_required_string(object, "manifest_key"),
-    descriptor_required_string(object, "package"),
-    descriptor_required_string(object, "spec_symbol"),
-    descriptor_required_string(object, "options_schema"),
-  )
-}
-
-///|
-/// Decodes the required list-valued metadata fields for one descriptor.
-fn decode_descriptor_collection_fields(
-  object : Map[String, Json],
-) -> Result[(Array[String], Array[String], Array[String]), String] {
-  zip3(
-    descriptor_required_string_array(object, "platforms"),
-    descriptor_required_string_array(object, "dependencies"),
-    descriptor_required_string_array(object, "capabilities"),
-  )
 }
 
 ///|
@@ -444,40 +443,56 @@ fn descriptor_required_string(
 }
 
 ///|
+/// Reads and decodes an optional string metadata field.
+fn descriptor_optional_string(
+  object : Map[String, Json],
+  key : String,
+  default : String,
+) -> Result[String, String] {
+  match object.get(key) {
+    None => Ok(default)
+    Some(String(value)) => Ok(value)
+    Some(_) => Err("expected string for metadata field: " + key)
+  }
+}
+
+///|
 /// Reads and decodes a required integer metadata field.
 fn descriptor_required_int(
   object : Map[String, Json],
   key : String,
 ) -> Result[Int, String] {
   descriptor_required_field(object, key).bind(fn(json) {
-    let decoded : Result[Int, _] = try? @json.from_json(json)
-    decoded.map_err(fn(error) {
-      "invalid int for metadata field " + key + ": " + error.to_string()
-    })
+    try @json.from_json(json) catch {
+      error =>
+        Err("invalid int for metadata field " + key + ": " + error.to_string())
+    } noraise {
+      value => Ok(value)
+    }
   })
 }
 
 ///|
-/// Reads and decodes a required string array metadata field.
-fn descriptor_required_string_array(
+/// Reads and decodes an optional string array metadata field.
+fn descriptor_optional_string_array(
   object : Map[String, Json],
   key : String,
+  default : Array[String],
 ) -> Result[Array[String], String] {
-  descriptor_required_field(object, key).bind(fn(value) {
-    match value {
-      Array(items) => {
-        let values : Array[String] = []
-        for item in items {
-          match item {
-            String(value) => values.push(value)
-            _ => return Err("expected string array for metadata field: " + key)
-          }
+  match object.get(key) {
+    None => Ok(copy_strings(default))
+    Some(Array(items)) => {
+      let values : Array[String] = []
+      for item in items {
+        match item {
+          String(value) => values.push(value)
+          _ => return Err("expected string array for metadata field: " + key)
         }
-        Ok(values)
       }
-      _ => Err("expected array for metadata field: " + key)
+      Ok(values)
     }
-  })
+    Some(_) => Err("expected array for metadata field: " + key)
+  }
 }
 
 ///|
@@ -490,13 +505,70 @@ fn normalize_path_string(path : String) -> String {
 ///|
 /// Joins two path segments and normalizes the result.
 fn path_join(base : String, child : String) -> String {
-  let value : @mbpath.Path = base
-  value.join(child).normalize().to_string()
+  let parts : Array[String] = []
+  for part in base.replace(old="\\", new="/").split("/") {
+    if part != "" && part != "." {
+      parts.push(part.to_owned())
+    }
+  }
+  for part in child.replace(old="\\", new="/").split("/") {
+    if part != "" && part != "." {
+      parts.push(part.to_owned())
+    }
+  }
+  parts.join("/")
 }
 
 ///|
 /// Returns the normalized parent directory of one filesystem path.
 fn path_dirname(path : String) -> String {
-  let value : @mbpath.Path = path
-  value.dirname().normalize().to_string()
+  let normalized = path.replace(old="\\", new="/")
+  let parts = normalized.split("/").collect()
+  guard parts.length() > 1 else { return "" }
+  let parent : Array[String] = []
+  for index, part in parts {
+    if index < parts.length() - 1 {
+      parent.push(part.to_owned())
+    }
+  }
+  parent.join("/")
+}
+
+///|
+/// Infers a package import path from an `extension.json` file path.
+fn default_package_path(path : String) -> String {
+  let dir = path_dirname(path)
+  let parts = dir.replace(old="\\", new="/").split("/").collect()
+  let mut extension_root_index = -1
+  for index, part in parts {
+    if part == "extensions" {
+      extension_root_index = index
+    }
+  }
+  if extension_root_index >= 0 && extension_root_index < parts.length() - 1 {
+    let package_parts : Array[String] = []
+    for index, part in parts {
+      if index >= extension_root_index {
+        package_parts.push(part.to_owned())
+      }
+    }
+    return package_parts.join("/")
+  }
+  guard parts.length() > 0 else { return "" }
+  let name = parts[parts.length() - 1]
+  guard name != "" && name != "." && name != ".." else { return "" }
+  "extensions/" + name.to_owned()
+}
+
+///|
+/// Normalizes metadata-local relative paths such as `./options.schema.json`.
+fn normalize_metadata_relative_path(path : String) -> String {
+  let parts = path.replace(old="\\", new="/").split("/").collect()
+  let normalized : Array[String] = []
+  for part in parts {
+    if part != "" && part != "." {
+      normalized.push(part.to_owned())
+    }
+  }
+  normalized.join("/")
 }

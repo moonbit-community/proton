@@ -252,18 +252,17 @@ fn read_text_file(
   encoding : String?,
 ) -> Result[ReadFileReply, String] {
   with_supported_text_encoding(encoding, fn() {
-    let content : Result[String, _] = try? @xfs.read_file_to_string(path)
-    content
-    .map_err(fn(error) {
-      "Failed to read file: " + @debug.render(@debug.to_repr(error))
-    })
-    .map(fn(content) {
-      ReadFileReply::{
+    try {
+      let content = @xfs.read_file_to_string(path)
+      Ok(ReadFileReply::{
         path,
         content,
         bytes_read: bytes_written_for_text(content),
-      }
-    })
+      })
+    } catch {
+      error =>
+        Err("Failed to read file: " + @debug.render(@debug.to_repr(error)))
+    }
   })
 }
 
@@ -275,20 +274,17 @@ fn write_text_file(
   encoding : String?,
 ) -> Result[WriteFileReply, String] {
   with_supported_text_encoding(encoding, fn() {
-    let written : Result[Unit, _] = try? @xfs.write_string_to_file(
-      path, content,
-    )
-    written
-    .map_err(fn(error) {
-      "Failed to write file: " + @debug.render(@debug.to_repr(error))
-    })
-    .map(fn(_) {
-      WriteFileReply::{
+    try {
+      @xfs.write_string_to_file(path, content)
+      Ok(WriteFileReply::{
         path,
         written: true,
         bytes_written: bytes_written_for_text(content),
-      }
-    })
+      })
+    } catch {
+      error =>
+        Err("Failed to write file: " + @debug.render(@debug.to_repr(error)))
+    }
   })
 }
 
@@ -301,31 +297,25 @@ fn append_text_file(
 ) -> Result[AppendFileReply, String] {
   with_supported_text_encoding(encoding, fn() {
     let existing = if native_path_exists(path) {
-      let read_result : Result[String, _] = try? @xfs.read_file_to_string(path)
-      match read_result {
-        Ok(text) => Ok(text)
-        Err(error) =>
+      Ok(@xfs.read_file_to_string(path)) catch {
+        error =>
           Err("Failed to append file: " + @debug.render(@debug.to_repr(error)))
       }
     } else {
       Ok("")
     }
     existing.bind(fn(existing) {
-      let written : Result[Unit, _] = try? @xfs.write_string_to_file(
-        path,
-        existing + content,
-      )
-      written
-      .map_err(fn(error) {
-        "Failed to append file: " + @debug.render(@debug.to_repr(error))
-      })
-      .map(fn(_) {
-        AppendFileReply::{
+      try {
+        @xfs.write_string_to_file(path, existing + content)
+        Ok(AppendFileReply::{
           path,
           written: true,
           bytes_written: bytes_written_for_text(content),
-        }
-      })
+        })
+      } catch {
+        error =>
+          Err("Failed to append file: " + @debug.render(@debug.to_repr(error)))
+      }
     })
   })
 }
@@ -336,24 +326,20 @@ fn native_stat_info(path : String) -> Result[StatReply, String] {
   let stat_json = decode_native_text(
     native_stat_json_ffi(encode_native_path_bytes(path)),
   )
-  let parsed_json : Result[Json, _] = try? @json.parse(stat_json)
-  parsed_json
-  .map_err(fn(error) { "Failed to stat path: " + error.to_string() })
-  .bind(fn(parsed_json) {
-    let decoded : Result[NativeStatData, _] = try? @json.from_json(parsed_json)
-    decoded
-    .map_err(fn(error) { "Failed to decode path stat: " + error.to_string() })
-    .map(fn(decoded) {
-      StatReply::{
-        path,
-        exists: decoded.exists,
-        size: decoded.size,
-        is_file: decoded.is_file,
-        is_dir: decoded.is_dir,
-        is_readonly: decoded.is_readonly,
-      }
+  try {
+    let parsed_json : Json = @json.parse(stat_json)
+    let decoded : NativeStatData = @json.from_json(parsed_json)
+    Ok(StatReply::{
+      path,
+      exists: decoded.exists,
+      size: decoded.size,
+      is_file: decoded.is_file,
+      is_dir: decoded.is_dir,
+      is_readonly: decoded.is_readonly,
     })
-  })
+  } catch {
+    error => Err("Failed to stat path: " + error.to_string())
+  }
 }
 
 ///|
@@ -505,13 +491,13 @@ fn native_create_dir(path : String) -> Result[Bool, String] {
       )
     }
   } else {
-    let result : Result[Unit, _] = try? @xfs.create_dir(path)
-    match result {
-      Ok(_) => Ok(true)
-      Err(error) =>
+    try @xfs.create_dir(path) catch {
+      error =>
         Err(
           "Failed to create directory: " + @debug.render(@debug.to_repr(error)),
         )
+    } noraise {
+      _ => Ok(true)
     }
   }
 }
@@ -538,11 +524,11 @@ fn native_remove_dir(path : String) -> Result[Bool, String] {
   if !native_path_exists(path) {
     return Ok(false)
   }
-  let removed : Result[Unit, _] = try? @xfs.remove_dir(path)
-  match removed {
-    Ok(_) => Ok(true)
-    Err(error) =>
+  try @xfs.remove_dir(path) catch {
+    error =>
       Err("Failed to remove directory: " + @debug.render(@debug.to_repr(error)))
+  } noraise {
+    _ => Ok(true)
   }
 }
 

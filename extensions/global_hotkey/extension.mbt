@@ -1,192 +1,108 @@
 ///|
-let extension_id = "justjavac/lepus-global-hotkey"
-
-///|
-let extension_namespace = "globalHotkey"
-
-///|
-struct GlobalHotkeyPayload {
-  accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct GlobalHotkeyReply {
-  registered : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct GlobalHotkeyListReply {
-  accelerators : Array[String]
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
+#lepus.event(name="activity")
 struct GlobalHotkeyActivity {
   operation : String
   accelerator : String
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-/// Verifies that global hotkeys are available on the current platform.
-fn ensure_supported() -> Result[Unit, String] {
-  @sys_global_hotkey.ensure_supported()
-}
+#lepus.event(name="triggered")
+struct GlobalHotkeyTriggered {
+  accelerator : String
+} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-/// Creates the native hotkey manager when support is available.
-fn init_manager() -> @sys_global_hotkey.GlobalHotkeyManager? {
-  match ensure_supported() {
-    Ok(_) =>
-      match @sys_global_hotkey.create() {
-        Ok(handle) => Some(handle)
-        Err(_) => None
-      }
-    Err(_) => None
-  }
-}
-
-///|
-/// Runs a hotkey operation with the initialized manager when available.
-fn[Reply] with_manager(
-  manager : @sys_global_hotkey.GlobalHotkeyManager?,
-  callback : (@sys_global_hotkey.GlobalHotkeyManager) -> Result[Reply, String],
-) -> Result[Reply, String] {
-  ensure_supported().bind(fn(_) {
-    match manager {
-      Some(handle) => callback(handle)
-      None => Err("globalHotkey extension failed to initialize")
-    }
-  })
-}
-
-///|
-/// Returns the selected accelerator list or an empty result when the manager is unavailable.
-fn list_or_empty(
-  manager : @sys_global_hotkey.GlobalHotkeyManager?,
-  selector : (@sys_global_hotkey.GlobalHotkeyManager) -> Array[String],
-) -> GlobalHotkeyListReply {
-  match manager {
-    Some(handle) => GlobalHotkeyListReply::{ accelerators: selector(handle) }
-    None => GlobalHotkeyListReply::{ accelerators: [] }
-  }
-}
-
-///|
-/// Destroys the native manager when it was initialized successfully.
-fn destroy_manager(manager : @sys_global_hotkey.GlobalHotkeyManager?) -> Unit {
-  match manager {
-    Some(handle) => handle.destroy()
-    None => ()
-  }
-}
-
-///|
-/// Emits a global-hotkey activity event for JavaScript listeners.
-fn emit_activity(
-  extension : @core.ExtensionContext,
+async fn emit_command_activity(
+  context : @app.AppCommandExtensionContext,
   operation : String,
   accelerator : String,
 ) -> Unit {
-  extension.emit("activity", GlobalHotkeyActivity::{ operation, accelerator })
+  emit_global_hotkey_activity(context, { operation, accelerator })
 }
 
 ///|
-/// Returns the JavaScript poller script that forwards triggered hotkeys as extension events.
+async fn[Reply] emit_command_result(
+  context : @app.AppCommandExtensionContext,
+  result : Result[Reply, String],
+  operation : String,
+  accelerator : String,
+) -> Result[Reply, String] {
+  match result {
+    Err(error) => Err(error)
+    Ok(reply) => {
+      emit_command_activity(context, operation, accelerator)
+      Ok(reply)
+    }
+  }
+}
+
+///|
+#lepus.script
 fn trigger_poller_script() -> String {
   (
     #|(() => {
-    #|  const moonbit = window.__MoonBit__;
-    #|  if (!moonbit || !moonbit.events || typeof moonbit.events["@@emitExtensionEvent"] !== "function") {
+    #|  const root = window.__MoonBit__;
+    #|  const globalHotkey = root && root.globalHotkey;
+    #|  if (!globalHotkey || typeof globalHotkey.drainTriggered !== "function") {
     #|    return;
     #|  }
-    #|  const state = moonbit["@@state"] && typeof moonbit["@@state"] === "object"
-    #|    ? moonbit["@@state"]
-    #|    : (moonbit["@@state"] = Object.create(null));
-    #|  if (state.globalHotkeyPoller) {
+    #|  if (globalHotkey.__lepusTriggerPoller) {
     #|    return;
     #|  }
-    #|  state.globalHotkeyPoller = window.setInterval(() => {
-    #|    const extension = moonbit.globalHotkey;
-    #|    if (!extension || typeof extension.drainTriggered !== "function") {
-    #|      return;
-    #|    }
-    #|    extension.drainTriggered({})
-    #|      .then((reply) => {
-    #|        if (!reply || !Array.isArray(reply.accelerators)) {
-    #|          return;
-    #|        }
-    #|        for (const accelerator of reply.accelerators) {
-    #|          moonbit.events["@@emitExtensionEvent"]("globalHotkey", "triggered", {
-    #|            accelerator,
-    #|          });
-    #|        }
-    #|      })
-    #|      .catch(() => {});
-    #|  }, 150);
+    #|  globalHotkey.__lepusTriggerPoller = window.setInterval(() => {
+    #|    globalHotkey.drainTriggered({}).catch(() => {});
+    #|  }, 100);
     #|})();
   )
 }
 
 ///|
-
-///|
-/// Builds the `globalHotkey` extension for direct installation.
-/// Install it manually when trusted local content needs runtime hotkey
-/// registration without going through an app registry.
-pub fn extension() -> @core.Extension {
-  let mut manager : @sys_global_hotkey.GlobalHotkeyManager? = None
-  @core.Extension::new(
-    extension_id,
-    extension_namespace,
-    fn(extension) {
-      manager = init_manager()
-
-      extension.op_result("register", fn(payload : GlobalHotkeyPayload) {
-        with_manager(manager, fn(handle) {
-          handle
-          .register(payload.accelerator)
-          .map(fn(registered) {
-            emit_activity(extension, "register", payload.accelerator)
-            GlobalHotkeyReply::{ registered, }
-          })
-        })
-      })
-
-      extension.op_result("unregister", fn(payload : GlobalHotkeyPayload) {
-        with_manager(manager, fn(handle) {
-          handle
-          .unregister(payload.accelerator)
-          .map(fn(registered) {
-            emit_activity(extension, "unregister", payload.accelerator)
-            GlobalHotkeyReply::{ registered, }
-          })
-        })
-      })
-
-      extension.op_result("list", fn(_payload : EmptyPayload) {
-        Ok(list_or_empty(manager, fn(handle) { handle.list() }))
-      })
-
-      extension.op_result("drainTriggered", fn(_payload : EmptyPayload) {
-        Ok(list_or_empty(manager, fn(handle) { handle.drain_triggered() }))
-      })
-    },
-    on_destroy=fn(_extension) {
-      destroy_manager(manager)
-      manager = None
-    },
-    scripts=[trigger_poller_script()],
+/// Registers one global hotkey from a generated app-command extension.
+#lepus.command(name="register")
+async fn register(
+  context : @app.AppCommandExtensionContext,
+  accelerator : String,
+) -> Result[GlobalHotkeyReply, String] {
+  emit_command_result(
+    context,
+    register_hotkey(app_command_manager_handle(), accelerator),
+    "register",
+    accelerator,
   )
 }
 
 ///|
-/// Builds the declarative `globalHotkey` extension spec.
-/// Use this when global hotkeys should be linked through registry-based app
-/// composition.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+/// Unregisters one global hotkey from a generated app-command extension.
+#lepus.command(name="unregister")
+async fn unregister(
+  context : @app.AppCommandExtensionContext,
+  accelerator : String,
+) -> Result[GlobalHotkeyReply, String] {
+  emit_command_result(
+    context,
+    unregister_hotkey(app_command_manager_handle(), accelerator),
+    "unregister",
+    accelerator,
+  )
+}
+
+///|
+/// Lists registered global hotkeys from a generated app-command extension.
+#lepus.command(name="list")
+fn list(_payload : EmptyPayload?) -> GlobalHotkeyListReply {
+  list_hotkeys(app_command_manager_handle())
+}
+
+///|
+/// Drains triggered global hotkeys from a generated app-command extension.
+#lepus.command(name="drainTriggered")
+async fn drain_triggered(
+  context : @app.AppCommandExtensionContext,
+  _payload : EmptyPayload?,
+) -> GlobalHotkeyListReply {
+  let reply = drain_triggered_hotkeys(app_command_manager_handle())
+  for accelerator in reply.accelerators {
+    emit_global_hotkey_triggered(context, { accelerator, })
+  }
+  reply
 }

@@ -384,19 +384,21 @@ async test "websocket ipc rejects remote websocket origins" {
       Ok(port) => port
       Err(error) => abort(error)
     }
-    let result = try? @websocket.connect(
-      "ws://" +
-      config.host +
-      ":" +
-      port.to_string() +
-      config.ws_path +
-      "?token=" +
-      config.token,
-      headers={ "Origin": "https://example.com" },
-    )
-    match result {
-      Err(_) => ()
-      Ok(ws) => {
+    try
+      @websocket.connect(
+        "ws://" +
+        config.host +
+        ":" +
+        port.to_string() +
+        config.ws_path +
+        "?token=" +
+        config.token,
+        headers={ "Origin": "https://example.com" },
+      )
+    catch {
+      _ => ()
+    } noraise {
+      ws => {
         ws.close()
         abort("expected remote websocket origin to be rejected")
       }

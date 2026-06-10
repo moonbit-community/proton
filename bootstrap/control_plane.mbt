@@ -24,13 +24,14 @@ pub fn write_document(
   path : String,
   document : AppManifestDocument,
 ) -> Result[Unit, String] {
-  let write_result : Result[Unit, _] = try? @mbfs.write_string_to_file(
-    path,
-    render_document(document),
-  )
-  write_result.map_err(fn(error) {
-    "failed to write app manifest: " + @debug.render(@debug.to_repr(error))
-  })
+  try @mbfs.write_string_to_file(path, render_document(document)) catch {
+    error =>
+      Err(
+        "failed to write app manifest: " + @debug.render(@debug.to_repr(error)),
+      )
+  } noraise {
+    _ => Ok(())
+  }
 }
 
 ///|

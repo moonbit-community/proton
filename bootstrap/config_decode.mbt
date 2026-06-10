@@ -63,20 +63,20 @@ fn decode_optional_int(json : Json?, label : String) -> Result[Int?, String] {
 ///|
 /// Decodes a JSON value as a string with a labeled error message.
 fn decode_string(json : Json, label : String) -> Result[String, String] {
-  let decoded : Result[String, _] = try? @json.from_json(json)
-  match decoded {
-    Ok(value) => Ok(value)
-    Err(error) => Err("invalid string for " + label + ": " + error.to_string())
+  try @json.from_json(json) catch {
+    error => Err("invalid string for " + label + ": " + error.to_string())
+  } noraise {
+    value => Ok(value)
   }
 }
 
 ///|
 /// Decodes a JSON value as an integer with a labeled error message.
 fn decode_int(json : Json, label : String) -> Result[Int, String] {
-  let decoded : Result[Int, _] = try? @json.from_json(json)
-  match decoded {
-    Ok(value) => Ok(value)
-    Err(error) => Err("invalid int for " + label + ": " + error.to_string())
+  try @json.from_json(json) catch {
+    error => Err("invalid int for " + label + ": " + error.to_string())
+  } noraise {
+    value => Ok(value)
   }
 }
 

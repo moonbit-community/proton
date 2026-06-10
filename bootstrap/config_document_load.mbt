@@ -58,13 +58,13 @@ fn refresh_app_manifest_document(
 ///|
 /// Reads manifest text from disk with a labeled error message.
 fn read_app_manifest_text(path : String) -> Result[String, String] {
-  let manifest_text : Result[String, _] = try? @mbfs.read_file_to_string(path)
-  match manifest_text {
-    Ok(text) => Ok(text)
-    Err(error) =>
+  try @mbfs.read_file_to_string(path) catch {
+    error =>
       Err(
         "failed to read app manifest: " + @debug.render(@debug.to_repr(error)),
       )
+  } noraise {
+    text => Ok(text)
   }
 }
 
@@ -73,10 +73,10 @@ fn read_app_manifest_text(path : String) -> Result[String, String] {
 fn parse_app_manifest_root_object(
   text : String,
 ) -> Result[Map[String, Json], String] {
-  let parsed_json : Result[Json, _] = try? @json.parse(text)
-  match parsed_json {
-    Err(error) => Err("failed to parse app manifest JSON: " + error.to_string())
-    Ok(json) => expect_object(json, "app manifest")
+  try @json.parse(text) catch {
+    error => Err("failed to parse app manifest JSON: " + error.to_string())
+  } noraise {
+    json => expect_object(json, "app manifest")
   }
 }
 

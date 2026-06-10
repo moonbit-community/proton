@@ -8,16 +8,16 @@ fn main {
   webview.bind("greet", fn(id, req) {
     let id = @ffi.from_cstr(id)
     let raw_req = @ffi.from_cstr(req)
-    let request_json : Result[Json, _] = try? @json.parse(raw_req)
-    let name = match request_json {
-      Err(_) => "world"
-      Ok(request_json) => {
-        let args : Result[Array[String], _] = try? @json.from_json(request_json)
-        match args {
-          Err(_) => "world"
-          Ok(args) => if args.length() > 0 { args[0] } else { "world" }
-        }
+    let name = try {
+      let request_json : Json = @json.parse(raw_req)
+      let args : Array[String] = @json.from_json(request_json)
+      if args.length() > 0 {
+        args[0]
+      } else {
+        "world"
       }
+    } catch {
+      _ => "world"
     }
     let result = "{\"message\":\"Hello \{name}, You have been greeted from Moonbit!\", \"req\":" +
       raw_req +

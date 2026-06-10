@@ -114,15 +114,16 @@ fn read_framework_config(
     err => Err(@debug.render(@debug.to_repr(err)))
   }
   text.bind(fn(text) {
-    let parsed : Result[Json, _] = try? @json.parse(text)
-    parsed
-    .map_err(fn(err) { err.to_string() })
-    .bind(fn(json) {
-      let config : Result[FrameworkProcessConfig, _] = try? @json.from_json(
-        json,
-      )
-      config.map_err(fn(err) { err.to_string() })
-    })
+    try @json.parse(text) catch {
+      err => Err(err.to_string())
+    } noraise {
+      json =>
+        try @json.from_json(json) catch {
+          err => Err(err.to_string())
+        } noraise {
+          config => Ok(config)
+        }
+    }
   })
 }
 

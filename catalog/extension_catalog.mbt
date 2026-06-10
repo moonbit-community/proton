@@ -184,32 +184,35 @@ fn collect_extension_descriptor_files(
     )
   }
 
-  let is_dir_result : Result[Bool, _] = try? @mbfs.is_dir(root)
-  is_dir_result
-  .map_err(fn(error) {
-    CatalogDiagnostic::new(
-      InvalidSearchRoot,
-      root,
-      "failed to inspect extension search root: " +
-      @debug.render(@debug.to_repr(error)),
-    ).to_error_string()
-  })
-  .bind(fn(is_dir) {
-    if is_dir {
-      collect_extension_descriptor_files_from_directory(root, descriptor_paths)
-    } else if root.has_suffix("extension.json") {
-      descriptor_paths.push(root)
-      Ok(())
-    } else {
+  try @mbfs.is_dir(root) catch {
+    error =>
       Err(
         CatalogDiagnostic::new(
           InvalidSearchRoot,
           root,
-          "extension search root must be a directory or extension.json file",
+          "failed to inspect extension search root: " +
+          @debug.render(@debug.to_repr(error)),
         ).to_error_string(),
       )
-    }
-  })
+  } noraise {
+    is_dir =>
+      if is_dir {
+        collect_extension_descriptor_files_from_directory(
+          root, descriptor_paths,
+        )
+      } else if root.has_suffix("extension.json") {
+        descriptor_paths.push(root)
+        Ok(())
+      } else {
+        Err(
+          CatalogDiagnostic::new(
+            InvalidSearchRoot,
+            root,
+            "extension search root must be a directory or extension.json file",
+          ).to_error_string(),
+        )
+      }
+  }
 }
 
 ///|
@@ -256,29 +259,37 @@ fn collect_extension_descriptor_files_from_directory(
 fn read_extension_search_directory(
   directory : String,
 ) -> Result[Array[String], String] {
-  let entries_result : Result[Array[String], _] = try? @mbfs.read_dir(directory)
-  entries_result.map_err(fn(error) {
-    CatalogDiagnostic::new(
-      DirectoryReadFailed,
-      directory,
-      "failed to read extension search root: " +
-      @debug.render(@debug.to_repr(error)),
-    ).to_error_string()
-  })
+  try @mbfs.read_dir(directory) catch {
+    error =>
+      Err(
+        CatalogDiagnostic::new(
+          DirectoryReadFailed,
+          directory,
+          "failed to read extension search root: " +
+          @debug.render(@debug.to_repr(error)),
+        ).to_error_string(),
+      )
+  } noraise {
+    entries => Ok(entries)
+  }
 }
 
 ///|
 /// Returns whether one candidate search entry is a directory.
 fn is_extension_search_directory(path : String) -> Result[Bool, String] {
-  let child_is_dir_result : Result[Bool, _] = try? @mbfs.is_dir(path)
-  child_is_dir_result.map_err(fn(error) {
-    CatalogDiagnostic::new(
-      InvalidSearchRoot,
-      path,
-      "failed to inspect extension search entry: " +
-      @debug.render(@debug.to_repr(error)),
-    ).to_error_string()
-  })
+  try @mbfs.is_dir(path) catch {
+    error =>
+      Err(
+        CatalogDiagnostic::new(
+          InvalidSearchRoot,
+          path,
+          "failed to inspect extension search entry: " +
+          @debug.render(@debug.to_repr(error)),
+        ).to_error_string(),
+      )
+  } noraise {
+    is_dir => Ok(is_dir)
+  }
 }
 
 ///|
