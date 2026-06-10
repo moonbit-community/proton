@@ -25,3 +25,11 @@ package-level duplicate-name checks.
 Generated event helpers are async and take an explicit
 `context : @app.AppCommandExtensionContext` parameter. Commands only need a
 context parameter when they call generated event helpers.
+
+`#lepus.script` can annotate a synchronous zero-argument function returning
+`String`; generated specs include each returned string in `scripts=[...]`.
+
+`#lepus.destroy` can annotate one synchronous function returning `Unit`. The
+function may either take no parameters or take
+`context : @app.AppCommandExtensionContext`; generated specs wire it to the
+command extension destroy hook.

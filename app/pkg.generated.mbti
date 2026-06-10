@@ -59,7 +59,7 @@ type AppCommandExtensionSpec
 pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
-pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String]) -> Self
+pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit) -> Self
 
 type AppCommandsConfig
 pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
