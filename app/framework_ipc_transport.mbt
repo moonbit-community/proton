@@ -34,6 +34,23 @@ fn framework_ipc_launch_config_ws(
 }
 
 ///|
+async fn prepare_framework_stdio(
+  command : String,
+) -> (&@process.ProcessInput, &@process.ProcessOutput, &@process.ProcessOutput) {
+  let stdin_path = command + ".framework.stdin"
+  let stdout_path = command + ".framework.stdout.log"
+  let stderr_path = command + ".framework.stderr.log"
+  @mbfs.write_string_to_file(stdin_path, "")
+  @mbfs.write_string_to_file(stdout_path, "")
+  @mbfs.write_string_to_file(stderr_path, "")
+  (
+    @process.redirect_from_file(stdin_path),
+    @process.redirect_to_file(stdout_path),
+    @process.redirect_to_file(stderr_path),
+  )
+}
+
+///|
 async fn[X] spawn_framework_process_in_group(
   group : @async.TaskGroup[X],
   command : String,
@@ -41,12 +58,16 @@ async fn[X] spawn_framework_process_in_group(
   cwd? : String,
 ) -> Result[FrameworkIpcChild, String] {
   try {
+    let (stdin, stdout, stderr) = prepare_framework_stdio(command)
     let child = match cwd {
       Some(cwd) =>
         @process.spawn(
           group,
           command,
           args,
+          stdin~,
+          stdout~,
+          stderr~,
           cwd~,
           cancel_handler=@process.graceful_cancel(timeout=1000),
           no_wait=true,
@@ -56,6 +77,9 @@ async fn[X] spawn_framework_process_in_group(
           group,
           command,
           args,
+          stdin~,
+          stdout~,
+          stderr~,
           cancel_handler=@process.graceful_cancel(timeout=1000),
           no_wait=true,
         )

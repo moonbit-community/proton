@@ -75,3 +75,4 @@ pub fn LoadedAppManifest::new(@lepus_manifest.AppManifest, base_dir? : String?) 
 // Type aliases
 
 // Traits
+
