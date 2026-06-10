@@ -3,7 +3,6 @@ package "extensions/dialog"
 
 import {
   "justjavac/lepus_app",
-  "justjavac/lepus_core",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -11,11 +10,7 @@ import {
 // Values
 pub async fn emit_dialog_activity(@lepus_app.AppCommandExtensionContext, DialogActivity) -> Unit
 
-pub fn extension() -> @lepus_core.Extension
-
 pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
-
-pub fn spec() -> @lepus_core.ExtensionSpec
 
 // Errors
 

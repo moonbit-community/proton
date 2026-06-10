@@ -6,7 +6,7 @@
   "description": "Native message, confirm, and file dialogs for desktop apps.",
   "namespace": "dialog",
   "package": "extensions/dialog",
-  "spec_symbol": "spec",
+  "spec_symbol": "generated_app_command_extension",
   "manifest_key": "justjavac/lepus-dialog",
   "platforms": ["windows"],
   "dependencies": [],
