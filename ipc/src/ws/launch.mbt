@@ -150,19 +150,14 @@ fn ws_ipc_health_body() -> String {
 
 ///|
 fn ws_ipc_health_body_is_valid(text : String) -> Bool {
-  let parsed : Result[Json, _] = try? @json.parse(text)
-  match parsed {
-    Err(_) => false
-    Ok(json) => {
-      let body : Result[WsIpcHealthResponse, _] = try? @json.from_json(json)
-      match body {
-        Err(_) => false
-        Ok(body) =>
-          body.ok &&
-          body.transport == ws_ipc_health_transport &&
-          body.version == ws_ipc_health_version
-      }
-    }
+  try {
+    let json : Json = @json.parse(text)
+    let body : WsIpcHealthResponse = @json.from_json(json)
+    body.ok &&
+    body.transport == ws_ipc_health_transport &&
+    body.version == ws_ipc_health_version
+  } catch {
+    _ => false
   }
 }
 

@@ -104,10 +104,10 @@ fn read_extension_codegen_config(
   path : String,
 ) -> Result[(String, String), String] raise @mbfs.IOError {
   let text = @mbfs.read_file_to_string(path)
-  let parsed : Result[Json, _] = try? @json.parse(text)
-  match parsed {
-    Err(error) => Err("failed to parse extension.json: " + error.to_string())
-    Ok(json) => decode_extension_codegen_config(json)
+  try @json.parse(text) catch {
+    error => Err("failed to parse extension.json: " + error.to_string())
+  } noraise {
+    json => decode_extension_codegen_config(json)
   }
 }
 

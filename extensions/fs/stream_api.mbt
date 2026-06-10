@@ -237,44 +237,41 @@ fn build_open_mode_from_options(
 ///|
 /// Reads a file into a byte buffer.
 fn read_path_bytes(path : String) -> Result[Bytes, String] {
-  let bytes : Result[Bytes, _] = try? @xfs.read_file_to_bytes(path)
-  match bytes {
-    Ok(bytes) => Ok(bytes)
-    Err(error) =>
-      Err("Failed to read file: " + @debug.render(@debug.to_repr(error)))
+  try @xfs.read_file_to_bytes(path) catch {
+    error => Err("Failed to read file: " + @debug.render(@debug.to_repr(error)))
+  } noraise {
+    bytes => Ok(bytes)
   }
 }
 
 ///|
 /// Writes a byte buffer to a file, replacing any existing content.
 fn write_path_bytes(path : String, content : Bytes) -> Result[Unit, String] {
-  let write_result : Result[Unit, _] = try? @xfs.write_bytes_to_file(
-    path, content,
-  )
-  match write_result {
-    Ok(_) => Ok(())
-    Err(error) =>
+  try @xfs.write_bytes_to_file(path, content) catch {
+    error =>
       Err("Failed to write file: " + @debug.render(@debug.to_repr(error)))
+  } noraise {
+    _ => Ok(())
   }
 }
 
 ///|
 /// Returns whether a path currently points to a file.
 fn is_path_file(path : String) -> Bool {
-  let result : Result[Bool, _] = try? @xfs.is_file(path)
-  match result {
-    Ok(value) => value
-    Err(_) => false
+  try @xfs.is_file(path) catch {
+    _ => false
+  } noraise {
+    value => value
   }
 }
 
 ///|
 /// Returns whether a path currently points to a directory.
 fn is_path_dir(path : String) -> Bool {
-  let result : Result[Bool, _] = try? @xfs.is_dir(path)
-  match result {
-    Ok(value) => value
-    Err(_) => false
+  try @xfs.is_dir(path) catch {
+    _ => false
+  } noraise {
+    value => value
   }
 }
 
@@ -465,22 +462,22 @@ fn native_remove_file(path : String) -> Result[Bool, String] {
   if !native_path_exists(path) {
     return Ok(false)
   }
-  let removed : Result[Unit, _] = try? @xfs.remove_file(path)
-  match removed {
-    Ok(_) => Ok(true)
-    Err(error) =>
+  try @xfs.remove_file(path) catch {
+    error =>
       Err("Failed to remove file: " + @debug.render(@debug.to_repr(error)))
+  } noraise {
+    _ => Ok(true)
   }
 }
 
 ///|
 /// Reads the direct entries of a directory.
 fn native_read_dir(path : String) -> Result[Array[String], String] {
-  let entries : Result[Array[String], _] = try? @xfs.read_dir(path)
-  match entries {
-    Ok(entries) => Ok(entries)
-    Err(error) =>
+  try @xfs.read_dir(path) catch {
+    error =>
       Err("Failed to read directory: " + @debug.render(@debug.to_repr(error)))
+  } noraise {
+    entries => Ok(entries)
   }
 }
 

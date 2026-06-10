@@ -34,11 +34,12 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_result(
     abort("OpRegistry::handle_result: op already registered: " + name)
   }
   self.handlers.set(name, fn(payload_json) {
-    let payload : Result[Payload, _] = try? @json.from_json(payload_json)
-    payload
-    .map_err(fn(err) { err.to_string() })
-    .bind(callback)
-    .map(fn(reply) { ToJson::to_json(reply) })
+    try {
+      let payload : Payload = @json.from_json(payload_json)
+      callback(payload).map(fn(reply) { ToJson::to_json(reply) })
+    } catch {
+      err => Err(err.to_string())
+    }
   })
 }
 
@@ -67,12 +68,8 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result(
   }
   self.async_handlers.set(name, async fn(payload_json) {
     let result = try {
-      let payload : Result[Payload, _] = try? @json.from_json(payload_json)
-      match payload {
-        Ok(payload) =>
-          callback(payload).map(fn(reply) { ToJson::to_json(reply) })
-        Err(err) => Err(err.to_string())
-      }
+      let payload : Payload = @json.from_json(payload_json)
+      callback(payload).map(fn(reply) { ToJson::to_json(reply) })
     } catch {
       err => Err(err.to_string())
     }

@@ -194,25 +194,30 @@ pub fn load_extension_descriptor_from_file(
 ///|
 /// Reads and parses one JSON file for catalog metadata use.
 fn read_json_file(path : String) -> Result[Json, String] {
-  let text : Result[String, _] = try? @mbfs.read_file_to_string(path)
-  text
-  .map_err(fn(error) {
-    CatalogDiagnostic::new(
-      MissingFile,
-      path,
-      "failed to read JSON file: " + @debug.render(@debug.to_repr(error)),
-    ).to_error_string()
-  })
-  .bind(fn(text) {
-    let parsed : Result[Json, _] = try? @json.parse(text)
-    parsed.map_err(fn(error) {
-      CatalogDiagnostic::new(
-        InvalidJson,
-        path,
-        "failed to parse JSON: " + error.to_string(),
-      ).to_error_string()
-    })
-  })
+  try @mbfs.read_file_to_string(path) catch {
+    error =>
+      Err(
+        CatalogDiagnostic::new(
+          MissingFile,
+          path,
+          "failed to read JSON file: " + @debug.render(@debug.to_repr(error)),
+        ).to_error_string(),
+      )
+  } noraise {
+    text =>
+      try @json.parse(text) catch {
+        error =>
+          Err(
+            CatalogDiagnostic::new(
+              InvalidJson,
+              path,
+              "failed to parse JSON: " + error.to_string(),
+            ).to_error_string(),
+          )
+      } noraise {
+        json => Ok(json)
+      }
+  }
 }
 
 ///|
@@ -450,10 +455,12 @@ fn descriptor_required_int(
   key : String,
 ) -> Result[Int, String] {
   descriptor_required_field(object, key).bind(fn(json) {
-    let decoded : Result[Int, _] = try? @json.from_json(json)
-    decoded.map_err(fn(error) {
-      "invalid int for metadata field " + key + ": " + error.to_string()
-    })
+    try @json.from_json(json) catch {
+      error =>
+        Err("invalid int for metadata field " + key + ": " + error.to_string())
+    } noraise {
+      value => Ok(value)
+    }
   })
 }
 

@@ -13,23 +13,17 @@ struct AssetBundleProbe {
 fn[Payload : @json.FromJson] decode_single_argument(
   raw_req : Bytes,
 ) -> Result[Payload, String] {
-  let request_json : Result[Json, _] = try? @json.parse(@ffi.from_cstr(raw_req))
-  request_json
-  .map_err(fn(err) { err.to_string() })
-  .bind(fn(request_json) {
-    let request_args : Result[Array[Payload], _] = try? @json.from_json(
-      request_json,
-    )
-    request_args
-    .map_err(fn(err) { err.to_string() })
-    .bind(fn(request_args) {
-      if request_args.length() == 1 {
-        Ok(request_args[0])
-      } else {
-        Err("Expected exactly one argument")
-      }
-    })
-  })
+  try {
+    let request_json : Json = @json.parse(@ffi.from_cstr(raw_req))
+    let request_args : Array[Payload] = @json.from_json(request_json)
+    if request_args.length() == 1 {
+      Ok(request_args[0])
+    } else {
+      Err("Expected exactly one argument")
+    }
+  } catch {
+    err => Err(err.to_string())
+  }
 }
 
 ///|

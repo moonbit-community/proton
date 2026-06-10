@@ -69,10 +69,12 @@ fn release_guard(
   keep_guard : @sys_keepawake.Guard,
 ) -> Result[KeepAwakeReply, String] {
   let scope_name = scope_label(keep_guard.scope())
-  let result : Result[Unit, @sys_keepawake.KeepAwakeError] = try? keep_guard.release()
-  result
-  .map_err(keepawake_error)
-  .map(fn(_) { KeepAwakeReply::{ active: false, scope: Some(scope_name) } })
+  try {
+    keep_guard.release()
+    Ok(KeepAwakeReply::{ active: false, scope: Some(scope_name) })
+  } catch {
+    error => Err(keepawake_error(error))
+  }
 }
 
 ///|
@@ -85,12 +87,16 @@ fn acquire_guard(
       Some(reason) => reason
       None => @sys_keepawake.default_reason
     }
-    let result : Result[@sys_keepawake.Guard, @sys_keepawake.KeepAwakeError] = match
-      scope {
-      Some(scope) => try? @sys_keepawake.acquire(reason~, scope~)
-      None => try? @sys_keepawake.acquire(reason~)
+    match scope {
+      Some(scope) =>
+        Ok(@sys_keepawake.acquire(reason~, scope~)) catch {
+          error => Err(keepawake_error(error))
+        }
+      None =>
+        Ok(@sys_keepawake.acquire(reason~)) catch {
+          error => Err(keepawake_error(error))
+        }
     }
-    result.map_err(keepawake_error)
   })
 }
 
@@ -157,8 +163,12 @@ pub fn extension() -> @core.Extension {
     on_destroy=fn(_extension) {
       match active_guard_ref {
         Some(active_guard) => {
-          let result : Result[Unit, @sys_keepawake.KeepAwakeError] = try? active_guard.release()
-          ignore(result)
+          try {
+            active_guard.release()
+            ()
+          } catch {
+            _ => ()
+          }
           active_guard_ref = None
         }
         None => ()
