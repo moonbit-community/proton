@@ -1,10 +1,4 @@
 ///|
-let extension_id = "justjavac/lepus-microphone"
-
-///|
-let extension_namespace = "microphone"
-
-///|
 struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -50,6 +44,7 @@ struct MicrophoneDevicesReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+#lepus.event(name="activity")
 struct MicrophoneActivity {
   operation : String
   count : Int?
@@ -77,16 +72,6 @@ fn sample_format_label(format : @sys_microphone.SampleFormat) -> String {
     U16 => "u16"
     F32 => "f32"
   }
-}
-
-///|
-/// Emits a microphone activity event for JavaScript listeners.
-fn emit_activity(
-  extension : @core.ExtensionContext,
-  operation : String,
-  count? : Int? = None,
-) -> Unit {
-  extension.emit("activity", MicrophoneActivity::{ operation, count })
 }
 
 ///|
@@ -167,36 +152,43 @@ fn microphone_devices_reply(
 }
 
 ///|
-/// Builds the `microphone` extension for direct installation.
-/// It currently exposes native device discovery and capture-config helpers from
-/// the `justjavac/microphone` package.
-pub fn extension() -> @core.Extension {
-  @core.Extension::new(extension_id, extension_namespace, fn(extension) {
-    extension.op("listDevices", fn(_payload : EmptyPayload) {
-      let devices = @sys_microphone.MicrophoneDevice::list()
-      emit_activity(extension, "listDevices", count=Some(devices.length()))
-      microphone_devices_reply(devices)
-    })
-
-    extension.op("parseListing", fn(payload : ParseListingPayload) {
-      let devices = @sys_microphone.MicrophoneDevice::parse_listing(
-        payload.listing,
-      )
-      microphone_devices_reply(devices)
-    })
-
-    extension.op_result("config", fn(payload : CaptureConfigPayload) {
-      build_capture_config(payload).map(capture_config_reply)
-    })
+/// Lists native microphone devices from a generated app-command extension.
+#lepus.command(name="listDevices")
+async fn list_devices(
+  context : @app.AppCommandExtensionContext,
+  _payload : EmptyPayload?,
+) -> MicrophoneDevicesReply {
+  let devices = @sys_microphone.MicrophoneDevice::list()
+  emit_microphone_activity(context, MicrophoneActivity::{
+    operation: "listDevices",
+    count: Some(devices.length()),
   })
+  microphone_devices_reply(devices)
 }
 
 ///|
-/// Builds the declarative `microphone` extension spec.
-/// Register this when microphone discovery helpers should be selected through
-/// app composition or generated registry code.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+/// Parses a platform microphone listing from a generated app-command extension.
+#lepus.command(name="parseListing")
+fn parse_listing(listing : String) -> MicrophoneDevicesReply {
+  let devices = @sys_microphone.MicrophoneDevice::parse_listing(listing)
+  microphone_devices_reply(devices)
+}
+
+///|
+/// Builds a normalized capture config from a generated app-command extension.
+#lepus.command(name="config")
+fn config(
+  channels : Int?,
+  sample_rate_hz : Int?,
+  sample_format : String?,
+  echo_cancellation : Bool?,
+  noise_suppression : Bool?,
+) -> Result[CaptureConfigReply, String] {
+  build_capture_config(CaptureConfigPayload::{
+    channels,
+    sample_rate_hz,
+    sample_format,
+    echo_cancellation,
+    noise_suppression,
+  }).map(capture_config_reply)
 }
