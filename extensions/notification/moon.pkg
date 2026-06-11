@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
   "justjavac/notification" @sys_notification,
-  "justjavac/lepus_core" @core,
+  "justjavac/lepus_app" @app,
 }
 
 import {
@@ -11,7 +11,15 @@ import {
 supported_targets = "native"
 
 options(
+  "pre-build": [
+    {
+      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "input": "extension.mbt",
+      "output": "extension.g.mbt",
+    },
+  ],
   targets: {
+    "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
   },

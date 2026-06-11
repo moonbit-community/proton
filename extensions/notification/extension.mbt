@@ -1,10 +1,4 @@
 ///|
-let extension_id = "justjavac/lepus-notification"
-
-///|
-let extension_namespace = "notification"
-
-///|
 struct NotificationPayload {
   title : String?
   body : String
@@ -17,6 +11,7 @@ struct NotificationReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+#lepus.event(name="activity")
 struct NotificationActivity {
   operation : String
   title : String?
@@ -58,20 +53,6 @@ fn level_to_native(level : String?) -> @sys_notification.NotificationLevel {
 }
 
 ///|
-/// Emits a notification activity event for JavaScript listeners.
-fn emit_activity(
-  extension : @core.ExtensionContext,
-  title : String?,
-  level : String?,
-) -> Unit {
-  extension.emit("activity", NotificationActivity::{
-    operation: "show",
-    title,
-    level,
-  })
-}
-
-///|
 /// Shows one native notification and converts the result into the extension reply shape.
 fn show_notification(
   payload : NotificationPayload,
@@ -86,28 +67,24 @@ fn show_notification(
 }
 
 ///|
-/// Builds the `notification` extension for direct installation.
-/// Install it manually when trusted local content needs native notification
-/// delivery without a declarative registry step.
-pub fn extension() -> @core.Extension {
-  @core.Extension::new(extension_id, extension_namespace, fn(extension) {
-    extension.op_result("show", fn(payload : NotificationPayload) {
-      with_supported(fn() {
-        show_notification(payload).map(fn(reply) {
-          emit_activity(extension, payload.title, payload.level)
-          reply
-        })
+/// Shows one native notification from a generated app-command extension.
+#lepus.command(name="show")
+async fn show(
+  context : @app.AppCommandExtensionContext,
+  title : String?,
+  body : String,
+  level : String?,
+) -> Result[NotificationReply, String] {
+  let payload = NotificationPayload::{ title, body, level }
+  match with_supported(fn() { show_notification(payload) }) {
+    Err(error) => Err(error)
+    Ok(reply) => {
+      emit_notification_activity(context, NotificationActivity::{
+        operation: "show",
+        title,
+        level,
       })
-    })
-  })
-}
-
-///|
-/// Builds the declarative `notification` extension spec.
-/// Register this when notification support should be selected through app
-/// composition or tooling workflows.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+      Ok(reply)
+    }
+  }
 }
