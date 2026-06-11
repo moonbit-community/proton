@@ -43,9 +43,10 @@ test "microphone parsed listings become serializable device replies" {
 }
 
 ///|
-test "microphone metadata constants match public spec" {
-  assert_eq(extension().id(), "justjavac/lepus-microphone")
-  assert_eq(extension().js_namespace(), "microphone")
-  assert_eq(spec().id(), "justjavac/lepus-microphone")
-  assert_eq(spec().js_namespace(), "microphone")
+test "microphone metadata constants match generated app command extension" {
+  assert_eq(
+    generated_app_command_extension().id(),
+    "justjavac/lepus-microphone",
+  )
+  assert_eq(generated_app_command_extension().js_namespace(), "microphone")
 }

@@ -113,9 +113,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/lepus-keepawake",
     "keepAwake",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("microphone"),
-    @microphone.spec(),
+    @microphone.generated_app_command_extension(),
     "extensions/microphone",
     "justjavac/lepus-microphone",
     "microphone",
