@@ -85,9 +85,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/lepus-devtools",
     "devtools",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
-    @dialog.spec(),
+    @dialog.generated_app_command_extension(),
     "extensions/dialog",
     "justjavac/lepus-dialog",
     "dialog",

@@ -2,15 +2,15 @@
 package "extensions/dialog"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus_app",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub async fn emit_dialog_activity(@lepus_app.AppCommandExtensionContext, DialogActivity) -> Unit
 
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
 
 // Errors
 
@@ -22,6 +22,14 @@ type DialogActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 type FileDialogPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type FileDialogReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type LepusConfirmPayload derive(@json.FromJson)
+
+type LepusMessagePayload derive(@json.FromJson)
+
+type LepusOpenFilePayload derive(@json.FromJson)
+
+type LepusSaveFilePayload derive(@json.FromJson)
 
 type MessagePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

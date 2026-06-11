@@ -21,9 +21,8 @@ fn main {
       "justjavac/lepus-clipboard": @manifest.ExtensionSetting::enabled(),
     },
   )
-  let extension_registry = @app.ExtensionRegistry::new()
-  let _ = extension_registry.register(@dialog.spec())
   let command_registry = @app.AppCommandExtensionRegistry::new()
+  let _ = command_registry.register(@dialog.generated_app_command_extension())
   let _ = command_registry.register(
     @clipboard.generated_app_command_extension(),
   )
@@ -36,7 +35,6 @@ fn main {
       manifest,
       framework_command,
       command_registry,
-      extension_registry~,
       framework_args=[@app.framework_process_arg()],
     ) {
     Ok(_) => ()
