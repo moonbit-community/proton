@@ -1,10 +1,4 @@
 ///|
-let extension_id = "justjavac/lepus-shell"
-
-///|
-let extension_namespace = "shell"
-
-///|
 struct ShellPayload {
   target : String
 } derive(ToJson, FromJson, Debug, Eq)
@@ -20,6 +14,7 @@ struct ShellReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+#lepus.event(name="activity")
 struct ShellActivity {
   operation : String
   target : String
@@ -68,19 +63,8 @@ fn validate_target(value : String, label : String) -> Result[String, String] {
 }
 
 ///|
-/// Emits a shell activity event for JavaScript listeners.
-fn emit_activity(
-  extension : @core.ExtensionContext,
-  operation : String,
-  target : String,
-) -> Unit {
-  extension.emit("activity", ShellActivity::{ operation, target })
-}
-
-///|
 /// Runs one native shell action and converts its result into the common reply type.
-fn perform_shell_action(
-  extension : @core.ExtensionContext,
+fn run_shell_action(
   operation : String,
   target : String,
   label : String,
@@ -92,50 +76,50 @@ fn perform_shell_action(
       guard launcher(@ffi.to_wstr(target)) else {
         return Err("shell.\{operation} failed")
       }
-      emit_activity(extension, operation, target)
       Ok(ShellReply::{ launched: true })
     }
   }
 }
 
 ///|
-/// Builds the `shell` extension for direct installation.
-/// Install it manually when trusted local content needs shell launching helpers
-/// on one webview.
-pub fn extension() -> @core.Extension {
-  @core.Extension::new(extension_id, extension_namespace, fn(extension) {
-    extension.op_result("open", fn(payload : ShellPayload) {
-      with_supported(fn() {
-        perform_shell_action(
-          extension,
-          "open",
-          payload.target,
-          "shell.open target",
-          open_shell_ffi,
-        )
-      })
-    })
-
-    extension.op_result("revealItem", fn(payload : RevealItemPayload) {
-      with_supported(fn() {
-        perform_shell_action(
-          extension,
-          "revealItem",
-          payload.path,
-          "shell.revealItem path",
-          reveal_item_ffi,
-        )
-      })
-    })
-  })
+/// Opens one target through the native shell from a generated app-command extension.
+#lepus.command(name="open")
+async fn open(
+  context : @app.AppCommandExtensionContext,
+  target : String,
+) -> Result[ShellReply, String] {
+  match
+    with_supported(fn() {
+      run_shell_action("open", target, "shell.open target", open_shell_ffi)
+    }) {
+    Err(error) => Err(error)
+    Ok(reply) => {
+      emit_shell_activity(context, ShellActivity::{ operation: "open", target })
+      Ok(reply)
+    }
+  }
 }
 
 ///|
-/// Builds the declarative `shell` extension spec.
-/// Use this when shell integration should be linked through registry-based app
-/// composition.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+/// Reveals one filesystem item through the native shell from a generated app-command extension.
+#lepus.command(name="revealItem")
+async fn reveal_item(
+  context : @app.AppCommandExtensionContext,
+  path : String,
+) -> Result[ShellReply, String] {
+  match
+    with_supported(fn() {
+      run_shell_action(
+        "revealItem", path, "shell.revealItem path", reveal_item_ffi,
+      )
+    }) {
+    Err(error) => Err(error)
+    Ok(reply) => {
+      emit_shell_activity(context, ShellActivity::{
+        operation: "revealItem",
+        target: path,
+      })
+      Ok(reply)
+    }
+  }
 }
