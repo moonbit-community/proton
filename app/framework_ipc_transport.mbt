@@ -34,12 +34,41 @@ fn framework_ipc_launch_config_ws(
 }
 
 ///|
+/// The final path component of `command`, accepting both separators so a
+/// Windows path keeps its file name on any host.
+fn command_file_name(command : String) -> String {
+  let mut name = command[:]
+  for part in command.split("/") {
+    name = part
+  }
+  let tail = name.to_owned()
+  let mut file = tail[:]
+  for part in tail.split("\\") {
+    file = part
+  }
+  file.to_owned()
+}
+
+///|
+/// Redirect the framework child's stdio to files. The files live in the
+/// framework's working directory when the caller provides one — the command
+/// itself may sit somewhere read-only (a signed macOS bundle under App
+/// Translocation is mounted read-only), where writing next to the executable
+/// would abort the whole launch. Without a cwd (dev runs from a writable
+/// checkout) they stay command-adjacent. Names are stable per command, so a
+/// relaunch truncates the previous run's files instead of accumulating.
 async fn prepare_framework_stdio(
   command : String,
+  dir? : String,
 ) -> (&@process.ProcessInput, &@process.ProcessOutput, &@process.ProcessOutput) {
-  let stdin_path = command + ".framework.stdin"
-  let stdout_path = command + ".framework.stdout.log"
-  let stderr_path = command + ".framework.stderr.log"
+  let base = if dir is Some(dir) {
+    dir + "/" + command_file_name(command)
+  } else {
+    command
+  }
+  let stdin_path = base + ".framework.stdin"
+  let stdout_path = base + ".framework.stdout.log"
+  let stderr_path = base + ".framework.stderr.log"
   @mbfs.write_string_to_file(stdin_path, "")
   @mbfs.write_string_to_file(stdout_path, "")
   @mbfs.write_string_to_file(stderr_path, "")
@@ -58,7 +87,7 @@ async fn[X] spawn_framework_process_in_group(
   cwd? : String,
 ) -> Result[FrameworkIpcChild, String] {
   try {
-    let (stdin, stdout, stderr) = prepare_framework_stdio(command)
+    let (stdin, stdout, stderr) = prepare_framework_stdio(command, dir?=cwd)
     let child = match cwd {
       Some(cwd) =>
         @process.spawn(
