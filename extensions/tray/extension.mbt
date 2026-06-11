@@ -1,10 +1,4 @@
 ///|
-let extension_id = "justjavac/lepus-tray"
-
-///|
-let extension_namespace = "tray"
-
-///|
 struct TrayShowPayload {
   tooltip : String?
 } derive(ToJson, FromJson, Debug, Eq)
@@ -23,10 +17,14 @@ struct TrayReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+#lepus.event(name="activity")
 struct TrayActivity {
   operation : String
   tooltip : String?
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+let app_command_tray_handle : Ref[@sys_tray.Tray?] = Ref(None)
 
 ///|
 /// Verifies that tray support is available on the current platform.
@@ -71,73 +69,78 @@ fn destroy_tray(tray_handle : @sys_tray.Tray?) -> Unit {
 }
 
 ///|
-/// Emits a tray activity event for JavaScript listeners.
-fn emit_activity(
-  extension : @core.ExtensionContext,
-  operation : String,
+/// Returns the app-command tray handle, initializing it when needed.
+fn tray_handle() -> @sys_tray.Tray? {
+  match app_command_tray_handle.val {
+    Some(handle) => Some(handle)
+    None => {
+      let handle = init_tray()
+      app_command_tray_handle.val = handle
+      handle
+    }
+  }
+}
+
+///|
+/// Destroys the app-command tray handle.
+#lepus.destroy
+fn cleanup_tray(context : @app.AppCommandExtensionContext) -> Unit {
+  ignore(context.extension_id())
+  destroy_tray(app_command_tray_handle.val)
+  app_command_tray_handle.val = None
+}
+
+///|
+/// Shows the native tray icon from a generated app-command extension.
+#lepus.command(name="show")
+async fn show(
+  context : @app.AppCommandExtensionContext,
   tooltip : String?,
-) -> Unit {
-  extension.emit("activity", TrayActivity::{ operation, tooltip })
+) -> Result[TrayReply, String] {
+  match with_tray_handle(tray_handle(), fn(handle) { handle.show(tooltip~) }) {
+    Err(error) => Err(error)
+    Ok(visible) => {
+      emit_tray_activity(context, TrayActivity::{ operation: "show", tooltip })
+      Ok(TrayReply::{ visible, })
+    }
+  }
 }
 
 ///|
-/// Builds the `tray` extension for direct installation.
-/// Install it manually when a trusted desktop app wants tray control without
-/// going through registry-based composition.
-pub fn extension() -> @core.Extension {
-  let mut tray_handle : @sys_tray.Tray? = None
-  @core.Extension::new(
-    extension_id,
-    extension_namespace,
-    fn(extension) {
-      tray_handle = init_tray()
-
-      extension.op_result("show", fn(payload : TrayShowPayload) {
-        with_tray_handle(tray_handle, fn(handle) {
-          handle
-          .show(tooltip=payload.tooltip)
-          .map(fn(visible) {
-            emit_activity(extension, "show", payload.tooltip)
-            TrayReply::{ visible, }
-          })
-        })
+/// Hides the native tray icon from a generated app-command extension.
+#lepus.command(name="hide")
+async fn hide(
+  context : @app.AppCommandExtensionContext,
+  _payload : EmptyPayload?,
+) -> Result[TrayReply, String] {
+  match with_tray_handle(tray_handle(), fn(handle) { handle.hide() }) {
+    Err(error) => Err(error)
+    Ok(visible) => {
+      emit_tray_activity(context, TrayActivity::{
+        operation: "hide",
+        tooltip: None,
       })
-
-      extension.op_result("hide", fn(_payload : EmptyPayload) {
-        with_tray_handle(tray_handle, fn(handle) {
-          handle
-          .hide()
-          .map(fn(visible) {
-            emit_activity(extension, "hide", None)
-            TrayReply::{ visible, }
-          })
-        })
-      })
-
-      extension.op_result("setTooltip", fn(payload : TrayTooltipPayload) {
-        with_tray_handle(tray_handle, fn(handle) {
-          handle
-          .set_tooltip(payload.tooltip)
-          .map(fn(visible) {
-            emit_activity(extension, "setTooltip", Some(payload.tooltip))
-            TrayReply::{ visible, }
-          })
-        })
-      })
-    },
-    on_destroy=fn(_extension) {
-      destroy_tray(tray_handle)
-      tray_handle = None
-    },
-  )
+      Ok(TrayReply::{ visible, })
+    }
+  }
 }
 
 ///|
-/// Builds the declarative `tray` extension spec.
-/// Register this when tray support should be selected through app planning or
-/// tooling workflows.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+/// Updates the native tray tooltip from a generated app-command extension.
+#lepus.command(name="setTooltip")
+async fn set_tooltip(
+  context : @app.AppCommandExtensionContext,
+  tooltip : String,
+) -> Result[TrayReply, String] {
+  match
+    with_tray_handle(tray_handle(), fn(handle) { handle.set_tooltip(tooltip) }) {
+    Err(error) => Err(error)
+    Ok(visible) => {
+      emit_tray_activity(context, TrayActivity::{
+        operation: "setTooltip",
+        tooltip: Some(tooltip),
+      })
+      Ok(TrayReply::{ visible, })
+    }
+  }
 }

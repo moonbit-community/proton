@@ -17,9 +17,8 @@ fn main {
       "justjavac/lepus-global-hotkey": @manifest.ExtensionSetting::enabled(),
     },
   )
-  let extension_registry = @app.ExtensionRegistry::new()
-  let _ = extension_registry.register(@tray.spec())
   let command_registry = @app.AppCommandExtensionRegistry::new()
+  let _ = command_registry.register(@tray.generated_app_command_extension())
   let _ = command_registry.register(
     @notification.generated_app_command_extension(),
   )
@@ -35,7 +34,6 @@ fn main {
       manifest,
       framework_command,
       command_registry,
-      extension_registry~,
       framework_args=[@app.framework_process_arg()],
     ) {
     Ok(_) => ()

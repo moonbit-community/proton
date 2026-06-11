@@ -2,20 +2,26 @@
 package "extensions/tray"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus_app",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub async fn emit_tray_activity(@lepus_app.AppCommandExtensionContext, TrayActivity) -> Unit
 
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
 
 // Errors
 
 // Types and methods
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type LepusHidePayload derive(@json.FromJson)
+
+type LepusSetTooltipPayload derive(@json.FromJson)
+
+type LepusShowPayload derive(@json.FromJson)
 
 type TrayActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
