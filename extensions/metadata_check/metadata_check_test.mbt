@@ -120,9 +120,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/lepus-microphone",
     "microphone",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("notification"),
-    @notification.spec(),
+    @notification.generated_app_command_extension(),
     "extensions/notification",
     "justjavac/lepus-notification",
     "notification",

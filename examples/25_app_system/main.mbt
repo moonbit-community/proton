@@ -18,9 +18,11 @@ fn main {
     },
   )
   let extension_registry = @app.ExtensionRegistry::new()
-  let _ = extension_registry.register(@notification.spec())
   let _ = extension_registry.register(@tray.spec())
   let command_registry = @app.AppCommandExtensionRegistry::new()
+  let _ = command_registry.register(
+    @notification.generated_app_command_extension(),
+  )
   let _ = command_registry.register(
     @global_hotkey.generated_app_command_extension(),
   )
