@@ -1,5 +1,12 @@
 ///|
 fn main {
+  if @app.is_framework_process() {
+    match @app.run_framework_process_from_cli() {
+      Ok(_) => ()
+      Err(error) => abort(error)
+    }
+    return
+  }
   let manifest = @manifest.AppManifest::new(
     @manifest.WindowManifest::new(
       "MoonBit App Runtime + Shell",
@@ -10,11 +17,20 @@ fn main {
     @manifest.AppEntry::Html(resource),
     debug=1,
   )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@shell.spec())
-  let app : @wvrt.App = match @app.create_app(manifest, registry) {
-    Ok(app) => app
+  let registry = @app.AppCommandExtensionRegistry::new()
+  let _ = registry.register(@shell.generated_app_command_extension())
+  let framework_command = match @app.current_executable_command() {
+    Ok(command) => command
     Err(error) => abort(error)
   }
-  app.run()
+  match
+    @app.run_app_command_extensions_with_framework_process(
+      manifest,
+      framework_command,
+      registry,
+      framework_args=[@app.framework_process_arg()],
+    ) {
+    Ok(_) => ()
+    Err(error) => abort(error)
+  }
 }

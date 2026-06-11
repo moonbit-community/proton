@@ -2,19 +2,23 @@
 package "extensions/shell"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus_app",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub async fn emit_shell_activity(@lepus_app.AppCommandExtensionContext, ShellActivity) -> Unit
 
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
 
 // Errors
 
 // Types and methods
+type LepusOpenPayload derive(@json.FromJson)
+
+type LepusRevealItemPayload derive(@json.FromJson)
+
 type RevealItemPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type ShellActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
