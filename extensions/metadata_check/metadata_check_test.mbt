@@ -127,9 +127,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/lepus-notification",
     "notification",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("path"),
-    @path.spec(),
+    @path.generated_app_command_extension(),
     "extensions/path",
     "justjavac/lepus-path",
     "path",

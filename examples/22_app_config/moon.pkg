@@ -1,8 +1,8 @@
 import {
   "extensions/fs",
   "extensions/path",
+  "justjavac/lepus_bootstrap" @bootstrap,
   "justjavac/lepus_app" @app,
-  "justjavac/lepus_runtime" @wvrt,
 }
 
 supported_targets = "native"

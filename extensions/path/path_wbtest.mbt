@@ -7,6 +7,12 @@ test "path helper script stays with path extension assets" {
 }
 
 ///|
+test "path metadata constants match generated app command extension" {
+  assert_eq(generated_app_command_extension().id(), "justjavac/lepus-path")
+  assert_eq(generated_app_command_extension().js_namespace(), "path")
+}
+
+///|
 test "path extension helpers expose basename dirname and extname" {
   let path = join_paths(join_paths("extensions", "path"), "example.txt")
   assert_eq(basename_path(path), "example.txt")

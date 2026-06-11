@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/x/path" @mbpath,
+  "justjavac/lepus_app" @app,
   "justjavac/lepus_core" @core,
 }
 
@@ -9,12 +10,18 @@ supported_targets = "native"
 options(
   "pre-build": [
     {
+      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "input": "extension.mbt",
+      "output": "extension.g.mbt",
+    },
+    {
       "command": "node $mod_dir/../scripts/embed_asset.mjs $input $output path_helper_template_resource",
       "input": "assets/node_path_helper.js",
       "output": "generated_path_helper_template.mbt",
     },
   ],
   targets: {
+    "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "helper_js.mbt": [ "native" ],
     "path_api.mbt": [ "native" ],

@@ -2,21 +2,17 @@
 package "extensions/path"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus_app",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
-
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
 
 // Errors
 
 // Types and methods
-type BasenamePayload derive(@json.FromJson)
-
 type BasenameReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type ExtnameReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -25,17 +21,33 @@ type FormatPayload derive(@json.FromJson)
 
 type IsAbsoluteReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type JoinPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type LepusBasenamePayload derive(@json.FromJson)
+
+type LepusDirnamePayload derive(@json.FromJson)
+
+type LepusExtnamePayload derive(@json.FromJson)
+
+type LepusFormatPayload derive(@json.FromJson)
+
+type LepusIsAbsolutePayload derive(@json.FromJson)
+
+type LepusJoinAllPayload derive(@json.FromJson)
+
+type LepusJoinPayload derive(@json.FromJson)
+
+type LepusNormalizePayload derive(@json.FromJson)
+
+type LepusParsePayload derive(@json.FromJson)
+
+type LepusRelativePayload derive(@json.FromJson)
+
+type LepusResolveAllPayload derive(@json.FromJson)
+
+type LepusResolvePayload derive(@json.FromJson)
 
 type ParseReply derive(ToJson)
 
-type PathPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
 type PathReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type PathsPayload derive(@json.FromJson)
-
-type RelativePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

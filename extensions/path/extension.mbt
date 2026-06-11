@@ -1,38 +1,4 @@
 ///|
-let extension_id = "justjavac/lepus-path"
-
-///|
-let extension_namespace = "path"
-
-///|
-struct PathPayload {
-  path : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct BasenamePayload {
-  path : String
-  suffix : String?
-} derive(FromJson)
-
-///|
-struct JoinPayload {
-  left : String
-  right : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct PathsPayload {
-  paths : Array[String]
-} derive(FromJson)
-
-///|
-struct RelativePayload {
-  path : String
-  base : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 struct FormatPayload {
   root : String?
   dir : String?
@@ -71,79 +37,100 @@ struct ParseReply {
 } derive(ToJson)
 
 ///|
-/// Registers a path API that returns a single `path` string field.
-fn register_path_reply_op(
-  extension : @core.ExtensionContext,
-  name : String,
-  callback : (String) -> String,
-) -> Unit {
-  extension.op(name, fn(payload : PathPayload) {
-    PathReply::{ path: callback(payload.path) }
-  })
+/// Installs the Node-style JavaScript helper for generated app-command APIs.
+#lepus.script
+fn generated_path_helper_script() -> String {
+  path_helper_script()
 }
 
 ///|
-/// Registers a path API that consumes many paths and returns one `path` string field.
-fn register_paths_reply_op(
-  extension : @core.ExtensionContext,
-  name : String,
-  callback : (Array[String]) -> String,
-) -> Unit {
-  extension.op(name, fn(payload : PathsPayload) {
-    PathReply::{ path: callback(payload.paths) }
-  })
+/// Returns the final path segment from a generated app-command extension.
+#lepus.command(name="basename")
+fn basename(path : String, suffix : String?) -> BasenameReply {
+  BasenameReply::{ name: basename_path(path, suffix~) }
 }
 
 ///|
-/// Builds the `path` extension for direct installation.
-///
-/// Install it with `@core.install_extension(webview, @path.extension())` to expose
-/// `window.__MoonBit__.path` for common path operations such as `resolve`,
-/// `join`, `dirname`, `basename`, `parse`, and `format`.
-pub fn extension() -> @core.Extension {
-  @core.Extension::new(
-    extension_id,
-    extension_namespace,
-    fn(extension) {
-      extension.op("basename", fn(payload : BasenamePayload) {
-        BasenameReply::{
-          name: basename_path(payload.path, suffix=payload.suffix),
-        }
-      })
-      register_path_reply_op(extension, "dirname", dirname_path)
-      extension.op("extname", fn(payload : PathPayload) {
-        ExtnameReply::{ ext: extname_path(payload.path) }
-      })
-      extension.op("isAbsolute", fn(payload : PathPayload) {
-        IsAbsoluteReply::{ is_absolute: is_absolute_path(payload.path) }
-      })
-      extension.op("join", fn(payload : JoinPayload) {
-        PathReply::{ path: join_paths(payload.left, payload.right) }
-      })
-      register_paths_reply_op(extension, "joinAll", join_many_paths)
-      register_path_reply_op(extension, "normalize", normalize_path)
-      extension.op("relative", fn(payload : RelativePayload) {
-        PathReply::{ path: relative_path(payload.path, payload.base) }
-      })
-      register_path_reply_op(extension, "resolve", resolve_path)
-      register_paths_reply_op(extension, "resolveAll", resolve_many_paths)
-      extension.op("parse", fn(payload : PathPayload) {
-        parse_path(payload.path)
-      })
-      extension.op("format", fn(payload : FormatPayload) {
-        PathReply::{ path: format_path(payload) }
-      })
-    },
-    scripts=[path_helper_script()],
-  )
+/// Returns the directory portion of a path from a generated app-command extension.
+#lepus.command(name="dirname")
+fn dirname(path : String) -> PathReply {
+  PathReply::{ path: dirname_path(path) }
 }
 
 ///|
-/// Builds the declarative `path` extension spec.
-/// Register this when common path operations should be linked declaratively
-/// through app composition.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+/// Returns the extension portion of a path from a generated app-command extension.
+#lepus.command(name="extname")
+fn extname(path : String) -> ExtnameReply {
+  ExtnameReply::{ ext: extname_path(path) }
+}
+
+///|
+/// Returns whether a path is absolute from a generated app-command extension.
+#lepus.command(name="isAbsolute")
+fn is_absolute(path : String) -> IsAbsoluteReply {
+  IsAbsoluteReply::{ is_absolute: is_absolute_path(path) }
+}
+
+///|
+/// Joins two path segments from a generated app-command extension.
+#lepus.command(name="join")
+fn join(left : String, right : String) -> PathReply {
+  PathReply::{ path: join_paths(left, right) }
+}
+
+///|
+/// Joins many path segments from a generated app-command extension.
+#lepus.command(name="joinAll")
+fn join_all(paths : Array[String]) -> PathReply {
+  PathReply::{ path: join_many_paths(paths) }
+}
+
+///|
+/// Normalizes one path from a generated app-command extension.
+#lepus.command(name="normalize")
+fn normalize(path : String) -> PathReply {
+  PathReply::{ path: normalize_path(path) }
+}
+
+///|
+/// Computes a relative path from a generated app-command extension.
+#lepus.command(name="relative")
+fn relative(path : String, base : String) -> PathReply {
+  PathReply::{ path: relative_path(path, base) }
+}
+
+///|
+/// Resolves one path from a generated app-command extension.
+#lepus.command(name="resolve")
+fn resolve(path : String) -> PathReply {
+  PathReply::{ path: resolve_path(path) }
+}
+
+///|
+/// Resolves many path segments from a generated app-command extension.
+#lepus.command(name="resolveAll")
+fn resolve_all(paths : Array[String]) -> PathReply {
+  PathReply::{ path: resolve_many_paths(paths) }
+}
+
+///|
+/// Parses a path from a generated app-command extension.
+#lepus.command(name="parse")
+fn parse(path : String) -> ParseReply {
+  parse_path(path)
+}
+
+///|
+/// Formats a path object from a generated app-command extension.
+#lepus.command(name="format")
+fn format(
+  root : String?,
+  dir : String?,
+  base : String?,
+  name : String?,
+  ext : String?,
+) -> PathReply {
+  PathReply::{
+    path: format_path(FormatPayload::{ root, dir, base, name, ext }),
+  }
 }
