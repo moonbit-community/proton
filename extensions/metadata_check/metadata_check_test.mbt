@@ -106,9 +106,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/lepus-global-hotkey",
     "globalHotkey",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("keepawake"),
-    @keepawake.spec(),
+    @keepawake.generated_app_command_extension(),
     "extensions/keepawake",
     "justjavac/lepus-keepawake",
     "keepAwake",

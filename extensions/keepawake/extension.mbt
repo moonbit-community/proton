@@ -1,10 +1,4 @@
 ///|
-let extension_id = "justjavac/lepus-keepawake"
-
-///|
-let extension_namespace = "keepAwake"
-
-///|
 struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -20,10 +14,14 @@ struct KeepAwakeReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+#lepus.event(name="activity")
 struct KeepAwakeActivity {
   operation : String
   scope : String?
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+let active_guard_ref : Ref[@sys_keepawake.Guard?] = Ref(None)
 
 ///|
 /// Converts public JS scope labels into the package enum.
@@ -51,16 +49,6 @@ fn scope_label(scope : @sys_keepawake.Scope) -> String {
 /// Converts package errors into strings that can travel over op_result.
 fn keepawake_error(error : @sys_keepawake.KeepAwakeError) -> String {
   error.to_string()
-}
-
-///|
-/// Emits a keep-awake activity event for JavaScript listeners.
-fn emit_activity(
-  extension : @core.ExtensionContext,
-  operation : String,
-  scope : String?,
-) -> Unit {
-  extension.emit("activity", KeepAwakeActivity::{ operation, scope })
 }
 
 ///|
@@ -101,88 +89,105 @@ fn acquire_guard(
 }
 
 ///|
-/// Builds the `keepAwake` extension for direct installation.
-/// The extension owns one native keep-awake guard per installed runtime
-/// extension instance.
-pub fn extension() -> @core.Extension {
-  let mut active_guard_ref : @sys_keepawake.Guard? = None
-  @core.Extension::new(
-    extension_id,
-    extension_namespace,
-    fn(extension) {
-      extension.op_result("acquire", fn(payload : AcquirePayload) {
-        match active_guard_ref {
-          Some(active_guard) =>
-            if active_guard.active() {
-              Err("keepAwake guard is already active")
-            } else {
-              acquire_guard(payload).map(fn(next_guard) {
-                let scope_name = scope_label(next_guard.scope())
-                active_guard_ref = Some(next_guard)
-                emit_activity(extension, "acquire", Some(scope_name))
-                KeepAwakeReply::{ active: true, scope: Some(scope_name) }
-              })
-            }
-          None =>
-            acquire_guard(payload).map(fn(next_guard) {
-              let scope_name = scope_label(next_guard.scope())
-              active_guard_ref = Some(next_guard)
-              emit_activity(extension, "acquire", Some(scope_name))
-              KeepAwakeReply::{ active: true, scope: Some(scope_name) }
-            })
-        }
-      })
-
-      extension.op_result("release", fn(_payload : EmptyPayload) {
-        match active_guard_ref {
-          Some(active_guard) =>
-            release_guard(active_guard).map(fn(reply) {
-              active_guard_ref = None
-              emit_activity(extension, "release", reply.scope)
-              reply
-            })
-          None => Ok(KeepAwakeReply::{ active: false, scope: None })
-        }
-      })
-
-      extension.op("status", fn(_payload : EmptyPayload) {
-        match active_guard_ref {
-          Some(active_guard) =>
-            if active_guard.active() {
-              KeepAwakeReply::{
-                active: true,
-                scope: Some(scope_label(active_guard.scope())),
-              }
-            } else {
-              KeepAwakeReply::{ active: false, scope: None }
-            }
-          _ => KeepAwakeReply::{ active: false, scope: None }
-        }
-      })
-    },
-    on_destroy=fn(_extension) {
-      match active_guard_ref {
-        Some(active_guard) => {
-          try {
-            active_guard.release()
-            ()
-          } catch {
-            _ => ()
-          }
-          active_guard_ref = None
-        }
-        None => ()
+/// Releases the active app-command guard if one exists.
+#lepus.destroy
+fn cleanup_keepawake(context : @app.AppCommandExtensionContext) -> Unit {
+  ignore(context.extension_id())
+  match active_guard_ref.val {
+    Some(active_guard) => {
+      try {
+        active_guard.release()
+        ()
+      } catch {
+        _ => ()
       }
-    },
-  )
+      active_guard_ref.val = None
+    }
+    None => ()
+  }
 }
 
 ///|
-/// Builds the declarative `keepAwake` extension spec.
-/// Register this when power-management guards should be selected through app
-/// composition or generated registry code.
-pub fn spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
-  })
+/// Acquires a keep-awake guard from a generated app-command extension.
+#lepus.command(name="acquire")
+async fn acquire(
+  context : @app.AppCommandExtensionContext,
+  reason : String?,
+  scope : String?,
+) -> Result[KeepAwakeReply, String] {
+  let payload = AcquirePayload::{ reason, scope }
+  match active_guard_ref.val {
+    Some(active_guard) =>
+      if active_guard.active() {
+        Err("keepAwake guard is already active")
+      } else {
+        match acquire_guard(payload) {
+          Err(error) => Err(error)
+          Ok(next_guard) => {
+            let scope_name = scope_label(next_guard.scope())
+            active_guard_ref.val = Some(next_guard)
+            emit_keep_awake_activity(context, KeepAwakeActivity::{
+              operation: "acquire",
+              scope: Some(scope_name),
+            })
+            Ok(KeepAwakeReply::{ active: true, scope: Some(scope_name) })
+          }
+        }
+      }
+    None =>
+      match acquire_guard(payload) {
+        Err(error) => Err(error)
+        Ok(next_guard) => {
+          let scope_name = scope_label(next_guard.scope())
+          active_guard_ref.val = Some(next_guard)
+          emit_keep_awake_activity(context, KeepAwakeActivity::{
+            operation: "acquire",
+            scope: Some(scope_name),
+          })
+          Ok(KeepAwakeReply::{ active: true, scope: Some(scope_name) })
+        }
+      }
+  }
+}
+
+///|
+/// Releases the active keep-awake guard from a generated app-command extension.
+#lepus.command(name="release")
+async fn release(
+  context : @app.AppCommandExtensionContext,
+  _payload : EmptyPayload?,
+) -> Result[KeepAwakeReply, String] {
+  match active_guard_ref.val {
+    Some(active_guard) =>
+      match release_guard(active_guard) {
+        Err(error) => Err(error)
+        Ok(reply) => {
+          active_guard_ref.val = None
+          emit_keep_awake_activity(context, KeepAwakeActivity::{
+            operation: "release",
+            scope: reply.scope,
+          })
+          Ok(reply)
+        }
+      }
+    None => Ok(KeepAwakeReply::{ active: false, scope: None })
+  }
+}
+
+///|
+/// Returns the active keep-awake guard status from a generated app-command extension.
+#lepus.command(name="status")
+fn status(_payload : EmptyPayload?) -> KeepAwakeReply {
+  match active_guard_ref.val {
+    Some(active_guard) =>
+      if active_guard.active() {
+        KeepAwakeReply::{
+          active: true,
+          scope: Some(scope_label(active_guard.scope())),
+        }
+      } else {
+        KeepAwakeReply::{ active: false, scope: None }
+      }
+    _ => KeepAwakeReply::{ active: false, scope: None }
+  }
 }

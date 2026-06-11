@@ -2,15 +2,15 @@
 package "extensions/keepawake"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus_app",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub async fn emit_keep_awake_activity(@lepus_app.AppCommandExtensionContext, KeepAwakeActivity) -> Unit
 
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
 
 // Errors
 
@@ -22,6 +22,12 @@ type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 type KeepAwakeActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type KeepAwakeReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type LepusAcquirePayload derive(@json.FromJson)
+
+type LepusReleasePayload derive(@json.FromJson)
+
+type LepusStatusPayload derive(@json.FromJson)
 
 // Type aliases
 
