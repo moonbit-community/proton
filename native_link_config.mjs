@@ -2,8 +2,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
 
 function nativeLinkPath(filePath) {
   if (process.platform !== "win32") {
@@ -12,150 +10,86 @@ function nativeLinkPath(filePath) {
   return filePath.replace(/\\/g, "/");
 }
 
-function requireFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Missing vendored native library: ${filePath}`);
-  }
-  return filePath;
-}
-
-function configuredLinkMode(env) {
-  const rawValue =
-    env.LEPUS_WEBVIEW_LINK ??
-    process.env.LEPUS_WEBVIEW_LINK ??
-    env.WEBVIEW_LINK ??
-    process.env.WEBVIEW_LINK ??
-    "static";
-  const value = String(rawValue).trim().toLowerCase();
-  if (value === "static") {
-    return "static";
-  }
-  if (value === "shared" || value === "dynamic") {
-    return "shared";
-  }
-  throw new Error(
-    `Unsupported LEPUS_WEBVIEW_LINK value "${rawValue}". Use "static" or "shared".`,
-  );
-}
-
-function linkDir(vendoredLibDir, target, mode) {
-  return nativeLinkPath(path.join(vendoredLibDir, target, mode));
-}
-
-function linuxSystemLinkFlags() {
+function optionalPayloadEnv() {
   try {
-    return execFileSync(
-      "pkg-config",
-      ["--libs", "gtk+-3.0", "webkit2gtk-4.1"],
-      { encoding: "utf8" },
-    ).trim();
-  } catch (error) {
-    throw new Error(
-      "Failed to resolve Linux system link flags via pkg-config for gtk+-3.0 and webkit2gtk-4.1. " +
-      "Install the development packages before building MoonBit code.\n" +
-      String(error),
-    );
+    const raw = fs.readFileSync(0, "utf8").trim();
+    if (raw.length === 0) {
+      return {};
+    }
+    return JSON.parse(raw).env ?? {};
+  } catch {
+    return {};
   }
 }
 
-function parsePkgConfigLibs(rawFlags) {
-  const libs = [];
-  const searchPaths = [];
-  const otherFlags = [];
-  for (const flag of rawFlags.split(/\s+/).map((value) => value.trim()).filter(Boolean)) {
-    if (flag.startsWith("-l") && flag.length > 2) {
-      libs.push(flag.slice(2));
-    } else if (flag.startsWith("-L") && flag.length > 2) {
-      searchPaths.push(nativeLinkPath(flag.slice(2)));
-    } else {
-      otherFlags.push(flag);
-    }
+function envValue(env, name) {
+  return env[name] ?? process.env[name] ?? "";
+}
+
+function requirePath(root, relativePath) {
+  const candidate = path.join(root, relativePath);
+  if (!fs.existsSync(candidate)) {
+    throw new Error(`Missing CEF file: ${candidate}`);
   }
-  return { libs, searchPaths, otherFlags };
+  return candidate;
+}
+
+function windowsConfig(root) {
+  requirePath(root, "include/capi/cef_app_capi.h");
+  requirePath(root, "include/capi/cef_browser_capi.h");
+  requirePath(root, "include/capi/cef_client_capi.h");
+  requirePath(root, "include/capi/cef_v8_capi.h");
+  requirePath(root, "Release/libcef.lib");
+  requirePath(root, "Release/libcef.dll");
+  requirePath(root, "Resources/icudtl.dat");
+
+  return {
+    link_libs: [
+      nativeLinkPath(path.join(root, "Release/libcef")),
+      "user32",
+      "gdi32",
+      "ole32",
+      "shell32",
+      "advapi32",
+      "comdlg32",
+    ],
+  };
 }
 
 function main() {
-  const payload = JSON.parse(fs.readFileSync(0, "utf8"));
-  const env = payload.env ?? {};
-  const isWindows = process.platform === "win32" || env.OS === "Windows_NT";
-  const rootDir = path.dirname(fileURLToPath(import.meta.url));
-  const vendoredLibDir = path.join(rootDir, "lib");
-  const mode = configuredLinkMode(env);
+  const env = optionalPayloadEnv();
+  const rawRoot = envValue(env, "LEPUS_CEF_ROOT").trim();
 
-  if (isWindows) {
-    const platformLibDir = linkDir(vendoredLibDir, "windows-x64", mode);
-    requireFile(path.join(vendoredLibDir, "windows-x64", mode, "webview.lib"));
-    if (mode === "shared") {
-      requireFile(path.join(vendoredLibDir, "windows-x64", mode, "webview.dll"));
-    }
-    const webviewLib = nativeLinkPath(path.join(platformLibDir, "webview"));
+  if (rawRoot.length === 0) {
     process.stdout.write(JSON.stringify({
-      link_configs: [
-        {
-          package: "justjavac/lepus",
-          link_libs: [
-            webviewLib,
-            "advapi32",
-            "ole32",
-            "shell32",
-            "shlwapi",
-            "user32",
-            "version",
-          ],
-        },
-      ],
+      vars: {
+        LEPUS_CEF_ENABLED: "0",
+        LEPUS_CEF_STUB_CC_FLAGS: "",
+      },
+      link_configs: [],
     }));
     return;
   }
 
-  if (process.platform === "darwin") {
-    const platformLibDir = linkDir(vendoredLibDir, "macos-universal", mode);
-    requireFile(
-      path.join(
-        vendoredLibDir,
-        "macos-universal",
-        mode,
-        mode === "static" ? "libwebview.a" : "libwebview.dylib",
-      ),
+  if (process.platform !== "win32") {
+    throw new Error(
+      "The root CEF backend is currently implemented for Windows only. " +
+      "Unset LEPUS_CEF_ROOT or build on Windows.",
     );
-    let linkFlags = "-framework WebKit";
-    if (mode === "shared") {
-      linkFlags += ` -Wl,-rpath,${platformLibDir}`;
-    }
-    process.stdout.write(JSON.stringify({
-      link_configs: [
-        {
-          package: "justjavac/lepus",
-          link_search_paths: [platformLibDir],
-          link_libs: ["webview", "c++", "dl"],
-          link_flags: linkFlags,
-        },
-      ],
-    }));
-    return;
   }
 
-  const platformLibDir = linkDir(vendoredLibDir, "linux-x64", mode);
-  requireFile(
-    path.join(
-      vendoredLibDir,
-      "linux-x64",
-      mode,
-      mode === "static" ? "libwebview.a" : "libwebview.so",
-    ),
-  );
-  const pkgConfig = parsePkgConfigLibs(linuxSystemLinkFlags());
-  let linkFlags = pkgConfig.otherFlags.join(" ");
-  if (mode === "shared") {
-    linkFlags += ` -Wl,-rpath,${platformLibDir}`;
-  }
+  const root = path.resolve(rawRoot);
   process.stdout.write(JSON.stringify({
+    vars: {
+      LEPUS_CEF_ENABLED: "1",
+      LEPUS_CEF_ROOT: nativeLinkPath(root),
+      LEPUS_CEF_STUB_CC_FLAGS:
+        `/DLEPUS_CEF_ENABLED=1 /I"${nativeLinkPath(root)}"`,
+    },
     link_configs: [
       {
         package: "justjavac/lepus",
-        link_search_paths: [platformLibDir, ...pkgConfig.searchPaths],
-        link_libs: ["webview", "stdc++", "dl", ...pkgConfig.libs],
-        ...(linkFlags.length > 0 ? { link_flags: linkFlags } : {}),
+        ...windowsConfig(root),
       },
     ],
   }));

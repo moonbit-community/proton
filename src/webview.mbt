@@ -5,8 +5,8 @@ pub(all) enum NativeHandleKind {
   Window = 0
   /// Browser widget. `GtkWidget` pointer (GTK), `NSView` pointer (Cocoa) or `HWND` (Win32).
   Widget = 1
-  /// Browser controller. `WebKitWebView` pointer (WebKitGTK), `WKWebView`
-  /// pointer (Cocoa/WebKit) or `ICoreWebView2Controller` pointer (Win32/WebView2).
+  /// Browser controller. Under the CEF backend this is a diagnostic CEF browser
+  /// host handle, not an `ICoreWebView2Controller` pointer.
   Browser = 2
 } derive(Debug)
 
@@ -22,6 +22,21 @@ pub(all) enum SizeHint {
   /// Window size can not be changed by a user.
   Fixed = 3
 } derive(Debug)
+
+///|
+/// Returns the compiled browser backend id.
+pub fn backend_id() -> String {
+  @ffi.from_cstr(webview_backend_id_ffi())
+}
+
+///|
+/// Returns whether the compiled browser backend can create native windows.
+///
+/// Without `LEPUS_CEF_ROOT`, the package still type-checks but the native
+/// backend reports unavailable and runtime window creation fails clearly.
+pub fn backend_available() -> Bool {
+  webview_backend_available_ffi()
+}
 
 ///|
 /// An instance of a webview window.
@@ -240,7 +255,7 @@ pub fn Webview::runtime_handle_id(self : Webview) -> Int64 {
 
 ///|
 /// Returns the internal webview handle of the webview instance. This handle is
-/// the raw pointer used by the underlying webview library.
+/// the raw pointer used by the compiled native backend.
 pub fn Webview::get_handle(self : Webview) -> Webview_t {
   self.handle
 }

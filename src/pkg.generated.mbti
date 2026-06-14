@@ -6,6 +6,10 @@ import {
 }
 
 // Values
+pub fn backend_available() -> Bool
+
+pub fn backend_id() -> String
+
 pub fn webview_bind(Webview_t, Bytes, FuncRef[(CStr, CStr, (Bytes, Bytes) -> Unit) -> Unit], (Bytes, Bytes) -> Unit) -> BindingHandle
 
 pub fn webview_create(Int, Int64) -> Webview_t
@@ -89,4 +93,3 @@ pub type Webview_t
 // Type aliases
 
 // Traits
-

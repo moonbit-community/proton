@@ -1,7 +1,9 @@
-/// This module provides the FFI (Foreign Function Interface) for the webview library.
-/// It allows the main application to call functions defined in the webview library.
-/// 
-/// see: https://github.com/webview/webview/blob/f1a9d6b6fb8bcc2e266057224887a3d628f30f90/webview.i
+/// This module provides the FFI (Foreign Function Interface) for the low-level
+/// browser backend.
+///
+/// The exported C ABI intentionally keeps the historical `webview_*` names so
+/// existing MoonBit callers do not need API changes when the native
+/// implementation changes backend.
 
 ///|
 /// typedef void *webview_t;
@@ -132,3 +134,11 @@ pub extern "C" fn webview_return(
   status : Int,
   result : Bytes,
 ) -> Int = "webview_return"
+
+///|
+/// Returns the compiled low-level browser backend id.
+extern "C" fn webview_backend_id_ffi() -> Bytes = "moonbit_webview_backend_id"
+
+///|
+/// Returns whether the compiled browser backend can create real windows.
+extern "C" fn webview_backend_available_ffi() -> Bool = "moonbit_webview_backend_available"
