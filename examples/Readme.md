@@ -63,7 +63,7 @@ node ../scripts/e2e_cdp_smoke.mjs
 | 34_app_keepawake | Platform-dependent | Focused `keepAwake` extension example |
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
 | 36_app_devtools | WebView2-only | Focused `devtools` extension example; unsupported under root CEF |
-| 37_cef_mvp | Legacy prototype | Older optional CEF probe retained for reference |
+| 37_cef_mvp | Windows CEF MVP | Root `justjavac/lepus` backend rendered through CEF |
 | 38_async_extension_add | OK | Async extension API implemented by a user process that starts a framework child |
 | 39_sync_async_extensions | OK | Sync and async command extensions registered through the same manifest/registry style |
 | 40_event_broadcast | OK | Ticker extension implemented in the user process with a framework child |
