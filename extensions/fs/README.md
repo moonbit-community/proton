@@ -175,8 +175,8 @@ Event payload shape:
   `write`, `seek`, and `flush`.
 - `readFileBuffer` and `writeFileBuffer` use SharedArrayBuffer/WebView2
   transfer where available. They currently require Windows WebView2 with
-  `sharedbufferreceived` support; other platforms report an unsupported
-  capability through `sharedBufferSupport()`.
+  `sharedbufferreceived` support; other platforms and the experimental root CEF
+  backend report an unsupported capability through `sharedBufferSupport()`.
 - The path API is intentionally closer to Node.js `fs/promises`, with a few
   Tauri-style aliases such as `readTextFile`, `writeTextFile`, and `remove`.
 - `openFile` currently supports common Node-style flags and read/write/append

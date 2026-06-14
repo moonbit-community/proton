@@ -1,10 +1,10 @@
 # Lepus
 
-MoonBit framework for building Tauri/Electron-style desktop apps on top of [webview](https://github.com/webview/webview), with a small runtime, manifest-driven control plane, and opt-in JS-facing extensions so applications only link the native capabilities they actually use.
+MoonBit framework for building Tauri/Electron-style desktop apps on top of a small native browser backend, with a compact runtime, manifest-driven control plane, and opt-in JS-facing extensions so applications only link the native capabilities they actually use.
 
 The repository is organized into these layers:
 
-- `justjavac/lepus`: low-level native webview binding
+- `justjavac/lepus`: low-level native browser binding
 - `justjavac/lepus_manifest`: declarative `app.json` contract types
 - `justjavac/lepus_core`: native/JS bridge, ops runtime, resource tables, extension host
 - `justjavac/lepus_runtime`: `App`, windows, and lifecycle orchestration
@@ -151,14 +151,28 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 
 This repo targets `native` only.
 
-- The default webview linkage is static and uses vendored `lib/<platform>/static`
-- Set `LEPUS_WEBVIEW_LINK=shared` (or `dynamic`) to link against vendored `lib/<platform>/shared`
-- macOS uses system `WebKit`
-- Linux needs `pkg-config`, `libgtk-3-dev`, and `libwebkit2gtk-4.1-dev`
-- Windows users still need Microsoft WebView2 Runtime installed
-- Windows native tests and examples that include WebView2 COM headers need the
-  SDK headers installed with `.\scripts\install_webview2_headers.ps1`
-- Windows shared builds need `lib/windows-x64/shared/webview.dll` beside the final executable or on `PATH`
+- The root `justjavac/lepus` package now uses a Windows CEF backend supplied by
+  `LEPUS_CEF_ROOT`.
+- `LEPUS_CEF_ROOT` must point at a CEF binary distribution with
+  `include/capi/cef_app_capi.h`, `Release/libcef.lib`,
+  `Release/libcef.dll`, and `Resources/icudtl.dat`.
+- When running a built executable, make the CEF `Release` binaries and
+  `Resources` payload available in the runtime layout expected by CEF. With the
+  official Windows minimal distribution this means copying the `Resources`
+  payload such as `icudtl.dat`, `resources.pak`, `chrome_*.pak`, and `locales/`
+  beside `libcef.dll` or beside the final executable.
+- If `LEPUS_CEF_ROOT` is unset, native checks can still compile against an
+  unavailable stub, but creating a real `Webview` aborts with a CEF setup
+  message.
+- `LEPUS_WEBVIEW_LINK` and vendored `libwebview` linkage are obsolete for the
+  root package.
+- The first production target for the CEF backend is Windows. macOS and Linux
+  CEF parity is deferred.
+- Windows native tests and examples that still include WebView2 COM headers need
+  the SDK headers installed with `.\scripts\install_webview2_headers.ps1`.
+- WebView2-only features such as `AppEntry::Asset`, `devtools.open`, and `fs`
+  SharedArrayBuffer transfer report clear unsupported-backend errors under CEF
+  instead of consuming CEF browser handles.
 - `clipboard` comes from the published Mooncakes package `justjavac/clipboard`.
 - `notification` comes from the published Mooncakes package `justjavac/notification`.
 - `tray` is provided by the published Mooncakes package `justjavac/tray`.

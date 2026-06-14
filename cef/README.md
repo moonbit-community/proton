@@ -12,6 +12,9 @@ Current state:
   falling back to the system webview.
 - The runnable example `examples/37_cef_mvp` keeps the current system webview
   as the default fallback, so the repository remains runnable without CEF.
+- WebView2-only integrations such as runtime asset origins, `devtools.open`,
+  and `fs` SharedArrayBuffer transfer degrade with explicit unsupported-backend
+  errors under a root CEF backend.
 - The public API mirrors the browser operations Lepus needs first:
   initialize, create view, navigate, set HTML, init/eval script, bind/respond,
   dispatch, run/quit, and destroy.

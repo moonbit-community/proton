@@ -12,7 +12,7 @@ Build every runnable example with:
 moon -C examples build --target native
 ```
 
-Run the default Windows/WebView2 e2e smoke scenarios:
+Run the Windows CEF e2e smoke scenarios after building with `LEPUS_CEF_ROOT`:
 
 ```sh
 node ../scripts/e2e_cdp_smoke.mjs
@@ -56,19 +56,20 @@ node ../scripts/e2e_cdp_smoke.mjs
 | 27_app_notification | Windows-only | Focused notification extension example |
 | 28_app_tray | Windows-only | Focused tray extension example |
 | 29_app_global_hotkey | Windows-only | Focused `globalHotkey` extension example |
-| 30_app_asset_origin | Windows-only | `AppEntry::Asset(...)` through a secure in-process origin with `SharedArrayBuffer` probing |
-| 31_app_asset_bundle | Windows-only | Asset bundle demo with separate `index.html`, `app.js`, and `styles.css` |
-| 32_shared_buffer_benchmark | Windows-only | Prototype benchmark comparing JSON bridge payloads with WebView2 shared buffers |
+| 30_app_asset_origin | WebView2-only | `AppEntry::Asset(...)` through a secure in-process origin with `SharedArrayBuffer` probing; unsupported under root CEF |
+| 31_app_asset_bundle | WebView2-only | Asset bundle demo with separate `index.html`, `app.js`, and `styles.css`; unsupported under root CEF |
+| 32_shared_buffer_benchmark | WebView2-only | Prototype benchmark comparing JSON bridge payloads with WebView2 shared buffers; unsupported under root CEF |
 | 33_app_auto_launch | Platform-dependent | Focused `autoLaunch` extension example |
 | 34_app_keepawake | Platform-dependent | Focused `keepAwake` extension example |
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
-| 36_app_devtools | Windows-only | Focused `devtools` extension example |
-| 37_cef_mvp | OK | Optional CEF probe with system webview fallback |
+| 36_app_devtools | WebView2-only | Focused `devtools` extension example; unsupported under root CEF |
+| 37_cef_mvp | Legacy prototype | Older optional CEF probe retained for reference |
 | 38_async_extension_add | OK | Async extension API implemented by a user process that starts a framework child |
 | 39_sync_async_extensions | OK | Sync and async command extensions registered through the same manifest/registry style |
 | 40_event_broadcast | OK | Ticker extension implemented in the user process with a framework child |
 | 41_app_commands | OK | App-level commands implemented in the user process with a framework child |
 | 42_attribute_codegen_commands | OK | App command extension generated from `#lepus.command` and `#lepus.event` attributes |
+| 43_cef_bind_smoke | Windows CEF smoke | Automated `webview.bind(...)` / `webview.response(...)` Promise marshalling smoke |
 
 ## Notes
 
@@ -78,12 +79,15 @@ node ../scripts/e2e_cdp_smoke.mjs
 - Example `39` shows sync and async extension-style APIs registered through one command extension registry.
 - Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
 - Example `41` demonstrates the multiprocess runtime split: MoonBit ops and
-  async handlers stay in the user parent process while WebView2 runs in a
-  framework/webview child process.
+  async handlers stay in the user parent process while browser runtime work
+  runs in a framework child process.
 - Example `42` shows the generated-command workflow. Regenerate its command
   bridge by first installing the CLI with
   `moon install ./cli --bin target/lepus-tools`. The package pre-build then
   calls `target/lepus-tools/lepus_cli codegen`; extension id and namespace come
   from `42_attribute_codegen_commands/extension.json`.
+- Example `43` exits on its own after JavaScript calls a MoonBit binding,
+  receives a response, and reports the Promise result back through a second
+  binding.
 - App examples declare extensions in MoonBit code and keep per-extension options in `app.json.extensions`.
 - Frontend code should use `window.__MoonBit__` throughout.
