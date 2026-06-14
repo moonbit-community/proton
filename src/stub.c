@@ -162,6 +162,7 @@ struct lepus_dispatch_task {
 
 static int lepus_cef_initialized = 0;
 static int lepus_cef_shutdown_registered = 0;
+static HMODULE lepus_cef_module = NULL;
 static struct moonbit_webview *lepus_webviews = NULL;
 static struct lepus_app lepus_app_instance;
 
@@ -376,6 +377,49 @@ static char *lepus_path_join(const char *left, const char *right) {
   }
   memcpy(out + left_len, right, right_len + 1);
   return out;
+}
+
+static void lepus_prepare_cef_runtime(const char *cef_root) {
+  char *release_dir = NULL;
+  char *dll_path = NULL;
+  const char *load_path = "libcef.dll";
+  DWORD flags = 0;
+  DWORD error;
+  if (lepus_cef_module != NULL) {
+    return;
+  }
+  if (cef_root != NULL && cef_root[0] != '\0') {
+    release_dir = lepus_path_join(cef_root, "Release");
+    if (release_dir != NULL) {
+      SetDllDirectoryA(release_dir);
+      dll_path = lepus_path_join(release_dir, "libcef.dll");
+    }
+    if (dll_path != NULL) {
+      load_path = dll_path;
+      flags = LOAD_WITH_ALTERED_SEARCH_PATH;
+    }
+  }
+  lepus_trace("load libcef");
+  lepus_cef_module = LoadLibraryExA(load_path, NULL, flags);
+  if (lepus_cef_module == NULL) {
+    error = GetLastError();
+    if (cef_root != NULL && cef_root[0] != '\0') {
+      fprintf(stderr,
+              "Lepus CEF runtime DLL could not be loaded from %s "
+              "(GetLastError=%lu).\n",
+              load_path, (unsigned long)error);
+    } else {
+      fprintf(stderr,
+              "Lepus CEF runtime DLL could not be loaded "
+              "(GetLastError=%lu). Set LEPUS_CEF_ROOT to a Windows CEF "
+              "binary distribution or put libcef.dll on PATH.\n",
+              (unsigned long)error);
+    }
+    fflush(stderr);
+    abort();
+  }
+  free(release_dir);
+  free(dll_path);
 }
 
 static char *lepus_temp_path_join(const char *name) {
@@ -1194,6 +1238,8 @@ static void lepus_ensure_cef_initialized(int debug) {
   if (lepus_cef_initialized) {
     return;
   }
+  cef_root = getenv("LEPUS_CEF_ROOT");
+  lepus_prepare_cef_runtime(cef_root);
   lepus_trace("init app");
   lepus_init_app();
 #ifdef CEF_API_VERSION
@@ -1223,7 +1269,6 @@ static void lepus_ensure_cef_initialized(int debug) {
       lepus_set_string(&settings.log_file, log_file);
     }
   }
-  cef_root = getenv("LEPUS_CEF_ROOT");
   if (cef_root != NULL && cef_root[0] != '\0') {
     resources_dir = lepus_path_join(cef_root, "Resources");
     if (resources_dir != NULL) {

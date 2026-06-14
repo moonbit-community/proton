@@ -53,6 +53,7 @@ function windowsConfig(root) {
       "advapi32",
       "comdlg32",
     ],
+    link_flags: "/link /DELAYLOAD:libcef.dll delayimp.lib",
   };
 }
 
