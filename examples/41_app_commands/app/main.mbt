@@ -76,7 +76,7 @@ fn register_app_commands(host : @core.AppCommandHost) -> Unit {
 }
 
 ///|
-fn main {
+async fn main {
   if @lepus_app.is_framework_process() {
     match @lepus_app.run_framework_process_from_cli() {
       Ok(_) => ()

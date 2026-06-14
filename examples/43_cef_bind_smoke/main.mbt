@@ -22,7 +22,8 @@ let html =
   #| </html>
 
 ///|
-fn main {
+async fn main {
+  @async.sleep(0)
   let webview = @webview.Webview::new(debug=0)
   webview.set_title("CEF Bind Smoke")
   webview.set_size(320, 240, @webview.SizeHint::None)

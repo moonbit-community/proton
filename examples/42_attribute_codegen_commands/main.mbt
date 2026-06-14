@@ -1,5 +1,5 @@
 ///|
-fn main {
+async fn main {
   if @app.is_framework_process() {
     match @app.run_framework_process_from_cli() {
       Ok(_) => ()

@@ -41,7 +41,7 @@ pub fn current_executable_command() -> Result[String, String] {
 /// The current process owns user code and async handlers. `framework_command`
 /// is started as a child process and should run
 /// `run_framework_process_from_cli(...)`.
-pub fn run_app_command_host_with_framework_process(
+pub async fn run_app_command_host_with_framework_process(
   manifest : @manifest.AppManifest,
   framework_command : String,
   host : @core.AppCommandHost,
@@ -91,14 +91,13 @@ pub fn run_app_command_host_with_framework_process(
     }
     Ok(_) => ()
   }
-  let args = framework_launch_args(framework_args, config_path)
-  let mut result : Result[Unit, String] = Err("framework process did not run")
-  @async.run_async_main(async fn() {
-    result = run_app_command_host_with_framework_process_async(
-      host, framework_command, args, framework_cwd, ipc_config,
-    )
-  })
-  result
+  run_app_command_host_with_framework_process_async(
+    host,
+    framework_command,
+    framework_launch_args(framework_args, config_path),
+    framework_cwd,
+    ipc_config,
+  )
 }
 
 ///|

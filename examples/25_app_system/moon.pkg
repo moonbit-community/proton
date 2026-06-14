@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "extensions/global_hotkey",
   "extensions/notification",
   "extensions/tray",

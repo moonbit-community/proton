@@ -72,7 +72,8 @@ fn run_cef_if_available() -> Bool {
 }
 
 ///|
-fn main {
+async fn main {
+  @async.sleep(0)
   println("Lepus browser backend: " + @cef.backend_id())
   println("CEF linked: \{@cef.is_available()}")
   if !run_cef_if_available() {

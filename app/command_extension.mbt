@@ -254,7 +254,7 @@ pub fn AppCommandExtensionRegistry::registered_ids(
 /// This is the preferred multi-process entrypoint for apps. User code remains
 /// the parent process; the framework child reads a generated config and
 /// connects back to the local IPC server.
-pub fn run_app_command_extensions_with_framework_process(
+pub async fn run_app_command_extensions_with_framework_process(
   manifest : @manifest.AppManifest,
   framework_command : String,
   registry : AppCommandExtensionRegistry,
