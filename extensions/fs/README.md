@@ -60,13 +60,17 @@ const loaded = await window.__MoonBit__.fs.readFile("demo.txt");
 const stat = await window.__MoonBit__.fs.stat("demo.txt");
 ```
 
-For binary payloads on Windows/WebView2, use the SharedArrayBuffer-backed
-helpers. They avoid serializing file contents through JSON and return/copy
-`Uint8Array` values through a native shared buffer:
+SharedArrayBuffer-backed binary helper entry points are kept in the JavaScript
+surface for compatibility, but this branch does not link a native shared-buffer
+transport. `sharedBufferSupport()` reports that the fast path is unsupported,
+and the buffer helpers reject until a backend-specific transport is linked:
 
 ```js
-const binary = await window.__MoonBit__.fs.readFileBuffer("asset.bin");
-await window.__MoonBit__.fs.writeFileBuffer("copy.bin", binary.content);
+const support = await window.__MoonBit__.fs.sharedBufferSupport();
+if (support.supported) {
+  const binary = await window.__MoonBit__.fs.readFileBuffer("asset.bin");
+  await window.__MoonBit__.fs.writeFileBuffer("copy.bin", binary.content);
+}
 ```
 
 If you want the native absolute path before opening a file, ask `stat` not to
@@ -91,11 +95,11 @@ const stat = await window.__MoonBit__.fs.stat("demo.txt", {
 - `fs.appendFile(path, content, options?)`
   Returns `{ path, written, bytes_written }`.
 - `fs.sharedBufferSupport()`
-  Returns WebView2 SharedArrayBuffer capability flags for the current webview.
+  Reports whether the current build/backend has native shared-buffer transfer support.
 - `fs.readFileBuffer(path)`
-  Uses WebView2 SharedBuffer transfer and returns `{ path, content, bytes_read, capacity }`, where `content` is a `Uint8Array`.
+  Reserved for native shared-buffer transfer. This branch currently reports unsupported.
 - `fs.writeFileBuffer(path, content, options?)`
-  Uses WebView2 SharedBuffer transfer to write `Uint8Array`, `ArrayBuffer`, `SharedArrayBuffer`, typed-array, or string content.
+  Reserved for native shared-buffer transfer of `Uint8Array`, `ArrayBuffer`, `SharedArrayBuffer`, typed-array, or string content. This branch currently reports unsupported.
 - `fs.stat(path, options?)`
   Returns `{ path, exists, size, is_file, is_dir, is_readonly }`.
 - `fs.readdir(path, options?)`
@@ -173,10 +177,10 @@ Event payload shape:
 - `readFile`, `writeFile`, and `appendFile` are UTF-8 text helpers. For
   streaming workflows, keep using the rid-based API with `open`, `read`,
   `write`, `seek`, and `flush`.
-- `readFileBuffer` and `writeFileBuffer` use SharedArrayBuffer/WebView2
-  transfer where available. They currently require Windows WebView2 with
-  `sharedbufferreceived` support; other platforms and the experimental root CEF
-  backend report an unsupported capability through `sharedBufferSupport()`.
+- `readFileBuffer` and `writeFileBuffer` currently report unsupported because
+  this branch does not link a native shared-buffer transport. Use the text
+  helpers or rid-based streaming API for binary-adjacent workflows until a
+  backend-specific implementation is added explicitly.
 - The path API is intentionally closer to Node.js `fs/promises`, with a few
   Tauri-style aliases such as `readTextFile`, `writeTextFile`, and `remove`.
 - `openFile` currently supports common Node-style flags and read/write/append

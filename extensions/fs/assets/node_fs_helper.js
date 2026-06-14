@@ -229,7 +229,7 @@
   function waitForSharedBuffer(kind, sequence) {
     if (!ensureSharedBufferListener()) {
       return Promise.reject(
-        new Error('fs SharedArrayBuffer transfer requires WebView2 sharedbufferreceived events'),
+        new Error('fs SharedArrayBuffer transfer requires a native shared-buffer event bridge'),
       );
     }
     return new Promise(function(resolve, reject) {
