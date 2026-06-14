@@ -2,6 +2,9 @@
 let shared_buffer_max_transfer_size : Int = 64 * 1024 * 1024
 
 ///|
+let cef_backend_id = "cef"
+
+///|
 extern "C" fn shared_buffer_probe_ffi(controller : Int64) -> Int = "extensions_fs_shared_buffer_probe"
 
 ///|
@@ -47,6 +50,52 @@ fn mask_has(mask : Int, bit : Int) -> Bool {
 
 ///|
 fn shared_buffer_capabilities(controller : Int64) -> SharedBufferSupportReply {
+  shared_buffer_capabilities_for_backend(@webview.backend_id(), controller)
+}
+
+///|
+fn shared_buffer_capabilities_for_backend(
+  backend_id : String,
+  controller : Int64,
+) -> SharedBufferSupportReply {
+  match shared_buffer_unsupported_backend_error(backend_id) {
+    Some(error) => unsupported_shared_buffer_capabilities(error)
+    None => shared_buffer_capabilities_from_native_probe(controller)
+  }
+}
+
+///|
+fn shared_buffer_unsupported_backend_error(backend_id : String) -> String? {
+  if backend_id == cef_backend_id {
+    Some(
+      "fs SharedArrayBuffer transfer requires the Windows WebView2 backend; current backend is " +
+      backend_id,
+    )
+  } else {
+    None
+  }
+}
+
+///|
+fn unsupported_shared_buffer_capabilities(
+  last_error : String,
+) -> SharedBufferSupportReply {
+  SharedBufferSupportReply::{
+    is_windows: false,
+    has_controller: false,
+    has_core_webview: false,
+    has_webview2_17: false,
+    has_environment12: false,
+    can_create_shared_buffer: false,
+    supported: false,
+    last_error,
+  }
+}
+
+///|
+fn shared_buffer_capabilities_from_native_probe(
+  controller : Int64,
+) -> SharedBufferSupportReply {
   let mask = shared_buffer_probe_ffi(controller)
   let has_webview2_17 = mask_has(mask, 8)
   let has_environment12 = mask_has(mask, 16)

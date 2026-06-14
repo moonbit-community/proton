@@ -11,15 +11,25 @@
 #define COBJMACROS
 #include <windows.h>
 #include <ole2.h>
+#if defined(__has_include)
+#if __has_include("../../build/_deps/microsoft_web_webview2-src/build/native/include/WebView2.h")
+#define LEPUS_RUNTIME_HAS_WEBVIEW2 1
 #include "../../build/_deps/microsoft_web_webview2-src/build/native/include/WebView2.h"
+#endif
+#endif
+#ifndef LEPUS_RUNTIME_HAS_WEBVIEW2
+#define LEPUS_RUNTIME_HAS_WEBVIEW2 0
+#endif
 #ifdef _MSC_VER
 #pragma comment(lib, "ole32.lib")
 #endif
+#else
+#define LEPUS_RUNTIME_HAS_WEBVIEW2 0
 #endif
 
 typedef struct lepus_runtime_asset_origin_state lepus_runtime_asset_origin_state_t;
 
-#ifdef _WIN32
+#if LEPUS_RUNTIME_HAS_WEBVIEW2
 static HRESULT STDMETHODCALLTYPE
 lepus_runtime_asset_origin_query_interface(
     ICoreWebView2WebResourceRequestedEventHandler *self,
@@ -562,7 +572,7 @@ lepus_runtime_asset_origin_install(
     moonbit_bytes_t host,
     moonbit_bytes_t root_dir,
     moonbit_bytes_t default_entry) {
-#ifdef _WIN32
+#if LEPUS_RUNTIME_HAS_WEBVIEW2
   ICoreWebView2Controller *controller =
       (ICoreWebView2Controller *)(uintptr_t)controller_handle;
   lepus_runtime_asset_origin_state_t *state = NULL;
@@ -641,7 +651,7 @@ lepus_runtime_asset_origin_install(
 
 MOONBIT_FFI_EXPORT void lepus_runtime_asset_origin_destroy(
     lepus_runtime_asset_origin_state_t *state) {
-#ifdef _WIN32
+#if LEPUS_RUNTIME_HAS_WEBVIEW2
   (void)state;
 #else
   (void)state;

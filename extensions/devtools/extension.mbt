@@ -5,6 +5,9 @@ let extension_id = "justjavac/lepus-devtools"
 let extension_namespace = "devtools"
 
 ///|
+let cef_backend_id = "cef"
+
+///|
 struct DevtoolsReply {
   opened : Bool
 } derive(ToJson, FromJson, Debug, Eq)
@@ -38,12 +41,33 @@ let open_status_open_failed = 4
 ///|
 /// Verifies that the devtools extension is available on the current platform.
 fn ensure_supported() -> Result[Unit, String] {
-  if is_windows_ffi() {
-    Ok(())
-  } else {
-    Err(
-      "devtools extension currently supports Windows WebView2 native builds only",
+  ensure_supported_for_backend(@webview.backend_id())
+}
+
+///|
+fn ensure_supported_for_backend(backend_id : String) -> Result[Unit, String] {
+  match devtools_unsupported_backend_error(backend_id) {
+    Some(error) => Err(error)
+    None =>
+      if is_windows_ffi() {
+        Ok(())
+      } else {
+        Err(
+          "devtools extension currently supports Windows WebView2 native builds only",
+        )
+      }
+  }
+}
+
+///|
+fn devtools_unsupported_backend_error(backend_id : String) -> String? {
+  if backend_id == cef_backend_id {
+    Some(
+      "devtools extension requires the Windows WebView2 backend; current backend is " +
+      backend_id,
     )
+  } else {
+    None
   }
 }
 

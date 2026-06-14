@@ -9,7 +9,12 @@ test "devtools metadata constants match public spec" {
 ///|
 test "devtools support check reports current native platform support" {
   let result = ensure_supported()
-  if is_windows_ffi() {
+  if @webview.backend_id() == "cef" {
+    debug_inspect(
+      result,
+      content="Err(\"devtools extension requires the Windows WebView2 backend; current backend is cef\")",
+    )
+  } else if is_windows_ffi() {
     debug_inspect(result, content="Ok(())")
   } else {
     debug_inspect(
@@ -17,6 +22,14 @@ test "devtools support check reports current native platform support" {
       content="Err(\"devtools extension currently supports Windows WebView2 native builds only\")",
     )
   }
+}
+
+///|
+test "devtools reports CEF root backend as unsupported" {
+  debug_inspect(
+    ensure_supported_for_backend("cef"),
+    content="Err(\"devtools extension requires the Windows WebView2 backend; current backend is cef\")",
+  )
 }
 
 ///|

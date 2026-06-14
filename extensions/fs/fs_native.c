@@ -18,17 +18,26 @@ extern "C" {
 #include <windows.h>
 #include <ole2.h>
 #include <wchar.h>
+#if defined(__has_include)
+#if __has_include("../../build/_deps/microsoft_web_webview2-src/build/native/include/WebView2.h")
+#define EXTENSIONS_FS_HAS_WEBVIEW2 1
 #include "../../build/_deps/microsoft_web_webview2-src/build/native/include/WebView2.h"
+#endif
+#endif
+#ifndef EXTENSIONS_FS_HAS_WEBVIEW2
+#define EXTENSIONS_FS_HAS_WEBVIEW2 0
+#endif
 #ifdef _MSC_VER
 #pragma comment(lib, "ole32.lib")
 #endif
 #else
+#define EXTENSIONS_FS_HAS_WEBVIEW2 0
 #include <unistd.h>
 #endif
 
 #include "moonbit.h"
 
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
 #define EXTENSIONS_FS_WEBVIEW2_17_POST_SHARED_BUFFER_TO_SCRIPT_INDEX 116
 #define EXTENSIONS_FS_ENVIRONMENT12_CREATE_SHARED_BUFFER_INDEX 24
 #define EXTENSIONS_FS_SHARED_BUFFER_GET_BUFFER_INDEX 4
@@ -541,7 +550,7 @@ MOONBIT_FFI_EXPORT int32_t extensions_fs_truncate_file_ffi(moonbit_bytes_t path,
 
 MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_probe(
     int64_t controller_handle) {
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
   int32_t mask = 1;
   ICoreWebView2 *webview = NULL;
   ICoreWebView2_3 *webview3 = NULL;
@@ -625,7 +634,7 @@ MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_publish_read(
     moonbit_bytes_t payload,
     int32_t size,
     int32_t sequence) {
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
   HRESULT hr;
 
   extensions_fs_shared_buffer_set_ok();
@@ -681,7 +690,7 @@ MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_prepare_write(
     int64_t controller_handle,
     int32_t size,
     int32_t sequence) {
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
   HRESULT hr;
 
   extensions_fs_shared_buffer_set_ok();
@@ -734,7 +743,7 @@ MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_commit_write(
     int32_t size,
     moonbit_bytes_t path,
     int32_t flush) {
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
   FILE *file;
   size_t written;
   int close_result;
@@ -789,7 +798,7 @@ MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_commit_write(
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t extensions_fs_shared_buffer_last_error(void) {
   const char *message =
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
       extensions_fs_shared_buffer_error;
 #else
       "fs SharedArrayBuffer transfer is Windows/WebView2-only";
@@ -799,7 +808,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t extensions_fs_shared_buffer_last_error(void) 
 }
 
 MOONBIT_FFI_EXPORT void extensions_fs_shared_buffer_release(void) {
-#ifdef _WIN32
+#if EXTENSIONS_FS_HAS_WEBVIEW2
   extensions_fs_release_shared_buffer_cache();
   extensions_fs_shared_buffer_set_ok();
 #endif

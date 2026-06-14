@@ -40,6 +40,18 @@ test "fs shared buffer helpers validate transfer sizes" {
 }
 
 ///|
+test "fs shared buffer reports CEF root backend as unsupported" {
+  let support = shared_buffer_capabilities_for_backend("cef", 123)
+  assert_false(support.is_windows)
+  assert_false(support.has_controller)
+  assert_false(support.supported)
+  assert_eq(
+    support.last_error,
+    "fs SharedArrayBuffer transfer requires the Windows WebView2 backend; current backend is cef",
+  )
+}
+
+///|
 fn write_text_fixture(path : String, content : String) -> Unit {
   try @xfs.write_string_to_file(path, content) catch {
     error =>

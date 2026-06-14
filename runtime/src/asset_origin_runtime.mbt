@@ -3,6 +3,9 @@
 let asset_origin_host_name = "app.localhost"
 
 ///|
+let cef_backend_id = "cef"
+
+///|
 /// Opaque native asset origin state managed by the Windows runtime shim.
 #external
 priv type AssetOriginState
@@ -25,8 +28,14 @@ extern "C" fn asset_origin_install_ffi(
 ///|
 /// Loads a file-backed frontend bundle through a synthetic secure origin.
 fn load_asset_entry(webview : @webview.Webview, raw_path : String) -> Unit {
+  match asset_origin_unsupported_backend_error(@webview.backend_id()) {
+    Some(error) => abort(error)
+    None => ()
+  }
   guard asset_origin_is_windows_ffi() else {
-    abort("AppEntry::Asset currently supports Windows native builds only")
+    abort(
+      "AppEntry::Asset currently supports Windows WebView2 native builds only",
+    )
   }
   let entry_path : @path.Path = raw_path
   let resolved_entry = normalize_asset_origin_path(
@@ -49,6 +58,18 @@ fn load_asset_entry(webview : @webview.Webview, raw_path : String) -> Unit {
     )
   }
   webview.navigate(asset_origin_url())
+}
+
+///|
+fn asset_origin_unsupported_backend_error(backend_id : String) -> String? {
+  if backend_id == cef_backend_id {
+    Some(
+      "AppEntry::Asset requires the Windows WebView2 backend; current backend is " +
+      backend_id,
+    )
+  } else {
+    None
+  }
 }
 
 ///|
