@@ -29,7 +29,9 @@ The near-term direction is:
 - keep Lepus framework-first rather than app-template-first
 - keep extensions opt-in so shipped binaries stay small
 - add AI support in metadata, tooling, diagnostics, and manifest control-plane layers rather than the default runtime of every app
-- simplify the public app surface around `create_app(...)` and `create_app_from_file(...)`
+- make `AppBuilder` and `AppFileBuilder` the ordinary app startup path while
+  keeping `create_app(...)` and `create_app_from_file(...)` as lower-level
+  escape hatches
 
 JavaScript now uses a single global entry:
 
@@ -66,24 +68,17 @@ import {
   "extensions/fs" @fs,
   "extensions/path" @path,
   "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
-  "justjavac/lepus_runtime" @wvrt,
 }
 
 fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Demo", 900, 700),
-    @manifest.AppEntry::Html("<html></html>"),
-    debug=1,
-  )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let _ = registry.register(@path.spec())
-  let runtime : @wvrt.App = match @app.create_app(manifest, registry) {
+  let app = match @app.AppBuilder::html("Demo", 900, 700, "<html></html>", debug=1)
+    .extension(@fs.spec())
+    .extension(@path.spec())
+    .build() {
     Ok(app) => app
     Err(error) => abort(error)
   }
-  runtime.run()
+  app.run()
 }
 ```
 
@@ -91,14 +86,14 @@ Or from `app.json`:
 
 ```moonbit
 fn main {
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let _ = registry.register(@path.spec())
-  let runtime = match @app.create_app_from_file("app.json", registry) {
+  let app = match @app.AppFileBuilder::new("app.json")
+    .link(@fs.spec())
+    .link(@path.spec())
+    .build() {
     Ok(app) => app
     Err(error) => abort(error)
   }
-  runtime.run()
+  app.run()
 }
 ```
 
@@ -127,6 +122,9 @@ The important rule is:
 
 - `app.json` configures extensions
 - explicit project code or generated registry code links extensions
+- inline `AppBuilder.extension(...)` links and enables an extension in one call
+- `AppFileBuilder.link(...)` only links; `app.json.extensions` remains the
+  source of enablement
 
 Even when catalog or tooling generates those edits, the final project should still make extension linking explicit and reviewable.
 

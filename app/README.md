@@ -2,10 +2,15 @@
 
 High-level app composition helpers for `lepus`.
 
-`lepus_app` turns a parsed manifest plus an explicit `ExtensionRegistry` into a
-runtime `App`.
+`lepus_app` turns inline app configuration or an `app.json` file plus explicit
+extension links into a runtime `App`.
 
-- `create_app(...)` builds from an `AppManifest`
+- `AppBuilder` is the ordinary inline app startup path; `.extension(...)`
+  links and enables an extension
+- `AppFileBuilder` is the ordinary `app.json` startup path; `.link(...)` only
+  links specs and leaves extension enablement to `app.json.extensions`
+- `create_app(...)` builds from an `AppManifest` when callers need a lower-level
+  escape hatch
 - `create_app_from_file(...)` builds from the bootstrap control plane and keeps
   manifest file loading aligned with the same `app.json` editing backend used
   by tooling

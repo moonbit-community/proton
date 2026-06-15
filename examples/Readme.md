@@ -60,7 +60,7 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | 19_app_fs | OK | `justjavac/lepus_app` startup with `fs` and `path` |
 | 20_app_desktop | OK | App startup with `dialog` and `clipboard` |
 | 21_app_shell | OK | App startup with the `shell` extension |
-| 22_app_config | OK | Declarative startup through `@app.create_app_from_file("app.json", ...)` |
+| 22_app_config | OK | Declarative startup through `@app.AppFileBuilder::new("app.json")` |
 | 23_ops_runtime | OK | Direct `window.__MoonBit__.core.invokeOp(...)` plus extension proxies |
 | 24_app_multi_window | OK | Multi-window startup with main and secondary windows |
 | 25_app_system | Windows-only | Notification, tray, and global hotkey in one runtime |
@@ -86,7 +86,9 @@ node ..\scripts\e2e_cdp_smoke.mjs
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
-- Examples `19` through `36` show app-style startup with `justjavac/lepus_app`.
+- Examples `19` through `36` show app-style startup with `justjavac/lepus_app`;
+  ordinary inline examples use `AppBuilder`, and `app.json` examples use
+  `AppFileBuilder`.
 - Example `38` shows async extension-style APIs with the user process starting a framework child process.
 - Example `39` shows sync and async extension-style APIs registered through one command extension registry.
 - Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
