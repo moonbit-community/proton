@@ -23,7 +23,7 @@ async fn main {
   let available = @webview.backend_available()
   if !available {
     println(
-      "CEF backend is not linked. Set LEPUS_CEF_ROOT before building this example.",
+      "CEF backend is unavailable. Set LEPUS_CEF_ROOT and LEPUS_CEF_SUBPROCESS_PATH before running this example.",
     )
     return
   }

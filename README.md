@@ -130,6 +130,28 @@ The important rule is:
 
 Even when catalog or tooling generates those edits, the final project should still make extension linking explicit and reviewable.
 
+### Run The Windows CEF Example
+
+Run from the repository root in one PowerShell session:
+
+```powershell
+$env:LEPUS_CEF_ROOT = "C:\path\to\cef_binary_..._windows64_minimal"
+Remove-Item Env:\LEPUS_CEF_SUBPROCESS_PATH -ErrorAction SilentlyContinue
+moon build src\cef_process --target native
+$env:LEPUS_CEF_SUBPROCESS_PATH = (Resolve-Path "_build\native\debug\build\justjavac\lepus\cef_process\cef_process.exe").Path
+moon -C examples run 37_cef_mvp --target native
+```
+
+Run the automated CEF bind smoke test with the same environment:
+
+```powershell
+moon -C examples run 43_cef_bind_smoke --target native
+```
+
+The smoke test prints `["ok"]` when the CEF backend, subprocess helper, and
+JavaScript binding bridge are working. The MSVC `LNK4044` warning about `/link`
+is expected with the current MoonBit linker flag forwarding.
+
 ## JavaScript Surface
 
 The runtime installs one global object:
@@ -156,16 +178,19 @@ This repo targets `native` only.
 - `LEPUS_CEF_ROOT` must point at a CEF binary distribution with
   `include/capi/cef_app_capi.h`, `Release/libcef.lib`,
   `Release/libcef.dll`, and `Resources/icudtl.dat`.
-- When running a built executable, make the CEF `Release` binaries and
-  `Resources` payload available in the runtime layout expected by CEF. With the
-  official Windows minimal distribution this means copying the `Resources`
-  payload such as `icudtl.dat`, `resources.pak`, `chrome_*.pak`, and `locales/`
-  beside `libcef.dll` or beside the final executable.
+- CEF child processes run through the MoonBit helper package
+  `src/cef_process`, not through the user executable. Build it first and pass
+  its executable path through `LEPUS_CEF_SUBPROCESS_PATH` when building or
+  running CEF examples.
+- With `LEPUS_CEF_ROOT` and `LEPUS_CEF_SUBPROCESS_PATH` set, the native stub
+  loads `Release/libcef.dll` and points CEF at `Resources/` from the configured
+  root. A deployed app can either keep those environment variables or package
+  the same CEF runtime layout beside the app.
 - If `LEPUS_CEF_ROOT` is unset, native checks can still compile against an
   unavailable stub, but creating a real `Webview` aborts with a CEF setup
   message.
-- `LEPUS_WEBVIEW_LINK` and vendored `libwebview` linkage are obsolete for the
-  root package.
+- The previous vendored webview linkage path has been removed from the root
+  package.
 - The first production target for the CEF backend is Windows. macOS and Linux
   CEF parity is deferred.
 - Windows native tests and examples that still include WebView2 COM headers need
