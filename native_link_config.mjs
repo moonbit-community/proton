@@ -34,6 +34,10 @@ function requirePath(root, relativePath) {
   return candidate;
 }
 
+function cStringDefine(value) {
+  return value.replace(/\\/g, "/").replace(/"/g, "\\\"");
+}
+
 function windowsConfig(root) {
   requirePath(root, "include/capi/cef_app_capi.h");
   requirePath(root, "include/capi/cef_browser_capi.h");
@@ -80,12 +84,23 @@ function main() {
   }
 
   const root = path.resolve(rawRoot);
+  const rawSubprocess = envValue(env, "LEPUS_CEF_SUBPROCESS_PATH").trim();
+  const subprocess = rawSubprocess.length === 0
+    ? ""
+    : path.resolve(rawSubprocess);
+  if (subprocess.length > 0 && !fs.existsSync(subprocess)) {
+    throw new Error(`Missing CEF subprocess executable: ${subprocess}`);
+  }
   process.stdout.write(JSON.stringify({
     vars: {
       LEPUS_CEF_ENABLED: "1",
       LEPUS_CEF_ROOT: nativeLinkPath(root),
+      LEPUS_CEF_SUBPROCESS_PATH: nativeLinkPath(subprocess),
       LEPUS_CEF_STUB_CC_FLAGS:
-        `/DLEPUS_CEF_ENABLED=1 /I"${nativeLinkPath(root)}"`,
+        `/DLEPUS_CEF_ENABLED=1 ` +
+        `/DLEPUS_CEF_ROOT_PATH=\\"${cStringDefine(root)}\\" ` +
+        `/DLEPUS_CEF_SUBPROCESS_PATH=\\"${cStringDefine(subprocess)}\\" ` +
+        `/I"${nativeLinkPath(root)}"`,
     },
     link_configs: [
       {

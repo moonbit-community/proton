@@ -102,6 +102,14 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_webview_backend_id(void) {
 #define LEPUS_CEF_CLASS_NAME L"LepusCefWindow"
 #define LEPUS_WM_FLUSH_OPS (WM_APP + 51)
 
+#ifndef LEPUS_CEF_ROOT_PATH
+#define LEPUS_CEF_ROOT_PATH ""
+#endif
+
+#ifndef LEPUS_CEF_SUBPROCESS_PATH
+#define LEPUS_CEF_SUBPROCESS_PATH ""
+#endif
+
 struct moonbit_webview_op {
   int type;
   char *value;
@@ -379,6 +387,102 @@ static char *lepus_path_join(const char *left, const char *right) {
   return out;
 }
 
+static const char *lepus_cef_root_path(void) {
+  const char *env = getenv("LEPUS_CEF_ROOT");
+  if (env != NULL && env[0] != '\0') {
+    return env;
+  }
+  return LEPUS_CEF_ROOT_PATH;
+}
+
+static const char *lepus_cef_subprocess_path(void) {
+  const char *env = getenv("LEPUS_CEF_SUBPROCESS_PATH");
+  if (env != NULL && env[0] != '\0') {
+    return env;
+  }
+  return LEPUS_CEF_SUBPROCESS_PATH;
+}
+
+static int lepus_file_exists(const char *path) {
+  DWORD attributes;
+  if (path == NULL || path[0] == '\0') {
+    return 0;
+  }
+  attributes = GetFileAttributesA(path);
+  return attributes != INVALID_FILE_ATTRIBUTES &&
+         (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
+
+static void lepus_prepend_env_path(const char *dir) {
+  DWORD old_len;
+  char *old_path = NULL;
+  char *new_path;
+  size_t dir_len;
+  size_t path_len = 0;
+  if (dir == NULL || dir[0] == '\0') {
+    return;
+  }
+  old_len = GetEnvironmentVariableA("PATH", NULL, 0);
+  if (old_len > 0) {
+    old_path = (char *)malloc((size_t)old_len + 1);
+    if (old_path == NULL) {
+      return;
+    }
+    if (GetEnvironmentVariableA("PATH", old_path, old_len + 1) == 0) {
+      free(old_path);
+      old_path = NULL;
+    }
+  }
+  dir_len = strlen(dir);
+  if (old_path != NULL) {
+    path_len = strlen(old_path);
+  }
+  new_path = (char *)malloc(dir_len + (path_len > 0 ? 1 + path_len : 0) + 1);
+  if (new_path == NULL) {
+    free(old_path);
+    return;
+  }
+  memcpy(new_path, dir, dir_len);
+  if (path_len > 0) {
+    new_path[dir_len] = ';';
+    memcpy(new_path + dir_len + 1, old_path, path_len + 1);
+  } else {
+    new_path[dir_len] = '\0';
+  }
+  SetEnvironmentVariableA("PATH", new_path);
+  free(old_path);
+  free(new_path);
+}
+
+static int lepus_cef_runtime_files_available(void) {
+  const char *cef_root = lepus_cef_root_path();
+  const char *subprocess_path = lepus_cef_subprocess_path();
+  char *release_dir = NULL;
+  char *dll_path = NULL;
+  char *resources_dir = NULL;
+  char *icudtl_path = NULL;
+  int available = 0;
+  if (cef_root == NULL || cef_root[0] == '\0') {
+    return 0;
+  }
+  release_dir = lepus_path_join(cef_root, "Release");
+  if (release_dir != NULL) {
+    dll_path = lepus_path_join(release_dir, "libcef.dll");
+  }
+  resources_dir = lepus_path_join(cef_root, "Resources");
+  if (resources_dir != NULL) {
+    icudtl_path = lepus_path_join(resources_dir, "icudtl.dat");
+  }
+  available = lepus_file_exists(dll_path) &&
+              lepus_file_exists(icudtl_path) &&
+              lepus_file_exists(subprocess_path);
+  free(release_dir);
+  free(dll_path);
+  free(resources_dir);
+  free(icudtl_path);
+  return available;
+}
+
 static void lepus_prepare_cef_runtime(const char *cef_root) {
   char *release_dir = NULL;
   char *dll_path = NULL;
@@ -391,7 +495,7 @@ static void lepus_prepare_cef_runtime(const char *cef_root) {
   if (cef_root != NULL && cef_root[0] != '\0') {
     release_dir = lepus_path_join(cef_root, "Release");
     if (release_dir != NULL) {
-      SetDllDirectoryA(release_dir);
+      lepus_prepend_env_path(release_dir);
       dll_path = lepus_path_join(release_dir, "libcef.dll");
     }
     if (dll_path != NULL) {
@@ -1219,6 +1323,27 @@ static void lepus_init_app(void) {
   initialized = 1;
 }
 
+static void lepus_check_cef_api_hash(void) {
+#ifdef CEF_API_VERSION
+  (void)cef_api_hash(CEF_API_VERSION, 0);
+#else
+  (void)cef_api_hash(0);
+#endif
+}
+
+MOONBIT_FFI_EXPORT int32_t lepus_cef_execute_process(void) {
+  cef_main_args_t args;
+  const char *cef_root = lepus_cef_root_path();
+  lepus_prepare_cef_runtime(cef_root);
+  lepus_trace("init subprocess app");
+  lepus_init_app();
+  lepus_check_cef_api_hash();
+  memset(&args, 0, sizeof(args));
+  args.instance = GetModuleHandleW(NULL);
+  lepus_trace("cef execute process");
+  return cef_execute_process(&args, &lepus_app_instance.app, NULL);
+}
+
 static void lepus_cef_shutdown(void) {
   if (lepus_cef_initialized) {
     cef_shutdown();
@@ -1229,8 +1354,8 @@ static void lepus_cef_shutdown(void) {
 static void lepus_ensure_cef_initialized(int debug) {
   cef_main_args_t args;
   cef_settings_t settings;
-  int exit_code;
   const char *cef_root;
+  const char *subprocess_path;
   char *resources_dir = NULL;
   char *locales_dir = NULL;
   char *root_cache_path = NULL;
@@ -1238,23 +1363,14 @@ static void lepus_ensure_cef_initialized(int debug) {
   if (lepus_cef_initialized) {
     return;
   }
-  cef_root = getenv("LEPUS_CEF_ROOT");
+  cef_root = lepus_cef_root_path();
+  subprocess_path = lepus_cef_subprocess_path();
   lepus_prepare_cef_runtime(cef_root);
   lepus_trace("init app");
   lepus_init_app();
-#ifdef CEF_API_VERSION
-  (void)cef_api_hash(CEF_API_VERSION, 0);
-#else
-  (void)cef_api_hash(0);
-#endif
+  lepus_check_cef_api_hash();
   memset(&args, 0, sizeof(args));
   args.instance = GetModuleHandleW(NULL);
-  lepus_trace("execute process");
-  exit_code = cef_execute_process(&args, &lepus_app_instance.app, NULL);
-  if (exit_code >= 0) {
-    lepus_trace("cef child process exit");
-    exit(exit_code);
-  }
   memset(&settings, 0, sizeof(settings));
   settings.size = sizeof(settings);
   settings.no_sandbox = 1;
@@ -1263,6 +1379,15 @@ static void lepus_ensure_cef_initialized(int debug) {
   settings.remote_debugging_port = 0;
   settings.log_severity =
       lepus_trace_enabled() ? LOGSEVERITY_DEFAULT : LOGSEVERITY_DISABLE;
+  if (!lepus_file_exists(subprocess_path)) {
+    fprintf(stderr,
+            "Lepus CEF subprocess executable is missing. Set "
+            "LEPUS_CEF_SUBPROCESS_PATH to the MoonBit CEF subprocess "
+            "executable before creating a Webview.\n");
+    fflush(stderr);
+    abort();
+  }
+  lepus_set_string(&settings.browser_subprocess_path, subprocess_path);
   if (lepus_trace_enabled()) {
     log_file = lepus_temp_path_join("lepus-cef.log");
     if (log_file != NULL) {
@@ -1291,6 +1416,7 @@ static void lepus_ensure_cef_initialized(int debug) {
   cef_string_clear(&settings.resources_dir_path);
   cef_string_clear(&settings.locales_dir_path);
   cef_string_clear(&settings.root_cache_path);
+  cef_string_clear(&settings.browser_subprocess_path);
   cef_string_clear(&settings.log_file);
   free(resources_dir);
   free(locales_dir);
@@ -1365,7 +1491,7 @@ static void lepus_create_browser(struct moonbit_webview *w) {
 }
 
 MOONBIT_FFI_EXPORT int32_t moonbit_webview_backend_available(void) {
-  return 1;
+  return lepus_cef_runtime_files_available();
 }
 
 MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
@@ -1839,6 +1965,10 @@ MOONBIT_FFI_EXPORT int64_t moonbit_webview_identity(webview_t raw) {
 
 MOONBIT_FFI_EXPORT int32_t moonbit_webview_backend_available(void) {
   return 0;
+}
+
+MOONBIT_FFI_EXPORT int32_t lepus_cef_execute_process(void) {
+  return -1;
 }
 
 MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
