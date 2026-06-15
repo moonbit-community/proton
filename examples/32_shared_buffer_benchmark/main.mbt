@@ -156,13 +156,14 @@ fn respond_json_error(
 
 ///|
 fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("SharedBuffer Benchmark", 1080, 760),
-    @manifest.AppEntry::Asset("32_shared_buffer_benchmark/index.html"),
-    debug=1,
-  )
   let app : @wvrt.App = match
-    @app.create_app(manifest, @app.ExtensionRegistry::new()) {
+    @app.AppBuilder::asset(
+      "SharedBuffer Benchmark",
+      1080,
+      760,
+      "32_shared_buffer_benchmark/index.html",
+      debug=1,
+    ).build() {
     Ok(app) => app
     Err(error) => abort(error)
   }

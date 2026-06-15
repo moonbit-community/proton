@@ -28,13 +28,14 @@ fn[Payload : @json.FromJson] decode_single_argument(
 
 ///|
 fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("MoonBit Asset Bundle", 1040, 760),
-    @manifest.AppEntry::Asset("31_app_asset_bundle/index.html"),
-    debug=1,
-  )
   let app : @wvrt.App = match
-    @app.create_app(manifest, @app.ExtensionRegistry::new()) {
+    @app.AppBuilder::asset(
+      "MoonBit Asset Bundle",
+      1040,
+      760,
+      "31_app_asset_bundle/index.html",
+      debug=1,
+    ).build() {
     Ok(app) => app
     Err(error) => abort(error)
   }
