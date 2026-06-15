@@ -14,6 +14,20 @@ let moonbit_core_template_resource : String =
   #|    const binding = window[bindingName];
   #|    return typeof binding === 'function' ? binding : null;
   #|  }
+  #|  function waitForBinding(deadline) {
+  #|    const binding = getBinding();
+  #|    if (binding) {
+  #|      return Promise.resolve(binding);
+  #|    }
+  #|    if (Date.now() >= deadline) {
+  #|      return Promise.reject(new Error('MoonBit op runtime is not available'));
+  #|    }
+  #|    return new Promise(function(resolve) {
+  #|      window.setTimeout(resolve, 10);
+  #|    }).then(function() {
+  #|      return waitForBinding(deadline);
+  #|    });
+  #|  }
   #|  function startBindingPoll() {
   #|    const pollName = bindingName + '_poll';
   #|    const poll = window[pollName];
@@ -31,6 +45,11 @@ let moonbit_core_template_resource : String =
   #|    };
   #|    window.setTimeout(tick, 0);
   #|  }
+  #|  function invokeWithBinding(binding, name, payload) {
+  #|    const result = binding({ name: name, payload: payload === undefined ? null : payload });
+  #|    startBindingPoll();
+  #|    return result;
+  #|  }
   #|  const core = root.core && typeof root.core === 'object' ? root.core : (root.core = Object.create(null));
   #|  core.registerOp = function(name) {
   #|    opNames[name] = true;
@@ -41,12 +60,12 @@ let moonbit_core_template_resource : String =
   #|  };
   #|  core.invokeOp = function(name, payload) {
   #|    const binding = getBinding();
-  #|    if (!binding) {
-  #|      return Promise.reject(new Error('MoonBit op runtime is not available'));
+  #|    if (binding) {
+  #|      return invokeWithBinding(binding, name, payload);
   #|    }
-  #|    const result = binding({ name: name, payload: payload === undefined ? null : payload });
-  #|    startBindingPoll();
-  #|    return result;
+  #|    return waitForBinding(Date.now() + 1000).then(function(binding) {
+  #|      return invokeWithBinding(binding, name, payload);
+  #|    });
   #|  };
   #|  core.ops = core.ops && typeof core.ops === 'object' ? core.ops : new Proxy(Object.create(null), {
   #|    get(target, property) {

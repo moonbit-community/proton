@@ -3,6 +3,7 @@ test "moonbit core script renders embedded template" {
   let script = make_moonbit_core_script()
   assert_true(script.contains("const moonbitName = \"__MoonBit__\";"))
   assert_true(script.contains("const bindingName = \"__moonbit_op_dispatch\";"))
+  assert_true(script.contains("function waitForBinding(deadline)"))
   assert_false(script.contains("__MOONBIT_NAME_JS__"))
   assert_false(script.contains("__BINDING_NAME_JS__"))
 }
