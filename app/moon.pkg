@@ -24,6 +24,8 @@ options(
   targets: {
     "command_extension.mbt": [ "native" ],
     "command_extension_order.mbt": [ "native" ],
+    "builder.mbt": [ "native" ],
+    "builder_wbtest.mbt": [ "native" ],
     "config_bridge.mbt": [ "native" ],
     "create.mbt": [ "native" ],
     "framework_ipc_transport.mbt": [ "native" ],

@@ -30,6 +30,20 @@ pub fn run_framework_process_from_config_file(String, extension_registry? : Exte
 // Errors
 
 // Types and methods
+type AppBuilder
+pub fn AppBuilder::asset(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::build(Self) -> Result[@lepus_runtime.App, String]
+pub fn AppBuilder::extension(Self, @lepus_core.ExtensionSpec) -> Self
+pub fn AppBuilder::extension_with_options(Self, @lepus_core.ExtensionSpec, Json) -> Self
+pub fn AppBuilder::file(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::html(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::run(Self) -> Result[Unit, String]
+pub fn AppBuilder::url(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_asset(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_file(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_html(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_url(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+
 type AppCommandApiDescriptor
 pub fn AppCommandApiDescriptor::new(String) -> Self
 
@@ -64,6 +78,13 @@ pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescripto
 type AppCommandsConfig
 pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
 
+type AppFileBuilder
+pub fn AppFileBuilder::build(Self) -> Result[@lepus_runtime.App, String]
+pub fn AppFileBuilder::link(Self, @lepus_core.ExtensionSpec) -> Self
+pub fn AppFileBuilder::links(Self, Array[@lepus_core.ExtensionSpec]) -> Self
+pub fn AppFileBuilder::new(String) -> Self
+pub fn AppFileBuilder::run(Self) -> Result[Unit, String]
+
 type ExtensionRegistry
 pub fn ExtensionRegistry::get(Self, String) -> @lepus_core.ExtensionSpec?
 pub fn ExtensionRegistry::new() -> Self
@@ -73,3 +94,4 @@ pub fn ExtensionRegistry::registered_ids(Self) -> Array[String]
 // Type aliases
 
 // Traits
+
