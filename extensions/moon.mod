@@ -4,7 +4,7 @@ version = "0.1.0"
 
 import {
   "justjavac/ffi@0.2.1",
-  "moonbitlang/x@0.4.43",
+  "moonbitlang/x@0.4.45",
   "moonbitlang/async@0.19.0",
   "justjavac/clipboard@0.1.5",
   "justjavac/notification@0.1.0",
