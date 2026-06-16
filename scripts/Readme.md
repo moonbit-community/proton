@@ -45,6 +45,33 @@ Install a specific SDK version:
 
 The generated `build/` directory is ignored by git.
 
+## `setup_cef.mjs`
+
+Downloads and extracts the Windows CEF binary distribution used by the root CEF
+backend. The script validates the expected CEF layout and prints the extracted
+CEF root path.
+
+### Usage
+
+Download the default CEF build into `.cef-cache/`:
+
+```powershell
+node .\scripts\setup_cef.mjs
+```
+
+Use a different cache directory:
+
+```powershell
+node .\scripts\setup_cef.mjs --cache D:\Code\moonbit-webview\.cef-cache
+```
+
+After downloading, set `LEPUS_CEF_ROOT` explicitly before building CEF-backed
+native targets:
+
+```powershell
+$env:LEPUS_CEF_ROOT = (Resolve-Path ".\.cef-cache\cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal").Path
+```
+
 ## `e2e_cdp_smoke.mjs`
 
 Starts the multi-process examples with WebView2 remote debugging enabled,

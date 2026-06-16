@@ -16,13 +16,17 @@ Run the Windows CEF examples by building the MoonBit subprocess helper first,
 then passing that helper path to the app build:
 
 ```powershell
-$env:LEPUS_CEF_ROOT = "C:\path\to\cef_binary_..._windows64_minimal"
+node .\scripts\setup_cef.mjs
+$env:LEPUS_CEF_ROOT = (Resolve-Path ".\.cef-cache\cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal").Path
 Remove-Item Env:\LEPUS_CEF_SUBPROCESS_PATH -ErrorAction SilentlyContinue
 moon build src\cef_process --target native
 $env:LEPUS_CEF_SUBPROCESS_PATH = (Resolve-Path "_build\native\debug\build\justjavac\lepus\cef_process\cef_process.exe").Path
 moon -C examples run 43_cef_bind_smoke --target native
 moon -C examples run 37_cef_mvp --target native
 ```
+
+If CEF is already downloaded elsewhere, set `LEPUS_CEF_ROOT` to that directory
+instead of running the download script.
 
 Run the Windows CEF e2e smoke scenarios with both CEF environment variables set:
 
