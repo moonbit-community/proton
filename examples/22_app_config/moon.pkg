@@ -3,6 +3,8 @@ import {
   "extensions/path",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_runtime" @wvrt,
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path" @mbpath,
 }
 
 supported_targets = "native"
