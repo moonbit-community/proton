@@ -19,9 +19,9 @@ pub fn framework_process_arg() -> String
 
 pub fn is_framework_process() -> Bool
 
-pub fn run_app_command_extensions_with_framework_process(@lepus_manifest.AppManifest, String, AppCommandExtensionRegistry, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
+pub async fn run_app_command_extensions_with_framework_process(@lepus_manifest.AppManifest, String, AppCommandExtensionRegistry, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
 
-pub fn run_app_command_host_with_framework_process(@lepus_manifest.AppManifest, String, @lepus_core.AppCommandHost, AppCommandsConfig, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
+pub async fn run_app_command_host_with_framework_process(@lepus_manifest.AppManifest, String, @lepus_core.AppCommandHost, AppCommandsConfig, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
 
 pub fn run_framework_process_from_cli(extension_registry? : ExtensionRegistry) -> Result[Unit, String]
 

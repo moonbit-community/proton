@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "extensions/clipboard",
   "extensions/dialog",
   "justjavac/lepus_app" @app,

@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "extensions/tray",
   "justjavac/lepus_app" @app,
   "justjavac/lepus_manifest" @manifest,
