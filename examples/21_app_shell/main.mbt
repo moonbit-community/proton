@@ -16,6 +16,9 @@ async fn main {
     ),
     @manifest.AppEntry::Html(resource),
     debug=1,
+    extensions={
+      "justjavac/lepus-shell": @manifest.ExtensionSetting::enabled(),
+    },
   )
   let registry = @app.AppCommandExtensionRegistry::new()
   let _ = registry.register(@shell.generated_app_command_extension())
