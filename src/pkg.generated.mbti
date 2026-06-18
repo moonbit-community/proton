@@ -23,8 +23,6 @@ pub fn framework_process_arg() -> String
 
 pub fn from_config_file(String) -> App
 
-pub fn from_file(String) -> App
-
 pub fn html(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
 
 pub fn is_framework_process() -> Bool

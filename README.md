@@ -4,15 +4,15 @@ MoonBit framework for building Tauri/Electron-style desktop apps on top of a sma
 
 The repository is organized into these layers:
 
-- `justjavac/lepus`: low-level native browser binding
-- `justjavac/lepus_manifest`: declarative `app.json` contract types
-- `justjavac/lepus_core`: native/JS bridge, ops runtime, resource tables, extension host
-- `justjavac/lepus_runtime`: `App`, windows, and lifecycle orchestration
-- `justjavac/lepus_bootstrap`: `app.json` loading, editing, and validation helpers
-- `justjavac/lepus_app`: high-level app composition and runtime construction
-- `justjavac/lepus_catalog`: metadata discovery, schema loading, and explicit link planning
-- `justjavac/lepus_cli`: developer CLI entry point, including build-time command/event code generation in `cli/codegen`
-- `extensions/*`: built-in extensions such as `fs`, `path`, `dialog`, `clipboard`, `shell`, `notification`, `tray`, and `globalHotkey`
+- `justjavac/lepus`: high-level app facade and ordinary developer API
+- `justjavac/lepus/webview`: low-level native browser binding
+- `justjavac/lepus/manifest`: declarative `app.json` contract types
+- `justjavac/lepus/core`: native/JS bridge, ops runtime, resource tables, extension host
+- `justjavac/lepus/runtime`: `App`, windows, and lifecycle orchestration
+- `justjavac/lepus/bootstrap`: `app.json` loading, editing, and validation helpers
+- `justjavac/lepus/catalog`: metadata discovery, schema loading, and explicit link planning
+- `justjavac/lepus/cli`: developer CLI entry point, including build-time command/event code generation in `src/cli/codegen`
+- `justjavac/lepus_ext/*`: built-in extensions such as `fs`, `path`, `dialog`, `clipboard`, `shell`, `notification`, `tray`, and `globalHotkey`
 
 The product direction is:
 
@@ -29,9 +29,9 @@ The near-term direction is:
 - keep Lepus framework-first rather than app-template-first
 - keep extensions opt-in so shipped binaries stay small
 - add AI support in metadata, tooling, diagnostics, and manifest control-plane layers rather than the default runtime of every app
-- make `AppBuilder` and `AppFileBuilder` the ordinary app startup path while
-  keeping `create_app(...)` and `create_app_from_file(...)` as lower-level
-  escape hatches
+- make package-level `@lepus.html(...)` and `@lepus.from_config_file(...)`
+  the ordinary app startup path while keeping `create_app(...)` and
+  `create_app_from_file(...)` as lower-level escape hatches
 
 JavaScript now uses a single global entry:
 
@@ -52,6 +52,10 @@ This separation is important for binary size. Metadata and manifests may help AI
 Low-level usage stays very small:
 
 ```moonbit
+import {
+  "justjavac/lepus/webview" @webview
+}
+
 fn main {
   @webview.Webview::new(debug=1)
   ..set_title("Lepus")
@@ -61,39 +65,31 @@ fn main {
 }
 ```
 
-App-style startup now goes through `justjavac/lepus_app`:
+App-style startup goes through `justjavac/lepus`:
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "extensions/path" @path,
-  "justjavac/lepus_app" @app,
+  "justjavac/lepus"
+  "justjavac/lepus_ext/fs" @fs
+  "justjavac/lepus_ext/path" @path
 }
 
-fn main {
-  let app = match @app.AppBuilder::html("Demo", 900, 700, "<html></html>", debug=1)
-    .extension(@fs.spec())
-    .extension(@path.spec())
-    .build() {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  app.run()
+async fn main {
+  @lepus.html("Demo", 900, 700, "<html></html>", debug=1)
+  .extension(@fs.spec())
+  .extension(@path.spec())
+  .run_or_abort()
 }
 ```
 
 Or from `app.json`:
 
 ```moonbit
-fn main {
-  let app = match @app.AppFileBuilder::new("app.json")
-    .link(@fs.spec())
-    .link(@path.spec())
-    .build() {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  app.run()
+async fn main {
+  @lepus.from_config_file("app.json")
+  .link(@fs.spec())
+  .link(@path.spec())
+  .run_or_abort()
 }
 ```
 
@@ -122,11 +118,24 @@ The important rule is:
 
 - `app.json` configures extensions
 - explicit project code or generated registry code links extensions
-- inline `AppBuilder.extension(...)` links and enables an extension in one call
-- `AppFileBuilder.link(...)` only links; `app.json.extensions` remains the
+- inline `App::extension(...)` links and enables an extension in one call
+- config-file `App::link(...)` only links; `app.json.extensions` remains the
   source of enablement
 
 Even when catalog or tooling generates those edits, the final project should still make extension linking explicit and reviewable.
+
+### Install The Codegen CLI
+
+Generated command extensions call `target/lepus-tools/lepus codegen` from
+package pre-build steps. Install the local CLI before building those packages:
+
+```powershell
+moon install --path src\cli --bin target\lepus-tools
+Copy-Item target\lepus-tools\cli.exe target\lepus-tools\lepus.exe -Force
+```
+
+On Unix-like shells, copy `target/lepus-tools/cli` to
+`target/lepus-tools/lepus` and make it executable.
 
 ### Run The Windows CEF Example
 
@@ -179,8 +188,8 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 
 This repo targets `native` only.
 
-- The root `justjavac/lepus` package now uses a Windows CEF backend supplied by
-  `LEPUS_CEF_ROOT`.
+- The low-level `justjavac/lepus/webview` package uses a Windows CEF backend
+  supplied by `LEPUS_CEF_ROOT`.
 - `LEPUS_CEF_ROOT` must point at a CEF binary distribution with
   `include/capi/cef_app_capi.h`, `Release/libcef.lib`,
   `Release/libcef.dll`, and `Resources/icudtl.dat`.

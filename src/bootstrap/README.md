@@ -1,3 +1,3 @@
-# lepus_bootstrap
+# lepus/bootstrap
 
 Declarative app bootstrap helpers for `lepus`.

@@ -188,8 +188,9 @@ The normal public API should be owned by the root package:
 - app command extension types such as `AppCommandExtensionSpec`,
   `AppCommandExtensionContext`, and descriptor types
 
-Use `from_config_file` as the documented name. If `from_file` is kept, treat it
-as a short alias, not as the primary docs/examples API.
+Use `from_config_file` as the documented name. Do not keep `from_file` in the
+root facade during this migration; the shorter name is less explicit and has no
+compatibility requirement for this breaking package-path change.
 
 ### Low-level webview binding: `justjavac/lepus/webview`
 
@@ -676,4 +677,3 @@ the import-path migration.
 The main cost is a broad mechanical move. That is why the implementation should
 be split into reviewable commits and validated after each layer, rather than
 doing one large rename plus behavior changes.
-

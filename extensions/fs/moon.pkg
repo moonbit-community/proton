@@ -5,12 +5,12 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @xfs,
   "moonbitlang/x/path",
-  "justjavac/lepus/core" @core,
+  "justjavac/lepus/core",
 }
 
 import {
   "moonbitlang/core/debug",
-  "justjavac/lepus/webview" @webview,
+  "justjavac/lepus/webview",
 } for "wbtest"
 
 supported_targets = "native"

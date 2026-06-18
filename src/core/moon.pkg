@@ -1,20 +1,20 @@
 import {
   "moonbitlang/core/json",
   "justjavac/ffi",
-  "justjavac/lepus/ipc" @ipc,
-  "justjavac/lepus/webview" @webview,
+  "justjavac/lepus/ipc",
+  "justjavac/lepus/webview",
 }
 
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "justjavac/ffi",
-  "justjavac/lepus/webview" @webview,
+  "justjavac/lepus/webview",
 } for "test"
 
 import {
   "moonbitlang/core/debug",
-  "justjavac/lepus/ipc" @ipc,
+  "justjavac/lepus/ipc",
 } for "wbtest"
 
 supported_targets = "+native"

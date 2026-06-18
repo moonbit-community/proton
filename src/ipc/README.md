@@ -1,4 +1,4 @@
-# lepus_ipc
+# lepus/ipc
 
 Transport-neutral IPC protocol types for Lepus.
 

@@ -1,9 +1,9 @@
 # Extensions
 
 This workspace contains the built-in extension packages that plug into
-`justjavac/lepus_core` and `justjavac/lepus_app`.
+`justjavac/lepus/core` and `justjavac/lepus`.
 
-They now participate in app startup through `justjavac/lepus_app`, and each
+They participate in app startup through `justjavac/lepus`, and each
 package exposes a `spec()` builder for registry-driven installation.
 
 ## Layout
@@ -32,15 +32,11 @@ extensions in this workspace adapt those capabilities into the webview runtime.
 
 ## Usage
 
-Add the workspace as a local dependency:
+Add the extension module as a dependency:
 
-```json
-{
-  "deps": {
-    "extensions": {
-      "path": "../extensions"
-    }
-  }
+```toml
+import {
+  "justjavac/lepus_ext@0.1.0"
 }
 ```
 
@@ -48,9 +44,9 @@ Add the workspace as a local dependency:
 
 ```moonbit
 import {
-  "justjavac/lepus_core" @core,
-  "extensions/path" @path,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/core" @core
+  "justjavac/lepus/webview" @webview
+  "justjavac/lepus_ext/path" @path
 }
 
 fn main {
@@ -64,27 +60,16 @@ fn main {
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "extensions/path" @path,
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
-  "justjavac/lepus_runtime" @wvrt,
+  "justjavac/lepus"
+  "justjavac/lepus_ext/fs" @fs
+  "justjavac/lepus_ext/path" @path
 }
 
-fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Demo", 900, 700),
-    @manifest.AppEntry::Html("<html></html>"),
-    debug=1,
-  )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let _ = registry.register(@path.spec())
-  let runtime : @wvrt.App = match @app.create_app(manifest, registry) {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  runtime.run()
+async fn main {
+  @lepus.html("Demo", 900, 700, "<html></html>", debug=1)
+  .extension(@fs.spec())
+  .extension(@path.spec())
+  .run_or_abort()
 }
 ```
 

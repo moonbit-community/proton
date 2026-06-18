@@ -1,21 +1,21 @@
-# lepus_runtime
+# lepus/runtime
 
-`justjavac/lepus_runtime` is the lifecycle layer for app and window orchestration.
-It sits on top of `justjavac/lepus_core`, which now owns the native/JS bridge,
+`justjavac/lepus/runtime` is the lifecycle layer for app and window orchestration.
+It sits on top of `justjavac/lepus/core`, which owns the native/JS bridge,
 ops runtime, resource tables, and low-level extension installation.
 
 Use:
 
-- `justjavac/lepus` for the raw native `Webview`
-- `justjavac/lepus_core` for `Extension`, `ExtensionSpec`, low-level install,
+- `justjavac/lepus/webview` for the raw native `Webview`
+- `justjavac/lepus/core` for `Extension`, `ExtensionSpec`, low-level install,
   and the `window.__MoonBit__` bridge
-- `justjavac/lepus_runtime` for `App`, `AppWindow`, and multi-window lifecycle
-- `justjavac/lepus_bootstrap` for manifest loading/editing
-- `justjavac/lepus_app` for registry-driven app planning and creation
+- `justjavac/lepus/runtime` for `App`, `AppWindow`, and multi-window lifecycle
+- `justjavac/lepus/bootstrap` for manifest loading/editing
+- `justjavac/lepus` for registry-driven app planning and creation
 
 This package does not decide which extensions are installed. That composition
-step now lives in `justjavac/lepus_app`, while built-in extension packages
-live in the sibling [`extensions/`](../extensions) workspace.
+step now lives in `justjavac/lepus`, while built-in extension packages live in
+the separate `justjavac/lepus_ext` module.
 
 ## JavaScript Surface
 
@@ -43,9 +43,9 @@ For direct installation on a raw webview:
 
 ```moonbit
 import {
-  "justjavac/lepus_core" @core,
-  "extensions/path" @path,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/core" @core
+  "justjavac/lepus/webview" @webview
+  "justjavac/lepus_ext/path" @path
 }
 
 fn main {
@@ -55,30 +55,19 @@ fn main {
 }
 ```
 
-For normal app-style startup, prefer `justjavac/lepus_app`:
+For normal app-style startup, prefer `justjavac/lepus`:
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "extensions/path" @path,
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
-  "justjavac/lepus_runtime" @wvrt,
+  "justjavac/lepus"
+  "justjavac/lepus_ext/fs" @fs
+  "justjavac/lepus_ext/path" @path
 }
 
-fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Demo", 900, 700),
-    @manifest.AppEntry::Html("<html></html>"),
-    debug=1,
-  )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let _ = registry.register(@path.spec())
-  let runtime : @wvrt.App = match @app.create_app(manifest, registry) {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  runtime.run()
+async fn main {
+  @lepus.html("Demo", 900, 700, "<html></html>", debug=1)
+  .extension(@fs.spec())
+  .extension(@path.spec())
+  .run_or_abort()
 }
 ```

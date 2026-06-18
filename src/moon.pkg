@@ -5,12 +5,12 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/sys",
-  "justjavac/lepus/bootstrap" @bootstrap,
-  "justjavac/lepus/core" @core,
-  "justjavac/lepus/ipc" @ipc,
+  "justjavac/lepus/bootstrap",
+  "justjavac/lepus/core",
+  "justjavac/lepus/ipc",
   "justjavac/lepus/ipc/ws" @ipc_ws,
-  "justjavac/lepus/manifest" @manifest,
-  "justjavac/lepus/webview" @webview,
+  "justjavac/lepus/manifest",
+  "justjavac/lepus/webview",
   "justjavac/lepus/runtime" @wvrt,
 }
 
@@ -39,4 +39,3 @@ options(
     "types.mbt": [ "native" ],
   },
 )
-

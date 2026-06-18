@@ -93,8 +93,8 @@ pub fn asset(
 }
 
 ///|
-/// Creates an application backed by an `app.json` file.
-pub fn from_file(path : String) -> App {
+/// Creates an application backed by a config file.
+pub fn from_config_file(path : String) -> App {
   App::{
     file_path: Some(path),
     window: @manifest.WindowManifest::new("", 0, 0),
@@ -106,12 +106,6 @@ pub fn from_file(path : String) -> App {
     command_host_setups: [],
     extension_settings: {},
   }
-}
-
-///|
-/// Creates an application backed by a config file.
-pub fn from_config_file(path : String) -> App {
-  from_file(path)
 }
 
 ///|

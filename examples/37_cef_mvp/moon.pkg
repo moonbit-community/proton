@@ -1,6 +1,6 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus/webview" @webview,
+  "justjavac/lepus/webview",
 }
 
 supported_targets = "native"

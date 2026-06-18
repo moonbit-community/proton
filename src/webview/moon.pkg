@@ -14,4 +14,3 @@ options(
   link: { "native": { "stub-cc-flags": "${build.LEPUS_CEF_STUB_CC_FLAGS}" } },
   targets: { "binding.mbt": [ "native" ], "webview.mbt": [ "native" ] },
 )
-

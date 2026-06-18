@@ -61,10 +61,10 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | -------------- | ------ | ---- |
 | 17_extension | OK | Custom extension mounted on `window.__MoonBit__` |
 | 18_extension_fs | OK | Filesystem workbench using `@fs.extension()` and `window.__MoonBit__.fs` |
-| 19_app_fs | OK | `justjavac/lepus_app` startup with `fs` and `path` |
+| 19_app_fs | OK | `justjavac/lepus` startup with `fs` and `path` |
 | 20_app_desktop | OK | App startup with `dialog` and `clipboard` |
 | 21_app_shell | OK | App startup with the `shell` extension |
-| 22_app_config | OK | Declarative startup through `@app.from_file("app.json")` |
+| 22_app_config | OK | Declarative startup through `@lepus.from_config_file("app.json")` |
 | 23_ops_runtime | OK | Direct `window.__MoonBit__.core.invokeOp(...)` plus extension proxies |
 | 24_app_multi_window | OK | Multi-window startup with main and secondary windows |
 | 25_app_system | Windows-only | Notification, tray, and global hotkey in one runtime |
@@ -86,10 +86,10 @@ node ..\scripts\e2e_cdp_smoke.mjs
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
-- Examples `19` through `35` show app-style startup with `justjavac/lepus_app`;
-  ordinary inline examples use `@app.html(...)`, `@app.file(...)`,
+- Examples `19` through `35` show app-style startup with `justjavac/lepus`;
+  ordinary inline examples use `@lepus.html(...)`, `@lepus.file(...)`,
   `.extension(...)`, and `.command(...)`; `app.json` examples use
-  `@app.from_file(...).link(...)`.
+  `@lepus.from_config_file(...).link(...)`.
 - Example `38` shows async extension-style APIs with the user process starting a framework child process.
 - Example `39` shows sync and async extension-style APIs registered through one command extension registry.
 - Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
@@ -98,8 +98,9 @@ node ..\scripts\e2e_cdp_smoke.mjs
   runs in a framework child process.
 - Example `42` shows the generated-command workflow. Regenerate its command
   bridge by first installing the CLI with
-  `moon install ./cli --bin target/lepus-tools`. The package pre-build then
-  calls `target/lepus-tools/lepus_cli codegen`; extension id and namespace come
+  `moon install --path src/cli --bin target/lepus-tools`, then copy
+  `target/lepus-tools/cli(.exe)` to `target/lepus-tools/lepus(.exe)`. The
+  package pre-build then calls `target/lepus-tools/lepus codegen`; extension id and namespace come
   from `42_attribute_codegen_commands/extension.json`.
 - Example `43` exits on its own after JavaScript calls a MoonBit binding,
   receives a response, and reports the Promise result back through a second

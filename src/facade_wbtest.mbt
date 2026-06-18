@@ -68,7 +68,7 @@ test "facade duplicate command ids return error" {
 
 ///|
 test "facade app json link does not auto-enable framework extension" {
-  let app = from_file("app.json").link(
+  let app = from_config_file("app.json").link(
     stub_extension("vendor/framework", js_namespace=Some("framework")),
   )
   let manifest = @manifest.AppManifest::new(
@@ -88,7 +88,7 @@ test "facade app json link does not auto-enable framework extension" {
 
 ///|
 test "facade app json extension links and enables framework extension" {
-  let app = from_file("app.json").extension(
+  let app = from_config_file("app.json").extension(
     stub_extension("vendor/framework", js_namespace=Some("framework")),
   )
   let manifest = @manifest.AppManifest::new(

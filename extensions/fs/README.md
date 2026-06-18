@@ -12,9 +12,9 @@ and install it without wiring command bindings manually.
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "justjavac/lepus_core" @core,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/core" @core
+  "justjavac/lepus/webview" @webview
+  "justjavac/lepus_ext/fs" @fs
 }
 
 fn main {
@@ -24,29 +24,18 @@ fn main {
 }
 ```
 
-For app-style startup, install it through `justjavac/lepus_app`:
+For app-style startup, install it through `justjavac/lepus`:
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
-  "justjavac/lepus_runtime" @wvrt,
+  "justjavac/lepus"
+  "justjavac/lepus_ext/fs" @fs
 }
 
-fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("FS Demo", 900, 700),
-    @manifest.AppEntry::Html("<html></html>"),
-    debug=1,
-  )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let runtime : @wvrt.App = match @app.create_app(manifest, registry) {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  runtime.run()
+async fn main {
+  @lepus.html("FS Demo", 900, 700, "<html></html>", debug=1)
+  .extension(@fs.spec())
+  .run_or_abort()
 }
 ```
 

@@ -1,8 +1,8 @@
-# lepus_catalog
+# lepus/catalog
 
 Metadata discovery and link-planning helpers for Lepus extensions.
 
-`lepus_catalog` is intentionally metadata-only.
+`justjavac/lepus/catalog` is intentionally metadata-only.
 
 - it scans explicit search roots for `extension.json`
 - it loads descriptors and schemas without importing extension code

@@ -1,4 +1,4 @@
-# lepus_ipc/ws
+# lepus/ipc/ws
 
 HTTP/WebSocket IPC transport for Lepus.
 
