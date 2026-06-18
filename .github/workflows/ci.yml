@@ -46,6 +46,17 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Setup Node.js on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install CEF on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          node .\scripts\setup_cef.mjs
+
       - name: Install Lepus CLI for pre-build codegen on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
@@ -105,12 +116,6 @@ jobs:
       - name: List Windows example binaries
         if: ${{ matrix.os == 'windows-latest' }}
         run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
-
-      - name: Setup Node.js for examples e2e
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
 
       - name: Run examples CDP e2e on Windows
         if: ${{ matrix.os == 'windows-latest' }}
