@@ -10,4 +10,5 @@ members = [
   "./examples",
   "./extensions",
   "./runtime",
+  "./e2e",
 ]
