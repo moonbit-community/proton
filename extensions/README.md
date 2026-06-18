@@ -13,7 +13,6 @@ package exposes a `spec()` builder for registry-driven installation.
 - `dialog/`: native message and file dialogs
 - `clipboard/`: adapter over the published `justjavac/clipboard` package
 - `auto_launch/`: startup-entry management through `justjavac/auto_launch`
-- `devtools/`: open the native developer tools window from trusted JavaScript
 - `shell/`: open external targets and reveal files
 - `keepawake/`: native keep-awake guards through `justjavac/keepawake`
 - `microphone/`: native microphone discovery and capture-config helpers
@@ -127,14 +126,12 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 - `path` is pure and side-effect free.
 - `autoLaunch` manages host startup entries and should be linked only for apps
   that explicitly expose that desktop integration.
-- `devtools` exposes the native developer tools window and should stay opt-in
-  for trusted development builds.
 - `keepAwake` owns one active native guard per installed extension instance.
 - `microphone` currently exposes device discovery and capture configuration
   helpers; capture-session streaming can be layered on once the package exposes
   that as public API.
-- `devtools`, `dialog`, and `shell`
-  currently ship Windows-native implementations in this repository.
+- `dialog` and `shell` currently ship Windows-native implementations in this
+  repository.
 - `globalHotkey` follows the upstream
   [`justjavac/global_hotkey`](https://mooncakes.io/docs/justjavac/global_hotkey)
   platform matrix.

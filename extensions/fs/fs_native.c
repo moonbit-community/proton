@@ -193,55 +193,6 @@ MOONBIT_FFI_EXPORT int32_t extensions_fs_truncate_file_ffi(moonbit_bytes_t path,
 #endif
 }
 
-MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_probe(
-    int64_t controller_handle) {
-  (void)controller_handle;
-  return 0;
-}
-
-MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_publish_read(
-    int64_t controller_handle,
-    moonbit_bytes_t payload,
-    int32_t size,
-    int32_t sequence) {
-  (void)controller_handle;
-  (void)payload;
-  (void)size;
-  (void)sequence;
-  return -1;
-}
-
-MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_prepare_write(
-    int64_t controller_handle,
-    int32_t size,
-    int32_t sequence) {
-  (void)controller_handle;
-  (void)size;
-  (void)sequence;
-  return -1;
-}
-
-MOONBIT_FFI_EXPORT int32_t extensions_fs_shared_buffer_commit_write(
-    int32_t sequence,
-    int32_t size,
-    moonbit_bytes_t path,
-    int32_t flush) {
-  (void)sequence;
-  (void)size;
-  (void)path;
-  (void)flush;
-  return -1;
-}
-
-MOONBIT_FFI_EXPORT moonbit_bytes_t extensions_fs_shared_buffer_last_error(void) {
-  const char *message = "fs SharedArrayBuffer transfer is unavailable in this build";
-  size_t len = strlen(message);
-  return extensions_fs_make_bytes(message, len);
-}
-
-MOONBIT_FFI_EXPORT void extensions_fs_shared_buffer_release(void) {
-}
-
 #ifdef __cplusplus
 }
 #endif

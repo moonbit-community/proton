@@ -17,38 +17,6 @@ test "fs helper script stays with fs extension assets" {
   assert_true(script.contains("const rootName = \"__MoonBit__\";"))
   assert_true(script.contains("const extensionName = \"fs\";"))
   assert_true(script.contains("@@nodeStyleFs"))
-  assert_true(script.contains("api.sharedBufferSupport = function()"))
-  assert_true(script.contains("api.readFileBuffer = function(path)"))
-  assert_true(
-    script.contains("api.writeFileBuffer = function(path, content, options)"),
-  )
-}
-
-///|
-test "fs shared buffer helpers validate transfer sizes" {
-  assert_eq(shared_buffer_capacity(0), 1)
-  assert_eq(shared_buffer_capacity(8), 8)
-  debug_inspect(validate_shared_buffer_size(0), content="Ok(())")
-  debug_inspect(
-    validate_shared_buffer_size(-1),
-    content="Err(\"fs SharedArrayBuffer size must be non-negative\")",
-  )
-  debug_inspect(
-    validate_shared_buffer_size(shared_buffer_max_transfer_size + 1),
-    content="Err(\"fs SharedArrayBuffer size exceeds the 64 MiB transfer limit: 67108865\")",
-  )
-}
-
-///|
-test "fs shared buffer reports CEF root backend as unsupported" {
-  let support = shared_buffer_capabilities_for_backend("cef", 123)
-  assert_false(support.is_windows)
-  assert_false(support.has_controller)
-  assert_false(support.supported)
-  assert_eq(
-    support.last_error,
-    "fs SharedArrayBuffer transfer requires the Windows WebView2 backend; current backend is cef",
-  )
 }
 
 ///|

@@ -60,7 +60,7 @@ fn load_app_entry(webview : @webview.Webview, entry : AppEntry) -> Unit {
     Html(html) => webview.set_html(html)
     Url(url) => webview.navigate(url)
     File(path) => webview.navigate(make_file_url(path))
-    Asset(path) => load_asset_entry(webview, path)
+    Asset(path) => webview.navigate(make_file_url(path))
   }
 }
 

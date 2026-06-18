@@ -33,10 +33,9 @@ await window.__MoonBit__.echo.ping({ text: "hello" });
 window.__MoonBit__.events.on("fs.activity", console.log);
 ```
 
-`AppEntry::Asset` is currently implemented with a Windows WebView2 synthetic
-origin. When the experimental root CEF backend is selected, asset entries fail
-with an unsupported-backend error instead of passing a CEF browser handle to the
-WebView2 origin shim.
+`AppEntry::Asset` is treated as a local file entry by the runtime. It is kept as
+a manifest-level distinction for tooling, but the runtime no longer installs a
+backend-specific synthetic origin.
 
 ## Typical Usage
 

@@ -13,6 +13,7 @@ import {
   "extensions@0.1.0",
   "justjavac/lepus_runtime@0.1.0",
   "justjavac/lepus@0.1.10",
+  "justjavac/cdp@0.1.7",
 }
 
 readme = "README.md"

@@ -6,7 +6,7 @@ pub(all) enum NativeHandleKind {
   /// Browser widget. `GtkWidget` pointer (GTK), `NSView` pointer (Cocoa) or `HWND` (Win32).
   Widget = 1
   /// Browser controller. Under the CEF backend this is a diagnostic CEF browser
-  /// host handle, not an `ICoreWebView2Controller` pointer.
+  /// host handle.
   Browser = 2
 } derive(Debug)
 

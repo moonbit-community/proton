@@ -4,7 +4,6 @@ import {
   "justjavac/lepus_app" @app,
   "justjavac/lepus_catalog" @catalog,
   "justjavac/lepus_core" @core,
-  "extensions/devtools",
   "extensions/dialog",
   "extensions/fs",
   "extensions/global_hotkey",

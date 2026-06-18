@@ -5,12 +5,12 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @xfs,
   "moonbitlang/x/path",
-  "justjavac/lepus" @webview,
   "justjavac/lepus_core" @core,
 }
 
 import {
   "moonbitlang/core/debug",
+  "justjavac/lepus" @webview,
 } for "wbtest"
 
 supported_targets = "native"
@@ -29,13 +29,11 @@ options(
     "extension_activity.mbt": [ "native" ],
     "extension_file_ops.mbt": [ "native" ],
     "extension_path_ops.mbt": [ "native" ],
-    "extension_shared_buffer_ops.mbt": [ "native" ],
     "extension_stream_ops.mbt": [ "native" ],
     "fs_wbtest.mbt": [ "native" ],
     "helper_js.mbt": [ "native" ],
     "op_helpers.mbt": [ "native" ],
     "path_api.mbt": [ "native" ],
-    "shared_buffer_api.mbt": [ "native" ],
     "stream_api.mbt": [ "native" ],
     "stream_checks.mbt": [ "native" ],
     "stream_types.mbt": [ "native" ],

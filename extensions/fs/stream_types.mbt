@@ -66,53 +66,6 @@ struct WriteReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-struct SharedBufferSupportReply {
-  is_windows : Bool
-  has_controller : Bool
-  has_core_webview : Bool
-  has_webview2_17 : Bool
-  has_environment12 : Bool
-  can_create_shared_buffer : Bool
-  supported : Bool
-  last_error : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct SharedBufferReadPayload {
-  path : String
-  sequence : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct SharedBufferReadReply {
-  path : String
-  sequence : Int
-  bytes_read : Int
-  capacity : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct SharedBufferWritePreparePayload {
-  path : String
-  sequence : Int
-  size : Int
-  flush : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct SharedBufferWritePrepareReply {
-  path : String
-  sequence : Int
-  capacity : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct SharedBufferWriteCommitPayload {
-  sequence : Int
-  size : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 struct ClosePayload {
   rid : Int
 } derive(ToJson, FromJson, Debug, Eq)

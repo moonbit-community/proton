@@ -192,6 +192,8 @@ This repo targets `native` only.
   loads `Release/libcef.dll` and points CEF at `Resources/` from the configured
   root. A deployed app can either keep those environment variables or package
   the same CEF runtime layout beside the app.
+- Set `LEPUS_CEF_REMOTE_DEBUGGING_PORT` to a port number to enable CEF remote
+  debugging for CDP-based smoke tests.
 - If `LEPUS_CEF_ROOT` is unset, native checks can still compile against an
   unavailable stub, but creating a real `Webview` aborts with a CEF setup
   message.
@@ -199,11 +201,6 @@ This repo targets `native` only.
   package.
 - The first production target for the CEF backend is Windows. macOS and Linux
   CEF parity is deferred.
-- Windows native tests and examples that still include WebView2 COM headers need
-  the SDK headers installed with `.\scripts\install_webview2_headers.ps1`.
-- WebView2-only features such as `AppEntry::Asset`, `devtools.open`, and `fs`
-  SharedArrayBuffer transfer report clear unsupported-backend errors under CEF
-  instead of consuming CEF browser handles.
 - `clipboard` comes from the published Mooncakes package `justjavac/clipboard`.
 - `notification` comes from the published Mooncakes package `justjavac/notification`.
 - `tray` is provided by the published Mooncakes package `justjavac/tray`.

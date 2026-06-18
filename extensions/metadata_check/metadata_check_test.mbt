@@ -78,13 +78,6 @@ fn assert_metadata_matches_app_command_spec(
 
 ///|
 test "built-in extension metadata stays aligned with built-in specs" {
-  assert_metadata_matches_spec(
-    load_descriptor("devtools"),
-    @devtools.spec(),
-    "extensions/devtools",
-    "justjavac/lepus-devtools",
-    "devtools",
-  )
   assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
     @dialog.generated_app_command_extension(),

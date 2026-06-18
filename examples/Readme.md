@@ -28,7 +28,7 @@ moon -C examples run 37_cef_mvp --target native
 If CEF is already downloaded elsewhere, set `LEPUS_CEF_ROOT` to that directory
 instead of running the download script.
 
-Run the Windows CEF e2e smoke scenarios with both CEF environment variables set:
+Run all automated CEF e2e smoke scenarios through `justjavac/cdp`:
 
 ```powershell
 node ..\scripts\e2e_cdp_smoke.mjs
@@ -64,7 +64,7 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | 19_app_fs | OK | `justjavac/lepus_app` startup with `fs` and `path` |
 | 20_app_desktop | OK | App startup with `dialog` and `clipboard` |
 | 21_app_shell | OK | App startup with the `shell` extension |
-| 22_app_config | OK | Declarative startup through `@app.AppFileBuilder::new("app.json")` |
+| 22_app_config | OK | Declarative startup through `@app.from_file("app.json")` |
 | 23_ops_runtime | OK | Direct `window.__MoonBit__.core.invokeOp(...)` plus extension proxies |
 | 24_app_multi_window | OK | Multi-window startup with main and secondary windows |
 | 25_app_system | Windows-only | Notification, tray, and global hotkey in one runtime |
@@ -72,13 +72,9 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | 27_app_notification | Windows-only | Focused notification extension example |
 | 28_app_tray | Windows-only | Focused tray extension example |
 | 29_app_global_hotkey | Windows-only | Focused `globalHotkey` extension example |
-| 30_app_asset_origin | WebView2-only | `AppEntry::Asset(...)` through a secure in-process origin with `SharedArrayBuffer` probing; unsupported under root CEF |
-| 31_app_asset_bundle | WebView2-only | Asset bundle demo with separate `index.html`, `app.js`, and `styles.css`; unsupported under root CEF |
-| 32_shared_buffer_benchmark | WebView2-only | Prototype benchmark comparing JSON bridge payloads with WebView2 shared buffers; unsupported under root CEF |
 | 33_app_auto_launch | Platform-dependent | Focused `autoLaunch` extension example |
 | 34_app_keepawake | Platform-dependent | Focused `keepAwake` extension example |
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
-| 36_app_devtools | WebView2-only | Focused `devtools` extension example; unsupported under root CEF |
 | 37_cef_mvp | Windows CEF MVP | Root `justjavac/lepus` backend rendered through CEF |
 | 38_async_extension_add | OK | Async extension API implemented by a user process that starts a framework child |
 | 39_sync_async_extensions | OK | Sync and async command extensions registered through the same manifest/registry style |
@@ -90,9 +86,10 @@ node ..\scripts\e2e_cdp_smoke.mjs
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
-- Examples `19` through `36` show app-style startup with `justjavac/lepus_app`;
-  ordinary inline examples use `AppBuilder`, and `app.json` examples use
-  `AppFileBuilder`.
+- Examples `19` through `35` show app-style startup with `justjavac/lepus_app`;
+  ordinary inline examples use `@app.html(...)`, `@app.file(...)`,
+  `.extension(...)`, and `.command(...)`; `app.json` examples use
+  `@app.from_file(...).link(...)`.
 - Example `38` shows async extension-style APIs with the user process starting a framework child process.
 - Example `39` shows sync and async extension-style APIs registered through one command extension registry.
 - Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
