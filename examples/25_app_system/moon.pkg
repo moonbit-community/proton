@@ -3,7 +3,7 @@ import {
   "extensions/global_hotkey",
   "extensions/notification",
   "extensions/tray",
-  "justjavac/lepus_app" @app,
+  "justjavac/lepus" @app,
 }
 
 supported_targets = "native"

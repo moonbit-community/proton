@@ -2,8 +2,8 @@ import {
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/core/json",
   "moonbitlang/async",
-  "justjavac/lepus_core" @core,
-  "justjavac/lepus_app",
+  "justjavac/lepus/core" @core,
+  "justjavac/lepus",
 }
 
 supported_targets = "native"

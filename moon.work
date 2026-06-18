@@ -1,14 +1,7 @@
 members = [
   ".",
-  "./manifest",
-  "./ipc",
-  "./core",
-  "./app",
-  "./bootstrap",
-  "./catalog",
   "./cli",
   "./examples",
   "./extensions",
-  "./runtime",
   "./e2e",
 ]

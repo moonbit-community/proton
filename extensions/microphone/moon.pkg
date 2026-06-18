@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/lepus_app" @app,
+  "justjavac/lepus" @app,
   "justjavac/microphone" @sys_microphone,
 }
 

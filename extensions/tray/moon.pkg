@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
   "justjavac/tray" @sys_tray,
-  "justjavac/lepus_app" @app,
+  "justjavac/lepus" @app,
 }
 
 supported_targets = "native"

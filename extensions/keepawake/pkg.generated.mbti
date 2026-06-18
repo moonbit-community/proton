@@ -2,15 +2,15 @@
 package "extensions/keepawake"
 
 import {
-  "justjavac/lepus_app",
+  "justjavac/lepus",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_keep_awake_activity(@lepus_app.AppCommandExtensionContext, KeepAwakeActivity) -> Unit
+pub async fn emit_keep_awake_activity(@lepus.AppCommandExtensionContext, KeepAwakeActivity) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec
 
 // Errors
 

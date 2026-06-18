@@ -1,9 +1,9 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/x/fs" @mbfs,
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_catalog" @catalog,
-  "justjavac/lepus_core" @core,
+  "justjavac/lepus" @app,
+  "justjavac/lepus/catalog" @catalog,
+  "justjavac/lepus/core" @core,
   "extensions/dialog",
   "extensions/fs",
   "extensions/global_hotkey",

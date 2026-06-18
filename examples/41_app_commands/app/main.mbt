@@ -77,7 +77,7 @@ fn register_app_commands(host : @core.AppCommandHost) -> Unit {
 
 ///|
 async fn main {
-  let app = @lepus_app.html("MoonBit App Commands", 920, 680, resource, debug=1).commands(
+  let app = @lepus.html("MoonBit App Commands", 920, 680, resource, debug=1).commands(
     ["app:ping", "app:slowAdd", "app:fail", "app:reportProbe"],
     register_app_commands,
   )

@@ -2,22 +2,22 @@
 package "justjavac/lepus"
 
 import {
-  "justjavac/lepus_core",
-  "justjavac/lepus_manifest",
-  "justjavac/lepus_runtime",
+  "justjavac/lepus/core",
+  "justjavac/lepus/manifest",
+  "justjavac/lepus/runtime",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn asset(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+pub fn asset(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
 
-pub fn create_app(@lepus_manifest.AppManifest, ExtensionRegistry, base_dir? : String?) -> Result[@lepus_runtime.App, String]
+pub fn create_app(@manifest.AppManifest, ExtensionRegistry, base_dir? : String?) -> Result[@runtime.App, String]
 
-pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@lepus_runtime.App, String]
+pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@runtime.App, String]
 
 pub fn current_executable_command() -> Result[String, String]
 
-pub fn file(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+pub fn file(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
 
 pub fn framework_process_arg() -> String
 
@@ -25,19 +25,19 @@ pub fn from_config_file(String) -> App
 
 pub fn from_file(String) -> App
 
-pub fn html(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+pub fn html(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
 
 pub fn is_framework_process() -> Bool
 
-pub async fn run_app_command_extensions_with_framework_process(@lepus_manifest.AppManifest, String, AppCommandExtensionRegistry, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
+pub async fn run_app_command_extensions_with_framework_process(@manifest.AppManifest, String, AppCommandExtensionRegistry, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
 
-pub async fn run_app_command_host_with_framework_process(@lepus_manifest.AppManifest, String, @lepus_core.AppCommandHost, AppCommandsConfig, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
+pub async fn run_app_command_host_with_framework_process(@manifest.AppManifest, String, @core.AppCommandHost, AppCommandsConfig, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
 
 pub fn run_framework_process_from_cli(extension_registry? : ExtensionRegistry) -> Result[Unit, String]
 
 pub fn run_framework_process_from_config_file(String, extension_registry? : ExtensionRegistry) -> Result[Unit, String]
 
-pub fn url(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+pub fn url(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
 
 // Errors
 
@@ -45,33 +45,33 @@ pub fn url(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.
 type App
 pub fn App::command(Self, AppCommandExtensionSpec) -> Self
 pub fn App::command_with_options(Self, AppCommandExtensionSpec, Json) -> Self
-pub fn App::commands(Self, Array[String], (@lepus_core.AppCommandHost) -> Unit) -> Self
+pub fn App::commands(Self, Array[String], (@core.AppCommandHost) -> Unit) -> Self
 pub fn App::debug(Self) -> Self
 pub fn App::debug_level(Self, Int) -> Self
-pub fn App::extension(Self, @lepus_core.ExtensionSpec) -> Self
-pub fn App::extension_with_options(Self, @lepus_core.ExtensionSpec, Json) -> Self
-pub fn App::link(Self, @lepus_core.ExtensionSpec) -> Self
+pub fn App::extension(Self, @core.ExtensionSpec) -> Self
+pub fn App::extension_with_options(Self, @core.ExtensionSpec, Json) -> Self
+pub fn App::link(Self, @core.ExtensionSpec) -> Self
 pub async fn App::run(Self) -> Result[Unit, String]
 pub async fn App::run_or_abort(Self) -> Unit
-pub fn App::size_hint(Self, @lepus_manifest.WindowSizeHint) -> Self
-pub fn App::window_asset(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn App::window_file(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn App::window_html(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn App::window_url(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn App::size_hint(Self, @manifest.WindowSizeHint) -> Self
+pub fn App::window_asset(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn App::window_file(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn App::window_html(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn App::window_url(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
 
 type AppBuilder
-pub fn AppBuilder::asset(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::build(Self) -> Result[@lepus_runtime.App, String]
-pub fn AppBuilder::extension(Self, @lepus_core.ExtensionSpec) -> Self
-pub fn AppBuilder::extension_with_options(Self, @lepus_core.ExtensionSpec, Json) -> Self
-pub fn AppBuilder::file(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::html(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::asset(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::build(Self) -> Result[@runtime.App, String]
+pub fn AppBuilder::extension(Self, @core.ExtensionSpec) -> Self
+pub fn AppBuilder::extension_with_options(Self, @core.ExtensionSpec, Json) -> Self
+pub fn AppBuilder::file(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::html(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
 pub fn AppBuilder::run(Self) -> Result[Unit, String]
-pub fn AppBuilder::url(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_asset(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_file(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_html(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_url(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::url(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_asset(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_file(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_html(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
+pub fn AppBuilder::window_url(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
 
 type AppCommandApiDescriptor
 pub fn AppCommandApiDescriptor::new(String) -> Self
@@ -80,7 +80,7 @@ type AppCommandExtensionContext
 pub fn AppCommandExtensionContext::base_dir(Self) -> String?
 pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(Self, String, Payload) -> Unit
 pub fn AppCommandExtensionContext::extension_id(Self) -> String
-pub fn AppCommandExtensionContext::host(Self) -> @lepus_core.AppCommandHost
+pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
 pub fn AppCommandExtensionContext::js_namespace(Self) -> String
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply) -> Unit
@@ -108,16 +108,16 @@ type AppCommandsConfig
 pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
 
 type AppFileBuilder
-pub fn AppFileBuilder::build(Self) -> Result[@lepus_runtime.App, String]
-pub fn AppFileBuilder::link(Self, @lepus_core.ExtensionSpec) -> Self
-pub fn AppFileBuilder::links(Self, Array[@lepus_core.ExtensionSpec]) -> Self
+pub fn AppFileBuilder::build(Self) -> Result[@runtime.App, String]
+pub fn AppFileBuilder::link(Self, @core.ExtensionSpec) -> Self
+pub fn AppFileBuilder::links(Self, Array[@core.ExtensionSpec]) -> Self
 pub fn AppFileBuilder::new(String) -> Self
 pub fn AppFileBuilder::run(Self) -> Result[Unit, String]
 
 type ExtensionRegistry
-pub fn ExtensionRegistry::get(Self, String) -> @lepus_core.ExtensionSpec?
+pub fn ExtensionRegistry::get(Self, String) -> @core.ExtensionSpec?
 pub fn ExtensionRegistry::new() -> Self
-pub fn ExtensionRegistry::register(Self, @lepus_core.ExtensionSpec) -> Self
+pub fn ExtensionRegistry::register(Self, @core.ExtensionSpec) -> Self
 pub fn ExtensionRegistry::registered_ids(Self) -> Array[String]
 
 // Type aliases

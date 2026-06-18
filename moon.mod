@@ -6,11 +6,6 @@ import {
   "justjavac/ffi@0.2.1",
   "moonbitlang/async@0.19.0",
   "moonbitlang/x@0.4.43",
-  "justjavac/lepus_bootstrap@0.1.0",
-  "justjavac/lepus_core@0.1.0",
-  "justjavac/lepus_ipc@0.1.0",
-  "justjavac/lepus_manifest@0.1.0",
-  "justjavac/lepus_runtime@0.1.0",
 }
 
 readme = "README.md"

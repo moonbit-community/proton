@@ -1,6 +1,6 @@
 import {
   "extensions/fs",
-  "justjavac/lepus_core" @core,
+  "justjavac/lepus/core" @core,
   "justjavac/lepus/webview" @webview,
 }
 

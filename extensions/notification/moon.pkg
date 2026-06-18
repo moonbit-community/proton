@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
   "justjavac/notification" @sys_notification,
-  "justjavac/lepus_app" @app,
+  "justjavac/lepus" @app,
 }
 
 import {

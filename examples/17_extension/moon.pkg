@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/lepus_core" @core,
+  "justjavac/lepus/core" @core,
   "justjavac/lepus/webview" @webview,
 }
 

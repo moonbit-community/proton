@@ -2,15 +2,15 @@
 package "extensions/notification"
 
 import {
-  "justjavac/lepus_app",
+  "justjavac/lepus",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_notification_activity(@lepus_app.AppCommandExtensionContext, NotificationActivity) -> Unit
+pub async fn emit_notification_activity(@lepus.AppCommandExtensionContext, NotificationActivity) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec
 
 // Errors
 
