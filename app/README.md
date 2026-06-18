@@ -5,10 +5,10 @@ High-level app composition helpers for `lepus`.
 `lepus_app` turns inline app configuration or an `app.json` file plus explicit
 extension links into a runtime `App`.
 
-- `AppBuilder` is the ordinary inline app startup path; `.extension(...)`
-  links and enables an extension
-- `AppFileBuilder` is the ordinary `app.json` startup path; `.link(...)` only
-  links specs and leaves extension enablement to `app.json.extensions`
+- `html(...)`, `url(...)`, `file(...)`, `asset(...)`, and `from_file(...)`
+  are the preferred app startup facade. Use `.extension(...)` for
+  framework-side extensions, `.command(...)` for user-process command
+  extensions, and `.run_or_abort()` for the common entrypoint.
 - `create_app(...)` builds from an `AppManifest` when callers need a lower-level
   escape hatch
 - `create_app_from_file(...)` builds from the bootstrap control plane and keeps
@@ -26,3 +26,15 @@ extension links into a runtime `App`.
 The package no longer treats `AppPlan` as a public concept. Planning remains an
 internal implementation detail so the user-facing API stays focused on app
 creation.
+
+Inline apps can keep framework process, manifest, registry, and IPC details out
+of user code:
+
+```moonbit
+async fn main {
+  @app.html("Demo", 900, 700, resource, debug=1)
+    .extension(@fs.spec())
+    .command(generated_app_command_extension())
+    .run_or_abort()
+}
+```

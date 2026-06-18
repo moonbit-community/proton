@@ -77,41 +77,9 @@ fn register_app_commands(host : @core.AppCommandHost) -> Unit {
 
 ///|
 async fn main {
-  if @lepus_app.is_framework_process() {
-    match @lepus_app.run_framework_process_from_cli() {
-      Ok(_) => ()
-      Err(error) => abort(error)
-    }
-    return
-  }
-  let framework_command = match @lepus_app.current_executable_command() {
-    Ok(command) => command
-    Err(error) => abort(error)
-  }
-  let commands = @lepus_app.AppCommandsConfig::new([
-    "app:ping", "app:slowAdd", "app:fail", "app:reportProbe",
-  ])
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new(
-      "MoonBit App Commands",
-      920,
-      680,
-      size_hint=@manifest.WindowSizeHint::None,
-    ),
-    @manifest.AppEntry::Html(resource),
-    debug=1,
+  let app = @lepus_app.html("MoonBit App Commands", 920, 680, resource, debug=1).commands(
+    ["app:ping", "app:slowAdd", "app:fail", "app:reportProbe"],
+    register_app_commands,
   )
-  let host = @core.AppCommandHost::new()
-  register_app_commands(host)
-  match
-    @lepus_app.run_app_command_host_with_framework_process(
-      manifest,
-      framework_command,
-      host,
-      commands,
-      framework_args=[@lepus_app.framework_process_arg()],
-    ) {
-    Ok(_) => ()
-    Err(error) => abort(error)
-  }
+  app.run_or_abort()
 }

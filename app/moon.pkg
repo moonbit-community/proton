@@ -28,6 +28,8 @@ options(
     "builder_wbtest.mbt": [ "native" ],
     "config_bridge.mbt": [ "native" ],
     "create.mbt": [ "native" ],
+    "facade.mbt": [ "native" ],
+    "facade_wbtest.mbt": [ "native" ],
     "framework_ipc_transport.mbt": [ "native" ],
     "framework_process.mbt": [ "native" ],
     "install.mbt": [ "native" ],

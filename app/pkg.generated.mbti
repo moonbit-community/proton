@@ -9,13 +9,21 @@ import {
 }
 
 // Values
+pub fn asset(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+
 pub fn create_app(@lepus_manifest.AppManifest, ExtensionRegistry, base_dir? : String?) -> Result[@lepus_runtime.App, String]
 
 pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@lepus_runtime.App, String]
 
 pub fn current_executable_command() -> Result[String, String]
 
+pub fn file(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+
 pub fn framework_process_arg() -> String
+
+pub fn from_file(String) -> App
+
+pub fn html(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
 
 pub fn is_framework_process() -> Bool
 
@@ -27,9 +35,28 @@ pub fn run_framework_process_from_cli(extension_registry? : ExtensionRegistry) -
 
 pub fn run_framework_process_from_config_file(String, extension_registry? : ExtensionRegistry) -> Result[Unit, String]
 
+pub fn url(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> App
+
 // Errors
 
 // Types and methods
+type App
+pub fn App::command(Self, AppCommandExtensionSpec) -> Self
+pub fn App::command_with_options(Self, AppCommandExtensionSpec, Json) -> Self
+pub fn App::commands(Self, Array[String], (@lepus_core.AppCommandHost) -> Unit) -> Self
+pub fn App::debug(Self) -> Self
+pub fn App::debug_level(Self, Int) -> Self
+pub fn App::extension(Self, @lepus_core.ExtensionSpec) -> Self
+pub fn App::extension_with_options(Self, @lepus_core.ExtensionSpec, Json) -> Self
+pub fn App::link(Self, @lepus_core.ExtensionSpec) -> Self
+pub async fn App::run(Self) -> Result[Unit, String]
+pub async fn App::run_or_abort(Self) -> Unit
+pub fn App::size_hint(Self, @lepus_manifest.WindowSizeHint) -> Self
+pub fn App::window_asset(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn App::window_file(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn App::window_html(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+pub fn App::window_url(Self, String, String, Int, Int, String, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
+
 type AppBuilder
 pub fn AppBuilder::asset(String, Int, Int, String, debug? : Int, size_hint? : @lepus_manifest.WindowSizeHint) -> Self
 pub fn AppBuilder::build(Self) -> Result[@lepus_runtime.App, String]

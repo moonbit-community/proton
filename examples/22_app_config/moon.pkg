@@ -1,8 +1,8 @@
 import {
+  "moonbitlang/async",
   "extensions/fs",
   "extensions/path",
   "justjavac/lepus_app" @app,
-  "justjavac/lepus_runtime" @wvrt,
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
 }

@@ -4,7 +4,6 @@ import {
   "extensions/notification",
   "extensions/tray",
   "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
 }
 
 supported_targets = "native"
