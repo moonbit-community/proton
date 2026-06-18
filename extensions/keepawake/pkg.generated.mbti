@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/keepawake"
+package "justjavac/lepus_ext/keepawake"
 
 import {
   "justjavac/lepus",

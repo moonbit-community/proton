@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/lepus" @app,
+  "justjavac/lepus",
   "justjavac/microphone" @sys_microphone,
 }
 
@@ -9,7 +9,7 @@ supported_targets = "native"
 options(
   "pre-build": [
     {
-      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "command": "$mod_dir/../target/lepus-tools/lepus codegen $input -o $output",
       "input": "extension.mbt",
       "output": "extension.g.mbt",
     },

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/global_hotkey"
+package "justjavac/lepus_ext/global_hotkey"
 
 import {
   "justjavac/lepus",

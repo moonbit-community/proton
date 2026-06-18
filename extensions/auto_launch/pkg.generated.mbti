@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/auto_launch"
+package "justjavac/lepus_ext/auto_launch"
 
 import {
   "justjavac/lepus",

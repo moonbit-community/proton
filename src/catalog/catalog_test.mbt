@@ -22,7 +22,7 @@ fn stub_descriptor(
   id : String,
   js_namespace : String,
   dependencies? : Array[String] = [],
-  package_path? : String = "extensions/" + js_namespace,
+  package_path? : String = "justjavac/lepus_ext/" + js_namespace,
   spec_symbol? : String = "spec",
 ) -> ExtensionDescriptor {
   ExtensionDescriptor::new(
@@ -152,7 +152,7 @@ test "decode minimal app-command extension metadata uses defaults" {
     Err(error) => abort(error)
   }
   assert_eq(descriptor.manifest_key(), "vendor/minimal")
-  assert_eq(descriptor.package_path(), "extensions/minimal_extension")
+  assert_eq(descriptor.package_path(), "justjavac/lepus_ext/minimal_extension")
   assert_eq(descriptor.spec_symbol(), "generated_app_command_extension")
   @debug.assert_eq(descriptor.dependencies(), [])
 }
@@ -216,7 +216,7 @@ test "build_extension_link_plan expands metadata dependencies in order" {
   @debug.assert_eq(plan.extension_ids(), [
     "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
   ])
-  assert_eq(plan.inputs()[0].package_path(), "extensions/path")
+  assert_eq(plan.inputs()[0].package_path(), "justjavac/lepus_ext/path")
   assert_eq(plan.inputs()[1].spec_symbol(), "spec")
 
   let inputs = plan.inputs()

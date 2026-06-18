@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_keep_awake_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : KeepAwakeActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -17,7 +17,7 @@ struct LepusAcquirePayload {
 
 ///|
 async fn __lepus_command_acquire(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusAcquirePayload,
 ) -> Result[KeepAwakeReply, String] {
   acquire(context, payload.reason, payload.scope)
@@ -30,7 +30,7 @@ struct LepusReleasePayload {
 
 ///|
 async fn __lepus_command_release(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusReleasePayload,
 ) -> Result[KeepAwakeReply, String] {
   release(context, payload._payload)
@@ -47,14 +47,14 @@ fn __lepus_command_status(payload : LepusStatusPayload) -> KeepAwakeReply {
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "justjavac/lepus-keepawake",
     "keepAwake",
     [
-      @app.AppCommandApiDescriptor::new("acquire"),
-      @app.AppCommandApiDescriptor::new("release"),
-      @app.AppCommandApiDescriptor::new("status"),
+      @lepus.AppCommandApiDescriptor::new("acquire"),
+      @lepus.AppCommandApiDescriptor::new("release"),
+      @lepus.AppCommandApiDescriptor::new("status"),
     ],
     fn(context) {
       context.op_async_result("acquire", async fn(payload) {

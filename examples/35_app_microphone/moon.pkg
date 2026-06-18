@@ -1,7 +1,7 @@
 import {
   "moonbitlang/async",
-  "extensions/microphone",
-  "justjavac/lepus" @app,
+  "justjavac/lepus_ext/microphone",
+  "justjavac/lepus",
 }
 
 supported_targets = "native"

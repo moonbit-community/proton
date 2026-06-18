@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/microphone"
+package "justjavac/lepus_ext/microphone"
 
 import {
   "justjavac/lepus",

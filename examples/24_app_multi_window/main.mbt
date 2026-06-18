@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @app.file(
+  let app = @lepus.file(
     "MoonBit Multi-Window",
     980,
     680,

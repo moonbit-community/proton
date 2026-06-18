@@ -557,7 +557,7 @@ fn default_package_path(path : String) -> String {
   guard parts.length() > 0 else { return "" }
   let name = parts[parts.length() - 1]
   guard name != "" && name != "." && name != ".." else { return "" }
-  "extensions/" + name.to_owned()
+  "justjavac/lepus_ext/" + name.to_owned()
 }
 
 ///|

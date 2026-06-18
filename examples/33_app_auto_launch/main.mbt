@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @app.html(
+  let app = @lepus.html(
     "MoonBit App Runtime + Auto Launch",
     980,
     700,

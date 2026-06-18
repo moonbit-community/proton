@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/metadata_check"
+package "justjavac/lepus_ext/metadata_check"
 
 // Values
 

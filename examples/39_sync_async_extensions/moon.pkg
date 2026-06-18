@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/async",
-  "justjavac/lepus" @app,
+  "justjavac/lepus",
 }
 
 supported_targets = "native"

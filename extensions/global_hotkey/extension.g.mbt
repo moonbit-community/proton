@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_global_hotkey_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : GlobalHotkeyActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -11,7 +11,7 @@ pub async fn emit_global_hotkey_activity(
 
 ///|
 pub async fn emit_global_hotkey_triggered(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : GlobalHotkeyTriggered,
 ) -> Unit {
   context.emit("triggered", payload)
@@ -24,7 +24,7 @@ struct LepusRegisterPayload {
 
 ///|
 async fn __lepus_command_register(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusRegisterPayload,
 ) -> Result[GlobalHotkeyReply, String] {
   register(context, payload.accelerator)
@@ -37,7 +37,7 @@ struct LepusUnregisterPayload {
 
 ///|
 async fn __lepus_command_unregister(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusUnregisterPayload,
 ) -> Result[GlobalHotkeyReply, String] {
   unregister(context, payload.accelerator)
@@ -60,22 +60,22 @@ struct LepusDrainTriggeredPayload {
 
 ///|
 async fn __lepus_command_drain_triggered(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusDrainTriggeredPayload,
 ) -> GlobalHotkeyListReply {
   drain_triggered(context, payload._payload)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "justjavac/lepus-global-hotkey",
     "globalHotkey",
     [
-      @app.AppCommandApiDescriptor::new("register"),
-      @app.AppCommandApiDescriptor::new("unregister"),
-      @app.AppCommandApiDescriptor::new("list"),
-      @app.AppCommandApiDescriptor::new("drainTriggered"),
+      @lepus.AppCommandApiDescriptor::new("register"),
+      @lepus.AppCommandApiDescriptor::new("unregister"),
+      @lepus.AppCommandApiDescriptor::new("list"),
+      @lepus.AppCommandApiDescriptor::new("drainTriggered"),
     ],
     fn(context) {
       context.op_async_result("register", async fn(payload) {

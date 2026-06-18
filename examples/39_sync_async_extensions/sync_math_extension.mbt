@@ -11,11 +11,11 @@ struct DoubleReply {
 } derive(ToJson)
 
 ///|
-fn sync_math_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+fn sync_math_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "examples/sync-math",
     "math",
-    [@app.AppCommandApiDescriptor::new("double")],
+    [@lepus.AppCommandApiDescriptor::new("double")],
     fn(context) {
       context.op("double", fn(payload : DoublePayload) {
         DoubleReply::{

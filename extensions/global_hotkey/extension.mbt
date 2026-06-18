@@ -13,7 +13,7 @@ struct GlobalHotkeyTriggered {
 
 ///|
 async fn emit_command_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   operation : String,
   accelerator : String,
 ) -> Unit {
@@ -22,7 +22,7 @@ async fn emit_command_activity(
 
 ///|
 async fn[Reply] emit_command_result(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   result : Result[Reply, String],
   operation : String,
   accelerator : String,
@@ -60,7 +60,7 @@ fn trigger_poller_script() -> String {
 /// Registers one global hotkey from a generated app-command extension.
 #lepus.command(name="register")
 async fn register(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   accelerator : String,
 ) -> Result[GlobalHotkeyReply, String] {
   emit_command_result(
@@ -75,7 +75,7 @@ async fn register(
 /// Unregisters one global hotkey from a generated app-command extension.
 #lepus.command(name="unregister")
 async fn unregister(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   accelerator : String,
 ) -> Result[GlobalHotkeyReply, String] {
   emit_command_result(
@@ -97,7 +97,7 @@ fn list(_payload : EmptyPayload?) -> GlobalHotkeyListReply {
 /// Drains triggered global hotkeys from a generated app-command extension.
 #lepus.command(name="drainTriggered")
 async fn drain_triggered(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> GlobalHotkeyListReply {
   let reply = drain_triggered_hotkeys(app_command_manager_handle())

@@ -36,7 +36,7 @@ fn render_event_helpers(
     builder.write_string("pub async fn ")
     builder.write_string(event.helper_name)
     builder.write_string("(\n")
-    builder.write_string("  context : @app.AppCommandExtensionContext,\n")
+    builder.write_string("  context : @lepus.AppCommandExtensionContext,\n")
     builder.write_string("  payload : ")
     builder.write_string(event.type_name)
     builder.write_string(",\n")
@@ -77,7 +77,7 @@ fn render_payloads_and_wrappers(
     builder.write_string(wrapper_name(command))
     if command.has_context {
       builder.write_string("(\n")
-      builder.write_string("  context : @app.AppCommandExtensionContext,\n")
+      builder.write_string("  context : @lepus.AppCommandExtensionContext,\n")
       builder.write_string("  payload : ")
       builder.write_string(command_payload_type(command))
       builder.write_string(",\n")
@@ -110,9 +110,9 @@ fn render_extension_spec(
 ) -> Unit {
   builder.write_string("///|\n")
   builder.write_string(
-    "pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {\n",
+    "pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {\n",
   )
-  builder.write_string("  @app.AppCommandExtensionSpec::new(\n")
+  builder.write_string("  @lepus.AppCommandExtensionSpec::new(\n")
   builder.write_string("    ")
   builder.write_string(mbt_string(extension_id))
   builder.write_string(",\n")
@@ -120,13 +120,13 @@ fn render_extension_spec(
   builder.write_string(mbt_string(js_namespace))
   builder.write_string(",\n")
   if commands.length() == 1 {
-    builder.write_string("    [@app.AppCommandApiDescriptor::new(")
+    builder.write_string("    [@lepus.AppCommandApiDescriptor::new(")
     builder.write_string(mbt_string(commands[0].js_name))
     builder.write_string(")],\n")
   } else {
     builder.write_string("    [\n")
     for command in commands {
-      builder.write_string("      @app.AppCommandApiDescriptor::new(")
+      builder.write_string("      @lepus.AppCommandApiDescriptor::new(")
       builder.write_string(mbt_string(command.js_name))
       builder.write_string("),\n")
     }

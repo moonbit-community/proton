@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
   "justjavac/global_hotkey" @sys_global_hotkey,
-  "justjavac/lepus" @app,
+  "justjavac/lepus",
 }
 
 supported_targets = "native"
@@ -9,7 +9,7 @@ supported_targets = "native"
 options(
   "pre-build": [
     {
-      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "command": "$mod_dir/../target/lepus-tools/lepus codegen $input -o $output",
       "input": "extension.mbt",
       "output": "extension.g.mbt",
     },

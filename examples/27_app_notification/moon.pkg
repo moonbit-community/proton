@@ -1,7 +1,7 @@
 import {
   "moonbitlang/async",
-  "extensions/notification",
-  "justjavac/lepus" @app,
+  "justjavac/lepus_ext/notification",
+  "justjavac/lepus",
 }
 
 supported_targets = "native"

@@ -1,4 +1,4 @@
-# lepus_cli/codegen
+# lepus/cli/codegen
 
 Build-time command/event code generation helpers for the Lepus CLI.
 
@@ -23,7 +23,7 @@ into a generated `AppCommandExtensionSpec`; sibling files are used for
 package-level duplicate-name checks.
 
 Generated event helpers are async and take an explicit
-`context : @app.AppCommandExtensionContext` parameter. Commands only need a
+`context : @lepus.AppCommandExtensionContext` parameter. Commands only need a
 context parameter when they call generated event helpers.
 
 `#lepus.script` can annotate a synchronous zero-argument function returning
@@ -31,5 +31,5 @@ context parameter when they call generated event helpers.
 
 `#lepus.destroy` can annotate one synchronous function returning `Unit`. The
 function may either take no parameters or take
-`context : @app.AppCommandExtensionContext`; generated specs wire it to the
+`context : @lepus.AppCommandExtensionContext`; generated specs wire it to the
 command extension destroy hook.

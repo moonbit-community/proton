@@ -13,11 +13,11 @@ struct SlowAddReply {
 } derive(ToJson)
 
 ///|
-fn async_add_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+fn async_add_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "examples/async-add",
     "add",
-    [@app.AppCommandApiDescriptor::new("slowAdd")],
+    [@lepus.AppCommandApiDescriptor::new("slowAdd")],
     fn(context) {
       // 故意保留一点延迟，方便看出 UI 没有被异步 command 阻塞。
       context.op_async_result("slowAdd", async fn(payload : SlowAddPayload) {

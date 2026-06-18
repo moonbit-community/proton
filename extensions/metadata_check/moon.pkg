@@ -1,18 +1,18 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/x/fs" @mbfs,
-  "justjavac/lepus" @app,
+  "justjavac/lepus",
   "justjavac/lepus/catalog" @catalog,
   "justjavac/lepus/core" @core,
-  "extensions/dialog",
-  "extensions/fs",
-  "extensions/global_hotkey",
-  "extensions/keepawake",
-  "extensions/microphone",
-  "extensions/notification",
-  "extensions/path",
-  "extensions/shell",
-  "extensions/tray",
+  "justjavac/lepus_ext/dialog",
+  "justjavac/lepus_ext/fs",
+  "justjavac/lepus_ext/global_hotkey",
+  "justjavac/lepus_ext/keepawake",
+  "justjavac/lepus_ext/microphone",
+  "justjavac/lepus_ext/notification",
+  "justjavac/lepus_ext/path",
+  "justjavac/lepus_ext/shell",
+  "justjavac/lepus_ext/tray",
 }
 
 warnings = "-29"

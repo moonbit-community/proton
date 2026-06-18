@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_shell_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : ShellActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -16,7 +16,7 @@ struct LepusOpenPayload {
 
 ///|
 async fn __lepus_command_open(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusOpenPayload,
 ) -> Result[ShellReply, String] {
   open(context, payload.target)
@@ -29,20 +29,20 @@ struct LepusRevealItemPayload {
 
 ///|
 async fn __lepus_command_reveal_item(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusRevealItemPayload,
 ) -> Result[ShellReply, String] {
   reveal_item(context, payload.path)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "justjavac/lepus-shell",
     "shell",
     [
-      @app.AppCommandApiDescriptor::new("open"),
-      @app.AppCommandApiDescriptor::new("revealItem"),
+      @lepus.AppCommandApiDescriptor::new("open"),
+      @lepus.AppCommandApiDescriptor::new("revealItem"),
     ],
     fn(context) {
       context.op_async_result("open", async fn(payload) {

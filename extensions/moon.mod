@@ -1,4 +1,4 @@
-name = "extensions"
+name = "justjavac/lepus_ext"
 
 version = "0.1.0"
 

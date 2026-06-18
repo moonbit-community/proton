@@ -13,11 +13,11 @@ async fn __lepus_command_slow_add(payload : LepusSlowAddPayload) -> Result[Int, 
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "examples/async-add",
     "add",
-    [@app.AppCommandApiDescriptor::new("slowAdd")],
+    [@lepus.AppCommandApiDescriptor::new("slowAdd")],
     fn(context) {
       context.op_async_result("slowAdd", __lepus_command_slow_add)
       Ok(())

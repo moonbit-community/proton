@@ -61,7 +61,7 @@ fn assert_metadata_matches_spec(
 /// Asserts that metadata fields stay aligned with the exported app-command extension spec.
 fn assert_metadata_matches_app_command_spec(
   descriptor : @catalog.ExtensionDescriptor,
-  spec : @app.AppCommandExtensionSpec,
+  spec : @lepus.AppCommandExtensionSpec,
   package_path : String,
   expected_id : String,
   expected_namespace : String,
@@ -81,63 +81,63 @@ test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
     @dialog.generated_app_command_extension(),
-    "extensions/dialog",
+    "justjavac/lepus_ext/dialog",
     "justjavac/lepus-dialog",
     "dialog",
   )
   assert_metadata_matches_spec(
     load_descriptor("fs"),
     @fs.spec(),
-    "extensions/fs",
+    "justjavac/lepus_ext/fs",
     "justjavac/lepus-fs",
     "fs",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("global_hotkey"),
     @global_hotkey.generated_app_command_extension(),
-    "extensions/global_hotkey",
+    "justjavac/lepus_ext/global_hotkey",
     "justjavac/lepus-global-hotkey",
     "globalHotkey",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("keepawake"),
     @keepawake.generated_app_command_extension(),
-    "extensions/keepawake",
+    "justjavac/lepus_ext/keepawake",
     "justjavac/lepus-keepawake",
     "keepAwake",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("microphone"),
     @microphone.generated_app_command_extension(),
-    "extensions/microphone",
+    "justjavac/lepus_ext/microphone",
     "justjavac/lepus-microphone",
     "microphone",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("notification"),
     @notification.generated_app_command_extension(),
-    "extensions/notification",
+    "justjavac/lepus_ext/notification",
     "justjavac/lepus-notification",
     "notification",
   )
   assert_metadata_matches_spec(
     load_descriptor("path"),
     @path.spec(),
-    "extensions/path",
+    "justjavac/lepus_ext/path",
     "justjavac/lepus-path",
     "path",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("shell"),
     @shell.generated_app_command_extension(),
-    "extensions/shell",
+    "justjavac/lepus_ext/shell",
     "justjavac/lepus-shell",
     "shell",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("tray"),
     @tray.generated_app_command_extension(),
-    "extensions/tray",
+    "justjavac/lepus_ext/tray",
     "justjavac/lepus-tray",
     "tray",
   )

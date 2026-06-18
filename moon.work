@@ -1,6 +1,5 @@
 members = [
   ".",
-  "./cli",
   "./examples",
   "./extensions",
   "./e2e",

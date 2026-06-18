@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/tray"
+package "justjavac/lepus_ext/tray"
 
 import {
   "justjavac/lepus",

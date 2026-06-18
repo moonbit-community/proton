@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_clipboard_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : ClipboardActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -16,7 +16,7 @@ struct LepusReadTextPayload {
 
 ///|
 async fn __lepus_command_read_text(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusReadTextPayload,
 ) -> Result[ReadTextReply, String] {
   read_text(context, payload._payload)
@@ -29,20 +29,20 @@ struct LepusWriteTextPayload {
 
 ///|
 async fn __lepus_command_write_text(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   payload : LepusWriteTextPayload,
 ) -> Result[WriteTextReply, String] {
   write_text(context, payload.text)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+  @lepus.AppCommandExtensionSpec::new(
     "justjavac/lepus-clipboard",
     "clipboard",
     [
-      @app.AppCommandApiDescriptor::new("readText"),
-      @app.AppCommandApiDescriptor::new("writeText"),
+      @lepus.AppCommandApiDescriptor::new("readText"),
+      @lepus.AppCommandApiDescriptor::new("writeText"),
     ],
     fn(context) {
       context.op_async_result("readText", async fn(payload) {

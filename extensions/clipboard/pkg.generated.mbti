@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/clipboard"
+package "justjavac/lepus_ext/clipboard"
 
 import {
   "justjavac/lepus",

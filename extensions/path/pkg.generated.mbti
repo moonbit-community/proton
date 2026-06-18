@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/path"
+package "justjavac/lepus_ext/path"
 
 import {
   "justjavac/lepus/core",

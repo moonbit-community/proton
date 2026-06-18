@@ -70,7 +70,7 @@ fn show_notification(
 /// Shows one native notification from a generated app-command extension.
 #lepus.command(name="show")
 async fn show(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus.AppCommandExtensionContext,
   title : String?,
   body : String,
   level : String?,

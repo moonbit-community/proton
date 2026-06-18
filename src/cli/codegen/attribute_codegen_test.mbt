@@ -11,7 +11,7 @@ test "attribute codegen renders commands events context and warnings" {
         #|
         #|///|
         #|#lepus.command(name="slowAdd")
-        #|async fn slow_add(context : @app.AppCommandExtensionContext, left : Int, right : Int, delay_ms : Int?) -> Result[AddReply, String] {
+        #|async fn slow_add(context : @lepus.AppCommandExtensionContext, left : Int, right : Int, delay_ms : Int?) -> Result[AddReply, String] {
         #|  emit_add_finished(context, AddFinished::{ total: left + right })
         #|  Ok(AddReply::{ total: left + right, waited_ms: delay_ms.unwrap_or(0) })
         #|}
@@ -38,7 +38,7 @@ test "attribute codegen renders commands events context and warnings" {
     #|
     #|///|
     #|pub async fn emit_add_finished(
-    #|  context : @app.AppCommandExtensionContext,
+    #|  context : @lepus.AppCommandExtensionContext,
     #|  payload : AddFinished,
     #|) -> Unit {
     #|  context.emit("addFinished", payload)
@@ -58,20 +58,20 @@ test "attribute codegen renders commands events context and warnings" {
     #|
     #|///|
     #|async fn __lepus_command_slow_add(
-    #|  context : @app.AppCommandExtensionContext,
+    #|  context : @lepus.AppCommandExtensionContext,
     #|  payload : LepusSlowAddPayload,
     #|) -> Result[AddReply, String] {
     #|  slow_add(context, payload.left, payload.right, payload.delay_ms)
     #|}
     #|
     #|///|
-    #|pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-    #|  @app.AppCommandExtensionSpec::new(
+    #|pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+    #|  @lepus.AppCommandExtensionSpec::new(
     #|    "examples/generated-add",
     #|    "add",
     #|    [
-    #|      @app.AppCommandApiDescriptor::new("ping"),
-    #|      @app.AppCommandApiDescriptor::new("slowAdd"),
+    #|      @lepus.AppCommandApiDescriptor::new("ping"),
+    #|      @lepus.AppCommandApiDescriptor::new("slowAdd"),
     #|    ],
     #|    fn(context) {
     #|      context.op("ping", __lepus_command_ping)
@@ -105,7 +105,7 @@ test "attribute codegen renders scripts and destroy hook" {
         #|
         #|///|
         #|#lepus.destroy
-        #|fn cleanup(context : @app.AppCommandExtensionContext) -> Unit {
+        #|fn cleanup(context : @lepus.AppCommandExtensionContext) -> Unit {
         #|  ignore(context.extension_id())
         #|}
         #|
@@ -126,11 +126,11 @@ test "attribute codegen renders scripts and destroy hook" {
     #|}
     #|
     #|///|
-    #|pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-    #|  @app.AppCommandExtensionSpec::new(
+    #|pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
+    #|  @lepus.AppCommandExtensionSpec::new(
     #|    "examples/lifecycle",
     #|    "lifecycle",
-    #|    [@app.AppCommandApiDescriptor::new("ping")],
+    #|    [@lepus.AppCommandApiDescriptor::new("ping")],
     #|    fn(context) {
     #|      context.op("ping", __lepus_command_ping)
     #|      Ok(())
@@ -194,7 +194,7 @@ test "attribute codegen rejects context without events" {
     generate_app_commands_from_source(
       (
         #|#lepus.command
-        #|fn ping(context : @app.AppCommandExtensionContext) -> Unit {}
+        #|fn ping(context : @lepus.AppCommandExtensionContext) -> Unit {}
         #|
       ),
       "examples/no-events",
