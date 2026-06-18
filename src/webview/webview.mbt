@@ -32,8 +32,8 @@ pub fn backend_id() -> String {
 ///|
 /// Returns whether the compiled browser backend can create native windows.
 ///
-/// Without `LEPUS_CEF_ROOT`, the package still type-checks but the native
-/// backend reports unavailable and runtime window creation fails clearly.
+/// On Windows, install CEF with `node .\scripts\setup_cef.mjs` and build the
+/// CEF subprocess helper before creating native windows.
 pub fn backend_available() -> Bool {
   webview_backend_available_ffi()
 }

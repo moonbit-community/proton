@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import https from "node:https";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -22,19 +23,16 @@ function usage() {
   node ./scripts/setup_cef.mjs [options]
 
 Options:
-  --cache <path>            Cache directory. Defaults to .cef-cache.
   --name <cef_binary_name>  CEF binary directory/archive name.
   --url <url>               Full CEF archive URL.
   --help                    Show this help.
 
 Examples:
-  node ./scripts/setup_cef.mjs
-  node ./scripts/setup_cef.mjs --cache .cef-cache-local`);
+  node ./scripts/setup_cef.mjs`);
 }
 
 function parseArgs(argv) {
   const options = {
-    cache: defaultCacheDir,
     name: defaultCefName,
     url: "",
   };
@@ -43,8 +41,6 @@ function parseArgs(argv) {
     if (arg === "--help" || arg === "-h") {
       usage();
       process.exit(0);
-    } else if (arg === "--cache") {
-      options.cache = requireValue(argv, ++i, arg);
     } else if (arg === "--name") {
       options.name = requireValue(argv, ++i, arg);
     } else if (arg === "--url") {
@@ -64,7 +60,7 @@ function requireValue(argv, index, optionName) {
   return value;
 }
 
-function requiredCefFiles(root) {
+function sourceCefFiles(root) {
   return [
     "include/capi/cef_app_capi.h",
     "include/capi/cef_browser_capi.h",
@@ -76,11 +72,28 @@ function requiredCefFiles(root) {
   ].map((relativePath) => path.join(root, relativePath));
 }
 
+function installedCefFiles(root) {
+  return [
+    ...sourceCefFiles(root).map((filePath) => path.relative(root, filePath)),
+    "Release/icudtl.dat",
+    "Release/chrome_100_percent.pak",
+    "Release/chrome_200_percent.pak",
+    "Release/resources.pak",
+  ].map((relativePath) => path.join(root, relativePath));
+}
+
 function validateCefRoot(root) {
-  const missing = requiredCefFiles(root).filter((filePath) => !fs.existsSync(filePath));
+  const missing = [
+    ...installedCefFiles(root),
+    path.join(root, "version.txt"),
+  ].filter((filePath) => !fs.existsSync(filePath));
   if (missing.length > 0) {
     fail(`Invalid CEF root: ${root}\nMissing:\n${missing.join("\n")}`);
   }
+}
+
+function hasSourceCefFiles(root) {
+  return sourceCefFiles(root).every((filePath) => fs.existsSync(filePath));
 }
 
 function archiveUrl(options) {
@@ -116,13 +129,65 @@ function download(url, destination) {
   });
 }
 
-function extractTarBz2(archivePath, cacheDir) {
-  fs.mkdirSync(cacheDir, { recursive: true });
-  const result = spawnSync("tar", ["-xjf", archivePath, "-C", cacheDir], {
+function extractTarBz2(archivePath, destination) {
+  fs.mkdirSync(destination, { recursive: true });
+  const result = spawnSync("tar", ["-xjf", archivePath, "-C", destination], {
     stdio: "inherit",
   });
   if (result.status !== 0) {
     fail(`tar failed with exit code ${result.status}`);
+  }
+}
+
+function assertSafeInstallDir(installDir) {
+  const parsed = path.parse(installDir);
+  if (
+    installDir === parsed.root ||
+    installDir === repoRoot ||
+    installDir === path.dirname(repoRoot)
+  ) {
+    fail(`Refusing to replace unsafe CEF install directory: ${installDir}`);
+  }
+}
+
+function findExtractedRoot(extractDir, name) {
+  const named = path.join(extractDir, name);
+  if (hasSourceCefFiles(named)) {
+    return named;
+  }
+  const candidates = fs.readdirSync(extractDir)
+    .filter((entry) => entry.startsWith("cef_binary_"))
+    .map((entry) => path.join(extractDir, entry))
+    .filter((entry) => hasSourceCefFiles(entry));
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
+  fail(`Could not find extracted CEF root in ${extractDir}`);
+}
+
+function installCefRoot(extractedRoot, installDir, name) {
+  assertSafeInstallDir(installDir);
+  fs.rmSync(installDir, { recursive: true, force: true });
+  fs.mkdirSync(installDir, { recursive: true });
+  fs.cpSync(extractedRoot, installDir, { recursive: true });
+  normalizeCefRuntimeLayout(installDir);
+  fs.writeFileSync(path.join(installDir, "version.txt"), `${name}\n`, "utf8");
+}
+
+function normalizeCefRuntimeLayout(root) {
+  const releaseDir = path.join(root, "Release");
+  const resourcesDir = path.join(root, "Resources");
+  fs.mkdirSync(releaseDir, { recursive: true });
+  for (const fileName of [
+    "icudtl.dat",
+    "chrome_100_percent.pak",
+    "chrome_200_percent.pak",
+    "resources.pak",
+  ]) {
+    const source = path.join(resourcesDir, fileName);
+    if (fs.existsSync(source)) {
+      fs.copyFileSync(source, path.join(releaseDir, fileName));
+    }
   }
 }
 
@@ -132,24 +197,33 @@ async function main() {
   }
 
   const options = parseArgs(process.argv.slice(2));
-  const cacheDir = path.resolve(options.cache);
-  const cefRoot = path.join(cacheDir, options.name);
-  const archivePath = path.join(cacheDir, `${options.name}.tar.bz2`);
+  const installDir = path.resolve(defaultCacheDir);
+  const versionPath = path.join(installDir, "version.txt");
+  const installedVersion = fs.existsSync(versionPath)
+    ? fs.readFileSync(versionPath, "utf8").trim()
+    : "";
 
-  if (!fs.existsSync(cefRoot)) {
-    if (!fs.existsSync(archivePath)) {
+  if (installedVersion === options.name) {
+    normalizeCefRuntimeLayout(installDir);
+  } else {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "lepus-cef-"));
+    const archivePath = path.join(tempDir, `${options.name}.tar.bz2`);
+    try {
       const url = archiveUrl(options);
       console.error(`[INFO] Downloading CEF: ${url}`);
       await download(url, archivePath);
-    } else {
-      console.error(`[INFO] Using cached archive: ${archivePath}`);
+      console.error(`[INFO] Extracting: ${archivePath}`);
+      extractTarBz2(archivePath, tempDir);
+      const extractedRoot = findExtractedRoot(tempDir, options.name);
+      console.error(`[INFO] Installing CEF into: ${installDir}`);
+      installCefRoot(extractedRoot, installDir, options.name);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
-    console.error(`[INFO] Extracting: ${archivePath}`);
-    extractTarBz2(archivePath, cacheDir);
   }
 
-  validateCefRoot(cefRoot);
-  console.log(cefRoot);
+  validateCefRoot(installDir);
+  console.log(installDir);
 }
 
 main().catch((error) => {

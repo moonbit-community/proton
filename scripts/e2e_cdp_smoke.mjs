@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
@@ -65,29 +65,43 @@ const startupScenarios = new Map([
   ["05_alert", { aliveAfterMs: 2000 }],
 ]);
 
-function resolveCefRoot() {
+function requiredCefFiles(root) {
+  return [
+    "include/capi/cef_app_capi.h",
+    "include/capi/cef_browser_capi.h",
+    "include/capi/cef_client_capi.h",
+    "include/capi/cef_v8_capi.h",
+    "Release/libcef.lib",
+    "Release/libcef.dll",
+    "Release/icudtl.dat",
+    "Release/chrome_100_percent.pak",
+    "Release/chrome_200_percent.pak",
+    "Release/resources.pak",
+    "Resources/icudtl.dat",
+    "version.txt",
+  ].map((relativePath) => path.join(root, relativePath));
+}
+
+function ensureCefInstalled() {
   if (process.env.LEPUS_CEF_ROOT) {
-    return process.env.LEPUS_CEF_ROOT;
+    return;
   }
   const cache = path.join(repoRoot, ".cef-cache");
-  if (!existsSync(cache)) {
-    throw new Error("LEPUS_CEF_ROOT is unset and .cef-cache does not exist; run node ./scripts/setup_cef.mjs first.");
+  const missing = requiredCefFiles(cache).filter((filePath) => !existsSync(filePath));
+  if (missing.length > 0) {
+    throw new Error(
+      [
+        "CEF is not installed in .cef-cache.",
+        "Run: node ./scripts/setup_cef.mjs",
+        "",
+        "Missing:",
+        ...missing,
+      ].join("\n"),
+    );
   }
-  const candidates = readdirSync(cache)
-    .filter((name) => name.startsWith("cef_binary_") && name.includes("windows64"))
-    .map((name) => path.join(cache, name))
-    .filter((candidate) => existsSync(path.join(candidate, "Release", "libcef.dll")));
-  if (candidates.length === 0) {
-    throw new Error("LEPUS_CEF_ROOT is unset and no extracted Windows CEF binary was found in .cef-cache.");
-  }
-  return candidates.sort().at(-1);
 }
 
 function ensureCefSubprocess(env) {
-  const configured = env.LEPUS_CEF_SUBPROCESS_PATH;
-  if (configured && existsSync(configured)) {
-    return configured;
-  }
   const build = spawnSync("moon", ["build", "src/cef_process", "--target", "native"], {
     cwd: repoRoot,
     env,
@@ -110,19 +124,17 @@ function ensureCefSubprocess(env) {
   if (!existsSync(exe)) {
     throw new Error(`CEF subprocess executable was not created: ${exe}`);
   }
-  return exe;
 }
 
 function cefEnv() {
   if (cachedCefEnv) {
     return cachedCefEnv;
   }
-  const cefRoot = resolveCefRoot();
+  ensureCefInstalled();
   const env = {
     ...process.env,
-    LEPUS_CEF_ROOT: cefRoot,
   };
-  env.LEPUS_CEF_SUBPROCESS_PATH = ensureCefSubprocess(env);
+  ensureCefSubprocess(env);
   cachedCefEnv = env;
   return env;
 }

@@ -19,9 +19,10 @@ creates the output directory when needed.
 
 ## `setup_cef.mjs`
 
-Downloads and extracts the Windows CEF binary distribution used by the root CEF
-backend. The script validates the expected CEF layout and prints the extracted
-CEF root path.
+Downloads and installs the Windows CEF binary distribution used by the root CEF
+backend. The script validates the expected CEF layout, installs the CEF files
+directly into `.cef-cache/`, writes `.cef-cache/version.txt`, and prints the CEF
+root path.
 
 ### Usage
 
@@ -31,18 +32,12 @@ Download the default CEF build into `.cef-cache/`:
 node .\scripts\setup_cef.mjs
 ```
 
-Use a different cache directory:
+Windows native builds look for CEF in `.cef-cache/` automatically. If CEF is
+missing, the build fails with the setup command.
 
-```powershell
-node .\scripts\setup_cef.mjs --cache .cef-cache-local
-```
-
-After downloading, set `LEPUS_CEF_ROOT` explicitly before building CEF-backed
-native targets:
-
-```powershell
-$env:LEPUS_CEF_ROOT = (Resolve-Path ".\.cef-cache\cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal").Path
-```
+The script also mirrors early-startup resource files such as `icudtl.dat` and
+`*.pak` into `Release/`. CEF loads those files from the `libcef.dll` directory
+before normal settings are fully applied.
 
 ## `e2e_cdp_smoke.mjs`
 
@@ -51,10 +46,10 @@ Starts CEF examples with remote debugging enabled, then runs the MoonBit
 their own, such as `09_dispatch` and `43_cef_bind_smoke`, are checked directly
 by the launcher.
 
-The script uses `LEPUS_CEF_ROOT` when it is already set. Otherwise it looks for
-an extracted Windows CEF build under `.cef-cache/`. It builds
-`src/cef_process` automatically and sets `LEPUS_CEF_SUBPROCESS_PATH` for the
-launched examples.
+The script verifies that CEF is installed in `.cef-cache/` and builds
+`src/cef_process` automatically before launching examples. The runtime locates
+the helper through the build-time default path during repository development;
+packaged apps should place `cef_process.exe` beside the app executable.
 
 ### Usage
 

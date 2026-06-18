@@ -2,6 +2,21 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = fileURLToPath(new URL(".", import.meta.url));
+const defaultCefDirName = ".cef-cache";
+const defaultSubprocessPath = path.join(
+  repoRoot,
+  "_build",
+  "native",
+  "debug",
+  "build",
+  "justjavac",
+  "lepus",
+  "cef_process",
+  "cef_process.exe",
+);
 
 function nativeLinkPath(filePath) {
   if (process.platform !== "win32") {
@@ -26,12 +41,67 @@ function envValue(env, name) {
   return env[name] ?? process.env[name] ?? "";
 }
 
-function requirePath(root, relativePath) {
-  const candidate = path.join(root, relativePath);
-  if (!fs.existsSync(candidate)) {
-    throw new Error(`Missing CEF file: ${candidate}`);
+function requiredCefFiles(root, requireVersion) {
+  const files = [
+    "include/capi/cef_app_capi.h",
+    "include/capi/cef_browser_capi.h",
+    "include/capi/cef_client_capi.h",
+    "include/capi/cef_v8_capi.h",
+    "Release/libcef.lib",
+    "Release/libcef.dll",
+    "Release/icudtl.dat",
+    "Release/chrome_100_percent.pak",
+    "Release/chrome_200_percent.pak",
+    "Release/resources.pak",
+    "Resources/icudtl.dat",
+  ].map((relativePath) => path.join(root, relativePath));
+  if (requireVersion) {
+    files.push(path.join(root, "version.txt"));
   }
-  return candidate;
+  return files;
+}
+
+function missingCefFiles(root, requireVersion) {
+  return requiredCefFiles(root, requireVersion)
+    .filter((candidate) => !fs.existsSync(candidate));
+}
+
+function isCefRoot(root, requireVersion) {
+  return missingCefFiles(root, requireVersion).length === 0;
+}
+
+function installGuide(message) {
+  return [
+    message,
+    "",
+    "CEF is required for the Windows native backend.",
+    "Install it with:",
+    "  node .\\scripts\\setup_cef.mjs",
+    "",
+    `Expected layout: ${path.join(repoRoot, defaultCefDirName)}`,
+    "The CEF files should live directly in .cef-cache, with version.txt at the root.",
+  ].join("\n");
+}
+
+function defaultCefRoot() {
+  const candidates = [
+    path.resolve(process.cwd(), defaultCefDirName),
+    path.join(repoRoot, defaultCefDirName),
+  ];
+  const unique = [...new Set(candidates)];
+  for (const candidate of unique) {
+    if (isCefRoot(candidate, true)) {
+      return candidate;
+    }
+  }
+  const existing = unique.find((candidate) => fs.existsSync(candidate));
+  if (existing) {
+    const missing = missingCefFiles(existing, true);
+    throw new Error(installGuide(
+      `Invalid CEF install directory: ${existing}\nMissing:\n${missing.join("\n")}`,
+    ));
+  }
+  throw new Error(installGuide("CEF is not installed."));
 }
 
 function cStringDefine(value) {
@@ -39,13 +109,11 @@ function cStringDefine(value) {
 }
 
 function windowsConfig(root) {
-  requirePath(root, "include/capi/cef_app_capi.h");
-  requirePath(root, "include/capi/cef_browser_capi.h");
-  requirePath(root, "include/capi/cef_client_capi.h");
-  requirePath(root, "include/capi/cef_v8_capi.h");
-  requirePath(root, "Release/libcef.lib");
-  requirePath(root, "Release/libcef.dll");
-  requirePath(root, "Resources/icudtl.dat");
+  for (const filePath of requiredCefFiles(root, false)) {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Missing CEF file: ${filePath}`);
+    }
+  }
 
   return {
     link_libs: [
@@ -65,7 +133,7 @@ function main() {
   const env = optionalPayloadEnv();
   const rawRoot = envValue(env, "LEPUS_CEF_ROOT").trim();
 
-  if (rawRoot.length === 0) {
+  if (process.platform !== "win32") {
     process.stdout.write(JSON.stringify({
       vars: {
         LEPUS_CEF_ENABLED: "0",
@@ -76,20 +144,17 @@ function main() {
     return;
   }
 
-  if (process.platform !== "win32") {
-    throw new Error(
-      "The root CEF backend is currently implemented for Windows only. " +
-      "Unset LEPUS_CEF_ROOT or build on Windows.",
-    );
-  }
-
-  const root = path.resolve(rawRoot);
+  const root = rawRoot.length === 0
+    ? defaultCefRoot()
+    : path.resolve(rawRoot);
   const rawSubprocess = envValue(env, "LEPUS_CEF_SUBPROCESS_PATH").trim();
   const subprocess = rawSubprocess.length === 0
-    ? ""
+    ? defaultSubprocessPath
     : path.resolve(rawSubprocess);
   if (subprocess.length > 0 && !fs.existsSync(subprocess)) {
-    throw new Error(`Missing CEF subprocess executable: ${subprocess}`);
+    if (rawSubprocess.length > 0) {
+      throw new Error(`Missing CEF subprocess executable: ${subprocess}`);
+    }
   }
   process.stdout.write(JSON.stringify({
     vars: {
@@ -111,4 +176,9 @@ function main() {
   }));
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  console.error(error?.message ?? String(error));
+  process.exit(1);
+}

@@ -143,19 +143,13 @@ Run from the repository root in one PowerShell session:
 
 ```powershell
 node .\scripts\setup_cef.mjs
-$env:LEPUS_CEF_ROOT = (Resolve-Path ".\.cef-cache\cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal").Path
-Remove-Item Env:\LEPUS_CEF_SUBPROCESS_PATH -ErrorAction SilentlyContinue
 moon build src\cef_process --target native
-$env:LEPUS_CEF_SUBPROCESS_PATH = (Resolve-Path "_build\native\debug\build\justjavac\lepus\cef_process\cef_process.exe").Path
 moon -C examples run 37_cef_mvp --target native
 ```
 
-If CEF is already downloaded elsewhere, set `LEPUS_CEF_ROOT` to that directory
-instead of running the download script:
-
-```powershell
-$env:LEPUS_CEF_ROOT = "<path-to-extracted-cef-root>"
-```
+The setup script installs CEF directly into `.cef-cache/` and writes
+`.cef-cache/version.txt`. If CEF is missing, Windows native builds fail with
+the same install command.
 
 Run the automated CEF bind smoke test with the same environment:
 
@@ -189,23 +183,23 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 This repo targets `native` only.
 
 - The low-level `justjavac/lepus/webview` package uses a Windows CEF backend
-  supplied by `LEPUS_CEF_ROOT`.
-- `LEPUS_CEF_ROOT` must point at a CEF binary distribution with
+  installed in `.cef-cache/` by `node .\scripts\setup_cef.mjs`.
+- `.cef-cache/` must contain a CEF binary distribution directly, with
   `include/capi/cef_app_capi.h`, `Release/libcef.lib`,
-  `Release/libcef.dll`, and `Resources/icudtl.dat`.
+  `Release/libcef.dll`, `Resources/icudtl.dat`, and `version.txt` at the root.
+  The setup script also mirrors early-startup resource files such as
+  `icudtl.dat` and `*.pak` into `Release/`, because CEF loads them from the
+  `libcef.dll` directory before normal settings are fully applied.
 - CEF child processes run through the MoonBit helper package
-  `src/cef_process`, not through the user executable. Build it first and pass
-  its executable path through `LEPUS_CEF_SUBPROCESS_PATH` when building or
-  running CEF examples.
-- With `LEPUS_CEF_ROOT` and `LEPUS_CEF_SUBPROCESS_PATH` set, the native stub
-  loads `Release/libcef.dll` and points CEF at `Resources/` from the configured
-  root. A deployed app can either keep those environment variables or package
-  the same CEF runtime layout beside the app.
+  `src/cef_process`, not through the user executable. Build it first with
+  `moon build src\cef_process --target native`. A deployed app should package
+  `cef_process.exe` beside the app executable.
+- The native stub loads `Release/libcef.dll` and points CEF at `Resources/`
+  from the configured root. A deployed app can package the same CEF runtime
+  layout beside the app executable.
 - Set `LEPUS_CEF_REMOTE_DEBUGGING_PORT` to a port number to enable CEF remote
   debugging for CDP-based smoke tests.
-- If `LEPUS_CEF_ROOT` is unset, native checks can still compile against an
-  unavailable stub, but creating a real `Webview` aborts with a CEF setup
-  message.
+- On Windows, missing CEF fails the native build with setup instructions.
 - The previous vendored webview linkage path has been removed from the root
   package.
 - The first production target for the CEF backend is Windows. macOS and Linux

@@ -23,7 +23,7 @@ async fn main {
   let available = @webview.backend_available()
   if !available {
     println(
-      "CEF backend is unavailable. Set LEPUS_CEF_ROOT and LEPUS_CEF_SUBPROCESS_PATH before running this example.",
+      "CEF backend is unavailable. Run `node .\\scripts\\setup_cef.mjs` and `moon build src\\cef_process --target native` before running this example.",
     )
     return
   }
