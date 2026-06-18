@@ -1,4 +1,4 @@
-# lepus/cli/codegen
+# lepus_cli/codegen
 
 Build-time command/event code generation helpers for the Lepus CLI.
 
