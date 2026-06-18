@@ -29,7 +29,7 @@ Options:
 
 Examples:
   node ./scripts/setup_cef.mjs
-  node ./scripts/setup_cef.mjs --cache D:\\Code\\moonbit-webview\\.cef-cache`);
+  node ./scripts/setup_cef.mjs --cache .cef-cache-local`);
 }
 
 function parseArgs(argv) {

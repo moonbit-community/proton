@@ -88,13 +88,13 @@ test "prepare_app expands dependencies in deterministic order" {
     "justjavac/lepus-dialog": @manifest.ExtensionSetting::enabled(),
   })
 
-  match prepare_app(manifest, registry, base_dir=Some("D:/workspace/app")) {
+  match prepare_app(manifest, registry, base_dir=Some("workspace/app")) {
     Err(error) => abort(error)
     Ok(prepared) => {
       @debug.assert_eq(prepared_extension_ids(prepared), [
         "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
       ])
-      @debug.assert_eq(prepared.base_dir(), Some("D:/workspace/app"))
+      @debug.assert_eq(prepared.base_dir(), Some("workspace/app"))
       let runtime_config = prepared.runtime_config()
       assert_eq(runtime_config.window.title, "Planner")
       assert_eq(runtime_config.window.width, 960)
@@ -121,7 +121,7 @@ test "prepare_app preserves asset-backed runtime entries" {
     @manifest.AppEntry::Asset("frontend/index.html"),
   )
 
-  match prepare_app(manifest, registry, base_dir=Some("D:/workspace/app")) {
+  match prepare_app(manifest, registry, base_dir=Some("workspace/app")) {
     Err(error) => abort(error)
     Ok(prepared) =>
       match prepared.runtime_config().entry {

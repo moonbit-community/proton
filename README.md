@@ -154,7 +154,7 @@ If CEF is already downloaded elsewhere, set `LEPUS_CEF_ROOT` to that directory
 instead of running the download script:
 
 ```powershell
-$env:LEPUS_CEF_ROOT = "D:\Code\moonbit-webview\.cef-cache\cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal"
+$env:LEPUS_CEF_ROOT = "<path-to-extracted-cef-root>"
 ```
 
 Run the automated CEF bind smoke test with the same environment:

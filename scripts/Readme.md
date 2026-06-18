@@ -34,7 +34,7 @@ node .\scripts\setup_cef.mjs
 Use a different cache directory:
 
 ```powershell
-node .\scripts\setup_cef.mjs --cache D:\Code\moonbit-webview\.cef-cache
+node .\scripts\setup_cef.mjs --cache .cef-cache-local
 ```
 
 After downloading, set `LEPUS_CEF_ROOT` explicitly before building CEF-backed

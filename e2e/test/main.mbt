@@ -258,10 +258,10 @@ fn scenario_probe_expression(name : String) -> String {
       (
         #|;(async () => {
         #|  const path = window.__MoonBit__.path;
-        #|  const basename = await path.basename("C:/tmp/demo.html", ".html");
-        #|  const dirname = await path.dirname("C:/tmp/demo.html");
-        #|  const joined = await path.join("C:/tmp", "child", "index.html");
-        #|  const parsed = await path.parse("C:/tmp/demo.html");
+        #|  const basename = await path.basename("fixtures/demo.html", ".html");
+        #|  const dirname = await path.dirname("fixtures/demo.html");
+        #|  const joined = await path.join("fixtures", "child", "index.html");
+        #|  const parsed = await path.parse("fixtures/demo.html");
         #|  return basename === "demo" &&
         #|    typeof dirname === "string" &&
         #|    joined.includes("child") &&
@@ -301,7 +301,6 @@ fn scenario_probe_expression(name : String) -> String {
         #|  const support = await api.support({});
         #|  const described = await api.describe({
         #|    name: "LepusCdpE2E",
-        #|    path: "C:/Windows/System32/notepad.exe",
         #|    identifier: "justjavac.lepus.cdp.e2e"
         #|  });
         #|  return support &&
