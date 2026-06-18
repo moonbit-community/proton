@@ -40,7 +40,7 @@ pub impl Show for AppWindowManifest
 pub(all) enum ExtensionSetting {
   Disabled
   Enabled(Json?)
-} derive(Eq)
+} derive(Eq, @debug.Debug)
 pub fn ExtensionSetting::disabled() -> Self
 pub fn ExtensionSetting::enabled(options? : Json?) -> Self
 pub fn ExtensionSetting::is_enabled(Self) -> Bool
@@ -67,3 +67,4 @@ pub impl Show for WindowSizeHint
 // Type aliases
 
 // Traits
+

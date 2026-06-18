@@ -104,7 +104,7 @@ function main() {
     },
     link_configs: [
       {
-        package: "justjavac/lepus",
+        package: "justjavac/lepus/webview",
         ...windowsConfig(root),
       },
     ],

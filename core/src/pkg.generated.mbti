@@ -2,27 +2,27 @@
 package "justjavac/lepus_core"
 
 import {
-  "justjavac/lepus",
+  "justjavac/lepus/webview",
   "justjavac/lepus_ipc",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn[Payload : ToJson] emit_extension(@lepus.Webview, String, String, Payload) -> Unit
+pub fn[Payload : ToJson] emit_extension(@webview.Webview, String, String, Payload) -> Unit
 
-pub fn emit_ipc_extension_event(@lepus.Webview, @lepus_ipc.IpcExtensionEvent) -> Unit
+pub fn emit_ipc_extension_event(@webview.Webview, @lepus_ipc.IpcExtensionEvent) -> Unit
 
-pub fn ensure_core_runtime(@lepus.Webview) -> Unit
+pub fn ensure_core_runtime(@webview.Webview) -> Unit
 
-pub fn extension_host(@lepus.Webview) -> ExtensionHost
+pub fn extension_host(@webview.Webview) -> ExtensionHost
 
-pub fn install_core_bridge(@lepus.Webview) -> Unit
+pub fn install_core_bridge(@webview.Webview) -> Unit
 
-pub fn install_extension(@lepus.Webview, Extension) -> Unit
+pub fn install_extension(@webview.Webview, Extension) -> Unit
 
-pub fn install_ipc_bridge_runtime(@lepus.Webview, String, Array[String], extensions? : Array[@lepus_ipc.IpcExtensionDescriptor]) -> Unit
+pub fn install_ipc_bridge_runtime(@webview.Webview, String, Array[String], extensions? : Array[@lepus_ipc.IpcExtensionDescriptor]) -> Unit
 
-pub fn install_ipc_extension(@lepus.Webview, @lepus_ipc.IpcExtensionDescriptor) -> Unit
+pub fn install_ipc_extension(@webview.Webview, @lepus_ipc.IpcExtensionDescriptor) -> Unit
 
 pub fn moonbit_global_name() -> String
 
@@ -64,13 +64,13 @@ pub fn ExtensionContext::id(Self) -> String
 pub fn ExtensionContext::js_namespace(Self) -> String
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
-pub fn ExtensionContext::webview(Self) -> @lepus.Webview
+pub fn ExtensionContext::webview(Self) -> @webview.Webview
 
 type ExtensionHost
 pub fn ExtensionHost::destroy(Self) -> Unit
 pub fn[Payload : ToJson] ExtensionHost::emit(Self, String, String, Payload) -> Unit
 pub fn ExtensionHost::install(Self, Extension) -> Unit
-pub fn ExtensionHost::new(@lepus.Webview) -> Self
+pub fn ExtensionHost::new(@webview.Webview) -> Self
 pub fn ExtensionHost::run(Self) -> Unit
 
 type ExtensionSpec
@@ -107,3 +107,4 @@ type TemplateReplacement
 // Type aliases
 
 // Traits
+

@@ -10,7 +10,7 @@ import {
 
 import {
   "moonbitlang/core/debug",
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/webview" @webview,
 } for "wbtest"
 
 supported_targets = "native"

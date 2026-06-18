@@ -2,14 +2,14 @@ import {
   "moonbitlang/core/json",
   "justjavac/ffi",
   "justjavac/lepus_ipc" @ipc,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/webview" @webview,
 }
 
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "justjavac/ffi",
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/webview" @webview,
 } for "test"
 
 import {

@@ -1,6 +1,6 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/webview" @webview,
   "justjavac/ffi",
 }
 

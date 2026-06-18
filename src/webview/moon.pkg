@@ -1,0 +1,17 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/ffi",
+}
+
+import {
+  "justjavac/ffi",
+} for "test"
+
+supported_targets = "+native"
+
+options(
+  "native-stub": [ "stub.c" ],
+  link: { "native": { "stub-cc-flags": "${build.LEPUS_CEF_STUB_CC_FLAGS}" } },
+  targets: { "binding.mbt": [ "native" ], "webview.mbt": [ "native" ] },
+)
+

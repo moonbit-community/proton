@@ -2,7 +2,7 @@
 package "justjavac/lepus_runtime"
 
 import {
-  "justjavac/lepus",
+  "justjavac/lepus/webview",
   "justjavac/lepus_core",
   "justjavac/lepus_ipc",
   "moonbitlang/core/debug",
@@ -32,7 +32,7 @@ pub fn App::install_ipc_bridge(Self, String, Array[String], extensions? : Array[
 pub fn App::main_window(Self) -> AppWindow
 pub fn App::new(AppConfig) -> Self
 pub fn App::run(Self) -> Unit
-pub fn App::webview(Self) -> @lepus.Webview
+pub fn App::webview(Self) -> @webview.Webview
 pub fn App::window(Self, String) -> AppWindow?
 pub fn App::windows(Self) -> Array[AppWindow]
 
@@ -55,14 +55,14 @@ type AppIpcBackend
 
 pub struct AppWindow {
   id : String
-  webview : @lepus.Webview
+  webview : @webview.Webview
   config : WindowConfig
   entry : AppEntry
 }
 pub fn AppWindow::config(Self) -> WindowConfig
 pub fn AppWindow::entry(Self) -> AppEntry
 pub fn AppWindow::id(Self) -> String
-pub fn AppWindow::webview(Self) -> @lepus.Webview
+pub fn AppWindow::webview(Self) -> @webview.Webview
 
 pub struct AppWindowConfig {
   id : String
@@ -77,9 +77,9 @@ pub struct WindowConfig {
   title : String
   width : Int
   height : Int
-  size_hint : @lepus.SizeHint
+  size_hint : @webview.SizeHint
 } derive(@debug.Debug)
-pub fn WindowConfig::new(String, Int, Int, size_hint? : @lepus.SizeHint) -> Self
+pub fn WindowConfig::new(String, Int, Int, size_hint? : @webview.SizeHint) -> Self
 
 // Type aliases
 
