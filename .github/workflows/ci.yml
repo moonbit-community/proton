@@ -49,15 +49,15 @@ jobs:
       - name: Install Lepus CLI for pre-build codegen on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon install --path src/cli --bin target/lepus-tools
-          cp target/lepus-tools/cli target/lepus-tools/lepus
+          moon install --path cli --bin target/lepus-tools
+          cp target/lepus-tools/lepus_cli target/lepus-tools/lepus
           chmod +x target/lepus-tools/lepus
 
       - name: Install Lepus CLI for pre-build codegen on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          moon install --path src/cli --bin target/lepus-tools
-          Copy-Item target\lepus-tools\cli.exe target\lepus-tools\lepus.exe -Force
+          moon install --path cli --bin target/lepus-tools
+          Copy-Item target\lepus-tools\lepus_cli.exe target\lepus-tools\lepus.exe -Force
 
       - name: Format check
         run: |
@@ -67,7 +67,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon check --target native --deny-warn
-          moon test src/cli/codegen --target native
+          moon -C cli test codegen --target native
 
       - name: Check framework modules on Windows
         if: ${{ matrix.os == 'windows-latest' }}
@@ -77,7 +77,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
-          moon test src/cli/codegen --target native
+          moon -C cli test codegen --target native
 
       - name: Check extension catalog on Unix
         if: ${{ matrix.os != 'windows-latest' }}
