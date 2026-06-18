@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/examples/41_app_commands/app"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type FailPayload derive(@json.FromJson)
+
+type PingPayload derive(@json.FromJson)
+
+type PingReply derive(ToJson)
+
+type ReportProbePayload derive(@json.FromJson)
+
+type ReportProbeReply derive(ToJson)
+
+type SlowAddPayload derive(@json.FromJson)
+
+type SlowAddReply derive(ToJson)
+
+// Type aliases
+
+// Traits
+

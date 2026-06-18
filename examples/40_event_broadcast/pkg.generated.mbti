@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/examples/40_event_broadcast"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type DoneEvent derive(ToJson)
+
+type StartPayload derive(@json.FromJson)
+
+type TickEvent derive(ToJson)
+
+type TickerResult derive(ToJson)
+
+// Type aliases
+
+// Traits
+

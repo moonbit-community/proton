@@ -11,6 +11,8 @@ import {
 // Errors
 
 // Types and methods
+type GeneratedPayload
+
 type JsonAck derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type JsonPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
