@@ -19,6 +19,11 @@ struct moonbit_webview_binding {
   struct moonbit_webview_binding *next;
 };
 
+struct moonbit_webview_init_script {
+  char *script;
+  struct moonbit_webview_init_script *next;
+};
+
 static char *moonbit_webview_strdup(const char *value) {
   size_t len;
   char *copy;
@@ -98,6 +103,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_webview_backend_id(void) {
 #define LEPUS_CEF_MESSAGE_RESPONSE "lepus.response"
 #define LEPUS_CEF_MESSAGE_CONTEXT_READY "lepus.context_ready"
 #define LEPUS_CEF_MESSAGE_INSTALL_BINDING "lepus.install_binding"
+#define LEPUS_CEF_MESSAGE_INIT_SCRIPT "lepus.init_script"
 #define LEPUS_CEF_DEFAULT_URL "about:blank"
 #define LEPUS_CEF_CLASS_NAME L"LepusCefWindow"
 #define LEPUS_WM_FLUSH_OPS (WM_APP + 51)
@@ -132,6 +138,7 @@ struct moonbit_webview {
   cef_browser_t *browser;
   cef_client_t *client;
   struct moonbit_webview_binding *bindings;
+  struct moonbit_webview_init_script *init_scripts;
   struct moonbit_webview_op *op_head;
   struct moonbit_webview_op *op_tail;
   struct moonbit_webview *next;
@@ -168,10 +175,17 @@ struct lepus_dispatch_task {
   void *arg;
 };
 
+struct lepus_render_init_script {
+  int browser_id;
+  char *script;
+  struct lepus_render_init_script *next;
+};
+
 static int lepus_cef_initialized = 0;
 static int lepus_cef_shutdown_registered = 0;
 static HMODULE lepus_cef_module = NULL;
 static struct moonbit_webview *lepus_webviews = NULL;
+static struct lepus_render_init_script *lepus_render_init_scripts = NULL;
 static struct lepus_app lepus_app_instance;
 
 static void CEF_CALLBACK lepus_add_ref(cef_base_ref_counted_t *base) {
@@ -403,6 +417,23 @@ static const char *lepus_cef_subprocess_path(void) {
   return LEPUS_CEF_SUBPROCESS_PATH;
 }
 
+static int lepus_cef_remote_debugging_port(void) {
+  const char *env = getenv("LEPUS_CEF_REMOTE_DEBUGGING_PORT");
+  char *end = NULL;
+  long port;
+  if (env == NULL || env[0] == '\0') {
+    return 0;
+  }
+  port = strtol(env, &end, 10);
+  if (end == env || *end != '\0' || port < 0 || port > 65535) {
+    fprintf(stderr,
+            "Ignoring invalid LEPUS_CEF_REMOTE_DEBUGGING_PORT value: %s\n",
+            env);
+    return 0;
+  }
+  return (int)port;
+}
+
 static int lepus_file_exists(const char *path) {
   DWORD attributes;
   if (path == NULL || path[0] == '\0') {
@@ -626,6 +657,73 @@ static void lepus_frame_execute(cef_frame_t *frame, const char *script) {
   cef_string_clear(&url);
 }
 
+static void lepus_context_eval(cef_v8_context_t *context, const char *script) {
+  cef_string_t code = {0};
+  cef_string_t url = {0};
+  cef_v8_value_t *result = NULL;
+  cef_v8_exception_t *exception = NULL;
+  if (context == NULL || script == NULL) {
+    return;
+  }
+  lepus_set_string(&code, script);
+  lepus_set_string(&url, "lepus://init");
+  context->eval(context, &code, &url, 1, &result, &exception);
+  cef_string_clear(&code);
+  cef_string_clear(&url);
+  if (result != NULL) {
+    result->base.release((cef_base_ref_counted_t *)result);
+  }
+  if (exception != NULL) {
+    exception->base.release((cef_base_ref_counted_t *)exception);
+  }
+}
+
+static void lepus_render_store_init_script(int browser_id, const char *script) {
+  struct lepus_render_init_script *entry;
+  struct lepus_render_init_script *cursor;
+  if (script == NULL) {
+    script = "";
+  }
+  for (cursor = lepus_render_init_scripts; cursor != NULL; cursor = cursor->next) {
+    if (cursor->browser_id == browser_id && strcmp(cursor->script, script) == 0) {
+      return;
+    }
+  }
+  entry = (struct lepus_render_init_script *)calloc(1, sizeof(*entry));
+  if (entry == NULL) {
+    return;
+  }
+  entry->browser_id = browser_id;
+  entry->script = moonbit_webview_strdup(script);
+  if (entry->script == NULL) {
+    free(entry);
+    return;
+  }
+  if (lepus_render_init_scripts == NULL) {
+    lepus_render_init_scripts = entry;
+    return;
+  }
+  for (cursor = lepus_render_init_scripts; cursor->next != NULL; cursor = cursor->next) {
+  }
+  cursor->next = entry;
+}
+
+static void lepus_render_eval_init_scripts(
+    cef_browser_t *browser,
+    cef_v8_context_t *context) {
+  int browser_id;
+  struct lepus_render_init_script *entry;
+  if (browser == NULL || context == NULL) {
+    return;
+  }
+  browser_id = browser->get_identifier(browser);
+  for (entry = lepus_render_init_scripts; entry != NULL; entry = entry->next) {
+    if (entry->browser_id == browser_id) {
+      lepus_context_eval(context, entry->script);
+    }
+  }
+}
+
 static char *lepus_js_quote(const char *value) {
   size_t len = 3;
   const char *p;
@@ -734,11 +832,78 @@ static void lepus_install_binding_script(
   frame->base.release((cef_base_ref_counted_t *)frame);
 }
 
+static void lepus_send_init_script(
+    struct moonbit_webview *w,
+    const char *script) {
+  cef_frame_t *frame;
+  cef_process_message_t *message;
+  cef_list_value_t *list;
+  cef_string_t message_name = {0};
+  cef_string_t script_string = {0};
+  if (w == NULL || w->browser == NULL || script == NULL) {
+    return;
+  }
+  frame = w->browser->get_main_frame(w->browser);
+  if (frame == NULL) {
+    return;
+  }
+  lepus_trace("send init script");
+  lepus_set_string(&message_name, LEPUS_CEF_MESSAGE_INIT_SCRIPT);
+  message = cef_process_message_create(&message_name);
+  cef_string_clear(&message_name);
+  if (message != NULL) {
+    list = message->get_argument_list(message);
+    list->set_size(list, 1);
+    lepus_set_string(&script_string, script);
+    list->set_string(list, 0, &script_string);
+    cef_string_clear(&script_string);
+    frame->send_process_message(frame, PID_RENDERER, message);
+  }
+  frame->base.release((cef_base_ref_counted_t *)frame);
+}
+
+static void lepus_send_all_init_scripts(struct moonbit_webview *w) {
+  struct moonbit_webview_init_script *entry;
+  if (w == NULL) {
+    return;
+  }
+  for (entry = w->init_scripts; entry != NULL; entry = entry->next) {
+    lepus_send_init_script(w, entry->script);
+  }
+}
+
 static void lepus_install_all_bindings(struct moonbit_webview *w) {
   struct moonbit_webview_binding *binding;
   for (binding = w->bindings; binding != NULL; binding = binding->next) {
     lepus_install_binding_script(w, binding->name);
   }
+}
+
+static int lepus_store_init_script(
+    struct moonbit_webview *w,
+    const char *script) {
+  struct moonbit_webview_init_script *entry;
+  struct moonbit_webview_init_script *cursor;
+  if (w == NULL) {
+    return 0;
+  }
+  entry = (struct moonbit_webview_init_script *)calloc(1, sizeof(*entry));
+  if (entry == NULL) {
+    return 0;
+  }
+  entry->script = moonbit_webview_strdup(script);
+  if (entry->script == NULL) {
+    free(entry);
+    return 0;
+  }
+  if (w->init_scripts == NULL) {
+    w->init_scripts = entry;
+    return 1;
+  }
+  for (cursor = w->init_scripts; cursor->next != NULL; cursor = cursor->next) {
+  }
+  cursor->next = entry;
+  return 1;
 }
 
 static void lepus_response_script_for_browser(
@@ -1082,6 +1247,7 @@ static void CEF_CALLBACK lepus_on_context_created(
   if (global != NULL && function != NULL) {
     global->set_value_bykey(global, &function_name, function, V8_PROPERTY_ATTRIBUTE_NONE);
   }
+  lepus_render_eval_init_scripts(browser, context);
   {
     cef_string_t ready_code = {0};
     cef_string_t ready_url = {0};
@@ -1136,6 +1302,7 @@ static int CEF_CALLBACK lepus_render_message(
   char *seq;
   char *result;
   char *binding_name;
+  char *init_script;
   int status;
   (void)self;
   (void)frame;
@@ -1157,6 +1324,26 @@ static int CEF_CALLBACK lepus_render_message(
       }
     }
     free(binding_name);
+    return 1;
+  }
+  if (strcmp(message_name, LEPUS_CEF_MESSAGE_INIT_SCRIPT) == 0) {
+    lepus_trace("renderer init script message");
+    free(message_name);
+    list = message->get_argument_list(message);
+    init_script = lepus_list_string(list, 0);
+    if (browser != NULL) {
+      lepus_render_store_init_script(browser->get_identifier(browser), init_script);
+    }
+    if (frame != NULL) {
+      lepus_frame_execute(frame, init_script);
+    } else if (browser != NULL) {
+      cef_frame_t *main_frame = browser->get_main_frame(browser);
+      if (main_frame != NULL) {
+        lepus_frame_execute(main_frame, init_script);
+        main_frame->base.release((cef_base_ref_counted_t *)main_frame);
+      }
+    }
+    free(init_script);
     return 1;
   }
   if (strcmp(message_name, LEPUS_CEF_MESSAGE_RESPONSE) != 0) {
@@ -1213,6 +1400,7 @@ static int CEF_CALLBACK lepus_client_message(
     lepus_trace("browser context ready");
     w = lepus_webview_from_browser(browser);
     if (w != NULL && w->running) {
+      lepus_send_all_init_scripts(w);
       lepus_install_all_bindings(w);
     }
     return 1;
@@ -1265,6 +1453,7 @@ static void CEF_CALLBACK lepus_on_after_created(
   lepus_trace("browser after created");
   owner->webview->browser = browser;
   lepus_addref_browser(browser);
+  lepus_send_all_init_scripts(owner->webview);
   lepus_flush_ops(owner->webview);
 }
 
@@ -1376,7 +1565,7 @@ static void lepus_ensure_cef_initialized(int debug) {
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
   (void)debug;
-  settings.remote_debugging_port = 0;
+  settings.remote_debugging_port = lepus_cef_remote_debugging_port();
   settings.log_severity =
       lepus_trace_enabled() ? LOGSEVERITY_DEFAULT : LOGSEVERITY_DISABLE;
   if (!lepus_file_exists(subprocess_path)) {
@@ -1661,6 +1850,7 @@ static void lepus_apply_op(
 MOONBIT_FFI_EXPORT int32_t webview_destroy(webview_t raw) {
   struct moonbit_webview *w = (struct moonbit_webview *)raw;
   struct moonbit_webview_binding *binding;
+  struct moonbit_webview_init_script *init_script;
   struct moonbit_webview_op *op;
   int had_browser;
   if (w == NULL || w->destroyed) {
@@ -1681,6 +1871,12 @@ MOONBIT_FFI_EXPORT int32_t webview_destroy(webview_t raw) {
     binding = w->bindings;
     w->bindings = binding->next;
     moonbit_webview_free_binding(binding);
+  }
+  while (w->init_scripts != NULL) {
+    init_script = w->init_scripts;
+    w->init_scripts = init_script->next;
+    free(init_script->script);
+    free(init_script);
   }
   while (w->op_head != NULL) {
     op = w->op_head;
@@ -1862,10 +2058,12 @@ MOONBIT_FFI_EXPORT int32_t webview_init(webview_t raw, const char *script) {
   if (w == NULL) {
     return -1;
   }
-  lepus_queue_op(w, 5, script, 0, 0, 0, NULL, NULL);
+  (void)lepus_store_init_script(w, script);
   if (w->browser != NULL) {
-    lepus_flush_ops(w);
+    lepus_send_init_script(w, script != NULL ? script : "");
+    return 0;
   }
+  lepus_queue_op(w, 5, script, 0, 0, 0, NULL, NULL);
   return 0;
 }
 
