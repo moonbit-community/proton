@@ -11,7 +11,7 @@ The repository is organized into these layers:
 - `justjavac/lepus/runtime`: `App`, windows, and lifecycle orchestration
 - `justjavac/lepus/bootstrap`: `app.json` loading, editing, and validation helpers
 - `justjavac/lepus/catalog`: metadata discovery, schema loading, and explicit link planning
-- `justjavac/lepus/cli`: developer CLI entry point, including build-time command/event code generation in `src/cli/codegen`
+- `justjavac/lepus_cli`: developer CLI entry point, including build-time command/event code generation in `cli/codegen`
 - `justjavac/lepus_ext/*`: built-in extensions such as `fs`, `path`, `dialog`, `clipboard`, `shell`, `notification`, `tray`, and `globalHotkey`
 
 The product direction is:
@@ -130,11 +130,11 @@ Generated command extensions call `target/lepus-tools/lepus codegen` from
 package pre-build steps. Install the local CLI before building those packages:
 
 ```powershell
-moon install --path src\cli --bin target\lepus-tools
-Copy-Item target\lepus-tools\cli.exe target\lepus-tools\lepus.exe -Force
+moon install --path cli --bin target\lepus-tools
+Copy-Item target\lepus-tools\lepus_cli.exe target\lepus-tools\lepus.exe -Force
 ```
 
-On Unix-like shells, copy `target/lepus-tools/cli` to
+On Unix-like shells, copy `target/lepus-tools/lepus_cli` to
 `target/lepus-tools/lepus` and make it executable.
 
 ### Run The Windows CEF Example

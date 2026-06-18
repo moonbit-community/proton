@@ -8,14 +8,14 @@
 - `src/runtime/`: `justjavac/lepus/runtime`; owns `App`, window lifecycle, and extension installation on top of `core`.
 - `src/bootstrap/`: `justjavac/lepus/bootstrap`; owns manifest parsing, editing, and config documents.
 - `src/catalog/`: `justjavac/lepus/catalog`; discovery, indexing, schema validation, and linking-plan helpers for metadata-driven tooling.
-- `src/cli/`: `justjavac/lepus/cli`; native developer CLI entry point plus `src/cli/codegen/` command/event code generation helpers.
+- `cli/`: `justjavac/lepus_cli`; independent native developer CLI module plus `cli/codegen/` command/event code generation helpers.
 - `extensions/`: `justjavac/lepus_ext`; built-in webview extensions such as `fs`, `path`, `dialog`, `clipboard`; each extension owns its own metadata plus JS/MBT binding and is intended for opt-in linking so apps only ship the capabilities they use.
 - `examples/`: runnable demos; prefer keeping [examples/Readme.md](examples/Readme.md) in sync with the actual examples.
 - `lib/`, `build/`, `_build/`, `target/`: generated or vendored artifacts.
 
 ## Build And Test
 - `moon check --target native`
-- `moon test src/cli/codegen --target native`
+- `moon -C cli test codegen --target native`
 - `moon -C extensions test --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`

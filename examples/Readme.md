@@ -98,8 +98,8 @@ node ..\scripts\e2e_cdp_smoke.mjs
   runs in a framework child process.
 - Example `42` shows the generated-command workflow. Regenerate its command
   bridge by first installing the CLI with
-  `moon install --path src/cli --bin target/lepus-tools`, then copy
-  `target/lepus-tools/cli(.exe)` to `target/lepus-tools/lepus(.exe)`. The
+  `moon install --path cli --bin target/lepus-tools`, then copy
+  `target/lepus-tools/lepus_cli(.exe)` to `target/lepus-tools/lepus(.exe)`. The
   package pre-build then calls `target/lepus-tools/lepus codegen`; extension id and namespace come
   from `42_attribute_codegen_commands/extension.json`.
 - Example `43` exits on its own after JavaScript calls a MoonBit binding,
