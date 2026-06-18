@@ -1,5 +1,6 @@
 {
   "schema_version": 2,
   "id": "justjavac/lepus-keepawake",
-  "namespace": "keepAwake"
+  "namespace": "keepAwake",
+  "package": "justjavac/lepus_ext/keepawake"
 }

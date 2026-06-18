@@ -1,5 +1,6 @@
 {
   "schema_version": 2,
   "id": "justjavac/lepus-shell",
-  "namespace": "shell"
+  "namespace": "shell",
+  "package": "justjavac/lepus_ext/shell"
 }

@@ -1,5 +1,6 @@
 {
   "schema_version": 2,
   "id": "justjavac/lepus-tray",
-  "namespace": "tray"
+  "namespace": "tray",
+  "package": "justjavac/lepus_ext/tray"
 }
