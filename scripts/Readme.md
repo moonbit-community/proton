@@ -67,5 +67,5 @@ node .\scripts\e2e_cdp_smoke.mjs
 Run a subset:
 
 ```powershell
-node .\scripts\e2e_cdp_smoke.mjs 38_async_extension_add 41_app_commands/app
+node .\scripts\e2e_cdp_smoke.mjs 38_async_extension_add 41_app_commands
 ```

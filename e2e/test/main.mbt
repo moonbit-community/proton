@@ -91,7 +91,7 @@ fn scenario_ready_expression(name : String) -> String {
       "Boolean(window.__MoonBit__ && window.__MoonBit__.math && window.__MoonBit__.add)"
     "40_event_broadcast" =>
       "Boolean(window.__MoonBit__ && window.__MoonBit__.ticker && window.__MoonBit__.ticker.start)"
-    "41_app_commands/app" =>
+    "41_app_commands" =>
       "Boolean(window.__MoonBit__ && window.__MoonBit__.core && window.__MoonBit__.core.invokeOp)"
     "42_attribute_codegen_commands" => moonbit_api_ready("add", "slowAdd")
     _ => "document.readyState !== 'loading'"
@@ -373,7 +373,7 @@ fn scenario_probe_expression(name : String) -> String {
         #|  return result && result.done && result.done.total === 2 && events.length >= 1;
         #|})()
       )
-    "41_app_commands/app" =>
+    "41_app_commands" =>
       (
         #|;(async () => {
         #|  const core = window.__MoonBit__.core;

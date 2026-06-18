@@ -45,7 +45,7 @@ const defaultScenarios = [
   "38_async_extension_add",
   "39_sync_async_extensions",
   "40_event_broadcast",
-  "41_app_commands/app",
+  "41_app_commands",
   "42_attribute_codegen_commands",
   "43_cef_bind_smoke",
 ];

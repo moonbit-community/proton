@@ -19,12 +19,12 @@ process registers:
 Run the app:
 
 ```sh
-moon -C examples run 41_app_commands/app --target native
+moon -C examples run 41_app_commands --target native
 ```
 
 Or build first and run the app executable:
 
 ```sh
 moon -C examples build --target native
-moon -C examples run 41_app_commands/app --target native
+moon -C examples run 41_app_commands --target native
 ```
