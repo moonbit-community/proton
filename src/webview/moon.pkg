@@ -5,6 +5,7 @@ import {
 
 import {
   "justjavac/ffi",
+  "moonbitlang/x/sys",
 } for "test"
 
 supported_targets = "+native"

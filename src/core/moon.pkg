@@ -8,6 +8,7 @@ import {
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "moonbitlang/x/sys",
   "justjavac/ffi",
   "justjavac/lepus/webview",
 } for "test"

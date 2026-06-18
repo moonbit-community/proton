@@ -9,8 +9,10 @@ import {
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "moonbitlang/x/sys",
   "justjavac/ffi",
   "justjavac/lepus/core",
+  "justjavac/lepus/webview",
 } for "test"
 
 supported_targets = "+native"

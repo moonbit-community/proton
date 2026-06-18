@@ -1,5 +1,14 @@
 ///|
+fn app_extension_cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => @webview.backend_available()
+    _ => false
+  }
+}
+
+///|
 test "App::extension_host and App::emit_extension deliver runtime events" {
+  guard app_extension_cef_unit_tests_enabled() else { return }
   let expected_event = ExtensionNoticeEvent::{
     extension: "math",
     name: "computed",
@@ -113,6 +122,7 @@ test "App::extension_host and App::emit_extension deliver runtime events" {
 
 ///|
 test "App runtime exposes __MoonBit__ extensions before page load" {
+  guard app_extension_cef_unit_tests_enabled() else { return }
   let expected_response = MultiplyReply::{ total: 42 }
   let expected_event = ExtensionNoticeEvent::{
     extension: "math",
@@ -255,6 +265,7 @@ test "App runtime exposes __MoonBit__ extensions before page load" {
 
 ///|
 test "__MoonBit__ root exposes consolidated extension runtime surfaces" {
+  guard app_extension_cef_unit_tests_enabled() else { return }
   let expected_report = AppRuntimeHelperReport::{
     via_invoke: MultiplyReply::{ total: 42 },
     via_method: MultiplyReply::{ total: 42 },

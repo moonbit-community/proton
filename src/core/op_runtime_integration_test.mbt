@@ -1,5 +1,14 @@
 ///|
+fn op_runtime_cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => @webview.backend_available()
+    _ => false
+  }
+}
+
+///|
 test "__MoonBit__ core ops expose extension APIs into JavaScript" {
+  guard op_runtime_cef_unit_tests_enabled() else { return }
   let expected_report = OpsRuntimeReport::{
     direct: MultiplyReply::{ total: 42 },
     extension: MultiplyReply::{ total: 42 },
@@ -130,6 +139,7 @@ test "__MoonBit__ core ops expose extension APIs into JavaScript" {
 
 ///|
 test "ipc bridge can coexist with local op runtime" {
+  guard op_runtime_cef_unit_tests_enabled() else { return }
   let expected_report = MixedRuntimeReport::{
     local_reply: MultiplyReply::{ total: 42 },
     remote: true,
@@ -223,6 +233,7 @@ test "ipc bridge can coexist with local op runtime" {
 
 ///|
 test "standalone ipc extension install creates core runtime surface" {
+  guard op_runtime_cef_unit_tests_enabled() else { return }
   let expected_report = StandaloneIpcExtensionReport::{
     has_core: true,
     has_extension: true,

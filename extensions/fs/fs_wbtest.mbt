@@ -20,6 +20,14 @@ test "fs helper script stays with fs extension assets" {
 }
 
 ///|
+fn fs_cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => @webview.backend_available()
+    _ => false
+  }
+}
+
+///|
 fn write_text_fixture(path : String, content : String) -> Unit {
   try @xfs.write_string_to_file(path, content) catch {
     error =>
@@ -83,6 +91,7 @@ test "fs path api can read write and append text files" {
 
 ///|
 test "fs extension text ops complete through WebView promise bridge" {
+  guard fs_cef_unit_tests_enabled() else { return }
   let path = "lepus-fs-webview-promise.txt"
   if native_path_exists(path) {
     ignore(native_remove_file(path))

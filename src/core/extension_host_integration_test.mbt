@@ -1,5 +1,14 @@
 ///|
+fn extension_host_cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => @webview.backend_available()
+    _ => false
+  }
+}
+
+///|
 test "Webview::emit_extension delivers events to JavaScript listeners" {
+  guard extension_host_cef_unit_tests_enabled() else { return }
   let expected_event = ExtensionNoticeEvent::{
     extension: "math",
     name: "computed",

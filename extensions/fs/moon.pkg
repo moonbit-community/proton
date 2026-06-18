@@ -10,6 +10,7 @@ import {
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/x/sys",
   "justjavac/lepus/webview",
 } for "wbtest"
 

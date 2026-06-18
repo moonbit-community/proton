@@ -29,7 +29,11 @@ fn normalize_test_slashes(path : String) -> String {
 ///|
 /// Resolves one bootstrap manifest fixture path from either module-local or workspace layout.
 fn manifest_test_path(name : String) -> String {
-  resolve_fixture_path(["testdata/" + name, "bootstrap/testdata/" + name])
+  resolve_fixture_path([
+    "testdata/" + name,
+    "src/bootstrap/testdata/" + name,
+    "bootstrap/testdata/" + name,
+  ])
 }
 
 ///|

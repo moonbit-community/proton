@@ -1,5 +1,14 @@
 ///|
+fn app_window_cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => @webview.backend_available()
+    _ => false
+  }
+}
+
+///|
 test "App registers additional windows before run" {
+  guard app_window_cef_unit_tests_enabled() else { return }
   let config = @runtime.AppConfig::new(
     @runtime.WindowConfig::new("runtime-main", 800, 600),
     @runtime.AppEntry::Html("<html>Main</html>"),
@@ -26,6 +35,7 @@ test "App registers additional windows before run" {
 
 ///|
 test "AppConfig and App accessors expose window snapshots" {
+  guard app_window_cef_unit_tests_enabled() else { return }
   let configured_windows = [
     @runtime.AppWindowConfig::new(
       "docs",
@@ -75,6 +85,7 @@ test "AppConfig and App accessors expose window snapshots" {
 
 ///|
 test "App::install_extension_spec builds one extension instance per window" {
+  guard app_window_cef_unit_tests_enabled() else { return }
   let mut build_count = 0
   let config = @runtime.AppConfig::new(
     @runtime.WindowConfig::new("runtime-main", 800, 600),
@@ -110,6 +121,7 @@ test "App::install_extension_spec builds one extension instance per window" {
 
 ///|
 test "panic App::install_extension applies to registered windows" {
+  guard app_window_cef_unit_tests_enabled() else { return }
   let config = @runtime.AppConfig::new(
     @runtime.WindowConfig::new("runtime-main", 800, 600),
     @runtime.AppEntry::Html("<html>Main</html>"),

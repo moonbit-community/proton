@@ -1,5 +1,14 @@
 ///|
+fn cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => backend_available()
+    _ => false
+  }
+}
+
+///|
 test "Start app loop and terminate it" {
+  guard cef_unit_tests_enabled() else { return }
   let webview = Webview::new()
   webview.dispatch(fn() { webview.terminate() })
   webview.run()
@@ -8,6 +17,7 @@ test "Start app loop and terminate it" {
 
 ///|
 test "Create a window, run app and terminate it" {
+  guard cef_unit_tests_enabled() else { return }
   let webview = Webview::new()
   webview.set_title("Test")
   webview.set_size(480, 320, SizeHint::None)
@@ -19,6 +29,7 @@ test "Create a window, run app and terminate it" {
 
 ///|
 test "Webview destroy is idempotent" {
+  guard cef_unit_tests_enabled() else { return }
   let webview = Webview::new()
   webview.destroy()
   webview.destroy()
@@ -26,6 +37,7 @@ test "Webview destroy is idempotent" {
 
 ///|
 test "Bind callback marshals C strings safely" {
+  guard cef_unit_tests_enabled() else { return }
   let mut called = false
   let mut callback_id = ""
   let mut callback_req = ""

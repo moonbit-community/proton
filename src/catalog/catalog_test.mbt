@@ -46,13 +46,17 @@ fn stub_descriptor(
 ///|
 /// Resolves a catalog test fixture path from either module-local or workspace layout.
 fn catalog_test_path(path : String) -> String {
-  resolve_fixture_path([path, "catalog/" + path])
+  resolve_fixture_path([path, "src/catalog/" + path, "catalog/" + path])
 }
 
 ///|
 /// Resolves the root directory of one built-in extension fixture for tests.
 fn builtin_extension_root(name : String) -> String {
-  resolve_fixture_path(["../extensions/" + name, "extensions/" + name])
+  resolve_fixture_path([
+    "../extensions/" + name,
+    "../../extensions/" + name,
+    "extensions/" + name,
+  ])
 }
 
 ///|
