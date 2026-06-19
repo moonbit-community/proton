@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/extension"
+
+import {
+  "justjavac/lepus/command",
+  "justjavac/lepus/core",
+}
+
+// Values
+pub fn extensions(Array[Extension]) -> Extensions
+
+pub fn from_command_spec(@command.AppCommandExtensionSpec) -> Extension
+
+pub fn from_core_spec(@core.ExtensionSpec) -> Extension
+
+// Errors
+
+// Types and methods
+type Extension
+pub fn Extension::command_spec(Self) -> @command.AppCommandExtensionSpec?
+pub fn Extension::core_spec(Self) -> @core.ExtensionSpec?
+pub fn Extension::id(Self) -> String
+
+type Extensions
+pub fn Extensions::items(Self) -> Array[Extension]
+pub fn Extensions::new(Array[Extension]) -> Self
+
+// Type aliases
+
+// Traits
+

@@ -1,250 +1,8 @@
 ///|
-/// Runtime context passed to one user-process command extension during registration.
-struct AppCommandExtensionContext {
-  host : @core.AppCommandHost
-  extension_id : String
-  js_namespace : String
-  options : Json?
-  base_dir : String?
-}
-
-///|
-/// Declarative user-process command extension spec.
-///
-/// The spec mirrors regular in-process extension registration, but its command
-/// handlers are installed into the user process and reached by IPC.
-struct AppCommandExtensionSpec {
-  id : String
-  js_namespace : String
-  apis : Array[AppCommandApiDescriptor]
-  scripts : Array[String]
-  dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Result[Unit, String]
-  on_destroy : (AppCommandExtensionContext) -> Unit
-}
-
-///|
-/// Registry of command extension specs available to one user app process.
-struct AppCommandExtensionRegistry {
-  specs : Map[String, AppCommandExtensionSpec]
-  registration_order : Array[String]
-}
-
-///|
 priv struct PreparedAppCommandExtension {
   id : String
-  spec : AppCommandExtensionSpec
+  spec : @lepus_command.AppCommandExtensionSpec
   options : Json?
-}
-
-///|
-fn AppCommandExtensionContext::new(
-  host : @core.AppCommandHost,
-  extension_id : String,
-  js_namespace : String,
-  options? : Json? = None,
-  base_dir? : String? = None,
-) -> AppCommandExtensionContext {
-  AppCommandExtensionContext::{
-    host,
-    extension_id,
-    js_namespace,
-    options: clone_json_option(options),
-    base_dir,
-  }
-}
-
-///|
-/// Returns the command host owned by the user app process.
-pub fn AppCommandExtensionContext::host(
-  self : AppCommandExtensionContext,
-) -> @core.AppCommandHost {
-  self.host
-}
-
-///|
-/// Registers a synchronous API handler for this command extension.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : (Payload) -> Reply,
-) -> Unit {
-  self.host.op(self.op_name(api_name), callback)
-}
-
-///|
-/// Registers a synchronous API handler that can return a string error.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : (Payload) -> Result[Reply, String],
-) -> Unit {
-  self.host.op_result(self.op_name(api_name), callback)
-}
-
-///|
-/// Registers an async API handler for this command extension.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : async (Payload) -> Reply,
-) -> Unit {
-  self.host.op_async(self.op_name(api_name), callback)
-}
-
-///|
-/// Registers an async API handler that can return a string error.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : async (Payload) -> Result[Reply, String],
-) -> Unit {
-  self.host.op_async_result(self.op_name(api_name), callback)
-}
-
-///|
-/// Emits an event from this command extension to the WebView page.
-pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(
-  self : AppCommandExtensionContext,
-  event_name : String,
-  payload : Payload,
-) -> Unit {
-  self.host.emit_extension(self.js_namespace, event_name, payload)
-}
-
-///|
-/// Returns the stable manifest/catalog id of this command extension.
-pub fn AppCommandExtensionContext::extension_id(
-  self : AppCommandExtensionContext,
-) -> String {
-  self.extension_id
-}
-
-///|
-/// Returns the JavaScript namespace of this command extension.
-pub fn AppCommandExtensionContext::js_namespace(
-  self : AppCommandExtensionContext,
-) -> String {
-  self.js_namespace
-}
-
-///|
-/// Returns the manifest-provided options for this command extension.
-pub fn AppCommandExtensionContext::options(
-  self : AppCommandExtensionContext,
-) -> Json? {
-  clone_json_option(self.options)
-}
-
-///|
-/// Returns the manifest base directory, when one is available.
-pub fn AppCommandExtensionContext::base_dir(
-  self : AppCommandExtensionContext,
-) -> String? {
-  self.base_dir
-}
-
-///|
-/// Returns the fully qualified IPC op name for one extension API.
-pub fn AppCommandExtensionContext::op_name(
-  self : AppCommandExtensionContext,
-  api_name : String,
-) -> String {
-  app_command_extension_op_name(self.js_namespace, api_name)
-}
-
-///|
-/// Creates one declarative command extension spec.
-pub fn AppCommandExtensionSpec::new(
-  id : String,
-  js_namespace : String,
-  apis : Array[AppCommandApiDescriptor],
-  register : (AppCommandExtensionContext) -> Result[Unit, String],
-  scripts? : Array[String] = [],
-  dependencies? : Array[String] = [],
-  on_destroy? : (AppCommandExtensionContext) -> Unit = fn(_context) {  },
-) -> AppCommandExtensionSpec {
-  AppCommandExtensionSpec::{
-    id,
-    js_namespace,
-    apis: copy_command_api_descriptors(apis),
-    scripts: copy_strings(scripts),
-    dependencies: copy_strings(dependencies),
-    register,
-    on_destroy,
-  }
-}
-
-///|
-/// Returns this command extension's stable manifest/catalog id.
-pub fn AppCommandExtensionSpec::id(self : AppCommandExtensionSpec) -> String {
-  self.id
-}
-
-///|
-/// Returns the JavaScript namespace exposed by this command extension.
-pub fn AppCommandExtensionSpec::js_namespace(
-  self : AppCommandExtensionSpec,
-) -> String {
-  self.js_namespace
-}
-
-///|
-/// Returns the extension dependencies that must be enabled first.
-pub fn AppCommandExtensionSpec::dependencies(
-  self : AppCommandExtensionSpec,
-) -> Array[String] {
-  copy_strings(self.dependencies)
-}
-
-///|
-/// Creates an empty command extension registry.
-pub fn AppCommandExtensionRegistry::new() -> AppCommandExtensionRegistry {
-  AppCommandExtensionRegistry::{ specs: {}, registration_order: [] }
-}
-
-///|
-/// Registers one command extension spec and returns the same registry.
-pub fn AppCommandExtensionRegistry::register(
-  self : AppCommandExtensionRegistry,
-  spec : AppCommandExtensionSpec,
-) -> AppCommandExtensionRegistry {
-  let id = spec.id()
-  guard id.trim().to_owned() != "" else {
-    abort(
-      "AppCommandExtensionRegistry::register: extension id must not be empty",
-    )
-  }
-  guard self.specs.get(id) is None else {
-    abort(
-      "AppCommandExtensionRegistry::register: duplicate extension id: " + id,
-    )
-  }
-  guard spec.js_namespace().trim().to_owned() != "" else {
-    abort(
-      "AppCommandExtensionRegistry::register: extension namespace must not be empty",
-    )
-  }
-  self.specs.set(id, copy_app_command_extension_spec(spec))
-  self.registration_order.push(id)
-  self
-}
-
-///|
-/// Returns one registered command extension spec by id, if present.
-pub fn AppCommandExtensionRegistry::get(
-  self : AppCommandExtensionRegistry,
-  id : String,
-) -> AppCommandExtensionSpec? {
-  self.specs.get(id).map(copy_app_command_extension_spec)
-}
-
-///|
-/// Returns registered command extension ids in registration order.
-pub fn AppCommandExtensionRegistry::registered_ids(
-  self : AppCommandExtensionRegistry,
-) -> Array[String] {
-  copy_strings(self.registration_order)
 }
 
 ///|
@@ -254,10 +12,10 @@ pub fn AppCommandExtensionRegistry::registered_ids(
 /// This is the preferred multi-process entrypoint for apps. User code remains
 /// the parent process; the framework child reads a generated config and
 /// connects back to the local IPC server.
-pub async fn run_app_command_extensions_with_framework_process(
+async fn run_app_command_extensions_with_framework_process(
   manifest : @manifest.AppManifest,
   framework_command : String,
-  registry : AppCommandExtensionRegistry,
+  registry : @lepus_command.AppCommandExtensionRegistry,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
   framework_args? : Array[String] = [],
   framework_cwd? : String? = None,
@@ -274,10 +32,15 @@ pub async fn run_app_command_extensions_with_framework_process(
     return Err("app command extension registry did not enable any extension")
   }
   let host = @core.AppCommandHost::new()
-  let registered : Array[(AppCommandExtensionSpec, AppCommandExtensionContext)] = []
+  let registered : Array[
+    (
+      @lepus_command.AppCommandExtensionSpec,
+      @lepus_command.AppCommandExtensionContext,
+    ),
+  ] = []
   for extension in prepared {
     let spec = extension.spec()
-    let context = AppCommandExtensionContext::new(
+    let context = @lepus_command.AppCommandExtensionContext::new(
       host,
       extension.id(),
       spec.js_namespace(),
@@ -322,7 +85,12 @@ pub async fn run_app_command_extensions_with_framework_process(
 
 ///|
 fn destroy_registered_command_extensions(
-  registered : Array[(AppCommandExtensionSpec, AppCommandExtensionContext)],
+  registered : Array[
+    (
+      @lepus_command.AppCommandExtensionSpec,
+      @lepus_command.AppCommandExtensionContext,
+    ),
+  ],
 ) -> Unit {
   for i = registered.length(); i > 0; {
     let entry = registered[i - 1]
@@ -335,7 +103,7 @@ fn destroy_registered_command_extensions(
 fn app_commands_config_from_prepared(
   prepared : Array[PreparedAppCommandExtension],
   framework_specs_by_id : Map[String, @core.ExtensionSpec],
-) -> AppCommandsConfig {
+) -> @lepus_command.AppCommandsConfig {
   let op_names : Array[String] = []
   let descriptors : Array[@ipc.IpcExtensionDescriptor] = []
   let framework_extension_ids : Array[String] = []
@@ -354,16 +122,14 @@ fn app_commands_config_from_prepared(
     }
     descriptors.push(spec.to_ipc_descriptor())
   }
-  AppCommandsConfig::{
-    op_names,
-    extensions: descriptors,
-    framework_extension_ids,
-  }
+  @lepus_command.AppCommandsConfig::from_ipc_descriptors(
+    op_names, descriptors, framework_extension_ids,
+  )
 }
 
 ///|
 fn validate_command_extension_registry(
-  registry : AppCommandExtensionRegistry,
+  registry : @lepus_command.AppCommandExtensionRegistry,
 ) -> Result[Unit, String] {
   let namespaces : Map[String, String] = {}
   let op_names : Map[String, String] = {}
@@ -388,10 +154,10 @@ fn validate_command_extension_registry(
         )
       None => namespaces[spec.js_namespace()] = spec.id()
     }
-    for api in spec.apis {
-      let op_name = app_command_extension_op_name(
-        spec.js_namespace,
-        api.api_name,
+    for api in spec.apis() {
+      let op_name = @lepus_command.app_command_extension_op_name(
+        spec.js_namespace(),
+        api.api_name(),
       )
       match op_names.get(op_name) {
         Some(existing_id) =>
@@ -412,7 +178,7 @@ fn validate_command_extension_registry(
 
 ///|
 fn validate_command_extension_spec_shape(
-  spec : AppCommandExtensionSpec,
+  spec : @lepus_command.AppCommandExtensionSpec,
 ) -> Result[Unit, String] {
   guard spec.id().trim().to_owned() != "" else {
     return Err("command extension id must not be empty")
@@ -425,12 +191,12 @@ fn validate_command_extension_spec_shape(
       "command extension namespace must not contain '/': " + spec.js_namespace(),
     )
   }
-  guard !app_command_js_property_is_reserved(spec.js_namespace()) else {
+  guard !@lepus_command.app_command_js_property_is_reserved(spec.js_namespace()) else {
     return Err(
       "command extension namespace is reserved: " + spec.js_namespace(),
     )
   }
-  match validate_command_api_descriptors(spec.id(), spec.apis) {
+  match validate_command_api_descriptors(spec.id(), spec.apis()) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
@@ -440,38 +206,36 @@ fn validate_command_extension_spec_shape(
 ///|
 fn validate_command_api_descriptors(
   owner_id : String,
-  apis : Array[AppCommandApiDescriptor],
+  apis : Array[@lepus_command.AppCommandApiDescriptor],
 ) -> Result[Unit, String] {
   guard apis.length() > 0 else {
     return Err("command extension must expose at least one API: " + owner_id)
   }
   let api_names : Map[String, Bool] = {}
   for api in apis {
-    guard api.api_name.trim().to_owned() != "" else {
+    let api_name = api.api_name()
+    guard api_name.trim().to_owned() != "" else {
       return Err("command extension API name must not be empty: " + owner_id)
     }
-    guard api.api_name.find("/") is None else {
+    guard api_name.find("/") is None else {
       return Err(
         "command extension API name must not contain '/': " +
         owner_id +
         "." +
-        api.api_name,
+        api_name,
       )
     }
-    guard !app_command_js_property_is_reserved(api.api_name) else {
+    guard !@lepus_command.app_command_js_property_is_reserved(api_name) else {
       return Err(
-        "command extension API name is reserved: " +
-        owner_id +
-        "." +
-        api.api_name,
+        "command extension API name is reserved: " + owner_id + "." + api_name,
       )
     }
-    guard api_names.get(api.api_name) is None else {
+    guard api_names.get(api_name) is None else {
       return Err(
-        "duplicate command extension API: " + owner_id + "." + api.api_name,
+        "duplicate command extension API: " + owner_id + "." + api_name,
       )
     }
-    api_names[api.api_name] = true
+    api_names[api_name] = true
   }
   Ok(())
 }
@@ -535,46 +299,9 @@ fn validate_registered_command_extension_handlers(
 }
 
 ///|
-fn AppCommandExtensionSpec::op_names(
-  self : AppCommandExtensionSpec,
-) -> Array[String] {
-  self.apis.map(fn(api) {
-    app_command_extension_op_name(self.js_namespace, api.api_name)
-  })
-}
-
-///|
-fn AppCommandExtensionSpec::to_ipc_descriptor(
-  self : AppCommandExtensionSpec,
-) -> @ipc.IpcExtensionDescriptor {
-  @ipc.IpcExtensionDescriptor::new(
-    self.id,
-    self.js_namespace,
-    self.apis.map(fn(api) { api.to_ipc_api() }),
-    scripts=copy_strings(self.scripts),
-  )
-}
-
-///|
-fn AppCommandExtensionSpec::register(
-  self : AppCommandExtensionSpec,
-  context : AppCommandExtensionContext,
-) -> Result[Unit, String] {
-  (self.register)(context)
-}
-
-///|
-fn AppCommandExtensionSpec::destroy(
-  self : AppCommandExtensionSpec,
-  context : AppCommandExtensionContext,
-) -> Unit {
-  (self.on_destroy)(context)
-}
-
-///|
 fn PreparedAppCommandExtension::new(
   id : String,
-  spec : AppCommandExtensionSpec,
+  spec : @lepus_command.AppCommandExtensionSpec,
   options : Json?,
 ) -> PreparedAppCommandExtension {
   PreparedAppCommandExtension::{
@@ -594,7 +321,7 @@ fn PreparedAppCommandExtension::id(
 ///|
 fn PreparedAppCommandExtension::spec(
   self : PreparedAppCommandExtension,
-) -> AppCommandExtensionSpec {
+) -> @lepus_command.AppCommandExtensionSpec {
   copy_app_command_extension_spec(self.spec)
 }
 
@@ -606,32 +333,10 @@ fn PreparedAppCommandExtension::options(
 }
 
 ///|
-fn AppCommandExtensionRegistry::spec_map(
-  self : AppCommandExtensionRegistry,
-) -> Map[String, AppCommandExtensionSpec] {
-  self.specs
-}
-
-///|
-fn AppCommandExtensionRegistry::ordered_names(
-  self : AppCommandExtensionRegistry,
-) -> Array[String] {
-  self.registration_order
-}
-
-///|
-fn app_command_extension_op_name(
-  js_namespace : String,
-  api_name : String,
-) -> String {
-  "ext:" + js_namespace + "/" + api_name
-}
-
-///|
 fn copy_app_command_extension_spec(
-  spec : AppCommandExtensionSpec,
-) -> AppCommandExtensionSpec {
-  AppCommandExtensionSpec::new(
+  spec : @lepus_command.AppCommandExtensionSpec,
+) -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     spec.id,
     spec.js_namespace,
     spec.apis,

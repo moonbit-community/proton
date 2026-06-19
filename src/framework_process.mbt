@@ -13,13 +13,13 @@ let framework_config_version = 2
 ///|
 /// Returns the CLI flag used when the current executable should enter
 /// framework/webview mode.
-pub fn framework_process_arg() -> String {
+fn framework_process_arg() -> String {
   framework_process_arg_name
 }
 
 ///|
 /// Returns whether the current process was started as the framework process.
-pub fn is_framework_process() -> Bool {
+fn is_framework_process() -> Bool {
   @sys.get_cli_args().any(fn(arg) { arg == framework_process_arg_name })
 }
 
@@ -28,7 +28,7 @@ pub fn is_framework_process() -> Bool {
 ///
 /// Single-binary examples use this to start the same executable again in
 /// framework mode with `--lepus-framework-process`.
-pub fn current_executable_command() -> Result[String, String] {
+fn current_executable_command() -> Result[String, String] {
   match @sys.get_cli_args().get(0) {
     Some(command) if command.trim().to_owned() != "" => Ok(command)
     _ => Err("current executable command is unavailable")
@@ -41,11 +41,11 @@ pub fn current_executable_command() -> Result[String, String] {
 /// The current process owns user code and async handlers. `framework_command`
 /// is started as a child process and should run
 /// `run_framework_process_from_cli(...)`.
-pub async fn run_app_command_host_with_framework_process(
+async fn run_app_command_host_with_framework_process(
   manifest : @manifest.AppManifest,
   framework_command : String,
   host : @core.AppCommandHost,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
   framework_args? : Array[String] = [],
   framework_cwd? : String? = None,
@@ -159,7 +159,7 @@ async fn run_app_command_host_with_framework_process_async(
 ///
 /// Framework binaries can use this as their `main` body. The config is written
 /// by the user process that owns command handlers and IPC server lifetime.
-pub fn run_framework_process_from_cli(
+fn run_framework_process_from_cli(
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
 ) -> Result[Unit, String] {
   match framework_config_path_from_env_or_args() {
@@ -171,7 +171,7 @@ pub fn run_framework_process_from_cli(
 
 ///|
 /// Runs the framework runtime process from one serialized config file.
-pub fn run_framework_process_from_config_file(
+fn run_framework_process_from_config_file(
   path : String,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
 ) -> Result[Unit, String] {
@@ -186,26 +186,27 @@ fn run_framework_process(
   extension_registry : ExtensionRegistry,
 ) -> Result[Unit, String] {
   validate_framework_process_config(config).bind(fn(_) {
-    @bootstrap.load_app_manifest_from_json(config.manifest.stringify()).bind(fn(
-      loaded,
-    ) {
-      let base_dir = match config.base_dir {
-        Some(base_dir) => Some(base_dir)
-        None => loaded.base_dir()
-      }
-      let commands = app_commands_config_from_framework_config(config)
-      match config.ipc {
-        Some(ipc) =>
-          run_framework_app_process(
-            loaded.manifest(),
-            framework_ipc_launch_config_from_ws(ipc),
-            commands,
-            extension_registry,
-            base_dir~,
-          )
-        None => Err("framework config ipc must be present")
-      }
-    })
+    @bootstrap.load_runtime_manifest_from_json(config.manifest.stringify()).bind(fn(
+        loaded,
+      ) {
+        let base_dir = match config.base_dir {
+          Some(base_dir) => Some(base_dir)
+          None => loaded.base_dir()
+        }
+        let commands = app_commands_config_from_framework_config(config)
+        match config.ipc {
+          Some(ipc) =>
+            run_framework_app_process(
+              loaded.manifest(),
+              framework_ipc_launch_config_from_ws(ipc),
+              commands,
+              extension_registry,
+              base_dir~,
+            )
+          None => Err("framework config ipc must be present")
+        }
+      },
+    )
   })
 }
 
@@ -213,7 +214,7 @@ fn run_framework_process(
 fn run_framework_app_process(
   manifest : @manifest.AppManifest,
   ipc_config : FrameworkIpcLaunchConfig,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
   extension_registry : ExtensionRegistry,
   base_dir? : String? = None,
 ) -> Result[Unit, String] {
@@ -259,7 +260,7 @@ fn validate_framework_process_command(command : String) -> Result[Unit, String] 
 
 ///|
 fn validate_app_commands_config(
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   guard commands.op_names().length() > 0 else {
     return Err("app commands must expose at least one op")
@@ -300,7 +301,7 @@ fn validate_app_commands_config(
 
 ///|
 fn validate_app_command_framework_dependencies(
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   let ids : Map[String, Bool] = {}
   for id in commands.framework_extension_ids() {
@@ -342,7 +343,9 @@ fn validate_app_command_descriptor(
       descriptor.js_namespace,
     )
   }
-  guard !app_command_js_property_is_reserved(descriptor.js_namespace) else {
+  guard !@lepus_command.app_command_js_property_is_reserved(
+    descriptor.js_namespace,
+  ) else {
     return Err(
       "command extension descriptor namespace is reserved: " +
       descriptor.js_namespace,
@@ -386,7 +389,7 @@ fn validate_ipc_descriptor_apis(
         api.api_name,
       )
     }
-    guard !app_command_js_property_is_reserved(api.api_name) else {
+    guard !@lepus_command.app_command_js_property_is_reserved(api.api_name) else {
       return Err(
         "command extension descriptor API name is reserved: " +
         descriptor.id +
@@ -403,7 +406,7 @@ fn validate_ipc_descriptor_apis(
       )
     }
     api_names[api.api_name] = true
-    let op_name = app_command_extension_op_name(
+    let op_name = @lepus_command.app_command_extension_op_name(
       descriptor.js_namespace,
       api.api_name,
     )
@@ -417,7 +420,7 @@ fn validate_ipc_descriptor_apis(
 
 ///|
 fn validate_extension_op_names_have_descriptors(
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
   extension_op_names : Map[String, Bool],
 ) -> Result[Unit, String] {
   for op_name in commands.op_names() {
@@ -432,7 +435,7 @@ fn validate_extension_op_names_have_descriptors(
 fn validate_framework_manifest_extensions(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   match validate_app_commands_config(commands) {
     Err(error) => return Err(error)
@@ -480,7 +483,7 @@ fn validate_framework_manifest_extensions(
 fn validate_framework_command_namespaces_do_not_collide(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   let command_namespaces = command_extension_namespace_map(
     commands.extensions(),
@@ -512,7 +515,7 @@ fn validate_framework_command_namespaces_do_not_collide(
 fn framework_manifest_for_commands(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
 ) -> @manifest.AppManifest {
   @manifest.AppManifest::new(
     manifest.window,
@@ -527,7 +530,7 @@ fn framework_manifest_for_commands(
 fn framework_extension_settings(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
 ) -> Map[String, @manifest.ExtensionSetting] {
   let specs = registry.spec_map()
   let settings : Map[String, @manifest.ExtensionSetting] = {}

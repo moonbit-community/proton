@@ -1,5 +1,5 @@
 ///|
-/// Declarative extension setting loaded from `app.json`.
+/// Runtime extension setting produced from MoonBit app code.
 pub(all) enum ExtensionSetting {
   Disabled
   Enabled(Json?)

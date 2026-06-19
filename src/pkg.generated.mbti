@@ -3,114 +3,42 @@ package "justjavac/lepus"
 
 import {
   "justjavac/lepus/core",
+  "justjavac/lepus/extension",
   "justjavac/lepus/manifest",
   "justjavac/lepus/runtime",
-  "moonbitlang/core/json",
 }
 
 // Values
-pub fn asset(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
+pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+
+pub fn config(String) -> App
 
 pub fn create_app(@manifest.AppManifest, ExtensionRegistry, base_dir? : String?) -> Result[@runtime.App, String]
 
 pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@runtime.App, String]
 
-pub fn current_executable_command() -> Result[String, String]
+pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
-pub fn file(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
+pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
-pub fn framework_process_arg() -> String
-
-pub fn from_config_file(String) -> App
-
-pub fn html(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
-
-pub fn is_framework_process() -> Bool
-
-pub async fn run_app_command_extensions_with_framework_process(@manifest.AppManifest, String, AppCommandExtensionRegistry, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
-
-pub async fn run_app_command_host_with_framework_process(@manifest.AppManifest, String, @core.AppCommandHost, AppCommandsConfig, extension_registry? : ExtensionRegistry, framework_args? : Array[String], framework_cwd? : String?, base_dir? : String?, ipc_token? : String?, framework_config_path? : String?) -> Result[Unit, String]
-
-pub fn run_framework_process_from_cli(extension_registry? : ExtensionRegistry) -> Result[Unit, String]
-
-pub fn run_framework_process_from_config_file(String, extension_registry? : ExtensionRegistry) -> Result[Unit, String]
-
-pub fn url(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> App
+pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 // Errors
 
 // Types and methods
 type App
-pub fn App::command(Self, AppCommandExtensionSpec) -> Self
-pub fn App::command_with_options(Self, AppCommandExtensionSpec, Json) -> Self
-pub fn App::commands(Self, Array[String], (@core.AppCommandHost) -> Unit) -> Self
-pub fn App::debug(Self) -> Self
+pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
-pub fn App::extension(Self, @core.ExtensionSpec) -> Self
-pub fn App::extension_with_options(Self, @core.ExtensionSpec, Json) -> Self
-pub fn App::link(Self, @core.ExtensionSpec) -> Self
+pub fn App::entry_asset(Self, String) -> Self
+pub fn App::entry_file(Self, String) -> Self
+pub fn App::entry_html(Self, String) -> Self
+pub fn App::entry_url(Self, String) -> Self
+pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
+pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub async fn App::run(Self) -> Result[Unit, String]
 pub async fn App::run_or_abort(Self) -> Unit
-pub fn App::size_hint(Self, @manifest.WindowSizeHint) -> Self
-pub fn App::window_asset(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn App::window_file(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn App::window_html(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn App::window_url(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-
-type AppBuilder
-pub fn AppBuilder::asset(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::build(Self) -> Result[@runtime.App, String]
-pub fn AppBuilder::extension(Self, @core.ExtensionSpec) -> Self
-pub fn AppBuilder::extension_with_options(Self, @core.ExtensionSpec, Json) -> Self
-pub fn AppBuilder::file(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::html(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::run(Self) -> Result[Unit, String]
-pub fn AppBuilder::url(String, Int, Int, String, debug? : Int, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_asset(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_file(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_html(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-pub fn AppBuilder::window_url(Self, String, String, Int, Int, String, size_hint? : @manifest.WindowSizeHint) -> Self
-
-type AppCommandApiDescriptor
-pub fn AppCommandApiDescriptor::new(String) -> Self
-
-type AppCommandExtensionContext
-pub fn AppCommandExtensionContext::base_dir(Self) -> String?
-pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(Self, String, Payload) -> Unit
-pub fn AppCommandExtensionContext::extension_id(Self) -> String
-pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
-pub fn AppCommandExtensionContext::js_namespace(Self) -> String
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
-pub fn AppCommandExtensionContext::op_name(Self, String) -> String
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
-pub fn AppCommandExtensionContext::options(Self) -> Json?
-
-type AppCommandExtensionDescriptor
-pub fn AppCommandExtensionDescriptor::new(String, String, Array[AppCommandApiDescriptor], scripts? : Array[String]) -> Self
-
-type AppCommandExtensionRegistry
-pub fn AppCommandExtensionRegistry::get(Self, String) -> AppCommandExtensionSpec?
-pub fn AppCommandExtensionRegistry::new() -> Self
-pub fn AppCommandExtensionRegistry::register(Self, AppCommandExtensionSpec) -> Self
-pub fn AppCommandExtensionRegistry::registered_ids(Self) -> Array[String]
-
-type AppCommandExtensionSpec
-pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::id(Self) -> String
-pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
-pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit) -> Self
-
-type AppCommandsConfig
-pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
-
-type AppFileBuilder
-pub fn AppFileBuilder::build(Self) -> Result[@runtime.App, String]
-pub fn AppFileBuilder::link(Self, @core.ExtensionSpec) -> Self
-pub fn AppFileBuilder::links(Self, Array[@core.ExtensionSpec]) -> Self
-pub fn AppFileBuilder::new(String) -> Self
-pub fn AppFileBuilder::run(Self) -> Result[Unit, String]
+pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
+pub fn App::title(Self, String) -> Self
 
 type ExtensionRegistry
 pub fn ExtensionRegistry::get(Self, String) -> @core.ExtensionSpec?
@@ -119,6 +47,9 @@ pub fn ExtensionRegistry::register(Self, @core.ExtensionSpec) -> Self
 pub fn ExtensionRegistry::registered_ids(Self) -> Array[String]
 
 // Type aliases
+pub using @extension {type Extension}
+
+pub using @extension {type Extensions}
 
 // Traits
 

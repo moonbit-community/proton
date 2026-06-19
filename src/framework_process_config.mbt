@@ -14,7 +14,7 @@ fn write_framework_process_ipc_config(
   path : String,
   manifest : @manifest.AppManifest,
   ipc_config : FrameworkIpcLaunchConfig,
-  commands : AppCommandsConfig,
+  commands : @lepus_command.AppCommandsConfig,
   base_dir? : String? = None,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
 ) -> Result[Unit, String] {
@@ -98,8 +98,8 @@ fn validate_framework_process_config(
 ///|
 fn app_commands_config_from_framework_config(
   config : FrameworkProcessConfig,
-) -> AppCommandsConfig {
-  AppCommandsConfig::from_ipc_descriptors(
+) -> @lepus_command.AppCommandsConfig {
+  @lepus_command.AppCommandsConfig::from_ipc_descriptors(
     config.op_names,
     config.extensions,
     config.framework_extension_ids,

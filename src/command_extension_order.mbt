@@ -2,7 +2,7 @@
 /// Builds the ordered command extension registration plan implied by one manifest.
 fn plan_app_command_extensions(
   manifest : @manifest.AppManifest,
-  registry : AppCommandExtensionRegistry,
+  registry : @lepus_command.AppCommandExtensionRegistry,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
 ) -> Result[Array[PreparedAppCommandExtension], String] {
   match validate_command_extension_registry(registry) {
@@ -50,7 +50,7 @@ fn plan_app_command_extensions(
 
 ///|
 fn validate_command_extension_ids_do_not_collide_with_framework(
-  specs_by_id : Map[String, AppCommandExtensionSpec],
+  specs_by_id : Map[String, @lepus_command.AppCommandExtensionSpec],
   framework_specs_by_id : Map[String, @core.ExtensionSpec],
 ) -> Result[Unit, String] {
   for id, _spec in specs_by_id {
@@ -66,7 +66,7 @@ fn validate_command_extension_ids_do_not_collide_with_framework(
 ///|
 fn ensure_manifest_command_extensions_known(
   manifest : @manifest.AppManifest,
-  specs_by_id : Map[String, AppCommandExtensionSpec],
+  specs_by_id : Map[String, @lepus_command.AppCommandExtensionSpec],
   framework_specs_by_id : Map[String, @core.ExtensionSpec],
 ) -> Result[Unit, String] {
   for entry in manifest.extension_settings() {
@@ -84,7 +84,7 @@ fn visit_command_extension(
   id : String,
   requested_by_id : String?,
   manifest : @manifest.AppManifest,
-  specs_by_id : Map[String, AppCommandExtensionSpec],
+  specs_by_id : Map[String, @lepus_command.AppCommandExtensionSpec],
   framework_specs_by_id : Map[String, @core.ExtensionSpec],
   visit_state : Map[String, Int],
   planned : Array[PreparedAppCommandExtension],
@@ -130,8 +130,8 @@ fn visit_command_extension(
 fn require_command_extension_spec(
   id : String,
   requested_by_id : String?,
-  specs_by_id : Map[String, AppCommandExtensionSpec],
-) -> Result[AppCommandExtensionSpec, String] {
+  specs_by_id : Map[String, @lepus_command.AppCommandExtensionSpec],
+) -> Result[@lepus_command.AppCommandExtensionSpec, String] {
   match specs_by_id.get(id) {
     Some(spec) => Ok(spec)
     None =>
@@ -176,7 +176,7 @@ fn visit_command_extension_dependencies(
   id : String,
   dependencies : Array[String],
   manifest : @manifest.AppManifest,
-  specs_by_id : Map[String, AppCommandExtensionSpec],
+  specs_by_id : Map[String, @lepus_command.AppCommandExtensionSpec],
   framework_specs_by_id : Map[String, @core.ExtensionSpec],
   visit_state : Map[String, Int],
   planned : Array[PreparedAppCommandExtension],
