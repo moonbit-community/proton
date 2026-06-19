@@ -79,7 +79,7 @@ test "load_app_manifest_from_json applies defaults" {
 }
 
 ///|
-test "load_app_manifest_document_from_file rebases file entry and preserves settings" {
+test "load_app_manifest_document_from_file rebases file entry" {
   let result = load_app_manifest_document_from_file(
     manifest_test_path("app.json"),
   )
@@ -102,22 +102,6 @@ test "load_app_manifest_document_from_file rebases file entry and preserves sett
             normalize_test_slashes(base_dir).has_suffix("bootstrap/testdata"),
           )
       }
-      @debug.assert_eq(
-        document.extension_setting("justjavac/lepus-fs"),
-        Some(
-          @manifest.ExtensionSetting::enabled(options=Some(Json::object({}))),
-        ),
-      )
-      @debug.assert_eq(
-        document.extension_setting("justjavac/lepus-path"),
-        Some(
-          @manifest.ExtensionSetting::enabled(options=Some(Json::object({}))),
-        ),
-      )
-      @debug.assert_eq(
-        document.extension_setting("justjavac/lepus-notification"),
-        None,
-      )
     }
   }
 }
@@ -240,159 +224,6 @@ test "load_app_manifest_from_json rejects legacy permissions field" {
       assert_eq(
         error, "app manifest.permissions is no longer supported; remove it",
       )
-  }
-}
-
-///|
-test "load_app_manifest_document preserves extension settings" {
-  let document_result = load_app_manifest_document_from_json(
-    (
-      #|{
-      #|  "window": {
-      #|    "title": "Document",
-      #|    "width": 800,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "html",
-      #|    "value": "<html></html>"
-      #|  },
-      #|  "extensions": {
-      #|    "justjavac/lepus-path": true,
-      #|    "vendor/echo": {
-      #|      "message": "hi"
-      #|    },
-      #|    "justjavac/lepus-tray": false
-      #|  }
-      #|}
-    ),
-  )
-  match document_result {
-    Err(error) => abort(error)
-    Ok(document) => {
-      @debug.assert_eq(
-        document.extension_setting("justjavac/lepus-path"),
-        Some(@manifest.ExtensionSetting::enabled()),
-      )
-      @debug.assert_eq(
-        document.extension_setting("vendor/echo"),
-        Some(
-          @manifest.ExtensionSetting::enabled(
-            options=Some(Json::object({ "message": Json::string("hi") })),
-          ),
-        ),
-      )
-      @debug.assert_eq(
-        document.extension_setting("justjavac/lepus-tray"),
-        Some(@manifest.ExtensionSetting::disabled()),
-      )
-      assert_eq(document.extension_settings().length(), 3)
-    }
-  }
-}
-
-///|
-test "app manifest document updates keep previous documents detached" {
-  let document = match
-    load_app_manifest_document_from_json(
-      (
-        #|{
-        #|  "window": {
-        #|    "title": "Document",
-        #|    "width": 800,
-        #|    "height": 600
-        #|  },
-        #|  "entry": {
-        #|    "kind": "html",
-        #|    "value": "<html></html>"
-        #|  }
-        #|}
-      ),
-    ) {
-    Ok(document) => document
-    Err(error) => abort(error)
-  }
-  let with_extension = match
-    document.enable_extension(
-      "justjavac/lepus-notification",
-      options=Some(Json::object({ "level": Json::string("info") })),
-    ) {
-    Ok(updated_document) => updated_document
-    Err(error) => abort(error)
-  }
-
-  @debug.assert_eq(
-    document.extension_setting("justjavac/lepus-notification"),
-    None,
-  )
-  @debug.assert_eq(
-    with_extension.extension_setting("justjavac/lepus-notification"),
-    Some(
-      @manifest.ExtensionSetting::enabled(
-        options=Some(Json::object({ "level": Json::string("info") })),
-      ),
-    ),
-  )
-
-  match manifest_document_json(document) {
-    Object(object) => @debug.assert_eq(object.get("extensions"), None)
-    _ => abort("expected manifest object")
-  }
-  match manifest_document_json(with_extension) {
-    Object(object) =>
-      match object.get("extensions") {
-        Some(Object(extension_object)) =>
-          @debug.assert_eq(
-            extension_object.get("justjavac/lepus-notification"),
-            Some(Json::object({ "level": Json::string("info") })),
-          )
-        _ => abort("expected extensions object")
-      }
-    _ => abort("expected manifest object")
-  }
-}
-
-///|
-test "app manifest document remove_extension_setting clears empty object" {
-  let document = match
-    load_app_manifest_document_from_json(
-      (
-        #|{
-        #|  "window": {
-        #|    "title": "Document",
-        #|    "width": 800,
-        #|    "height": 600
-        #|  },
-        #|  "entry": {
-        #|    "kind": "html",
-        #|    "value": "<html></html>"
-        #|  },
-        #|  "extensions": {
-        #|    "justjavac/lepus-notification": {}
-        #|  }
-        #|}
-      ),
-    ) {
-    Ok(document) => document
-    Err(error) => abort(error)
-  }
-  let updated = match
-    document.remove_extension_setting("justjavac/lepus-notification") {
-    Ok(updated) => updated
-    Err(error) => abort(error)
-  }
-
-  @debug.assert_eq(
-    document.extension_setting("justjavac/lepus-notification"),
-    Some(@manifest.ExtensionSetting::enabled(options=Some(Json::object({})))),
-  )
-  @debug.assert_eq(
-    updated.extension_setting("justjavac/lepus-notification"),
-    None,
-  )
-  match manifest_document_json(updated) {
-    Object(object) => @debug.assert_eq(object.get("extensions"), None)
-    _ => abort("expected manifest object")
   }
 }
 
@@ -669,7 +500,7 @@ test "app manifest document to_json returns a detached copy" {
 }
 
 ///|
-test "app_manifest_to_json roundtrips typed manifest" {
+test "app_manifest_to_json roundtrips internal runtime manifest" {
   let manifest = @manifest.AppManifest::new(
     @manifest.WindowManifest::new(
       "Roundtrip",
@@ -699,7 +530,7 @@ test "app_manifest_to_json roundtrips typed manifest" {
     },
   )
   let text = app_manifest_to_json(manifest).stringify(indent=2)
-  let loaded = match load_app_manifest_from_json(text) {
+  let loaded = match load_runtime_manifest_from_json(text) {
     Ok(loaded) => loaded
     Err(error) => abort(error)
   }
@@ -730,7 +561,7 @@ test "app_manifest_to_json roundtrips typed manifest" {
 }
 
 ///|
-test "load_app_manifest_from_json accepts boolean extension settings" {
+test "load_app_manifest_from_json rejects extension settings" {
   let result = load_app_manifest_from_json(
     (
       #|{
@@ -751,46 +582,10 @@ test "load_app_manifest_from_json accepts boolean extension settings" {
     ),
   )
   match result {
-    Err(error) => abort(error)
-    Ok(loaded) => {
-      let manifest = loaded.manifest()
-      @debug.assert_eq(
-        manifest.extension_setting("justjavac/lepus-fs"),
-        Some(@manifest.ExtensionSetting::enabled()),
-      )
-      @debug.assert_eq(
-        manifest.extension_setting("justjavac/lepus-tray"),
-        Some(@manifest.ExtensionSetting::disabled()),
-      )
-    }
-  }
-}
-
-///|
-test "load_app_manifest_from_json rejects invalid extension setting values" {
-  let result = load_app_manifest_from_json(
-    (
-      #|{
-      #|  "window": {
-      #|    "title": "Broken",
-      #|    "width": 800,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "html",
-      #|    "value": "<html></html>"
-      #|  },
-      #|  "extensions": {
-      #|    "justjavac/lepus-fs": "yes"
-      #|  }
-      #|}
-    ),
-  )
-  match result {
-    Ok(_) => abort("expected extension setting validation failure")
+    Ok(_) => abort("expected extension settings rejection")
     Err(error) =>
       assert_eq(
-        error, "expected boolean or object for app manifest.extensions.justjavac/lepus-fs",
+        error, "app manifest.extensions is no longer supported; declare extensions in MoonBit code with .extension(...)",
       )
   }
 }

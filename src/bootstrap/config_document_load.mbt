@@ -11,7 +11,7 @@ pub fn load_app_manifest_document_from_json(
 ///|
 /// Reads an app manifest document from disk while preserving editable JSON.
 /// The document remembers the manifest file's parent directory so later file
-/// entries and extension contexts can resolve relative paths consistently.
+/// entries can resolve relative paths consistently.
 pub fn load_app_manifest_document_from_file(
   path : String,
 ) -> Result[AppManifestDocument, String] {
@@ -40,9 +40,7 @@ fn build_app_manifest_document_from_object(
   build_loaded_manifest_from_json(Json::object(object), base_dir).bind(fn(
     loaded_manifest,
   ) {
-    extension_setting_entries_from_object(object).map(fn(_) {
-      AppManifestDocument::{ raw_object: object, loaded_manifest }
-    })
+    Ok(AppManifestDocument::{ raw_object: object, loaded_manifest })
   })
 }
 
@@ -78,34 +76,4 @@ fn parse_app_manifest_root_object(
   } noraise {
     json => expect_object(json, "app manifest")
   }
-}
-
-///|
-/// Extracts and validates the `extensions` object as normalized setting pairs.
-fn extension_setting_entries_from_object(
-  object : Map[String, Json],
-) -> Result[Array[(String, @manifest.ExtensionSetting)], String] {
-  let entries : Array[(String, @manifest.ExtensionSetting)] = []
-  let seen : Map[String, Bool] = {}
-  match object.get("extensions") {
-    Some(Object(extension_object)) =>
-      for name, value in extension_object {
-        let normalized = normalize_keyword(name)
-        guard normalized != "" else {
-          return Err("app manifest.extensions contains an empty key")
-        }
-        guard seen.get(name) is None else {
-          return Err("duplicate extension setting key: " + name)
-        }
-        let setting = match build_extension_setting_from_json(name, value) {
-          Ok(setting) => setting
-          Err(error) => return Err(error)
-        }
-        seen.set(name, true)
-        entries.push((name, setting))
-      }
-    Some(_) => return Err("expected object for app manifest.extensions")
-    None => ()
-  }
-  Ok(entries)
 }

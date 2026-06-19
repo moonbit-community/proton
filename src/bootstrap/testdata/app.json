@@ -9,9 +9,5 @@
     "kind": "file",
     "value": "app.html"
   },
-  "extensions": {
-    "justjavac/lepus-fs": {},
-    "justjavac/lepus-path": {}
-  },
   "debug": 1
 }

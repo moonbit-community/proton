@@ -27,41 +27,10 @@ pub fn AppManifestDocument::manifest(
 
 ///|
 /// Returns the manifest base directory associated with this document.
-/// Relative file entries and extension build contexts should resolve against
-/// this directory when the manifest came from disk.
+/// Relative file entries should resolve against this directory when the
+/// manifest came from disk.
 pub fn AppManifestDocument::base_dir(self : AppManifestDocument) -> String? {
   self.loaded_manifest.base_dir()
-}
-
-///|
-/// Returns every extension setting preserved from the original JSON document.
-/// Entries are revalidated and normalized through the same parsing path used
-/// during manifest loading.
-pub fn AppManifestDocument::extension_settings(
-  self : AppManifestDocument,
-) -> Array[(String, @manifest.ExtensionSetting)] {
-  match extension_setting_entries_from_object(self.raw_object) {
-    Ok(entries) => entries
-    Err(error) =>
-      abort("invalid extension settings in AppManifestDocument: " + error)
-  }
-}
-
-///|
-/// Returns one preserved extension setting by name, if present.
-/// This avoids rebuilding a separate map when tooling only needs to inspect
-/// one specific extension key.
-pub fn AppManifestDocument::extension_setting(
-  self : AppManifestDocument,
-  name : String,
-) -> @manifest.ExtensionSetting? {
-  for entry in self.extension_settings() {
-    let (entry_name, setting) = entry
-    if entry_name == name {
-      return Some(setting)
-    }
-  }
-  None
 }
 
 ///|

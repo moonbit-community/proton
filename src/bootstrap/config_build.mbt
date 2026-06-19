@@ -3,10 +3,13 @@
 fn build_loaded_manifest_from_json(
   json : Json,
   base_dir : String?,
+  allow_extensions? : Bool = false,
 ) -> Result[LoadedAppManifest, String] {
   expect_object(json, "app manifest").bind(fn(object) {
     reject_unsupported_permissions_field(object).bind(fn(_) {
-      build_app_manifest_from_object(object, base_dir).map(fn(manifest) {
+      build_app_manifest_from_object(object, base_dir, allow_extensions~).map(fn(
+        manifest,
+      ) {
         LoadedAppManifest::new(manifest, base_dir~)
       })
     })
@@ -26,12 +29,13 @@ fn build_window_manifest_from_json(
 fn build_app_manifest_from_object(
   object : Map[String, Json],
   base_dir : String?,
+  allow_extensions? : Bool = false,
 ) -> Result[@manifest.AppManifest, String] {
   zip5(
     build_required_window_from_object(object),
     build_required_entry_from_object(object, base_dir),
     build_optional_windows_from_object(object, base_dir),
-    build_declared_extension_settings_from_object(object),
+    build_declared_extension_settings_from_object(object, allow_extensions~),
     build_debug_value_from_object(object),
   ).map(fn(values) {
     let (window, entry, windows, extensions, debug) = values
@@ -76,10 +80,16 @@ fn build_optional_windows_from_object(
 }
 
 ///|
-/// Builds the normalized extension settings field from the root manifest object.
+/// Builds extension settings for internal runtime manifests.
 fn build_declared_extension_settings_from_object(
   object : Map[String, Json],
+  allow_extensions? : Bool = false,
 ) -> Result[Map[String, @manifest.ExtensionSetting], String] {
+  if !allow_extensions && object.get("extensions") is Some(_) {
+    return Err(
+      "app manifest.extensions is no longer supported; declare extensions in MoonBit code with .extension(...)",
+    )
+  }
   build_extension_settings(optional_field(object, "extensions"))
 }
 

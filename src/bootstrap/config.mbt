@@ -21,3 +21,21 @@ pub fn load_app_manifest_from_file(
     document.loaded_manifest()
   })
 }
+
+///|
+/// Parses an internal runtime manifest from JSON text.
+///
+/// Unlike user-facing app config files, runtime manifests may carry extension
+/// settings because code-declared extensions are serialized through framework
+/// process configuration.
+pub fn load_runtime_manifest_from_json(
+  text : String,
+) -> Result[LoadedAppManifest, String] {
+  parse_app_manifest_root_object(text).bind(fn(object) {
+    build_loaded_manifest_from_json(
+      Json::object(object),
+      None,
+      allow_extensions=true,
+    )
+  })
+}
