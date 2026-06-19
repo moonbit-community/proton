@@ -1,13 +1,21 @@
 ///|
 async fn main {
-  let app = @lepus.file(
-    "MoonBit Multi-Window",
-    980,
-    680,
-    "24_app_multi_window/main_window.html",
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("MoonBit Multi-Window", 980, 680),
+    @manifest.AppEntry::File("24_app_multi_window/main_window.html"),
     debug=1,
-  ).window_file(
-    "docs", "MoonBit Multi-Window Docs", 720, 560, "24_app_multi_window/docs_window.html",
+    windows=[
+      @manifest.AppWindowManifest::new(
+        "docs",
+        @manifest.WindowManifest::new("MoonBit Multi-Window Docs", 720, 560),
+        @manifest.AppEntry::File("24_app_multi_window/docs_window.html"),
+      ),
+    ],
   )
-  app.run_or_abort()
+  let app = match @lepus.create_app(manifest, @lepus.ExtensionRegistry::new()) {
+    Ok(app) => app
+    Err(error) => abort(error)
+  }
+  @async.sleep(0)
+  app.run()
 }

@@ -2,12 +2,12 @@
 async fn main {
   let app = @lepus.html(
       "MoonBit Sync + Async Extensions",
-      900,
-      620,
       resource,
-      debug=1,
+      width=900,
+      height=620,
+      debug=true,
     )
-    .command(sync_math_extension())
-    .command(async_add_extension())
+    .extension(sync_math_extension())
+    .extension(async_add_extension())
   app.run_or_abort()
 }

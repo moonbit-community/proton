@@ -39,16 +39,34 @@ struct ReportProbeReply {
 } derive(ToJson)
 
 ///|
-fn register_app_commands(host : @core.AppCommandHost) -> Unit {
-  // 用户进程只注册业务命令，窗口和 JS bridge 由 framework 进程处理。
-  host.op("app:ping", fn(payload : PingPayload) {
+fn app_commands_extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(
+    @lepus_command.AppCommandExtensionSpec::new(
+      "examples/app-commands",
+      "app",
+      [
+        @lepus_command.AppCommandApiDescriptor::new("ping"),
+        @lepus_command.AppCommandApiDescriptor::new("slowAdd"),
+        @lepus_command.AppCommandApiDescriptor::new("fail"),
+        @lepus_command.AppCommandApiDescriptor::new("reportProbe"),
+      ],
+      register_app_commands,
+    ),
+  )
+}
+
+///|
+fn register_app_commands(
+  context : @lepus_command.AppCommandExtensionContext,
+) -> Result[Unit, String] {
+  context.op("ping", fn(payload : PingPayload) {
     let name = payload.name.unwrap_or("app")
     PingReply::{
       message: "Hello " + name + " from the app command layer",
       source: "commands",
     }
   })
-  host.op_async_result("app:slowAdd", async fn(payload : SlowAddPayload) {
+  context.op_async_result("slowAdd", async fn(payload : SlowAddPayload) {
     let delay_ms = payload.delay_ms.unwrap_or(500)
     @async.sleep(delay_ms)
     Ok(SlowAddReply::{
@@ -57,14 +75,13 @@ fn register_app_commands(host : @core.AppCommandHost) -> Unit {
       source: "commands",
     })
   })
-  host.op_result("app:fail", fn(payload : FailPayload) {
+  context.op_result("fail", fn(payload : FailPayload) {
     let message = payload.message.unwrap_or("Intentional command failure")
     let result : Result[String, String] = Err(message)
     result
   })
-  host.op("app:reportProbe", fn(payload : ReportProbePayload) {
+  context.op("reportProbe", fn(payload : ReportProbePayload) {
     println("[app-commands] " + payload.report)
-    // smoke 测试用这个文件确认 async command 和 UI 回调已经跑通。
     @mbfs.create_dir("target") catch {
       _ => ()
     }
@@ -73,13 +90,17 @@ fn register_app_commands(host : @core.AppCommandHost) -> Unit {
     }
     ReportProbeReply::{ ok: true }
   })
+  Ok(())
 }
 
 ///|
 async fn main {
-  let app = @lepus.html("MoonBit App Commands", 920, 680, resource, debug=1).commands(
-    ["app:ping", "app:slowAdd", "app:fail", "app:reportProbe"],
-    register_app_commands,
-  )
+  let app = @lepus.html(
+    "MoonBit App Commands",
+    resource,
+    width=920,
+    height=680,
+    debug=true,
+  ).extension(app_commands_extension())
   app.run_or_abort()
 }

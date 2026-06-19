@@ -155,7 +155,8 @@ async function reservePort() {
 }
 
 async function terminateTree(child) {
-  if (child.exitCode !== null || child.signalCode !== null) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
+    closeChildPipes(child);
     return;
   }
   if (process.platform === "win32") {
@@ -167,6 +168,20 @@ async function terminateTree(child) {
   } else {
     child.kill("SIGTERM");
   }
+  await Promise.race([
+    new Promise((resolve) => child.once("exit", resolve)),
+    sleep(5000),
+  ]);
+  closeChildPipes(child);
+}
+
+function closeChildPipes(child) {
+  if (!child) {
+    return;
+  }
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.stdin?.destroy();
 }
 
 function run(command, args, options = {}) {
@@ -239,6 +254,7 @@ async function runScenario(name) {
           `CDP probe failed for ${name}\n\nProbe output:\n${probeOutput}\n\nApp output:\n${app.output().trim()}`,
         );
       }
+      closeChildPipes(probe.child);
       console.log(probeOutput || `CDP e2e passed: ${name}`);
     } catch (error) {
       await terminateTree(probe.child);
@@ -289,6 +305,7 @@ async function runDirectScenario(name, expectation) {
         `direct scenario failed for ${name}\n\nOutput:\n${output}`,
       );
     }
+    closeChildPipes(app.child);
     console.log(`direct e2e passed: ${name}`);
   } catch (error) {
     await terminateTree(app.child);
@@ -299,3 +316,4 @@ async function runDirectScenario(name, expectation) {
 for (const scenario of scenarios) {
   await runScenario(scenario);
 }
+process.exit(0);

@@ -1,7 +1,13 @@
 ///|
 async fn main {
-  let app = @lepus.html("MoonBit Ops Runtime", 980, 720, resource, debug=1)
-    .extension(@fs.spec())
-    .extension(@path.spec())
+  let app = @lepus.html(
+      "MoonBit Ops Runtime",
+      resource,
+      width=980,
+      height=720,
+      debug=true,
+    )
+    .extension(@fs.extension())
+    .extension(@path.extension())
   app.run_or_abort()
 }

@@ -1,24 +1,17 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/examples/42_attribute_codegen_commands"
+package "justjavac/lepus/examples/38_async_extension_add"
 
 import {
-  "justjavac/lepus/command",
   "justjavac/lepus/extension",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_add_finished(@command.AppCommandExtensionContext, AddFinished) -> Unit
-
 pub fn extension() -> @extension.Extension
 
 // Errors
 
 // Types and methods
-type AddFinished derive(ToJson)
-
-type AddReply derive(ToJson)
-
 type LepusSlowAddPayload derive(@json.FromJson)
 
 // Type aliases

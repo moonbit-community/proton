@@ -2,10 +2,10 @@
 async fn main {
   let app = @lepus.html(
     "MoonBit App Runtime + Auto Launch",
-    980,
-    700,
     resource,
-    debug=1,
-  ).command(@auto_launch.generated_app_command_extension())
+    width=980,
+    height=700,
+    debug=true,
+  ).extension(@auto_launch.extension())
   app.run_or_abort()
 }

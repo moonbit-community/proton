@@ -35,13 +35,13 @@ fn manifest_candidates() -> Array[String] {
     Some(path) => candidates.push(path)
     None => ()
   }
-  match @lepus.current_executable_command() {
-    Ok(command) =>
+  match @sys.get_cli_args().get(0) {
+    Some(command) if command.trim().to_owned() != "" =>
       match find_manifest_upwards((command : @mbpath.Path).dirname()) {
         Some(path) => candidates.push(path)
         None => ()
       }
-    Err(_) => ()
+    _ => ()
   }
   candidates
 }
@@ -52,9 +52,9 @@ async fn run_app_from_manifest_candidates() -> Result[Unit, String] {
   let mut last_error = "failed to read app manifest: no candidate path matched"
   for candidate in candidates {
     match
-      @lepus.from_config_file(candidate)
-      .link(@fs.spec())
-      .link(@path.spec())
+      @lepus.config(candidate)
+      .extension(@fs.extension())
+      .extension(@path.extension())
       .run() {
       Ok(_) => return Ok(())
       Err(error) => last_error = error

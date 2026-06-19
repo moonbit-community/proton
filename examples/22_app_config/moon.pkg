@@ -5,6 +5,7 @@ import {
   "justjavac/lepus",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
+  "moonbitlang/x/sys",
 }
 
 supported_targets = "native"

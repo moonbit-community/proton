@@ -174,12 +174,12 @@ let resource : String =
   #|      }
   #|
   #|      async function invoke(name, payload) {
-  #|        return window.__MoonBit__.core.invokeOp(name, payload);
+  #|        return window.__MoonBit__.core.invokeOp(`ext:app/${name}`, payload);
   #|      }
   #|
   #|      async function reportCommandProbe(report) {
   #|        try {
-  #|          await invoke("app:reportProbe", {
+  #|          await invoke("reportProbe", {
   #|            report: JSON.stringify(report),
   #|          });
   #|        } catch (error) {
@@ -209,10 +209,10 @@ let resource : String =
   #|        }, 80);
   #|
   #|        try {
-  #|          const ping = await invoke("app:ping", { name: "webview" });
+  #|          const ping = await invoke("ping", { name: "webview" });
   #|          log(`ping -> ${JSON.stringify(ping)}`);
   #|
-  #|          const sum = await invoke("app:slowAdd", {
+  #|          const sum = await invoke("slowAdd", {
   #|            left: 20,
   #|            right: 22,
   #|            delay_ms: 350,
@@ -246,10 +246,10 @@ let resource : String =
   #|
   #|      async function callFailure() {
   #|        try {
-  #|          await invoke("app:fail", { message: "Failure crossed command boundary" });
-  #|          log("Expected app:fail to reject", "error");
+  #|          await invoke("fail", { message: "Failure crossed command boundary" });
+  #|          log("Expected fail to reject", "error");
   #|        } catch (error) {
-  #|          log(`app:fail rejected as expected -> ${String(error)}`, "ok");
+  #|          log(`fail rejected as expected -> ${String(error)}`, "ok");
   #|        }
   #|      }
   #|
