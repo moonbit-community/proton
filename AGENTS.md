@@ -30,7 +30,7 @@ Use the smallest relevant validation set while iterating, then run the broader n
 - Use `PascalCase` for types and enum variants, `snake_case` for functions, methods, fields, and locals.
 - Prefer small JSON bridge structs deriving `ToJson`, `FromJson`, `Eq`, and `Show`.
 - Prefer the public API shape:
-  - app facade: `@lepus.html(...)`, `@lepus.from_config_file(...)`
+  - app facade: `@lepus.html(...)`, `@lepus.config(...)`
   - low-level: `@webview.Webview::new(...)`
   - core: `install_extension(...)`, `Extension::new(...)`, `ExtensionSpec::new(...)`
   - manifest: `AppManifest::new(...)`

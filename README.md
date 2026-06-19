@@ -29,7 +29,7 @@ The near-term direction is:
 - keep Lepus framework-first rather than app-template-first
 - keep extensions opt-in so shipped binaries stay small
 - add AI support in metadata, tooling, diagnostics, and manifest control-plane layers rather than the default runtime of every app
-- make package-level `@lepus.html(...)` and `@lepus.from_config_file(...)`
+- make package-level `@lepus.html(...)` and `@lepus.config(...)`
   the ordinary app startup path while keeping `create_app(...)` and
   `create_app_from_file(...)` as lower-level escape hatches
 
@@ -39,13 +39,13 @@ JavaScript now uses a single global entry:
 
 ## Project Model
 
-Lepus separates declaration, linking, and runtime state:
+Lepus separates app configuration from capability declaration:
 
-- `app.json` declares app shape and extension configuration
-- application code or generated project files explicitly link the extensions that should ship
-- the runtime only installs the extensions that were actually linked and selected
+- `app.json` declares app shape such as window, entry, and debug settings
+- application code explicitly declares the extensions that should ship
+- the runtime only installs the extensions that were declared in MoonBit code
 
-This separation is important for binary size. Metadata and manifests may help AI discover and configure extensions, but they should not imply that every built-in extension gets linked automatically.
+This separation is important for binary size. Metadata and manifests may help AI discover extensions, but they should not imply that every built-in extension gets linked automatically.
 
 ## Quick Start
 
@@ -75,9 +75,9 @@ import {
 }
 
 async fn main {
-  @lepus.html("Demo", 900, 700, "<html></html>", debug=1)
-  .extension(@fs.spec())
-  .extension(@path.spec())
+  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  .extension(@fs.extension())
+  .extension(@path.extension())
   .run_or_abort()
 }
 ```
@@ -86,14 +86,14 @@ Or from `app.json`:
 
 ```moonbit
 async fn main {
-  @lepus.from_config_file("app.json")
-  .link(@fs.spec())
-  .link(@path.spec())
+  @lepus.config("app.json")
+  .extension(@fs.extension())
+  .extension(@path.extension())
   .run_or_abort()
 }
 ```
 
-`app.json` declares which linked extensions are enabled and can pass per-extension options:
+`app.json` configures the app window, entry, and debug mode. Extensions are declared in MoonBit code:
 
 ```json
 {
@@ -106,21 +106,17 @@ async fn main {
     "kind": "file",
     "value": "app.html"
   },
-  "extensions": {
-    "justjavac/lepus-fs": true,
-    "justjavac/lepus-path": {}
-  },
   "debug": 1
 }
 ```
 
 The important rule is:
 
-- `app.json` configures extensions
-- explicit project code or generated registry code links extensions
-- inline `App::extension(...)` links and enables an extension in one call
-- config-file `App::link(...)` only links; `app.json.extensions` remains the
-  source of enablement
+- `app.json` configures the app
+- MoonBit code declares and enables extensions
+- `App::extension(...)` links and enables one extension in one call
+- `App::extensions(...)` links and enables an explicit extension set such as
+  `@lepus_ext.all()`
 
 Even when catalog or tooling generates those edits, the final project should still make extension linking explicit and reviewable.
 

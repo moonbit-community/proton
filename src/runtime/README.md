@@ -65,9 +65,9 @@ import {
 }
 
 async fn main {
-  @lepus.html("Demo", 900, 700, "<html></html>", debug=1)
-  .extension(@fs.spec())
-  .extension(@path.spec())
+  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  .extension(@fs.extension())
+  .extension(@path.extension())
   .run_or_abort()
 }
 ```
