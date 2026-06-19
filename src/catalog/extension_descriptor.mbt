@@ -280,9 +280,7 @@ fn decode_descriptor_object(
       Err(error) => return Err(error)
     }
     let spec_symbol = match
-      descriptor_optional_string(
-        object, "spec_symbol", "generated_app_command_extension",
-      ) {
+      descriptor_optional_string(object, "spec_symbol", "extension") {
       Ok(value) => value
       Err(error) => return Err(error)
     }

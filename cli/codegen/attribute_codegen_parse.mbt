@@ -428,7 +428,7 @@ fn parse_destroy_from_func(
   let has_context = params.any(fn(param) { param.is_context })
   guard params.length() == 0 || has_context else {
     return Err(
-      "#lepus.destroy parameter must be `context : @lepus.AppCommandExtensionContext`: " +
+      "#lepus.destroy parameter must be `context : @lepus_command.AppCommandExtensionContext`: " +
       function_name,
     )
   }
@@ -603,7 +603,7 @@ fn parse_ast_params(
               name,
               param_type,
               is_context: name == "context" &&
-              param_type == "@lepus.AppCommandExtensionContext",
+              param_type == "@lepus_command.AppCommandExtensionContext",
             })
         }
       DiscardPositional(..) =>
