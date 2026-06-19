@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_shell_activity(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : ShellActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -16,7 +16,7 @@ struct LepusOpenPayload {
 
 ///|
 async fn __lepus_command_open(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusOpenPayload,
 ) -> Result[ShellReply, String] {
   open(context, payload.target)
@@ -29,20 +29,25 @@ struct LepusRevealItemPayload {
 
 ///|
 async fn __lepus_command_reveal_item(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusRevealItemPayload,
 ) -> Result[ShellReply, String] {
   reveal_item(context, payload.path)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
-  @lepus.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-shell",
     "shell",
     [
-      @lepus.AppCommandApiDescriptor::new("open"),
-      @lepus.AppCommandApiDescriptor::new("revealItem"),
+      @lepus_command.AppCommandApiDescriptor::new("open"),
+      @lepus_command.AppCommandApiDescriptor::new("revealItem"),
     ],
     fn(context) {
       context.op_async_result("open", async fn(payload) {

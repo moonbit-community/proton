@@ -1,7 +1,7 @@
 ///|
 test "fs spec rejects unsupported options" {
   match
-    spec().build_extension(
+    core_spec().build_extension(
       @core.ExtensionBuildContext::new(
         options=Some(Json::object({ "deprecated": Json::boolean(true) })),
       ),
@@ -103,7 +103,7 @@ test "fs extension text ops complete through WebView promise bridge" {
   let mut seen_report : FsRuntimeReport? = None
   let mut js_error : String? = None
   let webview = @webview.Webview::new()
-  @core.install_extension(webview, extension())
+  @core.install_extension(webview, core_extension())
   webview.bind("reportFsFailure", fn(id, req) {
     let request_id = @ffi.from_cstr(id)
     let message_result : Result[String, String] = decode_single_argument(req)

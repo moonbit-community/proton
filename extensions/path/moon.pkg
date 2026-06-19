@@ -2,6 +2,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/path" @mbpath,
   "justjavac/lepus/core",
+  "justjavac/lepus/extension" @lepus_extension,
 }
 
 supported_targets = "native"

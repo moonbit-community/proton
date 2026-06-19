@@ -1,7 +1,8 @@
 import {
   "moonbitlang/core/json",
   "justjavac/keepawake" @sys_keepawake,
-  "justjavac/lepus",
+  "justjavac/lepus/command" @lepus_command,
+  "justjavac/lepus/extension" @lepus_extension,
 }
 
 import {

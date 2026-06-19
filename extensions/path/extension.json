@@ -6,7 +6,7 @@
   "description": "Portable path helpers exposed through a JavaScript-friendly namespace.",
   "namespace": "path",
   "package": "justjavac/lepus_ext/path",
-  "spec_symbol": "spec",
+  "spec_symbol": "extension",
   "manifest_key": "justjavac/lepus-path",
   "platforms": ["windows", "macos", "linux"],
   "dependencies": [],

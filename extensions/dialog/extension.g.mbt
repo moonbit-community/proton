@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_dialog_activity(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : DialogActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -18,7 +18,7 @@ struct LepusMessagePayload {
 
 ///|
 async fn __lepus_command_message(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusMessagePayload,
 ) -> Result[MessageReply, String] {
   message(context, payload.message, payload.title, payload.level)
@@ -33,7 +33,7 @@ struct LepusConfirmPayload {
 
 ///|
 async fn __lepus_command_confirm(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusConfirmPayload,
 ) -> Result[ConfirmReply, String] {
   confirm(context, payload.message, payload.title, payload.level)
@@ -47,7 +47,7 @@ struct LepusOpenFilePayload {
 
 ///|
 async fn __lepus_command_open_file(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusOpenFilePayload,
 ) -> Result[FileDialogReply, String] {
   open_file(context, payload.title, payload.path)
@@ -61,22 +61,27 @@ struct LepusSaveFilePayload {
 
 ///|
 async fn __lepus_command_save_file(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusSaveFilePayload,
 ) -> Result[FileDialogReply, String] {
   save_file(context, payload.title, payload.path)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
-  @lepus.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-dialog",
     "dialog",
     [
-      @lepus.AppCommandApiDescriptor::new("message"),
-      @lepus.AppCommandApiDescriptor::new("confirm"),
-      @lepus.AppCommandApiDescriptor::new("openFile"),
-      @lepus.AppCommandApiDescriptor::new("saveFile"),
+      @lepus_command.AppCommandApiDescriptor::new("message"),
+      @lepus_command.AppCommandApiDescriptor::new("confirm"),
+      @lepus_command.AppCommandApiDescriptor::new("openFile"),
+      @lepus_command.AppCommandApiDescriptor::new("saveFile"),
     ],
     fn(context) {
       context.op_async_result("message", async fn(payload) {

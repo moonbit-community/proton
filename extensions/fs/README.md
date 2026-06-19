@@ -19,7 +19,7 @@ import {
 
 fn main {
   let webview = @webview.Webview::new(debug=1)
-  @core.install_extension(webview, @fs.extension())
+  @core.install_extension(webview, @fs.core_extension())
   webview.run()
 }
 ```
@@ -33,8 +33,8 @@ import {
 }
 
 async fn main {
-  @lepus.html("FS Demo", 900, 700, "<html></html>", debug=1)
-  .extension(@fs.spec())
+  @lepus.html("FS Demo", "<html></html>", width=900, height=700, debug=true)
+  .extension(@fs.extension())
   .run_or_abort()
 }
 ```

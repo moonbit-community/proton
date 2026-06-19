@@ -85,7 +85,7 @@ fn run_shell_action(
 /// Opens one target through the native shell from a generated app-command extension.
 #lepus.command(name="open")
 async fn open(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   target : String,
 ) -> Result[ShellReply, String] {
   match
@@ -104,7 +104,7 @@ async fn open(
 /// Reveals one filesystem item through the native shell from a generated app-command extension.
 #lepus.command(name="revealItem")
 async fn reveal_item(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   path : String,
 ) -> Result[ShellReply, String] {
   match

@@ -5,15 +5,21 @@ let extension_id = "justjavac/lepus-fs"
 let extension_namespace = "fs"
 
 ///|
+/// Builds the app-facing `fs` extension.
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_core_spec(core_spec())
+}
+
+///|
 /// Builds the unrestricted `fs` extension for direct installation.
 ///
-/// Install it with `@core.install_extension(webview, @fs.extension())` to expose
+/// Install it with `@core.install_extension(webview, @fs.core_extension())` to expose
 /// `window.__MoonBit__.fs`. Opened resources remember their resolved absolute path.
 ///
 /// This extension intentionally exposes host filesystem access. Only install it
 /// in webviews that load trusted/local content; do not combine it with
 /// untrusted or remote HTML/JavaScript.
-pub fn extension() -> @core.Extension {
+pub fn core_extension() -> @core.Extension {
   build_extension()
 }
 
@@ -21,11 +27,11 @@ pub fn extension() -> @core.Extension {
 /// Builds the declarative `fs` extension spec.
 /// Register this spec when filesystem access should be linked through app
 /// planning rather than installed ad hoc on one webview.
-pub fn spec() -> @core.ExtensionSpec {
+pub fn core_spec() -> @core.ExtensionSpec {
   @core.ExtensionSpec::new(extension_id, extension_namespace, fn(context) {
     ignore(context.base_dir())
     match context.options() {
-      None => Ok(extension())
+      None => Ok(core_extension())
       Some(_) => Err("fs extension options are not supported")
     }
   })

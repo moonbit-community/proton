@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_clipboard_activity(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : ClipboardActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -16,7 +16,7 @@ struct LepusReadTextPayload {
 
 ///|
 async fn __lepus_command_read_text(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusReadTextPayload,
 ) -> Result[ReadTextReply, String] {
   read_text(context, payload._payload)
@@ -29,20 +29,25 @@ struct LepusWriteTextPayload {
 
 ///|
 async fn __lepus_command_write_text(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusWriteTextPayload,
 ) -> Result[WriteTextReply, String] {
   write_text(context, payload.text)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec {
-  @lepus.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-clipboard",
     "clipboard",
     [
-      @lepus.AppCommandApiDescriptor::new("readText"),
-      @lepus.AppCommandApiDescriptor::new("writeText"),
+      @lepus_command.AppCommandApiDescriptor::new("readText"),
+      @lepus_command.AppCommandApiDescriptor::new("writeText"),
     ],
     fn(context) {
       context.op_async_result("readText", async fn(payload) {

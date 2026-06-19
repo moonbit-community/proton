@@ -2,17 +2,18 @@
 package "justjavac/lepus_ext/global_hotkey"
 
 import {
-  "justjavac/lepus",
+  "justjavac/lepus/command",
+  "justjavac/lepus/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_global_hotkey_activity(@lepus.AppCommandExtensionContext, GlobalHotkeyActivity) -> Unit
+pub async fn emit_global_hotkey_activity(@command.AppCommandExtensionContext, GlobalHotkeyActivity) -> Unit
 
-pub async fn emit_global_hotkey_triggered(@lepus.AppCommandExtensionContext, GlobalHotkeyTriggered) -> Unit
+pub async fn emit_global_hotkey_triggered(@command.AppCommandExtensionContext, GlobalHotkeyTriggered) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec
+pub fn extension() -> @extension.Extension
 
 // Errors
 

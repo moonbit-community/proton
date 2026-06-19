@@ -2,15 +2,16 @@
 package "justjavac/lepus_ext/dialog"
 
 import {
-  "justjavac/lepus",
+  "justjavac/lepus/command",
+  "justjavac/lepus/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_dialog_activity(@lepus.AppCommandExtensionContext, DialogActivity) -> Unit
+pub async fn emit_dialog_activity(@command.AppCommandExtensionContext, DialogActivity) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec
+pub fn extension() -> @extension.Extension
 
 // Errors
 

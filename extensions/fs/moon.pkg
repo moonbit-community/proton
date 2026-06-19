@@ -6,6 +6,7 @@ import {
   "moonbitlang/x/fs" @xfs,
   "moonbitlang/x/path",
   "justjavac/lepus/core",
+  "justjavac/lepus/extension" @lepus_extension,
 }
 
 import {

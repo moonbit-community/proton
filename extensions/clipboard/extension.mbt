@@ -5,7 +5,7 @@ struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 /// Reads plain text from the native clipboard.
 #lepus.command(name="readText")
 async fn read_text(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> Result[ReadTextReply, String] {
   match read_clipboard_text() {
@@ -24,7 +24,7 @@ async fn read_text(
 /// Writes plain text to the native clipboard.
 #lepus.command(name="writeText")
 async fn write_text(
-  context : @lepus.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   text : String,
 ) -> Result[WriteTextReply, String] {
   match write_clipboard_text(text) {

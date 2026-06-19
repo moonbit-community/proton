@@ -6,7 +6,7 @@
   "description": "Host filesystem access with text, directory, and stream helpers.",
   "namespace": "fs",
   "package": "justjavac/lepus_ext/fs",
-  "spec_symbol": "spec",
+  "spec_symbol": "extension",
   "manifest_key": "justjavac/lepus-fs",
   "platforms": ["windows", "macos", "linux"],
   "dependencies": [],

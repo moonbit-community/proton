@@ -2,15 +2,16 @@
 package "justjavac/lepus_ext/microphone"
 
 import {
-  "justjavac/lepus",
+  "justjavac/lepus/command",
+  "justjavac/lepus/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_microphone_activity(@lepus.AppCommandExtensionContext, MicrophoneActivity) -> Unit
+pub async fn emit_microphone_activity(@command.AppCommandExtensionContext, MicrophoneActivity) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus.AppCommandExtensionSpec
+pub fn extension() -> @extension.Extension
 
 // Errors
 

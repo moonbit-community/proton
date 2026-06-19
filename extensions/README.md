@@ -3,8 +3,8 @@
 This workspace contains the built-in extension packages that plug into
 `justjavac/lepus/core` and `justjavac/lepus`.
 
-They participate in app startup through `justjavac/lepus`, and each
-package exposes a `spec()` builder for registry-driven installation.
+They participate in app startup through `justjavac/lepus`, and each package
+exposes `extension()` as its ordinary app-facing entrypoint.
 
 ## Layout
 
@@ -51,7 +51,7 @@ import {
 
 fn main {
   let webview = @webview.Webview::new()
-  @core.install_extension(webview, @path.extension())
+  @core.install_extension(webview, @path.core_extension())
   webview.run()
 }
 ```
@@ -66,17 +66,17 @@ import {
 }
 
 async fn main {
-  @lepus.html("Demo", 900, 700, "<html></html>", debug=1)
-  .extension(@fs.spec())
-  .extension(@path.spec())
+  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  .extension(@fs.extension())
+  .extension(@path.extension())
   .run_or_abort()
 }
 ```
 
 In this model:
 
-- MoonBit code registers which extensions are available.
-- `app.json.extensions` enables or disables registered extensions and can pass options.
+- MoonBit code declares and enables extensions.
+- `app.json` configures app-level settings such as window, entry, and debug mode.
 - JavaScript talks to one global object: `window.__MoonBit__`.
 - Each extension owns `extension.json` and `options.schema.json` for machine-readable metadata.
 
@@ -86,10 +86,6 @@ Example config:
 {
   "window": { "title": "Demo", "width": 900, "height": 700 },
   "entry": { "kind": "file", "value": "app.html" },
-  "extensions": {
-    "justjavac/lepus-fs": true,
-    "justjavac/lepus-path": {}
-  },
   "debug": 1
 }
 ```

@@ -3,14 +3,17 @@ package "justjavac/lepus_ext/path"
 
 import {
   "justjavac/lepus/core",
+  "justjavac/lepus/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @core.Extension
+pub fn core_extension() -> @core.Extension
 
-pub fn spec() -> @core.ExtensionSpec
+pub fn core_spec() -> @core.ExtensionSpec
+
+pub fn extension() -> @extension.Extension
 
 // Errors
 
