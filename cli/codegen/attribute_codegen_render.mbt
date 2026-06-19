@@ -197,7 +197,7 @@ fn codegen_warnings(parsed : ParsedLepusModule) -> Array[String] {
   let warnings : Array[String] = []
   if parsed.events.length() > 0 {
     for command in parsed.commands {
-      if !command.is_async {
+      if !command.is_async && command.has_context {
         warnings.push(
           "sync command `" +
           command.function_name +
