@@ -1,7 +1,7 @@
 ///|
 priv struct PreparedAppCommandExtension {
   id : String
-  spec : @lepus_command.AppCommandExtensionSpec
+  spec : @proton_command.AppCommandExtensionSpec
   options : Json?
 }
 
@@ -15,7 +15,7 @@ priv struct PreparedAppCommandExtension {
 async fn run_app_command_extensions_with_framework_process(
   manifest : @manifest.AppManifest,
   framework_command : String,
-  registry : @lepus_command.AppCommandExtensionRegistry,
+  registry : @proton_command.AppCommandExtensionRegistry,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
   framework_args? : Array[String] = [],
   framework_cwd? : String? = None,
@@ -34,13 +34,13 @@ async fn run_app_command_extensions_with_framework_process(
   let host = @core.AppCommandHost::new()
   let registered : Array[
     (
-      @lepus_command.AppCommandExtensionSpec,
-      @lepus_command.AppCommandExtensionContext,
+      @proton_command.AppCommandExtensionSpec,
+      @proton_command.AppCommandExtensionContext,
     ),
   ] = []
   for extension in prepared {
     let spec = extension.spec()
-    let context = @lepus_command.AppCommandExtensionContext::new(
+    let context = @proton_command.AppCommandExtensionContext::new(
       host,
       extension.id(),
       spec.js_namespace(),
@@ -87,8 +87,8 @@ async fn run_app_command_extensions_with_framework_process(
 fn destroy_registered_command_extensions(
   registered : Array[
     (
-      @lepus_command.AppCommandExtensionSpec,
-      @lepus_command.AppCommandExtensionContext,
+      @proton_command.AppCommandExtensionSpec,
+      @proton_command.AppCommandExtensionContext,
     ),
   ],
 ) -> Unit {
@@ -103,7 +103,7 @@ fn destroy_registered_command_extensions(
 fn app_commands_config_from_prepared(
   prepared : Array[PreparedAppCommandExtension],
   framework_specs_by_id : Map[String, @core.ExtensionSpec],
-) -> @lepus_command.AppCommandsConfig {
+) -> @proton_command.AppCommandsConfig {
   let op_names : Array[String] = []
   let descriptors : Array[@ipc.IpcExtensionDescriptor] = []
   let framework_extension_ids : Array[String] = []
@@ -122,14 +122,14 @@ fn app_commands_config_from_prepared(
     }
     descriptors.push(spec.to_ipc_descriptor())
   }
-  @lepus_command.AppCommandsConfig::from_ipc_descriptors(
+  @proton_command.AppCommandsConfig::from_ipc_descriptors(
     op_names, descriptors, framework_extension_ids,
   )
 }
 
 ///|
 fn validate_command_extension_registry(
-  registry : @lepus_command.AppCommandExtensionRegistry,
+  registry : @proton_command.AppCommandExtensionRegistry,
 ) -> Result[Unit, String] {
   let namespaces : Map[String, String] = {}
   let op_names : Map[String, String] = {}
@@ -155,7 +155,7 @@ fn validate_command_extension_registry(
       None => namespaces[spec.js_namespace()] = spec.id()
     }
     for api in spec.apis() {
-      let op_name = @lepus_command.app_command_extension_op_name(
+      let op_name = @proton_command.app_command_extension_op_name(
         spec.js_namespace(),
         api.api_name(),
       )
@@ -178,7 +178,7 @@ fn validate_command_extension_registry(
 
 ///|
 fn validate_command_extension_spec_shape(
-  spec : @lepus_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionSpec,
 ) -> Result[Unit, String] {
   guard spec.id().trim().to_owned() != "" else {
     return Err("command extension id must not be empty")
@@ -191,7 +191,9 @@ fn validate_command_extension_spec_shape(
       "command extension namespace must not contain '/': " + spec.js_namespace(),
     )
   }
-  guard !@lepus_command.app_command_js_property_is_reserved(spec.js_namespace()) else {
+  guard !@proton_command.app_command_js_property_is_reserved(
+    spec.js_namespace(),
+  ) else {
     return Err(
       "command extension namespace is reserved: " + spec.js_namespace(),
     )
@@ -206,7 +208,7 @@ fn validate_command_extension_spec_shape(
 ///|
 fn validate_command_api_descriptors(
   owner_id : String,
-  apis : Array[@lepus_command.AppCommandApiDescriptor],
+  apis : Array[@proton_command.AppCommandApiDescriptor],
 ) -> Result[Unit, String] {
   guard apis.length() > 0 else {
     return Err("command extension must expose at least one API: " + owner_id)
@@ -225,7 +227,7 @@ fn validate_command_api_descriptors(
         api_name,
       )
     }
-    guard !@lepus_command.app_command_js_property_is_reserved(api_name) else {
+    guard !@proton_command.app_command_js_property_is_reserved(api_name) else {
       return Err(
         "command extension API name is reserved: " + owner_id + "." + api_name,
       )
@@ -301,7 +303,7 @@ fn validate_registered_command_extension_handlers(
 ///|
 fn PreparedAppCommandExtension::new(
   id : String,
-  spec : @lepus_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionSpec,
   options : Json?,
 ) -> PreparedAppCommandExtension {
   PreparedAppCommandExtension::{
@@ -321,7 +323,7 @@ fn PreparedAppCommandExtension::id(
 ///|
 fn PreparedAppCommandExtension::spec(
   self : PreparedAppCommandExtension,
-) -> @lepus_command.AppCommandExtensionSpec {
+) -> @proton_command.AppCommandExtensionSpec {
   copy_app_command_extension_spec(self.spec)
 }
 
@@ -334,9 +336,9 @@ fn PreparedAppCommandExtension::options(
 
 ///|
 fn copy_app_command_extension_spec(
-  spec : @lepus_command.AppCommandExtensionSpec,
-) -> @lepus_command.AppCommandExtensionSpec {
-  @lepus_command.AppCommandExtensionSpec::new(
+  spec : @proton_command.AppCommandExtensionSpec,
+) -> @proton_command.AppCommandExtensionSpec {
+  @proton_command.AppCommandExtensionSpec::new(
     spec.id,
     spec.js_namespace,
     spec.apis,

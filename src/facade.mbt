@@ -7,7 +7,7 @@ struct App {
   windows : Array[@manifest.AppWindowManifest]
   mut debug_level_value : Int
   extension_specs : Array[@core.ExtensionSpec]
-  command_specs : Array[@lepus_command.AppCommandExtensionSpec]
+  command_specs : Array[@proton_command.AppCommandExtensionSpec]
   extension_settings : Map[String, @manifest.ExtensionSetting]
   validation_errors : Array[String]
   mut title_overridden : Bool
@@ -187,7 +187,7 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 /// Links and enables one extension.
 pub fn App::extension(
   self : App,
-  extension : @lepus_extension.Extension,
+  extension : @proton_extension.Extension,
   options? : Json,
 ) -> App {
   match extension.core_spec() {
@@ -205,7 +205,7 @@ pub fn App::extension(
 /// Links and enables a set of extensions.
 pub fn App::extensions(
   self : App,
-  extensions : @lepus_extension.Extensions,
+  extensions : @proton_extension.Extensions,
 ) -> App {
   for extension in extensions.items() {
     ignore(self.extension(extension))
@@ -234,7 +234,7 @@ fn App::add_framework_extension(
 ///|
 fn App::add_command_extension(
   self : App,
-  spec : @lepus_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionSpec,
   options : Json?,
 ) -> Unit {
   let id = spec.id()
@@ -541,7 +541,7 @@ fn validate_extension_specs(
 ///|
 fn App::command_registry(
   self : App,
-) -> Result[@lepus_command.AppCommandExtensionRegistry, String] {
+) -> Result[@proton_command.AppCommandExtensionRegistry, String] {
   match self.validation_error() {
     Some(error) => return Err(error)
     None => ()
@@ -549,7 +549,7 @@ fn App::command_registry(
   match validate_app_facade_command_specs(self.command_specs) {
     Err(error) => Err(error)
     Ok(_) => {
-      let registry = @lepus_command.AppCommandExtensionRegistry::new()
+      let registry = @proton_command.AppCommandExtensionRegistry::new()
       for spec in self.command_specs {
         ignore(registry.register(spec))
       }
@@ -560,7 +560,7 @@ fn App::command_registry(
 
 ///|
 fn validate_app_facade_command_specs(
-  specs : Array[@lepus_command.AppCommandExtensionSpec],
+  specs : Array[@proton_command.AppCommandExtensionSpec],
 ) -> Result[Unit, String] {
   let ids : Map[String, Bool] = {}
   let namespaces : Map[String, String] = {}

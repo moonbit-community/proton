@@ -14,7 +14,7 @@ struct ShellReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct ShellActivity {
   operation : String
   target : String
@@ -83,9 +83,9 @@ fn run_shell_action(
 
 ///|
 /// Opens one target through the native shell from a generated app-command extension.
-#lepus.command(name="open")
+#proton.command(name="open")
 async fn open(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   target : String,
 ) -> Result[ShellReply, String] {
   match
@@ -102,9 +102,9 @@ async fn open(
 
 ///|
 /// Reveals one filesystem item through the native shell from a generated app-command extension.
-#lepus.command(name="revealItem")
+#proton.command(name="revealItem")
 async fn reveal_item(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   path : String,
 ) -> Result[ShellReply, String] {
   match

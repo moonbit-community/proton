@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/clipboard"
+package "justjavac/proton_ext/clipboard"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -20,9 +20,9 @@ type ClipboardActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusReadTextPayload derive(@json.FromJson)
+type ProtonReadTextPayload derive(@json.FromJson)
 
-type LepusWriteTextPayload derive(@json.FromJson)
+type ProtonWriteTextPayload derive(@json.FromJson)
 
 type ReadTextReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

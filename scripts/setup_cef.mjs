@@ -193,7 +193,7 @@ function normalizeCefRuntimeLayout(root) {
 
 async function main() {
   if (process.platform !== "win32") {
-    fail("The Lepus CEF backend is currently Windows-only.");
+    fail("The Proton CEF backend is currently Windows-only.");
   }
 
   const options = parseArgs(process.argv.slice(2));
@@ -206,7 +206,7 @@ async function main() {
   if (installedVersion === options.name) {
     normalizeCefRuntimeLayout(installDir);
   } else {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "lepus-cef-"));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "proton-cef-"));
     const archivePath = path.join(tempDir, `${options.name}.tar.bz2`);
     try {
       const url = archiveUrl(options);

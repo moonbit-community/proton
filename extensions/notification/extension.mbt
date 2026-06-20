@@ -11,7 +11,7 @@ struct NotificationReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct NotificationActivity {
   operation : String
   title : String?
@@ -68,9 +68,9 @@ fn show_notification(
 
 ///|
 /// Shows one native notification from a generated app-command extension.
-#lepus.command(name="show")
+#proton.command(name="show")
 async fn show(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   title : String?,
   body : String,
   level : String?,

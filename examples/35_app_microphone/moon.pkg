@@ -1,7 +1,7 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus_ext/microphone",
-  "justjavac/lepus",
+  "justjavac/proton_ext/microphone",
+  "justjavac/proton",
 }
 
 supported_targets = "native"

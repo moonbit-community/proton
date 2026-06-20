@@ -1,5 +1,5 @@
 import {
-  "justjavac/lepus/webview",
+  "justjavac/proton/webview",
 }
 
 supported_targets = "native"

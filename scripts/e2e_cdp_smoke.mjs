@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import net from "node:net";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-const timeoutMs = Number(process.env.LEPUS_CDP_E2E_TIMEOUT_MS ?? "30000");
+const timeoutMs = Number(process.env.PROTON_CDP_E2E_TIMEOUT_MS ?? "30000");
 
 const defaultScenarios = [
   "01_run",
@@ -83,7 +83,7 @@ function requiredCefFiles(root) {
 }
 
 function ensureCefInstalled() {
-  if (process.env.LEPUS_CEF_ROOT) {
+  if (process.env.PROTON_CEF_ROOT) {
     return;
   }
   const cache = path.join(repoRoot, ".cef-cache");
@@ -117,7 +117,7 @@ function ensureCefSubprocess(env) {
     "debug",
     "build",
     "justjavac",
-    "lepus",
+    "proton",
     "cef_process",
     "cef_process.exe",
   );
@@ -228,7 +228,7 @@ async function runScenario(name) {
   const port = await reservePort();
   const baseEnv = cefEnv();
   const app = run("moon", ["-C", "examples", "run", name, "--target", "native"], {
-    env: { ...baseEnv, LEPUS_CEF_REMOTE_DEBUGGING_PORT: String(port) },
+    env: { ...baseEnv, PROTON_CEF_REMOTE_DEBUGGING_PORT: String(port) },
   });
 
   try {
@@ -237,8 +237,8 @@ async function runScenario(name) {
       env: {
         ...baseEnv,
         MBT_CDP_TARGET: String(port),
-        MBT_LEPUS_E2E_SCENARIO: name,
-        MBT_LEPUS_E2E_TIMEOUT_MS: String(timeoutMs),
+        MBT_PROTON_E2E_SCENARIO: name,
+        MBT_PROTON_E2E_TIMEOUT_MS: String(timeoutMs),
       },
     });
     try {

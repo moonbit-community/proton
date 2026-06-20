@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/global_hotkey"
+package "justjavac/proton_ext/global_hotkey"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -30,13 +30,13 @@ type GlobalHotkeyReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type GlobalHotkeyTriggered derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusDrainTriggeredPayload derive(@json.FromJson)
+type ProtonDrainTriggeredPayload derive(@json.FromJson)
 
-type LepusListPayload derive(@json.FromJson)
+type ProtonListPayload derive(@json.FromJson)
 
-type LepusRegisterPayload derive(@json.FromJson)
+type ProtonRegisterPayload derive(@json.FromJson)
 
-type LepusUnregisterPayload derive(@json.FromJson)
+type ProtonUnregisterPayload derive(@json.FromJson)
 
 // Type aliases
 

@@ -52,7 +52,7 @@ async fn run_app_from_manifest_candidates() -> Result[Unit, String] {
   let mut last_error = "failed to read app manifest: no candidate path matched"
   for candidate in candidates {
     match
-      @lepus.config(candidate)
+      @proton.config(candidate)
       .extension(@fs.extension())
       .extension(@path.extension())
       .run() {

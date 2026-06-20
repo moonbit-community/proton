@@ -1,4 +1,4 @@
-name = "justjavac/lepus"
+name = "justjavac/proton"
 
 version = "0.1.10"
 
@@ -10,7 +10,7 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/moonbit-community/lepus"
+repository = "https://github.com/moonbit-community/proton"
 
 license = "MIT"
 

@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/runtime"
+package "justjavac/proton/runtime"
 
 import {
-  "justjavac/lepus/core",
-  "justjavac/lepus/ipc",
-  "justjavac/lepus/webview",
+  "justjavac/proton/core",
+  "justjavac/proton/ipc",
+  "justjavac/proton/webview",
   "moonbitlang/core/debug",
 }
 

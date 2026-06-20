@@ -1,6 +1,6 @@
 ///|
 fn extension_host_cef_unit_tests_enabled() -> Bool {
-  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+  match @sys.get_env_var("PROTON_RUN_CEF_UNIT_TESTS") {
     Some("1") => @webview.backend_available()
     _ => false
   }

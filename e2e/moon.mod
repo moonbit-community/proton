@@ -1,4 +1,4 @@
-name = "justjavac/lepus/e2e"
+name = "justjavac/proton/e2e"
 
 version = "0.1.0"
 
@@ -9,13 +9,13 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/moonbit-community/lepus/tree/main/e2e"
+repository = "https://github.com/moonbit-community/proton/tree/main/e2e"
 
 license = "MIT"
 
 keywords = [ "webview", "cef", "cdp", "e2e" ]
 
-description = "CEF end-to-end smoke probes for Lepus examples."
+description = "CEF end-to-end smoke probes for Proton examples."
 
 options(
   source: "",

@@ -1,8 +1,8 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus_ext/clipboard",
-  "justjavac/lepus_ext/dialog",
-  "justjavac/lepus",
+  "justjavac/proton_ext/clipboard",
+  "justjavac/proton_ext/dialog",
+  "justjavac/proton",
 }
 
 supported_targets = "native"

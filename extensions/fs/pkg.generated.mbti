@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/fs"
+package "justjavac/proton_ext/fs"
 
 import {
-  "justjavac/lepus/core",
-  "justjavac/lepus/extension",
+  "justjavac/proton/core",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }

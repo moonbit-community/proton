@@ -44,7 +44,7 @@ struct MicrophoneDevicesReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct MicrophoneActivity {
   operation : String
   count : Int?
@@ -153,9 +153,9 @@ fn microphone_devices_reply(
 
 ///|
 /// Lists native microphone devices from a generated app-command extension.
-#lepus.command(name="listDevices")
+#proton.command(name="listDevices")
 async fn list_devices(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> MicrophoneDevicesReply {
   let devices = @sys_microphone.MicrophoneDevice::list()
@@ -168,7 +168,7 @@ async fn list_devices(
 
 ///|
 /// Parses a platform microphone listing from a generated app-command extension.
-#lepus.command(name="parseListing")
+#proton.command(name="parseListing")
 fn parse_listing(listing : String) -> MicrophoneDevicesReply {
   let devices = @sys_microphone.MicrophoneDevice::parse_listing(listing)
   microphone_devices_reply(devices)
@@ -176,7 +176,7 @@ fn parse_listing(listing : String) -> MicrophoneDevicesReply {
 
 ///|
 /// Builds a normalized capture config from a generated app-command extension.
-#lepus.command(name="config")
+#proton.command(name="config")
 fn config(
   channels : Int?,
   sample_rate_hz : Int?,

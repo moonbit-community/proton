@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/keepawake"
+package "justjavac/proton_ext/keepawake"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -24,11 +24,11 @@ type KeepAwakeActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type KeepAwakeReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusAcquirePayload derive(@json.FromJson)
+type ProtonAcquirePayload derive(@json.FromJson)
 
-type LepusReleasePayload derive(@json.FromJson)
+type ProtonReleasePayload derive(@json.FromJson)
 
-type LepusStatusPayload derive(@json.FromJson)
+type ProtonStatusPayload derive(@json.FromJson)
 
 // Type aliases
 

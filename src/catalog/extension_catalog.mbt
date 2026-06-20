@@ -1,5 +1,5 @@
 ///|
-/// Metadata catalog for Lepus extensions discovered from explicit search roots.
+/// Metadata catalog for Proton extensions discovered from explicit search roots.
 pub struct ExtensionCatalog {
   descriptors : Map[String, ExtensionDescriptor]
   discovery_order : Array[String]

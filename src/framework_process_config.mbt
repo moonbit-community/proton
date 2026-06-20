@@ -14,7 +14,7 @@ fn write_framework_process_ipc_config(
   path : String,
   manifest : @manifest.AppManifest,
   ipc_config : FrameworkIpcLaunchConfig,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
   base_dir? : String? = None,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
 ) -> Result[Unit, String] {
@@ -57,7 +57,7 @@ fn default_framework_process_config_path(
   ipc_config : FrameworkIpcLaunchConfig,
 ) -> String {
   let ws = framework_ipc_launch_config_ws(ipc_config)
-  "target/lepus-framework-" + ws.token + ".json"
+  "target/proton-framework-" + ws.token + ".json"
 }
 
 ///|
@@ -98,8 +98,8 @@ fn validate_framework_process_config(
 ///|
 fn app_commands_config_from_framework_config(
   config : FrameworkProcessConfig,
-) -> @lepus_command.AppCommandsConfig {
-  @lepus_command.AppCommandsConfig::from_ipc_descriptors(
+) -> @proton_command.AppCommandsConfig {
+  @proton_command.AppCommandsConfig::from_ipc_descriptors(
     config.op_names,
     config.extensions,
     config.framework_extension_ids,

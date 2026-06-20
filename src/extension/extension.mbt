@@ -1,7 +1,7 @@
 ///|
 priv enum ExtensionKind {
   Framework(@core.ExtensionSpec)
-  Command(@lepus_command.AppCommandExtensionSpec)
+  Command(@proton_command.AppCommandExtensionSpec)
 }
 
 ///|
@@ -21,7 +21,7 @@ pub fn from_core_spec(spec : @core.ExtensionSpec) -> Extension {
 
 ///|
 pub fn from_command_spec(
-  spec : @lepus_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionSpec,
 ) -> Extension {
   Extension::{ kind: Command(spec) }
 }
@@ -55,7 +55,7 @@ pub fn Extension::core_spec(self : Extension) -> @core.ExtensionSpec? {
 ///|
 pub fn Extension::command_spec(
   self : Extension,
-) -> @lepus_command.AppCommandExtensionSpec? {
+) -> @proton_command.AppCommandExtensionSpec? {
   match self.kind {
     Framework(_) => None
     Command(spec) => Some(spec)

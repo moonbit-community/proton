@@ -12,7 +12,7 @@ test "websocket bridge script embeds launch config" {
   assert_true(script.contains("remoteOpNames[name] = true;"))
   assert_true(script.contains("return previousInvokeOp(name, payload);"))
   assert_true(script.contains("let opened = false;"))
-  assert_true(script.contains("healthTransport: \"lepus-ipc-ws\""))
+  assert_true(script.contains("healthTransport: \"proton-ipc-ws\""))
   assert_true(script.contains("async function healthMatches(response)"))
   assert_true(script.contains("body.transport === config.healthTransport"))
   assert_true(
@@ -76,14 +76,14 @@ test "websocket bridge script validation rejects invalid op names" {
 
 ///|
 test "ipc token query matching is exact" {
-  assert_true(path_has_token("/__lepus__/health?token=abc", "abc"))
-  assert_true(path_has_token("/__lepus__/health?x=1&token=abc", "abc"))
-  assert_true(path_has_token("/__lepus__/health?token=a%26b%3Dc%25", "a&b=c%"))
-  assert_false(path_has_token("/__lepus__/health?token=abcx", "abc"))
-  assert_false(path_has_token("/__lepus__/health?token=abc&token=abc", "abc"))
-  assert_false(path_has_token("/__lepus__/health?token=abc&token=bad", "abc"))
-  assert_false(path_has_token("/__lepus__/health?x=token=abc", "abc"))
-  assert_false(path_has_token("/__lepus__/health?token=a%2", "a%2"))
+  assert_true(path_has_token("/__proton__/health?token=abc", "abc"))
+  assert_true(path_has_token("/__proton__/health?x=1&token=abc", "abc"))
+  assert_true(path_has_token("/__proton__/health?token=a%26b%3Dc%25", "a&b=c%"))
+  assert_false(path_has_token("/__proton__/health?token=abcx", "abc"))
+  assert_false(path_has_token("/__proton__/health?token=abc&token=abc", "abc"))
+  assert_false(path_has_token("/__proton__/health?token=abc&token=bad", "abc"))
+  assert_false(path_has_token("/__proton__/health?x=token=abc", "abc"))
+  assert_false(path_has_token("/__proton__/health?token=a%2", "a%2"))
   assert_true(
     health_url(WsIpcLaunchConfig::new("a&b=c%", [49181]), 49181).contains(
       "token=a%26b%3Dc%25",
@@ -139,7 +139,7 @@ test "ipc health body validation parses JSON fields" {
   let valid =
     #| {
     #|   "version": "1",
-    #|   "transport": "lepus-ipc-ws",
+    #|   "transport": "proton-ipc-ws",
     #|   "ok": true
     #| }
   assert_true(ws_ipc_health_body_is_valid(valid))
@@ -148,7 +148,7 @@ test "ipc health body validation parses JSON fields" {
     #|   "ok": false,
     #|   "transport": "wrong",
     #|   "version": "0",
-    #|   "note": "\"ok\":true \"transport\":\"lepus-ipc-ws\" \"version\":\"1\""
+    #|   "note": "\"ok\":true \"transport\":\"proton-ipc-ws\" \"version\":\"1\""
     #| }
   assert_false(ws_ipc_health_body_is_valid(misleading))
 }
@@ -217,7 +217,7 @@ test "ipc launch config validation keeps transport on loopback" {
       WsIpcLaunchConfig::new(
         "test-token",
         [49181],
-        health_path="__lepus__/health",
+        health_path="__proton__/health",
       ),
     ) {
     Err(error) =>
@@ -229,7 +229,7 @@ test "ipc launch config validation keeps transport on loopback" {
       WsIpcLaunchConfig::new(
         "test-token",
         [49181],
-        ws_path="/__lepus__/ws#frag",
+        ws_path="/__proton__/ws#frag",
       ),
     ) {
     Err(error) =>
@@ -238,7 +238,7 @@ test "ipc launch config validation keeps transport on loopback" {
   }
   match
     validate_ws_ipc_launch_config(
-      WsIpcLaunchConfig::new("test-token", [49181], ws_path="//__lepus__/ws"),
+      WsIpcLaunchConfig::new("test-token", [49181], ws_path="//__proton__/ws"),
     ) {
     Err(error) =>
       assert_eq(error, "WebSocket IPC websocket path must be an absolute path")
@@ -257,8 +257,8 @@ test "ipc launch config validation keeps transport on loopback" {
       WsIpcLaunchConfig::new(
         "test-token",
         [49181],
-        health_path="/__lepus__/same",
-        ws_path="/__lepus__/same",
+        health_path="/__proton__/same",
+        ws_path="/__proton__/same",
       ),
     ) {
     Err(error) =>
@@ -272,7 +272,7 @@ test "ipc launch config validation keeps transport on loopback" {
       WsIpcLaunchConfig::new(
         "test-token",
         [49181],
-        health_path="/__lepus__/bad health",
+        health_path="/__proton__/bad health",
       ),
     ) {
     Err(error) =>

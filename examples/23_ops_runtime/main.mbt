@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @lepus.html(
+  let app = @proton.html(
       "MoonBit Ops Runtime",
       resource,
       width=980,

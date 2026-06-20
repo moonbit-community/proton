@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/shell"
+package "justjavac/proton_ext/shell"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -16,9 +16,9 @@ pub fn extension() -> @extension.Extension
 // Errors
 
 // Types and methods
-type LepusOpenPayload derive(@json.FromJson)
+type ProtonOpenPayload derive(@json.FromJson)
 
-type LepusRevealItemPayload derive(@json.FromJson)
+type ProtonRevealItemPayload derive(@json.FromJson)
 
 type RevealItemPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

@@ -16,6 +16,6 @@ test "dialog empty wide string becomes None path" {
 
 ///|
 test "dialog metadata constants match generated app command extension" {
-  assert_eq(extension().id(), "justjavac/lepus-dialog")
+  assert_eq(extension().id(), "justjavac/proton-dialog")
   assert_eq(extension().command_spec().unwrap().js_namespace(), "dialog")
 }

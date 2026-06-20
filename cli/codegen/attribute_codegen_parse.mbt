@@ -1,5 +1,5 @@
 ///|
-/// Generates Lepus command extension MoonBit source from one source string.
+/// Generates Proton command extension MoonBit source from one source string.
 ///
 /// This entry point parses only `source`; it is intended for unit tests and
 /// callers that already have the full package context in memory.
@@ -7,15 +7,15 @@ pub fn generate_app_commands_from_source(
   source : String,
   extension_id : String,
   js_namespace : String,
-) -> Result[LepusCommandCodegenOutput, String] {
+) -> Result[ProtonCommandCodegenOutput, String] {
   validate_non_empty("extension id", extension_id).bind(fn(_) {
     validate_js_part("extension namespace", js_namespace).bind(fn(_) {
       let (ast, reports) = @parser.parse_string(source)
       guard reports.is_empty() else {
-        return Err("failed to parse MoonBit source for #lepus codegen")
+        return Err("failed to parse MoonBit source for #proton codegen")
       }
-      parse_lepus_ast(ast, source).bind(fn(base) {
-        let parsed = ParsedLepusModule::{
+      parse_proton_ast(ast, source).bind(fn(base) {
+        let parsed = ParsedProtonModule::{
           commands: base.commands,
           events: base.events,
           scripts: base.scripts,
@@ -24,7 +24,7 @@ pub fn generate_app_commands_from_source(
           package_events: [],
         }
         validate_parsed_module(parsed).map(fn(_) {
-          render_lepus_command_codegen(parsed, extension_id, js_namespace)
+          render_proton_command_codegen(parsed, extension_id, js_namespace)
         })
       })
     })
@@ -32,7 +32,7 @@ pub fn generate_app_commands_from_source(
 }
 
 ///|
-/// Generates Lepus command extension MoonBit source from one input file.
+/// Generates Proton command extension MoonBit source from one input file.
 ///
 /// The input file's package directory is scanned for ordinary `.mbt` files so
 /// duplicate command and event names can be checked against sibling sources.
@@ -40,10 +40,10 @@ pub fn generate_app_commands_from_file(
   input_file : String,
   extension_id : String,
   js_namespace : String,
-) -> Result[LepusCommandCodegenOutput, String] {
+) -> Result[ProtonCommandCodegenOutput, String] {
   validate_extension_id(extension_id).bind(fn(_) {
     validate_js_part("extension namespace", js_namespace).bind(fn(_) {
-      let parsed_result = collect_package_lepus_module(input_file) catch {
+      let parsed_result = collect_package_proton_module(input_file) catch {
         err => return Err(@debug.render(@debug.to_repr(err)))
       }
       let parsed = match parsed_result {
@@ -51,20 +51,20 @@ pub fn generate_app_commands_from_file(
         Err(error) => return Err(error)
       }
       validate_parsed_module(parsed).map(fn(_) {
-        render_lepus_command_codegen(parsed, extension_id, js_namespace)
+        render_proton_command_codegen(parsed, extension_id, js_namespace)
       })
     })
   })
 }
 
 ///|
-/// Generates Lepus command extension MoonBit source using extension metadata.
+/// Generates Proton command extension MoonBit source using extension metadata.
 ///
 /// The codegen input's package directory must contain `extension.json` with an
 /// `id` field. `namespace` is optional and is inferred from the id when absent.
 pub fn generate_app_commands_from_file_with_metadata(
   input_file : String,
-) -> Result[LepusCommandCodegenOutput, String] {
+) -> Result[ProtonCommandCodegenOutput, String] {
   let config_result = read_package_extension_config(input_file) catch {
     err => return Err(@debug.render(@debug.to_repr(err)))
   }
@@ -135,12 +135,12 @@ fn decode_extension_codegen_config(
 }
 
 ///|
-fn collect_package_lepus_module(
+fn collect_package_proton_module(
   input_file : String,
-) -> Result[ParsedLepusModule, String] raise @mbfs.IOError {
+) -> Result[ParsedProtonModule, String] raise @mbfs.IOError {
   let input_path = normalize_path(input_file)
   let dir = path_dirname(input_file)
-  let target = ParsedLepusModule::{
+  let target = ParsedProtonModule::{
     commands: [],
     events: [],
     scripts: [],
@@ -148,7 +148,7 @@ fn collect_package_lepus_module(
     package_commands: [],
     package_events: [],
   }
-  let context = ParsedLepusModule::{
+  let context = ParsedProtonModule::{
     commands: [],
     events: [],
     scripts: [],
@@ -167,12 +167,12 @@ fn collect_package_lepus_module(
     if !reports.is_empty() {
       guard !is_target else {
         return Err(
-          "failed to parse MoonBit source for #lepus codegen: " + input_file,
+          "failed to parse MoonBit source for #proton codegen: " + input_file,
         )
       }
       continue
     }
-    let parsed = match parse_lepus_ast(ast, source) {
+    let parsed = match parse_proton_ast(ast, source) {
       Ok(parsed) => parsed
       Err(error) => return Err(error)
     }
@@ -188,7 +188,7 @@ fn collect_package_lepus_module(
       context.events.append(parsed.events)
     }
   }
-  Ok(ParsedLepusModule::{
+  Ok(ParsedProtonModule::{
     commands: target.commands,
     events: target.events,
     scripts: target.scripts,
@@ -207,14 +207,14 @@ fn is_codegen_source_file(name : String) -> Bool {
 }
 
 ///|
-fn parse_lepus_ast(
+fn parse_proton_ast(
   ast : @list.List[@moonbitlang/parser/syntax.Impl],
   source : String,
-) -> Result[ParsedLepusModule, String] {
-  let commands : Array[ParsedLepusCommand] = []
-  let events : Array[ParsedLepusEvent] = []
-  let scripts : Array[ParsedLepusScript] = []
-  let mut destroy : ParsedLepusDestroy? = None
+) -> Result[ParsedProtonModule, String] {
+  let commands : Array[ParsedProtonCommand] = []
+  let events : Array[ParsedProtonEvent] = []
+  let scripts : Array[ParsedProtonScript] = []
+  let mut destroy : ParsedProtonDestroy? = None
   let mut first_error : String? = None
   ast.each(fn(item) {
     if first_error is Some(_) {
@@ -230,7 +230,7 @@ fn parse_lepus_ast(
             match destroy {
               Some(_) =>
                 first_error = Some(
-                  "only one #lepus.destroy attribute is supported",
+                  "only one #proton.destroy attribute is supported",
                 )
               None => destroy = Some(next_destroy)
             }
@@ -248,7 +248,7 @@ fn parse_lepus_ast(
   if first_error is Some(error) {
     return Err(error)
   }
-  Ok(ParsedLepusModule::{
+  Ok(ParsedProtonModule::{
     commands,
     events,
     scripts,
@@ -261,9 +261,9 @@ fn parse_lepus_ast(
 ///|
 priv enum FunctionCodegenItem {
   None
-  Command(ParsedLepusCommand)
-  Script(ParsedLepusScript)
-  Destroy(ParsedLepusDestroy)
+  Command(ParsedProtonCommand)
+  Script(ParsedProtonScript)
+  Destroy(ParsedProtonDestroy)
 }
 
 ///|
@@ -271,29 +271,29 @@ fn parse_func_codegen_item(
   func : @moonbitlang/parser/syntax.FunDecl,
   source : String,
 ) -> Result[FunctionCodegenItem, String] {
-  let attrs = match collect_lepus_attributes(func.attrs, source) {
+  let attrs = match collect_proton_attributes(func.attrs, source) {
     Ok(attrs) => attrs
     Err(error) => return Err(error)
   }
-  match select_single_lepus_attribute(attrs) {
+  match select_single_proton_attribute(attrs) {
     Err(error) => Err(error)
     Ok(None) => Ok(FunctionCodegenItem::None)
     Ok(Some(attr)) =>
       match attr.kind {
-        LepusAttributeKind::Command =>
+        ProtonAttributeKind::Command =>
           parse_command_from_func(func, attr).map(fn(command) {
             FunctionCodegenItem::Command(command)
           })
-        LepusAttributeKind::Script =>
+        ProtonAttributeKind::Script =>
           parse_script_from_func(func).map(fn(script) {
             FunctionCodegenItem::Script(script)
           })
-        LepusAttributeKind::Destroy =>
+        ProtonAttributeKind::Destroy =>
           parse_destroy_from_func(func).map(fn(destroy) {
             FunctionCodegenItem::Destroy(destroy)
           })
-        LepusAttributeKind::Event =>
-          Err("#lepus.event can only annotate a struct")
+        ProtonAttributeKind::Event =>
+          Err("#proton.event can only annotate a struct")
       }
   }
 }
@@ -301,8 +301,8 @@ fn parse_func_codegen_item(
 ///|
 fn parse_command_from_func(
   func : @moonbitlang/parser/syntax.FunDecl,
-  attr : LepusAttribute,
-) -> Result[ParsedLepusCommand, String] {
+  attr : ProtonAttribute,
+) -> Result[ParsedProtonCommand, String] {
   let function_name = func.name.name
   match validate_identifier("command function name", function_name) {
     Err(error) => return Err(error)
@@ -322,7 +322,7 @@ fn parse_command_from_func(
         Ok(text) => text
         Err(_) =>
           return Err(
-            "unsupported command return type in #lepus.command: " +
+            "unsupported command return type in #proton.command: " +
             function_name,
           )
       }
@@ -336,7 +336,7 @@ fn parse_command_from_func(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  Ok(ParsedLepusCommand::{
+  Ok(ParsedProtonCommand::{
     function_name,
     js_name,
     params,
@@ -350,14 +350,14 @@ fn parse_command_from_func(
 ///|
 fn parse_script_from_func(
   func : @moonbitlang/parser/syntax.FunDecl,
-) -> Result[ParsedLepusScript, String] {
+) -> Result[ParsedProtonScript, String] {
   let function_name = func.name.name
   match validate_identifier("script function name", function_name) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
   guard func.is_async is None else {
-    return Err("#lepus.script function must be synchronous: " + function_name)
+    return Err("#proton.script function must be synchronous: " + function_name)
   }
   let params = match func.decl_params {
     Some(value) =>
@@ -369,7 +369,7 @@ fn parse_script_from_func(
   }
   guard params.length() == 0 else {
     return Err(
-      "#lepus.script function must not take parameters: " + function_name,
+      "#proton.script function must not take parameters: " + function_name,
     )
   }
   let return_type = match func.return_type {
@@ -377,27 +377,27 @@ fn parse_script_from_func(
       match type_expr_text(ty) {
         Ok(text) => text
         Err(_) =>
-          return Err("unsupported #lepus.script return type: " + function_name)
+          return Err("unsupported #proton.script return type: " + function_name)
       }
     None => "Unit"
   }
   guard return_type == "String" else {
-    return Err("#lepus.script function must return String: " + function_name)
+    return Err("#proton.script function must return String: " + function_name)
   }
-  Ok(ParsedLepusScript::{ function_name, })
+  Ok(ParsedProtonScript::{ function_name, })
 }
 
 ///|
 fn parse_destroy_from_func(
   func : @moonbitlang/parser/syntax.FunDecl,
-) -> Result[ParsedLepusDestroy, String] {
+) -> Result[ParsedProtonDestroy, String] {
   let function_name = func.name.name
   match validate_identifier("destroy function name", function_name) {
     Err(error) => return Err(error)
     Ok(_) => ()
   }
   guard func.is_async is None else {
-    return Err("#lepus.destroy function must be synchronous: " + function_name)
+    return Err("#proton.destroy function must be synchronous: " + function_name)
   }
   let params = match func.decl_params {
     Some(value) =>
@@ -412,39 +412,41 @@ fn parse_destroy_from_func(
       match type_expr_text(ty) {
         Ok(text) => text
         Err(_) =>
-          return Err("unsupported #lepus.destroy return type: " + function_name)
+          return Err(
+            "unsupported #proton.destroy return type: " + function_name,
+          )
       }
     None => "Unit"
   }
   guard return_type == "Unit" else {
-    return Err("#lepus.destroy function must return Unit: " + function_name)
+    return Err("#proton.destroy function must return Unit: " + function_name)
   }
   guard params.length() <= 1 else {
     return Err(
-      "#lepus.destroy function accepts at most one context parameter: " +
+      "#proton.destroy function accepts at most one context parameter: " +
       function_name,
     )
   }
   let has_context = params.any(fn(param) { param.is_context })
   guard params.length() == 0 || has_context else {
     return Err(
-      "#lepus.destroy parameter must be `context : @lepus_command.AppCommandExtensionContext`: " +
+      "#proton.destroy parameter must be `context : @proton_command.AppCommandExtensionContext`: " +
       function_name,
     )
   }
-  Ok(ParsedLepusDestroy::{ function_name, has_context })
+  Ok(ParsedProtonDestroy::{ function_name, has_context })
 }
 
 ///|
 fn parse_event_from_type_def(
   type_decl : @moonbitlang/parser/syntax.TypeDecl,
   source : String,
-) -> Result[ParsedLepusEvent?, String] {
-  let attrs = match collect_lepus_attributes(type_decl.attrs, source) {
+) -> Result[ParsedProtonEvent?, String] {
+  let attrs = match collect_proton_attributes(type_decl.attrs, source) {
     Ok(attrs) => attrs
     Err(error) => return Err(error)
   }
-  let event_attr = match select_single_lepus_attribute(attrs) {
+  let event_attr = match select_single_proton_attribute(attrs) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -452,17 +454,17 @@ fn parse_event_from_type_def(
     None => return Ok(None)
     Some(attr) =>
       match attr.kind {
-        LepusAttributeKind::Event => attr
+        ProtonAttributeKind::Event => attr
         _ =>
           return Err(
-            "#lepus." +
-            lepus_attribute_kind_label(attr.kind) +
+            "#proton." +
+            proton_attribute_kind_label(attr.kind) +
             " can only annotate a function",
           )
       }
   }
   guard type_decl.components is Record(..) else {
-    return Err("#lepus.event can only annotate a struct")
+    return Err("#proton.event can only annotate a struct")
   }
   let type_name = type_decl.tycon
   match validate_type_identifier("event payload type", type_name) {
@@ -478,7 +480,7 @@ fn parse_event_from_type_def(
     Ok(_) => ()
   }
   Ok(
-    Some(ParsedLepusEvent::{
+    Some(ParsedProtonEvent::{
       type_name,
       js_name,
       helper_name: "emit_" + snake_from_camel(type_name),
@@ -487,34 +489,34 @@ fn parse_event_from_type_def(
 }
 
 ///|
-fn collect_lepus_attributes(
+fn collect_proton_attributes(
   attrs : @list.List[@moonbitlang/parser/attribute.Attribute],
   source : String,
-) -> Result[Array[LepusAttribute], String] {
-  let parsed : Array[LepusAttribute] = []
+) -> Result[Array[ProtonAttribute], String] {
+  let parsed : Array[ProtonAttribute] = []
   let mut first_error : String? = None
   attrs.each(fn(attr) {
     if first_error is Some(_) {
       return
     }
     let raw = recover_attr_raw(source, attr)
-    if raw.has_prefix("#lepus.command") {
-      match parse_lepus_attribute(LepusAttributeKind::Command, raw) {
+    if raw.has_prefix("#proton.command") {
+      match parse_proton_attribute(ProtonAttributeKind::Command, raw) {
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
-    } else if raw.has_prefix("#lepus.event") {
-      match parse_lepus_attribute(LepusAttributeKind::Event, raw) {
+    } else if raw.has_prefix("#proton.event") {
+      match parse_proton_attribute(ProtonAttributeKind::Event, raw) {
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
-    } else if raw.has_prefix("#lepus.script") {
-      match parse_lepus_attribute(LepusAttributeKind::Script, raw) {
+    } else if raw.has_prefix("#proton.script") {
+      match parse_proton_attribute(ProtonAttributeKind::Script, raw) {
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
-    } else if raw.has_prefix("#lepus.destroy") {
-      match parse_lepus_attribute(LepusAttributeKind::Destroy, raw) {
+    } else if raw.has_prefix("#proton.destroy") {
+      match parse_proton_attribute(ProtonAttributeKind::Destroy, raw) {
         Ok(attr) => parsed.push(attr)
         Err(error) => first_error = Some(error)
       }
@@ -527,40 +529,40 @@ fn collect_lepus_attributes(
 }
 
 ///|
-fn parse_lepus_attribute(
-  kind : LepusAttributeKind,
+fn parse_proton_attribute(
+  kind : ProtonAttributeKind,
   raw : String,
-) -> Result[LepusAttribute, String] {
-  let label = lepus_attribute_kind_label(kind)
-  let prefix = "#lepus." + label
+) -> Result[ProtonAttribute, String] {
+  let label = proton_attribute_kind_label(kind)
+  let prefix = "#proton." + label
   if raw == prefix {
-    return Ok(LepusAttribute::{ kind, name_override: None })
+    return Ok(ProtonAttribute::{ kind, name_override: None })
   }
   guard raw.has_prefix(prefix + "(") && raw.has_suffix(")") else {
-    return Err("unsupported #lepus." + label + " attribute syntax: " + raw)
+    return Err("unsupported #proton." + label + " attribute syntax: " + raw)
   }
   let inner = raw
     .unsafe_substring(start=prefix.length() + 1, end=raw.length() - 1)
     .trim()
     .to_owned()
   guard inner.has_prefix("name=\"") && inner.has_suffix("\"") else {
-    return Err("unsupported #lepus." + label + " attribute arguments: " + raw)
+    return Err("unsupported #proton." + label + " attribute arguments: " + raw)
   }
   let name = inner.unsafe_substring(start=6, end=inner.length() - 1)
   guard name != "" else {
-    return Err("#lepus." + label + " name must not be empty")
+    return Err("#proton." + label + " name must not be empty")
   }
-  Ok(LepusAttribute::{ kind, name_override: Some(name) })
+  Ok(ProtonAttribute::{ kind, name_override: Some(name) })
 }
 
 ///|
-fn select_single_lepus_attribute(
-  attrs : Array[LepusAttribute],
-) -> Result[LepusAttribute?, String] {
-  let mut selected : LepusAttribute? = None
+fn select_single_proton_attribute(
+  attrs : Array[ProtonAttribute],
+) -> Result[ProtonAttribute?, String] {
+  let mut selected : ProtonAttribute? = None
   for attr in attrs {
     guard selected is None else {
-      return Err("only one #lepus attribute can be attached to one item")
+      return Err("only one #proton attribute can be attached to one item")
     }
     selected = Some(attr)
   }
@@ -568,12 +570,12 @@ fn select_single_lepus_attribute(
 }
 
 ///|
-fn lepus_attribute_kind_label(kind : LepusAttributeKind) -> String {
+fn proton_attribute_kind_label(kind : ProtonAttributeKind) -> String {
   match kind {
-    LepusAttributeKind::Command => "command"
-    LepusAttributeKind::Event => "event"
-    LepusAttributeKind::Script => "script"
-    LepusAttributeKind::Destroy => "destroy"
+    ProtonAttributeKind::Command => "command"
+    ProtonAttributeKind::Event => "event"
+    ProtonAttributeKind::Script => "script"
+    ProtonAttributeKind::Destroy => "destroy"
   }
 }
 
@@ -581,8 +583,8 @@ fn lepus_attribute_kind_label(kind : LepusAttributeKind) -> String {
 fn parse_ast_params(
   function_name : String,
   params : @list.List[@moonbitlang/parser/syntax.Parameter],
-) -> Result[Array[ParsedLepusParam], String] {
-  let out : Array[ParsedLepusParam] = []
+) -> Result[Array[ParsedProtonParam], String] {
+  let out : Array[ParsedProtonParam] = []
   let mut first_error : String? = None
   params.each(fn(param) {
     if first_error is Some(_) {
@@ -593,27 +595,27 @@ fn parse_ast_params(
         match type_expr_text(ty) {
           Err(_) =>
             first_error = Some(
-              "unsupported command parameter type in #lepus.command: " +
+              "unsupported command parameter type in #proton.command: " +
               function_name +
               "." +
               name,
             )
           Ok(param_type) =>
-            out.push(ParsedLepusParam::{
+            out.push(ParsedProtonParam::{
               name,
               param_type,
               is_context: name == "context" &&
-              param_type == "@lepus_command.AppCommandExtensionContext",
+              param_type == "@proton_command.AppCommandExtensionContext",
             })
         }
       DiscardPositional(..) =>
         first_error = Some(
-          "discard parameters are not supported by #lepus.command: " +
+          "discard parameters are not supported by #proton.command: " +
           function_name,
         )
       Labelled(..) =>
         first_error = Some(
-          "labeled and optional-parameter syntax is not supported by #lepus.command: " +
+          "labeled and optional-parameter syntax is not supported by #proton.command: " +
           function_name,
         )
       _ =>
@@ -699,15 +701,15 @@ fn result_ok_type(type_name : String) -> String? {
 }
 
 ///|
-fn validate_parsed_module(parsed : ParsedLepusModule) -> Result[Unit, String] {
+fn validate_parsed_module(parsed : ParsedProtonModule) -> Result[Unit, String] {
   guard parsed.commands.length() > 0 else {
-    return Err("#lepus.command codegen requires at least one command")
+    return Err("#proton.command codegen requires at least one command")
   }
   for command in parsed.commands {
     if parsed.events.length() == 0 {
       guard !command.has_context else {
         return Err(
-          "context parameter is only supported when #lepus.event helpers are generated: " +
+          "context parameter is only supported when #proton.event helpers are generated: " +
           command.function_name,
         )
       }
@@ -720,7 +722,7 @@ fn validate_parsed_module(parsed : ParsedLepusModule) -> Result[Unit, String] {
     }
     guard context_count <= 1 else {
       return Err(
-        "only one context parameter is supported by #lepus.command: " +
+        "only one context parameter is supported by #proton.command: " +
         command.function_name,
       )
     }

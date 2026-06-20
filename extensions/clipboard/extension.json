@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-clipboard",
+  "id": "justjavac/proton-clipboard",
   "namespace": "clipboard",
-  "package": "justjavac/lepus_ext/clipboard"
+  "package": "justjavac/proton_ext/clipboard"
 }

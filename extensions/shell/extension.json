@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-shell",
+  "id": "justjavac/proton-shell",
   "namespace": "shell",
-  "package": "justjavac/lepus_ext/shell"
+  "package": "justjavac/proton_ext/shell"
 }

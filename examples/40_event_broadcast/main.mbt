@@ -37,12 +37,12 @@ fn clamp(value : Int, min : Int, max : Int) -> Int {
 }
 
 ///|
-fn ticker_extension() -> @lepus_extension.Extension {
-  @lepus_extension.from_command_spec(
-    @lepus_command.AppCommandExtensionSpec::new(
+fn ticker_extension() -> @proton_extension.Extension {
+  @proton_extension.from_command_spec(
+    @proton_command.AppCommandExtensionSpec::new(
       "examples/event-ticker",
       "ticker",
-      [@lepus_command.AppCommandApiDescriptor::new("start")],
+      [@proton_command.AppCommandApiDescriptor::new("start")],
       fn(context) {
         context.op_async_result("start", async fn(payload : StartPayload) {
           let count = clamp(payload.count, 1, 20)
@@ -71,7 +71,7 @@ fn ticker_extension() -> @lepus_extension.Extension {
 
 ///|
 async fn main {
-  let app = @lepus.html(
+  let app = @proton.html(
     "MoonBit Event Broadcast",
     resource,
     width=900,

@@ -1,21 +1,21 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_cli/codegen"
+package "justjavac/proton_cli/codegen"
 
 import {
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn generate_app_commands_from_file(String, String, String) -> Result[LepusCommandCodegenOutput, String]
+pub fn generate_app_commands_from_file(String, String, String) -> Result[ProtonCommandCodegenOutput, String]
 
-pub fn generate_app_commands_from_file_with_metadata(String) -> Result[LepusCommandCodegenOutput, String]
+pub fn generate_app_commands_from_file_with_metadata(String) -> Result[ProtonCommandCodegenOutput, String]
 
-pub fn generate_app_commands_from_source(String, String, String) -> Result[LepusCommandCodegenOutput, String]
+pub fn generate_app_commands_from_source(String, String, String) -> Result[ProtonCommandCodegenOutput, String]
 
 // Errors
 
 // Types and methods
-pub(all) struct LepusCommandCodegenOutput {
+pub(all) struct ProtonCommandCodegenOutput {
   source : String
   warnings : Array[String]
 } derive(Eq, ToJson, @debug.Debug)

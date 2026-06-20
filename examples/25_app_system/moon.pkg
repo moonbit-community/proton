@@ -1,9 +1,9 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus_ext/global_hotkey",
-  "justjavac/lepus_ext/notification",
-  "justjavac/lepus_ext/tray",
-  "justjavac/lepus",
+  "justjavac/proton_ext/global_hotkey",
+  "justjavac/proton_ext/notification",
+  "justjavac/proton_ext/tray",
+  "justjavac/proton",
 }
 
 supported_targets = "native"

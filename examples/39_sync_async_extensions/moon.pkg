@@ -1,9 +1,9 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/async",
-  "justjavac/lepus/command" @lepus_command,
-  "justjavac/lepus/extension" @lepus_extension,
-  "justjavac/lepus",
+  "justjavac/proton/command" @proton_command,
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton",
 }
 
 supported_targets = "native"

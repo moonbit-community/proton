@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/auto_launch"
+package "justjavac/proton_ext/auto_launch"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -26,17 +26,17 @@ type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type EnabledReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusDescribePayload derive(@json.FromJson)
-
-type LepusDisablePayload derive(@json.FromJson)
-
-type LepusEnablePayload derive(@json.FromJson)
-
-type LepusIsEnabledPayload derive(@json.FromJson)
-
-type LepusSupportPayload derive(@json.FromJson)
-
 type MutationReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProtonDescribePayload derive(@json.FromJson)
+
+type ProtonDisablePayload derive(@json.FromJson)
+
+type ProtonEnablePayload derive(@json.FromJson)
+
+type ProtonIsEnabledPayload derive(@json.FromJson)
+
+type ProtonSupportPayload derive(@json.FromJson)
 
 type SupportReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

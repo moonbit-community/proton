@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-tray",
+  "id": "justjavac/proton-tray",
   "namespace": "tray",
-  "package": "justjavac/lepus_ext/tray"
+  "package": "justjavac/proton_ext/tray"
 }

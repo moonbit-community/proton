@@ -1,8 +1,8 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/x/path" @mbpath,
-  "justjavac/lepus/core",
-  "justjavac/lepus/extension" @lepus_extension,
+  "justjavac/proton/core",
+  "justjavac/proton/extension" @proton_extension,
 }
 
 supported_targets = "native"

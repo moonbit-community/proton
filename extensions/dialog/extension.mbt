@@ -8,7 +8,7 @@ fn file_dialog_result_path(result : Result[FileDialogReply, String]) -> String? 
 
 ///|
 async fn[Reply] emit_command_result(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   result : Result[Reply, String],
   operation : String,
   path? : String? = None,
@@ -25,9 +25,9 @@ async fn[Reply] emit_command_result(
 
 ///|
 /// Shows a message dialog from a generated app-command extension.
-#lepus.command(name="message")
+#proton.command(name="message")
 async fn message(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   message : String,
   title : String?,
   level : String?,
@@ -43,9 +43,9 @@ async fn message(
 
 ///|
 /// Shows a confirmation dialog from a generated app-command extension.
-#lepus.command(name="confirm")
+#proton.command(name="confirm")
 async fn confirm(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   message : String,
   title : String?,
   level : String?,
@@ -61,9 +61,9 @@ async fn confirm(
 
 ///|
 /// Shows an open-file dialog from a generated app-command extension.
-#lepus.command(name="openFile")
+#proton.command(name="openFile")
 async fn open_file(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   title : String?,
   path : String?,
 ) -> Result[FileDialogReply, String] {
@@ -75,9 +75,9 @@ async fn open_file(
 
 ///|
 /// Shows a save-file dialog from a generated app-command extension.
-#lepus.command(name="saveFile")
+#proton.command(name="saveFile")
 async fn save_file(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   title : String?,
   path : String?,
 ) -> Result[FileDialogReply, String] {
@@ -88,7 +88,7 @@ async fn save_file(
 }
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct DialogActivity {
   operation : String
   path : String?

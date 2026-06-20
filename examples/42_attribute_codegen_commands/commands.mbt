@@ -5,15 +5,15 @@ struct AddReply {
 } derive(ToJson)
 
 ///|
-#lepus.event(name="addFinished")
+#proton.event(name="addFinished")
 struct AddFinished {
   total : Int
 } derive(ToJson)
 
 ///|
-#lepus.command(name="slowAdd")
+#proton.command(name="slowAdd")
 async fn slow_add(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   left : Int,
   right : Int,
   delay_ms : Int?,

@@ -1,7 +1,7 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus/manifest",
-  "justjavac/lepus",
+  "justjavac/proton/manifest",
+  "justjavac/proton",
 }
 
 supported_targets = "native"

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/examples/42_attribute_codegen_commands"
+package "justjavac/proton/examples/42_attribute_codegen_commands"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/json",
 }
 
@@ -19,7 +19,7 @@ type AddFinished derive(ToJson)
 
 type AddReply derive(ToJson)
 
-type LepusSlowAddPayload derive(@json.FromJson)
+type ProtonSlowAddPayload derive(@json.FromJson)
 
 // Type aliases
 

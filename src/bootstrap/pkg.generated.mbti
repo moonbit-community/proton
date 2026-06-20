@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/bootstrap"
+package "justjavac/proton/bootstrap"
 
 import {
-  "justjavac/lepus/manifest",
+  "justjavac/proton/manifest",
 }
 
 // Values

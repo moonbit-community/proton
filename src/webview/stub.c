@@ -7,7 +7,7 @@
 
 #include "moonbit.h"
 
-#define LEPUS_CEF_BACKEND_NAME "cef"
+#define PROTON_CEF_BACKEND_NAME "cef"
 
 typedef void *webview_t;
 typedef void (*moonbit_webview_bind_callback_t)(void *seq, void *req, void *arg);
@@ -39,15 +39,15 @@ static char *moonbit_webview_strdup(const char *value) {
   return copy;
 }
 
-static void lepus_trace(const char *message) {
-  if (getenv("LEPUS_CEF_TRACE") != NULL) {
-    fprintf(stderr, "[lepus-cef] %s\n", message);
+static void proton_trace(const char *message) {
+  if (getenv("PROTON_CEF_TRACE") != NULL) {
+    fprintf(stderr, "[proton-cef] %s\n", message);
     fflush(stderr);
   }
 }
 
-static int lepus_trace_enabled(void) {
-  return getenv("LEPUS_CEF_TRACE") != NULL;
+static int proton_trace_enabled(void) {
+  return getenv("PROTON_CEF_TRACE") != NULL;
 }
 
 static void moonbit_webview_free_binding(
@@ -78,10 +78,10 @@ static moonbit_bytes_t moonbit_webview_make_cstr(const char *value) {
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_webview_backend_id(void) {
-  return moonbit_webview_make_cstr(LEPUS_CEF_BACKEND_NAME);
+  return moonbit_webview_make_cstr(PROTON_CEF_BACKEND_NAME);
 }
 
-#if defined(_WIN32) && defined(LEPUS_CEF_ENABLED) && LEPUS_CEF_ENABLED
+#if defined(_WIN32) && defined(PROTON_CEF_ENABLED) && PROTON_CEF_ENABLED
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -100,21 +100,21 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_webview_backend_id(void) {
 #include "include/internal/cef_string.h"
 #include "include/cef_api_hash.h"
 
-#define LEPUS_CEF_MESSAGE_INVOKE "lepus.invoke"
-#define LEPUS_CEF_MESSAGE_RESPONSE "lepus.response"
-#define LEPUS_CEF_MESSAGE_CONTEXT_READY "lepus.context_ready"
-#define LEPUS_CEF_MESSAGE_INSTALL_BINDING "lepus.install_binding"
-#define LEPUS_CEF_MESSAGE_INIT_SCRIPT "lepus.init_script"
-#define LEPUS_CEF_DEFAULT_URL "about:blank"
-#define LEPUS_CEF_CLASS_NAME L"LepusCefWindow"
-#define LEPUS_WM_FLUSH_OPS (WM_APP + 51)
+#define PROTON_CEF_MESSAGE_INVOKE "proton.invoke"
+#define PROTON_CEF_MESSAGE_RESPONSE "proton.response"
+#define PROTON_CEF_MESSAGE_CONTEXT_READY "proton.context_ready"
+#define PROTON_CEF_MESSAGE_INSTALL_BINDING "proton.install_binding"
+#define PROTON_CEF_MESSAGE_INIT_SCRIPT "proton.init_script"
+#define PROTON_CEF_DEFAULT_URL "about:blank"
+#define PROTON_CEF_CLASS_NAME L"ProtonCefWindow"
+#define PROTON_WM_FLUSH_OPS (WM_APP + 51)
 
-#ifndef LEPUS_CEF_ROOT_PATH
-#define LEPUS_CEF_ROOT_PATH ""
+#ifndef PROTON_CEF_ROOT_PATH
+#define PROTON_CEF_ROOT_PATH ""
 #endif
 
-#ifndef LEPUS_CEF_SUBPROCESS_PATH
-#define LEPUS_CEF_SUBPROCESS_PATH ""
+#ifndef PROTON_CEF_SUBPROCESS_PATH
+#define PROTON_CEF_SUBPROCESS_PATH ""
 #endif
 
 struct moonbit_webview_op {
@@ -145,59 +145,59 @@ struct moonbit_webview {
   struct moonbit_webview *next;
 };
 
-struct lepus_ref_counted {
+struct proton_ref_counted {
   long refs;
 };
 
-struct lepus_client {
+struct proton_client {
   cef_client_t client;
-  struct lepus_ref_counted refs;
+  struct proton_ref_counted refs;
   struct moonbit_webview *webview;
   cef_life_span_handler_t life_span;
-  struct lepus_ref_counted life_span_refs;
+  struct proton_ref_counted life_span_refs;
   cef_load_handler_t load;
-  struct lepus_ref_counted load_refs;
+  struct proton_ref_counted load_refs;
 };
 
-struct lepus_app {
+struct proton_app {
   cef_app_t app;
-  struct lepus_ref_counted refs;
+  struct proton_ref_counted refs;
   cef_render_process_handler_t render;
-  struct lepus_ref_counted render_refs;
+  struct proton_ref_counted render_refs;
   cef_v8_handler_t v8;
-  struct lepus_ref_counted v8_refs;
+  struct proton_ref_counted v8_refs;
 };
 
-struct lepus_dispatch_task {
+struct proton_dispatch_task {
   cef_task_t task;
-  struct lepus_ref_counted refs;
+  struct proton_ref_counted refs;
   webview_t webview;
   void (*callback)(webview_t, void *);
   void *arg;
 };
 
-struct lepus_render_init_script {
+struct proton_render_init_script {
   int browser_id;
   char *script;
-  struct lepus_render_init_script *next;
+  struct proton_render_init_script *next;
 };
 
-static int lepus_cef_initialized = 0;
-static int lepus_cef_shutdown_registered = 0;
-static HMODULE lepus_cef_module = NULL;
-static struct moonbit_webview *lepus_webviews = NULL;
-static struct lepus_render_init_script *lepus_render_init_scripts = NULL;
-static struct lepus_app lepus_app_instance;
+static int proton_cef_initialized = 0;
+static int proton_cef_shutdown_registered = 0;
+static HMODULE proton_cef_module = NULL;
+static struct moonbit_webview *proton_webviews = NULL;
+static struct proton_render_init_script *proton_render_init_scripts = NULL;
+static struct proton_app proton_app_instance;
 
-static void CEF_CALLBACK lepus_add_ref(cef_base_ref_counted_t *base) {
-  struct lepus_ref_counted *refs =
-      (struct lepus_ref_counted *)((char *)base + base->size);
+static void CEF_CALLBACK proton_add_ref(cef_base_ref_counted_t *base) {
+  struct proton_ref_counted *refs =
+      (struct proton_ref_counted *)((char *)base + base->size);
   InterlockedIncrement(&refs->refs);
 }
 
-static int CEF_CALLBACK lepus_release(cef_base_ref_counted_t *base) {
-  struct lepus_ref_counted *refs =
-      (struct lepus_ref_counted *)((char *)base + base->size);
+static int CEF_CALLBACK proton_release(cef_base_ref_counted_t *base) {
+  struct proton_ref_counted *refs =
+      (struct proton_ref_counted *)((char *)base + base->size);
   long value = InterlockedDecrement(&refs->refs);
   if (value <= 0) {
     refs->refs = 1;
@@ -205,42 +205,42 @@ static int CEF_CALLBACK lepus_release(cef_base_ref_counted_t *base) {
   return 0;
 }
 
-static int CEF_CALLBACK lepus_has_one_ref(cef_base_ref_counted_t *base) {
-  struct lepus_ref_counted *refs =
-      (struct lepus_ref_counted *)((char *)base + base->size);
+static int CEF_CALLBACK proton_has_one_ref(cef_base_ref_counted_t *base) {
+  struct proton_ref_counted *refs =
+      (struct proton_ref_counted *)((char *)base + base->size);
   return refs->refs == 1;
 }
 
-static int CEF_CALLBACK lepus_has_at_least_one_ref(
+static int CEF_CALLBACK proton_has_at_least_one_ref(
     cef_base_ref_counted_t *base) {
-  struct lepus_ref_counted *refs =
-      (struct lepus_ref_counted *)((char *)base + base->size);
+  struct proton_ref_counted *refs =
+      (struct proton_ref_counted *)((char *)base + base->size);
   return refs->refs > 0;
 }
 
-static void lepus_init_base(cef_base_ref_counted_t *base, size_t size) {
-  struct lepus_ref_counted *refs =
-      (struct lepus_ref_counted *)((char *)base + size);
+static void proton_init_base(cef_base_ref_counted_t *base, size_t size) {
+  struct proton_ref_counted *refs =
+      (struct proton_ref_counted *)((char *)base + size);
   memset(base, 0, size + sizeof(*refs));
   base->size = size;
-  base->add_ref = lepus_add_ref;
-  base->release = lepus_release;
-  base->has_one_ref = lepus_has_one_ref;
-  base->has_at_least_one_ref = lepus_has_at_least_one_ref;
+  base->add_ref = proton_add_ref;
+  base->release = proton_release;
+  base->has_one_ref = proton_has_one_ref;
+  base->has_at_least_one_ref = proton_has_at_least_one_ref;
   refs->refs = 1;
 }
 
-static void CEF_CALLBACK lepus_task_add_ref(cef_base_ref_counted_t *base) {
-  struct lepus_dispatch_task *task =
-      (struct lepus_dispatch_task *)((char *)base -
-                                     offsetof(struct lepus_dispatch_task, task));
+static void CEF_CALLBACK proton_task_add_ref(cef_base_ref_counted_t *base) {
+  struct proton_dispatch_task *task =
+      (struct proton_dispatch_task *)((char *)base -
+                                     offsetof(struct proton_dispatch_task, task));
   InterlockedIncrement(&task->refs.refs);
 }
 
-static int CEF_CALLBACK lepus_task_release(cef_base_ref_counted_t *base) {
-  struct lepus_dispatch_task *task =
-      (struct lepus_dispatch_task *)((char *)base -
-                                     offsetof(struct lepus_dispatch_task, task));
+static int CEF_CALLBACK proton_task_release(cef_base_ref_counted_t *base) {
+  struct proton_dispatch_task *task =
+      (struct proton_dispatch_task *)((char *)base -
+                                     offsetof(struct proton_dispatch_task, task));
   long value = InterlockedDecrement(&task->refs.refs);
   if (value == 0) {
     if (task->arg != NULL) {
@@ -253,46 +253,46 @@ static int CEF_CALLBACK lepus_task_release(cef_base_ref_counted_t *base) {
   return 0;
 }
 
-static int CEF_CALLBACK lepus_task_has_one_ref(cef_base_ref_counted_t *base) {
-  struct lepus_dispatch_task *task =
-      (struct lepus_dispatch_task *)((char *)base -
-                                     offsetof(struct lepus_dispatch_task, task));
+static int CEF_CALLBACK proton_task_has_one_ref(cef_base_ref_counted_t *base) {
+  struct proton_dispatch_task *task =
+      (struct proton_dispatch_task *)((char *)base -
+                                     offsetof(struct proton_dispatch_task, task));
   return task->refs.refs == 1;
 }
 
-static int CEF_CALLBACK lepus_task_has_at_least_one_ref(
+static int CEF_CALLBACK proton_task_has_at_least_one_ref(
     cef_base_ref_counted_t *base) {
-  struct lepus_dispatch_task *task =
-      (struct lepus_dispatch_task *)((char *)base -
-                                     offsetof(struct lepus_dispatch_task, task));
+  struct proton_dispatch_task *task =
+      (struct proton_dispatch_task *)((char *)base -
+                                     offsetof(struct proton_dispatch_task, task));
   return task->refs.refs > 0;
 }
 
-static void CEF_CALLBACK lepus_dispatch_task_execute(cef_task_t *raw_task) {
-  struct lepus_dispatch_task *task =
-      (struct lepus_dispatch_task *)((char *)raw_task -
-                                     offsetof(struct lepus_dispatch_task, task));
+static void CEF_CALLBACK proton_dispatch_task_execute(cef_task_t *raw_task) {
+  struct proton_dispatch_task *task =
+      (struct proton_dispatch_task *)((char *)raw_task -
+                                     offsetof(struct proton_dispatch_task, task));
   if (task->callback != NULL) {
     task->callback(task->webview, task->arg);
     task->arg = NULL;
   }
 }
 
-static struct lepus_dispatch_task *lepus_dispatch_task_new(
+static struct proton_dispatch_task *proton_dispatch_task_new(
     webview_t webview,
     void (*callback)(webview_t, void *),
     void *arg) {
-  struct lepus_dispatch_task *task =
-      (struct lepus_dispatch_task *)calloc(1, sizeof(*task));
+  struct proton_dispatch_task *task =
+      (struct proton_dispatch_task *)calloc(1, sizeof(*task));
   if (task == NULL) {
     return NULL;
   }
   task->task.base.size = sizeof(task->task);
-  task->task.base.add_ref = lepus_task_add_ref;
-  task->task.base.release = lepus_task_release;
-  task->task.base.has_one_ref = lepus_task_has_one_ref;
-  task->task.base.has_at_least_one_ref = lepus_task_has_at_least_one_ref;
-  task->task.execute = lepus_dispatch_task_execute;
+  task->task.base.add_ref = proton_task_add_ref;
+  task->task.base.release = proton_task_release;
+  task->task.base.has_one_ref = proton_task_has_one_ref;
+  task->task.base.has_at_least_one_ref = proton_task_has_at_least_one_ref;
+  task->task.execute = proton_dispatch_task_execute;
   task->refs.refs = 1;
   task->webview = webview;
   task->callback = callback;
@@ -300,14 +300,14 @@ static struct lepus_dispatch_task *lepus_dispatch_task_new(
   return task;
 }
 
-static void lepus_set_string(cef_string_t *target, const char *value) {
+static void proton_set_string(cef_string_t *target, const char *value) {
   if (value == NULL) {
     value = "";
   }
   cef_string_from_utf8(value, strlen(value), target);
 }
 
-static char *lepus_userfree_to_utf8(cef_string_userfree_t value) {
+static char *proton_userfree_to_utf8(cef_string_userfree_t value) {
   cef_string_utf8_t out = {0};
   char *copy = NULL;
   if (value == NULL) {
@@ -320,27 +320,27 @@ static char *lepus_userfree_to_utf8(cef_string_userfree_t value) {
   return copy;
 }
 
-static char *lepus_v8_to_utf8(cef_v8_value_t *value) {
+static char *proton_v8_to_utf8(cef_v8_value_t *value) {
   if (value == NULL || !value->is_string(value)) {
     return moonbit_webview_strdup("");
   }
-  return lepus_userfree_to_utf8(value->get_string_value(value));
+  return proton_userfree_to_utf8(value->get_string_value(value));
 }
 
-static char *lepus_list_string(cef_list_value_t *list, int index) {
+static char *proton_list_string(cef_list_value_t *list, int index) {
   if (list == NULL || list->get_size(list) <= (size_t)index) {
     return moonbit_webview_strdup("");
   }
-  return lepus_userfree_to_utf8(list->get_string(list, index));
+  return proton_userfree_to_utf8(list->get_string(list, index));
 }
 
-static int lepus_is_data_url_safe(unsigned char value) {
+static int proton_is_data_url_safe(unsigned char value) {
   return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z') ||
          (value >= '0' && value <= '9') || value == '-' || value == '_' ||
          value == '.' || value == '~';
 }
 
-static char *lepus_html_data_url(const char *html) {
+static char *proton_html_data_url(const char *html) {
   static const char hex[] = "0123456789ABCDEF";
   static const char prefix[] = "data:text/html;charset=utf-8,";
   size_t prefix_len = sizeof(prefix) - 1;
@@ -353,7 +353,7 @@ static char *lepus_html_data_url(const char *html) {
   }
   for (i = 0; html[i] != '\0'; ++i) {
     unsigned char ch = (unsigned char)html[i];
-    len += lepus_is_data_url_safe(ch) ? 1 : 3;
+    len += proton_is_data_url_safe(ch) ? 1 : 3;
   }
   url = (char *)malloc(prefix_len + len + 1);
   if (url == NULL) {
@@ -363,7 +363,7 @@ static char *lepus_html_data_url(const char *html) {
   out = url + prefix_len;
   for (i = 0; html[i] != '\0'; ++i) {
     unsigned char ch = (unsigned char)html[i];
-    if (lepus_is_data_url_safe(ch)) {
+    if (proton_is_data_url_safe(ch)) {
       *out++ = (char)ch;
     } else {
       *out++ = '%';
@@ -375,7 +375,7 @@ static char *lepus_html_data_url(const char *html) {
   return url;
 }
 
-static char *lepus_path_join(const char *left, const char *right) {
+static char *proton_path_join(const char *left, const char *right) {
   size_t left_len;
   size_t right_len;
   int needs_separator;
@@ -402,7 +402,7 @@ static char *lepus_path_join(const char *left, const char *right) {
   return out;
 }
 
-static int lepus_path_file_exists(const char *path) {
+static int proton_path_file_exists(const char *path) {
   DWORD attributes;
   if (path == NULL || path[0] == '\0') {
     return 0;
@@ -412,7 +412,7 @@ static int lepus_path_file_exists(const char *path) {
          (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
-static const char *lepus_executable_dir_path(void) {
+static const char *proton_executable_dir_path(void) {
   static char dir[MAX_PATH];
   static int initialized = 0;
   DWORD len;
@@ -440,7 +440,7 @@ static const char *lepus_executable_dir_path(void) {
   return dir;
 }
 
-static int lepus_cef_root_runtime_available(const char *root) {
+static int proton_cef_root_runtime_available(const char *root) {
   char *release_dir = NULL;
   char *dll_path = NULL;
   char *resources_dir = NULL;
@@ -449,16 +449,16 @@ static int lepus_cef_root_runtime_available(const char *root) {
   if (root == NULL || root[0] == '\0') {
     return 0;
   }
-  release_dir = lepus_path_join(root, "Release");
+  release_dir = proton_path_join(root, "Release");
   if (release_dir != NULL) {
-    dll_path = lepus_path_join(release_dir, "libcef.dll");
+    dll_path = proton_path_join(release_dir, "libcef.dll");
   }
-  resources_dir = lepus_path_join(root, "Resources");
+  resources_dir = proton_path_join(root, "Resources");
   if (resources_dir != NULL) {
-    icudtl_path = lepus_path_join(resources_dir, "icudtl.dat");
+    icudtl_path = proton_path_join(resources_dir, "icudtl.dat");
   }
-  available = lepus_path_file_exists(dll_path) &&
-              lepus_path_file_exists(icudtl_path);
+  available = proton_path_file_exists(dll_path) &&
+              proton_path_file_exists(icudtl_path);
   free(release_dir);
   free(dll_path);
   free(resources_dir);
@@ -466,63 +466,63 @@ static int lepus_cef_root_runtime_available(const char *root) {
   return available;
 }
 
-static const char *lepus_default_cef_root_path(void) {
+static const char *proton_default_cef_root_path(void) {
   const char *exe_dir;
-  if (lepus_cef_root_runtime_available(LEPUS_CEF_ROOT_PATH)) {
-    return LEPUS_CEF_ROOT_PATH;
+  if (proton_cef_root_runtime_available(PROTON_CEF_ROOT_PATH)) {
+    return PROTON_CEF_ROOT_PATH;
   }
-  exe_dir = lepus_executable_dir_path();
-  if (lepus_cef_root_runtime_available(exe_dir)) {
+  exe_dir = proton_executable_dir_path();
+  if (proton_cef_root_runtime_available(exe_dir)) {
     return exe_dir;
   }
-  return LEPUS_CEF_ROOT_PATH;
+  return PROTON_CEF_ROOT_PATH;
 }
 
-static const char *lepus_cef_root_path(void) {
-  const char *env = getenv("LEPUS_CEF_ROOT");
+static const char *proton_cef_root_path(void) {
+  const char *env = getenv("PROTON_CEF_ROOT");
   if (env != NULL && env[0] != '\0') {
     return env;
   }
-  return lepus_default_cef_root_path();
+  return proton_default_cef_root_path();
 }
 
-static const char *lepus_default_cef_subprocess_path(void) {
+static const char *proton_default_cef_subprocess_path(void) {
   static char subprocess_path[MAX_PATH];
   const char *exe_dir;
   char *joined;
-  if (LEPUS_CEF_SUBPROCESS_PATH[0] != '\0' &&
-      lepus_path_file_exists(LEPUS_CEF_SUBPROCESS_PATH)) {
-    return LEPUS_CEF_SUBPROCESS_PATH;
+  if (PROTON_CEF_SUBPROCESS_PATH[0] != '\0' &&
+      proton_path_file_exists(PROTON_CEF_SUBPROCESS_PATH)) {
+    return PROTON_CEF_SUBPROCESS_PATH;
   }
-  exe_dir = lepus_executable_dir_path();
-  joined = lepus_path_join(exe_dir, "cef_process.exe");
+  exe_dir = proton_executable_dir_path();
+  joined = proton_path_join(exe_dir, "cef_process.exe");
   if (joined != NULL) {
     if (strlen(joined) < sizeof(subprocess_path)) {
       memcpy(subprocess_path, joined, strlen(joined) + 1);
       free(joined);
-      if (lepus_path_file_exists(subprocess_path)) {
+      if (proton_path_file_exists(subprocess_path)) {
         return subprocess_path;
       }
     } else {
       free(joined);
     }
   }
-  if (LEPUS_CEF_SUBPROCESS_PATH[0] != '\0') {
-    return LEPUS_CEF_SUBPROCESS_PATH;
+  if (PROTON_CEF_SUBPROCESS_PATH[0] != '\0') {
+    return PROTON_CEF_SUBPROCESS_PATH;
   }
   return subprocess_path;
 }
 
-static const char *lepus_cef_subprocess_path(void) {
-  const char *env = getenv("LEPUS_CEF_SUBPROCESS_PATH");
+static const char *proton_cef_subprocess_path(void) {
+  const char *env = getenv("PROTON_CEF_SUBPROCESS_PATH");
   if (env != NULL && env[0] != '\0') {
     return env;
   }
-  return lepus_default_cef_subprocess_path();
+  return proton_default_cef_subprocess_path();
 }
 
-static int lepus_cef_remote_debugging_port(void) {
-  const char *env = getenv("LEPUS_CEF_REMOTE_DEBUGGING_PORT");
+static int proton_cef_remote_debugging_port(void) {
+  const char *env = getenv("PROTON_CEF_REMOTE_DEBUGGING_PORT");
   char *end = NULL;
   long port;
   if (env == NULL || env[0] == '\0') {
@@ -531,18 +531,18 @@ static int lepus_cef_remote_debugging_port(void) {
   port = strtol(env, &end, 10);
   if (end == env || *end != '\0' || port < 0 || port > 65535) {
     fprintf(stderr,
-            "Ignoring invalid LEPUS_CEF_REMOTE_DEBUGGING_PORT value: %s\n",
+            "Ignoring invalid PROTON_CEF_REMOTE_DEBUGGING_PORT value: %s\n",
             env);
     return 0;
   }
   return (int)port;
 }
 
-static int lepus_file_exists(const char *path) {
-  return lepus_path_file_exists(path);
+static int proton_file_exists(const char *path) {
+  return proton_path_file_exists(path);
 }
 
-static void lepus_prepend_env_path(const char *dir) {
+static void proton_prepend_env_path(const char *dir) {
   DWORD old_len;
   char *old_path = NULL;
   char *new_path;
@@ -583,9 +583,9 @@ static void lepus_prepend_env_path(const char *dir) {
   free(new_path);
 }
 
-static int lepus_cef_runtime_files_available(void) {
-  const char *cef_root = lepus_cef_root_path();
-  const char *subprocess_path = lepus_cef_subprocess_path();
+static int proton_cef_runtime_files_available(void) {
+  const char *cef_root = proton_cef_root_path();
+  const char *subprocess_path = proton_cef_subprocess_path();
   char *release_dir = NULL;
   char *dll_path = NULL;
   char *resources_dir = NULL;
@@ -594,17 +594,17 @@ static int lepus_cef_runtime_files_available(void) {
   if (cef_root == NULL || cef_root[0] == '\0') {
     return 0;
   }
-  release_dir = lepus_path_join(cef_root, "Release");
+  release_dir = proton_path_join(cef_root, "Release");
   if (release_dir != NULL) {
-    dll_path = lepus_path_join(release_dir, "libcef.dll");
+    dll_path = proton_path_join(release_dir, "libcef.dll");
   }
-  resources_dir = lepus_path_join(cef_root, "Resources");
+  resources_dir = proton_path_join(cef_root, "Resources");
   if (resources_dir != NULL) {
-    icudtl_path = lepus_path_join(resources_dir, "icudtl.dat");
+    icudtl_path = proton_path_join(resources_dir, "icudtl.dat");
   }
-  available = lepus_file_exists(dll_path) &&
-              lepus_file_exists(icudtl_path) &&
-              lepus_file_exists(subprocess_path);
+  available = proton_file_exists(dll_path) &&
+              proton_file_exists(icudtl_path) &&
+              proton_file_exists(subprocess_path);
   free(release_dir);
   free(dll_path);
   free(resources_dir);
@@ -612,38 +612,38 @@ static int lepus_cef_runtime_files_available(void) {
   return available;
 }
 
-static void lepus_prepare_cef_runtime(const char *cef_root) {
+static void proton_prepare_cef_runtime(const char *cef_root) {
   char *release_dir = NULL;
   char *dll_path = NULL;
   const char *load_path = "libcef.dll";
   DWORD flags = 0;
   DWORD error;
-  if (lepus_cef_module != NULL) {
+  if (proton_cef_module != NULL) {
     return;
   }
   if (cef_root != NULL && cef_root[0] != '\0') {
-    release_dir = lepus_path_join(cef_root, "Release");
+    release_dir = proton_path_join(cef_root, "Release");
     if (release_dir != NULL) {
-      lepus_prepend_env_path(release_dir);
-      dll_path = lepus_path_join(release_dir, "libcef.dll");
+      proton_prepend_env_path(release_dir);
+      dll_path = proton_path_join(release_dir, "libcef.dll");
     }
     if (dll_path != NULL) {
       load_path = dll_path;
       flags = LOAD_WITH_ALTERED_SEARCH_PATH;
     }
   }
-  lepus_trace("load libcef");
-  lepus_cef_module = LoadLibraryExA(load_path, NULL, flags);
-  if (lepus_cef_module == NULL) {
+  proton_trace("load libcef");
+  proton_cef_module = LoadLibraryExA(load_path, NULL, flags);
+  if (proton_cef_module == NULL) {
     error = GetLastError();
     if (cef_root != NULL && cef_root[0] != '\0') {
       fprintf(stderr,
-              "Lepus CEF runtime DLL could not be loaded from %s "
+              "Proton CEF runtime DLL could not be loaded from %s "
               "(GetLastError=%lu).\n",
               load_path, (unsigned long)error);
     } else {
       fprintf(stderr,
-              "Lepus CEF runtime DLL could not be loaded "
+              "Proton CEF runtime DLL could not be loaded "
               "(GetLastError=%lu). Install CEF with "
               "`node .\\scripts\\setup_cef.mjs` before building, or package "
               "the CEF runtime beside the app executable.\n",
@@ -656,7 +656,7 @@ static void lepus_prepare_cef_runtime(const char *cef_root) {
   free(dll_path);
 }
 
-static char *lepus_temp_path_join(const char *name) {
+static char *proton_temp_path_join(const char *name) {
   DWORD len = GetTempPathA(0, NULL);
   char *tmp;
   char *out;
@@ -671,36 +671,36 @@ static char *lepus_temp_path_join(const char *name) {
     free(tmp);
     return moonbit_webview_strdup(name);
   }
-  out = lepus_path_join(tmp, name);
+  out = proton_path_join(tmp, name);
   free(tmp);
   return out;
 }
 
-static char *lepus_cache_path_for_process(void) {
+static char *proton_cache_path_for_process(void) {
   char name[64];
-  snprintf(name, sizeof(name), "lepus-cef-cache-%lu", GetCurrentProcessId());
-  return lepus_temp_path_join(name);
+  snprintf(name, sizeof(name), "proton-cef-cache-%lu", GetCurrentProcessId());
+  return proton_temp_path_join(name);
 }
 
-static void lepus_release_browser(cef_browser_t *browser) {
+static void proton_release_browser(cef_browser_t *browser) {
   if (browser != NULL) {
     browser->base.release((cef_base_ref_counted_t *)browser);
   }
 }
 
-static void lepus_addref_browser(cef_browser_t *browser) {
+static void proton_addref_browser(cef_browser_t *browser) {
   if (browser != NULL) {
     browser->base.add_ref((cef_base_ref_counted_t *)browser);
   }
 }
 
-static void lepus_webview_list_add(struct moonbit_webview *w) {
-  w->next = lepus_webviews;
-  lepus_webviews = w;
+static void proton_webview_list_add(struct moonbit_webview *w) {
+  w->next = proton_webviews;
+  proton_webviews = w;
 }
 
-static void lepus_webview_list_remove(struct moonbit_webview *w) {
-  struct moonbit_webview **cursor = &lepus_webviews;
+static void proton_webview_list_remove(struct moonbit_webview *w) {
+  struct moonbit_webview **cursor = &proton_webviews;
   while (*cursor != NULL) {
     if (*cursor == w) {
       *cursor = w->next;
@@ -711,7 +711,7 @@ static void lepus_webview_list_remove(struct moonbit_webview *w) {
   }
 }
 
-static struct moonbit_webview *lepus_webview_from_browser(
+static struct moonbit_webview *proton_webview_from_browser(
     cef_browser_t *browser) {
   int identifier;
   struct moonbit_webview *cursor;
@@ -719,7 +719,7 @@ static struct moonbit_webview *lepus_webview_from_browser(
     return NULL;
   }
   identifier = browser->get_identifier(browser);
-  for (cursor = lepus_webviews; cursor != NULL; cursor = cursor->next) {
+  for (cursor = proton_webviews; cursor != NULL; cursor = cursor->next) {
     if (cursor->browser != NULL &&
         cursor->browser->get_identifier(cursor->browser) == identifier) {
       return cursor;
@@ -728,7 +728,7 @@ static struct moonbit_webview *lepus_webview_from_browser(
   return NULL;
 }
 
-static struct moonbit_webview_binding *lepus_find_binding(
+static struct moonbit_webview_binding *proton_find_binding(
     struct moonbit_webview *w,
     const char *name) {
   struct moonbit_webview_binding *binding;
@@ -743,20 +743,20 @@ static struct moonbit_webview_binding *lepus_find_binding(
   return NULL;
 }
 
-static void lepus_frame_execute(cef_frame_t *frame, const char *script) {
+static void proton_frame_execute(cef_frame_t *frame, const char *script) {
   cef_string_t code = {0};
   cef_string_t url = {0};
   if (frame == NULL || script == NULL) {
     return;
   }
-  lepus_set_string(&code, script);
-  lepus_set_string(&url, "lepus://native");
+  proton_set_string(&code, script);
+  proton_set_string(&url, "proton://native");
   frame->execute_java_script(frame, &code, &url, 1);
   cef_string_clear(&code);
   cef_string_clear(&url);
 }
 
-static void lepus_context_eval(cef_v8_context_t *context, const char *script) {
+static void proton_context_eval(cef_v8_context_t *context, const char *script) {
   cef_string_t code = {0};
   cef_string_t url = {0};
   cef_v8_value_t *result = NULL;
@@ -764,8 +764,8 @@ static void lepus_context_eval(cef_v8_context_t *context, const char *script) {
   if (context == NULL || script == NULL) {
     return;
   }
-  lepus_set_string(&code, script);
-  lepus_set_string(&url, "lepus://init");
+  proton_set_string(&code, script);
+  proton_set_string(&url, "proton://init");
   context->eval(context, &code, &url, 1, &result, &exception);
   cef_string_clear(&code);
   cef_string_clear(&url);
@@ -777,18 +777,18 @@ static void lepus_context_eval(cef_v8_context_t *context, const char *script) {
   }
 }
 
-static void lepus_render_store_init_script(int browser_id, const char *script) {
-  struct lepus_render_init_script *entry;
-  struct lepus_render_init_script *cursor;
+static void proton_render_store_init_script(int browser_id, const char *script) {
+  struct proton_render_init_script *entry;
+  struct proton_render_init_script *cursor;
   if (script == NULL) {
     script = "";
   }
-  for (cursor = lepus_render_init_scripts; cursor != NULL; cursor = cursor->next) {
+  for (cursor = proton_render_init_scripts; cursor != NULL; cursor = cursor->next) {
     if (cursor->browser_id == browser_id && strcmp(cursor->script, script) == 0) {
       return;
     }
   }
-  entry = (struct lepus_render_init_script *)calloc(1, sizeof(*entry));
+  entry = (struct proton_render_init_script *)calloc(1, sizeof(*entry));
   if (entry == NULL) {
     return;
   }
@@ -798,32 +798,32 @@ static void lepus_render_store_init_script(int browser_id, const char *script) {
     free(entry);
     return;
   }
-  if (lepus_render_init_scripts == NULL) {
-    lepus_render_init_scripts = entry;
+  if (proton_render_init_scripts == NULL) {
+    proton_render_init_scripts = entry;
     return;
   }
-  for (cursor = lepus_render_init_scripts; cursor->next != NULL; cursor = cursor->next) {
+  for (cursor = proton_render_init_scripts; cursor->next != NULL; cursor = cursor->next) {
   }
   cursor->next = entry;
 }
 
-static void lepus_render_eval_init_scripts(
+static void proton_render_eval_init_scripts(
     cef_browser_t *browser,
     cef_v8_context_t *context) {
   int browser_id;
-  struct lepus_render_init_script *entry;
+  struct proton_render_init_script *entry;
   if (browser == NULL || context == NULL) {
     return;
   }
   browser_id = browser->get_identifier(browser);
-  for (entry = lepus_render_init_scripts; entry != NULL; entry = entry->next) {
+  for (entry = proton_render_init_scripts; entry != NULL; entry = entry->next) {
     if (entry->browser_id == browser_id) {
-      lepus_context_eval(context, entry->script);
+      proton_context_eval(context, entry->script);
     }
   }
 }
 
-static char *lepus_js_quote(const char *value) {
+static char *proton_js_quote(const char *value) {
   size_t len = 3;
   const char *p;
   char *out;
@@ -859,7 +859,7 @@ static char *lepus_js_quote(const char *value) {
   return out;
 }
 
-static void lepus_install_binding_script_on_frame(
+static void proton_install_binding_script_on_frame(
     cef_frame_t *frame,
     const char *name) {
   char *quoted;
@@ -868,8 +868,8 @@ static void lepus_install_binding_script_on_frame(
   if (frame == NULL || name == NULL) {
     return;
   }
-  lepus_trace("install binding script");
-  quoted = lepus_js_quote(name);
+  proton_trace("install binding script");
+  quoted = proton_js_quote(name);
   if (quoted == NULL) {
     return;
   }
@@ -881,27 +881,27 @@ static void lepus_install_binding_script_on_frame(
         len,
         "(function(){"
         "var n=%s;"
-        "var native=window.__lepusNativeInvoke;"
+        "var native=window.__protonNativeInvoke;"
         "if(typeof native!=='function')return;"
-        "if(!window.__lepusNativePending)window.__lepusNativePending=Object.create(null);"
-        "if(!window.__lepusNativeResolve){window.__lepusNativeResolve=function(id,status,result){"
-        "var p=window.__lepusNativePending[id];delete window.__lepusNativePending[id];"
+        "if(!window.__protonNativePending)window.__protonNativePending=Object.create(null);"
+        "if(!window.__protonNativeResolve){window.__protonNativeResolve=function(id,status,result){"
+        "var p=window.__protonNativePending[id];delete window.__protonNativePending[id];"
         "if(!p)return;try{if(status===0){p.resolve(result===''?undefined:JSON.parse(result));}"
         "else{p.reject(new Error(result===''?'native binding failed':JSON.parse(result)));}}"
         "catch(e){p.reject(e);}};}"
         "window[n]=function(){var args=Array.prototype.slice.call(arguments);"
         "return new Promise(function(resolve,reject){"
-        "try{var id=native(n,JSON.stringify(args));window.__lepusNativePending[id]={resolve:resolve,reject:reject};}"
+        "try{var id=native(n,JSON.stringify(args));window.__protonNativePending[id]={resolve:resolve,reject:reject};}"
         "catch(e){reject(e);}});};"
         "})();",
         quoted);
-    lepus_frame_execute(frame, script);
+    proton_frame_execute(frame, script);
     free(script);
   }
   free(quoted);
 }
 
-static void lepus_install_binding_script(
+static void proton_install_binding_script(
     struct moonbit_webview *w,
     const char *name) {
   cef_frame_t *frame;
@@ -916,14 +916,14 @@ static void lepus_install_binding_script(
   if (frame == NULL) {
     return;
   }
-  lepus_trace("send install binding");
-  lepus_set_string(&message_name, LEPUS_CEF_MESSAGE_INSTALL_BINDING);
+  proton_trace("send install binding");
+  proton_set_string(&message_name, PROTON_CEF_MESSAGE_INSTALL_BINDING);
   message = cef_process_message_create(&message_name);
   cef_string_clear(&message_name);
   if (message != NULL) {
     list = message->get_argument_list(message);
     list->set_size(list, 1);
-    lepus_set_string(&binding_name, name);
+    proton_set_string(&binding_name, name);
     list->set_string(list, 0, &binding_name);
     cef_string_clear(&binding_name);
     frame->send_process_message(frame, PID_RENDERER, message);
@@ -931,7 +931,7 @@ static void lepus_install_binding_script(
   frame->base.release((cef_base_ref_counted_t *)frame);
 }
 
-static void lepus_send_init_script(
+static void proton_send_init_script(
     struct moonbit_webview *w,
     const char *script) {
   cef_frame_t *frame;
@@ -946,14 +946,14 @@ static void lepus_send_init_script(
   if (frame == NULL) {
     return;
   }
-  lepus_trace("send init script");
-  lepus_set_string(&message_name, LEPUS_CEF_MESSAGE_INIT_SCRIPT);
+  proton_trace("send init script");
+  proton_set_string(&message_name, PROTON_CEF_MESSAGE_INIT_SCRIPT);
   message = cef_process_message_create(&message_name);
   cef_string_clear(&message_name);
   if (message != NULL) {
     list = message->get_argument_list(message);
     list->set_size(list, 1);
-    lepus_set_string(&script_string, script);
+    proton_set_string(&script_string, script);
     list->set_string(list, 0, &script_string);
     cef_string_clear(&script_string);
     frame->send_process_message(frame, PID_RENDERER, message);
@@ -961,24 +961,24 @@ static void lepus_send_init_script(
   frame->base.release((cef_base_ref_counted_t *)frame);
 }
 
-static void lepus_send_all_init_scripts(struct moonbit_webview *w) {
+static void proton_send_all_init_scripts(struct moonbit_webview *w) {
   struct moonbit_webview_init_script *entry;
   if (w == NULL) {
     return;
   }
   for (entry = w->init_scripts; entry != NULL; entry = entry->next) {
-    lepus_send_init_script(w, entry->script);
+    proton_send_init_script(w, entry->script);
   }
 }
 
-static void lepus_install_all_bindings(struct moonbit_webview *w) {
+static void proton_install_all_bindings(struct moonbit_webview *w) {
   struct moonbit_webview_binding *binding;
   for (binding = w->bindings; binding != NULL; binding = binding->next) {
-    lepus_install_binding_script(w, binding->name);
+    proton_install_binding_script(w, binding->name);
   }
 }
 
-static int lepus_store_init_script(
+static int proton_store_init_script(
     struct moonbit_webview *w,
     const char *script) {
   struct moonbit_webview_init_script *entry;
@@ -1005,7 +1005,7 @@ static int lepus_store_init_script(
   return 1;
 }
 
-static void lepus_response_script_for_browser(
+static void proton_response_script_for_browser(
     cef_browser_t *browser,
     const char *seq,
     int status,
@@ -1022,8 +1022,8 @@ static void lepus_response_script_for_browser(
   if (frame == NULL) {
     return;
   }
-  quoted_seq = lepus_js_quote(seq);
-  quoted_result = lepus_js_quote(result);
+  quoted_seq = proton_js_quote(seq);
+  quoted_result = proton_js_quote(result);
   if (quoted_seq == NULL || quoted_result == NULL) {
     free(quoted_seq);
     free(quoted_result);
@@ -1035,18 +1035,18 @@ static void lepus_response_script_for_browser(
     snprintf(
         script,
         len,
-        "if(window.__lepusNativeResolve)window.__lepusNativeResolve(%s,%d,%s);",
+        "if(window.__protonNativeResolve)window.__protonNativeResolve(%s,%d,%s);",
         quoted_seq,
         status,
         quoted_result);
-    lepus_frame_execute(frame, script);
+    proton_frame_execute(frame, script);
     free(script);
   }
   free(quoted_seq);
   free(quoted_result);
 }
 
-static void lepus_response_script(
+static void proton_response_script(
     struct moonbit_webview *w,
     const char *seq,
     int status,
@@ -1054,10 +1054,10 @@ static void lepus_response_script(
   if (w == NULL) {
     return;
   }
-  lepus_response_script_for_browser(w->browser, seq, status, result);
+  proton_response_script_for_browser(w->browser, seq, status, result);
 }
 
-static void lepus_send_response_to_renderer(
+static void proton_send_response_to_renderer(
     struct moonbit_webview *w,
     const char *seq,
     int status,
@@ -1075,7 +1075,7 @@ static void lepus_send_response_to_renderer(
   if (frame == NULL) {
     return;
   }
-  lepus_set_string(&message_name, LEPUS_CEF_MESSAGE_RESPONSE);
+  proton_set_string(&message_name, PROTON_CEF_MESSAGE_RESPONSE);
   message = cef_process_message_create(&message_name);
   cef_string_clear(&message_name);
   if (message == NULL) {
@@ -1084,8 +1084,8 @@ static void lepus_send_response_to_renderer(
   }
   list = message->get_argument_list(message);
   list->set_size(list, 3);
-  lepus_set_string(&seq_string, seq);
-  lepus_set_string(&result_string, result != NULL ? result : "");
+  proton_set_string(&seq_string, seq);
+  proton_set_string(&result_string, result != NULL ? result : "");
   list->set_string(list, 0, &seq_string);
   list->set_int(list, 1, status);
   list->set_string(list, 2, &result_string);
@@ -1095,7 +1095,7 @@ static void lepus_send_response_to_renderer(
   frame->base.release((cef_base_ref_counted_t *)frame);
 }
 
-static void lepus_queue_op(
+static void proton_queue_op(
     struct moonbit_webview *w,
     int type,
     const char *value,
@@ -1128,33 +1128,33 @@ static void lepus_queue_op(
   }
 }
 
-static void lepus_apply_op(struct moonbit_webview *w, struct moonbit_webview_op *op);
+static void proton_apply_op(struct moonbit_webview *w, struct moonbit_webview_op *op);
 
-static void lepus_flush_ops(struct moonbit_webview *w) {
+static void proton_flush_ops(struct moonbit_webview *w) {
   struct moonbit_webview_op *op = w->op_head;
   w->op_head = NULL;
   w->op_tail = NULL;
   while (op != NULL) {
     struct moonbit_webview_op *next = op->next;
-    lepus_apply_op(w, op);
+    proton_apply_op(w, op);
     free(op->value);
     free(op);
     op = next;
   }
 }
 
-static void lepus_flush_dispatch(webview_t raw, void *arg) {
+static void proton_flush_dispatch(webview_t raw, void *arg) {
   (void)arg;
-  lepus_flush_ops((struct moonbit_webview *)raw);
+  proton_flush_ops((struct moonbit_webview *)raw);
 }
 
-static void lepus_install_bindings_dispatch(webview_t raw, void *arg) {
+static void proton_install_bindings_dispatch(webview_t raw, void *arg) {
   (void)arg;
-  lepus_trace("delayed install bindings");
-  lepus_install_all_bindings((struct moonbit_webview *)raw);
+  proton_trace("delayed install bindings");
+  proton_install_all_bindings((struct moonbit_webview *)raw);
 }
 
-static LRESULT CALLBACK lepus_window_proc(
+static LRESULT CALLBACK proton_window_proc(
     HWND hwnd,
     UINT msg,
     WPARAM wparam,
@@ -1162,10 +1162,10 @@ static LRESULT CALLBACK lepus_window_proc(
   struct moonbit_webview *w =
       (struct moonbit_webview *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
   switch (msg) {
-  case LEPUS_WM_FLUSH_OPS:
+  case PROTON_WM_FLUSH_OPS:
     if (w != NULL) {
-      lepus_trace("flush ops");
-      lepus_flush_ops(w);
+      proton_trace("flush ops");
+      proton_flush_ops(w);
     }
     return 0;
   case WM_SIZE:
@@ -1209,22 +1209,22 @@ static LRESULT CALLBACK lepus_window_proc(
   return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
-static void lepus_register_window_class(void) {
+static void proton_register_window_class(void) {
   static int registered = 0;
   WNDCLASSW wc;
   if (registered) {
     return;
   }
   memset(&wc, 0, sizeof(wc));
-  wc.lpfnWndProc = lepus_window_proc;
+  wc.lpfnWndProc = proton_window_proc;
   wc.hInstance = GetModuleHandleW(NULL);
-  wc.lpszClassName = LEPUS_CEF_CLASS_NAME;
+  wc.lpszClassName = PROTON_CEF_CLASS_NAME;
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);
   RegisterClassW(&wc);
   registered = 1;
 }
 
-static void lepus_on_before_command_line_processing(
+static void proton_on_before_command_line_processing(
     cef_app_t *self,
     const cef_string_t *process_type,
     cef_command_line_t *command_line) {
@@ -1236,24 +1236,24 @@ static void lepus_on_before_command_line_processing(
   if (command_line != NULL) {
     cef_string_t switch_name = {0};
     cef_string_t switch_value = {0};
-    lepus_set_string(&switch_name, "disable-gpu");
+    proton_set_string(&switch_name, "disable-gpu");
     command_line->append_switch(command_line, &switch_name);
     cef_string_clear(&switch_name);
-    cef_root = lepus_cef_root_path();
+    cef_root = proton_cef_root_path();
     if (cef_root != NULL && cef_root[0] != '\0') {
-      resources_dir = lepus_path_join(cef_root, "Resources");
+      resources_dir = proton_path_join(cef_root, "Resources");
       if (resources_dir != NULL) {
-        lepus_set_string(&switch_name, "resources-dir-path");
-        lepus_set_string(&switch_value, resources_dir);
+        proton_set_string(&switch_name, "resources-dir-path");
+        proton_set_string(&switch_value, resources_dir);
         command_line->append_switch_with_value(
             command_line, &switch_name, &switch_value);
         cef_string_clear(&switch_name);
         cef_string_clear(&switch_value);
-        locales_dir = lepus_path_join(resources_dir, "locales");
+        locales_dir = proton_path_join(resources_dir, "locales");
       }
       if (locales_dir != NULL) {
-        lepus_set_string(&switch_name, "locales-dir-path");
-        lepus_set_string(&switch_value, locales_dir);
+        proton_set_string(&switch_name, "locales-dir-path");
+        proton_set_string(&switch_value, locales_dir);
         command_line->append_switch_with_value(
             command_line, &switch_name, &switch_value);
         cef_string_clear(&switch_name);
@@ -1265,13 +1265,13 @@ static void lepus_on_before_command_line_processing(
   free(locales_dir);
 }
 
-static cef_render_process_handler_t *CEF_CALLBACK lepus_get_render_handler(
+static cef_render_process_handler_t *CEF_CALLBACK proton_get_render_handler(
     cef_app_t *self) {
   (void)self;
-  return &lepus_app_instance.render;
+  return &proton_app_instance.render;
 }
 
-static int CEF_CALLBACK lepus_v8_execute(
+static int CEF_CALLBACK proton_v8_execute(
     cef_v8_handler_t *self,
     const cef_string_t *name,
     cef_v8_value_t *object,
@@ -1300,7 +1300,7 @@ static int CEF_CALLBACK lepus_v8_execute(
     *retval = cef_v8_value_create_undefined();
     return 1;
   }
-  lepus_trace("v8 invoke");
+  proton_trace("v8 invoke");
   context = cef_v8_context_get_current_context();
   if (context == NULL) {
     *retval = cef_v8_value_create_undefined();
@@ -1319,18 +1319,18 @@ static int CEF_CALLBACK lepus_v8_execute(
     *retval = cef_v8_value_create_undefined();
     return 1;
   }
-  binding_name = lepus_v8_to_utf8(arguments[0]);
-  request_json = lepus_v8_to_utf8(arguments[1]);
+  binding_name = proton_v8_to_utf8(arguments[0]);
+  request_json = proton_v8_to_utf8(arguments[1]);
   snprintf(seq, sizeof(seq), "cef:%ld", InterlockedIncrement(&request_id));
-  lepus_set_string(&message_name, LEPUS_CEF_MESSAGE_INVOKE);
+  proton_set_string(&message_name, PROTON_CEF_MESSAGE_INVOKE);
   message = cef_process_message_create(&message_name);
   cef_string_clear(&message_name);
   if (message != NULL) {
     list = message->get_argument_list(message);
     list->set_size(list, 3);
-    lepus_set_string(&seq_string, seq);
-    lepus_set_string(&binding_string, binding_name);
-    lepus_set_string(&request_string, request_json);
+    proton_set_string(&seq_string, seq);
+    proton_set_string(&binding_string, binding_name);
+    proton_set_string(&request_string, request_json);
     list->set_string(list, 0, &seq_string);
     list->set_string(list, 1, &binding_string);
     list->set_string(list, 2, &request_string);
@@ -1341,7 +1341,7 @@ static int CEF_CALLBACK lepus_v8_execute(
   }
   free(binding_name);
   free(request_json);
-  lepus_set_string(&seq_string, seq);
+  proton_set_string(&seq_string, seq);
   *retval = cef_v8_value_create_string(&seq_string);
   cef_string_clear(&seq_string);
   frame->base.release((cef_base_ref_counted_t *)frame);
@@ -1350,7 +1350,7 @@ static int CEF_CALLBACK lepus_v8_execute(
   return 1;
 }
 
-static void CEF_CALLBACK lepus_on_context_created(
+static void CEF_CALLBACK proton_on_context_created(
     cef_render_process_handler_t *self,
     cef_browser_t *browser,
     cef_frame_t *frame,
@@ -1363,24 +1363,24 @@ static void CEF_CALLBACK lepus_on_context_created(
   cef_string_t message_name = {0};
   (void)self;
   (void)browser;
-  lepus_trace("context created");
+  proton_trace("context created");
   if (context == NULL || !context->enter(context)) {
     return;
   }
   global = context->get_global(context);
-  lepus_set_string(&function_name, "__lepusNativeInvoke");
-  function = cef_v8_value_create_function(&function_name, &lepus_app_instance.v8);
+  proton_set_string(&function_name, "__protonNativeInvoke");
+  function = cef_v8_value_create_function(&function_name, &proton_app_instance.v8);
   if (global != NULL && function != NULL) {
     global->set_value_bykey(global, &function_name, function, V8_PROPERTY_ATTRIBUTE_NONE);
   }
-  lepus_render_eval_init_scripts(browser, context);
+  proton_render_eval_init_scripts(browser, context);
   {
     cef_string_t ready_code = {0};
     cef_string_t ready_url = {0};
     cef_v8_value_t *ready_result = NULL;
     cef_v8_exception_t *ready_exception = NULL;
-    lepus_set_string(&ready_code, "__lepusNativeInvoke('__lepusReady','[]');");
-    lepus_set_string(&ready_url, "lepus://ready");
+    proton_set_string(&ready_code, "__protonNativeInvoke('__protonReady','[]');");
+    proton_set_string(&ready_url, "proton://ready");
     context->eval(context, &ready_code, &ready_url, 1, &ready_result, &ready_exception);
     cef_string_clear(&ready_code);
     cef_string_clear(&ready_url);
@@ -1404,7 +1404,7 @@ static void CEF_CALLBACK lepus_on_context_created(
   cef_string_clear(&function_name);
   context->exit(context);
   if (message_frame != NULL) {
-    lepus_set_string(&message_name, LEPUS_CEF_MESSAGE_CONTEXT_READY);
+    proton_set_string(&message_name, PROTON_CEF_MESSAGE_CONTEXT_READY);
     message = cef_process_message_create(&message_name);
     cef_string_clear(&message_name);
     if (message != NULL) {
@@ -1416,7 +1416,7 @@ static void CEF_CALLBACK lepus_on_context_created(
   }
 }
 
-static int CEF_CALLBACK lepus_render_message(
+static int CEF_CALLBACK proton_render_message(
     cef_render_process_handler_t *self,
     cef_browser_t *browser,
     cef_frame_t *frame,
@@ -1434,75 +1434,75 @@ static int CEF_CALLBACK lepus_render_message(
   (void)frame;
   (void)source_process;
   raw_name = message->get_name(message);
-  message_name = lepus_userfree_to_utf8(raw_name);
-  if (strcmp(message_name, LEPUS_CEF_MESSAGE_INSTALL_BINDING) == 0) {
-    lepus_trace("renderer install binding message");
+  message_name = proton_userfree_to_utf8(raw_name);
+  if (strcmp(message_name, PROTON_CEF_MESSAGE_INSTALL_BINDING) == 0) {
+    proton_trace("renderer install binding message");
     free(message_name);
     list = message->get_argument_list(message);
-    binding_name = lepus_list_string(list, 0);
+    binding_name = proton_list_string(list, 0);
     if (frame != NULL) {
-      lepus_install_binding_script_on_frame(frame, binding_name);
+      proton_install_binding_script_on_frame(frame, binding_name);
     } else if (browser != NULL) {
       cef_frame_t *main_frame = browser->get_main_frame(browser);
       if (main_frame != NULL) {
-        lepus_install_binding_script_on_frame(main_frame, binding_name);
+        proton_install_binding_script_on_frame(main_frame, binding_name);
         main_frame->base.release((cef_base_ref_counted_t *)main_frame);
       }
     }
     free(binding_name);
     return 1;
   }
-  if (strcmp(message_name, LEPUS_CEF_MESSAGE_INIT_SCRIPT) == 0) {
-    lepus_trace("renderer init script message");
+  if (strcmp(message_name, PROTON_CEF_MESSAGE_INIT_SCRIPT) == 0) {
+    proton_trace("renderer init script message");
     free(message_name);
     list = message->get_argument_list(message);
-    init_script = lepus_list_string(list, 0);
+    init_script = proton_list_string(list, 0);
     if (browser != NULL) {
-      lepus_render_store_init_script(browser->get_identifier(browser), init_script);
+      proton_render_store_init_script(browser->get_identifier(browser), init_script);
     }
     if (frame != NULL) {
-      lepus_frame_execute(frame, init_script);
+      proton_frame_execute(frame, init_script);
     } else if (browser != NULL) {
       cef_frame_t *main_frame = browser->get_main_frame(browser);
       if (main_frame != NULL) {
-        lepus_frame_execute(main_frame, init_script);
+        proton_frame_execute(main_frame, init_script);
         main_frame->base.release((cef_base_ref_counted_t *)main_frame);
       }
     }
     free(init_script);
     return 1;
   }
-  if (strcmp(message_name, LEPUS_CEF_MESSAGE_RESPONSE) != 0) {
+  if (strcmp(message_name, PROTON_CEF_MESSAGE_RESPONSE) != 0) {
     free(message_name);
     return 0;
   }
-  lepus_trace("renderer response message");
+  proton_trace("renderer response message");
   free(message_name);
   list = message->get_argument_list(message);
-  seq = lepus_list_string(list, 0);
+  seq = proton_list_string(list, 0);
   status = list->get_int(list, 1);
-  result = lepus_list_string(list, 2);
-  lepus_response_script_for_browser(browser, seq, status, result);
+  result = proton_list_string(list, 2);
+  proton_response_script_for_browser(browser, seq, status, result);
   free(seq);
   free(result);
   return 1;
 }
 
-static cef_life_span_handler_t *CEF_CALLBACK lepus_get_life_span_handler(
+static cef_life_span_handler_t *CEF_CALLBACK proton_get_life_span_handler(
     cef_client_t *client) {
-  struct lepus_client *owner =
-      (struct lepus_client *)((char *)client - offsetof(struct lepus_client, client));
+  struct proton_client *owner =
+      (struct proton_client *)((char *)client - offsetof(struct proton_client, client));
   return &owner->life_span;
 }
 
-static cef_load_handler_t *CEF_CALLBACK lepus_get_load_handler(
+static cef_load_handler_t *CEF_CALLBACK proton_get_load_handler(
     cef_client_t *client) {
-  struct lepus_client *owner =
-      (struct lepus_client *)((char *)client - offsetof(struct lepus_client, client));
+  struct proton_client *owner =
+      (struct proton_client *)((char *)client - offsetof(struct proton_client, client));
   return &owner->load;
 }
 
-static int CEF_CALLBACK lepus_client_message(
+static int CEF_CALLBACK proton_client_message(
     cef_client_t *client,
     cef_browser_t *browser,
     cef_frame_t *frame,
@@ -1520,44 +1520,44 @@ static int CEF_CALLBACK lepus_client_message(
   (void)frame;
   (void)source_process;
   raw_name = message->get_name(message);
-  message_name = lepus_userfree_to_utf8(raw_name);
-  if (strcmp(message_name, LEPUS_CEF_MESSAGE_CONTEXT_READY) == 0) {
+  message_name = proton_userfree_to_utf8(raw_name);
+  if (strcmp(message_name, PROTON_CEF_MESSAGE_CONTEXT_READY) == 0) {
     free(message_name);
-    lepus_trace("browser context ready");
-    w = lepus_webview_from_browser(browser);
+    proton_trace("browser context ready");
+    w = proton_webview_from_browser(browser);
     if (w != NULL && w->running) {
-      lepus_send_all_init_scripts(w);
-      lepus_install_all_bindings(w);
+      proton_send_all_init_scripts(w);
+      proton_install_all_bindings(w);
     }
     return 1;
   }
-  if (strcmp(message_name, LEPUS_CEF_MESSAGE_INVOKE) != 0) {
+  if (strcmp(message_name, PROTON_CEF_MESSAGE_INVOKE) != 0) {
     free(message_name);
     return 0;
   }
-  lepus_trace("browser invoke message");
+  proton_trace("browser invoke message");
   free(message_name);
-  w = lepus_webview_from_browser(browser);
+  w = proton_webview_from_browser(browser);
   list = message->get_argument_list(message);
-  seq = lepus_list_string(list, 0);
-  binding_name = lepus_list_string(list, 1);
-  request_json = lepus_list_string(list, 2);
-  if (lepus_trace_enabled()) {
-    fprintf(stderr, "[lepus-cef] invoke binding: %s\n", binding_name);
+  seq = proton_list_string(list, 0);
+  binding_name = proton_list_string(list, 1);
+  request_json = proton_list_string(list, 2);
+  if (proton_trace_enabled()) {
+    fprintf(stderr, "[proton-cef] invoke binding: %s\n", binding_name);
     fflush(stderr);
   }
-  if (strcmp(binding_name, "__lepusReady") == 0) {
+  if (strcmp(binding_name, "__protonReady") == 0) {
     if (w != NULL && w->running) {
-      lepus_install_all_bindings(w);
+      proton_install_all_bindings(w);
     }
     free(seq);
     free(binding_name);
     free(request_json);
     return 1;
   }
-  binding = lepus_find_binding(w, binding_name);
+  binding = proton_find_binding(w, binding_name);
   if (binding == NULL) {
-    lepus_send_response_to_renderer(
+    proton_send_response_to_renderer(
         w,
         seq,
         1,
@@ -1571,19 +1571,19 @@ static int CEF_CALLBACK lepus_client_message(
   return 1;
 }
 
-static void CEF_CALLBACK lepus_on_after_created(
+static void CEF_CALLBACK proton_on_after_created(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
-  struct lepus_client *owner =
-      (struct lepus_client *)((char *)self - offsetof(struct lepus_client, life_span));
-  lepus_trace("browser after created");
+  struct proton_client *owner =
+      (struct proton_client *)((char *)self - offsetof(struct proton_client, life_span));
+  proton_trace("browser after created");
   owner->webview->browser = browser;
-  lepus_addref_browser(browser);
-  lepus_send_all_init_scripts(owner->webview);
-  lepus_flush_ops(owner->webview);
+  proton_addref_browser(browser);
+  proton_send_all_init_scripts(owner->webview);
+  proton_flush_ops(owner->webview);
 }
 
-static int CEF_CALLBACK lepus_do_close(
+static int CEF_CALLBACK proton_do_close(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
   (void)self;
@@ -1591,54 +1591,54 @@ static int CEF_CALLBACK lepus_do_close(
   return 0;
 }
 
-static void CEF_CALLBACK lepus_on_before_close(
+static void CEF_CALLBACK proton_on_before_close(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
-  struct lepus_client *owner =
-      (struct lepus_client *)((char *)self - offsetof(struct lepus_client, life_span));
+  struct proton_client *owner =
+      (struct proton_client *)((char *)self - offsetof(struct proton_client, life_span));
   (void)browser;
   owner->webview->terminated = 1;
   cef_quit_message_loop();
 }
 
-static void CEF_CALLBACK lepus_on_load_end(
+static void CEF_CALLBACK proton_on_load_end(
     cef_load_handler_t *self,
     cef_browser_t *browser,
     cef_frame_t *frame,
     int http_status_code) {
-  struct lepus_client *owner =
-      (struct lepus_client *)((char *)self - offsetof(struct lepus_client, load));
+  struct proton_client *owner =
+      (struct proton_client *)((char *)self - offsetof(struct proton_client, load));
   (void)browser;
   (void)http_status_code;
   if (frame != NULL && frame->is_main(frame)) {
-    lepus_trace("load end");
+    proton_trace("load end");
     if (owner->webview != NULL && owner->webview->running) {
-      lepus_install_all_bindings(owner->webview);
+      proton_install_all_bindings(owner->webview);
     }
   }
 }
 
-static void lepus_init_app(void) {
+static void proton_init_app(void) {
   static int initialized = 0;
   if (initialized) {
     return;
   }
-  lepus_init_base((cef_base_ref_counted_t *)&lepus_app_instance.app.base,
-                  sizeof(lepus_app_instance.app));
-  lepus_app_instance.app.on_before_command_line_processing =
-      lepus_on_before_command_line_processing;
-  lepus_app_instance.app.get_render_process_handler = lepus_get_render_handler;
-  lepus_init_base((cef_base_ref_counted_t *)&lepus_app_instance.render.base,
-                  sizeof(lepus_app_instance.render));
-  lepus_app_instance.render.on_context_created = lepus_on_context_created;
-  lepus_app_instance.render.on_process_message_received = lepus_render_message;
-  lepus_init_base((cef_base_ref_counted_t *)&lepus_app_instance.v8.base,
-                  sizeof(lepus_app_instance.v8));
-  lepus_app_instance.v8.execute = lepus_v8_execute;
+  proton_init_base((cef_base_ref_counted_t *)&proton_app_instance.app.base,
+                  sizeof(proton_app_instance.app));
+  proton_app_instance.app.on_before_command_line_processing =
+      proton_on_before_command_line_processing;
+  proton_app_instance.app.get_render_process_handler = proton_get_render_handler;
+  proton_init_base((cef_base_ref_counted_t *)&proton_app_instance.render.base,
+                  sizeof(proton_app_instance.render));
+  proton_app_instance.render.on_context_created = proton_on_context_created;
+  proton_app_instance.render.on_process_message_received = proton_render_message;
+  proton_init_base((cef_base_ref_counted_t *)&proton_app_instance.v8.base,
+                  sizeof(proton_app_instance.v8));
+  proton_app_instance.v8.execute = proton_v8_execute;
   initialized = 1;
 }
 
-static void lepus_check_cef_api_hash(void) {
+static void proton_check_cef_api_hash(void) {
 #ifdef CEF_API_VERSION
   (void)cef_api_hash(CEF_API_VERSION, 0);
 #else
@@ -1646,27 +1646,27 @@ static void lepus_check_cef_api_hash(void) {
 #endif
 }
 
-MOONBIT_FFI_EXPORT int32_t lepus_cef_execute_process(void) {
+MOONBIT_FFI_EXPORT int32_t proton_cef_execute_process(void) {
   cef_main_args_t args;
-  const char *cef_root = lepus_cef_root_path();
-  lepus_prepare_cef_runtime(cef_root);
-  lepus_trace("init subprocess app");
-  lepus_init_app();
-  lepus_check_cef_api_hash();
+  const char *cef_root = proton_cef_root_path();
+  proton_prepare_cef_runtime(cef_root);
+  proton_trace("init subprocess app");
+  proton_init_app();
+  proton_check_cef_api_hash();
   memset(&args, 0, sizeof(args));
   args.instance = GetModuleHandleW(NULL);
-  lepus_trace("cef execute process");
-  return cef_execute_process(&args, &lepus_app_instance.app, NULL);
+  proton_trace("cef execute process");
+  return cef_execute_process(&args, &proton_app_instance.app, NULL);
 }
 
-static void lepus_cef_shutdown(void) {
-  if (lepus_cef_initialized) {
+static void proton_cef_shutdown(void) {
+  if (proton_cef_initialized) {
     cef_shutdown();
-    lepus_cef_initialized = 0;
+    proton_cef_initialized = 0;
   }
 }
 
-static void lepus_ensure_cef_initialized(int debug) {
+static void proton_ensure_cef_initialized(int debug) {
   cef_main_args_t args;
   cef_settings_t settings;
   const char *cef_root;
@@ -1675,15 +1675,15 @@ static void lepus_ensure_cef_initialized(int debug) {
   char *locales_dir = NULL;
   char *root_cache_path = NULL;
   char *log_file = NULL;
-  if (lepus_cef_initialized) {
+  if (proton_cef_initialized) {
     return;
   }
-  cef_root = lepus_cef_root_path();
-  subprocess_path = lepus_cef_subprocess_path();
-  lepus_prepare_cef_runtime(cef_root);
-  lepus_trace("init app");
-  lepus_init_app();
-  lepus_check_cef_api_hash();
+  cef_root = proton_cef_root_path();
+  subprocess_path = proton_cef_subprocess_path();
+  proton_prepare_cef_runtime(cef_root);
+  proton_trace("init app");
+  proton_init_app();
+  proton_check_cef_api_hash();
   memset(&args, 0, sizeof(args));
   args.instance = GetModuleHandleW(NULL);
   memset(&settings, 0, sizeof(settings));
@@ -1691,42 +1691,42 @@ static void lepus_ensure_cef_initialized(int debug) {
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
   (void)debug;
-  settings.remote_debugging_port = lepus_cef_remote_debugging_port();
+  settings.remote_debugging_port = proton_cef_remote_debugging_port();
   settings.log_severity =
-      lepus_trace_enabled() ? LOGSEVERITY_DEFAULT : LOGSEVERITY_DISABLE;
-  if (!lepus_file_exists(subprocess_path)) {
+      proton_trace_enabled() ? LOGSEVERITY_DEFAULT : LOGSEVERITY_DISABLE;
+  if (!proton_file_exists(subprocess_path)) {
     fprintf(stderr,
-            "Lepus CEF subprocess executable is missing: %s\n"
+            "Proton CEF subprocess executable is missing: %s\n"
             "Build it with `moon build src\\cef_process --target native`, "
             "or package cef_process.exe beside the app executable.\n",
             subprocess_path);
     fflush(stderr);
     abort();
   }
-  lepus_set_string(&settings.browser_subprocess_path, subprocess_path);
-  if (lepus_trace_enabled()) {
-    log_file = lepus_temp_path_join("lepus-cef.log");
+  proton_set_string(&settings.browser_subprocess_path, subprocess_path);
+  if (proton_trace_enabled()) {
+    log_file = proton_temp_path_join("proton-cef.log");
     if (log_file != NULL) {
-      lepus_set_string(&settings.log_file, log_file);
+      proton_set_string(&settings.log_file, log_file);
     }
   }
   if (cef_root != NULL && cef_root[0] != '\0') {
-    resources_dir = lepus_path_join(cef_root, "Resources");
+    resources_dir = proton_path_join(cef_root, "Resources");
     if (resources_dir != NULL) {
-      locales_dir = lepus_path_join(resources_dir, "locales");
-      lepus_set_string(&settings.resources_dir_path, resources_dir);
+      locales_dir = proton_path_join(resources_dir, "locales");
+      proton_set_string(&settings.resources_dir_path, resources_dir);
     }
     if (locales_dir != NULL) {
-      lepus_set_string(&settings.locales_dir_path, locales_dir);
+      proton_set_string(&settings.locales_dir_path, locales_dir);
     }
   }
-  root_cache_path = lepus_cache_path_for_process();
+  root_cache_path = proton_cache_path_for_process();
   if (root_cache_path != NULL) {
     CreateDirectoryA(root_cache_path, NULL);
-    lepus_set_string(&settings.root_cache_path, root_cache_path);
+    proton_set_string(&settings.root_cache_path, root_cache_path);
   }
-  lepus_trace("cef initialize");
-  if (!cef_initialize(&args, &settings, &lepus_app_instance.app, NULL)) {
+  proton_trace("cef initialize");
+  if (!cef_initialize(&args, &settings, &proton_app_instance.app, NULL)) {
     abort();
   }
   cef_string_clear(&settings.resources_dir_path);
@@ -1738,38 +1738,38 @@ static void lepus_ensure_cef_initialized(int debug) {
   free(locales_dir);
   free(root_cache_path);
   free(log_file);
-  lepus_cef_initialized = 1;
-  lepus_trace("cef initialized");
-  if (!lepus_cef_shutdown_registered) {
-    atexit(lepus_cef_shutdown);
-    lepus_cef_shutdown_registered = 1;
+  proton_cef_initialized = 1;
+  proton_trace("cef initialized");
+  if (!proton_cef_shutdown_registered) {
+    atexit(proton_cef_shutdown);
+    proton_cef_shutdown_registered = 1;
   }
 }
 
-static struct lepus_client *lepus_client_new(struct moonbit_webview *w) {
-  struct lepus_client *client =
-      (struct lepus_client *)calloc(1, sizeof(*client));
+static struct proton_client *proton_client_new(struct moonbit_webview *w) {
+  struct proton_client *client =
+      (struct proton_client *)calloc(1, sizeof(*client));
   if (client == NULL) {
     return NULL;
   }
   client->webview = w;
-  lepus_init_base((cef_base_ref_counted_t *)&client->client.base,
+  proton_init_base((cef_base_ref_counted_t *)&client->client.base,
                   sizeof(client->client));
-  client->client.get_life_span_handler = lepus_get_life_span_handler;
-  client->client.get_load_handler = lepus_get_load_handler;
-  client->client.on_process_message_received = lepus_client_message;
-  lepus_init_base((cef_base_ref_counted_t *)&client->life_span.base,
+  client->client.get_life_span_handler = proton_get_life_span_handler;
+  client->client.get_load_handler = proton_get_load_handler;
+  client->client.on_process_message_received = proton_client_message;
+  proton_init_base((cef_base_ref_counted_t *)&client->life_span.base,
                   sizeof(client->life_span));
-  client->life_span.on_after_created = lepus_on_after_created;
-  client->life_span.do_close = lepus_do_close;
-  client->life_span.on_before_close = lepus_on_before_close;
-  lepus_init_base((cef_base_ref_counted_t *)&client->load.base,
+  client->life_span.on_after_created = proton_on_after_created;
+  client->life_span.do_close = proton_do_close;
+  client->life_span.on_before_close = proton_on_before_close;
+  proton_init_base((cef_base_ref_counted_t *)&client->load.base,
                   sizeof(client->load));
-  client->load.on_load_end = lepus_on_load_end;
+  client->load.on_load_end = proton_on_load_end;
   return client;
 }
 
-static void lepus_create_browser(struct moonbit_webview *w) {
+static void proton_create_browser(struct moonbit_webview *w) {
   cef_window_info_t window_info;
   cef_browser_settings_t browser_settings;
   cef_string_t url = {0};
@@ -1782,15 +1782,15 @@ static void lepus_create_browser(struct moonbit_webview *w) {
   window_info.size = sizeof(window_info);
   browser_settings.size = sizeof(browser_settings);
   GetClientRect(w->window, &rect);
-  lepus_set_string(&window_info.window_name, "Lepus");
+  proton_set_string(&window_info.window_name, "Proton");
   window_info.parent_window = w->window;
   window_info.style = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
   window_info.bounds.x = 0;
   window_info.bounds.y = 0;
   window_info.bounds.width = rect.right - rect.left;
   window_info.bounds.height = rect.bottom - rect.top;
-  lepus_set_string(&url, LEPUS_CEF_DEFAULT_URL);
-  lepus_trace("create browser");
+  proton_set_string(&url, PROTON_CEF_DEFAULT_URL);
+  proton_trace("create browser");
   w->browser = cef_browser_host_create_browser_sync(
       &window_info,
       w->client,
@@ -1799,24 +1799,24 @@ static void lepus_create_browser(struct moonbit_webview *w) {
       NULL,
       NULL);
   if (w->browser != NULL) {
-    lepus_install_all_bindings(w);
-    lepus_flush_ops(w);
+    proton_install_all_bindings(w);
+    proton_flush_ops(w);
   }
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
 }
 
 MOONBIT_FFI_EXPORT int32_t moonbit_webview_backend_available(void) {
-  return lepus_cef_runtime_files_available();
+  return proton_cef_runtime_files_available();
 }
 
 MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
   struct moonbit_webview *w;
   DWORD style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
   (void)window;
-  lepus_trace("webview create");
-  lepus_ensure_cef_initialized(debug);
-  lepus_register_window_class();
+  proton_trace("webview create");
+  proton_ensure_cef_initialized(debug);
+  proton_register_window_class();
   w = (struct moonbit_webview *)calloc(1, sizeof(*w));
   if (w == NULL) {
     abort();
@@ -1824,15 +1824,15 @@ MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
   w->debug = debug;
   w->width = 800;
   w->height = 600;
-  w->client = (cef_client_t *)lepus_client_new(w);
+  w->client = (cef_client_t *)proton_client_new(w);
   if (w->client == NULL) {
     free(w);
     abort();
   }
   w->window = CreateWindowExW(
       0,
-      LEPUS_CEF_CLASS_NAME,
-      L"Lepus",
+      PROTON_CEF_CLASS_NAME,
+      L"Proton",
       style,
       CW_USEDEFAULT,
       CW_USEDEFAULT,
@@ -1848,12 +1848,12 @@ MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
     abort();
   }
   SetWindowLongPtrW(w->window, GWLP_USERDATA, (LONG_PTR)w);
-  lepus_webview_list_add(w);
-  lepus_create_browser(w);
+  proton_webview_list_add(w);
+  proton_create_browser(w);
   return w;
 }
 
-static void lepus_apply_op(
+static void proton_apply_op(
     struct moonbit_webview *w,
     struct moonbit_webview_op *op) {
   cef_frame_t *frame;
@@ -1864,7 +1864,7 @@ static void lepus_apply_op(
     return;
   }
   if (!w->running && op->type >= 3 && op->type <= 7) {
-    lepus_queue_op(
+    proton_queue_op(
         w,
         op->type,
         op->value,
@@ -1877,7 +1877,7 @@ static void lepus_apply_op(
     return;
   }
   if (w->browser == NULL && op->type != 1 && op->type != 2 && op->type != 7) {
-    lepus_queue_op(
+    proton_queue_op(
         w,
         op->type,
         op->value,
@@ -1891,21 +1891,21 @@ static void lepus_apply_op(
   }
   switch (op->type) {
   case 1:
-    lepus_trace("apply title");
+    proton_trace("apply title");
     SetWindowTextA(w->window, op->value != NULL ? op->value : "");
     break;
   case 2:
-    lepus_trace("apply size");
+    proton_trace("apply size");
     w->width = op->width;
     w->height = op->height;
     SetWindowPos(w->window, NULL, 0, 0, op->width, op->height, SWP_NOMOVE | SWP_NOZORDER);
     break;
   case 3:
-    lepus_trace("apply html");
+    proton_trace("apply html");
     frame = w->browser->get_main_frame(w->browser);
     if (frame != NULL) {
-      char *quoted_html = lepus_js_quote(op->value);
-      struct lepus_dispatch_task *task;
+      char *quoted_html = proton_js_quote(op->value);
+      struct proton_dispatch_task *task;
       if (quoted_html != NULL) {
         size_t script_len = strlen(quoted_html) + 80;
         char *script = (char *)malloc(script_len);
@@ -1915,12 +1915,12 @@ static void lepus_apply_op(
               script_len,
               "document.open();document.write(%s);document.close();",
               quoted_html);
-          lepus_frame_execute(frame, script);
+          proton_frame_execute(frame, script);
           free(script);
         }
         free(quoted_html);
       }
-      task = lepus_dispatch_task_new((webview_t)w, lepus_install_bindings_dispatch, NULL);
+      task = proton_dispatch_task_new((webview_t)w, proton_install_bindings_dispatch, NULL);
       if (task != NULL) {
         task->task.base.add_ref((cef_base_ref_counted_t *)&task->task);
         if (cef_post_delayed_task(TID_UI, &task->task, 500)) {
@@ -1932,34 +1932,34 @@ static void lepus_apply_op(
       }
       frame->base.release((cef_base_ref_counted_t *)frame);
     } else {
-      lepus_trace("html frame missing");
+      proton_trace("html frame missing");
     }
     break;
   case 4:
-    lepus_trace("apply navigate");
+    proton_trace("apply navigate");
     frame = w->browser->get_main_frame(w->browser);
     if (frame != NULL) {
-      lepus_set_string(&value, op->value);
+      proton_set_string(&value, op->value);
       frame->load_url(frame, &value);
       cef_string_clear(&value);
       frame->base.release((cef_base_ref_counted_t *)frame);
     } else {
-      lepus_trace("navigate frame missing");
+      proton_trace("navigate frame missing");
     }
     break;
   case 5:
   case 6:
-    lepus_trace("apply script");
+    proton_trace("apply script");
     frame = w->browser->get_main_frame(w->browser);
     if (frame != NULL) {
-      lepus_frame_execute(frame, op->value);
+      proton_frame_execute(frame, op->value);
       frame->base.release((cef_base_ref_counted_t *)frame);
     } else {
-      lepus_trace("script frame missing");
+      proton_trace("script frame missing");
     }
     break;
   case 7:
-    lepus_trace("apply dispatch");
+    proton_trace("apply dispatch");
     if (op->dispatch_cb != NULL) {
       op->dispatch_cb((webview_t)w, op->dispatch_arg);
       op->dispatch_arg = NULL;
@@ -1991,7 +1991,7 @@ MOONBIT_FFI_EXPORT int32_t webview_destroy(webview_t raw) {
       host->close_browser(host, 1);
       host->base.release((cef_base_ref_counted_t *)host);
     }
-    lepus_release_browser(w->browser);
+    proton_release_browser(w->browser);
     w->browser = NULL;
   }
   while (w->bindings != NULL) {
@@ -2018,7 +2018,7 @@ MOONBIT_FFI_EXPORT int32_t webview_destroy(webview_t raw) {
     DestroyWindow(w->window);
     w->window = NULL;
   }
-  lepus_webview_list_remove(w);
+  proton_webview_list_remove(w);
   if (had_browser) {
     return 0;
   }
@@ -2037,12 +2037,12 @@ MOONBIT_FFI_EXPORT int32_t webview_run(webview_t raw) {
   }
   w->running = 1;
   if (w->op_head != NULL) {
-    PostMessageW(w->window, LEPUS_WM_FLUSH_OPS, 0, 0);
+    PostMessageW(w->window, PROTON_WM_FLUSH_OPS, 0, 0);
   }
   ShowWindow(w->window, SW_SHOW);
-  lepus_trace("run message loop");
+  proton_trace("run message loop");
   cef_run_message_loop();
-  lepus_trace("message loop returned");
+  proton_trace("message loop returned");
   return 0;
 }
 
@@ -2058,7 +2058,7 @@ MOONBIT_FFI_EXPORT int32_t webview_terminate(webview_t raw) {
       }
     }
   }
-  lepus_trace("terminate");
+  proton_trace("terminate");
   cef_quit_message_loop();
   return 0;
 }
@@ -2068,7 +2068,7 @@ MOONBIT_FFI_EXPORT int32_t webview_dispatch(
     void (*fn)(webview_t w, void *arg),
     void *arg) {
   struct moonbit_webview *w = (struct moonbit_webview *)raw;
-  struct lepus_dispatch_task *task;
+  struct proton_dispatch_task *task;
   int posted;
   if (w == NULL) {
     if (arg != NULL) {
@@ -2077,7 +2077,7 @@ MOONBIT_FFI_EXPORT int32_t webview_dispatch(
     return -1;
   }
   if (!w->running || w->browser == NULL) {
-    lepus_queue_op(w, 7, NULL, 0, 0, 0, fn, arg);
+    proton_queue_op(w, 7, NULL, 0, 0, 0, fn, arg);
     return 0;
   }
   if (cef_currently_on(TID_UI)) {
@@ -2086,7 +2086,7 @@ MOONBIT_FFI_EXPORT int32_t webview_dispatch(
     }
     return 0;
   }
-  task = lepus_dispatch_task_new(raw, fn, arg);
+  task = proton_dispatch_task_new(raw, fn, arg);
   if (task == NULL) {
     if (arg != NULL) {
       moonbit_decref(arg);
@@ -2131,7 +2131,7 @@ MOONBIT_FFI_EXPORT int32_t webview_set_title(webview_t raw, const char *title) {
   memset(&op, 0, sizeof(op));
   op.type = 1;
   op.value = (char *)(title != NULL ? title : "");
-  lepus_apply_op(w, &op);
+  proton_apply_op(w, &op);
   return 0;
 }
 
@@ -2150,7 +2150,7 @@ MOONBIT_FFI_EXPORT int32_t webview_set_size(
   op.width = width;
   op.height = height;
   op.hint = hint;
-  lepus_apply_op(w, &op);
+  proton_apply_op(w, &op);
   return 0;
 }
 
@@ -2163,7 +2163,7 @@ MOONBIT_FFI_EXPORT int32_t webview_set_html(webview_t raw, const char *html) {
   memset(&op, 0, sizeof(op));
   op.type = 3;
   op.value = (char *)(html != NULL ? html : "");
-  lepus_apply_op(w, &op);
+  proton_apply_op(w, &op);
   return 0;
 }
 
@@ -2176,7 +2176,7 @@ MOONBIT_FFI_EXPORT int32_t webview_navigate(webview_t raw, const char *url) {
   memset(&op, 0, sizeof(op));
   op.type = 4;
   op.value = (char *)(url != NULL ? url : "");
-  lepus_apply_op(w, &op);
+  proton_apply_op(w, &op);
   return 0;
 }
 
@@ -2185,12 +2185,12 @@ MOONBIT_FFI_EXPORT int32_t webview_init(webview_t raw, const char *script) {
   if (w == NULL) {
     return -1;
   }
-  (void)lepus_store_init_script(w, script);
+  (void)proton_store_init_script(w, script);
   if (w->browser != NULL) {
-    lepus_send_init_script(w, script != NULL ? script : "");
+    proton_send_init_script(w, script != NULL ? script : "");
     return 0;
   }
-  lepus_queue_op(w, 5, script, 0, 0, 0, NULL, NULL);
+  proton_queue_op(w, 5, script, 0, 0, 0, NULL, NULL);
   return 0;
 }
 
@@ -2199,9 +2199,9 @@ MOONBIT_FFI_EXPORT int32_t webview_eval(webview_t raw, const char *script) {
   if (w == NULL) {
     return -1;
   }
-  lepus_queue_op(w, 6, script, 0, 0, 0, NULL, NULL);
+  proton_queue_op(w, 6, script, 0, 0, 0, NULL, NULL);
   if (w->browser != NULL) {
-    lepus_flush_ops(w);
+    proton_flush_ops(w);
   }
   return 0;
 }
@@ -2240,7 +2240,7 @@ MOONBIT_FFI_EXPORT void *moonbit_webview_bind(
   binding->next = w->bindings;
   w->bindings = binding;
   if (w->running) {
-    lepus_install_binding_script(w, binding->name);
+    proton_install_binding_script(w, binding->name);
   }
   return binding;
 }
@@ -2274,7 +2274,7 @@ MOONBIT_FFI_EXPORT int32_t webview_return(
     const char *seq,
     int32_t status,
     const char *result) {
-  lepus_send_response_to_renderer(
+  proton_send_response_to_renderer(
       (struct moonbit_webview *)raw,
       seq,
       status,
@@ -2292,7 +2292,7 @@ MOONBIT_FFI_EXPORT int32_t moonbit_webview_backend_available(void) {
   return 0;
 }
 
-MOONBIT_FFI_EXPORT int32_t lepus_cef_execute_process(void) {
+MOONBIT_FFI_EXPORT int32_t proton_cef_execute_process(void) {
   return -1;
 }
 
@@ -2301,7 +2301,7 @@ MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
   (void)window;
   fprintf(
       stderr,
-      "Lepus CEF backend is not linked. Install CEF with "
+      "Proton CEF backend is not linked. Install CEF with "
       "`node .\\scripts\\setup_cef.mjs` before building.\n");
   abort();
 }

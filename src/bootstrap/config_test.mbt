@@ -213,7 +213,7 @@ test "load_app_manifest_from_json rejects legacy permissions field" {
       #|    "value": "<html></html>"
       #|  },
       #|  "permissions": {
-      #|    "justjavac/lepus-notification": false
+      #|    "justjavac/proton-notification": false
       #|  }
       #|}
     ),
@@ -523,10 +523,10 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
       ),
     ],
     extensions={
-      "justjavac/lepus-fs": @manifest.ExtensionSetting::enabled(
+      "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(
         options=Some(Json::object({ "scope": Json::string("read") })),
       ),
-      "justjavac/lepus-tray": @manifest.ExtensionSetting::disabled(),
+      "justjavac/proton-tray": @manifest.ExtensionSetting::disabled(),
     },
   )
   let text = app_manifest_to_json(manifest).stringify(indent=2)
@@ -547,7 +547,7 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
     @manifest.WindowSizeHint::Fixed,
   )
   @debug.assert_eq(
-    roundtripped.extension_setting("justjavac/lepus-fs"),
+    roundtripped.extension_setting("justjavac/proton-fs"),
     Some(
       @manifest.ExtensionSetting::enabled(
         options=Some(Json::object({ "scope": Json::string("read") })),
@@ -555,7 +555,7 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
     ),
   )
   @debug.assert_eq(
-    roundtripped.extension_setting("justjavac/lepus-tray"),
+    roundtripped.extension_setting("justjavac/proton-tray"),
     Some(@manifest.ExtensionSetting::disabled()),
   )
 }
@@ -575,8 +575,8 @@ test "load_app_manifest_from_json rejects extension settings" {
       #|    "value": "<html></html>"
       #|  },
       #|  "extensions": {
-      #|    "justjavac/lepus-fs": true,
-      #|    "justjavac/lepus-tray": false
+      #|    "justjavac/proton-fs": true,
+      #|    "justjavac/proton-tray": false
       #|  }
       #|}
     ),

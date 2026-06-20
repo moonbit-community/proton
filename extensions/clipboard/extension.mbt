@@ -3,9 +3,9 @@ struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 /// Reads plain text from the native clipboard.
-#lepus.command(name="readText")
+#proton.command(name="readText")
 async fn read_text(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> Result[ReadTextReply, String] {
   match read_clipboard_text() {
@@ -22,9 +22,9 @@ async fn read_text(
 
 ///|
 /// Writes plain text to the native clipboard.
-#lepus.command(name="writeText")
+#proton.command(name="writeText")
 async fn write_text(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   text : String,
 ) -> Result[WriteTextReply, String] {
   match write_clipboard_text(text) {
@@ -40,7 +40,7 @@ async fn write_text(
 }
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct ClipboardActivity {
   operation : String
   text_length : Int?

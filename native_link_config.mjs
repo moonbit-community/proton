@@ -13,7 +13,7 @@ const defaultSubprocessPath = path.join(
   "debug",
   "build",
   "justjavac",
-  "lepus",
+  "proton",
   "cef_process",
   "cef_process.exe",
 );
@@ -131,13 +131,13 @@ function windowsConfig(root) {
 
 function main() {
   const env = optionalPayloadEnv();
-  const rawRoot = envValue(env, "LEPUS_CEF_ROOT").trim();
+  const rawRoot = envValue(env, "PROTON_CEF_ROOT").trim();
 
   if (process.platform !== "win32") {
     process.stdout.write(JSON.stringify({
       vars: {
-        LEPUS_CEF_ENABLED: "0",
-        LEPUS_CEF_STUB_CC_FLAGS: "",
+        PROTON_CEF_ENABLED: "0",
+        PROTON_CEF_STUB_CC_FLAGS: "",
       },
       link_configs: [],
     }));
@@ -147,7 +147,7 @@ function main() {
   const root = rawRoot.length === 0
     ? defaultCefRoot()
     : path.resolve(rawRoot);
-  const rawSubprocess = envValue(env, "LEPUS_CEF_SUBPROCESS_PATH").trim();
+  const rawSubprocess = envValue(env, "PROTON_CEF_SUBPROCESS_PATH").trim();
   const subprocess = rawSubprocess.length === 0
     ? defaultSubprocessPath
     : path.resolve(rawSubprocess);
@@ -158,18 +158,18 @@ function main() {
   }
   process.stdout.write(JSON.stringify({
     vars: {
-      LEPUS_CEF_ENABLED: "1",
-      LEPUS_CEF_ROOT: nativeLinkPath(root),
-      LEPUS_CEF_SUBPROCESS_PATH: nativeLinkPath(subprocess),
-      LEPUS_CEF_STUB_CC_FLAGS:
-        `/DLEPUS_CEF_ENABLED=1 ` +
-        `/DLEPUS_CEF_ROOT_PATH=\\"${cStringDefine(root)}\\" ` +
-        `/DLEPUS_CEF_SUBPROCESS_PATH=\\"${cStringDefine(subprocess)}\\" ` +
+      PROTON_CEF_ENABLED: "1",
+      PROTON_CEF_ROOT: nativeLinkPath(root),
+      PROTON_CEF_SUBPROCESS_PATH: nativeLinkPath(subprocess),
+      PROTON_CEF_STUB_CC_FLAGS:
+        `/DPROTON_CEF_ENABLED=1 ` +
+        `/DPROTON_CEF_ROOT_PATH=\\"${cStringDefine(root)}\\" ` +
+        `/DPROTON_CEF_SUBPROCESS_PATH=\\"${cStringDefine(subprocess)}\\" ` +
         `/I"${nativeLinkPath(root)}"`,
     },
     link_configs: [
       {
-        package: "justjavac/lepus/webview",
+        package: "justjavac/proton/webview",
         ...windowsConfig(root),
       },
     ],

@@ -12,7 +12,8 @@ async fn main {
       ),
     ],
   )
-  let app = match @lepus.create_app(manifest, @lepus.ExtensionRegistry::new()) {
+  let app = match
+    @proton.create_app(manifest, @proton.ExtensionRegistry::new()) {
     Ok(app) => app
     Err(error) => abort(error)
   }

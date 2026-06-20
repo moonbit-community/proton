@@ -47,12 +47,12 @@ let html =
 /// The webview window is configured with:
 ///
 /// * Debug mode enabled
-/// * Custom title "MoonBit Lepus Example"
+/// * Custom title "MoonBit Proton Example"
 /// * Window size of 800x600 pixels
 /// * Centered text content with custom styling
 fn main {
   @webview.Webview::new(debug=1)
-  ..set_title("MoonBit Lepus Example")
+  ..set_title("MoonBit Proton Example")
   ..set_size(800, 600, @webview.SizeHint::None)
   ..set_html(html)
   .run()

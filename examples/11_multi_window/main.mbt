@@ -45,11 +45,11 @@ let html =
 /// "Hello, Moonbit!" message.
 fn main {
   let webview1 = @webview.Webview::new(debug=1)
-  webview1.set_title("MoonBit Lepus Example")
+  webview1.set_title("MoonBit Proton Example")
   webview1.set_size(800, 600, @webview.SizeHint::None)
   webview1.set_html(html)
   let second_webview = @webview.Webview::new(debug=1)
-  second_webview.set_title("MoonBit Lepus Example")
+  second_webview.set_title("MoonBit Proton Example")
   second_webview.set_size(800, 600, @webview.SizeHint::None)
   second_webview.set_html(html)
   webview1.run()

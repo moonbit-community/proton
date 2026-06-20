@@ -1,5 +1,5 @@
 ///|
-extern "C" fn cef_execute_process_ffi() -> Int = "lepus_cef_execute_process"
+extern "C" fn cef_execute_process_ffi() -> Int = "proton_cef_execute_process"
 
 ///|
 fn main {

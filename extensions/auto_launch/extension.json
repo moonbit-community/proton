@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-auto-launch",
+  "id": "justjavac/proton-auto-launch",
   "namespace": "autoLaunch",
-  "package": "justjavac/lepus_ext/auto_launch"
+  "package": "justjavac/proton_ext/auto_launch"
 }

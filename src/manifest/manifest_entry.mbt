@@ -1,5 +1,5 @@
 ///|
-/// Declarative entry content loaded into a Lepus application window.
+/// Declarative entry content loaded into a Proton application window.
 pub(all) enum AppEntry {
   Html(String)
   Url(String)

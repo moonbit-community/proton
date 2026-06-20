@@ -1,7 +1,7 @@
 ///|
-/// Returns every built-in Lepus extension.
-pub fn all() -> @lepus_extension.Extensions {
-  @lepus_extension.extensions([
+/// Returns every built-in Proton extension.
+pub fn all() -> @proton_extension.Extensions {
+  @proton_extension.extensions([
     @fs.extension(),
     @path.extension(),
     @dialog.extension(),
@@ -18,8 +18,8 @@ pub fn all() -> @lepus_extension.Extensions {
 
 ///|
 /// Returns built-in desktop integration extensions.
-pub fn desktop() -> @lepus_extension.Extensions {
-  @lepus_extension.extensions([
+pub fn desktop() -> @proton_extension.Extensions {
+  @proton_extension.extensions([
     @dialog.extension(),
     @clipboard.extension(),
     @shell.extension(),

@@ -1,12 +1,12 @@
 import {
   "moonbitlang/x/sys",
-  "justjavac/lepus/webview",
+  "justjavac/proton/webview",
 }
 
 supported_targets = "native"
 
 options(
   "is-main": true,
-  "bin-name": "lepus-cef-process",
+  "bin-name": "proton-cef-process",
   targets: { "main.mbt": [ "native" ] },
 )

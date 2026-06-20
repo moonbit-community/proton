@@ -64,7 +64,7 @@ fn basic_probe_expression(name : String) -> String? {
         (
           #|;(async () => {
           #|  const fs = window.__MoonBit__.fs;
-          #|  const path = "lepus-cdp-e2e-18.txt";
+          #|  const path = "proton-cdp-e2e-18.txt";
           #|  await fs.writeFile(path, "hello");
           #|  await fs.appendFile(path, " fs");
           #|  const loaded = await fs.readFile(path);

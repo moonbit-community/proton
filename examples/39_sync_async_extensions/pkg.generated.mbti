@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/examples/39_sync_async_extensions"
+package "justjavac/proton/examples/39_sync_async_extensions"
 
 import {
   "moonbitlang/core/json",

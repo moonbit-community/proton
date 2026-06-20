@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/lepus/core",
-  "justjavac/lepus/webview",
+  "justjavac/proton/core",
+  "justjavac/proton/webview",
 }
 
 supported_targets = "native"

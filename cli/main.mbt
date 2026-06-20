@@ -2,7 +2,7 @@
 fn print_usage() -> Unit {
   let usage =
     #|Usage:
-    #|  lepus codegen <input.mbt> -o <output.g.mbt>
+    #|  proton codegen <input.mbt> -o <output.g.mbt>
     #|
   println(usage)
 }
@@ -25,8 +25,8 @@ fn print_error_message(message : String) -> Unit {
 ///|
 fn codegen_arg_parser() -> @argparse.Command {
   @argparse.Command(
-    "lepus codegen",
-    about="Generate Lepus command extension code from #lepus attributes",
+    "proton codegen",
+    about="Generate Proton command extension code from #proton attributes",
     options=[
       OptionArg(
         "output-file",

@@ -1,4 +1,4 @@
-name = "justjavac/lepus_cli"
+name = "justjavac/proton_cli"
 
 version = "0.1.10"
 
@@ -10,13 +10,13 @@ import {
 
 readme = "codegen/README.md"
 
-repository = "https://github.com/moonbit-community/lepus/tree/main/cli"
+repository = "https://github.com/moonbit-community/proton/tree/main/cli"
 
 license = "MIT"
 
-keywords = [ "lepus", "cli", "codegen" ]
+keywords = [ "proton", "cli", "codegen" ]
 
-description = "Developer CLI and code generation tools for Lepus."
+description = "Developer CLI and code generation tools for Proton."
 
 options(
   warn_list: "",

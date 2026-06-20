@@ -1,11 +1,11 @@
 ///|
-let framework_config_arg_name = "--lepus-framework-config"
+let framework_config_arg_name = "--proton-framework-config"
 
 ///|
-let framework_config_env_name = "LEPUS_FRAMEWORK_CONFIG"
+let framework_config_env_name = "PROTON_FRAMEWORK_CONFIG"
 
 ///|
-let framework_process_arg_name = "--lepus-framework-process"
+let framework_process_arg_name = "--proton-framework-process"
 
 ///|
 let framework_config_version = 2
@@ -27,7 +27,7 @@ fn is_framework_process() -> Bool {
 /// Returns the current executable command as reported by argv[0].
 ///
 /// Single-binary examples use this to start the same executable again in
-/// framework mode with `--lepus-framework-process`.
+/// framework mode with `--proton-framework-process`.
 fn current_executable_command() -> Result[String, String] {
   match @sys.get_cli_args().get(0) {
     Some(command) if command.trim().to_owned() != "" => Ok(command)
@@ -45,7 +45,7 @@ async fn run_app_command_host_with_framework_process(
   manifest : @manifest.AppManifest,
   framework_command : String,
   host : @core.AppCommandHost,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
   extension_registry? : ExtensionRegistry = ExtensionRegistry::new(),
   framework_args? : Array[String] = [],
   framework_cwd? : String? = None,
@@ -214,7 +214,7 @@ fn run_framework_process(
 fn run_framework_app_process(
   manifest : @manifest.AppManifest,
   ipc_config : FrameworkIpcLaunchConfig,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
   extension_registry : ExtensionRegistry,
   base_dir? : String? = None,
 ) -> Result[Unit, String] {
@@ -260,7 +260,7 @@ fn validate_framework_process_command(command : String) -> Result[Unit, String] 
 
 ///|
 fn validate_app_commands_config(
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   guard commands.op_names().length() > 0 else {
     return Err("app commands must expose at least one op")
@@ -301,7 +301,7 @@ fn validate_app_commands_config(
 
 ///|
 fn validate_app_command_framework_dependencies(
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   let ids : Map[String, Bool] = {}
   for id in commands.framework_extension_ids() {
@@ -343,7 +343,7 @@ fn validate_app_command_descriptor(
       descriptor.js_namespace,
     )
   }
-  guard !@lepus_command.app_command_js_property_is_reserved(
+  guard !@proton_command.app_command_js_property_is_reserved(
     descriptor.js_namespace,
   ) else {
     return Err(
@@ -389,7 +389,7 @@ fn validate_ipc_descriptor_apis(
         api.api_name,
       )
     }
-    guard !@lepus_command.app_command_js_property_is_reserved(api.api_name) else {
+    guard !@proton_command.app_command_js_property_is_reserved(api.api_name) else {
       return Err(
         "command extension descriptor API name is reserved: " +
         descriptor.id +
@@ -406,7 +406,7 @@ fn validate_ipc_descriptor_apis(
       )
     }
     api_names[api.api_name] = true
-    let op_name = @lepus_command.app_command_extension_op_name(
+    let op_name = @proton_command.app_command_extension_op_name(
       descriptor.js_namespace,
       api.api_name,
     )
@@ -420,7 +420,7 @@ fn validate_ipc_descriptor_apis(
 
 ///|
 fn validate_extension_op_names_have_descriptors(
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
   extension_op_names : Map[String, Bool],
 ) -> Result[Unit, String] {
   for op_name in commands.op_names() {
@@ -435,7 +435,7 @@ fn validate_extension_op_names_have_descriptors(
 fn validate_framework_manifest_extensions(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   match validate_app_commands_config(commands) {
     Err(error) => return Err(error)
@@ -483,7 +483,7 @@ fn validate_framework_manifest_extensions(
 fn validate_framework_command_namespaces_do_not_collide(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
 ) -> Result[Unit, String] {
   let command_namespaces = command_extension_namespace_map(
     commands.extensions(),
@@ -515,7 +515,7 @@ fn validate_framework_command_namespaces_do_not_collide(
 fn framework_manifest_for_commands(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
 ) -> @manifest.AppManifest {
   @manifest.AppManifest::new(
     manifest.window,
@@ -530,7 +530,7 @@ fn framework_manifest_for_commands(
 fn framework_extension_settings(
   manifest : @manifest.AppManifest,
   registry : ExtensionRegistry,
-  commands : @lepus_command.AppCommandsConfig,
+  commands : @proton_command.AppCommandsConfig,
 ) -> Map[String, @manifest.ExtensionSetting] {
   let specs = registry.spec_map()
   let settings : Map[String, @manifest.ExtensionSetting] = {}

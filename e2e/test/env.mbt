@@ -27,12 +27,12 @@ fn cdp_http_endpoint() -> String {
 
 ///|
 fn scenario_name() -> String {
-  env_or("MBT_LEPUS_E2E_SCENARIO", "38_async_extension_add")
+  env_or("MBT_PROTON_E2E_SCENARIO", "38_async_extension_add")
 }
 
 ///|
 fn timeout_ms() -> Int {
-  match @env.get_env_var("MBT_LEPUS_E2E_TIMEOUT_MS") {
+  match @env.get_env_var("MBT_PROTON_E2E_TIMEOUT_MS") {
     Some(value) =>
       try @string.parse_int(value) catch {
         _ => 30000

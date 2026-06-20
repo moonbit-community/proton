@@ -1,8 +1,8 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus_ext/fs",
-  "justjavac/lepus_ext/path",
-  "justjavac/lepus",
+  "justjavac/proton_ext/fs",
+  "justjavac/proton_ext/path",
+  "justjavac/proton",
 }
 
 supported_targets = "native"
