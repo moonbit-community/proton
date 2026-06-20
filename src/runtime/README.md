@@ -1,21 +1,21 @@
-# lepus/runtime
+# proton/runtime
 
-`justjavac/lepus/runtime` is the lifecycle layer for app and window orchestration.
-It sits on top of `justjavac/lepus/core`, which owns the native/JS bridge,
+`justjavac/proton/runtime` is the lifecycle layer for app and window orchestration.
+It sits on top of `justjavac/proton/core`, which owns the native/JS bridge,
 ops runtime, resource tables, and low-level extension installation.
 
 Use:
 
-- `justjavac/lepus/webview` for the raw native `Webview`
-- `justjavac/lepus/core` for `Extension`, `ExtensionSpec`, low-level install,
+- `justjavac/proton/webview` for the raw native `Webview`
+- `justjavac/proton/core` for `Extension`, `ExtensionSpec`, low-level install,
   and the `window.__MoonBit__` bridge
-- `justjavac/lepus/runtime` for `App`, `AppWindow`, and multi-window lifecycle
-- `justjavac/lepus/bootstrap` for manifest loading/editing
-- `justjavac/lepus` for registry-driven app planning and creation
+- `justjavac/proton/runtime` for `App`, `AppWindow`, and multi-window lifecycle
+- `justjavac/proton/bootstrap` for manifest loading/editing
+- `justjavac/proton` for registry-driven app planning and creation
 
 This package does not decide which extensions are installed. That composition
-step now lives in `justjavac/lepus`, while built-in extension packages live in
-the separate `justjavac/lepus_ext` module.
+step now lives in `justjavac/proton`, while built-in extension packages live in
+the separate `justjavac/proton_ext` module.
 
 ## JavaScript Surface
 
@@ -43,9 +43,9 @@ For direct installation on a raw webview:
 
 ```moonbit
 import {
-  "justjavac/lepus/core" @core
-  "justjavac/lepus/webview" @webview
-  "justjavac/lepus_ext/path" @path
+  "justjavac/proton/core" @core
+  "justjavac/proton/webview" @webview
+  "justjavac/proton_ext/path" @path
 }
 
 fn main {
@@ -55,17 +55,17 @@ fn main {
 }
 ```
 
-For normal app-style startup, prefer `justjavac/lepus`:
+For normal app-style startup, prefer `justjavac/proton`:
 
 ```moonbit
 import {
-  "justjavac/lepus"
-  "justjavac/lepus_ext/fs" @fs
-  "justjavac/lepus_ext/path" @path
+  "justjavac/proton"
+  "justjavac/proton_ext/fs" @fs
+  "justjavac/proton_ext/path" @path
 }
 
 async fn main {
-  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
   .extension(@fs.extension())
   .extension(@path.extension())
   .run_or_abort()

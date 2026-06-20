@@ -1,6 +1,6 @@
-# Lepus E2E Probes
+# Proton E2E Probes
 
-This directory contains internal end-to-end probes for validating real Lepus
+This directory contains internal end-to-end probes for validating real Proton
 example applications. These packages are not user-facing examples.
 
 `test` connects to a running CEF app through Chrome DevTools Protocol via

@@ -1,6 +1,6 @@
 # FS Extension
 
-Native filesystem extension for `justjavac/lepus` applications.
+Native filesystem extension for `justjavac/proton` applications.
 
 It exposes a Node-first API under `window.__MoonBit__.fs` and keeps a rid-based
 streaming API for streaming and binary-style workflows.
@@ -12,9 +12,9 @@ and install it without wiring command bindings manually.
 
 ```moonbit
 import {
-  "justjavac/lepus/core" @core
-  "justjavac/lepus/webview" @webview
-  "justjavac/lepus_ext/fs" @fs
+  "justjavac/proton/core" @core
+  "justjavac/proton/webview" @webview
+  "justjavac/proton_ext/fs" @fs
 }
 
 fn main {
@@ -24,16 +24,16 @@ fn main {
 }
 ```
 
-For app-style startup, install it through `justjavac/lepus`:
+For app-style startup, install it through `justjavac/proton`:
 
 ```moonbit
 import {
-  "justjavac/lepus"
-  "justjavac/lepus_ext/fs" @fs
+  "justjavac/proton"
+  "justjavac/proton_ext/fs" @fs
 }
 
 async fn main {
-  @lepus.html("FS Demo", "<html></html>", width=900, height=700, debug=true)
+  @proton.html("FS Demo", "<html></html>", width=900, height=700, debug=true)
   .extension(@fs.extension())
   .run_or_abort()
 }

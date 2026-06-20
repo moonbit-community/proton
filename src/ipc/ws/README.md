@@ -1,6 +1,6 @@
-# lepus/ipc/ws
+# proton/ipc/ws
 
-HTTP/WebSocket IPC transport for Lepus.
+HTTP/WebSocket IPC transport for Proton.
 
 The user process runs the local WebSocket server, exposes a health endpoint for
 startup readiness, dispatches protocol requests, and can stream extension events

@@ -1,18 +1,18 @@
-# Lepus
+# Proton
 
 MoonBit framework for building Tauri/Electron-style desktop apps on top of a small native browser backend, with a compact runtime, manifest-driven control plane, and opt-in JS-facing extensions so applications only link the native capabilities they actually use.
 
 The repository is organized into these layers:
 
-- `justjavac/lepus`: high-level app facade and ordinary developer API
-- `justjavac/lepus/webview`: low-level native browser binding
-- `justjavac/lepus/manifest`: declarative `app.json` contract types
-- `justjavac/lepus/core`: native/JS bridge, ops runtime, resource tables, extension host
-- `justjavac/lepus/runtime`: `App`, windows, and lifecycle orchestration
-- `justjavac/lepus/bootstrap`: `app.json` loading, editing, and validation helpers
-- `justjavac/lepus/catalog`: metadata discovery, schema loading, and explicit link planning
-- `justjavac/lepus_cli`: developer CLI entry point, including build-time command/event code generation in `cli/codegen`
-- `justjavac/lepus_ext/*`: built-in extensions such as `fs`, `path`, `dialog`, `clipboard`, `shell`, `notification`, `tray`, and `globalHotkey`
+- `justjavac/proton`: high-level app facade and ordinary developer API
+- `justjavac/proton/webview`: low-level native browser binding
+- `justjavac/proton/manifest`: declarative `app.json` contract types
+- `justjavac/proton/core`: native/JS bridge, ops runtime, resource tables, extension host
+- `justjavac/proton/runtime`: `App`, windows, and lifecycle orchestration
+- `justjavac/proton/bootstrap`: `app.json` loading, editing, and validation helpers
+- `justjavac/proton/catalog`: metadata discovery, schema loading, and explicit link planning
+- `justjavac/proton_cli`: developer CLI entry point, including build-time command/event code generation in `cli/codegen`
+- `justjavac/proton_ext/*`: built-in extensions such as `fs`, `path`, `dialog`, `clipboard`, `shell`, `notification`, `tray`, and `globalHotkey`
 
 The product direction is:
 
@@ -20,16 +20,16 @@ The product direction is:
 - keep extension linking explicit
 - keep AI support in metadata, manifests, diagnostics, and tooling rather than in every shipped runtime
 
-In one sentence: Lepus is aiming for "small runtime, rich control plane".
+In one sentence: Proton is aiming for "small runtime, rich control plane".
 
 ## Direction
 
 The near-term direction is:
 
-- keep Lepus framework-first rather than app-template-first
+- keep Proton framework-first rather than app-template-first
 - keep extensions opt-in so shipped binaries stay small
 - add AI support in metadata, tooling, diagnostics, and manifest control-plane layers rather than the default runtime of every app
-- make package-level `@lepus.html(...)` and `@lepus.config(...)`
+- make package-level `@proton.html(...)` and `@proton.config(...)`
   the ordinary app startup path while keeping `create_app(...)` and
   `create_app_from_file(...)` as lower-level escape hatches
 
@@ -39,7 +39,7 @@ JavaScript now uses a single global entry:
 
 ## Project Model
 
-Lepus separates app configuration from capability declaration:
+Proton separates app configuration from capability declaration:
 
 - `app.json` declares app shape such as window, entry, and debug settings
 - application code explicitly declares the extensions that should ship
@@ -53,29 +53,29 @@ Low-level usage stays very small:
 
 ```moonbit
 import {
-  "justjavac/lepus/webview" @webview
+  "justjavac/proton/webview" @webview
 }
 
 fn main {
   @webview.Webview::new(debug=1)
-  ..set_title("Lepus")
+  ..set_title("Proton")
   ..set_size(800, 600, @webview.SizeHint::None)
   ..set_html("<html><body><h1>Hello</h1></body></html>")
   .run()
 }
 ```
 
-App-style startup goes through `justjavac/lepus`:
+App-style startup goes through `justjavac/proton`:
 
 ```moonbit
 import {
-  "justjavac/lepus"
-  "justjavac/lepus_ext/fs" @fs
-  "justjavac/lepus_ext/path" @path
+  "justjavac/proton"
+  "justjavac/proton_ext/fs" @fs
+  "justjavac/proton_ext/path" @path
 }
 
 async fn main {
-  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
   .extension(@fs.extension())
   .extension(@path.extension())
   .run_or_abort()
@@ -86,7 +86,7 @@ Or from `app.json`:
 
 ```moonbit
 async fn main {
-  @lepus.config("app.json")
+  @proton.config("app.json")
   .extension(@fs.extension())
   .extension(@path.extension())
   .run_or_abort()
@@ -116,22 +116,22 @@ The important rule is:
 - MoonBit code declares and enables extensions
 - `App::extension(...)` links and enables one extension in one call
 - `App::extensions(...)` links and enables an explicit extension set such as
-  `@lepus_ext.all()`
+  `@proton_ext.all()`
 
 Even when catalog or tooling generates those edits, the final project should still make extension linking explicit and reviewable.
 
 ### Install The Codegen CLI
 
-Generated command extensions call `target/lepus-tools/lepus codegen` from
+Generated command extensions call `target/proton-tools/proton codegen` from
 package pre-build steps. Install the local CLI before building those packages:
 
 ```powershell
-moon install --path cli --bin target\lepus-tools
-Copy-Item target\lepus-tools\lepus_cli.exe target\lepus-tools\lepus.exe -Force
+moon install --path cli --bin target\proton-tools
+Copy-Item target\proton-tools\proton_cli.exe target\proton-tools\proton.exe -Force
 ```
 
-On Unix-like shells, copy `target/lepus-tools/lepus_cli` to
-`target/lepus-tools/lepus` and make it executable.
+On Unix-like shells, copy `target/proton-tools/proton_cli` to
+`target/proton-tools/proton` and make it executable.
 
 ### Run The Windows CEF Example
 
@@ -178,7 +178,7 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 
 This repo targets `native` only.
 
-- The low-level `justjavac/lepus/webview` package uses a Windows CEF backend
+- The low-level `justjavac/proton/webview` package uses a Windows CEF backend
   installed in `.cef-cache/` by `node .\scripts\setup_cef.mjs`.
 - `.cef-cache/` must contain a CEF binary distribution directly, with
   `include/capi/cef_app_capi.h`, `Release/libcef.lib`,
@@ -193,7 +193,7 @@ This repo targets `native` only.
 - The native stub loads `Release/libcef.dll` and points CEF at `Resources/`
   from the configured root. A deployed app can package the same CEF runtime
   layout beside the app executable.
-- Set `LEPUS_CEF_REMOTE_DEBUGGING_PORT` to a port number to enable CEF remote
+- Set `PROTON_CEF_REMOTE_DEBUGGING_PORT` to a port number to enable CEF remote
   debugging for CDP-based smoke tests.
 - On Windows, missing CEF fails the native build with setup instructions.
 - The previous vendored webview linkage path has been removed from the root

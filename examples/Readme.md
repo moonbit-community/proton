@@ -59,10 +59,10 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | -------------- | ------ | ---- |
 | 17_extension | OK | Custom extension mounted on `window.__MoonBit__` |
 | 18_extension_fs | OK | Filesystem workbench using `@fs.extension()` and `window.__MoonBit__.fs` |
-| 19_app_fs | OK | `justjavac/lepus` startup with `fs` and `path` |
+| 19_app_fs | OK | `justjavac/proton` startup with `fs` and `path` |
 | 20_app_desktop | OK | App startup with `dialog` and `clipboard` |
 | 21_app_shell | OK | App startup with the `shell` extension |
-| 22_app_config | OK | Config-file startup through `@lepus.config("app.json")` with extensions declared in code |
+| 22_app_config | OK | Config-file startup through `@proton.config("app.json")` with extensions declared in code |
 | 23_ops_runtime | OK | Direct `window.__MoonBit__.core.invokeOp(...)` plus extension proxies |
 | 24_app_multi_window | OK | Multi-window startup with main and secondary windows |
 | 25_app_system | Windows-only | Notification, tray, and global hotkey in one runtime |
@@ -73,30 +73,30 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | 33_app_auto_launch | Platform-dependent | Focused `autoLaunch` extension example |
 | 34_app_keepawake | Platform-dependent | Focused `keepAwake` extension example |
 | 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
-| 37_cef_mvp | Windows CEF MVP | Root `justjavac/lepus` backend rendered through CEF |
-| 38_async_extension_add | OK | Async extension API generated from `#lepus.command` and enabled with `.extension(...)` |
+| 37_cef_mvp | Windows CEF MVP | Root `justjavac/proton` backend rendered through CEF |
+| 38_async_extension_add | OK | Async extension API generated from `#proton.command` and enabled with `.extension(...)` |
 | 39_sync_async_extensions | OK | Sync and async command extensions enabled through the same `.extension(...)` API |
 | 40_event_broadcast | OK | Ticker extension implemented in the user process with a framework child |
 | 41_app_commands | OK | User-process command extension implemented by hand and enabled with `.extension(...)` |
-| 42_attribute_codegen_commands | OK | Command extension generated from `#lepus.command` and `#lepus.event` attributes |
+| 42_attribute_codegen_commands | OK | Command extension generated from `#proton.command` and `#proton.event` attributes |
 | 43_cef_bind_smoke | Windows CEF smoke | Automated `webview.bind(...)` / `webview.response(...)` Promise marshalling smoke |
 
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
-- Examples `19` through `35` show app-style startup with `justjavac/lepus`;
-  ordinary inline examples use `@lepus.html(...)`, `@lepus.file(...)`,
+- Examples `19` through `35` show app-style startup with `justjavac/proton`;
+  ordinary inline examples use `@proton.html(...)`, `@proton.file(...)`,
   and `.extension(...)`; `app.json` examples use
-  `@lepus.config(...).extension(...)`.
+  `@proton.config(...).extension(...)`.
 - Example `38` shows async extension-style APIs with the user process starting a framework child process.
 - Example `39` shows sync and async extension-style APIs enabled through the same app-facing extension method.
 - Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
 - Example `41` demonstrates a hand-written user-process command extension.
 - Example `42` shows the generated-command workflow. Regenerate its command
   bridge by first installing the CLI with
-  `moon install --path cli --bin target/lepus-tools`, then copy
-  `target/lepus-tools/lepus_cli(.exe)` to `target/lepus-tools/lepus(.exe)`. The
-  package pre-build then calls `target/lepus-tools/lepus codegen`; extension id and namespace come
+  `moon install --path cli --bin target/proton-tools`, then copy
+  `target/proton-tools/proton_cli(.exe)` to `target/proton-tools/proton(.exe)`. The
+  package pre-build then calls `target/proton-tools/proton codegen`; extension id and namespace come
   from `42_attribute_codegen_commands/extension.json`.
 - Example `43` exits on its own after JavaScript calls a MoonBit binding,
   receives a response, and reports the Promise result back through a second
