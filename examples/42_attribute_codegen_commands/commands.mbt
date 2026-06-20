@@ -13,7 +13,7 @@ struct AddFinished {
 ///|
 #lepus.command(name="slowAdd")
 async fn slow_add(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   left : Int,
   right : Int,
   delay_ms : Int?,

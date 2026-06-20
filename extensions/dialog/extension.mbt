@@ -8,7 +8,7 @@ fn file_dialog_result_path(result : Result[FileDialogReply, String]) -> String? 
 
 ///|
 async fn[Reply] emit_command_result(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   result : Result[Reply, String],
   operation : String,
   path? : String? = None,
@@ -27,7 +27,7 @@ async fn[Reply] emit_command_result(
 /// Shows a message dialog from a generated app-command extension.
 #lepus.command(name="message")
 async fn message(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   message : String,
   title : String?,
   level : String?,
@@ -45,7 +45,7 @@ async fn message(
 /// Shows a confirmation dialog from a generated app-command extension.
 #lepus.command(name="confirm")
 async fn confirm(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   message : String,
   title : String?,
   level : String?,
@@ -63,7 +63,7 @@ async fn confirm(
 /// Shows an open-file dialog from a generated app-command extension.
 #lepus.command(name="openFile")
 async fn open_file(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   title : String?,
   path : String?,
 ) -> Result[FileDialogReply, String] {
@@ -77,7 +77,7 @@ async fn open_file(
 /// Shows a save-file dialog from a generated app-command extension.
 #lepus.command(name="saveFile")
 async fn save_file(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   title : String?,
   path : String?,
 ) -> Result[FileDialogReply, String] {

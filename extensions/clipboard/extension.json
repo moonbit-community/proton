@@ -1,5 +1,6 @@
 {
   "schema_version": 2,
   "id": "justjavac/lepus-clipboard",
-  "namespace": "clipboard"
+  "namespace": "clipboard",
+  "package": "justjavac/lepus_ext/clipboard"
 }

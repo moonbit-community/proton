@@ -1,16 +1,17 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/shell"
+package "justjavac/lepus_ext/shell"
 
 import {
-  "justjavac/lepus_app",
+  "justjavac/lepus/command",
+  "justjavac/lepus/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_shell_activity(@lepus_app.AppCommandExtensionContext, ShellActivity) -> Unit
+pub async fn emit_shell_activity(@command.AppCommandExtensionContext, ShellActivity) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
+pub fn extension() -> @extension.Extension
 
 // Errors
 

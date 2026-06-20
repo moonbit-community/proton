@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "id": "vendor/path",
+  "version": "0.1.0",
+  "display_name": "Path",
+  "description": "Path extension",
+  "namespace": "path",
+  "manifest_key": "vendor/path",
+  "package": "justjavac/lepus_ext/path\"\nmalicious",
+  "spec_symbol": "spec",
+  "platforms": ["windows"],
+  "dependencies": [],
+  "capabilities": [],
+  "options_schema": "./options.schema.json"
+}

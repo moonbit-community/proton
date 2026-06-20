@@ -95,12 +95,18 @@ fn register_paths_reply_op(
 }
 
 ///|
+/// Builds the app-facing `path` extension.
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_core_spec(core_spec())
+}
+
+///|
 /// Builds the `path` extension for direct installation.
 ///
-/// Install it with `@core.install_extension(webview, @path.extension())` to expose
+/// Install it with `@core.install_extension(webview, @path.core_extension())` to expose
 /// `window.__MoonBit__.path` for common path operations such as `resolve`,
 /// `join`, `dirname`, `basename`, `parse`, and `format`.
-pub fn extension() -> @core.Extension {
+pub fn core_extension() -> @core.Extension {
   @core.Extension::new(
     extension_id,
     extension_namespace,
@@ -142,8 +148,8 @@ pub fn extension() -> @core.Extension {
 /// Builds the declarative `path` extension spec.
 /// Register this when common path operations should be linked declaratively
 /// through app composition.
-pub fn spec() -> @core.ExtensionSpec {
+pub fn core_spec() -> @core.ExtensionSpec {
   @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(extension())
+    Ok(core_extension())
   })
 }

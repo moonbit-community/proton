@@ -4,16 +4,11 @@ version = "0.1.0"
 
 import {
   "moonbitlang/x@0.4.43",
-  "justjavac/lepus_bootstrap@0.1.0",
-  "justjavac/lepus_app@0.1.0",
-  "justjavac/lepus_core@0.1.0",
-  "justjavac/lepus_manifest@0.1.0",
   "justjavac/ffi@0.2.1",
   "moonbitlang/async@0.19.0",
-  "extensions@0.1.0",
-  "justjavac/lepus_runtime@0.1.0",
+  "justjavac/lepus_ext@0.1.0",
   "justjavac/lepus@0.1.10",
-  "justjavac/lepus_cef@0.1.0",
+  "justjavac/cdp@0.1.7",
 }
 
 readme = "README.md"

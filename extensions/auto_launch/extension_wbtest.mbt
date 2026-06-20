@@ -22,9 +22,6 @@ test "auto launch descriptor validates payloads through package constructor" {
 
 ///|
 test "auto launch metadata constants match generated app command extension" {
-  assert_eq(
-    generated_app_command_extension().id(),
-    "justjavac/lepus-auto-launch",
-  )
-  assert_eq(generated_app_command_extension().js_namespace(), "autoLaunch")
+  assert_eq(extension().id(), "justjavac/lepus-auto-launch")
+  assert_eq(extension().command_spec().unwrap().js_namespace(), "autoLaunch")
 }

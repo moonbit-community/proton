@@ -1,0 +1,73 @@
+///|
+fn cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => backend_available()
+    _ => false
+  }
+}
+
+///|
+test "Start app loop and terminate it" {
+  guard cef_unit_tests_enabled() else { return }
+  let webview = Webview::new()
+  webview.dispatch(fn() { webview.terminate() })
+  webview.run()
+  assert_eq(1 + 1, 2)
+}
+
+///|
+test "Create a window, run app and terminate it" {
+  guard cef_unit_tests_enabled() else { return }
+  let webview = Webview::new()
+  webview.set_title("Test")
+  webview.set_size(480, 320, SizeHint::None)
+  webview.set_html("set_html ok")
+  webview.navigate("data:text/plain,navigate%20ok")
+  webview.dispatch(fn() { webview.terminate() })
+  webview.run()
+}
+
+///|
+test "Webview destroy is idempotent" {
+  guard cef_unit_tests_enabled() else { return }
+  let webview = Webview::new()
+  webview.destroy()
+  webview.destroy()
+}
+
+///|
+test "Bind callback marshals C strings safely" {
+  guard cef_unit_tests_enabled() else { return }
+  let mut called = false
+  let mut callback_id = ""
+  let mut callback_req = ""
+  let webview = Webview::new()
+  webview.bind("press", fn(id, req) {
+    callback_id = @ffi.from_cstr(id)
+    callback_req = @ffi.from_cstr(req)
+    called = true
+    webview.response(callback_id, 0, "{\"ok\":true}")
+    webview.terminate()
+  })
+  webview.set_html(
+    (
+      #| <html>
+      #|   <body>
+      #|     <script>
+      #|       window.addEventListener("load", () => {
+      #|         window.setTimeout(() => {
+      #|           window.press("hello", 123).catch((error) => {
+      #|             document.body.textContent = String(error);
+      #|           });
+      #|         }, 0);
+      #|       });
+      #|     </script>
+      #|   </body>
+      #| </html>,
+    ),
+  )
+  webview.run()
+  assert_true(called)
+  assert_true(!callback_id.is_empty())
+  assert_eq(callback_req, "[\"hello\",123]")
+}

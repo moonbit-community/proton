@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/examples/38_async_extension_add"
+
+import {
+  "justjavac/lepus/extension",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn extension() -> @extension.Extension
+
+// Errors
+
+// Types and methods
+type LepusSlowAddPayload derive(@json.FromJson)
+
+// Type aliases
+
+// Traits
+

@@ -1,10 +1,10 @@
 # Extensions
 
 This workspace contains the built-in extension packages that plug into
-`justjavac/lepus_core` and `justjavac/lepus_app`.
+`justjavac/lepus/core` and `justjavac/lepus`.
 
-They now participate in app startup through `justjavac/lepus_app`, and each
-package exposes a `spec()` builder for registry-driven installation.
+They participate in app startup through `justjavac/lepus`, and each package
+exposes `extension()` as its ordinary app-facing entrypoint.
 
 ## Layout
 
@@ -13,7 +13,6 @@ package exposes a `spec()` builder for registry-driven installation.
 - `dialog/`: native message and file dialogs
 - `clipboard/`: adapter over the published `justjavac/clipboard` package
 - `auto_launch/`: startup-entry management through `justjavac/auto_launch`
-- `devtools/`: open the native developer tools window from trusted JavaScript
 - `shell/`: open external targets and reveal files
 - `keepawake/`: native keep-awake guards through `justjavac/keepawake`
 - `microphone/`: native microphone discovery and capture-config helpers
@@ -33,15 +32,11 @@ extensions in this workspace adapt those capabilities into the webview runtime.
 
 ## Usage
 
-Add the workspace as a local dependency:
+Add the extension module as a dependency:
 
-```json
-{
-  "deps": {
-    "extensions": {
-      "path": "../extensions"
-    }
-  }
+```toml
+import {
+  "justjavac/lepus_ext@0.1.0"
 }
 ```
 
@@ -49,14 +44,14 @@ Add the workspace as a local dependency:
 
 ```moonbit
 import {
-  "justjavac/lepus_core" @core,
-  "extensions/path" @path,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/core" @core
+  "justjavac/lepus/webview" @webview
+  "justjavac/lepus_ext/path" @path
 }
 
 fn main {
   let webview = @webview.Webview::new()
-  @core.install_extension(webview, @path.extension())
+  @core.install_extension(webview, @path.core_extension())
   webview.run()
 }
 ```
@@ -65,34 +60,23 @@ fn main {
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "extensions/path" @path,
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
-  "justjavac/lepus_runtime" @wvrt,
+  "justjavac/lepus"
+  "justjavac/lepus_ext/fs" @fs
+  "justjavac/lepus_ext/path" @path
 }
 
-fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Demo", 900, 700),
-    @manifest.AppEntry::Html("<html></html>"),
-    debug=1,
-  )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let _ = registry.register(@path.spec())
-  let runtime : @wvrt.App = match @app.create_app(manifest, registry) {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  runtime.run()
+async fn main {
+  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  .extension(@fs.extension())
+  .extension(@path.extension())
+  .run_or_abort()
 }
 ```
 
 In this model:
 
-- MoonBit code registers which extensions are available.
-- `app.json.extensions` enables or disables registered extensions and can pass options.
+- MoonBit code declares and enables extensions.
+- `app.json` configures app-level settings such as window, entry, and debug mode.
 - JavaScript talks to one global object: `window.__MoonBit__`.
 - Each extension owns `extension.json` and `options.schema.json` for machine-readable metadata.
 
@@ -102,10 +86,6 @@ Example config:
 {
   "window": { "title": "Demo", "width": 900, "height": 700 },
   "entry": { "kind": "file", "value": "app.html" },
-  "extensions": {
-    "justjavac/lepus-fs": true,
-    "justjavac/lepus-path": {}
-  },
   "debug": 1
 }
 ```
@@ -127,14 +107,12 @@ window.__MoonBit__.events.on("fs.activity", console.log);
 - `path` is pure and side-effect free.
 - `autoLaunch` manages host startup entries and should be linked only for apps
   that explicitly expose that desktop integration.
-- `devtools` exposes the native developer tools window and should stay opt-in
-  for trusted development builds.
 - `keepAwake` owns one active native guard per installed extension instance.
 - `microphone` currently exposes device discovery and capture configuration
   helpers; capture-session streaming can be layered on once the package exposes
   that as public API.
-- `devtools`, `dialog`, and `shell`
-  currently ship Windows-native implementations in this repository.
+- `dialog` and `shell` currently ship Windows-native implementations in this
+  repository.
 - `globalHotkey` follows the upstream
   [`justjavac/global_hotkey`](https://mooncakes.io/docs/justjavac/global_hotkey)
   platform matrix.

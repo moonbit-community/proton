@@ -1,7 +1,8 @@
 import {
   "moonbitlang/core/json",
   "justjavac/keepawake" @sys_keepawake,
-  "justjavac/lepus_app" @app,
+  "justjavac/lepus/command" @lepus_command,
+  "justjavac/lepus/extension" @lepus_extension,
 }
 
 import {
@@ -13,7 +14,7 @@ supported_targets = "native"
 options(
   "pre-build": [
     {
-      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "command": "$mod_dir/../target/lepus-tools/lepus codegen $input -o $output",
       "input": "extension.mbt",
       "output": "extension.g.mbt",
     },

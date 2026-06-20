@@ -2,6 +2,7 @@
 _build/
 target/
 .mooncakes/
+dist/
 
 # CMake build directories and cache
 build/

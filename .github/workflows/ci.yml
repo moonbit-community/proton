@@ -2,9 +2,6 @@ name: ci
 
 on: [push, pull_request]
 
-env:
-  WEBVIEW2_SDK_VERSION: 1.0.3967.48
-
 jobs:
   moonbit:
     strategy:
@@ -29,7 +26,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
-          "C:\Users\runneradmin\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Install Linux native dependencies
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -49,13 +46,29 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install WebView2 SDK headers
+      - name: Setup Node.js on Windows
         if: ${{ matrix.os == 'windows-latest' }}
-        run: .\scripts\install_webview2_headers.ps1
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
-      - name: Install Lepus CLI for pre-build codegen
+      - name: Install CEF on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          moon install ./cli --bin target/lepus-tools
+          node .\scripts\setup_cef.mjs
+
+      - name: Install Lepus CLI for pre-build codegen on Unix
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          moon install --path cli --bin target/lepus-tools
+          cp target/lepus-tools/lepus_cli target/lepus-tools/lepus
+          chmod +x target/lepus-tools/lepus
+
+      - name: Install Lepus CLI for pre-build codegen on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          moon install --path cli --bin target/lepus-tools
+          Copy-Item target\lepus-tools\lepus_cli.exe target\lepus-tools\lepus.exe -Force
 
       - name: Format check
         run: |
@@ -65,15 +78,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon check --target native --deny-warn
-          moon -C manifest check --target native --deny-warn
-          moon -C core check --target native --deny-warn
-          moon -C runtime check --target native --deny-warn
-          moon -C bootstrap check --target native --deny-warn
-          moon -C app check --target native --deny-warn
-          moon -C catalog check --target native --deny-warn
-          moon -C cli check --target native --deny-warn
-          moon -C cef check --target native --deny-warn
-          moon test cli/codegen --target native
+          moon -C cli test codegen --target native
 
       - name: Check framework modules on Windows
         if: ${{ matrix.os == 'windows-latest' }}
@@ -83,15 +88,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
-          moon -C manifest check --target native --deny-warn
-          moon -C core check --target native --deny-warn
-          moon -C runtime check --target native --deny-warn
-          moon -C bootstrap check --target native --deny-warn
-          moon -C app check --target native --deny-warn
-          moon -C catalog check --target native --deny-warn
-          moon -C cli check --target native --deny-warn
-          moon -C cef check --target native --deny-warn
-          moon test cli/codegen --target native
+          moon -C cli test codegen --target native
 
       - name: Check extension catalog on Unix
         if: ${{ matrix.os != 'windows-latest' }}
@@ -119,12 +116,6 @@ jobs:
       - name: List Windows example binaries
         if: ${{ matrix.os == 'windows-latest' }}
         run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
-
-      - name: Setup Node.js for examples e2e
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
 
       - name: Run examples CDP e2e on Windows
         if: ${{ matrix.os == 'windows-latest' }}

@@ -132,9 +132,9 @@
                 <h1>__MoonBit__ Runtime Config</h1>
                 <p>
                     This app is created through
-                    <code>app.create_app_from_file("22_app_config/app.json", extensions=[...])</code>.
-                    The config file enables built-in <code>fs</code> and <code>path</code>
-                    extensions and resolves relative paths from the config directory.
+                    <code>@lepus.config("22_app_config/app.json").extension(...)</code>.
+                    MoonBit code enables built-in <code>fs</code> and <code>path</code>
+                    extensions; the config file resolves relative app paths from its directory.
                 </p>
             </div>
             <div class="grid">
@@ -155,10 +155,13 @@
             </div>
         </div>
         <script>
-            const app = window.__MoonBit__;
             const notice = document.getElementById("notice");
             const output = document.getElementById("output");
             const configDirHint = "22_app_config";
+
+            function moonbit() {
+                return window.__MoonBit__;
+            }
 
             function setNotice(message, kind) {
                 notice.textContent = message;
@@ -170,6 +173,10 @@
 
             document.getElementById("load").addEventListener("click", async () => {
                 try {
+                    const app = moonbit();
+                    if (!app || !app.path || !app.fs) {
+                        throw new Error("MoonBit runtime is not ready");
+                    }
                     const here = await app.path.resolve({ path: configDirHint });
                     const files = await app.fs.readDir({ path: here.path });
                     output.textContent = JSON.stringify(

@@ -1,7 +1,7 @@
 ///|
 test "fs spec rejects unsupported options" {
   match
-    spec().build_extension(
+    core_spec().build_extension(
       @core.ExtensionBuildContext::new(
         options=Some(Json::object({ "deprecated": Json::boolean(true) })),
       ),
@@ -17,26 +17,14 @@ test "fs helper script stays with fs extension assets" {
   assert_true(script.contains("const rootName = \"__MoonBit__\";"))
   assert_true(script.contains("const extensionName = \"fs\";"))
   assert_true(script.contains("@@nodeStyleFs"))
-  assert_true(script.contains("api.sharedBufferSupport = function()"))
-  assert_true(script.contains("api.readFileBuffer = function(path)"))
-  assert_true(
-    script.contains("api.writeFileBuffer = function(path, content, options)"),
-  )
 }
 
 ///|
-test "fs shared buffer helpers validate transfer sizes" {
-  assert_eq(shared_buffer_capacity(0), 1)
-  assert_eq(shared_buffer_capacity(8), 8)
-  debug_inspect(validate_shared_buffer_size(0), content="Ok(())")
-  debug_inspect(
-    validate_shared_buffer_size(-1),
-    content="Err(\"fs SharedArrayBuffer size must be non-negative\")",
-  )
-  debug_inspect(
-    validate_shared_buffer_size(shared_buffer_max_transfer_size + 1),
-    content="Err(\"fs SharedArrayBuffer size exceeds the 64 MiB transfer limit: 67108865\")",
-  )
+fn fs_cef_unit_tests_enabled() -> Bool {
+  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+    Some("1") => @webview.backend_available()
+    _ => false
+  }
 }
 
 ///|
@@ -103,6 +91,7 @@ test "fs path api can read write and append text files" {
 
 ///|
 test "fs extension text ops complete through WebView promise bridge" {
+  guard fs_cef_unit_tests_enabled() else { return }
   let path = "lepus-fs-webview-promise.txt"
   if native_path_exists(path) {
     ignore(native_remove_file(path))
@@ -114,7 +103,7 @@ test "fs extension text ops complete through WebView promise bridge" {
   let mut seen_report : FsRuntimeReport? = None
   let mut js_error : String? = None
   let webview = @webview.Webview::new()
-  @core.install_extension(webview, extension())
+  @core.install_extension(webview, core_extension())
   webview.bind("reportFsFailure", fn(id, req) {
     let request_id = @ffi.from_cstr(id)
     let message_result : Result[String, String] = decode_single_argument(req)

@@ -1,6 +1,6 @@
 name = "justjavac/lepus_cli"
 
-version = "0.1.0"
+version = "0.1.10"
 
 import {
   "moonbitlang/x@0.4.43",
@@ -8,18 +8,17 @@ import {
   "justjavac/case@0.2.0",
 }
 
-readme = "README.md"
+readme = "codegen/README.md"
 
 repository = "https://github.com/moonbit-community/lepus/tree/main/cli"
 
 license = "MIT"
 
-keywords = [ "webview", "cli", "codegen" ]
+keywords = [ "lepus", "cli", "codegen" ]
 
-description = "Developer CLI for Lepus."
+description = "Developer CLI and code generation tools for Lepus."
 
 options(
-  source: "",
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",

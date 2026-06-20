@@ -1,8 +1,9 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/async",
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
+  "justjavac/lepus/command" @lepus_command,
+  "justjavac/lepus/extension" @lepus_extension,
+  "justjavac/lepus",
 }
 
 supported_targets = "native"
@@ -11,7 +12,7 @@ options(
   "is-main": true,
   "pre-build": [
     {
-      "command": "$mod_dir/../target/lepus-tools/lepus_cli codegen $input -o $output",
+      "command": "$mod_dir/../target/lepus-tools/lepus codegen $input -o $output",
       "input": "commands.mbt",
       "output": "commands.g.mbt",
     },

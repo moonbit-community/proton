@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_microphone_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : MicrophoneActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -16,7 +16,7 @@ struct LepusListDevicesPayload {
 
 ///|
 async fn __lepus_command_list_devices(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusListDevicesPayload,
 ) -> MicrophoneDevicesReply {
   list_devices(context, payload._payload)
@@ -47,14 +47,19 @@ fn __lepus_command_config(payload : LepusConfigPayload) -> Result[CaptureConfigR
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-microphone",
     "microphone",
     [
-      @app.AppCommandApiDescriptor::new("listDevices"),
-      @app.AppCommandApiDescriptor::new("parseListing"),
-      @app.AppCommandApiDescriptor::new("config"),
+      @lepus_command.AppCommandApiDescriptor::new("listDevices"),
+      @lepus_command.AppCommandApiDescriptor::new("parseListing"),
+      @lepus_command.AppCommandApiDescriptor::new("config"),
     ],
     fn(context) {
       context.op_async("listDevices", async fn(payload) {

@@ -1,0 +1,98 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/command"
+
+import {
+  "justjavac/lepus/core",
+  "justjavac/lepus/ipc",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn app_command_extension_op_name(String, String) -> String
+
+pub fn app_command_js_property_is_reserved(String) -> Bool
+
+// Errors
+
+// Types and methods
+pub struct AppCommandApiDescriptor {
+  api_name : String
+}
+pub fn AppCommandApiDescriptor::api_name(Self) -> String
+pub fn AppCommandApiDescriptor::new(String) -> Self
+pub fn AppCommandApiDescriptor::to_ipc_api(Self) -> @ipc.IpcExtensionApi
+
+pub struct AppCommandExtensionContext {
+  host : @core.AppCommandHost
+  extension_id : String
+  js_namespace : String
+  options : Json?
+  base_dir : String?
+}
+pub fn AppCommandExtensionContext::base_dir(Self) -> String?
+pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(Self, String, Payload) -> Unit
+pub fn AppCommandExtensionContext::extension_id(Self) -> String
+pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
+pub fn AppCommandExtensionContext::js_namespace(Self) -> String
+pub fn AppCommandExtensionContext::new(@core.AppCommandHost, String, String, options? : Json?, base_dir? : String?) -> Self
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn AppCommandExtensionContext::op_name(Self, String) -> String
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn AppCommandExtensionContext::options(Self) -> Json?
+
+pub struct AppCommandExtensionDescriptor {
+  id : String
+  js_namespace : String
+  apis : Array[AppCommandApiDescriptor]
+  scripts : Array[String]
+}
+pub fn AppCommandExtensionDescriptor::new(String, String, Array[AppCommandApiDescriptor], scripts? : Array[String]) -> Self
+pub fn AppCommandExtensionDescriptor::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
+
+pub struct AppCommandExtensionRegistry {
+  specs : Map[String, AppCommandExtensionSpec]
+  registration_order : Array[String]
+}
+pub fn AppCommandExtensionRegistry::get(Self, String) -> AppCommandExtensionSpec?
+pub fn AppCommandExtensionRegistry::new() -> Self
+pub fn AppCommandExtensionRegistry::ordered_names(Self) -> Array[String]
+pub fn AppCommandExtensionRegistry::register(Self, AppCommandExtensionSpec) -> Self
+pub fn AppCommandExtensionRegistry::registered_ids(Self) -> Array[String]
+pub fn AppCommandExtensionRegistry::spec_map(Self) -> Map[String, AppCommandExtensionSpec]
+
+pub struct AppCommandExtensionSpec {
+  id : String
+  js_namespace : String
+  apis : Array[AppCommandApiDescriptor]
+  scripts : Array[String]
+  dependencies : Array[String]
+  register : (AppCommandExtensionContext) -> Result[Unit, String]
+  on_destroy : (AppCommandExtensionContext) -> Unit
+}
+pub fn AppCommandExtensionSpec::apis(Self) -> Array[AppCommandApiDescriptor]
+pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
+pub fn AppCommandExtensionSpec::destroy(Self, AppCommandExtensionContext) -> Unit
+pub fn AppCommandExtensionSpec::id(Self) -> String
+pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
+pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit) -> Self
+pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
+pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Result[Unit, String]
+pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
+
+pub struct AppCommandsConfig {
+  op_names : Array[String]
+  extensions : Array[@ipc.IpcExtensionDescriptor]
+  framework_extension_ids : Array[String]
+}
+pub fn AppCommandsConfig::extensions(Self) -> Array[@ipc.IpcExtensionDescriptor]
+pub fn AppCommandsConfig::framework_extension_ids(Self) -> Array[String]
+pub fn AppCommandsConfig::from_ipc_descriptors(Array[String], Array[@ipc.IpcExtensionDescriptor], Array[String]) -> Self
+pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
+pub fn AppCommandsConfig::op_names(Self) -> Array[String]
+
+// Type aliases
+
+// Traits
+

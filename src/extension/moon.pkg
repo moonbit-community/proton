@@ -1,0 +1,6 @@
+import {
+  "justjavac/lepus/command" @lepus_command,
+  "justjavac/lepus/core",
+}
+
+supported_targets = "native"

@@ -48,7 +48,7 @@ fn is_enabled(
 /// Enables the resolved native startup entry.
 #lepus.command(name="enable")
 async fn enable(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   name : String,
   path : String?,
   launch_in_background : Bool?,
@@ -77,7 +77,7 @@ async fn enable(
 /// Disables the resolved native startup entry.
 #lepus.command(name="disable")
 async fn disable(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   name : String,
   path : String?,
   launch_in_background : Bool?,

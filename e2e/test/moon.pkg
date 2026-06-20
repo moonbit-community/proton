@@ -1,0 +1,22 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "justjavac/cdp/client",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  targets: {
+    "cdp_eval.mbt": [ "native" ],
+    "env.mbt": [ "native" ],
+    "main.mbt": [ "native" ],
+    "probes.mbt": [ "native" ],
+    "probes_app.mbt": [ "native" ],
+    "probes_basic.mbt": [ "native" ],
+    "probes_command.mbt": [ "native" ],
+    "ready.mbt": [ "native" ],
+  },
+)

@@ -2,14 +2,15 @@
 package "justjavac/lepus/examples/42_attribute_codegen_commands"
 
 import {
-  "justjavac/lepus_app",
+  "justjavac/lepus/command",
+  "justjavac/lepus/extension",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_add_finished(@lepus_app.AppCommandExtensionContext, AddFinished) -> Unit
+pub async fn emit_add_finished(@command.AppCommandExtensionContext, AddFinished) -> Unit
 
-pub fn generated_app_command_extension() -> @lepus_app.AppCommandExtensionSpec
+pub fn extension() -> @extension.Extension
 
 // Errors
 

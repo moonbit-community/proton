@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_notification_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : NotificationActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -18,18 +18,23 @@ struct LepusShowPayload {
 
 ///|
 async fn __lepus_command_show(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusShowPayload,
 ) -> Result[NotificationReply, String] {
   show(context, payload.title, payload.body, payload.level)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-notification",
     "notification",
-    [@app.AppCommandApiDescriptor::new("show")],
+    [@lepus_command.AppCommandApiDescriptor::new("show")],
     fn(context) {
       context.op_async_result("show", async fn(payload) {
         __lepus_command_show(context, payload)

@@ -155,7 +155,7 @@ fn microphone_devices_reply(
 /// Lists native microphone devices from a generated app-command extension.
 #lepus.command(name="listDevices")
 async fn list_devices(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> MicrophoneDevicesReply {
   let devices = @sys_microphone.MicrophoneDevice::list()

@@ -1,15 +1,42 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "justjavac/ffi",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/sys",
+  "justjavac/lepus/bootstrap",
+  "justjavac/lepus/command" @lepus_command,
+  "justjavac/lepus/core",
+  "justjavac/lepus/extension" @lepus_extension,
+  "justjavac/lepus/ipc",
+  "justjavac/lepus/ipc/ws" @ipc_ws,
+  "justjavac/lepus/manifest",
+  "justjavac/lepus/webview",
+  "justjavac/lepus/runtime" @wvrt,
 }
 
 import {
-  "justjavac/ffi",
-} for "test"
+  "moonbitlang/core/debug",
+} for "wbtest"
 
-supported_targets = "+native"
+supported_targets = "native"
 
 options(
-  "native-stub": [ "stub.c" ],
-  targets: { "binding.mbt": [ "native" ], "webview.mbt": [ "native" ] },
+  targets: {
+    "command_extension.mbt": [ "native" ],
+    "command_extension_order.mbt": [ "native" ],
+    "config_bridge.mbt": [ "native" ],
+    "create.mbt": [ "native" ],
+    "exports.mbt": [ "native" ],
+    "facade.mbt": [ "native" ],
+    "facade_wbtest.mbt": [ "native" ],
+    "framework_ipc_transport.mbt": [ "native" ],
+    "framework_process.mbt": [ "native" ],
+    "install.mbt": [ "native" ],
+    "json_helpers.mbt": [ "native" ],
+    "order.mbt": [ "native" ],
+    "prepare_wbtest.mbt": [ "native" ],
+    "types.mbt": [ "native" ],
+  },
 )

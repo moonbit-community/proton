@@ -1,0 +1,28 @@
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/x/path",
+  "justjavac/lepus/core",
+  "justjavac/lepus/ipc",
+  "justjavac/lepus/webview",
+}
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/x/sys",
+  "justjavac/ffi",
+  "justjavac/lepus/core",
+  "justjavac/lepus/webview",
+} for "test"
+
+supported_targets = "+native"
+
+options(
+  targets: {
+    "app.mbt": [ "native" ],
+    "app_extension_runtime.mbt": [ "native" ],
+    "app_ipc_runtime.mbt": [ "native" ],
+    "app_window_runtime.mbt": [ "native" ],
+    "config.mbt": [ "native" ],
+  },
+)

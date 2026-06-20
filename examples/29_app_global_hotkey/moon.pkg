@@ -1,7 +1,7 @@
 import {
-  "extensions/global_hotkey",
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
+  "moonbitlang/async",
+  "justjavac/lepus_ext/global_hotkey",
+  "justjavac/lepus",
 }
 
 supported_targets = "native"

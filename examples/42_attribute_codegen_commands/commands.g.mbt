@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_add_finished(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : AddFinished,
 ) -> Unit {
   context.emit("addFinished", payload)
@@ -18,18 +18,23 @@ struct LepusSlowAddPayload {
 
 ///|
 async fn __lepus_command_slow_add(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusSlowAddPayload,
 ) -> Result[AddReply, String] {
   slow_add(context, payload.left, payload.right, payload.delay_ms)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "examples/attribute-codegen",
     "add",
-    [@app.AppCommandApiDescriptor::new("slowAdd")],
+    [@lepus_command.AppCommandApiDescriptor::new("slowAdd")],
     fn(context) {
       context.op_async_result("slowAdd", async fn(payload) {
         __lepus_command_slow_add(context, payload)

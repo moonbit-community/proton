@@ -1,5 +1,6 @@
 {
   "schema_version": 2,
   "id": "justjavac/lepus-dialog",
-  "namespace": "dialog"
+  "namespace": "dialog",
+  "package": "justjavac/lepus_ext/dialog"
 }

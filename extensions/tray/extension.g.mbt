@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_tray_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : TrayActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -16,7 +16,7 @@ struct LepusShowPayload {
 
 ///|
 async fn __lepus_command_show(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusShowPayload,
 ) -> Result[TrayReply, String] {
   show(context, payload.tooltip)
@@ -29,7 +29,7 @@ struct LepusHidePayload {
 
 ///|
 async fn __lepus_command_hide(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusHidePayload,
 ) -> Result[TrayReply, String] {
   hide(context, payload._payload)
@@ -42,21 +42,26 @@ struct LepusSetTooltipPayload {
 
 ///|
 async fn __lepus_command_set_tooltip(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusSetTooltipPayload,
 ) -> Result[TrayReply, String] {
   set_tooltip(context, payload.tooltip)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-tray",
     "tray",
     [
-      @app.AppCommandApiDescriptor::new("show"),
-      @app.AppCommandApiDescriptor::new("hide"),
-      @app.AppCommandApiDescriptor::new("setTooltip"),
+      @lepus_command.AppCommandApiDescriptor::new("show"),
+      @lepus_command.AppCommandApiDescriptor::new("hide"),
+      @lepus_command.AppCommandApiDescriptor::new("setTooltip"),
     ],
     fn(context) {
       context.op_async_result("show", async fn(payload) {

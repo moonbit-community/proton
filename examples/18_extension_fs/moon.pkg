@@ -1,7 +1,7 @@
 import {
-  "extensions/fs",
-  "justjavac/lepus_core" @core,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus_ext/fs",
+  "justjavac/lepus/core",
+  "justjavac/lepus/webview",
 }
 
 supported_targets = "native"

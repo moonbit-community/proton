@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/examples/39_sync_async_extensions"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type DoublePayload derive(@json.FromJson)
+
+type DoubleReply derive(ToJson)
+
+type SlowAddPayload derive(@json.FromJson)
+
+type SlowAddReply derive(ToJson)
+
+// Type aliases
+
+// Traits
+

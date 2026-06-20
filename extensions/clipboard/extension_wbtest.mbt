@@ -10,6 +10,6 @@ test "clipboard text length handles empty clipboard reply" {
 
 ///|
 test "clipboard metadata constants match generated app command extension" {
-  assert_eq(generated_app_command_extension().id(), "justjavac/lepus-clipboard")
-  assert_eq(generated_app_command_extension().js_namespace(), "clipboard")
+  assert_eq(extension().id(), "justjavac/lepus-clipboard")
+  assert_eq(extension().command_spec().unwrap().js_namespace(), "clipboard")
 }

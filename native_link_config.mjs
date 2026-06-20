@@ -3,7 +3,20 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
+
+const repoRoot = fileURLToPath(new URL(".", import.meta.url));
+const defaultCefDirName = ".cef-cache";
+const defaultSubprocessPath = path.join(
+  repoRoot,
+  "_build",
+  "native",
+  "debug",
+  "build",
+  "justjavac",
+  "lepus",
+  "cef_process",
+  "cef_process.exe",
+);
 
 function nativeLinkPath(filePath) {
   if (process.platform !== "win32") {
@@ -12,153 +25,160 @@ function nativeLinkPath(filePath) {
   return filePath.replace(/\\/g, "/");
 }
 
-function requireFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Missing vendored native library: ${filePath}`);
-  }
-  return filePath;
-}
-
-function configuredLinkMode(env) {
-  const rawValue =
-    env.LEPUS_WEBVIEW_LINK ??
-    process.env.LEPUS_WEBVIEW_LINK ??
-    env.WEBVIEW_LINK ??
-    process.env.WEBVIEW_LINK ??
-    "static";
-  const value = String(rawValue).trim().toLowerCase();
-  if (value === "static") {
-    return "static";
-  }
-  if (value === "shared" || value === "dynamic") {
-    return "shared";
-  }
-  throw new Error(
-    `Unsupported LEPUS_WEBVIEW_LINK value "${rawValue}". Use "static" or "shared".`,
-  );
-}
-
-function linkDir(vendoredLibDir, target, mode) {
-  return nativeLinkPath(path.join(vendoredLibDir, target, mode));
-}
-
-function linuxSystemLinkFlags() {
+function optionalPayloadEnv() {
   try {
-    return execFileSync(
-      "pkg-config",
-      ["--libs", "gtk+-3.0", "webkit2gtk-4.1"],
-      { encoding: "utf8" },
-    ).trim();
-  } catch (error) {
-    throw new Error(
-      "Failed to resolve Linux system link flags via pkg-config for gtk+-3.0 and webkit2gtk-4.1. " +
-      "Install the development packages before building MoonBit code.\n" +
-      String(error),
-    );
+    const raw = fs.readFileSync(0, "utf8").trim();
+    if (raw.length === 0) {
+      return {};
+    }
+    return JSON.parse(raw).env ?? {};
+  } catch {
+    return {};
   }
 }
 
-function parsePkgConfigLibs(rawFlags) {
-  const libs = [];
-  const searchPaths = [];
-  const otherFlags = [];
-  for (const flag of rawFlags.split(/\s+/).map((value) => value.trim()).filter(Boolean)) {
-    if (flag.startsWith("-l") && flag.length > 2) {
-      libs.push(flag.slice(2));
-    } else if (flag.startsWith("-L") && flag.length > 2) {
-      searchPaths.push(nativeLinkPath(flag.slice(2)));
-    } else {
-      otherFlags.push(flag);
+function envValue(env, name) {
+  return env[name] ?? process.env[name] ?? "";
+}
+
+function requiredCefFiles(root, requireVersion) {
+  const files = [
+    "include/capi/cef_app_capi.h",
+    "include/capi/cef_browser_capi.h",
+    "include/capi/cef_client_capi.h",
+    "include/capi/cef_v8_capi.h",
+    "Release/libcef.lib",
+    "Release/libcef.dll",
+    "Release/icudtl.dat",
+    "Release/chrome_100_percent.pak",
+    "Release/chrome_200_percent.pak",
+    "Release/resources.pak",
+    "Resources/icudtl.dat",
+  ].map((relativePath) => path.join(root, relativePath));
+  if (requireVersion) {
+    files.push(path.join(root, "version.txt"));
+  }
+  return files;
+}
+
+function missingCefFiles(root, requireVersion) {
+  return requiredCefFiles(root, requireVersion)
+    .filter((candidate) => !fs.existsSync(candidate));
+}
+
+function isCefRoot(root, requireVersion) {
+  return missingCefFiles(root, requireVersion).length === 0;
+}
+
+function installGuide(message) {
+  return [
+    message,
+    "",
+    "CEF is required for the Windows native backend.",
+    "Install it with:",
+    "  node .\\scripts\\setup_cef.mjs",
+    "",
+    `Expected layout: ${path.join(repoRoot, defaultCefDirName)}`,
+    "The CEF files should live directly in .cef-cache, with version.txt at the root.",
+  ].join("\n");
+}
+
+function defaultCefRoot() {
+  const candidates = [
+    path.resolve(process.cwd(), defaultCefDirName),
+    path.join(repoRoot, defaultCefDirName),
+  ];
+  const unique = [...new Set(candidates)];
+  for (const candidate of unique) {
+    if (isCefRoot(candidate, true)) {
+      return candidate;
     }
   }
-  return { libs, searchPaths, otherFlags };
+  const existing = unique.find((candidate) => fs.existsSync(candidate));
+  if (existing) {
+    const missing = missingCefFiles(existing, true);
+    throw new Error(installGuide(
+      `Invalid CEF install directory: ${existing}\nMissing:\n${missing.join("\n")}`,
+    ));
+  }
+  throw new Error(installGuide("CEF is not installed."));
+}
+
+function cStringDefine(value) {
+  return value.replace(/\\/g, "/").replace(/"/g, "\\\"");
+}
+
+function windowsConfig(root) {
+  for (const filePath of requiredCefFiles(root, false)) {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Missing CEF file: ${filePath}`);
+    }
+  }
+
+  return {
+    link_libs: [
+      nativeLinkPath(path.join(root, "Release/libcef")),
+      "user32",
+      "gdi32",
+      "ole32",
+      "shell32",
+      "advapi32",
+      "comdlg32",
+    ],
+    link_flags: "/link /DELAYLOAD:libcef.dll delayimp.lib",
+  };
 }
 
 function main() {
-  const payload = JSON.parse(fs.readFileSync(0, "utf8"));
-  const env = payload.env ?? {};
-  const isWindows = process.platform === "win32" || env.OS === "Windows_NT";
-  const rootDir = path.dirname(fileURLToPath(import.meta.url));
-  const vendoredLibDir = path.join(rootDir, "lib");
-  const mode = configuredLinkMode(env);
+  const env = optionalPayloadEnv();
+  const rawRoot = envValue(env, "LEPUS_CEF_ROOT").trim();
 
-  if (isWindows) {
-    const platformLibDir = linkDir(vendoredLibDir, "windows-x64", mode);
-    requireFile(path.join(vendoredLibDir, "windows-x64", mode, "webview.lib"));
-    if (mode === "shared") {
-      requireFile(path.join(vendoredLibDir, "windows-x64", mode, "webview.dll"));
-    }
-    const webviewLib = nativeLinkPath(path.join(platformLibDir, "webview"));
+  if (process.platform !== "win32") {
     process.stdout.write(JSON.stringify({
-      link_configs: [
-        {
-          package: "justjavac/lepus",
-          link_libs: [
-            webviewLib,
-            "advapi32",
-            "ole32",
-            "shell32",
-            "shlwapi",
-            "user32",
-            "version",
-          ],
-        },
-      ],
+      vars: {
+        LEPUS_CEF_ENABLED: "0",
+        LEPUS_CEF_STUB_CC_FLAGS: "",
+      },
+      link_configs: [],
     }));
     return;
   }
 
-  if (process.platform === "darwin") {
-    const platformLibDir = linkDir(vendoredLibDir, "macos-universal", mode);
-    requireFile(
-      path.join(
-        vendoredLibDir,
-        "macos-universal",
-        mode,
-        mode === "static" ? "libwebview.a" : "libwebview.dylib",
-      ),
-    );
-    let linkFlags = "-framework WebKit";
-    if (mode === "shared") {
-      linkFlags += ` -Wl,-rpath,${platformLibDir}`;
+  const root = rawRoot.length === 0
+    ? defaultCefRoot()
+    : path.resolve(rawRoot);
+  const rawSubprocess = envValue(env, "LEPUS_CEF_SUBPROCESS_PATH").trim();
+  const subprocess = rawSubprocess.length === 0
+    ? defaultSubprocessPath
+    : path.resolve(rawSubprocess);
+  if (subprocess.length > 0 && !fs.existsSync(subprocess)) {
+    if (rawSubprocess.length > 0) {
+      throw new Error(`Missing CEF subprocess executable: ${subprocess}`);
     }
-    process.stdout.write(JSON.stringify({
-      link_configs: [
-        {
-          package: "justjavac/lepus",
-          link_search_paths: [platformLibDir],
-          link_libs: ["webview", "c++", "dl"],
-          link_flags: linkFlags,
-        },
-      ],
-    }));
-    return;
-  }
-
-  const platformLibDir = linkDir(vendoredLibDir, "linux-x64", mode);
-  requireFile(
-    path.join(
-      vendoredLibDir,
-      "linux-x64",
-      mode,
-      mode === "static" ? "libwebview.a" : "libwebview.so",
-    ),
-  );
-  const pkgConfig = parsePkgConfigLibs(linuxSystemLinkFlags());
-  let linkFlags = pkgConfig.otherFlags.join(" ");
-  if (mode === "shared") {
-    linkFlags += ` -Wl,-rpath,${platformLibDir}`;
   }
   process.stdout.write(JSON.stringify({
+    vars: {
+      LEPUS_CEF_ENABLED: "1",
+      LEPUS_CEF_ROOT: nativeLinkPath(root),
+      LEPUS_CEF_SUBPROCESS_PATH: nativeLinkPath(subprocess),
+      LEPUS_CEF_STUB_CC_FLAGS:
+        `/DLEPUS_CEF_ENABLED=1 ` +
+        `/DLEPUS_CEF_ROOT_PATH=\\"${cStringDefine(root)}\\" ` +
+        `/DLEPUS_CEF_SUBPROCESS_PATH=\\"${cStringDefine(subprocess)}\\" ` +
+        `/I"${nativeLinkPath(root)}"`,
+    },
     link_configs: [
       {
-        package: "justjavac/lepus",
-        link_search_paths: [platformLibDir, ...pkgConfig.searchPaths],
-        link_libs: ["webview", "stdc++", "dl", ...pkgConfig.libs],
-        ...(linkFlags.length > 0 ? { link_flags: linkFlags } : {}),
+        package: "justjavac/lepus/webview",
+        ...windowsConfig(root),
       },
     ],
   }));
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  console.error(error?.message ?? String(error));
+  process.exit(1);
+}

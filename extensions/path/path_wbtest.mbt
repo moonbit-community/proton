@@ -37,7 +37,7 @@ test "path extension helpers normalize mixed segments" {
 
 ///|
 test "path extension can parse and format node style path objects" {
-  let parsed = parse_path("extensions/path/example.txt")
+  let parsed = parse_path("justjavac/lepus_ext/path/example.txt")
   assert_eq(parsed.base, "example.txt")
   assert_eq(parsed.ext, ".txt")
   assert_eq(parsed.name, "example")

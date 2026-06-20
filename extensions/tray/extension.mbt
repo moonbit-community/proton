@@ -84,7 +84,7 @@ fn tray_handle() -> @sys_tray.Tray? {
 ///|
 /// Destroys the app-command tray handle.
 #lepus.destroy
-fn cleanup_tray(context : @app.AppCommandExtensionContext) -> Unit {
+fn cleanup_tray(context : @lepus_command.AppCommandExtensionContext) -> Unit {
   ignore(context.extension_id())
   destroy_tray(app_command_tray_handle.val)
   app_command_tray_handle.val = None
@@ -94,7 +94,7 @@ fn cleanup_tray(context : @app.AppCommandExtensionContext) -> Unit {
 /// Shows the native tray icon from a generated app-command extension.
 #lepus.command(name="show")
 async fn show(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   tooltip : String?,
 ) -> Result[TrayReply, String] {
   match with_tray_handle(tray_handle(), fn(handle) { handle.show(tooltip~) }) {
@@ -110,7 +110,7 @@ async fn show(
 /// Hides the native tray icon from a generated app-command extension.
 #lepus.command(name="hide")
 async fn hide(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> Result[TrayReply, String] {
   match with_tray_handle(tray_handle(), fn(handle) { handle.hide() }) {
@@ -129,7 +129,7 @@ async fn hide(
 /// Updates the native tray tooltip from a generated app-command extension.
 #lepus.command(name="setTooltip")
 async fn set_tooltip(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   tooltip : String,
 ) -> Result[TrayReply, String] {
   match

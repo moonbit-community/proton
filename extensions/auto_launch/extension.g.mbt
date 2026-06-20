@@ -3,7 +3,7 @@
 
 ///|
 pub async fn emit_auto_launch_activity(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : AutoLaunchActivity,
 ) -> Unit {
   context.emit("activity", payload)
@@ -61,7 +61,7 @@ struct LepusEnablePayload {
 
 ///|
 async fn __lepus_command_enable(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusEnablePayload,
 ) -> Result[MutationReply, String] {
   enable(context, payload.name, payload.path, payload.launch_in_background, payload.background_arg, payload.extra_arguments, payload.identifier)
@@ -79,23 +79,28 @@ struct LepusDisablePayload {
 
 ///|
 async fn __lepus_command_disable(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   payload : LepusDisablePayload,
 ) -> Result[MutationReply, String] {
   disable(context, payload.name, payload.path, payload.launch_in_background, payload.background_arg, payload.extra_arguments, payload.identifier)
 }
 
 ///|
-pub fn generated_app_command_extension() -> @app.AppCommandExtensionSpec {
-  @app.AppCommandExtensionSpec::new(
+pub fn extension() -> @lepus_extension.Extension {
+  @lepus_extension.from_command_spec(__lepus_command_extension_spec())
+}
+
+///|
+fn __lepus_command_extension_spec() -> @lepus_command.AppCommandExtensionSpec {
+  @lepus_command.AppCommandExtensionSpec::new(
     "justjavac/lepus-auto-launch",
     "autoLaunch",
     [
-      @app.AppCommandApiDescriptor::new("support"),
-      @app.AppCommandApiDescriptor::new("describe"),
-      @app.AppCommandApiDescriptor::new("isEnabled"),
-      @app.AppCommandApiDescriptor::new("enable"),
-      @app.AppCommandApiDescriptor::new("disable"),
+      @lepus_command.AppCommandApiDescriptor::new("support"),
+      @lepus_command.AppCommandApiDescriptor::new("describe"),
+      @lepus_command.AppCommandApiDescriptor::new("isEnabled"),
+      @lepus_command.AppCommandApiDescriptor::new("enable"),
+      @lepus_command.AppCommandApiDescriptor::new("disable"),
     ],
     fn(context) {
       context.op("support", __lepus_command_support)

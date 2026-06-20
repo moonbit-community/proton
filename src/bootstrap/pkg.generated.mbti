@@ -1,0 +1,64 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/lepus/bootstrap"
+
+import {
+  "justjavac/lepus/manifest",
+}
+
+// Values
+pub fn app_manifest_to_json(@manifest.AppManifest) -> Json
+
+pub fn load_app_manifest_document_from_file(String) -> Result[AppManifestDocument, String]
+
+pub fn load_app_manifest_document_from_json(String) -> Result[AppManifestDocument, String]
+
+pub fn load_app_manifest_from_file(String) -> Result[LoadedAppManifest, String]
+
+pub fn load_app_manifest_from_json(String) -> Result[LoadedAppManifest, String]
+
+pub fn load_document(String) -> Result[AppManifestDocument, String]
+
+pub fn load_runtime_manifest_from_json(String) -> Result[LoadedAppManifest, String]
+
+pub fn normalize_document(AppManifestDocument) -> Result[AppManifestDocument, String]
+
+pub fn parse_document(String) -> Result[AppManifestDocument, String]
+
+pub fn render_document(AppManifestDocument) -> String
+
+pub fn set_debug(AppManifestDocument, Int) -> Result[AppManifestDocument, String]
+
+pub fn set_entry(AppManifestDocument, @manifest.AppEntry) -> Result[AppManifestDocument, String]
+
+pub fn set_window_size(AppManifestDocument, Int, Int, size_hint? : @manifest.WindowSizeHint?) -> Result[AppManifestDocument, String]
+
+pub fn set_window_title(AppManifestDocument, String) -> Result[AppManifestDocument, String]
+
+pub fn validate_document(AppManifestDocument) -> Result[Unit, String]
+
+pub fn write_document(String, AppManifestDocument) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+type AppManifestDocument
+pub fn AppManifestDocument::base_dir(Self) -> String?
+pub fn AppManifestDocument::loaded_manifest(Self) -> LoadedAppManifest
+pub fn AppManifestDocument::manifest(Self) -> @manifest.AppManifest
+pub fn AppManifestDocument::remove_window(Self, String) -> Result[Self, String]
+pub fn AppManifestDocument::set_debug(Self, Int) -> Result[Self, String]
+pub fn AppManifestDocument::set_entry(Self, @manifest.AppEntry) -> Result[Self, String]
+pub fn AppManifestDocument::set_window(Self, @manifest.WindowManifest) -> Result[Self, String]
+pub fn AppManifestDocument::to_json(Self) -> Json
+pub fn AppManifestDocument::to_pretty_json(Self) -> String
+pub fn AppManifestDocument::upsert_window(Self, @manifest.AppWindowManifest) -> Result[Self, String]
+
+type LoadedAppManifest
+pub fn LoadedAppManifest::base_dir(Self) -> String?
+pub fn LoadedAppManifest::manifest(Self) -> @manifest.AppManifest
+pub fn LoadedAppManifest::new(@manifest.AppManifest, base_dir? : String?) -> Self
+
+// Type aliases
+
+// Traits
+

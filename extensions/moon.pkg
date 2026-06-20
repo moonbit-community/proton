@@ -1,0 +1,20 @@
+import {
+  "justjavac/lepus/extension" @lepus_extension,
+  "justjavac/lepus_ext/auto_launch",
+  "justjavac/lepus_ext/clipboard",
+  "justjavac/lepus_ext/dialog",
+  "justjavac/lepus_ext/fs",
+  "justjavac/lepus_ext/global_hotkey",
+  "justjavac/lepus_ext/keepawake",
+  "justjavac/lepus_ext/microphone",
+  "justjavac/lepus_ext/notification",
+  "justjavac/lepus_ext/path",
+  "justjavac/lepus_ext/shell",
+  "justjavac/lepus_ext/tray",
+}
+
+supported_targets = "native"
+
+options(
+  targets: { "sets.mbt": [ "native" ] },
+)

@@ -1,0 +1,7 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/lepus/core",
+  "justjavac/lepus/ipc",
+}
+
+supported_targets = "native"

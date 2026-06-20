@@ -1,8 +1,8 @@
 import {
-  "extensions/clipboard",
-  "extensions/dialog",
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
+  "moonbitlang/async",
+  "justjavac/lepus_ext/clipboard",
+  "justjavac/lepus_ext/dialog",
+  "justjavac/lepus",
 }
 
 supported_targets = "native"

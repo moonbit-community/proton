@@ -12,41 +12,30 @@ and install it without wiring command bindings manually.
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "justjavac/lepus_core" @core,
-  "justjavac/lepus" @webview,
+  "justjavac/lepus/core" @core
+  "justjavac/lepus/webview" @webview
+  "justjavac/lepus_ext/fs" @fs
 }
 
 fn main {
   let webview = @webview.Webview::new(debug=1)
-  @core.install_extension(webview, @fs.extension())
+  @core.install_extension(webview, @fs.core_extension())
   webview.run()
 }
 ```
 
-For app-style startup, install it through `justjavac/lepus_app`:
+For app-style startup, install it through `justjavac/lepus`:
 
 ```moonbit
 import {
-  "extensions/fs" @fs,
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
-  "justjavac/lepus_runtime" @wvrt,
+  "justjavac/lepus"
+  "justjavac/lepus_ext/fs" @fs
 }
 
-fn main {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("FS Demo", 900, 700),
-    @manifest.AppEntry::Html("<html></html>"),
-    debug=1,
-  )
-  let registry = @app.ExtensionRegistry::new()
-  let _ = registry.register(@fs.spec())
-  let runtime : @wvrt.App = match @app.create_app(manifest, registry) {
-    Ok(app) => app
-    Err(error) => abort(error)
-  }
-  runtime.run()
+async fn main {
+  @lepus.html("FS Demo", "<html></html>", width=900, height=700, debug=true)
+  .extension(@fs.extension())
+  .run_or_abort()
 }
 ```
 
@@ -58,15 +47,6 @@ await window.__MoonBit__.fs.writeFile("demo.txt", "Hello from MoonBit");
 const loaded = await window.__MoonBit__.fs.readFile("demo.txt");
 
 const stat = await window.__MoonBit__.fs.stat("demo.txt");
-```
-
-For binary payloads on Windows/WebView2, use the SharedArrayBuffer-backed
-helpers. They avoid serializing file contents through JSON and return/copy
-`Uint8Array` values through a native shared buffer:
-
-```js
-const binary = await window.__MoonBit__.fs.readFileBuffer("asset.bin");
-await window.__MoonBit__.fs.writeFileBuffer("copy.bin", binary.content);
 ```
 
 If you want the native absolute path before opening a file, ask `stat` not to
@@ -90,12 +70,6 @@ const stat = await window.__MoonBit__.fs.stat("demo.txt", {
   Tauri-style alias for `writeFile`.
 - `fs.appendFile(path, content, options?)`
   Returns `{ path, written, bytes_written }`.
-- `fs.sharedBufferSupport()`
-  Returns WebView2 SharedArrayBuffer capability flags for the current webview.
-- `fs.readFileBuffer(path)`
-  Uses WebView2 SharedBuffer transfer and returns `{ path, content, bytes_read, capacity }`, where `content` is a `Uint8Array`.
-- `fs.writeFileBuffer(path, content, options?)`
-  Uses WebView2 SharedBuffer transfer to write `Uint8Array`, `ArrayBuffer`, `SharedArrayBuffer`, typed-array, or string content.
 - `fs.stat(path, options?)`
   Returns `{ path, exists, size, is_file, is_dir, is_readonly }`.
 - `fs.readdir(path, options?)`
@@ -173,10 +147,6 @@ Event payload shape:
 - `readFile`, `writeFile`, and `appendFile` are UTF-8 text helpers. For
   streaming workflows, keep using the rid-based API with `open`, `read`,
   `write`, `seek`, and `flush`.
-- `readFileBuffer` and `writeFileBuffer` use SharedArrayBuffer/WebView2
-  transfer where available. They currently require Windows WebView2 with
-  `sharedbufferreceived` support; other platforms report an unsupported
-  capability through `sharedBufferSupport()`.
 - The path API is intentionally closer to Node.js `fs/promises`, with a few
   Tauri-style aliases such as `readTextFile`, `writeTextFile`, and `remove`.
 - `openFile` currently supports common Node-style flags and read/write/append

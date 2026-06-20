@@ -1,5 +1,6 @@
 {
   "schema_version": 2,
   "id": "justjavac/lepus-auto-launch",
-  "namespace": "autoLaunch"
+  "namespace": "autoLaunch",
+  "package": "justjavac/lepus_ext/auto_launch"
 }

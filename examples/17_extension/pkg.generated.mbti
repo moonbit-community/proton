@@ -2,13 +2,13 @@
 package "justjavac/lepus/examples/17_extension"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus/core",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub fn extension() -> @core.Extension
 
 // Errors
 
@@ -22,3 +22,4 @@ type SumReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 // Type aliases
 
 // Traits
+

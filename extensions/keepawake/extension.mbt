@@ -91,7 +91,9 @@ fn acquire_guard(
 ///|
 /// Releases the active app-command guard if one exists.
 #lepus.destroy
-fn cleanup_keepawake(context : @app.AppCommandExtensionContext) -> Unit {
+fn cleanup_keepawake(
+  context : @lepus_command.AppCommandExtensionContext,
+) -> Unit {
   ignore(context.extension_id())
   match active_guard_ref.val {
     Some(active_guard) => {
@@ -111,7 +113,7 @@ fn cleanup_keepawake(context : @app.AppCommandExtensionContext) -> Unit {
 /// Acquires a keep-awake guard from a generated app-command extension.
 #lepus.command(name="acquire")
 async fn acquire(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   reason : String?,
   scope : String?,
 ) -> Result[KeepAwakeReply, String] {
@@ -154,7 +156,7 @@ async fn acquire(
 /// Releases the active keep-awake guard from a generated app-command extension.
 #lepus.command(name="release")
 async fn release(
-  context : @app.AppCommandExtensionContext,
+  context : @lepus_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> Result[KeepAwakeReply, String] {
   match active_guard_ref.val {

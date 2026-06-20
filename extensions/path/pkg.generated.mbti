@@ -1,16 +1,19 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "extensions/path"
+package "justjavac/lepus_ext/path"
 
 import {
-  "justjavac/lepus_core",
+  "justjavac/lepus/core",
+  "justjavac/lepus/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn extension() -> @lepus_core.Extension
+pub fn core_extension() -> @core.Extension
 
-pub fn spec() -> @lepus_core.ExtensionSpec
+pub fn core_spec() -> @core.ExtensionSpec
+
+pub fn extension() -> @extension.Extension
 
 // Errors
 

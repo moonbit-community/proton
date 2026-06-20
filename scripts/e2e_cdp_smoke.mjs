@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const timeoutMs = Number(process.env.LEPUS_CDP_E2E_TIMEOUT_MS ?? "30000");
 
-const allExamples = [
+const defaultScenarios = [
   "01_run",
   "01_tauri_like_helloworld",
   "02_local",
@@ -35,123 +38,109 @@ const allExamples = [
   "27_app_notification",
   "28_app_tray",
   "29_app_global_hotkey",
-  "30_app_asset_origin",
-  "31_app_asset_bundle",
-  "32_shared_buffer_benchmark",
   "33_app_auto_launch",
   "34_app_keepawake",
   "35_app_microphone",
-  "36_app_devtools",
   "37_cef_mvp",
   "38_async_extension_add",
   "39_sync_async_extensions",
   "40_event_broadcast",
-  "41_app_commands/app",
+  "41_app_commands",
+  "42_attribute_codegen_commands",
+  "43_cef_bind_smoke",
 ];
 
-const scenarios = {
-  "38_async_extension_add": {
-    waitExpression:
-      "Boolean(window.__MoonBit__ && window.__MoonBit__.add && window.__MoonBit__.add.slowAdd)",
-    probeExpression: `;(async () => {
-      const total = await window.__MoonBit__.add.slowAdd({ left: 8, right: 5 });
-      return { total };
-    })()`,
-    validate(value) {
-      return value?.total === 13;
-    },
-  },
-  "39_sync_async_extensions": {
-    waitExpression:
-      "Boolean(window.__MoonBit__ && window.__MoonBit__.math && window.__MoonBit__.add)",
-    probeExpression: `;(async () => {
-      const doubled = await window.__MoonBit__.math.double({ value: 7 });
-      const sum = await window.__MoonBit__.add.slowAdd({
-        left: 4,
-        right: 6,
-        delay_ms: 20
-      });
-      return { doubled, sum };
-    })()`,
-    validate(value) {
-      return value?.doubled?.doubled === 14 && value?.sum?.total === 10;
-    },
-  },
-  "40_event_broadcast": {
-    waitExpression:
-      "Boolean(window.__MoonBit__ && window.__MoonBit__.ticker && window.__MoonBit__.ticker.start)",
-    probeExpression: `;(async () => {
-      const events = [];
-      window.__MoonBit__.ticker.on("tick", (event) => events.push(event));
-      const result = await window.__MoonBit__.ticker.start({
-        run_id: 77,
-        count: 2,
-        interval_ms: 100
-      });
-      return { result, events };
-    })()`,
-    validate(value) {
-      return value?.result?.done?.total === 2 && value?.events?.length >= 1;
-    },
-  },
-  "41_app_commands/app": {
-    waitExpression:
-      "Boolean(window.__MoonBit__ && window.__MoonBit__.core && window.__MoonBit__.core.invokeOp)",
-    probeExpression: `;(async () => {
-      const ping = await window.__MoonBit__.core.invokeOp("app:ping", { name: "cdp" });
-      const sum = await window.__MoonBit__.core.invokeOp("app:slowAdd", {
-        left: 4,
-        right: 5,
-        delay_ms: 20
-      });
-      const report = await window.__MoonBit__.core.invokeOp("app:reportProbe", {
-        report: JSON.stringify({ source: "cdp", ping, sum })
-      });
-      return { ping, sum, report };
-    })()`,
-    validate(value) {
-      return value?.sum?.total === 9 && value?.report?.ok === true;
-    },
-  },
-};
+const scenarios = process.argv.slice(2).length > 0
+  ? process.argv.slice(2)
+  : defaultScenarios;
 
-const requested = process.argv.slice(2);
-const examples = requested.includes("--all-examples")
-  ? allExamples
-  : requested.length > 0
-    ? requested
-    : Object.keys(scenarios);
+let cachedCefEnv = null;
 
-const startupScenario = {
-  waitExpression: "document.readyState !== 'loading'",
-};
+const directScenarios = new Map([
+  ["09_dispatch", { mustInclude: null }],
+  ["43_cef_bind_smoke", { mustInclude: "[\"ok\"]" }],
+]);
+
+const startupScenarios = new Map([
+  ["05_alert", { aliveAfterMs: 2000 }],
+]);
+
+function requiredCefFiles(root) {
+  return [
+    "include/capi/cef_app_capi.h",
+    "include/capi/cef_browser_capi.h",
+    "include/capi/cef_client_capi.h",
+    "include/capi/cef_v8_capi.h",
+    "Release/libcef.lib",
+    "Release/libcef.dll",
+    "Release/icudtl.dat",
+    "Release/chrome_100_percent.pak",
+    "Release/chrome_200_percent.pak",
+    "Release/resources.pak",
+    "Resources/icudtl.dat",
+    "version.txt",
+  ].map((relativePath) => path.join(root, relativePath));
+}
+
+function ensureCefInstalled() {
+  if (process.env.LEPUS_CEF_ROOT) {
+    return;
+  }
+  const cache = path.join(repoRoot, ".cef-cache");
+  const missing = requiredCefFiles(cache).filter((filePath) => !existsSync(filePath));
+  if (missing.length > 0) {
+    throw new Error(
+      [
+        "CEF is not installed in .cef-cache.",
+        "Run: node ./scripts/setup_cef.mjs",
+        "",
+        "Missing:",
+        ...missing,
+      ].join("\n"),
+    );
+  }
+}
+
+function ensureCefSubprocess(env) {
+  const build = spawnSync("moon", ["build", "src/cef_process", "--target", "native"], {
+    cwd: repoRoot,
+    env,
+    stdio: "inherit",
+  });
+  if (build.status !== 0) {
+    throw new Error("failed to build src/cef_process");
+  }
+  const exe = path.join(
+    repoRoot,
+    "_build",
+    "native",
+    "debug",
+    "build",
+    "justjavac",
+    "lepus",
+    "cef_process",
+    "cef_process.exe",
+  );
+  if (!existsSync(exe)) {
+    throw new Error(`CEF subprocess executable was not created: ${exe}`);
+  }
+}
+
+function cefEnv() {
+  if (cachedCefEnv) {
+    return cachedCefEnv;
+  }
+  ensureCefInstalled();
+  const env = {
+    ...process.env,
+  };
+  ensureCefSubprocess(env);
+  cachedCefEnv = env;
+  return env;
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function withTimeout(promise, ms, label) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
-    ),
-  ]);
-}
-
-function describeExit({ code, signal }) {
-  if (signal) {
-    return `signal ${signal}`;
-  }
-  return `exit code ${code}`;
-}
-
-function prematureExitError(example, phase, exit, output) {
-  const trimmed = output.trim();
-  return new Error(
-    `example ${example} exited during ${phase} before e2e completed (${describeExit(exit)})` +
-      (trimmed ? `\n\nOutput:\n${trimmed}` : ""),
-  );
 }
 
 async function reservePort() {
@@ -160,138 +149,14 @@ async function reservePort() {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
   });
-  const address = server.address();
-  const port = address.port;
+  const port = server.address().port;
   await new Promise((resolve) => server.close(resolve));
   return port;
 }
 
-async function waitForTarget(port, deadline) {
-  let lastError = null;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`);
-      if (response.ok) {
-        const targets = await response.json();
-        const page = targets.find(
-          (target) => target.type === "page" && target.webSocketDebuggerUrl,
-        );
-        if (page) {
-          return page;
-        }
-      }
-    } catch (error) {
-      lastError = error;
-    }
-    await sleep(100);
-  }
-  throw new Error(
-    `CDP target did not become available${lastError ? `: ${lastError.message}` : ""}`,
-  );
-}
-
-function openCdp(wsUrl) {
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl);
-    const pending = new Map();
-    const listeners = new Map();
-    let nextId = 1;
-
-    ws.addEventListener("open", () => {
-      resolve({
-        call(method, params = {}) {
-          const id = nextId++;
-          ws.send(JSON.stringify({ id, method, params }));
-          return new Promise((resolveCall, rejectCall) => {
-            pending.set(id, { resolve: resolveCall, reject: rejectCall });
-          });
-        },
-        close() {
-          ws.close();
-        },
-        on(method, handler) {
-          if (!listeners.has(method)) {
-            listeners.set(method, []);
-          }
-          listeners.get(method).push(handler);
-        },
-      });
-    });
-
-    ws.addEventListener("message", (event) => {
-      const message = JSON.parse(event.data);
-      if (!message.id || !pending.has(message.id)) {
-        if (message.method && listeners.has(message.method)) {
-          for (const handler of listeners.get(message.method)) {
-            handler(message.params ?? {});
-          }
-        }
-        return;
-      }
-      const entry = pending.get(message.id);
-      pending.delete(message.id);
-      if (message.error) {
-        entry.reject(new Error(JSON.stringify(message.error)));
-      } else {
-        entry.resolve(message.result);
-      }
-    });
-
-    ws.addEventListener("error", () => {
-      reject(new Error("failed to open CDP websocket"));
-    });
-
-    ws.addEventListener("close", () => {
-      for (const entry of pending.values()) {
-        entry.reject(new Error("CDP websocket closed"));
-      }
-      pending.clear();
-    });
-  });
-}
-
-async function waitForBridge(cdp, scenario, deadline) {
-  while (Date.now() < deadline) {
-    try {
-      const result = await cdp.call("Runtime.evaluate", {
-        expression: scenario.waitExpression,
-        returnByValue: true,
-      });
-      if (result.result?.value === true) {
-        return;
-      }
-    } catch (error) {
-      if (!String(error.message).includes("Execution context was destroyed")) {
-        throw error;
-      }
-    }
-    await sleep(100);
-  }
-  throw new Error("MoonBit JS bridge did not become available");
-}
-
-async function evaluateProbe(cdp, scenario) {
-  let lastError = null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      return await cdp.call("Runtime.evaluate", {
-        awaitPromise: true,
-        returnByValue: true,
-        expression: scenario.probeExpression,
-      });
-    } catch (error) {
-      lastError = error;
-      if (!String(error.message).includes("Execution context was destroyed")) {
-        throw error;
-      }
-      await sleep(250);
-    }
-  }
-  throw lastError;
-}
-
 async function terminateTree(child) {
-  if (child.exitCode !== null || child.signalCode !== null) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
+    closeChildPipes(child);
     return;
   }
   if (process.platform === "win32") {
@@ -303,25 +168,28 @@ async function terminateTree(child) {
   } else {
     child.kill("SIGTERM");
   }
+  await Promise.race([
+    new Promise((resolve) => child.once("exit", resolve)),
+    sleep(5000),
+  ]);
+  closeChildPipes(child);
 }
 
-async function runExample(example) {
-  const scenario = scenarios[example] ?? startupScenario;
-  const functional = scenarios[example] !== undefined;
-  const port = await reservePort();
-  const child = spawn(
-    "moon",
-    ["-C", "examples", "run", example, "--target", "native"],
-    {
-      cwd: repoRoot,
-      env: {
-        ...process.env,
-        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:
-          `--remote-debugging-port=${port} --remote-allow-origins=*`,
-      },
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
+function closeChildPipes(child) {
+  if (!child) {
+    return;
+  }
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.stdin?.destroy();
+}
+
+function run(command, args, options = {}) {
+  const child = spawn(command, args, {
+    cwd: repoRoot,
+    env: { ...process.env, ...options.env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   let output = "";
   child.stdout.on("data", (chunk) => {
     output += chunk.toString();
@@ -329,70 +197,123 @@ async function runExample(example) {
   child.stderr.on("data", (chunk) => {
     output += chunk.toString();
   });
-  const childExit = new Promise((resolve, reject) => {
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      resolve({ code, signal });
-    });
+  return { child, output: () => output };
+}
+
+async function waitForExit(child, timeout, label) {
+  return await Promise.race([
+    new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", (code, signal) => resolve({ code, signal }));
+    }),
+    sleep(timeout).then(() => {
+      throw new Error(`${label} timed out after ${timeout}ms`);
+    }),
+  ]);
+}
+
+async function runScenario(name) {
+  const directScenario = directScenarios.get(name);
+  if (directScenario) {
+    await runDirectScenario(name, directScenario);
+    return;
+  }
+
+  const startupScenario = startupScenarios.get(name);
+  if (startupScenario) {
+    await runStartupScenario(name, startupScenario);
+    return;
+  }
+
+  const port = await reservePort();
+  const baseEnv = cefEnv();
+  const app = run("moon", ["-C", "examples", "run", name, "--target", "native"], {
+    env: { ...baseEnv, LEPUS_CEF_REMOTE_DEBUGGING_PORT: String(port) },
   });
-  const withChildRunning = (promise, phase) =>
-    Promise.race([
-      promise,
-      childExit.then((exit) => {
-        throw prematureExitError(example, phase, exit, output);
-      }),
-    ]);
 
   try {
-    const deadline = Date.now() + timeoutMs;
-    const target = await withChildRunning(
-      waitForTarget(port, deadline),
-      "CDP target discovery",
-    );
-    const cdp = await withChildRunning(
-      withTimeout(openCdp(target.webSocketDebuggerUrl), 5000, "CDP connect"),
-      "CDP connect",
-    );
-    await cdp.call("Runtime.enable");
-    await cdp.call("Page.enable").catch(() => {});
-    cdp.on("Page.javascriptDialogOpening", () => {
-      cdp.call("Page.handleJavaScriptDialog", { accept: true }).catch(() => {});
+    await sleep(1000);
+    const probe = run("moon", ["-C", "e2e", "run", "test", "--target", "native"], {
+      env: {
+        ...baseEnv,
+        MBT_CDP_TARGET: String(port),
+        MBT_LEPUS_E2E_SCENARIO: name,
+        MBT_LEPUS_E2E_TIMEOUT_MS: String(timeoutMs),
+      },
     });
-    await withChildRunning(waitForBridge(cdp, scenario, deadline), "bridge wait");
-    if (functional) {
-      const probe = await withChildRunning(evaluateProbe(cdp, scenario), "probe evaluation");
-      const value = probe.result?.value;
-      if (!scenario.validate(value)) {
-        throw new Error(`unexpected probe result: ${JSON.stringify({ value, probe })}`);
+    try {
+      const exit = await waitForExit(probe.child, timeoutMs + 15000, `CDP probe ${name}`);
+      const probeOutput = probe.output().trim();
+      if (
+        exit.code !== 0 ||
+        !probeOutput.includes(`CDP e2e passed: ${name}`) ||
+        probeOutput.includes(" FAILED: ") ||
+        probeOutput.includes("Failure(")
+      ) {
+        throw new Error(
+          `CDP probe failed for ${name}\n\nProbe output:\n${probeOutput}\n\nApp output:\n${app.output().trim()}`,
+        );
       }
+      closeChildPipes(probe.child);
+      console.log(probeOutput || `CDP e2e passed: ${name}`);
+    } catch (error) {
+      await terminateTree(probe.child);
+      throw error;
     }
-    await cdp.call("Browser.close").catch(() => {});
-    cdp.close();
-    await withTimeout(
-      new Promise((resolve) => child.once("exit", resolve)),
-      5000,
-      "example shutdown",
-    ).catch(async () => {
-      await terminateTree(child);
-    });
-    console.log(`${functional ? "CDP e2e" : "CDP startup"} passed for ${example} on port ${port}`);
+  } finally {
+    await terminateTree(app.child);
+  }
+}
+
+async function runStartupScenario(name, expectation) {
+  const app = run("moon", ["-C", "examples", "run", name, "--target", "native"], {
+    env: cefEnv(),
+  });
+  try {
+    const exitOrAlive = await Promise.race([
+      new Promise((resolve, reject) => {
+        app.child.once("error", reject);
+        app.child.once("exit", (code, signal) => resolve({ code, signal }));
+      }),
+      sleep(expectation.aliveAfterMs).then(() => null),
+    ]);
+    const output = app.output().trim();
+    if (exitOrAlive !== null || output.includes("Failure(")) {
+      throw new Error(
+        `startup scenario failed for ${name}\n\nOutput:\n${output}`,
+      );
+    }
+    console.log(`startup e2e passed: ${name}`);
+  } finally {
+    await terminateTree(app.child);
+  }
+}
+
+async function runDirectScenario(name, expectation) {
+  const app = run("moon", ["-C", "examples", "run", name, "--target", "native"], {
+    env: cefEnv(),
+  });
+  try {
+    const exit = await waitForExit(app.child, timeoutMs + 15000, `direct scenario ${name}`);
+    const output = app.output().trim();
+    if (
+      exit.code !== 0 ||
+      output.includes("Failure(") ||
+      (expectation.mustInclude && !output.includes(expectation.mustInclude))
+    ) {
+      throw new Error(
+        `direct scenario failed for ${name}\n\nOutput:\n${output}`,
+      );
+    }
+    closeChildPipes(app.child);
+    console.log(`direct e2e passed: ${name}`);
   } catch (error) {
-    await terminateTree(child);
-    console.error(output.trim());
+    await terminateTree(app.child);
     throw error;
   }
 }
 
-async function main() {
-  if (process.platform !== "win32") {
-    throw new Error("CDP e2e currently requires Windows WebView2.");
-  }
-  for (const example of examples) {
-    await runExample(example);
-  }
+for (const scenario of scenarios) {
+  await runScenario(scenario);
 }
-
-main().catch((error) => {
-  console.error(error.stack || error.message);
-  process.exit(1);
-});
+process.exit(0);

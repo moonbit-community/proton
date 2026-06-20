@@ -1,9 +1,9 @@
 import {
-  "extensions/global_hotkey",
-  "extensions/notification",
-  "extensions/tray",
-  "justjavac/lepus_app" @app,
-  "justjavac/lepus_manifest" @manifest,
+  "moonbitlang/async",
+  "justjavac/lepus_ext/global_hotkey",
+  "justjavac/lepus_ext/notification",
+  "justjavac/lepus_ext/tray",
+  "justjavac/lepus",
 }
 
 supported_targets = "native"
