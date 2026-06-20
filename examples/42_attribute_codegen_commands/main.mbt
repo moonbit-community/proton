@@ -1,7 +1,7 @@
 ///|
 async fn main {
-  let app = @lepus.html(
-    "Lepus Attribute Codegen",
+  let app = @proton.html(
+    "Proton Attribute Codegen",
     resource,
     width=840,
     height=560,

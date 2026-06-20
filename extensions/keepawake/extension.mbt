@@ -14,7 +14,7 @@ struct KeepAwakeReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct KeepAwakeActivity {
   operation : String
   scope : String?
@@ -90,9 +90,9 @@ fn acquire_guard(
 
 ///|
 /// Releases the active app-command guard if one exists.
-#lepus.destroy
+#proton.destroy
 fn cleanup_keepawake(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
 ) -> Unit {
   ignore(context.extension_id())
   match active_guard_ref.val {
@@ -111,9 +111,9 @@ fn cleanup_keepawake(
 
 ///|
 /// Acquires a keep-awake guard from a generated app-command extension.
-#lepus.command(name="acquire")
+#proton.command(name="acquire")
 async fn acquire(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   reason : String?,
   scope : String?,
 ) -> Result[KeepAwakeReply, String] {
@@ -154,9 +154,9 @@ async fn acquire(
 
 ///|
 /// Releases the active keep-awake guard from a generated app-command extension.
-#lepus.command(name="release")
+#proton.command(name="release")
 async fn release(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> Result[KeepAwakeReply, String] {
   match active_guard_ref.val {
@@ -178,7 +178,7 @@ async fn release(
 
 ///|
 /// Returns the active keep-awake guard status from a generated app-command extension.
-#lepus.command(name="status")
+#proton.command(name="status")
 fn status(_payload : EmptyPayload?) -> KeepAwakeReply {
   match active_guard_ref.val {
     Some(active_guard) =>

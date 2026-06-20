@@ -3,7 +3,7 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
-  "justjavac/lepus/manifest",
+  "justjavac/proton/manifest",
 }
 
 warnings = "-29"

@@ -1,20 +1,16 @@
 import {
   "moonbitlang/async",
-  "justjavac/lepus_ext/clipboard",
-  "justjavac/lepus_ext/dialog",
-  "justjavac/lepus",
+  "justjavac/proton_ext/clipboard",
+  "justjavac/proton_ext/dialog",
+  "justjavac/proton",
 }
 
 supported_targets = "native"
 
+dev_build(rule: "embed", input: "app.html", output: "app.mbt")
+
 options(
+  formatter: { "ignore": [ "app.mbt" ] },
   "is-main": true,
-  "pre-build": [
-    {
-      "command": ":embed -i $input -o $output",
-      "input": "app.html",
-      "output": "app.mbt",
-    },
-  ],
   targets: { "main.mbt": [ "native" ] },
 )

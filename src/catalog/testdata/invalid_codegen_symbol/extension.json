@@ -6,7 +6,7 @@
   "description": "Path extension",
   "namespace": "path",
   "manifest_key": "vendor/path",
-  "package": "justjavac/lepus_ext/path",
+  "package": "justjavac/proton_ext/path",
   "spec_symbol": "spec());bad",
   "platforms": ["windows"],
   "dependencies": [],

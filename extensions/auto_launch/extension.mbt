@@ -3,14 +3,14 @@ struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 /// Returns platform support details for JavaScript callers.
-#lepus.command(name="support")
+#proton.command(name="support")
 fn support(_payload : EmptyPayload?) -> SupportReply {
   auto_launch_support()
 }
 
 ///|
 /// Describes the resolved native startup entry.
-#lepus.command(name="describe")
+#proton.command(name="describe")
 fn describe(
   name : String,
   path : String?,
@@ -28,7 +28,7 @@ fn describe(
 
 ///|
 /// Returns whether the resolved native startup entry is enabled.
-#lepus.command(name="isEnabled")
+#proton.command(name="isEnabled")
 fn is_enabled(
   name : String,
   path : String?,
@@ -46,9 +46,9 @@ fn is_enabled(
 
 ///|
 /// Enables the resolved native startup entry.
-#lepus.command(name="enable")
+#proton.command(name="enable")
 async fn enable(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   name : String,
   path : String?,
   launch_in_background : Bool?,
@@ -75,9 +75,9 @@ async fn enable(
 
 ///|
 /// Disables the resolved native startup entry.
-#lepus.command(name="disable")
+#proton.command(name="disable")
 async fn disable(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   name : String,
   path : String?,
   launch_in_background : Bool?,
@@ -103,7 +103,7 @@ async fn disable(
 }
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct AutoLaunchActivity {
   operation : String
   identifier : String?

@@ -169,7 +169,7 @@ let resource : String =
   #|            </label>
   #|            <label>
   #|              Identifier
-  #|              <input id="entry-id" value="io.moonbit.lepus.examples.auto_launch" />
+  #|              <input id="entry-id" value="io.moonbit.proton.examples.auto_launch" />
   #|            </label>
   #|            <label>
   #|              App path
@@ -177,7 +177,7 @@ let resource : String =
   #|            </label>
   #|            <label>
   #|              Extra arguments
-  #|              <input id="entry-args" value="--from-lepus-example" />
+  #|              <input id="entry-args" value="--from-proton-example" />
   #|            </label>
   #|          </div>
   #|          <label class="check">

@@ -1,5 +1,5 @@
 ///|
-let extension_id = "justjavac/lepus-path"
+let extension_id = "justjavac/proton-path"
 
 ///|
 let extension_namespace = "path"
@@ -96,8 +96,8 @@ fn register_paths_reply_op(
 
 ///|
 /// Builds the app-facing `path` extension.
-pub fn extension() -> @lepus_extension.Extension {
-  @lepus_extension.from_core_spec(core_spec())
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.from_core_spec(core_spec())
 }
 
 ///|

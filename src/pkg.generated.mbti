@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus"
+package "justjavac/proton"
 
 import {
-  "justjavac/lepus/core",
-  "justjavac/lepus/extension",
-  "justjavac/lepus/manifest",
-  "justjavac/lepus/runtime",
+  "justjavac/proton/core",
+  "justjavac/proton/extension",
+  "justjavac/proton/manifest",
+  "justjavac/proton/runtime",
 }
 
 // Values

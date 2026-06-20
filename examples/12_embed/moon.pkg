@@ -1,17 +1,13 @@
 import {
-  "justjavac/lepus/webview",
+  "justjavac/proton/webview",
 }
 
 supported_targets = "native"
 
+dev_build(rule: "embed", input: "hello.html", output: "hello.mbt")
+
 options(
+  formatter: { "ignore": [ "hello.mbt" ] },
   "is-main": true,
-  "pre-build": [
-    {
-      "command": ":embed -i $input -o $output",
-      "input": "hello.html",
-      "output": "hello.mbt",
-    },
-  ],
   targets: { "main.mbt": [ "native" ] },
 )

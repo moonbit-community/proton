@@ -1,20 +1,20 @@
 import {
   "moonbitlang/core/json",
   "justjavac/auto_launch" @sys_auto_launch,
-  "justjavac/lepus/command" @lepus_command,
-  "justjavac/lepus/extension" @lepus_extension,
+  "justjavac/proton/command" @proton_command,
+  "justjavac/proton/extension" @proton_extension,
 }
 
 supported_targets = "native"
 
+dev_build(
+  rule: "proton_codegen",
+  input: "extension.mbt",
+  output: "extension.g.mbt",
+)
+
 options(
-  "pre-build": [
-    {
-      "command": "$mod_dir/../target/lepus-tools/lepus codegen $input -o $output",
-      "input": "extension.mbt",
-      "output": "extension.g.mbt",
-    },
-  ],
+  formatter: { "ignore": [ "extension.g.mbt" ] },
   targets: {
     "auto_launch.mbt": [ "native" ],
     "extension.g.mbt": [ "native" ],

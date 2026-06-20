@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/examples/41_app_commands"
+package "justjavac/proton/examples/41_app_commands"
 
 import {
   "moonbitlang/core/json",

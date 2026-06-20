@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/notification"
+package "justjavac/proton_ext/notification"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -16,13 +16,13 @@ pub fn extension() -> @extension.Extension
 // Errors
 
 // Types and methods
-type LepusShowPayload derive(@json.FromJson)
-
 type NotificationActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type NotificationPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type NotificationReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProtonShowPayload derive(@json.FromJson)
 
 // Type aliases
 

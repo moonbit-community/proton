@@ -1,19 +1,19 @@
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct GlobalHotkeyActivity {
   operation : String
   accelerator : String
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-#lepus.event(name="triggered")
+#proton.event(name="triggered")
 struct GlobalHotkeyTriggered {
   accelerator : String
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 async fn emit_command_activity(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   operation : String,
   accelerator : String,
 ) -> Unit {
@@ -22,7 +22,7 @@ async fn emit_command_activity(
 
 ///|
 async fn[Reply] emit_command_result(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   result : Result[Reply, String],
   operation : String,
   accelerator : String,
@@ -37,7 +37,7 @@ async fn[Reply] emit_command_result(
 }
 
 ///|
-#lepus.script
+#proton.script
 fn trigger_poller_script() -> String {
   (
     #|(() => {
@@ -46,10 +46,10 @@ fn trigger_poller_script() -> String {
     #|  if (!globalHotkey || typeof globalHotkey.drainTriggered !== "function") {
     #|    return;
     #|  }
-    #|  if (globalHotkey.__lepusTriggerPoller) {
+    #|  if (globalHotkey.__protonTriggerPoller) {
     #|    return;
     #|  }
-    #|  globalHotkey.__lepusTriggerPoller = window.setInterval(() => {
+    #|  globalHotkey.__protonTriggerPoller = window.setInterval(() => {
     #|    globalHotkey.drainTriggered({}).catch(() => {});
     #|  }, 100);
     #|})();
@@ -58,9 +58,9 @@ fn trigger_poller_script() -> String {
 
 ///|
 /// Registers one global hotkey from a generated app-command extension.
-#lepus.command(name="register")
+#proton.command(name="register")
 async fn register(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   accelerator : String,
 ) -> Result[GlobalHotkeyReply, String] {
   emit_command_result(
@@ -73,9 +73,9 @@ async fn register(
 
 ///|
 /// Unregisters one global hotkey from a generated app-command extension.
-#lepus.command(name="unregister")
+#proton.command(name="unregister")
 async fn unregister(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   accelerator : String,
 ) -> Result[GlobalHotkeyReply, String] {
   emit_command_result(
@@ -88,16 +88,16 @@ async fn unregister(
 
 ///|
 /// Lists registered global hotkeys from a generated app-command extension.
-#lepus.command(name="list")
+#proton.command(name="list")
 fn list(_payload : EmptyPayload?) -> GlobalHotkeyListReply {
   list_hotkeys(app_command_manager_handle())
 }
 
 ///|
 /// Drains triggered global hotkeys from a generated app-command extension.
-#lepus.command(name="drainTriggered")
+#proton.command(name="drainTriggered")
 async fn drain_triggered(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> GlobalHotkeyListReply {
   let reply = drain_triggered_hotkeys(app_command_manager_handle())

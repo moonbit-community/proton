@@ -6,7 +6,7 @@ fn app_probe_expression(name : String) -> String? {
         (
           #|;(async () => {
           #|  const fs = window.__MoonBit__.fs;
-          #|  const path = "lepus-cdp-e2e.txt";
+          #|  const path = "proton-cdp-e2e.txt";
           #|  await fs.writeFile(path, "hello");
           #|  await fs.appendFile(path, " cdp");
           #|  const loaded = await fs.readFile(path);
@@ -24,7 +24,7 @@ fn app_probe_expression(name : String) -> String? {
           #|  try {
           #|    previous = await app.clipboard.readText({});
           #|  } catch (_) {}
-          #|  const text = "lepus-cdp-clipboard-" + Date.now();
+          #|  const text = "proton-cdp-clipboard-" + Date.now();
           #|  const events = [];
           #|  app.events.on("clipboard.activity", (event) => events.push(event));
           #|  try {
@@ -66,7 +66,7 @@ fn app_probe_expression(name : String) -> String? {
         (
           #|;(async () => {
           #|  const app = window.__MoonBit__;
-          #|  const joined = await app.path.join(".", "lepus-cdp-e2e-22.txt");
+          #|  const joined = await app.path.join(".", "proton-cdp-e2e-22.txt");
           #|  await app.fs.writeFile(joined, "config");
           #|  const loaded = await app.fs.readFile(joined);
           #|  await app.fs.unlink(joined).catch(() => {});
@@ -130,7 +130,7 @@ fn app_probe_expression(name : String) -> String? {
           #|;(async () => {
           #|  const tray = window.__MoonBit__.tray;
           #|  try {
-          #|    const shown = await tray.show({ tooltip: "Lepus CDP e2e" });
+          #|    const shown = await tray.show({ tooltip: "Proton CDP e2e" });
           #|    const hidden = await tray.hide({});
           #|    return shown &&
           #|      hidden &&
@@ -160,14 +160,14 @@ fn app_probe_expression(name : String) -> String? {
           #|  const api = window.__MoonBit__.autoLaunch;
           #|  const support = await api.support({});
           #|  const described = await api.describe({
-          #|    name: "LepusCdpE2E",
-          #|    identifier: "justjavac.lepus.cdp.e2e"
+          #|    name: "ProtonCdpE2E",
+          #|    identifier: "justjavac.proton.cdp.e2e"
           #|  });
           #|  return support &&
           #|    typeof support.supported === "boolean" &&
           #|    typeof support.platform === "string" &&
           #|    described &&
-          #|    described.name === "LepusCdpE2E";
+          #|    described.name === "ProtonCdpE2E";
           #|})()
         ),
       )
@@ -177,7 +177,7 @@ fn app_probe_expression(name : String) -> String? {
           #|;(async () => {
           #|  const api = window.__MoonBit__.keepAwake;
           #|  const before = await api.status({});
-          #|  const acquired = await api.acquire({ reason: "Lepus CDP e2e", scope: "system" });
+          #|  const acquired = await api.acquire({ reason: "Proton CDP e2e", scope: "system" });
           #|  const during = await api.status({});
           #|  const released = await api.release({});
           #|  return before &&

@@ -1,7 +1,7 @@
 ///|
 test "facade inline extension enables and links framework spec" {
   let app = html("Facade", "<html></html>", width=900, height=700).extension(
-    @lepus_extension.from_core_spec(
+    @proton_extension.from_core_spec(
       stub_extension("vendor/demo", js_namespace=Some("demo")),
     ),
   )
@@ -18,7 +18,7 @@ test "facade inline extension enables and links framework spec" {
 ///|
 test "facade command enables and registers command spec" {
   let app = html("Facade", "<html></html>", width=900, height=700).extension(
-    @lepus_extension.from_command_spec(
+    @proton_extension.from_command_spec(
       stub_command_extension("vendor/demo", js_namespace=Some("demo")),
     ),
   )
@@ -36,7 +36,7 @@ test "facade command enables and registers command spec" {
 test "facade command options are preserved" {
   let options = Json::object({ "delay": Json::number(10) })
   let app = html("Facade", "<html></html>", width=900, height=700).extension(
-    @lepus_extension.from_command_spec(
+    @proton_extension.from_command_spec(
       stub_command_extension("vendor/demo", js_namespace=Some("demo")),
     ),
     options~,
@@ -62,12 +62,12 @@ test "facade command options are preserved" {
 test "facade duplicate command ids return error" {
   let app = html("Facade", "<html></html>", width=900, height=700)
     .extension(
-      @lepus_extension.from_command_spec(
+      @proton_extension.from_command_spec(
         stub_command_extension("vendor/demo", js_namespace=Some("demo")),
       ),
     )
     .extension(
-      @lepus_extension.from_command_spec(
+      @proton_extension.from_command_spec(
         stub_command_extension("vendor/demo", js_namespace=Some("demoAgain")),
       ),
     )
@@ -82,12 +82,12 @@ test "facade duplicate command ids return error" {
 test "facade duplicate framework extension with same options deduplicates" {
   let app = html("Facade", "<html></html>", width=900, height=700)
     .extension(
-      @lepus_extension.from_core_spec(
+      @proton_extension.from_core_spec(
         stub_extension("vendor/demo", js_namespace=Some("demo")),
       ),
     )
     .extension(
-      @lepus_extension.from_core_spec(
+      @proton_extension.from_core_spec(
         stub_extension("vendor/demo", js_namespace=Some("demo")),
       ),
     )
@@ -101,13 +101,13 @@ test "facade duplicate framework extension with same options deduplicates" {
 test "facade duplicate extension id with different options returns error" {
   let app = html("Facade", "<html></html>", width=900, height=700)
     .extension(
-      @lepus_extension.from_core_spec(
+      @proton_extension.from_core_spec(
         stub_extension("vendor/demo", js_namespace=Some("demo")),
       ),
       options=Json::object({ "mode": Json::string("a") }),
     )
     .extension(
-      @lepus_extension.from_core_spec(
+      @proton_extension.from_core_spec(
         stub_extension("vendor/demo", js_namespace=Some("demo")),
       ),
       options=Json::object({ "mode": Json::string("b") }),
@@ -124,7 +124,7 @@ test "facade duplicate extension id with different options returns error" {
 ///|
 test "facade app json extension links and enables framework extension" {
   let app = config("app.json").extension(
-    @lepus_extension.from_core_spec(
+    @proton_extension.from_core_spec(
       stub_extension("vendor/framework", js_namespace=Some("framework")),
     ),
   )
@@ -146,7 +146,7 @@ test "facade app json extension links and enables framework extension" {
 ///|
 test "facade config ignores extension settings from app json manifest" {
   let app = config("app.json").extension(
-    @lepus_extension.from_core_spec(
+    @proton_extension.from_core_spec(
       stub_extension("vendor/code", js_namespace=Some("code")),
     ),
   )

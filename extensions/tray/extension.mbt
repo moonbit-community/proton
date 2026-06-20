@@ -17,7 +17,7 @@ struct TrayReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-#lepus.event(name="activity")
+#proton.event(name="activity")
 struct TrayActivity {
   operation : String
   tooltip : String?
@@ -37,7 +37,7 @@ fn ensure_supported() -> Result[Unit, String] {
 fn init_tray() -> @sys_tray.Tray? {
   match ensure_supported() {
     Ok(_) =>
-      match @sys_tray.create(identifier="justjavac.lepus.tray") {
+      match @sys_tray.create(identifier="justjavac.proton.tray") {
         Ok(handle) => Some(handle)
         Err(_) => None
       }
@@ -83,8 +83,8 @@ fn tray_handle() -> @sys_tray.Tray? {
 
 ///|
 /// Destroys the app-command tray handle.
-#lepus.destroy
-fn cleanup_tray(context : @lepus_command.AppCommandExtensionContext) -> Unit {
+#proton.destroy
+fn cleanup_tray(context : @proton_command.AppCommandExtensionContext) -> Unit {
   ignore(context.extension_id())
   destroy_tray(app_command_tray_handle.val)
   app_command_tray_handle.val = None
@@ -92,9 +92,9 @@ fn cleanup_tray(context : @lepus_command.AppCommandExtensionContext) -> Unit {
 
 ///|
 /// Shows the native tray icon from a generated app-command extension.
-#lepus.command(name="show")
+#proton.command(name="show")
 async fn show(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   tooltip : String?,
 ) -> Result[TrayReply, String] {
   match with_tray_handle(tray_handle(), fn(handle) { handle.show(tooltip~) }) {
@@ -108,9 +108,9 @@ async fn show(
 
 ///|
 /// Hides the native tray icon from a generated app-command extension.
-#lepus.command(name="hide")
+#proton.command(name="hide")
 async fn hide(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
 ) -> Result[TrayReply, String] {
   match with_tray_handle(tray_handle(), fn(handle) { handle.hide() }) {
@@ -127,9 +127,9 @@ async fn hide(
 
 ///|
 /// Updates the native tray tooltip from a generated app-command extension.
-#lepus.command(name="setTooltip")
+#proton.command(name="setTooltip")
 async fn set_tooltip(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
   tooltip : String,
 ) -> Result[TrayReply, String] {
   match

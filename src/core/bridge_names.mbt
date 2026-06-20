@@ -5,9 +5,9 @@ let moonbit_global_name_value = "__MoonBit__"
 let moonbit_op_binding_name_value = "__moonbit_op_dispatch"
 
 ///|
-/// Returns the root JavaScript namespace used by Lepus runtime helpers.
+/// Returns the root JavaScript namespace used by Proton runtime helpers.
 /// JavaScript bridges and generated helper scripts should agree on this value
-/// when exposing Lepus functionality on `window`.
+/// when exposing Proton functionality on `window`.
 pub fn moonbit_global_name() -> String {
   moonbit_global_name_value
 }

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/dialog"
+package "justjavac/proton_ext/dialog"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -24,17 +24,17 @@ type FileDialogPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type FileDialogReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusConfirmPayload derive(@json.FromJson)
-
-type LepusMessagePayload derive(@json.FromJson)
-
-type LepusOpenFilePayload derive(@json.FromJson)
-
-type LepusSaveFilePayload derive(@json.FromJson)
-
 type MessagePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type MessageReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProtonConfirmPayload derive(@json.FromJson)
+
+type ProtonMessagePayload derive(@json.FromJson)
+
+type ProtonOpenFilePayload derive(@json.FromJson)
+
+type ProtonSaveFilePayload derive(@json.FromJson)
 
 // Type aliases
 

@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @lepus.html(
+  let app = @proton.html(
     "MoonBit App Runtime + Global Hotkey",
     resource,
     width=960,

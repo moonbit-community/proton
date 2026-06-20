@@ -28,10 +28,10 @@ async fn main {
     return
   }
   let webview = @webview.Webview::new(debug=1)
-  println("Lepus browser backend: " + backend)
+  println("Proton browser backend: " + backend)
   println("Backend available: true")
   webview
-  ..set_title("Lepus Browser Backend MVP")
+  ..set_title("Proton Browser Backend MVP")
   ..set_size(820, 560, @webview.SizeHint::None)
   ..set_html(page_html(backend, "CEF backend is active."))
   .run()

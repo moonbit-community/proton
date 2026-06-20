@@ -6,7 +6,7 @@
   "description": "Path extension",
   "namespace": "path",
   "manifest_key": "vendor/path",
-  "package": "justjavac/lepus_ext/path\"\nmalicious",
+  "package": "justjavac/proton_ext/path\"\nmalicious",
   "spec_symbol": "spec",
   "platforms": ["windows"],
   "dependencies": [],

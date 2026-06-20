@@ -22,7 +22,7 @@ fn stub_descriptor(
   id : String,
   js_namespace : String,
   dependencies? : Array[String] = [],
-  package_path? : String = "justjavac/lepus_ext/" + js_namespace,
+  package_path? : String = "justjavac/proton_ext/" + js_namespace,
   spec_symbol? : String = "extension",
 ) -> ExtensionDescriptor {
   ExtensionDescriptor::new(
@@ -98,10 +98,10 @@ test "discover_extension_descriptor_files can target one extension package" {
     Err(error) => abort(error)
   }
 
-  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/lepus-path"])
+  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/proton-path"])
   let ids = catalog.descriptor_ids()
   ids.push("mutated")
-  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/lepus-path"])
+  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/proton-path"])
 }
 
 ///|
@@ -156,7 +156,7 @@ test "decode minimal app-command extension metadata uses defaults" {
     Err(error) => abort(error)
   }
   assert_eq(descriptor.manifest_key(), "vendor/minimal")
-  assert_eq(descriptor.package_path(), "justjavac/lepus_ext/minimal_extension")
+  assert_eq(descriptor.package_path(), "justjavac/proton_ext/minimal_extension")
   assert_eq(descriptor.spec_symbol(), "extension")
   @debug.assert_eq(descriptor.dependencies(), [])
 }
@@ -174,7 +174,7 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
 
   let ids = catalog.descriptor_ids()
   ids.sort()
-  @debug.assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/lepus-path"])
+  @debug.assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/proton-path"])
 
   let schema = match catalog.load_schema("vendor/echo") {
     Ok(schema) => schema
@@ -195,14 +195,14 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
 
 ///|
 test "build_extension_link_plan expands metadata dependencies in order" {
-  let fs_descriptor = stub_descriptor("justjavac/lepus-fs", "fs", dependencies=[
-    "justjavac/lepus-path",
+  let fs_descriptor = stub_descriptor("justjavac/proton-fs", "fs", dependencies=[
+    "justjavac/proton-path",
   ])
   let catalog = match
     ExtensionCatalog::from_descriptors([
-      stub_descriptor("justjavac/lepus-path", "path"),
+      stub_descriptor("justjavac/proton-path", "path"),
       fs_descriptor,
-      stub_descriptor("justjavac/lepus-dialog", "dialog"),
+      stub_descriptor("justjavac/proton-dialog", "dialog"),
     ]) {
     Ok(catalog) => catalog
     Err(error) => abort(error)
@@ -211,22 +211,22 @@ test "build_extension_link_plan expands metadata dependencies in order" {
 
   let plan = match
     build_extension_link_plan(catalog, [
-      "justjavac/lepus-fs", "justjavac/lepus-dialog",
+      "justjavac/proton-fs", "justjavac/proton-dialog",
     ]) {
     Ok(plan) => plan
     Err(error) => abort(error)
   }
 
   @debug.assert_eq(plan.extension_ids(), [
-    "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
+    "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
   ])
-  assert_eq(plan.inputs()[0].package_path(), "justjavac/lepus_ext/path")
+  assert_eq(plan.inputs()[0].package_path(), "justjavac/proton_ext/path")
   assert_eq(plan.inputs()[1].spec_symbol(), "extension")
 
   let inputs = plan.inputs()
   inputs.push(inputs[0])
   @debug.assert_eq(plan.extension_ids(), [
-    "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
+    "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
   ])
 }
 

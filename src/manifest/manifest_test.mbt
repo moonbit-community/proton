@@ -45,10 +45,10 @@ test "app manifest stores windows and extension settings" {
     debug=2,
     windows=[settings_window],
     extensions={
-      "justjavac/lepus-fs": ExtensionSetting::enabled(
+      "justjavac/proton-fs": ExtensionSetting::enabled(
         options=Some(Json::object({ "scope": Json::string("read") })),
       ),
-      "justjavac/lepus-dialog": ExtensionSetting::disabled(),
+      "justjavac/proton-dialog": ExtensionSetting::disabled(),
     },
   )
 
@@ -59,7 +59,7 @@ test "app manifest stores windows and extension settings" {
   assert_eq(manifest.debug, 2)
   @debug.assert_eq(manifest.windows, [settings_window])
   @debug.assert_eq(
-    manifest.extension_setting("justjavac/lepus-fs"),
+    manifest.extension_setting("justjavac/proton-fs"),
     Some(
       ExtensionSetting::enabled(
         options=Some(Json::object({ "scope": Json::string("read") })),
@@ -67,10 +67,10 @@ test "app manifest stores windows and extension settings" {
     ),
   )
   @debug.assert_eq(
-    manifest.extension_setting("justjavac/lepus-dialog"),
+    manifest.extension_setting("justjavac/proton-dialog"),
     Some(ExtensionSetting::disabled()),
   )
-  @debug.assert_eq(manifest.extension_setting("justjavac/lepus-path"), None)
+  @debug.assert_eq(manifest.extension_setting("justjavac/proton-path"), None)
   assert_eq(manifest.extension_settings().length(), 2)
 }
 
@@ -83,7 +83,7 @@ test "app manifest constructor copies mutable inputs" {
       File("settings.html"),
     ),
   ]
-  let extensions = { "justjavac/lepus-fs": ExtensionSetting::enabled() }
+  let extensions = { "justjavac/proton-fs": ExtensionSetting::enabled() }
   let manifest = AppManifest::new(
     WindowManifest::new("Main", 960, 720),
     Html("<html></html>"),
@@ -98,17 +98,17 @@ test "app manifest constructor copies mutable inputs" {
       File("later.html"),
     ),
   )
-  extensions["justjavac/lepus-dialog"] = ExtensionSetting::enabled()
+  extensions["justjavac/proton-dialog"] = ExtensionSetting::enabled()
 
   assert_eq(manifest.windows.length(), 1)
-  @debug.assert_eq(manifest.extension_setting("justjavac/lepus-dialog"), None)
+  @debug.assert_eq(manifest.extension_setting("justjavac/proton-dialog"), None)
 }
 
 ///|
 test "app manifest extension settings expose option snapshots" {
   let options = Json::object({ "scope": Json::string("read") })
   let extensions = {
-    "justjavac/lepus-fs": ExtensionSetting::enabled(options=Some(options)),
+    "justjavac/proton-fs": ExtensionSetting::enabled(options=Some(options)),
   }
   let manifest = AppManifest::new(
     WindowManifest::new("Main", 960, 720),
@@ -119,14 +119,14 @@ test "app manifest extension settings expose option snapshots" {
     Object(object) => object["late"] = Json::boolean(true)
     _ => abort("expected object options")
   }
-  match manifest.extension_setting("justjavac/lepus-fs") {
+  match manifest.extension_setting("justjavac/proton-fs") {
     Some(ExtensionSetting::Enabled(Some(Object(object)))) => {
       @debug.assert_eq(object.get("late"), None)
       object["exposed"] = Json::boolean(true)
     }
     _ => abort("expected fs extension options")
   }
-  match manifest.extension_setting("justjavac/lepus-fs") {
+  match manifest.extension_setting("justjavac/proton-fs") {
     Some(ExtensionSetting::Enabled(Some(Object(object)))) =>
       @debug.assert_eq(object.get("exposed"), None)
     _ => abort("expected fresh fs extension options")
@@ -137,7 +137,7 @@ test "app manifest extension settings expose option snapshots" {
       object["entry"] = Json::boolean(true)
     _ => abort("expected extension settings entry")
   }
-  match manifest.extension_setting("justjavac/lepus-fs") {
+  match manifest.extension_setting("justjavac/proton-fs") {
     Some(ExtensionSetting::Enabled(Some(Object(object)))) =>
       @debug.assert_eq(object.get("entry"), None)
     _ => abort("expected fresh fs extension options after entries")

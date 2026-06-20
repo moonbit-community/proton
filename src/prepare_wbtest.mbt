@@ -24,15 +24,15 @@ fn stub_command_extension(
   id : String,
   js_namespace? : String? = None,
   dependencies? : Array[String] = [],
-) -> @lepus_command.AppCommandExtensionSpec {
+) -> @proton_command.AppCommandExtensionSpec {
   let extension_namespace = match js_namespace {
     Some(value) => value
     None => id
   }
-  @lepus_command.AppCommandExtensionSpec::new(
+  @proton_command.AppCommandExtensionSpec::new(
     id,
     extension_namespace,
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
     fn(_context) { Ok(()) },
     dependencies~,
   )
@@ -71,28 +71,30 @@ fn prepared_extension_ids(prepared : PreparedApp) -> Array[String] {
 ///|
 test "prepare_app expands dependencies in deterministic order" {
   let registry = ExtensionRegistry::new()
-    .register(stub_extension("justjavac/lepus-path", js_namespace=Some("path")))
     .register(
-      stub_extension("justjavac/lepus-fs", js_namespace=Some("fs"), dependencies=[
-        "justjavac/lepus-path",
+      stub_extension("justjavac/proton-path", js_namespace=Some("path")),
+    )
+    .register(
+      stub_extension("justjavac/proton-fs", js_namespace=Some("fs"), dependencies=[
+        "justjavac/proton-path",
       ]),
     )
     .register(
-      stub_extension("justjavac/lepus-dialog", js_namespace=Some("dialog")),
+      stub_extension("justjavac/proton-dialog", js_namespace=Some("dialog")),
     )
 
   let manifest = demo_manifest({
-    "justjavac/lepus-fs": @manifest.ExtensionSetting::enabled(
+    "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(
       options=Some(Json::object({ "scope": Json::string("read") })),
     ),
-    "justjavac/lepus-dialog": @manifest.ExtensionSetting::enabled(),
+    "justjavac/proton-dialog": @manifest.ExtensionSetting::enabled(),
   })
 
   match prepare_app(manifest, registry, base_dir=Some("workspace/app")) {
     Err(error) => abort(error)
     Ok(prepared) => {
       @debug.assert_eq(prepared_extension_ids(prepared), [
-        "justjavac/lepus-path", "justjavac/lepus-fs", "justjavac/lepus-dialog",
+        "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
       ])
       @debug.assert_eq(prepared.base_dir(), Some("workspace/app"))
       let runtime_config = prepared.runtime_config()
@@ -135,10 +137,10 @@ test "prepare_app preserves asset-backed runtime entries" {
 test "prepare_app rejects unknown manifest extension keys" {
   let registry = ExtensionRegistry::new()
   let manifest = demo_manifest({
-    "justjavac/lepus-fs": @manifest.ExtensionSetting::enabled(),
+    "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(),
   })
   match prepare_app(manifest, registry) {
-    Err(error) => assert_eq(error, "unknown extension key: justjavac/lepus-fs")
+    Err(error) => assert_eq(error, "unknown extension key: justjavac/proton-fs")
     Ok(_) => abort("expected unknown extension error")
   }
 }
@@ -146,13 +148,13 @@ test "prepare_app rejects unknown manifest extension keys" {
 ///|
 test "framework manifest keeps framework extensions and strips command extensions" {
   let framework_registry = ExtensionRegistry::new().register(
-    stub_extension("justjavac/lepus-path", js_namespace=Some("path")),
+    stub_extension("justjavac/proton-path", js_namespace=Some("path")),
   )
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("examples/async-add", js_namespace=Some("add")),
   )
   let manifest = demo_manifest({
-    "justjavac/lepus-path": @manifest.ExtensionSetting::enabled(),
+    "justjavac/proton-path": @manifest.ExtensionSetting::enabled(),
     "examples/async-add": @manifest.ExtensionSetting::enabled(),
   })
   let prepared = match
@@ -180,7 +182,7 @@ test "framework manifest keeps framework extensions and strips command extension
     manifest, framework_registry, commands,
   )
   @debug.assert_eq(
-    framework_manifest.extension_setting("justjavac/lepus-path"),
+    framework_manifest.extension_setting("justjavac/proton-path"),
     Some(@manifest.ExtensionSetting::enabled()),
   )
   @debug.assert_eq(
@@ -191,7 +193,7 @@ test "framework manifest keeps framework extensions and strips command extension
 
 ///|
 test "command extension planning rejects keys outside both registries" {
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("examples/async-add", js_namespace=Some("add")),
   )
   let manifest = demo_manifest({
@@ -213,8 +215,8 @@ test "framework config writer validates linked framework dependencies" {
   }
   let path = "target/framework-dependency-wbtest.json"
   let manifest = demo_manifest({})
-  let commands = @lepus_command.AppCommandsConfig::new(["app:ping"], framework_extension_ids=[
-    "justjavac/lepus-path",
+  let commands = @proton_command.AppCommandsConfig::new(["app:ping"], framework_extension_ids=[
+    "justjavac/proton-path",
   ])
   let ipc_config = match
     make_framework_ipc_launch_config(Some("dependency-token")) {
@@ -225,12 +227,12 @@ test "framework config writer validates linked framework dependencies" {
     write_framework_process_ipc_config(path, manifest, ipc_config, commands) {
     Err(error) =>
       assert_eq(
-        error, "unknown command framework dependency: justjavac/lepus-path",
+        error, "unknown command framework dependency: justjavac/proton-path",
       )
     Ok(_) => abort("expected missing framework dependency error")
   }
   let framework_registry = ExtensionRegistry::new().register(
-    stub_extension("justjavac/lepus-path", js_namespace=Some("path")),
+    stub_extension("justjavac/proton-path", js_namespace=Some("path")),
   )
   match
     write_framework_process_ipc_config(
@@ -255,7 +257,7 @@ test "framework ipc config writer records user-parent launch settings" {
   }
   let path = "target/framework-ipc-wbtest.json"
   let manifest = demo_manifest({})
-  let commands = @lepus_command.AppCommandsConfig::new(["app:ping"])
+  let commands = @proton_command.AppCommandsConfig::new(["app:ping"])
   let ipc_config = match
     make_framework_ipc_launch_config(Some("ipc-test-token")) {
     Err(error) => abort(error)
@@ -344,11 +346,11 @@ test "framework config validation rejects invalid command metadata" {
 ///|
 test "command extension can depend on framework extension" {
   let framework_registry = ExtensionRegistry::new().register(
-    stub_extension("justjavac/lepus-path", js_namespace=Some("path")),
+    stub_extension("justjavac/proton-path", js_namespace=Some("path")),
   )
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("examples/async-add", js_namespace=Some("add"), dependencies=[
-      "justjavac/lepus-path",
+      "justjavac/proton-path",
     ]),
   )
   let manifest = demo_manifest({
@@ -367,12 +369,12 @@ test "command extension can depend on framework extension" {
     prepared,
     framework_registry.spec_map(),
   )
-  @debug.assert_eq(commands.framework_extension_ids(), ["justjavac/lepus-path"])
+  @debug.assert_eq(commands.framework_extension_ids(), ["justjavac/proton-path"])
   let framework_manifest = framework_manifest_for_commands(
     manifest, framework_registry, commands,
   )
   @debug.assert_eq(
-    framework_manifest.extension_setting("justjavac/lepus-path"),
+    framework_manifest.extension_setting("justjavac/proton-path"),
     Some(@manifest.ExtensionSetting::enabled()),
   )
 }
@@ -380,15 +382,15 @@ test "command extension can depend on framework extension" {
 ///|
 test "command extension rejects disabled framework dependency" {
   let framework_registry = ExtensionRegistry::new().register(
-    stub_extension("justjavac/lepus-path", js_namespace=Some("path")),
+    stub_extension("justjavac/proton-path", js_namespace=Some("path")),
   )
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("examples/async-add", js_namespace=Some("add"), dependencies=[
-      "justjavac/lepus-path",
+      "justjavac/proton-path",
     ]),
   )
   let manifest = demo_manifest({
-    "justjavac/lepus-path": @manifest.ExtensionSetting::disabled(),
+    "justjavac/proton-path": @manifest.ExtensionSetting::disabled(),
     "examples/async-add": @manifest.ExtensionSetting::enabled(),
   })
   match
@@ -399,7 +401,7 @@ test "command extension rejects disabled framework dependency" {
     ) {
     Err(error) =>
       assert_eq(
-        error, "command extension examples/async-add requires disabled framework dependency justjavac/lepus-path",
+        error, "command extension examples/async-add requires disabled framework dependency justjavac/proton-path",
       )
     Ok(_) => abort("expected disabled framework dependency error")
   }
@@ -407,7 +409,7 @@ test "command extension rejects disabled framework dependency" {
 
 ///|
 test "command extension rejects disabled command dependency" {
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new()
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new()
     .register(stub_command_extension("vendor/base", js_namespace=Some("base")))
     .register(
       stub_command_extension("vendor/feature", js_namespace=Some("feature"), dependencies=[
@@ -430,22 +432,24 @@ test "command extension rejects disabled command dependency" {
 ///|
 test "prepare_app rejects disabled dependencies" {
   let registry = ExtensionRegistry::new()
-    .register(stub_extension("justjavac/lepus-path", js_namespace=Some("path")))
     .register(
-      stub_extension("justjavac/lepus-fs", js_namespace=Some("fs"), dependencies=[
-        "justjavac/lepus-path",
+      stub_extension("justjavac/proton-path", js_namespace=Some("path")),
+    )
+    .register(
+      stub_extension("justjavac/proton-fs", js_namespace=Some("fs"), dependencies=[
+        "justjavac/proton-path",
       ]),
     )
 
   let manifest = demo_manifest({
-    "justjavac/lepus-path": @manifest.ExtensionSetting::disabled(),
-    "justjavac/lepus-fs": @manifest.ExtensionSetting::enabled(),
+    "justjavac/proton-path": @manifest.ExtensionSetting::disabled(),
+    "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(),
   })
 
   match prepare_app(manifest, registry) {
     Err(error) =>
       assert_eq(
-        error, "extension justjavac/lepus-fs requires disabled dependency justjavac/lepus-path",
+        error, "extension justjavac/proton-fs requires disabled dependency justjavac/proton-path",
       )
     Ok(_) => abort("expected disabled dependency error")
   }
@@ -559,12 +563,12 @@ test "prepare_app rejects duplicate secondary window ids" {
 
 ///|
 test "app commands config preserves command extension descriptors" {
-  let extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/demo",
     "demo",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let commands = @lepus_command.AppCommandsConfig::new(["app:ping"], extensions=[
+  let commands = @proton_command.AppCommandsConfig::new(["app:ping"], extensions=[
     extension,
   ])
   @debug.assert_eq(commands.op_names(), ["app:ping"])
@@ -576,15 +580,15 @@ test "app commands config preserves command extension descriptors" {
 test "app command constructors copy mutable array inputs" {
   let op_names = ["ext:demo/ping"]
   let framework_ids = ["vendor/framework"]
-  let apis = [@lepus_command.AppCommandApiDescriptor::new("ping")]
+  let apis = [@proton_command.AppCommandApiDescriptor::new("ping")]
   let scripts = ["window.__demo = true;"]
-  let extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/demo",
     "demo",
     apis,
     scripts~,
   )
-  let commands = @lepus_command.AppCommandsConfig::new(
+  let commands = @proton_command.AppCommandsConfig::new(
     op_names,
     extensions=[extension],
     framework_extension_ids=framework_ids,
@@ -592,7 +596,7 @@ test "app command constructors copy mutable array inputs" {
 
   op_names.push(" ")
   framework_ids.push(" ")
-  apis.push(@lepus_command.AppCommandApiDescriptor::new("later"))
+  apis.push(@proton_command.AppCommandApiDescriptor::new("later"))
   scripts.push("window.__demo = false;")
 
   match validate_app_commands_config(commands) {
@@ -607,11 +611,11 @@ test "app command constructors copy mutable array inputs" {
 
 ///|
 test "app commands config exposes command descriptor snapshots" {
-  let commands = @lepus_command.AppCommandsConfig::new(["ext:demo/ping"], extensions=[
-    @lepus_command.AppCommandExtensionDescriptor::new(
+  let commands = @proton_command.AppCommandsConfig::new(["ext:demo/ping"], extensions=[
+    @proton_command.AppCommandExtensionDescriptor::new(
       "vendor/demo",
       "demo",
-      [@lepus_command.AppCommandApiDescriptor::new("ping")],
+      [@proton_command.AppCommandApiDescriptor::new("ping")],
       scripts=["window.__demo = true;"],
     ),
   ])
@@ -656,7 +660,7 @@ test "extension registries expose snapshot id lists" {
   extension_ids.push("vendor/mutated")
   @debug.assert_eq(extension_registry.registered_ids(), ["vendor/framework"])
 
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/demo", js_namespace=Some("demo")),
   )
   let command_ids = command_registry.registered_ids()
@@ -667,10 +671,10 @@ test "extension registries expose snapshot id lists" {
 ///|
 test "command extension spec exposes dependency snapshots" {
   let dependencies = ["vendor/base"]
-  let spec = @lepus_command.AppCommandExtensionSpec::new(
+  let spec = @proton_command.AppCommandExtensionSpec::new(
     "vendor/demo",
     "demo",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
     fn(_context) { Ok(()) },
     dependencies~,
   )
@@ -684,19 +688,19 @@ test "command extension spec exposes dependency snapshots" {
 ///|
 test "command extension registry and prepared entries copy specs" {
   let destroy_count = Ref(0)
-  let spec = @lepus_command.AppCommandExtensionSpec::new(
+  let spec = @proton_command.AppCommandExtensionSpec::new(
     "vendor/demo",
     "demo",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
     fn(_context) { Ok(()) },
     scripts=["window.__demo = true;"],
     dependencies=["vendor/base"],
     on_destroy=fn(_context) { destroy_count.val += 1 },
   )
-  let registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let registry = @proton_command.AppCommandExtensionRegistry::new().register(
     spec,
   )
-  spec.apis.push(@lepus_command.AppCommandApiDescriptor::new("changed"))
+  spec.apis.push(@proton_command.AppCommandApiDescriptor::new("changed"))
   spec.scripts.push("window.__demo = false;")
   spec.dependencies.push("vendor/mutated")
 
@@ -709,7 +713,7 @@ test "command extension registry and prepared entries copy specs" {
   let descriptor = registered.to_ipc_descriptor()
   assert_eq(descriptor.scripts.length(), 1)
 
-  registered.apis.push(@lepus_command.AppCommandApiDescriptor::new("later"))
+  registered.apis.push(@proton_command.AppCommandApiDescriptor::new("later"))
   registered.scripts.push("window.__demo = null;")
   registered.dependencies.push("vendor/changed")
   let fresh = match registry.get("vendor/demo") {
@@ -720,7 +724,7 @@ test "command extension registry and prepared entries copy specs" {
   @debug.assert_eq(fresh.dependencies(), ["vendor/base"])
   assert_eq(fresh.to_ipc_descriptor().scripts.length(), 1)
   let host = @core.AppCommandHost::new()
-  let context = @lepus_command.AppCommandExtensionContext::new(
+  let context = @proton_command.AppCommandExtensionContext::new(
     host, "vendor/demo", "demo",
   )
   fresh.destroy(context)
@@ -732,10 +736,10 @@ test "command extension registry and prepared entries copy specs" {
     fresh,
     Some(Json::object({ "enabled": Json::boolean(true) })),
   )
-  fresh.apis.push(@lepus_command.AppCommandApiDescriptor::new("after-prepare"))
+  fresh.apis.push(@proton_command.AppCommandApiDescriptor::new("after-prepare"))
   @debug.assert_eq(prepared.spec().op_names(), ["ext:demo/ping"])
   let exposed = prepared.spec()
-  exposed.apis.push(@lepus_command.AppCommandApiDescriptor::new("exposed"))
+  exposed.apis.push(@proton_command.AppCommandApiDescriptor::new("exposed"))
   @debug.assert_eq(prepared.spec().op_names(), ["ext:demo/ping"])
 }
 
@@ -791,10 +795,10 @@ test "prepared sync extension options are snapshots" {
 ///|
 test "command extension context and prepared options are snapshots" {
   let options = Json::object({ "mode": Json::string("fast") })
-  let spec = @lepus_command.AppCommandExtensionSpec::new(
+  let spec = @proton_command.AppCommandExtensionSpec::new(
     "vendor/demo",
     "demo",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
     fn(_context) { Ok(()) },
   )
   let prepared = PreparedAppCommandExtension::new(
@@ -819,7 +823,7 @@ test "command extension context and prepared options are snapshots" {
   }
 
   let host = @core.AppCommandHost::new()
-  let context = @lepus_command.AppCommandExtensionContext::new(
+  let context = @proton_command.AppCommandExtensionContext::new(
     host,
     "vendor/demo",
     "demo",
@@ -838,7 +842,7 @@ test "command extension context and prepared options are snapshots" {
 
 ///|
 test "app commands config rejects duplicate op names" {
-  let commands = @lepus_command.AppCommandsConfig::new(["app:ping", "app:ping"])
+  let commands = @proton_command.AppCommandsConfig::new(["app:ping", "app:ping"])
   match validate_app_commands_config(commands) {
     Err(error) => assert_eq(error, "duplicate app command op name: app:ping")
     Ok(_) => abort("expected duplicate op name error")
@@ -847,8 +851,8 @@ test "app commands config rejects duplicate op names" {
 
 ///|
 test "app commands config rejects invalid framework dependency ids" {
-  let empty = @lepus_command.AppCommandsConfig::new(["app:ping"], framework_extension_ids=[
-    "justjavac/lepus-path", " ",
+  let empty = @proton_command.AppCommandsConfig::new(["app:ping"], framework_extension_ids=[
+    "justjavac/proton-path", " ",
   ])
   match validate_app_commands_config(empty) {
     Err(error) =>
@@ -856,13 +860,13 @@ test "app commands config rejects invalid framework dependency ids" {
     Ok(_) => abort("expected empty framework dependency id error")
   }
 
-  let duplicate = @lepus_command.AppCommandsConfig::new(["app:ping"], framework_extension_ids=[
-    "justjavac/lepus-path", "justjavac/lepus-path",
+  let duplicate = @proton_command.AppCommandsConfig::new(["app:ping"], framework_extension_ids=[
+    "justjavac/proton-path", "justjavac/proton-path",
   ])
   match validate_app_commands_config(duplicate) {
     Err(error) =>
       assert_eq(
-        error, "duplicate command framework dependency: justjavac/lepus-path",
+        error, "duplicate command framework dependency: justjavac/proton-path",
       )
     Ok(_) => abort("expected duplicate framework dependency id error")
   }
@@ -889,7 +893,7 @@ test "framework ipc config accepts caller provided token" {
 test "framework config path prefers cli args over env" {
   @debug.assert_eq(
     framework_config_path(
-      ["app.exe", "--lepus-framework-config", "from-args.json"],
+      ["app.exe", "--proton-framework-config", "from-args.json"],
       Some("from-env.json"),
     ),
     Ok("from-args.json"),
@@ -900,27 +904,27 @@ test "framework config path prefers cli args over env" {
   )
   @debug.assert_eq(
     framework_config_path(
-      ["app.exe", "--lepus-framework-config", ""],
+      ["app.exe", "--proton-framework-config", ""],
       Some("from-env.json"),
     ),
     Err("framework config path must not be empty"),
   )
   @debug.assert_eq(
     framework_config_path(
-      ["app.exe", "--lepus-framework-config"],
+      ["app.exe", "--proton-framework-config"],
       Some("from-env.json"),
     ),
-    Err("missing value for --lepus-framework-config"),
+    Err("missing value for --proton-framework-config"),
   )
   @debug.assert_eq(
     framework_config_path(
       [
-        "app.exe", "--lepus-framework-config", "first.json", "--lepus-framework-config",
+        "app.exe", "--proton-framework-config", "first.json", "--proton-framework-config",
         "second.json",
       ],
       Some("from-env.json"),
     ),
-    Err("duplicate value for --lepus-framework-config"),
+    Err("duplicate value for --proton-framework-config"),
   )
   @debug.assert_eq(
     framework_config_path(["app.exe"], Some("")),
@@ -930,12 +934,12 @@ test "framework config path prefers cli args over env" {
 
 ///|
 test "app commands config rejects descriptor APIs without matching ops" {
-  let extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/demo",
     "demo",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let commands = @lepus_command.AppCommandsConfig::new(["ext:demo/pong"], extensions=[
+  let commands = @proton_command.AppCommandsConfig::new(["ext:demo/pong"], extensions=[
     extension,
   ])
   match validate_app_commands_config(commands) {
@@ -949,7 +953,7 @@ test "app commands config rejects descriptor APIs without matching ops" {
 
 ///|
 test "app commands config rejects extension ops without descriptors" {
-  let missing_descriptor = @lepus_command.AppCommandsConfig::new([
+  let missing_descriptor = @proton_command.AppCommandsConfig::new([
     "ext:demo/ping",
   ])
   match validate_app_commands_config(missing_descriptor) {
@@ -960,12 +964,12 @@ test "app commands config rejects extension ops without descriptors" {
     Ok(_) => abort("expected missing command extension descriptor error")
   }
 
-  let extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/demo",
     "demo",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let extra_op = @lepus_command.AppCommandsConfig::new(
+  let extra_op = @proton_command.AppCommandsConfig::new(
     ["ext:demo/ping", "ext:demo/secret"],
     extensions=[extension],
   )
@@ -980,7 +984,7 @@ test "app commands config rejects extension ops without descriptors" {
 
 ///|
 test "command extension planning rejects duplicate namespaces" {
-  let registry = @lepus_command.AppCommandExtensionRegistry::new()
+  let registry = @proton_command.AppCommandExtensionRegistry::new()
     .register(stub_command_extension("vendor/alpha", js_namespace=Some("demo")))
     .register(stub_command_extension("vendor/beta", js_namespace=Some("demo")))
   let manifest = demo_manifest({
@@ -1001,7 +1005,7 @@ test "command extension planning rejects framework id collisions" {
   let extension_registry = ExtensionRegistry::new().register(
     stub_extension("vendor/shared", js_namespace=Some("sharedFramework")),
   )
-  let command_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let command_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/shared", js_namespace=Some("sharedCommand")),
   )
   let manifest = demo_manifest({
@@ -1022,12 +1026,12 @@ test "raw app commands reject framework id collisions" {
   let extension_registry = ExtensionRegistry::new().register(
     stub_extension("vendor/shared", js_namespace=Some("sharedFramework")),
   )
-  let command_extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let command_extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/shared",
     "sharedCommand",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let commands = @lepus_command.AppCommandsConfig::new(
+  let commands = @proton_command.AppCommandsConfig::new(
     ["ext:sharedCommand/ping"],
     extensions=[command_extension],
   )
@@ -1051,12 +1055,12 @@ test "raw app commands reject enabled framework namespace collisions" {
   let extension_registry = ExtensionRegistry::new().register(
     stub_extension("vendor/framework", js_namespace=Some("shared")),
   )
-  let command_extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let command_extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/command",
     "shared",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let commands = @lepus_command.AppCommandsConfig::new(["ext:shared/ping"], extensions=[
+  let commands = @proton_command.AppCommandsConfig::new(["ext:shared/ping"], extensions=[
     command_extension,
   ])
   let manifest = demo_manifest({
@@ -1080,12 +1084,12 @@ test "raw app commands reject framework dependency namespace collisions" {
   let extension_registry = ExtensionRegistry::new().register(
     stub_extension("vendor/framework", js_namespace=Some("shared")),
   )
-  let command_extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let command_extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/command",
     "shared",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let commands = @lepus_command.AppCommandsConfig::new(
+  let commands = @proton_command.AppCommandsConfig::new(
     ["ext:shared/ping"],
     extensions=[command_extension],
     framework_extension_ids=["vendor/framework"],
@@ -1111,13 +1115,13 @@ test "raw app commands reject op name separators in descriptor public names" {
   let manifest = demo_manifest({
     "vendor/command": @manifest.ExtensionSetting::enabled(),
   })
-  let namespace_command = @lepus_command.AppCommandsConfig::new(
+  let namespace_command = @proton_command.AppCommandsConfig::new(
     ["ext:demo/bad/ping"],
     extensions=[
-      @lepus_command.AppCommandExtensionDescriptor::new(
+      @proton_command.AppCommandExtensionDescriptor::new(
         "vendor/command",
         "demo/bad",
-        [@lepus_command.AppCommandApiDescriptor::new("ping")],
+        [@proton_command.AppCommandApiDescriptor::new("ping")],
       ),
     ],
   )
@@ -1132,13 +1136,13 @@ test "raw app commands reject op name separators in descriptor public names" {
     Ok(_) => abort("expected raw namespace separator error")
   }
 
-  let api_command = @lepus_command.AppCommandsConfig::new(
+  let api_command = @proton_command.AppCommandsConfig::new(
     ["ext:demo/bad/api"],
     extensions=[
-      @lepus_command.AppCommandExtensionDescriptor::new(
+      @proton_command.AppCommandExtensionDescriptor::new(
         "vendor/command",
         "demo",
-        [@lepus_command.AppCommandApiDescriptor::new("bad/api")],
+        [@proton_command.AppCommandApiDescriptor::new("bad/api")],
       ),
     ],
   )
@@ -1163,12 +1167,12 @@ test "raw app commands reject transitive framework namespace collisions" {
         "vendor/base",
       ]),
     )
-  let command_extension = @lepus_command.AppCommandExtensionDescriptor::new(
+  let command_extension = @proton_command.AppCommandExtensionDescriptor::new(
     "vendor/command",
     "shared",
-    [@lepus_command.AppCommandApiDescriptor::new("ping")],
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
   )
-  let commands = @lepus_command.AppCommandsConfig::new(["ext:shared/ping"], extensions=[
+  let commands = @proton_command.AppCommandsConfig::new(["ext:shared/ping"], extensions=[
     command_extension,
   ])
   let manifest = demo_manifest({
@@ -1189,8 +1193,8 @@ test "raw app commands reject transitive framework namespace collisions" {
 
 ///|
 test "command extension planning rejects empty API lists" {
-  let registry = @lepus_command.AppCommandExtensionRegistry::new().register(
-    @lepus_command.AppCommandExtensionSpec::new("vendor/empty", "empty", [], fn(
+  let registry = @proton_command.AppCommandExtensionRegistry::new().register(
+    @proton_command.AppCommandExtensionSpec::new("vendor/empty", "empty", [], fn(
       _context,
     ) {
       Ok(())
@@ -1210,7 +1214,7 @@ test "command extension planning rejects empty API lists" {
 
 ///|
 test "command extension planning rejects invalid dependency shape" {
-  let empty_dependency = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let empty_dependency = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/feature", js_namespace=Some("feature"), dependencies=[
       " ",
     ]),
@@ -1226,7 +1230,7 @@ test "command extension planning rejects invalid dependency shape" {
     Ok(_) => abort("expected empty command extension dependency error")
   }
 
-  let self_dependency = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let self_dependency = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/feature", js_namespace=Some("feature"), dependencies=[
       "vendor/feature",
     ]),
@@ -1239,7 +1243,7 @@ test "command extension planning rejects invalid dependency shape" {
     Ok(_) => abort("expected self command extension dependency error")
   }
 
-  let duplicate_dependency = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let duplicate_dependency = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/feature", js_namespace=Some("feature"), dependencies=[
       "vendor/base", "vendor/base",
     ]),
@@ -1255,7 +1259,7 @@ test "command extension planning rejects invalid dependency shape" {
 
 ///|
 test "command extension planning rejects op name separators in public names" {
-  let namespace_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let namespace_registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/demo", js_namespace=Some("demo/bad")),
   )
   let manifest = demo_manifest({
@@ -1269,11 +1273,11 @@ test "command extension planning rejects op name separators in public names" {
     Ok(_) => abort("expected command namespace separator error")
   }
 
-  let api_registry = @lepus_command.AppCommandExtensionRegistry::new().register(
-    @lepus_command.AppCommandExtensionSpec::new(
+  let api_registry = @proton_command.AppCommandExtensionRegistry::new().register(
+    @proton_command.AppCommandExtensionSpec::new(
       "vendor/demo",
       "demo",
-      [@lepus_command.AppCommandApiDescriptor::new("bad/api")],
+      [@proton_command.AppCommandApiDescriptor::new("bad/api")],
       fn(_context) { Ok(()) },
     ),
   )
@@ -1288,7 +1292,7 @@ test "command extension planning rejects op name separators in public names" {
 
 ///|
 test "command extension host rejects missing declared handlers" {
-  let registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/demo", js_namespace=Some("demo")),
   )
   let manifest = demo_manifest({
@@ -1311,7 +1315,7 @@ test "command extension host rejects missing declared handlers" {
 
 ///|
 test "command extension host rejects undeclared handlers" {
-  let registry = @lepus_command.AppCommandExtensionRegistry::new().register(
+  let registry = @proton_command.AppCommandExtensionRegistry::new().register(
     stub_command_extension("vendor/demo", js_namespace=Some("demo")),
   )
   let manifest = demo_manifest({

@@ -31,6 +31,6 @@ test "keep awake scope labels are stable" {
 
 ///|
 test "keep awake metadata constants match generated app command extension" {
-  assert_eq(extension().id(), "justjavac/lepus-keepawake")
+  assert_eq(extension().id(), "justjavac/proton-keepawake")
   assert_eq(extension().command_spec().unwrap().js_namespace(), "keepAwake")
 }

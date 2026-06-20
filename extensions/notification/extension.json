@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-notification",
+  "id": "justjavac/proton-notification",
   "namespace": "notification",
-  "package": "justjavac/lepus_ext/notification"
+  "package": "justjavac/proton_ext/notification"
 }

@@ -1,9 +1,9 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/x/path",
-  "justjavac/lepus/core",
-  "justjavac/lepus/ipc",
-  "justjavac/lepus/webview",
+  "justjavac/proton/core",
+  "justjavac/proton/ipc",
+  "justjavac/proton/webview",
 }
 
 import {
@@ -11,8 +11,8 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/sys",
   "justjavac/ffi",
-  "justjavac/lepus/core",
-  "justjavac/lepus/webview",
+  "justjavac/proton/core",
+  "justjavac/proton/webview",
 } for "test"
 
 supported_targets = "+native"

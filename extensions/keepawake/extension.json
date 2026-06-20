@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-keepawake",
+  "id": "justjavac/proton-keepawake",
   "namespace": "keepAwake",
-  "package": "justjavac/lepus_ext/keepawake"
+  "package": "justjavac/proton_ext/keepawake"
 }

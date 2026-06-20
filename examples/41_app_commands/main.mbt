@@ -39,16 +39,16 @@ struct ReportProbeReply {
 } derive(ToJson)
 
 ///|
-fn app_commands_extension() -> @lepus_extension.Extension {
-  @lepus_extension.from_command_spec(
-    @lepus_command.AppCommandExtensionSpec::new(
+fn app_commands_extension() -> @proton_extension.Extension {
+  @proton_extension.from_command_spec(
+    @proton_command.AppCommandExtensionSpec::new(
       "examples/app-commands",
       "app",
       [
-        @lepus_command.AppCommandApiDescriptor::new("ping"),
-        @lepus_command.AppCommandApiDescriptor::new("slowAdd"),
-        @lepus_command.AppCommandApiDescriptor::new("fail"),
-        @lepus_command.AppCommandApiDescriptor::new("reportProbe"),
+        @proton_command.AppCommandApiDescriptor::new("ping"),
+        @proton_command.AppCommandApiDescriptor::new("slowAdd"),
+        @proton_command.AppCommandApiDescriptor::new("fail"),
+        @proton_command.AppCommandApiDescriptor::new("reportProbe"),
       ],
       register_app_commands,
     ),
@@ -57,7 +57,7 @@ fn app_commands_extension() -> @lepus_extension.Extension {
 
 ///|
 fn register_app_commands(
-  context : @lepus_command.AppCommandExtensionContext,
+  context : @proton_command.AppCommandExtensionContext,
 ) -> Result[Unit, String] {
   context.op("ping", fn(payload : PingPayload) {
     let name = payload.name.unwrap_or("app")
@@ -95,7 +95,7 @@ fn register_app_commands(
 
 ///|
 async fn main {
-  let app = @lepus.html(
+  let app = @proton.html(
     "MoonBit App Commands",
     resource,
     width=920,

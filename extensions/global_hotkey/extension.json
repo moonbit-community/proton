@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-global-hotkey",
+  "id": "justjavac/proton-global-hotkey",
   "namespace": "globalHotkey",
-  "package": "justjavac/lepus_ext/global_hotkey"
+  "package": "justjavac/proton_ext/global_hotkey"
 }

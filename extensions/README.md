@@ -1,9 +1,9 @@
 # Extensions
 
 This workspace contains the built-in extension packages that plug into
-`justjavac/lepus/core` and `justjavac/lepus`.
+`justjavac/proton/core` and `justjavac/proton`.
 
-They participate in app startup through `justjavac/lepus`, and each package
+They participate in app startup through `justjavac/proton`, and each package
 exposes `extension()` as its ordinary app-facing entrypoint.
 
 ## Layout
@@ -36,7 +36,7 @@ Add the extension module as a dependency:
 
 ```toml
 import {
-  "justjavac/lepus_ext@0.1.0"
+  "justjavac/proton_ext@0.1.0"
 }
 ```
 
@@ -44,9 +44,9 @@ import {
 
 ```moonbit
 import {
-  "justjavac/lepus/core" @core
-  "justjavac/lepus/webview" @webview
-  "justjavac/lepus_ext/path" @path
+  "justjavac/proton/core" @core
+  "justjavac/proton/webview" @webview
+  "justjavac/proton_ext/path" @path
 }
 
 fn main {
@@ -60,13 +60,13 @@ fn main {
 
 ```moonbit
 import {
-  "justjavac/lepus"
-  "justjavac/lepus_ext/fs" @fs
-  "justjavac/lepus_ext/path" @path
+  "justjavac/proton"
+  "justjavac/proton_ext/fs" @fs
+  "justjavac/proton_ext/path" @path
 }
 
 async fn main {
-  @lepus.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
   .extension(@fs.extension())
   .extension(@path.extension())
   .run_or_abort()

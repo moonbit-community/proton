@@ -1,13 +1,13 @@
 ///|
-let extension_id = "justjavac/lepus-fs"
+let extension_id = "justjavac/proton-fs"
 
 ///|
 let extension_namespace = "fs"
 
 ///|
 /// Builds the app-facing `fs` extension.
-pub fn extension() -> @lepus_extension.Extension {
-  @lepus_extension.from_core_spec(core_spec())
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.from_core_spec(core_spec())
 }
 
 ///|

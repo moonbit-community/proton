@@ -1,6 +1,6 @@
 # App Commands
 
-This example exposes app commands as a hand-written Lepus command extension.
+This example exposes app commands as a hand-written Proton command extension.
 The app enables it with the same `.extension(...)` method used by built-in
 extensions.
 

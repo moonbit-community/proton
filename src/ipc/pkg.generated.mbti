@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/ipc"
+package "justjavac/proton/ipc"
 
 import {
   "moonbitlang/core/debug",

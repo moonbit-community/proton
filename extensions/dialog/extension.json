@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-dialog",
+  "id": "justjavac/proton-dialog",
   "namespace": "dialog",
-  "package": "justjavac/lepus_ext/dialog"
+  "package": "justjavac/proton_ext/dialog"
 }

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/microphone"
+package "justjavac/proton_ext/microphone"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -22,12 +22,6 @@ type CaptureConfigReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusConfigPayload derive(@json.FromJson)
-
-type LepusListDevicesPayload derive(@json.FromJson)
-
-type LepusParseListingPayload derive(@json.FromJson)
-
 type MicrophoneActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type MicrophoneDeviceReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -35,6 +29,12 @@ type MicrophoneDeviceReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 type MicrophoneDevicesReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type ParseListingPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProtonConfigPayload derive(@json.FromJson)
+
+type ProtonListDevicesPayload derive(@json.FromJson)
+
+type ProtonParseListingPayload derive(@json.FromJson)
 
 // Type aliases
 

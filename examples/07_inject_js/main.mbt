@@ -39,7 +39,7 @@ let html =
 /// to set a global variable.
 fn main {
   @webview.Webview::new(debug=1)
-  ..set_title("MoonBit Lepus Example")
+  ..set_title("MoonBit Proton Example")
   ..set_size(800, 600, @webview.SizeHint::None)
   ..init("(window.foo = 'bar')")
   ..set_html(html)

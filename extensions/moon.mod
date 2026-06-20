@@ -1,4 +1,4 @@
-name = "justjavac/lepus_ext"
+name = "justjavac/proton_ext"
 
 version = "0.1.0"
 
@@ -10,7 +10,7 @@ import {
   "justjavac/notification@0.1.0",
   "justjavac/tray@0.1.0",
   "justjavac/global_hotkey@0.1.0",
-  "justjavac/lepus@0.1.10",
+  "justjavac/proton@0.1.10",
   "justjavac/microphone@0.1.0",
   "justjavac/auto_launch@0.1.3",
   "justjavac/keepawake@0.1.0",
@@ -18,13 +18,18 @@ import {
 
 readme = "README.md"
 
-repository = "https://github.com/moonbit-community/lepus/tree/main/extensions"
+repository = "https://github.com/moonbit-community/proton/tree/main/extensions"
 
 license = "MIT"
 
 keywords = [ "webview", "extension", "filesystem" ]
 
-description = "Extensions for lepus examples and applications."
+description = "Extensions for proton examples and applications."
+
+rule(
+  name: "proton_codegen",
+  command: "$mod_dir/../target/proton-tools/proton codegen $input -o $output",
+)
 
 options(
   source: ".",

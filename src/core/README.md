@@ -1,3 +1,3 @@
-# Lepus Core
+# Proton Core
 
-Native and JavaScript bridge infrastructure plus extension hosting for Lepus.
+Native and JavaScript bridge infrastructure plus extension hosting for Proton.

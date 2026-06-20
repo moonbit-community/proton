@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "id": "justjavac/lepus-microphone",
+  "id": "justjavac/proton-microphone",
   "namespace": "microphone",
-  "package": "justjavac/lepus_ext/microphone"
+  "package": "justjavac/proton_ext/microphone"
 }

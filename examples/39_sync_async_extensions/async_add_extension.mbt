@@ -13,12 +13,12 @@ struct SlowAddReply {
 } derive(ToJson)
 
 ///|
-fn async_add_extension() -> @lepus_extension.Extension {
-  @lepus_extension.from_command_spec(
-    @lepus_command.AppCommandExtensionSpec::new(
+fn async_add_extension() -> @proton_extension.Extension {
+  @proton_extension.from_command_spec(
+    @proton_command.AppCommandExtensionSpec::new(
       "examples/async-add",
       "add",
-      [@lepus_command.AppCommandApiDescriptor::new("slowAdd")],
+      [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
       fn(context) {
         context.op_async_result("slowAdd", async fn(payload : SlowAddPayload) {
           let delay_ms = payload.delay_ms.unwrap_or(800)

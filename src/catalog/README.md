@@ -1,8 +1,8 @@
-# lepus/catalog
+# proton/catalog
 
-Metadata discovery and link-planning helpers for Lepus extensions.
+Metadata discovery and link-planning helpers for Proton extensions.
 
-`justjavac/lepus/catalog` is intentionally metadata-only.
+`justjavac/proton/catalog` is intentionally metadata-only.
 
 - it scans explicit search roots for `extension.json`
 - it loads descriptors and schemas without importing extension code

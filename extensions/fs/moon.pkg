@@ -5,27 +5,32 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @xfs,
   "moonbitlang/x/path",
-  "justjavac/lepus/core",
-  "justjavac/lepus/extension" @lepus_extension,
+  "justjavac/proton/core",
+  "justjavac/proton/extension" @proton_extension,
 }
 
 import {
   "moonbitlang/core/debug",
   "moonbitlang/x/sys",
-  "justjavac/lepus/webview",
+  "justjavac/proton/webview",
 } for "wbtest"
 
 supported_targets = "native"
 
+rule(
+  name: "embed_fs_helper_template",
+  command: "node $mod_dir/../scripts/embed_asset.mjs $input $output fs_helper_template_resource",
+)
+
+dev_build(
+  rule: "embed_fs_helper_template",
+  input: "assets/node_fs_helper.js",
+  output: "generated_fs_helper_template.mbt",
+)
+
 options(
+  formatter: { "ignore": [ "generated_fs_helper_template.mbt" ] },
   "native-stub": [ "fs_native.c" ],
-  "pre-build": [
-    {
-      "command": "node $mod_dir/../scripts/embed_asset.mjs $input $output fs_helper_template_resource",
-      "input": "assets/node_fs_helper.js",
-      "output": "generated_fs_helper_template.mbt",
-    },
-  ],
   targets: {
     "extension.mbt": [ "native" ],
     "extension_activity.mbt": [ "native" ],

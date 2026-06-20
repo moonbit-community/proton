@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/core"
+package "justjavac/proton/core"
 
 import {
-  "justjavac/lepus/ipc",
-  "justjavac/lepus/webview",
+  "justjavac/proton/ipc",
+  "justjavac/proton/webview",
   "moonbitlang/core/json",
 }
 

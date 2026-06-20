@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/examples/40_event_broadcast"
+package "justjavac/proton/examples/40_event_broadcast"
 
 import {
   "moonbitlang/core/json",

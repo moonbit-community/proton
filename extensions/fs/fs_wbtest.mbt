@@ -21,7 +21,7 @@ test "fs helper script stays with fs extension assets" {
 
 ///|
 fn fs_cef_unit_tests_enabled() -> Bool {
-  match @sys.get_env_var("LEPUS_RUN_CEF_UNIT_TESTS") {
+  match @sys.get_env_var("PROTON_RUN_CEF_UNIT_TESTS") {
     Some("1") => @webview.backend_available()
     _ => false
   }
@@ -64,7 +64,7 @@ fn[Payload : @json.FromJson] decode_single_argument(
 
 ///|
 test "fs path api can read write and append text files" {
-  let path = "lepus-fs-path-api.txt"
+  let path = "proton-fs-path-api.txt"
   match write_text_file(path, "hello", None) {
     Ok(reply) => {
       assert_true(reply.written)
@@ -92,7 +92,7 @@ test "fs path api can read write and append text files" {
 ///|
 test "fs extension text ops complete through WebView promise bridge" {
   guard fs_cef_unit_tests_enabled() else { return }
-  let path = "lepus-fs-webview-promise.txt"
+  let path = "proton-fs-webview-promise.txt"
   if native_path_exists(path) {
     ignore(native_remove_file(path))
   }
@@ -133,7 +133,7 @@ test "fs extension text ops complete through WebView promise bridge" {
       #| <html>
       #|   <body>
       #|     <script>
-      #|       const path = "lepus-fs-webview-promise.txt";
+      #|       const path = "proton-fs-webview-promise.txt";
       #|       const reportFailure = (message) =>
       #|         window.reportFsFailure(message).catch(() => {});
       #|       const waitFor = (predicate, onReady, label, attempts = 0) => {
@@ -199,9 +199,9 @@ test "fs extension text ops complete through WebView promise bridge" {
 
 ///|
 test "fs path api can stat rename and copy files" {
-  let path = "lepus-fs-stat-source.txt"
-  let renamed = "lepus-fs-stat-renamed.txt"
-  let copied = "lepus-fs-stat-copy.txt"
+  let path = "proton-fs-stat-source.txt"
+  let renamed = "proton-fs-stat-renamed.txt"
+  let copied = "proton-fs-stat-copy.txt"
   write_text_fixture(path, "abc123")
 
   match stat_path(path, true) {
@@ -231,7 +231,7 @@ test "fs path api can stat rename and copy files" {
 
 ///|
 test "fs path api can create directories recursively" {
-  let root = "lepus-fs-dir-api"
+  let root = "proton-fs-dir-api"
   let child = join_native_child_path(root, "nested")
 
   if native_path_exists(root) {
@@ -254,7 +254,7 @@ test "fs path api can create directories recursively" {
 
 ///|
 test "fs path api can list directories recursively" {
-  let root = "lepus-fs-list-api"
+  let root = "proton-fs-list-api"
   let child = join_native_child_path(root, "nested")
   let file = join_native_child_path(child, "demo.txt")
 
@@ -283,7 +283,7 @@ test "fs path api can list directories recursively" {
 
 ///|
 test "fs path api can remove directories recursively" {
-  let root = "lepus-fs-remove-api"
+  let root = "proton-fs-remove-api"
   let child = join_native_child_path(root, "nested")
   let file = join_native_child_path(child, "demo.txt")
 
@@ -309,7 +309,7 @@ test "fs path api can remove directories recursively" {
 
 ///|
 test "fs path api can truncate files and measure size" {
-  let path = "lepus-fs-truncate.txt"
+  let path = "proton-fs-truncate.txt"
   write_text_fixture(path, "abcdef")
 
   match truncate_path(path, 3) {

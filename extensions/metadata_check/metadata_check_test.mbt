@@ -61,7 +61,7 @@ fn assert_metadata_matches_spec(
 /// Asserts that metadata fields stay aligned with the exported app-command extension spec.
 fn assert_metadata_matches_app_command_spec(
   descriptor : @catalog.ExtensionDescriptor,
-  spec : @lepus_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionSpec,
   package_path : String,
   expected_id : String,
   expected_namespace : String,
@@ -81,64 +81,64 @@ test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
     @dialog.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/dialog",
-    "justjavac/lepus-dialog",
+    "justjavac/proton_ext/dialog",
+    "justjavac/proton-dialog",
     "dialog",
   )
   assert_metadata_matches_spec(
     load_descriptor("fs"),
     @fs.core_spec(),
-    "justjavac/lepus_ext/fs",
-    "justjavac/lepus-fs",
+    "justjavac/proton_ext/fs",
+    "justjavac/proton-fs",
     "fs",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("global_hotkey"),
     @global_hotkey.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/global_hotkey",
-    "justjavac/lepus-global-hotkey",
+    "justjavac/proton_ext/global_hotkey",
+    "justjavac/proton-global-hotkey",
     "globalHotkey",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("keepawake"),
     @keepawake.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/keepawake",
-    "justjavac/lepus-keepawake",
+    "justjavac/proton_ext/keepawake",
+    "justjavac/proton-keepawake",
     "keepAwake",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("microphone"),
     @microphone.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/microphone",
-    "justjavac/lepus-microphone",
+    "justjavac/proton_ext/microphone",
+    "justjavac/proton-microphone",
     "microphone",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("notification"),
     @notification.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/notification",
-    "justjavac/lepus-notification",
+    "justjavac/proton_ext/notification",
+    "justjavac/proton-notification",
     "notification",
   )
   assert_metadata_matches_spec(
     load_descriptor("path"),
     @path.core_spec(),
-    "justjavac/lepus_ext/path",
-    "justjavac/lepus-path",
+    "justjavac/proton_ext/path",
+    "justjavac/proton-path",
     "path",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("shell"),
     @shell.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/shell",
-    "justjavac/lepus-shell",
+    "justjavac/proton_ext/shell",
+    "justjavac/proton-shell",
     "shell",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("tray"),
     @tray.extension().command_spec().unwrap(),
-    "justjavac/lepus_ext/tray",
-    "justjavac/lepus-tray",
+    "justjavac/proton_ext/tray",
+    "justjavac/proton-tray",
     "tray",
   )
 }

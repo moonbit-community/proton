@@ -2,13 +2,13 @@
 let ws_ipc_host = "127.0.0.1"
 
 ///|
-let ws_ipc_health_path = "/__lepus__/health"
+let ws_ipc_health_path = "/__proton__/health"
 
 ///|
-let ws_ipc_socket_path = "/__lepus__/ws"
+let ws_ipc_socket_path = "/__proton__/ws"
 
 ///|
-let ws_ipc_health_transport = "lepus-ipc-ws"
+let ws_ipc_health_transport = "proton-ipc-ws"
 
 ///|
 let ws_ipc_health_version = "1"
@@ -275,7 +275,7 @@ fn generate_ws_ipc_token() -> String {
   let now = @async.now()
   ws_ipc_token_counter.val += 1L
   let seed = Buffer()
-  seed.write_string_utf8("lepus-ipc-ws-v1")
+  seed.write_string_utf8("proton-ipc-ws-v1")
   seed.write_int64_le(now)
   seed.write_int64_le(ws_ipc_token_counter.val)
   seed.write_int64_le(now + 17L)

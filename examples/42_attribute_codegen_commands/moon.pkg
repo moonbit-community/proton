@@ -1,27 +1,24 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/async",
-  "justjavac/lepus/command" @lepus_command,
-  "justjavac/lepus/extension" @lepus_extension,
-  "justjavac/lepus",
+  "justjavac/proton/command" @proton_command,
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton",
 }
 
 supported_targets = "native"
 
+dev_build(
+  rule: "proton_codegen",
+  input: "commands.mbt",
+  output: "commands.g.mbt",
+)
+
+dev_build(rule: "embed", input: "app.html", output: "app.mbt")
+
 options(
+  formatter: { "ignore": [ "commands.g.mbt", "app.mbt" ] },
   "is-main": true,
-  "pre-build": [
-    {
-      "command": "$mod_dir/../target/lepus-tools/lepus codegen $input -o $output",
-      "input": "commands.mbt",
-      "output": "commands.g.mbt",
-    },
-    {
-      "command": ":embed -i $input -o $output",
-      "input": "app.html",
-      "output": "app.mbt",
-    },
-  ],
   targets: {
     "app.mbt": [ "native" ],
     "commands.g.mbt": [ "native" ],

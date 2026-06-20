@@ -293,7 +293,7 @@ let resource : String =
   #|                                File path
   #|                                <input
   #|                                    id="path"
-  #|                                    value="lepus-extension-demo.txt"
+  #|                                    value="proton-extension-demo.txt"
   #|                                />
   #|                            </label>
   #|                            <label>

@@ -1,3 +1,3 @@
-# lepus/bootstrap
+# proton/bootstrap
 
-Declarative app bootstrap helpers for `lepus`.
+Declarative app bootstrap helpers for `proton`.

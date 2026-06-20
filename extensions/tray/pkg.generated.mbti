@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus_ext/tray"
+package "justjavac/proton_ext/tray"
 
 import {
-  "justjavac/lepus/command",
-  "justjavac/lepus/extension",
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -18,11 +18,11 @@ pub fn extension() -> @extension.Extension
 // Types and methods
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type LepusHidePayload derive(@json.FromJson)
+type ProtonHidePayload derive(@json.FromJson)
 
-type LepusSetTooltipPayload derive(@json.FromJson)
+type ProtonSetTooltipPayload derive(@json.FromJson)
 
-type LepusShowPayload derive(@json.FromJson)
+type ProtonShowPayload derive(@json.FromJson)
 
 type TrayActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

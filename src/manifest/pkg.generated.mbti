@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/lepus/manifest"
+package "justjavac/proton/manifest"
 
 import {
   "moonbitlang/core/debug",
