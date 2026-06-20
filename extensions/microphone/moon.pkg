@@ -7,14 +7,14 @@ import {
 
 supported_targets = "native"
 
+dev_build(
+  rule: "proton_codegen",
+  input: "extension.mbt",
+  output: "extension.g.mbt",
+)
+
 options(
-  "pre-build": [
-    {
-      "command": "$mod_dir/../target/proton-tools/proton codegen $input -o $output",
-      "input": "extension.mbt",
-      "output": "extension.g.mbt",
-    },
-  ],
+  formatter: { "ignore": [ "extension.g.mbt" ] },
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],

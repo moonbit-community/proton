@@ -26,6 +26,11 @@ keywords = [ "webview", "extension", "filesystem" ]
 
 description = "Extensions for proton examples and applications."
 
+rule(
+  name: "proton_codegen",
+  command: "$mod_dir/../target/proton-tools/proton codegen $input -o $output",
+)
+
 options(
   source: ".",
   warn_list: "",

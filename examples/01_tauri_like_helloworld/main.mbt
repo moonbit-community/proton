@@ -27,7 +27,7 @@ fn main {
     println(result)
     webview.response(id, 0, result)
   })
-  // Load embedded HTML resource produced from index.html via pre-build
+  // Load embedded HTML resource produced from index.html via dev_build
   webview.set_html(resource)
   webview.run()
 }

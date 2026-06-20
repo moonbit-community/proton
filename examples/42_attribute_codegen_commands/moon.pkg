@@ -8,20 +8,17 @@ import {
 
 supported_targets = "native"
 
+dev_build(
+  rule: "proton_codegen",
+  input: "commands.mbt",
+  output: "commands.g.mbt",
+)
+
+dev_build(rule: "embed", input: "app.html", output: "app.mbt")
+
 options(
+  formatter: { "ignore": [ "commands.g.mbt", "app.mbt" ] },
   "is-main": true,
-  "pre-build": [
-    {
-      "command": "$mod_dir/../target/proton-tools/proton codegen $input -o $output",
-      "input": "commands.mbt",
-      "output": "commands.g.mbt",
-    },
-    {
-      "command": ":embed -i $input -o $output",
-      "input": "app.html",
-      "output": "app.mbt",
-    },
-  ],
   targets: {
     "app.mbt": [ "native" ],
     "commands.g.mbt": [ "native" ],

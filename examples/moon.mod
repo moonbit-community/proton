@@ -21,6 +21,13 @@ keywords = [ "webview", "webui", "gui", "web", "desktop-app" ]
 
 description = "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs."
 
+rule(name: "embed", command: ":embed -i $input -o $output")
+
+rule(
+  name: "proton_codegen",
+  command: "$mod_dir/../target/proton-tools/proton codegen $input -o $output",
+)
+
 options(
   source: "",
   warn_list: "",

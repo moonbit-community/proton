@@ -123,7 +123,7 @@ Even when catalog or tooling generates those edits, the final project should sti
 ### Install The Codegen CLI
 
 Generated command extensions call `target/proton-tools/proton codegen` from
-package pre-build steps. Install the local CLI before building those packages:
+package `dev_build` steps. Install the local CLI before building those packages:
 
 ```powershell
 moon install --path cli --bin target\proton-tools

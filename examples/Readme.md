@@ -96,7 +96,7 @@ node ..\scripts\e2e_cdp_smoke.mjs
   bridge by first installing the CLI with
   `moon install --path cli --bin target/proton-tools`, then copy
   `target/proton-tools/proton_cli(.exe)` to `target/proton-tools/proton(.exe)`. The
-  package pre-build then calls `target/proton-tools/proton codegen`; extension id and namespace come
+  package `dev_build` step then calls `target/proton-tools/proton codegen`; extension id and namespace come
   from `42_attribute_codegen_commands/extension.json`.
 - Example `43` exits on its own after JavaScript calls a MoonBit binding,
   receives a response, and reports the Promise result back through a second

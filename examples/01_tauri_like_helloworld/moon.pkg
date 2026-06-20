@@ -6,14 +6,10 @@ import {
 
 supported_targets = "native"
 
+dev_build(rule: "embed", input: "index.html", output: "index.mbt")
+
 options(
+  formatter: { "ignore": [ "index.mbt" ] },
   "is-main": true,
-  "pre-build": [
-    {
-      "command": ":embed -i $input -o $output",
-      "input": "index.html",
-      "output": "index.mbt",
-    },
-  ],
   targets: { "main.mbt": [ "native" ] },
 )

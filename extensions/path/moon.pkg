@@ -7,14 +7,19 @@ import {
 
 supported_targets = "native"
 
+rule(
+  name: "embed_path_helper_template",
+  command: "node $mod_dir/../scripts/embed_asset.mjs $input $output path_helper_template_resource",
+)
+
+dev_build(
+  rule: "embed_path_helper_template",
+  input: "assets/node_path_helper.js",
+  output: "generated_path_helper_template.mbt",
+)
+
 options(
-  "pre-build": [
-    {
-      "command": "node $mod_dir/../scripts/embed_asset.mjs $input $output path_helper_template_resource",
-      "input": "assets/node_path_helper.js",
-      "output": "generated_path_helper_template.mbt",
-    },
-  ],
+  formatter: { "ignore": [ "generated_path_helper_template.mbt" ] },
   targets: {
     "extension.mbt": [ "native" ],
     "helper_js.mbt": [ "native" ],

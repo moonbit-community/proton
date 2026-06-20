@@ -5,7 +5,7 @@ This directory holds small repository maintenance scripts.
 ## `embed_asset.mjs`
 
 Embeds a text asset into a generated MoonBit source file as a multiline
-`String`. It is used by `moon.pkg` pre-build steps in `core/` and built-in
+`String`. It is used by `moon.pkg` `dev_build` steps in `core/` and built-in
 extensions.
 
 ### Usage
