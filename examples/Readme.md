@@ -1,112 +1,47 @@
 # Examples
 
-Run a specific example with:
+Run one example:
 
 ```sh
 moon -C examples run 19_app_fs --target native
 ```
 
-Build every runnable example with:
+Build all examples:
 
 ```sh
 moon -C examples build --target native
 ```
 
-Run the Windows CEF examples by installing CEF and building the MoonBit
-subprocess helper first:
+CEF examples need the local CEF runtime and helper process:
 
 ```powershell
 node .\scripts\setup_cef.mjs
 moon build src\cef_process --target native
 moon -C examples run 43_cef_bind_smoke --target native
-moon -C examples run 37_cef_mvp --target native
 ```
 
-The setup script installs CEF directly into `.cef-cache/` and writes
-`.cef-cache/version.txt`. Windows native builds fail with setup instructions if
-that directory is missing.
-
-Run all automated CEF e2e smoke scenarios through `justjavac/cdp`:
+Run automated CEF smoke scenarios:
 
 ```powershell
 node ..\scripts\e2e_cdp_smoke.mjs
 ```
 
-## Core Webview
+## Groups
 
-| Name            | Status | Note |
-| --------------- | ------ | ---- |
-| 01_run          | OK     | Basic window creation |
-| 01_tauri_like_helloworld | OK | Tauri-style hello world with `webview.bind(...)` |
-| 02_local        | OK     | Loading local HTML files |
-| 03_remote       | OK     | Loading remote web pages |
-| 04_user_agent   | OK     | Custom user agent configuration |
-| 05_alert        | Partial | Works on Windows, no response on macOS |
-| 06_onload       | OK     | Handling page load events |
-| 07_inject_js    | OK     | Injecting JavaScript code |
-| 08_eval         | OK     | Evaluating JavaScript expressions |
-| 09_dispatch     | OK     | Dispatching work onto the UI thread |
-| 10_bind         | OK     | Binding __MoonBit__ functions to JavaScript |
-| 11_multi_window | OK     | Multiple window management |
-| 12_embed        | OK     | Embedding resources |
-| 13_todo         | OK     | Complete todo application |
-| 14_beforeunload | OK     | Preventing unload with the browser `beforeunload` event |
-| 15_close        | OK     | Closing the webview from page JavaScript |
+- `01_*` through `15_*`: low-level `webview` examples
+- `17_*` and `18_*`: direct extension installation through `core`
+- `19_*` through `35_*`: app-style startup through `justjavac/proton`
+- `37_*` and `43_*`: CEF backend smoke examples
+- `38_*` through `42_*`: command extensions and generated command bridges
+- `44_project_config`: `moon.proton` project config decoding
 
-## Runtime And App
+Generated-command examples use `target/proton-tools/proton codegen`. Install
+the local CLI before building them:
 
-| Name           | Status | Note |
-| -------------- | ------ | ---- |
-| 17_extension | OK | Custom extension mounted on `window.__MoonBit__` |
-| 18_extension_fs | OK | Filesystem workbench using `@fs.extension()` and `window.__MoonBit__.fs` |
-| 19_app_fs | OK | `justjavac/proton` startup with `fs` and `path` |
-| 20_app_desktop | OK | App startup with `dialog` and `clipboard` |
-| 21_app_shell | OK | App startup with the `shell` extension |
-| 22_app_config | OK | Config-file startup through `@proton.config("moon.proton")` with extensions declared in code |
-| 23_ops_runtime | OK | Direct `window.__MoonBit__.core.invokeOp(...)` plus extension proxies |
-| 24_app_multi_window | OK | Multi-window startup with main and secondary windows |
-| 25_app_system | Windows-only | Notification, tray, and global hotkey in one runtime |
-| 26_app_path | OK | Focused `path` extension example using `window.__MoonBit__.path` |
-| 27_app_notification | Windows-only | Focused notification extension example |
-| 28_app_tray | Windows-only | Focused tray extension example |
-| 29_app_global_hotkey | Windows-only | Focused `globalHotkey` extension example |
-| 33_app_auto_launch | Platform-dependent | Focused `autoLaunch` extension example |
-| 34_app_keepawake | Platform-dependent | Focused `keepAwake` extension example |
-| 35_app_microphone | Platform-dependent | Focused `microphone` extension example |
-| 37_cef_mvp | Windows CEF MVP | Root `justjavac/proton` backend rendered through CEF |
-| 38_async_extension_add | OK | Async extension API generated from `#proton.command` and enabled with `.extension(...)` |
-| 39_sync_async_extensions | OK | Sync and async command extensions enabled through the same `.extension(...)` API |
-| 40_event_broadcast | OK | Ticker extension implemented in the user process with a framework child |
-| 41_app_commands | OK | User-process command extension implemented by hand and enabled with `.extension(...)` |
-| 42_attribute_codegen_commands | OK | Command extension generated from `#proton.command` and `#proton.event` attributes |
-| 43_cef_bind_smoke | Windows CEF smoke | Automated `webview.bind(...)` / `webview.response(...)` Promise marshalling smoke |
-| 44_project_config | OK | Full `moon.proton` project config with `frontend` and `bundle` tooling fields |
+```powershell
+moon install --path cli --bin target/proton-tools
+Copy-Item target/proton-tools/proton_cli.exe target/proton-tools/proton.exe -Force
+```
 
-## Notes
-
-- Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
-- Examples `19` through `35` show app-style startup with `justjavac/proton`;
-  ordinary inline examples use `@proton.html(...)`, `@proton.file(...)`,
-  and `.extension(...)`; config-file examples use
-  `@proton.config(...).extension(...)`.
-- Example `38` shows async extension-style APIs with the user process starting
-  a framework child process; extension id and namespace come from
-  `38_async_extension_add/moon.ext`.
-- Example `39` shows sync and async extension-style APIs enabled through the same app-facing extension method.
-- Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
-- Example `41` demonstrates a hand-written user-process command extension.
-- Example `42` shows the generated-command workflow. Regenerate its command
-  bridge by first installing the CLI with
-  `moon install --path cli --bin target/proton-tools`, then copy
-  `target/proton-tools/proton_cli(.exe)` to `target/proton-tools/proton(.exe)`. The
-  package `dev_build` step then calls `target/proton-tools/proton codegen`; extension id and namespace come
-  from `42_attribute_codegen_commands/moon.ext`.
-- Example `43` exits on its own after JavaScript calls a MoonBit binding,
-  receives a response, and reports the Promise result back through a second
-  binding.
-- Example `44` does not start a WebView. It validates the tooling-facing
-  `frontend` and `bundle` sections read by
-  `@bootstrap.load_proton_project_config_from_file(...)`.
-- App examples declare extensions in MoonBit code. `moon.proton` stays limited
-  to app configuration such as window, entry, and debug settings.
-- Frontend code should use `window.__MoonBit__` throughout.
+App examples declare extensions in MoonBit code. `moon.proton` configures app
+settings such as window, entry, debug, frontend, and bundle metadata.

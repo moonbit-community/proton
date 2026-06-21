@@ -1,36 +1,22 @@
 # proton_cli/codegen
 
-Build-time command/event code generation helpers for the Proton CLI.
+`justjavac/proton_cli/codegen` generates Proton command extensions from
+MoonBit attributes.
 
-This package owns the `#proton.command` and `#proton.event` parser, validation,
-and MoonBit source renderer used by the `proton` CLI.
+It handles:
 
-Run command/event code generation with:
+- `#proton.command`
+- `#proton.event`
+- `#proton.script`
+- `#proton.destroy`
+
+Run codegen with:
 
 ```sh
 moon -C cli run . --target native -- codegen <input.mbt> -o <output.g.mbt>
 moonfmt -w <output.g.mbt>
 ```
 
-The generator reads `moon.ext` from the same package directory as `<input.mbt>`.
-`moon.ext` must declare both `id` and `namespace`.
-
-The generator treats `<input.mbt>` as the target file and scans ordinary `.mbt`
-files in the same package as context. It ignores `.g.mbt`, `_test.mbt`, and
-`_wbtest.mbt` files. Annotated commands/events in the input file are emitted
-into a generated `extension()` function returning
-`@proton_extension.Extension`; sibling files are used for package-level
-duplicate-name checks. The generated command spec is private implementation
-detail.
-
-Generated event helpers are async and take an explicit
-`context : @proton_command.AppCommandExtensionContext` parameter. Commands only need a
-context parameter when they call generated event helpers.
-
-`#proton.script` can annotate a synchronous zero-argument function returning
-`String`; generated specs include each returned string in `scripts=[...]`.
-
-`#proton.destroy` can annotate one synchronous function returning `Unit`. The
-function may either take no parameters or take
-`context : @proton_command.AppCommandExtensionContext`; generated specs wire it to the
-command extension destroy hook.
+The input package must contain `moon.ext` with `id` and `namespace`. The
+generator emits an `extension()` function and uses sibling `.mbt` files only for
+package-level validation.
