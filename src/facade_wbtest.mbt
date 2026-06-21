@@ -122,8 +122,8 @@ test "facade duplicate extension id with different options returns error" {
 }
 
 ///|
-test "facade app json extension links and enables framework extension" {
-  let app = config("app.json").extension(
+test "facade moon.proton extension links and enables framework extension" {
+  let app = config("moon.proton").extension(
     @proton_extension.from_core_spec(
       stub_extension("vendor/framework", js_namespace=Some("framework")),
     ),
@@ -144,8 +144,8 @@ test "facade app json extension links and enables framework extension" {
 }
 
 ///|
-test "facade config ignores extension settings from app json manifest" {
-  let app = config("app.json").extension(
+test "facade config ignores extension settings from file manifest" {
+  let app = config("moon.proton").extension(
     @proton_extension.from_core_spec(
       stub_extension("vendor/code", js_namespace=Some("code")),
     ),

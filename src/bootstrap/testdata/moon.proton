@@ -1,0 +1,13 @@
+window = {
+  title: "Proton Runtime",
+  width: 840,
+  height: 600,
+  size_hint: "fixed",
+}
+
+entry = {
+  kind: "file",
+  value: "app.html",
+}
+
+debug = true

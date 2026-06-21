@@ -1,21 +1,12 @@
 # Async Extension Add
 
-This example shows one command extension whose handler runs in the user process
-and uses MoonBit `async`.
+Async command-extension example.
 
-The same executable has two roles:
+The app exposes `window.__MoonBit__.add.slowAdd(...)`. The command handler runs
+in the user process; the framework process owns the WebView and bridge.
 
-- framework process: opens the WebView and injects the WebSocket IPC bridge.
-- command-host process: registers `examples/async-add` and handles
-  `window.__MoonBit__.add.slowAdd(...)`.
-
-`main.mbt` keeps the process split in one place. The extension logic lives in
-`async_add_extension.mbt`, so adding more APIs does not make startup code harder
-to read.
-
-## Run
+Run:
 
 ```sh
 moon -C examples run 38_async_extension_add --target native
 ```
-

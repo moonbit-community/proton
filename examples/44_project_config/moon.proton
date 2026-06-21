@@ -1,0 +1,31 @@
+product_name = "Proton Project Config"
+identifier = "com.justjavac.proton.project-config"
+
+window = {
+  title: "Proton Project Config",
+  width: 960,
+  height: 640,
+  size_hint: "none",
+}
+
+entry = {
+  kind: "asset",
+  value: "frontend/dist/index.html",
+}
+
+debug = true
+
+frontend = {
+  dev_url: "http://localhost:5173",
+  dist: "frontend/dist",
+  before_dev: "npm run dev -- --host 127.0.0.1",
+  before_build: "npm run build",
+}
+
+bundle = {
+  active: true,
+  targets: ["app", "zip"],
+  icon: ["icons/icon.ico", "icons/icon.icns", "icons/icon.png"],
+  resources: ["resources/**"],
+  output: "target/proton-dist",
+}

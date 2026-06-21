@@ -1,5 +1,5 @@
 ///|
-/// Declarative application manifest loaded from `app.json`.
+/// Declarative application manifest consumed by the runtime.
 pub struct AppManifest {
   window : WindowManifest
   entry : AppEntry

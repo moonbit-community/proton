@@ -60,8 +60,8 @@ pub fn generate_app_commands_from_file(
 ///|
 /// Generates Proton command extension MoonBit source using extension metadata.
 ///
-/// The codegen input's package directory must contain `extension.json` with an
-/// `id` field. `namespace` is optional and is inferred from the id when absent.
+/// The codegen input's package directory must contain `moon.ext` with string
+/// `id` and `namespace` fields.
 pub fn generate_app_commands_from_file_with_metadata(
   input_file : String,
 ) -> Result[ProtonCommandCodegenOutput, String] {
@@ -79,12 +79,12 @@ pub fn generate_app_commands_from_file_with_metadata(
 fn read_package_extension_config(
   input_file : String,
 ) -> Result[(String, String), String] raise @mbfs.IOError {
-  let extension_path = path_join(path_dirname(input_file), "extension.json")
-  let has_metadata = @mbfs.is_file(extension_path) catch { _ => false }
-  guard has_metadata else {
-    return Err("missing extension.json next to input file")
-  }
-  let (id, js_namespace) = match read_extension_codegen_config(extension_path) {
+  let package_dir = path_dirname(input_file)
+  let moon_ext_path = path_join(package_dir, "moon.ext")
+  let has_moon_ext = @mbfs.is_file(moon_ext_path) catch { _ => false }
+  guard has_moon_ext else { return Err("missing moon.ext next to input file") }
+  let (id, js_namespace) = match
+    read_moon_ext_codegen_config_file(moon_ext_path) {
     Ok(config) => config
     Err(error) => return Err(error)
   }
@@ -100,38 +100,112 @@ fn read_package_extension_config(
 }
 
 ///|
-fn read_extension_codegen_config(
+fn read_moon_ext_codegen_config_file(
   path : String,
 ) -> Result[(String, String), String] raise @mbfs.IOError {
   let text = @mbfs.read_file_to_string(path)
-  try @json.parse(text) catch {
-    error => Err("failed to parse extension.json: " + error.to_string())
-  } noraise {
-    json => decode_extension_codegen_config(json)
+  read_moon_ext_codegen_config(path, text)
+}
+
+///|
+fn read_moon_ext_codegen_config(
+  path : String,
+  text : String,
+) -> Result[(String, String), String] {
+  let (ast, reports) = @proton_config.parse_moon_ext(name=path, text)
+  if reports.length() > 0 {
+    return Err(render_moon_ext_config_reports(reports))
+  }
+  match ast {
+    Obj(fields, _) => read_moon_ext_codegen_fields(fields)
+    _ => Err("expected field list for moon.ext")
   }
 }
 
 ///|
-fn decode_extension_codegen_config(
-  json : Json,
+fn read_moon_ext_codegen_fields(
+  fields : Array[@proton_config.ConfigField],
 ) -> Result[(String, String), String] {
-  match json {
-    Object(object) => {
-      let id = match object.get("id") {
-        Some(String(value)) => value
-        Some(_) => return Err("extension.json field `id` must be a string")
-        None => return Err("extension.json must contain string field `id`")
-      }
-      let js_namespace = match object.get("namespace") {
-        Some(String(value)) => value
-        Some(_) =>
-          return Err("extension.json field `namespace` must be a string")
-        None => lower_camel_from_id(id)
-      }
-      Ok((id, js_namespace))
+  validate_moon_ext_codegen_fields(fields).bind(fn(_) {
+    moon_ext_codegen_required_string(fields, "id").bind(fn(id) {
+      moon_ext_codegen_required_string(fields, "namespace").map(fn(
+        js_namespace,
+      ) {
+        (id, js_namespace)
+      })
+    })
+  })
+}
+
+///|
+fn validate_moon_ext_codegen_fields(
+  fields : Array[@proton_config.ConfigField],
+) -> Result[Unit, String] {
+  let seen : Map[String, Bool] = {}
+  for field in fields {
+    guard !seen.contains(field.key) else {
+      return Err("duplicate moon.ext field: " + field.key)
     }
-    _ => Err("extension.json must contain a JSON object")
+    seen[field.key] = true
+    match field.key {
+      "id"
+      | "namespace"
+      | "version"
+      | "display_name"
+      | "description"
+      | "license"
+      | "repository"
+      | "readme" =>
+        match field.value {
+          Str(_, _) => ()
+          _ => return Err("moon.ext field `" + field.key + "` must be a string")
+        }
+      "package" =>
+        match field.value {
+          Str(value, _) =>
+            match validate_npm_package_name(value) {
+              Ok(_) => ()
+              Err(error) => return Err(error)
+            }
+          _ => return Err("moon.ext field `package` must be a string")
+        }
+      "keywords" | "platforms" | "dependencies" =>
+        match field.value {
+          Arr(_, _) => ()
+          _ => return Err("moon.ext field `" + field.key + "` must be an array")
+        }
+      other => return Err("unknown moon.ext field: " + other)
+    }
   }
+  Ok(())
+}
+
+///|
+fn moon_ext_codegen_required_string(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+) -> Result[String, String] {
+  for field in fields {
+    if field.key == key {
+      match field.value {
+        Str(value, _) => return Ok(value)
+        _ => return Err("moon.ext field `" + key + "` must be a string")
+      }
+    }
+  }
+  Err("moon.ext must contain string field `" + key + "`")
+}
+
+///|
+fn render_moon_ext_config_reports(reports : Array[@basic.Report]) -> String {
+  let builder = StringBuilder::new()
+  for index, report in reports {
+    if index > 0 {
+      builder.write_string("\n")
+    }
+    builder.write_string(report.to_string())
+  }
+  builder.to_string()
 }
 
 ///|

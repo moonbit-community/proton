@@ -80,6 +80,65 @@ fn validate_extension_id(value : String) -> Result[Unit, String] {
 }
 
 ///|
+fn validate_npm_package_name(package_name : String) -> Result[Unit, String] {
+  guard package_name != "" else {
+    return Err("moon.ext package must not be empty")
+  }
+  guard !package_name.contains("\\") &&
+    (!package_name.contains("/") || package_name.has_prefix("@")) else {
+    return Err(
+      "moon.ext package must be an npm-style package name: " + package_name,
+    )
+  }
+  guard !package_name.contains("..") &&
+    !package_name.contains("://") &&
+    !package_name.contains(" ") else {
+    return Err("moon.ext package contains invalid characters: " + package_name)
+  }
+  if package_name.has_prefix("@") {
+    let parts = package_name.split("/").collect()
+    guard parts.length() == 2 else {
+      return Err("moon.ext scoped package must be @scope/name: " + package_name)
+    }
+    validate_npm_package_part(parts[0][1:].to_owned(), package_name).bind(fn(
+      _,
+    ) {
+      validate_npm_package_part(parts[1].to_owned(), package_name)
+    })
+  } else {
+    validate_npm_package_part(package_name, package_name)
+  }
+}
+
+///|
+fn validate_npm_package_part(
+  part : String,
+  package_name : String,
+) -> Result[Unit, String] {
+  guard part != "" else {
+    return Err("moon.ext package contains empty name segment: " + package_name)
+  }
+  for index, ch in part {
+    if index == 0 {
+      guard is_lowercase_ascii(ch) || is_digit_ascii(ch) else {
+        return Err(
+          "moon.ext package segment must start with lowercase letter or digit: " +
+          package_name,
+        )
+      }
+    }
+    guard is_lowercase_ascii(ch) ||
+      is_digit_ascii(ch) ||
+      ch == '-' ||
+      ch == '_' ||
+      ch == '.' else {
+      return Err("moon.ext package contains invalid character: " + package_name)
+    }
+  }
+  Ok(())
+}
+
+///|
 fn is_identifier_start_char(ch : Char) -> Bool {
   ('a' <= ch && ch <= 'z') || ch == '_'
 }
@@ -89,6 +148,16 @@ fn is_identifier_continue_char(ch : Char) -> Bool {
   is_identifier_start_char(ch) ||
   ('A' <= ch && ch <= 'Z') ||
   ('0' <= ch && ch <= '9')
+}
+
+///|
+fn is_lowercase_ascii(ch : Char) -> Bool {
+  'a' <= ch && ch <= 'z'
+}
+
+///|
+fn is_digit_ascii(ch : Char) -> Bool {
+  '0' <= ch && ch <= '9'
 }
 
 ///|
@@ -106,17 +175,6 @@ fn lower_camel_from_snake(name : String) -> String {
     }
   }
   builder.to_string()
-}
-
-///|
-fn lower_camel_from_id(id : String) -> String {
-  let parts = id.split("/").collect()
-  let base = if parts.length() == 0 {
-    id
-  } else {
-    parts[parts.length() - 1].to_owned()
-  }
-  @case.camel_case(base)
 }
 
 ///|

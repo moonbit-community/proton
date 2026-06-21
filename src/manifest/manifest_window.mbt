@@ -18,7 +18,7 @@ pub impl Show for WindowSizeHint with fn output(self, logger) {
 }
 
 ///|
-/// Declarative window settings loaded from `app.json`.
+/// Declarative window settings consumed by runtime manifests.
 pub struct WindowManifest {
   title : String
   width : Int
@@ -40,7 +40,7 @@ pub impl Show for WindowManifest with fn output(self, logger) {
 }
 
 ///|
-/// Declarative secondary window entry loaded from `app.json`.
+/// Declarative secondary window entry consumed by runtime manifests.
 pub struct AppWindowManifest {
   id : String
   window : WindowManifest

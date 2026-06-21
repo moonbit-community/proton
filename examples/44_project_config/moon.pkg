@@ -1,0 +1,12 @@
+import {
+  "justjavac/proton/bootstrap",
+  "justjavac/proton/manifest",
+  "moonbitlang/x/fs" @mbfs,
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  targets: { "main.mbt": [ "native" ] },
+)

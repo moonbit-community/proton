@@ -10,7 +10,7 @@ import {
   "justjavac/notification@0.1.0",
   "justjavac/tray@0.1.0",
   "justjavac/global_hotkey@0.1.0",
-  "justjavac/proton@0.1.10",
+  "justjavac/proton@0.1.0",
   "justjavac/microphone@0.1.0",
   "justjavac/auto_launch@0.1.3",
   "justjavac/keepawake@0.1.0",

@@ -1,20 +1,21 @@
 ///|
-/// Typed metadata descriptor loaded from one extension's `extension.json`.
+/// Typed metadata descriptor loaded from one extension's metadata file.
 pub struct ExtensionDescriptor {
-  schema_version : Int
   id : String
   version : String
   display_name : String
   description : String
+  license : String?
+  repository : String?
+  readme : String?
+  keywords : Array[String]
   js_namespace : String
-  manifest_key : String
-  package_path : String
-  spec_symbol : String
+  moonbit_import_path : String
+  publish_package : String?
   platforms : Array[String]
   dependencies : Array[String]
-  capabilities : Array[String]
-  options_schema_path : String
   root_dir : String
+  metadata_path : String?
 } derive(Eq, Debug)
 
 ///|
@@ -22,44 +23,39 @@ pub struct ExtensionDescriptor {
 /// Most callers load descriptors from disk, but this constructor keeps tests and
 /// tooling code simple when fixtures are assembled in memory.
 pub fn ExtensionDescriptor::new(
-  schema_version : Int,
   id : String,
   version : String,
   display_name : String,
   description : String,
   js_namespace : String,
-  manifest_key : String,
-  package_path : String,
-  spec_symbol : String,
+  moonbit_import_path : String,
   platforms : Array[String],
   dependencies : Array[String],
-  capabilities : Array[String],
-  options_schema_path : String,
   root_dir : String,
+  publish_package? : String? = None,
+  license? : String? = None,
+  repository? : String? = None,
+  readme? : String? = None,
+  keywords? : Array[String] = [],
+  metadata_path? : String? = None,
 ) -> ExtensionDescriptor {
   ExtensionDescriptor::{
-    schema_version,
     id,
     version,
     display_name,
     description,
+    license,
+    repository,
+    readme,
+    keywords: copy_strings(keywords),
     js_namespace,
-    manifest_key,
-    package_path,
-    spec_symbol,
+    moonbit_import_path,
+    publish_package,
     platforms: copy_strings(platforms),
     dependencies: copy_strings(dependencies),
-    capabilities: copy_strings(capabilities),
-    options_schema_path,
     root_dir,
+    metadata_path,
   }
-}
-
-///|
-/// Returns the schema version declared by the metadata file.
-/// Tooling can branch on this value when supporting future schema migrations.
-pub fn ExtensionDescriptor::schema_version(self : ExtensionDescriptor) -> Int {
-  self.schema_version
 }
 
 ///|
@@ -92,6 +88,32 @@ pub fn ExtensionDescriptor::description(self : ExtensionDescriptor) -> String {
 }
 
 ///|
+/// Returns the SPDX-style license string, if declared or inherited.
+pub fn ExtensionDescriptor::license(self : ExtensionDescriptor) -> String? {
+  self.license
+}
+
+///|
+/// Returns the source repository URL, if declared or inherited.
+pub fn ExtensionDescriptor::repository(self : ExtensionDescriptor) -> String? {
+  self.repository
+}
+
+///|
+/// Returns the readme path or URL, if declared or inherited.
+pub fn ExtensionDescriptor::readme(self : ExtensionDescriptor) -> String? {
+  self.readme
+}
+
+///|
+/// Returns discovery keywords declared by metadata or inherited from `moon.mod`.
+pub fn ExtensionDescriptor::keywords(
+  self : ExtensionDescriptor,
+) -> Array[String] {
+  copy_strings(self.keywords)
+}
+
+///|
 /// Returns the JavaScript namespace exposed by the extension.
 /// Generated runtime helpers expose the extension under this namespace on
 /// `window.__MoonBit__`.
@@ -100,27 +122,19 @@ pub fn ExtensionDescriptor::js_namespace(self : ExtensionDescriptor) -> String {
 }
 
 ///|
-/// Returns the manifest key that should be edited in `app.json`.
-/// The documented v2 metadata model keeps this aligned with the stable
-/// extension id so tooling does not need a second identity mapping.
-pub fn ExtensionDescriptor::manifest_key(self : ExtensionDescriptor) -> String {
-  self.manifest_key
+/// Returns the inferred MoonBit import path used for explicit linking.
+pub fn ExtensionDescriptor::moonbit_import_path(
+  self : ExtensionDescriptor,
+) -> String {
+  self.moonbit_import_path
 }
 
 ///|
-/// Returns the import path that application code uses to link this extension.
-/// Generated registry modules write this value into explicit `moon.pkg` import
-/// blocks.
-pub fn ExtensionDescriptor::package_path(self : ExtensionDescriptor) -> String {
-  self.package_path
-}
-
-///|
-/// Returns the exported function name that produces the extension spec.
-/// Registry code calls this symbol on the imported package to obtain the
-/// declarative extension spec.
-pub fn ExtensionDescriptor::spec_symbol(self : ExtensionDescriptor) -> String {
-  self.spec_symbol
+/// Returns the npm-style package name declared by `moon.ext.package`, if any.
+pub fn ExtensionDescriptor::publish_package(
+  self : ExtensionDescriptor,
+) -> String? {
+  self.publish_package
 }
 
 ///|
@@ -143,92 +157,82 @@ pub fn ExtensionDescriptor::dependencies(
 }
 
 ///|
-/// Returns the declared capability identifiers.
-/// Capability tags are intended for discovery, search, and AI-assisted
-/// recommendations.
-pub fn ExtensionDescriptor::capabilities(
-  self : ExtensionDescriptor,
-) -> Array[String] {
-  copy_strings(self.capabilities)
-}
-
-///|
 /// Returns the extension directory from which this descriptor was loaded.
-/// Relative metadata assets such as `options.schema.json` are resolved from this
-/// directory.
 pub fn ExtensionDescriptor::root_dir(self : ExtensionDescriptor) -> String {
   self.root_dir
 }
 
 ///|
-/// Returns the resolved `extension.json` path for this descriptor.
+/// Returns the resolved metadata path for this descriptor.
 /// Use this when diagnostics or tooling output need to point back to the source
 /// metadata file.
 pub fn ExtensionDescriptor::metadata_path(self : ExtensionDescriptor) -> String {
-  path_join(self.root_dir, "extension.json")
+  match self.metadata_path {
+    Some(path) => return path
+    None => ()
+  }
+  path_join(self.root_dir, "moon.ext")
 }
 
 ///|
-/// Returns the resolved `options.schema.json` path for this descriptor.
-/// The path is normalized relative to the extension root stored in the
-/// descriptor.
-pub fn ExtensionDescriptor::options_schema_file(
-  self : ExtensionDescriptor,
-) -> String {
-  path_join(self.root_dir, self.options_schema_path)
-}
-
-///|
-/// Reads and decodes one extension descriptor from an `extension.json` file.
+/// Reads and decodes one extension descriptor from an extension metadata file.
 /// The returned descriptor stores normalized filesystem paths so later tooling
 /// can compare and render them consistently.
 pub fn load_extension_descriptor_from_file(
   path : String,
 ) -> Result[ExtensionDescriptor, String] {
   let normalized_path = normalize_path_string(path)
-  read_json_file(normalized_path).bind(fn(json) {
-    decode_extension_descriptor(json, normalized_path)
+  guard normalized_path.has_suffix("moon.ext") else {
+    return Err(
+      CatalogDiagnostic::new(
+        InvalidMetadata,
+        normalized_path,
+        "extension metadata must be moon.ext",
+      ).to_error_string(),
+    )
+  }
+  read_text_file(normalized_path).bind(fn(text) {
+    decode_moon_ext_descriptor(text, normalized_path)
   })
 }
 
 ///|
-/// Reads and parses one JSON file for catalog metadata use.
-fn read_json_file(path : String) -> Result[Json, String] {
+/// Reads one metadata text file.
+fn read_text_file(path : String) -> Result[String, String] {
   try @mbfs.read_file_to_string(path) catch {
     error =>
       Err(
         CatalogDiagnostic::new(
           MissingFile,
           path,
-          "failed to read JSON file: " + @debug.render(@debug.to_repr(error)),
+          "failed to read metadata file: " +
+          @debug.render(@debug.to_repr(error)),
         ).to_error_string(),
       )
   } noraise {
-    text =>
-      try @json.parse(text) catch {
-        error =>
-          Err(
-            CatalogDiagnostic::new(
-              InvalidJson,
-              path,
-              "failed to parse JSON: " + error.to_string(),
-            ).to_error_string(),
-          )
-      } noraise {
-        json => Ok(json)
-      }
+    text => Ok(text)
   }
 }
 
 ///|
-/// Converts one parsed metadata JSON value into the typed descriptor.
-fn decode_extension_descriptor(
-  json : Json,
+/// Converts one `moon.ext` text document into the typed descriptor.
+fn decode_moon_ext_descriptor(
+  text : String,
   path : String,
 ) -> Result[ExtensionDescriptor, String] {
-  match json {
-    Object(object) =>
-      decode_descriptor_object(object, path).map_err(fn(error) {
+  let (ast, reports) = @proton_config.parse_moon_ext(name=path, text)
+  if reports.length() > 0 {
+    return Err(
+      CatalogDiagnostic::new(
+        InvalidMetadata,
+        path,
+        render_config_reports(reports),
+      ).to_error_string(),
+    )
+  }
+  match ast {
+    Obj(fields, _) =>
+      decode_moon_ext_fields(fields, path).map_err(fn(error) {
         CatalogDiagnostic::new(InvalidMetadata, path, error).to_error_string()
       })
     _ =>
@@ -236,146 +240,444 @@ fn decode_extension_descriptor(
         CatalogDiagnostic::new(
           InvalidMetadata,
           path,
-          "expected object for extension metadata",
+          "expected field list for moon.ext",
         ).to_error_string(),
       )
   }
 }
 
 ///|
-/// Decodes the metadata object fields into the typed descriptor.
-fn decode_descriptor_object(
-  object : Map[String, Json],
+fn decode_moon_ext_fields(
+  fields : Array[@proton_config.ConfigField],
   path : String,
 ) -> Result[ExtensionDescriptor, String] {
-  zip3(
-    descriptor_required_int(object, "schema_version"),
-    descriptor_required_string(object, "id"),
-    descriptor_required_string(object, "namespace"),
-  ).bind(fn(required) {
-    let (schema_version, id, js_namespace) = required
-    let root_dir = path_dirname(path)
-    let version = match descriptor_optional_string(object, "version", "0.1.0") {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let display_name = match
-      descriptor_optional_string(object, "display_name", id) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let description = match
-      descriptor_optional_string(object, "description", "") {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let manifest_key = match
-      descriptor_optional_string(object, "manifest_key", id) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let package_path = match
-      descriptor_optional_string(object, "package", default_package_path(path)) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let spec_symbol = match
-      descriptor_optional_string(object, "spec_symbol", "extension") {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let options_schema_path = match
-      descriptor_optional_string(
-        object, "options_schema", "options.schema.json",
-      ) {
-      Ok(value) => normalize_metadata_relative_path(value)
-      Err(error) => return Err(error)
-    }
-    let platforms = match
-      descriptor_optional_string_array(object, "platforms", []) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let dependencies = match
-      descriptor_optional_string_array(object, "dependencies", []) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    let capabilities = match
-      descriptor_optional_string_array(object, "capabilities", []) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    guard schema_version == 2 else {
-      return Err(
-        "unsupported extension metadata schema_version: " +
-        schema_version.to_string(),
+  validate_moon_ext_fields(fields).bind(fn(_) {
+    zip2(
+      moon_ext_required_string(fields, "id"),
+      moon_ext_required_string(fields, "namespace"),
+    ).bind(fn(required) {
+      let (id, js_namespace) = required
+      let root_dir = path_dirname(path)
+      match validate_moon_ext_namespace(js_namespace) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let moon_mod_metadata = read_nearest_moon_mod_metadata(root_dir)
+      let version_default = moon_mod_metadata.version.unwrap_or("0.1.0")
+      let description_default = moon_mod_metadata.description.unwrap_or("")
+      let keywords_default = moon_mod_metadata.keywords
+      let version = match
+        moon_ext_optional_string(fields, "version", version_default) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let display_name = match
+        moon_ext_optional_string(fields, "display_name", id) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let description = match
+        moon_ext_optional_string(fields, "description", description_default) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let license = match
+        moon_ext_optional_string_option(
+          fields,
+          "license",
+          moon_mod_metadata.license,
+        ) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let repository = match
+        moon_ext_optional_string_option(
+          fields,
+          "repository",
+          moon_mod_metadata.repository,
+        ) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let readme = match
+        moon_ext_optional_string_option(
+          fields,
+          "readme",
+          moon_mod_metadata.readme,
+        ) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let keywords = match
+        moon_ext_optional_string_array(fields, "keywords", keywords_default) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      match validate_moon_ext_keywords(keywords) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let moonbit_import_path = infer_moonbit_import_path(path)
+      let publish_package = match
+        moon_ext_optional_string_value(fields, "package") {
+        Err(error) => return Err(error)
+        Ok(value) => value
+      }
+      match publish_package {
+        Some(package_name) =>
+          match validate_npm_package_name(package_name) {
+            Ok(_) => ()
+            Err(error) => return Err(error)
+          }
+        None => ()
+      }
+      match validate_moonbit_import_path(moonbit_import_path) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let platforms = match
+        moon_ext_optional_string_array(fields, "platforms", []) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      match validate_moon_ext_platforms(platforms) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      let dependencies = match
+        moon_ext_optional_string_array(fields, "dependencies", []) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      match validate_moon_ext_dependencies(id, dependencies) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      Ok(
+        ExtensionDescriptor::new(
+          id,
+          version,
+          display_name,
+          description,
+          js_namespace,
+          moonbit_import_path,
+          platforms,
+          dependencies,
+          root_dir,
+          publish_package~,
+          license~,
+          repository~,
+          readme~,
+          keywords~,
+          metadata_path=Some(path),
+        ),
       )
-    }
-    guard manifest_key == id else {
-      return Err("metadata manifest_key must match id: " + id)
-    }
-    match validate_metadata_package_path(package_path) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
-    match validate_metadata_spec_symbol(spec_symbol) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
-    Ok(
-      ExtensionDescriptor::new(
-        schema_version, id, version, display_name, description, js_namespace, manifest_key,
-        package_path, spec_symbol, platforms, dependencies, capabilities, options_schema_path,
-        root_dir,
-      ),
-    )
+    })
   })
 }
 
 ///|
-/// Reads a required raw JSON field from one metadata object.
-fn descriptor_required_field(
-  object : Map[String, Json],
+fn validate_moon_ext_fields(
+  fields : Array[@proton_config.ConfigField],
+) -> Result[Unit, String] {
+  let seen : Map[String, Unit] = {}
+  for field in fields {
+    if seen.contains(field.key) {
+      return Err("duplicate moon.ext field: " + field.key)
+    }
+    seen[field.key] = ()
+    match field.key {
+      "id"
+      | "namespace"
+      | "package"
+      | "version"
+      | "display_name"
+      | "description"
+      | "license"
+      | "repository"
+      | "readme"
+      | "keywords"
+      | "platforms"
+      | "dependencies" => ()
+      other => return Err("unknown moon.ext field: " + other)
+    }
+  }
+  Ok(())
+}
+
+///|
+fn moon_ext_required_string(
+  fields : Array[@proton_config.ConfigField],
   key : String,
-) -> Result[Json, String] {
-  match object.get(key) {
-    Some(value) => Ok(value)
-    None => Err("missing required metadata field: " + key)
+) -> Result[String, String] {
+  match moon_ext_optional_string_value(fields, key) {
+    Err(error) => Err(error)
+    Ok(Some(value)) =>
+      if value == "" {
+        Err("moon.ext field `" + key + "` must not be empty")
+      } else {
+        Ok(value)
+      }
+    Ok(None) => Err("missing required moon.ext field: " + key)
   }
 }
 
 ///|
-/// Validates that a metadata package path can be emitted as one moon.pkg import.
-fn validate_metadata_package_path(
-  package_path : String,
-) -> Result[Unit, String] {
-  guard package_path != "" else {
-    return Err("metadata package must not be empty")
+fn moon_ext_optional_string(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+  default : String,
+) -> Result[String, String] {
+  match moon_ext_optional_string_value(fields, key) {
+    Err(error) => Err(error)
+    Ok(Some(value)) => Ok(value)
+    Ok(None) => Ok(default)
   }
-  guard !package_path.has_prefix("/") && !package_path.has_suffix("/") else {
-    return Err("metadata package must not start or end with /: " + package_path)
+}
+
+///|
+fn moon_ext_optional_string_option(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+  default : String?,
+) -> Result[String?, String] {
+  match moon_ext_optional_string_value(fields, key) {
+    Err(error) => Err(error)
+    Ok(Some(value)) => Ok(Some(value))
+    Ok(None) => Ok(default)
+  }
+}
+
+///|
+fn moon_ext_optional_string_value(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+) -> Result[String?, String] {
+  for field in fields {
+    if field.key == key {
+      match field.value {
+        Str(value, _) => return Ok(Some(value))
+        _ => return Err("moon.ext field `" + key + "` must be a string")
+      }
+    }
+  }
+  Ok(None)
+}
+
+///|
+fn moon_ext_optional_string_array(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+  default : Array[String],
+) -> Result[Array[String], String] {
+  for field in fields {
+    if field.key == key {
+      match field.value {
+        Arr(items, _) => {
+          let values : Array[String] = []
+          for item in items {
+            match item {
+              Str(value, _) => values.push(value)
+              _ =>
+                return Err(
+                  "moon.ext field `" + key + "` must be a string array",
+                )
+            }
+          }
+          return Ok(values)
+        }
+        _ => return Err("moon.ext field `" + key + "` must be a string array")
+      }
+    }
+  }
+  Ok(copy_strings(default))
+}
+
+///|
+fn render_config_reports(reports : Array[@basic.Report]) -> String {
+  let builder = StringBuilder::new()
+  for index, report in reports {
+    if index > 0 {
+      builder.write_string("\n")
+    }
+    builder.write_string(report.to_string())
+  }
+  builder.to_string()
+}
+
+///|
+fn validate_moon_ext_platforms(
+  platforms : Array[String],
+) -> Result[Unit, String] {
+  let seen : Map[String, Unit] = {}
+  for platform in platforms {
+    guard platform == "windows" || platform == "macos" || platform == "linux" else {
+      return Err(
+        "moon.ext platforms contains unsupported platform: " + platform,
+      )
+    }
+    guard !seen.contains(platform) else {
+      return Err("moon.ext platforms contains duplicate value: " + platform)
+    }
+    seen[platform] = ()
+  }
+  Ok(())
+}
+
+///|
+fn validate_moon_ext_dependencies(
+  id : String,
+  dependencies : Array[String],
+) -> Result[Unit, String] {
+  let seen : Map[String, Unit] = {}
+  for dependency in dependencies {
+    guard dependency != "" else {
+      return Err("moon.ext dependencies must not contain empty values")
+    }
+    guard dependency != id else {
+      return Err("moon.ext dependencies must not include itself: " + id)
+    }
+    guard !seen.contains(dependency) else {
+      return Err(
+        "moon.ext dependencies contains duplicate value: " + dependency,
+      )
+    }
+    seen[dependency] = ()
+  }
+  Ok(())
+}
+
+///|
+fn validate_moon_ext_namespace(js_namespace : String) -> Result[Unit, String] {
+  guard js_namespace.trim().to_owned() != "" else {
+    return Err("moon.ext namespace must not be empty")
+  }
+  guard js_namespace.find("/") is None && js_namespace.find("\\") is None else {
+    return Err(
+      "moon.ext namespace must not contain path separators: " + js_namespace,
+    )
+  }
+  guard js_namespace != "__proto__" &&
+    js_namespace != "prototype" &&
+    js_namespace != "constructor" else {
+    return Err(
+      "moon.ext namespace uses a reserved JavaScript property name: " +
+      js_namespace,
+    )
+  }
+  Ok(())
+}
+
+///|
+fn validate_moon_ext_keywords(keywords : Array[String]) -> Result[Unit, String] {
+  for keyword in keywords {
+    guard keyword != "" else {
+      return Err("moon.ext keywords must not contain empty values")
+    }
+  }
+  Ok(())
+}
+
+///|
+/// Validates that a MoonBit import path can be emitted as one moon.pkg import.
+fn validate_moonbit_import_path(import_path : String) -> Result[Unit, String] {
+  guard import_path != "" else {
+    return Err("moonbit import path must not be empty")
+  }
+  guard !import_path.has_prefix("/") && !import_path.has_suffix("/") else {
+    return Err(
+      "moonbit import path must not start or end with /: " + import_path,
+    )
   }
   let mut previous_slash = false
-  for _, ch in package_path {
+  for _, ch in import_path {
     if ch == '/' {
       guard !previous_slash else {
         return Err(
-          "metadata package must not contain empty path segments: " +
-          package_path,
+          "moonbit import path must not contain empty path segments: " +
+          import_path,
         )
       }
       previous_slash = true
     } else {
       guard is_metadata_package_char(ch) else {
         return Err(
-          "metadata package contains invalid character: " + package_path,
+          "moonbit import path contains invalid character: " + import_path,
         )
       }
       previous_slash = false
     }
   }
   Ok(())
+}
+
+///|
+fn validate_npm_package_name(package_name : String) -> Result[Unit, String] {
+  guard package_name != "" else {
+    return Err("moon.ext package must not be empty")
+  }
+  guard !package_name.contains("\\") &&
+    (!package_name.contains("/") || package_name.has_prefix("@")) else {
+    return Err(
+      "moon.ext package must be an npm-style package name: " + package_name,
+    )
+  }
+  guard !package_name.contains("..") &&
+    !package_name.contains("://") &&
+    !package_name.contains(" ") else {
+    return Err("moon.ext package contains invalid characters: " + package_name)
+  }
+  if package_name.has_prefix("@") {
+    let parts = package_name.split("/").collect()
+    guard parts.length() == 2 else {
+      return Err("moon.ext scoped package must be @scope/name: " + package_name)
+    }
+    validate_npm_package_part(parts[0][1:].to_owned(), package_name).bind(fn(
+      _,
+    ) {
+      validate_npm_package_part(parts[1].to_owned(), package_name)
+    })
+  } else {
+    validate_npm_package_part(package_name, package_name)
+  }
+}
+
+///|
+fn validate_npm_package_part(
+  part : String,
+  package_name : String,
+) -> Result[Unit, String] {
+  guard part != "" else {
+    return Err("moon.ext package contains empty name segment: " + package_name)
+  }
+  for index, ch in part {
+    if index == 0 {
+      guard is_lowercase_ascii(ch) || is_digit_ascii(ch) else {
+        return Err(
+          "moon.ext package segment must start with lowercase letter or digit: " +
+          package_name,
+        )
+      }
+    }
+    guard is_lowercase_ascii(ch) ||
+      is_digit_ascii(ch) ||
+      ch == '-' ||
+      ch == '_' ||
+      ch == '.' else {
+      return Err("moon.ext package contains invalid character: " + package_name)
+    }
+  }
+  Ok(())
+}
+
+///|
+fn is_lowercase_ascii(ch : Char) -> Bool {
+  'a' <= ch && ch <= 'z'
+}
+
+///|
+fn is_digit_ascii(ch : Char) -> Bool {
+  '0' <= ch && ch <= '9'
 }
 
 ///|
@@ -386,111 +688,6 @@ fn is_metadata_package_char(ch : Char) -> Bool {
   ('0' <= ch && ch <= '9') ||
   ch == '_' ||
   ch == '-'
-}
-
-///|
-/// Validates that a metadata spec symbol can be emitted as a MoonBit function.
-fn validate_metadata_spec_symbol(spec_symbol : String) -> Result[Unit, String] {
-  guard spec_symbol != "" else {
-    return Err("metadata spec_symbol must not be empty")
-  }
-  for index, ch in spec_symbol {
-    if index == 0 {
-      guard is_metadata_identifier_start(ch) else {
-        return Err(
-          "metadata spec_symbol must start with a lowercase letter or _: " +
-          spec_symbol,
-        )
-      }
-    } else {
-      guard is_metadata_identifier_continue(ch) else {
-        return Err(
-          "metadata spec_symbol must use only lowercase letters, digits, or _: " +
-          spec_symbol,
-        )
-      }
-    }
-  }
-  Ok(())
-}
-
-///|
-/// Returns whether one character can start a generated function identifier.
-fn is_metadata_identifier_start(ch : Char) -> Bool {
-  ('a' <= ch && ch <= 'z') || ch == '_'
-}
-
-///|
-/// Returns whether one character can continue a generated function identifier.
-fn is_metadata_identifier_continue(ch : Char) -> Bool {
-  is_metadata_identifier_start(ch) || ('0' <= ch && ch <= '9')
-}
-
-///|
-/// Reads and decodes a required string metadata field.
-fn descriptor_required_string(
-  object : Map[String, Json],
-  key : String,
-) -> Result[String, String] {
-  descriptor_required_field(object, key).bind(fn(value) {
-    match value {
-      String(value) => Ok(value)
-      _ => Err("expected string for metadata field: " + key)
-    }
-  })
-}
-
-///|
-/// Reads and decodes an optional string metadata field.
-fn descriptor_optional_string(
-  object : Map[String, Json],
-  key : String,
-  default : String,
-) -> Result[String, String] {
-  match object.get(key) {
-    None => Ok(default)
-    Some(String(value)) => Ok(value)
-    Some(_) => Err("expected string for metadata field: " + key)
-  }
-}
-
-///|
-/// Reads and decodes a required integer metadata field.
-fn descriptor_required_int(
-  object : Map[String, Json],
-  key : String,
-) -> Result[Int, String] {
-  descriptor_required_field(object, key).bind(fn(json) {
-    try @json.from_json(json) catch {
-      error =>
-        Err("invalid int for metadata field " + key + ": " + error.to_string())
-    } noraise {
-      value => Ok(value)
-    }
-  })
-}
-
-///|
-/// Reads and decodes an optional string array metadata field.
-fn descriptor_optional_string_array(
-  object : Map[String, Json],
-  key : String,
-  default : Array[String],
-) -> Result[Array[String], String] {
-  match object.get(key) {
-    None => Ok(copy_strings(default))
-    Some(Array(items)) => {
-      let values : Array[String] = []
-      for item in items {
-        match item {
-          String(value) => values.push(value)
-          _ => return Err("expected string array for metadata field: " + key)
-        }
-      }
-      Ok(values)
-    }
-    Some(_) => Err("expected array for metadata field: " + key)
-  }
 }
 
 ///|
@@ -533,8 +730,8 @@ fn path_dirname(path : String) -> String {
 }
 
 ///|
-/// Infers a package import path from an `extension.json` file path.
-fn default_package_path(path : String) -> String {
+/// Infers a fallback MoonBit import path when no `moon.mod` can be found.
+fn default_moonbit_import_path(path : String) -> String {
   let dir = path_dirname(path)
   let parts = dir.replace(old="\\", new="/").split("/").collect()
   let mut extension_root_index = -1
@@ -559,14 +756,181 @@ fn default_package_path(path : String) -> String {
 }
 
 ///|
-/// Normalizes metadata-local relative paths such as `./options.schema.json`.
-fn normalize_metadata_relative_path(path : String) -> String {
-  let parts = path.replace(old="\\", new="/").split("/").collect()
-  let normalized : Array[String] = []
-  for part in parts {
-    if part != "" && part != "." {
-      normalized.push(part.to_owned())
+fn infer_moonbit_import_path(path : String) -> String {
+  let package_dir = path_dirname(path)
+  match find_nearest_moon_mod(package_dir) {
+    Some((module_dir, module_name)) => {
+      let relative = relative_package_dir(module_dir, package_dir)
+      if relative == "" {
+        module_name
+      } else {
+        module_name + "/" + relative
+      }
+    }
+    None => default_moonbit_import_path(path)
+  }
+}
+
+///|
+fn find_nearest_moon_mod(start_dir : String) -> (String, String)? {
+  for current = start_dir, depth = 0; depth < 16; {
+    let moon_mod_path = path_join(current, "moon.mod")
+    if is_file_no_raise(moon_mod_path) {
+      match read_moon_mod_name(moon_mod_path) {
+        Some(name) => return Some((current, name))
+        None => return None
+      }
+    }
+    let parent = path_dirname(current)
+    if parent == current || parent == "" {
+      return None
+    }
+    continue parent, depth + 1
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn is_file_no_raise(path : String) -> Bool {
+  @mbfs.is_file(path) catch {
+    _ => false
+  }
+}
+
+///|
+fn read_moon_mod_name(path : String) -> String? {
+  let text = @mbfs.read_file_to_string(path) catch { _ => return None }
+  let (ast, _reports) = @proton_config.parse_moon_mod(name=path, text)
+  match ast {
+    Obj(fields, _) => moon_mod_string_field(fields, "name")
+    _ => None
+  }
+}
+
+///|
+priv struct MoonExtMoonModMetadata {
+  mut version : String?
+  mut description : String?
+  mut license : String?
+  mut repository : String?
+  mut readme : String?
+  mut keywords : Array[String]
+}
+
+///|
+fn MoonExtMoonModMetadata::new() -> MoonExtMoonModMetadata {
+  MoonExtMoonModMetadata::{
+    version: None,
+    description: None,
+    license: None,
+    repository: None,
+    readme: None,
+    keywords: [],
+  }
+}
+
+///|
+fn read_nearest_moon_mod_metadata(start_dir : String) -> MoonExtMoonModMetadata {
+  match find_nearest_moon_mod_path(start_dir) {
+    Some(path) => read_moon_mod_metadata(path)
+    None => MoonExtMoonModMetadata::new()
+  }
+}
+
+///|
+fn find_nearest_moon_mod_path(start_dir : String) -> String? {
+  for current = start_dir, depth = 0; depth < 16; {
+    let moon_mod_path = path_join(current, "moon.mod")
+    if is_file_no_raise(moon_mod_path) {
+      return Some(moon_mod_path)
+    }
+    let parent = path_dirname(current)
+    if parent == current || parent == "" {
+      return None
+    }
+    continue parent, depth + 1
+  } nobreak {
+    None
+  }
+}
+
+///|
+fn read_moon_mod_metadata(path : String) -> MoonExtMoonModMetadata {
+  let text = @mbfs.read_file_to_string(path) catch {
+    _ => return MoonExtMoonModMetadata::new()
+  }
+  let metadata = MoonExtMoonModMetadata::new()
+  let (ast, _reports) = @proton_config.parse_moon_mod(name=path, text)
+  match ast {
+    Obj(fields, _) => {
+      metadata.version = moon_mod_string_field(fields, "version")
+      metadata.description = moon_mod_string_field(fields, "description")
+      metadata.license = moon_mod_string_field(fields, "license")
+      metadata.repository = moon_mod_string_field(fields, "repository")
+      metadata.readme = moon_mod_string_field(fields, "readme")
+      match moon_mod_string_array_field(fields, "keywords") {
+        Some(value) => metadata.keywords = value
+        None => ()
+      }
+    }
+    _ => ()
+  }
+  metadata
+}
+
+///|
+fn moon_mod_string_field(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+) -> String? {
+  for field in fields {
+    if field.key == key {
+      match field.value {
+        Str(value, _) => return Some(value)
+        _ => return None
+      }
     }
   }
-  normalized.join("/")
+  None
+}
+
+///|
+fn moon_mod_string_array_field(
+  fields : Array[@proton_config.ConfigField],
+  key : String,
+) -> Array[String]? {
+  for field in fields {
+    if field.key == key {
+      match field.value {
+        Arr(items, _) => {
+          let values : Array[String] = []
+          for item in items {
+            match item {
+              Str(value, _) => values.push(value)
+              _ => ()
+            }
+          }
+          return Some(values)
+        }
+        _ => return None
+      }
+    }
+  }
+  None
+}
+
+///|
+fn relative_package_dir(module_dir : String, package_dir : String) -> String {
+  let module_path = module_dir.replace(old="\\", new="/")
+  let package_path = package_dir.replace(old="\\", new="/")
+  if package_path == module_path {
+    return ""
+  }
+  let prefix = module_path + "/"
+  if package_path.has_prefix(prefix) {
+    package_path[prefix.length():].to_owned()
+  } else {
+    ""
+  }
 }

@@ -1,0 +1,10 @@
+id = "justjavac/proton-fs"
+namespace = "fs"
+package = "@justjavac/proton-fs"
+
+version = "0.1.0"
+display_name = "Filesystem"
+description = "Host filesystem access with text, directory, and stream helpers."
+
+platforms = ["windows", "macos", "linux"]
+dependencies = []
