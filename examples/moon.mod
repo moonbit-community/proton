@@ -7,7 +7,7 @@ import {
   "justjavac/ffi@0.2.1",
   "moonbitlang/async@0.19.0",
   "justjavac/proton_ext@0.1.0",
-  "justjavac/proton@0.1.10",
+  "justjavac/proton@0.1.0",
   "justjavac/cdp@0.1.7",
 }
 
