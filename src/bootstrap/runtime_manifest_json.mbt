@@ -1,4 +1,24 @@
 ///|
+/// Deep-clones a JSON value so extension options do not alias the source tree.
+fn clone_json(json : Json) -> Json {
+  match json {
+    Array(items) => Json::array(items.map(item => clone_json(item)))
+    Object(object) => Json::object(clone_json_object(object))
+    _ => json
+  }
+}
+
+///|
+/// Deep-clones a JSON object map entry by entry.
+fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
+  let cloned : Map[String, Json] = {}
+  for key, value in object {
+    cloned.set(key, clone_json(value))
+  }
+  cloned
+}
+
+///|
 /// Converts one normalized extension setting back into its JSON representation.
 fn extension_setting_to_json(setting : @manifest.ExtensionSetting) -> Json {
   match setting {
@@ -9,7 +29,7 @@ fn extension_setting_to_json(setting : @manifest.ExtensionSetting) -> Json {
 }
 
 ///|
-/// Converts one manifest window into its persisted JSON object form.
+/// Converts one manifest window into its internal runtime JSON object form.
 fn window_manifest_to_json(window : @manifest.WindowManifest) -> Json {
   let object : Map[String, Json] = {
     "title": Json::string(window.title),
@@ -27,7 +47,7 @@ fn window_manifest_to_json(window : @manifest.WindowManifest) -> Json {
 }
 
 ///|
-/// Converts one manifest entry into its persisted JSON object form.
+/// Converts one manifest entry into its internal runtime JSON object form.
 fn app_entry_to_json(entry : @manifest.AppEntry) -> Json {
   let object : Map[String, Json] = {}
   match entry {
@@ -52,7 +72,7 @@ fn app_entry_to_json(entry : @manifest.AppEntry) -> Json {
 }
 
 ///|
-/// Converts one secondary window manifest into its persisted JSON form.
+/// Converts one secondary window manifest into internal runtime JSON.
 fn app_window_manifest_to_json(window : @manifest.AppWindowManifest) -> Json {
   Json::object({
     "id": Json::string(window.id),
@@ -62,10 +82,7 @@ fn app_window_manifest_to_json(window : @manifest.AppWindowManifest) -> Json {
 }
 
 ///|
-/// Converts a typed runtime manifest into JSON.
-///
-/// User-facing app config files do not support `extensions`, but internal
-/// framework process config still serializes code-declared extension settings.
+/// Converts a typed runtime manifest into JSON for framework process handoff.
 pub fn app_manifest_to_json(manifest : @manifest.AppManifest) -> Json {
   let object : Map[String, Json] = {
     "window": window_manifest_to_json(manifest.window),
@@ -85,30 +102,4 @@ pub fn app_manifest_to_json(manifest : @manifest.AppManifest) -> Json {
     object["extensions"] = Json::object(extensions)
   }
   Json::object(object)
-}
-
-///|
-/// Returns the mutable `windows` array, creating it when necessary.
-fn ensure_windows_json_array(object : Map[String, Json]) -> Array[Json] {
-  match object.get("windows") {
-    Some(Array(windows)) => windows
-    _ => {
-      let windows : Array[Json] = []
-      object["windows"] = Json::array(windows)
-      windows
-    }
-  }
-}
-
-///|
-/// Extracts a secondary window id from raw JSON when present.
-fn window_id_from_json(json : Json) -> String? {
-  match json {
-    Object(object) =>
-      match object.get("id") {
-        Some(String(id)) => Some(id)
-        _ => None
-      }
-    _ => None
-  }
 }

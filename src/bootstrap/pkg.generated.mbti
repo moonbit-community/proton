@@ -8,55 +8,55 @@ import {
 // Values
 pub fn app_manifest_to_json(@manifest.AppManifest) -> Json
 
-pub fn load_app_manifest_document_from_file(String) -> Result[AppManifestDocument, String]
+pub fn load_config_manifest_from_file(String) -> Result[LoadedAppManifest, String]
 
-pub fn load_app_manifest_document_from_json(String) -> Result[AppManifestDocument, String]
+pub fn load_proton_manifest_from_file(String) -> Result[LoadedAppManifest, String]
 
-pub fn load_app_manifest_from_file(String) -> Result[LoadedAppManifest, String]
+pub fn load_proton_project_config_from_file(String) -> Result[ProtonProjectConfig, String]
 
-pub fn load_app_manifest_from_json(String) -> Result[LoadedAppManifest, String]
-
-pub fn load_document(String) -> Result[AppManifestDocument, String]
+pub fn load_proton_project_summary_from_file(String) -> Result[Json, String]
 
 pub fn load_runtime_manifest_from_json(String) -> Result[LoadedAppManifest, String]
-
-pub fn normalize_document(AppManifestDocument) -> Result[AppManifestDocument, String]
-
-pub fn parse_document(String) -> Result[AppManifestDocument, String]
-
-pub fn render_document(AppManifestDocument) -> String
-
-pub fn set_debug(AppManifestDocument, Int) -> Result[AppManifestDocument, String]
-
-pub fn set_entry(AppManifestDocument, @manifest.AppEntry) -> Result[AppManifestDocument, String]
-
-pub fn set_window_size(AppManifestDocument, Int, Int, size_hint? : @manifest.WindowSizeHint?) -> Result[AppManifestDocument, String]
-
-pub fn set_window_title(AppManifestDocument, String) -> Result[AppManifestDocument, String]
-
-pub fn validate_document(AppManifestDocument) -> Result[Unit, String]
-
-pub fn write_document(String, AppManifestDocument) -> Result[Unit, String]
 
 // Errors
 
 // Types and methods
-type AppManifestDocument
-pub fn AppManifestDocument::base_dir(Self) -> String?
-pub fn AppManifestDocument::loaded_manifest(Self) -> LoadedAppManifest
-pub fn AppManifestDocument::manifest(Self) -> @manifest.AppManifest
-pub fn AppManifestDocument::remove_window(Self, String) -> Result[Self, String]
-pub fn AppManifestDocument::set_debug(Self, Int) -> Result[Self, String]
-pub fn AppManifestDocument::set_entry(Self, @manifest.AppEntry) -> Result[Self, String]
-pub fn AppManifestDocument::set_window(Self, @manifest.WindowManifest) -> Result[Self, String]
-pub fn AppManifestDocument::to_json(Self) -> Json
-pub fn AppManifestDocument::to_pretty_json(Self) -> String
-pub fn AppManifestDocument::upsert_window(Self, @manifest.AppWindowManifest) -> Result[Self, String]
-
 type LoadedAppManifest
 pub fn LoadedAppManifest::base_dir(Self) -> String?
 pub fn LoadedAppManifest::manifest(Self) -> @manifest.AppManifest
 pub fn LoadedAppManifest::new(@manifest.AppManifest, base_dir? : String?) -> Self
+
+type ProtonAppMetadata
+pub fn ProtonAppMetadata::description(Self) -> String?
+pub fn ProtonAppMetadata::identifier(Self) -> String?
+pub fn ProtonAppMetadata::license(Self) -> String?
+pub fn ProtonAppMetadata::new(String, identifier? : String?, version? : String?, description? : String?, license? : String?) -> Self
+pub fn ProtonAppMetadata::product_name(Self) -> String
+pub fn ProtonAppMetadata::version(Self) -> String?
+
+type ProtonBundleConfig
+pub fn ProtonBundleConfig::active(Self) -> Bool
+pub fn ProtonBundleConfig::icon(Self) -> Array[String]
+pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], output? : String) -> Self
+pub fn ProtonBundleConfig::output(Self) -> String
+pub fn ProtonBundleConfig::resources(Self) -> Array[String]
+pub fn ProtonBundleConfig::targets(Self) -> Array[String]
+
+type ProtonFrontendConfig
+pub fn ProtonFrontendConfig::before_build(Self) -> String?
+pub fn ProtonFrontendConfig::before_dev(Self) -> String?
+pub fn ProtonFrontendConfig::dev_url(Self) -> String?
+pub fn ProtonFrontendConfig::dist(Self) -> String?
+pub fn ProtonFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?) -> Self
+
+type ProtonProjectConfig
+pub fn ProtonProjectConfig::bundle(Self) -> ProtonBundleConfig?
+pub fn ProtonProjectConfig::dev_manifest(Self) -> LoadedAppManifest
+pub fn ProtonProjectConfig::frontend(Self) -> ProtonFrontendConfig?
+pub fn ProtonProjectConfig::manifest(Self) -> LoadedAppManifest
+pub fn ProtonProjectConfig::metadata(Self) -> ProtonAppMetadata
+pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?) -> Self
+pub fn ProtonProjectConfig::to_summary_json(Self) -> Json
 
 // Type aliases
 

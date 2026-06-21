@@ -4,8 +4,10 @@ version = "0.1.10"
 
 import {
   "justjavac/ffi@0.2.1",
+  "justjavac/proton_config@0.1.10",
   "moonbitlang/async@0.19.0",
   "moonbitlang/x@0.4.43",
+  "moonbitlang/lexer@0.3.4",
 }
 
 readme = "README.md"

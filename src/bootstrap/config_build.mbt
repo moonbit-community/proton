@@ -102,7 +102,7 @@ fn build_debug_value_from_object(
 }
 
 ///|
-/// Rejects legacy permissions fields on the root manifest object.
+/// Rejects unsupported permissions fields on the root manifest object.
 fn reject_unsupported_permissions_field(
   object : Map[String, Json],
 ) -> Result[Unit, String] {
@@ -283,10 +283,10 @@ fn build_extension_setting_from_json(
 }
 
 ///|
-/// Rejects legacy `permissions` config that is no longer supported.
+/// Rejects unsupported `permissions` config.
 fn reject_unsupported_permissions(json : Json?) -> Result[Unit, String] {
   match json {
     None => Ok(())
-    Some(_) => Err("app manifest.permissions is no longer supported; remove it")
+    Some(_) => Err("app manifest.permissions is not supported")
   }
 }

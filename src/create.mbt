@@ -58,17 +58,6 @@ pub fn create_app(
 }
 
 ///|
-/// Builds an app from one parsed control-plane manifest document.
-/// The document's preserved base directory is forwarded so relative file paths
-/// and extension build contexts resolve the same way they would on disk.
-fn create_app_from_document(
-  document : @bootstrap.AppManifestDocument,
-  registry : ExtensionRegistry,
-) -> Result[@wvrt.App, String] {
-  create_app(document.manifest(), registry, base_dir=document.base_dir())
-}
-
-///|
 /// Loads a manifest document from disk and creates a runtime app.
 /// Relative file entries and extension base directories are resolved from the
 /// manifest file's parent directory before the runtime app is constructed.
@@ -76,8 +65,9 @@ pub fn create_app_from_file(
   path : String,
   registry : ExtensionRegistry,
 ) -> Result[@wvrt.App, String] {
-  match @bootstrap.load_document(path) {
+  match @bootstrap.load_config_manifest_from_file(path) {
     Err(error) => Err(error)
-    Ok(document) => create_app_from_document(document, registry)
+    Ok(loaded) =>
+      create_app(loaded.manifest(), registry, base_dir=loaded.base_dir())
   }
 }
