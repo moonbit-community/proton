@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/lexer/basic" @lexer_basic,
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/sys",
+  "moonbitlang/moon_config",
+}
+
+supported_targets = "native"
