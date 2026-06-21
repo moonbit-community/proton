@@ -2,6 +2,7 @@
 fn print_usage() -> Unit {
   let usage =
     #|Usage:
+    #|  proton [-C DIR] doctor [--dry-run] [--verbose] [--json]
     #|  proton codegen <input.mbt> -o <output.g.mbt>
     #|
   println(usage)
@@ -54,6 +55,56 @@ fn match_value(matches : @argparse.Matches, name : String) -> String? {
 }
 
 ///|
+fn parse_global_args(args : Array[String]) -> (String, Array[String]) {
+  let rest : Array[String] = []
+  let mut cwd = "."
+  let mut index = 0
+  while index < args.length() {
+    if args[index] == "-C" || args[index] == "--cwd" {
+      if index + 1 < args.length() {
+        cwd = args[index + 1]
+        index = index + 2
+      } else {
+        rest.push(args[index])
+        index = index + 1
+      }
+    } else {
+      rest.push(args[index])
+      index = index + 1
+    }
+  }
+  (cwd, rest)
+}
+
+///|
+fn run_doctor_from_args(
+  cwd : String,
+  args : Array[String],
+) -> Result[Unit, CliError] {
+  let mut dry_run = false
+  let mut verbose = false
+  let mut json = false
+  for arg in args {
+    match arg {
+      "--dry-run" => dry_run = true
+      "--verbose" => verbose = true
+      "--json" => json = true
+      "-h" | "--help" => {
+        println(
+          "Usage: proton [-C DIR] doctor [--dry-run] [--verbose] [--json]",
+        )
+        return Ok(())
+      }
+      _ =>
+        return Err(CliError::UsageError("unknown doctor option: " + arg, false))
+    }
+  }
+  @doctor.run(cwd~, dry_run~, verbose~, json~).map_err(fn(message) {
+    CliError::CommandError(message)
+  })
+}
+
+///|
 fn run_codegen(args : Array[String]) -> Result[Unit, CliError] {
   let cmd = codegen_arg_parser()
   let matches = cmd.parse(argv=args, env={}) catch {
@@ -85,12 +136,15 @@ fn run_codegen(args : Array[String]) -> Result[Unit, CliError] {
 ///|
 fn main {
   let argv = @sys.get_cli_args()
-  let args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
+  let raw_args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
+  let (cwd, args) = parse_global_args(raw_args)
   if args.length() == 0 || args[0] == "-h" || args[0] == "--help" {
     print_usage()
     return
   }
-  let result = if args.length() >= 1 && args[0] == "codegen" {
+  let result = if args.length() >= 1 && args[0] == "doctor" {
+    run_doctor_from_args(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(args[1:].to_owned())
   } else {
     Err(CliError::UsageError("unknown command", false))
