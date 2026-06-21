@@ -1,0 +1,3 @@
+id = "justjavac/proton-clipboard"
+namespace = "clipboard"
+package = "@justjavac/proton-clipboard"

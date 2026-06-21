@@ -107,18 +107,7 @@ pub fn ExtensionCatalog::descriptors(
 }
 
 ///|
-/// Loads the schema referenced by one known descriptor id.
-/// The descriptor id is validated against the catalog before the schema file is
-/// read from disk.
-pub fn ExtensionCatalog::load_schema(
-  self : ExtensionCatalog,
-  id : String,
-) -> Result[ExtensionSchema, String] {
-  self.require(id).bind(load_extension_schema)
-}
-
-///|
-/// Loads a catalog from many explicit `extension.json` file paths.
+/// Loads a catalog from many explicit extension metadata file paths.
 /// Each descriptor is decoded independently so the first metadata error can be
 /// reported with its exact file path.
 pub fn load_extension_catalog_from_descriptor_files(
@@ -135,12 +124,12 @@ pub fn load_extension_catalog_from_descriptor_files(
 }
 
 ///|
-/// Discovers `extension.json` files from one or more explicit search roots.
+/// Discovers extension metadata files from one or more explicit search roots.
 ///
 /// Each search root may be:
 /// - one directory that contains many extension package directories
 /// - one specific extension package directory
-/// - one explicit `extension.json` file path
+/// - one explicit `moon.ext` file path
 pub fn discover_extension_descriptor_files(
   search_roots : Array[String],
 ) -> Result[Array[String], String] {
@@ -158,7 +147,7 @@ pub fn discover_extension_descriptor_files(
 ///|
 /// Loads a catalog by scanning one or more explicit extension search roots.
 /// Search roots may point at extension package directories, explicit
-/// `extension.json` files, or directories that contain many extensions.
+/// metadata files, or directories that contain many extensions.
 pub fn load_extension_catalog_from_search_roots(
   search_roots : Array[String],
 ) -> Result[ExtensionCatalog, String] {
@@ -200,7 +189,7 @@ fn collect_extension_descriptor_files(
         collect_extension_descriptor_files_from_directory(
           root, descriptor_paths,
         )
-      } else if root.has_suffix("extension.json") {
+      } else if is_extension_metadata_file(root) {
         descriptor_paths.push(root)
         Ok(())
       } else {
@@ -208,7 +197,7 @@ fn collect_extension_descriptor_files(
           CatalogDiagnostic::new(
             InvalidSearchRoot,
             root,
-            "extension search root must be a directory or extension.json file",
+            "extension search root must be a directory or extension metadata file",
           ).to_error_string(),
         )
       }
@@ -227,11 +216,10 @@ fn collect_extension_descriptor_files_from_directory(
   }
   entries.sort()
 
-  if entries.contains("extension.json") {
-    descriptor_paths.push(path_join(directory, "extension.json"))
+  if entries.contains("moon.ext") {
+    descriptor_paths.push(path_join(directory, "moon.ext"))
     return Ok(())
   }
-
   for entry in entries {
     if should_skip_extension_search_entry(entry) {
       continue
@@ -299,6 +287,11 @@ fn should_skip_extension_search_entry(entry : String) -> Bool {
   entry == "_build" ||
   entry == "build" ||
   entry == "target"
+}
+
+///|
+fn is_extension_metadata_file(path : String) -> Bool {
+  path.has_suffix("moon.ext")
 }
 
 ///|

@@ -1,0 +1,3 @@
+id = "justjavac/proton-global-hotkey"
+namespace = "globalHotkey"
+package = "@justjavac/proton-global-hotkey"

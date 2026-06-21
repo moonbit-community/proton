@@ -10,9 +10,9 @@ fn manifest_at(base : @mbpath.Path, relative : String) -> String? {
 
 ///|
 fn manifest_from_base(base : @mbpath.Path) -> String? {
-  match manifest_at(base, "22_app_config/app.json") {
+  match manifest_at(base, "22_app_config/moon.proton") {
     Some(path) => Some(path)
-    None => manifest_at(base, "examples/22_app_config/app.json")
+    None => manifest_at(base, "examples/22_app_config/moon.proton")
   }
 }
 

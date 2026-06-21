@@ -1,13 +1,11 @@
-# Proton E2E Probes
+# Proton E2E
 
-This directory contains internal end-to-end probes for validating real Proton
-example applications. These packages are not user-facing examples.
+Internal CDP probes for CEF-backed examples.
 
-`test` connects to a running CEF app through Chrome DevTools Protocol via
-`justjavac/cdp`, evaluates scenario-specific checks in the loaded page, and
-exits with success or failure for the launcher script.
+The `test` package connects to a running example through
+`justjavac/cdp`, evaluates page checks, and exits with success or failure.
 
-Run the full smoke suite from the repository root:
+Run from the repository root:
 
 ```powershell
 node .\scripts\e2e_cdp_smoke.mjs

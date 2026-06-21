@@ -8,20 +8,21 @@ fn copy_extension_descriptor(
   descriptor : ExtensionDescriptor,
 ) -> ExtensionDescriptor {
   ExtensionDescriptor::new(
-    descriptor.schema_version(),
     descriptor.id(),
     descriptor.version(),
     descriptor.display_name(),
     descriptor.description(),
     descriptor.js_namespace(),
-    descriptor.manifest_key(),
-    descriptor.package_path(),
-    descriptor.spec_symbol(),
+    descriptor.moonbit_import_path(),
     descriptor.platforms(),
     descriptor.dependencies(),
-    descriptor.capabilities(),
-    descriptor.options_schema_path,
     descriptor.root_dir(),
+    publish_package=descriptor.publish_package(),
+    license=descriptor.license(),
+    repository=descriptor.repository(),
+    readme=descriptor.readme(),
+    keywords=descriptor.keywords(),
+    metadata_path=Some(descriptor.metadata_path()),
   )
 }
 

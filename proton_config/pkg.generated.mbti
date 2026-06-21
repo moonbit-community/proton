@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_config"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/lexer/basic",
+}
+
+// Values
+pub fn parse_moon_ext(name? : String, String) -> (Ast, Array[@basic.Report])
+
+pub fn parse_moon_mod(name? : String, String) -> (Ast, Array[@basic.Report])
+
+pub fn parse_moon_proton(name? : String, String) -> (Ast, Array[@basic.Report])
+
+// Errors
+
+// Types and methods
+pub(all) enum Ast {
+  Bool(Bool, @basic.Location)
+  Str(String, @basic.Location)
+  Int(String, @basic.Location)
+  Arr(Array[Ast], @basic.Location)
+  Obj(Array[ConfigField], @basic.Location)
+} derive(Eq, @debug.Debug)
+pub fn Ast::loc(Self) -> @basic.Location
+
+pub(all) struct ConfigField {
+  key : String
+  key_loc : @basic.Location
+  value : Ast
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+pub using @basic {type Location as ConfigLoc}
+
+// Traits
+

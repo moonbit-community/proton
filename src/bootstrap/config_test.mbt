@@ -37,57 +37,57 @@ fn manifest_test_path(name : String) -> String {
 }
 
 ///|
-/// Returns the detached JSON value used by document-editing assertions.
-fn manifest_document_json(document : AppManifestDocument) -> Json {
-  document.to_json()
-}
-
-///|
-test "load_app_manifest_from_json applies defaults" {
-  let result = load_app_manifest_from_json(
+/// Writes a minimal moon.proton with one extra top-level field and checks the error.
+fn expect_moon_proton_extra_field_error(
+  extra : String,
+  expected : String,
+) -> Unit {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-extra-field") catch {
+    _ => ()
+  }
+  let config_path = "target/proton-extra-field/moon.proton"
+  @mbfs.write_string_to_file(
+    config_path,
     (
-      #|{
-      #|  "window": {
-      #|    "title": "JSON Runtime",
-      #|    "width": 840,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "html",
-      #|    "value": "<html></html>"
-      #|  }
+      #|window = {
+      #|  title: "Invalid",
+      #|  width: 900,
+      #|  height: 700,
       #|}
-    ),
-  )
-  match result {
-    Err(error) => abort(error)
-    Ok(loaded) => {
-      let manifest = loaded.manifest()
-      assert_eq(manifest.window.title, "JSON Runtime")
-      assert_eq(manifest.window.width, 840)
-      assert_eq(manifest.window.height, 600)
-      assert_eq(manifest.window.size_hint, @manifest.WindowSizeHint::None)
-      assert_eq(manifest.debug, 0)
-      assert_eq(manifest.windows.length(), 0)
-      @debug.assert_eq(loaded.base_dir(), None)
-      match manifest.entry {
-        Html(html) => assert_eq(html, "<html></html>")
-        _ => abort("expected html entry")
-      }
-    }
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+    ) +
+    extra +
+    "\n",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_config_manifest_from_file(config_path) {
+    Ok(_) => abort("expected moon.proton field rejection")
+    Err(error) => if error != expected { abort("unexpected error: " + error) }
   }
 }
 
 ///|
-test "load_app_manifest_document_from_file rebases file entry" {
-  let result = load_app_manifest_document_from_file(
-    manifest_test_path("app.json"),
-  )
+test "load_proton_manifest_from_file rebases file entry and bool debug" {
+  let result = load_proton_manifest_from_file(manifest_test_path("moon.proton"))
   match result {
     Err(error) => abort(error)
-    Ok(document) => {
-      let loaded = document.loaded_manifest()
+    Ok(loaded) => {
       let manifest = loaded.manifest()
+      assert_eq(manifest.window.title, "Proton Runtime")
+      assert_eq(manifest.window.width, 840)
+      assert_eq(manifest.window.height, 600)
+      assert_eq(manifest.window.size_hint, @manifest.WindowSizeHint::Fixed)
+      assert_eq(manifest.debug, 1)
       match manifest.entry {
         File(path) =>
           assert_true(
@@ -95,407 +95,468 @@ test "load_app_manifest_document_from_file rebases file entry" {
           )
         _ => abort("expected file entry")
       }
-      match loaded.base_dir() {
-        None => abort("expected manifest base dir")
-        Some(base_dir) =>
-          assert_true(
-            normalize_test_slashes(base_dir).has_suffix("bootstrap/testdata"),
-          )
-      }
     }
   }
 }
 
 ///|
-test "load_app_manifest_from_json rejects unknown entry kinds" {
-  let result = load_app_manifest_from_json(
-    (
-      #|{
-      #|  "window": {
-      #|    "title": "Broken",
-      #|    "width": 800,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "markdown",
-      #|    "value": "README.md"
-      #|  }
-      #|}
-    ),
-  )
-  match result {
-    Ok(_) => abort("expected entry kind validation failure")
-    Err(error) => assert_eq(error, "unsupported app entry kind: markdown")
-  }
-}
-
-///|
-test "load_app_manifest_from_json parses additional windows" {
-  let result = load_app_manifest_from_json(
-    (
-      #|{
-      #|  "window": {
-      #|    "title": "Main",
-      #|    "width": 800,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "html",
-      #|    "value": "<html>Main</html>"
-      #|  },
-      #|  "windows": [
-      #|    {
-      #|      "id": "docs",
-      #|      "window": {
-      #|        "title": "Docs",
-      #|        "width": 640,
-      #|        "height": 480,
-      #|        "size_hint": "fixed"
-      #|      },
-      #|      "entry": {
-      #|        "kind": "url",
-      #|        "value": "https://example.com/docs"
-      #|      }
-      #|    }
-      #|  ]
-      #|}
-    ),
-  )
-  match result {
+test "load_config_manifest_from_file only accepts moon.proton" {
+  match load_config_manifest_from_file(manifest_test_path("moon.proton")) {
     Err(error) => abort(error)
-    Ok(loaded) => {
-      let manifest = loaded.manifest()
-      assert_eq(manifest.windows.length(), 1)
-      let window = manifest.windows[0]
-      assert_eq(window.id, "docs")
-      assert_eq(window.window.title, "Docs")
-      assert_eq(window.window.size_hint, @manifest.WindowSizeHint::Fixed)
-      match window.entry {
-        Url(url) => assert_eq(url, "https://example.com/docs")
-        _ => abort("expected url entry")
-      }
-    }
+    Ok(loaded) => assert_eq(loaded.manifest().debug, 1)
+  }
+  match load_config_manifest_from_file("target/app.json") {
+    Ok(_) => abort("expected moon.proton suffix error")
+    Err(error) => assert_eq(error, "config manifest must be moon.proton")
   }
 }
 
 ///|
-test "load_app_manifest_document_from_file rebases asset entry" {
-  let result = load_app_manifest_document_from_file(
-    manifest_test_path("asset_app.json"),
-  )
-  match result {
-    Err(error) => abort(error)
-    Ok(document) =>
-      match document.manifest().entry {
-        Asset(path) =>
-          assert_true(
-            normalize_test_slashes(path).has_suffix(
-              "bootstrap/testdata/frontend/index.html",
-            ),
-          )
-        _ => abort("expected asset entry")
-      }
+test "load_proton_manifest_from_file rejects extension settings" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
   }
-}
-
-///|
-test "load_app_manifest_from_json rejects legacy permissions field" {
-  let result = load_app_manifest_from_json(
+  @mbfs.create_dir("target/proton-unsupported") catch {
+    _ => ()
+  }
+  let config_path = "target/proton-unsupported/moon.proton"
+  @mbfs.write_string_to_file(
+    config_path,
     (
-      #|{
-      #|  "window": {
-      #|    "title": "Legacy",
-      #|    "width": 800,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "html",
-      #|    "value": "<html></html>"
-      #|  },
-      #|  "permissions": {
-      #|    "justjavac/proton-notification": false
-      #|  }
+      #|window = {
+      #|  title: "Invalid",
+      #|  width: 900,
+      #|  height: 700,
       #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|extensions = {}
+      #|
     ),
-  )
-  match result {
-    Ok(_) => abort("expected legacy permissions rejection")
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_config_manifest_from_file(config_path) {
+    Ok(_) => abort("expected extensions rejection")
     Err(error) =>
       assert_eq(
-        error, "app manifest.permissions is no longer supported; remove it",
+        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
       )
   }
 }
 
 ///|
-test "app manifest document can replace window entry and debug" {
-  let document = match
-    load_app_manifest_document_from_json(
-      (
-        #|{
-        #|  "window": {
-        #|    "title": "Main",
-        #|    "width": 800,
-        #|    "height": 600
-        #|  },
-        #|  "entry": {
-        #|    "kind": "html",
-        #|    "value": "<html>Main</html>"
-        #|  }
-        #|}
-      ),
-    ) {
-    Ok(document) => document
-    Err(error) => abort(error)
+test "load_proton_manifest_from_file rejects unsupported top-level fields" {
+  expect_moon_proton_extra_field_error(
+    "version = \"1.0.0\"", "unknown moon.proton field: version",
+  )
+  expect_moon_proton_extra_field_error(
+    "license = \"MIT\"", "unknown moon.proton field: license",
+  )
+  expect_moon_proton_extra_field_error(
+    "description = \"App\"", "unknown moon.proton field: description",
+  )
+  expect_moon_proton_extra_field_error(
+    "permissions = {}", "moon.proton field `permissions` is not supported in v1",
+  )
+  expect_moon_proton_extra_field_error(
+    "windows = []", "moon.proton field `windows` is not supported in v1",
+  )
+  expect_moon_proton_extra_field_error(
+    "debug = 1", "moon.proton debug must be a bool",
+  )
+}
+
+///|
+test "load_proton_project_config_from_file decodes tooling blocks and moon.mod metadata" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
   }
-  let updated = match
-    document.set_window(
-      @manifest.WindowManifest::new(
-        "Settings",
-        420,
-        320,
-        size_hint=@manifest.WindowSizeHint::Fixed,
-      ),
-    ) {
-    Ok(updated) => updated
-    Err(error) => abort(error)
+  @mbfs.create_dir("target/proton-project-config") catch {
+    _ => ()
   }
-  let updated = match
-    updated.set_entry(@manifest.AppEntry::File("settings.html")) {
-    Ok(updated) => updated
-    Err(error) => abort(error)
+  @mbfs.write_string_to_file(
+    "target/proton-project-config/moon.mod",
+    (
+      #|name = "vendor/app"
+      #|version = "1.2.3"
+      #|license = "MIT"
+      #|description = "Desktop app"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let updated = match updated.set_debug(2) {
-    Ok(updated) => updated
+  let config_path = "target/proton-project-config/moon.proton"
+  @mbfs.write_string_to_file(
+    config_path,
+    (
+      #|product_name = "Desktop App"
+      #|identifier = "com.vendor.app"
+      #|
+      #|window = {
+      #|  title: "Runtime Title",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "asset",
+      #|  value: "frontend/dist/index.html",
+      #|}
+      #|
+      #|debug = true
+      #|
+      #|frontend = {
+      #|  dev_url: "http://localhost:5173",
+      #|  dist: "frontend/dist",
+      #|  before_dev: "npm run dev",
+      #|  before_build: "npm run build",
+      #|}
+      #|
+      #|bundle = {
+      #|  active: true,
+      #|  targets: ["app", "zip"],
+      #|  icon: ["icons/icon.ico"],
+      #|  resources: ["resources/**"],
+      #|  output: "target/proton-dist",
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+
+  let project = match load_proton_project_config_from_file(config_path) {
+    Ok(project) => project
     Err(error) => abort(error)
   }
 
-  assert_eq(document.manifest().window.title, "Main")
-  assert_eq(document.manifest().debug, 0)
+  assert_eq(project.manifest().manifest().debug, 1)
+  let metadata = project.metadata()
+  assert_eq(metadata.product_name(), "Desktop App")
+  @debug.assert_eq(metadata.identifier(), Some("com.vendor.app"))
+  @debug.assert_eq(metadata.version(), Some("1.2.3"))
+  @debug.assert_eq(metadata.description(), Some("Desktop app"))
+  @debug.assert_eq(metadata.license(), Some("MIT"))
 
-  let manifest = updated.manifest()
-  assert_eq(manifest.window.title, "Settings")
-  assert_eq(manifest.window.width, 420)
-  assert_eq(manifest.window.height, 320)
-  assert_eq(manifest.window.size_hint, @manifest.WindowSizeHint::Fixed)
-  assert_eq(manifest.debug, 2)
-  match manifest.entry {
-    File(path) => assert_eq(path, "settings.html")
-    _ => abort("expected file entry")
-  }
-
-  match manifest_document_json(updated) {
-    Object(object) => {
-      match object.get("window") {
-        Some(Object(window_object)) => {
-          @debug.assert_eq(
-            window_object.get("title"),
-            Some(Json::string("Settings")),
-          )
-          @debug.assert_eq(
-            window_object.get("width"),
-            Some(ToJson::to_json(420)),
-          )
-          @debug.assert_eq(
-            window_object.get("height"),
-            Some(ToJson::to_json(320)),
-          )
-          @debug.assert_eq(
-            window_object.get("size_hint"),
-            Some(Json::string("fixed")),
-          )
-        }
-        _ => abort("expected window object")
-      }
-      match object.get("entry") {
-        Some(Object(entry_object)) => {
-          @debug.assert_eq(entry_object.get("kind"), Some(Json::string("file")))
-          @debug.assert_eq(
-            entry_object.get("value"),
-            Some(Json::string("settings.html")),
-          )
-        }
-        _ => abort("expected entry object")
-      }
-      @debug.assert_eq(object.get("debug"), Some(ToJson::to_json(2)))
+  match project.frontend() {
+    None => abort("expected frontend config")
+    Some(frontend) => {
+      @debug.assert_eq(frontend.dev_url(), Some("http://localhost:5173"))
+      @debug.assert_eq(frontend.dist(), Some("frontend/dist"))
+      @debug.assert_eq(frontend.before_dev(), Some("npm run dev"))
+      @debug.assert_eq(frontend.before_build(), Some("npm run build"))
     }
-    _ => abort("expected manifest object")
-  }
-}
-
-///|
-test "app manifest document persists asset entry kind" {
-  let document = match
-    load_app_manifest_document_from_json(
-      (
-        #|{
-        #|  "window": {
-        #|    "title": "Main",
-        #|    "width": 800,
-        #|    "height": 600
-        #|  },
-        #|  "entry": {
-        #|    "kind": "html",
-        #|    "value": "<html>Main</html>"
-        #|  }
-        #|}
-      ),
-    ) {
-    Ok(document) => document
-    Err(error) => abort(error)
-  }
-  let updated = match
-    document.set_entry(@manifest.AppEntry::Asset("frontend/index.html")) {
-    Ok(updated) => updated
-    Err(error) => abort(error)
   }
 
-  match updated.manifest().entry {
-    Asset(path) => assert_eq(path, "frontend/index.html")
-    _ => abort("expected asset entry")
+  match project.bundle() {
+    None => abort("expected bundle config")
+    Some(bundle) => {
+      assert_true(bundle.active())
+      @debug.assert_eq(bundle.targets(), ["app", "zip"])
+      @debug.assert_eq(bundle.icon(), ["icons/icon.ico"])
+      @debug.assert_eq(bundle.resources(), ["resources/**"])
+      assert_eq(bundle.output(), "target/proton-dist")
+
+      let targets = bundle.targets()
+      targets.push("mutated")
+      @debug.assert_eq(bundle.targets(), ["app", "zip"])
+    }
   }
 
-  match manifest_document_json(updated) {
-    Object(object) =>
-      match object.get("entry") {
-        Some(Object(entry_object)) => {
+  let dev_loaded = project.dev_manifest()
+  @debug.assert_eq(dev_loaded.base_dir(), project.manifest().base_dir())
+  match dev_loaded.manifest().entry {
+    Url(url) => assert_eq(url, "http://localhost:5173")
+    _ => abort("expected dev manifest to use frontend.dev_url")
+  }
+
+  match project.to_summary_json() {
+    Object(summary) => {
+      match summary.get("runtime") {
+        Some(Object(runtime)) => {
+          @debug.assert_eq(runtime.get("debug"), Some(Json::boolean(true)))
+          match runtime.get("entry") {
+            Some(Object(entry)) => {
+              @debug.assert_eq(entry.get("kind"), Some(Json::string("asset")))
+              @debug.assert_eq(
+                entry.get("value"),
+                Some(Json::string("frontend/dist/index.html")),
+              )
+            }
+            _ => abort("expected runtime.entry summary")
+          }
+          match runtime.get("dev_entry") {
+            Some(Object(entry)) => {
+              @debug.assert_eq(entry.get("kind"), Some(Json::string("url")))
+              @debug.assert_eq(
+                entry.get("value"),
+                Some(Json::string("http://localhost:5173")),
+              )
+            }
+            _ => abort("expected runtime.dev_entry summary")
+          }
+        }
+        _ => abort("expected runtime summary")
+      }
+      match summary.get("metadata") {
+        Some(Object(metadata)) => {
           @debug.assert_eq(
-            entry_object.get("kind"),
-            Some(Json::string("asset")),
+            metadata.get("product_name"),
+            Some(Json::string("Desktop App")),
           )
+          @debug.assert_eq(metadata.get("version"), Some(Json::string("1.2.3")))
+        }
+        _ => abort("expected metadata summary")
+      }
+      match summary.get("bundle") {
+        Some(Object(bundle)) => {
+          @debug.assert_eq(bundle.get("active"), Some(Json::boolean(true)))
           @debug.assert_eq(
-            entry_object.get("value"),
-            Some(Json::string("frontend/index.html")),
+            bundle.get("output"),
+            Some(Json::string("target/proton-dist")),
           )
         }
-        _ => abort("expected entry object")
+        _ => abort("expected bundle summary")
       }
-    _ => abort("expected manifest object")
+    }
+    _ => abort("expected object summary")
+  }
+
+  let loaded_summary = match
+    load_proton_project_summary_from_file(config_path) {
+    Ok(summary) => summary
+    Err(error) => abort(error)
+  }
+  @debug.assert_eq(loaded_summary, project.to_summary_json())
+}
+
+///|
+test "proton project dev_manifest keeps entry when dev_url is absent" {
+  let loaded = LoadedAppManifest::new(
+    @manifest.AppManifest::new(
+      @manifest.WindowManifest::new("App", 800, 600),
+      @manifest.AppEntry::Asset("frontend/dist/index.html"),
+      debug=1,
+    ),
+    base_dir=Some("workspace/app"),
+  )
+  let project = ProtonProjectConfig::new(
+    loaded,
+    ProtonAppMetadata::new("App"),
+    frontend=Some(ProtonFrontendConfig::new(dist=Some("frontend/dist"))),
+  )
+
+  let dev_loaded = project.dev_manifest()
+  @debug.assert_eq(dev_loaded.base_dir(), Some("workspace/app"))
+  match dev_loaded.manifest().entry {
+    Asset(path) => assert_eq(path, "frontend/dist/index.html")
+    _ => abort("expected original entry without frontend.dev_url")
+  }
+  assert_eq(dev_loaded.manifest().debug, 1)
+}
+
+///|
+test "load_proton_project_config_from_file validates tooling blocks" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-project-invalid") catch {
+    _ => ()
+  }
+  let config_path = "target/proton-project-invalid/moon.proton"
+  @mbfs.write_string_to_file(
+    config_path,
+    (
+      #|window = {
+      #|  title: "Invalid",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|frontend = {
+      #|  unknown: "value",
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+
+  match load_proton_project_config_from_file(config_path) {
+    Ok(_) => abort("expected frontend validation error")
+    Err(error) => assert_eq(error, "unknown frontend field: unknown")
   }
 }
 
 ///|
-test "app manifest document can upsert and remove secondary windows" {
-  let document = match
-    load_app_manifest_document_from_json(
-      (
-        #|{
-        #|  "window": {
-        #|    "title": "Main",
-        #|    "width": 800,
-        #|    "height": 600
-        #|  },
-        #|  "entry": {
-        #|    "kind": "html",
-        #|    "value": "<html>Main</html>"
-        #|  },
-        #|  "windows": [
-        #|    {
-        #|      "id": "docs",
-        #|      "window": {
-        #|        "title": "Docs",
-        #|        "width": 500,
-        #|        "height": 400
-        #|      },
-        #|      "entry": {
-        #|        "kind": "url",
-        #|        "value": "https://example.com/docs"
-        #|      }
-        #|    }
-        #|  ]
-        #|}
-      ),
-    ) {
-    Ok(document) => document
-    Err(error) => abort(error)
+test "load_proton_project_config_from_file validates active bundle metadata" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
   }
-  let with_settings = match
-    document.upsert_window(
-      @manifest.AppWindowManifest::new(
-        "settings",
-        @manifest.WindowManifest::new(
-          "Settings",
-          420,
-          320,
-          size_hint=@manifest.WindowSizeHint::Fixed,
-        ),
-        @manifest.AppEntry::File("settings.html"),
-      ),
-    ) {
-    Ok(updated) => updated
-    Err(error) => abort(error)
+  @mbfs.create_dir("target/proton-project-bundle-metadata") catch {
+    _ => ()
   }
-  let replaced_settings = match
-    with_settings.upsert_window(
-      @manifest.AppWindowManifest::new(
-        "settings",
-        @manifest.WindowManifest::new("Settings v2", 640, 480),
-        @manifest.AppEntry::Html("<html>Settings</html>"),
-      ),
-    ) {
-    Ok(updated) => updated
-    Err(error) => abort(error)
-  }
-  let without_docs = match replaced_settings.remove_window("docs") {
-    Ok(updated) => updated
-    Err(error) => abort(error)
-  }
-  let without_settings = match without_docs.remove_window("settings") {
-    Ok(updated) => updated
-    Err(error) => abort(error)
+  @mbfs.write_string_to_file(
+    "target/proton-project-bundle-metadata/moon.mod",
+    (
+      #|name = "vendor/app"
+      #|version = "1.0.0"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 
-  assert_eq(document.manifest().windows.length(), 1)
-  assert_eq(with_settings.manifest().windows.length(), 2)
-  assert_eq(replaced_settings.manifest().windows.length(), 2)
-  assert_eq(without_docs.manifest().windows.length(), 1)
-  assert_eq(without_settings.manifest().windows.length(), 0)
-
-  let settings_window = replaced_settings.manifest().windows[1]
-  assert_eq(settings_window.id, "settings")
-  assert_eq(settings_window.window.title, "Settings v2")
-  assert_eq(settings_window.window.width, 640)
-  match settings_window.entry {
-    Html(html) => assert_eq(html, "<html>Settings</html>")
-    _ => abort("expected html settings entry")
+  let missing_identifier = "target/proton-project-bundle-metadata/missing-identifier.moon.proton"
+  @mbfs.write_string_to_file(
+    missing_identifier,
+    (
+      #|window = {
+      #|  title: "Bundle App",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|bundle = {
+      #|  active: true,
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_proton_project_config_from_file(missing_identifier) {
+    Ok(_) => abort("expected identifier validation error")
+    Err(error) =>
+      assert_eq(
+        error, "moon.proton identifier is required when bundle.active = true",
+      )
   }
 
-  match manifest_document_json(without_settings) {
-    Object(object) => @debug.assert_eq(object.get("windows"), None)
-    _ => abort("expected manifest object")
+  @mbfs.create_dir("target/proton-project-bundle-no-version") catch {
+    _ => ()
+  }
+  let missing_version = "target/proton-project-bundle-no-version/moon.proton"
+  @mbfs.write_string_to_file(
+    missing_version,
+    (
+      #|identifier = "com.vendor.app"
+      #|
+      #|window = {
+      #|  title: "Bundle App",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|bundle = {
+      #|  active: true,
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_proton_project_config_from_file(missing_version) {
+    Ok(_) => abort("expected version validation error")
+    Err(error) =>
+      assert_eq(error, "moon.mod version is required when bundle.active = true")
   }
 }
 
 ///|
-test "app manifest document to_json returns a detached copy" {
-  let document = match
-    load_app_manifest_document_from_json(
-      (
-        #|{
-        #|  "window": {
-        #|    "title": "Detached",
-        #|    "width": 800,
-        #|    "height": 600
-        #|  },
-        #|  "entry": {
-        #|    "kind": "html",
-        #|    "value": "<html></html>"
-        #|  }
-        #|}
-      ),
-    ) {
-    Ok(document) => document
-    Err(error) => abort(error)
+test "load_proton_project_config_from_file validates bundle targets" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-project-bundle-targets") catch {
+    _ => ()
+  }
+  let unsupported_target = "target/proton-project-bundle-targets/unsupported.moon.proton"
+  @mbfs.write_string_to_file(
+    unsupported_target,
+    (
+      #|window = {
+      #|  title: "Bundle App",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|bundle = {
+      #|  targets: ["dmg"],
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_proton_project_config_from_file(unsupported_target) {
+    Ok(_) => abort("expected unsupported bundle target error")
+    Err(error) =>
+      assert_eq(error, "bundle.targets contains unsupported target: dmg")
   }
 
-  match manifest_document_json(document) {
-    Object(object) => object["debug"] = ToJson::to_json(99)
-    _ => abort("expected manifest object")
+  let duplicate_target = "target/proton-project-bundle-targets/duplicate.moon.proton"
+  @mbfs.write_string_to_file(
+    duplicate_target,
+    (
+      #|window = {
+      #|  title: "Bundle App",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|bundle = {
+      #|  targets: ["app", "app"],
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
-
-  match manifest_document_json(document) {
-    Object(object) => @debug.assert_eq(object.get("debug"), None)
-    _ => abort("expected manifest object")
+  match load_proton_project_config_from_file(duplicate_target) {
+    Ok(_) => abort("expected duplicate bundle target error")
+    Err(error) =>
+      assert_eq(error, "bundle.targets contains duplicate target: app")
   }
 }
 
@@ -558,34 +619,4 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
     roundtripped.extension_setting("justjavac/proton-tray"),
     Some(@manifest.ExtensionSetting::disabled()),
   )
-}
-
-///|
-test "load_app_manifest_from_json rejects extension settings" {
-  let result = load_app_manifest_from_json(
-    (
-      #|{
-      #|  "window": {
-      #|    "title": "Boolean Extensions",
-      #|    "width": 800,
-      #|    "height": 600
-      #|  },
-      #|  "entry": {
-      #|    "kind": "html",
-      #|    "value": "<html></html>"
-      #|  },
-      #|  "extensions": {
-      #|    "justjavac/proton-fs": true,
-      #|    "justjavac/proton-tray": false
-      #|  }
-      #|}
-    ),
-  )
-  match result {
-    Ok(_) => abort("expected extension settings rejection")
-    Err(error) =>
-      assert_eq(
-        error, "app manifest.extensions is no longer supported; declare extensions in MoonBit code with .extension(...)",
-      )
-  }
 }

@@ -352,13 +352,13 @@ fn App::run_without_commands(self : App) -> Result[Unit, String] {
       match self.extension_registry() {
         Err(error) => Err(error)
         Ok(registry) =>
-          match @bootstrap.load_document(path) {
+          match @bootstrap.load_config_manifest_from_file(path) {
             Err(error) => Err(error)
-            Ok(document) =>
+            Ok(loaded) =>
               create_app(
-                self.merge_config(document.manifest()),
+                self.merge_config(loaded.manifest()),
                 registry,
-                base_dir=document.base_dir(),
+                base_dir=loaded.base_dir(),
               ).bind(fn(app) {
                 app.run()
                 Ok(())
@@ -394,10 +394,10 @@ fn App::command_manifest(
 ) -> Result[(@manifest.AppManifest, String?), String] {
   match self.file_path {
     Some(path) =>
-      match @bootstrap.load_document(path) {
+      match @bootstrap.load_config_manifest_from_file(path) {
         Err(error) => Err(error)
-        Ok(document) =>
-          Ok((self.merge_config(document.manifest()), document.base_dir()))
+        Ok(loaded) =>
+          Ok((self.merge_config(loaded.manifest()), loaded.base_dir()))
       }
     None => Ok((self.inline_manifest(), None))
   }
@@ -468,7 +468,7 @@ fn App::set_entry(self : App, entry : @manifest.AppEntry) -> App {
 fn App::warn_config_override(self : App, field : String) -> Unit {
   if self.file_path is Some(_) {
     println(
-      "warning: app.json field \"" + field + "\" is overridden by inline code",
+      "warning: config field \"" + field + "\" is overridden by inline code",
     )
   }
 }

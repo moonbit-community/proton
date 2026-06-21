@@ -1,6 +1,0 @@
-{
-  "schema_version": 2,
-  "id": "justjavac/proton-dialog",
-  "namespace": "dialog",
-  "package": "justjavac/proton_ext/dialog"
-}

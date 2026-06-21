@@ -1,73 +1,20 @@
 # proton/runtime
 
-`justjavac/proton/runtime` is the lifecycle layer for app and window orchestration.
-It sits on top of `justjavac/proton/core`, which owns the native/JS bridge,
-ops runtime, resource tables, and low-level extension installation.
+`justjavac/proton/runtime` owns app and window lifecycle on top of
+`justjavac/proton/core`.
 
-Use:
+Use this package when you need lower-level `App` or `AppWindow` control. For
+ordinary applications, prefer the root `justjavac/proton` facade.
 
-- `justjavac/proton/webview` for the raw native `Webview`
-- `justjavac/proton/core` for `Extension`, `ExtensionSpec`, low-level install,
-  and the `window.__MoonBit__` bridge
-- `justjavac/proton/runtime` for `App`, `AppWindow`, and multi-window lifecycle
-- `justjavac/proton/bootstrap` for manifest loading/editing
-- `justjavac/proton` for registry-driven app planning and creation
+## Responsibilities
 
-This package does not decide which extensions are installed. That composition
-step now lives in `justjavac/proton`, while built-in extension packages live in
-the separate `justjavac/proton_ext` module.
+- create and run app windows
+- apply runtime manifests
+- install explicitly provided extension specs
+- keep `AppEntry::Asset` as a tooling distinction while loading it as a local file
 
-## JavaScript Surface
+## Related Packages
 
-The runtime installs a single global object:
-
-- `window.__MoonBit__.events.on(...)`
-- `window.__MoonBit__.<extension>.*`
-- `window.__MoonBit__.core.invokeOp(name, payload)` for low-level debugging
-
-Built-in and custom extensions use the same shape. For example:
-
-```js
-await window.__MoonBit__.fs.readFile("demo.txt");
-await window.__MoonBit__.echo.ping({ text: "hello" });
-window.__MoonBit__.events.on("fs.activity", console.log);
-```
-
-`AppEntry::Asset` is treated as a local file entry by the runtime. It is kept as
-a manifest-level distinction for tooling, but the runtime no longer installs a
-backend-specific synthetic origin.
-
-## Typical Usage
-
-For direct installation on a raw webview:
-
-```moonbit
-import {
-  "justjavac/proton/core" @core
-  "justjavac/proton/webview" @webview
-  "justjavac/proton_ext/path" @path
-}
-
-fn main {
-  let webview = @webview.Webview::new(debug=1)
-  @core.install_extension(webview, @path.extension())
-  webview.run()
-}
-```
-
-For normal app-style startup, prefer `justjavac/proton`:
-
-```moonbit
-import {
-  "justjavac/proton"
-  "justjavac/proton_ext/fs" @fs
-  "justjavac/proton_ext/path" @path
-}
-
-async fn main {
-  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
-  .extension(@fs.extension())
-  .extension(@path.extension())
-  .run_or_abort()
-}
-```
+- `justjavac/proton/core`: bridge, ops runtime, and extension host
+- `justjavac/proton/bootstrap`: `moon.proton` loading
+- `justjavac/proton`: ergonomic app composition

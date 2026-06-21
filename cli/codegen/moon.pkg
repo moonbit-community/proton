@@ -3,11 +3,12 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/list",
   "moonbitlang/core/string",
-  "justjavac/case",
+  "moonbitlang/lexer/basic",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/syntax",
+  "justjavac/proton_config",
 }
 
 warnings = "-29"

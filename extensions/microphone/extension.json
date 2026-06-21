@@ -1,6 +1,0 @@
-{
-  "schema_version": 2,
-  "id": "justjavac/proton-microphone",
-  "namespace": "microphone",
-  "package": "justjavac/proton_ext/microphone"
-}

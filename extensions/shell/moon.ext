@@ -1,0 +1,3 @@
+id = "justjavac/proton-shell"
+namespace = "shell"
+package = "@justjavac/proton-shell"

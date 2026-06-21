@@ -22,31 +22,19 @@ fn stub_descriptor(
   id : String,
   js_namespace : String,
   dependencies? : Array[String] = [],
-  package_path? : String = "justjavac/proton_ext/" + js_namespace,
-  spec_symbol? : String = "extension",
+  moonbit_import_path? : String = "justjavac/proton_ext/" + js_namespace,
 ) -> ExtensionDescriptor {
   ExtensionDescriptor::new(
-    2,
     id,
     "0.1.0",
     id,
     id + " extension",
     js_namespace,
-    id,
-    package_path,
-    spec_symbol,
+    moonbit_import_path,
     ["windows"],
     dependencies,
-    [id + ".demo"],
-    "./options.schema.json",
-    package_path,
+    moonbit_import_path,
   )
-}
-
-///|
-/// Resolves a catalog test fixture path from either module-local or workspace layout.
-fn catalog_test_path(path : String) -> String {
-  resolve_fixture_path([path, "src/catalog/" + path, "catalog/" + path])
 }
 
 ///|
@@ -60,21 +48,35 @@ fn builtin_extension_root(name : String) -> String {
 }
 
 ///|
+/// Resolves a catalog test fixture path from either module-local or workspace layout.
+fn catalog_test_path(path : String) -> String {
+  resolve_fixture_path([path, "src/catalog/" + path, "catalog/" + path])
+}
+
+///|
 test "extension descriptor constructor and accessors copy mutable arrays" {
   let platforms = ["windows"]
   let dependencies = ["vendor/base"]
-  let capabilities = ["vendor.demo"]
+  let keywords = ["demo"]
   let descriptor = ExtensionDescriptor::new(
-    2, "vendor/demo", "0.1.0", "Demo", "Demo extension", "demo", "vendor/demo", "vendor/extensions/demo",
-    "spec", platforms, dependencies, capabilities, "./options.schema.json", "vendor/extensions/demo",
+    "vendor/demo",
+    "0.1.0",
+    "Demo",
+    "Demo extension",
+    "demo",
+    "vendor/extensions/demo",
+    platforms,
+    dependencies,
+    "vendor/extensions/demo",
+    keywords~,
   )
 
   platforms.push("linux")
   dependencies.push("vendor/mutated")
-  capabilities.push("vendor.mutated")
+  keywords.push("mutated")
   @debug.assert_eq(descriptor.platforms(), ["windows"])
   @debug.assert_eq(descriptor.dependencies(), ["vendor/base"])
-  @debug.assert_eq(descriptor.capabilities(), ["vendor.demo"])
+  @debug.assert_eq(descriptor.keywords(), ["demo"])
 
   let exposed_dependencies = descriptor.dependencies()
   exposed_dependencies.push("vendor/changed")
@@ -90,7 +92,7 @@ test "discover_extension_descriptor_files can target one extension package" {
   }
 
   assert_eq(descriptor_paths.length(), 1)
-  assert_true(descriptor_paths[0].has_suffix("extension.json"))
+  assert_true(descriptor_paths[0].has_suffix("moon.ext"))
 
   let catalog = match
     load_extension_catalog_from_search_roots([builtin_extension_root("path")]) {
@@ -105,47 +107,50 @@ test "discover_extension_descriptor_files can target one extension package" {
 }
 
 ///|
-test "decode_extension_descriptor rejects unsafe codegen metadata fields" {
-  match
-    load_extension_descriptor_from_file(
-      catalog_test_path("testdata/invalid_codegen_package/extension.json"),
-    ) {
-    Ok(_) => abort("expected invalid package path")
+test "load_extension_descriptor_from_file requires moon.ext" {
+  match load_extension_descriptor_from_file("target/rejected/extension.json") {
+    Ok(_) => abort("expected moon.ext-only error")
     Err(error) =>
-      assert_true(error.contains("metadata package contains invalid character"))
-  }
-
-  match
-    load_extension_descriptor_from_file(
-      catalog_test_path("testdata/invalid_codegen_symbol/extension.json"),
-    ) {
-    Ok(_) => abort("expected invalid spec symbol")
-    Err(error) =>
-      assert_true(
-        error.contains(
-          "metadata spec_symbol must use only lowercase letters, digits, or _",
-        ),
-      )
+      assert_true(error.contains("extension metadata must be moon.ext"))
   }
 }
 
 ///|
-test "decode minimal app-command extension metadata uses defaults" {
+test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/minimal_extension") catch {
+  @mbfs.create_dir("target/moon-ext-module") catch {
     _ => ()
   }
-  let metadata_path = "target/minimal_extension/extension.json"
+  @mbfs.create_dir("target/moon-ext-module/fs") catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(
+    "target/moon-ext-module/moon.mod",
+    (
+      #|name = "vendor/exts"
+      #|version = "2.3.4"
+      #|description = "Vendor extension pack"
+      #|license = "MIT"
+      #|repository = "https://example.com/vendor/exts"
+      #|readme = "README.md"
+      #|keywords = [ "desktop", "extension" ]
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let metadata_path = "target/moon-ext-module/fs/moon.ext"
   @mbfs.write_string_to_file(
     metadata_path,
     (
-      #|{
-      #|  "schema_version": 2,
-      #|  "id": "vendor/minimal",
-      #|  "namespace": "minimal"
-      #|}
+      #|id = "vendor/fs"
+      #|namespace = "fs"
+      #|package = "@vendor/proton-fs"
+      #|dependencies = ["vendor/path"]
+      #|
     ),
     encoding="utf8",
   ) catch {
@@ -155,10 +160,100 @@ test "decode minimal app-command extension metadata uses defaults" {
     Ok(descriptor) => descriptor
     Err(error) => abort(error)
   }
-  assert_eq(descriptor.manifest_key(), "vendor/minimal")
-  assert_eq(descriptor.package_path(), "justjavac/proton_ext/minimal_extension")
-  assert_eq(descriptor.spec_symbol(), "extension")
-  @debug.assert_eq(descriptor.dependencies(), [])
+  assert_eq(descriptor.id(), "vendor/fs")
+  assert_eq(descriptor.version(), "2.3.4")
+  assert_eq(descriptor.description(), "Vendor extension pack")
+  @debug.assert_eq(descriptor.license(), Some("MIT"))
+  @debug.assert_eq(
+    descriptor.repository(),
+    Some("https://example.com/vendor/exts"),
+  )
+  @debug.assert_eq(descriptor.readme(), Some("README.md"))
+  @debug.assert_eq(descriptor.keywords(), ["desktop", "extension"])
+  assert_eq(descriptor.moonbit_import_path(), "vendor/exts/fs")
+  @debug.assert_eq(descriptor.publish_package(), Some("@vendor/proton-fs"))
+  @debug.assert_eq(descriptor.dependencies(), ["vendor/path"])
+
+  let descriptor_paths = match
+    discover_extension_descriptor_files(["target/moon-ext-module/fs"]) {
+    Ok(paths) => paths
+    Err(error) => abort(error)
+  }
+  assert_eq(descriptor_paths.length(), 1)
+  assert_true(descriptor_paths[0].has_suffix("moon.ext"))
+}
+
+///|
+test "decode moon.ext rejects invalid metadata" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/moon-ext-invalid") catch {
+    _ => ()
+  }
+
+  let unsupported_platform = "target/moon-ext-invalid/unsupported-platform.moon.ext"
+  @mbfs.write_string_to_file(
+    unsupported_platform,
+    (
+      #|id = "vendor/fs"
+      #|namespace = "fs"
+      #|platforms = ["windows", "ios"]
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_extension_descriptor_from_file(unsupported_platform) {
+    Ok(_) => abort("expected unsupported platform error")
+    Err(error) =>
+      assert_true(
+        error.contains("moon.ext platforms contains unsupported platform: ios"),
+      )
+  }
+
+  let self_dependency = "target/moon-ext-invalid/self-dependency.moon.ext"
+  @mbfs.write_string_to_file(
+    self_dependency,
+    (
+      #|id = "vendor/fs"
+      #|namespace = "fs"
+      #|dependencies = ["vendor/fs"]
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_extension_descriptor_from_file(self_dependency) {
+    Ok(_) => abort("expected self dependency error")
+    Err(error) =>
+      assert_true(
+        error.contains(
+          "moon.ext dependencies must not include itself: vendor/fs",
+        ),
+      )
+  }
+
+  let removed_field = "target/moon-ext-invalid/removed-field.moon.ext"
+  @mbfs.write_string_to_file(
+    removed_field,
+    (
+      #|id = "vendor/fs"
+      #|namespace = "fs"
+      #|spec_symbol = "extension"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_extension_descriptor_from_file(removed_field) {
+    Ok(_) => abort("expected removed field error")
+    Err(error) =>
+      assert_true(error.contains("unknown moon.ext field: spec_symbol"))
+  }
 }
 
 ///|
@@ -176,21 +271,52 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
   ids.sort()
   @debug.assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/proton-path"])
 
-  let schema = match catalog.load_schema("vendor/echo") {
-    Ok(schema) => schema
-    Err(error) => abort(error)
+  match catalog.to_summary_json() {
+    Object(summary) =>
+      match summary.get("extensions") {
+        Some(Array(extensions)) => {
+          assert_eq(extensions.length(), 3)
+          match extensions[0] {
+            Object(extension) => {
+              @debug.assert_eq(
+                extension.get("id"),
+                Some(Json::string("vendor/base")),
+              )
+              @debug.assert_eq(
+                extension.get("metadata_format"),
+                Some(Json::string("moon.ext")),
+              )
+            }
+            _ => abort("expected extension summary object")
+          }
+          match extensions[2] {
+            Object(extension) => {
+              @debug.assert_eq(
+                extension.get("id"),
+                Some(Json::string("justjavac/proton-path")),
+              )
+              @debug.assert_eq(
+                extension.get("moonbit_import_path"),
+                Some(Json::string("justjavac/proton_ext/path")),
+              )
+            }
+            _ => abort("expected extension summary object")
+          }
+        }
+        _ => abort("expected extensions summary array")
+      }
+    _ => abort("expected catalog summary object")
   }
 
-  assert_eq(schema.descriptor_id(), "vendor/echo")
-  assert_true(schema.path().has_suffix("options.schema.json"))
-  match schema.json() {
-    Object(object) =>
-      @debug.assert_eq(
-        object.get("title"),
-        Some(Json::string("vendor echo options")),
-      )
-    _ => abort("expected schema object")
+  let summary_from_roots = match
+    load_extension_catalog_summary_from_search_roots([
+      builtin_extension_root("path"),
+      catalog_test_path("testdata/vendor_extensions"),
+    ]) {
+    Ok(summary) => summary
+    Err(error) => abort(error)
   }
+  @debug.assert_eq(summary_from_roots, catalog.to_summary_json())
 }
 
 ///|
@@ -220,8 +346,7 @@ test "build_extension_link_plan expands metadata dependencies in order" {
   @debug.assert_eq(plan.extension_ids(), [
     "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
   ])
-  assert_eq(plan.inputs()[0].package_path(), "justjavac/proton_ext/path")
-  assert_eq(plan.inputs()[1].spec_symbol(), "extension")
+  assert_eq(plan.inputs()[0].moonbit_import_path(), "justjavac/proton_ext/path")
 
   let inputs = plan.inputs()
   inputs.push(inputs[0])
