@@ -90,6 +90,90 @@ test "moon_config adapter reports parse failures" {
 }
 
 ///|
+test "moon.proton reader extracts app and frontend fields" {
+  let dir = "target/proton-doctor-app-config"
+  ensure_test_dir(dir)
+  let config_path = path_join(dir, "moon.proton")
+  @mbfs.write_string_to_file(
+    config_path,
+    (
+      #|window = {
+      #|  title: "Demo",
+      #|  width: 960,
+      #|  height: 720,
+      #|  size_hint: "none",
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "file",
+      #|  value: "app.html",
+      #|}
+      #|
+      #|debug = true
+      #|
+      #|frontend = {
+      #|  before_build: "npm run build",
+      #|  dist: "dist",
+      #|  dev_url: "http://localhost:5173/",
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let config = read_proton_project_config(config_path).unwrap()
+  assert_eq(config.window.title, "Demo")
+  assert_eq(config.window.width, 960)
+  assert_eq(config.entry.kind, "file")
+  assert_eq(config.entry.value, "app.html")
+  assert_true(config.debug)
+  match config.frontend {
+    Some(frontend) => {
+      @debug.assert_eq(frontend.before_build, Some("npm run build"))
+      @debug.assert_eq(frontend.dist, Some("dist"))
+      @debug.assert_eq(frontend.dev_url, Some("http://localhost:5173/"))
+    }
+    None => abort("expected frontend")
+  }
+}
+
+///|
+test "moon.proton reader rejects manifest extensions" {
+  let dir = "target/proton-doctor-app-config-reject"
+  ensure_test_dir(dir)
+  let config_path = path_join(dir, "moon.proton")
+  @mbfs.write_string_to_file(
+    config_path,
+    (
+      #|window = {
+      #|  title: "Demo",
+      #|  width: 960,
+      #|  height: 720,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "file",
+      #|  value: "app.html",
+      #|}
+      #|
+      #|extensions = {}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match read_proton_project_config(config_path) {
+    Err(error) =>
+      assert_eq(
+        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+      )
+    Ok(_) => abort("expected moon.proton extensions to be rejected")
+  }
+}
+
+///|
 test "text renderer uses utf8 symbols and dry run note" {
   let report = DoctorReport::new(
     [

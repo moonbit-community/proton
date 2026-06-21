@@ -110,8 +110,8 @@ priv struct ProjectDoctorInfo {
   mode : ProjectMode
   moon_mod_path : String?
   moon_pkg_path : String?
+  moon_proton_path : String?
   app_json_path : String?
-  proton_cli_json_path : String?
 }
 
 ///|
@@ -147,4 +147,33 @@ priv enum MoonConfigReadError {
   MissingFile(String)
   ReadFailed(String, String)
   ParseFailed(String, String)
+}
+
+///|
+priv struct DoctorAppWindow {
+  title : String
+  width : Int
+  height : Int
+  size_hint : String
+}
+
+///|
+priv struct DoctorAppEntry {
+  kind : String
+  value : String
+}
+
+///|
+priv struct DoctorFrontendConfig {
+  before_build : String?
+  dist : String?
+  dev_url : String?
+}
+
+///|
+priv struct DoctorAppConfig {
+  window : DoctorAppWindow
+  entry : DoctorAppEntry
+  debug : Bool
+  frontend : DoctorFrontendConfig?
 }

@@ -56,21 +56,20 @@ fn option_string_or(value : String?, fallback : String) -> String {
 }
 
 ///|
-fn option_int_string_or(value : Int?, fallback : String) -> String {
-  match value {
-    Some(value) => value.to_string()
-    None => fallback
-  }
-}
-
-///|
-fn manifest_key_to_builtin_import(key : String) -> String {
-  let prefix = "justjavac/proton-"
-  if key.has_prefix(prefix) {
-    "justjavac/proton_ext/" +
-    key.unsafe_substring(start=prefix.length(), end=key.length()).to_string()
-  } else {
-    key
+fn resolve_cef_root(project : ProjectDoctorInfo) -> String {
+  match @sys.get_env_var("PROTON_CEF_ROOT") {
+    Some(root) => root
+    None => {
+      let project_cache = path_join(project.root, ".cef-cache")
+      if @mbfs.path_exists(project_cache) {
+        project_cache
+      } else {
+        match find_up(project.root, ".cef-cache") {
+          Some(path) => path
+          None => project_cache
+        }
+      }
+    }
   }
 }
 
@@ -101,10 +100,7 @@ fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
   lines.push(
     DoctorLine::new(Unknown, "npm: version probing not implemented yet"),
   )
-  let cef_root = match @sys.get_env_var("PROTON_CEF_ROOT") {
-    Some(root) => root
-    None => path_join(project.root, ".cef-cache")
-  }
+  let cef_root = resolve_cef_root(project)
   if @mbfs.path_exists(cef_root) {
     lines.push(DoctorLine::new(Ok, "CEF root: " + cef_root))
     let version_path = path_join(cef_root, "version.txt")
@@ -176,15 +172,14 @@ fn collect_project(project : ProjectDoctorInfo) -> DoctorSection {
   lines.push(
     DoctorLine::new(
       Neutral,
-      "app.json: " + option_path_or_missing(project.app_json_path),
+      "moon.proton: " + option_path_or_missing(project.moon_proton_path),
     ),
   )
-  lines.push(
-    DoctorLine::new(
-      Neutral,
-      "proton.cli.json: " + option_path_or_missing(project.proton_cli_json_path),
-    ),
-  )
+  match project.app_json_path {
+    Some(path) =>
+      lines.push(DoctorLine::new(Neutral, "legacy app.json: " + path))
+    None => ()
+  }
   DoctorSection::new("Project", Neutral, lines)
 }
 
@@ -306,44 +301,6 @@ fn collect_packages(
 }
 
 ///|
-fn configured_extension_keys(app_json_path : String?) -> Array[String] {
-  match app_json_path {
-    Some(path) =>
-      if @mbfs.path_exists(path) {
-        let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-          _ => ""
-        }
-        if text == "" {
-          []
-        } else {
-          try @json.parse(text) catch {
-            _ => []
-          } noraise {
-            json =>
-              match json {
-                Object(object) =>
-                  match object.get("extensions") {
-                    Some(Object(extensions)) => {
-                      let keys : Array[String] = []
-                      for key, _ in extensions {
-                        keys.push(key)
-                      }
-                      keys
-                    }
-                    _ => []
-                  }
-                _ => []
-              }
-          }
-        }
-      } else {
-        []
-      }
-    None => []
-  }
-}
-
-///|
 fn collect_extensions(
   project : ProjectDoctorInfo,
   package_config : Result[MoonPackageConfig, MoonConfigReadError]?,
@@ -353,14 +310,20 @@ fn collect_extensions(
       package_imports_with_prefix(Some(config), "justjavac/proton_ext/")
     _ => []
   }
-  let configured = configured_extension_keys(project.app_json_path)
   let extension_root = match find_up(project.root, "extensions") {
     Some(path) => path
     None => path_join(project.root, "extensions")
   }
   let discovered = if @mbfs.path_exists(extension_root) {
     let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
-    entries.length()
+    let mut count = 0
+    for entry in entries {
+      let ext_path = path_join(path_join(extension_root, entry), "moon.ext")
+      if (@mbfs.is_file(ext_path) catch { _ => false }) {
+        count += 1
+      }
+    }
+    count
   } else {
     0
   }
@@ -373,148 +336,165 @@ fn collect_extensions(
   } else {
     lines.push(DoctorLine::new(Neutral, "imported packages: none"))
   }
-  if configured.length() > 0 {
-    lines.push(
-      DoctorLine::new(
-        Neutral,
-        "configured in manifest: " + configured.join(", "),
-      ),
-    )
-    for key in configured {
-      let expected_import = manifest_key_to_builtin_import(key)
-      if !imported.contains(expected_import) {
-        lines.push(
-          DoctorLine::new(
-            Warn,
-            "configured but not proven linked: " + key,
-            hint="manifest options do not link native code; add an explicit MoonBit extension link",
-          ),
-        )
-      }
-    }
-  }
   DoctorSection::new("Extensions", section_status(lines), lines)
 }
 
 ///|
-fn json_string_field(object : Map[String, Json], key : String) -> String? {
-  match object.get(key) {
-    Some(String(value)) => Some(value)
-    _ => None
+fn project_relative_path(project : ProjectDoctorInfo, path : String) -> String {
+  let windows_prefix = project.root + "\\"
+  let unix_prefix = project.root + "/"
+  if path.has_prefix(windows_prefix) {
+    path
+    .unsafe_substring(start=windows_prefix.length(), end=path.length())
+    .to_string()
+  } else if path.has_prefix(unix_prefix) {
+    path
+    .unsafe_substring(start=unix_prefix.length(), end=path.length())
+    .to_string()
+  } else {
+    path
   }
 }
 
 ///|
-fn json_int_field(object : Map[String, Json], key : String) -> Int? {
-  match object.get(key) {
-    Some(Number(value, ..)) => Some(value.to_int())
-    _ => None
+fn entry_path(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
+  if entry.kind == "file" || entry.kind == "asset" {
+    if entry.value.has_prefix("\\") ||
+      entry.value.has_prefix("/") ||
+      entry.value.contains(":\\") ||
+      entry.value.contains(":/") {
+      entry.value
+    } else {
+      path_join(project.root, entry.value)
+    }
+  } else {
+    entry.value
+  }
+}
+
+///|
+fn entry_text(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
+  match entry.kind {
+    "html" => "html inline"
+    "url" => "url " + entry.value
+    "file" =>
+      "file " + project_relative_path(project, entry_path(project, entry))
+    "asset" =>
+      "asset " + project_relative_path(project, entry_path(project, entry))
+    _ => entry.kind + " " + entry.value
+  }
+}
+
+///|
+fn push_entry_existence(
+  lines : Array[DoctorLine],
+  project : ProjectDoctorInfo,
+  entry : DoctorAppEntry,
+) -> Unit {
+  let path = entry_path(project, entry)
+  match entry.kind {
+    "file" =>
+      if @mbfs.path_exists(path) {
+        lines.push(DoctorLine::new(Ok, "entry file exists"))
+      } else {
+        lines.push(
+          DoctorLine::new(
+            Error,
+            "entry file missing: " + project_relative_path(project, path),
+          ),
+        )
+      }
+    "asset" =>
+      if @mbfs.path_exists(path) {
+        lines.push(DoctorLine::new(Ok, "entry asset exists"))
+      } else {
+        lines.push(
+          DoctorLine::new(
+            Warn,
+            "entry asset missing: " + project_relative_path(project, path),
+            hint="run frontend.before_build before release builds",
+          ),
+        )
+      }
+    _ => ()
+  }
+}
+
+///|
+fn push_optional_app_line(
+  lines : Array[DoctorLine],
+  label : String,
+  value : String?,
+) -> Unit {
+  match value {
+    Some(value) => lines.push(DoctorLine::new(Neutral, label + ": " + value))
+    None => ()
+  }
+}
+
+///|
+fn push_loaded_app(
+  lines : Array[DoctorLine],
+  project : ProjectDoctorInfo,
+  config : DoctorAppConfig,
+) -> Unit {
+  let window = config.window
+  lines.push(
+    DoctorLine::new(
+      Neutral,
+      "window: \"" +
+      window.title +
+      "\" " +
+      window.width.to_string() +
+      "x" +
+      window.height.to_string() +
+      " size_hint=" +
+      window.size_hint,
+    ),
+  )
+  lines.push(
+    DoctorLine::new(Neutral, "entry: " + entry_text(project, config.entry)),
+  )
+  push_entry_existence(lines, project, config.entry)
+  lines.push(DoctorLine::new(Neutral, "debug: \{config.debug}"))
+  match config.frontend {
+    Some(frontend) => {
+      push_optional_app_line(
+        lines,
+        "before_build_command",
+        frontend.before_build,
+      )
+      push_optional_app_line(lines, "frontend_dist", frontend.dist)
+      push_optional_app_line(lines, "dev_url", frontend.dev_url)
+    }
+    None => ()
   }
 }
 
 ///|
 fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
-  match project.app_json_path {
-    None => lines.push(DoctorLine::new(Warn, "app.json: not found"))
-    Some(path) => {
-      let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-        err => {
+  match project.moon_proton_path {
+    Some(path) =>
+      match read_proton_project_config(path) {
+        Ok(config) => push_loaded_app(lines, project, config)
+        Err(error) =>
+          lines.push(
+            DoctorLine::new(Error, "moon.proton: failed to load", hint=error),
+          )
+      }
+    None =>
+      match project.app_json_path {
+        Some(path) =>
           lines.push(
             DoctorLine::new(
-              Error,
-              "app.json: failed to read",
-              hint=@debug.render(@debug.to_repr(err)),
+              Warn,
+              "app.json: legacy runtime manifest found at " + path,
+              hint="create moon.proton; app.json is no longer the user-facing Proton config",
             ),
           )
-          return DoctorSection::new("App", section_status(lines), lines)
-        }
+        None => lines.push(DoctorLine::new(Warn, "moon.proton: not found"))
       }
-      let parsed = @json.parse(text) catch {
-        err => {
-          lines.push(
-            DoctorLine::new(
-              Error,
-              "app.json: failed to parse",
-              hint=err.to_string(),
-            ),
-          )
-          return DoctorSection::new("App", section_status(lines), lines)
-        }
-      }
-      match parsed {
-        Object(root) => {
-          match root.get("window") {
-            Some(Object(window)) => {
-              let title = option_string_or(
-                json_string_field(window, "title"),
-                "Untitled",
-              )
-              let width = option_int_string_or(
-                json_int_field(window, "width"),
-                "?",
-              )
-              let height = option_int_string_or(
-                json_int_field(window, "height"),
-                "?",
-              )
-              let size_hint = option_string_or(
-                json_string_field(window, "size_hint"),
-                "none",
-              )
-              lines.push(
-                DoctorLine::new(
-                  Neutral,
-                  "window: \"" +
-                  title +
-                  "\" " +
-                  width +
-                  "x" +
-                  height +
-                  " size_hint=" +
-                  size_hint,
-                ),
-              )
-            }
-            _ => lines.push(DoctorLine::new(Warn, "window: missing"))
-          }
-          match root.get("entry") {
-            Some(Object(entry)) => {
-              let kind = option_string_or(
-                json_string_field(entry, "kind"),
-                "unknown",
-              )
-              let value = option_string_or(
-                json_string_field(entry, "value"),
-                "",
-              )
-              lines.push(
-                DoctorLine::new(Neutral, "entry: " + kind + " " + value),
-              )
-              if kind == "file" && value != "" {
-                let entry_path = path_join(project.root, value)
-                if @mbfs.path_exists(entry_path) {
-                  lines.push(DoctorLine::new(Ok, "entry file exists"))
-                } else {
-                  lines.push(
-                    DoctorLine::new(Error, "entry file missing: " + value),
-                  )
-                }
-              }
-            }
-            _ => lines.push(DoctorLine::new(Warn, "entry: missing"))
-          }
-          let debug = match root.get("debug") {
-            Some(Number(value, ..)) => value.to_int() > 0
-            Some(True) => true
-            Some(False) => false
-            _ => false
-          }
-          lines.push(DoctorLine::new(Neutral, "debug: \{debug}"))
-        }
-        _ => lines.push(DoctorLine::new(Error, "app.json: expected object"))
-      }
-    }
   }
   DoctorSection::new("App", section_status(lines), lines)
 }

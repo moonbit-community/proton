@@ -48,6 +48,13 @@ pub fn run(
   verbose~ : Bool,
   json~ : Bool,
 ) -> Result[Unit, String] {
+  if !@mbfs.path_exists(cwd) {
+    return Err("cwd does not exist: " + cwd)
+  }
+  let cwd_is_dir = @mbfs.is_dir(cwd) catch { _ => false }
+  if !cwd_is_dir {
+    return Err("cwd is not a directory: " + cwd)
+  }
   let options = DoctorOptions::new(cwd~, dry_run~, verbose~, json~)
   let report = build_doctor_report(options)
   if options.json {

@@ -43,11 +43,11 @@ fn find_up(start : String, file_name : String) -> String? {
 
 ///|
 fn project_mode(
+  moon_proton_path : String?,
   app_json_path : String?,
   moon_mod_path : String?,
-  proton_cli_json_path : String?,
 ) -> ProjectMode {
-  match (app_json_path, proton_cli_json_path, moon_mod_path) {
+  match (moon_proton_path, app_json_path, moon_mod_path) {
     (Some(_), _, _) | (_, Some(_), _) => AppProject
     (_, _, Some(_)) => MoonPackage
     _ => PlainDirectory
@@ -56,21 +56,19 @@ fn project_mode(
 
 ///|
 fn discover_project(cwd : String) -> ProjectDoctorInfo {
-  let proton_cli_json_path = if @mbfs.path_exists(
-      path_join(cwd, "proton.cli.json"),
-    ) {
-    Some(path_join(cwd, "proton.cli.json"))
-  } else {
-    None
-  }
+  let moon_proton_path = find_up(cwd, "moon.proton")
   let app_json_path = find_up(cwd, "app.json")
   let moon_mod_path = find_up(cwd, "moon.mod")
   let moon_pkg_path = match find_up(cwd, "moon.pkg") {
     Some(path) => Some(path)
     None => None
   }
-  let root = match (proton_cli_json_path, app_json_path, moon_mod_path) {
-    (Some(_), _, _) => cwd
+  let root = match (moon_proton_path, app_json_path, moon_mod_path) {
+    (Some(path), _, _) =>
+      match path_parent(path) {
+        Some(parent) => parent
+        None => cwd
+      }
     (_, Some(path), _) =>
       match path_parent(path) {
         Some(parent) => parent
@@ -94,10 +92,10 @@ fn discover_project(cwd : String) -> ProjectDoctorInfo {
   {
     root,
     package_dir,
-    mode: project_mode(app_json_path, moon_mod_path, proton_cli_json_path),
+    mode: project_mode(moon_proton_path, app_json_path, moon_mod_path),
     moon_mod_path,
     moon_pkg_path,
+    moon_proton_path,
     app_json_path,
-    proton_cli_json_path,
   }
 }
