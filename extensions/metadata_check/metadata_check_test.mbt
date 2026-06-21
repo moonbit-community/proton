@@ -20,9 +20,9 @@ fn resolve_fixture_path(candidates : Array[String]) -> String {
 /// Resolves the metadata file path for one built-in extension fixture.
 fn extension_metadata_path(name : String) -> String {
   resolve_fixture_path([
-    "../" + name + "/extension.json",
-    name + "/extension.json",
-    "extensions/" + name + "/extension.json",
+    "../" + name + "/moon.ext",
+    name + "/moon.ext",
+    "extensions/" + name + "/moon.ext",
   ])
 }
 
@@ -31,7 +31,10 @@ fn extension_metadata_path(name : String) -> String {
 fn load_descriptor(name : String) -> @catalog.ExtensionDescriptor {
   match
     @catalog.load_extension_descriptor_from_file(extension_metadata_path(name)) {
-    Ok(descriptor) => descriptor
+    Ok(descriptor) => {
+      assert_true(descriptor.metadata_path().has_suffix("moon.ext"))
+      descriptor
+    }
     Err(error) => abort(error)
   }
 }
@@ -48,13 +51,10 @@ fn assert_metadata_matches_spec(
   assert_eq(descriptor.id(), spec.id())
   assert_eq(descriptor.id(), expected_id)
   @debug.assert_eq(descriptor.dependencies(), spec.dependencies())
-  assert_eq(descriptor.package_path(), package_path)
-  assert_eq(descriptor.spec_symbol(), "extension")
-  assert_eq(descriptor.manifest_key(), expected_id)
+  assert_eq(descriptor.moonbit_import_path(), package_path)
   assert_eq(spec.js_namespace(), expected_namespace)
   assert_eq(descriptor.js_namespace(), expected_namespace)
   assert_true(descriptor.platforms().length() > 0)
-  assert_true(descriptor.capabilities().length() > 0)
 }
 
 ///|
@@ -69,9 +69,7 @@ fn assert_metadata_matches_app_command_spec(
   assert_eq(descriptor.id(), spec.id())
   assert_eq(descriptor.id(), expected_id)
   @debug.assert_eq(descriptor.dependencies(), spec.dependencies())
-  assert_eq(descriptor.package_path(), package_path)
-  assert_eq(descriptor.spec_symbol(), "extension")
-  assert_eq(descriptor.manifest_key(), expected_id)
+  assert_eq(descriptor.moonbit_import_path(), package_path)
   assert_eq(spec.js_namespace(), expected_namespace)
   assert_eq(descriptor.js_namespace(), expected_namespace)
 }

@@ -1,6 +1,0 @@
-{
-  "schema_version": 2,
-  "id": "justjavac/proton-keepawake",
-  "namespace": "keepAwake",
-  "package": "justjavac/proton_ext/keepawake"
-}

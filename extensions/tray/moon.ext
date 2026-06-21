@@ -1,0 +1,3 @@
+id = "justjavac/proton-tray"
+namespace = "tray"
+package = "@justjavac/proton-tray"

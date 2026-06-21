@@ -1,0 +1,3 @@
+id = "justjavac/proton-dialog"
+namespace = "dialog"
+package = "@justjavac/proton-dialog"

@@ -2,8 +2,7 @@
 /// One explicit import-time input needed to link an extension into an app project.
 pub struct ExtensionLinkInput {
   id : String
-  package_path : String
-  spec_symbol : String
+  moonbit_import_path : String
 } derive(Eq, Debug)
 
 ///|
@@ -36,10 +35,11 @@ pub fn ExtensionLinkPlan::extension_ids(
 }
 
 ///|
-/// Returns the import path needed to link this extension.
-/// Tooling writes this path into generated `moon.pkg` import blocks.
-pub fn ExtensionLinkInput::package_path(self : ExtensionLinkInput) -> String {
-  self.package_path
+/// Returns the MoonBit import path needed to link this extension.
+pub fn ExtensionLinkInput::moonbit_import_path(
+  self : ExtensionLinkInput,
+) -> String {
+  self.moonbit_import_path
 }
 
 ///|
@@ -47,13 +47,6 @@ pub fn ExtensionLinkInput::package_path(self : ExtensionLinkInput) -> String {
 /// This is the same id used by manifests and catalogs during planning.
 pub fn ExtensionLinkInput::id(self : ExtensionLinkInput) -> String {
   self.id
-}
-
-///|
-/// Returns the exported spec symbol that should be registered.
-/// Generated registries invoke this symbol on the imported package.
-pub fn ExtensionLinkInput::spec_symbol(self : ExtensionLinkInput) -> String {
-  self.spec_symbol
 }
 
 ///|
@@ -122,8 +115,7 @@ fn visit_linked_extension(
   visit_state.set(id, 2)
   inputs.push(ExtensionLinkInput::{
     id,
-    package_path: descriptor.package_path(),
-    spec_symbol: descriptor.spec_symbol(),
+    moonbit_import_path: descriptor.moonbit_import_path(),
   })
   Ok(())
 }

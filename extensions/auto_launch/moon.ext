@@ -1,0 +1,3 @@
+id = "justjavac/proton-auto-launch"
+namespace = "autoLaunch"
+package = "@justjavac/proton-auto-launch"

@@ -1,6 +1,0 @@
-{
-  "schema_version": 2,
-  "id": "justjavac/proton-tray",
-  "namespace": "tray",
-  "package": "justjavac/proton_ext/tray"
-}

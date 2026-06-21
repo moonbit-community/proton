@@ -76,18 +76,26 @@ async fn main {
 In this model:
 
 - MoonBit code declares and enables extensions.
-- `app.json` configures app-level settings such as window, entry, and debug mode.
+- `moon.proton` configures app-level settings such as window, entry, and debug mode;
+  app code uses `@proton.config("moon.proton")`.
 - JavaScript talks to one global object: `window.__MoonBit__`.
-- Each extension owns `extension.json` and `options.schema.json` for machine-readable metadata.
+- Each extension owns `moon.ext` for machine-readable metadata.
 
 Example config:
 
-```json
-{
-  "window": { "title": "Demo", "width": 900, "height": 700 },
-  "entry": { "kind": "file", "value": "app.html" },
-  "debug": 1
+```moonbit
+window = {
+  title: "Demo",
+  width: 900,
+  height: 700,
 }
+
+entry = {
+  kind: "file",
+  value: "app.html",
+}
+
+debug = true
 ```
 
 ## JavaScript Surface

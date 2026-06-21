@@ -1,0 +1,6 @@
+id = "vendor/base"
+namespace = "vendorBase"
+display_name = "Vendor Base"
+description = "Base vendor extension fixture."
+platforms = ["windows"]
+

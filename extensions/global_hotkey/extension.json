@@ -1,6 +1,0 @@
-{
-  "schema_version": 2,
-  "id": "justjavac/proton-global-hotkey",
-  "namespace": "globalHotkey",
-  "package": "justjavac/proton_ext/global_hotkey"
-}

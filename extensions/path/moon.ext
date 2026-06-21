@@ -1,0 +1,10 @@
+id = "justjavac/proton-path"
+namespace = "path"
+package = "@justjavac/proton-path"
+
+version = "0.1.10"
+display_name = "Path"
+description = "Portable path helpers exposed through a JavaScript-friendly namespace."
+
+platforms = ["windows", "macos", "linux"]
+dependencies = []

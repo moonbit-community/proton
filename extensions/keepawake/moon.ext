@@ -1,0 +1,3 @@
+id = "justjavac/proton-keepawake"
+namespace = "keepAwake"
+package = "@justjavac/proton-keepawake"

@@ -1,0 +1,7 @@
+id = "vendor/echo"
+namespace = "vendorEcho"
+display_name = "Vendor Echo"
+description = "Echo vendor extension fixture."
+platforms = ["windows"]
+dependencies = ["vendor/base"]
+
