@@ -12,9 +12,8 @@ moon -C cli run . --target native -- codegen <input.mbt> -o <output.g.mbt>
 moonfmt -w <output.g.mbt>
 ```
 
-The generator reads `extension.json` from the same package directory as
-`<input.mbt>`. The metadata file must contain `id`; `namespace` is optional and
-is inferred from the id when absent.
+The generator reads `moon.ext` from the same package directory as `<input.mbt>`.
+`moon.ext` must declare both `id` and `namespace`.
 
 The generator treats `<input.mbt>` as the target file and scans ordinary `.mbt`
 files in the same package as context. It ignores `.g.mbt`, `_test.mbt`, and

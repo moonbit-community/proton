@@ -404,21 +404,21 @@ test "attribute codegen file scan targets input file and checks package context"
 }
 
 ///|
-test "attribute codegen reads extension json and infers namespace" {
+test "attribute codegen reads moon ext metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/proton-codegen-extension-json") catch {
+  @mbfs.create_dir("target/proton-codegen-moon-ext") catch {
     _ => ()
   }
-  let input = "target/proton-codegen-extension-json/commands.mbt"
+  let input = "target/proton-codegen-moon-ext/commands.mbt"
   @mbfs.write_string_to_file(
-    "target/proton-codegen-extension-json/extension.json",
+    "target/proton-codegen-moon-ext/moon.ext",
     (
-      #|{
-      #|  "schema_version": 2,
-      #|  "id": "company/user-profile"
-      #|}
+      #|id = "company/moon-ext"
+      #|namespace = "moonExt"
+      #|description = "command metadata = still valid"
+      #|
     ),
     encoding="utf8",
   ) catch {
@@ -436,56 +436,132 @@ test "attribute codegen reads extension json and infers namespace" {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
   let generated = generate_app_commands_from_file_with_metadata(input).unwrap()
-  inspect(generated.source.contains("\"company/user-profile\""), content="true")
-  inspect(generated.source.contains("\"userProfile\""), content="true")
+  inspect(generated.source.contains("\"company/moon-ext\""), content="true")
+  inspect(generated.source.contains("\"moonExt\""), content="true")
 }
 
 ///|
-test "attribute codegen extension json namespace overrides inference" {
+test "attribute codegen requires moon ext namespace" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/proton-codegen-extension-json-namespace") catch {
+  @mbfs.create_dir("target/proton-codegen-moon-ext-missing-namespace") catch {
     _ => ()
   }
-  let input = "target/proton-codegen-extension-json-namespace/commands.mbt"
+  let input = "target/proton-codegen-moon-ext-missing-namespace/commands.mbt"
   @mbfs.write_string_to_file(
-    "target/proton-codegen-extension-json-namespace/extension.json",
+    "target/proton-codegen-moon-ext-missing-namespace/moon.ext",
     (
-      #|{
-      #|  "schema_version": 2,
-      #|  "id": "company/user-profile",
-      #|  "namespace": "profile"
-      #|}
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
-  }
-  @mbfs.write_string_to_file(
-    input,
-    (
-      #|#proton.command
-      #|fn ping() -> Unit {}
+      #|id = "company/moon-ext"
       #|
     ),
     encoding="utf8",
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let generated = generate_app_commands_from_file_with_metadata(input).unwrap()
-  inspect(generated.source.contains("\"profile\""), content="true")
+  match generate_app_commands_from_file_with_metadata(input) {
+    Ok(_) => abort("expected missing namespace error")
+    Err(error) =>
+      inspect(error, content="moon.ext must contain string field `namespace`")
+  }
 }
 
 ///|
-test "attribute codegen requires extension json metadata" {
+test "attribute codegen rejects removed moon ext fields" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/proton-codegen-missing-extension-json") catch {
+  @mbfs.create_dir("target/proton-codegen-moon-ext-removed") catch {
     _ => ()
   }
-  let input = "target/proton-codegen-missing-extension-json/commands.mbt"
+  let input = "target/proton-codegen-moon-ext-removed/commands.mbt"
+  @mbfs.write_string_to_file(
+    "target/proton-codegen-moon-ext-removed/moon.ext",
+    (
+      #|id = "company/moon-ext"
+      #|namespace = "moonExt"
+      #|spec_symbol = "extension"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match generate_app_commands_from_file_with_metadata(input) {
+    Ok(_) => abort("expected removed moon.ext field error")
+    Err(error) => inspect(error, content="unknown moon.ext field: spec_symbol")
+  }
+}
+
+///|
+test "attribute codegen rejects duplicate moon ext fields" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-codegen-moon-ext-duplicate") catch {
+    _ => ()
+  }
+  let input = "target/proton-codegen-moon-ext-duplicate/commands.mbt"
+  @mbfs.write_string_to_file(
+    "target/proton-codegen-moon-ext-duplicate/moon.ext",
+    (
+      #|id = "company/moon-ext"
+      #|id = "company/other"
+      #|namespace = "moonExt"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match generate_app_commands_from_file_with_metadata(input) {
+    Ok(_) => abort("expected duplicate moon.ext field error")
+    Err(error) => inspect(error, content="duplicate moon.ext field: id")
+  }
+}
+
+///|
+test "attribute codegen validates moon ext npm package" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-codegen-moon-ext-package") catch {
+    _ => ()
+  }
+  let input = "target/proton-codegen-moon-ext-package/commands.mbt"
+  @mbfs.write_string_to_file(
+    "target/proton-codegen-moon-ext-package/moon.ext",
+    (
+      #|id = "company/moon-ext"
+      #|namespace = "moonExt"
+      #|package = "@Vendor/proton-fs"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match generate_app_commands_from_file_with_metadata(input) {
+    Ok(_) => abort("expected invalid moon.ext package error")
+    Err(error) =>
+      inspect(
+        error,
+        content=(
+          #|moon.ext package segment must start with lowercase letter or digit: @Vendor/proton-fs
+        ),
+      )
+  }
+}
+
+///|
+test "attribute codegen requires moon ext metadata" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-codegen-missing-moon-ext") catch {
+    _ => ()
+  }
+  let input = "target/proton-codegen-missing-moon-ext/commands.mbt"
   @mbfs.write_string_to_file(
     input,
     (
@@ -499,7 +575,6 @@ test "attribute codegen requires extension json metadata" {
   }
   match generate_app_commands_from_file_with_metadata(input) {
     Ok(_) => abort("expected missing extension metadata error")
-    Err(error) =>
-      inspect(error, content="missing extension.json next to input file")
+    Err(error) => inspect(error, content="missing moon.ext next to input file")
   }
 }

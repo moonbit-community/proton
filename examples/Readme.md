@@ -62,7 +62,7 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | 19_app_fs | OK | `justjavac/proton` startup with `fs` and `path` |
 | 20_app_desktop | OK | App startup with `dialog` and `clipboard` |
 | 21_app_shell | OK | App startup with the `shell` extension |
-| 22_app_config | OK | Config-file startup through `@proton.config("app.json")` with extensions declared in code |
+| 22_app_config | OK | Config-file startup through `@proton.config("moon.proton")` with extensions declared in code |
 | 23_ops_runtime | OK | Direct `window.__MoonBit__.core.invokeOp(...)` plus extension proxies |
 | 24_app_multi_window | OK | Multi-window startup with main and secondary windows |
 | 25_app_system | Windows-only | Notification, tray, and global hotkey in one runtime |
@@ -80,15 +80,18 @@ node ..\scripts\e2e_cdp_smoke.mjs
 | 41_app_commands | OK | User-process command extension implemented by hand and enabled with `.extension(...)` |
 | 42_attribute_codegen_commands | OK | Command extension generated from `#proton.command` and `#proton.event` attributes |
 | 43_cef_bind_smoke | Windows CEF smoke | Automated `webview.bind(...)` / `webview.response(...)` Promise marshalling smoke |
+| 44_project_config | OK | Full `moon.proton` project config with `frontend` and `bundle` tooling fields |
 
 ## Notes
 
 - Examples `17` and `18` show direct low-level installation with `@core.install_extension(...)`.
 - Examples `19` through `35` show app-style startup with `justjavac/proton`;
   ordinary inline examples use `@proton.html(...)`, `@proton.file(...)`,
-  and `.extension(...)`; `app.json` examples use
+  and `.extension(...)`; config-file examples use
   `@proton.config(...).extension(...)`.
-- Example `38` shows async extension-style APIs with the user process starting a framework child process.
+- Example `38` shows async extension-style APIs with the user process starting
+  a framework child process; extension id and namespace come from
+  `38_async_extension_add/moon.ext`.
 - Example `39` shows sync and async extension-style APIs enabled through the same app-facing extension method.
 - Example `40` keeps the WebView responsive while ticker work runs in the user command-host process.
 - Example `41` demonstrates a hand-written user-process command extension.
@@ -97,9 +100,13 @@ node ..\scripts\e2e_cdp_smoke.mjs
   `moon install --path cli --bin target/proton-tools`, then copy
   `target/proton-tools/proton_cli(.exe)` to `target/proton-tools/proton(.exe)`. The
   package `dev_build` step then calls `target/proton-tools/proton codegen`; extension id and namespace come
-  from `42_attribute_codegen_commands/extension.json`.
+  from `42_attribute_codegen_commands/moon.ext`.
 - Example `43` exits on its own after JavaScript calls a MoonBit binding,
   receives a response, and reports the Promise result back through a second
   binding.
-- App examples declare extensions in MoonBit code. `app.json` stays limited to app configuration such as window, entry, and debug settings.
+- Example `44` does not start a WebView. It validates the tooling-facing
+  `frontend` and `bundle` sections read by
+  `@bootstrap.load_proton_project_config_from_file(...)`.
+- App examples declare extensions in MoonBit code. `moon.proton` stays limited
+  to app configuration such as window, entry, and debug settings.
 - Frontend code should use `window.__MoonBit__` throughout.
