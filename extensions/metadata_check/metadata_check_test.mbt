@@ -28,7 +28,7 @@ fn extension_metadata_path(name : String) -> String {
 
 ///|
 /// Loads one built-in extension descriptor and aborts the test on failure.
-fn load_descriptor(name : String) -> @catalog.ExtensionDescriptor {
+fn load_descriptor(name : String) -> @catalog.ExtensionDescriptor raise {
   match
     @catalog.load_extension_descriptor_from_file(extension_metadata_path(name)) {
     Ok(descriptor) => {
