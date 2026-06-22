@@ -108,10 +108,14 @@ pub fn App::create_window(self : App, config : AppWindowConfig) -> AppWindow {
     config.entry,
     self.config.debug,
   )
-  install_existing_extensions_or_abort(
-    window.webview,
-    self.installed_extensions(),
-  )
+  match
+    install_existing_extensions(window.webview, self.installed_extensions()) {
+    Ok(_) => ()
+    Err(error) => {
+      window.webview.destroy()
+      abort(error)
+    }
+  }
   install_existing_ipc_backends(window, self.installed_ipc_backends())
   self.register_window(window)
   window
@@ -120,13 +124,14 @@ pub fn App::create_window(self : App, config : AppWindowConfig) -> AppWindow {
 ///|
 /// Runs the main window loop after loading every configured window entry.
 /// Each registered window has its configured entry loaded before control is
-/// handed off to the main window's event loop.
+/// handed off to the main window's event loop. Once the event loop returns,
+/// every registered window is destroyed and runtime resources are released.
 pub fn App::run(self : App) -> Unit {
   for window in self.windows() {
     load_app_entry(window.webview, window.entry)
   }
   self.main_window.webview.run()
-  self.close_ipc_backends()
+  self.destroy()
 }
 
 ///|
@@ -136,6 +141,7 @@ pub fn App::run(self : App) -> Unit {
 pub fn App::destroy(self : App) -> Unit {
   let windows = self.windows()
   self.windows = []
+  self.installed_extensions.clear()
   self.installed_extension_ids.clear()
   self.installed_extension_namespaces.clear()
   for window in windows {

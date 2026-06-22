@@ -11,11 +11,25 @@ struct InstalledExtension {
 fn InstalledExtension::from_extension(
   extension : @core.Extension,
 ) -> InstalledExtension {
+  let id = extension.id()
+  let js_namespace = extension.js_namespace()
+  let mut consumed = false
   InstalledExtension::{
-    id: extension.id(),
-    js_namespace: extension.js_namespace(),
-    build: fn() { Ok(extension) },
+    id,
+    js_namespace,
+    build: fn() {
+      guard !consumed else { return Err(prebuilt_extension_reuse_error(id)) }
+      consumed = true
+      Ok(extension)
+    },
   }
+}
+
+///|
+fn prebuilt_extension_reuse_error(id : String) -> String {
+  "prebuilt extension " +
+  id +
+  " can only be installed on one app window; use App::install_extension_spec for multi-window apps"
 }
 
 ///|

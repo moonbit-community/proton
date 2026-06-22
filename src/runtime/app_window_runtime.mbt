@@ -25,16 +25,17 @@ fn install_extension_on_webview(
 
 ///|
 /// Installs every already-known extension onto a newly created webview.
-fn install_existing_extensions_or_abort(
+fn install_existing_extensions(
   webview : @webview.Webview,
   extensions : Array[InstalledExtension],
-) -> Unit {
+) -> Result[Unit, String] {
   for installed_extension in extensions {
     match install_extension_on_webview(webview, installed_extension) {
       Ok(_) => ()
-      Err(error) => abort(error)
+      Err(error) => return Err(error)
     }
   }
+  Ok(())
 }
 
 ///|

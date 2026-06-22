@@ -120,7 +120,41 @@ test "App::install_extension_spec builds one extension instance per window" {
 }
 
 ///|
-test "panic App::install_extension applies to registered windows" {
+test "App::destroy destroys all registered windows" {
+  guard app_window_cef_unit_tests_enabled() else { return }
+  let mut destroy_count = 0
+  let config = @runtime.AppConfig::new(
+    @runtime.WindowConfig::new("runtime-main", 800, 600),
+    @runtime.AppEntry::Html("<html>Main</html>"),
+    windows=[
+      @runtime.AppWindowConfig::new(
+        "docs",
+        @runtime.WindowConfig::new("Docs", 640, 480),
+        @runtime.AppEntry::Html("<html>Docs</html>"),
+      ),
+    ],
+  )
+  let app = @runtime.App::new(config)
+  let spec = @core.ExtensionSpec::new("tests/cleanup", "cleanup", fn(_context) {
+    Ok(
+      @core.Extension::new("tests/cleanup", "cleanup", fn(_extension) {  }, on_destroy=fn(
+        _context,
+      ) {
+        destroy_count += 1
+      }),
+    )
+  })
+  match app.install_extension_spec(spec, @core.ExtensionBuildContext::new()) {
+    Ok(_) => ()
+    Err(error) => abort(error)
+  }
+  app.destroy()
+  assert_eq(app.windows().length(), 0)
+  assert_eq(destroy_count, 2)
+}
+
+///|
+test "panic App::install_extension rejects multi-window prebuilt extension" {
   guard app_window_cef_unit_tests_enabled() else { return }
   let config = @runtime.AppConfig::new(
     @runtime.WindowConfig::new("runtime-main", 800, 600),
@@ -137,12 +171,4 @@ test "panic App::install_extension applies to registered windows" {
   app.install_extension(
     @core.Extension::new("tests/math", "math", fn(_extension) {  }),
   )
-  match app.window("docs") {
-    Some(window) =>
-      @core.install_extension(
-        window.webview(),
-        @core.Extension::new("tests/math", "math", fn(_extension) {  }),
-      )
-    None => abort("expected docs window")
-  }
 }
