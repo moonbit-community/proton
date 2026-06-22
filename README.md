@@ -81,7 +81,7 @@ await window.__MoonBit__.core.invokeOp("ext:path/resolve", { path: "." });
 Install CEF for Windows native builds:
 
 ```powershell
-node .\scripts\setup_cef.mjs
+proton cef setup
 ```
 
 Build examples:
@@ -108,7 +108,7 @@ node .\scripts\e2e_cdp_smoke.mjs
 ## Notes
 
 - This repository currently targets `native`.
-- The CEF runtime lives in `.cef-cache/` and is installed by `scripts/setup_cef.mjs`.
+- The CEF runtime lives in `.cef-cache/` and is installed by `proton cef setup`.
 - CEF child processes use `src/cef_process`; packaged apps should ship the helper beside the app executable.
 - Extension linking is explicit so applications only ship the capabilities they enable.
 
