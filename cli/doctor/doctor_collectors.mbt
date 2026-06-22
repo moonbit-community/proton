@@ -76,10 +76,9 @@ fn resolve_cef_root(project : ProjectDoctorInfo) -> String {
 ///|
 fn cef_required_layout_files() -> Array[String] {
   [
-    "include\\capi\\cef_app_capi.h", "include\\capi\\cef_browser_capi.h",
-    "include\\capi\\cef_client_capi.h", "include\\capi\\cef_v8_capi.h",
-    "Release\\libcef.lib", "Release\\libcef.dll", "Release\\icudtl.dat",
-    "Release\\chrome_100_percent.pak", "Release\\chrome_200_percent.pak",
+    "include\\capi\\cef_app_capi.h", "include\\capi\\cef_browser_capi.h", "include\\capi\\cef_client_capi.h",
+    "include\\capi\\cef_v8_capi.h", "Release\\libcef.lib", "Release\\libcef.dll",
+    "Release\\icudtl.dat", "Release\\chrome_100_percent.pak", "Release\\chrome_200_percent.pak",
     "Release\\resources.pak", "Resources\\icudtl.dat",
   ]
 }
