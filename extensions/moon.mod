@@ -1,6 +1,6 @@
 name = "justjavac/proton_ext"
 
-version = "0.1.1"
+version = "0.1.2"
 
 import {
   "justjavac/ffi@0.2.1",
@@ -10,7 +10,7 @@ import {
   "justjavac/notification@0.1.0",
   "justjavac/tray@0.1.0",
   "justjavac/global_hotkey@0.1.0",
-  "justjavac/proton@0.1.0",
+  "justjavac/proton@0.1.1",
   "justjavac/microphone@0.1.0",
   "justjavac/auto_launch@0.1.3",
   "justjavac/keepawake@0.1.0",
