@@ -13,7 +13,7 @@ It handles:
 Run codegen with:
 
 ```sh
-moon -C cli run . --target native -- codegen <input.mbt> -o <output.g.mbt>
+proton_cli codegen <input.mbt> -o <output.g.mbt>
 moonfmt -w <output.g.mbt>
 ```
 

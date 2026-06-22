@@ -14,8 +14,8 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 
 Installs the Windows CEF runtime into `.cef-cache/` through the Proton CLI.
 
-```powershell
-proton cef setup
+```sh
+proton_cli cef setup
 ```
 
 ## `e2e_cdp_smoke.mjs`
@@ -23,7 +23,7 @@ proton cef setup
 Builds the CEF helper, starts selected examples, and runs CDP-based smoke
 probes.
 
-```powershell
-node .\scripts\e2e_cdp_smoke.mjs
-node .\scripts\e2e_cdp_smoke.mjs 38_async_extension_add 41_app_commands
+```sh
+node ./scripts/e2e_cdp_smoke.mjs
+node ./scripts/e2e_cdp_smoke.mjs 38_async_extension_add 41_app_commands
 ```

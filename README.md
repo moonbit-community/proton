@@ -1,39 +1,54 @@
 # Proton
 
-Proton is a MoonBit framework for native desktop apps backed by CEF. Apps use a
-small runtime and explicitly link only the extensions they enable.
+Proton is a MoonBit framework for native desktop apps backed by CEF. It gives
+MoonBit apps a browser window, a JavaScript bridge, and opt-in native
+extensions such as filesystem, path, dialog, clipboard, notification, tray, and
+global hotkeys.
 
-## Quick Start
+## Install The CLI
 
-Install the local `justjavac/proton_cli` first. Generated-command examples and
-CEF setup expect a `proton` binary in `target/proton-tools`:
+Install the released CLI from the MoonBit registry:
 
-```powershell
-moon install --path cli --bin target\proton-tools
-Copy-Item target\proton-tools\proton_cli.exe target\proton-tools\proton.exe -Force
+```sh
+moon install justjavac/proton_cli
 ```
 
-On Unix-like shells, copy `target/proton-tools/proton_cli` to
-`target/proton-tools/proton` and make it executable.
+This installs the `proton_cli` command into MoonBit's binary directory
+(`~/.moon/bin` by default). Make sure that directory is on `PATH`.
 
-Install CEF and build the examples:
+Use the CLI to install the local CEF runtime for the current project:
 
-```powershell
-target\proton-tools\proton cef setup
-moon -C examples build --target native
+```sh
+proton_cli cef setup
 ```
 
-Run the CEF smoke checks:
+## Add Proton To An App
 
-```powershell
-moon build src\cef_process --target native
-moon -C examples run 43_cef_bind_smoke --target native
-node .\scripts\e2e_cdp_smoke.mjs
+Add the runtime and whichever extension package you need:
+
+```sh
+moon add justjavac/proton@0.1.2
+moon add justjavac/proton_ext@0.1.3
 ```
 
-## App Startup
+Your executable package should target native and import the packages it uses:
 
-Inline startup:
+```moon.pkg
+import {
+  "moonbitlang/async",
+  "justjavac/proton",
+  "justjavac/proton_ext/fs",
+  "justjavac/proton_ext/path",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)
+```
+
+Start an app directly from HTML:
 
 ```moonbit
 import {
@@ -43,38 +58,33 @@ import {
 }
 
 async fn main {
-  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
-  .extension(@fs.extension())
-  .extension(@path.extension())
-  .run_or_abort()
+  let app =
+    @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
+    .extension(@fs.extension())
+    .extension(@path.extension())
+  app.run_or_abort()
 }
 ```
 
-Config-file startup uses `moon.proton`; extensions are still declared in
-MoonBit code:
+Or keep window and entry settings in `moon.proton`:
 
 ```moonbit
 async fn main {
-  @proton.config("moon.proton")
-  .extension(@fs.extension())
-  .extension(@path.extension())
-  .run_or_abort()
+  let app =
+    @proton.config("moon.proton")
+    .extension(@fs.extension())
+    .extension(@path.extension())
+  app.run_or_abort()
 }
 ```
 
-## Main Packages
-
-- `justjavac/proton`: app facade with `@proton.html(...)` and `@proton.config(...)`
-- `justjavac/proton/webview`: low-level native WebView binding
-- `justjavac/proton/core`: JavaScript bridge, ops dispatch, and extension host
-- `justjavac/proton/runtime`: app and window lifecycle
-- `justjavac/proton_config`: parser for `moon.proton`, `moon.ext`, and `moon.mod`
-- `justjavac/proton_cli`: developer CLI and command/event codegen
-- `justjavac/proton_ext`: built-in extensions such as `fs`, `path`, `dialog`, and `shell`
+`moon.proton` configures app settings such as window size, entry HTML, debug
+mode, frontend build metadata, and bundle metadata. Extensions are still linked
+explicitly in MoonBit code so apps only ship the capabilities they use.
 
 ## JavaScript Bridge
 
-Proton installs one global object:
+Proton exposes one global object to the web page:
 
 ```js
 await window.__MoonBit__.fs.readFile("demo.txt");
@@ -82,18 +92,56 @@ await window.__MoonBit__.path.resolve({ path: "." });
 window.__MoonBit__.events.on("fs.activity", console.log);
 ```
 
-Low-level custom calls can use:
+Low-level custom calls can use the core op bridge:
 
 ```js
 await window.__MoonBit__.core.invokeOp("ext:path/resolve", { path: "." });
 ```
 
+## Run This Repository's Examples
+
+The examples include generated command extensions. Install the released CLI
+into the repository tool directory before building them:
+
+```sh
+moon install justjavac/proton_cli --bin target/proton-tools
+```
+
+No local `--path` install or binary copy is needed. The examples call
+`target/proton-tools/proton_cli` directly.
+
+Set up CEF, build the helper process, then build or run examples:
+
+```sh
+target/proton-tools/proton_cli cef setup
+moon build src/cef_process --target native
+moon -C examples build --target native
+moon -C examples run 43_cef_bind_smoke --target native
+```
+
+Run the CDP-based smoke scenarios:
+
+```sh
+node ./scripts/e2e_cdp_smoke.mjs
+```
+
+## Packages
+
+- `justjavac/proton`: app facade with `@proton.html(...)` and `@proton.config(...)`
+- `justjavac/proton/webview`: low-level native WebView binding
+- `justjavac/proton/core`: JavaScript bridge, ops dispatch, and extension host
+- `justjavac/proton/runtime`: app and window lifecycle
+- `justjavac/proton_config`: parser for `moon.proton`, `moon.ext`, and `moon.mod`
+- `justjavac/proton_cli`: CEF setup and command/event code generation
+- `justjavac/proton_ext`: built-in opt-in extensions
+
 ## Notes
 
-- This repository currently targets `native`.
-- The CEF runtime lives in `.cef-cache/` and is installed by `proton cef setup`.
-- CEF child processes use `src/cef_process`; packaged apps should ship the helper beside the app executable.
-- Extension linking is explicit so apps only ship the capabilities they enable.
+- Proton currently targets MoonBit `native`.
+- The CEF runtime lives in `.cef-cache/` after `proton_cli cef setup`.
+- CEF child processes use `src/cef_process`; packaged apps should ship the
+  helper beside the app executable.
+- Command extensions are generated with `proton_cli codegen`.
 
 ## License
 

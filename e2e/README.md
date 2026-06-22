@@ -7,6 +7,6 @@ The `test` package connects to a running example through
 
 Run from the repository root:
 
-```powershell
-node .\scripts\e2e_cdp_smoke.mjs
+```sh
+node ./scripts/e2e_cdp_smoke.mjs
 ```
