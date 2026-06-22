@@ -6,7 +6,9 @@ import {
   "justjavac/proton_config@0.1.2",
   "moonbitlang/x@0.4.43",
   "moonbitlang/parser@0.3.2",
-  "moonbitlang/lexer@0.3.4",
+  "justjavac/case@0.2.0",
+  "moonbitlang/moon_config@0.3.5",
+  "moonbitlang/lexer@0.3.5",
 }
 
 readme = "codegen/README.md"

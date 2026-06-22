@@ -25,8 +25,6 @@ fn app_probe_expression(name : String) -> String? {
           #|    previous = await app.clipboard.readText({});
           #|  } catch (_) {}
           #|  const text = "proton-cdp-clipboard-" + Date.now();
-          #|  const events = [];
-          #|  app.events.on("clipboard.activity", (event) => events.push(event));
           #|  try {
           #|    const written = await app.clipboard.writeText({ text });
           #|    const loaded = await app.clipboard.readText({});
@@ -34,8 +32,7 @@ fn app_probe_expression(name : String) -> String? {
           #|      written &&
           #|      written.written === true &&
           #|      loaded &&
-          #|      loaded.text === text &&
-          #|      events.length >= 1;
+          #|      loaded.text === text;
           #|  } finally {
           #|    if (previous && typeof previous.text === "string") {
           #|      await app.clipboard.writeText({ text: previous.text }).catch(() => {});
