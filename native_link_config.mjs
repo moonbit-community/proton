@@ -76,7 +76,7 @@ function installGuide(message) {
     "",
     "CEF is required for the Windows native backend.",
     "Install it with:",
-    "  node .\\scripts\\setup_cef.mjs",
+    "  proton cef setup",
     "",
     `Expected layout: ${path.join(repoRoot, defaultCefDirName)}`,
     "The CEF files should live directly in .cef-cache, with version.txt at the root.",
@@ -101,7 +101,7 @@ function defaultCefRoot() {
       `Invalid CEF install directory: ${existing}\nMissing:\n${missing.join("\n")}`,
     ));
   }
-  throw new Error(installGuide("CEF is not installed."));
+  return "";
 }
 
 function cStringDefine(value) {
@@ -147,6 +147,16 @@ function main() {
   const root = rawRoot.length === 0
     ? defaultCefRoot()
     : path.resolve(rawRoot);
+  if (root.length === 0) {
+    process.stdout.write(JSON.stringify({
+      vars: {
+        PROTON_CEF_ENABLED: "0",
+        PROTON_CEF_STUB_CC_FLAGS: "",
+      },
+      link_configs: [],
+    }));
+    return;
+  }
   const rawSubprocess = envValue(env, "PROTON_CEF_SUBPROCESS_PATH").trim();
   const subprocess = rawSubprocess.length === 0
     ? defaultSubprocessPath
