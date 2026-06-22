@@ -135,7 +135,7 @@ fn run_codegen(args : Array[String]) -> Result[Unit, CliError] {
 }
 
 ///|
-fn main {
+async fn main {
   let argv = @sys.get_cli_args()
   let raw_args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
   let (cwd, args) = parse_global_args(raw_args)

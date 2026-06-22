@@ -1,8 +1,13 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/x/encoding",
   "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path",
   "moonbitlang/x/sys",
   "justjavac/proton_cli/codegen",
   "justjavac/proton_cli/doctor",

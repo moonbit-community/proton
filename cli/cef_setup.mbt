@@ -17,28 +17,7 @@ let default_cef_name = "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_win
 let default_cef_base_url = "https://cef-builds.spotifycdn.com"
 
 ///|
-extern "C" fn cli_is_windows_ffi() -> Bool = "proton_cli_is_windows"
-
-///|
-extern "C" fn cli_getcwd_ffi() -> Bytes = "proton_cli_getcwd"
-
-///|
 extern "C" fn cli_last_error_ffi() -> Bytes = "proton_cli_last_error"
-
-///|
-#borrow(prefix)
-extern "C" fn cli_make_temp_dir_ffi(prefix : Bytes) -> Bytes = "proton_cli_make_temp_dir"
-
-///|
-#borrow(url, destination)
-extern "C" fn cli_download_file_ffi(url : Bytes, destination : Bytes) -> Int = "proton_cli_download_file"
-
-///|
-#borrow(archive_path, destination)
-extern "C" fn cli_extract_tar_bz2_ffi(
-  archive_path : Bytes,
-  destination : Bytes,
-) -> Int = "proton_cli_extract_tar_bz2"
 
 ///|
 #borrow(src, dest)
@@ -47,10 +26,6 @@ extern "C" fn cli_copy_file_ffi(src : Bytes, dest : Bytes) -> Int = "proton_cli_
 ///|
 #borrow(src, dest)
 extern "C" fn cli_copy_tree_ffi(src : Bytes, dest : Bytes) -> Int = "proton_cli_copy_tree"
-
-///|
-#borrow(path)
-extern "C" fn cli_remove_tree_ffi(path : Bytes) -> Int = "proton_cli_remove_tree"
 
 ///|
 fn native_text(bytes : Bytes) -> String {
@@ -237,15 +212,9 @@ fn find_project_root_from(start : String) -> String {
 
 ///|
 fn project_root() -> Result[String, CliError] {
-  let cwd = native_text(cli_getcwd_ffi())
-  if cwd == "" {
-    Err(
-      CliError::CommandError(
-        "Failed to read current directory: " + cli_last_error(),
-      ),
-    )
-  } else {
-    Ok(find_project_root_from(cwd))
+  match @env.current_dir() {
+    Some(cwd) => Ok(find_project_root_from(cwd))
+    None => Err(CliError::CommandError("Failed to read current directory"))
   }
 }
 
@@ -259,7 +228,7 @@ fn archive_url(name : String, url : String?) -> String {
 
 ///|
 fn require_windows() -> Result[Unit, CliError] {
-  if cli_is_windows_ffi() {
+  if @path.sep == '\\' {
     Ok(())
   } else {
     Err(
@@ -271,40 +240,67 @@ fn require_windows() -> Result[Unit, CliError] {
 }
 
 ///|
-fn make_temp_dir() -> Result[String, CliError] {
-  let temp_dir = native_text(cli_make_temp_dir_ffi(native_path("proton-cef-")))
+async fn make_temp_dir() -> Result[String, CliError] {
+  let temp_dir = @async_fs.tmpdir(prefix="proton-cef-") catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to create temp directory: " +
+          @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
   if temp_dir == "" {
-    Err(
-      CliError::CommandError(
-        "Failed to create temp directory: " + cli_last_error(),
-      ),
-    )
+    Err(CliError::CommandError("Failed to create temp directory"))
   } else {
     Ok(temp_dir)
   }
 }
 
 ///|
-fn download_file(url : String, destination : String) -> Result[Unit, CliError] {
+async fn download_file(
+  url : String,
+  destination : String,
+) -> Result[Unit, CliError] {
   println("[INFO] Downloading CEF: " + url)
-  guard cli_download_file_ffi(native_path(url), native_path(destination)) == 0 else {
-    return Err(CliError::CommandError("Download failed: " + cli_last_error()))
+  let code = @process.run("curl", ["-L", "--fail", "--output", destination, url]) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Download failed: " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  guard code == 0 else {
+    return Err(
+      CliError::CommandError(
+        "Download failed: curl exited with code " + code.to_string(),
+      ),
+    )
   }
   Ok(())
 }
 
 ///|
-fn extract_tar_bz2(
+async fn extract_tar_bz2(
   archive_path : String,
   destination : String,
 ) -> Result[Unit, CliError] {
   println("[INFO] Extracting: " + archive_path)
-  guard cli_extract_tar_bz2_ffi(
-      native_path(archive_path),
-      native_path(destination),
-    ) ==
-    0 else {
-    return Err(CliError::CommandError("tar failed: " + cli_last_error()))
+  let code = @process.run("tar", ["-xjf", archive_path, "-C", destination]) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "tar failed: " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  guard code == 0 else {
+    return Err(
+      CliError::CommandError(
+        "tar failed: tar exited with code " + code.to_string(),
+      ),
+    )
   }
   Ok(())
 }
@@ -369,12 +365,36 @@ fn assert_safe_install_dir(
 }
 
 ///|
-fn remove_tree(path : String) -> Result[Unit, CliError] {
+async fn remove_tree(path : String) -> Result[Unit, CliError] {
   guard path_exists(path) else { return Ok(()) }
-  guard cli_remove_tree_ffi(native_path(path)) == 0 else {
+  if path_is_file(path) {
+    @async_fs.remove(path) catch {
+      err =>
+        return Err(
+          CliError::CommandError(
+            "Failed to remove " +
+            path +
+            ": " +
+            @debug.render(@debug.to_repr(err)),
+          ),
+        )
+    }
+  } else if path_is_dir(path) {
+    @async_fs.rmdir(path, recursive=true) catch {
+      err =>
+        return Err(
+          CliError::CommandError(
+            "Failed to remove " +
+            path +
+            ": " +
+            @debug.render(@debug.to_repr(err)),
+          ),
+        )
+    }
+  } else {
     return Err(
       CliError::CommandError(
-        "Failed to remove " + path + ": " + cli_last_error(),
+        "Failed to remove " + path + ": path is not a file or directory",
       ),
     )
   }
@@ -382,7 +402,7 @@ fn remove_tree(path : String) -> Result[Unit, CliError] {
 }
 
 ///|
-fn install_cef_root(
+async fn install_cef_root(
   extracted_root : String,
   install_dir : String,
   name : String,
@@ -423,7 +443,7 @@ fn install_cef_root(
 }
 
 ///|
-fn setup_downloaded_cef(
+async fn setup_downloaded_cef(
   name : String,
   url : String?,
   root : String,
@@ -470,7 +490,7 @@ fn installed_version(install_dir : String) -> String {
 }
 
 ///|
-fn run_cef_setup(args : Array[String]) -> Result[Unit, CliError] {
+async fn run_cef_setup(args : Array[String]) -> Result[Unit, CliError] {
   let cmd = cef_setup_arg_parser()
   let matches = cmd.parse(argv=args, env={}) catch {
     err => return Err(CliError::UsageError(err.to_string(), true))
