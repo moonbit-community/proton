@@ -1,8 +1,0 @@
-members = [
-  ".",
-  "./config",
-  "./cli",
-  "./examples",
-  "./extensions",
-  "./e2e",
-]
