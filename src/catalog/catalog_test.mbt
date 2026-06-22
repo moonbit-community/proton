@@ -54,6 +54,25 @@ fn catalog_test_path(path : String) -> String {
 }
 
 ///|
+/// Finds one extension summary object by id without relying on discovery order.
+fn find_extension_summary(
+  extensions : Array[Json],
+  id : String,
+) -> Map[String, Json]? {
+  for extension_json in extensions {
+    match extension_json {
+      Object(extension) =>
+        match extension.get("id") {
+          Some(String(found)) if found == id => return Some(extension)
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 test "extension descriptor constructor and accessors copy mutable arrays" {
   let platforms = ["windows"]
   let dependencies = ["vendor/base"]
@@ -276,8 +295,8 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
       match summary.get("extensions") {
         Some(Array(extensions)) => {
           assert_eq(extensions.length(), 3)
-          match extensions[0] {
-            Object(extension) => {
+          match find_extension_summary(extensions, "vendor/base") {
+            Some(extension) => {
               @debug.assert_eq(
                 extension.get("id"),
                 Some(Json::string("vendor/base")),
@@ -289,8 +308,8 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
             }
             _ => abort("expected extension summary object")
           }
-          match extensions[2] {
-            Object(extension) => {
+          match find_extension_summary(extensions, "justjavac/proton-path") {
+            Some(extension) => {
               @debug.assert_eq(
                 extension.get("id"),
                 Some(Json::string("justjavac/proton-path")),

@@ -184,7 +184,11 @@ fn Parser::parse_object_fields(self : Parser) -> Array[ConfigField] {
         if self.consume_if(TK_RBRACE) {
           return fields
         }
-        if !self.consume_if(TK_COMMA) && self.peek_kind() != TK_EOF {
+        if self.consume_if(TK_COMMA) {
+          if self.consume_if(TK_RBRACE) {
+            return fields
+          }
+        } else if self.peek_kind() != TK_EOF {
           self.report_here("expected `,` or `}` after object field")
         }
       }
@@ -205,7 +209,11 @@ fn Parser::parse_array_items(self : Parser) -> Array[Ast] {
     if self.consume_if(TK_RBRACKET) {
       return items
     }
-    if !self.consume_if(TK_COMMA) && self.peek_kind() != TK_EOF {
+    if self.consume_if(TK_COMMA) {
+      if self.consume_if(TK_RBRACKET) {
+        return items
+      }
+    } else if self.peek_kind() != TK_EOF {
       self.report_here("expected `,` or `]` after array item")
     }
   }
