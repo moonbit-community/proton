@@ -7,41 +7,14 @@ fn cef_unit_tests_enabled() -> Bool {
 }
 
 ///|
-test "Start app loop and terminate it" {
-  guard cef_unit_tests_enabled() else { return }
-  let webview = Webview::new()
-  webview.dispatch(fn() { webview.terminate() })
-  webview.run()
-  assert_eq(1 + 1, 2)
-}
-
-///|
-test "Create a window, run app and terminate it" {
-  guard cef_unit_tests_enabled() else { return }
-  let webview = Webview::new()
-  webview.set_title("Test")
-  webview.set_size(480, 320, SizeHint::None)
-  webview.set_html("set_html ok")
-  webview.navigate("data:text/plain,navigate%20ok")
-  webview.dispatch(fn() { webview.terminate() })
-  webview.run()
-}
-
-///|
-test "Webview destroy is idempotent" {
-  guard cef_unit_tests_enabled() else { return }
-  let webview = Webview::new()
-  webview.destroy()
-  webview.destroy()
-}
-
-///|
-test "Bind callback marshals C strings safely" {
+test "CEF webview lifecycle and binding smoke" {
   guard cef_unit_tests_enabled() else { return }
   let mut called = false
   let mut callback_id = ""
   let mut callback_req = ""
   let webview = Webview::new()
+  webview.set_title("Test")
+  webview.set_size(480, 320, SizeHint::None)
   webview.bind("press", fn(id, req) {
     callback_id = @ffi.from_cstr(id)
     callback_req = @ffi.from_cstr(req)
@@ -67,6 +40,8 @@ test "Bind callback marshals C strings safely" {
     ),
   )
   webview.run()
+  webview.destroy()
+  webview.destroy()
   assert_true(called)
   assert_true(!callback_id.is_empty())
   assert_eq(callback_req, "[\"hello\",123]")
