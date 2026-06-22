@@ -15,7 +15,7 @@ moon -C examples build --target native
 CEF examples need the local CEF runtime and helper process:
 
 ```powershell
-node .\scripts\setup_cef.mjs
+proton cef setup
 moon build src\cef_process --target native
 moon -C examples run 43_cef_bind_smoke --target native
 ```

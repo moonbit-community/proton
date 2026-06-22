@@ -287,10 +287,15 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
           match runtime.get("entry") {
             Some(Object(entry)) => {
               @debug.assert_eq(entry.get("kind"), Some(Json::string("asset")))
-              @debug.assert_eq(
-                entry.get("value"),
-                Some(Json::string("frontend/dist/index.html")),
-              )
+              match entry.get("value") {
+                Some(String(path)) =>
+                  assert_true(
+                    normalize_test_slashes(path).has_suffix(
+                      "target/proton-project-config/frontend/dist/index.html",
+                    ),
+                  )
+                _ => abort("expected runtime.entry value")
+              }
             }
             _ => abort("expected runtime.entry summary")
           }
@@ -457,6 +462,16 @@ test "load_proton_project_config_from_file validates active bundle metadata" {
 
   @mbfs.create_dir("target/proton-project-bundle-no-version") catch {
     _ => ()
+  }
+  @mbfs.write_string_to_file(
+    "target/proton-project-bundle-no-version/moon.mod",
+    (
+      #|name = "vendor/no-version"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let missing_version = "target/proton-project-bundle-no-version/moon.proton"
   @mbfs.write_string_to_file(

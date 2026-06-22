@@ -10,12 +10,12 @@ Embeds a text file into generated MoonBit source.
 node ./scripts/embed_asset.mjs <input> <output> <identifier>
 ```
 
-## `setup_cef.mjs`
+## CEF setup
 
-Installs the Windows CEF runtime into `.cef-cache/`.
+Installs the Windows CEF runtime into `.cef-cache/` through the Proton CLI.
 
 ```powershell
-node .\scripts\setup_cef.mjs
+proton cef setup
 ```
 
 ## `e2e_cdp_smoke.mjs`

@@ -1,0 +1,509 @@
+///|
+fn cef_setup_arg_parser() -> @argparse.Command {
+  @argparse.Command(
+    "proton cef setup",
+    about="Install the Windows CEF runtime into .cef-cache",
+    options=[
+      OptionArg("name", about="CEF binary directory/archive name"),
+      OptionArg("url", about="Full CEF archive URL"),
+    ],
+  )
+}
+
+///|
+let default_cef_name = "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal"
+
+///|
+let default_cef_base_url = "https://cef-builds.spotifycdn.com"
+
+///|
+extern "C" fn cli_is_windows_ffi() -> Bool = "proton_cli_is_windows"
+
+///|
+extern "C" fn cli_getcwd_ffi() -> Bytes = "proton_cli_getcwd"
+
+///|
+extern "C" fn cli_last_error_ffi() -> Bytes = "proton_cli_last_error"
+
+///|
+#borrow(prefix)
+extern "C" fn cli_make_temp_dir_ffi(prefix : Bytes) -> Bytes = "proton_cli_make_temp_dir"
+
+///|
+#borrow(url, destination)
+extern "C" fn cli_download_file_ffi(url : Bytes, destination : Bytes) -> Int = "proton_cli_download_file"
+
+///|
+#borrow(archive_path, destination)
+extern "C" fn cli_extract_tar_bz2_ffi(
+  archive_path : Bytes,
+  destination : Bytes,
+) -> Int = "proton_cli_extract_tar_bz2"
+
+///|
+#borrow(src, dest)
+extern "C" fn cli_copy_file_ffi(src : Bytes, dest : Bytes) -> Int = "proton_cli_copy_file"
+
+///|
+#borrow(src, dest)
+extern "C" fn cli_copy_tree_ffi(src : Bytes, dest : Bytes) -> Int = "proton_cli_copy_tree"
+
+///|
+#borrow(path)
+extern "C" fn cli_remove_tree_ffi(path : Bytes) -> Int = "proton_cli_remove_tree"
+
+///|
+fn native_text(bytes : Bytes) -> String {
+  if bytes.length() == 0 || bytes[bytes.length() - 1] != 0x00 {
+    abort("expected null-terminated native string")
+  }
+  let decoder = @encoding.decoder(UTF8)
+  decoder.decode_lossy(bytes[0:bytes.length() - 1])
+}
+
+///|
+fn native_path(path : String) -> Bytes {
+  @encoding.encode(UTF8, path + "\u{0000}")
+}
+
+///|
+fn cli_last_error() -> String {
+  let message = native_text(cli_last_error_ffi())
+  if message == "" {
+    "unknown OS error"
+  } else {
+    message
+  }
+}
+
+///|
+fn path_exists(path : String) -> Bool {
+  @mbfs.path_exists(path)
+}
+
+///|
+fn path_is_dir(path : String) -> Bool {
+  @mbfs.is_dir(path) catch {
+    _ => false
+  }
+}
+
+///|
+fn path_is_file(path : String) -> Bool {
+  @mbfs.is_file(path) catch {
+    _ => false
+  }
+}
+
+///|
+fn path_join(base : String, child : String) -> String {
+  if base == "" {
+    child
+  } else if child == "" {
+    base
+  } else if base.has_suffix("\\") || base.has_suffix("/") {
+    base + child
+  } else {
+    base + "\\" + child
+  }
+}
+
+///|
+fn path_parent(path : String) -> String {
+  let normalized = path.replace(old="/", new="\\")
+  let parts = normalized.split("\\").collect()
+  if parts.length() <= 1 {
+    normalized
+  } else {
+    let parent_parts = parts[:parts.length() - 1].to_owned()
+    parent_parts.join("\\")
+  }
+}
+
+///|
+fn source_cef_relative_files() -> Array[String] {
+  [
+    "include\\capi\\cef_app_capi.h", "include\\capi\\cef_browser_capi.h", "include\\capi\\cef_client_capi.h",
+    "include\\capi\\cef_v8_capi.h", "Release\\libcef.lib", "Release\\libcef.dll",
+    "Resources\\icudtl.dat",
+  ]
+}
+
+///|
+fn installed_cef_relative_files() -> Array[String] {
+  let files = source_cef_relative_files()
+  files.push("Release\\icudtl.dat")
+  files.push("Release\\chrome_100_percent.pak")
+  files.push("Release\\chrome_200_percent.pak")
+  files.push("Release\\resources.pak")
+  files
+}
+
+///|
+fn all_exist(root : String, files : Array[String]) -> Bool {
+  for file in files {
+    guard path_exists(path_join(root, file)) else { return false }
+  }
+  true
+}
+
+///|
+fn has_source_cef_files(root : String) -> Bool {
+  all_exist(root, source_cef_relative_files())
+}
+
+///|
+fn validate_cef_root(root : String) -> Result[Unit, CliError] {
+  let missing : Array[String] = []
+  for relative in installed_cef_relative_files() {
+    let path = path_join(root, relative)
+    if !path_exists(path) {
+      missing.push(path)
+    }
+  }
+  let version_path = path_join(root, "version.txt")
+  if !path_exists(version_path) {
+    missing.push(version_path)
+  }
+  if missing.length() > 0 {
+    Err(
+      CliError::CommandError(
+        "Invalid CEF root: " + root + "\nMissing:\n" + missing.join("\n"),
+      ),
+    )
+  } else {
+    Ok(())
+  }
+}
+
+///|
+fn copy_file_if_exists(src : String, dest : String) -> Result[Unit, CliError] {
+  guard path_exists(src) else { return Ok(()) }
+  guard cli_copy_file_ffi(native_path(src), native_path(dest)) == 0 else {
+    return Err(
+      CliError::CommandError(
+        "Failed to copy " + src + " to " + dest + ": " + cli_last_error(),
+      ),
+    )
+  }
+  Ok(())
+}
+
+///|
+fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CliError] {
+  let release_dir = path_join(root, "Release")
+  if !path_exists(release_dir) {
+    @mbfs.create_dir(release_dir) catch {
+      err =>
+        return Err(
+          CliError::CommandError(
+            "Failed to create Release directory: " +
+            @debug.render(@debug.to_repr(err)),
+          ),
+        )
+    }
+  }
+  for
+    file_name in [
+      "icudtl.dat", "chrome_100_percent.pak", "chrome_200_percent.pak", "resources.pak",
+    ] {
+    match
+      copy_file_if_exists(
+        path_join(path_join(root, "Resources"), file_name),
+        path_join(release_dir, file_name),
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  }
+  Ok(())
+}
+
+///|
+fn find_project_root_from(start : String) -> String {
+  for dir = start; dir != ""; {
+    if path_exists(path_join(dir, "moon.work")) &&
+      path_exists(path_join(dir, "src")) {
+      return dir
+    }
+    let parent = path_parent(dir)
+    if parent == dir {
+      return start
+    }
+    continue parent
+  }
+  start
+}
+
+///|
+fn project_root() -> Result[String, CliError] {
+  let cwd = native_text(cli_getcwd_ffi())
+  if cwd == "" {
+    Err(
+      CliError::CommandError(
+        "Failed to read current directory: " + cli_last_error(),
+      ),
+    )
+  } else {
+    Ok(find_project_root_from(cwd))
+  }
+}
+
+///|
+fn archive_url(name : String, url : String?) -> String {
+  match url {
+    Some(url) => url
+    None => default_cef_base_url + "/" + name + ".tar.bz2"
+  }
+}
+
+///|
+fn require_windows() -> Result[Unit, CliError] {
+  if cli_is_windows_ffi() {
+    Ok(())
+  } else {
+    Err(
+      CliError::CommandError(
+        "The Proton CEF backend is currently Windows-only.",
+      ),
+    )
+  }
+}
+
+///|
+fn make_temp_dir() -> Result[String, CliError] {
+  let temp_dir = native_text(cli_make_temp_dir_ffi(native_path("proton-cef-")))
+  if temp_dir == "" {
+    Err(
+      CliError::CommandError(
+        "Failed to create temp directory: " + cli_last_error(),
+      ),
+    )
+  } else {
+    Ok(temp_dir)
+  }
+}
+
+///|
+fn download_file(url : String, destination : String) -> Result[Unit, CliError] {
+  println("[INFO] Downloading CEF: " + url)
+  guard cli_download_file_ffi(native_path(url), native_path(destination)) == 0 else {
+    return Err(CliError::CommandError("Download failed: " + cli_last_error()))
+  }
+  Ok(())
+}
+
+///|
+fn extract_tar_bz2(
+  archive_path : String,
+  destination : String,
+) -> Result[Unit, CliError] {
+  println("[INFO] Extracting: " + archive_path)
+  guard cli_extract_tar_bz2_ffi(
+      native_path(archive_path),
+      native_path(destination),
+    ) ==
+    0 else {
+    return Err(CliError::CommandError("tar failed: " + cli_last_error()))
+  }
+  Ok(())
+}
+
+///|
+fn find_extracted_root(
+  extract_dir : String,
+  name : String,
+) -> Result[String, CliError] {
+  let named = path_join(extract_dir, name)
+  if has_source_cef_files(named) {
+    return Ok(named)
+  }
+  let candidates : Array[String] = []
+  let entries = @mbfs.read_dir(extract_dir) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to read extract directory: " +
+          @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  for entry in entries {
+    guard entry.has_prefix("cef_binary_") else { continue }
+    let candidate = path_join(extract_dir, entry)
+    if path_is_dir(candidate) && has_source_cef_files(candidate) {
+      candidates.push(candidate)
+    }
+  }
+  match candidates {
+    [candidate] => Ok(candidate)
+    _ =>
+      Err(
+        CliError::CommandError(
+          "Could not find extracted CEF root in " + extract_dir,
+        ),
+      )
+  }
+}
+
+///|
+fn assert_safe_install_dir(
+  install_dir : String,
+  root : String,
+) -> Result[Unit, CliError] {
+  let normalized_install = install_dir.replace(old="/", new="\\")
+  let normalized_root = root.replace(old="/", new="\\")
+  let parent = path_parent(normalized_root)
+  if normalized_install == "" ||
+    normalized_install.has_suffix(":\\") ||
+    normalized_install == normalized_root ||
+    normalized_install == parent {
+    Err(
+      CliError::CommandError(
+        "Refusing to replace unsafe CEF install directory: " + install_dir,
+      ),
+    )
+  } else {
+    Ok(())
+  }
+}
+
+///|
+fn remove_tree(path : String) -> Result[Unit, CliError] {
+  guard path_exists(path) else { return Ok(()) }
+  guard cli_remove_tree_ffi(native_path(path)) == 0 else {
+    return Err(
+      CliError::CommandError(
+        "Failed to remove " + path + ": " + cli_last_error(),
+      ),
+    )
+  }
+  Ok(())
+}
+
+///|
+fn install_cef_root(
+  extracted_root : String,
+  install_dir : String,
+  name : String,
+  root : String,
+) -> Result[Unit, CliError] {
+  match assert_safe_install_dir(install_dir, root) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  match remove_tree(install_dir) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  println("[INFO] Installing CEF into: " + install_dir)
+  guard cli_copy_tree_ffi(native_path(extracted_root), native_path(install_dir)) ==
+    0 else {
+    return Err(
+      CliError::CommandError("Failed to install CEF: " + cli_last_error()),
+    )
+  }
+  match normalize_cef_runtime_layout(install_dir) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  @mbfs.write_string_to_file(
+    path_join(install_dir, "version.txt"),
+    name + "\n",
+    encoding="utf8",
+  ) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to write CEF version: " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  Ok(())
+}
+
+///|
+fn setup_downloaded_cef(
+  name : String,
+  url : String?,
+  root : String,
+  install_dir : String,
+) -> Result[Unit, CliError] {
+  let temp_dir = match make_temp_dir() {
+    Ok(temp_dir) => temp_dir
+    Err(error) => return Err(error)
+  }
+  let archive_path = path_join(temp_dir, name + ".tar.bz2")
+  let setup_result = match download_file(archive_url(name, url), archive_path) {
+    Err(error) => Err(error)
+    Ok(_) =>
+      match extract_tar_bz2(archive_path, temp_dir) {
+        Err(error) => Err(error)
+        Ok(_) =>
+          match find_extracted_root(temp_dir, name) {
+            Err(error) => Err(error)
+            Ok(extracted_root) =>
+              install_cef_root(extracted_root, install_dir, name, root)
+          }
+      }
+  }
+  let cleanup_result = remove_tree(temp_dir)
+  match setup_result {
+    Err(error) => {
+      ignore(cleanup_result)
+      Err(error)
+    }
+    Ok(_) => cleanup_result
+  }
+}
+
+///|
+fn installed_version(install_dir : String) -> String {
+  let version_path = path_join(install_dir, "version.txt")
+  if path_is_file(version_path) {
+    @mbfs.read_file_to_string(version_path, encoding="utf8").trim().to_owned() catch {
+      _ => ""
+    }
+  } else {
+    ""
+  }
+}
+
+///|
+fn run_cef_setup(args : Array[String]) -> Result[Unit, CliError] {
+  let cmd = cef_setup_arg_parser()
+  let matches = cmd.parse(argv=args, env={}) catch {
+    err => return Err(CliError::UsageError(err.to_string(), true))
+  }
+  match require_windows() {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let name = match match_value(matches, "name") {
+    Some(name) => name
+    None => default_cef_name
+  }
+  let url = match_value(matches, "url")
+  let root = match project_root() {
+    Ok(root) => root
+    Err(error) => return Err(error)
+  }
+  let install_dir = path_join(root, ".cef-cache")
+  if installed_version(install_dir) == name {
+    match normalize_cef_runtime_layout(install_dir) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  } else {
+    match setup_downloaded_cef(name, url, root, install_dir) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  }
+  match validate_cef_root(install_dir) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  println(install_dir)
+  Ok(())
+}

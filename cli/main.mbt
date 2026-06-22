@@ -4,6 +4,7 @@ fn print_usage() -> Unit {
     #|Usage:
     #|  proton [-C DIR] doctor [--dry-run] [--verbose] [--json]
     #|  proton codegen <input.mbt> -o <output.g.mbt>
+    #|  proton cef setup [--name <cef_binary_name>] [--url <url>]
     #|
   println(usage)
 }
@@ -146,6 +147,8 @@ fn main {
     run_doctor_from_args(cwd, args[1:].to_owned())
   } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(args[1:].to_owned())
+  } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
+    run_cef_setup(args[2:].to_owned())
   } else {
     Err(CliError::UsageError("unknown command", false))
   }

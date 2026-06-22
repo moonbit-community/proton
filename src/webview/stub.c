@@ -645,7 +645,7 @@ static void proton_prepare_cef_runtime(const char *cef_root) {
       fprintf(stderr,
               "Proton CEF runtime DLL could not be loaded "
               "(GetLastError=%lu). Install CEF with "
-              "`node .\\scripts\\setup_cef.mjs` before building, or package "
+              "`proton cef setup` before building, or package "
               "the CEF runtime beside the app executable.\n",
               (unsigned long)error);
     }
@@ -2302,7 +2302,7 @@ MOONBIT_FFI_EXPORT webview_t webview_create(int32_t debug, int64_t window) {
   fprintf(
       stderr,
       "Proton CEF backend is not linked. Install CEF with "
-      "`node .\\scripts\\setup_cef.mjs` before building.\n");
+      "`proton cef setup` before building.\n");
   abort();
 }
 
