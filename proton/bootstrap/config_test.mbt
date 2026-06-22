@@ -31,7 +31,7 @@ fn normalize_test_slashes(path : String) -> String {
 fn manifest_test_path(name : String) -> String {
   resolve_fixture_path([
     "testdata/" + name,
-    "src/bootstrap/testdata/" + name,
+    "proton/bootstrap/testdata/" + name,
     "bootstrap/testdata/" + name,
   ])
 }

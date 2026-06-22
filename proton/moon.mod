@@ -21,8 +21,7 @@ keywords = [ "webview", "webui", "gui", "web", "desktop-app" ]
 description = "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs."
 
 options(
-  source: "src",
-  "--moonbit-unstable-prebuild": "native_link_config.mjs",
+  "--moonbit-unstable-prebuild": "../native_link_config.mjs",
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",

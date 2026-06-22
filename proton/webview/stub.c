@@ -1697,7 +1697,7 @@ static void proton_ensure_cef_initialized(int debug) {
   if (!proton_file_exists(subprocess_path)) {
     fprintf(stderr,
             "Proton CEF subprocess executable is missing: %s\n"
-            "Build it with `moon build src\\cef_process --target native`, "
+            "Build it with `moon -C proton build cef_process --target native`, "
             "or package cef_process.exe beside the app executable.\n",
             subprocess_path);
     fflush(stderr);

@@ -22,12 +22,12 @@ supported_targets = "+native"
 
 rule(
   name: "embed_moonbit_core_template",
-  command: "node $mod_dir/scripts/embed_asset.mjs $input $output moonbit_core_template_resource",
+  command: "node $mod_dir/../scripts/embed_asset.mjs $input $output moonbit_core_template_resource",
 )
 
 rule(
   name: "embed_moonbit_register_op_template",
-  command: "node $mod_dir/scripts/embed_asset.mjs $input $output moonbit_register_op_template_resource",
+  command: "node $mod_dir/../scripts/embed_asset.mjs $input $output moonbit_register_op_template_resource",
 )
 
 dev_build(
