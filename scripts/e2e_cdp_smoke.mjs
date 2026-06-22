@@ -102,13 +102,13 @@ function ensureCefInstalled() {
 }
 
 function ensureCefSubprocess(env) {
-  const build = spawnSync("moon", ["build", "src/cef_process", "--target", "native"], {
+  const build = spawnSync("moon", ["-C", "proton", "build", "cef_process", "--target", "native"], {
     cwd: repoRoot,
     env,
     stdio: "inherit",
   });
   if (build.status !== 0) {
-    throw new Error("failed to build src/cef_process");
+    throw new Error("failed to build proton/cef_process");
   }
   const exe = path.join(
     repoRoot,

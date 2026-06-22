@@ -28,7 +28,7 @@ description = "Extensions for proton examples and applications."
 
 rule(
   name: "proton_codegen",
-  command: "moon -C ../cli run --target-dir ../target/proton-codegen-moon . -- codegen $input -o $output",
+  command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- codegen $input -o $output",
 )
 
 options(

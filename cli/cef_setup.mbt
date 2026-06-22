@@ -223,7 +223,7 @@ fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CliError] {
 fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(path_join(dir, "moon.work")) &&
-      path_exists(path_join(dir, "src")) {
+      path_exists(path_join(dir, "proton")) {
       return dir
     }
     let parent = path_parent(dir)
