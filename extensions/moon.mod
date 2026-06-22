@@ -1,6 +1,6 @@
 name = "justjavac/proton_ext"
 
-version = "0.1.0"
+version = "0.1.1"
 
 import {
   "justjavac/ffi@0.2.1",
@@ -28,7 +28,7 @@ description = "Extensions for proton examples and applications."
 
 rule(
   name: "proton_codegen",
-  command: "$mod_dir/../target/proton-tools/proton codegen $input -o $output",
+  command: "proton_cli codegen $input -o $output",
 )
 
 options(
