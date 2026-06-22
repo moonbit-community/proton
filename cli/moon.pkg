@@ -5,7 +5,6 @@ import {
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
-  "moonbitlang/x/encoding",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",
   "moonbitlang/x/sys",

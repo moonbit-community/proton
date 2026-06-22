@@ -17,41 +17,6 @@ let default_cef_name = "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_win
 let default_cef_base_url = "https://cef-builds.spotifycdn.com"
 
 ///|
-extern "C" fn cli_last_error_ffi() -> Bytes = "proton_cli_last_error"
-
-///|
-#borrow(src, dest)
-extern "C" fn cli_copy_file_ffi(src : Bytes, dest : Bytes) -> Int = "proton_cli_copy_file"
-
-///|
-#borrow(src, dest)
-extern "C" fn cli_copy_tree_ffi(src : Bytes, dest : Bytes) -> Int = "proton_cli_copy_tree"
-
-///|
-fn native_text(bytes : Bytes) -> String {
-  if bytes.length() == 0 || bytes[bytes.length() - 1] != 0x00 {
-    abort("expected null-terminated native string")
-  }
-  let decoder = @encoding.decoder(UTF8)
-  decoder.decode_lossy(bytes[0:bytes.length() - 1])
-}
-
-///|
-fn native_path(path : String) -> Bytes {
-  @encoding.encode(UTF8, path + "\u{0000}")
-}
-
-///|
-fn cli_last_error() -> String {
-  let message = native_text(cli_last_error_ffi())
-  if message == "" {
-    "unknown OS error"
-  } else {
-    message
-  }
-}
-
-///|
 fn path_exists(path : String) -> Bool {
   @mbfs.path_exists(path)
 }
@@ -152,20 +117,94 @@ fn validate_cef_root(root : String) -> Result[Unit, CliError] {
 }
 
 ///|
-fn copy_file_if_exists(src : String, dest : String) -> Result[Unit, CliError] {
-  guard path_exists(src) else { return Ok(()) }
-  guard cli_copy_file_ffi(native_path(src), native_path(dest)) == 0 else {
-    return Err(
-      CliError::CommandError(
-        "Failed to copy " + src + " to " + dest + ": " + cli_last_error(),
-      ),
-    )
+async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
+  let data = @async_fs.read_file(src) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to read " + src + ": " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  @async_fs.write_file(dest, data, create_mode=CreateOrTruncate) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to copy " +
+          src +
+          " to " +
+          dest +
+          ": " +
+          @debug.render(@debug.to_repr(err)),
+        ),
+      )
   }
   Ok(())
 }
 
 ///|
-fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CliError] {
+async fn copy_file_if_exists(
+  src : String,
+  dest : String,
+) -> Result[Unit, CliError] {
+  guard path_exists(src) else { return Ok(()) }
+  copy_file(src, dest)
+}
+
+///|
+async fn copy_tree(src : String, dest : String) -> Result[Unit, CliError] {
+  if path_is_file(src) {
+    return copy_file(src, dest)
+  }
+  if !path_is_dir(src) {
+    return Err(
+      CliError::CommandError(
+        "Failed to copy " +
+        src +
+        " to " +
+        dest +
+        ": source path is not a file or directory",
+      ),
+    )
+  }
+  if !path_exists(dest) {
+    @async_fs.mkdir(dest, recursive=true) catch {
+      err =>
+        return Err(
+          CliError::CommandError(
+            "Failed to create " +
+            dest +
+            ": " +
+            @debug.render(@debug.to_repr(err)),
+          ),
+        )
+    }
+  }
+  let entries = @async_fs.readdir(
+    src,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to read " + src + ": " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  for entry in entries {
+    let child_src = path_join(src, entry)
+    let child_dest = path_join(dest, entry)
+    match copy_tree(child_src, child_dest) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  }
+  Ok(())
+}
+
+///|
+async fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CliError] {
   let release_dir = path_join(root, "Release")
   if !path_exists(release_dir) {
     @mbfs.create_dir(release_dir) catch {
@@ -417,11 +456,9 @@ async fn install_cef_root(
     Err(error) => return Err(error)
   }
   println("[INFO] Installing CEF into: " + install_dir)
-  guard cli_copy_tree_ffi(native_path(extracted_root), native_path(install_dir)) ==
-    0 else {
-    return Err(
-      CliError::CommandError("Failed to install CEF: " + cli_last_error()),
-    )
+  match copy_tree(extracted_root, install_dir) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
   }
   match normalize_cef_runtime_layout(install_dir) {
     Ok(_) => ()
