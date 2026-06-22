@@ -79,9 +79,20 @@ pub extern "C" fn webview_set_size(
 pub extern "C" fn webview_navigate(webview : Webview_t, url : Bytes) -> Int = "webview_navigate"
 
 ///|
+/// Queues a pre-rendered HTML replacement script.
+#borrow(js)
+extern "C" fn webview_set_html_script(webview : Webview_t, js : Bytes) -> Int = "moonbit_webview_set_html_script"
+
+///|
 /// extern void webview_set_html(webview_t w, const char *html);
-#borrow(html)
-pub extern "C" fn webview_set_html(webview : Webview_t, html : Bytes) -> Int = "webview_set_html"
+pub fn webview_set_html(webview : Webview_t, html : Bytes) -> Int {
+  webview_set_html_script(
+    webview,
+    @ffi.to_cstr(
+      webview_html_replacement_script(webview_c_string_bytes_to_string(html)),
+    ),
+  )
+}
 
 ///|
 /// extern void webview_init(webview_t w, const char *js);

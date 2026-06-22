@@ -202,7 +202,10 @@ pub fn Webview::set_title(self : Webview, title : String) -> Unit {
 /// webview.run()
 /// ```
 pub fn Webview::set_html(self : Webview, html : String) -> Unit {
-  let _ = webview_set_html(self.handle, @ffi.to_cstr(html))
+  let _ = webview_set_html_script(
+    self.handle,
+    @ffi.to_cstr(webview_html_replacement_script(html)),
+  )
 }
 
 ///|

@@ -334,47 +334,6 @@ static char *proton_list_string(cef_list_value_t *list, int index) {
   return proton_userfree_to_utf8(list->get_string(list, index));
 }
 
-static int proton_is_data_url_safe(unsigned char value) {
-  return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z') ||
-         (value >= '0' && value <= '9') || value == '-' || value == '_' ||
-         value == '.' || value == '~';
-}
-
-static char *proton_html_data_url(const char *html) {
-  static const char hex[] = "0123456789ABCDEF";
-  static const char prefix[] = "data:text/html;charset=utf-8,";
-  size_t prefix_len = sizeof(prefix) - 1;
-  size_t len = 0;
-  size_t i;
-  char *url;
-  char *out;
-  if (html == NULL) {
-    html = "";
-  }
-  for (i = 0; html[i] != '\0'; ++i) {
-    unsigned char ch = (unsigned char)html[i];
-    len += proton_is_data_url_safe(ch) ? 1 : 3;
-  }
-  url = (char *)malloc(prefix_len + len + 1);
-  if (url == NULL) {
-    return NULL;
-  }
-  memcpy(url, prefix, prefix_len);
-  out = url + prefix_len;
-  for (i = 0; html[i] != '\0'; ++i) {
-    unsigned char ch = (unsigned char)html[i];
-    if (proton_is_data_url_safe(ch)) {
-      *out++ = (char)ch;
-    } else {
-      *out++ = '%';
-      *out++ = hex[ch >> 4];
-      *out++ = hex[ch & 15];
-    }
-  }
-  *out = '\0';
-  return url;
-}
-
 static char *proton_path_join(const char *left, const char *right) {
   size_t left_len;
   size_t right_len;
@@ -857,6 +816,26 @@ static char *proton_js_quote(const char *value) {
   *cursor++ = '"';
   *cursor = '\0';
   return out;
+}
+
+static char *proton_html_replacement_script(const char *html) {
+  char *quoted_html = proton_js_quote(html);
+  char *script;
+  size_t script_len;
+  if (quoted_html == NULL) {
+    return NULL;
+  }
+  script_len = strlen(quoted_html) + 80;
+  script = (char *)malloc(script_len);
+  if (script != NULL) {
+    snprintf(
+        script,
+        script_len,
+        "document.open();document.write(%s);document.close();",
+        quoted_html);
+  }
+  free(quoted_html);
+  return script;
 }
 
 static void proton_install_binding_script_on_frame(
@@ -1904,22 +1883,8 @@ static void proton_apply_op(
     proton_trace("apply html");
     frame = w->browser->get_main_frame(w->browser);
     if (frame != NULL) {
-      char *quoted_html = proton_js_quote(op->value);
       struct proton_dispatch_task *task;
-      if (quoted_html != NULL) {
-        size_t script_len = strlen(quoted_html) + 80;
-        char *script = (char *)malloc(script_len);
-        if (script != NULL) {
-          snprintf(
-              script,
-              script_len,
-              "document.open();document.write(%s);document.close();",
-              quoted_html);
-          proton_frame_execute(frame, script);
-          free(script);
-        }
-        free(quoted_html);
-      }
+      proton_frame_execute(frame, op->value);
       task = proton_dispatch_task_new((webview_t)w, proton_install_bindings_dispatch, NULL);
       if (task != NULL) {
         task->task.base.add_ref((cef_base_ref_counted_t *)&task->task);
@@ -2154,7 +2119,9 @@ MOONBIT_FFI_EXPORT int32_t webview_set_size(
   return 0;
 }
 
-MOONBIT_FFI_EXPORT int32_t webview_set_html(webview_t raw, const char *html) {
+MOONBIT_FFI_EXPORT int32_t moonbit_webview_set_html_script(
+    webview_t raw,
+    const char *script) {
   struct moonbit_webview *w = (struct moonbit_webview *)raw;
   struct moonbit_webview_op op;
   if (w == NULL) {
@@ -2162,9 +2129,20 @@ MOONBIT_FFI_EXPORT int32_t webview_set_html(webview_t raw, const char *html) {
   }
   memset(&op, 0, sizeof(op));
   op.type = 3;
-  op.value = (char *)(html != NULL ? html : "");
+  op.value = (char *)(script != NULL ? script : "");
   proton_apply_op(w, &op);
   return 0;
+}
+
+MOONBIT_FFI_EXPORT int32_t webview_set_html(webview_t raw, const char *html) {
+  char *script = proton_html_replacement_script(html);
+  int32_t result;
+  if (script == NULL) {
+    return -1;
+  }
+  result = moonbit_webview_set_html_script(raw, script);
+  free(script);
+  return result;
 }
 
 MOONBIT_FFI_EXPORT int32_t webview_navigate(webview_t raw, const char *url) {
@@ -2359,6 +2337,14 @@ MOONBIT_FFI_EXPORT int32_t webview_set_size(
   (void)width;
   (void)height;
   (void)hint;
+  return -1;
+}
+
+MOONBIT_FFI_EXPORT int32_t moonbit_webview_set_html_script(
+    webview_t w,
+    const char *script) {
+  (void)w;
+  (void)script;
   return -1;
 }
 
