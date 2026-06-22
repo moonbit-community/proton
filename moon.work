@@ -1,0 +1,7 @@
+members = [
+  ".",
+  "./proton_config",
+  "./examples",
+  "./extensions",
+  "./e2e",
+]

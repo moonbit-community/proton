@@ -26,10 +26,7 @@ keywords = [ "webview", "extension", "filesystem" ]
 
 description = "Extensions for proton examples and applications."
 
-rule(
-  name: "proton_codegen",
-  command: "proton_cli codegen $input -o $output",
-)
+rule(name: "proton_codegen", command: "proton_cli codegen $input -o $output")
 
 options(
   source: ".",
