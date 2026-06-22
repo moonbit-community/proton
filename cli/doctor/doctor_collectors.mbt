@@ -74,6 +74,17 @@ fn resolve_cef_root(project : ProjectDoctorInfo) -> String {
 }
 
 ///|
+fn cef_required_layout_files() -> Array[String] {
+  [
+    "include\\capi\\cef_app_capi.h", "include\\capi\\cef_browser_capi.h",
+    "include\\capi\\cef_client_capi.h", "include\\capi\\cef_v8_capi.h",
+    "Release\\libcef.lib", "Release\\libcef.dll", "Release\\icudtl.dat",
+    "Release\\chrome_100_percent.pak", "Release\\chrome_200_percent.pak",
+    "Release\\resources.pak", "Resources\\icudtl.dat",
+  ]
+}
+
+///|
 fn moon_config_error_line(
   label : String,
   error : MoonConfigReadError,
@@ -115,10 +126,7 @@ fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       lines.push(DoctorLine::new(Unknown, "CEF version: version.txt missing"))
     }
     let missing : Array[String] = []
-    for
-      required in [
-        "include\\capi\\cef_app_capi.h", "Release\\libcef.dll", "Resources\\icudtl.dat",
-      ] {
+    for required in cef_required_layout_files() {
       if !@mbfs.path_exists(path_join(cef_root, required)) {
         missing.push(required)
       }
@@ -137,7 +145,7 @@ fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       DoctorLine::new(
         Missing,
         "CEF root: not found",
-        hint="run `node .\\scripts\\setup_cef.mjs` or set PROTON_CEF_ROOT",
+        hint="run `proton cef setup` or set PROTON_CEF_ROOT",
       ),
     )
   }
