@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL(".", import.meta.url));
-const defaultCefDirName = ".cef-cache";
+const defaultCefRoot = path.join(repoRoot, ".cef-cache");
 const defaultSubprocessPath = path.join(
   repoRoot,
   "_build",
@@ -19,9 +19,6 @@ const defaultSubprocessPath = path.join(
 );
 
 function nativeLinkPath(filePath) {
-  if (process.platform !== "win32") {
-    return filePath;
-  }
   return filePath.replace(/\\/g, "/");
 }
 
@@ -41,132 +38,22 @@ function envValue(env, name) {
   return env[name] ?? process.env[name] ?? "";
 }
 
-function requiredCefFiles(root, requireVersion) {
-  const files = [
-    "include/capi/cef_app_capi.h",
-    "include/capi/cef_browser_capi.h",
-    "include/capi/cef_client_capi.h",
-    "include/capi/cef_v8_capi.h",
-    "Release/libcef.lib",
-    "Release/libcef.dll",
-    "Release/icudtl.dat",
-    "Release/chrome_100_percent.pak",
-    "Release/chrome_200_percent.pak",
-    "Release/resources.pak",
-    "Resources/icudtl.dat",
-  ].map((relativePath) => path.join(root, relativePath));
-  if (requireVersion) {
-    files.push(path.join(root, "version.txt"));
-  }
-  return files;
-}
-
-function missingCefFiles(root, requireVersion) {
-  return requiredCefFiles(root, requireVersion)
-    .filter((candidate) => !fs.existsSync(candidate));
-}
-
-function isCefRoot(root, requireVersion) {
-  return missingCefFiles(root, requireVersion).length === 0;
-}
-
-function installGuide(message) {
-  return [
-    message,
-    "",
-    "CEF is required for the Windows native backend.",
-    "Install it with:",
-    "  proton cef setup",
-    "",
-    `Expected layout: ${path.join(repoRoot, defaultCefDirName)}`,
-    "The CEF files should live directly in .cef-cache, with version.txt at the root.",
-  ].join("\n");
-}
-
-function defaultCefRoot() {
-  const candidates = [
-    path.resolve(process.cwd(), defaultCefDirName),
-    path.join(repoRoot, defaultCefDirName),
-  ];
-  const unique = [...new Set(candidates)];
-  for (const candidate of unique) {
-    if (isCefRoot(candidate, true)) {
-      return candidate;
-    }
-  }
-  const existing = unique.find((candidate) => fs.existsSync(candidate));
-  if (existing) {
-    const missing = missingCefFiles(existing, true);
-    throw new Error(installGuide(
-      `Invalid CEF install directory: ${existing}\nMissing:\n${missing.join("\n")}`,
-    ));
-  }
-  return "";
-}
-
 function cStringDefine(value) {
   return value.replace(/\\/g, "/").replace(/"/g, "\\\"");
 }
 
-function windowsConfig(root) {
-  for (const filePath of requiredCefFiles(root, false)) {
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Missing CEF file: ${filePath}`);
-    }
-  }
-
+function emptyConfig() {
   return {
-    link_libs: [
-      nativeLinkPath(path.join(root, "Release/libcef")),
-      "user32",
-      "gdi32",
-      "ole32",
-      "shell32",
-      "advapi32",
-      "comdlg32",
-    ],
-    link_flags: "/link /DELAYLOAD:libcef.dll delayimp.lib",
+    vars: {
+      PROTON_CEF_ENABLED: "0",
+      PROTON_CEF_STUB_CC_FLAGS: "",
+    },
+    link_configs: [],
   };
 }
 
-function main() {
-  const env = optionalPayloadEnv();
-  const rawRoot = envValue(env, "PROTON_CEF_ROOT").trim();
-
-  if (process.platform !== "win32") {
-    process.stdout.write(JSON.stringify({
-      vars: {
-        PROTON_CEF_ENABLED: "0",
-        PROTON_CEF_STUB_CC_FLAGS: "",
-      },
-      link_configs: [],
-    }));
-    return;
-  }
-
-  const root = rawRoot.length === 0
-    ? defaultCefRoot()
-    : path.resolve(rawRoot);
-  if (root.length === 0) {
-    process.stdout.write(JSON.stringify({
-      vars: {
-        PROTON_CEF_ENABLED: "0",
-        PROTON_CEF_STUB_CC_FLAGS: "",
-      },
-      link_configs: [],
-    }));
-    return;
-  }
-  const rawSubprocess = envValue(env, "PROTON_CEF_SUBPROCESS_PATH").trim();
-  const subprocess = rawSubprocess.length === 0
-    ? defaultSubprocessPath
-    : path.resolve(rawSubprocess);
-  if (subprocess.length > 0 && !fs.existsSync(subprocess)) {
-    if (rawSubprocess.length > 0) {
-      throw new Error(`Missing CEF subprocess executable: ${subprocess}`);
-    }
-  }
-  process.stdout.write(JSON.stringify({
+function windowsConfig(root, subprocess) {
+  return {
     vars: {
       PROTON_CEF_ENABLED: "1",
       PROTON_CEF_ROOT: nativeLinkPath(root),
@@ -180,10 +67,38 @@ function main() {
     link_configs: [
       {
         package: "justjavac/proton/webview",
-        ...windowsConfig(root),
+        link_libs: [
+          nativeLinkPath(path.join(root, "Release/libcef")),
+          "user32",
+          "gdi32",
+          "ole32",
+          "shell32",
+          "advapi32",
+          "comdlg32",
+        ],
+        link_flags: "/link /DELAYLOAD:libcef.dll delayimp.lib",
       },
     ],
-  }));
+  };
+}
+
+function main() {
+  const env = optionalPayloadEnv();
+  const rawRoot = envValue(env, "PROTON_CEF_ROOT").trim();
+
+  if (process.platform !== "win32") {
+    process.stdout.write(JSON.stringify(emptyConfig()));
+    return;
+  }
+
+  const root = rawRoot.length === 0
+    ? defaultCefRoot
+    : path.resolve(rawRoot);
+  const rawSubprocess = envValue(env, "PROTON_CEF_SUBPROCESS_PATH").trim();
+  const subprocess = rawSubprocess.length === 0
+    ? defaultSubprocessPath
+    : path.resolve(rawSubprocess);
+  process.stdout.write(JSON.stringify(windowsConfig(root, subprocess)));
 }
 
 try {
