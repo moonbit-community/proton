@@ -1,5 +1,6 @@
 members = [
   ".",
+  "./cli",
   "./config",
   "./examples",
   "./extensions",
