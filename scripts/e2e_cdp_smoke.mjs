@@ -92,7 +92,7 @@ function ensureCefInstalled() {
     throw new Error(
       [
         "CEF is not installed in .cef-cache.",
-        "Run: node ./scripts/setup_cef.mjs",
+        "Run: proton cef setup",
         "",
         "Missing:",
         ...missing,
