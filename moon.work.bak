@@ -1,6 +1,6 @@
 members = [
   ".",
-  "./proton_config",
+  "./config",
   "./cli",
   "./examples",
   "./extensions",
