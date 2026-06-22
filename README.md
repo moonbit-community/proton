@@ -114,7 +114,7 @@ Set up CEF, build the helper process, then build or run examples:
 
 ```sh
 target/proton-tools/proton_cli cef setup
-moon build src/cef_process --target native
+moon -C proton build cef_process --target native
 moon -C examples build --target native
 moon -C examples run 43_cef_bind_smoke --target native
 ```
@@ -139,7 +139,7 @@ node ./scripts/e2e_cdp_smoke.mjs
 
 - Proton currently targets MoonBit `native`.
 - The CEF runtime lives in `.cef-cache/` after `proton_cli cef setup`.
-- CEF child processes use `src/cef_process`; packaged apps should ship the
+- CEF child processes use `proton/cef_process`; packaged apps should ship the
   helper beside the app executable.
 - Command extensions are generated with `proton_cli codegen`.
 

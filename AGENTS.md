@@ -1,13 +1,13 @@
 # Repository Guidelines
 
 ## Project Structure
-- `src/`: root `justjavac/proton` facade plus Proton subpackages.
-- `src/webview/`: `justjavac/proton/webview`; low-level CEF-backed native binding.
-- `src/manifest/`: `justjavac/proton/manifest`; owns `app.json`-style manifest types and declarative extension settings.
-- `src/core/`: `justjavac/proton/core`; owns ops dispatch, JS bridge installation, extension host, and `window.__MoonBit__`.
-- `src/runtime/`: `justjavac/proton/runtime`; owns `App`, window lifecycle, and extension installation on top of `core`.
-- `src/bootstrap/`: `justjavac/proton/bootstrap`; owns manifest parsing, editing, and config documents.
-- `src/catalog/`: `justjavac/proton/catalog`; discovery, indexing, schema validation, and linking-plan helpers for metadata-driven tooling.
+- `proton/`: root `justjavac/proton` module, facade package, and Proton subpackages.
+- `proton/webview/`: `justjavac/proton/webview`; low-level CEF-backed native binding.
+- `proton/manifest/`: `justjavac/proton/manifest`; owns `app.json`-style manifest types and declarative extension settings.
+- `proton/core/`: `justjavac/proton/core`; owns ops dispatch, JS bridge installation, extension host, and `window.__MoonBit__`.
+- `proton/runtime/`: `justjavac/proton/runtime`; owns `App`, window lifecycle, and extension installation on top of `core`.
+- `proton/bootstrap/`: `justjavac/proton/bootstrap`; owns manifest parsing, editing, and config documents.
+- `proton/catalog/`: `justjavac/proton/catalog`; discovery, indexing, schema validation, and linking-plan helpers for metadata-driven tooling.
 - `cli/`: `justjavac/proton_cli`; independent native developer CLI module plus `cli/codegen/` command/event code generation helpers.
 - `extensions/`: `justjavac/proton_ext`; built-in webview extensions such as `fs`, `path`, `dialog`, `clipboard`; each extension owns its own metadata plus JS/MBT binding and is intended for opt-in linking so apps only ship the capabilities they use.
 - `examples/`: runnable demos; prefer keeping [examples/Readme.md](examples/Readme.md) in sync with the actual examples.

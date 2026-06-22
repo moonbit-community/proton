@@ -25,7 +25,7 @@ CEF examples need the local CEF runtime and helper process:
 
 ```sh
 target/proton-tools/proton_cli cef setup
-moon build src/cef_process --target native
+moon -C proton build cef_process --target native
 moon -C examples run 43_cef_bind_smoke --target native
 ```
 
