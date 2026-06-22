@@ -7,6 +7,5 @@ supported_targets = "native"
 
 options(
   "is-main": true,
-  "bin-name": "proton-cef-process",
   targets: { "main.mbt": [ "native" ] },
 )
