@@ -25,14 +25,19 @@ fn app_probe_expression(name : String) -> String? {
           #|    previous = await app.clipboard.readText({});
           #|  } catch (_) {}
           #|  const text = "proton-cdp-clipboard-" + Date.now();
+          #|  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
           #|  try {
-          #|    const written = await app.clipboard.writeText({ text });
-          #|    const loaded = await app.clipboard.readText({});
-          #|    return typeof app.dialog.message === "function" &&
-          #|      written &&
-          #|      written.written === true &&
-          #|      loaded &&
-          #|      loaded.text === text;
+          #|    for (let attempt = 0; attempt < 10; attempt += 1) {
+          #|      try {
+          #|        const written = await app.clipboard.writeText({ text });
+          #|        const loaded = await app.clipboard.readText({});
+          #|        if (written && written.written === true && loaded && loaded.text === text) {
+          #|          return typeof app.dialog.message === "function";
+          #|        }
+          #|      } catch (_) {}
+          #|      await sleep(100);
+          #|    }
+          #|    return false;
           #|  } finally {
           #|    if (previous && typeof previous.text === "string") {
           #|      await app.clipboard.writeText({ text: previous.text }).catch(() => {});
