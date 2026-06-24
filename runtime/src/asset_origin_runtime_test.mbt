@@ -1,4 +1,8 @@
 ///|
+/// The asset origin is a Windows/WebView2-only feature (see
+/// asset_origin_runtime.mbt); on other platforms the native path aborts, so
+/// this test is compiled only on Windows.
+#cfg(platform="windows")
 struct AssetOriginReport {
   href : String
   origin : String
@@ -10,6 +14,7 @@ struct AssetOriginReport {
 
 ///|
 /// Resolves one fixture path by searching the current directory and its parents.
+#cfg(platform="windows")
 fn resolve_fixture_path(candidates : Array[String]) -> String {
   let mut prefix = ""
   let mut depth = 0
@@ -27,6 +32,7 @@ fn resolve_fixture_path(candidates : Array[String]) -> String {
 }
 
 ///|
+#cfg(platform="windows")
 fn asset_origin_test_path(relative_path : String) -> String {
   let root : @path.Path = resolve_fixture_path([
     "testdata/asset_origin", "runtime/testdata/asset_origin",
@@ -35,6 +41,7 @@ fn asset_origin_test_path(relative_path : String) -> String {
 }
 
 ///|
+#cfg(platform="windows")
 test "AppEntry::Asset loads through a secure isolated origin" {
   let expected = AssetOriginReport::{
     href: "https://app.localhost/",
@@ -83,4 +90,14 @@ test "AppEntry::Asset loads through a secure isolated origin" {
   app.run()
   @debug.assert_eq(js_error, None)
   assert_true(report == Some(expected))
+}
+
+///|
+/// The Windows-only test above is this package's only user of the `x/fs` and
+/// `x/path` test imports. Reference them on other platforms so the imports do
+/// not warn as unused under `--deny-warn`.
+#cfg(not(platform="windows"))
+let _asset_origin_test_imports : @path.Path? = {
+  ignore(@mbfs.path_exists)
+  None
 }
