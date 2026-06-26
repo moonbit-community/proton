@@ -35,11 +35,11 @@ pub fn AppCommandExtensionContext::extension_id(Self) -> String
 pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
 pub fn AppCommandExtensionContext::js_namespace(Self) -> String
 pub fn AppCommandExtensionContext::new(@core.AppCommandHost, String, String, options? : Json?, base_dir? : String?) -> Self
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply, emits_events? : Bool) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply, emits_events? : Bool) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::op_name(Self, String) -> String
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::options(Self) -> Json?
 
 pub struct AppCommandExtensionDescriptor {

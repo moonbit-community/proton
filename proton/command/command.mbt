@@ -127,8 +127,13 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(
   self : AppCommandExtensionContext,
   api_name : String,
   callback : (Payload) -> Reply,
+  emits_events? : Bool = false,
 ) -> Unit {
-  self.host.op(self.op_name(api_name), callback)
+  let op_name = self.op_name(api_name)
+  self.host.op(op_name, callback)
+  if emits_events {
+    self.host.scope_events_for_op(op_name)
+  }
 }
 
 ///|
@@ -136,8 +141,13 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_
   self : AppCommandExtensionContext,
   api_name : String,
   callback : (Payload) -> Result[Reply, String],
+  emits_events? : Bool = false,
 ) -> Unit {
-  self.host.op_result(self.op_name(api_name), callback)
+  let op_name = self.op_name(api_name)
+  self.host.op_result(op_name, callback)
+  if emits_events {
+    self.host.scope_events_for_op(op_name)
+  }
 }
 
 ///|
@@ -145,8 +155,13 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_
   self : AppCommandExtensionContext,
   api_name : String,
   callback : async (Payload) -> Reply,
+  emits_events? : Bool = false,
 ) -> Unit {
-  self.host.op_async(self.op_name(api_name), callback)
+  let op_name = self.op_name(api_name)
+  self.host.op_async(op_name, callback)
+  if emits_events {
+    self.host.scope_events_for_op(op_name)
+  }
 }
 
 ///|
@@ -154,8 +169,13 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_
   self : AppCommandExtensionContext,
   api_name : String,
   callback : async (Payload) -> Result[Reply, String],
+  emits_events? : Bool = false,
 ) -> Unit {
-  self.host.op_async_result(self.op_name(api_name), callback)
+  let op_name = self.op_name(api_name)
+  self.host.op_async_result(op_name, callback)
+  if emits_events {
+    self.host.scope_events_for_op(op_name)
+  }
 }
 
 ///|

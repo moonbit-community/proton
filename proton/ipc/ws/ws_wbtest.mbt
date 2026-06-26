@@ -282,7 +282,7 @@ test "ipc launch config validation keeps transport on loopback" {
 }
 
 ///|
-test "ipc origin policy only allows local webview origins" {
+test "ipc origin policy only allows local app origins" {
   assert_true(origin_is_allowed(None))
   assert_true(origin_is_allowed(Some("null")))
   assert_true(origin_is_allowed(Some("file://")))

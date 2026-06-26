@@ -1,17 +1,8 @@
 import {
+  "moonbitlang/async",
   "moonbitlang/core/json",
-  "justjavac/ffi",
   "justjavac/proton/ipc",
-  "justjavac/proton/webview",
 }
-
-import {
-  "moonbitlang/core/debug",
-  "moonbitlang/core/json",
-  "moonbitlang/x/sys",
-  "justjavac/ffi",
-  "justjavac/proton/webview",
-} for "test"
 
 import {
   "moonbitlang/core/debug",
@@ -20,53 +11,19 @@ import {
 
 supported_targets = "+native"
 
-rule(
-  name: "embed_moonbit_core_template",
-  command: "node $mod_dir/../scripts/embed_asset.mjs $input $output moonbit_core_template_resource",
-)
-
-rule(
-  name: "embed_moonbit_register_op_template",
-  command: "node $mod_dir/../scripts/embed_asset.mjs $input $output moonbit_register_op_template_resource",
-)
-
-dev_build(
-  rule: "embed_moonbit_core_template",
-  input: "assets/moonbit_core.js",
-  output: "generated_moonbit_core_template.mbt",
-)
-
-dev_build(
-  rule: "embed_moonbit_register_op_template",
-  input: "assets/moonbit_register_op.js",
-  output: "generated_moonbit_register_op_template.mbt",
-)
-
 options(
-  formatter: {
-    "ignore": [
-      "generated_moonbit_core_template.mbt",
-      "generated_moonbit_register_op_template.mbt",
-    ],
-  },
   targets: {
     "app_command_host.mbt": [ "native" ],
     "app_command_host_wbtest.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
-    "core_js_wbtest.mbt": [ "native" ],
     "extension_host.mbt": [ "native" ],
-    "extension_scripts.mbt": [ "native" ],
+    "extension_host_wbtest.mbt": [ "native" ],
     "extension_spec.mbt": [ "native" ],
     "extension_types.mbt": [ "native" ],
-    "ipc_op_runtime.mbt": [ "native" ],
-    "ipc_protocol_wbtest.mbt": [ "native" ],
     "json_helpers.mbt": [ "native" ],
-    "js_runtime.mbt": [ "native" ],
     "js_template_render.mbt": [ "native" ],
     "mbt_process_host.mbt": [ "native" ],
     "op_registry.mbt": [ "native" ],
-    "op_runtime.mbt": [ "native" ],
     "resource_table.mbt": [ "native" ],
-    "runtime_script_install.mbt": [ "native" ],
   },
 )

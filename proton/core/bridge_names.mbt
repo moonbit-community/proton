@@ -13,7 +13,7 @@ pub fn moonbit_global_name() -> String {
 }
 
 ///|
-/// Returns the native/webview binding name used by the op bridge.
+/// Returns the native binding name used by the op bridge.
 /// Native dispatch glue and injected runtime scripts both use this name to
 /// route op calls through the same binding.
 pub fn moonbit_op_binding_name() -> String {
