@@ -1,44 +1,66 @@
 # Proton
 
-Proton is a MoonBit framework for native desktop apps backed by CEF. It gives
-MoonBit apps a browser window, a JavaScript bridge, and opt-in native
-extensions such as filesystem, path, dialog, clipboard, notification, tray, and
-global hotkeys.
+Proton is a MoonBit facade over a standalone native desktop runtime. The current
+runtime route is intentionally narrow:
 
-## Install The CLI
-
-Install the released CLI from the MoonBit registry:
-
-```sh
-moon install justjavac/proton_cli
+```text
+MoonBit app
+  -> justjavac/proton
+  -> proton.dll / libproton.dylib / libproton.so
+  -> native browser runtime
+  -> cef_process.exe helper at runtime
 ```
 
-This installs the `proton_cli` command into MoonBit's binary directory
-(`~/.moon/bin` by default). Make sure that directory is on `PATH`.
+MoonBit links only the Proton native dynamic library. It does not link CEF
+directly and does not provide a compatibility layer for the old runtime route.
 
-Use the CLI to install the local CEF runtime for the current project:
+## Build The Native Runtime
 
-```sh
-proton_cli cef setup
+CMake is the only native build entry point.
+
+For the Windows engine-backed development layout, place the CEF SDK/runtime in
+`.cef-cache` or pass another path through `PROTON_ENGINE_ROOT`, then run:
+
+```powershell
+cmake -S native -B native\build-engine `
+  -DCMAKE_INSTALL_PREFIX=native\dist `
+  -DPROTON_WITH_ENGINE=ON `
+  -DPROTON_ENGINE_ROOT=.cef-cache
+cmake --build native\build-engine --config Debug
+cmake --install native\build-engine --config Debug
 ```
 
-## Add Proton To An App
+The install step produces the layout MoonBit expects:
 
-Add the runtime and whichever extension package you need:
+```text
+native/dist/bin/proton.dll
+native/dist/bin/cef_process.exe
+native/dist/lib/proton.lib
+native/dist/Resources/
+```
+
+The ABI-only build is still useful for binding tests:
+
+```powershell
+cmake -S native -B native\build -DCMAKE_INSTALL_PREFIX=native\dist
+cmake --build native\build --config Debug
+cmake --install native\build --config Debug
+```
+
+On non-Windows platforms the CMake install layout uses `libproton.so` or
+`libproton.dylib`; the real engine implementation is currently wired on Windows.
+
+## Link From MoonBit
+
+Add Proton and import the root facade:
 
 ```sh
 moon add justjavac/proton@0.1.2
-moon add justjavac/proton_ext@0.1.3
 ```
-
-Your executable package should target native and import the packages it uses:
 
 ```moon.pkg
 import {
-  "moonbitlang/async",
   "justjavac/proton",
-  "justjavac/proton_ext/fs",
-  "justjavac/proton_ext/path",
 }
 
 supported_targets = "native"
@@ -48,100 +70,67 @@ options(
 )
 ```
 
-Start an app directly from HTML:
+`native_link_config.mjs` points native builds at `native/dist` by default. Set
+`PROTON_NATIVE_DIST` when the installed native runtime lives elsewhere.
 
-```moonbit
-import {
-  "justjavac/proton"
-  "justjavac/proton_ext/fs" @fs
-  "justjavac/proton_ext/path" @path
-}
+On Windows, add the installed DLL directory to `PATH` while running local
+MoonBit builds:
 
-async fn main {
-  let app =
-    @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
-    .extension(@fs.extension())
-    .extension(@path.extension())
-  app.run_or_abort()
-}
+```powershell
+$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
 ```
 
-Or keep window and entry settings in `moon.proton`:
+Minimal MoonBit app:
 
 ```moonbit
 async fn main {
-  let app =
-    @proton.config("moon.proton")
-    .extension(@fs.extension())
-    .extension(@path.extension())
-  app.run_or_abort()
+  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
+  .run_or_abort()
 }
 ```
 
-`moon.proton` configures app settings such as window size, entry HTML, debug
-mode, frontend build metadata, and bundle metadata. Extensions are still linked
-explicitly in MoonBit code so apps only ship the capabilities they use.
+The chainable `.extension(...)` API registers command extensions for the current
+native DLL route. Inline HTML entries get both the low-level
+`window.__MoonBit__.core.invokeOp(...)` bridge and generated command proxies
+such as `window.__MoonBit__.add.slowAdd(...)`. Event APIs such as
+`window.__MoonBit__.events.on(...)` are still a later layer.
 
-## JavaScript Bridge
+The low-level `justjavac/proton/native` package remains available for ABI tests
+and runtime diagnostics, but ordinary apps should start from the root facade.
 
-Proton exposes one global object to the web page:
+## Run The Example
 
-```js
-await window.__MoonBit__.fs.readFile("demo.txt");
-await window.__MoonBit__.path.resolve({ path: "." });
-window.__MoonBit__.events.on("fs.activity", console.log);
+```powershell
+cmake -S native -B native\build-engine `
+  -DCMAKE_INSTALL_PREFIX=native\dist `
+  -DPROTON_WITH_ENGINE=ON `
+  -DPROTON_ENGINE_ROOT=.cef-cache
+cmake --build native\build-engine --config Debug
+cmake --install native\build-engine --config Debug
+
+$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+moon -C examples run 01_run --target native
 ```
 
-Low-level custom calls can use the core op bridge:
+## Validate
 
-```js
-await window.__MoonBit__.core.invokeOp("ext:path/resolve", { path: "." });
+```powershell
+ctest --test-dir native\build-engine -C Debug --output-on-failure
+node native\scripts\verify_link_config.mjs native\dist
+$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+moon -C proton test native --target native --diagnostic-limit 80
+moon -C examples build 01_run --target native --diagnostic-limit 80
+node scripts\e2e_bridge_smoke.mjs 41_app_commands
 ```
 
-## Run This Repository's Examples
+## Active Packages
 
-The examples include generated command extensions. Install the released CLI
-into the repository tool directory before building them:
-
-```sh
-moon install justjavac/proton_cli --bin target/proton-tools
-```
-
-No local `--path` install or binary copy is needed. The examples call
-`target/proton-tools/proton_cli` directly.
-
-Set up CEF, build the helper process, then build or run examples:
-
-```sh
-target/proton-tools/proton_cli cef setup
-moon -C proton build cef_process --target native
-moon -C examples build --target native
-moon -C examples run 43_cef_bind_smoke --target native
-```
-
-Run the CDP-based smoke scenarios:
-
-```sh
-node ./scripts/e2e_cdp_smoke.mjs
-```
-
-## Packages
-
-- `justjavac/proton`: app facade with `@proton.html(...)` and `@proton.config(...)`
-- `justjavac/proton/webview`: low-level native WebView binding
-- `justjavac/proton/core`: JavaScript bridge, ops dispatch, and extension host
-- `justjavac/proton/runtime`: app and window lifecycle
-- `justjavac/proton_config`: parser for `moon.proton`, `moon.ext`, and `moon.mod`
-- `justjavac/proton_cli`: CEF setup and command/event code generation
-- `justjavac/proton_ext`: built-in opt-in extensions
-
-## Notes
-
-- Proton currently targets MoonBit `native`.
-- The CEF runtime lives in `.cef-cache/` after `proton_cli cef setup`.
-- CEF child processes use `proton/cef_process`; packaged apps should ship the
-  helper beside the app executable.
-- Command extensions are generated with `proton_cli codegen`.
+- `justjavac/proton`: root facade plus native binding re-exports.
+- `justjavac/proton/native`: safe MoonBit API over the `proton_*` C ABI.
+- `native/`: CMake project that builds the native dynamic library, import
+  library, public header, tests, and `cef_process.exe`.
+- `examples/01_run`: minimal root-facade native DLL/EXE example.
+- `justjavac/proton_cli`: developer tooling such as doctor and code generation.
 
 ## License
 

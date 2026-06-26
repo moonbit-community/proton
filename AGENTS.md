@@ -1,59 +1,78 @@
 # Repository Guidelines
 
 ## Project Structure
-- `proton/`: root `justjavac/proton` module, facade package, and Proton subpackages.
-- `proton/webview/`: `justjavac/proton/webview`; low-level CEF-backed native binding.
-- `proton/manifest/`: `justjavac/proton/manifest`; owns `app.json`-style manifest types and declarative extension settings.
-- `proton/core/`: `justjavac/proton/core`; owns ops dispatch, JS bridge installation, extension host, and `window.__MoonBit__`.
-- `proton/runtime/`: `justjavac/proton/runtime`; owns `App`, window lifecycle, and extension installation on top of `core`.
-- `proton/bootstrap/`: `justjavac/proton/bootstrap`; owns manifest parsing, editing, and config documents.
-- `proton/catalog/`: `justjavac/proton/catalog`; discovery, indexing, schema validation, and linking-plan helpers for metadata-driven tooling.
-- `cli/`: `justjavac/proton_cli`; independent native developer CLI module plus `cli/codegen/` command/event code generation helpers.
-- `extensions/`: `justjavac/proton_ext`; built-in webview extensions such as `fs`, `path`, `dialog`, `clipboard`; each extension owns its own metadata plus JS/MBT binding and is intended for opt-in linking so apps only ship the capabilities they use.
-- `examples/`: runnable demos; prefer keeping [examples/Readme.md](examples/Readme.md) in sync with the actual examples.
-- `lib/`, `build/`, `_build/`, `target/`: generated or vendored artifacts.
+- `native/`: standalone CMake project for the Proton native runtime. It builds
+  `proton` as a dynamic library/import library, installs `proton_native.h`, and
+  installs `cef_process.exe` when the engine build is enabled.
+- `proton/`: root `justjavac/proton` MoonBit module. The public facade currently
+  re-exports `justjavac/proton/native`.
+- `proton/native/`: safe MoonBit binding over the `proton_*` C ABI. MoonBit code
+  links only the native Proton library through `native_link_config.mjs`.
+- `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
+  `proton/core/`, `proton/command/`, `proton/ipc/`: supporting packages for
+  metadata, tooling, bridge experiments, and IPC helpers. Do not reintroduce the
+  old app runtime route without an explicit design decision.
+- `cli/`: `justjavac/proton_cli`; independent native developer CLI module plus
+  `cli/codegen/` and `cli/doctor/` helpers.
+- `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
+  aligned with the actual examples.
+- `lib/`, `build/`, `_build/`, `target/`, `native/build*`, `native/dist/`:
+  generated or vendored artifacts.
 
 ## Build And Test
-- `moon check --target native`
-- `moon -C cli test codegen --target native`
-- `moon -C extensions test --target native`
-- `moon -C examples build --target native`
-- `moon -C e2e build --target native`
+- Native engine build:
+  `cmake -S native -B native\build-engine -DCMAKE_INSTALL_PREFIX=native\dist -DPROTON_WITH_ENGINE=ON -DPROTON_ENGINE_ROOT=.cef-cache`
+- `cmake --build native\build-engine --config Debug`
+- `cmake --install native\build-engine --config Debug`
+- `ctest --test-dir native\build-engine -C Debug --output-on-failure`
+- `node native\scripts\verify_link_config.mjs native\dist`
 - `moon fmt` or `moon fmt --check`
-- `moon info --target native`, `moon -C extensions info --target native`, `moon -C examples info --target native`, `moon -C e2e info --target native`
+- With `native\dist\bin` on `PATH`: `moon -C proton test native --target native --diagnostic-limit 80`
+- With `native\dist\bin` on `PATH`: `moon -C proton check --target native --diagnostic-limit 80`
+- With `native\dist\bin` on `PATH`: `moon -C examples build 01_native_window --target native --diagnostic-limit 80`
+- `moon -C cli test --target native --diagnostic-limit 80`
 
-Use the smallest relevant validation set while iterating, then run the broader native checks before handing off larger refactors.
+Use the smallest relevant validation set while iterating, then run broader
+native checks before handing off larger refactors.
 
 ## Coding Conventions
 - Use MoonBit with 2-space indentation and `///|` top-level separators.
 - Keep public APIs documented with `///|` comments.
-- Use `PascalCase` for types and enum variants, `snake_case` for functions, methods, fields, and locals.
-- Prefer small JSON bridge structs deriving `ToJson`, `FromJson`, `Eq`, and `Show`.
-- Prefer the public API shape:
-  - app facade: `@proton.html(...)`, `@proton.config(...)`
-  - low-level: `@webview.Webview::new(...)`
-  - core: `install_extension(...)`, `Extension::new(...)`, `ExtensionSpec::new(...)`
-  - manifest: `AppManifest::new(...)`
-  - bootstrap: `AppManifestDocument::new(...)`
-  - low-level app composition: `create_app(...)`, `create_app_from_file(...)`
-- Treat `plan_app(...)`, `plan_app_document(...)`, and `AppPlan` as removable implementation details unless a strong external use case clearly survives review.
-- Keep JS-facing examples and docs aligned with the current runtime surface:
-  - `window.__MoonBit__.core.invokeOp(...)`
-  - `window.__MoonBit__.events.on(...)`
-  - `window.__MoonBit__.<extension>.*`
+- Use `PascalCase` for types and enum variants, `snake_case` for functions,
+  methods, fields, and locals.
+- Prefer small JSON bridge structs deriving `ToJson`, `FromJson`, `Eq`, and
+  `Show`.
+- Prefer the current public API shape:
+  - facade: `@proton.Runtime::new(...)`, `@proton.RuntimeConfig::bundled(...)`,
+    `@proton.Window::new(...)`
+  - low-level package: `justjavac/proton/native`
+  - C ABI: `proton_*`
+- Do not add old low-level compatibility APIs.
 
 ## Architectural Rules
-- Keep dependencies acyclic and flowing downward: `webview <- core <- runtime <- proton`, `manifest <- bootstrap <- proton`, `ipc <- core/runtime/proton`, `core <- proton_ext`.
-- `bootstrap` must stay declarative; it should parse and edit manifest data, not install extensions or create windows.
-- `runtime` should orchestrate lifecycle only; JS bridge plumbing, op registration, and extension host behavior belong in `core`.
-- Treat Proton as a framework first: applications should link only the extensions they explicitly choose so shipped binaries stay small.
-- Keep linking explicit at build time. Metadata, catalogs, and tools may generate project edits or registry code, but they must not imply auto-linking every built-in extension.
-- The root `proton` facade should stay focused on ergonomic composition from `manifest + explicitly linked extensions` into a runtime app, with a small and clear public API.
-- AI support should primarily live in metadata, catalog/discovery, diagnostics, scaffolding, and manifest-editing tooling rather than in the default runtime of every app.
-- Treat runtime introspection as a debug aid, not as the main composition mechanism.
-- Each built-in extension should keep its own `extension.json` and `options.schema.json`, plus its own JS/MBT binding files, so AI and tooling can reason about extensions locally.
+- There is one runtime route: CMake builds the native Proton dynamic library and
+  helper executable; MoonBit links only the Proton library/import library.
+- CEF is the native implementation detail. Do not expose CEF in MoonBit package
+  names, C ABI prefixes, or public facade names.
+- `native/CMakeLists.txt` is the only native build source of truth. Do not add
+  duplicate native build entry points.
+- `native_link_config.mjs` owns MoonBit link flags. Keep MoonBit FFI simple:
+  no loader shim unless a separate import-library/TCC spike proves it is needed.
+- Keep `proton_*` ABI functions stable and MoonBit-facing: use status codes,
+  `Int64` handle ids, caller-owned buffers, and typed MoonBit wrappers.
+- Runtime/window configs must keep explicit `abi_version` JSON schemas and
+  reject unknown top-level fields.
+- `cef_process.exe` is a native packaged helper. It is built by CMake and
+  shipped beside the native runtime DLL; it is not a MoonBit package.
+- The root `proton` facade should stay focused on ergonomic re-export of the
+  native binding until a new public runtime layer is deliberately designed.
+- Treat bridge, extensions, and metadata tooling as later layers. Do not
+  document old `window.__MoonBit__` or extension flows as the current runtime
+  surface unless the native DLL route actually implements them.
 
 ## Commit And PR Guidance
-- Use Conventional Commit style such as `feat(app):`, `fix(examples):`, `docs:`.
+- Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or
+  `docs:`.
 - Keep subjects imperative and scoped.
-- In PRs, summarize behavior changes, note platform-specific impact, and list the validation commands you ran.
+- In PRs, summarize behavior changes, note platform-specific impact, and list
+  the validation commands you ran.
