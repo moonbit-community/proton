@@ -1,12 +1,19 @@
 # Proton E2E
 
-Internal CDP probes for CEF-backed examples.
+CDP-based end-to-end smoke probes for the native DLL bridge route.
 
-The `test` package connects to a running example through
-`justjavac/cdp`, evaluates page checks, and exits with success or failure.
-
-Run from the repository root:
+The module is intentionally separate from the root workspace. Before running it
+from this repository, add it to the current MoonBit workspace:
 
 ```sh
-node ./scripts/e2e_cdp_smoke.mjs
+moon work use ./e2e
 ```
+
+Then start an example with remote debugging enabled and run:
+
+```sh
+MBT_PROTON_E2E_SCENARIO=41_app_commands MBT_CDP_TARGET=9222 moon -C e2e run test --target native
+```
+
+The current v1 probe covers `window.__MoonBit__.core.invokeOp(...)` for
+`41_app_commands`.

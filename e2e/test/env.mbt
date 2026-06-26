@@ -27,7 +27,7 @@ fn cdp_http_endpoint() -> String {
 
 ///|
 fn scenario_name() -> String {
-  env_or("MBT_PROTON_E2E_SCENARIO", "38_async_extension_add")
+  env_or("MBT_PROTON_E2E_SCENARIO", "41_app_commands")
 }
 
 ///|
