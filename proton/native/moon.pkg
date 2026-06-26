@@ -1,0 +1,18 @@
+import {
+  "justjavac/ffi",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": false,
+  targets: {
+    "ffi.mbt": [ "native" ],
+    "types.mbt": [ "native" ],
+    "native.mbt": [ "native" ],
+    "native_test.mbt": [ "native" ],
+    "native_wbtest.mbt": [ "native" ],
+    "README.mbt.md": [ "native" ],
+  },
+)
