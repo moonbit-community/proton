@@ -1,4 +1,5 @@
 #include "proton_engine.h"
+#include "proton_json.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -232,135 +233,53 @@ static int32_t proton_engine_unsupported(char *error,
   return PROTON_ERR_UNSUPPORTED;
 }
 
-static bool proton_engine_is_json_delim(char ch) {
-  return ch == '\0' || ch == ',' || ch == '}' || ch == ' ' || ch == '\t' ||
-         ch == '\r' || ch == '\n';
-}
-
 static bool proton_engine_parse_json_int_field(const char *config_json,
                                                const char *field_name,
                                                int32_t *out_value) {
-  char quoted_name[64];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(config_json, quoted_name);
-  if (key == NULL) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, config_json)) {
     return false;
   }
-  const char *cursor = strchr(key, ':');
-  if (cursor == NULL) {
-    return false;
-  }
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-  char *end = NULL;
-  long parsed = strtol(cursor, &end, 10);
-  if (end == cursor || !proton_engine_is_json_delim(*end) || parsed < 0 ||
-      parsed > INT32_MAX) {
-    return false;
-  }
-  *out_value = (int32_t)parsed;
-  return true;
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_int32(&doc, value, out_value);
+  proton_json_dispose(&doc);
+  return ok;
 }
 
 static bool proton_engine_parse_json_bool_field(const char *config_json,
                                                 const char *field_name,
                                                 bool *out_value) {
-  char quoted_name[64];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(config_json, quoted_name);
-  if (key == NULL || out_value == NULL) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, config_json)) {
     return false;
   }
-  const char *cursor = strchr(key, ':');
-  if (cursor == NULL) {
-    return false;
-  }
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-  if (strncmp(cursor, "true", 4) == 0 &&
-      proton_engine_is_json_delim(cursor[4])) {
-    *out_value = true;
-    return true;
-  }
-  if (strncmp(cursor, "false", 5) == 0 &&
-      proton_engine_is_json_delim(cursor[5])) {
-    *out_value = false;
-    return true;
-  }
-  return false;
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_bool(&doc, value, out_value);
+  proton_json_dispose(&doc);
+  return ok;
 }
 
 static bool proton_engine_parse_json_string_field(const char *config_json,
                                                   const char *field_name,
                                                   char *out_value,
                                                   size_t out_value_len) {
-  char quoted_name[64];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(config_json, quoted_name);
-  if (key == NULL || out_value == NULL || out_value_len == 0) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, config_json)) {
     return false;
   }
-  const char *cursor = strchr(key, ':');
-  if (cursor == NULL) {
-    return false;
-  }
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-  if (*cursor != '"') {
-    return false;
-  }
-  cursor++;
-  size_t written = 0;
-  while (*cursor != '\0' && *cursor != '"') {
-    char ch = *cursor++;
-    if (ch == '\\') {
-      ch = *cursor++;
-      if (ch == '\0') {
-        return false;
-      }
-      switch (ch) {
-      case '"':
-      case '\\':
-      case '/':
-        break;
-      case 'b':
-        ch = '\b';
-        break;
-      case 'f':
-        ch = '\f';
-        break;
-      case 'n':
-        ch = '\n';
-        break;
-      case 'r':
-        ch = '\r';
-        break;
-      case 't':
-        ch = '\t';
-        break;
-      default:
-        return false;
-      }
-    }
-    if (written + 1 >= out_value_len) {
-      return false;
-    }
-    out_value[written++] = ch;
-  }
-  if (*cursor != '"') {
-    return false;
-  }
-  out_value[written] = '\0';
-  return true;
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_string(&doc, value, out_value, out_value_len);
+  proton_json_dispose(&doc);
+  return ok;
 }
 
 static bool proton_engine_join_path(char *out,
@@ -596,235 +515,99 @@ static int proton_engine_bridge_op_is_valid(const char *op) {
   return 1;
 }
 
-static int proton_engine_json_skip_string_value(const char **cursor) {
-  if (cursor == NULL || *cursor == NULL || **cursor != '"') {
-    return 0;
-  }
-  (*cursor)++;
-  while (**cursor != '\0') {
-    char ch = *(*cursor)++;
-    if (ch == '"') {
-      return 1;
-    }
-    if ((unsigned char)ch < 0x20) {
-      return 0;
-    }
-    if (ch == '\\') {
-      char escaped = *(*cursor)++;
-      if (escaped == '\0') {
-        return 0;
-      }
-      if (escaped == 'u') {
-        for (int i = 0; i < 4; i++) {
-          char hex = **cursor;
-          if (!((hex >= '0' && hex <= '9') || (hex >= 'a' && hex <= 'f') ||
-                (hex >= 'A' && hex <= 'F'))) {
-            return 0;
-          }
-          (*cursor)++;
-        }
-      }
-    }
-  }
-  return 0;
-}
-
-static int proton_engine_json_skip_value(const char **cursor) {
-  if (cursor == NULL || *cursor == NULL) {
-    return 0;
-  }
-  while (**cursor == ' ' || **cursor == '\t' || **cursor == '\r' ||
-         **cursor == '\n') {
-    (*cursor)++;
-  }
-  if (**cursor == '"') {
-    return proton_engine_json_skip_string_value(cursor);
-  }
-  if (**cursor == '{' || **cursor == '[') {
-    char open = **cursor;
-    char close = open == '{' ? '}' : ']';
-    int depth = 1;
-    (*cursor)++;
-    while (**cursor != '\0') {
-      if (**cursor == '"') {
-        if (!proton_engine_json_skip_string_value(cursor)) {
-          return 0;
-        }
-        continue;
-      }
-      if (**cursor == open) {
-        depth++;
-      } else if (**cursor == close) {
-        depth--;
-        (*cursor)++;
-        if (depth == 0) {
-          return 1;
-        }
-        continue;
-      }
-      (*cursor)++;
-    }
-    return 0;
-  }
-  const char *start = *cursor;
-  while (**cursor != '\0' && **cursor != ',' && **cursor != '}' &&
-         **cursor != ']') {
-    (*cursor)++;
-  }
-  return *cursor > start;
-}
-
-static int proton_engine_json_find_field(const char *json,
-                                         const char *field_name,
-                                         const char **out_value) {
-  if (json == NULL || field_name == NULL || out_value == NULL) {
-    return 0;
-  }
-  *out_value = NULL;
-  char quoted_name[96];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(json, quoted_name);
-  if (key == NULL) {
-    return 0;
-  }
-  const char *cursor = strchr(key + strlen(quoted_name), ':');
-  if (cursor == NULL) {
-    return 0;
-  }
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-  *out_value = cursor;
-  return 1;
-}
-
 static int proton_engine_json_read_int64_field(const char *json,
                                                const char *field_name,
                                                int64_t *out_value) {
-  const char *value = NULL;
-  if (!proton_engine_json_find_field(json, field_name, &value) ||
-      out_value == NULL) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, json)) {
     return 0;
   }
-  char *end = NULL;
-  if (*value == '"') {
-    value++;
-    long long parsed = strtoll(value, &end, 10);
-    if (end == value || *end != '"') {
-      return 0;
-    }
-    *out_value = (int64_t)parsed;
-    return 1;
-  }
-  long long parsed = strtoll(value, &end, 10);
-  if (end == value || !proton_engine_is_json_delim(*end)) {
-    return 0;
-  }
-  *out_value = (int64_t)parsed;
-  return 1;
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_int64(&doc, value, out_value);
+  proton_json_dispose(&doc);
+  return ok ? 1 : 0;
 }
 
 static int proton_engine_json_read_bool_field(const char *json,
                                               const char *field_name,
                                               int *out_value) {
-  const char *value = NULL;
-  if (!proton_engine_json_find_field(json, field_name, &value) ||
-      out_value == NULL) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  bool bool_value = false;
+  if (out_value == NULL || !proton_json_parse(&doc, json)) {
     return 0;
   }
-  if (strncmp(value, "true", 4) == 0 &&
-      proton_engine_is_json_delim(value[4])) {
-    *out_value = 1;
-    return 1;
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_bool(&doc, value, &bool_value);
+  if (ok) {
+    *out_value = bool_value ? 1 : 0;
   }
-  if (strncmp(value, "false", 5) == 0 &&
-      proton_engine_is_json_delim(value[5])) {
-    *out_value = 0;
-    return 1;
-  }
-  return 0;
+  proton_json_dispose(&doc);
+  return ok ? 1 : 0;
 }
 
 static char *proton_engine_json_copy_raw_field(const char *json,
                                               const char *field_name) {
-  const char *value = NULL;
-  if (!proton_engine_json_find_field(json, field_name, &value)) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, json)) {
     return NULL;
   }
-  const char *end = value;
-  if (!proton_engine_json_skip_value(&end) || end <= value) {
-    return NULL;
+  char *copy = NULL;
+  if (proton_json_root_object(&doc, &root) &&
+      proton_json_object_get(&doc, root, field_name, &value)) {
+    copy = proton_json_copy_raw(&doc, value);
   }
-  return proton_engine_strdup_len(value, (size_t)(end - value));
-}
-
-static int proton_engine_json_read_string_at(const char **cursor,
-                                             char *out,
-                                             size_t out_len) {
-  if (cursor == NULL || *cursor == NULL || out == NULL || out_len == 0 ||
-      **cursor != '"') {
-    return 0;
-  }
-  (*cursor)++;
-  size_t written = 0;
-  while (**cursor != '\0' && **cursor != '"') {
-    char ch = *(*cursor)++;
-    if (ch == '\\') {
-      ch = *(*cursor)++;
-      if (ch == '\0') {
-        return 0;
-      }
-      switch (ch) {
-      case '"':
-      case '\\':
-      case '/':
-        break;
-      case 'b':
-        ch = '\b';
-        break;
-      case 'f':
-        ch = '\f';
-        break;
-      case 'n':
-        ch = '\n';
-        break;
-      case 'r':
-        ch = '\r';
-        break;
-      case 't':
-        ch = '\t';
-        break;
-      default:
-        return 0;
-      }
-    }
-    if (written + 1 >= out_len) {
-      return 0;
-    }
-    out[written++] = ch;
-  }
-  if (**cursor != '"') {
-    return 0;
-  }
-  (*cursor)++;
-  out[written] = '\0';
-  return 1;
+  proton_json_dispose(&doc);
+  return copy;
 }
 
 static char *proton_engine_json_copy_string_field(const char *json,
                                                  const char *field_name) {
-  const char *value = NULL;
-  if (!proton_engine_json_find_field(json, field_name, &value) ||
-      *value != '"') {
-    return NULL;
-  }
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
   char buffer[512];
-  if (!proton_engine_json_read_string_at(&value, buffer, sizeof(buffer))) {
+  if (!proton_json_parse(&doc, json)) {
     return NULL;
   }
-  return proton_engine_strdup(buffer);
+  char *copy = NULL;
+  if (proton_json_root_object(&doc, &root) &&
+      proton_json_object_get(&doc, root, field_name, &value) &&
+      proton_json_read_string(&doc, value, buffer, sizeof(buffer))) {
+    copy = proton_engine_strdup(buffer);
+  }
+  proton_json_dispose(&doc);
+  return copy;
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  const char *op;
+  int allowed;
+} proton_engine_bridge_op_match_t;
+
+static bool proton_engine_bridge_op_match_item(proton_json_value_t value,
+                                               void *user_data) {
+  proton_engine_bridge_op_match_t *match =
+      (proton_engine_bridge_op_match_t *)user_data;
+  proton_json_value_t name_value;
+  char candidate[PROTON_ENGINE_MAX_BRIDGE_OP_BYTES];
+  if (proton_json_is_object(match->doc, value) &&
+      proton_json_object_get(match->doc, value, "name", &name_value) &&
+      proton_json_read_string(match->doc, name_value, candidate,
+                              sizeof(candidate)) &&
+      strcmp(candidate, match->op) == 0) {
+    match->allowed = 1;
+    return false;
+  }
+  return true;
 }
 
 static int proton_engine_bridge_config_allows_op(const char *bridge_config_json,
@@ -832,26 +615,20 @@ static int proton_engine_bridge_config_allows_op(const char *bridge_config_json,
   if (!proton_engine_bridge_op_is_valid(op) || bridge_config_json == NULL) {
     return 0;
   }
-  const char *cursor = bridge_config_json;
-  while ((cursor = strstr(cursor, "\"name\"")) != NULL) {
-    const char *value = strchr(cursor + 6, ':');
-    if (value == NULL) {
-      return 0;
-    }
-    value++;
-    while (*value == ' ' || *value == '\t' || *value == '\r' ||
-           *value == '\n') {
-      value++;
-    }
-    char candidate[PROTON_ENGINE_MAX_BRIDGE_OP_BYTES];
-    if (proton_engine_json_read_string_at(&value, candidate,
-                                          sizeof(candidate)) &&
-        strcmp(candidate, op) == 0) {
-      return 1;
-    }
-    cursor = value;
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t ops;
+  if (!proton_json_parse(&doc, bridge_config_json)) {
+    return 0;
   }
-  return 0;
+  proton_engine_bridge_op_match_t match = {&doc, op, 0};
+  if (proton_json_root_object(&doc, &root) &&
+      proton_json_object_get(&doc, root, "ops", &ops) &&
+      proton_json_is_array(&doc, ops)) {
+    proton_json_array_each(&doc, ops, proton_engine_bridge_op_match_item, &match);
+  }
+  proton_json_dispose(&doc);
+  return match.allowed;
 }
 
 static void proton_engine_runtime_bridge_lock(proton_engine_runtime_t *runtime) {

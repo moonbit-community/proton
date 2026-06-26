@@ -1,5 +1,6 @@
 #include "proton_native.h"
 #include "proton_engine.h"
+#include "proton_json.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -137,128 +138,6 @@ static int32_t proton_require_runtime_owner_thread(
   return PROTON_OK;
 }
 
-static bool proton_is_json_delim(char ch) {
-  return ch == '\0' || ch == ',' || ch == '}' || ch == ' ' || ch == '\t' ||
-         ch == '\r' || ch == '\n';
-}
-
-static bool proton_json_is_ws(char ch) {
-  return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
-}
-
-static void proton_json_skip_ws(const char **cursor) {
-  while (proton_json_is_ws(**cursor)) {
-    (*cursor)++;
-  }
-}
-
-static bool proton_json_is_hex(char ch) {
-  return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') ||
-         (ch >= 'A' && ch <= 'F');
-}
-
-static bool proton_json_skip_string(const char **cursor) {
-  if (**cursor != '"') {
-    return false;
-  }
-  (*cursor)++;
-  while (**cursor != '\0') {
-    char ch = *(*cursor)++;
-    if (ch == '"') {
-      return true;
-    }
-    if ((unsigned char)ch < 0x20) {
-      return false;
-    }
-    if (ch == '\\') {
-      char escaped = *(*cursor)++;
-      switch (escaped) {
-      case '"':
-      case '\\':
-      case '/':
-      case 'b':
-      case 'f':
-      case 'n':
-      case 'r':
-      case 't':
-        break;
-      case 'u':
-        for (int i = 0; i < 4; i++) {
-          if (!proton_json_is_hex(**cursor)) {
-            return false;
-          }
-          (*cursor)++;
-        }
-        break;
-      default:
-        return false;
-      }
-    }
-  }
-  return false;
-}
-
-static bool proton_json_read_key(const char **cursor,
-                                 char *out_key,
-                                 size_t out_key_len) {
-  if (**cursor != '"' || out_key == NULL || out_key_len == 0) {
-    return false;
-  }
-  (*cursor)++;
-  size_t written = 0;
-  while (**cursor != '\0') {
-    char ch = *(*cursor)++;
-    if (ch == '"') {
-      out_key[written] = '\0';
-      return true;
-    }
-    if ((unsigned char)ch < 0x20 || ch == '\\') {
-      return false;
-    }
-    if (written + 1 >= out_key_len) {
-      return false;
-    }
-    out_key[written++] = ch;
-  }
-  return false;
-}
-
-static bool proton_json_skip_value(const char **cursor) {
-  proton_json_skip_ws(cursor);
-  if (**cursor == '"') {
-    return proton_json_skip_string(cursor);
-  }
-  if (**cursor == '{' || **cursor == '[') {
-    int depth = 1;
-    (*cursor)++;
-    while (**cursor != '\0') {
-      if (**cursor == '"') {
-        if (!proton_json_skip_string(cursor)) {
-          return false;
-        }
-        continue;
-      }
-      if (**cursor == '{' || **cursor == '[') {
-        depth++;
-      } else if (**cursor == '}' || **cursor == ']') {
-        depth--;
-        if (depth == 0) {
-          (*cursor)++;
-          return true;
-        }
-      }
-      (*cursor)++;
-    }
-    return false;
-  }
-
-  const char *start = *cursor;
-  while (**cursor != '\0' && **cursor != ',' && **cursor != '}') {
-    (*cursor)++;
-  }
-  return *cursor > start;
-}
-
 static bool proton_json_key_allowed(const char *key,
                                     const char *const *allowed_keys,
                                     size_t allowed_key_count) {
@@ -270,143 +149,42 @@ static bool proton_json_key_allowed(const char *key,
   return false;
 }
 
-static bool proton_json_find_top_level_field(const char *config_json,
-                                             const char *field_name,
-                                             const char **out_value) {
-  if (config_json == NULL || field_name == NULL || out_value == NULL) {
-    return false;
-  }
-  *out_value = NULL;
-  const char *cursor = config_json;
-  proton_json_skip_ws(&cursor);
-  if (*cursor != '{') {
-    return false;
-  }
-  cursor++;
-  while (true) {
-    proton_json_skip_ws(&cursor);
-    if (*cursor == '}') {
-      return false;
-    }
-    char key[64];
-    if (!proton_json_read_key(&cursor, key, sizeof(key))) {
-      return false;
-    }
-    proton_json_skip_ws(&cursor);
-    if (*cursor != ':') {
-      return false;
-    }
-    cursor++;
-    proton_json_skip_ws(&cursor);
-    if (strcmp(key, field_name) == 0) {
-      *out_value = cursor;
-      return true;
-    }
-    if (!proton_json_skip_value(&cursor)) {
-      return false;
-    }
-    proton_json_skip_ws(&cursor);
-    if (*cursor == ',') {
-      cursor++;
-      continue;
-    }
-    if (*cursor == '}') {
-      return false;
-    }
-    return false;
-  }
-}
+typedef struct {
+  const proton_json_doc_t *doc;
+  const char *config_name;
+  const char *const *allowed_keys;
+  size_t allowed_key_count;
+  bool has_abi_version;
+  int32_t status;
+} proton_abi_validation_t;
 
-static bool proton_json_read_string_value(const char **cursor,
-                                          char *out_value,
-                                          size_t out_value_len) {
-  if (cursor == NULL || *cursor == NULL || out_value == NULL ||
-      out_value_len == 0) {
+static bool proton_validate_abi_field(const char *key,
+                                      proton_json_value_t value,
+                                      void *user_data) {
+  proton_abi_validation_t *validation = (proton_abi_validation_t *)user_data;
+  if (!proton_json_key_allowed(key, validation->allowed_keys,
+                               validation->allowed_key_count)) {
+    char message[192];
+    snprintf(message, sizeof(message), "%s config contains unknown field: %s",
+             validation->config_name, key);
+    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
     return false;
   }
-  proton_json_skip_ws(cursor);
-  if (**cursor != '"') {
-    return false;
-  }
-  (*cursor)++;
-  size_t written = 0;
-  while (**cursor != '\0' && **cursor != '"') {
-    char ch = *(*cursor)++;
-    if (ch == '\\') {
-      ch = *(*cursor)++;
-      if (ch == '\0') {
-        return false;
-      }
-      switch (ch) {
-      case '"':
-      case '\\':
-      case '/':
-        break;
-      case 'b':
-        ch = '\b';
-        break;
-      case 'f':
-        ch = '\f';
-        break;
-      case 'n':
-        ch = '\n';
-        break;
-      case 'r':
-        ch = '\r';
-        break;
-      case 't':
-        ch = '\t';
-        break;
-      default:
-        return false;
-      }
-    }
-    if (written + 1 >= out_value_len) {
+  if (strcmp(key, "abi_version") == 0) {
+    int32_t abi_version = 0;
+    validation->has_abi_version = true;
+    if (!proton_json_read_int32(validation->doc, value, &abi_version) ||
+        abi_version != PROTON_ABI_VERSION) {
+      char message[160];
+      snprintf(message, sizeof(message),
+               "%s config abi_version must be set to %d",
+               validation->config_name, PROTON_ABI_VERSION);
+      validation->status =
+          proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
       return false;
     }
-    out_value[written++] = ch;
   }
-  if (**cursor != '"') {
-    return false;
-  }
-  (*cursor)++;
-  out_value[written] = '\0';
   return true;
-}
-
-static bool proton_json_read_int_value(const char **cursor,
-                                       int32_t *out_value) {
-  if (cursor == NULL || *cursor == NULL || out_value == NULL) {
-    return false;
-  }
-  proton_json_skip_ws(cursor);
-  char *end = NULL;
-  long parsed = strtol(*cursor, &end, 10);
-  if (end == *cursor || !proton_is_json_delim(*end) || parsed < INT32_MIN ||
-      parsed > INT32_MAX) {
-    return false;
-  }
-  *out_value = (int32_t)parsed;
-  *cursor = end;
-  return true;
-}
-
-static bool proton_json_read_bool_value(const char **cursor, bool *out_value) {
-  if (cursor == NULL || *cursor == NULL || out_value == NULL) {
-    return false;
-  }
-  proton_json_skip_ws(cursor);
-  if (strncmp(*cursor, "true", 4) == 0 && proton_is_json_delim((*cursor)[4])) {
-    *out_value = true;
-    *cursor += 4;
-    return true;
-  }
-  if (strncmp(*cursor, "false", 5) == 0 && proton_is_json_delim((*cursor)[5])) {
-    *out_value = false;
-    *cursor += 5;
-    return true;
-  }
-  return false;
 }
 
 static int32_t proton_validate_abi_config(
@@ -421,103 +199,96 @@ static int32_t proton_validate_abi_config(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
   }
 
-  const char *cursor = config_json;
-  proton_json_skip_ws(&cursor);
-  if (*cursor != '{') {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  if (!proton_json_parse(&doc, config_json)) {
+    if (doc.trailing_comma) {
+      char message[160];
+      snprintf(message, sizeof(message), "%s config has a trailing comma",
+               config_name);
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    }
+    char message[160];
+    snprintf(message, sizeof(message), "%s config must be valid JSON",
+             config_name);
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+  }
+  if (!proton_json_root_object(&doc, &root)) {
+    proton_json_dispose(&doc);
     char message[160];
     snprintf(message, sizeof(message), "%s config must be a JSON object",
              config_name);
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
   }
-  cursor++;
 
-  bool has_abi_version = false;
-  while (true) {
-    proton_json_skip_ws(&cursor);
-    if (*cursor == '}') {
-      cursor++;
-      break;
-    }
-
-    char key[64];
-    if (!proton_json_read_key(&cursor, key, sizeof(key))) {
-      char message[160];
-      snprintf(message, sizeof(message), "%s config has an invalid field name",
-               config_name);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    }
-    if (!proton_json_key_allowed(key, allowed_keys, allowed_key_count)) {
-      char message[192];
-      snprintf(message, sizeof(message), "%s config contains unknown field: %s",
-               config_name, key);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    }
-
-    proton_json_skip_ws(&cursor);
-    if (*cursor != ':') {
-      char message[160];
-      snprintf(message, sizeof(message), "%s config field is missing ':'",
-               config_name);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    }
-    cursor++;
-
-    const char *value_start = cursor;
-    proton_json_skip_ws(&value_start);
-    if (strcmp(key, "abi_version") == 0) {
-      has_abi_version = true;
-      if (*value_start != '1' || !proton_is_json_delim(value_start[1])) {
-        char message[160];
-        snprintf(message, sizeof(message),
-                 "%s config abi_version must be set to 1", config_name);
-        return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-      }
-    }
-
-    if (!proton_json_skip_value(&cursor)) {
-      char message[160];
-      snprintf(message, sizeof(message), "%s config has an invalid value",
-               config_name);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    }
-
-    proton_json_skip_ws(&cursor);
-    if (*cursor == ',') {
-      cursor++;
-      proton_json_skip_ws(&cursor);
-      if (*cursor == '}') {
-        char message[160];
-        snprintf(message, sizeof(message), "%s config has a trailing comma",
-                 config_name);
-        return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-      }
-      continue;
-    }
-    if (*cursor == '}') {
-      cursor++;
-      break;
-    }
+  proton_abi_validation_t validation = {
+      &doc, config_name, allowed_keys, allowed_key_count, false, PROTON_OK};
+  bool valid = proton_json_object_each(&doc, root, proton_validate_abi_field,
+                                       &validation);
+  if (!valid && validation.status == PROTON_OK) {
     char message[160];
-    snprintf(message, sizeof(message), "%s config object is malformed",
+    snprintf(message, sizeof(message), "%s config has an invalid field",
              config_name);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    validation.status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
   }
-
-  proton_json_skip_ws(&cursor);
-  if (*cursor != '\0') {
-    char message[160];
-    snprintf(message, sizeof(message), "%s config has trailing data",
-             config_name);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-  if (!has_abi_version) {
+  if (validation.status == PROTON_OK && !validation.has_abi_version) {
     char message[160];
     snprintf(message, sizeof(message),
-             "%s config must contain \"abi_version\": 1", config_name);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+             "%s config must contain \"abi_version\": %d", config_name,
+             PROTON_ABI_VERSION);
+    validation.status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
   }
+  proton_json_dispose(&doc);
+  return validation.status;
+}
 
-  return PROTON_OK;
+static bool proton_parse_json_int_field(const char *config_json,
+                                        const char *field_name,
+                                        int32_t *out_value) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, config_json)) {
+    return false;
+  }
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_int32(&doc, value, out_value);
+  proton_json_dispose(&doc);
+  return ok;
+}
+
+static bool proton_parse_json_bool_field(const char *config_json,
+                                         const char *field_name,
+                                         bool *out_value) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, config_json)) {
+    return false;
+  }
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_bool(&doc, value, out_value);
+  proton_json_dispose(&doc);
+  return ok;
+}
+
+static bool proton_parse_json_string_field(const char *config_json,
+                                           const char *field_name,
+                                           char *out_value,
+                                           size_t out_value_len) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, config_json)) {
+    return false;
+  }
+  bool ok = proton_json_root_object(&doc, &root) &&
+            proton_json_object_get(&doc, root, field_name, &value) &&
+            proton_json_read_string(&doc, value, out_value, out_value_len);
+  proton_json_dispose(&doc);
+  return ok;
 }
 
 static const char *const proton_runtime_config_keys[] = {
@@ -556,142 +327,6 @@ static const char *const proton_bridge_response_keys[] = {
     "payload",
     "error",
 };
-
-static bool proton_parse_json_int_field(const char *config_json,
-                                        const char *field_name,
-                                        int32_t *out_value) {
-  char quoted_name[64];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(config_json, quoted_name);
-  if (key == NULL) {
-    return false;
-  }
-
-  const char *cursor = strchr(key, ':');
-  if (cursor == NULL) {
-    return false;
-  }
-
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-
-  char *end = NULL;
-  long parsed = strtol(cursor, &end, 10);
-  if (end == cursor || !proton_is_json_delim(*end)) {
-    return false;
-  }
-  if (parsed < INT32_MIN || parsed > INT32_MAX) {
-    return false;
-  }
-
-  *out_value = (int32_t)parsed;
-  return true;
-}
-
-static bool proton_parse_json_bool_field(const char *config_json,
-                                         const char *field_name,
-                                         bool *out_value) {
-  char quoted_name[64];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(config_json, quoted_name);
-  if (key == NULL || out_value == NULL) {
-    return false;
-  }
-
-  const char *cursor = strchr(key, ':');
-  if (cursor == NULL) {
-    return false;
-  }
-
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-
-  if (strncmp(cursor, "true", 4) == 0 && proton_is_json_delim(cursor[4])) {
-    *out_value = true;
-    return true;
-  }
-  if (strncmp(cursor, "false", 5) == 0 && proton_is_json_delim(cursor[5])) {
-    *out_value = false;
-    return true;
-  }
-  return false;
-}
-
-static bool proton_parse_json_string_field(const char *config_json,
-                                           const char *field_name,
-                                           char *out_value,
-                                           size_t out_value_len) {
-  char quoted_name[64];
-  snprintf(quoted_name, sizeof(quoted_name), "\"%s\"", field_name);
-  const char *key = strstr(config_json, quoted_name);
-  if (key == NULL || out_value == NULL || out_value_len == 0) {
-    return false;
-  }
-
-  const char *cursor = strchr(key, ':');
-  if (cursor == NULL) {
-    return false;
-  }
-
-  cursor++;
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' ||
-         *cursor == '\n') {
-    cursor++;
-  }
-  if (*cursor != '"') {
-    return false;
-  }
-  cursor++;
-
-  size_t written = 0;
-  while (*cursor != '\0' && *cursor != '"') {
-    char ch = *cursor++;
-    if (ch == '\\') {
-      ch = *cursor++;
-      if (ch == '\0') {
-        return false;
-      }
-      switch (ch) {
-      case '"':
-      case '\\':
-      case '/':
-        break;
-      case 'b':
-        ch = '\b';
-        break;
-      case 'f':
-        ch = '\f';
-        break;
-      case 'n':
-        ch = '\n';
-        break;
-      case 'r':
-        ch = '\r';
-        break;
-      case 't':
-        ch = '\t';
-        break;
-      default:
-        return false;
-      }
-    }
-    if (written + 1 >= out_value_len) {
-      return false;
-    }
-    out_value[written++] = ch;
-  }
-  if (*cursor != '"') {
-    return false;
-  }
-  out_value[written] = '\0';
-  return true;
-}
 
 static bool proton_path_exists(const char *path) {
   struct stat info;
@@ -1008,149 +643,147 @@ static bool proton_bridge_op_name_valid(const char *name) {
   return true;
 }
 
-static int32_t proton_validate_bridge_origin_policy(const char *value) {
-  const char *cursor = value;
-  proton_json_skip_ws(&cursor);
-  if (*cursor != '{') {
+typedef struct {
+  const proton_json_doc_t *doc;
+  bool has_mode;
+  int32_t status;
+} proton_bridge_origin_policy_validation_t;
+
+static bool proton_validate_bridge_origin_policy_field(
+    const char *key,
+    proton_json_value_t value,
+    void *user_data) {
+  proton_bridge_origin_policy_validation_t *validation =
+      (proton_bridge_origin_policy_validation_t *)user_data;
+  if (strcmp(key, "mode") != 0) {
+    char message[160];
+    snprintf(message, sizeof(message),
+             "bridge origin_policy contains unknown field: %s", key);
+    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    return false;
+  }
+  char mode[32];
+  if (!proton_json_read_string(validation->doc, value, mode, sizeof(mode)) ||
+      strcmp(mode, "app_only") != 0) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge origin_policy.mode must be app_only");
+    return false;
+  }
+  validation->has_mode = true;
+  return true;
+}
+
+static int32_t proton_validate_bridge_origin_policy(
+    const proton_json_doc_t *doc,
+    proton_json_value_t value) {
+  if (!proton_json_is_object(doc, value)) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge origin_policy must be an object");
   }
-  cursor++;
-  bool has_mode = false;
-  while (true) {
-    proton_json_skip_ws(&cursor);
-    if (*cursor == '}') {
-      cursor++;
-      break;
-    }
-    char key[64];
-    if (!proton_json_read_key(&cursor, key, sizeof(key))) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge origin_policy has an invalid field");
-    }
-    if (strcmp(key, "mode") != 0) {
-      char message[160];
-      snprintf(message, sizeof(message),
-               "bridge origin_policy contains unknown field: %s", key);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    }
-    proton_json_skip_ws(&cursor);
-    if (*cursor != ':') {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge origin_policy field is missing ':'");
-    }
-    cursor++;
-    char mode[32];
-    if (!proton_json_read_string_value(&cursor, mode, sizeof(mode)) ||
-        strcmp(mode, "app_only") != 0) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge origin_policy.mode must be app_only");
-    }
-    has_mode = true;
-    proton_json_skip_ws(&cursor);
-    if (*cursor == ',') {
-      cursor++;
-      continue;
-    }
-    if (*cursor == '}') {
-      cursor++;
-      break;
-    }
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge origin_policy object is malformed");
+  proton_bridge_origin_policy_validation_t validation = {
+      doc, false, PROTON_OK};
+  if (!proton_json_object_each(doc, value,
+                               proton_validate_bridge_origin_policy_field,
+                               &validation) &&
+      validation.status == PROTON_OK) {
+    validation.status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge origin_policy has an invalid field");
   }
-  if (!has_mode) {
+  if (validation.status != PROTON_OK) {
+    return validation.status;
+  }
+  if (!validation.has_mode) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge origin_policy requires mode");
   }
   return PROTON_OK;
 }
 
-static int32_t proton_validate_bridge_ops(const char *value) {
-  const char *cursor = value;
-  proton_json_skip_ws(&cursor);
-  if (*cursor != '[') {
+typedef struct {
+  const proton_json_doc_t *doc;
+  bool has_name;
+  int32_t status;
+} proton_bridge_op_validation_t;
+
+static bool proton_validate_bridge_op_field(const char *key,
+                                            proton_json_value_t value,
+                                            void *user_data) {
+  proton_bridge_op_validation_t *validation =
+      (proton_bridge_op_validation_t *)user_data;
+  if (strcmp(key, "name") != 0) {
+    char message[160];
+    snprintf(message, sizeof(message), "bridge op contains unknown field: %s",
+             key);
+    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    return false;
+  }
+  char name[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
+  if (!proton_json_read_string(validation->doc, value, name, sizeof(name)) ||
+      !proton_bridge_op_name_valid(name)) {
+    validation->status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "bridge op name is invalid");
+    return false;
+  }
+  validation->has_name = true;
+  return true;
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t op_count;
+  int32_t status;
+} proton_bridge_ops_validation_t;
+
+static bool proton_validate_bridge_ops_item(proton_json_value_t value,
+                                            void *user_data) {
+  proton_bridge_ops_validation_t *validation =
+      (proton_bridge_ops_validation_t *)user_data;
+  if (validation->op_count >= PROTON_MAX_BRIDGE_OPS) {
+    validation->status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "bridge ops array is too large");
+    return false;
+  }
+  if (!proton_json_is_object(validation->doc, value)) {
+    validation->status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "bridge op must be an object");
+    return false;
+  }
+  proton_bridge_op_validation_t op_validation = {
+      validation->doc, false, PROTON_OK};
+  if (!proton_json_object_each(validation->doc, value,
+                               proton_validate_bridge_op_field,
+                               &op_validation) &&
+      op_validation.status == PROTON_OK) {
+    op_validation.status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "bridge op has an invalid field");
+  }
+  if (op_validation.status != PROTON_OK) {
+    validation->status = op_validation.status;
+    return false;
+  }
+  if (!op_validation.has_name) {
+    validation->status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "bridge op requires name");
+    return false;
+  }
+  validation->op_count++;
+  return true;
+}
+
+static int32_t proton_validate_bridge_ops(const proton_json_doc_t *doc,
+                                          proton_json_value_t value) {
+  if (!proton_json_is_array(doc, value)) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge ops must be an array");
   }
-  cursor++;
-  size_t op_count = 0;
-  while (true) {
-    proton_json_skip_ws(&cursor);
-    if (*cursor == ']') {
-      cursor++;
-      break;
-    }
-    if (op_count >= PROTON_MAX_BRIDGE_OPS) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge ops array is too large");
-    }
-    if (*cursor != '{') {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge op must be an object");
-    }
-    cursor++;
-    bool has_name = false;
-    while (true) {
-      proton_json_skip_ws(&cursor);
-      if (*cursor == '}') {
-        cursor++;
-        break;
-      }
-      char key[64];
-      if (!proton_json_read_key(&cursor, key, sizeof(key))) {
-        return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                                "bridge op has an invalid field");
-      }
-      if (strcmp(key, "name") != 0) {
-        char message[160];
-        snprintf(message, sizeof(message),
-                 "bridge op contains unknown field: %s", key);
-        return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-      }
-      proton_json_skip_ws(&cursor);
-      if (*cursor != ':') {
-        return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                                "bridge op field is missing ':'");
-      }
-      cursor++;
-      char name[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
-      if (!proton_json_read_string_value(&cursor, name, sizeof(name)) ||
-          !proton_bridge_op_name_valid(name)) {
-        return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                                "bridge op name is invalid");
-      }
-      has_name = true;
-      proton_json_skip_ws(&cursor);
-      if (*cursor == ',') {
-        cursor++;
-        continue;
-      }
-      if (*cursor == '}') {
-        cursor++;
-        break;
-      }
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge op object is malformed");
-    }
-    if (!has_name) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge op requires name");
-    }
-    op_count++;
-    proton_json_skip_ws(&cursor);
-    if (*cursor == ',') {
-      cursor++;
-      continue;
-    }
-    if (*cursor == ']') {
-      cursor++;
-      break;
-    }
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge ops array is malformed");
+  proton_bridge_ops_validation_t validation = {doc, 0, PROTON_OK};
+  if (!proton_json_array_each(doc, value, proton_validate_bridge_ops_item,
+                              &validation) &&
+      validation.status == PROTON_OK) {
+    validation.status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "bridge ops array is malformed");
   }
-  return PROTON_OK;
+  return validation.status;
 }
 
 static int32_t proton_validate_bridge_config_json(const char *bridge_json) {
@@ -1165,53 +798,66 @@ static int32_t proton_validate_bridge_config_json(const char *bridge_json) {
     return status;
   }
 
-  const char *value = NULL;
-  if (proton_json_find_top_level_field(bridge_json, "namespace", &value)) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  if (!proton_json_parse(&doc, bridge_json) ||
+      !proton_json_root_object(&doc, &root)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge config must be a JSON object");
+  }
+
+  proton_json_value_t value;
+  if (proton_json_object_get(&doc, root, "namespace", &value)) {
     char namespace_value[64];
-    if (!proton_json_read_string_value(&value, namespace_value,
-                                       sizeof(namespace_value)) ||
+    if (!proton_json_read_string(&doc, value, namespace_value,
+                                 sizeof(namespace_value)) ||
         strcmp(namespace_value, "__MoonBit__") != 0) {
+      proton_json_dispose(&doc);
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                               "bridge namespace must be __MoonBit__");
     }
   }
 
-  if (proton_json_find_top_level_field(bridge_json, "origin_policy", &value)) {
-    status = proton_validate_bridge_origin_policy(value);
+  if (proton_json_object_get(&doc, root, "origin_policy", &value)) {
+    status = proton_validate_bridge_origin_policy(&doc, value);
     if (status != PROTON_OK) {
+      proton_json_dispose(&doc);
       return status;
     }
   }
 
-  if (!proton_json_find_top_level_field(bridge_json, "ops", &value)) {
+  if (!proton_json_object_get(&doc, root, "ops", &value)) {
+    proton_json_dispose(&doc);
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge config requires ops");
   }
-  status = proton_validate_bridge_ops(value);
+  status = proton_validate_bridge_ops(&doc, value);
   if (status != PROTON_OK) {
+    proton_json_dispose(&doc);
     return status;
   }
 
-  if (proton_json_find_top_level_field(bridge_json, "max_payload_bytes",
-                                       &value)) {
+  if (proton_json_object_get(&doc, root, "max_payload_bytes", &value)) {
     int32_t max_payload_bytes = 0;
-    if (!proton_json_read_int_value(&value, &max_payload_bytes) ||
+    if (!proton_json_read_int32(&doc, value, &max_payload_bytes) ||
         max_payload_bytes <= 0 ||
         max_payload_bytes > PROTON_MAX_BRIDGE_BYTES) {
+      proton_json_dispose(&doc);
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                               "bridge max_payload_bytes is invalid");
     }
   }
 
-  if (proton_json_find_top_level_field(bridge_json, "request_timeout_ms",
-                                       &value)) {
+  if (proton_json_object_get(&doc, root, "request_timeout_ms", &value)) {
     int32_t timeout_ms = 0;
-    if (!proton_json_read_int_value(&value, &timeout_ms) || timeout_ms <= 0) {
+    if (!proton_json_read_int32(&doc, value, &timeout_ms) || timeout_ms <= 0) {
+      proton_json_dispose(&doc);
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                               "bridge request_timeout_ms is invalid");
     }
   }
 
+  proton_json_dispose(&doc);
   return PROTON_OK;
 }
 
@@ -1223,19 +869,29 @@ static int32_t proton_validate_bridge_response_json(const char *response_json) {
   if (status != PROTON_OK) {
     return status;
   }
-  const char *value = NULL;
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, response_json) ||
+      !proton_json_root_object(&doc, &root)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge response must be a JSON object");
+  }
   int32_t request_id = 0;
-  if (!proton_json_find_top_level_field(response_json, "request_id", &value) ||
-      !proton_json_read_int_value(&value, &request_id) || request_id <= 0) {
+  if (!proton_json_object_get(&doc, root, "request_id", &value) ||
+      !proton_json_read_int32(&doc, value, &request_id) || request_id <= 0) {
+    proton_json_dispose(&doc);
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge response requires positive request_id");
   }
   bool ok = false;
-  if (!proton_json_find_top_level_field(response_json, "ok", &value) ||
-      !proton_json_read_bool_value(&value, &ok)) {
+  if (!proton_json_object_get(&doc, root, "ok", &value) ||
+      !proton_json_read_bool(&doc, value, &ok)) {
+    proton_json_dispose(&doc);
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge response requires boolean ok");
   }
+  proton_json_dispose(&doc);
   return PROTON_OK;
 }
 

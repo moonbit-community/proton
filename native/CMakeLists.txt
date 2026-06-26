@@ -21,6 +21,7 @@ if(PROTON_WITH_ENGINE)
 endif()
 
 add_library(proton SHARED
+  src/proton_json.c
   src/proton.c
   ${PROTON_ENGINE_SOURCE}
 )
