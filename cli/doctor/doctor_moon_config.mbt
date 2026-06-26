@@ -165,7 +165,6 @@ fn read_moon_pkg(
           path,
           imports: parse_pkg_imports(ast),
           is_main: ast_bool(ast_field(ast, "is-main")),
-          bin_name: ast_string(ast_field(ast, "bin-name")),
         })
       }
     }

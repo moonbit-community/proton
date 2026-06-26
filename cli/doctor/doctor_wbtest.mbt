@@ -43,7 +43,6 @@ test "moon_config adapter reads module deps and package imports" {
       #|
       #|options(
       #|  "is-main": true,
-      #|  "bin-name": "demo",
       #|)
       #|
     ),

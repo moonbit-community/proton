@@ -185,7 +185,7 @@ fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       DoctorLine::new(
         Missing,
         "Proton native dist: not found",
-        hint="run `proton cef setup`, or set PROTON_NATIVE_DIST",
+        hint="run `proton_cli cef setup`, or set PROTON_NATIVE_DIST",
       ),
     )
   }
@@ -322,11 +322,6 @@ fn collect_packages(
         match config.is_main {
           Some(value) =>
             lines.push(DoctorLine::new(Neutral, "is-main: \{value}"))
-          None => ()
-        }
-        match config.bin_name {
-          Some(value) =>
-            lines.push(DoctorLine::new(Neutral, "bin-name: " + value))
           None => ()
         }
         for item in config.imports {

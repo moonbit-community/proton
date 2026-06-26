@@ -139,7 +139,6 @@ priv struct MoonPackageConfig {
   path : String
   imports : Array[MoonPackageImport]
   is_main : Bool?
-  bin_name : String?
 }
 
 ///|
