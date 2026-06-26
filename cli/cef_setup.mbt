@@ -1,7 +1,7 @@
 ///|
 fn cef_setup_arg_parser() -> @argparse.Command {
   @argparse.Command(
-    "proton cef setup",
+    "proton_cli cef setup",
     about="Install the Windows Proton runtime into .proton",
     options=[
       OptionArg("name", about="CEF binary directory/archive name"),
@@ -17,7 +17,11 @@ let default_cef_name = "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_win
 let default_cef_base_url = "https://cef-builds.spotifycdn.com"
 
 ///|
-let proton_version = "0.1.2"
+struct ProtonPlatform {
+  id : String
+  cef_suffix : String
+  supported : Bool
+} derive(Eq, Debug)
 
 ///|
 fn path_exists(path : String) -> Bool {
@@ -64,23 +68,35 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn platform_id() -> String {
-  "win32-x64"
+fn current_platform() -> ProtonPlatform {
+  if @path.sep == '\\' {
+    { id: "win32-x64", cef_suffix: "_windows64_minimal", supported: true }
+  } else {
+    { id: "unsupported", cef_suffix: "", supported: false }
+  }
 }
 
 ///|
-fn proton_runtime_id(cef_name : String) -> String {
+fn proton_runtime_id(
+  proton_version : String,
+  platform : ProtonPlatform,
+  cef_name : String,
+) -> String {
   let cef_version = cef_name
     .replace(old="cef_binary_", new="")
-    .replace(old="_windows64_minimal", new="")
+    .replace(old=platform.cef_suffix, new="")
   "proton-" + proton_version + "_cef-" + cef_version
 }
 
 ///|
-fn relative_runtime_dist(platform : String, cef_name : String) -> String {
+fn relative_runtime_dist(
+  proton_version : String,
+  platform : ProtonPlatform,
+  cef_name : String,
+) -> String {
   path_join(
-    path_join(path_join(".proton", "runtimes"), platform),
-    proton_runtime_id(cef_name),
+    path_join(path_join(".proton", "runtimes"), platform.id),
+    proton_runtime_id(proton_version, platform, cef_name),
   )
 }
 
@@ -342,18 +358,18 @@ fn archive_url(name : String, url : String?) -> String {
 ///|
 fn find_prebuilt_root(
   root : String,
-  platform : String,
+  platform : ProtonPlatform,
 ) -> Result[String, CliError] {
   let package_prebuilt = path_join(
     path_join(path_join(root, "proton"), "prebuilt"),
-    platform,
+    platform.id,
   )
   if all_exist(package_prebuilt, proton_prebuilt_relative_files()) {
     return Ok(package_prebuilt)
   }
   let mooncakes_prebuilt = path_join(
     path_join(path_join(path_join(root, ".mooncakes"), "justjavac"), "proton"),
-    path_join("prebuilt", platform),
+    path_join("prebuilt", platform.id),
   )
   if all_exist(mooncakes_prebuilt, proton_prebuilt_relative_files()) {
     return Ok(mooncakes_prebuilt)
@@ -365,7 +381,7 @@ fn find_prebuilt_root(
   Err(
     CliError::CommandError(
       "Missing Proton prebuilt artifacts for " +
-      platform +
+      platform.id +
       ". Expected " +
       package_prebuilt +
       ", " +
@@ -377,8 +393,10 @@ fn find_prebuilt_root(
 }
 
 ///|
-fn require_windows() -> Result[Unit, CliError] {
-  if @path.sep == '\\' {
+fn require_supported_platform(
+  platform : ProtonPlatform,
+) -> Result[Unit, CliError] {
+  if platform.supported {
     Ok(())
   } else {
     Err(
@@ -387,6 +405,62 @@ fn require_windows() -> Result[Unit, CliError] {
       ),
     )
   }
+}
+
+///|
+fn read_json_file(path : String) -> Result[Json, CliError] {
+  let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to read " + path + ": " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  try @json.parse(text) catch {
+    err =>
+      Err(
+        CliError::CommandError(
+          "Failed to parse " + path + ": " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  } noraise {
+    json => Ok(json)
+  }
+}
+
+///|
+fn json_string_field(
+  json : Json,
+  field : String,
+  label : String,
+) -> Result[String, CliError] {
+  match json {
+    Object(object) =>
+      match object.get(field) {
+        Some(String(value)) => Ok(value)
+        _ =>
+          Err(CliError::CommandError(label + " missing string field: " + field))
+      }
+    _ => Err(CliError::CommandError(label + " must be a JSON object"))
+  }
+}
+
+///|
+fn prebuilt_manifest_version(
+  prebuilt_root : String,
+) -> Result[String, CliError] {
+  let manifest_path = path_join(prebuilt_root, "manifest.json")
+  guard path_is_file(manifest_path) else {
+    return Err(
+      CliError::CommandError(
+        "Missing Proton prebuilt manifest: " + manifest_path,
+      ),
+    )
+  }
+  read_json_file(manifest_path).bind(fn(json) {
+    json_string_field(json, "proton_version", manifest_path)
+  })
 }
 
 ///|
@@ -688,6 +762,7 @@ async fn copy_cef_runtime(
 
 ///|
 fn runtime_manifest_json(
+  proton_version : String,
   platform : String,
   cef_name : String,
   dist : String,
@@ -704,11 +779,14 @@ fn runtime_manifest_json(
 fn write_runtime_metadata(
   root : String,
   runtime_dir : String,
+  proton_version : String,
   platform : String,
   cef_name : String,
   relative_dist : String,
 ) -> Result[Unit, CliError] {
-  let manifest = runtime_manifest_json(platform, cef_name, relative_dist)
+  let manifest = runtime_manifest_json(
+    proton_version, platform, cef_name, relative_dist,
+  )
   @mbfs.write_string_to_file(
     path_join(runtime_dir, "manifest.json"),
     manifest + "\n",
@@ -752,9 +830,63 @@ fn write_runtime_metadata(
 }
 
 ///|
-async fn assemble_runtime(
+fn validate_active_runtime_manifest(
   root : String,
   platform : String,
+  proton_version : String,
+  relative_dist : String,
+) -> Result[Unit, CliError] {
+  let manifest_path = path_join(path_join(root, ".proton"), "runtime.json")
+  read_json_file(manifest_path).bind(fn(json) {
+    json_string_field(json, "platform", manifest_path).bind(fn(
+      actual_platform,
+    ) {
+      if actual_platform != platform {
+        return Err(
+          CliError::CommandError(
+            "Active runtime platform mismatch: expected " +
+            platform +
+            ", got " +
+            actual_platform,
+          ),
+        )
+      }
+      json_string_field(json, "proton_version", manifest_path).bind(fn(
+        actual_version,
+      ) {
+        if actual_version != proton_version {
+          return Err(
+            CliError::CommandError(
+              "Active runtime Proton version mismatch: expected " +
+              proton_version +
+              ", got " +
+              actual_version,
+            ),
+          )
+        }
+        json_string_field(json, "dist", manifest_path).bind(fn(actual_dist) {
+          if actual_dist != relative_dist {
+            return Err(
+              CliError::CommandError(
+                "Active runtime dist mismatch: expected " +
+                relative_dist +
+                ", got " +
+                actual_dist,
+              ),
+            )
+          }
+          Ok(())
+        })
+      })
+    })
+  })
+}
+
+///|
+async fn assemble_runtime(
+  root : String,
+  platform : ProtonPlatform,
+  proton_version : String,
   cef_name : String,
   cef_root : String,
   prebuilt_root : String,
@@ -779,11 +911,27 @@ async fn assemble_runtime(
     Err(error) => return Err(error)
   }
   match
-    write_runtime_metadata(root, runtime_dir, platform, cef_name, relative_dist) {
+    write_runtime_metadata(
+      root,
+      runtime_dir,
+      proton_version,
+      platform.id,
+      cef_name,
+      relative_dist,
+    ) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  validate_runtime_dist(runtime_dir)
+  match validate_runtime_dist(runtime_dir) {
+    Ok(_) =>
+      validate_active_runtime_manifest(
+        root,
+        platform.id,
+        proton_version,
+        relative_dist,
+      )
+    Err(error) => Err(error)
+  }
 }
 
 ///|
@@ -842,7 +990,8 @@ async fn run_cef_setup(
   let matches = cmd.parse(argv=args, env={}) catch {
     err => return Err(CliError::UsageError(err.to_string(), true))
   }
-  match require_windows() {
+  let platform = current_platform()
+  match require_supported_platform(platform) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
@@ -855,18 +1004,21 @@ async fn run_cef_setup(
     Ok(root) => root
     Err(error) => return Err(error)
   }
-  let platform = platform_id()
   let proton_root = path_join(root, ".proton")
-  let cache_dir = path_join(
-    path_join(path_join(path_join(proton_root, "cache"), "cef"), platform),
-    name,
-  )
-  let relative_dist = relative_runtime_dist(platform, name)
-  let runtime_dir = path_join(root, relative_dist)
   let prebuilt_root = match find_prebuilt_root(root, platform) {
     Ok(path) => path
     Err(error) => return Err(error)
   }
+  let proton_version = match prebuilt_manifest_version(prebuilt_root) {
+    Ok(version) => version
+    Err(error) => return Err(error)
+  }
+  let cache_dir = path_join(
+    path_join(path_join(path_join(proton_root, "cache"), "cef"), platform.id),
+    name,
+  )
+  let relative_dist = relative_runtime_dist(proton_version, platform, name)
+  let runtime_dir = path_join(root, relative_dist)
   match ensure_cef_cache(name, url, root, cache_dir) {
     Ok(_) => ()
     Err(error) => return Err(error)
@@ -877,7 +1029,8 @@ async fn run_cef_setup(
   }
   match
     assemble_runtime(
-      root, platform, name, cache_dir, prebuilt_root, runtime_dir, relative_dist,
+      root, platform, proton_version, name, cache_dir, prebuilt_root, runtime_dir,
+      relative_dist,
     ) {
     Ok(_) => ()
     Err(error) => return Err(error)

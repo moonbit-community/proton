@@ -2,9 +2,9 @@
 fn print_usage() -> Unit {
   let usage =
     #|Usage:
-    #|  proton [-C DIR] doctor [--dry-run] [--verbose] [--json]
-    #|  proton codegen <input.mbt> -o <output.g.mbt>
-    #|  proton cef setup [--name <cef_binary_name>] [--url <url>]
+    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]
+    #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
+    #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
     #|
   println(usage)
 }
@@ -27,7 +27,7 @@ fn print_error_message(message : String) -> Unit {
 ///|
 fn codegen_arg_parser() -> @argparse.Command {
   @argparse.Command(
-    "proton codegen",
+    "proton_cli codegen",
     about="Generate Proton command extension code from #proton attributes",
     options=[
       OptionArg(
@@ -92,7 +92,7 @@ fn run_doctor_from_args(
       "--json" => json = true
       "-h" | "--help" => {
         println(
-          "Usage: proton [-C DIR] doctor [--dry-run] [--verbose] [--json]",
+          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]",
         )
         return Ok(())
       }
