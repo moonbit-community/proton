@@ -18,8 +18,8 @@ directly and does not provide a compatibility layer for the old runtime route.
 
 CMake is the only native build entry point.
 
-For the Windows engine-backed development layout, place the CEF SDK/runtime in
-`.cef-cache` or pass another path through `PROTON_ENGINE_ROOT`, then run:
+For release packaging, build the Windows engine-backed native runtime, then
+stage only the Proton artifacts into `proton/prebuilt/win32-x64/`:
 
 ```powershell
 cmake -S native -B native\build-engine `
@@ -30,14 +30,21 @@ cmake --build native\build-engine --config Debug
 cmake --install native\build-engine --config Debug
 ```
 
-The install step produces the layout MoonBit expects:
+The package ships these files:
 
 ```text
-native/dist/bin/proton.dll
-native/dist/bin/cef_process.exe
-native/dist/lib/proton.lib
-native/dist/Resources/
+proton/prebuilt/win32-x64/bin/proton.dll
+proton/prebuilt/win32-x64/bin/cef_process.exe
+proton/prebuilt/win32-x64/lib/proton.lib
+proton/prebuilt/win32-x64/include/proton_native.h
 ```
+
+CEF files are not shipped in the package. `proton cef setup` downloads or reuses
+CEF and assembles the complete project runtime under `.proton/`.
+
+Platform prebuilds live under `proton/prebuilt/<platform>/`. Current Windows
+uses `win32-x64`; future macOS work should add `darwin-arm64` and/or
+`darwin-x64` with the same Proton-only rule.
 
 The ABI-only build is still useful for binding tests:
 
@@ -70,14 +77,25 @@ options(
 )
 ```
 
-`native_link_config.mjs` points native builds at `native/dist` by default. Set
-`PROTON_NATIVE_DIST` when the installed native runtime lives elsewhere.
-
-On Windows, add the installed DLL directory to `PATH` while running local
-MoonBit builds:
+Install the CLI and assemble the active native runtime:
 
 ```powershell
-$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+moon install justjavac/proton_cli
+proton cef setup
+```
+
+`native_link_config.mjs` resolves link inputs in this order:
+
+1. `PROTON_NATIVE_DIST`
+2. the active project `.proton/runtime.json`
+3. the repository development fallback `native/dist`
+
+On Windows the runtime DLL directory must still be on `PATH` when running the
+compiled executable. For the setup-managed runtime:
+
+```powershell
+$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 ```
 
 Minimal MoonBit app:
@@ -101,14 +119,10 @@ and runtime diagnostics, but ordinary apps should start from the root facade.
 ## Run The Example
 
 ```powershell
-cmake -S native -B native\build-engine `
-  -DCMAKE_INSTALL_PREFIX=native\dist `
-  -DPROTON_WITH_ENGINE=ON `
-  -DPROTON_ENGINE_ROOT=.cef-cache
-cmake --build native\build-engine --config Debug
-cmake --install native\build-engine --config Debug
+moon -C cli run . -- -C .. cef setup
 
-$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 moon -C examples run 01_run --target native
 ```
 
@@ -117,7 +131,9 @@ moon -C examples run 01_run --target native
 ```powershell
 ctest --test-dir native\build-engine -C Debug --output-on-failure
 node native\scripts\verify_link_config.mjs native\dist
-$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+moon -C cli run . -- -C .. cef setup
+$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 moon -C proton test native --target native --diagnostic-limit 80
 moon -C examples build 01_run --target native --diagnostic-limit 80
 node scripts\e2e_bridge_smoke.mjs 41_app_commands

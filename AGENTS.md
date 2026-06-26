@@ -16,8 +16,11 @@
   `cli/codegen/` and `cli/doctor/` helpers.
 - `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
   aligned with the actual examples.
+- `proton/prebuilt/<platform>/`: shipped Proton-only native artifacts. Do not
+  put CEF runtime files here.
 - `lib/`, `build/`, `_build/`, `target/`, `native/build*`, `native/dist/`:
   generated or vendored artifacts.
+- `.proton/`: generated project runtime cache created by `proton cef setup`.
 
 ## Build And Test
 - Native engine build:
@@ -26,11 +29,19 @@
 - `cmake --install native\build-engine --config Debug`
 - `ctest --test-dir native\build-engine -C Debug --output-on-failure`
 - `node native\scripts\verify_link_config.mjs native\dist`
+- Sync release artifacts into `proton/prebuilt/<platform>/`; only include the
+  Proton DLL/shared library, import library if any, helper executable, public
+  header, and manifest.
+- `moon -C cli run . -- -C .. cef setup`
+- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+  `moon -C proton test native --target native --diagnostic-limit 80`
+- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+  `moon -C proton check --target native --diagnostic-limit 80`
+- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+  `moon -C examples build --target native --diagnostic-limit 80`
+- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+  `moon -C cli test --target native --diagnostic-limit 80`
 - `moon fmt` or `moon fmt --check`
-- With `native\dist\bin` on `PATH`: `moon -C proton test native --target native --diagnostic-limit 80`
-- With `native\dist\bin` on `PATH`: `moon -C proton check --target native --diagnostic-limit 80`
-- With `native\dist\bin` on `PATH`: `moon -C examples build 01_native_window --target native --diagnostic-limit 80`
-- `moon -C cli test --target native --diagnostic-limit 80`
 
 Use the smallest relevant validation set while iterating, then run broader
 native checks before handing off larger refactors.
@@ -52,12 +63,19 @@ native checks before handing off larger refactors.
 ## Architectural Rules
 - There is one runtime route: CMake builds the native Proton dynamic library and
   helper executable; MoonBit links only the Proton library/import library.
+- Published packages ship `proton/prebuilt/<platform>/` Proton artifacts only.
+  CEF is installed by `proton cef setup`, which writes `.proton/runtime.json`
+  and assembles `.proton/runtimes/<platform>/...`.
+- Platform ids should stay predictable: `win32-x64` now; future macOS work
+  should use `darwin-arm64` and `darwin-x64`.
 - CEF is the native implementation detail. Do not expose CEF in MoonBit package
   names, C ABI prefixes, or public facade names.
 - `native/CMakeLists.txt` is the only native build source of truth. Do not add
   duplicate native build entry points.
 - `native_link_config.mjs` owns MoonBit link flags. Keep MoonBit FFI simple:
   no loader shim unless a separate import-library/TCC spike proves it is needed.
+  Its resolution order is `PROTON_NATIVE_DIST`, active `.proton/runtime.json`,
+  then development fallback `native/dist`.
 - Keep `proton_*` ABI functions stable and MoonBit-facing: use status codes,
   `Int64` handle ids, caller-owned buffers, and typed MoonBit wrappers.
 - Runtime/window configs must keep explicit `abi_version` JSON schemas and

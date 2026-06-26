@@ -2,6 +2,14 @@
 
 Run commands from the repository root.
 
+Install or assemble the native runtime first:
+
+```powershell
+moon -C cli run . -- -C .. cef setup
+$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
+```
+
 Generated-command examples use the released Proton CLI. Install it into the
 tool directory used by `examples/moon.mod`:
 
@@ -19,14 +27,6 @@ Run one example:
 
 ```sh
 moon -C examples run 01_run --target native
-```
-
-Install the native runtime before running examples:
-
-```sh
-cmake -S native -B native/build-engine -DCMAKE_INSTALL_PREFIX=native/dist -DPROTON_WITH_ENGINE=ON -DPROTON_ENGINE_ROOT=.cef-cache
-cmake --build native/build-engine --config Debug
-cmake --install native/build-engine --config Debug
 ```
 
 ## Groups

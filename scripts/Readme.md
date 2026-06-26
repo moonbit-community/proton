@@ -13,7 +13,13 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 ## `e2e_bridge_smoke.mjs`
 
 Runs native DLL bridge smoke scenarios through CEF remote debugging. Build and
-install `native/dist` first, then run:
+assemble the active runtime first, then run:
+
+```powershell
+moon -C cli run . -- -C .. cef setup
+$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
+```
 
 ```sh
 node ./scripts/e2e_bridge_smoke.mjs 38_async_extension_add 39_sync_async_extensions

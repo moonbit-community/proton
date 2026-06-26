@@ -118,7 +118,8 @@ native/dist/
 ```
 
 For the package distribution layout, build the helper and engine-backed DLL into
-`native/dist`:
+`native/dist`, then stage only the Proton artifacts into
+`proton/prebuilt/win32-x64`:
 
 ```powershell
 cmake -S native -B native\build-engine `
@@ -129,7 +130,8 @@ cmake --build native\build-engine --config Debug
 cmake --install native\build-engine --config Debug
 ```
 
-These commands expect the CEF SDK/runtime at `.cef-cache` and install:
+These commands expect the CEF SDK/runtime at `.cef-cache` and install a full
+development dist:
 
 ```text
 native/dist/bin/proton.dll
@@ -137,6 +139,17 @@ native/dist/bin/cef_process.exe
 native/dist/lib/proton.lib
 native/dist/Resources/
 ```
+
+The published MoonBit package includes only:
+
+```text
+proton/prebuilt/win32-x64/bin/proton.dll
+proton/prebuilt/win32-x64/bin/cef_process.exe
+proton/prebuilt/win32-x64/lib/proton.lib
+proton/prebuilt/win32-x64/include/proton_native.h
+```
+
+CEF runtime files are assembled later by `proton cef setup` into `.proton/`.
 
 MoonBit FFI consumers only link `proton.lib`/`proton.dll`. They do not link CEF
 directly; the runtime starts `bin/cef_process.exe` through the C ABI runtime
@@ -153,8 +166,9 @@ $env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
 moon -C proton test native --target native
 ```
 
-By default the prebuild link config uses `native/dist`. Set
-`PROTON_NATIVE_DIST` to point MoonBit at another install prefix:
+By default the prebuild link config prefers `PROTON_NATIVE_DIST`, then the
+active `.proton/runtime.json`, then the development fallback `native/dist`. Set
+`PROTON_NATIVE_DIST` to force another install prefix:
 
 ```powershell
 $env:PROTON_NATIVE_DIST = 'C:\path\to\proton-dist'
