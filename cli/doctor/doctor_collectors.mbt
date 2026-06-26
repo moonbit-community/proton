@@ -56,17 +56,17 @@ fn option_string_or(value : String?, fallback : String) -> String {
 }
 
 ///|
-fn resolve_cef_root(project : ProjectDoctorInfo) -> String {
-  match @sys.get_env_var("PROTON_CEF_ROOT") {
+fn resolve_native_dist(project : ProjectDoctorInfo) -> String {
+  match @sys.get_env_var("PROTON_NATIVE_DIST") {
     Some(root) => root
     None => {
-      let project_cache = path_join(project.root, ".cef-cache")
-      if @mbfs.path_exists(project_cache) {
-        project_cache
+      let project_dist = path_join(path_join(project.root, "native"), "dist")
+      if @mbfs.path_exists(project_dist) {
+        project_dist
       } else {
-        match find_up(project.root, ".cef-cache") {
-          Some(path) => path
-          None => project_cache
+        match find_up(project.root, "native") {
+          Some(path) => path_join(path, "dist")
+          None => project_dist
         }
       }
     }
@@ -74,12 +74,10 @@ fn resolve_cef_root(project : ProjectDoctorInfo) -> String {
 }
 
 ///|
-fn cef_required_layout_files() -> Array[String] {
+fn native_dist_required_layout_files() -> Array[String] {
   [
-    "include\\capi\\cef_app_capi.h", "include\\capi\\cef_browser_capi.h", "include\\capi\\cef_client_capi.h",
-    "include\\capi\\cef_v8_capi.h", "Release\\libcef.lib", "Release\\libcef.dll",
-    "Release\\icudtl.dat", "Release\\chrome_100_percent.pak", "Release\\chrome_200_percent.pak",
-    "Release\\resources.pak", "Resources\\icudtl.dat",
+    "bin\\proton.dll", "bin\\cef_process.exe", "lib\\proton.lib", "bin\\libcef.dll",
+    "bin\\icudtl.dat", "Resources\\icudtl.dat", "Resources\\locales",
   ]
 }
 
@@ -110,41 +108,43 @@ fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
   lines.push(
     DoctorLine::new(Unknown, "npm: version probing not implemented yet"),
   )
-  let cef_root = resolve_cef_root(project)
-  if @mbfs.path_exists(cef_root) {
-    lines.push(DoctorLine::new(Ok, "CEF root: " + cef_root))
-    let version_path = path_join(cef_root, "version.txt")
+  let native_dist = resolve_native_dist(project)
+  if @mbfs.path_exists(native_dist) {
+    lines.push(DoctorLine::new(Ok, "Proton native dist: " + native_dist))
+    let version_path = path_join(native_dist, "version.txt")
     if @mbfs.path_exists(version_path) {
       let version = @mbfs.read_file_to_string(version_path, encoding="utf8") catch {
         _ => "unknown"
       }
       lines.push(
-        DoctorLine::new(Ok, "CEF version: " + version.trim().to_owned()),
+        DoctorLine::new(Ok, "runtime version: " + version.trim().to_owned()),
       )
     } else {
-      lines.push(DoctorLine::new(Unknown, "CEF version: version.txt missing"))
+      lines.push(
+        DoctorLine::new(Unknown, "runtime version: version.txt missing"),
+      )
     }
     let missing : Array[String] = []
-    for required in cef_required_layout_files() {
-      if !@mbfs.path_exists(path_join(cef_root, required)) {
+    for required in native_dist_required_layout_files() {
+      if !@mbfs.path_exists(path_join(native_dist, required)) {
         missing.push(required)
       }
     }
     if missing.length() == 0 {
       lines.push(
-        DoctorLine::new(Ok, "CEF layout: include, Release, Resources found"),
+        DoctorLine::new(Ok, "native layout: DLL, helper, lib, Resources found"),
       )
     } else {
       lines.push(
-        DoctorLine::new(Error, "CEF layout: missing " + missing.join(", ")),
+        DoctorLine::new(Error, "native layout: missing " + missing.join(", ")),
       )
     }
   } else {
     lines.push(
       DoctorLine::new(
         Missing,
-        "CEF root: not found",
-        hint="run `proton cef setup` or set PROTON_CEF_ROOT",
+        "Proton native dist: not found",
+        hint="run `cmake -S native -B native\\build-engine -DCMAKE_INSTALL_PREFIX=native\\dist -DPROTON_WITH_ENGINE=ON -DPROTON_ENGINE_ROOT=.cef-cache` and install it, or set PROTON_NATIVE_DIST",
       ),
     )
   }

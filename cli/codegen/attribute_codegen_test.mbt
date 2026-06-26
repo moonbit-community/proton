@@ -80,7 +80,7 @@ test "attribute codegen renders commands events and async context" {
     #|      context.op("ping", __proton_command_ping)
     #|      context.op_async_result("slowAdd", async fn(payload) {
     #|        __proton_command_slow_add(context, payload)
-    #|      })
+    #|      }, emits_events=true)
     #|      Ok(())
     #|    },
     #|  )

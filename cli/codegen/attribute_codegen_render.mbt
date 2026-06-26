@@ -15,6 +15,7 @@ fn render_proton_command_codegen(
   render_extension_spec(
     builder,
     parsed.commands,
+    parsed.events.length() > 0,
     parsed.scripts,
     parsed.destroy,
     extension_id,
@@ -107,6 +108,7 @@ fn render_payloads_and_wrappers(
 fn render_extension_spec(
   builder : StringBuilder,
   commands : Array[ParsedProtonCommand],
+  has_events : Bool,
   scripts : Array[ParsedProtonScript],
   destroy : ParsedProtonDestroy?,
   extension_id : String,
@@ -163,6 +165,9 @@ fn render_extension_spec(
     } else {
       builder.write_string(wrapper_name(command))
     }
+    if command_emits_events(command, has_events) {
+      builder.write_string(", emits_events=true")
+    }
     builder.write_string(")\n")
   }
   builder.write_string("      Ok(())\n")
@@ -192,6 +197,14 @@ fn render_extension_spec(
   }
   builder.write_string("  )\n")
   builder.write_string("}\n")
+}
+
+///|
+fn command_emits_events(
+  command : ParsedProtonCommand,
+  has_events : Bool,
+) -> Bool {
+  has_events && command.has_context && command.is_async
 }
 
 ///|
