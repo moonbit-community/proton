@@ -38,7 +38,7 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async_result("slowAdd", async fn(payload) {
         __proton_command_slow_add(context, payload)
-      })
+      }, emits_events=true)
       Ok(())
     },
   )

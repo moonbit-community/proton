@@ -1,17 +1,4 @@
 ///|
-/// Creates and runs a webview window displaying a local HTML content with a
-/// "Hello, Moonbit!" message.
-///
-/// The webview window is configured with:
-///
-/// * Debug mode enabled
-/// * Custom title "MoonBit Proton Example"
-/// * Window size of 800x600 pixels
-/// * Centered text content with custom styling
-fn main {
-  @webview.Webview::new(debug=1)
-  ..set_title("MoonBit Proton Example")
-  ..set_size(800, 600, @webview.SizeHint::None)
-  ..set_html(resource)
-  .run()
+async fn main {
+  @proton.html("12 embed", resource, width=800, height=600, debug=true).run_or_abort()
 }

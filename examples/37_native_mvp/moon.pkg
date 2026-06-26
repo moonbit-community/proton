@@ -1,6 +1,6 @@
 import {
   "moonbitlang/async",
-  "justjavac/proton/webview",
+  "justjavac/proton",
 }
 
 supported_targets = "native"

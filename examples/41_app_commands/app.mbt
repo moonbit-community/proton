@@ -209,7 +209,7 @@ let resource : String =
   #|        }, 80);
   #|
   #|        try {
-  #|          const ping = await invoke("ping", { name: "webview" });
+  #|          const ping = await invoke("ping", { name: "proton" });
   #|          log(`ping -> ${JSON.stringify(ping)}`);
   #|
   #|          const sum = await invoke("slowAdd", {

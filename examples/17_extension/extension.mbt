@@ -70,35 +70,10 @@ let resource : String =
   #|  </head>
   #|  <body>
   #|    <main>
-  #|      <h1>Extension API</h1>
-  #|      <p>A __MoonBit__ extension registers ops-backed APIs on <code>window.__MoonBit__</code>, with events delivered through <code>window.__MoonBit__.events</code>.</p>
-  #|      <button id="run">Call math.sum</button>
-  #|      <pre id="output">Click the button.</pre>
+  #|      <h1>Extension Metadata</h1>
+  #|      <p>This example keeps the extension registration shape available through the top-level Proton API. The current native DLL route records extension metadata but does not expose page bridge calls yet.</p>
+  #|      <pre id="output">Bridge/event support is planned for a later native layer.</pre>
   #|    </main>
-  #|    <script>
-  #|      const output = document.getElementById("output");
-  #|      let lastEvent = null;
-  #|      window.__MoonBit__.events.on("math.computed", (event) => {
-  #|        lastEvent = event;
-  #|        output.textContent =
-  #|          "Extension event:\n" + JSON.stringify(event, null, 2);
-  #|      });
-  #|      document.getElementById("run").addEventListener("click", () => {
-  #|        Promise.all([
-  #|          window.__MoonBit__.core.invokeOp("ext:math/sum", { left: 20, right: 22 }),
-  #|          window.__MoonBit__.math.sum({ left: 20, right: 22 }),
-  #|        ])
-  #|          .then(([direct, extension]) => {
-  #|            output.textContent =
-  #|              "Direct op response:\n" + JSON.stringify(direct, null, 2) +
-  #|              "\n\nExtension helper response:\n" + JSON.stringify(extension, null, 2) +
-  #|              "\n\nLast event:\n" + JSON.stringify(lastEvent, null, 2);
-  #|          })
-  #|          .catch((error) => {
-  #|            output.textContent = "Transport error:\n" + String(error);
-  #|          });
-  #|      });
-  #|    </script>
   #|  </body>
   #|</html>
   #|

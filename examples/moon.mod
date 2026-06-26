@@ -17,9 +17,9 @@ repository = "https://github.com/moonbit-community/proton/tree/main/examples"
 
 license = "MIT"
 
-keywords = [ "webview", "webui", "gui", "web", "desktop-app" ]
+keywords = [ "proton", "gui", "web", "desktop-app" ]
 
-description = "MoonBit bindings for webview, a tiny library for creating web-based desktop GUIs."
+description = "MoonBit examples for the Proton native desktop runtime facade."
 
 rule(name: "embed", command: ":embed -i $input -o $output")
 

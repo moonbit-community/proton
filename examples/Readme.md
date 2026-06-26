@@ -9,40 +9,42 @@ tool directory used by `examples/moon.mod`:
 moon install justjavac/proton_cli --bin target/proton-tools
 ```
 
-Build all examples:
+Build the minimal root-facade example:
 
 ```sh
-moon -C examples build --target native
+moon -C examples build 01_run --target native
 ```
 
 Run one example:
 
 ```sh
-moon -C examples run 19_app_fs --target native
+moon -C examples run 01_run --target native
 ```
 
-CEF examples need the local CEF runtime and helper process:
+Install the native runtime before running examples:
 
 ```sh
-target/proton-tools/proton_cli cef setup
-moon -C proton build cef_process --target native
-moon -C examples run 43_cef_bind_smoke --target native
-```
-
-Run automated CEF smoke scenarios:
-
-```sh
-node ./scripts/e2e_cdp_smoke.mjs
+cmake -S native -B native/build-engine -DCMAKE_INSTALL_PREFIX=native/dist -DPROTON_WITH_ENGINE=ON -DPROTON_ENGINE_ROOT=.cef-cache
+cmake --build native/build-engine --config Debug
+cmake --install native/build-engine --config Debug
 ```
 
 ## Groups
 
-- `01_*` through `15_*`: low-level `webview` examples
-- `17_*` and `18_*`: direct extension installation through `core`
-- `19_*` through `35_*`: app-style startup through `justjavac/proton`
-- `37_*` and `43_*`: CEF backend smoke examples
-- `38_*` through `42_*`: command extensions and generated command bridges
+- `01_run`: minimal app-style startup through `justjavac/proton`
+- `02_*` through `18_*`: root-facade examples that compile against the native
+  DLL route
+- `19_*` through `35_*`: app-style examples kept for top-level API migration.
+- `41_app_commands`: current `core.invokeOp` bridge smoke for the native DLL
+  route.
+- `38_*` and `39_*`: inline HTML command-extension proxy examples backed by the
+  native DLL bridge.
+- `40_event_broadcast`: command-extension event broadcast over the native DLL
+  bridge.
+- `42_attribute_codegen_commands`: generated command metadata plus generated
+  event helper over the native DLL bridge.
 - `44_project_config`: `moon.proton` project config decoding
 
-App examples declare extensions in MoonBit code. `moon.proton` configures app
-settings such as window, entry, debug, frontend, and bundle metadata.
+All runnable examples should import `justjavac/proton`. `moon.proton`
+configures app settings such as window, entry, debug, frontend, and bundle
+metadata.

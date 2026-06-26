@@ -44,25 +44,29 @@ fn ticker_extension() -> @proton_extension.Extension {
       "ticker",
       [@proton_command.AppCommandApiDescriptor::new("start")],
       fn(context) {
-        context.op_async_result("start", async fn(payload : StartPayload) {
-          let count = clamp(payload.count, 1, 20)
-          let interval_ms = clamp(payload.interval_ms, 100, 2000)
-          let ticks : Array[TickEvent] = []
-          for index in 1..<=count {
-            @async.sleep(interval_ms)
-            let tick = TickEvent::{
-              run_id: payload.run_id,
-              index,
-              total: count,
-              remaining: count - index,
+        context.op_async_result(
+          "start",
+          async fn(payload : StartPayload) {
+            let count = clamp(payload.count, 1, 20)
+            let interval_ms = clamp(payload.interval_ms, 100, 2000)
+            let ticks : Array[TickEvent] = []
+            for index in 1..<=count {
+              @async.sleep(interval_ms)
+              let tick = TickEvent::{
+                run_id: payload.run_id,
+                index,
+                total: count,
+                remaining: count - index,
+              }
+              ticks.push(tick)
+              context.emit("tick", tick)
             }
-            ticks.push(tick)
-            context.emit("tick", tick)
-          }
-          let done = DoneEvent::{ run_id: payload.run_id, total: count }
-          context.emit("done", done)
-          Ok(TickerResult::{ ticks, done })
-        })
+            let done = DoneEvent::{ run_id: payload.run_id, total: count }
+            context.emit("done", done)
+            Ok(TickerResult::{ ticks, done })
+          },
+          emits_events=true,
+        )
         Ok(())
       },
     ),

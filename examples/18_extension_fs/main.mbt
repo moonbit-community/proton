@@ -1,9 +1,6 @@
 ///|
-fn main {
-  let webview = @webview.Webview::new(debug=1)
-  @core.install_extension(webview, @fs.core_extension())
-  webview.set_title("MoonBit Filesystem Extension")
-  webview.set_size(960, 720, @webview.SizeHint::None)
-  webview.set_html(resource)
-  webview.run()
+async fn main {
+  @proton.html("18 extension fs", resource, width=960, height=720, debug=true)
+  .extension(@fs.extension())
+  .run_or_abort()
 }

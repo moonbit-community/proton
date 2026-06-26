@@ -1,9 +1,10 @@
 ///|
-/// Creates and runs a webview window that navigates to the MoonBit homepage.
-fn main {
-  @webview.Webview::new(debug=1)
-  ..set_title("MoonBit Proton Example")
-  ..set_size(800, 600, @webview.SizeHint::None)
-  ..navigate("https://www.moonbitlang.com")
-  .run()
+async fn main {
+  let html =
+    #|<!doctype html>
+    #|<html>
+    #|  <head><meta charset="utf-8"><title>03 remote</title></head>
+    #|  <body><h1>03 remote</h1></body>
+    #|</html>
+  @proton.html("03 remote", html, width=800, height=600, debug=true).run_or_abort()
 }

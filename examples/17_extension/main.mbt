@@ -1,9 +1,4 @@
 ///|
-fn main {
-  let webview = @webview.Webview::new(debug=1)
-  @core.install_extension(webview, extension())
-  webview.set_title("MoonBit Extension Runtime")
-  webview.set_size(900, 640, @webview.SizeHint::None)
-  webview.set_html(resource)
-  webview.run()
+async fn main {
+  @proton.html("17 extension", resource, width=800, height=600, debug=true).run_or_abort()
 }
