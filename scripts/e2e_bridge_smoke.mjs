@@ -76,15 +76,25 @@ function supportsMoonBitE2eScenario(name) {
   return name === "41_app_commands";
 }
 
-function pathEnvWithNativeDist() {
-  const binDir = path.join(repoRoot, "native", "dist", "bin");
+function activeRuntimeDist() {
+  const manifestPath = path.join(repoRoot, ".proton", "runtime.json");
+  if (fs.existsSync(manifestPath)) {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    if (typeof manifest.dist === "string" && manifest.dist.length > 0) {
+      return path.resolve(repoRoot, manifest.dist);
+    }
+  }
+  return path.join(repoRoot, "native", "dist");
+}
+
+function pathEnvWithNativeRuntime() {
+  const runtimeDist = activeRuntimeDist();
+  const binDir = path.join(runtimeDist, "bin");
   if (!fs.existsSync(binDir)) {
     fail(
       [
         `Native runtime bin directory does not exist: ${binDir}`,
-        "Build and install native first:",
-        "cmake --build native\\build-engine --config Debug",
-        "cmake --install native\\build-engine --config Debug",
+        "Run proton_cli cef setup or build and install native first.",
       ].join("\n"),
     );
   }
@@ -93,25 +103,25 @@ function pathEnvWithNativeDist() {
   return {
     ...process.env,
     [key]: `${binDir}${path.delimiter}${currentPath}`,
-    PROTON_NATIVE_DIST: path.join(repoRoot, "native", "dist"),
+    PROTON_NATIVE_DIST: runtimeDist,
     PROTON_NATIVE_LOG: path.join(repoRoot, "target", "proton-native.log"),
     PROTON_REMOTE_DEBUGGING_PORT: String(cdpPort),
   };
 }
 
-function ensureE2eWorkspaceIfPresent() {
+function ensureE2eWorkspaceMember() {
   const e2eMod = path.join(repoRoot, "e2e", "moon.mod");
   if (!fs.existsSync(e2eMod)) {
     console.warn("e2e module is not present; running self-contained CDP smoke only.");
     return false;
   }
-  console.log("preparing MoonBit workspace: moon work use ./e2e");
-  const result = spawnSync("moon", ["work", "use", "./e2e"], {
-    cwd: repoRoot,
-    stdio: "inherit",
-  });
-  if (result.status !== 0) {
-    fail("failed to add ./e2e to moon.work");
+  const workPath = path.join(repoRoot, "moon.work");
+  if (!fs.existsSync(workPath)) {
+    fail("e2e module is present, but moon.work is missing");
+  }
+  const work = fs.readFileSync(workPath, "utf8");
+  if (!/"\.\/e2e"/.test(work) && !/'\.\/e2e'/.test(work)) {
+    fail("e2e module must be listed in moon.work before running e2e smoke");
   }
   return true;
 }
@@ -1281,6 +1291,7 @@ Get-CimInstance Win32_Process |
   Where-Object {
     ($_.CommandLine -like "*$root*") -or
     ($_.ExecutablePath -like "$root\\_build\\native\\*") -or
+    ($_.ExecutablePath -like "$root\\.proton\\runtimes\\*\\bin\\cef_process.exe") -or
     ($_.ExecutablePath -like "$root\\native\\dist\\bin\\cef_process.exe")
   } |
   Where-Object { $_.ProcessId -ne $PID } |
@@ -1357,7 +1368,7 @@ if ($closed -le 0) {
 
 async function runScenario(name, hasMoonBitE2e) {
   ensureSupportedScenario(name);
-  const env = pathEnvWithNativeDist();
+  const env = pathEnvWithNativeRuntime();
   fs.mkdirSync(path.join(repoRoot, "target"), { recursive: true });
   removeIfExists(path.join(repoRoot, "target", "proton-native.log"));
   removeIfExists(path.join(repoRoot, "examples", "target", "app-commands.probe.json"));
@@ -1451,7 +1462,7 @@ function assertNativeLogScenarioGuards(name) {
 }
 
 await chooseCdpPort();
-const hasMoonBitE2e = ensureE2eWorkspaceIfPresent();
+const hasMoonBitE2e = ensureE2eWorkspaceMember();
 for (const scenario of scenarios) {
   await runScenario(scenario, hasMoonBitE2e);
 }
