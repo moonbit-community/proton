@@ -37,3 +37,8 @@ bisect.coverage
 
 # Optional local CEF binary distributions
 .cef-cache/
+.proton/
+
+# Package prebuilt Proton artifacts are intentionally shipped.
+!proton/prebuilt/
+!proton/prebuilt/**

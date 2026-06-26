@@ -39,10 +39,51 @@ function firstExistingDist(candidates) {
   return candidates[0];
 }
 
+function platformId() {
+  return `${process.platform}-${process.arch}`;
+}
+
+function findProjectRootWithRuntime(start) {
+  for (let current = path.resolve(start); ; current = path.dirname(current)) {
+    const manifest = path.join(current, ".proton", "runtime.json");
+    if (fs.existsSync(manifest)) {
+      return { root: current, manifest };
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+  }
+}
+
+function activeRuntimeDist() {
+  const found = findProjectRootWithRuntime(process.cwd());
+  if (!found) {
+    return "";
+  }
+  try {
+    const manifest = JSON.parse(fs.readFileSync(found.manifest, "utf8"));
+    if (manifest.platform && manifest.platform !== platformId()) {
+      return "";
+    }
+    if (typeof manifest.dist !== "string" || manifest.dist.length === 0) {
+      return "";
+    }
+    const dist = path.isAbsolute(manifest.dist)
+      ? manifest.dist
+      : path.resolve(found.root, manifest.dist);
+    return fs.existsSync(dist) ? dist : "";
+  } catch {
+    return "";
+  }
+}
+
 function defaultDist() {
+  const activeDist = activeRuntimeDist();
+  if (activeDist.length > 0) {
+    return activeDist;
+  }
   return firstExistingDist([
-    path.join(moduleRoot, "dist"),
-    path.join(moduleRoot, "native", "dist"),
     path.resolve(moduleRoot, "..", "native", "dist"),
   ]);
 }

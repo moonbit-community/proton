@@ -56,20 +56,61 @@ fn option_string_or(value : String?, fallback : String) -> String {
 }
 
 ///|
+fn path_is_absolute_like(path : String) -> Bool {
+  path.has_prefix("\\") ||
+  path.has_prefix("/") ||
+  path.contains(":\\") ||
+  path.contains(":/")
+}
+
+///|
+fn runtime_dist_from_manifest(project : ProjectDoctorInfo) -> String? {
+  let manifest_path = path_join(
+    path_join(project.root, ".proton"),
+    "runtime.json",
+  )
+  guard @mbfs.path_exists(manifest_path) else { return None }
+  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+    _ => return None
+  }
+  let json = @json.parse(text) catch { _ => return None }
+  match json {
+    Object(object) =>
+      match object.get("dist") {
+        Some(String(dist)) =>
+          if path_is_absolute_like(dist) {
+            Some(dist)
+          } else {
+            Some(path_join(project.root, dist))
+          }
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
 fn resolve_native_dist(project : ProjectDoctorInfo) -> String {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
     Some(root) => root
-    None => {
-      let project_dist = path_join(path_join(project.root, "native"), "dist")
-      if @mbfs.path_exists(project_dist) {
-        project_dist
-      } else {
-        match find_up(project.root, "native") {
-          Some(path) => path_join(path, "dist")
-          None => project_dist
+    None =>
+      match runtime_dist_from_manifest(project) {
+        Some(path) => path
+        None => {
+          let project_dist = path_join(
+            path_join(project.root, "native"),
+            "dist",
+          )
+          if @mbfs.path_exists(project_dist) {
+            project_dist
+          } else {
+            match find_up(project.root, "native") {
+              Some(path) => path_join(path, "dist")
+              None => project_dist
+            }
+          }
         }
       }
-    }
   }
 }
 
@@ -144,7 +185,7 @@ fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       DoctorLine::new(
         Missing,
         "Proton native dist: not found",
-        hint="run `cmake -S native -B native\\build-engine -DCMAKE_INSTALL_PREFIX=native\\dist -DPROTON_WITH_ENGINE=ON -DPROTON_ENGINE_ROOT=.cef-cache` and install it, or set PROTON_NATIVE_DIST",
+        hint="run `proton cef setup`, or set PROTON_NATIVE_DIST",
       ),
     )
   }

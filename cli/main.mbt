@@ -148,7 +148,7 @@ async fn main {
   } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(args[1:].to_owned())
   } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
-    run_cef_setup(args[2:].to_owned())
+    run_cef_setup(cwd, args[2:].to_owned())
   } else {
     Err(CliError::UsageError("unknown command", false))
   }
