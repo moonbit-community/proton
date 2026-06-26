@@ -1,0 +1,180 @@
+# Proton Native
+
+This directory builds the standalone Proton native dynamic library used by
+`justjavac/proton/native`.
+
+The current implementation follows the staged plan in
+`docs/proton-native-ffi-plan.md`: it provides the stable `proton_*` C ABI,
+`Int64` handle ids, a default no-engine runtime/window registry for ABI tests,
+and synchronous error reporting. Windows engine code is isolated behind the same
+ABI and is enabled only with `PROTON_WITH_ENGINE=ON`.
+
+`proton_runtime_info_json` reports the loaded DLL's ABI version, runtime
+availability, build mode, platform, and public feature flags using the same
+caller-owned buffer pattern as event polling.
+
+It also exposes `proton_runtime_probe_json`, which validates the configured
+runtime layout before initialization. The probe checks `runtime_root`,
+`helper_path`, resources, locales, and core runtime files without loading the
+browser engine.
+
+Runtime and window handles are bound to the thread that created the runtime.
+Calling runtime/window APIs from another thread returns `PROTON_ERR_WRONG_THREAD`;
+native callbacks or future event pumps must marshal work back to the owner
+thread instead of touching handles directly.
+
+Runtime and window config JSON is treated as a stable v1 schema. The native ABI
+rejects unknown top-level fields and requires top-level `"abi_version": 1`, so
+typos do not silently fall back to defaults.
+
+Only one runtime may be active in a process. A second
+`proton_runtime_create_json` call returns `PROTON_ERR_ALREADY_INITIALIZED` until
+the current runtime is destroyed.
+
+In the current v1 ABI, `proton_window_close` closes the native window and
+releases the Proton window handle through the same path as
+`proton_window_destroy`; callers should treat a successful close as consuming
+that window handle.
+
+Engine-specific code is isolated behind `src/proton_engine.h`. The default
+build uses `src/proton_engine_none.c`, so ABI and MoonBit binding tests can run
+without a browser SDK. The real engine implementation should replace that file
+behind the same internal interface.
+
+## Build
+
+CMake is the only native build entry point.
+
+For the ABI-only build:
+
+```powershell
+cmake -S native -B native\build -DCMAKE_INSTALL_PREFIX=native\dist
+cmake --build native\build --config Debug
+cmake --install native\build --config Debug
+ctest --test-dir native\build -C Debug --output-on-failure
+```
+
+By default the library is built without the browser engine linked. In that mode
+typed fake runtime/window handles are available for ABI and binding tests, while
+configs that include `runtime_root` or `helper_path` are treated as real engine
+configs and return `PROTON_ERR_UNSUPPORTED` after the layout probe succeeds.
+
+To wire the runtime SDK into the native build:
+
+```powershell
+cmake -S native -B native\build-engine `
+  -DCMAKE_INSTALL_PREFIX=native\dist `
+  -DPROTON_WITH_ENGINE=ON `
+  -DPROTON_ENGINE_ROOT=C:\path\to\runtime
+cmake --build native\build-engine --config Debug
+cmake --install native\build-engine --config Debug
+ctest --test-dir native\build-engine -C Debug --output-on-failure
+```
+
+Engine builds are currently wired only on Windows. On Windows this expects
+`Release/libcef.lib` and `Release/libcef.dll` under the
+runtime root, plus `Resources/icudtl.dat` and `Resources/locales/`. This
+switches the build to `src/proton_engine_cef_win.c`, which wires
+`cef_execute_process`, `cef_initialize`, the CEF app instance, a Win32 parent
+window, and a minimal CEF child browser path. JS bridge IPC, renderer handlers,
+and production packaging still need a real CEF SDK/runtime validation pass.
+The current Windows `load_html` implementation serves HTML through the internal
+`proton://` scheme so the loaded document keeps the supplied Proton origin and
+relative URL base. For v1, `base_url` must use the `proton://` scheme.
+
+The install step writes:
+
+```text
+native/dist/bin/proton.dll
+native/dist/lib/proton.lib
+native/dist/include/proton_native.h
+```
+
+When `PROTON_WITH_ENGINE=ON`, CMake also installs native runtime libraries under
+`native/dist/bin` on Windows, copies CEF data files such as `icudtl.dat`,
+`resources.pak`, and `v8_context_snapshot.bin` beside the helper executable,
+copies `Resources/` to `native/dist/Resources`, and installs the native helper
+as `native/dist/bin/cef_process.exe`.
+
+On non-Windows platforms the same CMake target installs `libproton.so` or
+`libproton.dylib` under `native/dist/lib`.
+
+`proton_runtime_probe_json` accepts both SDK-style and installed app layouts:
+
+```text
+sdk-root/
+  Release/libcef.dll
+  Resources/icudtl.dat
+  Resources/locales/
+
+native/dist/
+  bin/libcef.dll
+  bin/icudtl.dat
+  bin/resources.pak
+  bin/v8_context_snapshot.bin
+  bin/cef_process.exe
+  Resources/icudtl.dat
+  Resources/locales/
+```
+
+For the package distribution layout, build the helper and engine-backed DLL into
+`native/dist`:
+
+```powershell
+cmake -S native -B native\build-engine `
+  -DCMAKE_INSTALL_PREFIX=native\dist `
+  -DPROTON_WITH_ENGINE=ON `
+  -DPROTON_ENGINE_ROOT=.cef-cache
+cmake --build native\build-engine --config Debug
+cmake --install native\build-engine --config Debug
+```
+
+These commands expect the CEF SDK/runtime at `.cef-cache` and install:
+
+```text
+native/dist/bin/proton.dll
+native/dist/bin/cef_process.exe
+native/dist/lib/proton.lib
+native/dist/Resources/
+```
+
+MoonBit FFI consumers only link `proton.lib`/`proton.dll`. They do not link CEF
+directly; the runtime starts `bin/cef_process.exe` through the C ABI runtime
+configuration.
+
+## MoonBit Validation
+
+`native_link_config.mjs` points `justjavac/proton/native` at the installed
+library. On Windows, add the DLL directory to `PATH` before running linked
+tests:
+
+```powershell
+$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+moon -C proton test native --target native
+```
+
+By default the prebuild link config uses `native/dist`. Set
+`PROTON_NATIVE_DIST` to point MoonBit at another install prefix:
+
+```powershell
+$env:PROTON_NATIVE_DIST = 'C:\path\to\proton-dist'
+moon -C proton test native --target native
+```
+
+Validate the installed native library and MoonBit binding with:
+
+```powershell
+ctest --test-dir native\build-engine -C Debug --output-on-failure
+node native\scripts\verify_link_config.mjs native\dist
+$env:PATH = (Resolve-Path 'native\dist\bin').Path + ';' + $env:PATH
+moon -C proton test native --target native --diagnostic-limit 80
+moon -C proton check --target native --diagnostic-limit 80
+moon -C proton info --target native
+```
+
+This checks the exported dynamic-library symbol surface, validates that
+`native_link_config.mjs` points MoonBit at the installed native library, and
+runs the focused MoonBit binding validation.
+
+Use the same commands with `native\build` instead of `native\build-engine` for
+an ABI-only build.
