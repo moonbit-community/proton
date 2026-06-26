@@ -149,7 +149,7 @@ proton/prebuilt/win32-x64/lib/proton.lib
 proton/prebuilt/win32-x64/include/proton_native.h
 ```
 
-CEF runtime files are assembled later by `proton cef setup` into `.proton/`.
+CEF runtime files are assembled later by `proton_cli cef setup` into `.proton/`.
 
 MoonBit FFI consumers only link `proton.lib`/`proton.dll`. They do not link CEF
 directly; the runtime starts `bin/cef_process.exe` through the C ABI runtime

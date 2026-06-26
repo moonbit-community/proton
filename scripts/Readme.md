@@ -27,6 +27,5 @@ node ./scripts/e2e_bridge_smoke.mjs 40_event_broadcast
 node ./scripts/e2e_bridge_smoke.mjs 41_app_commands 42_attribute_codegen_commands 45_bridge_multi_window
 ```
 
-If an `e2e/` MoonBit module is present, the script first runs
-`moon work use ./e2e` because that module is not assumed to be listed in
-`moon.work`.
+The `e2e/` MoonBit module is part of `moon.work`. The script checks that
+workspace membership before running the MoonBit e2e probe.

@@ -39,8 +39,8 @@ proton/prebuilt/win32-x64/lib/proton.lib
 proton/prebuilt/win32-x64/include/proton_native.h
 ```
 
-CEF files are not shipped in the package. `proton cef setup` downloads or reuses
-CEF and assembles the complete project runtime under `.proton/`.
+CEF files are not shipped in the package. `proton_cli cef setup` downloads or
+reuses CEF and assembles the complete project runtime under `.proton/`.
 
 Platform prebuilds live under `proton/prebuilt/<platform>/`. Current Windows
 uses `win32-x64`; future macOS work should add `darwin-arm64` and/or
@@ -81,7 +81,7 @@ Install the CLI and assemble the active native runtime:
 
 ```powershell
 moon install justjavac/proton_cli
-proton cef setup
+proton_cli cef setup
 ```
 
 `native_link_config.mjs` resolves link inputs in this order:
@@ -130,9 +130,9 @@ moon -C examples run 01_run --target native
 
 ```powershell
 ctest --test-dir native\build-engine -C Debug --output-on-failure
-node native\scripts\verify_link_config.mjs native\dist
 moon -C cli run . -- -C .. cef setup
 $runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+node native\scripts\verify_link_config.mjs $runtime
 $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 moon -C proton test native --target native --diagnostic-limit 80
 moon -C examples build 01_run --target native --diagnostic-limit 80
@@ -141,7 +141,8 @@ node scripts\e2e_bridge_smoke.mjs 41_app_commands
 
 ## Active Packages
 
-- `justjavac/proton`: root facade plus native binding re-exports.
+- `justjavac/proton`: root app facade, command-extension bridge wiring, and
+  native binding re-exports.
 - `justjavac/proton/native`: safe MoonBit API over the `proton_*` C ABI.
 - `native/`: CMake project that builds the native dynamic library, import
   library, public header, tests, and `cef_process.exe`.

@@ -56,7 +56,7 @@ window.__MoonBit__.math.double(payload)
 - inline HTML command extension proxy 已覆盖 `38_async_extension_add` 和 `39_sync_async_extensions`。
 - inline HTML command extension event broadcast 已覆盖 `40_event_broadcast`。
 - attribute-codegen command metadata 已覆盖 `42_attribute_codegen_commands`，仍走同一套 inline HTML proxy 和 native DLL bridge。
-- `scripts/e2e_bridge_smoke.mjs` 运行前会执行 `moon work use ./e2e`，因为 `e2e/` 不是默认假定在 `moon.work` 里。
+- `scripts/e2e_bridge_smoke.mjs` 要求 `e2e/` 已经列在 `moon.work` 中；脚本不再运行时修改 workspace。
 
 暂不实现：
 
@@ -222,11 +222,7 @@ Bridge 是 native capability 边界，必须持续验证：
   - generated `emit_add_finished(...)` helper 能广播 `add.addFinished` 到 JS listener。
   - command response 和 generated event 都正确返回。
 
-运行 e2e 时不要假设 `e2e/` 已经在 `moon.work` 里。脚本会自动执行：
-
-```powershell
-moon work use .\e2e
-```
+运行 e2e 前应确认 `e2e/` 已经列在 `moon.work` 中。
 
 验证命令：
 

@@ -4,8 +4,9 @@
 - `native/`: standalone CMake project for the Proton native runtime. It builds
   `proton` as a dynamic library/import library, installs `proton_native.h`, and
   installs `cef_process.exe` when the engine build is enabled.
-- `proton/`: root `justjavac/proton` MoonBit module. The public facade currently
-  re-exports `justjavac/proton/native`.
+- `proton/`: root `justjavac/proton` MoonBit module. The public facade owns the
+  app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
+  wiring, and selected low-level native re-exports.
 - `proton/native/`: safe MoonBit binding over the `proton_*` C ABI. MoonBit code
   links only the native Proton library through `native_link_config.mjs`.
 - `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
@@ -20,7 +21,7 @@
   put CEF runtime files here.
 - `lib/`, `build/`, `_build/`, `target/`, `native/build*`, `native/dist/`:
   generated or vendored artifacts.
-- `.proton/`: generated project runtime cache created by `proton cef setup`.
+- `.proton/`: generated project runtime cache created by `proton_cli cef setup`.
 
 ## Build And Test
 - Native engine build:
@@ -64,10 +65,11 @@ native checks before handing off larger refactors.
 - There is one runtime route: CMake builds the native Proton dynamic library and
   helper executable; MoonBit links only the Proton library/import library.
 - Published packages ship `proton/prebuilt/<platform>/` Proton artifacts only.
-  CEF is installed by `proton cef setup`, which writes `.proton/runtime.json`
+  CEF is installed by `proton_cli cef setup`, which writes `.proton/runtime.json`
   and assembles `.proton/runtimes/<platform>/...`.
-- Platform ids should stay predictable: `win32-x64` now; future macOS work
-  should use `darwin-arm64` and `darwin-x64`.
+- Keep platform-specific setup decisions centralized in the CLI/native platform
+  helpers. Platform ids should stay predictable: `win32-x64` now; future macOS
+  work should use `darwin-arm64` and `darwin-x64`.
 - CEF is the native implementation detail. Do not expose CEF in MoonBit package
   names, C ABI prefixes, or public facade names.
 - `native/CMakeLists.txt` is the only native build source of truth. Do not add
@@ -82,11 +84,13 @@ native checks before handing off larger refactors.
   reject unknown top-level fields.
 - `cef_process.exe` is a native packaged helper. It is built by CMake and
   shipped beside the native runtime DLL; it is not a MoonBit package.
-- The root `proton` facade should stay focused on ergonomic re-export of the
-  native binding until a new public runtime layer is deliberately designed.
-- Treat bridge, extensions, and metadata tooling as later layers. Do not
-  document old `window.__MoonBit__` or extension flows as the current runtime
-  surface unless the native DLL route actually implements them.
+- The root `proton` facade is the current public app surface. Keep it thin over
+  the native DLL route and avoid reintroducing a second runtime path.
+- Bridge and command-extension APIs may be documented only when implemented by
+  the native DLL route. Do not document old `window.__MoonBit__` flows that no
+  longer match the current runtime.
+- The `e2e/` module is a workspace member. Do not make scripts mutate
+  `moon.work` at runtime to add it.
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

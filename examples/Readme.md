@@ -17,6 +17,9 @@ tool directory used by `examples/moon.mod`:
 moon install justjavac/proton_cli --bin target/proton-tools
 ```
 
+The installed executable is `proton_cli`; this repository's build rules call the
+CLI through `moon -C ../cli run ...` during local development.
+
 Build the minimal root-facade example:
 
 ```sh

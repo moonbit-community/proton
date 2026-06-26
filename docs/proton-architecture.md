@@ -105,7 +105,7 @@ MoonBit app
   - bridge 相关示例包括 `38_async_extension_add`、`39_sync_async_extensions`、`40_event_broadcast`、`41_app_commands`、`42_attribute_codegen_commands`、`45_bridge_multi_window`。
 - `scripts/e2e_bridge_smoke.mjs`
   - CDP-based e2e smoke runner。
-  - 会执行 `moon work use ./e2e`，因为 `e2e/` 不要求长期放在 `moon.work` 中。
+  - 要求 `e2e/` 已经列在 `moon.work` 中；脚本不在运行时修改 workspace。
   - 负责验证 bridge、reload、window close、multi-window 等行为。
 
 ## 2. 整体运行流程
@@ -708,13 +708,7 @@ $env:PATH = (Resolve-Path native\dist\bin).Path + ';' + $env:PATH
 node scripts\e2e_bridge_smoke.mjs 38_async_extension_add 39_sync_async_extensions 40_event_broadcast 41_app_commands 42_attribute_codegen_commands 45_bridge_multi_window
 ```
 
-e2e runner 会执行：
-
-```text
-moon work use ./e2e
-```
-
-所以 `e2e/` 不需要长期在 repo root `moon.work` 中。
+e2e runner 要求 `e2e/` 已经在 repo root `moon.work` 中。
 
 ## 14. mooncakes.io 安装后的使用方式
 
