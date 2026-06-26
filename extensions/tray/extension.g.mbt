@@ -66,13 +66,13 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async_result("show", async fn(payload) {
         __proton_command_show(context, payload)
-      })
+      }, emits_events=true)
       context.op_async_result("hide", async fn(payload) {
         __proton_command_hide(context, payload)
-      })
+      }, emits_events=true)
       context.op_async_result("setTooltip", async fn(payload) {
         __proton_command_set_tooltip(context, payload)
-      })
+      }, emits_events=true)
       Ok(())
     },
     on_destroy=fn(context) {

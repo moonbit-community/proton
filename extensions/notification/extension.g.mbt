@@ -38,7 +38,7 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async_result("show", async fn(payload) {
         __proton_command_show(context, payload)
-      })
+      }, emits_events=true)
       Ok(())
     },
   )

@@ -22,7 +22,7 @@ repository = "https://github.com/moonbit-community/proton/tree/main/extensions"
 
 license = "MIT"
 
-keywords = [ "webview", "extension", "filesystem" ]
+keywords = [ "proton", "extension", "filesystem" ]
 
 description = "Extensions for proton examples and applications."
 

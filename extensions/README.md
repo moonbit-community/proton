@@ -1,48 +1,35 @@
 # Extensions
 
-`justjavac/proton_ext` contains built-in extensions for Proton apps.
+`justjavac/proton_ext` currently contains metadata and implementation pieces for
+future Proton extension tooling.
 
-Each extension exposes `extension()` for app-style startup and owns a `moon.ext`
-metadata file for tooling.
+These packages are not part of the active native DLL runtime route yet. The
+current supported route is:
+
+```text
+MoonBit app -> justjavac/proton -> proton dynamic library
+```
+
+Do not treat these packages as a runnable app API until the native DLL route has
+an implemented bridge/event layer that exposes extension calls.
 
 ## Packages
 
-- `fs`: host filesystem helpers and resource-id streaming
-- `path`: path transforms such as `resolve`, `join`, and `dirname`
-- `dialog`: native dialogs
-- `clipboard`: clipboard adapter
-- `shell`: open or reveal host paths
-- `notification`: native notifications
-- `tray`: tray icon helpers
-- `global_hotkey`: global hotkey helpers
-- `auto_launch`: startup-entry management
-- `keepawake`: native keep-awake guards
-- `microphone`: microphone discovery and capture config helpers
+- `fs`: host filesystem helper definitions
+- `path`: path transform helper definitions
+- `dialog`: native dialog helper definitions
+- `clipboard`: clipboard helper definitions
+- `shell`: open/reveal host path helper definitions
+- `notification`: native notification helper definitions
+- `tray`: tray icon helper definitions
+- `global_hotkey`: global hotkey helper definitions
+- `auto_launch`: startup-entry helper definitions
+- `keepawake`: keep-awake helper definitions
+- `microphone`: microphone discovery/capture helper definitions
 
-## Usage
+## Current Rule
 
-```moonbit
-import {
-  "justjavac/proton"
-  "justjavac/proton_ext/fs" @fs
-  "justjavac/proton_ext/path" @path
-}
-
-async fn main {
-  @proton.html("Demo", "<html></html>", width=900, height=700, debug=true)
-  .extension(@fs.extension())
-  .extension(@path.extension())
-  .run_or_abort()
-}
-```
-
-JavaScript calls extensions through `window.__MoonBit__`:
-
-```js
-await window.__MoonBit__.fs.readFile("demo.txt");
-await window.__MoonBit__.path.resolve({ path: "." });
-window.__MoonBit__.events.on("fs.activity", console.log);
-```
-
-Extensions are opt-in. `moon.proton` configures the app; MoonBit code chooses
-the capabilities that ship.
+Extension metadata may be useful to code generation, catalog checks, and future
+bridge work. Applications may keep `.extension(...)` calls in top-level Proton
+code, but pages cannot call those extensions until the native bridge/event layer
+exists.

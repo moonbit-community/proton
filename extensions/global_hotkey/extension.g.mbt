@@ -85,14 +85,14 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async_result("register", async fn(payload) {
         __proton_command_register(context, payload)
-      })
+      }, emits_events=true)
       context.op_async_result("unregister", async fn(payload) {
         __proton_command_unregister(context, payload)
-      })
+      }, emits_events=true)
       context.op("list", __proton_command_list)
       context.op_async("drainTriggered", async fn(payload) {
         __proton_command_drain_triggered(context, payload)
-      })
+      }, emits_events=true)
       Ok(())
     },
     scripts=[
