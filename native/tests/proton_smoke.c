@@ -104,6 +104,34 @@ static int prepare_probe_layout(char *config,
                                 size_t installed_config_len,
                                 char *missing_helper_config,
                                 size_t missing_helper_config_len) {
+#ifdef __APPLE__
+  const char *helper_path = "probe-helper";
+  mkdir_one("probe-runtime");
+  mkdir_one("probe-runtime" PATH_SEP "Frameworks");
+  mkdir_one("probe-runtime" PATH_SEP "Frameworks" PATH_SEP
+            "Chromium Embedded Framework.framework");
+  mkdir_one("probe-runtime" PATH_SEP "Resources");
+  mkdir_one("probe-app");
+  mkdir_one("probe-app" PATH_SEP "bin");
+  mkdir_one("probe-app" PATH_SEP "Frameworks");
+  mkdir_one("probe-app" PATH_SEP "Frameworks" PATH_SEP
+            "Chromium Embedded Framework.framework");
+  mkdir_one("probe-app" PATH_SEP "Resources");
+  if (write_empty_file("probe-runtime" PATH_SEP "Frameworks" PATH_SEP
+                       "Chromium Embedded Framework.framework" PATH_SEP
+                       "Chromium Embedded Framework") ||
+      write_empty_file("probe-runtime" PATH_SEP "Resources" PATH_SEP
+                       "icudtl.dat") ||
+      write_empty_file("probe-app" PATH_SEP "Frameworks" PATH_SEP
+                       "Chromium Embedded Framework.framework" PATH_SEP
+                       "Chromium Embedded Framework") ||
+      write_empty_file("probe-app" PATH_SEP "Resources" PATH_SEP
+                       "icudtl.dat") ||
+      write_empty_file(helper_path)) {
+    return 1;
+  }
+#else
+  const char *helper_path = "probe-helper.exe";
   mkdir_one("probe-runtime");
   mkdir_one("probe-runtime" PATH_SEP "Release");
   mkdir_one("probe-runtime" PATH_SEP "Resources");
@@ -119,18 +147,21 @@ static int prepare_probe_layout(char *config,
       write_empty_file("probe-app" PATH_SEP "bin" PATH_SEP "libcef.dll") ||
       write_empty_file("probe-app" PATH_SEP "Resources" PATH_SEP
                        "icudtl.dat") ||
-      write_empty_file("probe-helper.exe")) {
+      write_empty_file(helper_path)) {
     return 1;
   }
+#endif
   snprintf(config, config_len,
            "{\"abi_version\":1,\"runtime_root\":\"probe-runtime\","
-           "\"helper_path\":\"probe-helper.exe\"}");
+           "\"helper_path\":\"%s\"}",
+           helper_path);
   snprintf(installed_config, installed_config_len,
            "{\"abi_version\":1,\"runtime_root\":\"probe-app\","
-           "\"helper_path\":\"probe-helper.exe\"}");
+           "\"helper_path\":\"%s\"}",
+           helper_path);
   snprintf(missing_helper_config, missing_helper_config_len,
            "{\"abi_version\":1,\"runtime_root\":\"probe-runtime\","
-           "\"helper_path\":\"missing-helper.exe\"}");
+           "\"helper_path\":\"missing-helper\"}");
   return 0;
 }
 

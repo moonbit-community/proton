@@ -11,6 +11,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__)
+#include <dlfcn.h>
+#include <mach-o/dyld.h>
+#include <pthread.h>
 #else
 #include <pthread.h>
 #endif
@@ -414,6 +418,20 @@ static bool proton_module_dir(char *out, size_t out_len) {
     return false;
   }
   return proton_path_parent(out);
+#elif defined(__APPLE__)
+  if (out == NULL || out_len == 0) {
+    return false;
+  }
+  Dl_info info;
+  if (dladdr((const void *)&proton_module_dir, &info) == 0 ||
+      info.dli_fname == NULL || info.dli_fname[0] == '\0') {
+    return false;
+  }
+  int written = snprintf(out, out_len, "%s", info.dli_fname);
+  if (written < 0 || (size_t)written >= out_len) {
+    return false;
+  }
+  return proton_path_parent(out);
 #else
   (void)out;
   (void)out_len;
@@ -425,7 +443,11 @@ static bool proton_default_runtime_root(char *out, size_t out_len) {
   if (!proton_module_dir(out, out_len)) {
     return false;
   }
-  if (proton_path_basename_equals(out, "bin")) {
+  if (proton_path_basename_equals(out, "bin")
+#ifndef _WIN32
+      || proton_path_basename_equals(out, "lib")
+#endif
+  ) {
     return proton_path_parent(out);
   }
   return true;
@@ -436,7 +458,19 @@ static bool proton_default_helper_path(char *out, size_t out_len) {
   if (!proton_module_dir(bin_dir, sizeof(bin_dir))) {
     return false;
   }
+#ifdef _WIN32
   return proton_join_path(out, out_len, bin_dir, "cef_process.exe");
+#else
+  if (proton_path_basename_equals(bin_dir, "lib")) {
+    char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
+    snprintf(runtime_root, sizeof(runtime_root), "%s", bin_dir);
+    if (!proton_path_parent(runtime_root) ||
+        !proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin")) {
+      return false;
+    }
+  }
+  return proton_join_path(out, out_len, bin_dir, "cef_process");
+#endif
 }
 
 static int32_t proton_require_file(const char *path, const char *label) {
@@ -484,16 +518,21 @@ static int32_t proton_find_engine_library(const char *runtime_root,
   return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                           "runtime engine library path is too long");
 #elif defined(__APPLE__)
-  if (proton_join_path(engine_lib, engine_lib_len, runtime_root,
+  char framework_dir[PROTON_MAX_PATH_BYTES] = {0};
+  if (proton_join_path(framework_dir, sizeof(framework_dir), runtime_root,
                        "Chromium Embedded Framework.framework") &&
+      proton_join_path(engine_lib, engine_lib_len, framework_dir,
+                       "Chromium Embedded Framework") &&
       proton_path_exists(engine_lib)) {
     return PROTON_OK;
   }
   char frameworks_dir[PROTON_MAX_PATH_BYTES] = {0};
   if (proton_join_path(frameworks_dir, sizeof(frameworks_dir), runtime_root,
                        "Frameworks") &&
-      proton_join_path(engine_lib, engine_lib_len, frameworks_dir,
-                       "Chromium Embedded Framework.framework")) {
+      proton_join_path(framework_dir, sizeof(framework_dir), frameworks_dir,
+                       "Chromium Embedded Framework.framework") &&
+      proton_join_path(engine_lib, engine_lib_len, framework_dir,
+                       "Chromium Embedded Framework")) {
     return PROTON_OK;
   }
   return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -580,10 +619,12 @@ static int32_t proton_runtime_probe_layout(const char *config_json) {
   if (status != PROTON_OK) {
     return status;
   }
+#ifndef __APPLE__
   status = proton_require_dir(locales_dir, "runtime locales");
   if (status != PROTON_OK) {
     return status;
   }
+#endif
   status = proton_require_file(icu_data, "runtime icu data");
   if (status != PROTON_OK) {
     return status;
