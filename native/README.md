@@ -3,11 +3,10 @@
 This directory builds the standalone Proton native dynamic library used by
 `justjavac/proton/native`.
 
-The current implementation follows the staged plan in
-`docs/proton-native-ffi-plan.md`: it provides the stable `proton_*` C ABI,
-`Int64` handle ids, a default no-engine runtime/window registry for ABI tests,
-and synchronous error reporting. Windows engine code is isolated behind the same
-ABI and is enabled only with `PROTON_WITH_ENGINE=ON`.
+The current implementation provides the stable `proton_*` C ABI, `Int64`
+handle ids, a default no-engine runtime/window registry for ABI tests, and
+synchronous error reporting. Engine code is isolated behind the same ABI and is
+enabled only with `PROTON_WITH_ENGINE=ON`.
 
 `proton_runtime_info_json` reports the loaded DLL's ABI version, runtime
 availability, build mode, platform, and public feature flags using the same
