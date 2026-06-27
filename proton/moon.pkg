@@ -19,10 +19,12 @@ options(
   "is-main": false,
   targets: {
     "exports.mbt": [ "native" ],
+    "facade_bridge.mbt": [ "native" ],
+    "facade_builders.mbt": [ "native" ],
     "facade_entry.mbt": [ "native" ],
     "facade_manifest.mbt": [ "native" ],
+    "facade_runtime.mbt": [ "native" ],
     "facade_types.mbt": [ "native" ],
-    "facade.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
   },
 )
