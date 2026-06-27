@@ -5,11 +5,11 @@ let default_cef_name = "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_win
 let default_cef_base_url = "https://cef-builds.spotifycdn.com"
 
 ///|
-struct ProtonPlatform {
+priv struct ProtonPlatform {
   id : String
   cef_suffix : String
   supported : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 fn path_exists(path : String) -> Bool {
