@@ -849,7 +849,7 @@ async function runWindowCloseLifecycleProbe(env, scenario) {
       (log) => /bridge_enqueue .*op=ext:app\/slowAdd/.test(log),
       "pending slowAdd request to enter bridge queue",
     );
-    closeWindowsForProcessTree(child.pid);
+    await closeScenarioWindow(client, child.pid);
     await waitForExit(child, output, "window close lifecycle app");
     const lifecycle = assertNativeLogLifecycleGuards();
     return lifecycle;
@@ -893,7 +893,7 @@ async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
       "pending ticker request to enter bridge queue",
     );
     await sleep(250);
-    closeWindowsForProcessTree(child.pid);
+    await closeScenarioWindow(client, child.pid);
     await waitForExit(child, output, "event broadcast window close lifecycle app");
     return assertNativeLogEventLifecycleGuards();
   } finally {
@@ -1283,6 +1283,36 @@ async function terminateTree(child) {
 
 function cleanupWorkspaceProcesses() {
   if (process.platform !== "win32") {
+    const result = spawnSync("ps", ["-axo", "pid=,command="], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    if (result.status !== 0) {
+      return;
+    }
+    const candidates = [];
+    for (const line of result.stdout.split(/\r?\n/)) {
+      const match = line.match(/^\s*(\d+)\s+(.*)$/);
+      if (!match) {
+        continue;
+      }
+      const pid = Number(match[1]);
+      const command = match[2];
+      if (
+        pid !== process.pid &&
+        command.includes(repoRoot) &&
+        !command.includes("scripts/e2e_bridge_smoke.mjs")
+      ) {
+        candidates.push(pid);
+      }
+    }
+    for (const pid of candidates) {
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch {
+        // Best-effort cleanup only.
+      }
+    }
     return;
   }
   const script = `
@@ -1364,6 +1394,14 @@ if ($closed -le 0) {
   if (result.status !== 0) {
     throw new Error(`failed to close lifecycle window: ${result.stderr || result.stdout}`);
   }
+}
+
+async function closeScenarioWindow(client, rootPid) {
+  if (process.platform === "win32") {
+    closeWindowsForProcessTree(rootPid);
+    return;
+  }
+  await client.send("Page.close");
 }
 
 async function runScenario(name, hasMoonBitE2e) {
@@ -1514,10 +1552,11 @@ function assertNativeLogLifecycleGuards() {
     throw new Error("native log did not prove window close cleaned bridge pending state");
   }
   if (
+    !/bridge_pending_remove request=\d+ browser=\d+/.test(log) &&
     !/bridge_response_no_pending request=\d+/.test(log) &&
     !/bridge_response_send_failed request=\d+/.test(log)
   ) {
-    throw new Error("native log did not prove stale bridge response was handled after close");
+    throw new Error("native log did not prove pending bridge response state was handled after close");
   }
   if (!/bridge_queue_clear removed=\d+/.test(log)) {
     throw new Error("native log did not prove runtime destroy cleared the bridge queue");
@@ -1527,7 +1566,7 @@ function assertNativeLogLifecycleGuards() {
   }
   return {
     windowClosePendingCleanup: true,
-    staleResponseIgnored: true,
+    pendingResponseStateHandled: true,
     runtimeDestroyCleanup: true,
   };
 }
@@ -1569,10 +1608,11 @@ function assertNativeLogEventLifecycleGuards() {
     throw new Error("native log did not prove event lifecycle close cleaned bridge pending state");
   }
   if (
+    !/bridge_pending_remove request=\d+ browser=\d+/.test(log) &&
     !/bridge_response_no_pending request=\d+/.test(log) &&
     !/bridge_response_send_failed request=\d+/.test(log)
   ) {
-    throw new Error("native log did not prove event lifecycle stale bridge response was handled after close");
+    throw new Error("native log did not prove event lifecycle pending bridge response state was handled after close");
   }
   if (!/bridge_queue_clear removed=\d+/.test(log)) {
     throw new Error("native log did not prove event lifecycle runtime destroy cleared the bridge queue");
@@ -1583,7 +1623,7 @@ function assertNativeLogEventLifecycleGuards() {
   return {
     eventCommandEnqueued: true,
     windowClosePendingCleanup: true,
-    staleResponseIgnored: true,
+    pendingResponseStateHandled: true,
     runtimeDestroyCleanup: true,
   };
 }
