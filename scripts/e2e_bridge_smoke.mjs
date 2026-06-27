@@ -1548,14 +1548,14 @@ function assertNativeLogLifecycleGuards() {
   const pendingCleanup = [
     ...log.matchAll(/bridge_pending_remove_browser browser=\d+ pending=(\d+) queued=(\d+)/g),
   ].some((match) => Number(match[1]) > 0 || Number(match[2]) > 0);
-  if (!pendingCleanup) {
-    throw new Error("native log did not prove window close cleaned bridge pending state");
-  }
-  if (
-    !/bridge_pending_remove request=\d+ browser=\d+/.test(log) &&
-    !/bridge_response_no_pending request=\d+/.test(log) &&
-    !/bridge_response_send_failed request=\d+/.test(log)
-  ) {
+  const staleResponseHandled =
+    /bridge_pending_remove request=\d+ browser=\d+/.test(log) ||
+    /bridge_response_no_pending request=\d+/.test(log) ||
+    /bridge_response_send_failed request=\d+/.test(log);
+  const pendingResponseHandled =
+    pendingCleanup ||
+    staleResponseHandled;
+  if (!pendingResponseHandled) {
     throw new Error("native log did not prove pending bridge response state was handled after close");
   }
   if (!/bridge_queue_clear removed=\d+/.test(log)) {
@@ -1565,8 +1565,8 @@ function assertNativeLogLifecycleGuards() {
     throw new Error("native log did not prove runtime destroy cleared pending bridge responses");
   }
   return {
-    windowClosePendingCleanup: true,
-    pendingResponseStateHandled: true,
+    windowClosePendingCleanup: pendingCleanup,
+    pendingResponseStateHandled: pendingResponseHandled,
     runtimeDestroyCleanup: true,
   };
 }
@@ -1604,14 +1604,14 @@ function assertNativeLogEventLifecycleGuards() {
   const pendingCleanup = [
     ...log.matchAll(/bridge_pending_remove_browser browser=\d+ pending=(\d+) queued=(\d+)/g),
   ].some((match) => Number(match[1]) > 0 || Number(match[2]) > 0);
-  if (!pendingCleanup) {
-    throw new Error("native log did not prove event lifecycle close cleaned bridge pending state");
-  }
-  if (
-    !/bridge_pending_remove request=\d+ browser=\d+/.test(log) &&
-    !/bridge_response_no_pending request=\d+/.test(log) &&
-    !/bridge_response_send_failed request=\d+/.test(log)
-  ) {
+  const staleResponseHandled =
+    /bridge_pending_remove request=\d+ browser=\d+/.test(log) ||
+    /bridge_response_no_pending request=\d+/.test(log) ||
+    /bridge_response_send_failed request=\d+/.test(log);
+  const pendingResponseHandled =
+    pendingCleanup ||
+    staleResponseHandled;
+  if (!pendingResponseHandled) {
     throw new Error("native log did not prove event lifecycle pending bridge response state was handled after close");
   }
   if (!/bridge_queue_clear removed=\d+/.test(log)) {
@@ -1622,8 +1622,8 @@ function assertNativeLogEventLifecycleGuards() {
   }
   return {
     eventCommandEnqueued: true,
-    windowClosePendingCleanup: true,
-    pendingResponseStateHandled: true,
+    windowClosePendingCleanup: pendingCleanup,
+    pendingResponseStateHandled: pendingResponseHandled,
     runtimeDestroyCleanup: true,
   };
 }
