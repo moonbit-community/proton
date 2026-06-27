@@ -92,6 +92,50 @@ native checks before handing off larger refactors.
 - The `e2e/` module is a workspace member. Do not make scripts mutate
   `moon.work` at runtime to add it.
 
+## Native DLL And FFI Rules
+- Treat the native dynamic library as the product boundary. MoonBit packages
+  must bind to `proton.dll`, `libproton.dylib`, or `libproton.so`; they must not
+  link CEF, load CEF directly, or call platform browser APIs directly.
+- Keep the C ABI small, C-compatible, and MoonBit-friendly. Export only
+  `proton_*` functions, plain integer status codes, fixed-width integer types,
+  opaque `Int64` handles, UTF-8 strings, and caller-owned output buffers.
+- Do not expose C++ types, CEF structs, Objective-C objects, Win32 handles, or
+  owned pointers across the public ABI. Platform details belong behind
+  `src/proton_engine.h` and the per-platform native implementation files.
+- Preserve ABI stability. Additive changes are preferred; changing existing
+  function signatures, handle semantics, status codes, or config schemas needs
+  an explicit migration decision and matching MoonBit binding updates.
+- Keep config exchange schema-driven. Runtime and window config JSON must keep
+  `"abi_version": 1`, reject unknown top-level fields, and be parsed through
+  existing structured helpers; do not add ad hoc handwritten JSON parsing in C.
+- Keep error reporting synchronous and explicit. Native functions return status
+  codes, detailed diagnostics go through the existing last-error/probe/info JSON
+  paths, and MoonBit wrappers translate status codes into typed errors.
+- Handle ownership must stay centralized in the native registry. Handles are
+  not raw pointers, must validate kind/generation/thread ownership, and must be
+  invalidated on destroy/close paths.
+- Respect the thread model. Runtime and window handles are owned by their
+  creating thread; native callbacks or future pumps must marshal work to the
+  owner thread instead of touching handles directly from arbitrary threads.
+- `native_link_config.mjs` is the only MoonBit native-link integration point.
+  Keep its resolution order simple: `PROTON_NATIVE_DIST`, active
+  `.proton/runtime.json`, then development fallback `native/dist`.
+- Published MoonBit packages ship Proton artifacts only under
+  `proton/prebuilt/<platform>/`: the dynamic library, import library when the
+  platform needs one, helper executable, public header, and manifest. Do not put
+  CEF runtime files in that directory.
+- `proton_cli cef setup` owns runtime assembly. It may download/reuse CEF and
+  combine it with Proton prebuilt artifacts under `.proton/runtimes/<platform>/`,
+  then write `.proton/runtime.json`.
+- Keep `cef_process.exe` or the platform equivalent as a native packaged helper
+  built by CMake. It is part of the runtime layout, not a MoonBit executable.
+- When adding a platform, implement the same ABI behind the same exported
+  function names and keep platform ids stable, for example `win32-x64`,
+  `darwin-arm64`, `darwin-x64`, and future Linux ids.
+- Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
+  native tests for the FFI binding. Engine or bridge changes should also run the
+  relevant examples and `scripts/e2e_bridge_smoke.mjs` scenarios.
+
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or
   `docs:`.
