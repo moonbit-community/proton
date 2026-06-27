@@ -30,6 +30,15 @@ function quote(filePath) {
   return `"${nativeLinkPath(filePath)}"`;
 }
 
+function darwinWarningFlags(cc) {
+  if (!/^(?:.*\/)?(?:clang|cc)$/.test(cc)) {
+    return "";
+  }
+  // ld64 has a narrow switch for duplicate libraries, but duplicate rpaths
+  // only honor the general warning suppressor. Keep this Darwin-only.
+  return "-Wl,-no_warn_duplicate_libraries -Wl,-w";
+}
+
 function firstExistingDist(candidates) {
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
@@ -88,18 +97,25 @@ function defaultDist() {
   ]);
 }
 
-function linkFlags(dist) {
+function appendFlags(...parts) {
+  return parts.filter(part => part.length > 0).join(" ");
+}
+
+function linkFlags(dist, cc) {
   const libDir = path.join(dist, "lib");
   if (process.platform === "win32") {
     return quote(path.join(libDir, "proton.lib"));
   }
   if (process.platform === "darwin") {
-    return `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`;
+    return appendFlags(
+      `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`,
+      darwinWarningFlags(cc),
+    );
   }
   return `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`;
 }
 
-function linkConfig(dist, packageName) {
+function linkConfig(dist, packageName, cc) {
   const libDir = path.join(dist, "lib");
   if (process.platform === "win32") {
     return {
@@ -110,7 +126,13 @@ function linkConfig(dist, packageName) {
   return {
     package: packageName,
     link_libs: ["proton"],
-    link_flags: `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
+    link_flags:
+      process.platform === "darwin"
+        ? appendFlags(
+          `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
+          darwinWarningFlags(cc),
+        )
+        : `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
   };
 }
 
@@ -122,19 +144,19 @@ function helperPath(binDir) {
 
 export function createNativeLinkConfig(env = readPayloadEnv()) {
   const rawDist = envValue(env, "PROTON_NATIVE_DIST").trim();
+  const cc = envValue(env, "MOON_CC").trim();
   const dist = path.resolve(rawDist.length === 0 ? defaultDist() : rawDist);
   const binDir = path.join(dist, "bin");
   return {
     vars: {
-      PROTON_NATIVE_LINK_FLAGS: linkFlags(dist),
+      PROTON_NATIVE_LINK_FLAGS: linkFlags(dist, cc),
       PROTON_NATIVE_STUB_CC_FLAGS: "",
       PROTON_NATIVE_RUNTIME_DIR: nativeLinkPath(binDir),
       PROTON_RUNTIME_ROOT: nativeLinkPath(dist),
       PROTON_HELPER_PATH: helperPath(binDir),
     },
     link_configs: [
-      linkConfig(dist, "justjavac/proton/native"),
-      linkConfig(dist, "justjavac/proton"),
+      linkConfig(dist, "justjavac/proton/native", cc),
     ],
   };
 }
