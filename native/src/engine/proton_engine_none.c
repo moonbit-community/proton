@@ -1,4 +1,4 @@
-#include "proton_engine.h"
+#include "../proton_engine.h"
 
 #include <stdio.h>
 

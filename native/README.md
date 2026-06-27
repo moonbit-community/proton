@@ -36,9 +36,9 @@ releases the Proton window handle through the same path as
 that window handle.
 
 Engine-specific code is isolated behind `src/proton_engine.h`. The default
-build uses `src/proton_engine_none.c`, so ABI and MoonBit binding tests can run
-without a browser SDK. The real engine implementation should replace that file
-behind the same internal interface.
+build uses `src/engine/proton_engine_none.c`, so ABI and MoonBit binding tests
+can run without a browser SDK. The real engine implementation should replace
+that file behind the same internal interface.
 
 ## Build
 
@@ -73,13 +73,13 @@ ctest --test-dir native\build-engine -C Debug --output-on-failure
 Engine builds are wired in CMake for Windows and macOS. On Windows this expects
 `Release/libcef.lib` and `Release/libcef.dll` under the runtime root, plus
 `Resources/icudtl.dat` and `Resources/locales/`. This switches the build to
-`src/proton_engine_cef_win.c`, which wires `cef_execute_process`,
+`src/engine/cef_win/proton_engine_cef_win.c`, which wires `cef_execute_process`,
 `cef_initialize`, the CEF app instance, a Win32 parent window, and a minimal CEF
 child browser path.
 
 On macOS, the engine build expects
 `Release/Chromium Embedded Framework.framework` under the runtime root and
-switches the build to `src/proton_engine_cef_mac.m`.
+switches the build to `src/engine/cef_mac/proton_engine_cef_mac.m`.
 
 `proton_cli cef setup` runtime assembly is currently Windows-only; macOS
 packaging still needs the matching CLI/prebuilt setup path.
@@ -157,7 +157,7 @@ proton/prebuilt/win32-x64/include/proton_native.h
 CEF runtime files are assembled later by `proton_cli cef setup` into `.proton/`.
 
 MoonBit FFI consumers only link `proton.lib`/`proton.dll`. They do not link CEF
-directly; the runtime starts `bin/cef_process.exe` through the C ABI runtime
+directly; the runtime starts `bin/cef_process(.exe)` through the C ABI runtime
 configuration.
 
 ## MoonBit Validation

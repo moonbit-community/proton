@@ -1,5 +1,5 @@
-#include "proton_engine.h"
-#include "proton_json.h"
+#include "../../proton_engine.h"
+#include "../../proton_json.h"
 
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"
@@ -193,55 +193,6 @@ static void proton_engine_debug_log(const char *format, ...) {
   va_end(args);
 }
 
-static bool proton_engine_parse_json_int_field(const char *config_json,
-                                               const char *field_name,
-                                               int32_t *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, config_json)) {
-    return false;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_int32(&doc, value, out_value);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
-static bool proton_engine_parse_json_bool_field(const char *config_json,
-                                                const char *field_name,
-                                                bool *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, config_json)) {
-    return false;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_bool(&doc, value, out_value);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
-static bool proton_engine_parse_json_string_field(const char *config_json,
-                                                  const char *field_name,
-                                                  char *out_value,
-                                                  size_t out_value_len) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, config_json)) {
-    return false;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_string(&doc, value, out_value, out_value_len);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
 static bool proton_engine_join_path(char *out,
                                     size_t out_len,
                                     const char *base,
@@ -326,12 +277,8 @@ static bool proton_engine_default_helper_path(char *out, size_t out_len) {
   return proton_engine_join_path(out, out_len, bin_dir, "cef_process");
 }
 
-static void proton_engine_set_string(cef_string_t *target, const char *value) {
-  if (value == NULL) {
-    value = "";
-  }
-  cef_string_from_utf8(value, strlen(value), target);
-}
+#include "../cef_common/strings.h"
+#include "../cef_common/json_fields.h"
 
 static void proton_engine_append_switch(cef_command_line_t *command_line,
                                         const char *name) {
@@ -344,92 +291,19 @@ static void proton_engine_append_switch(cef_command_line_t *command_line,
   cef_string_clear(&switch_name);
 }
 
-static void CEF_CALLBACK proton_engine_add_ref(cef_base_ref_counted_t *base) {
-  proton_engine_ref_counted_t *refs =
-      (proton_engine_ref_counted_t *)((char *)base + base->size);
-  atomic_fetch_add_explicit(&refs->refs, 1, memory_order_relaxed);
-}
-
-static int CEF_CALLBACK proton_engine_release(cef_base_ref_counted_t *base) {
-  proton_engine_ref_counted_t *refs =
-      (proton_engine_ref_counted_t *)((char *)base + base->size);
-  int value = atomic_fetch_sub_explicit(&refs->refs, 1, memory_order_acq_rel) - 1;
-  if (value <= 0) {
-    atomic_store(&refs->refs, 1);
-  }
-  return 0;
-}
-
-static int CEF_CALLBACK proton_engine_has_one_ref(cef_base_ref_counted_t *base) {
-  proton_engine_ref_counted_t *refs =
-      (proton_engine_ref_counted_t *)((char *)base + base->size);
-  return atomic_load_explicit(&refs->refs, memory_order_acquire) == 1;
-}
-
-static int CEF_CALLBACK
-proton_engine_has_at_least_one_ref(cef_base_ref_counted_t *base) {
-  proton_engine_ref_counted_t *refs =
-      (proton_engine_ref_counted_t *)((char *)base + base->size);
-  return atomic_load_explicit(&refs->refs, memory_order_acquire) >= 1;
-}
-
-static void proton_engine_init_ref_counted(cef_base_ref_counted_t *base,
-                                           size_t size,
-                                           proton_engine_ref_counted_t *refs) {
-  memset(base, 0, size);
-  base->size = size;
-  base->add_ref = proton_engine_add_ref;
-  base->release = proton_engine_release;
-  base->has_one_ref = proton_engine_has_one_ref;
-  base->has_at_least_one_ref = proton_engine_has_at_least_one_ref;
-  atomic_store(&refs->refs, 1);
-}
-
-static char *proton_engine_strdup_len(const char *value, size_t len) {
-  char *copy = (char *)malloc(len + 1);
-  if (copy == NULL) {
-    return NULL;
-  }
-  if (len > 0 && value != NULL) {
-    memcpy(copy, value, len);
-  }
-  copy[len] = '\0';
-  return copy;
-}
-
-static char *proton_engine_strdup(const char *value) {
-  return proton_engine_strdup_len(value != NULL ? value : "",
-                                  value != NULL ? strlen(value) : 0);
-}
-
-static char *proton_engine_userfree_to_utf8(cef_string_userfree_t value) {
-  if (value == NULL) {
-    return NULL;
-  }
-  cef_string_utf8_t utf8 = {0};
-  char *copy = NULL;
-  if (cef_string_to_utf8(value->str, value->length, &utf8) != 0 &&
-      utf8.str != NULL) {
-    copy = proton_engine_strdup_len(utf8.str, utf8.length);
-  }
-  cef_string_utf8_clear(&utf8);
-  cef_string_userfree_free(value);
-  return copy;
-}
-
-static char *proton_engine_cef_string_to_utf8(const cef_string_t *value) {
-  if (value == NULL) {
-    return NULL;
-  }
-  cef_string_utf8_t utf8 = {0};
-  char *copy = NULL;
-  if (cef_string_to_utf8(value->str, value->length, &utf8) != 0 &&
-      utf8.str != NULL) {
-    copy = proton_engine_strdup_len(utf8.str, utf8.length);
-  }
-  cef_string_utf8_clear(&utf8);
-  return copy;
-}
+#define PROTON_ENGINE_REF_INCREMENT(refs) \
+  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
+#define PROTON_ENGINE_REF_DECREMENT(refs) \
+  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
+#define PROTON_ENGINE_REF_LOAD(refs) \
+  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
+#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
+#include "../cef_common/ref_count.h"
+#undef PROTON_ENGINE_REF_INCREMENT
+#undef PROTON_ENGINE_REF_DECREMENT
+#undef PROTON_ENGINE_REF_LOAD
+#undef PROTON_ENGINE_REF_STORE
+#include "../cef_common/bridge_json.h"
 
 static int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
@@ -477,140 +351,6 @@ static proton_engine_window_t *proton_engine_window_from_browser(
     }
   }
   return NULL;
-}
-
-static int proton_engine_bridge_op_is_valid(const char *op) {
-  if (op == NULL || op[0] == '\0') {
-    return 0;
-  }
-  size_t len = strlen(op);
-  if (len >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
-    return 0;
-  }
-  for (size_t i = 0; i < len; i++) {
-    unsigned char ch = (unsigned char)op[i];
-    if (ch < 0x21 || ch > 0x7e || ch == '"' || ch == '\\') {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-static int proton_engine_json_read_int64_field(const char *json,
-                                               const char *field_name,
-                                               int64_t *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, json)) {
-    return 0;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_int64(&doc, value, out_value);
-  proton_json_dispose(&doc);
-  return ok ? 1 : 0;
-}
-
-static int proton_engine_json_read_bool_field(const char *json,
-                                              const char *field_name,
-                                              int *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  bool bool_value = false;
-  if (out_value == NULL || !proton_json_parse(&doc, json)) {
-    return 0;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_bool(&doc, value, &bool_value);
-  if (ok) {
-    *out_value = bool_value ? 1 : 0;
-  }
-  proton_json_dispose(&doc);
-  return ok ? 1 : 0;
-}
-
-static char *proton_engine_json_copy_raw_field(const char *json,
-                                               const char *field_name) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, json)) {
-    return NULL;
-  }
-  char *copy = NULL;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, field_name, &value)) {
-    copy = proton_json_copy_raw(&doc, value);
-  }
-  proton_json_dispose(&doc);
-  return copy;
-}
-
-static char *proton_engine_json_copy_string_field(const char *json,
-                                                  const char *field_name) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  char buffer[512];
-  if (!proton_json_parse(&doc, json)) {
-    return NULL;
-  }
-  char *copy = NULL;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, field_name, &value) &&
-      proton_json_read_string(&doc, value, buffer, sizeof(buffer))) {
-    copy = proton_engine_strdup(buffer);
-  }
-  proton_json_dispose(&doc);
-  return copy;
-}
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  const char *op;
-  int allowed;
-} proton_engine_bridge_op_match_t;
-
-static bool proton_engine_bridge_op_match_item(proton_json_value_t value,
-                                               void *user_data) {
-  proton_engine_bridge_op_match_t *match =
-      (proton_engine_bridge_op_match_t *)user_data;
-  proton_json_value_t name_value;
-  char candidate[PROTON_ENGINE_MAX_BRIDGE_OP_BYTES];
-  if (proton_json_is_object(match->doc, value) &&
-      proton_json_object_get(match->doc, value, "name", &name_value) &&
-      proton_json_read_string(match->doc, name_value, candidate,
-                              sizeof(candidate)) &&
-      strcmp(candidate, match->op) == 0) {
-    match->allowed = 1;
-    return false;
-  }
-  return true;
-}
-
-static int proton_engine_bridge_config_allows_op(const char *bridge_config_json,
-                                                 const char *op) {
-  if (!proton_engine_bridge_op_is_valid(op) || bridge_config_json == NULL) {
-    return 0;
-  }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t ops;
-  if (!proton_json_parse(&doc, bridge_config_json)) {
-    return 0;
-  }
-  proton_engine_bridge_op_match_t match = {&doc, op, 0};
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, "ops", &ops) &&
-      proton_json_is_array(&doc, ops)) {
-    proton_json_array_each(&doc, ops, proton_engine_bridge_op_match_item,
-                           &match);
-  }
-  proton_json_dispose(&doc);
-  return match.allowed;
 }
 
 static void proton_engine_runtime_bridge_lock(proton_engine_runtime_t *runtime) {
@@ -1156,79 +896,6 @@ static char *proton_engine_v8_value_to_utf8(cef_v8_value_t *value) {
     return NULL;
   }
   return proton_engine_userfree_to_utf8(value->get_string_value(value));
-}
-
-static char *proton_engine_js_quote_string(const char *value) {
-  if (value == NULL) {
-    value = "";
-  }
-  size_t len = strlen(value);
-  size_t cap = len * 2 + 3;
-  char *quoted = (char *)malloc(cap);
-  if (quoted == NULL) {
-    return NULL;
-  }
-  size_t out = 0;
-  quoted[out++] = '"';
-  for (size_t i = 0; i < len; i++) {
-    unsigned char ch = (unsigned char)value[i];
-    if (out + 7 >= cap) {
-      size_t next_cap = cap * 2;
-      char *next = (char *)realloc(quoted, next_cap);
-      if (next == NULL) {
-        free(quoted);
-        return NULL;
-      }
-      quoted = next;
-      cap = next_cap;
-    }
-    switch (ch) {
-    case '\\':
-      quoted[out++] = '\\';
-      quoted[out++] = '\\';
-      break;
-    case '"':
-      quoted[out++] = '\\';
-      quoted[out++] = '"';
-      break;
-    case '\b':
-      quoted[out++] = '\\';
-      quoted[out++] = 'b';
-      break;
-    case '\f':
-      quoted[out++] = '\\';
-      quoted[out++] = 'f';
-      break;
-    case '\n':
-      quoted[out++] = '\\';
-      quoted[out++] = 'n';
-      break;
-    case '\r':
-      quoted[out++] = '\\';
-      quoted[out++] = 'r';
-      break;
-    case '\t':
-      quoted[out++] = '\\';
-      quoted[out++] = 't';
-      break;
-    default:
-      if (ch < 0x20) {
-        static const char hex[] = "0123456789abcdef";
-        quoted[out++] = '\\';
-        quoted[out++] = 'u';
-        quoted[out++] = '0';
-        quoted[out++] = '0';
-        quoted[out++] = hex[(ch >> 4) & 0xf];
-        quoted[out++] = hex[ch & 0xf];
-      } else {
-        quoted[out++] = (char)ch;
-      }
-      break;
-    }
-  }
-  quoted[out++] = '"';
-  quoted[out] = '\0';
-  return quoted;
 }
 
 static int proton_engine_send_bridge_request_to_browser(
