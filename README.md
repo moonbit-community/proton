@@ -8,7 +8,7 @@ MoonBit app
   -> justjavac/proton
   -> proton.dll / libproton.dylib / libproton.so
   -> native browser runtime
-  -> cef_process.exe helper at runtime
+  -> cef_process(.exe) helper at runtime
 ```
 
 MoonBit links only the Proton native dynamic library. It does not link CEF
@@ -111,8 +111,8 @@ async fn main {
 The chainable `.extension(...)` API registers command extensions for the current
 native DLL route. Inline HTML entries get both the low-level
 `window.__MoonBit__.core.invokeOp(...)` bridge and generated command proxies
-such as `window.__MoonBit__.add.slowAdd(...)`. Event APIs such as
-`window.__MoonBit__.events.on(...)` are still a later layer.
+such as `window.__MoonBit__.add.slowAdd(...)`. Extension events are exposed
+through `window.__MoonBit__.events.on(...)` for extensions that emit events.
 
 The low-level `justjavac/proton/native` package remains available for ABI tests
 and runtime diagnostics, but ordinary apps should start from the root facade.
@@ -145,8 +145,17 @@ node scripts\e2e_bridge_smoke.mjs 41_app_commands
 - `justjavac/proton`: root app facade, command-extension bridge wiring, and
   native binding re-exports.
 - `justjavac/proton/native`: safe MoonBit API over the `proton_*` C ABI.
+- `justjavac/proton/manifest` and `justjavac/proton/bootstrap`: data and
+  config loading support for `moon.proton` and runtime manifests.
+- `justjavac/proton/core`, `justjavac/proton/command`, and
+  `justjavac/proton/extension`: extension/codegen support packages used by the
+  facade, examples, and extension packages; ordinary apps should not treat them
+  as the primary entry point.
+- `justjavac/proton/ipc`: transport-neutral bridge protocol types. The
+  `justjavac/proton/ipc/ws` package is experimental and is not the current app
+  runtime route.
 - `native/`: CMake project that builds the native dynamic library, import
-  library, public header, tests, and `cef_process.exe`.
+  library, public header, tests, and helper executable.
 - `examples/01_run`: minimal root-facade native DLL/EXE example.
 - `justjavac/proton_cli`: developer tooling such as doctor and code generation.
 

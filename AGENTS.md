@@ -3,7 +3,7 @@
 ## Project Structure
 - `native/`: standalone CMake project for the Proton native runtime. It builds
   `proton` as a dynamic library/import library, installs `proton_native.h`, and
-  installs `cef_process.exe` when the engine build is enabled.
+  installs the helper executable when the engine build is enabled.
 - `proton/`: root `justjavac/proton` MoonBit module. The public facade owns the
   app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
   wiring, and selected low-level native re-exports.
@@ -82,7 +82,7 @@ native checks before handing off larger refactors.
   `Int64` handle ids, caller-owned buffers, and typed MoonBit wrappers.
 - Runtime/window configs must keep explicit `abi_version` JSON schemas and
   reject unknown top-level fields.
-- `cef_process.exe` is a native packaged helper. It is built by CMake and
+- `cef_process(.exe)` is a native packaged helper. It is built by CMake and
   shipped beside the native runtime DLL; it is not a MoonBit package.
 - The root `proton` facade is the current public app surface. Keep it thin over
   the native DLL route and avoid reintroducing a second runtime path.

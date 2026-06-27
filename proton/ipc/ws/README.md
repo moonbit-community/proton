@@ -1,7 +1,11 @@
 # proton/ipc/ws
 
-`justjavac/proton/ipc/ws` provides the local HTTP/WebSocket transport used
-between the user process and the framework process.
+`justjavac/proton/ipc/ws` provides an experimental local HTTP/WebSocket
+transport over the transport-neutral `justjavac/proton/ipc` protocol.
+
+The current app runtime route does not use this package. Ordinary apps should
+start from the root `justjavac/proton` facade, which talks to the native Proton
+dynamic library directly.
 
 It owns:
 

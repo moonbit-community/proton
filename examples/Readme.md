@@ -40,15 +40,18 @@ moon -C examples run 01_run --target native
 - `19_*` through `35_*`: extension and app-capability examples for filesystem,
   path, shell, desktop integration, notification, tray, hotkey, auto-launch,
   keepawake, and microphone behavior.
-- `41_app_commands`: current `core.invokeOp` bridge smoke for the native DLL
-  route.
+- `37_native_mvp`: direct native-window MVP smoke for the native DLL route.
 - `38_*` and `39_*`: inline HTML command-extension proxy examples backed by the
   native DLL bridge.
 - `40_event_broadcast`: command-extension event broadcast over the native DLL
   bridge.
+- `41_app_commands`: current `core.invokeOp` bridge smoke for the native DLL
+  route.
 - `42_attribute_codegen_commands`: generated command metadata plus generated
   event helper over the native DLL bridge.
+- `43_native_bind_smoke`: low-level native binding smoke.
 - `44_project_config`: `moon.proton` project config decoding
+- `45_bridge_multi_window`: multi-window bridge smoke.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
