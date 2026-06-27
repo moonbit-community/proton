@@ -19,6 +19,9 @@ options(
   "is-main": false,
   targets: {
     "exports.mbt": [ "native" ],
+    "facade_entry.mbt": [ "native" ],
+    "facade_manifest.mbt": [ "native" ],
+    "facade_types.mbt": [ "native" ],
     "facade.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
   },
