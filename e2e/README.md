@@ -2,12 +2,8 @@
 
 CDP-based end-to-end smoke probes for the native DLL bridge route.
 
-The module is intentionally separate from the root workspace. Before running it
-from this repository, add it to the current MoonBit workspace:
-
-```sh
-moon work use ./e2e
-```
+The module is part of the root `moon.work`. Do not mutate the workspace before
+running e2e probes.
 
 Then start an example with remote debugging enabled and run:
 

@@ -68,8 +68,8 @@ native checks before handing off larger refactors.
   CEF is installed by `proton_cli cef setup`, which writes `.proton/runtime.json`
   and assembles `.proton/runtimes/<platform>/...`.
 - Keep platform-specific setup decisions centralized in the CLI/native platform
-  helpers. Platform ids should stay predictable: `win32-x64` now; future macOS
-  work should use `darwin-arm64` and `darwin-x64`.
+  helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
+  `darwin-x64`, and future Linux ids.
 - CEF is the native implementation detail. Do not expose CEF in MoonBit package
   names, C ABI prefixes, or public facade names.
 - `native/CMakeLists.txt` is the only native build source of truth. Do not add

@@ -37,7 +37,9 @@ moon -C examples run 01_run --target native
 - `01_run`: minimal app-style startup through `justjavac/proton`
 - `02_*` through `18_*`: root-facade examples that compile against the native
   DLL route
-- `19_*` through `35_*`: app-style examples kept for top-level API migration.
+- `19_*` through `35_*`: extension and app-capability examples for filesystem,
+  path, shell, desktop integration, notification, tray, hotkey, auto-launch,
+  keepawake, and microphone behavior.
 - `41_app_commands`: current `core.invokeOp` bridge smoke for the native DLL
   route.
 - `38_*` and `39_*`: inline HTML command-extension proxy examples backed by the

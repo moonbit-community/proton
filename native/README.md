@@ -70,13 +70,19 @@ cmake --install native\build-engine --config Debug
 ctest --test-dir native\build-engine -C Debug --output-on-failure
 ```
 
-Engine builds are currently wired only on Windows. On Windows this expects
-`Release/libcef.lib` and `Release/libcef.dll` under the
-runtime root, plus `Resources/icudtl.dat` and `Resources/locales/`. This
-switches the build to `src/proton_engine_cef_win.c`, which wires
-`cef_execute_process`, `cef_initialize`, the CEF app instance, a Win32 parent
-window, and a minimal CEF child browser path. JS bridge IPC, renderer handlers,
-and production packaging still need a real CEF SDK/runtime validation pass.
+Engine builds are wired in CMake for Windows and macOS. On Windows this expects
+`Release/libcef.lib` and `Release/libcef.dll` under the runtime root, plus
+`Resources/icudtl.dat` and `Resources/locales/`. This switches the build to
+`src/proton_engine_cef_win.c`, which wires `cef_execute_process`,
+`cef_initialize`, the CEF app instance, a Win32 parent window, and a minimal CEF
+child browser path.
+
+On macOS, the engine build expects
+`Release/Chromium Embedded Framework.framework` under the runtime root and
+switches the build to `src/proton_engine_cef_mac.m`.
+
+`proton_cli cef setup` runtime assembly is currently Windows-only; macOS
+packaging still needs the matching CLI/prebuilt setup path.
 The current Windows `load_html` implementation serves HTML through the internal
 `proton://` scheme so the loaded document keeps the supplied Proton origin and
 relative URL base. For v1, `base_url` must use the `proton://` scheme.

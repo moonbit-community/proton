@@ -42,9 +42,9 @@ proton/prebuilt/win32-x64/include/proton_native.h
 CEF files are not shipped in the package. `proton_cli cef setup` downloads or
 reuses CEF and assembles the complete project runtime under `.proton/`.
 
-Platform prebuilds live under `proton/prebuilt/<platform>/`. Current Windows
-uses `win32-x64`; future macOS work should add `darwin-arm64` and/or
-`darwin-x64` with the same Proton-only rule.
+Platform prebuilds live under `proton/prebuilt/<platform>/`. The currently
+shipped prebuild is `win32-x64`; macOS packaging should use `darwin-arm64`
+and/or `darwin-x64` with the same Proton-only rule.
 
 The ABI-only build is still useful for binding tests:
 
@@ -55,7 +55,8 @@ cmake --install native\build --config Debug
 ```
 
 On non-Windows platforms the CMake install layout uses `libproton.so` or
-`libproton.dylib`; the real engine implementation is currently wired on Windows.
+`libproton.dylib`. Engine-backed CMake builds are wired for Windows and macOS;
+`proton_cli cef setup` packaging is currently Windows-only.
 
 ## Link From MoonBit
 
