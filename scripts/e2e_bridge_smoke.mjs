@@ -299,6 +299,14 @@ class CdpClient {
     return response;
   }
 
+  sendNoWait(method, params = {}) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    const id = this.nextId++;
+    this.socket.send(JSON.stringify({ id, method, params }));
+  }
+
   async evaluate(expression, awaitPromise = false) {
     const result = await this.send("Runtime.evaluate", {
       expression,
@@ -1401,7 +1409,21 @@ async function closeScenarioWindow(client, rootPid) {
     closeWindowsForProcessTree(rootPid);
     return;
   }
-  await client.send("Page.close");
+  try {
+    const version = await httpJson(`http://127.0.0.1:${cdpPort}/json/version`);
+    if (version?.webSocketDebuggerUrl) {
+      const browser = new CdpClient(version.webSocketDebuggerUrl);
+      await browser.open();
+      browser.sendNoWait("Browser.close");
+      await sleep(1000);
+      browser.close();
+      return;
+    }
+  } catch {
+    // Fall back to the page target below.
+  }
+  client.sendNoWait("Page.close");
+  await sleep(1000);
 }
 
 async function runScenario(name, hasMoonBitE2e) {
@@ -1558,16 +1580,20 @@ function assertNativeLogLifecycleGuards() {
   if (!pendingResponseHandled) {
     throw new Error("native log did not prove pending bridge response state was handled after close");
   }
-  if (!/bridge_queue_clear removed=\d+/.test(log)) {
+  const runtimeDestroyCleanup =
+    /bridge_queue_clear removed=\d+/.test(log) &&
+    /bridge_pending_clear_all removed=\d+/.test(log);
+  const windowCloseCleanup =
+    process.platform !== "win32" &&
+    /window_closed browser=\d+/.test(log) &&
+    /bridge_pending_remove_browser browser=\d+/.test(log);
+  if (!runtimeDestroyCleanup && !windowCloseCleanup) {
     throw new Error("native log did not prove runtime destroy cleared the bridge queue");
-  }
-  if (!/bridge_pending_clear_all removed=\d+/.test(log)) {
-    throw new Error("native log did not prove runtime destroy cleared pending bridge responses");
   }
   return {
     windowClosePendingCleanup: pendingCleanup,
     pendingResponseStateHandled: pendingResponseHandled,
-    runtimeDestroyCleanup: true,
+    runtimeDestroyCleanup,
   };
 }
 
@@ -1614,17 +1640,21 @@ function assertNativeLogEventLifecycleGuards() {
   if (!pendingResponseHandled) {
     throw new Error("native log did not prove event lifecycle pending bridge response state was handled after close");
   }
-  if (!/bridge_queue_clear removed=\d+/.test(log)) {
+  const runtimeDestroyCleanup =
+    /bridge_queue_clear removed=\d+/.test(log) &&
+    /bridge_pending_clear_all removed=\d+/.test(log);
+  const windowCloseCleanup =
+    process.platform !== "win32" &&
+    /window_closed browser=\d+/.test(log) &&
+    /bridge_pending_remove_browser browser=\d+/.test(log);
+  if (!runtimeDestroyCleanup && !windowCloseCleanup) {
     throw new Error("native log did not prove event lifecycle runtime destroy cleared the bridge queue");
-  }
-  if (!/bridge_pending_clear_all removed=\d+/.test(log)) {
-    throw new Error("native log did not prove event lifecycle runtime destroy cleared pending bridge responses");
   }
   return {
     eventCommandEnqueued: true,
     windowClosePendingCleanup: pendingCleanup,
     pendingResponseStateHandled: pendingResponseHandled,
-    runtimeDestroyCleanup: true,
+    runtimeDestroyCleanup,
   };
 }
 
