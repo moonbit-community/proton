@@ -120,6 +120,10 @@ scheduling, MoonBit async handlers, GC, and main-thread load can still affect
 latency. The root facade automatically falls back to the older idle sleep loop
 when a platform runtime reports that wait/wakeup is unsupported.
 
+CEF internal logs are disabled by default to keep application consoles quiet.
+Set `PROTON_CEF_LOG=default` before launch to temporarily restore CEF logging;
+`verbose`, `info`, `warning`, `error`, and `fatal` are also accepted.
+
 The low-level `justjavac/proton/native` package remains available for ABI tests
 and runtime diagnostics, but ordinary apps should start from the root facade.
 
@@ -157,9 +161,8 @@ node scripts\e2e_bridge_smoke.mjs 41_app_commands
   `justjavac/proton/extension`: extension/codegen support packages used by the
   facade, examples, and extension packages; ordinary apps should not treat them
   as the primary entry point.
-- `justjavac/proton/ipc`: transport-neutral bridge protocol types. The
-  `justjavac/proton/ipc/ws` package is experimental and is not the current app
-  runtime route.
+- `justjavac/proton/ipc`: transport-neutral bridge protocol types used by the
+  native DLL bridge path.
 - `native/`: CMake project that builds the native dynamic library, import
   library, public header, tests, and helper executable.
 - `examples/01_run`: minimal root-facade native DLL/EXE example.

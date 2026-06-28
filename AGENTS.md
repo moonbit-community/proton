@@ -11,8 +11,9 @@
   links only the native Proton library through `native_link_config.mjs`.
 - `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
   `proton/core/`, `proton/command/`, `proton/ipc/`: supporting packages for
-  metadata, tooling, bridge experiments, and IPC helpers. Do not reintroduce the
-  old app runtime route without an explicit design decision.
+  metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
+  helpers. Do not reintroduce the old app runtime route without an explicit
+  design decision.
 - `cli/`: `justjavac/proton_cli`; independent native developer CLI module plus
   `cli/codegen/` and `cli/doctor/` helpers.
 - `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
@@ -89,6 +90,9 @@ native checks before handing off larger refactors.
 - Bridge and command-extension APIs may be documented only when implemented by
   the native DLL route. Do not document old `window.__MoonBit__` flows that no
   longer match the current runtime.
+- Do not reintroduce local WebSocket IPC as an app runtime path. DevTools test
+  automation may use WebSocket to talk to Chromium, but Proton app IPC belongs
+  to the native DLL bridge route.
 - Keep the bridge pump wait-driven where the native runtime supports
   `proton_runtime_wait`. The facade may fall back to idle sleep for unsupported
   platforms, but do not reintroduce fixed sleep polling as the primary Windows
@@ -138,6 +142,8 @@ native checks before handing off larger refactors.
   then write `.proton/runtime.json`.
 - Keep `cef_process.exe` or the platform equivalent as a native packaged helper
   built by CMake. It is part of the runtime layout, not a MoonBit executable.
+- CEF internal logging is disabled by default. Use `PROTON_CEF_LOG` only as a
+  temporary debugging switch; do not turn Chromium log noise back on by default.
 - When adding a platform, implement the same ABI behind the same exported
   function names and keep platform ids stable, for example `win32-x64`,
   `darwin-arm64`, `darwin-x64`, and future Linux ids.
