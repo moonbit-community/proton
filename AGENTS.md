@@ -43,10 +43,23 @@
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C cli test --target native --diagnostic-limit 80`
+- `moon check --target native`
+- `moon -C cli test codegen --target native`
+- `node scripts/verify_generated.mjs`
+- `moon -C extensions test --target native`
+- `moon -C examples build --target native`
+- `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`
 
 Use the smallest relevant validation set while iterating, then run broader
 native checks before handing off larger refactors.
+
+## Generated Files And Release Flow
+- Published `proton` and `proton_ext` packages must not require repository-local `dev_build` or `rule` commands. Generated `.mbt` files are committed and consumed directly by downstream users.
+- When changing extension command annotations, `moon.ext` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
+- Before publishing `proton` or `proton_ext`, run `node scripts/verify_generated.mjs`; it regenerates outputs in a temp directory and fails if committed generated files are stale.
+- Keep release validation for standalone users explicit: run `moon publish --dry-run` in each published module, and smoke-check an independent app with remote `justjavac/proton` and `justjavac/proton_ext` dependencies after publishing.
+- Keep `examples/` and `e2e/` out of release publishing unless explicitly requested; they are validation/demo modules, not release packages.
 
 ## Coding Conventions
 - Use MoonBit with 2-space indentation and `///|` top-level separators.

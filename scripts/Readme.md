@@ -10,6 +10,25 @@ Embeds a text file into generated MoonBit source.
 node ./scripts/embed_asset.mjs <input> <output> <identifier>
 ```
 
+## `verify_generated.mjs`
+
+Checks that committed generated MoonBit files match their sources. It writes
+fresh outputs to a temp directory and compares them against the repository.
+
+```sh
+node ./scripts/verify_generated.mjs
+```
+
+Run this before publishing `proton` or `proton_ext`, and after changing any of:
+
+- extension `#proton.command` annotations or `moon.ext` metadata
+- `extensions/fs/assets/*.js`
+- `extensions/path/assets/*.js`
+
+Published library packages consume committed generated files directly; do not
+put `dev_build` or repository-relative codegen rules back into `proton` or
+`proton_ext` package metadata.
+
 ## `e2e_bridge_smoke.mjs`
 
 Runs native DLL bridge smoke scenarios through CEF remote debugging. Build and
