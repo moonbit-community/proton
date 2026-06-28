@@ -70,35 +70,10 @@ let resource : String =
   #|  </head>
   #|  <body>
   #|    <main>
-  #|      <h1>Extension API</h1>
-  #|      <p>A __MoonBit__ extension registers ops-backed APIs on <code>window.__MoonBit__</code>, with events delivered through <code>window.__MoonBit__.events</code>.</p>
-  #|      <button id="run">Call math.sum</button>
-  #|      <pre id="output">Click the button.</pre>
+  #|      <h1>Core Extension Metadata</h1>
+  #|      <p>This example is a legacy core-extension metadata smoke. The current native DLL route exposes page-callable APIs through command extensions.</p>
+  #|      <pre id="output">Run 38_async_extension_add, 39_sync_async_extensions, 40_event_broadcast, or 42_attribute_codegen_commands for bridge extension calls.</pre>
   #|    </main>
-  #|    <script>
-  #|      const output = document.getElementById("output");
-  #|      let lastEvent = null;
-  #|      window.__MoonBit__.events.on("math.computed", (event) => {
-  #|        lastEvent = event;
-  #|        output.textContent =
-  #|          "Extension event:\n" + JSON.stringify(event, null, 2);
-  #|      });
-  #|      document.getElementById("run").addEventListener("click", () => {
-  #|        Promise.all([
-  #|          window.__MoonBit__.core.invokeOp("ext:math/sum", { left: 20, right: 22 }),
-  #|          window.__MoonBit__.math.sum({ left: 20, right: 22 }),
-  #|        ])
-  #|          .then(([direct, extension]) => {
-  #|            output.textContent =
-  #|              "Direct op response:\n" + JSON.stringify(direct, null, 2) +
-  #|              "\n\nExtension helper response:\n" + JSON.stringify(extension, null, 2) +
-  #|              "\n\nLast event:\n" + JSON.stringify(lastEvent, null, 2);
-  #|          })
-  #|          .catch((error) => {
-  #|            output.textContent = "Transport error:\n" + String(error);
-  #|          });
-  #|      });
-  #|    </script>
   #|  </body>
   #|</html>
   #|

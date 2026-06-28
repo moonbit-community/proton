@@ -1,7 +1,7 @@
 ///|
 /// Command host intended to run in the MBT process.
 ///
-/// The host is independent from `@webview.Webview`, so application code can use
+/// The host is independent from the browser window, so application code can use
 /// normal MoonBit syntax, state, and `async` handlers without living in the GUI
 /// process.
 struct MbtProcessHost {

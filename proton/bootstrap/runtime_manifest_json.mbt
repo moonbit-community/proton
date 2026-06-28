@@ -82,7 +82,7 @@ fn app_window_manifest_to_json(window : @manifest.AppWindowManifest) -> Json {
 }
 
 ///|
-/// Converts a typed runtime manifest into JSON for framework process handoff.
+/// Converts a typed runtime manifest into JSON for native runtime handoff.
 pub fn app_manifest_to_json(manifest : @manifest.AppManifest) -> Json {
   let object : Map[String, Json] = {
     "window": window_manifest_to_json(manifest.window),

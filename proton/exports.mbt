@@ -1,2 +1,17 @@
 ///|
-pub using @proton_extension {type Extension, type Extensions}
+pub using @native {
+  abi_version,
+  execute_process,
+  last_error_message,
+  probe_runtime,
+  runtime_info,
+  runtime_info_json,
+  type NativeError,
+  type ProcessResult,
+  type Runtime,
+  type RuntimeConfig,
+  type RuntimeEvent,
+  type RuntimeInfo,
+  type Window,
+  type WindowConfig,
+}

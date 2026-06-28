@@ -1,49 +1,10 @@
 ///|
-/// Defines an HTML string containing a simple webpage with a JavaScript alert.
-///
-/// Contains a minimal HTML document structure with a script tag that displays an
-/// alert message "Hello Moonbit!" when loaded.
-let html =
-  #| <html>
-  #|   <head>
-  #|     <style>
-  #|       :root {
-  #|         color-scheme: light dark;
-  #|         --bg: #f4efe7;
-  #|         --ink: #182028;
-  #|       }
-  #|       @media (prefers-color-scheme: dark) {
-  #|         :root {
-  #|           --bg: #0f151a;
-  #|           --ink: #ecf2f7;
-  #|         }
-  #|       }
-  #|       body {
-  #|         margin: 0;
-  #|         min-height: 100vh;
-  #|         display: grid;
-  #|         place-items: center;
-  #|         font-family: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
-  #|         background:
-  #|           radial-gradient(circle at top, rgba(15, 118, 110, 0.14), transparent 32%),
-  #|           var(--bg);
-  #|         color: var(--ink);
-  #|       }
-  #|     </style>
-  #|   </head>
-  #|   <body>
-  #|     <p>Alert demo is running.</p>
-  #|     <script>setTimeout(() => alert("Hello Moonbit!"), 250)</script>
-  #|   </body>
-  #| </html>
-
-///|
-/// Creates and runs a webview window that displays a simple HTML page with a
-/// JavaScript alert.
-fn main {
-  @webview.Webview::new(debug=1)
-  ..set_title("MoonBit Proton Example")
-  ..set_size(800, 600, @webview.SizeHint::None)
-  ..set_html(html)
-  .run()
+async fn main {
+  let html =
+    #|<!doctype html>
+    #|<html>
+    #|  <head><meta charset="utf-8"><title>05 alert</title></head>
+    #|  <body><h1>05 alert</h1></body>
+    #|</html>
+  @proton.html("05 alert", html, width=800, height=600, debug=true).run_or_abort()
 }

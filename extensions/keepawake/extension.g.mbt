@@ -64,10 +64,10 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async_result("acquire", async fn(payload) {
         __proton_command_acquire(context, payload)
-      })
+      }, emits_events=true)
       context.op_async_result("release", async fn(payload) {
         __proton_command_release(context, payload)
-      })
+      }, emits_events=true)
       context.op("status", __proton_command_status)
       Ok(())
     },

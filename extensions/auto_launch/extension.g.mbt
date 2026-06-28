@@ -108,10 +108,10 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       context.op_result("isEnabled", __proton_command_is_enabled)
       context.op_async_result("enable", async fn(payload) {
         __proton_command_enable(context, payload)
-      })
+      }, emits_events=true)
       context.op_async_result("disable", async fn(payload) {
         __proton_command_disable(context, payload)
-      })
+      }, emits_events=true)
       Ok(())
     },
   )

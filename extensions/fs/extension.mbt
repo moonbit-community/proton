@@ -13,11 +13,12 @@ pub fn extension() -> @proton_extension.Extension {
 ///|
 /// Builds the unrestricted `fs` extension for direct installation.
 ///
-/// Install it with `@core.install_extension(webview, @fs.core_extension())` to expose
-/// `window.__MoonBit__.fs`. Opened resources remember their resolved absolute path.
+/// Future bridge work can install it on an `@core.ExtensionHost` to expose
+/// filesystem calls to pages.
+/// Opened resources remember their resolved absolute path.
 ///
 /// This extension intentionally exposes host filesystem access. Only install it
-/// in webviews that load trusted/local content; do not combine it with
+/// in windows that load trusted/local content; do not combine it with
 /// untrusted or remote HTML/JavaScript.
 pub fn core_extension() -> @core.Extension {
   build_extension()
@@ -26,7 +27,7 @@ pub fn core_extension() -> @core.Extension {
 ///|
 /// Builds the declarative `fs` extension spec.
 /// Register this spec when filesystem access should be linked through app
-/// planning rather than installed ad hoc on one webview.
+/// planning rather than installed ad hoc on one window.
 pub fn core_spec() -> @core.ExtensionSpec {
   @core.ExtensionSpec::new(extension_id, extension_namespace, fn(context) {
     ignore(context.base_dir())

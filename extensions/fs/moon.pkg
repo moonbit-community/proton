@@ -12,7 +12,6 @@ import {
 import {
   "moonbitlang/core/debug",
   "moonbitlang/x/sys",
-  "justjavac/proton/webview",
 } for "wbtest"
 
 supported_targets = "native"
@@ -37,7 +36,6 @@ options(
     "extension_file_ops.mbt": [ "native" ],
     "extension_path_ops.mbt": [ "native" ],
     "extension_stream_ops.mbt": [ "native" ],
-    "fs_wbtest.mbt": [ "native" ],
     "helper_js.mbt": [ "native" ],
     "op_helpers.mbt": [ "native" ],
     "path_api.mbt": [ "native" ],

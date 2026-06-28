@@ -35,11 +35,11 @@ pub fn AppCommandExtensionContext::extension_id(Self) -> String
 pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
 pub fn AppCommandExtensionContext::js_namespace(Self) -> String
 pub fn AppCommandExtensionContext::new(@core.AppCommandHost, String, String, options? : Json?, base_dir? : String?) -> Self
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply, emits_events? : Bool) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply, emits_events? : Bool) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::op_name(Self, String) -> String
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::options(Self) -> Json?
 
 pub struct AppCommandExtensionDescriptor {
@@ -79,6 +79,7 @@ pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
 pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit) -> Self
 pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Result[Unit, String]
+pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
 
 pub struct AppCommandsConfig {

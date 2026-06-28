@@ -56,30 +56,69 @@ fn option_string_or(value : String?, fallback : String) -> String {
 }
 
 ///|
-fn resolve_cef_root(project : ProjectDoctorInfo) -> String {
-  match @sys.get_env_var("PROTON_CEF_ROOT") {
-    Some(root) => root
-    None => {
-      let project_cache = path_join(project.root, ".cef-cache")
-      if @mbfs.path_exists(project_cache) {
-        project_cache
-      } else {
-        match find_up(project.root, ".cef-cache") {
-          Some(path) => path
-          None => project_cache
-        }
+fn path_is_absolute_like(path : String) -> Bool {
+  path.has_prefix("\\") ||
+  path.has_prefix("/") ||
+  path.contains(":\\") ||
+  path.contains(":/")
+}
+
+///|
+fn runtime_dist_from_manifest(project : ProjectDoctorInfo) -> String? {
+  let manifest_path = path_join(
+    path_join(project.root, ".proton"),
+    "runtime.json",
+  )
+  guard @mbfs.path_exists(manifest_path) else { return None }
+  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+    _ => return None
+  }
+  let json = @json.parse(text) catch { _ => return None }
+  match json {
+    Object(object) =>
+      match object.get("dist") {
+        Some(String(dist)) =>
+          if path_is_absolute_like(dist) {
+            Some(dist)
+          } else {
+            Some(path_join(project.root, dist))
+          }
+        _ => None
       }
-    }
+    _ => None
   }
 }
 
 ///|
-fn cef_required_layout_files() -> Array[String] {
+fn resolve_native_dist(project : ProjectDoctorInfo) -> String {
+  match @sys.get_env_var("PROTON_NATIVE_DIST") {
+    Some(root) => root
+    None =>
+      match runtime_dist_from_manifest(project) {
+        Some(path) => path
+        None => {
+          let project_dist = path_join(
+            path_join(project.root, "native"),
+            "dist",
+          )
+          if @mbfs.path_exists(project_dist) {
+            project_dist
+          } else {
+            match find_up(project.root, "native") {
+              Some(path) => path_join(path, "dist")
+              None => project_dist
+            }
+          }
+        }
+      }
+  }
+}
+
+///|
+fn native_dist_required_layout_files() -> Array[String] {
   [
-    "include\\capi\\cef_app_capi.h", "include\\capi\\cef_browser_capi.h", "include\\capi\\cef_client_capi.h",
-    "include\\capi\\cef_v8_capi.h", "Release\\libcef.lib", "Release\\libcef.dll",
-    "Release\\icudtl.dat", "Release\\chrome_100_percent.pak", "Release\\chrome_200_percent.pak",
-    "Release\\resources.pak", "Resources\\icudtl.dat",
+    "bin\\proton.dll", "bin\\cef_process.exe", "lib\\proton.lib", "bin\\libcef.dll",
+    "bin\\icudtl.dat", "Resources\\icudtl.dat", "Resources\\locales",
   ]
 }
 
@@ -98,53 +137,111 @@ fn moon_config_error_line(
 }
 
 ///|
-fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
+fn first_non_empty_line(text : String) -> String? {
+  for raw in text.replace(old="\r\n", new="\n").split("\n") {
+    let line = raw.trim().to_owned()
+    if line != "" {
+      return Some(line)
+    }
+  }
+  None
+}
+
+///|
+async fn tool_version_line(
+  label : String,
+  commands : Array[String],
+  args : Array[String],
+) -> DoctorLine {
+  for command in commands {
+    let (code, output) = @process.collect_output_merged(command, args) catch {
+      _ => continue
+    }
+    let text = output.text() catch { _ => "" }
+    match first_non_empty_line(text) {
+      Some(line) =>
+        if code == 0 {
+          return DoctorLine::new(Ok, label + ": " + line)
+        } else {
+          return DoctorLine::new(
+            Warn,
+            label + ": version command exited with code " + code.to_string(),
+            hint=line,
+          )
+        }
+      None =>
+        if code == 0 {
+          return DoctorLine::new(Unknown, label + ": version output is empty")
+        } else {
+          return DoctorLine::new(
+            Warn,
+            label + ": version command exited with code " + code.to_string(),
+          )
+        }
+    }
+  }
+  DoctorLine::new(
+    Missing,
+    label + ": not found",
+    hint="make sure one of `" +
+      commands.join("`, `") +
+      "` is installed and available on PATH",
+  )
+}
+
+///|
+async fn npm_version_line() -> DoctorLine {
+  let direct = tool_version_line("npm", ["npm", "npm.cmd"], ["--version"])
+  if direct.status != Missing {
+    return direct
+  }
+  tool_version_line("npm", ["cmd"], ["/c", "npm", "--version"])
+}
+
+///|
+async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   lines.push(DoctorLine::new(Ok, "OS: Windows x86_64"))
-  lines.push(
-    DoctorLine::new(Unknown, "moon: version probing not implemented yet"),
-  )
-  lines.push(
-    DoctorLine::new(Unknown, "node: version probing not implemented yet"),
-  )
-  lines.push(
-    DoctorLine::new(Unknown, "npm: version probing not implemented yet"),
-  )
-  let cef_root = resolve_cef_root(project)
-  if @mbfs.path_exists(cef_root) {
-    lines.push(DoctorLine::new(Ok, "CEF root: " + cef_root))
-    let version_path = path_join(cef_root, "version.txt")
+  lines.push(tool_version_line("moon", ["moon"], ["version"]))
+  lines.push(tool_version_line("node", ["node"], ["--version"]))
+  lines.push(npm_version_line())
+  let native_dist = resolve_native_dist(project)
+  if @mbfs.path_exists(native_dist) {
+    lines.push(DoctorLine::new(Ok, "Proton native dist: " + native_dist))
+    let version_path = path_join(native_dist, "version.txt")
     if @mbfs.path_exists(version_path) {
       let version = @mbfs.read_file_to_string(version_path, encoding="utf8") catch {
         _ => "unknown"
       }
       lines.push(
-        DoctorLine::new(Ok, "CEF version: " + version.trim().to_owned()),
+        DoctorLine::new(Ok, "runtime version: " + version.trim().to_owned()),
       )
     } else {
-      lines.push(DoctorLine::new(Unknown, "CEF version: version.txt missing"))
+      lines.push(
+        DoctorLine::new(Unknown, "runtime version: version.txt missing"),
+      )
     }
     let missing : Array[String] = []
-    for required in cef_required_layout_files() {
-      if !@mbfs.path_exists(path_join(cef_root, required)) {
+    for required in native_dist_required_layout_files() {
+      if !@mbfs.path_exists(path_join(native_dist, required)) {
         missing.push(required)
       }
     }
     if missing.length() == 0 {
       lines.push(
-        DoctorLine::new(Ok, "CEF layout: include, Release, Resources found"),
+        DoctorLine::new(Ok, "native layout: DLL, helper, lib, Resources found"),
       )
     } else {
       lines.push(
-        DoctorLine::new(Error, "CEF layout: missing " + missing.join(", ")),
+        DoctorLine::new(Error, "native layout: missing " + missing.join(", ")),
       )
     }
   } else {
     lines.push(
       DoctorLine::new(
         Missing,
-        "CEF root: not found",
-        hint="run `proton cef setup` or set PROTON_CEF_ROOT",
+        "Proton native dist: not found",
+        hint="run `proton_cli cef setup`, or set PROTON_NATIVE_DIST",
       ),
     )
   }
@@ -281,11 +378,6 @@ fn collect_packages(
         match config.is_main {
           Some(value) =>
             lines.push(DoctorLine::new(Neutral, "is-main: \{value}"))
-          None => ()
-        }
-        match config.bin_name {
-          Some(value) =>
-            lines.push(DoctorLine::new(Neutral, "bin-name: " + value))
           None => ()
         }
         for item in config.imports {

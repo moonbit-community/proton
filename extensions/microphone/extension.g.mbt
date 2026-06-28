@@ -64,7 +64,7 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async("listDevices", async fn(payload) {
         __proton_command_list_devices(context, payload)
-      })
+      }, emits_events=true)
       context.op("parseListing", __proton_command_parse_listing)
       context.op_result("config", __proton_command_config)
       Ok(())

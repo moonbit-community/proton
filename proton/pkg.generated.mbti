@@ -2,24 +2,30 @@
 package "justjavac/proton"
 
 import {
-  "justjavac/proton/core",
   "justjavac/proton/extension",
-  "justjavac/proton/manifest",
-  "justjavac/proton/runtime",
+  "justjavac/proton/native",
 }
 
 // Values
+pub fn abi_version() -> Int
+
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn config(String) -> App
 
-pub fn create_app(@manifest.AppManifest, ExtensionRegistry, base_dir? : String?) -> Result[@runtime.App, String]
-
-pub fn create_app_from_file(String, ExtensionRegistry) -> Result[@runtime.App, String]
+pub fn execute_process(config? : @native.RuntimeConfig) -> Result[@native.ProcessResult, @native.NativeError]
 
 pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+
+pub fn last_error_message() -> String
+
+pub fn probe_runtime(config? : @native.RuntimeConfig) -> Result[Unit, @native.NativeError]
+
+pub fn runtime_info() -> Result[@native.RuntimeInfo, @native.NativeError]
+
+pub fn runtime_info_json() -> Result[String, @native.NativeError]
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
@@ -40,16 +46,22 @@ pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 
-type ExtensionRegistry
-pub fn ExtensionRegistry::get(Self, String) -> @core.ExtensionSpec?
-pub fn ExtensionRegistry::new() -> Self
-pub fn ExtensionRegistry::register(Self, @core.ExtensionSpec) -> Self
-pub fn ExtensionRegistry::registered_ids(Self) -> Array[String]
-
 // Type aliases
-pub using @extension {type Extension}
+pub using @native {type NativeError}
 
-pub using @extension {type Extensions}
+pub using @native {type ProcessResult}
+
+pub using @native {type Runtime}
+
+pub using @native {type RuntimeConfig}
+
+pub using @native {type RuntimeEvent}
+
+pub using @native {type RuntimeInfo}
+
+pub using @native {type Window}
+
+pub using @native {type WindowConfig}
 
 // Traits
 

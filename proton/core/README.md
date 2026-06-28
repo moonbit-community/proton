@@ -8,8 +8,8 @@ It provides:
 - extension specs and installation
 - op registration and dispatch
 - resource tables
-- `window.__MoonBit__` bridge setup
+- `window.__MoonBit__` bridge wiring
 - extension events
 
-Application lifecycle belongs in `runtime`; app composition belongs in the root
-`proton` facade.
+Application lifecycle and app composition belong in the root `proton` facade,
+which drives the native Proton dynamic library.

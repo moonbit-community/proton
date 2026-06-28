@@ -1,13 +1,10 @@
 # App Commands
 
-Hand-written Proton command-extension example.
+Hand-written Proton command-extension bridge smoke.
 
-The app exposes:
-
-- `window.__MoonBit__.app.ping(...)`
-- `window.__MoonBit__.app.slowAdd(...)`
-- `window.__MoonBit__.app.fail(...)`
-- `window.__MoonBit__.app.reportProbe(...)`
+This example exercises the current native DLL bridge route:
+`window.__MoonBit__.core.invokeOp(...)` calls registered MoonBit command
+handlers through the `proton_*` C ABI request/response queue.
 
 Run:
 

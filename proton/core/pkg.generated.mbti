@@ -3,27 +3,10 @@ package "justjavac/proton/core"
 
 import {
   "justjavac/proton/ipc",
-  "justjavac/proton/webview",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn[Payload : ToJson] emit_extension(@webview.Webview, String, String, Payload) -> Unit
-
-pub fn emit_ipc_extension_event(@webview.Webview, @ipc.IpcExtensionEvent) -> Unit
-
-pub fn ensure_core_runtime(@webview.Webview) -> Unit
-
-pub fn extension_host(@webview.Webview) -> ExtensionHost
-
-pub fn install_core_bridge(@webview.Webview) -> Unit
-
-pub fn install_extension(@webview.Webview, Extension) -> Unit
-
-pub fn install_ipc_bridge_runtime(@webview.Webview, String, Array[String], extensions? : Array[@ipc.IpcExtensionDescriptor]) -> Unit
-
-pub fn install_ipc_extension(@webview.Webview, @ipc.IpcExtensionDescriptor) -> Unit
-
 pub fn moonbit_global_name() -> String
 
 pub fn moonbit_op_binding_name() -> String
@@ -38,6 +21,7 @@ pub fn replacement(String, String) -> TemplateReplacement
 type AppCommandHost
 pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
+pub async fn AppCommandHost::dispatch_ipc_with_event_sender(Self, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit)?) -> @ipc.IpcOpResponse
 pub async fn[Payload : ToJson] AppCommandHost::emit_extension(Self, String, String, Payload) -> Unit
 pub fn AppCommandHost::new() -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply) -> Unit
@@ -45,6 +29,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, 
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
 pub fn AppCommandHost::registered_ops(Self) -> Array[String]
+pub fn AppCommandHost::scope_events_for_op(Self, String) -> Unit
 pub fn AppCommandHost::seal_registrations(Self) -> Unit
 pub fn AppCommandHost::set_event_sender(Self, async (@ipc.IpcExtensionEvent) -> Unit) -> Unit
 
@@ -52,6 +37,7 @@ type Extension
 pub fn Extension::id(Self) -> String
 pub fn Extension::js_namespace(Self) -> String
 pub fn Extension::new(String, String, (ExtensionContext) -> Unit, on_install? : (ExtensionContext) -> Unit, on_destroy? : (ExtensionContext) -> Unit, scripts? : Array[String]) -> Self
+pub fn Extension::scripts(Self) -> Array[String]
 
 type ExtensionBuildContext
 pub fn ExtensionBuildContext::base_dir(Self) -> String?
@@ -64,14 +50,14 @@ pub fn ExtensionContext::id(Self) -> String
 pub fn ExtensionContext::js_namespace(Self) -> String
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
-pub fn ExtensionContext::webview(Self) -> @webview.Webview
 
 type ExtensionHost
+pub fn ExtensionHost::api_names(Self, String) -> Array[String]
 pub fn ExtensionHost::destroy(Self) -> Unit
+pub fn ExtensionHost::dispatch_op(Self, String, Json) -> Result[Json, String]
 pub fn[Payload : ToJson] ExtensionHost::emit(Self, String, String, Payload) -> Unit
 pub fn ExtensionHost::install(Self, Extension) -> Unit
-pub fn ExtensionHost::new(@webview.Webview) -> Self
-pub fn ExtensionHost::run(Self) -> Unit
+pub fn ExtensionHost::new() -> Self
 
 type ExtensionSpec
 pub fn ExtensionSpec::build_default(Self) -> Result[Extension, String]

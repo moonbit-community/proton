@@ -1,58 +1,18 @@
 ///|
-/// Creates an extension host for a webview.
-/// Most callers should prefer `extension_host(webview)` so the default cached
-/// host is reused across helper layers.
-pub fn ExtensionHost::new(webview : @webview.Webview) -> ExtensionHost {
-  make_extension_host(webview)
-}
-
-///|
-/// Returns the default extension host attached to this webview.
-/// The host is created lazily and cached with the default op runtime so later
-/// extension installs share one consistent bridge.
-pub fn extension_host(webview : @webview.Webview) -> ExtensionHost {
-  let runtime = op_runtime(webview)
-  match runtime.extension_host_cache() {
-    Some(host) => host
-    None => {
-      let host = make_extension_host(
-        webview,
-        default_runtime_cache=Some(runtime),
-      )
-      runtime.cache_extension_host(host)
-      host
-    }
+/// Creates an extension host.
+pub fn ExtensionHost::new() -> ExtensionHost {
+  ExtensionHost::{
+    extension_ids: {},
+    extension_namespaces: {},
+    apis: {},
+    api_names: {},
+    destroy_hooks: {},
+    op_registry: OpRegistry::new(),
   }
 }
 
 ///|
-/// Installs an extension into the webview's default extension host.
-/// This is the simplest way to expose one extension on a raw `@webview.Webview`
-/// without manually managing host lifetime.
-pub fn install_extension(
-  webview : @webview.Webview,
-  extension : Extension,
-) -> Unit {
-  extension_host(webview).install(extension)
-}
-
-///|
-/// Emits an extension-scoped event from the webview's default extension host.
-/// The event is serialized once and forwarded to JavaScript listeners under the
-/// extension's namespace and event name.
-pub fn[Payload : ToJson] emit_extension(
-  webview : @webview.Webview,
-  extension_namespace : String,
-  event_name : String,
-  payload : Payload,
-) -> Unit {
-  extension_host(webview).emit(extension_namespace, event_name, payload)
-}
-
-///|
 /// Installs an extension into the host.
-/// Reserved namespaces plus duplicate ids or namespaces are rejected before
-/// JavaScript helpers, ops, and lifecycle hooks are registered.
 pub fn ExtensionHost::install(
   self : ExtensionHost,
   extension : Extension,
@@ -88,16 +48,12 @@ pub fn ExtensionHost::install(
   self.extension_ids.set(extension.id, extension.js_namespace)
   self.extension_namespaces.set(extension.js_namespace, extension.id)
   self.destroy_hooks.set(extension.id, fn() { (extension.on_destroy)(context) })
-  install_extension_namespace(self.webview, extension.js_namespace)
   (extension.register)(context)
-  install_extension_scripts(self.webview, extension.scripts())
   (extension.on_install)(context)
 }
 
 ///|
-/// Emits an extension-scoped event from the host to JavaScript.
-/// The payload is converted to JSON and dispatched on the owning webview's main
-/// event loop so JavaScript observers receive it safely.
+/// Validates and records an extension-scoped event.
 pub fn[Payload : ToJson] ExtensionHost::emit(
   self : ExtensionHost,
   extension_namespace : String,
@@ -114,38 +70,20 @@ pub fn[Payload : ToJson] ExtensionHost::emit(
       extension_namespace,
     )
   }
-  let payload_json = ToJson::to_json(payload).stringify()
-  let script = make_extension_emit_script(
-    extension_namespace, event_name, payload_json,
-  )
-  self.webview.dispatch(fn() { self.webview.eval(script) })
+  ignore(ToJson::to_json(payload))
 }
 
 ///|
 /// Drops all registered extension metadata.
-/// Registered destroy hooks run before caches are cleared so extensions can
-/// release native resources in a predictable order.
 pub fn ExtensionHost::destroy(self : ExtensionHost) -> Unit {
-  match self.default_runtime_cache {
-    Some(runtime) => runtime.clear_extension_host_cache()
-    None => ()
-  }
-  self.webview.unregister_destroy_hook(self.destroy_hook_name)
   for _, hook in self.destroy_hooks {
     hook()
   }
   self.extension_ids.clear()
   self.extension_namespaces.clear()
   self.apis.clear()
+  self.api_names.clear()
   self.destroy_hooks.clear()
-}
-
-///|
-/// Runs the underlying webview loop.
-/// This is a convenience passthrough for code that already holds an
-/// `ExtensionHost` rather than the raw webview.
-pub fn ExtensionHost::run(self : ExtensionHost) -> Unit {
-  self.webview.run()
 }
 
 ///|
@@ -172,28 +110,33 @@ fn ExtensionContext::register_api(
     )
   }
   self.host.apis.set(registry_key, true)
+  match self.host.api_names.get(self.extension_namespace) {
+    Some(names) => names.push(api_name)
+    None => self.host.api_names.set(self.extension_namespace, [api_name])
+  }
   extension_op_name(self.extension_namespace, api_name)
 }
 
 ///|
-/// Creates a host wrapper and attaches its destroy hook to the owning webview.
-fn make_extension_host(
-  webview : @webview.Webview,
-  default_runtime_cache? : OpRuntime? = None,
-) -> ExtensionHost {
-  let destroy_hook_name = extension_host_destroy_hook_name()
-  let host = ExtensionHost::{
-    webview,
-    extension_ids: {},
-    extension_namespaces: {},
-    apis: {},
-    destroy_hooks: {},
-    destroy_hook_name,
-    default_runtime_cache,
+/// Returns the API names registered for one installed extension namespace.
+pub fn ExtensionHost::api_names(
+  self : ExtensionHost,
+  extension_namespace : String,
+) -> Array[String] {
+  match self.api_names.get(extension_namespace) {
+    Some(names) => names.map(fn(name) { name })
+    None => []
   }
-  let _ = op_runtime(webview)
-  webview.register_destroy_hook(destroy_hook_name, fn() { host.destroy() })
-  host
+}
+
+///|
+/// Dispatches one installed extension op with a raw JSON payload.
+pub fn ExtensionHost::dispatch_op(
+  self : ExtensionHost,
+  name : String,
+  payload : Json,
+) -> Result[Json, String] {
+  self.op_registry.call(name, payload)
 }
 
 ///|
@@ -245,12 +188,6 @@ fn validate_extension_event_target(
     return Err("extension event name must not be empty: " + extension_namespace)
   }
   Ok(())
-}
-
-///|
-/// Returns the destroy hook name used by the default extension host.
-fn extension_host_destroy_hook_name() -> String {
-  "extension-host"
 }
 
 ///|

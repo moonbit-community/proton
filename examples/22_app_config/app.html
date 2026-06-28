@@ -177,11 +177,11 @@
                     if (!app || !app.path || !app.fs) {
                         throw new Error("MoonBit runtime is not ready");
                     }
-                    const here = await app.path.resolve({ path: configDirHint });
-                    const files = await app.fs.readDir({ path: here.path });
+                    const here = await app.path.resolve(configDirHint);
+                    const files = await app.fs.readdir(here);
                     output.textContent = JSON.stringify(
                         {
-                            config_directory: here.path,
+                            config_directory: here,
                             entries: files.entries,
                         },
                         null,

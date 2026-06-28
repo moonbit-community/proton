@@ -1,50 +1,10 @@
 ///|
-/// Defines an HTML template that displays a simple message by executing JavaScript
-let html =
-  #| <html>
-  #|   <head>
-  #|     <style>
-  #|       :root {
-  #|         color-scheme: light dark;
-  #|         --bg: #f4efe7;
-  #|         --ink: #182028;
-  #|       }
-  #|       @media (prefers-color-scheme: dark) {
-  #|         :root {
-  #|           --bg: #0f151a;
-  #|           --ink: #ecf2f7;
-  #|         }
-  #|       }
-  #|       body {
-  #|         margin: 0;
-  #|         min-height: 100vh;
-  #|         display: grid;
-  #|         place-items: center;
-  #|         font-family: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
-  #|         background:
-  #|           radial-gradient(circle at top, rgba(15, 118, 110, 0.14), transparent 32%),
-  #|           var(--bg);
-  #|         color: var(--ink);
-  #|         font-size: 2.4rem;
-  #|       }
-  #|     </style>
-  #|   </head>
-  #|   <body>
-  #|     <script>
-  #|       function foo(msg) {
-  #|         document.body.innerHTML = msg; 
-  #|       }
-  #|     </script>
-  #|   </body>
-  #| </html>
-
-///|
-/// Creates and runs a webview window that evaluates JavaScript
-fn main {
-  @webview.Webview::new(debug=1)
-  ..set_title("MoonBit Proton Example")
-  ..set_size(800, 600, @webview.SizeHint::None)
-  ..set_html(html)
-  ..eval("foo('Hello from Moonbit!');")
-  .run()
+async fn main {
+  let html =
+    #|<!doctype html>
+    #|<html>
+    #|  <head><meta charset="utf-8"><title>08 eval</title></head>
+    #|  <body><h1>08 eval</h1></body>
+    #|</html>
+  @proton.html("08 eval", html, width=800, height=600, debug=true).run_or_abort()
 }

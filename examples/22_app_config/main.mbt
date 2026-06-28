@@ -1,26 +1,41 @@
 ///|
-fn manifest_at(base : @mbpath.Path, relative : String) -> String? {
-  let path = base.join(relative).normalize().to_string()
-  if @mbfs.path_exists(path) {
-    Some(path)
+struct AppConfigCandidate {
+  manifest : String
+  html : String
+}
+
+///|
+fn app_config_at(
+  base : @mbpath.Path,
+  manifest_relative : String,
+  html_relative : String,
+) -> AppConfigCandidate? {
+  let manifest = base.join(manifest_relative).normalize().to_string()
+  let html = base.join(html_relative).normalize().to_string()
+  if @mbfs.path_exists(manifest) && @mbfs.path_exists(html) {
+    Some({ manifest, html })
   } else {
     None
   }
 }
 
 ///|
-fn manifest_from_base(base : @mbpath.Path) -> String? {
-  match manifest_at(base, "22_app_config/moon.proton") {
-    Some(path) => Some(path)
-    None => manifest_at(base, "examples/22_app_config/moon.proton")
+fn app_config_from_base(base : @mbpath.Path) -> AppConfigCandidate? {
+  match
+    app_config_at(base, "22_app_config/moon.proton", "22_app_config/app.html") {
+    Some(candidate) => Some(candidate)
+    None =>
+      app_config_at(
+        base, "examples/22_app_config/moon.proton", "examples/22_app_config/app.html",
+      )
   }
 }
 
 ///|
-fn find_manifest_upwards(start : @mbpath.Path) -> String? {
+fn find_app_config_upwards(start : @mbpath.Path) -> AppConfigCandidate? {
   for current = start.normalize(), depth = 0; depth < 12; {
-    match manifest_from_base(current) {
-      Some(path) => return Some(path)
+    match app_config_from_base(current) {
+      Some(candidate) => return Some(candidate)
       None => continue current.dirname(), depth + 1
     }
   } nobreak {
@@ -29,16 +44,16 @@ fn find_manifest_upwards(start : @mbpath.Path) -> String? {
 }
 
 ///|
-fn manifest_candidates() -> Array[String] {
-  let candidates : Array[String] = []
-  match find_manifest_upwards(".") {
-    Some(path) => candidates.push(path)
+fn app_config_candidates() -> Array[AppConfigCandidate] {
+  let candidates : Array[AppConfigCandidate] = []
+  match find_app_config_upwards(".") {
+    Some(candidate) => candidates.push(candidate)
     None => ()
   }
   match @sys.get_cli_args().get(0) {
     Some(command) if command.trim().to_owned() != "" =>
-      match find_manifest_upwards((command : @mbpath.Path).dirname()) {
-        Some(path) => candidates.push(path)
+      match find_app_config_upwards((command : @mbpath.Path).dirname()) {
+        Some(candidate) => candidates.push(candidate)
         None => ()
       }
     _ => ()
@@ -47,12 +62,31 @@ fn manifest_candidates() -> Array[String] {
 }
 
 ///|
-async fn run_app_from_manifest_candidates() -> Result[Unit, String] {
-  let candidates = manifest_candidates()
-  let mut last_error = "failed to read app manifest: no candidate path matched"
+fn app_html_from_candidate(
+  candidate : AppConfigCandidate,
+) -> Result[String, String] {
+  try @mbfs.read_file_to_string(candidate.html, encoding="utf8") catch {
+    _ => Err("failed to read app HTML: " + candidate.html)
+  } noraise {
+    html => Ok(html)
+  }
+}
+
+///|
+async fn run_app_from_config_candidates() -> Result[Unit, String] {
+  let candidates = app_config_candidates()
+  let mut last_error = "failed to read app config: no candidate path matched"
   for candidate in candidates {
+    let html = match app_html_from_candidate(candidate) {
+      Ok(html) => html
+      Err(error) => {
+        last_error = error
+        continue
+      }
+    }
     match
-      @proton.config(candidate)
+      @proton.config(candidate.manifest)
+      .entry_html(html)
       .extension(@fs.extension())
       .extension(@path.extension())
       .run() {
@@ -65,7 +99,7 @@ async fn run_app_from_manifest_candidates() -> Result[Unit, String] {
 
 ///|
 async fn main {
-  match run_app_from_manifest_candidates() {
+  match run_app_from_config_candidates() {
     Ok(_) => ()
     Err(error) => abort(error)
   }

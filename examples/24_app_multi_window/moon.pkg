@@ -1,6 +1,5 @@
 import {
   "moonbitlang/async",
-  "justjavac/proton/manifest",
   "justjavac/proton",
 }
 

@@ -267,11 +267,9 @@ let resource : String =
   #|            <div class="hero">
   #|                <h1>Filesystem Extension Demo</h1>
   #|                <p>
-  #|                    Use <code>window.__MoonBit__.fs</code> like a Node-style file
-  #|                    workbench: edit text with <code>writeFile</code>, load it
-  #|                    back with <code>readFile</code>, inspect path metadata with
-  #|                    <code>stat</code>, browse siblings with
-  #|                    <code>readdir</code>, and watch native extension activity.
+  #|                    This page keeps the filesystem extension UI available while
+  #|                    the native DLL route is being wired. Extension calls are
+  #|                    disabled until the bridge/event layer exists.
   #|                </p>
   #|            </div>
   #|            <div class="layout">
@@ -299,9 +297,9 @@ let resource : String =
   #|                            <label>
   #|                                Content
   #|                                <textarea id="content">
-  #|Hello from the fs extension.
+  #|Hello from the fs extension metadata example.
   #|
-  #| This demo writes text through __MoonBit__, reads it back, and shows extension activity emitted from the native side.</textarea
+  #| The current native DLL route records extension settings but does not expose filesystem calls to pages yet.</textarea
   #|                                >
   #|                            </label>
   #|                            <div class="actions">
@@ -416,10 +414,19 @@ let resource : String =
   #|            var buttons = Array.prototype.slice.call(
   #|                document.querySelectorAll("button"),
   #|            );
-  #|            var fs = window.__MoonBit__.fs;
+  #|            var fs = window.__MoonBit__ && window.__MoonBit__.fs;
   #|            var lastReadAt = "-";
   #|            var lastWriteAt = "-";
   #|            var activityLog = [];
+  #|            if (!fs) {
+  #|                setNotice(
+  #|                    "Extension calls are not exposed by the current native DLL route yet.",
+  #|                    "error",
+  #|                );
+  #|                buttons.forEach(function (button) {
+  #|                    button.disabled = true;
+  #|                });
+  #|            }
   #|
   #|            function expectOk(response) {
   #|                return response;
@@ -585,9 +592,11 @@ let resource : String =
   #|                    });
   #|            }
   #|
-  #|            fs.on("activity", function (event) {
-  #|                rememberActivity(event);
-  #|            });
+  #|            if (fs && fs.on) {
+  #|                fs.on("activity", function (event) {
+  #|                    rememberActivity(event);
+  #|                });
+  #|            }
   #|
   #|            document
   #|                .getElementById("seed")
@@ -813,17 +822,20 @@ let resource : String =
   #|
   #|            renderStat(null);
   #|            renderActivityLog();
-  #|            resolveInputPath().then(
-  #|                function () {
-  #|                    renderStat(null);
-  #|                },
-  #|                function (error) {
-  #|                    setNotice(
-  #|                        "Could not resolve the default path: " + String(error),
-  #|                        "error",
-  #|                    );
-  #|                },
-  #|            );
+  #|            if (fs) {
+  #|                resolveInputPath().then(
+  #|                    function () {
+  #|                        renderStat(null);
+  #|                    },
+  #|                    function (error) {
+  #|                        setNotice(
+  #|                            "Could not resolve the default path: " +
+  #|                                String(error),
+  #|                            "error",
+  #|                        );
+  #|                    },
+  #|                );
+  #|            }
   #|        </script>
   #|    </body>
   #|</html>

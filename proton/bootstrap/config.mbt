@@ -2,7 +2,7 @@
 /// Parses an internal runtime manifest from JSON text.
 ///
 /// User-facing app config is `moon.proton`. Runtime manifests are only used for
-/// framework process handoff and may carry code-declared extension settings.
+/// native runtime bootstrap and may carry code-declared extension settings.
 pub fn load_runtime_manifest_from_json(
   text : String,
 ) -> Result[LoadedAppManifest, String] {

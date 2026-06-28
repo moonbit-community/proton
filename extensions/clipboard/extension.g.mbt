@@ -52,10 +52,10 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     fn(context) {
       context.op_async_result("readText", async fn(payload) {
         __proton_command_read_text(context, payload)
-      })
+      }, emits_events=true)
       context.op_async_result("writeText", async fn(payload) {
         __proton_command_write_text(context, payload)
-      })
+      }, emits_events=true)
       Ok(())
     },
   )

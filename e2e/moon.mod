@@ -13,9 +13,9 @@ repository = "https://github.com/moonbit-community/proton/tree/main/e2e"
 
 license = "MIT"
 
-keywords = [ "webview", "cef", "cdp", "e2e" ]
+keywords = [ "proton", "cef", "cdp", "e2e" ]
 
-description = "CEF end-to-end smoke probes for Proton examples."
+description = "CEF end-to-end bridge smoke probes for Proton examples."
 
 options(
   source: "",

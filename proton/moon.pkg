@@ -1,42 +1,30 @@
 import {
   "moonbitlang/async",
-  "moonbitlang/async/process",
-  "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
-  "moonbitlang/x/fs" @mbfs,
-  "moonbitlang/x/sys",
+  "moonbitlang/core/string",
+  "moonbitlang/x/path" @mbpath,
   "justjavac/proton/bootstrap",
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/core",
   "justjavac/proton/extension" @proton_extension,
   "justjavac/proton/ipc",
-  "justjavac/proton/ipc/ws" @ipc_ws,
   "justjavac/proton/manifest",
-  "justjavac/proton/webview",
-  "justjavac/proton/runtime" @wvrt,
+  "justjavac/proton/native",
 }
-
-import {
-  "moonbitlang/core/debug",
-} for "wbtest"
 
 supported_targets = "native"
 
 options(
+  "is-main": false,
   targets: {
-    "command_extension.mbt": [ "native" ],
-    "command_extension_order.mbt": [ "native" ],
-    "config_bridge.mbt": [ "native" ],
-    "create.mbt": [ "native" ],
     "exports.mbt": [ "native" ],
-    "facade.mbt": [ "native" ],
+    "facade_bridge.mbt": [ "native" ],
+    "facade_builders.mbt": [ "native" ],
+    "facade_entry.mbt": [ "native" ],
+    "facade_manifest.mbt": [ "native" ],
+    "facade_runtime.mbt": [ "native" ],
+    "facade_types.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
-    "framework_ipc_transport.mbt": [ "native" ],
-    "framework_process.mbt": [ "native" ],
-    "install.mbt": [ "native" ],
-    "json_helpers.mbt": [ "native" ],
-    "order.mbt": [ "native" ],
-    "prepare_wbtest.mbt": [ "native" ],
-    "types.mbt": [ "native" ],
   },
 )

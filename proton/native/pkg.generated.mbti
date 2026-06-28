@@ -1,0 +1,139 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton/native"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn abi_version() -> Int
+
+pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeError]
+
+pub fn last_error_message() -> String
+
+pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
+
+pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
+
+pub fn runtime_info_json() -> Result[String, NativeError]
+
+pub let runtime_wait_all : Int
+
+pub let runtime_wait_bridge : Int
+
+pub let runtime_wait_event : Int
+
+pub let runtime_wait_none : Int
+
+pub let runtime_wait_platform : Int
+
+// Errors
+
+// Types and methods
+pub(all) struct BridgeConfig {
+  raw_json : String?
+  ops : Array[String]
+  max_payload_bytes : Int
+  request_timeout_ms : Int
+} derive(Eq, @debug.Debug)
+pub fn BridgeConfig::new(ops~ : Array[String], max_payload_bytes? : Int, request_timeout_ms? : Int) -> Self
+pub fn BridgeConfig::to_json_string(Self) -> String
+pub fn BridgeConfig::unsafe_from_json(String) -> Self
+
+pub(all) struct BridgeRequest {
+  request_id : Int64
+  window : Int64
+  op : String
+  payload : Json
+  page_instance : String?
+} derive(@debug.Debug)
+pub fn BridgeRequest::op(Self) -> String
+pub fn BridgeRequest::page_instance(Self) -> String?
+pub fn BridgeRequest::payload(Self) -> Json
+pub fn BridgeRequest::request_id(Self) -> Int64
+pub fn BridgeRequest::window(Self) -> Int64
+
+pub(all) enum BridgeResponse {
+  Ok(request_id~ : Int64, payload~ : Json)
+  Err(request_id~ : Int64, code~ : String, message~ : String)
+} derive(@debug.Debug)
+pub fn BridgeResponse::to_json_string(Self) -> String
+
+pub(all) struct NativeError {
+  status : Int
+  message : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ProcessResult {
+  MainProcess
+  SubprocessHandled(Int)
+} derive(Eq, @debug.Debug)
+
+type Runtime
+pub fn Runtime::destroy(Self) -> Result[Unit, NativeError]
+pub fn Runtime::do_message_loop_work(Self) -> Result[Unit, NativeError]
+pub fn Runtime::new(config? : RuntimeConfig) -> Result[Self, NativeError]
+pub fn Runtime::poll_bridge_request(Self) -> Result[BridgeRequest?, NativeError]
+pub fn Runtime::poll_bridge_request_json(Self) -> Result[String?, NativeError]
+pub fn Runtime::poll_event(Self) -> Result[RuntimeEvent?, NativeError]
+pub fn Runtime::poll_event_json(Self) -> Result[String?, NativeError]
+pub fn Runtime::quit(Self) -> Result[Unit, NativeError]
+pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Result[Unit, NativeError]
+pub fn Runtime::run(Self) -> Result[Unit, NativeError]
+pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> Result[RuntimeWaitReady, NativeError]
+
+type RuntimeConfig derive(Eq, @debug.Debug)
+pub fn RuntimeConfig::bundled(cache_dir? : String, remote_debugging_port? : Int) -> Self
+pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, remote_debugging_port? : Int) -> Self
+pub fn RuntimeConfig::probe(Self) -> Result[Unit, NativeError]
+pub fn RuntimeConfig::to_json_string(Self) -> String
+pub fn RuntimeConfig::unsafe_from_json(String) -> Self
+
+type RuntimeEvent derive(Eq, @debug.Debug)
+pub fn RuntimeEvent::event_type(Self) -> String
+pub fn RuntimeEvent::has_window(Self) -> Bool
+pub fn RuntimeEvent::is_window_closed(Self) -> Bool
+pub fn RuntimeEvent::is_window_created(Self) -> Bool
+
+pub(all) struct RuntimeInfo {
+  abi_version : Int
+  runtime_available : Bool
+  build_mode : String
+  platform : String
+  features : Array[String]
+} derive(Eq, @debug.Debug, @json.FromJson)
+
+pub(all) struct RuntimeWaitReady {
+  mask : Int
+} derive(Eq, @debug.Debug)
+pub fn RuntimeWaitReady::has_bridge(Self) -> Bool
+pub fn RuntimeWaitReady::has_event(Self) -> Bool
+pub fn RuntimeWaitReady::has_platform(Self) -> Bool
+pub fn RuntimeWaitReady::is_timeout(Self) -> Bool
+pub fn RuntimeWaitReady::mask(Self) -> Int
+
+type Window
+pub fn Window::close(Self) -> Result[Unit, NativeError]
+pub fn Window::destroy(Self) -> Result[Unit, NativeError]
+pub fn Window::eval(Self, String) -> Result[Unit, NativeError]
+pub fn Window::focus(Self) -> Result[Unit, NativeError]
+pub fn Window::hide(Self) -> Result[Unit, NativeError]
+pub fn Window::install_bridge(Self, BridgeConfig) -> Result[Unit, NativeError]
+pub fn Window::load_html(Self, String, String) -> Result[Unit, NativeError]
+pub fn Window::load_url(Self, String) -> Result[Unit, NativeError]
+pub fn Window::new(Runtime, config? : WindowConfig) -> Result[Self, NativeError]
+pub fn Window::set_size(Self, Int, Int) -> Result[Unit, NativeError]
+pub fn Window::set_title(Self, String) -> Result[Unit, NativeError]
+pub fn Window::show(Self) -> Result[Unit, NativeError]
+
+type WindowConfig derive(Eq, @debug.Debug)
+pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String) -> Self
+pub fn WindowConfig::to_json_string(Self) -> String
+pub fn WindowConfig::unsafe_from_json(String) -> Self
+
+// Type aliases
+
+// Traits
+

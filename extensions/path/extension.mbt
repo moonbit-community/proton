@@ -103,8 +103,8 @@ pub fn extension() -> @proton_extension.Extension {
 ///|
 /// Builds the `path` extension for direct installation.
 ///
-/// Install it with `@core.install_extension(webview, @path.core_extension())` to expose
-/// `window.__MoonBit__.path` for common path operations such as `resolve`,
+/// Future bridge work can install it on an `@core.ExtensionHost` to expose
+/// common path operations such as `resolve`,
 /// `join`, `dirname`, `basename`, `parse`, and `format`.
 pub fn core_extension() -> @core.Extension {
   @core.Extension::new(

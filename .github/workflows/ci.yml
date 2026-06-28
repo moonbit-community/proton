@@ -52,23 +52,40 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install CEF on Windows
+      - name: Build Proton ABI smoke runtime on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          node .\scripts\setup_cef.mjs
+          cmake -S native -B native\build -DCMAKE_INSTALL_PREFIX=native\dist
+          cmake --build native\build --config Debug
+          cmake --install native\build --config Debug
+          ctest --test-dir native\build -C Debug --output-on-failure
 
       - name: Install Proton CLI for pre-build codegen on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon install --path cli --bin target/proton-tools
-          cp target/proton-tools/proton_cli target/proton-tools/proton
-          chmod +x target/proton-tools/proton
+          chmod +x target/proton-tools/proton_cli
 
       - name: Install Proton CLI for pre-build codegen on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           moon install --path cli --bin target/proton-tools
-          Copy-Item target\proton-tools\proton_cli.exe target\proton-tools\proton.exe -Force
+
+      - name: Assemble active Proton runtime on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          moon -C cli run . -- -C .. cef setup
+          if (!(Test-Path .proton\runtime.json)) {
+            throw "missing .proton\runtime.json"
+          }
+          $runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+          if (!(Test-Path "$runtime\bin\proton.dll")) {
+            throw "missing active proton.dll"
+          }
+          node native\scripts\verify_link_config.mjs $runtime
+          (Resolve-Path "$runtime\bin").Path | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Format check
         run: |
@@ -125,7 +142,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          node .\scripts\e2e_cdp_smoke.mjs
+          node .\scripts\e2e_bridge_smoke.mjs 41_app_commands
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}

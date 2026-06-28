@@ -1,3 +1,4 @@
-Hello from the __MoonBit__ App runtime.
+Hello from the Proton app runtime.
 
-This page talks to the native fs extension through window.__MoonBit__.
+This page is kept as static sample content while native extension calls are
+not exposed to pages yet.
