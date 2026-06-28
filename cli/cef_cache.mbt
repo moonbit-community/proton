@@ -34,6 +34,7 @@ async fn install_cef_root(
   install_dir : String,
   name : String,
   root : String,
+  platform : ProtonPlatform,
 ) -> Result[Unit, CliError] {
   match assert_safe_install_dir(install_dir, root) {
     Ok(_) => ()
@@ -64,6 +65,10 @@ async fn install_cef_root(
         ),
       )
   }
+  match validate_cef_root(install_dir, platform) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
   Ok(())
 }
 
@@ -73,15 +78,16 @@ async fn ensure_cef_cache(
   url : String?,
   root : String,
   cache_dir : String,
+  platform : ProtonPlatform,
 ) -> Result[Unit, CliError] {
   if installed_version(cache_dir) == name {
     return normalize_cef_runtime_layout(cache_dir)
   }
   let legacy_cache = path_join(root, ".cef-cache")
   if installed_version(legacy_cache) == name {
-    return install_cef_root(legacy_cache, cache_dir, name, root)
+    return install_cef_root(legacy_cache, cache_dir, name, root, platform)
   }
-  setup_downloaded_cef(name, url, root, cache_dir)
+  setup_downloaded_cef(name, url, root, cache_dir, platform)
 }
 
 ///|
@@ -90,6 +96,7 @@ async fn setup_downloaded_cef(
   url : String?,
   root : String,
   install_dir : String,
+  platform : ProtonPlatform,
 ) -> Result[Unit, CliError] {
   let temp_dir = match make_temp_dir() {
     Ok(temp_dir) => temp_dir
@@ -102,10 +109,12 @@ async fn setup_downloaded_cef(
       match extract_tar_bz2(archive_path, temp_dir) {
         Err(error) => Err(error)
         Ok(_) =>
-          match find_extracted_root(temp_dir, name) {
+          match find_extracted_root(temp_dir, name, platform) {
             Err(error) => Err(error)
             Ok(extracted_root) =>
-              install_cef_root(extracted_root, install_dir, name, root)
+              install_cef_root(
+                extracted_root, install_dir, name, root, platform,
+              )
           }
       }
   }

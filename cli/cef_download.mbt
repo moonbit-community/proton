@@ -68,9 +68,10 @@ async fn extract_tar_bz2(
 fn find_extracted_root(
   extract_dir : String,
   name : String,
+  platform : ProtonPlatform,
 ) -> Result[String, CliError] {
   let named = path_join(extract_dir, name)
-  if has_source_cef_files(named) {
+  if has_source_cef_files(named, platform) {
     return Ok(named)
   }
   let candidates : Array[String] = []
@@ -86,7 +87,7 @@ fn find_extracted_root(
   for entry in entries {
     guard entry.has_prefix("cef_binary_") else { continue }
     let candidate = path_join(extract_dir, entry)
-    if path_is_dir(candidate) && has_source_cef_files(candidate) {
+    if path_is_dir(candidate) && has_source_cef_files(candidate, platform) {
       candidates.push(candidate)
     }
   }

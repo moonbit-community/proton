@@ -7,18 +7,18 @@ fn find_prebuilt_root(
     path_join(path_join(root, "proton"), "prebuilt"),
     platform.id,
   )
-  if all_exist(package_prebuilt, proton_prebuilt_relative_files()) {
+  if all_exist(package_prebuilt, proton_prebuilt_relative_files(platform)) {
     return Ok(package_prebuilt)
   }
   let mooncakes_prebuilt = path_join(
     path_join(path_join(path_join(root, ".mooncakes"), "justjavac"), "proton"),
     path_join("prebuilt", platform.id),
   )
-  if all_exist(mooncakes_prebuilt, proton_prebuilt_relative_files()) {
+  if all_exist(mooncakes_prebuilt, proton_prebuilt_relative_files(platform)) {
     return Ok(mooncakes_prebuilt)
   }
   let dev_dist = path_join(path_join(root, "native"), "dist")
-  if all_exist(dev_dist, proton_prebuilt_relative_files()) {
+  if all_exist(dev_dist, proton_prebuilt_relative_files(platform)) {
     return Ok(dev_dist)
   }
   Err(

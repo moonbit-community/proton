@@ -22,6 +22,7 @@ fn assert_safe_generated_dir(
 
 ///|
 async fn copy_prebuilt_runtime(
+  platform : ProtonPlatform,
   prebuilt_root : String,
   runtime_dir : String,
 ) -> Result[Unit, CliError] {
@@ -40,7 +41,7 @@ async fn copy_prebuilt_runtime(
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  for relative in proton_prebuilt_relative_files() {
+  for relative in proton_prebuilt_relative_files(platform) {
     match
       copy_file(
         path_join(prebuilt_root, relative),
@@ -97,7 +98,7 @@ async fn assemble_runtime(
     Err(error) => return Err(error)
   }
   println("[INFO] Assembling Proton runtime: " + runtime_dir)
-  match copy_prebuilt_runtime(prebuilt_root, runtime_dir) {
+  match copy_prebuilt_runtime(platform, prebuilt_root, runtime_dir) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
@@ -117,7 +118,7 @@ async fn assemble_runtime(
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  match validate_runtime_dist(runtime_dir) {
+  match validate_runtime_dist(runtime_dir, platform) {
     Ok(_) =>
       validate_active_runtime_manifest(
         root,

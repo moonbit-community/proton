@@ -2,7 +2,7 @@
 fn cef_setup_arg_parser() -> @argparse.Command {
   @argparse.Command(
     "proton_cli cef setup",
-    about="Install the Windows Proton runtime into .proton",
+    about="Install the Proton CEF runtime into .proton",
     options=[
       OptionArg("name", about="CEF binary directory/archive name"),
       OptionArg("url", about="Full CEF archive URL"),
@@ -26,7 +26,7 @@ async fn run_cef_setup(
   }
   let name = match match_value(matches, "name") {
     Some(name) => name
-    None => default_cef_name
+    None => platform.default_cef_name
   }
   let url = match_value(matches, "url")
   let root = match project_root(cwd) {
@@ -48,11 +48,11 @@ async fn run_cef_setup(
   )
   let relative_dist = relative_runtime_dist(proton_version, platform, name)
   let runtime_dir = path_join(root, relative_dist)
-  match ensure_cef_cache(name, url, root, cache_dir) {
+  match ensure_cef_cache(name, url, root, cache_dir, platform) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  match validate_cef_root(cache_dir) {
+  match validate_cef_root(cache_dir, platform) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }

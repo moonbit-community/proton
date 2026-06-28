@@ -1,5 +1,33 @@
 ///|
 async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
+  if @path.sep != '\\' {
+    let code = @process.run("cp", ["-p", src, dest]) catch {
+      err =>
+        return Err(
+          CliError::CommandError(
+            "Failed to copy " +
+            src +
+            " to " +
+            dest +
+            ": " +
+            @debug.render(@debug.to_repr(err)),
+          ),
+        )
+    }
+    guard code == 0 else {
+      return Err(
+        CliError::CommandError(
+          "Failed to copy " +
+          src +
+          " to " +
+          dest +
+          ": cp exited with code " +
+          code.to_string(),
+        ),
+      )
+    }
+    return Ok(())
+  }
   let data = @async_fs.read_file(src) catch {
     err =>
       return Err(
