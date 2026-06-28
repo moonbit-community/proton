@@ -43,7 +43,7 @@
 #define PROTON_PLATFORM_NAME "linux"
 #endif
 
-#if PROTON_WITH_ENGINE && defined(_WIN32)
+#if PROTON_WITH_ENGINE && (defined(_WIN32) || defined(__APPLE__))
 #define PROTON_RUNTIME_WAIT_FEATURE ",\"runtime_wait\""
 #else
 #define PROTON_RUNTIME_WAIT_FEATURE ""
