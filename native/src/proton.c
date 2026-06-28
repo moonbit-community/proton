@@ -1,3 +1,7 @@
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+
 #include "proton_native.h"
 #include "proton_engine.h"
 #include "proton_json.h"
@@ -11,9 +15,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__linux__)
 #include <dlfcn.h>
+#if defined(__APPLE__)
 #include <mach-o/dyld.h>
+#endif
 #include <pthread.h>
 #else
 #include <pthread.h>
@@ -43,7 +49,8 @@
 #define PROTON_PLATFORM_NAME "linux"
 #endif
 
-#if PROTON_WITH_ENGINE && (defined(_WIN32) || defined(__APPLE__))
+#if PROTON_WITH_ENGINE && \
+    (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
 #define PROTON_RUNTIME_WAIT_FEATURE ",\"runtime_wait\""
 #else
 #define PROTON_RUNTIME_WAIT_FEATURE ""
@@ -424,7 +431,7 @@ static bool proton_module_dir(char *out, size_t out_len) {
     return false;
   }
   return proton_path_parent(out);
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__linux__)
   if (out == NULL || out_len == 0) {
     return false;
   }
@@ -544,9 +551,15 @@ static int32_t proton_find_engine_library(const char *runtime_root,
   return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                           "runtime framework path is too long");
 #else
+  char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
   char lib_dir[PROTON_MAX_PATH_BYTES] = {0};
   if (proton_join_path(engine_lib, engine_lib_len, runtime_root,
                        "libcef.so") &&
+      proton_path_exists(engine_lib)) {
+    return PROTON_OK;
+  }
+  if (proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin") &&
+      proton_join_path(engine_lib, engine_lib_len, bin_dir, "libcef.so") &&
       proton_path_exists(engine_lib)) {
     return PROTON_OK;
   }
@@ -1433,6 +1446,10 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
 
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_require_runtime_owner_thread(slot);
   if (status != PROTON_OK) {
     return status;
   }

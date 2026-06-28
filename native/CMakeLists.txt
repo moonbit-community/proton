@@ -18,9 +18,17 @@ if(PROTON_WITH_ENGINE)
   elseif(APPLE)
     enable_language(OBJC)
     set(PROTON_ENGINE_SOURCE src/engine/cef_mac/proton_engine_cef_mac.m)
+  elseif(UNIX)
+    set(PROTON_ENGINE_SOURCE src/engine/cef_linux/proton_engine_cef_linux.c)
   else()
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
+endif()
+
+if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(PROTON_GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
+  pkg_check_modules(PROTON_X11 REQUIRED IMPORTED_TARGET x11)
 endif()
 
 add_library(proton SHARED
@@ -42,6 +50,9 @@ target_compile_definitions(proton
 if(NOT WIN32)
   target_link_libraries(proton PRIVATE Threads::Threads)
 endif()
+if(UNIX AND NOT APPLE)
+  target_link_libraries(proton PRIVATE ${CMAKE_DL_LIBS})
+endif()
 
 if(PROTON_WITH_ENGINE)
   if(PROTON_ENGINE_ROOT STREQUAL "")
@@ -51,6 +62,9 @@ if(PROTON_WITH_ENGINE)
   target_compile_definitions(proton PRIVATE PROTON_WITH_ENGINE=1)
   target_compile_definitions(proton PRIVATE CEF_API_VERSION=14700)
   target_include_directories(proton PRIVATE "${PROTON_ENGINE_ROOT}")
+  if(UNIX AND NOT APPLE)
+    target_compile_definitions(proton PRIVATE OS_LINUX=1 CEF_X11=1)
+  endif()
   if(APPLE)
     set(PROTON_ENGINE_FRAMEWORK_PARENT "${PROTON_ENGINE_ROOT}/Release")
     set(PROTON_ENGINE_FRAMEWORK_DIR "${PROTON_ENGINE_FRAMEWORK_PARENT}/Chromium Embedded Framework.framework")
@@ -156,6 +170,95 @@ if(PROTON_WITH_ENGINE)
       DESTINATION bin
     )
     install(TARGETS cef_process RUNTIME DESTINATION bin)
+  elseif(UNIX)
+    set(PROTON_ENGINE_SHARED_LIB "${PROTON_ENGINE_ROOT}/Release/libcef.so")
+    if(NOT EXISTS "${PROTON_ENGINE_SHARED_LIB}")
+      message(FATAL_ERROR "Missing engine shared library: ${PROTON_ENGINE_SHARED_LIB}")
+    endif()
+    if(NOT EXISTS "${PROTON_ENGINE_ICU_DATA}")
+      message(FATAL_ERROR "Missing engine ICU data: ${PROTON_ENGINE_ICU_DATA}")
+    endif()
+    if(NOT IS_DIRECTORY "${PROTON_ENGINE_LOCALES_DIR}")
+      message(FATAL_ERROR "Missing engine locales directory: ${PROTON_ENGINE_LOCALES_DIR}")
+    endif()
+    target_link_libraries(proton PRIVATE
+      "${PROTON_ENGINE_SHARED_LIB}"
+      PkgConfig::PROTON_GTK3
+      PkgConfig::PROTON_X11
+      ${CMAKE_DL_LIBS}
+    )
+    target_link_options(proton INTERFACE
+      "LINKER:-rpath-link,${PROTON_ENGINE_ROOT}/Release"
+    )
+    set_target_properties(proton PROPERTIES
+      INSTALL_RPATH "$ORIGIN;$ORIGIN/../bin"
+      BUILD_WITH_INSTALL_RPATH ON
+      BUILD_RPATH "${PROTON_ENGINE_ROOT}/Release"
+    )
+    add_executable(cef_process
+      src/cef_process.c
+    )
+    target_link_libraries(cef_process PRIVATE
+      proton
+      "${PROTON_ENGINE_SHARED_LIB}"
+    )
+    target_include_directories(cef_process
+      PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    target_link_options(cef_process PRIVATE
+      "LINKER:--no-as-needed"
+    )
+    set_target_properties(cef_process PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+      INSTALL_RPATH "$ORIGIN/../lib;$ORIGIN"
+      BUILD_WITH_INSTALL_RPATH ON
+      BUILD_RPATH "${PROTON_ENGINE_ROOT}/Release"
+    )
+    file(GLOB PROTON_ENGINE_RUNTIME_LIBS
+      "${PROTON_ENGINE_ROOT}/Release/*.so"
+      "${PROTON_ENGINE_ROOT}/Release/*.so.*"
+    )
+    file(GLOB PROTON_ENGINE_RUNTIME_DATA
+      "${PROTON_ENGINE_ROOT}/Release/*.bin"
+      "${PROTON_ENGINE_ROOT}/Release/*.dat"
+      "${PROTON_ENGINE_ROOT}/Release/*.json"
+      "${PROTON_ENGINE_ROOT}/Release/*.pak"
+    )
+    file(GLOB PROTON_ENGINE_RESOURCE_PAKS
+      "${PROTON_ENGINE_RESOURCES_DIR}/*.pak"
+    )
+    install(FILES ${PROTON_ENGINE_RUNTIME_LIBS} DESTINATION bin)
+    install(FILES ${PROTON_ENGINE_RUNTIME_DATA} DESTINATION bin)
+    install(FILES "${PROTON_ENGINE_ICU_DATA}" ${PROTON_ENGINE_RESOURCE_PAKS}
+            DESTINATION bin)
+    if(EXISTS "${PROTON_ENGINE_ROOT}/Release/chrome-sandbox")
+      install(PROGRAMS "${PROTON_ENGINE_ROOT}/Release/chrome-sandbox"
+              DESTINATION bin)
+    endif()
+    install(DIRECTORY "${PROTON_ENGINE_RESOURCES_DIR}/" DESTINATION Resources)
+    install(TARGETS cef_process RUNTIME DESTINATION bin)
+
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../proton/moon.mod"
+         PROTON_MOON_VERSION_LINE REGEX "^version = ")
+    string(REGEX REPLACE "^version = \"([^\"]+)\".*$" "\\1"
+           PROTON_PREBUILT_VERSION "${PROTON_MOON_VERSION_LINE}")
+    set(PROTON_PREBUILT_MANIFEST "${CMAKE_BINARY_DIR}/proton_prebuilt_manifest.json")
+    file(WRITE "${PROTON_PREBUILT_MANIFEST}"
+      "{\n"
+      "  \"platform\": \"linux-x64\",\n"
+      "  \"proton_version\": \"${PROTON_PREBUILT_VERSION}\",\n"
+      "  \"artifacts\": {\n"
+      "    \"shared_lib\": \"lib/libproton.so\",\n"
+      "    \"helper\": \"bin/cef_process\",\n"
+      "    \"header\": \"include/proton_native.h\"\n"
+      "  }\n"
+      "}\n"
+    )
+    install(FILES "${PROTON_PREBUILT_MANIFEST}" DESTINATION .
+            RENAME manifest.json)
   endif()
 else()
   target_compile_definitions(proton PRIVATE PROTON_WITH_ENGINE=0)
@@ -230,11 +333,20 @@ if(BUILD_TESTING)
       ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
     )
   else()
+    if(PROTON_WITH_ENGINE)
+      set(PROTON_TEST_LD_LIBRARY_PATH
+        "$<TARGET_FILE_DIR:proton>:${PROTON_ENGINE_ROOT}/Release:$ENV{LD_LIBRARY_PATH}"
+      )
+    else()
+      set(PROTON_TEST_LD_LIBRARY_PATH
+        "$<TARGET_FILE_DIR:proton>:$ENV{LD_LIBRARY_PATH}"
+      )
+    endif()
     set_tests_properties(proton_smoke PROPERTIES
-      ENVIRONMENT "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{LD_LIBRARY_PATH}"
+      ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
     )
     set_tests_properties(proton_exports_smoke PROPERTIES
-      ENVIRONMENT "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{LD_LIBRARY_PATH}"
+      ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
     )
   endif()
 endif()

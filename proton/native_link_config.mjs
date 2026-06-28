@@ -101,8 +101,13 @@ function appendFlags(...parts) {
   return parts.filter(part => part.length > 0).join(" ");
 }
 
+function linuxRpathLinkFlag(binDir, cc) {
+  return cc.length > 0 ? `-Wl,-rpath-link,${quote(binDir)}` : "";
+}
+
 function linkFlags(dist, cc) {
   const libDir = path.join(dist, "lib");
+  const binDir = path.join(dist, "bin");
   if (process.platform === "win32") {
     return quote(path.join(libDir, "proton.lib"));
   }
@@ -112,11 +117,15 @@ function linkFlags(dist, cc) {
       darwinWarningFlags(cc),
     );
   }
-  return `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`;
+  return appendFlags(
+    `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`,
+    linuxRpathLinkFlag(binDir, cc),
+  );
 }
 
 function linkConfig(dist, packageName, cc) {
   const libDir = path.join(dist, "lib");
+  const binDir = path.join(dist, "bin");
   if (process.platform === "win32") {
     return {
       package: packageName,
@@ -132,7 +141,10 @@ function linkConfig(dist, packageName, cc) {
           `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
           darwinWarningFlags(cc),
         )
-        : `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
+        : appendFlags(
+          `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
+          linuxRpathLinkFlag(binDir, cc),
+        ),
   };
 }
 

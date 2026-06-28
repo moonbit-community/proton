@@ -130,7 +130,7 @@ static int prepare_probe_layout(char *config,
       write_empty_file(helper_path)) {
     return 1;
   }
-#else
+#elif defined(_WIN32)
   const char *helper_path = "probe-helper.exe";
   mkdir_one("probe-runtime");
   mkdir_one("probe-runtime" PATH_SEP "Release");
@@ -145,6 +145,24 @@ static int prepare_probe_layout(char *config,
       write_empty_file("probe-runtime" PATH_SEP "Resources" PATH_SEP
                        "icudtl.dat") ||
       write_empty_file("probe-app" PATH_SEP "bin" PATH_SEP "libcef.dll") ||
+      write_empty_file("probe-app" PATH_SEP "Resources" PATH_SEP
+                       "icudtl.dat") ||
+      write_empty_file(helper_path)) {
+    return 1;
+  }
+#else
+  const char *helper_path = "probe-helper";
+  mkdir_one("probe-runtime");
+  mkdir_one("probe-runtime" PATH_SEP "Resources");
+  mkdir_one("probe-runtime" PATH_SEP "Resources" PATH_SEP "locales");
+  mkdir_one("probe-app");
+  mkdir_one("probe-app" PATH_SEP "lib");
+  mkdir_one("probe-app" PATH_SEP "Resources");
+  mkdir_one("probe-app" PATH_SEP "Resources" PATH_SEP "locales");
+  if (write_empty_file("probe-runtime" PATH_SEP "libcef.so") ||
+      write_empty_file("probe-runtime" PATH_SEP "Resources" PATH_SEP
+                       "icudtl.dat") ||
+      write_empty_file("probe-app" PATH_SEP "lib" PATH_SEP "libcef.so") ||
       write_empty_file("probe-app" PATH_SEP "Resources" PATH_SEP
                        "icudtl.dat") ||
       write_empty_file(helper_path)) {
@@ -236,10 +254,28 @@ static int expect_runtime_wait_ready(proton_runtime_id_t runtime,
 }
 
 typedef struct {
+  proton_runtime_id_t runtime;
   proton_window_id_t window;
   int32_t status;
   char error[256];
 } wrong_thread_probe_t;
+
+#ifdef _WIN32
+static DWORD WINAPI wrong_thread_runtime_wait(void *raw_probe) {
+#else
+static void *wrong_thread_runtime_wait(void *raw_probe) {
+#endif
+  wrong_thread_probe_t *probe = (wrong_thread_probe_t *)raw_probe;
+  uint32_t ready_mask = PROTON_WAIT_NONE;
+  probe->status =
+      proton_runtime_wait(probe->runtime, PROTON_WAIT_EVENT, 0, &ready_mask);
+  proton_last_error_message(probe->error, (int32_t)sizeof(probe->error));
+#ifdef _WIN32
+  return 0;
+#else
+  return NULL;
+#endif
+}
 
 #ifdef _WIN32
 static DWORD WINAPI wrong_thread_window_show(void *raw_probe) {
@@ -254,6 +290,39 @@ static void *wrong_thread_window_show(void *raw_probe) {
 #else
   return NULL;
 #endif
+}
+
+static int expect_wrong_thread_runtime_wait_rejected(
+    proton_runtime_id_t runtime) {
+  wrong_thread_probe_t probe;
+  memset(&probe, 0, sizeof(probe));
+  probe.runtime = runtime;
+
+#ifdef _WIN32
+  HANDLE thread = CreateThread(NULL, 0, wrong_thread_runtime_wait, &probe, 0,
+                               NULL);
+  if (thread == NULL) {
+    return fail("failed to create wrong-thread runtime probe thread");
+  }
+  WaitForSingleObject(thread, INFINITE);
+  CloseHandle(thread);
+#else
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, wrong_thread_runtime_wait, &probe) != 0) {
+    return fail("failed to create wrong-thread runtime probe thread");
+  }
+  pthread_join(thread, NULL);
+#endif
+
+  if (expect_status("runtime_wait from wrong thread", probe.status,
+                    PROTON_ERR_WRONG_THREAD)) {
+    return 1;
+  }
+  if (strstr(probe.error, "owner thread") == NULL) {
+    fprintf(stderr, "expected wrong-thread error, got '%s'\n", probe.error);
+    return 1;
+  }
+  return 0;
 }
 
 static int expect_wrong_thread_window_rejected(proton_window_id_t window) {
@@ -395,6 +464,9 @@ int main(void) {
   }
   if (expect_runtime_wait_ready(runtime, PROTON_WAIT_EVENT,
                                 PROTON_WAIT_NONE)) {
+    return 1;
+  }
+  if (expect_wrong_thread_runtime_wait_rejected(runtime)) {
     return 1;
   }
 
