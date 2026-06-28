@@ -11,12 +11,6 @@ import {
 
 supported_targets = "native"
 
-dev_build(
-  rule: "proton_codegen",
-  input: "extension.mbt",
-  output: "extension.g.mbt",
-)
-
 options(
   formatter: { "ignore": [ "extension.g.mbt" ] },
   "native-stub": [ "dialog_native.c" ],
