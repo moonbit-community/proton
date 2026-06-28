@@ -203,7 +203,7 @@ temporarily restore CEF logging while debugging; accepted values are `verbose`,
 
 ## MoonBit Validation
 
-`native_link_config.mjs` points `justjavac/proton/native` at the installed
+`proton/native_link_config.mjs` points `justjavac/proton/native` at the installed
 library. On Windows, add the DLL directory to `PATH` before running linked
 tests:
 
@@ -245,7 +245,7 @@ PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton info --target native
 ```
 
 This checks the exported dynamic-library symbol surface, validates that
-`native_link_config.mjs` points MoonBit at the installed native library, and
+`proton/native_link_config.mjs` points MoonBit at the installed native library, and
 runs the focused MoonBit binding validation.
 
 Use the same commands with `native\build` instead of `native\build-engine` for

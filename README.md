@@ -85,7 +85,7 @@ moon install justjavac/proton_cli
 proton_cli cef setup
 ```
 
-`native_link_config.mjs` resolves link inputs in this order:
+`proton/native_link_config.mjs` resolves link inputs in this order:
 
 1. `PROTON_NATIVE_DIST`
 2. the active project `.proton/runtime.json`

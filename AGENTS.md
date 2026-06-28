@@ -8,7 +8,7 @@
   app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
   wiring, and selected low-level native re-exports.
 - `proton/native/`: safe MoonBit binding over the `proton_*` C ABI. MoonBit code
-  links only the native Proton library through `native_link_config.mjs`.
+  links only the native Proton library through `proton/native_link_config.mjs`.
 - `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
   `proton/core/`, `proton/command/`, `proton/ipc/`: supporting packages for
   metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
@@ -88,7 +88,7 @@ native checks before handing off larger refactors.
   names, C ABI prefixes, or public facade names.
 - `native/CMakeLists.txt` is the only native build source of truth. Do not add
   duplicate native build entry points.
-- `native_link_config.mjs` owns MoonBit link flags. Keep MoonBit FFI simple:
+- `proton/native_link_config.mjs` owns MoonBit link flags. Keep MoonBit FFI simple:
   no loader shim unless a separate import-library/TCC spike proves it is needed.
   Its resolution order is `PROTON_NATIVE_DIST`, active `.proton/runtime.json`,
   then development fallback `native/dist`.
@@ -143,7 +143,7 @@ native checks before handing off larger refactors.
 - Respect the thread model. Runtime and window handles are owned by their
   creating thread; native callbacks or future pumps must marshal work to the
   owner thread instead of touching handles directly from arbitrary threads.
-- `native_link_config.mjs` is the only MoonBit native-link integration point.
+- `proton/native_link_config.mjs` is the only MoonBit native-link integration point.
   Keep its resolution order simple: `PROTON_NATIVE_DIST`, active
   `.proton/runtime.json`, then development fallback `native/dist`.
 - Published MoonBit packages ship Proton artifacts only under

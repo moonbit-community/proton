@@ -9,7 +9,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const nativeRoot = path.resolve(scriptDir, "..");
 const repoRoot = path.resolve(nativeRoot, "..");
 const dist = path.resolve(process.argv[2] ?? path.join(nativeRoot, "dist"));
-const configScript = path.join(repoRoot, "native_link_config.mjs");
+const configScript = path.join(repoRoot, "proton", "native_link_config.mjs");
 
 function fail(message) {
   console.error(message);
@@ -62,14 +62,14 @@ const result = spawnSync(process.execPath, [configScript], {
 });
 
 if (result.status !== 0) {
-  fail(result.stderr.trim() || "native_link_config.mjs failed");
+  fail(result.stderr.trim() || "proton/native_link_config.mjs failed");
 }
 
 let config;
 try {
   config = JSON.parse(result.stdout);
 } catch (error) {
-  fail(`native_link_config.mjs returned invalid JSON: ${error.message}`);
+  fail(`proton/native_link_config.mjs returned invalid JSON: ${error.message}`);
 }
 
 const vars = config?.vars ?? {};
