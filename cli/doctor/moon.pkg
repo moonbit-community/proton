@@ -1,5 +1,7 @@
 import {
   "justjavac/proton_config",
+  "moonbitlang/async/io",
+  "moonbitlang/async/process",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/string",

@@ -137,18 +137,74 @@ fn moon_config_error_line(
 }
 
 ///|
-fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
+fn first_non_empty_line(text : String) -> String? {
+  for raw in text.replace(old="\r\n", new="\n").split("\n") {
+    let line = raw.trim().to_owned()
+    if line != "" {
+      return Some(line)
+    }
+  }
+  None
+}
+
+///|
+async fn tool_version_line(
+  label : String,
+  commands : Array[String],
+  args : Array[String],
+) -> DoctorLine {
+  for command in commands {
+    let (code, output) = @process.collect_output_merged(command, args) catch {
+      _ => continue
+    }
+    let text = output.text() catch { _ => "" }
+    match first_non_empty_line(text) {
+      Some(line) =>
+        if code == 0 {
+          return DoctorLine::new(Ok, label + ": " + line)
+        } else {
+          return DoctorLine::new(
+            Warn,
+            label + ": version command exited with code " + code.to_string(),
+            hint=line,
+          )
+        }
+      None =>
+        if code == 0 {
+          return DoctorLine::new(Unknown, label + ": version output is empty")
+        } else {
+          return DoctorLine::new(
+            Warn,
+            label + ": version command exited with code " + code.to_string(),
+          )
+        }
+    }
+  }
+  DoctorLine::new(
+    Missing,
+    label + ": not found",
+    hint="make sure one of `" +
+      commands.join("`, `") +
+      "` is installed and available on PATH",
+  )
+}
+
+///|
+async fn npm_version_line() -> DoctorLine {
+  let direct = tool_version_line("npm", ["npm", "npm.cmd"], ["--version"])
+  if direct.status != Missing {
+    return direct
+  }
+  tool_version_line("npm", ["cmd"], ["/c", "npm", "--version"])
+}
+
+///|
+async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   lines.push(DoctorLine::new(Ok, "OS: Windows x86_64"))
-  lines.push(
-    DoctorLine::new(Unknown, "moon: version probing not implemented yet"),
-  )
-  lines.push(
-    DoctorLine::new(Unknown, "node: version probing not implemented yet"),
-  )
-  lines.push(
-    DoctorLine::new(Unknown, "npm: version probing not implemented yet"),
-  )
+  lines.push(tool_version_line("moon", ["moon"], ["version"]))
+  lines.push(tool_version_line("node", ["node"], ["--version"]))
+  lines.push(npm_version_line())
   let native_dist = resolve_native_dist(project)
   if @mbfs.path_exists(native_dist) {
     lines.push(DoctorLine::new(Ok, "Proton native dist: " + native_dist))

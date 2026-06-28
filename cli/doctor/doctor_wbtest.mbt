@@ -89,6 +89,15 @@ test "moon_config adapter reports parse failures" {
 }
 
 ///|
+test "doctor collector extracts first non-empty version line" {
+  @debug.assert_eq(
+    first_non_empty_line("\r\n\n  moon 0.1.0  \nFeature flags\n"),
+    Some("moon 0.1.0"),
+  )
+  @debug.assert_eq(first_non_empty_line("\r\n\n"), None)
+}
+
+///|
 test "moon.proton reader extracts app and frontend fields" {
   let dir = "target/proton-doctor-app-config"
   ensure_test_dir(dir)

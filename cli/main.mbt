@@ -78,7 +78,7 @@ fn parse_global_args(args : Array[String]) -> (String, Array[String]) {
 }
 
 ///|
-fn run_doctor_from_args(
+async fn run_doctor_from_args(
   cwd : String,
   args : Array[String],
 ) -> Result[Unit, CliError] {

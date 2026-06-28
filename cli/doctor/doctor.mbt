@@ -19,7 +19,7 @@ fn read_project_moon_pkg(
 }
 
 ///|
-fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
+async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
   let project = discover_project(options.cwd)
   let module_config = read_project_moon_mod(project)
   let package_config = read_project_moon_pkg(project)
@@ -42,7 +42,7 @@ fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
 }
 
 ///|
-pub fn run(
+pub async fn run(
   cwd~ : String,
   dry_run~ : Bool,
   verbose~ : Bool,
