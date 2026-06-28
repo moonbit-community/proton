@@ -7,8 +7,7 @@ dist/
 # CMake build directories and cache
 build/
 bin/
-native/build/
-native/build-engine/
+native/build*/
 native/dist-engine/
 CMakeUserPresets.json
 *.cmake
