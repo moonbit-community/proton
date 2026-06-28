@@ -64,9 +64,43 @@ async fn copy_prebuilt_runtime(
 
 ///|
 async fn copy_cef_runtime(
+  platform : ProtonPlatform,
   cef_root : String,
   runtime_dir : String,
 ) -> Result[Unit, CliError] {
+  if platform.id == "darwin-arm64" {
+    let framework = "Chromium Embedded Framework.framework"
+    let framework_src = path_join(path_join(cef_root, "Release"), framework)
+    let framework_dst = path_join(
+      path_join(runtime_dir, "Frameworks"),
+      framework,
+    )
+    let bin_dir = path_join(runtime_dir, "bin")
+    match ensure_dir(path_join(runtime_dir, "Frameworks")) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    match copy_tree(framework_src, framework_dst) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    match
+      copy_tree(
+        path_join(framework_src, "Resources"),
+        path_join(runtime_dir, "Resources"),
+      ) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    let libraries = path_join(framework_src, "Libraries")
+    for name in ["libEGL.dylib", "libGLESv2.dylib", "libvk_swiftshader.dylib"] {
+      match copy_file(path_join(libraries, name), path_join(bin_dir, name)) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    }
+    return Ok(())
+  }
   match
     copy_tree(path_join(cef_root, "Release"), path_join(runtime_dir, "bin")) {
     Ok(_) => ()
@@ -102,7 +136,7 @@ async fn assemble_runtime(
     Ok(_) => ()
     Err(error) => return Err(error)
   }
-  match copy_cef_runtime(cef_root, runtime_dir) {
+  match copy_cef_runtime(platform, cef_root, runtime_dir) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }

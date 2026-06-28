@@ -79,7 +79,7 @@ fn current_platform() -> ProtonPlatform {
           id: "darwin-arm64",
           cef_suffix: "_macosarm64_minimal",
           default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
-          supported: false,
+          supported: true,
         }
       Some("darwin-x64") =>
         {
@@ -87,6 +87,20 @@ fn current_platform() -> ProtonPlatform {
           cef_suffix: "_macosx64_minimal",
           default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosx64_minimal",
           supported: false,
+        }
+      Some("linux-x64") =>
+        {
+          id: "linux-x64",
+          cef_suffix: "_linux64_minimal",
+          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
+          supported: true,
+        }
+      _ if is_macos_host() =>
+        {
+          id: "darwin-arm64",
+          cef_suffix: "_macosarm64_minimal",
+          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
+          supported: true,
         }
       _ =>
         {
@@ -97,6 +111,11 @@ fn current_platform() -> ProtonPlatform {
         }
     }
   }
+}
+
+///|
+fn is_macos_host() -> Bool {
+  path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
 ///|
@@ -137,6 +156,13 @@ fn source_cef_relative_files(platform : ProtonPlatform) -> Array[String] {
       "include/capi/cef_browser_capi.h", "include/capi/cef_client_capi.h", "include/capi/cef_v8_capi.h",
       "Release/libcef.so", "Resources/icudtl.dat",
     ]
+  } else if platform.id == "darwin-arm64" {
+    [
+      "include/base/cef_build.h", "include/capi/cef_base_capi.h", "include/capi/cef_app_capi.h",
+      "include/capi/cef_browser_capi.h", "include/capi/cef_client_capi.h", "include/capi/cef_v8_capi.h",
+      "Release/Chromium Embedded Framework.framework/Chromium Embedded Framework",
+      "Release/Chromium Embedded Framework.framework/Resources/icudtl.dat",
+    ]
   } else {
     []
   }
@@ -156,6 +182,16 @@ fn installed_cef_relative_files(platform : ProtonPlatform) -> Array[String] {
     files.push("Release/chrome_200_percent.pak")
     files.push("Release/resources.pak")
     files.push("Release/v8_context_snapshot.bin")
+  } else if platform.id == "darwin-arm64" {
+    let resource_root = "Release/Chromium Embedded Framework.framework/Resources"
+    files.push(path_join(resource_root, "chrome_100_percent.pak"))
+    files.push(path_join(resource_root, "chrome_200_percent.pak"))
+    files.push(path_join(resource_root, "resources.pak"))
+    files.push(path_join(resource_root, "v8_context_snapshot.arm64.bin"))
+    let libraries_root = "Release/Chromium Embedded Framework.framework/Libraries"
+    files.push(path_join(libraries_root, "libEGL.dylib"))
+    files.push(path_join(libraries_root, "libGLESv2.dylib"))
+    files.push(path_join(libraries_root, "libvk_swiftshader.dylib"))
   }
   files
 }
@@ -166,6 +202,8 @@ fn proton_prebuilt_relative_files(platform : ProtonPlatform) -> Array[String] {
     ["bin\\proton.dll", "bin\\cef_process.exe", "lib\\proton.lib"]
   } else if platform.id == "linux-x64" {
     ["bin/cef_process", "lib/libproton.so", "include/proton_native.h"]
+  } else if platform.id == "darwin-arm64" {
+    ["bin/cef_process", "lib/libproton.dylib", "include/proton_native.h"]
   } else {
     []
   }
@@ -182,6 +220,12 @@ fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
     [
       "bin/cef_process", "lib/libproton.so", "bin/libcef.so", "bin/icudtl.dat", "bin/v8_context_snapshot.bin",
       "Resources/icudtl.dat", "Resources/locales",
+    ]
+  } else if platform.id == "darwin-arm64" {
+    [
+      "bin/cef_process", "lib/libproton.dylib", "bin/libEGL.dylib", "bin/libGLESv2.dylib",
+      "bin/libvk_swiftshader.dylib", "Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework",
+      "Resources/icudtl.dat",
     ]
   } else {
     []
