@@ -1,16 +1,16 @@
 name = "justjavac/proton_ext"
 
-version = "0.1.6"
+version = "0.1.7"
 
 import {
   "justjavac/ffi@0.2.1",
   "moonbitlang/x@0.4.43",
-  "moonbitlang/async@0.19.0",
+  "moonbitlang/async@0.19.4",
   "justjavac/clipboard@0.1.5",
   "justjavac/notification@0.1.0",
   "justjavac/tray@0.1.0",
   "justjavac/global_hotkey@0.1.0",
-  "justjavac/proton@0.1.5",
+  "justjavac/proton@0.1.6",
   "justjavac/microphone@0.1.0",
   "justjavac/auto_launch@0.1.3",
   "justjavac/keepawake@0.1.0",

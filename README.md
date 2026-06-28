@@ -63,7 +63,7 @@ On non-Windows platforms the CMake install layout uses `libproton.so` or
 Add Proton and import the root facade:
 
 ```sh
-moon add justjavac/proton@0.1.2
+moon add justjavac/proton@0.1.6
 ```
 
 ```moon.pkg
