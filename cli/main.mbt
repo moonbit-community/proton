@@ -78,6 +78,23 @@ fn parse_global_args(args : Array[String]) -> (String, Array[String]) {
 }
 
 ///|
+fn cli_path_is_absolute(path : String) -> Bool {
+  path.has_prefix("\\") ||
+  path.has_prefix("/") ||
+  path.contains(":\\") ||
+  path.contains(":/")
+}
+
+///|
+fn resolve_cli_path(cwd : String, path : String) -> String {
+  if cli_path_is_absolute(path) {
+    path
+  } else {
+    path_join(cwd, path)
+  }
+}
+
+///|
 async fn run_doctor_from_args(
   cwd : String,
   args : Array[String],
@@ -106,7 +123,7 @@ async fn run_doctor_from_args(
 }
 
 ///|
-fn run_codegen(args : Array[String]) -> Result[Unit, CliError] {
+fn run_codegen(cwd : String, args : Array[String]) -> Result[Unit, CliError] {
   let cmd = codegen_arg_parser()
   let matches = cmd.parse(argv=args, env={}) catch {
     err => return Err(CliError::UsageError(err.to_string(), true))
@@ -119,10 +136,16 @@ fn run_codegen(args : Array[String]) -> Result[Unit, CliError] {
     Some(output) => output
     None => return Err(CliError::UsageError("missing -o <output.g.mbt>", false))
   }
-  match @codegen.generate_app_commands_from_file_with_metadata(input) {
+  let resolved_input = resolve_cli_path(cwd, input)
+  let resolved_output = resolve_cli_path(cwd, output)
+  match @codegen.generate_app_commands_from_file_with_metadata(resolved_input) {
     Err(error) => Err(CliError::CommandError(error))
     Ok(result) => {
-      @mbfs.write_string_to_file(output, result.source, encoding="utf8") catch {
+      @mbfs.write_string_to_file(
+        resolved_output,
+        result.source,
+        encoding="utf8",
+      ) catch {
         err =>
           return Err(CliError::CommandError(@debug.render(@debug.to_repr(err))))
       }
@@ -146,7 +169,7 @@ async fn main {
   let result = if args.length() >= 1 && args[0] == "doctor" {
     run_doctor_from_args(cwd, args[1:].to_owned())
   } else if args.length() >= 1 && args[0] == "codegen" {
-    run_codegen(args[1:].to_owned())
+    run_codegen(cwd, args[1:].to_owned())
   } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
     run_cef_setup(cwd, args[2:].to_owned())
   } else {
