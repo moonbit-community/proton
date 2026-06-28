@@ -1,0 +1,9 @@
+{
+  "platform": "linux-x64",
+  "proton_version": "0.1.2",
+  "artifacts": {
+    "shared_lib": "lib/libproton.so",
+    "helper": "bin/cef_process",
+    "header": "include/proton_native.h"
+  }
+}
