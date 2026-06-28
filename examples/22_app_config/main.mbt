@@ -47,12 +47,31 @@ fn manifest_candidates() -> Array[String] {
 }
 
 ///|
+fn app_html_from_manifest(manifest_path : String) -> Result[String, String] {
+  let path : @mbpath.Path = manifest_path
+  let html_path = path.dirname().join("app.html").to_string()
+  try @mbfs.read_file_to_string(html_path, encoding="utf8") catch {
+    _ => Err("failed to read app HTML: " + html_path)
+  } noraise {
+    html => Ok(html)
+  }
+}
+
+///|
 async fn run_app_from_manifest_candidates() -> Result[Unit, String] {
   let candidates = manifest_candidates()
   let mut last_error = "failed to read app manifest: no candidate path matched"
   for candidate in candidates {
+    let html = match app_html_from_manifest(candidate) {
+      Ok(html) => html
+      Err(error) => {
+        last_error = error
+        continue
+      }
+    }
     match
       @proton.config(candidate)
+      .entry_html(html)
       .extension(@fs.extension())
       .extension(@path.extension())
       .run() {
