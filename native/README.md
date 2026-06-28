@@ -183,13 +183,18 @@ proton/prebuilt/linux-x64/bin/cef_process
 proton/prebuilt/linux-x64/lib/libproton.so
 proton/prebuilt/linux-x64/include/proton_native.h
 proton/prebuilt/linux-x64/manifest.json
+proton/prebuilt/darwin-arm64/bin/cef_process
+proton/prebuilt/darwin-arm64/lib/libproton.dylib
+proton/prebuilt/darwin-arm64/include/proton_native.h
+proton/prebuilt/darwin-arm64/manifest.json
 ```
 
 CEF runtime files are assembled later by `proton_cli cef setup` into `.proton/`.
 
 MoonBit FFI consumers only link `proton.lib`/`proton.dll` on Windows or
-`libproton.so` on Linux. They do not link CEF directly; the runtime starts
-`bin/cef_process(.exe)` through the C ABI runtime configuration.
+`libproton.so` on Linux or `libproton.dylib` on macOS. They do not link CEF
+directly; the runtime starts `bin/cef_process(.exe)` through the C ABI runtime
+configuration.
 
 CEF internal logs are disabled by default. Set `PROTON_CEF_LOG=default` to
 temporarily restore CEF logging while debugging; accepted values are `verbose`,
