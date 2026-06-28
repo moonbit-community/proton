@@ -8,6 +8,23 @@ let proton_event_none = 2
 let proton_err_buffer_too_small = -11
 
 ///|
+pub let runtime_wait_none : Int = 0
+
+///|
+pub let runtime_wait_event : Int = 1
+
+///|
+pub let runtime_wait_bridge : Int = 2
+
+///|
+pub let runtime_wait_platform : Int = 4
+
+///|
+pub let runtime_wait_all : Int = runtime_wait_event
+  .lor(runtime_wait_bridge)
+  .lor(runtime_wait_platform)
+
+///|
 let proton_invalid_handle : Int64 = 0L
 
 ///|
@@ -50,6 +67,15 @@ extern "C" fn proton_runtime_quit_ffi(runtime : Int64) -> Int = "proton_runtime_
 
 ///|
 extern "C" fn proton_runtime_do_message_loop_work_ffi(runtime : Int64) -> Int = "proton_runtime_do_message_loop_work"
+
+///|
+#borrow(out_ready_mask)
+extern "C" fn proton_runtime_wait_ffi(
+  runtime : Int64,
+  interest_mask : Int,
+  timeout_ms : Int,
+  out_ready_mask : Ref[Int],
+) -> Int = "proton_runtime_wait"
 
 ///|
 #borrow(buffer, out_required_len)

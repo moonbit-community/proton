@@ -20,6 +20,13 @@ extern "C" {
 #define PROTON_ABI_VERSION 1
 #define PROTON_INVALID_HANDLE 0
 
+#define PROTON_WAIT_NONE 0u
+#define PROTON_WAIT_EVENT (1u << 0)
+#define PROTON_WAIT_BRIDGE (1u << 1)
+#define PROTON_WAIT_PLATFORM (1u << 2)
+#define PROTON_WAIT_ALL \
+  (PROTON_WAIT_EVENT | PROTON_WAIT_BRIDGE | PROTON_WAIT_PLATFORM)
+
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
 
@@ -59,6 +66,10 @@ PROTON_API int32_t proton_runtime_run(proton_runtime_id_t runtime);
 PROTON_API int32_t proton_runtime_quit(proton_runtime_id_t runtime);
 PROTON_API int32_t proton_runtime_do_message_loop_work(
     proton_runtime_id_t runtime);
+PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
+                                       uint32_t interest_mask,
+                                       uint32_t timeout_ms,
+                                       uint32_t *out_ready_mask);
 PROTON_API int32_t proton_runtime_poll_event_json(
     proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);

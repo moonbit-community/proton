@@ -135,6 +135,7 @@ fn close_command_host(host : @core.AppCommandHost?) -> Unit {
 async fn run_window_pump(runtime : @native.Runtime) -> Result[Unit, String] {
   let mut closed = false
   let mut idle_delay = 0
+  let mut runtime_wait_supported = true
   while !closed {
     let mut did_work = false
     match runtime.do_message_loop_work() {
@@ -160,8 +161,13 @@ async fn run_window_pump(runtime : @native.Runtime) -> Result[Unit, String] {
       idle_delay = 0
       @async.sleep(0)
     } else {
-      idle_delay = next_idle_delay(idle_delay)
-      @async.sleep(idle_delay)
+      match wait_for_runtime_idle(runtime, idle_delay, runtime_wait_supported) {
+        Err(error) => return Err(error)
+        Ok((next_delay, next_wait_supported)) => {
+          idle_delay = next_delay
+          runtime_wait_supported = next_wait_supported
+        }
+      }
     }
   }
   Ok(())
@@ -176,6 +182,7 @@ async fn run_bridge_pump(
   @async.with_task_group(group => {
     let mut closed = false
     let mut idle_delay = 0
+    let mut runtime_wait_supported = true
     let mut pending : Array[BridgeDispatchTask] = []
     while !closed {
       let mut did_work = false
@@ -250,9 +257,18 @@ async fn run_bridge_pump(
       if did_work {
         idle_delay = 0
         @async.sleep(0)
+      } else if pending.length() > 0 {
+        idle_delay = 0
+        @async.sleep(1)
       } else {
-        idle_delay = next_idle_delay(idle_delay)
-        @async.sleep(idle_delay)
+        match
+          wait_for_runtime_idle(runtime, idle_delay, runtime_wait_supported) {
+          Err(error) => return Err(error)
+          Ok((next_delay, next_wait_supported)) => {
+            idle_delay = next_delay
+            runtime_wait_supported = next_wait_supported
+          }
+        }
       }
     }
     for item in pending {
@@ -261,6 +277,46 @@ async fn run_bridge_pump(
     Ok(())
   })
 }
+
+///|
+async fn wait_for_runtime_idle(
+  runtime : @native.Runtime,
+  idle_delay : Int,
+  runtime_wait_supported : Bool,
+) -> Result[(Int, Bool), String] {
+  if runtime_wait_supported {
+    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
+      Ok(_) => Ok((0, true))
+      Err(error) =>
+        if is_runtime_wait_unsupported(error) {
+          sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
+            (next_delay, false)
+          })
+        } else {
+          Err(native_error_message("wait runtime", error))
+        }
+    }
+  } else {
+    sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
+      (next_delay, false)
+    })
+  }
+}
+
+///|
+async fn sleep_with_idle_backoff(idle_delay : Int) -> Result[Int, String] {
+  let delay = next_idle_delay(idle_delay)
+  @async.sleep(delay)
+  Ok(delay)
+}
+
+///|
+fn is_runtime_wait_unsupported(error : @native.NativeError) -> Bool {
+  error.status == proton_err_unsupported
+}
+
+///|
+let proton_err_unsupported = -8
 
 ///|
 fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {

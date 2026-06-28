@@ -12,11 +12,9 @@ test "runtime info reports ABI and Proton runtime metadata" {
   let has_runtime = info.contains("\"runtime_available\":true") &&
     info.contains("\"build_mode\":\"runtime\"")
   assert_true(has_abi_only || has_runtime)
-  assert_true(
-    info.contains(
-      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\"]",
-    ),
-  )
+  assert_true(info.contains("\"base_abi\""))
+  assert_true(info.contains("\"event_polling\""))
+  assert_true(info.contains("\"bridge_polling\""))
   assert_true(info.contains("\"platform\":"))
   let typed = runtime_info().unwrap()
   inspect(typed.abi_version, content="1")
@@ -26,6 +24,57 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(typed.features.contains("base_abi"))
   assert_true(typed.features.contains("event_polling"))
   assert_true(typed.features.contains("bridge_polling"))
+}
+
+///|
+test "runtime wait ready mask helpers" {
+  let ready = RuntimeWaitReady::{
+    mask: runtime_wait_event.lor(runtime_wait_bridge),
+  }
+  inspect(ready.mask(), content="3")
+  inspect(ready.has_event(), content="true")
+  inspect(ready.has_bridge(), content="true")
+  inspect(ready.has_platform(), content="false")
+  inspect(ready.is_timeout(), content="false")
+  inspect(
+    RuntimeWaitReady::{ mask: runtime_wait_none }.is_timeout(),
+    content="true",
+  )
+}
+
+///|
+test "runtime wait reports queued native events without consuming them" {
+  let runtime = Runtime::new().unwrap()
+  let empty_ready = runtime
+    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
+    .unwrap()
+  inspect(empty_ready.is_timeout(), content="true")
+  let window = Window::new(runtime).unwrap()
+  let ready = runtime
+    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
+    .unwrap()
+  inspect(ready.has_event(), content="true")
+  match runtime.poll_event() {
+    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    _ => fail("expected window_created event")
+  }
+  let empty_after_poll = runtime
+    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
+    .unwrap()
+  inspect(empty_after_poll.is_timeout(), content="true")
+  match runtime.wait(interest_mask=runtime_wait_bridge, timeout_ms=0) {
+    Err(error) => {
+      inspect(error.status, content="-8")
+      assert_true(error.message.contains("native engine"))
+    }
+    Ok(_) => fail("expected bridge wait to require engine")
+  }
+  debug_inspect(window.destroy(), content="Ok(())")
+  match runtime.poll_event() {
+    Ok(Some(event)) => inspect(event.event_type(), content="window_closed")
+    _ => fail("expected window_closed event")
+  }
+  debug_inspect(runtime.destroy(), content="Ok(())")
 }
 
 ///|

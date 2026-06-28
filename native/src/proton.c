@@ -43,6 +43,12 @@
 #define PROTON_PLATFORM_NAME "linux"
 #endif
 
+#if PROTON_WITH_ENGINE && defined(_WIN32)
+#define PROTON_RUNTIME_WAIT_FEATURE ",\"runtime_wait\""
+#else
+#define PROTON_RUNTIME_WAIT_FEATURE ""
+#endif
+
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
 #define PROTON_MAX_EVENTS 32
@@ -1171,7 +1177,8 @@ int32_t proton_runtime_info_json(char *buffer,
       info, sizeof(info),
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
-      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\"]}",
+      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
+      PROTON_RUNTIME_WAIT_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
   if (required < 0 || required >= (int)sizeof(info)) {
@@ -1402,6 +1409,74 @@ int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
       return proton_set_engine_status(status, engine_error);
     }
   }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_wait(proton_runtime_id_t runtime,
+                            uint32_t interest_mask,
+                            uint32_t timeout_ms,
+                            uint32_t *out_ready_mask) {
+  if (out_ready_mask == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_ready_mask is required");
+  }
+  *out_ready_mask = PROTON_WAIT_NONE;
+  if (interest_mask == PROTON_WAIT_NONE) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "interest_mask is required");
+  }
+  if ((interest_mask & ~PROTON_WAIT_ALL) != 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "interest_mask contains unsupported bits");
+  }
+
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->running) {
+    return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
+                            "runtime run loop is already active");
+  }
+
+  uint32_t ready_mask = PROTON_WAIT_NONE;
+  if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
+    status = proton_runtime_sync_engine_closed_windows(runtime, slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    if (slot->event_count > 0) {
+      ready_mask |= PROTON_WAIT_EVENT;
+    }
+  }
+  if (ready_mask != PROTON_WAIT_NONE) {
+    *out_ready_mask = ready_mask;
+    g_last_error[0] = '\0';
+    return PROTON_OK;
+  }
+
+  uint32_t engine_interest =
+      interest_mask & (PROTON_WAIT_BRIDGE | PROTON_WAIT_PLATFORM);
+  if (engine_interest == PROTON_WAIT_NONE) {
+    g_last_error[0] = '\0';
+    return PROTON_OK;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime wait requires native engine");
+  }
+
+  char engine_error[512] = {0};
+  uint32_t engine_ready = PROTON_WAIT_NONE;
+  status = proton_engine_runtime_wait(slot->engine_runtime, engine_interest,
+                                      timeout_ms, &engine_ready, engine_error,
+                                      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  *out_ready_mask = engine_ready & engine_interest;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

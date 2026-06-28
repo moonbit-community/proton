@@ -308,6 +308,35 @@ pub fn Runtime::do_message_loop_work(
 }
 
 ///|
+pub fn Runtime::wait(
+  self : Runtime,
+  interest_mask~ : Int,
+  timeout_ms~ : Int,
+) -> Result[RuntimeWaitReady, NativeError] {
+  if interest_mask == runtime_wait_none {
+    return Err(invalid_argument("interest_mask is required"))
+  }
+  if interest_mask.land(runtime_wait_all.lnot()) != 0 {
+    return Err(invalid_argument("interest_mask contains unsupported bits"))
+  }
+  if timeout_ms < 0 {
+    return Err(invalid_argument("timeout_ms must be non-negative"))
+  }
+  let ready_mask = Ref(runtime_wait_none)
+  let status = proton_runtime_wait_ffi(
+    self.handle,
+    interest_mask,
+    timeout_ms,
+    ready_mask,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(RuntimeWaitReady::{ mask: ready_mask.val })
+  }
+}
+
+///|
 pub fn Runtime::quit(self : Runtime) -> Result[Unit, NativeError] {
   status_to_result(proton_runtime_quit_ffi(self.handle))
 }

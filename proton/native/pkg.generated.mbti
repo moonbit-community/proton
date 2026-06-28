@@ -19,6 +19,16 @@ pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
 
 pub fn runtime_info_json() -> Result[String, NativeError]
 
+pub let runtime_wait_all : Int
+
+pub let runtime_wait_bridge : Int
+
+pub let runtime_wait_event : Int
+
+pub let runtime_wait_none : Int
+
+pub let runtime_wait_platform : Int
+
 // Errors
 
 // Types and methods
@@ -72,6 +82,7 @@ pub fn Runtime::poll_event_json(Self) -> Result[String?, NativeError]
 pub fn Runtime::quit(Self) -> Result[Unit, NativeError]
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Result[Unit, NativeError]
 pub fn Runtime::run(Self) -> Result[Unit, NativeError]
+pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> Result[RuntimeWaitReady, NativeError]
 
 type RuntimeConfig derive(Eq, @debug.Debug)
 pub fn RuntimeConfig::bundled(cache_dir? : String, remote_debugging_port? : Int) -> Self
@@ -93,6 +104,15 @@ pub(all) struct RuntimeInfo {
   platform : String
   features : Array[String]
 } derive(Eq, @debug.Debug, @json.FromJson)
+
+pub(all) struct RuntimeWaitReady {
+  mask : Int
+} derive(Eq, @debug.Debug)
+pub fn RuntimeWaitReady::has_bridge(Self) -> Bool
+pub fn RuntimeWaitReady::has_event(Self) -> Bool
+pub fn RuntimeWaitReady::has_platform(Self) -> Bool
+pub fn RuntimeWaitReady::is_timeout(Self) -> Bool
+pub fn RuntimeWaitReady::mask(Self) -> Int
 
 type Window
 pub fn Window::close(Self) -> Result[Unit, NativeError]

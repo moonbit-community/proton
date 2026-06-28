@@ -665,6 +665,12 @@ static void proton_engine_on_before_command_line_processing(
     cef_command_line_t *command_line) {
   (void)self;
   (void)process_type;
+  proton_engine_append_switch(command_line, "disable-background-networking");
+  proton_engine_append_switch(command_line, "disable-component-update");
+  proton_engine_append_switch(command_line, "disable-domain-reliability");
+  proton_engine_append_switch(command_line, "disable-sync");
+  proton_engine_append_switch(command_line, "metrics-recording-only");
+  proton_engine_append_switch(command_line, "safebrowsing-disable-auto-update");
   proton_engine_append_switch(command_line, "use-mock-keychain");
 }
 
@@ -1632,6 +1638,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.size = sizeof(settings);
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
+  settings.log_severity = LOGSEVERITY_DISABLE;
   settings.remote_debugging_port = config.remote_debugging_port;
   proton_engine_set_string(&settings.browser_subprocess_path,
                            config.helper_path);
@@ -1759,6 +1766,23 @@ int32_t proton_engine_runtime_do_message_loop_work(
   [NSApp updateWindows];
   cef_do_message_loop_work();
   return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
+                                   uint32_t interest_mask,
+                                   uint32_t timeout_ms,
+                                   uint32_t *out_ready_mask,
+                                   char *error,
+                                   size_t error_len) {
+  (void)runtime;
+  (void)interest_mask;
+  (void)timeout_ms;
+  if (out_ready_mask != NULL) {
+    *out_ready_mask = PROTON_WAIT_NONE;
+  }
+  proton_engine_set_message(error, error_len,
+                            "runtime wait is not implemented on macOS yet");
+  return PROTON_ERR_UNSUPPORTED;
 }
 
 int32_t proton_engine_runtime_poll_bridge_request_json(

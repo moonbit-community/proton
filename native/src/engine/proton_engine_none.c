@@ -80,6 +80,22 @@ int32_t proton_engine_runtime_do_message_loop_work(
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
+                                   uint32_t interest_mask,
+                                   uint32_t timeout_ms,
+                                   uint32_t *out_ready_mask,
+                                   char *error,
+                                   size_t error_len) {
+  (void)runtime;
+  (void)interest_mask;
+  (void)timeout_ms;
+  if (out_ready_mask != NULL) {
+    *out_ready_mask = PROTON_WAIT_NONE;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,

@@ -20,6 +20,11 @@ pub(all) struct RuntimeInfo {
 } derive(Debug, Eq, FromJson)
 
 ///|
+pub(all) struct RuntimeWaitReady {
+  mask : Int
+} derive(Debug, Eq)
+
+///|
 struct RuntimeEvent {
   event_type : String
   has_window : Bool
@@ -66,6 +71,31 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+pub fn RuntimeWaitReady::mask(self : RuntimeWaitReady) -> Int {
+  self.mask
+}
+
+///|
+pub fn RuntimeWaitReady::has_event(self : RuntimeWaitReady) -> Bool {
+  self.mask.land(runtime_wait_event) != 0
+}
+
+///|
+pub fn RuntimeWaitReady::has_bridge(self : RuntimeWaitReady) -> Bool {
+  self.mask.land(runtime_wait_bridge) != 0
+}
+
+///|
+pub fn RuntimeWaitReady::has_platform(self : RuntimeWaitReady) -> Bool {
+  self.mask.land(runtime_wait_platform) != 0
+}
+
+///|
+pub fn RuntimeWaitReady::is_timeout(self : RuntimeWaitReady) -> Bool {
+  self.mask == runtime_wait_none
 }
 
 ///|

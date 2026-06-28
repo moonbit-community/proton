@@ -77,9 +77,9 @@ static int expect_runtime_info(void) {
                     strstr(buffer, "\"build_mode\":\"runtime\"") != NULL;
   if (strstr(buffer, "\"abi_version\":1") == NULL ||
       (!has_abi_only && !has_runtime) ||
-      strstr(buffer,
-             "\"features\":[\"base_abi\",\"event_polling\","
-             "\"bridge_polling\"]") == NULL ||
+      strstr(buffer, "\"base_abi\"") == NULL ||
+      strstr(buffer, "\"event_polling\"") == NULL ||
+      strstr(buffer, "\"bridge_polling\"") == NULL ||
       strstr(buffer, EXPECTED_PLATFORM) == NULL) {
     fprintf(stderr, "unexpected runtime info: %s\n", buffer);
     return 1;
@@ -215,6 +215,22 @@ static int expect_bridge_request_none(proton_runtime_id_t runtime) {
   }
   if (required != 0) {
     return fail("poll_bridge_request none should require zero bytes");
+  }
+  return 0;
+}
+
+static int expect_runtime_wait_ready(proton_runtime_id_t runtime,
+                                     uint32_t interest,
+                                     uint32_t expected_ready) {
+  uint32_t ready = 0xffffffffu;
+  int32_t status = proton_runtime_wait(runtime, interest, 0, &ready);
+  if (expect_status("runtime_wait", status, PROTON_OK)) {
+    return 1;
+  }
+  if (ready != expected_ready) {
+    fprintf(stderr, "runtime_wait: expected ready mask %u, got %u\n",
+            expected_ready, ready);
+    return 1;
   }
   return 0;
 }
@@ -366,6 +382,21 @@ int main(void) {
   if (expect_last_error_contains("already initialized")) {
     return 1;
   }
+  uint32_t ready_mask = 123u;
+  status = proton_runtime_wait(runtime, PROTON_WAIT_EVENT, 0, NULL);
+  if (expect_status("runtime_wait rejects null out mask", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  status = proton_runtime_wait(runtime, PROTON_WAIT_NONE, 0, &ready_mask);
+  if (expect_status("runtime_wait rejects empty interest", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_runtime_wait_ready(runtime, PROTON_WAIT_EVENT,
+                                PROTON_WAIT_NONE)) {
+    return 1;
+  }
 
   proton_window_id_t window = PROTON_INVALID_HANDLE;
   if (expect_status("window_create",
@@ -378,6 +409,10 @@ int main(void) {
   }
   if (window == PROTON_INVALID_HANDLE) {
     return fail("window_create returned invalid handle");
+  }
+  if (expect_runtime_wait_ready(runtime, PROTON_WAIT_EVENT,
+                                PROTON_WAIT_EVENT)) {
+    return 1;
   }
   if (expect_event(runtime, "window_created")) {
     return 1;
@@ -402,6 +437,14 @@ int main(void) {
     return 1;
   }
   if (expect_bridge_request_none(runtime)) {
+    return 1;
+  }
+  status = proton_runtime_wait(runtime, PROTON_WAIT_BRIDGE, 0, &ready_mask);
+  if (expect_status("runtime_wait without engine", status,
+                    PROTON_ERR_UNSUPPORTED)) {
+    return 1;
+  }
+  if (expect_last_error_contains("native engine")) {
     return 1;
   }
   status = proton_window_install_bridge_json(

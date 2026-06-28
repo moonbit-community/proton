@@ -49,6 +49,7 @@ struct proton_engine_runtime {
   size_t bridge_count;
   CRITICAL_SECTION bridge_lock;
   int bridge_lock_initialized;
+  HANDLE bridge_event;
 };
 
 struct proton_engine_window {
@@ -152,7 +153,9 @@ static proton_engine_window_t *g_proton_engine_windows;
 static proton_engine_bridge_pending_t *g_proton_engine_bridge_pending;
 static char g_proton_engine_resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
-static int64_t g_proton_engine_scheduled_pump_delay_ms = -1;
+static volatile LONG64 g_proton_engine_scheduled_pump_delay_ms = -1;
+static volatile LONG g_proton_engine_runtime_wait_log_count = 0;
+static HANDLE g_proton_engine_pump_event = NULL;
 
 static void CEF_CALLBACK proton_engine_on_loading_state_change(
     cef_load_handler_t *self,
@@ -209,6 +212,35 @@ static void proton_engine_verbose_log(const char *format, ...) {
   va_start(args, format);
   proton_engine_log_to_env("PROTON_NATIVE_LOG_VERBOSE", format, args);
   va_end(args);
+}
+
+static int64_t proton_engine_get_scheduled_pump_delay_ms(void) {
+  return (int64_t)InterlockedCompareExchange64(
+      &g_proton_engine_scheduled_pump_delay_ms, 0, 0);
+}
+
+static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
+  InterlockedExchange64(&g_proton_engine_scheduled_pump_delay_ms,
+                        (LONG64)delay_ms);
+  if (g_proton_engine_pump_event != NULL && delay_ms <= 0) {
+    SetEvent(g_proton_engine_pump_event);
+  }
+}
+
+static void proton_engine_reset_scheduled_pump(void) {
+  InterlockedExchange64(&g_proton_engine_scheduled_pump_delay_ms, -1);
+  if (g_proton_engine_pump_event != NULL) {
+    ResetEvent(g_proton_engine_pump_event);
+  }
+}
+
+static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
+                                                 uint32_t interest_mask) {
+  LONG count = InterlockedIncrement(&g_proton_engine_runtime_wait_log_count);
+  if (count <= 16) {
+    proton_engine_debug_log("runtime_wait ready mask=%u interest=%u",
+                            ready_mask, interest_mask);
+  }
 }
 
 static const char *proton_engine_log_url(const char *url) {
@@ -380,6 +412,31 @@ static void proton_engine_runtime_bridge_unlock(
   }
 }
 
+static void proton_engine_runtime_sync_bridge_event_locked(
+    proton_engine_runtime_t *runtime) {
+  if (runtime == NULL || runtime->bridge_event == NULL) {
+    return;
+  }
+  if (runtime->bridge_count > 0) {
+    SetEvent(runtime->bridge_event);
+  } else {
+    ResetEvent(runtime->bridge_event);
+  }
+}
+
+static int proton_engine_runtime_has_bridge_request(
+    proton_engine_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return 0;
+  }
+  int has_request = 0;
+  proton_engine_runtime_bridge_lock(runtime);
+  has_request = runtime->bridge_count > 0;
+  proton_engine_runtime_sync_bridge_event_locked(runtime);
+  proton_engine_runtime_bridge_unlock(runtime);
+  return has_request;
+}
+
 static int proton_engine_runtime_enqueue_bridge_request(
     proton_engine_runtime_t *runtime,
     char *request_json) {
@@ -394,6 +451,7 @@ static int proton_engine_runtime_enqueue_bridge_request(
         PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
     runtime->bridge_queue[index] = request_json;
     runtime->bridge_count++;
+    proton_engine_runtime_sync_bridge_event_locked(runtime);
     ok = 1;
   }
   proton_engine_runtime_bridge_unlock(runtime);
@@ -413,6 +471,7 @@ static char *proton_engine_runtime_pop_bridge_request(
     runtime->bridge_head =
         (runtime->bridge_head + 1) % PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
     runtime->bridge_count--;
+    proton_engine_runtime_sync_bridge_event_locked(runtime);
   }
   proton_engine_runtime_bridge_unlock(runtime);
   return request_json;
@@ -434,6 +493,7 @@ static size_t proton_engine_runtime_clear_bridge_queue(
   }
   runtime->bridge_head = 0;
   runtime->bridge_count = 0;
+  proton_engine_runtime_sync_bridge_event_locked(runtime);
   proton_engine_runtime_bridge_unlock(runtime);
   proton_engine_debug_log("bridge_queue_clear removed=%llu",
                           (unsigned long long)removed);
@@ -473,6 +533,7 @@ static int proton_engine_runtime_remove_bridge_request(
   for (size_t i = 0; i < kept_count; i++) {
     runtime->bridge_queue[i] = kept[i];
   }
+  proton_engine_runtime_sync_bridge_event_locked(runtime);
   proton_engine_runtime_bridge_unlock(runtime);
   if (removed > 0) {
     proton_engine_debug_log("bridge_queue_remove request=%lld removed=%d",
@@ -1351,6 +1412,12 @@ static void proton_engine_on_before_command_line_processing(
     return;
   }
   proton_engine_append_switch(command_line, "disable-gpu");
+  proton_engine_append_switch(command_line, "disable-background-networking");
+  proton_engine_append_switch(command_line, "disable-component-update");
+  proton_engine_append_switch(command_line, "disable-domain-reliability");
+  proton_engine_append_switch(command_line, "disable-sync");
+  proton_engine_append_switch(command_line, "metrics-recording-only");
+  proton_engine_append_switch(command_line, "safebrowsing-disable-auto-update");
   proton_engine_append_switch_with_value(command_line, "resources-dir-path",
                                          g_proton_engine_resources_dir);
   proton_engine_append_switch_with_value(command_line, "locales-dir-path",
@@ -1361,7 +1428,7 @@ static void CEF_CALLBACK proton_engine_on_schedule_message_pump_work(
     cef_browser_process_handler_t *self,
     int64_t delay_ms) {
   (void)self;
-  g_proton_engine_scheduled_pump_delay_ms = delay_ms;
+  proton_engine_set_scheduled_pump_delay_ms(delay_ms);
 }
 
 static cef_browser_process_handler_t *CEF_CALLBACK
@@ -1883,8 +1950,19 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
   settings.external_message_pump = 1;
+  settings.log_severity = LOGSEVERITY_DISABLE;
   g_proton_engine_multi_threaded_message_loop = 0;
   settings.remote_debugging_port = config.remote_debugging_port;
+
+  if (g_proton_engine_pump_event == NULL) {
+    g_proton_engine_pump_event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (g_proton_engine_pump_event == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "failed to create CEF pump wake event");
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+  proton_engine_reset_scheduled_pump();
 
   proton_engine_set_string(&settings.browser_subprocess_path,
                            config.helper_path);
@@ -1899,6 +1977,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     cef_string_clear(&settings.resources_dir_path);
     cef_string_clear(&settings.locales_dir_path);
     cef_string_clear(&settings.root_cache_path);
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
@@ -1912,6 +1992,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (!proton_engine_register_scheme_factory()) {
     proton_engine_cef_shutdown();
     g_proton_cef_runtime_active = 0;
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
     proton_engine_set_message(error, error_len,
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
@@ -1926,6 +2008,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (runtime == NULL) {
     proton_engine_cef_shutdown();
     g_proton_cef_runtime_active = 0;
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
     proton_engine_set_message(error, error_len,
                               "failed to allocate runtime state");
     return PROTON_ERR_ENGINE;
@@ -1934,6 +2018,19 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   runtime->next_bridge_request_id = 1;
   InitializeCriticalSection(&runtime->bridge_lock);
   runtime->bridge_lock_initialized = 1;
+  runtime->bridge_event = CreateEventW(NULL, TRUE, FALSE, NULL);
+  if (runtime->bridge_event == NULL) {
+    DeleteCriticalSection(&runtime->bridge_lock);
+    runtime->bridge_lock_initialized = 0;
+    free(runtime);
+    proton_engine_cef_shutdown();
+    g_proton_cef_runtime_active = 0;
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
+    proton_engine_set_message(error, error_len,
+                              "failed to create bridge wake event");
+    return PROTON_ERR_PLATFORM;
+  }
   *out_runtime = runtime;
   return PROTON_OK;
 }
@@ -1951,10 +2048,19 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   proton_engine_runtime_clear_bridge_queue(runtime);
   proton_engine_bridge_pending_clear_all();
+  if (runtime->bridge_event != NULL) {
+    CloseHandle(runtime->bridge_event);
+    runtime->bridge_event = NULL;
+  }
   if (runtime->bridge_lock_initialized) {
     DeleteCriticalSection(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
+  if (g_proton_engine_pump_event != NULL) {
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
+  }
+  proton_engine_reset_scheduled_pump();
   g_proton_cef_runtime_active = 0;
   free(runtime);
   return PROTON_OK;
@@ -1990,6 +2096,7 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
+  proton_engine_reset_scheduled_pump();
   MSG msg;
   while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
     TranslateMessage(&msg);
@@ -2004,7 +2111,121 @@ int32_t proton_engine_runtime_do_message_loop_work(
   if (!g_proton_engine_multi_threaded_message_loop) {
     cef_do_message_loop_work();
   }
-  g_proton_engine_scheduled_pump_delay_ms = -1;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
+                                   uint32_t interest_mask,
+                                   uint32_t timeout_ms,
+                                   uint32_t *out_ready_mask,
+                                   char *error,
+                                   size_t error_len) {
+  if (out_ready_mask != NULL) {
+    *out_ready_mask = PROTON_WAIT_NONE;
+  }
+  if (runtime == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (out_ready_mask == NULL) {
+    proton_engine_set_message(error, error_len, "out_ready_mask is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+
+  uint32_t ready_mask = PROTON_WAIT_NONE;
+  if ((interest_mask & PROTON_WAIT_BRIDGE) != 0 &&
+      proton_engine_runtime_has_bridge_request(runtime)) {
+    ready_mask |= PROTON_WAIT_BRIDGE;
+  }
+  if (ready_mask != PROTON_WAIT_NONE) {
+    proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
+    *out_ready_mask = ready_mask;
+    return PROTON_OK;
+  }
+  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
+      proton_engine_get_scheduled_pump_delay_ms() == 0) {
+    ready_mask |= PROTON_WAIT_PLATFORM;
+  }
+  if (ready_mask != PROTON_WAIT_NONE) {
+    proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
+    *out_ready_mask = ready_mask;
+    return PROTON_OK;
+  }
+
+  HANDLE handles[2];
+  DWORD handle_count = 0;
+  DWORD bridge_handle_index = MAXDWORD;
+  DWORD pump_handle_index = MAXDWORD;
+  if ((interest_mask & PROTON_WAIT_BRIDGE) != 0 &&
+      runtime->bridge_event != NULL) {
+    bridge_handle_index = handle_count;
+    handles[handle_count++] = runtime->bridge_event;
+  }
+  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
+      g_proton_engine_pump_event != NULL) {
+    pump_handle_index = handle_count;
+    handles[handle_count++] = g_proton_engine_pump_event;
+  }
+
+  DWORD wait_timeout = timeout_ms;
+  int waiting_for_scheduled_pump = 0;
+  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
+    int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
+    if (scheduled_delay > 0 && scheduled_delay <= (int64_t)wait_timeout) {
+      wait_timeout = (DWORD)scheduled_delay;
+      waiting_for_scheduled_pump = 1;
+    }
+  }
+
+  DWORD wake_mask =
+      (interest_mask & PROTON_WAIT_PLATFORM) != 0 ? QS_ALLINPUT : 0;
+  DWORD wait_result = MsgWaitForMultipleObjectsEx(
+      handle_count, handle_count > 0 ? handles : NULL, wait_timeout, wake_mask,
+      MWMO_INPUTAVAILABLE);
+  if (wait_result == WAIT_FAILED) {
+    char message[128];
+    snprintf(message, sizeof(message),
+             "runtime wait failed with Windows error %lu",
+             (unsigned long)GetLastError());
+    proton_engine_set_message(error, error_len, message);
+    return PROTON_ERR_PLATFORM;
+  }
+
+  if (wait_result >= WAIT_OBJECT_0 &&
+      wait_result < WAIT_OBJECT_0 + handle_count) {
+    DWORD ready_index = wait_result - WAIT_OBJECT_0;
+    if (ready_index == bridge_handle_index) {
+      ready_mask |= PROTON_WAIT_BRIDGE;
+    }
+    if (ready_index == pump_handle_index) {
+      ready_mask |= PROTON_WAIT_PLATFORM;
+    }
+  } else if (wait_result == WAIT_OBJECT_0 + handle_count) {
+    if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
+      ready_mask |= PROTON_WAIT_PLATFORM;
+    }
+  } else if (wait_result == WAIT_TIMEOUT) {
+    if (waiting_for_scheduled_pump) {
+      ready_mask |= PROTON_WAIT_PLATFORM;
+    }
+  } else {
+    proton_engine_set_message(error, error_len,
+                              "runtime wait returned an unexpected status");
+    return PROTON_ERR_PLATFORM;
+  }
+
+  if ((interest_mask & PROTON_WAIT_BRIDGE) != 0 &&
+      proton_engine_runtime_has_bridge_request(runtime)) {
+    ready_mask |= PROTON_WAIT_BRIDGE;
+  }
+  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
+      proton_engine_get_scheduled_pump_delay_ms() == 0) {
+    ready_mask |= PROTON_WAIT_PLATFORM;
+  }
+  if (ready_mask != PROTON_WAIT_NONE) {
+    proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
+  }
+  *out_ready_mask = ready_mask & interest_mask;
   return PROTON_OK;
 }
 
@@ -2047,6 +2268,7 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
   runtime->bridge_head =
       (runtime->bridge_head + 1) % PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
   runtime->bridge_count--;
+  proton_engine_runtime_sync_bridge_event_locked(runtime);
   proton_engine_runtime_bridge_unlock(runtime);
   free(request_json);
   return PROTON_OK;

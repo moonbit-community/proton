@@ -31,6 +31,12 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
     size_t error_len);
+int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
+                                   uint32_t interest_mask,
+                                   uint32_t timeout_ms,
+                                   uint32_t *out_ready_mask,
+                                   char *error,
+                                   size_t error_len);
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
