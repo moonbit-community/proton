@@ -12,6 +12,15 @@ enabled only with `PROTON_WITH_ENGINE=ON`.
 availability, build mode, platform, and public feature flags using the same
 caller-owned buffer pattern as event polling.
 
+`proton_runtime_wait` lets the MoonBit facade block until selected runtime work
+is ready, then drain it through the existing poll APIs. Ready masks are wake
+reasons, not ownership transfer: callers still drain `proton_runtime_poll_*`
+until the queues are empty. Windows engine builds expose the `runtime_wait`
+feature and wait on bridge queue wakeups, CEF external message-pump scheduling,
+and Win32 messages. The current macOS engine returns `PROTON_ERR_UNSUPPORTED`
+for wait so MoonBit falls back to the idle sleep loop until the CFRunLoop wake
+path is implemented.
+
 It also exposes `proton_runtime_probe_json`, which validates the configured
 runtime layout before initialization. The probe checks `runtime_root`,
 `helper_path`, resources, locales, and core runtime files without loading the

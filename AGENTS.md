@@ -89,6 +89,10 @@ native checks before handing off larger refactors.
 - Bridge and command-extension APIs may be documented only when implemented by
   the native DLL route. Do not document old `window.__MoonBit__` flows that no
   longer match the current runtime.
+- Keep the bridge pump wait-driven where the native runtime supports
+  `proton_runtime_wait`. The facade may fall back to idle sleep for unsupported
+  platforms, but do not reintroduce fixed sleep polling as the primary Windows
+  bridge path.
 - The `e2e/` module is a workspace member. Do not make scripts mutate
   `moon.work` at runtime to add it.
 
@@ -111,6 +115,11 @@ native checks before handing off larger refactors.
 - Keep error reporting synchronous and explicit. Native functions return status
   codes, detailed diagnostics go through the existing last-error/probe/info JSON
   paths, and MoonBit wrappers translate status codes into typed errors.
+- `proton_runtime_wait` is a low-level pump primitive, not a separate app API.
+  It reports ready masks for event, bridge, and platform work; callers must
+  still drain via the existing poll APIs. Windows engine waits on bridge queue
+  wakeups, CEF external message-pump scheduling, and Win32 messages. macOS may
+  return `PROTON_ERR_UNSUPPORTED` until its CFRunLoop wake path is implemented.
 - Handle ownership must stay centralized in the native registry. Handles are
   not raw pointers, must validate kind/generation/thread ownership, and must be
   invalidated on destroy/close paths.

@@ -114,6 +114,12 @@ native DLL route. Inline HTML entries get both the low-level
 such as `window.__MoonBit__.add.slowAdd(...)`. Extension events are exposed
 through `window.__MoonBit__.events.on(...)` for extensions that emit events.
 
+The bridge pump is event-driven low-latency on native runtimes that expose
+`runtime_wait`. It is not a hard real-time channel: CEF process IPC, OS message
+scheduling, MoonBit async handlers, GC, and main-thread load can still affect
+latency. The root facade automatically falls back to the older idle sleep loop
+when a platform runtime reports that wait/wakeup is unsupported.
+
 The low-level `justjavac/proton/native` package remains available for ABI tests
 and runtime diagnostics, but ordinary apps should start from the root facade.
 

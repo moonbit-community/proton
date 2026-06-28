@@ -81,3 +81,29 @@ test "runtime and window lifecycle" {
   debug_inspect(runtime.destroy(), content="Ok(())")
 }
 ```
+
+`Runtime::wait` is a low-level pump primitive used by the root facade. It
+reports which kinds of work may be ready, and the caller still drains events or
+bridge requests through the poll APIs.
+
+```mbt check
+///|
+test "runtime wait event readiness" {
+  let runtime = Runtime::new().unwrap()
+  let empty = runtime
+    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
+    .unwrap()
+  inspect(empty.is_timeout(), content="true")
+  let window = Window::new(runtime).unwrap()
+  let ready = runtime
+    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
+    .unwrap()
+  inspect(ready.has_event(), content="true")
+  match runtime.poll_event() {
+    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    _ => fail("expected window_created")
+  }
+  debug_inspect(window.destroy(), content="Ok(())")
+  debug_inspect(runtime.destroy(), content="Ok(())")
+}
+```
