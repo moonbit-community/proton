@@ -22,6 +22,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <ctype.h>
 #include <crt_externs.h>
 #include <dlfcn.h>
 #include <pthread.h>
@@ -191,6 +192,55 @@ static void proton_engine_debug_log(const char *format, ...) {
   va_start(args, format);
   proton_engine_log_to_env("PROTON_NATIVE_LOG", format, args);
   va_end(args);
+}
+
+static int proton_engine_env_equals_ignore_case(const char *value,
+                                                const char *expected) {
+  if (value == NULL || expected == NULL) {
+    return 0;
+  }
+  while (*value != '\0' && *expected != '\0') {
+    if (tolower((unsigned char)*value) !=
+        tolower((unsigned char)*expected)) {
+      return 0;
+    }
+    value++;
+    expected++;
+  }
+  return *value == '\0' && *expected == '\0';
+}
+
+static cef_log_severity_t proton_engine_cef_log_severity_from_env(void) {
+  const char *value = getenv("PROTON_CEF_LOG");
+  if (value == NULL || value[0] == '\0' ||
+      proton_engine_env_equals_ignore_case(value, "0") ||
+      proton_engine_env_equals_ignore_case(value, "false") ||
+      proton_engine_env_equals_ignore_case(value, "off") ||
+      proton_engine_env_equals_ignore_case(value, "disable") ||
+      proton_engine_env_equals_ignore_case(value, "disabled")) {
+    return LOGSEVERITY_DISABLE;
+  }
+  if (proton_engine_env_equals_ignore_case(value, "verbose") ||
+      proton_engine_env_equals_ignore_case(value, "debug")) {
+    return LOGSEVERITY_VERBOSE;
+  }
+  if (proton_engine_env_equals_ignore_case(value, "info")) {
+    return LOGSEVERITY_INFO;
+  }
+  if (proton_engine_env_equals_ignore_case(value, "warning") ||
+      proton_engine_env_equals_ignore_case(value, "warn")) {
+    return LOGSEVERITY_WARNING;
+  }
+  if (proton_engine_env_equals_ignore_case(value, "error")) {
+    return LOGSEVERITY_ERROR;
+  }
+  if (proton_engine_env_equals_ignore_case(value, "fatal")) {
+    return LOGSEVERITY_FATAL;
+  }
+  if (proton_engine_env_equals_ignore_case(value, "default")) {
+    return LOGSEVERITY_DEFAULT;
+  }
+  return LOGSEVERITY_DEFAULT;
 }
 
 static bool proton_engine_join_path(char *out,
@@ -1638,7 +1688,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.size = sizeof(settings);
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
-  settings.log_severity = LOGSEVERITY_DISABLE;
+  settings.log_severity = proton_engine_cef_log_severity_from_env();
   settings.remote_debugging_port = config.remote_debugging_port;
   proton_engine_set_string(&settings.browser_subprocess_path,
                            config.helper_path);

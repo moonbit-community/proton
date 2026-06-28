@@ -169,6 +169,11 @@ MoonBit FFI consumers only link `proton.lib`/`proton.dll`. They do not link CEF
 directly; the runtime starts `bin/cef_process(.exe)` through the C ABI runtime
 configuration.
 
+CEF internal logs are disabled by default. Set `PROTON_CEF_LOG=default` to
+temporarily restore CEF logging while debugging; accepted values are `verbose`,
+`debug`, `info`, `warning`, `warn`, `error`, `fatal`, `default`, `0`, `false`,
+`off`, `disable`, and `disabled`.
+
 ## MoonBit Validation
 
 `native_link_config.mjs` points `justjavac/proton/native` at the installed
