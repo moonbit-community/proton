@@ -79,6 +79,7 @@ pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
 pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit) -> Self
 pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Result[Unit, String]
+pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
 
 pub struct AppCommandsConfig {

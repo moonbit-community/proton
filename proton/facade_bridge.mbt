@@ -2,6 +2,7 @@
 fn build_command_host(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  base_dir : String?,
 ) -> Result[@core.AppCommandHost?, String] {
   let host = @core.AppCommandHost::new()
   let mut has_commands = false
@@ -14,6 +15,7 @@ fn build_command_host(
             id,
             spec.js_namespace(),
             options=setting.options(),
+            base_dir~,
           )
           match spec.register(context) {
             Err(error) => {
@@ -41,6 +43,7 @@ fn build_command_proxy_script(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> Result[String?, String] {
   let specs : Array[Json] = []
+  let scripts : Array[String] = []
   for id, spec in command_extensions {
     match manifest.extension_setting(id) {
       Some(setting) =>
@@ -71,6 +74,9 @@ fn build_command_proxy_script(
               "apis": Json::array(apis),
             }),
           )
+          for script in spec.scripts() {
+            scripts.push(script)
+          }
         }
       None => ()
     }
@@ -78,7 +84,12 @@ fn build_command_proxy_script(
   if specs.length() == 0 {
     Ok(None)
   } else {
-    Ok(Some(command_proxy_bootstrap_script(Json::array(specs).stringify())))
+    let script = command_proxy_bootstrap_script(Json::array(specs).stringify())
+    if scripts.length() == 0 {
+      Ok(Some(script))
+    } else {
+      Ok(Some(script + "\n" + scripts.join("\n")))
+    }
   }
 }
 
@@ -140,12 +151,30 @@ fn command_proxy_bootstrap_script(specs_json : String) -> String {
   "    }\n" +
   "    return core.invokeOp('ext:' + namespace + '/' + apiName, payload);\n" +
   "  }\n" +
+  "  var extensions = root['@@extensions'] && typeof root['@@extensions'] === 'object' ? root['@@extensions'] : Object.create(null);\n" +
+  "  root['@@extensions'] = extensions;\n" +
+  "  root['@@ensureExtension'] = function(extensionName) {\n" +
+  "    var existingExtension = extensions[extensionName];\n" +
+  "    if (existingExtension && typeof existingExtension === 'object') {\n" +
+  "      return existingExtension;\n" +
+  "    }\n" +
+  "    var target = {};\n" +
+  "    target.invoke = function(apiName, payload) {\n" +
+  "      return invokeExtension(String(extensionName), String(apiName), payload);\n" +
+  "    };\n" +
+  "    target.on = function(eventName, listener) {\n" +
+  "      return events.on(String(extensionName) + '.' + String(eventName), listener);\n" +
+  "    };\n" +
+  "    Object.defineProperty(target, 'name', { value: String(extensionName), enumerable: true });\n" +
+  "    extensions[extensionName] = target;\n" +
+  "    root[extensionName] = target;\n" +
+  "    return target;\n" +
+  "  };\n" +
   "  for (var i = 0; i < specs.length; i += 1) {\n" +
   "    var namespace = String(specs[i].namespace || '');\n" +
   "    var apis = Array.isArray(specs[i].apis) ? specs[i].apis : [];\n" +
   "    if (!namespace) { continue; }\n" +
-  "    var target = root[namespace];\n" +
-  "    if (!target || typeof target !== 'object') { target = {}; }\n" +
+  "    var target = root['@@ensureExtension'](namespace);\n" +
   "    target.invoke = (function(ns) {\n" +
   "      return function(apiName, payload) {\n" +
   "        return invokeExtension(ns, String(apiName), payload);\n" +

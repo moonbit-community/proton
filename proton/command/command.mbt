@@ -308,6 +308,13 @@ pub fn AppCommandExtensionSpec::apis(
 }
 
 ///|
+pub fn AppCommandExtensionSpec::scripts(
+  self : AppCommandExtensionSpec,
+) -> Array[String] {
+  copy_strings(self.scripts)
+}
+
+///|
 pub fn AppCommandExtensionRegistry::new() -> AppCommandExtensionRegistry {
   AppCommandExtensionRegistry::{ specs: {}, registration_order: [] }
 }

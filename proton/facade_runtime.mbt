@@ -8,7 +8,12 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
   }
   match self.resolved_manifest() {
     Err(error) => Err(error)
-    Ok(manifest) => run_manifest(manifest, self.command_extensions)
+    Ok(manifest) =>
+      run_manifest(
+        manifest,
+        self.command_extensions,
+        app_config_base_dir(self.file_path),
+      )
   }
 }
 
@@ -25,6 +30,7 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 async fn run_manifest(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  base_dir : String?,
 ) -> Result[Unit, String] {
   let runtime = match
     @native.Runtime::new(
@@ -52,7 +58,8 @@ async fn run_manifest(
     }
   }
 
-  let command_host = match build_command_host(manifest, command_extensions) {
+  let command_host = match
+    build_command_host(manifest, command_extensions, base_dir) {
     Err(error) => {
       ignore(window.destroy())
       ignore(runtime.destroy())
@@ -120,6 +127,14 @@ async fn run_manifest(
           }
         }
       }
+  }
+}
+
+///|
+fn app_config_base_dir(file_path : String?) -> String? {
+  match file_path {
+    Some(path) => Some((path : @mbpath.Path).dirname().to_string())
+    None => None
   }
 }
 

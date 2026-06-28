@@ -52,7 +52,9 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(Self, Stri
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
 
 type ExtensionHost
+pub fn ExtensionHost::api_names(Self, String) -> Array[String]
 pub fn ExtensionHost::destroy(Self) -> Unit
+pub fn ExtensionHost::dispatch_op(Self, String, Json) -> Result[Json, String]
 pub fn[Payload : ToJson] ExtensionHost::emit(Self, String, String, Payload) -> Unit
 pub fn ExtensionHost::install(Self, Extension) -> Unit
 pub fn ExtensionHost::new() -> Self

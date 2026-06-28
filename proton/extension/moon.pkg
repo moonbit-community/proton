@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/core/json",
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/core",
 }

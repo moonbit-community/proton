@@ -23,6 +23,7 @@ struct ExtensionHost {
   extension_ids : Map[String, String]
   extension_namespaces : Map[String, String]
   apis : Map[String, Bool]
+  api_names : Map[String, Array[String]]
   destroy_hooks : Map[String, () -> Unit]
   op_registry : OpRegistry
 }

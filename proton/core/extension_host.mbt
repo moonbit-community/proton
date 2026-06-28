@@ -5,6 +5,7 @@ pub fn ExtensionHost::new() -> ExtensionHost {
     extension_ids: {},
     extension_namespaces: {},
     apis: {},
+    api_names: {},
     destroy_hooks: {},
     op_registry: OpRegistry::new(),
   }
@@ -81,6 +82,7 @@ pub fn ExtensionHost::destroy(self : ExtensionHost) -> Unit {
   self.extension_ids.clear()
   self.extension_namespaces.clear()
   self.apis.clear()
+  self.api_names.clear()
   self.destroy_hooks.clear()
 }
 
@@ -108,7 +110,33 @@ fn ExtensionContext::register_api(
     )
   }
   self.host.apis.set(registry_key, true)
+  match self.host.api_names.get(self.extension_namespace) {
+    Some(names) => names.push(api_name)
+    None => self.host.api_names.set(self.extension_namespace, [api_name])
+  }
   extension_op_name(self.extension_namespace, api_name)
+}
+
+///|
+/// Returns the API names registered for one installed extension namespace.
+pub fn ExtensionHost::api_names(
+  self : ExtensionHost,
+  extension_namespace : String,
+) -> Array[String] {
+  match self.api_names.get(extension_namespace) {
+    Some(names) => names.map(fn(name) { name })
+    None => []
+  }
+}
+
+///|
+/// Dispatches one installed extension op with a raw JSON payload.
+pub fn ExtensionHost::dispatch_op(
+  self : ExtensionHost,
+  name : String,
+  payload : Json,
+) -> Result[Json, String] {
+  self.op_registry.call(name, payload)
 }
 
 ///|
