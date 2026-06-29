@@ -32,9 +32,11 @@ async fn run_manifest(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
 ) -> Result[Unit, String] {
+  let helper_path = macos_bundled_helper_path()
   let runtime = match
     @native.Runtime::new(
       config=@native.RuntimeConfig::bundled(
+        helper_path?,
         remote_debugging_port=debug_port(manifest.debug),
       ),
     ) {

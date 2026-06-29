@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/fs",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
@@ -22,6 +23,7 @@ options(
     "facade_bridge.mbt": [ "native" ],
     "facade_builders.mbt": [ "native" ],
     "facade_entry.mbt": [ "native" ],
+    "facade_macos_layout.mbt": [ "native" ],
     "facade_manifest.mbt": [ "native" ],
     "facade_runtime.mbt": [ "native" ],
     "facade_types.mbt": [ "native" ],

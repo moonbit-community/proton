@@ -190,7 +190,14 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
 }
 
 ///|
+/// `helper_path`, when set, overrides the subprocess executable the bundled
+/// runtime launches. On macOS the helper must run from a nested `.app` so
+/// Chromium's outer-bundle walk yields the same base bundle id as the browser;
+/// otherwise the MachPort rendezvous service names mismatch and every child
+/// process terminates. Framework and resource discovery still run relative to
+/// the loaded `libproton`, so only the helper needs an explicit path.
 pub fn RuntimeConfig::bundled(
+  helper_path? : String,
   cache_dir? : String,
   remote_debugging_port? : Int = 0,
 ) -> RuntimeConfig {
@@ -198,7 +205,7 @@ pub fn RuntimeConfig::bundled(
     raw_json: None,
     use_bundled: true,
     runtime_root: None,
-    helper_path: None,
+    helper_path,
     resources_dir: None,
     locales_dir: None,
     cache_dir,
