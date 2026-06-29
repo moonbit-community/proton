@@ -11,7 +11,9 @@
  * here first, then proton_execute_process delegates to cef_execute_process and
  * returns the subprocess exit code when CEF handles the process.
  */
-int main(void) {
+int main(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   int32_t exit_code = 0;
   int32_t status =
       proton_execute_process("{\"abi_version\":1,\"use_bundled\":true}",

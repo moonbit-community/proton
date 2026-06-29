@@ -20,6 +20,7 @@
 #include "include/capi/cef_v8_capi.h"
 #import "include/cef_application_mac.h"
 #include "include/internal/cef_string.h"
+#include "include/wrapper/cef_library_loader.h"
 
 #import <Cocoa/Cocoa.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -162,6 +163,7 @@ typedef struct {
 } proton_engine_window_config_t;
 
 static int g_proton_cef_initialized = 0;
+static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
 static int g_proton_cef_shutdown_registered = 0;
 static proton_engine_app_t g_app;
@@ -420,6 +422,42 @@ static bool proton_engine_default_helper_path(char *out, size_t out_len) {
     return false;
   }
   return proton_engine_join_path(out, out_len, bin_dir, "cef_process");
+}
+
+static int proton_engine_load_cef_library(
+    const proton_engine_runtime_config_t *config,
+    char *error,
+    size_t error_len) {
+  if (g_proton_cef_library_loaded) {
+    return 1;
+  }
+  if (config == NULL || config->framework_dir[0] == '\0') {
+    proton_engine_set_message(error, error_len,
+                              "runtime framework path is required");
+    return 0;
+  }
+  char framework_binary[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
+  if (!proton_engine_join_path(framework_binary, sizeof(framework_binary),
+                               config->framework_dir,
+                               "Chromium Embedded Framework")) {
+    proton_engine_set_message(error, error_len,
+                              "runtime framework binary path is too long");
+    return 0;
+  }
+  proton_engine_debug_log("cef_load_library path=%s", framework_binary);
+  if (!cef_load_library(framework_binary)) {
+    proton_engine_set_message(error, error_len, "failed to load CEF framework");
+    return 0;
+  }
+  g_proton_cef_library_loaded = 1;
+  return 1;
+}
+
+static void proton_engine_unload_cef_library(void) {
+  if (g_proton_cef_library_loaded) {
+    (void)cef_unload_library();
+    g_proton_cef_library_loaded = 0;
+  }
 }
 
 #include "../cef_common/strings.h"
@@ -907,6 +945,8 @@ static void CEF_CALLBACK proton_engine_on_schedule_message_pump_work(
 static cef_browser_process_handler_t *CEF_CALLBACK
 proton_engine_get_browser_process_handler(cef_app_t *self) {
   (void)self;
+  g_browser_process_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_browser_process_handler.handler);
   return &g_browser_process_handler.handler;
 }
 
@@ -962,12 +1002,16 @@ static void CEF_CALLBACK proton_engine_on_before_close(
 static cef_life_span_handler_t *CEF_CALLBACK
 proton_engine_client_get_life_span_handler(cef_client_t *self) {
   (void)self;
+  g_life_span_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_life_span_handler.handler);
   return &g_life_span_handler.handler;
 }
 
 static cef_load_handler_t *CEF_CALLBACK
 proton_engine_client_get_load_handler(cef_client_t *self) {
   (void)self;
+  g_load_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_load_handler.handler);
   return &g_load_handler.handler;
 }
 
@@ -1402,6 +1446,8 @@ static int CEF_CALLBACK proton_engine_renderer_on_process_message_received(
 static cef_render_process_handler_t *CEF_CALLBACK
 proton_engine_get_render_process_handler(cef_app_t *self) {
   (void)self;
+  g_render_process_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_render_process_handler.handler);
   return &g_render_process_handler.handler;
 }
 
@@ -1585,6 +1631,13 @@ static void CEF_CALLBACK proton_engine_on_load_start(
     cef_transition_type_t transition_type) {
   (void)self;
   (void)transition_type;
+  char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
+                            : NULL;
+  proton_engine_debug_log("load_start browser=%d main=%d url=%s",
+                          proton_engine_browser_id(browser),
+                          frame != NULL ? frame->is_main(frame) : 0,
+                          url != NULL ? url : "");
+  free(url);
   proton_engine_inject_bridge_script(browser, frame);
 }
 
@@ -1594,7 +1647,13 @@ static void CEF_CALLBACK proton_engine_on_load_end(
     cef_frame_t *frame,
     int httpStatusCode) {
   (void)self;
-  (void)httpStatusCode;
+  char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
+                            : NULL;
+  proton_engine_debug_log("load_end browser=%d main=%d status=%d url=%s",
+                          proton_engine_browser_id(browser),
+                          frame != NULL ? frame->is_main(frame) : 0,
+                          httpStatusCode, url != NULL ? url : "");
+  free(url);
   proton_engine_inject_bridge_script(browser, frame);
 }
 
@@ -1852,6 +1911,7 @@ static void proton_engine_cef_shutdown(void) {
     cef_shutdown();
     g_proton_cef_initialized = 0;
   }
+  proton_engine_unload_cef_library();
 }
 
 static void proton_engine_check_cef_api_hash(void) {
@@ -1876,6 +1936,9 @@ int32_t proton_engine_execute_process_json(const char *config_json,
   if (status != PROTON_OK) {
     return status;
   }
+  if (!proton_engine_load_cef_library(&config, error, error_len)) {
+    return PROTON_ERR_ENGINE;
+  }
   proton_engine_check_cef_api_hash();
   cef_main_args_t args;
   memset(&args, 0, sizeof(args));
@@ -1883,6 +1946,7 @@ int32_t proton_engine_execute_process_json(const char *config_json,
   args.argv = *_NSGetArgv();
   proton_engine_init_handlers();
   int exit_code = cef_execute_process(&args, &g_app.app, NULL);
+  proton_engine_unload_cef_library();
   if (out_exit_code != NULL) {
     *out_exit_code = exit_code;
   }
@@ -1910,10 +1974,14 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     return status;
   }
 
+  if (!proton_engine_load_cef_library(&config, error, error_len)) {
+    return PROTON_ERR_ENGINE;
+  }
   proton_engine_ensure_appkit();
   proton_engine_init_handlers();
   proton_engine_check_cef_api_hash();
   if (!proton_engine_setup_wait_source(error, error_len)) {
+    proton_engine_unload_cef_library();
     return PROTON_ERR_ENGINE;
   }
 
@@ -1947,6 +2015,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     cef_string_clear(&settings.locales_dir_path);
     cef_string_clear(&settings.root_cache_path);
     proton_engine_teardown_wait_source();
+    proton_engine_unload_cef_library();
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
@@ -2527,6 +2596,8 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   }
   cef_string_t cef_url = {0};
   proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
+  proton_engine_debug_log("load_url browser=%d url=%s", window->browser_id,
+                          url != NULL ? url : "about:blank");
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);
   frame->base.release((cef_base_ref_counted_t *)frame);
@@ -2563,6 +2634,12 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
   window->html_url = url_copy;
   window->html = copy;
   window->html_len = strlen(copy);
+  proton_engine_debug_log("load_html browser=%d base_url=%s bytes=%llu",
+                          window->browser_id,
+                          base_url != NULL && base_url[0] != '\0'
+                              ? base_url
+                              : "proton://app/",
+                          (unsigned long long)window->html_len);
   int32_t status = proton_engine_window_load_url(
       window, base_url != NULL && base_url[0] != '\0' ? base_url
                                                       : "proton://app/",
