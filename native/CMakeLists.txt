@@ -16,7 +16,7 @@ if(PROTON_WITH_ENGINE)
   if(WIN32)
     set(PROTON_ENGINE_SOURCE src/engine/cef_win/proton_engine_cef_win.c)
   elseif(APPLE)
-    enable_language(OBJC)
+    enable_language(OBJC CXX OBJCXX)
     set(PROTON_ENGINE_SOURCE src/engine/cef_mac/proton_engine_cef_mac.m)
   elseif(UNIX)
     set(PROTON_ENGINE_SOURCE src/engine/cef_linux/proton_engine_cef_linux.c)
@@ -123,12 +123,21 @@ if(PROTON_WITH_ENGINE)
     if(NOT EXISTS "${PROTON_ENGINE_ICU_DATA}")
       message(FATAL_ERROR "Missing engine ICU data: ${PROTON_ENGINE_ICU_DATA}")
     endif()
+    add_library(proton_cef_loader STATIC
+      "${PROTON_ENGINE_ROOT}/libcef_dll/wrapper/libcef_dll_dylib.cc"
+      "${PROTON_ENGINE_ROOT}/libcef_dll/wrapper/cef_scoped_library_loader_mac.mm"
+    )
+    target_include_directories(proton_cef_loader PRIVATE "${PROTON_ENGINE_ROOT}")
+    target_compile_definitions(proton_cef_loader PRIVATE WRAPPING_CEF_SHARED=1)
+    target_compile_features(proton_cef_loader PRIVATE cxx_std_17)
     target_link_libraries(proton PRIVATE
-      "${PROTON_ENGINE_FRAMEWORK_BINARY}"
+      proton_cef_loader
       "-framework Cocoa"
       "-framework AppKit"
       "-framework Foundation"
+      "-lc++"
     )
+    set_target_properties(proton PROPERTIES LINKER_LANGUAGE CXX)
     set_target_properties(proton PROPERTIES
       INSTALL_RPATH "@loader_path/../Frameworks;@loader_path"
       BUILD_WITH_INSTALL_RPATH ON
@@ -139,11 +148,6 @@ if(PROTON_WITH_ENGINE)
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
               "${PROTON_ENGINE_FRAMEWORK_DIR}"
               "$<TARGET_FILE_DIR:proton>/../Frameworks/Chromium Embedded Framework.framework"
-      COMMAND install_name_tool
-              -change
-              "@executable_path/../Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework"
-              "@loader_path/../Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework"
-              "$<TARGET_FILE:proton>"
       VERBATIM
     )
     add_executable(cef_process
