@@ -1,9 +1,9 @@
 ///|
-fn read_json_file(path : String) -> Result[Json, CliError] {
+fn read_json_file(path : String) -> Result[Json, CefError] {
   let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to read " + path + ": " + @debug.render(@debug.to_repr(err)),
         ),
       )
@@ -11,7 +11,7 @@ fn read_json_file(path : String) -> Result[Json, CliError] {
   try @json.parse(text) catch {
     err =>
       Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to parse " + path + ": " + @debug.render(@debug.to_repr(err)),
         ),
       )
@@ -25,14 +25,14 @@ fn json_string_field(
   json : Json,
   field : String,
   label : String,
-) -> Result[String, CliError] {
+) -> Result[String, CefError] {
   match json {
     Object(object) =>
       match object.get(field) {
         Some(String(value)) => Ok(value)
         _ =>
-          Err(CliError::CommandError(label + " missing string field: " + field))
+          Err(CefError::CommandError(label + " missing string field: " + field))
       }
-    _ => Err(CliError::CommandError(label + " must be a JSON object"))
+    _ => Err(CefError::CommandError(label + " must be a JSON object"))
   }
 }

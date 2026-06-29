@@ -86,6 +86,19 @@ fn cli_path_is_absolute(path : String) -> Bool {
 }
 
 ///|
+fn path_join(base : String, child : String) -> String {
+  if base == "" {
+    child
+  } else if child == "" {
+    base
+  } else if base.has_suffix("\\") || base.has_suffix("/") {
+    base + child
+  } else {
+    base + @path.sep.to_string() + child
+  }
+}
+
+///|
 fn resolve_cli_path(cwd : String, path : String) -> String {
   if cli_path_is_absolute(path) {
     path
@@ -171,7 +184,13 @@ async fn main {
   } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(cwd, args[1:].to_owned())
   } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
-    run_cef_setup(cwd, args[2:].to_owned())
+    @cef.run_setup(cwd, args[2:].to_owned()).map_err(fn(error) {
+      match error {
+        UsageError(message, usage_is_embedded) =>
+          CliError::UsageError(message, usage_is_embedded)
+        CommandError(message) => CliError::CommandError(message)
+      }
+    })
   } else {
     Err(CliError::UsageError("unknown command", false))
   }

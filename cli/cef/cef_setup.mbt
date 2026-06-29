@@ -11,13 +11,21 @@ fn cef_setup_arg_parser() -> @argparse.Command {
 }
 
 ///|
-async fn run_cef_setup(
+fn match_value(matches : @argparse.Matches, name : String) -> String? {
+  match matches.values.get(name) {
+    Some([value, ..]) => Some(value)
+    _ => None
+  }
+}
+
+///|
+pub async fn run_setup(
   cwd : String,
   args : Array[String],
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let cmd = cef_setup_arg_parser()
   let matches = cmd.parse(argv=args, env={}) catch {
-    err => return Err(CliError::UsageError(err.to_string(), true))
+    err => return Err(CefError::UsageError(err.to_string(), true))
   }
   let platform = current_platform()
   match require_supported_platform(platform) {

@@ -10,7 +10,7 @@ fn archive_url(name : String, url : String?) -> String {
 fn assert_safe_install_dir(
   install_dir : String,
   root : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let normalized_install = install_dir.replace(old="/", new="\\")
   let normalized_root = root.replace(old="/", new="\\")
   let parent = path_parent(normalized_root)
@@ -19,7 +19,7 @@ fn assert_safe_install_dir(
     normalized_install == normalized_root ||
     normalized_install == parent {
     Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "Refusing to replace unsafe CEF install directory: " + install_dir,
       ),
     )
@@ -35,7 +35,7 @@ async fn install_cef_root(
   name : String,
   root : String,
   platform : ProtonPlatform,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   match assert_safe_install_dir(install_dir, root) {
     Ok(_) => ()
     Err(error) => return Err(error)
@@ -60,7 +60,7 @@ async fn install_cef_root(
   ) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to write CEF version: " + @debug.render(@debug.to_repr(err)),
         ),
       )
@@ -79,7 +79,7 @@ async fn ensure_cef_cache(
   root : String,
   cache_dir : String,
   platform : ProtonPlatform,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   if installed_version(cache_dir) == name {
     return normalize_cef_runtime_layout(cache_dir)
   }
@@ -97,7 +97,7 @@ async fn setup_downloaded_cef(
   root : String,
   install_dir : String,
   platform : ProtonPlatform,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let temp_dir = match make_temp_dir() {
     Ok(temp_dir) => temp_dir
     Err(error) => return Err(error)

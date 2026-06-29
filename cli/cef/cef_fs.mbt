@@ -1,10 +1,10 @@
 ///|
-async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
+async fn copy_file(src : String, dest : String) -> Result[Unit, CefError] {
   if @path.sep != '\\' {
     let code = @process.run("cp", ["-p", src, dest]) catch {
       err =>
         return Err(
-          CliError::CommandError(
+          CefError::CommandError(
             "Failed to copy " +
             src +
             " to " +
@@ -16,7 +16,7 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
     }
     guard code == 0 else {
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to copy " +
           src +
           " to " +
@@ -34,7 +34,7 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
   ]) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to copy " +
           src +
           " to " +
@@ -46,7 +46,7 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
   }
   guard code == 0 else {
     return Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "Failed to copy " +
         src +
         " to " +
@@ -61,11 +61,11 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
 
 ///|
 #cfg(not(platform="windows"))
-async fn make_executable(path : String) -> Result[Unit, CliError] {
+async fn make_executable(path : String) -> Result[Unit, CefError] {
   @async_fs.chmod(path, 0o755) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to mark executable " +
           path +
           ": " +
@@ -78,7 +78,7 @@ async fn make_executable(path : String) -> Result[Unit, CliError] {
 
 ///|
 #cfg(platform="windows")
-fn make_executable(_path : String) -> Result[Unit, CliError] {
+fn make_executable(_path : String) -> Result[Unit, CefError] {
   Ok(())
 }
 
@@ -86,19 +86,19 @@ fn make_executable(_path : String) -> Result[Unit, CliError] {
 async fn copy_file_if_exists(
   src : String,
   dest : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   guard path_exists(src) else { return Ok(()) }
   copy_file(src, dest)
 }
 
 ///|
-async fn copy_tree(src : String, dest : String) -> Result[Unit, CliError] {
+async fn copy_tree(src : String, dest : String) -> Result[Unit, CefError] {
   if path_is_file(src) {
     return copy_file(src, dest)
   }
   if !path_is_dir(src) {
     return Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "Failed to copy " +
         src +
         " to " +
@@ -111,7 +111,7 @@ async fn copy_tree(src : String, dest : String) -> Result[Unit, CliError] {
     @async_fs.mkdir(dest, recursive=true) catch {
       err =>
         return Err(
-          CliError::CommandError(
+          CefError::CommandError(
             "Failed to create " +
             dest +
             ": " +
@@ -127,7 +127,7 @@ async fn copy_tree(src : String, dest : String) -> Result[Unit, CliError] {
   ) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to read " + src + ": " + @debug.render(@debug.to_repr(err)),
         ),
       )
@@ -144,12 +144,12 @@ async fn copy_tree(src : String, dest : String) -> Result[Unit, CliError] {
 }
 
 ///|
-async fn ensure_dir(path : String) -> Result[Unit, CliError] {
+async fn ensure_dir(path : String) -> Result[Unit, CefError] {
   guard !path_exists(path) else { return Ok(()) }
   @async_fs.mkdir(path, recursive=true) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to create " + path + ": " + @debug.render(@debug.to_repr(err)),
         ),
       )
@@ -158,13 +158,13 @@ async fn ensure_dir(path : String) -> Result[Unit, CliError] {
 }
 
 ///|
-async fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CliError] {
+async fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CefError] {
   let release_dir = path_join(root, "Release")
   if !path_exists(release_dir) {
     @mbfs.create_dir(release_dir) catch {
       err =>
         return Err(
-          CliError::CommandError(
+          CefError::CommandError(
             "Failed to create Release directory: " +
             @debug.render(@debug.to_repr(err)),
           ),
@@ -188,13 +188,13 @@ async fn normalize_cef_runtime_layout(root : String) -> Result[Unit, CliError] {
 }
 
 ///|
-async fn remove_tree(path : String) -> Result[Unit, CliError] {
+async fn remove_tree(path : String) -> Result[Unit, CefError] {
   guard path_exists(path) else { return Ok(()) }
   if path_is_file(path) {
     @async_fs.remove(path) catch {
       err =>
         return Err(
-          CliError::CommandError(
+          CefError::CommandError(
             "Failed to remove " +
             path +
             ": " +
@@ -206,7 +206,7 @@ async fn remove_tree(path : String) -> Result[Unit, CliError] {
     @async_fs.rmdir(path, recursive=true) catch {
       err =>
         return Err(
-          CliError::CommandError(
+          CefError::CommandError(
             "Failed to remove " +
             path +
             ": " +
@@ -216,7 +216,7 @@ async fn remove_tree(path : String) -> Result[Unit, CliError] {
     }
   } else {
     return Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "Failed to remove " + path + ": path is not a file or directory",
       ),
     )

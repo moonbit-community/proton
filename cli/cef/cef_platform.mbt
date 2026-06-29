@@ -244,12 +244,12 @@ fn all_exist(root : String, files : Array[String]) -> Bool {
 ///|
 fn require_supported_platform(
   platform : ProtonPlatform,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   if platform.supported {
     Ok(())
   } else {
     Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "The Proton CEF backend is not supported for " + platform.id + ".",
       ),
     )

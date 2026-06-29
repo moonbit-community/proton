@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_cli/cef"
+
+// Values
+pub async fn run_setup(String, Array[String]) -> Result[Unit, CefError]
+
+// Errors
+
+// Types and methods
+pub(all) enum CefError {
+  UsageError(String, Bool)
+  CommandError(String)
+}
+
+// Type aliases
+
+// Traits
+

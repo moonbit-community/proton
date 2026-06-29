@@ -2,7 +2,7 @@
 fn assert_safe_generated_dir(
   generated_dir : String,
   root : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let normalized_generated = generated_dir.replace(old="/", new="\\")
   let normalized_root = root.replace(old="/", new="\\")
   let parent = path_parent(normalized_root)
@@ -11,7 +11,7 @@ fn assert_safe_generated_dir(
     normalized_generated == normalized_root ||
     normalized_generated == parent {
     Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "Refusing to replace unsafe generated directory: " + generated_dir,
       ),
     )
@@ -25,7 +25,7 @@ async fn copy_prebuilt_runtime(
   platform : ProtonPlatform,
   prebuilt_root : String,
   runtime_dir : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let bin_dir = path_join(runtime_dir, "bin")
   let lib_dir = path_join(runtime_dir, "lib")
   let include_dir = path_join(runtime_dir, "include")
@@ -67,7 +67,7 @@ async fn copy_cef_runtime(
   platform : ProtonPlatform,
   cef_root : String,
   runtime_dir : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   if platform.id == "darwin-arm64" {
     let framework = "Chromium Embedded Framework.framework"
     let framework_src = path_join(path_join(cef_root, "Release"), framework)
@@ -122,7 +122,7 @@ async fn assemble_runtime(
   prebuilt_root : String,
   runtime_dir : String,
   relative_dist : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   match assert_safe_generated_dir(runtime_dir, root) {
     Ok(_) => ()
     Err(error) => return Err(error)

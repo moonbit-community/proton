@@ -1,16 +1,16 @@
 ///|
-async fn make_temp_dir() -> Result[String, CliError] {
+async fn make_temp_dir() -> Result[String, CefError] {
   let temp_dir = @async_fs.tmpdir(prefix="proton-cef-") catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to create temp directory: " +
           @debug.render(@debug.to_repr(err)),
         ),
       )
   }
   if temp_dir == "" {
-    Err(CliError::CommandError("Failed to create temp directory"))
+    Err(CefError::CommandError("Failed to create temp directory"))
   } else {
     Ok(temp_dir)
   }
@@ -20,19 +20,19 @@ async fn make_temp_dir() -> Result[String, CliError] {
 async fn download_file(
   url : String,
   destination : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   println("[INFO] Downloading CEF: " + url)
   let code = @process.run("curl", ["-L", "--fail", "--output", destination, url]) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Download failed: " + @debug.render(@debug.to_repr(err)),
         ),
       )
   }
   guard code == 0 else {
     return Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "Download failed: curl exited with code " + code.to_string(),
       ),
     )
@@ -44,19 +44,19 @@ async fn download_file(
 async fn extract_tar_bz2(
   archive_path : String,
   destination : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   println("[INFO] Extracting: " + archive_path)
   let code = @process.run("tar", ["-xjf", archive_path, "-C", destination]) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "tar failed: " + @debug.render(@debug.to_repr(err)),
         ),
       )
   }
   guard code == 0 else {
     return Err(
-      CliError::CommandError(
+      CefError::CommandError(
         "tar failed: tar exited with code " + code.to_string(),
       ),
     )
@@ -69,7 +69,7 @@ fn find_extracted_root(
   extract_dir : String,
   name : String,
   platform : ProtonPlatform,
-) -> Result[String, CliError] {
+) -> Result[String, CefError] {
   let named = path_join(extract_dir, name)
   if has_source_cef_files(named, platform) {
     return Ok(named)
@@ -78,7 +78,7 @@ fn find_extracted_root(
   let entries = @mbfs.read_dir(extract_dir) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to read extract directory: " +
           @debug.render(@debug.to_repr(err)),
         ),
@@ -95,7 +95,7 @@ fn find_extracted_root(
     [candidate] => Ok(candidate)
     _ =>
       Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Could not find extracted CEF root in " + extract_dir,
         ),
       )

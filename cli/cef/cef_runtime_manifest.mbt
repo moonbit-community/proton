@@ -21,7 +21,7 @@ fn write_runtime_metadata(
   platform : String,
   cef_name : String,
   relative_dist : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let manifest = runtime_manifest_json(
     proton_version, platform, cef_name, relative_dist,
   )
@@ -32,7 +32,7 @@ fn write_runtime_metadata(
   ) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to write runtime manifest: " +
           @debug.render(@debug.to_repr(err)),
         ),
@@ -45,7 +45,7 @@ fn write_runtime_metadata(
   ) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to write active runtime manifest: " +
           @debug.render(@debug.to_repr(err)),
         ),
@@ -58,7 +58,7 @@ fn write_runtime_metadata(
   ) catch {
     err =>
       return Err(
-        CliError::CommandError(
+        CefError::CommandError(
           "Failed to write runtime version: " +
           @debug.render(@debug.to_repr(err)),
         ),
@@ -73,7 +73,7 @@ fn validate_active_runtime_manifest(
   platform : String,
   proton_version : String,
   relative_dist : String,
-) -> Result[Unit, CliError] {
+) -> Result[Unit, CefError] {
   let manifest_path = path_join(path_join(root, ".proton"), "runtime.json")
   read_json_file(manifest_path).bind(fn(json) {
     json_string_field(json, "platform", manifest_path).bind(fn(
@@ -81,7 +81,7 @@ fn validate_active_runtime_manifest(
     ) {
       if actual_platform != platform {
         return Err(
-          CliError::CommandError(
+          CefError::CommandError(
             "Active runtime platform mismatch: expected " +
             platform +
             ", got " +
@@ -94,7 +94,7 @@ fn validate_active_runtime_manifest(
       ) {
         if actual_version != proton_version {
           return Err(
-            CliError::CommandError(
+            CefError::CommandError(
               "Active runtime Proton version mismatch: expected " +
               proton_version +
               ", got " +
@@ -105,7 +105,7 @@ fn validate_active_runtime_manifest(
         json_string_field(json, "dist", manifest_path).bind(fn(actual_dist) {
           if actual_dist != relative_dist {
             return Err(
-              CliError::CommandError(
+              CefError::CommandError(
                 "Active runtime dist mismatch: expected " +
                 relative_dist +
                 ", got " +

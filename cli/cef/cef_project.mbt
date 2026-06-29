@@ -15,12 +15,12 @@ fn find_project_root_from(start : String) -> String {
 }
 
 ///|
-fn project_root(cwd : String) -> Result[String, CliError] {
+fn project_root(cwd : String) -> Result[String, CefError] {
   if cwd != "" && cwd != "." {
     return Ok(find_project_root_from(cwd))
   }
   match @env.current_dir() {
     Some(cwd) => Ok(find_project_root_from(cwd))
-    None => Err(CliError::CommandError("Failed to read current directory"))
+    None => Err(CefError::CommandError("Failed to read current directory"))
   }
 }
