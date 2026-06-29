@@ -10,6 +10,13 @@ fn find_prebuilt_root(
   if all_exist(package_prebuilt, proton_prebuilt_relative_files(platform)) {
     return Ok(package_prebuilt)
   }
+  let workspace_prebuilt = path_join(
+    path_join(path_join(path_join(root, "lepus"), "proton"), "prebuilt"),
+    platform.id,
+  )
+  if all_exist(workspace_prebuilt, proton_prebuilt_relative_files(platform)) {
+    return Ok(workspace_prebuilt)
+  }
   let mooncakes_prebuilt = path_join(
     path_join(path_join(path_join(root, ".mooncakes"), "justjavac"), "proton"),
     path_join("prebuilt", platform.id),
@@ -27,6 +34,8 @@ fn find_prebuilt_root(
       platform.id +
       ". Expected " +
       package_prebuilt +
+      ", " +
+      workspace_prebuilt +
       ", " +
       mooncakes_prebuilt +
       " or " +

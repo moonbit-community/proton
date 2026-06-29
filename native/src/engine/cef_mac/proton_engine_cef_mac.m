@@ -81,6 +81,7 @@ struct proton_engine_window {
   int width;
   int height;
   int closed;
+  int closing;
   struct proton_engine_window *next;
 };
 
@@ -166,6 +167,8 @@ static int g_proton_cef_initialized = 0;
 static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
 static int g_proton_cef_shutdown_registered = 0;
+static int g_proton_app_menu_installed = 0;
+static int g_proton_app_terminating = 0;
 static proton_engine_app_t g_app;
 static proton_engine_browser_process_handler_t g_browser_process_handler;
 static proton_engine_render_process_handler_t g_render_process_handler;
@@ -999,6 +1002,22 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   }
 }
 
+static int CEF_CALLBACK proton_engine_do_close(
+    cef_life_span_handler_t *self,
+    cef_browser_t *browser) {
+  (void)self;
+  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  if (window != NULL) {
+    proton_engine_debug_log("browser_do_close browser=%d",
+                            window->browser_id);
+    window->closing = 1;
+    if (window->window != nil) {
+      [window->window close];
+    }
+  }
+  return 1;
+}
+
 static cef_life_span_handler_t *CEF_CALLBACK
 proton_engine_client_get_life_span_handler(cef_client_t *self) {
   (void)self;
@@ -1095,6 +1114,7 @@ static void proton_engine_init_handlers(void) {
       (cef_base_ref_counted_t *)&g_life_span_handler.handler.base,
       sizeof(g_life_span_handler.handler), &g_life_span_handler.refs);
   g_life_span_handler.handler.on_before_popup = proton_engine_on_before_popup;
+  g_life_span_handler.handler.do_close = proton_engine_do_close;
   g_life_span_handler.handler.on_before_close = proton_engine_on_before_close;
 
   proton_engine_init_ref_counted(
@@ -1819,6 +1839,43 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
+static void proton_engine_window_note_closed(proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  if (!window->closed) {
+    proton_engine_debug_log("window_closed browser=%d", window->browser_id);
+  }
+  window->closed = 1;
+  proton_engine_bridge_pending_remove_browser(window->runtime,
+                                              window->browser_id);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static int proton_engine_request_all_windows_close(void) {
+  int requested = 0;
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    if (window->closed) {
+      continue;
+    }
+    requested = 1;
+    if (window->browser != NULL) {
+      cef_browser_host_t *host = window->browser->get_host(window->browser);
+      if (host != NULL) {
+        host->close_browser(host, 1);
+        host->base.release((cef_base_ref_counted_t *)host);
+        continue;
+      }
+    }
+    proton_engine_window_mark_closed(window);
+    if (window->window != nil) {
+      [window->window close];
+    }
+  }
+  return requested;
+}
+
 @interface ProtonWindowDelegate : NSObject <NSWindowDelegate> {
 @public
   proton_engine_window_t *window;
@@ -1829,7 +1886,10 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
 - (BOOL)windowShouldClose:(id)sender {
   (void)sender;
   if (window != NULL) {
-    if (window->closed) {
+    proton_engine_debug_log("window_should_close browser=%d closing=%d closed=%d",
+                            window->browser_id, window->closing,
+                            window->closed);
+    if (window->closed || window->closing) {
       return YES;
     }
     if (!window->closed && window->browser != NULL) {
@@ -1843,6 +1903,22 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
     proton_engine_window_mark_closed(window);
   }
   return YES;
+}
+
+- (void)windowWillClose:(NSNotification *)notification {
+  (void)notification;
+  if (window != NULL) {
+    proton_engine_debug_log("window_will_close browser=%d closing=%d closed=%d",
+                            window->browser_id, window->closing,
+                            window->closed);
+    if (window->closing && window->browser_view != nil) {
+      [window->browser_view removeFromSuperview];
+      window->browser_view = nil;
+    }
+    if (window->closing && !window->closed) {
+      proton_engine_window_note_closed(window);
+    }
+  }
 }
 @end
 
@@ -1867,12 +1943,100 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
   [super sendEvent:event];
   handlingSendEvent_ = wasHandling;
 }
+
+- (void)terminate:(id)sender {
+  (void)sender;
+  proton_engine_debug_log("app_terminate");
+  g_proton_app_terminating = 1;
+  if (g_proton_cef_initialized && proton_engine_request_all_windows_close()) {
+    return;
+  }
+  [super terminate:sender];
+}
 @end
+
+static NSString *proton_engine_application_name(void) {
+  NSString *name =
+      [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
+  if (name == nil || [name length] == 0) {
+    name = [[NSProcessInfo processInfo] processName];
+  }
+  if (name == nil || [name length] == 0) {
+    name = @"Proton";
+  }
+  return name;
+}
+
+static NSMenuItem *proton_engine_add_menu_item(NSMenu *menu,
+                                               NSString *title,
+                                               SEL action,
+                                               NSString *key) {
+  return [menu addItemWithTitle:title action:action keyEquivalent:key];
+}
+
+static void proton_engine_install_default_app_menu(void) {
+  if (g_proton_app_menu_installed) {
+    return;
+  }
+  NSMenu *existing = [NSApp mainMenu];
+  if (existing != nil && [existing numberOfItems] > 0) {
+    g_proton_app_menu_installed = 1;
+    return;
+  }
+
+  NSString *app_name = proton_engine_application_name();
+  NSMenu *main_menu = [[NSMenu alloc] initWithTitle:@""];
+
+  NSMenuItem *app_item = proton_engine_add_menu_item(main_menu, @"", nil, @"");
+  NSMenu *app_menu = [[NSMenu alloc] initWithTitle:app_name];
+  proton_engine_add_menu_item(
+      app_menu, [NSString stringWithFormat:@"Hide %@", app_name],
+      @selector(hide:), @"h");
+  NSMenuItem *hide_others = proton_engine_add_menu_item(
+      app_menu, @"Hide Others", @selector(hideOtherApplications:), @"h");
+  [hide_others setKeyEquivalentModifierMask:
+                   NSEventModifierFlagOption | NSEventModifierFlagCommand];
+  proton_engine_add_menu_item(app_menu, @"Show All",
+                              @selector(unhideAllApplications:), @"");
+  [app_menu addItem:[NSMenuItem separatorItem]];
+  proton_engine_add_menu_item(
+      app_menu, [NSString stringWithFormat:@"Quit %@", app_name],
+      @selector(terminate:), @"q");
+  [main_menu setSubmenu:app_menu forItem:app_item];
+
+  NSMenuItem *edit_item = proton_engine_add_menu_item(main_menu, @"", nil, @"");
+  NSMenu *edit_menu = [[NSMenu alloc] initWithTitle:@"Edit"];
+  proton_engine_add_menu_item(edit_menu, @"Undo", @selector(undo:), @"z");
+  proton_engine_add_menu_item(edit_menu, @"Redo", @selector(redo:), @"Z");
+  [edit_menu addItem:[NSMenuItem separatorItem]];
+  proton_engine_add_menu_item(edit_menu, @"Cut", @selector(cut:), @"x");
+  proton_engine_add_menu_item(edit_menu, @"Copy", @selector(copy:), @"c");
+  proton_engine_add_menu_item(edit_menu, @"Paste", @selector(paste:), @"v");
+  proton_engine_add_menu_item(edit_menu, @"Select All", @selector(selectAll:),
+                              @"a");
+  [main_menu setSubmenu:edit_menu forItem:edit_item];
+
+  NSMenuItem *window_item =
+      proton_engine_add_menu_item(main_menu, @"", nil, @"");
+  NSMenu *window_menu = [[NSMenu alloc] initWithTitle:@"Window"];
+  proton_engine_add_menu_item(window_menu, @"Minimize",
+                              @selector(performMiniaturize:), @"m");
+  proton_engine_add_menu_item(window_menu, @"Zoom", @selector(performZoom:),
+                              @"");
+  proton_engine_add_menu_item(window_menu, @"Close", @selector(performClose:),
+                              @"w");
+  [main_menu setSubmenu:window_menu forItem:window_item];
+
+  [NSApp setMainMenu:main_menu];
+  [NSApp setWindowsMenu:window_menu];
+  g_proton_app_menu_installed = 1;
+}
 
 static void proton_engine_ensure_appkit(void) {
   [ProtonApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   [NSApp finishLaunching];
+  proton_engine_install_default_app_menu();
 }
 
 static char *proton_engine_data_url_for_html(const char *html) {
@@ -2072,7 +2236,12 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   if (runtime->owns_cef_runtime) {
     proton_engine_runtime_clear_bridge_queue(runtime);
     proton_engine_bridge_pending_clear_all();
-    proton_engine_cef_shutdown();
+    if (g_proton_app_terminating) {
+      g_proton_cef_initialized = 0;
+      g_proton_cef_library_loaded = 0;
+    } else {
+      proton_engine_cef_shutdown();
+    }
     proton_engine_teardown_wait_source();
     runtime->owns_cef_runtime = 0;
   }

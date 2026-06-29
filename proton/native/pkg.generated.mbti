@@ -85,7 +85,7 @@ pub fn Runtime::run(Self) -> Result[Unit, NativeError]
 pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> Result[RuntimeWaitReady, NativeError]
 
 type RuntimeConfig derive(Eq, @debug.Debug)
-pub fn RuntimeConfig::bundled(cache_dir? : String, remote_debugging_port? : Int) -> Self
+pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, remote_debugging_port? : Int) -> Self
 pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, remote_debugging_port? : Int) -> Self
 pub fn RuntimeConfig::probe(Self) -> Result[Unit, NativeError]
 pub fn RuntimeConfig::to_json_string(Self) -> String
