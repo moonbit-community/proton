@@ -1,11 +1,6 @@
 import {
   "moonbitlang/async",
-  "justjavac/proton_ext/fs",
-  "justjavac/proton_ext/path",
   "justjavac/proton",
-  "moonbitlang/x/fs" @mbfs,
-  "moonbitlang/x/path" @mbpath,
-  "moonbitlang/x/sys",
 }
 
 supported_targets = "native"

@@ -6,7 +6,6 @@ package "justjavac/proton/examples/22_app_config"
 // Errors
 
 // Types and methods
-type AppConfigCandidate
 
 // Type aliases
 
