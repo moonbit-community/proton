@@ -1,6 +1,6 @@
 name = "justjavac/proton_cli"
 
-version = "0.1.4"
+version = "0.1.5"
 
 import {
   "justjavac/proton_config@0.1.4",

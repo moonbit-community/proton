@@ -136,6 +136,13 @@ async fn assemble_runtime(
     Ok(_) => ()
     Err(error) => return Err(error)
   }
+  if platform.id != "win32-x64" {
+    match
+      make_executable(path_join(path_join(runtime_dir, "bin"), "cef_process")) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+  }
   match copy_cef_runtime(platform, cef_root, runtime_dir) {
     Ok(_) => ()
     Err(error) => return Err(error)

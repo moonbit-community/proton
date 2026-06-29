@@ -28,15 +28,10 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
     }
     return Ok(())
   }
-  let data = @async_fs.read_file(src) catch {
-    err =>
-      return Err(
-        CliError::CommandError(
-          "Failed to read " + src + ": " + @debug.render(@debug.to_repr(err)),
-        ),
-      )
-  }
-  @async_fs.write_file(dest, data, create_mode=CreateOrTruncate) catch {
+  let code = @process.run("powershell", [
+    "-NoProfile", "-NonInteractive", "-Command", "Copy-Item -LiteralPath $args[0] -Destination $args[1] -Force",
+    src, dest,
+  ]) catch {
     err =>
       return Err(
         CliError::CommandError(
@@ -49,6 +44,41 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CliError] {
         ),
       )
   }
+  guard code == 0 else {
+    return Err(
+      CliError::CommandError(
+        "Failed to copy " +
+        src +
+        " to " +
+        dest +
+        ": Copy-Item exited with code " +
+        code.to_string(),
+      ),
+    )
+  }
+  Ok(())
+}
+
+///|
+#cfg(not(platform="windows"))
+async fn make_executable(path : String) -> Result[Unit, CliError] {
+  @async_fs.chmod(path, 0o755) catch {
+    err =>
+      return Err(
+        CliError::CommandError(
+          "Failed to mark executable " +
+          path +
+          ": " +
+          @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  Ok(())
+}
+
+///|
+#cfg(platform="windows")
+fn make_executable(_path : String) -> Result[Unit, CliError] {
   Ok(())
 }
 
