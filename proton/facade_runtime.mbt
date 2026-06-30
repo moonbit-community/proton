@@ -13,6 +13,7 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
         manifest,
         self.command_extensions,
         app_config_base_dir(self.file_path),
+        self.asset_dir,
       )
   }
 }
@@ -31,6 +32,7 @@ async fn run_manifest(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
+  asset_dir : String?,
 ) -> Result[Unit, String] {
   let helper_path = macos_bundled_helper_path()
   let runtime = match
@@ -98,7 +100,13 @@ async fn run_manifest(
     }
     None => ()
   }
-  match load_entry_after_create(window, manifest.entry, command_proxy_script) {
+  match
+    load_entry_after_create(
+      window,
+      manifest.entry,
+      command_proxy_script,
+      asset_dir,
+    ) {
     Err(error) => {
       close_command_host(command_host)
       ignore(window.destroy())

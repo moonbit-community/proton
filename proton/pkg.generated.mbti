@@ -33,6 +33,7 @@ pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable
 
 // Types and methods
 type App
+pub fn App::asset_dir(Self, String) -> Self
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::entry_asset(Self, String) -> Self

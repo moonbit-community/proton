@@ -89,6 +89,13 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                        const char *base_url,
                                        char *error,
                                        size_t error_len);
+int32_t proton_engine_window_load_html_with_assets(
+    proton_engine_window_t *window,
+    const char *html,
+    const char *base_url,
+    const char *asset_root,
+    char *error,
+    size_t error_len);
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,

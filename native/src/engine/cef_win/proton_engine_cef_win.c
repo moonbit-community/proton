@@ -63,6 +63,7 @@ struct proton_engine_window {
   char *html_url;
   char *html;
   size_t html_len;
+  char *asset_root;
   char *bridge_config_json;
   int width;
   int height;
@@ -108,6 +109,7 @@ typedef struct {
   cef_resource_handler_t handler;
   proton_engine_ref_counted_t refs;
   char *html;
+  char *mime;
   size_t html_len;
   size_t offset;
 } proton_engine_html_resource_handler_t;
@@ -603,6 +605,190 @@ static int proton_engine_url_is_proton(const char *url) {
   return url != NULL && strncmp(url, "proton://", 9) == 0;
 }
 
+static const char *proton_engine_mime_type_for_path(const char *path) {
+  const char *ext = path != NULL ? strrchr(path, '.') : NULL;
+  if (ext == NULL) {
+    return "application/octet-stream";
+  }
+  if (_stricmp(ext, ".css") == 0) {
+    return "text/css";
+  }
+  if (_stricmp(ext, ".js") == 0 || _stricmp(ext, ".mjs") == 0) {
+    return "text/javascript";
+  }
+  if (_stricmp(ext, ".html") == 0 || _stricmp(ext, ".htm") == 0) {
+    return "text/html";
+  }
+  if (_stricmp(ext, ".json") == 0) {
+    return "application/json";
+  }
+  if (_stricmp(ext, ".svg") == 0) {
+    return "image/svg+xml";
+  }
+  if (_stricmp(ext, ".png") == 0) {
+    return "image/png";
+  }
+  if (_stricmp(ext, ".jpg") == 0 || _stricmp(ext, ".jpeg") == 0) {
+    return "image/jpeg";
+  }
+  if (_stricmp(ext, ".gif") == 0) {
+    return "image/gif";
+  }
+  if (_stricmp(ext, ".webp") == 0) {
+    return "image/webp";
+  }
+  if (_stricmp(ext, ".woff") == 0) {
+    return "font/woff";
+  }
+  if (_stricmp(ext, ".woff2") == 0) {
+    return "font/woff2";
+  }
+  return "application/octet-stream";
+}
+
+static bool proton_engine_relative_asset_path_is_safe(const char *path) {
+  if (path == NULL || path[0] == '\0' || path[0] == '/' ||
+      path[0] == '\\') {
+    return false;
+  }
+  const char *segment = path;
+  for (const char *cursor = path;; cursor++) {
+    char ch = *cursor;
+    if (ch == '\\') {
+      return false;
+    }
+    if (ch == '/' || ch == '\0') {
+      size_t len = (size_t)(cursor - segment);
+      if (len == 0 || (len == 1 && segment[0] == '.') ||
+          (len == 2 && segment[0] == '.' && segment[1] == '.')) {
+        return false;
+      }
+      if (ch == '\0') {
+        return true;
+      }
+      segment = cursor + 1;
+    }
+  }
+}
+
+static int proton_engine_hex_value(char ch) {
+  if (ch >= '0' && ch <= '9') {
+    return ch - '0';
+  }
+  if (ch >= 'a' && ch <= 'f') {
+    return ch - 'a' + 10;
+  }
+  if (ch >= 'A' && ch <= 'F') {
+    return ch - 'A' + 10;
+  }
+  return -1;
+}
+
+static char *proton_engine_decode_relative_url_path(const char *path) {
+  if (path == NULL) {
+    return NULL;
+  }
+  size_t len = strcspn(path, "?#");
+  char *decoded = (char *)malloc(len + 1);
+  if (decoded == NULL) {
+    return NULL;
+  }
+  size_t out = 0;
+  for (size_t index = 0; index < len; index++) {
+    if (path[index] == '%' && index + 2 < len) {
+      int high = proton_engine_hex_value(path[index + 1]);
+      int low = proton_engine_hex_value(path[index + 2]);
+      if (high >= 0 && low >= 0) {
+        decoded[out++] = (char)((high << 4) | low);
+        index += 2;
+        continue;
+      }
+    }
+    decoded[out++] = path[index];
+  }
+  decoded[out] = '\0';
+  return decoded;
+}
+
+static bool proton_engine_url_asset_relative_path(const char *base_url,
+                                                  const char *url,
+                                                  char **out_path) {
+  if (out_path == NULL) {
+    return false;
+  }
+  *out_path = NULL;
+  if (base_url == NULL || url == NULL || strcmp(base_url, url) == 0) {
+    return false;
+  }
+  const char *path_start = NULL;
+  size_t base_len = strlen(base_url);
+  if (base_len > 0 && base_url[base_len - 1] == '/') {
+    if (strncmp(url, base_url, base_len) != 0) {
+      return false;
+    }
+    path_start = url + base_len;
+  } else {
+    const char *slash = strrchr(base_url, '/');
+    if (slash == NULL) {
+      return false;
+    }
+    size_t prefix_len = (size_t)(slash - base_url) + 1;
+    if (strncmp(url, base_url, prefix_len) != 0) {
+      return false;
+    }
+    path_start = url + prefix_len;
+  }
+  char *decoded = proton_engine_decode_relative_url_path(path_start);
+  if (decoded == NULL) {
+    return false;
+  }
+  if (!proton_engine_relative_asset_path_is_safe(decoded)) {
+    free(decoded);
+    return false;
+  }
+  *out_path = decoded;
+  return true;
+}
+
+static bool proton_engine_read_file_bytes(const char *path,
+                                          char **out_data,
+                                          size_t *out_len) {
+  if (out_data == NULL || out_len == NULL) {
+    return false;
+  }
+  *out_data = NULL;
+  *out_len = 0;
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    return false;
+  }
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return false;
+  }
+  long size = ftell(file);
+  if (size < 0) {
+    fclose(file);
+    return false;
+  }
+  rewind(file);
+  char *data = (char *)malloc((size_t)size + 1);
+  if (data == NULL) {
+    fclose(file);
+    return false;
+  }
+  size_t read = fread(data, 1, (size_t)size, file);
+  fclose(file);
+  if (read != (size_t)size) {
+    free(data);
+    return false;
+  }
+  data[read] = '\0';
+  *out_data = data;
+  *out_len = read;
+  return true;
+}
+
 static int CEF_CALLBACK proton_engine_html_handler_release(
     cef_base_ref_counted_t *base) {
   proton_engine_ref_counted_t *refs =
@@ -612,6 +798,7 @@ static int CEF_CALLBACK proton_engine_html_handler_release(
     proton_engine_html_resource_handler_t *handler =
         (proton_engine_html_resource_handler_t *)base;
     free(handler->html);
+    free(handler->mime);
     free(handler);
     return 1;
   }
@@ -660,7 +847,9 @@ static void CEF_CALLBACK proton_engine_html_get_response_headers(
   if (response != NULL) {
     cef_string_t mime = {0};
     cef_string_t charset = {0};
-    proton_engine_set_string(&mime, "text/html");
+    proton_engine_set_string(&mime,
+                             handler->mime != NULL ? handler->mime
+                                                   : "application/octet-stream");
     proton_engine_set_string(&charset, "utf-8");
     response->set_status(response, 200);
     response->set_mime_type(response, &mime);
@@ -669,7 +858,7 @@ static void CEF_CALLBACK proton_engine_html_get_response_headers(
     cef_string_clear(&charset);
   }
   if (response_length != NULL) {
-    *response_length = -1;
+    *response_length = (int64_t)handler->html_len;
   }
   proton_engine_verbose_log("html_headers length=%llu",
                             (unsigned long long)handler->html_len);
@@ -753,8 +942,10 @@ static void CEF_CALLBACK proton_engine_html_cancel(
   (void)self;
 }
 
-static cef_resource_handler_t *proton_engine_html_handler_new(const char *html,
-                                                             size_t html_len) {
+static cef_resource_handler_t *proton_engine_html_handler_new(
+    const char *html,
+    size_t html_len,
+    const char *mime) {
   proton_engine_html_resource_handler_t *handler =
       (proton_engine_html_resource_handler_t *)calloc(1, sizeof(*handler));
   if (handler == NULL) {
@@ -773,7 +964,11 @@ static cef_resource_handler_t *proton_engine_html_handler_new(const char *html,
   handler->handler.read_response = proton_engine_html_read_response;
   handler->handler.cancel = proton_engine_html_cancel;
   handler->html = proton_engine_strdup_len(html, html_len);
-  if (handler->html == NULL) {
+  handler->mime = proton_engine_strdup(mime != NULL ? mime
+                                                    : "application/octet-stream");
+  if (handler->html == NULL || handler->mime == NULL) {
+    free(handler->html);
+    free(handler->mime);
     free(handler);
     return NULL;
   }
@@ -792,16 +987,54 @@ static cef_resource_handler_t *proton_engine_find_html_handler(
     return NULL;
   }
   cef_resource_handler_t *handler = NULL;
+  char *html_url = NULL;
+  char *asset_root = NULL;
   EnterCriticalSection(&g_proton_engine_window_lock);
   for (proton_engine_window_t *window = g_proton_engine_windows;
        window != NULL; window = window->next) {
-    if (window->browser_id == browser_id && window->html_url != NULL &&
-        strcmp(window->html_url, url) == 0 && window->html != NULL) {
-      handler = proton_engine_html_handler_new(window->html, window->html_len);
+    if (window->browser_id != browser_id || window->html_url == NULL) {
+      continue;
+    }
+    if (strcmp(window->html_url, url) == 0 && window->html != NULL) {
+      handler = proton_engine_html_handler_new(window->html, window->html_len,
+                                               "text/html");
+      break;
+    }
+    if (window->asset_root != NULL && window->asset_root[0] != '\0') {
+      html_url = proton_engine_strdup(window->html_url);
+      asset_root = proton_engine_strdup(window->asset_root);
       break;
     }
   }
   LeaveCriticalSection(&g_proton_engine_window_lock);
+  if (handler != NULL || html_url == NULL || asset_root == NULL) {
+    free(html_url);
+    free(asset_root);
+    return handler;
+  }
+  char *relative_path = NULL;
+  if (!proton_engine_url_asset_relative_path(html_url, url, &relative_path)) {
+    free(html_url);
+    free(asset_root);
+    return NULL;
+  }
+  char path[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
+  bool joined = proton_engine_join_path(path, sizeof(path), asset_root,
+                                        relative_path);
+  const char *mime = proton_engine_mime_type_for_path(relative_path);
+  free(html_url);
+  free(asset_root);
+  free(relative_path);
+  if (!joined) {
+    return NULL;
+  }
+  char *data = NULL;
+  size_t len = 0;
+  if (!proton_engine_read_file_bytes(path, &data, &len)) {
+    return NULL;
+  }
+  handler = proton_engine_html_handler_new(data, len, mime);
+  free(data);
   return handler;
 }
 
@@ -2466,6 +2699,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
     free(window->client);
     free(window->html_url);
     free(window->html);
+    free(window->asset_root);
     free(window->bridge_config_json);
     free(window);
     return status;
@@ -2505,6 +2739,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   }
   free(window->html_url);
   free(window->html);
+  free(window->asset_root);
   free(window->bridge_config_json);
   free(window);
   return PROTON_OK;
@@ -2624,6 +2859,17 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                        const char *base_url,
                                        char *error,
                                        size_t error_len) {
+  return proton_engine_window_load_html_with_assets(window, html, base_url, NULL,
+                                                   error, error_len);
+}
+
+int32_t proton_engine_window_load_html_with_assets(
+    proton_engine_window_t *window,
+    const char *html,
+    const char *base_url,
+    const char *asset_root,
+    char *error,
+    size_t error_len) {
   if (window == NULL || window->browser == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -2633,18 +2879,27 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "main frame is not available");
     return PROTON_ERR_ENGINE;
   }
-  if (!proton_engine_url_is_proton(base_url)) {
+  const char *effective_base_url =
+      base_url != NULL && base_url[0] != '\0' ? base_url : "proton://app/";
+  if (!proton_engine_url_is_proton(effective_base_url)) {
     proton_engine_set_message(error, error_len,
                               "base_url must use the proton:// scheme");
     frame->base.release((cef_base_ref_counted_t *)frame);
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
-  char *url_copy = proton_engine_strdup(base_url);
+  char *url_copy = proton_engine_strdup(effective_base_url);
   char *html_copy = proton_engine_strdup(html);
-  if (url_copy == NULL || html_copy == NULL) {
+  char *asset_root_copy =
+      asset_root != NULL && asset_root[0] != '\0'
+          ? proton_engine_strdup(asset_root)
+          : NULL;
+  if (url_copy == NULL || html_copy == NULL ||
+      (asset_root != NULL && asset_root[0] != '\0' &&
+       asset_root_copy == NULL)) {
     free(url_copy);
     free(html_copy);
+    free(asset_root_copy);
     proton_engine_set_message(error, error_len, "failed to copy html content");
     frame->base.release((cef_base_ref_counted_t *)frame);
     return PROTON_ERR_ENGINE;
@@ -2654,17 +2909,20 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
   EnterCriticalSection(&g_proton_engine_window_lock);
   free(window->html_url);
   free(window->html);
+  free(window->asset_root);
   window->html_url = url_copy;
   window->html = html_copy;
   window->html_len = strlen(html_copy);
+  window->asset_root = asset_root_copy;
   LeaveCriticalSection(&g_proton_engine_window_lock);
 
   cef_string_t url_value = {0};
-  proton_engine_set_string(&url_value, base_url);
+  proton_engine_set_string(&url_value, effective_base_url);
   proton_engine_verbose_log(
       "load_html thread=%lu browser=%d base_url=%s bytes=%llu",
       GetCurrentThreadId(), window->browser_id,
-      proton_engine_log_url(base_url), (unsigned long long)window->html_len);
+      proton_engine_log_url(effective_base_url),
+      (unsigned long long)window->html_len);
   frame->load_url(frame, &url_value);
   cef_string_clear(&url_value);
   frame->base.release((cef_base_ref_counted_t *)frame);

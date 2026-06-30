@@ -1850,6 +1850,13 @@ int32_t proton_window_load_url(proton_window_id_t window, const char *url) {
 
 int32_t proton_window_load_html(proton_window_id_t window, const char *html,
                                 const char *base_url) {
+  return proton_window_load_html_with_assets(window, html, base_url, NULL);
+}
+
+int32_t proton_window_load_html_with_assets(proton_window_id_t window,
+                                            const char *html,
+                                            const char *base_url,
+                                            const char *asset_root) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1861,9 +1868,9 @@ int32_t proton_window_load_html(proton_window_id_t window, const char *html,
   }
   if (slot->engine_window != NULL) {
     char engine_error[512] = {0};
-    status = proton_engine_window_load_html(slot->engine_window, html, base_url,
-                                            engine_error,
-                                            sizeof(engine_error));
+    status = proton_engine_window_load_html_with_assets(
+        slot->engine_window, html, base_url, asset_root, engine_error,
+        sizeof(engine_error));
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }

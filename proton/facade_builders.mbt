@@ -83,6 +83,7 @@ pub fn asset(
 pub fn config(path : String) -> App {
   App::{
     file_path: Some(path),
+    asset_dir: None,
     window: @manifest.WindowManifest::new(
       "Proton",
       900,
@@ -163,6 +164,13 @@ pub fn App::entry_file(self : App, path : String) -> App {
 /// Overrides the primary app entry with an asset path.
 pub fn App::entry_asset(self : App, path : String) -> App {
   self.set_entry(@manifest.AppEntry::Asset(path))
+}
+
+///|
+/// Serves same-origin resources for inline HTML entries from `path`.
+pub fn App::asset_dir(self : App, path : String) -> App {
+  self.asset_dir = Some(path)
+  self
 }
 
 ///|
