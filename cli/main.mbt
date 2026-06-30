@@ -7,13 +7,148 @@ fn print_usage() -> Unit {
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
     #|
+    #|Set PROTON_NO_UPDATE_CHECK=1 to skip update checks.
+    #|
   println(usage)
+}
+
+///|
+let cli_current_version : String = "0.1.5"
+
+///|
+let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"
+
+///|
+priv struct CliVersion {
+  major : Int
+  minor : Int
+  patch : Int
 }
 
 ///|
 priv enum CliError {
   UsageError(String, Bool)
   CommandError(String)
+}
+
+///|
+fn env_flag_is_enabled(value : String) -> Bool {
+  match value.trim().to_owned().to_lower() {
+    "" | "0" | "false" | "no" | "off" => false
+    _ => true
+  }
+}
+
+///|
+fn cli_update_check_disabled() -> Bool {
+  match @sys.get_env_var("PROTON_NO_UPDATE_CHECK") {
+    Some(value) => env_flag_is_enabled(value)
+    None => false
+  }
+}
+
+///|
+fn parse_cli_version_part(part : StringView) -> Int? {
+  let text = part.to_owned()
+  guard text != "" else { return None }
+  let mut value = 0
+  for ch in text {
+    guard ch.is_ascii_digit() else { return None }
+    value = value * 10 + ch.to_int() - '0'.to_int()
+  }
+  Some(value)
+}
+
+///|
+fn parse_cli_version(version : String) -> CliVersion? {
+  let core = match version.split_once("-") {
+    Some((prefix, _)) => prefix.to_owned()
+    None => version
+  }
+  match core.split(".").collect() {
+    [major, minor, patch] =>
+      match
+        (
+          parse_cli_version_part(major),
+          parse_cli_version_part(minor),
+          parse_cli_version_part(patch),
+        ) {
+        (Some(major), Some(minor), Some(patch)) =>
+          Some(CliVersion::{ major, minor, patch })
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+fn compare_cli_version(left : CliVersion, right : CliVersion) -> Int {
+  if left.major != right.major {
+    left.major.compare(right.major)
+  } else if left.minor != right.minor {
+    left.minor.compare(right.minor)
+  } else {
+    left.patch.compare(right.patch)
+  }
+}
+
+///|
+fn cli_version_is_newer(candidate : String, current : String) -> Bool {
+  match (parse_cli_version(candidate), parse_cli_version(current)) {
+    (Some(candidate), Some(current)) =>
+      compare_cli_version(candidate, current) > 0
+    _ => false
+  }
+}
+
+///|
+fn latest_version_from_manifest_text(text : String) -> String? {
+  let manifest = @json.parse(text) catch { _ => return None }
+  match manifest {
+    Object(fields) =>
+      match fields.get("latest_version") {
+        Some(String(version)) => Some(version)
+        _ => None
+      }
+    _ => None
+  }
+}
+
+///|
+async fn fetch_latest_cli_version() -> String? {
+  let (code, output) = @process.collect_output_merged("curl", [
+    "-fsSL", "--max-time", "2", cli_manifest_url,
+  ]) catch {
+    _ => return None
+  }
+  guard code == 0 else { return None }
+  let text = output.text() catch { _ => return None }
+  latest_version_from_manifest_text(text)
+}
+
+///|
+async fn write_stderr_line(message : String) -> Unit {
+  @stdio.stderr.write(message + "\n") catch {
+    _ => ()
+  }
+}
+
+///|
+async fn check_cli_update() -> Unit {
+  guard !cli_update_check_disabled() else { return }
+  match fetch_latest_cli_version() {
+    Some(latest) =>
+      if cli_version_is_newer(latest, cli_current_version) {
+        write_stderr_line(
+          "warning: proton_cli " +
+          latest +
+          " is available (current " +
+          cli_current_version +
+          "). Set PROTON_NO_UPDATE_CHECK=1 to disable this check.",
+        )
+      }
+    None => ()
+  }
 }
 
 ///|
@@ -176,6 +311,7 @@ async fn main {
   let argv = @sys.get_cli_args()
   let raw_args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
   let (cwd, args) = parse_global_args(raw_args)
+  check_cli_update()
   if args.length() == 0 || args[0] == "-h" || args[0] == "--help" {
     print_usage()
     return
