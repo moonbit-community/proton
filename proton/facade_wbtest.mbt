@@ -102,12 +102,12 @@ test "file entry bootstrap keeps relative assets under original directory" {
     #|<html><head><link rel="stylesheet" href="app.css"></head><body><script src="app.js"></script></body></html>
   let injected = inject_html_bootstrap(
     html,
-    base_tag("file:///D:/Code/proton-demo/app/") +
+    base_tag("proton://app/D:/Code/proton-demo/app/") +
     script_tag("window.__MoonBit__ = {};</script><p>tail</p>"),
   )
   assert_true(
     injected.contains(
-      "<head>\n<base href=\"file:///D:/Code/proton-demo/app/\">\n<script>",
+      "<head>\n<base href=\"proton://app/D:/Code/proton-demo/app/\">\n<script>",
     ),
   )
   assert_true(injected.contains("href=\"app.css\""))
@@ -117,17 +117,32 @@ test "file entry bootstrap keeps relative assets under original directory" {
 }
 
 ///|
-test "file base url resolves local path directory" {
-  let base = file_base_url("app/app.html").replace_all(old="\\", new="/")
-  assert_true(base.has_prefix("file:///"))
-  assert_true(base.has_suffix("/"))
-  inspect(
-    file_base_url("file:///D:/Code/proton-demo/app/app.html"),
-    content="file:///D:/Code/proton-demo/app/",
-  )
+test "file url resolves local paths" {
+  let url = file_url("app/app.html").replace_all(old="\\", new="/")
+  assert_true(url.has_prefix("file:///"))
+  assert_true(url.has_suffix("/app/app.html"))
   inspect(
     base_tag("file:///tmp/a&b\"c/"),
     content="<base href=\"file:///tmp/a&amp;b&quot;c/\">\n",
+  )
+}
+
+///|
+test "asset urls resolve under the local file path" {
+  let path = "46_asset_sidecar_resources/app/app.html"
+  let base = asset_base_url(path).replace_all(old="\\", new="/")
+  let document = asset_document_url(path).replace_all(old="\\", new="/")
+  assert_true(base.has_prefix("proton://app/"))
+  assert_true(base.has_suffix("/46_asset_sidecar_resources/app/"))
+  assert_true(document.has_prefix("proton://app/"))
+  assert_true(document.has_suffix("/46_asset_sidecar_resources/app/app.html"))
+}
+
+///|
+test "asset url path encoding escapes browser url delimiters" {
+  inspect(
+    asset_url_path_encode("C:/tmp/a b/#?%/中.html"),
+    content="C:/tmp/a%20b/%23%3f%25/%e4%b8%ad.html",
   )
 }
 

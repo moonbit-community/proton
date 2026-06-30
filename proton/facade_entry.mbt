@@ -47,12 +47,12 @@ fn load_file_entry_after_create(
       match read_file_entry_html(path, action) {
         Err(error) => Err(error)
         Ok(html) => {
-          let bootstrap = base_tag(file_base_url(path)) + script_tag(script)
+          let bootstrap = base_tag(asset_base_url(path)) + script_tag(script)
           native_unit_result(
             action,
             window.load_html(
               inject_html_bootstrap(html, bootstrap),
-              "proton://app/",
+              asset_document_url(path),
             ),
           )
         }
@@ -148,23 +148,50 @@ fn file_url(path : String) -> String {
 }
 
 ///|
-fn file_base_url(path : String) -> String {
-  if path.has_prefix("file://") {
-    let index = path.rev_find("/")
-    match index {
-      Some(value) => path[:value + 1].to_owned()
-      None => path
-    }
-  } else {
-    let file_path : @mbpath.Path = path
-    let dir = file_path.resolve().dirname().to_string()
-    let url = file_url(dir)
-    if url.has_suffix("/") {
-      url
+fn asset_base_url(path : String) -> String {
+  let document_url = asset_document_url(path)
+  match document_url.rev_find("/") {
+    Some(index) => document_url[:index + 1].to_owned()
+    None => document_url
+  }
+}
+
+///|
+fn asset_document_url(path : String) -> String {
+  let file_path : @mbpath.Path = path
+  let normalized = file_path
+    .resolve()
+    .to_string()
+    .replace_all(old="\\", new="/")
+  "proton://app/" + asset_url_path_encode(normalized)
+}
+
+///|
+fn asset_url_path_encode(path : String) -> String {
+  let bytes = @utf8.encode(path)
+  let builder = StringBuilder::new(size_hint=bytes.length())
+  for byte in bytes {
+    if asset_url_path_byte_is_safe(byte) {
+      builder.write_char(byte.to_char())
     } else {
-      url + "/"
+      builder.write_char('%')
+      builder.write_string(byte.to_hex())
     }
   }
+  builder.to_string()
+}
+
+///|
+fn asset_url_path_byte_is_safe(byte : Byte) -> Bool {
+  (byte >= b'A' && byte <= b'Z') ||
+  (byte >= b'a' && byte <= b'z') ||
+  (byte >= b'0' && byte <= b'9') ||
+  byte == b'-' ||
+  byte == b'.' ||
+  byte == b'_' ||
+  byte == b'~' ||
+  byte == b'/' ||
+  byte == b':'
 }
 
 ///|
