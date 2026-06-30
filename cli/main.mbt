@@ -2,6 +2,7 @@
 fn print_usage() -> Unit {
   let usage =
     #|Usage:
+    #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
     #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
@@ -168,6 +169,10 @@ async fn main {
   }
   let result = if args.length() >= 1 && args[0] == "doctor" {
     run_doctor_from_args(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "new" {
+    @new_project.run(cwd, args[1:].to_owned()).map_err(fn(message) {
+      CliError::CommandError(message)
+    })
   } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(cwd, args[1:].to_owned())
   } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {

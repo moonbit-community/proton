@@ -1,0 +1,24 @@
+name = {{module_mbt}}
+
+version = "0.1.0"
+
+import {
+  "moonbitlang/async@{{async_version}}",
+  "justjavac/proton@{{proton_version}}",
+}
+
+readme = "README.mbt.md"
+
+repository = ""
+
+license = "MIT"
+
+keywords = [ "proton", "gui", "web", "desktop-app" ]
+
+description = "A Proton desktop app."
+
+options(
+  warn_list: "",
+  preferred_target: "native",
+  supported_targets: "+native",
+)

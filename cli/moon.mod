@@ -10,6 +10,8 @@ import {
   "moonbitlang/moon_config@0.3.5",
   "moonbitlang/lexer@0.3.5",
   "moonbitlang/async@0.19.4",
+  "justjavac/ci@0.1.1",
+  "justjavac/template@0.1.1",
 }
 
 readme = "codegen/README.md"

@@ -1,0 +1,44 @@
+///|
+struct CounterReply {
+  value : Int
+} derive(ToJson)
+
+///|
+let counter_value : Ref[Int] = Ref(0)
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.from_command_spec(counter_spec())
+}
+
+///|
+fn counter_spec() -> @proton_command.AppCommandExtensionSpec {
+  @proton_command.AppCommandExtensionSpec::new(
+    {{counter_extension_id_mbt}},
+    "counter",
+    [
+      @proton_command.AppCommandApiDescriptor::new("get"),
+      @proton_command.AppCommandApiDescriptor::new("increment"),
+      @proton_command.AppCommandApiDescriptor::new("reset"),
+    ],
+    register_counter_commands,
+  )
+}
+
+///|
+fn register_counter_commands(
+  context : @proton_command.AppCommandExtensionContext,
+) -> Result[Unit, String] {
+  context.op("get", fn(_payload : Json) {
+    CounterReply::{ value: counter_value.val }
+  })
+  context.op("increment", fn(_payload : Json) {
+    counter_value.val = counter_value.val + 1
+    CounterReply::{ value: counter_value.val }
+  })
+  context.op("reset", fn(_payload : Json) {
+    counter_value.val = 0
+    CounterReply::{ value: counter_value.val }
+  })
+  Ok(())
+}

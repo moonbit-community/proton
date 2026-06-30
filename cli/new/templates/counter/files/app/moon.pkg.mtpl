@@ -1,0 +1,12 @@
+import {
+  "moonbitlang/async",
+  "justjavac/proton",
+  {{module_counter_import_mbt}} @counter,
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  targets: { "main.mbt": [ "native" ] },
+)

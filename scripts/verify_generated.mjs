@@ -104,6 +104,13 @@ try {
     compareGeneratedFile(asset.output, outputPath);
   }
 
+  const newTemplatesOutput = tempOutputPath("templates.generated.mbt");
+  run("node", [
+    path.join(repoRoot, "scripts", "generate_new_templates.mjs"),
+    newTemplatesOutput,
+  ]);
+  compareGeneratedFile("cli/new/templates.generated.mbt", newTemplatesOutput);
+
   if (failures.length > 0) {
     console.error(`Generated files are stale: ${failures.join(", ")}`);
     process.exitCode = 1;
