@@ -1,0 +1,26 @@
+import {
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/core/json",
+  "moonbitlang/async",
+  "justjavac/proton/command" @proton_command,
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton",
+}
+
+supported_targets = "native"
+
+dev_build(
+  rule: "proton_codegen",
+  input: "commands.mbt",
+  output: "commands.g.mbt",
+)
+
+options(
+  formatter: { "ignore": [ "commands.g.mbt" ] },
+  "is-main": true,
+  targets: {
+    "commands.g.mbt": [ "native" ],
+    "commands.mbt": [ "native" ],
+    "main.mbt": [ "native" ],
+  },
+)
