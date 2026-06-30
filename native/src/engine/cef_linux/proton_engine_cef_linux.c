@@ -93,6 +93,7 @@ struct proton_engine_window {
   int width;
   int height;
   int closed;
+  int closing;
   struct proton_engine_window *next;
 };
 
@@ -189,6 +190,7 @@ static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static proton_engine_runtime_t *g_active_runtime = NULL;
+static proton_engine_window_t *g_closed_windows = NULL;
 
 static void proton_engine_set_message(char *error,
                                       size_t error_len,
@@ -532,6 +534,37 @@ static void proton_engine_window_list_remove(proton_engine_window_t *window) {
       return;
     }
     cursor = &(*cursor)->next;
+  }
+}
+
+static void proton_engine_window_defer_free(proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  proton_engine_window_list_remove(window);
+  window->next = g_closed_windows;
+  g_closed_windows = window;
+}
+
+static void proton_engine_window_free_storage(proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  free(window->client);
+  free(window->html_url);
+  free(window->html);
+  free(window->bridge_config_json);
+  free(window);
+}
+
+static void proton_engine_free_closed_windows(void) {
+  proton_engine_window_t *window = g_closed_windows;
+  g_closed_windows = NULL;
+  while (window != NULL) {
+    proton_engine_window_t *next = window->next;
+    window->next = NULL;
+    proton_engine_window_free_storage(window);
+    window = next;
   }
 }
 
@@ -1008,7 +1041,6 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     proton_engine_window_mark_closed(window);
     if (window->window != NULL) {
       gtk_widget_destroy(window->window);
-      window->window = NULL;
     }
   }
 }
@@ -1813,12 +1845,30 @@ static gboolean proton_engine_on_window_delete(GtkWidget *widget,
   if (window == NULL || window->closed) {
     return FALSE;
   }
+  if (window->closing) {
+    return FALSE;
+  }
   if (window->browser != NULL) {
     cef_browser_host_t *host = window->browser->get_host(window->browser);
     if (host != NULL) {
-      host->close_browser(host, 0);
+      int allow_close = 0;
+      if (host->is_ready_to_be_closed != NULL &&
+          host->is_ready_to_be_closed(host)) {
+        allow_close = 1;
+        window->closing = 1;
+      } else if (host->try_close_browser != NULL) {
+        allow_close = host->try_close_browser(host);
+        if (allow_close) {
+          window->closing = 1;
+        }
+      } else {
+        host->close_browser(host, 0);
+      }
+      proton_engine_debug_log("window_delete_close browser=%d allow=%d",
+                              window->browser_id, allow_close);
       host->base.release((cef_base_ref_counted_t *)host);
-      return TRUE;
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return allow_close ? FALSE : TRUE;
     }
   }
   proton_engine_window_mark_closed(window);
@@ -1829,8 +1879,14 @@ static void proton_engine_on_window_destroy(GtkWidget *widget,
                                             gpointer user_data) {
   (void)widget;
   proton_engine_window_t *window = (proton_engine_window_t *)user_data;
+  if (window != NULL) {
+    window->window = NULL;
+    window->browser_host = NULL;
+  }
   if (window != NULL && !window->closed) {
-    proton_engine_window_mark_closed(window);
+    if (window->browser == NULL) {
+      proton_engine_window_mark_closed(window);
+    }
   }
 }
 
@@ -1839,24 +1895,36 @@ static int proton_engine_ensure_gtk(char *error, size_t error_len) {
   static int available = 0;
   if (initialized) {
     if (!available) {
-      proton_engine_set_message(error, error_len, "GTK initialization failed");
+      proton_engine_set_message(error, error_len,
+                                "GTK X11 initialization failed");
     }
     return available;
   }
   int argc = 0;
   char **argv = NULL;
+  g_setenv("GDK_BACKEND", "x11", TRUE);
+  gdk_set_allowed_backends("x11");
   available = gtk_init_check(&argc, &argv) ? 1 : 0;
+  if (available) {
+    GdkDisplay *display = gdk_display_get_default();
+    if (display == NULL || !GDK_IS_X11_DISPLAY(display)) {
+      available = 0;
+    }
+  }
   initialized = 1;
   if (!available) {
-    proton_engine_set_message(error, error_len, "GTK initialization failed");
+    proton_engine_set_message(error, error_len,
+                              "GTK X11 initialization failed");
   }
   return available;
 }
 
 static void proton_engine_cef_shutdown(void) {
   if (g_proton_cef_initialized) {
+    proton_engine_debug_log("cef_shutdown_start");
     cef_shutdown();
     g_proton_cef_initialized = 0;
+    proton_engine_debug_log("cef_shutdown_done");
   }
 }
 
@@ -2127,10 +2195,13 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  proton_engine_debug_log("runtime_destroy_start owns_cef=%d",
+                          runtime->owns_cef_runtime);
   if (runtime->owns_cef_runtime) {
     proton_engine_runtime_clear_bridge_queue(runtime);
     proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();
+    proton_engine_free_closed_windows();
     proton_engine_close_wake_pipe(runtime);
     runtime->owns_cef_runtime = 0;
   }
@@ -2142,6 +2213,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     g_active_runtime = NULL;
   }
   g_proton_cef_runtime_active = 0;
+  proton_engine_debug_log("runtime_destroy_done");
   free(runtime);
   return PROTON_OK;
 }
@@ -2535,6 +2607,18 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  if (window->closed && window->browser == NULL) {
+    proton_engine_debug_log("window_destroy_defer_closed browser=%d",
+                            window->browser_id);
+    if (window->window != NULL) {
+      g_signal_handlers_disconnect_by_data(window->window, window);
+      gtk_widget_destroy(window->window);
+      window->window = NULL;
+      window->browser_host = NULL;
+    }
+    proton_engine_window_defer_free(window);
+    return PROTON_OK;
+  }
   if (window->browser != NULL) {
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
@@ -2554,11 +2638,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     window->window = NULL;
     window->browser_host = NULL;
   }
-  free(window->client);
-  free(window->html_url);
-  free(window->html);
-  free(window->bridge_config_json);
-  free(window);
+  proton_engine_window_free_storage(window);
   return PROTON_OK;
 }
 
