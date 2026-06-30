@@ -16,9 +16,13 @@ fn load_entry_after_create(
     @manifest.AppEntry::Url(url) =>
       native_unit_result("load url", window.load_url(url))
     @manifest.AppEntry::File(path) =>
-      native_unit_result("load file", window.load_url(file_url(path)))
+      load_file_entry_after_create(
+        window, "load file", path, command_proxy_script,
+      )
     @manifest.AppEntry::Asset(path) =>
-      native_unit_result("load asset", window.load_url(file_url(path)))
+      load_file_entry_after_create(
+        window, "load asset", path, command_proxy_script,
+      )
   }
 }
 
@@ -26,19 +30,83 @@ fn load_entry_after_create(
 fn inject_command_proxy_script(html : String, script : String?) -> String {
   match script {
     None => html
-    Some(value) => {
-      let tag = "<script>" +
-        value.replace_all(old="</script", new="<\\/script") +
-        "</script>\n"
-      if html.contains("<head>") {
-        html.replace(old="<head>", new="<head>\n" + tag)
-      } else if html.contains("<body>") {
-        html.replace(old="<body>", new=tag + "<body>")
-      } else {
-        tag + html
-      }
-    }
+    Some(value) => inject_html_bootstrap(html, script_tag(value))
   }
+}
+
+///|
+fn load_file_entry_after_create(
+  window : @native.Window,
+  action : String,
+  path : String,
+  command_proxy_script : String?,
+) -> Result[Unit, String] {
+  match command_proxy_script {
+    None => native_unit_result(action, window.load_url(file_url(path)))
+    Some(script) =>
+      match read_file_entry_html(path, action) {
+        Err(error) => Err(error)
+        Ok(html) => {
+          let bootstrap = base_tag(file_base_url(path)) + script_tag(script)
+          native_unit_result(
+            action,
+            window.load_html(
+              inject_html_bootstrap(html, bootstrap),
+              "proton://app/",
+            ),
+          )
+        }
+      }
+  }
+}
+
+///|
+fn read_file_entry_html(
+  path : String,
+  action : String,
+) -> Result[String, String] {
+  try @mbfs.read_file_to_string(path) catch {
+    error =>
+      Err(
+        action +
+        " failed: failed to read HTML entry: " +
+        @debug.render(@debug.to_repr(error)),
+      )
+  } noraise {
+    text => Ok(text)
+  }
+}
+
+///|
+fn inject_html_bootstrap(html : String, bootstrap : String) -> String {
+  if html.contains("<head>") {
+    html.replace(old="<head>", new="<head>\n" + bootstrap)
+  } else if html.contains("<body>") {
+    html.replace(old="<body>", new=bootstrap + "<body>")
+  } else {
+    bootstrap + html
+  }
+}
+
+///|
+fn script_tag(script : String) -> String {
+  "<script>" +
+  script.replace_all(old="</script", new="<\\/script") +
+  "</script>\n"
+}
+
+///|
+fn base_tag(href : String) -> String {
+  "<base href=\"" + html_attribute_escape(href) + "\">\n"
+}
+
+///|
+fn html_attribute_escape(value : String) -> String {
+  value
+  .replace_all(old="&", new="&amp;")
+  .replace_all(old="\"", new="&quot;")
+  .replace_all(old="<", new="&lt;")
+  .replace_all(old=">", new="&gt;")
 }
 
 ///|
@@ -75,6 +143,26 @@ fn file_url(path : String) -> String {
       "file://" + normalized
     } else {
       "file:///" + normalized
+    }
+  }
+}
+
+///|
+fn file_base_url(path : String) -> String {
+  if path.has_prefix("file://") {
+    let index = path.rev_find("/")
+    match index {
+      Some(value) => path[:value + 1].to_owned()
+      None => path
+    }
+  } else {
+    let file_path : @mbpath.Path = path
+    let dir = file_path.resolve().dirname().to_string()
+    let url = file_url(dir)
+    if url.has_suffix("/") {
+      url
+    } else {
+      url + "/"
     }
   }
 }

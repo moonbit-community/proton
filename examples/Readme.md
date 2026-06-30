@@ -20,6 +20,12 @@ moon install justjavac/proton_cli --bin target/proton-tools
 The installed executable is `proton_cli`; this repository's build rules call the
 CLI through `moon -C ../cli run ...` during local development.
 
+To create a fresh app project instead of working inside `examples/`, use:
+
+```sh
+proton_cli new my-counter
+```
+
 Build the minimal root-facade example:
 
 ```sh

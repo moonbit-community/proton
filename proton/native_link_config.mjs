@@ -52,6 +52,10 @@ function platformId() {
   return `${process.platform}-${process.arch}`;
 }
 
+function packagePrebuiltDist() {
+  return path.resolve(moduleRoot, "prebuilt", platformId());
+}
+
 function findProjectRootWithRuntime(start) {
   for (let current = path.resolve(start); ; current = path.dirname(current)) {
     const manifest = path.join(current, ".proton", "runtime.json");
@@ -93,6 +97,7 @@ function defaultDist() {
     return activeDist;
   }
   return firstExistingDist([
+    packagePrebuiltDist(),
     path.resolve(moduleRoot, "..", "native", "dist"),
   ]);
 }

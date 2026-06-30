@@ -97,6 +97,41 @@ test "extension event dispatch script calls page event emitter with JSON data" {
 }
 
 ///|
+test "file entry bootstrap keeps relative assets under original directory" {
+  let html =
+    #|<html><head><link rel="stylesheet" href="app.css"></head><body><script src="app.js"></script></body></html>
+  let injected = inject_html_bootstrap(
+    html,
+    base_tag("file:///D:/Code/proton-demo/app/") +
+    script_tag("window.__MoonBit__ = {};</script><p>tail</p>"),
+  )
+  assert_true(
+    injected.contains(
+      "<head>\n<base href=\"file:///D:/Code/proton-demo/app/\">\n<script>",
+    ),
+  )
+  assert_true(injected.contains("href=\"app.css\""))
+  assert_true(injected.contains("src=\"app.js\""))
+  inspect(injected.contains("</script><p>tail</p>"), content="false")
+  inspect(injected.contains("<\\/script><p>tail</p>"), content="true")
+}
+
+///|
+test "file base url resolves local path directory" {
+  let base = file_base_url("app/app.html").replace_all(old="\\", new="/")
+  assert_true(base.has_prefix("file:///"))
+  assert_true(base.has_suffix("/"))
+  inspect(
+    file_base_url("file:///D:/Code/proton-demo/app/app.html"),
+    content="file:///D:/Code/proton-demo/app/",
+  )
+  inspect(
+    base_tag("file:///tmp/a&b\"c/"),
+    content="<base href=\"file:///tmp/a&amp;b&quot;c/\">\n",
+  )
+}
+
+///|
 test "extension event dispatch script can target a page instance" {
   let event = @ipc.IpcExtensionEvent::new("ticker", "done", Json::null())
   let script = extension_event_dispatch_script(event, Some("page-1"))

@@ -63,7 +63,7 @@ On non-Windows platforms the CMake install layout uses `libproton.so` or
 Add Proton and import the root facade:
 
 ```sh
-moon add justjavac/proton@0.1.6
+moon add justjavac/proton@0.1.8
 ```
 
 ```moon.pkg
@@ -84,6 +84,20 @@ Install the CLI and assemble the active native runtime:
 moon install justjavac/proton_cli
 proton_cli cef setup
 ```
+
+Create a new native app scaffold:
+
+```powershell
+proton_cli new my-counter --title "My Counter"
+```
+
+`proton_cli new` generates a native-first MoonBit project with `app/` as the
+runnable package, `extensions/counter/` as a reusable command-bridge extension,
+`moon.proton`, `AGENTS.md`, `README.mbt.md`, `LICENSE`, and `.gitignore`. It
+uses `@proton.asset(...)` for `app/app.html` and runs
+`moon check --target native --diagnostic-limit 80` by default. Use `--no-check`
+to skip that check, or `-y/--yes` in scripts to accept defaults and skip
+prompts.
 
 `proton/native_link_config.mjs` resolves link inputs in this order:
 
