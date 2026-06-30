@@ -169,6 +169,71 @@ test "command proxy script ignores disabled command extensions" {
 }
 
 ///|
+test "command host close runs extension destroy hooks once" {
+  let extension_id = "examples/destroy"
+  let destroyed = Ref(0)
+  let manifest = test_command_manifest(extension_id)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
+    extension_id,
+    "destroyTest",
+    [@proton_command.AppCommandApiDescriptor::new("ping")],
+    fn(context) {
+      context.op("ping", fn(_payload : Unit) { "pong" })
+      Ok(())
+    },
+    on_destroy=fn(context) {
+      if context.extension_id() == extension_id {
+        destroyed.val = destroyed.val + 1
+      }
+    },
+  )
+  match build_command_host(manifest, command_extensions, None) {
+    Ok(Some(host)) => {
+      close_command_host(Some(host))
+      assert_eq(destroyed.val, 1)
+      close_command_host(Some(host))
+      assert_eq(destroyed.val, 1)
+    }
+    _ => fail("expected command host")
+  }
+}
+
+///|
+test "core spec command wrapper destroys runtime core host" {
+  let extension_id = "examples/core-destroy"
+  let destroyed = Ref(0)
+  let core_spec = @core.ExtensionSpec::new(extension_id, "coreDestroy", fn(
+    _context,
+  ) {
+    Ok(
+      @core.Extension::new(
+        extension_id,
+        "coreDestroy",
+        fn(extension) { extension.op("ping", fn(_payload : Unit) { "pong" }) },
+        on_destroy=fn(_extension) { destroyed.val = destroyed.val + 1 },
+      ),
+    )
+  })
+  let command_spec = match
+    @proton_extension.from_core_spec(core_spec).command_spec() {
+    Some(spec) => spec
+    None => fail("expected command spec")
+  }
+  assert_eq(destroyed.val, 1)
+  let manifest = test_command_manifest(extension_id)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  command_extensions[extension_id] = command_spec
+  match build_command_host(manifest, command_extensions, None) {
+    Ok(Some(host)) => {
+      close_command_host(Some(host))
+      assert_eq(destroyed.val, 2)
+    }
+    _ => fail("expected command host")
+  }
+}
+
+///|
 test "command proxy script rejects invalid namespace and API names" {
   let namespace_extension_id = "examples/bad-namespace"
   let namespace_manifest = test_command_manifest(namespace_extension_id)

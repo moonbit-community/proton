@@ -79,7 +79,7 @@ async fn run_manifest(
   }
   match command_host {
     Some(host) => {
-      let ops = host.registered_ops()
+      let ops = host.host.registered_ops()
       match
         native_unit_result(
           "install bridge",
@@ -91,7 +91,7 @@ async fn run_manifest(
           ignore(runtime.destroy())
           return Err(error)
         }
-        Ok(_) => install_extension_event_sender(window, host)
+        Ok(_) => install_extension_event_sender(window, host.host)
       }
     }
     None => ()
@@ -113,7 +113,7 @@ async fn run_manifest(
         }
         Ok(_) => {
           let run_result = match command_host {
-            Some(host) => run_bridge_pump(runtime, window, host)
+            Some(host) => run_bridge_pump(runtime, window, host.host)
             None => run_window_pump(runtime)
           }
           close_command_host(command_host)
@@ -139,11 +139,18 @@ fn app_config_base_dir(file_path : String?) -> String? {
 }
 
 ///|
-fn close_command_host(host : @core.AppCommandHost?) -> Unit {
+fn close_command_host(host : CommandHostRuntime?) -> Unit {
   match host {
     Some(value) => value.close()
     None => ()
   }
+}
+
+///|
+fn CommandHostRuntime::close(self : CommandHostRuntime) -> Unit {
+  guard !self.closed else { return }
+  self.closed = true
+  close_command_host_runtime(self.host, self.destroy_hooks)
 }
 
 ///|

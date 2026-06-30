@@ -19,3 +19,10 @@ priv struct BridgeDispatchTask {
   request_id : Int64
   task : @async.Task[@native.BridgeResponse]
 }
+
+///|
+priv struct CommandHostRuntime {
+  host : @core.AppCommandHost
+  destroy_hooks : Array[() -> Unit]
+  mut closed : Bool
+}
