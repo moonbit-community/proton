@@ -2,6 +2,7 @@
 fn print_usage() -> Unit {
   let usage =
     #|Usage:
+    #|  proton_cli version
     #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
     #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
@@ -112,6 +113,16 @@ fn latest_version_from_manifest_text(text : String) -> String? {
       }
     _ => None
   }
+}
+
+///|
+fn cli_version_text() -> String {
+  "proton_cli " + cli_current_version
+}
+
+///|
+fn is_cli_version_arg(arg : String) -> Bool {
+  arg == "version" || arg == "--version" || arg == "-V"
 }
 
 ///|
@@ -311,6 +322,10 @@ async fn main {
   let argv = @sys.get_cli_args()
   let raw_args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
   let (cwd, args) = parse_global_args(raw_args)
+  if args.length() == 1 && is_cli_version_arg(args[0]) {
+    println(cli_version_text())
+    return
+  }
   check_cli_update()
   if args.length() == 0 || args[0] == "-h" || args[0] == "--help" {
     print_usage()

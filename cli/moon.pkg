@@ -16,6 +16,10 @@ import {
   "justjavac/proton_cli/new" @new_project,
 }
 
+import {
+  "moonbitlang/moon_config",
+} for "wbtest"
+
 supported_targets = "native"
 
 options(

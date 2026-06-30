@@ -52,3 +52,44 @@ test "latest version is read from mooncakes manifest" {
   assert_true(latest_version_from_manifest_text("{}") is None)
   assert_true(latest_version_from_manifest_text("not json") is None)
 }
+
+///|
+test "cli version command text and aliases" {
+  assert_eq(cli_version_text(), "proton_cli " + cli_current_version)
+  assert_true(is_cli_version_arg("version"))
+  assert_true(is_cli_version_arg("--version"))
+  assert_true(is_cli_version_arg("-V"))
+  assert_true(!is_cli_version_arg("doctor"))
+}
+
+///|
+fn moon_mod_version_from_source(path : String, source : String) -> String? {
+  let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
+  guard reports.length() == 0 else { return None }
+  match ast {
+    @moon_config.Ast::Obj(fields, ..) => {
+      for field in fields {
+        match field {
+          ("version", @moon_config.Ast::Str(version, ..)) =>
+            return Some(version)
+          _ => ()
+        }
+      }
+      None
+    }
+    _ => None
+  }
+}
+
+///|
+test "embedded cli version matches moon.mod" {
+  let path = "moon.mod"
+  let source = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    err =>
+      fail("failed to read " + path + ": " + @debug.render(@debug.to_repr(err)))
+  }
+  match moon_mod_version_from_source(path, source) {
+    Some(version) => assert_eq(cli_current_version, version)
+    None => fail("expected moon.mod version to parse")
+  }
+}
