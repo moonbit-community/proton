@@ -7,8 +7,9 @@ import {
 
 supported_targets = "native"
 
+formatter(ignore: [ "extension.g.mbt" ])
+
 options(
-  formatter: { "ignore": [ "extension.g.mbt" ] },
   targets: {
     "auto_launch.mbt": [ "native" ],
     "extension.g.mbt": [ "native" ],

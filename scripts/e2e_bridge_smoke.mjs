@@ -12,9 +12,25 @@ const requestedCdpPort = process.env.PROTON_BRIDGE_E2E_CDP_PORT
   ? Number(process.env.PROTON_BRIDGE_E2E_CDP_PORT)
   : null;
 let cdpPort = requestedCdpPort ?? 9222;
-const scenarios = process.argv.slice(2).length > 0
-  ? process.argv.slice(2)
-  : ["41_app_commands"];
+const rawArgs = process.argv.slice(2);
+const scenarios = [];
+let appWorkdir = repoRoot;
+for (let i = 0; i < rawArgs.length; i += 1) {
+  const arg = rawArgs[i];
+  if (arg === "--workdir") {
+    const value = rawArgs[i + 1];
+    if (!value) {
+      fail("--workdir requires a path");
+    }
+    appWorkdir = path.resolve(repoRoot, value);
+    i += 1;
+  } else {
+    scenarios.push(arg);
+  }
+}
+if (scenarios.length === 0) {
+  scenarios.push("41_app_commands");
+}
 
 function fail(message) {
   console.error(message);
@@ -66,7 +82,8 @@ function ensureSupportedScenario(name) {
     name !== "40_event_broadcast" &&
     name !== "41_app_commands" &&
     name !== "42_attribute_codegen_commands" &&
-    name !== "45_bridge_multi_window"
+    name !== "45_bridge_multi_window" &&
+    name !== "46_asset_sidecar_resources"
   ) {
     fail(`Unsupported bridge smoke scenario: ${name}`);
   }
@@ -713,6 +730,62 @@ async function runAttributeCodegenCommandProbe() {
   }
 }
 
+async function runAssetSidecarResourcesProbe() {
+  await waitForCdpEndpoint();
+  const page = await waitForPageTargetByTitle("Asset Sidecar Resources");
+  const client = new CdpClient(page.webSocketDebuggerUrl);
+  await client.open();
+  try {
+    await client.send("Runtime.enable");
+    await waitForExpression(
+      client,
+      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.add?.add && window.__MoonBit__?.add?.reportProbe)",
+      "window.__MoonBit__ asset sidecar add command bridge",
+    );
+    await waitForExpression(
+      client,
+      'document.querySelector("#result")?.textContent === "12"',
+      "asset sidecar app.js automatic add result",
+    );
+    const result = await client.evaluate(
+      `(
+        async () => {
+          const commandReply = await window.__MoonBit__.add.add({
+            left: 30,
+            right: 12,
+          });
+          const probeReply = await window.__MoonBit__.add.reportProbe({
+            report: JSON.stringify({
+              ok: commandReply === 42,
+              source: "smoke",
+            }),
+          });
+          return {
+            url: location.href,
+            title: document.title,
+            hasBridge: typeof window.__MoonBit__?.core?.invokeOp === "function",
+            hasGeneratedProxy: typeof window.__MoonBit__?.add?.add === "function",
+            hasReportProxy: typeof window.__MoonBit__?.add?.reportProbe === "function",
+            autoResult: document.querySelector("#result")?.textContent,
+            logText: document.querySelector("#log")?.textContent,
+            cssLoaded: getComputedStyle(document.documentElement)
+              .getPropertyValue("--accent")
+              .trim() !== "",
+            scriptElementPresent: Boolean(document.querySelector('script[src="app.js"]')),
+            commandReply,
+            probeReply,
+          };
+        }
+      )()`,
+      true,
+    );
+    assertAssetSidecarResourcesProbeResult(result);
+    return result;
+  } finally {
+    client.close();
+  }
+}
+
 async function runQueueFullProbe(client) {
   const result = await client.evaluate(
     `(
@@ -1198,6 +1271,34 @@ function assertAttributeCodegenCommandProbeResult(result) {
   }
 }
 
+function assertAssetSidecarResourcesProbeResult(result) {
+  if (!result || typeof result !== "object") {
+    throw new Error(`asset sidecar probe returned non-object: ${JSON.stringify(result)}`);
+  }
+  if (!String(result.url ?? "").startsWith("proton://app/")) {
+    throw new Error(`expected proton://app/ URL, got ${result.url}`);
+  }
+  if (result.title !== "Asset Sidecar Resources") {
+    throw new Error(`unexpected title: ${result.title}`);
+  }
+  if (
+    result.hasBridge !== true ||
+    result.hasGeneratedProxy !== true ||
+    result.hasReportProxy !== true
+  ) {
+    throw new Error(`asset sidecar command bridge was not installed: ${JSON.stringify(result)}`);
+  }
+  if (result.autoResult !== "12") {
+    throw new Error(`asset sidecar app.js did not run automatic add: ${JSON.stringify(result)}`);
+  }
+  if (result.cssLoaded !== true || result.scriptElementPresent !== true) {
+    throw new Error(`asset sidecar resources were not loaded: ${JSON.stringify(result)}`);
+  }
+  if (result.commandReply !== 42 || result.probeReply?.ok !== true) {
+    throw new Error(`unexpected asset sidecar command replies: ${JSON.stringify(result)}`);
+  }
+}
+
 function assertReloadProbeResult(result) {
   if (!result || typeof result !== "object") {
     throw new Error(`reload probe returned non-object result: ${JSON.stringify(result)}`);
@@ -1249,8 +1350,18 @@ function assertNonProtonProbeResult(result) {
 }
 
 function spawnApp(env, scenario) {
-  return spawn("moon", ["-C", "examples", "run", scenario, "--target", "native", "--diagnostic-limit", "120"], {
-    cwd: repoRoot,
+  fs.mkdirSync(appWorkdir, { recursive: true });
+  return spawn("moon", [
+    "-C",
+    path.join(repoRoot, "examples"),
+    "run",
+    scenario,
+    "--target",
+    "native",
+    "--diagnostic-limit",
+    "120",
+  ], {
+    cwd: appWorkdir,
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -1496,6 +1607,9 @@ async function runCdpScenarioProbe(name) {
   if (name === "45_bridge_multi_window") {
     return await runMultiWindowRoutingProbe();
   }
+  if (name === "46_asset_sidecar_resources") {
+    return await runAssetSidecarResourcesProbe();
+  }
   return await runCdpProbe();
 }
 
@@ -1517,6 +1631,12 @@ function assertNativeLogScenarioGuards(name) {
   }
   if (name === "45_bridge_multi_window") {
     return assertNativeLogMultiWindowGuards();
+  }
+  if (name === "46_asset_sidecar_resources") {
+    return assertNativeLogOpsEnqueued([
+      "ext:add/add",
+      "ext:add/reportProbe",
+    ]);
   }
   return assertNativeLogBridgeGuards();
 }

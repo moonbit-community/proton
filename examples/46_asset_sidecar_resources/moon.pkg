@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/core/json",
   "moonbitlang/async",
   "justjavac/proton/command" @proton_command,
@@ -14,9 +15,7 @@ dev_build(
   output: "commands.g.mbt",
 )
 
-dev_build(rule: "embed", input: "app.html", output: "app.mbt")
-
-formatter(ignore: [ "commands.g.mbt", "app.mbt" ])
+formatter(ignore: [ "commands.g.mbt" ])
 
 options(
   "is-main": true,

@@ -11,8 +11,9 @@ import {
 
 supported_targets = "native"
 
+formatter(ignore: [ "extension.g.mbt" ])
+
 options(
-  formatter: { "ignore": [ "extension.g.mbt" ] },
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],

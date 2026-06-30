@@ -13,6 +13,4 @@ import {
 
 supported_targets = "native"
 
-options(
-  formatter: { "ignore": [ "templates.generated.mbt" ] },
-)
+formatter(ignore: [ "templates.generated.mbt" ])

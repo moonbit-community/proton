@@ -58,6 +58,7 @@ moon -C examples run 01_run --target native
 - `43_native_bind_smoke`: low-level native binding smoke.
 - `44_project_config`: `moon.proton` project config decoding
 - `45_bridge_multi_window`: multi-window bridge smoke.
+- `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle

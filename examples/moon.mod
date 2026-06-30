@@ -27,8 +27,9 @@ rule(
   command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen $input -o $output",
 )
 
+source = ""
+
 options(
-  source: "",
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",
