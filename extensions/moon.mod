@@ -26,8 +26,9 @@ keywords = [ "proton", "extension", "filesystem" ]
 
 description = "Extensions for proton examples and applications."
 
+source = "."
+
 options(
-  source: ".",
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",

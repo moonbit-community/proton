@@ -16,8 +16,9 @@ dev_build(
 
 dev_build(rule: "embed", input: "app.html", output: "app.mbt")
 
+formatter(ignore: [ "commands.g.mbt", "app.mbt" ])
+
 options(
-  formatter: { "ignore": [ "commands.g.mbt", "app.mbt" ] },
   "is-main": true,
   targets: {
     "commands.g.mbt": [ "native" ],

@@ -17,8 +17,9 @@ keywords = [ "proton", "cef", "cdp", "e2e" ]
 
 description = "CEF end-to-end bridge smoke probes for Proton examples."
 
+source = ""
+
 options(
-  source: "",
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",

@@ -7,8 +7,9 @@ supported_targets = "native"
 
 dev_build(rule: "embed", input: "index.html", output: "index.mbt")
 
+formatter(ignore: [ "index.mbt" ])
+
 options(
-  formatter: { "ignore": [ "index.mbt" ] },
   "is-main": true,
   targets: { "main.mbt": [ "native" ] },
 )

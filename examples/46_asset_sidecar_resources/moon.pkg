@@ -15,8 +15,9 @@ dev_build(
   output: "commands.g.mbt",
 )
 
+formatter(ignore: [ "commands.g.mbt" ])
+
 options(
-  formatter: { "ignore": [ "commands.g.mbt" ] },
   "is-main": true,
   targets: {
     "commands.g.mbt": [ "native" ],
