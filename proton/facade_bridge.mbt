@@ -3,8 +3,9 @@ fn build_command_host(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
-) -> Result[@core.AppCommandHost?, String] {
+) -> Result[CommandHostRuntime?, String] {
   let host = @core.AppCommandHost::new()
+  let destroy_hooks : Array[() -> Unit] = []
   let mut has_commands = false
   for id, spec in command_extensions {
     match manifest.extension_setting(id) {
@@ -19,10 +20,13 @@ fn build_command_host(
           )
           match spec.register(context) {
             Err(error) => {
-              host.close()
+              close_command_host_runtime(host, destroy_hooks)
               return Err(error)
             }
-            Ok(_) => has_commands = true
+            Ok(_) => {
+              has_commands = true
+              destroy_hooks.push(fn() { spec.destroy(context) })
+            }
           }
         }
       None => ()
@@ -30,11 +34,23 @@ fn build_command_host(
   }
   if has_commands {
     host.seal_registrations()
-    Ok(Some(host))
+    Ok(Some(CommandHostRuntime::{ host, destroy_hooks, closed: false }))
   } else {
-    host.close()
+    close_command_host_runtime(host, destroy_hooks)
     Ok(None)
   }
+}
+
+///|
+fn close_command_host_runtime(
+  host : @core.AppCommandHost,
+  destroy_hooks : Array[() -> Unit],
+) -> Unit {
+  let hook_count = destroy_hooks.length()
+  for index in 0..<hook_count {
+    destroy_hooks[hook_count - index - 1]()
+  }
+  host.close()
 }
 
 ///|

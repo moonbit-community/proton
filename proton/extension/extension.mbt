@@ -84,17 +84,20 @@ fn core_command_spec(
 ) -> @proton_command.AppCommandExtensionSpec? {
   match core_command_descriptor(spec) {
     Err(_) => None
-    Ok(descriptor) =>
+    Ok(descriptor) => {
+      let core_host_ref : Ref[@core.ExtensionHost?] = Ref(None)
       Some(
         @proton_command.AppCommandExtensionSpec::new(
           spec.id(),
           spec.js_namespace(),
           descriptor.apis,
-          fn(context) { register_core_commands(spec, context) },
+          fn(context) { register_core_commands(spec, context, core_host_ref) },
           scripts=descriptor.scripts,
           dependencies=spec.dependencies(),
+          on_destroy=fn(_context) { destroy_core_command_host(core_host_ref) },
         ),
       )
+    }
   }
 }
 
@@ -123,7 +126,9 @@ fn core_command_descriptor(
 fn register_core_commands(
   spec : @core.ExtensionSpec,
   context : @proton_command.AppCommandExtensionContext,
+  core_host_ref : Ref[@core.ExtensionHost?],
 ) -> Result[Unit, String] {
+  destroy_core_command_host(core_host_ref)
   let core_context = @core.ExtensionBuildContext::new(
     options=context.options(),
     base_dir=context.base_dir(),
@@ -139,7 +144,19 @@ fn register_core_commands(
           core_host.dispatch_op(op_name, payload)
         })
       }
+      core_host_ref.val = Some(core_host)
       Ok(())
     }
+  }
+}
+
+///|
+fn destroy_core_command_host(core_host_ref : Ref[@core.ExtensionHost?]) -> Unit {
+  match core_host_ref.val {
+    Some(core_host) => {
+      core_host.destroy()
+      core_host_ref.val = None
+    }
+    None => ()
   }
 }
