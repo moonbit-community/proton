@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title_html}}</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f8f5;
+        --ink: #182026;
+        --muted: #5e6b74;
+        --panel: #ffffff;
+        --line: #d9e1dd;
+        --accent: #0f766e;
+        --accent-2: #9a3412;
+        --ok: #13795b;
+        --err: #b42318;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111817;
+          --ink: #eef5f2;
+          --muted: #a4b4ae;
+          --panel: #17211f;
+          --line: #2a3a36;
+          --accent: #2dd4bf;
+          --accent-2: #fb923c;
+          --ok: #5ee0a8;
+          --err: #ff8a80;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Segoe UI", system-ui, sans-serif;
+      }
+
+      main {
+        width: min(760px, 100%);
+        margin: 0 auto;
+        padding: 32px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        line-height: 1.15;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .counter {
+        display: grid;
+        gap: 18px;
+        margin: 28px 0 20px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .value {
+        font-size: 64px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        min-width: 112px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: white;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        border-color: var(--line);
+        background: var(--panel);
+        color: var(--ink);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .status {
+        margin-top: 12px;
+        color: var(--muted);
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .err {
+        color: var(--err);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>{{title_html}}</h1>
+      <p>Counter state is owned by a MoonBit extension command bridge.</p>
+
+      <section class="counter" aria-label="Counter">
+        <div id="value" class="value">0</div>
+        <div class="toolbar">
+          <button id="increment" disabled>Increment</button>
+          <button id="reset" class="secondary" disabled>Reset</button>
+        </div>
+      </section>
+
+      <p id="status" class="status">Waiting for bridge...</p>
+    </main>
+
+    <script>
+      const valueEl = document.querySelector("#value");
+      const statusEl = document.querySelector("#status");
+      const incrementButton = document.querySelector("#increment");
+      const resetButton = document.querySelector("#reset");
+
+      function setStatus(text, kind = "") {
+        statusEl.textContent = text;
+        statusEl.className = kind ? `status ${kind}` : "status";
+      }
+
+      function setEnabled(enabled) {
+        incrementButton.disabled = !enabled;
+        resetButton.disabled = !enabled;
+      }
+
+      async function invoke(name, payload = {}) {
+        return window.__MoonBit__.core.invokeOp(`ext:counter/${name}`, payload);
+      }
+
+      async function refresh() {
+        const reply = await invoke("get");
+        valueEl.textContent = String(reply.value);
+      }
+
+      async function run(name) {
+        setEnabled(false);
+        try {
+          const reply = await invoke(name);
+          valueEl.textContent = String(reply.value);
+          setStatus("Bridge ready", "ok");
+        } catch (error) {
+          setStatus(String(error), "err");
+        } finally {
+          setEnabled(true);
+        }
+      }
+
+      function waitForBridge(attempt = 0) {
+        if (window.__MoonBit__?.core?.invokeOp) {
+          setEnabled(true);
+          setStatus("Bridge ready", "ok");
+          void refresh();
+          return;
+        }
+        if (attempt > 100) {
+          setStatus("Bridge timed out", "err");
+          return;
+        }
+        window.setTimeout(() => waitForBridge(attempt + 1), 25);
+      }
+
+      incrementButton.addEventListener("click", () => void run("increment"));
+      resetButton.addEventListener("click", () => void run("reset"));
+      window.addEventListener("load", () => waitForBridge());
+    </script>
+  </body>
+</html>

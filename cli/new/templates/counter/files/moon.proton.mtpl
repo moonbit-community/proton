@@ -1,0 +1,15 @@
+product_name = {{title_mbt}}
+
+window = {
+  title: {{title_mbt}},
+  width: {{width}},
+  height: {{height}},
+  size_hint: "none",
+}
+
+entry = {
+  kind: "asset",
+  value: "app/app.html",
+}
+
+debug = true

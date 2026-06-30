@@ -1,0 +1,10 @@
+///|
+async fn main {
+  @proton.asset(
+    {{title_mbt}},
+    "app/app.html",
+    width={{width}},
+    height={{height}},
+    debug=true,
+  ).extension(@counter.extension()).run_or_abort()
+}

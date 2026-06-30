@@ -8,6 +8,7 @@ import {
   "justjavac/proton_cli/cef",
   "justjavac/proton_cli/codegen",
   "justjavac/proton_cli/doctor",
+  "justjavac/proton_cli/new" @new_project,
 }
 
 supported_targets = "native"
