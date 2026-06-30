@@ -217,13 +217,13 @@ let resource : String =
   #|                <p>
   #|                    This example runs through <code>App</code> and uses the
   #|                    runtime bridge exposed on <code>window.__MoonBit__</code>.
-  #|                    It demonstrates the generated proxies
-  #|                    <code>__MoonBit__.fs</code> and
-  #|                    <code>__MoonBit__.path</code>, with the filesystem flow
-  #|                    leaning on Node-style calls such as
-  #|                    <code>readFile(path)</code>,
-  #|                    <code>writeFile(path, content)</code>,
-  #|                    <code>stat(path)</code>, and
+  #|                    It demonstrates direct
+  #|                    <code>__MoonBit__.core.invokeOp(...)</code> calls to the
+  #|                    <code>fs</code> and <code>path</code> extensions, with the filesystem flow
+  #|                    using MoonBit-style calls such as
+  #|                    <code>read_file(path)</code>,
+  #|                    <code>write_file(path, content)</code>,
+  #|                    <code>exists(path)</code>, and
   #|                    <code>readdir(path)</code>.
   #|                </p>
   #|            </div>
@@ -240,7 +240,7 @@ let resource : String =
   #|                                Content
   #|                                <textarea id="content">Hello from the __MoonBit__ App runtime.
   #|
-  #|This page talks to the native fs extension through window.__MoonBit__.</textarea>
+  #|This page talks to the fs extension through window.__MoonBit__.</textarea>
   #|                            </label>
   #|                            <div class="actions">
   #|                                <button id="resolve" class="ghost">Resolve Path</button>
@@ -291,8 +291,6 @@ let resource : String =
   #|        </div>
   #|        <script>
   #|            const app = window.__MoonBit__;
-  #|            const fs = app.fs;
-  #|            const pathApi = app.path;
   #|            const pathInput = document.getElementById("path");
   #|            const contentInput = document.getElementById("content");
   #|            const notice = document.getElementById("notice");
@@ -334,9 +332,6 @@ let resource : String =
   #|                if (payload.path) {
   #|                    parts.push(payload.path);
   #|                }
-  #|                if (payload.rid != null) {
-  #|                    parts.push("rid " + payload.rid);
-  #|                }
   #|                if (payload.bytes != null) {
   #|                    parts.push(payload.bytes + " bytes");
   #|                }
@@ -350,13 +345,31 @@ let resource : String =
   #|                }
   #|            }
   #|
+  #|            async function pathOp(name, payload) {
+  #|                return app.core.invokeOp("ext:path/" + name, payload);
+  #|            }
+  #|
+  #|            async function pathValue(name, payload, key) {
+  #|                const reply = await pathOp(name, payload);
+  #|                return reply[key || "path"];
+  #|            }
+  #|
+  #|            async function fsOp(name, payload) {
+  #|                return app.core.invokeOp("ext:fs/" + name, payload);
+  #|            }
+  #|
+  #|            async function fsValue(name, payload, key) {
+  #|                const reply = await fsOp(name, payload);
+  #|                return reply[key];
+  #|            }
+  #|
   #|            async function refreshPathInfo(path) {
   #|                const [dirname, basename, extname, absolute, normalized] = await Promise.all([
-  #|                    pathApi.dirname(path),
-  #|                    pathApi.basename(path),
-  #|                    pathApi.extname(path),
-  #|                    pathApi.isAbsolute(path),
-  #|                    pathApi.normalize(path),
+  #|                    pathValue("dirname", { path }),
+  #|                    pathValue("basename", { path }, "name"),
+  #|                    pathValue("extname", { path }, "ext"),
+  #|                    pathValue("is_absolute", { path }, "is_absolute"),
+  #|                    pathValue("normalize", { path }),
   #|                ]);
   #|                pathInfo.textContent =
   #|                    "dir " +
@@ -376,7 +389,7 @@ let resource : String =
   #|                if (!input) {
   #|                    throw new Error("Please enter a file path.");
   #|                }
-  #|                const absolutePath = await pathApi.resolve(input);
+  #|                const absolutePath = await pathValue("resolve", { path: input });
   #|                pathInput.value = absolutePath;
   #|                resolved.textContent = absolutePath;
   #|                await refreshPathInfo(absolutePath);
@@ -384,7 +397,30 @@ let resource : String =
   #|            }
   #|
   #|            async function inspect(path) {
-  #|                return fs.stat(path, { throwIfNoEntry: false });
+  #|                const exists = await fsValue("exists", { path }, "exists");
+  #|                if (!exists) {
+  #|                    return {
+  #|                        path,
+  #|                        size: 0,
+  #|                        kind: "missing",
+  #|                        exists: false,
+  #|                        is_file: false,
+  #|                        is_dir: false,
+  #|                    };
+  #|                }
+  #|                const [realpath, kind, size] = await Promise.all([
+  #|                    fsValue("realpath", { path }, "path"),
+  #|                    fsValue("kind", { path }, "kind"),
+  #|                    fsValue("size", { path }, "size"),
+  #|                ]);
+  #|                return {
+  #|                    path: realpath,
+  #|                    size,
+  #|                    kind,
+  #|                    exists: true,
+  #|                    is_file: kind === "regular",
+  #|                    is_dir: kind === "directory",
+  #|                };
   #|            }
   #|
   #|            app.events.on("fs.activity", (event) => {
@@ -395,7 +431,7 @@ let resource : String =
   #|                setBusy(true);
   #|                try {
   #|                    await resolveInputPath();
-  #|                    setNotice("Resolved the input path through __MoonBit__.path.resolve().");
+  #|                    setNotice("Resolved the input path through ext:path/resolve.");
   #|                } catch (error) {
   #|                    setNotice("Resolve failed: " + String(error), "error");
   #|                }
@@ -406,12 +442,12 @@ let resource : String =
   #|                setBusy(true);
   #|                try {
   #|                    const path = await resolveInputPath();
-  #|                    await fs.writeFile(path, contentInput.value, { flush: true });
+  #|                    await fsOp("write_file", { path, content: contentInput.value });
   #|                    const summary = await inspect(path);
   #|                    stat.textContent = summary.exists
   #|                        ? "size " + summary.size + ", file " + summary.is_file + ", dir " + summary.is_dir
   #|                        : "missing";
-  #|                    setNotice("Saved the file through __MoonBit__.fs.writeFile().");
+  #|                    setNotice("Saved the file through ext:fs/write_file.");
   #|                } catch (error) {
   #|                    setNotice("Save failed: " + String(error), "error");
   #|                }
@@ -424,9 +460,9 @@ let resource : String =
   #|                    const path = await resolveInputPath();
   #|                    const loaded = {
   #|                        summary: await inspect(path),
-  #|                        read: await fs.readFile(path),
+  #|                        content: await fsValue("read_file", { path }, "content"),
   #|                    };
-  #|                    contentInput.value = loaded.read.content;
+  #|                    contentInput.value = loaded.content;
   #|                    stat.textContent =
   #|                        "size " +
   #|                        loaded.summary.size +
@@ -434,7 +470,7 @@ let resource : String =
   #|                        loaded.summary.is_file +
   #|                        ", dir " +
   #|                        loaded.summary.is_dir;
-  #|                    setNotice("Loaded the file through __MoonBit__.fs.readFile().");
+  #|                    setNotice("Loaded the file through ext:fs/read_file.");
   #|                } catch (error) {
   #|                    setNotice("Load failed: " + String(error), "error");
   #|                }
@@ -465,9 +501,9 @@ let resource : String =
   #|                setBusy(true);
   #|                try {
   #|                    const path = await resolveInputPath();
-  #|                    const dirname = await pathApi.dirname(path);
-  #|                    const entries = await fs.readdir(dirname);
-  #|                    renderDir(entries.entries);
+  #|                    const dirname = await pathValue("dirname", { path });
+  #|                    const entries = await fsValue("readdir", { path: dirname }, "entries");
+  #|                    renderDir(entries);
   #|                    setNotice("Listed the parent directory.");
   #|                } catch (error) {
   #|                    setNotice("Directory listing failed: " + String(error), "error");
@@ -479,11 +515,14 @@ let resource : String =
   #|                setBusy(true);
   #|                try {
   #|                    const path = await resolveInputPath();
-  #|                    const removed = await fs.rm(path, { force: true });
-  #|                    stat.textContent = removed.removed ? "removed" : "already missing";
+  #|                    const existed = await fsValue("exists", { path }, "exists");
+  #|                    if (existed) {
+  #|                        await fsOp("remove", { path });
+  #|                    }
+  #|                    stat.textContent = existed ? "removed" : "already missing";
   #|                    setNotice(
-  #|                        removed.removed ? "Deleted the file." : "The file was already absent.",
-  #|                        removed.removed ? "ok" : "error",
+  #|                        existed ? "Deleted the file." : "The file was already absent.",
+  #|                        existed ? "ok" : "error",
   #|                    );
   #|                } catch (error) {
   #|                    setNotice("Delete failed: " + String(error), "error");

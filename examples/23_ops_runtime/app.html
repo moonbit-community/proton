@@ -123,10 +123,9 @@
             <div class="hero">
                 <h1>__MoonBit__ Ops Runtime</h1>
                 <p>
-                    This example shows the new Deno-style ops flow through
-                    <code>__MoonBit__.core.invokeOp(...)</code>, plus the higher-level
-                    <code>__MoonBit__.path</code>, <code>__MoonBit__.fs</code>, and
-                    <code>__MoonBit__</code> extension proxies.
+                    This example shows the MoonBit-style ops flow through
+                    <code>__MoonBit__.core.invokeOp(...)</code> with direct
+                    <code>fs</code> and <code>path</code> extension calls.
                 </p>
             </div>
             <div class="panel">
@@ -139,12 +138,12 @@
                     <pre id="direct">Not loaded yet.</pre>
                 </div>
                 <div class="panel">
-                    <h2>__MoonBit__ API</h2>
+                    <h2>Path Ops</h2>
                     <pre id="extension">Not loaded yet.</pre>
                 </div>
                 <div class="panel">
-                    <h2>__MoonBit__ API</h2>
-                    <pre id="compat">Not loaded yet.</pre>
+                    <h2>FS Ops</h2>
+                    <pre id="fs-output">Not loaded yet.</pre>
                 </div>
             </div>
         </div>
@@ -152,7 +151,7 @@
             const status = document.getElementById("status");
             const direct = document.getElementById("direct");
             const extension = document.getElementById("extension");
-            const compat = document.getElementById("compat");
+            const fsOutput = document.getElementById("fs-output");
 
             function setStatus(message, kind) {
                 status.textContent = message;
@@ -164,13 +163,20 @@
 
             document.getElementById("run").addEventListener("click", async () => {
                 try {
+                    const invokeOp = window.__MoonBit__.core.invokeOp;
                     const resolved = await window.__MoonBit__.core.invokeOp(
                         "ext:path/resolve",
                         { path: "23_ops_runtime" },
                     );
-                    const listed = await window.__MoonBit__.fs.readdir(resolved.path);
-                    const dirname = await window.__MoonBit__.path.dirname(resolved.path);
-                    const appListed = await window.__MoonBit__.fs.readdir(resolved.path);
+                    const listed = await invokeOp("ext:fs/readdir", {
+                        path: resolved.path,
+                    });
+                    const dirname = await invokeOp("ext:path/dirname", {
+                        path: resolved.path,
+                    });
+                    const appListed = await invokeOp("ext:fs/readdir", {
+                        path: resolved.path,
+                    });
 
                     direct.textContent = JSON.stringify(
                         {
@@ -187,12 +193,12 @@
                         null,
                         2,
                     );
-                    compat.textContent = JSON.stringify(
+                    fsOutput.textContent = JSON.stringify(
                         {
-                            moonbitapp_path_dirname: await window.__MoonBit__.path.dirname(
-                                resolved.path,
-                            ),
-                            moonbitapp_fs_readdir: appListed,
+                            path_dirname_again: await invokeOp("ext:path/dirname", {
+                                path: resolved.path,
+                            }),
+                            fs_readdir_again: appListed,
                         },
                         null,
                         2,
