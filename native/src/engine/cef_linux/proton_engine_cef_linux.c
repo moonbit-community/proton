@@ -51,6 +51,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define PROTON_ENGINE_PATH_SEPARATOR '/'
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
 #define PROTON_ENGINE_MAX_BRIDGE_REQUESTS 256
@@ -145,6 +146,7 @@ typedef struct {
   proton_engine_ref_counted_t refs;
   char *data;
   size_t len;
+  char *mime_type;
   size_t offset;
 } proton_engine_resource_handler_t;
 
@@ -464,6 +466,7 @@ static bool proton_engine_default_helper_path(char *out, size_t out_len) {
 }
 
 #include "../cef_common/strings.h"
+#include "../cef_common/assets.h"
 #include "../cef_common/json_fields.h"
 
 static void proton_engine_append_switch(cef_command_line_t *command_line,
@@ -752,7 +755,9 @@ static void CEF_CALLBACK proton_engine_resource_get_response_headers(
       (proton_engine_resource_handler_t *)self;
   if (response != NULL) {
     cef_string_t mime = {0};
-    proton_engine_set_string(&mime, "text/html");
+    proton_engine_set_string(&mime, handler->mime_type != NULL
+                                        ? handler->mime_type
+                                        : "text/html");
     response->set_status(response, 200);
     response->set_mime_type(response, &mime);
     cef_string_clear(&mime);
@@ -795,9 +800,29 @@ static void CEF_CALLBACK proton_engine_resource_cancel(
   (void)self;
 }
 
+static int CEF_CALLBACK proton_engine_resource_handler_release(
+    cef_base_ref_counted_t *base) {
+  if (base == NULL) {
+    return 0;
+  }
+  proton_engine_resource_handler_t *handler =
+      (proton_engine_resource_handler_t *)base;
+  int value = atomic_fetch_sub_explicit(&handler->refs.refs, 1,
+                                        memory_order_acq_rel) -
+              1;
+  if (value <= 0) {
+    free(handler->data);
+    free(handler->mime_type);
+    free(handler);
+    return 1;
+  }
+  return 0;
+}
+
 static cef_resource_handler_t *proton_engine_resource_handler_create(
-    const char *html,
-    size_t html_len) {
+    const char *data,
+    size_t data_len,
+    const char *mime_type) {
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)calloc(1, sizeof(*handler));
   if (handler == NULL) {
@@ -806,14 +831,22 @@ static cef_resource_handler_t *proton_engine_resource_handler_create(
   proton_engine_init_ref_counted(
       (cef_base_ref_counted_t *)&handler->handler.base,
       sizeof(handler->handler), &handler->refs);
-  handler->data = (char *)malloc(html_len + 1);
+  handler->handler.base.release = proton_engine_resource_handler_release;
+  handler->data = (char *)malloc(data_len + 1);
   if (handler->data == NULL) {
     free(handler);
     return NULL;
   }
-  memcpy(handler->data, html != NULL ? html : "", html_len);
-  handler->data[html_len] = '\0';
-  handler->len = html_len;
+  memcpy(handler->data, data != NULL ? data : "", data_len);
+  handler->data[data_len] = '\0';
+  handler->len = data_len;
+  handler->mime_type = proton_engine_strdup(mime_type != NULL ? mime_type
+                                                              : "text/html");
+  if (handler->mime_type == NULL) {
+    free(handler->data);
+    free(handler);
+    return NULL;
+  }
   handler->handler.open = proton_engine_resource_open;
   handler->handler.get_response_headers =
       proton_engine_resource_get_response_headers;
@@ -831,12 +864,38 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   (void)self;
   (void)frame;
   (void)scheme_name;
-  (void)request;
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
-  if (window == NULL || window->html == NULL) {
+  if (window == NULL) {
     return NULL;
   }
-  return proton_engine_resource_handler_create(window->html, window->html_len);
+  char *url = proton_engine_request_url(request);
+  cef_resource_handler_t *handler = NULL;
+  if (url != NULL && window->html_url != NULL &&
+      strcmp(window->html_url, url) == 0 && window->html != NULL) {
+    handler = proton_engine_resource_handler_create(window->html,
+                                                    window->html_len,
+                                                    "text/html");
+  } else {
+    char *asset_path = proton_engine_url_to_asset_path(url);
+    if (asset_path != NULL) {
+      char *html_path = proton_engine_url_to_asset_path(window->html_url);
+      char *asset_root = proton_engine_asset_path_dirname(html_path);
+      if (proton_engine_asset_path_is_under_root(asset_path, asset_root)) {
+        char *data = NULL;
+        size_t data_len = 0;
+        if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
+          handler = proton_engine_resource_handler_create(
+              data, data_len, proton_engine_asset_mime_type(asset_path));
+          free(data);
+        }
+      }
+      free(asset_root);
+      free(html_path);
+      free(asset_path);
+    }
+  }
+  free(url);
+  return handler;
 }
 
 static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
@@ -2613,21 +2672,29 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                        const char *base_url,
                                        char *error,
                                        size_t error_len) {
-  (void)base_url;
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (!proton_engine_url_is_proton(base_url)) {
+    proton_engine_set_message(error, error_len,
+                              "base_url must use the proton:// scheme");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (html == NULL) {
     html = "";
   }
-  char *copy = (char *)malloc(strlen(html) + 1);
-  if (copy == NULL) {
+  char *copy = proton_engine_strdup(html);
+  char *url_copy = proton_engine_strdup(base_url);
+  if (copy == NULL || url_copy == NULL) {
+    free(copy);
+    free(url_copy);
     proton_engine_set_message(error, error_len, "failed to copy html");
     return PROTON_ERR_ENGINE;
   }
-  strcpy(copy, html);
+  free(window->html_url);
   free(window->html);
+  window->html_url = url_copy;
   window->html = copy;
   window->html_len = strlen(copy);
   int32_t status = proton_engine_window_load_url(

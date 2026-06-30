@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PROTON_ENGINE_PATH_SEPARATOR '\\'
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
 #define PROTON_ENGINE_WINDOW_CLASS L"ProtonNativeWindow"
@@ -109,6 +110,7 @@ typedef struct {
   proton_engine_ref_counted_t refs;
   char *html;
   size_t html_len;
+  char *mime_type;
   size_t offset;
 } proton_engine_html_resource_handler_t;
 
@@ -401,6 +403,7 @@ static bool proton_engine_default_helper_path(char *out, size_t out_len) {
 }
 
 #include "../cef_common/strings.h"
+#include "../cef_common/assets.h"
 #include "../cef_common/json_fields.h"
 
 #define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
@@ -612,6 +615,7 @@ static int CEF_CALLBACK proton_engine_html_handler_release(
     proton_engine_html_resource_handler_t *handler =
         (proton_engine_html_resource_handler_t *)base;
     free(handler->html);
+    free(handler->mime_type);
     free(handler);
     return 1;
   }
@@ -660,7 +664,9 @@ static void CEF_CALLBACK proton_engine_html_get_response_headers(
   if (response != NULL) {
     cef_string_t mime = {0};
     cef_string_t charset = {0};
-    proton_engine_set_string(&mime, "text/html");
+    proton_engine_set_string(&mime, handler->mime_type != NULL
+                                        ? handler->mime_type
+                                        : "text/html");
     proton_engine_set_string(&charset, "utf-8");
     response->set_status(response, 200);
     response->set_mime_type(response, &mime);
@@ -753,8 +759,10 @@ static void CEF_CALLBACK proton_engine_html_cancel(
   (void)self;
 }
 
-static cef_resource_handler_t *proton_engine_html_handler_new(const char *html,
-                                                             size_t html_len) {
+static cef_resource_handler_t *proton_engine_html_handler_new(
+    const char *html,
+    size_t html_len,
+    const char *mime_type) {
   proton_engine_html_resource_handler_t *handler =
       (proton_engine_html_resource_handler_t *)calloc(1, sizeof(*handler));
   if (handler == NULL) {
@@ -773,7 +781,11 @@ static cef_resource_handler_t *proton_engine_html_handler_new(const char *html,
   handler->handler.read_response = proton_engine_html_read_response;
   handler->handler.cancel = proton_engine_html_cancel;
   handler->html = proton_engine_strdup_len(html, html_len);
-  if (handler->html == NULL) {
+  handler->mime_type = proton_engine_strdup(mime_type != NULL ? mime_type
+                                                              : "text/html");
+  if (handler->html == NULL || handler->mime_type == NULL) {
+    free(handler->html);
+    free(handler->mime_type);
     free(handler);
     return NULL;
   }
@@ -785,7 +797,7 @@ static int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
 }
 
-static cef_resource_handler_t *proton_engine_find_html_handler(
+static cef_resource_handler_t *proton_engine_find_asset_handler(
     int browser_id,
     const char *url) {
   if (browser_id == 0 || url == NULL || !g_proton_engine_window_lock_initialized) {
@@ -795,9 +807,32 @@ static cef_resource_handler_t *proton_engine_find_html_handler(
   EnterCriticalSection(&g_proton_engine_window_lock);
   for (proton_engine_window_t *window = g_proton_engine_windows;
        window != NULL; window = window->next) {
-    if (window->browser_id == browser_id && window->html_url != NULL &&
-        strcmp(window->html_url, url) == 0 && window->html != NULL) {
-      handler = proton_engine_html_handler_new(window->html, window->html_len);
+    if (window->browser_id != browser_id) {
+      continue;
+    }
+    if (window->html_url != NULL && strcmp(window->html_url, url) == 0 &&
+        window->html != NULL) {
+      handler =
+          proton_engine_html_handler_new(window->html, window->html_len,
+                                         "text/html");
+      break;
+    }
+    char *asset_path = proton_engine_url_to_asset_path(url);
+    if (asset_path != NULL) {
+      char *html_path = proton_engine_url_to_asset_path(window->html_url);
+      char *asset_root = proton_engine_asset_path_dirname(html_path);
+      if (proton_engine_asset_path_is_under_root(asset_path, asset_root)) {
+        char *data = NULL;
+        size_t data_len = 0;
+        if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
+          handler = proton_engine_html_handler_new(
+              data, data_len, proton_engine_asset_mime_type(asset_path));
+          free(data);
+        }
+      }
+      free(asset_root);
+      free(html_path);
+      free(asset_path);
       break;
     }
   }
@@ -982,7 +1017,7 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   (void)scheme_name;
   char *url = proton_engine_request_url(request);
   cef_resource_handler_t *handler =
-      proton_engine_find_html_handler(proton_engine_browser_id(browser), url);
+      proton_engine_find_asset_handler(proton_engine_browser_id(browser), url);
   proton_engine_verbose_log("scheme_create browser=%d url=%s handler=%d",
                             proton_engine_browser_id(browser),
                             proton_engine_log_url(url), handler != NULL);
