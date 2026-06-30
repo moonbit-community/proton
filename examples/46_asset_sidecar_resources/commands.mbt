@@ -5,13 +5,15 @@ fn add(left : Int, right : Int) -> Int {
 }
 
 ///|
-struct ProbeReply {
-  ok : Bool
-} derive(ToJson)
+#proton.command(name="addLater")
+async fn add_later(left : Int, right : Int) -> Result[Int, String] {
+  @async.sleep(800)
+  Ok(left + right)
+}
 
 ///|
 #proton.command(name="reportProbe")
-fn report_probe(report : String) -> ProbeReply {
+fn report_probe(report : String) -> Unit {
   println("[asset-sidecar] " + report)
   @mbfs.create_dir("target") catch {
     _ => ()
@@ -19,5 +21,4 @@ fn report_probe(report : String) -> ProbeReply {
   @mbfs.write_string_to_file("target/asset-sidecar.probe.json", report) catch {
     _ => ()
   }
-  ProbeReply::{ ok: true }
 }

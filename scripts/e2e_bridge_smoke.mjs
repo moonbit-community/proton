@@ -739,24 +739,36 @@ async function runAssetSidecarResourcesProbe() {
     await client.send("Runtime.enable");
     await waitForExpression(
       client,
-      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.add?.add && window.__MoonBit__?.add?.reportProbe)",
+      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.add?.add && window.__MoonBit__?.add?.addLater && window.__MoonBit__?.add?.reportProbe)",
       "window.__MoonBit__ asset sidecar add command bridge",
     );
     await waitForExpression(
       client,
-      'document.querySelector("#result")?.textContent === "12"',
-      "asset sidecar app.js automatic add result",
+      'document.querySelector("#log")?.textContent === "Bridge ready."',
+      "asset sidecar bridge ready",
     );
     const result = await client.evaluate(
       `(
         async () => {
+          document.querySelector("#instant-left").value = "30";
+          document.querySelector("#instant-right").value = "12";
+          document.querySelector("#instant-form").requestSubmit();
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          document.querySelector("#delayed-left").value = "9";
+          document.querySelector("#delayed-right").value = "8";
+          document.querySelector("#delayed-form").requestSubmit();
+          await new Promise((resolve) => setTimeout(resolve, 950));
           const commandReply = await window.__MoonBit__.add.add({
             left: 30,
             right: 12,
           });
-          const probeReply = await window.__MoonBit__.add.reportProbe({
+          const delayedReply = await window.__MoonBit__.add.addLater({
+            left: 20,
+            right: 22,
+          });
+          await window.__MoonBit__.add.reportProbe({
             report: JSON.stringify({
-              ok: commandReply === 42,
+              ok: commandReply === 42 && delayedReply === 42,
               source: "smoke",
             }),
           });
@@ -765,15 +777,17 @@ async function runAssetSidecarResourcesProbe() {
             title: document.title,
             hasBridge: typeof window.__MoonBit__?.core?.invokeOp === "function",
             hasGeneratedProxy: typeof window.__MoonBit__?.add?.add === "function",
+            hasDelayedProxy: typeof window.__MoonBit__?.add?.addLater === "function",
             hasReportProxy: typeof window.__MoonBit__?.add?.reportProbe === "function",
-            autoResult: document.querySelector("#result")?.textContent,
+            instantResult: document.querySelector("#instant-result")?.textContent,
+            delayedResult: document.querySelector("#delayed-result")?.textContent,
             logText: document.querySelector("#log")?.textContent,
             cssLoaded: getComputedStyle(document.documentElement)
               .getPropertyValue("--accent")
               .trim() !== "",
             scriptElementPresent: Boolean(document.querySelector('script[src="app.js"]')),
             commandReply,
-            probeReply,
+            delayedReply,
           };
         }
       )()`,
@@ -1284,17 +1298,18 @@ function assertAssetSidecarResourcesProbeResult(result) {
   if (
     result.hasBridge !== true ||
     result.hasGeneratedProxy !== true ||
+    result.hasDelayedProxy !== true ||
     result.hasReportProxy !== true
   ) {
     throw new Error(`asset sidecar command bridge was not installed: ${JSON.stringify(result)}`);
   }
-  if (result.autoResult !== "12") {
-    throw new Error(`asset sidecar app.js did not run automatic add: ${JSON.stringify(result)}`);
+  if (result.instantResult !== "42" || result.delayedResult !== "17") {
+    throw new Error(`asset sidecar forms did not run add commands: ${JSON.stringify(result)}`);
   }
   if (result.cssLoaded !== true || result.scriptElementPresent !== true) {
     throw new Error(`asset sidecar resources were not loaded: ${JSON.stringify(result)}`);
   }
-  if (result.commandReply !== 42 || result.probeReply?.ok !== true) {
+  if (result.commandReply !== 42 || result.delayedReply !== 42) {
     throw new Error(`unexpected asset sidecar command replies: ${JSON.stringify(result)}`);
   }
 }
@@ -1635,6 +1650,7 @@ function assertNativeLogScenarioGuards(name) {
   if (name === "46_asset_sidecar_resources") {
     return assertNativeLogOpsEnqueued([
       "ext:add/add",
+      "ext:add/addLater",
       "ext:add/reportProbe",
     ]);
   }

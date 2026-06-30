@@ -9,13 +9,49 @@
   </head>
   <body>
     <main>
-      <h1>Asset sidecar resources</h1>
-      <p>HTML, CSS, and JavaScript are separate files beside each other.</p>
-      <button id="add">Run add command</button>
-      <section>
-        <span>Result</span>
-        <strong id="result">--</strong>
+      <header>
+        <p class="eyebrow">proton://app</p>
+        <h1>Asset command examples</h1>
+      </header>
+
+      <section class="example" aria-labelledby="instant-title">
+        <div>
+          <p class="eyebrow">sync</p>
+          <h2 id="instant-title">Immediate add</h2>
+        </div>
+        <form id="instant-form" class="adder">
+          <label>
+            <span>Left</span>
+            <input id="instant-left" type="number" value="7" required />
+          </label>
+          <label>
+            <span>Right</span>
+            <input id="instant-right" type="number" value="5" required />
+          </label>
+          <button type="submit">Add</button>
+        </form>
+        <output id="instant-result">--</output>
       </section>
+
+      <section class="example" aria-labelledby="delayed-title">
+        <div>
+          <p class="eyebrow">async</p>
+          <h2 id="delayed-title">Delayed add</h2>
+        </div>
+        <form id="delayed-form" class="adder">
+          <label>
+            <span>Left</span>
+            <input id="delayed-left" type="number" value="30" required />
+          </label>
+          <label>
+            <span>Right</span>
+            <input id="delayed-right" type="number" value="12" required />
+          </label>
+          <button type="submit">Add</button>
+        </form>
+        <output id="delayed-result">--</output>
+      </section>
+
       <pre id="log">Waiting for bridge.</pre>
     </main>
   </body>
