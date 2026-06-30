@@ -2,67 +2,47 @@
 package "justjavac/proton_ext/fs"
 
 import {
-  "justjavac/proton/core",
+  "justjavac/proton/command",
   "justjavac/proton/extension",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn core_extension() -> @core.Extension
-
-pub fn core_spec() -> @core.ExtensionSpec
+pub async fn emit_fs_activity(@command.AppCommandExtensionContext, FsActivity) -> Unit
 
 pub fn extension() -> @extension.Extension
 
 // Errors
 
 // Types and methods
-type ClosePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type CloseReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ExistsPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
 type ExistsReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type FlushPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type FlushReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type FsActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type FstatPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonExistsPayload derive(@json.FromJson)
 
-type FstatReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonKindPayload derive(@json.FromJson)
 
-type OpenPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonMkdirPayload derive(@json.FromJson)
 
-type OpenReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonReadFilePayload derive(@json.FromJson)
 
-type ReadDirPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonReaddirPayload derive(@json.FromJson)
 
-type ReadDirReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonRealpathPayload derive(@json.FromJson)
 
-type ReadPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonRemovePayload derive(@json.FromJson)
 
-type ReadReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonRenamePayload derive(@json.FromJson)
 
-type RemoveFilePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type ProtonRmdirPayload derive(@json.FromJson)
+
+type ProtonSizePayload derive(@json.FromJson)
+
+type ProtonWriteFilePayload derive(@json.FromJson)
 
 type RemoveFileReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ResolvePathPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ResolvePathReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type SeekPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type SeekReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type WritePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type WriteReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

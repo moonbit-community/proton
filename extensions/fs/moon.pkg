@@ -1,35 +1,25 @@
 import {
   "moonbitlang/core/debug",
-  "justjavac/ffi",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
-  "moonbitlang/x/fs" @xfs,
-  "moonbitlang/x/path",
-  "justjavac/proton/core",
+  "moonbitlang/async/fs" @async_fs,
+  "justjavac/proton/command" @proton_command,
   "justjavac/proton/extension" @proton_extension,
 }
 
 import {
   "moonbitlang/core/debug",
-  "moonbitlang/x/sys",
+  "moonbitlang/async",
 } for "wbtest"
 
 supported_targets = "native"
 
 options(
-  formatter: { "ignore": [ "generated_fs_helper_template.mbt" ] },
-  "native-stub": [ "fs_native.c" ],
+  formatter: { "ignore": [ "extension.g.mbt" ] },
   targets: {
+    "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
-    "extension_activity.mbt": [ "native" ],
-    "extension_file_ops.mbt": [ "native" ],
-    "extension_path_ops.mbt": [ "native" ],
-    "extension_stream_ops.mbt": [ "native" ],
-    "helper_js.mbt": [ "native" ],
-    "op_helpers.mbt": [ "native" ],
-    "path_api.mbt": [ "native" ],
-    "stream_api.mbt": [ "native" ],
-    "stream_checks.mbt": [ "native" ],
-    "stream_types.mbt": [ "native" ],
+    "fs_api.mbt": [ "native" ],
+    "fs_wbtest.mbt": [ "native" ],
   },
 )

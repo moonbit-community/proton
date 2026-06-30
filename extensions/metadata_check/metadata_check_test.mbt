@@ -83,9 +83,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/proton-dialog",
     "dialog",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("fs"),
-    @fs.core_spec(),
+    @fs.extension().command_spec().unwrap(),
     "justjavac/proton_ext/fs",
     "justjavac/proton-fs",
     "fs",
