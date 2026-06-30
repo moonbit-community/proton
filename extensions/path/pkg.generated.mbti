@@ -24,13 +24,9 @@ type BasenameReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type ExtnameReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type FormatPayload derive(@json.FromJson)
-
 type IsAbsoluteReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type JoinPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ParseReply derive(ToJson)
 
 type PathPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 

@@ -4,7 +4,7 @@ package = "@justjavac/proton-path"
 
 version = "0.1.0"
 display_name = "Path"
-description = "Portable path helpers exposed through a JavaScript-friendly namespace."
+description = "MoonBit-style portable path helpers wrapping moonbitlang/x/path operations."
 
 platforms = ["windows", "macos", "linux"]
 dependencies = []

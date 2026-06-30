@@ -33,15 +33,6 @@ struct RelativePayload {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-struct FormatPayload {
-  root : String?
-  dir : String?
-  base : String?
-  name : String?
-  ext : String?
-} derive(FromJson)
-
-///|
 struct PathReply {
   path : String
 } derive(ToJson, FromJson, Debug, Eq)
@@ -60,15 +51,6 @@ struct ExtnameReply {
 struct IsAbsoluteReply {
   is_absolute : Bool
 } derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct ParseReply {
-  root : String
-  dir : String
-  base : String
-  ext : String
-  name : String
-} derive(ToJson)
 
 ///|
 /// Registers a path API that returns a single `path` string field.
@@ -104,44 +86,32 @@ pub fn extension() -> @proton_extension.Extension {
 /// Builds the `path` extension for direct installation.
 ///
 /// Future bridge work can install it on an `@core.ExtensionHost` to expose
-/// common path operations such as `resolve`,
-/// `join`, `dirname`, `basename`, `parse`, and `format`.
+/// common path operations such as `resolve`, `join`, `dirname`, and `basename`.
 pub fn core_extension() -> @core.Extension {
-  @core.Extension::new(
-    extension_id,
-    extension_namespace,
-    fn(extension) {
-      extension.op("basename", fn(payload : BasenamePayload) {
-        BasenameReply::{
-          name: basename_path(payload.path, suffix=payload.suffix),
-        }
-      })
-      register_path_reply_op(extension, "dirname", dirname_path)
-      extension.op("extname", fn(payload : PathPayload) {
-        ExtnameReply::{ ext: extname_path(payload.path) }
-      })
-      extension.op("isAbsolute", fn(payload : PathPayload) {
-        IsAbsoluteReply::{ is_absolute: is_absolute_path(payload.path) }
-      })
-      extension.op("join", fn(payload : JoinPayload) {
-        PathReply::{ path: join_paths(payload.left, payload.right) }
-      })
-      register_paths_reply_op(extension, "joinAll", join_many_paths)
-      register_path_reply_op(extension, "normalize", normalize_path)
-      extension.op("relative", fn(payload : RelativePayload) {
-        PathReply::{ path: relative_path(payload.path, payload.base) }
-      })
-      register_path_reply_op(extension, "resolve", resolve_path)
-      register_paths_reply_op(extension, "resolveAll", resolve_many_paths)
-      extension.op("parse", fn(payload : PathPayload) {
-        parse_path(payload.path)
-      })
-      extension.op("format", fn(payload : FormatPayload) {
-        PathReply::{ path: format_path(payload) }
-      })
-    },
-    scripts=[path_helper_script()],
-  )
+  @core.Extension::new(extension_id, extension_namespace, fn(extension) {
+    extension.op("basename", fn(payload : BasenamePayload) {
+      BasenameReply::{
+        name: basename_path(payload.path, suffix=payload.suffix),
+      }
+    })
+    register_path_reply_op(extension, "dirname", dirname_path)
+    extension.op("extname", fn(payload : PathPayload) {
+      ExtnameReply::{ ext: extname_path(payload.path) }
+    })
+    extension.op("is_absolute", fn(payload : PathPayload) {
+      IsAbsoluteReply::{ is_absolute: is_absolute_path(payload.path) }
+    })
+    extension.op("join", fn(payload : JoinPayload) {
+      PathReply::{ path: join_paths(payload.left, payload.right) }
+    })
+    register_paths_reply_op(extension, "join_all", join_many_paths)
+    register_path_reply_op(extension, "normalize", normalize_path)
+    extension.op("relative", fn(payload : RelativePayload) {
+      PathReply::{ path: relative_path(payload.path, payload.base) }
+    })
+    register_path_reply_op(extension, "resolve", resolve_path)
+    register_paths_reply_op(extension, "resolve_all", resolve_many_paths)
+  })
 }
 
 ///|
