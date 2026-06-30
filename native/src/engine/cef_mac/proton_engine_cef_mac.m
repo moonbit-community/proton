@@ -693,6 +693,13 @@ static void proton_engine_bridge_pending_clear_all(void) {
                           (unsigned long long)removed);
 }
 
+static char *proton_engine_request_url(cef_request_t *request) {
+  if (request == NULL) {
+    return NULL;
+  }
+  return proton_engine_userfree_to_utf8(request->get_url(request));
+}
+
 static int CEF_CALLBACK proton_engine_resource_open(
     cef_resource_handler_t *self,
     cef_request_t *request,

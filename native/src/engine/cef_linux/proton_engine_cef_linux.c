@@ -445,6 +445,14 @@ static bool proton_engine_module_dir(char *out, size_t out_len) {
 }
 
 static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
+  const char *env_root = getenv("PROTON_RUNTIME_ROOT");
+  if (env_root == NULL || env_root[0] == '\0') {
+    env_root = getenv("PROTON_NATIVE_DIST");
+  }
+  if (env_root != NULL && env_root[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_root);
+    return written > 0 && (size_t)written < out_len;
+  }
   if (!proton_engine_module_dir(out, out_len)) {
     return false;
   }
@@ -456,6 +464,11 @@ static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
 }
 
 static bool proton_engine_default_helper_path(char *out, size_t out_len) {
+  const char *env_helper = getenv("PROTON_HELPER_PATH");
+  if (env_helper != NULL && env_helper[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_helper);
+    return written > 0 && (size_t)written < out_len;
+  }
   char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
   if (!proton_engine_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
@@ -729,6 +742,13 @@ static void proton_engine_bridge_pending_clear_all(void) {
   }
   proton_engine_debug_log("bridge_pending_clear_all removed=%llu",
                           (unsigned long long)removed);
+}
+
+static char *proton_engine_request_url(cef_request_t *request) {
+  if (request == NULL) {
+    return NULL;
+  }
+  return proton_engine_userfree_to_utf8(request->get_url(request));
 }
 
 static int CEF_CALLBACK proton_engine_resource_open(
