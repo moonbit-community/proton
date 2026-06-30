@@ -267,9 +267,8 @@ let resource : String =
   #|            <div class="hero">
   #|                <h1>Filesystem Extension Demo</h1>
   #|                <p>
-  #|                    This page keeps the filesystem extension UI available while
-  #|                    the native DLL route is being wired. Extension calls are
-  #|                    disabled until the bridge/event layer exists.
+  #|                    This page calls the filesystem extension through direct
+  #|                    <code>ext:fs</code> ops on the app command bridge.
   #|                </p>
   #|            </div>
   #|            <div class="layout">
@@ -385,7 +384,7 @@ let resource : String =
   #|                            <div>
   #|                                <h2>Extension Activity</h2>
   #|                                <p class="muted">
-  #|                                    Recent events emitted by the native fs
+  #|                                    Recent events emitted by the fs
   #|                                    extension.
   #|                                </p>
   #|                            </div>
@@ -414,17 +413,27 @@ let resource : String =
   #|            var buttons = Array.prototype.slice.call(
   #|                document.querySelectorAll("button"),
   #|            );
-  #|            var fs = window.__MoonBit__ && window.__MoonBit__.fs;
+  #|            var app = window.__MoonBit__;
   #|            var lastReadAt = "-";
   #|            var lastWriteAt = "-";
   #|            var activityLog = [];
-  #|            if (!fs) {
+  #|            if (!app || !app.core || !app.core.invokeOp) {
   #|                setNotice(
   #|                    "Extension calls are not exposed by the current native DLL route yet.",
   #|                    "error",
   #|                );
   #|                buttons.forEach(function (button) {
   #|                    button.disabled = true;
+  #|                });
+  #|            }
+  #|
+  #|            function fsOp(name, payload) {
+  #|                return app.core.invokeOp("ext:fs/" + name, payload);
+  #|            }
+  #|
+  #|            function fsValue(name, payload, key) {
+  #|                return fsOp(name, payload).then(function (reply) {
+  #|                    return reply[key];
   #|                });
   #|            }
   #|
@@ -535,9 +544,6 @@ let resource : String =
   #|                if (event.payload.path) {
   #|                    bits.push(event.payload.path);
   #|                }
-  #|                if (event.payload.rid != null) {
-  #|                    bits.push("rid " + event.payload.rid);
-  #|                }
   #|                if (event.payload.bytes != null) {
   #|                    bits.push(event.payload.bytes + " bytes");
   #|                }
@@ -550,31 +556,32 @@ let resource : String =
   #|                renderActivityLog();
   #|            }
   #|
+  #|            function utf8Length(content) {
+  #|                return new TextEncoder().encode(content).length;
+  #|            }
+  #|
   #|            function resolveInputPath() {
   #|                var path = pathInput.value.trim();
   #|                if (!path) {
   #|                    return Promise.resolve("");
   #|                }
-  #|                return inspectFile(path).then(function (stat) {
-  #|                    var resolvedPath = stat.path || path;
-  #|                    pathInput.value = resolvedPath;
-  #|                    return resolvedPath;
-  #|                });
+  #|                return Promise.resolve(path);
   #|            }
   #|            function saveFile(path, content) {
-  #|                return fs
-  #|                    .writeFile(path, content, { flush: true })
-  #|                    .then(function (response) {
-  #|                        var written = expectOk(response);
+  #|                return fsOp("write_file", { path: path, content: content })
+  #|                    .then(function () {
   #|                        return inspectFile(path).then(function (stat) {
-  #|                            return { written: written, stat: stat };
+  #|                            return {
+  #|                                bytes_written: utf8Length(content),
+  #|                                stat: stat,
+  #|                            };
   #|                        });
   #|                    });
   #|            }
   #|
   #|            function loadFile(path) {
   #|                return Promise.all([
-  #|                    fs.readFile(path),
+  #|                    fsValue("read_file", { path: path }, "content"),
   #|                    inspectFile(path),
   #|                ]).then(function (responses) {
   #|                    return {
@@ -585,15 +592,35 @@ let resource : String =
   #|            }
   #|
   #|            function inspectFile(path) {
-  #|                return fs
-  #|                    .stat(path, { throwIfNoEntry: false })
-  #|                    .then(function (response) {
-  #|                        return expectOk(response);
+  #|                return fsValue("exists", { path: path }, "exists").then(function (exists) {
+  #|                    if (!exists) {
+  #|                        return {
+  #|                            path: path,
+  #|                            size: 0,
+  #|                            exists: false,
+  #|                            is_file: false,
+  #|                            is_dir: false,
+  #|                        };
+  #|                    }
+  #|                    return Promise.all([
+  #|                        fsValue("realpath", { path: path }, "path"),
+  #|                        fsValue("kind", { path: path }, "kind"),
+  #|                        fsValue("size", { path: path }, "size"),
+  #|                    ]).then(function (responses) {
+  #|                        var kind = responses[1];
+  #|                        return {
+  #|                            path: responses[0],
+  #|                            size: responses[2],
+  #|                            exists: true,
+  #|                            is_file: kind === "file",
+  #|                            is_dir: kind === "directory",
+  #|                        };
   #|                    });
+  #|                });
   #|            }
   #|
-  #|            if (fs && fs.on) {
-  #|                fs.on("activity", function (event) {
+  #|            if (app && app.events && app.events.on) {
+  #|                app.events.on("fs.activity", function (event) {
   #|                    rememberActivity(event);
   #|                });
   #|            }
@@ -605,7 +632,7 @@ let resource : String =
   #|                        "__MoonBit__ fs extension demo\n\n" +
   #|                        "- Save writes the editor content to disk\n" +
   #|                        "- Load reads the file back into the editor\n" +
-  #|                        "- Inspect shows fstat metadata\n" +
+  #|                        "- Inspect shows filesystem metadata\n" +
   #|                        "- Refresh List shows sibling files\n";
   #|                    setNotice("Sample content inserted into the editor.");
   #|                });
@@ -631,7 +658,7 @@ let resource : String =
   #|                                    result.stat.path || pathInput.value;
   #|                                setNotice(
   #|                                    "Saved " +
-  #|                                        result.written.bytes_written +
+  #|                                        result.bytes_written +
   #|                                        " bytes to " +
   #|                                        (result.stat.path || pathInput.value) +
   #|                                        ".",
@@ -663,14 +690,14 @@ let resource : String =
   #|                        })
   #|                        .then(
   #|                            function (result) {
-  #|                                contentInput.value = result.read.content;
+  #|                                contentInput.value = result.read;
   #|                                lastReadAt = nowLabel();
   #|                                renderStat(result.stat);
   #|                                pathInput.value =
   #|                                    result.stat.path || pathInput.value;
   #|                                setNotice(
   #|                                    "Loaded " +
-  #|                                        result.read.bytes_read +
+  #|                                        utf8Length(result.read) +
   #|                                        " bytes from " +
   #|                                        (result.stat.path || pathInput.value) +
   #|                                        ".",
@@ -735,12 +762,14 @@ let resource : String =
   #|                    resolveInputPath()
   #|                        .then(function (path) {
   #|                            var directoryPath = parentDir(path);
-  #|                            return fs
-  #|                                .readdir(directoryPath)
-  #|                                .then(function (response) {
+  #|                            return fsValue(
+  #|                                "readdir",
+  #|                                { path: directoryPath },
+  #|                                "entries",
+  #|                            ).then(function (entries) {
   #|                                    return {
   #|                                        directoryPath: directoryPath,
-  #|                                        entries: expectOk(response).entries,
+  #|                                        entries: entries,
   #|                                    };
   #|                                });
   #|                        })
@@ -781,14 +810,14 @@ let resource : String =
   #|                    setBusy(true);
   #|                    resolveInputPath()
   #|                        .then(function (path) {
-  #|                            return fs
-  #|                                .rm(path, { force: true })
-  #|                                .then(function (response) {
-  #|                                    return {
-  #|                                        path: path,
-  #|                                        removed: expectOk(response),
-  #|                                    };
+  #|                            return fsValue("exists", { path: path }, "exists").then(function (exists) {
+  #|                                if (!exists) {
+  #|                                    return { path: path, removed: false };
+  #|                                }
+  #|                                return fsOp("remove", { path: path }).then(function () {
+  #|                                    return { path: path, removed: true };
   #|                                });
+  #|                            });
   #|                        })
   #|                        .then(
   #|                            function (result) {
@@ -803,10 +832,10 @@ let resource : String =
   #|                                });
   #|                                pathInput.value = result.path;
   #|                                setNotice(
-  #|                                    result.removed.removed
+  #|                                    result.removed
   #|                                        ? "Deleted " + result.path + "."
   #|                                        : result.path + " was already absent.",
-  #|                                    result.removed.removed ? "ok" : "error",
+  #|                                    result.removed ? "ok" : "error",
   #|                                );
   #|                                setBusy(false);
   #|                            },
@@ -822,7 +851,7 @@ let resource : String =
   #|
   #|            renderStat(null);
   #|            renderActivityLog();
-  #|            if (fs) {
+  #|            if (app && app.core && app.core.invokeOp) {
   #|                resolveInputPath().then(
   #|                    function () {
   #|                        renderStat(null);

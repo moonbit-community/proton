@@ -8,11 +8,5 @@ import {
 supported_targets = "native"
 
 options(
-  formatter: { "ignore": [ "generated_path_helper_template.mbt" ] },
-  targets: {
-    "extension.mbt": [ "native" ],
-    "helper_js.mbt": [ "native" ],
-    "path_api.mbt": [ "native" ],
-    "path_wbtest.mbt": [ "native" ],
-  },
+  targets: { "extension.mbt": [ "native" ], "path_api.mbt": [ "native" ] },
 )

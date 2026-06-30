@@ -28,10 +28,15 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CefError] {
     }
     return Ok(())
   }
-  let code = @process.run("powershell", [
-    "-NoProfile", "-NonInteractive", "-Command", "Copy-Item -LiteralPath $args[0] -Destination $args[1] -Force",
-    src, dest,
-  ]) catch {
+  let data = @async_fs.read_file(src) catch {
+    err =>
+      return Err(
+        CefError::CommandError(
+          "Failed to read " + src + ": " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  @async_fs.write_file(dest, data, create_mode=CreateOrTruncate) catch {
     err =>
       return Err(
         CefError::CommandError(
@@ -43,18 +48,6 @@ async fn copy_file(src : String, dest : String) -> Result[Unit, CefError] {
           @debug.render(@debug.to_repr(err)),
         ),
       )
-  }
-  guard code == 0 else {
-    return Err(
-      CefError::CommandError(
-        "Failed to copy " +
-        src +
-        " to " +
-        dest +
-        ": Copy-Item exited with code " +
-        code.to_string(),
-      ),
-    )
   }
   Ok(())
 }

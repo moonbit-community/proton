@@ -1,19 +1,21 @@
 # FS Extension
 
-`justjavac/proton_ext/fs` contains filesystem extension definitions and helper
-logic for future bridge integration.
+`justjavac/proton_ext/fs` contains a thin command-extension wrapper around
+`moonbitlang/async/fs`.
 
-It is not currently wired into the active native DLL runtime route. The current
-supported application path is the root facade under `justjavac/proton`;
-filesystem calls are not exposed to pages until the native bridge/event layer is
-implemented.
+It is exposed as an app command extension, so filesystem calls run through the
+same async command bridge used by the other native Proton extensions.
 
 ## Scope
 
-- File and directory operation definitions.
-- Resource-id streaming model.
+- MoonBit-style operation names such as `read_file`, `write_file`, `mkdir`,
+  `readdir`, `remove`, `rmdir`, `rename`, `realpath`, `exists`, `kind`, and
+  `size`.
 - Activity event metadata.
 - Metadata used by catalog and code generation checks.
+
+Keep new operations close to the shape of `moonbitlang/async/fs` and avoid
+adding JavaScript helpers or hand-rolled filesystem behavior.
 
 ## Safety Notes
 

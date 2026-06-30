@@ -50,6 +50,7 @@ try {
     "auto_launch",
     "clipboard",
     "dialog",
+    "fs",
     "global_hotkey",
     "keepawake",
     "microphone",
@@ -75,33 +76,6 @@ try {
       outputPath,
     ]);
     compareGeneratedFile(path.join("extensions", extension, "extension.g.mbt"), outputPath);
-  }
-
-  const embedScript = path.join(repoRoot, "scripts", "embed_asset.mjs");
-  const embedAssets = [
-    {
-      input: "extensions/fs/assets/node_fs_helper.js",
-      output: "extensions/fs/generated_fs_helper_template.mbt",
-      identifier: "fs_helper_template_resource",
-      tempName: "generated_fs_helper_template.mbt",
-    },
-    {
-      input: "extensions/path/assets/node_path_helper.js",
-      output: "extensions/path/generated_path_helper_template.mbt",
-      identifier: "path_helper_template_resource",
-      tempName: "generated_path_helper_template.mbt",
-    },
-  ];
-
-  for (const asset of embedAssets) {
-    const outputPath = tempOutputPath(asset.tempName);
-    run("node", [
-      embedScript,
-      path.join(repoRoot, asset.input),
-      outputPath,
-      asset.identifier,
-    ]);
-    compareGeneratedFile(asset.output, outputPath);
   }
 
   const newTemplatesOutput = tempOutputPath("templates.generated.mbt");

@@ -169,9 +169,8 @@ let resource : String =
   #|      <h1>Path ops as a focused runtime demo.</h1>
   #|      <p class="lead">
   #|        This example isolates the <code>path</code> extension. It compares
-  #|        direct <code>__MoonBit__.core.invokeOp(...)</code> calls with the higher-level
-  #|        <code>__MoonBit__.path</code> and <code>__MoonBit__.path</code> helpers in a
-  #|        Node-style API shape.
+  #|        direct <code>__MoonBit__.core.invokeOp(...)</code> calls for
+  #|        MoonBit-style path operations.
   #|      </p>
   #|      <section class="layout">
   #|        <div class="stack">
@@ -203,8 +202,8 @@ let resource : String =
   #|          </article>
   #|
   #|          <article class="panel">
-  #|            <h2>__MoonBit__ Helper</h2>
-  #|            <pre id="app-output">Waiting for __MoonBit__.path.</pre>
+  #|            <h2>More Ops</h2>
+  #|            <pre id="app-output">Waiting for path ops.</pre>
   #|          </article>
   #|        </div>
   #|
@@ -213,9 +212,7 @@ let resource : String =
   #|          <p class="muted">
   #|            The path extension is pure: it does not require permissions or file
   #|            handles. It is a good probe for checking whether the ops runtime,
-  #|            extension namespace, and app-level helper are all wired up. The
-  #|            extension exposes a Node-style API surface that mirrors familiar
-  #|            positional calls from the JavaScript <code>path</code> module.
+  #|            extension namespace, and direct op bridge are all wired up.
   #|          </p>
   #|        </aside>
   #|      </section>
@@ -233,30 +230,45 @@ let resource : String =
   #|        pathB.value = next;
   #|      });
   #|
+  #|      async function pathOp(name, payload) {
+  #|        return window.__MoonBit__.core.invokeOp("ext:path/" + name, payload);
+  #|      }
+  #|
+  #|      async function pathValue(name, payload, key) {
+  #|        const reply = await pathOp(name, payload);
+  #|        return reply[key || "path"];
+  #|      }
+  #|
   #|      document.getElementById("run-ops").addEventListener("click", async () => {
   #|        try {
   #|          const direct = {
-  #|            resolve: await window.__MoonBit__.core.invokeOp("ext:path/resolve", {
+  #|            resolve: await pathOp("resolve", { path: pathA.value }),
+  #|            basename: await pathValue("basename", {
   #|              path: pathA.value,
+  #|              suffix: ".html",
+  #|            }, "name"),
+  #|            dirname: await pathValue("dirname", { path: pathA.value }),
+  #|            extname: await pathValue("extname", { path: pathA.value }, "ext"),
+  #|            join: await pathValue("join", {
+  #|              left: pathB.value,
+  #|              right: joinRight.value,
   #|            }),
-  #|            basename: await window.__MoonBit__.path.basename(pathA.value, ".html"),
-  #|            dirname: await window.__MoonBit__.path.dirname(pathA.value),
-  #|            extname: await window.__MoonBit__.path.extname(pathA.value),
-  #|            join: await window.__MoonBit__.path.join(pathB.value, joinRight.value),
-  #|            parse: await window.__MoonBit__.path.parse(pathA.value),
-  #|            format: await window.__MoonBit__.path.format({
-  #|              dir: pathB.value,
-  #|              name: "notes/output",
-  #|              ext: ".txt",
+  #|            join_all: await pathValue("join_all", {
+  #|              paths: [pathB.value, joinRight.value],
   #|            }),
-  #|            sep: window.__MoonBit__.path.sep,
-  #|            delimiter: window.__MoonBit__.path.delimiter,
   #|          };
   #|          const appLayer = {
-  #|            relative: await window.__MoonBit__.path.relative(pathB.value, pathA.value),
-  #|            normalize: await window.__MoonBit__.path.normalize(pathB.value),
-  #|            resolve: await window.__MoonBit__.path.resolve(pathB.value, joinRight.value),
-  #|            isAbsolute: await window.__MoonBit__.path.isAbsolute(pathA.value),
+  #|            relative: await pathValue("relative", {
+  #|              path: pathA.value,
+  #|              base: pathB.value,
+  #|            }),
+  #|            normalize: await pathValue("normalize", { path: pathB.value }),
+  #|            resolve: await pathValue("resolve_all", {
+  #|              paths: [pathB.value, joinRight.value],
+  #|            }),
+  #|            is_absolute: await pathValue("is_absolute", {
+  #|              path: pathA.value,
+  #|            }, "is_absolute"),
   #|          };
   #|          opsOutput.textContent = JSON.stringify(direct, null, 2);
   #|          appOutput.textContent = JSON.stringify(appLayer, null, 2);
