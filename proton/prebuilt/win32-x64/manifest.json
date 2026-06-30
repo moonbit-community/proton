@@ -1,6 +1,6 @@
 {
   "platform": "win32-x64",
-  "proton_version": "0.1.2",
+  "proton_version": "0.1.10",
   "artifacts": {
     "dll": "bin/proton.dll",
     "helper": "bin/cef_process.exe",
