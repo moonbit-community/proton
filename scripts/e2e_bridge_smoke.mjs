@@ -12,9 +12,25 @@ const requestedCdpPort = process.env.PROTON_BRIDGE_E2E_CDP_PORT
   ? Number(process.env.PROTON_BRIDGE_E2E_CDP_PORT)
   : null;
 let cdpPort = requestedCdpPort ?? 9222;
-const scenarios = process.argv.slice(2).length > 0
-  ? process.argv.slice(2)
-  : ["41_app_commands"];
+const rawArgs = process.argv.slice(2);
+const scenarios = [];
+let appWorkdir = repoRoot;
+for (let i = 0; i < rawArgs.length; i += 1) {
+  const arg = rawArgs[i];
+  if (arg === "--workdir") {
+    const value = rawArgs[i + 1];
+    if (!value) {
+      fail("--workdir requires a path");
+    }
+    appWorkdir = path.resolve(repoRoot, value);
+    i += 1;
+  } else {
+    scenarios.push(arg);
+  }
+}
+if (scenarios.length === 0) {
+  scenarios.push("41_app_commands");
+}
 
 function fail(message) {
   console.error(message);
@@ -1334,8 +1350,18 @@ function assertNonProtonProbeResult(result) {
 }
 
 function spawnApp(env, scenario) {
-  return spawn("moon", ["-C", "examples", "run", scenario, "--target", "native", "--diagnostic-limit", "120"], {
-    cwd: repoRoot,
+  fs.mkdirSync(appWorkdir, { recursive: true });
+  return spawn("moon", [
+    "-C",
+    path.join(repoRoot, "examples"),
+    "run",
+    scenario,
+    "--target",
+    "native",
+    "--diagnostic-limit",
+    "120",
+  ], {
+    cwd: appWorkdir,
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
