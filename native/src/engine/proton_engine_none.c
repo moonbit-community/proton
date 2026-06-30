@@ -221,9 +221,21 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                        const char *base_url,
                                        char *error,
                                        size_t error_len) {
+  return proton_engine_window_load_html_with_assets(window, html, base_url, NULL,
+                                                   error, error_len);
+}
+
+int32_t proton_engine_window_load_html_with_assets(
+    proton_engine_window_t *window,
+    const char *html,
+    const char *base_url,
+    const char *asset_root,
+    char *error,
+    size_t error_len) {
   (void)window;
   (void)html;
   (void)base_url;
+  (void)asset_root;
   return proton_engine_set_error(error, error_len,
                                  proton_engine_unavailable_message());
 }

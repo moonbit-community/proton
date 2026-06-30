@@ -97,6 +97,11 @@ PROTON_API int32_t proton_window_load_url(proton_window_id_t window,
 PROTON_API int32_t proton_window_load_html(proton_window_id_t window,
                                            const char *html,
                                            const char *base_url);
+PROTON_API int32_t proton_window_load_html_with_assets(
+    proton_window_id_t window,
+    const char *html,
+    const char *base_url,
+    const char *asset_root);
 PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
 PROTON_API int32_t proton_window_install_bridge_json(

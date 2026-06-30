@@ -3,15 +3,25 @@ fn load_entry_after_create(
   window : @native.Window,
   entry : @manifest.AppEntry,
   command_proxy_script : String?,
+  asset_dir : String?,
 ) -> Result[Unit, String] {
   match entry {
     @manifest.AppEntry::Html(html) =>
       native_unit_result(
         "load html",
-        window.load_html(
-          inject_command_proxy_script(html, command_proxy_script),
-          "proton://app/",
-        ),
+        match asset_dir {
+          Some(dir) =>
+            window.load_html_with_assets(
+              inject_command_proxy_script(html, command_proxy_script),
+              "proton://app/",
+              dir,
+            )
+          None =>
+            window.load_html(
+              inject_command_proxy_script(html, command_proxy_script),
+              "proton://app/",
+            )
+        },
       )
     @manifest.AppEntry::Url(url) =>
       native_unit_result("load url", window.load_url(url))

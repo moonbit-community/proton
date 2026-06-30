@@ -557,6 +557,23 @@ pub fn Window::load_html(
 }
 
 ///|
+pub fn Window::load_html_with_assets(
+  self : Window,
+  html : String,
+  base_url : String,
+  asset_root : String,
+) -> Result[Unit, NativeError] {
+  status_to_result(
+    proton_window_load_html_with_assets_ffi(
+      self.handle,
+      @ffi.to_cstr(html),
+      @ffi.to_cstr(base_url),
+      @ffi.to_cstr(asset_root),
+    ),
+  )
+}
+
+///|
 pub fn Window::eval(
   self : Window,
   script : String,
