@@ -1897,6 +1897,8 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
   window->appkit_closing = 1;
   if (window->browser != NULL) {
     // Keep the CEF browser alive until on_before_close reports completion.
+    proton_engine_bridge_pending_remove_browser(window->runtime,
+                                                window->browser_id);
     proton_engine_window_request_browser_close(window, 1);
     if (window->browser_view != nil) {
       [window->browser_view removeFromSuperview];
