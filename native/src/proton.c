@@ -453,6 +453,14 @@ static bool proton_module_dir(char *out, size_t out_len) {
 }
 
 static bool proton_default_runtime_root(char *out, size_t out_len) {
+  const char *env_root = getenv("PROTON_RUNTIME_ROOT");
+  if (env_root == NULL || env_root[0] == '\0') {
+    env_root = getenv("PROTON_NATIVE_DIST");
+  }
+  if (env_root != NULL && env_root[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_root);
+    return written > 0 && (size_t)written < out_len;
+  }
   if (!proton_module_dir(out, out_len)) {
     return false;
   }
@@ -467,21 +475,20 @@ static bool proton_default_runtime_root(char *out, size_t out_len) {
 }
 
 static bool proton_default_helper_path(char *out, size_t out_len) {
+  const char *env_helper = getenv("PROTON_HELPER_PATH");
+  if (env_helper != NULL && env_helper[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_helper);
+    return written > 0 && (size_t)written < out_len;
+  }
+  char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (!proton_module_dir(bin_dir, sizeof(bin_dir))) {
+  if (!proton_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
+      !proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin")) {
     return false;
   }
 #ifdef _WIN32
   return proton_join_path(out, out_len, bin_dir, "cef_process.exe");
 #else
-  if (proton_path_basename_equals(bin_dir, "lib")) {
-    char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
-    snprintf(runtime_root, sizeof(runtime_root), "%s", bin_dir);
-    if (!proton_path_parent(runtime_root) ||
-        !proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin")) {
-      return false;
-    }
-  }
   return proton_join_path(out, out_len, bin_dir, "cef_process");
 #endif
 }
@@ -1757,7 +1764,36 @@ int32_t proton_window_hide(proton_window_id_t window) {
 }
 
 int32_t proton_window_close(proton_window_id_t window) {
-  return proton_window_destroy(window);
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status == PROTON_ERR_DESTROYED) {
+    return PROTON_OK;
+  }
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_window_close(slot->engine_window, engine_error,
+                                        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  } else {
+    proton_runtime_slot_t *runtime = NULL;
+    status = proton_get_runtime(slot->runtime, &runtime);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    if (!proton_runtime_enqueue_window_event(runtime, "window_closed", window)) {
+      return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                              "failed to queue window_closed event");
+    }
+    slot->destroyed = true;
+    slot->visible = false;
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
 int32_t proton_window_focus(proton_window_id_t window) {
