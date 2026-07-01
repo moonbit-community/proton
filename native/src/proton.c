@@ -1764,7 +1764,36 @@ int32_t proton_window_hide(proton_window_id_t window) {
 }
 
 int32_t proton_window_close(proton_window_id_t window) {
-  return proton_window_destroy(window);
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status == PROTON_ERR_DESTROYED) {
+    return PROTON_OK;
+  }
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_window_close(slot->engine_window, engine_error,
+                                        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  } else {
+    proton_runtime_slot_t *runtime = NULL;
+    status = proton_get_runtime(slot->runtime, &runtime);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    if (!proton_runtime_enqueue_window_event(runtime, "window_closed", window)) {
+      return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                              "failed to queue window_closed event");
+    }
+    slot->destroyed = true;
+    slot->visible = false;
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
 int32_t proton_window_focus(proton_window_id_t window) {
