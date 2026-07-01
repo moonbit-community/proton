@@ -18,10 +18,26 @@ fn test_command_manifest(
 }
 
 ///|
+fn test_command_manifest_ids(
+  extension_ids : Array[String],
+) -> @manifest.AppManifest {
+  let extensions : Map[String, @manifest.ExtensionSetting] = {}
+  for id in extension_ids {
+    extensions[id] = @manifest.ExtensionSetting::enabled()
+  }
+  @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Test", 320, 240),
+    @manifest.AppEntry::Html("<html></html>"),
+    extensions~,
+  )
+}
+
+///|
 fn test_command_spec(
   extension_id : String,
   js_namespace : String,
   api_names : Array[String],
+  dependencies? : Array[String] = [],
 ) -> @proton_command.AppCommandExtensionSpec {
   @proton_command.AppCommandExtensionSpec::new(
     extension_id,
@@ -30,6 +46,26 @@ fn test_command_spec(
       @proton_command.AppCommandApiDescriptor::new(api_name)
     }),
     fn(_context) { Ok(()) },
+    dependencies~,
+  )
+}
+
+///|
+fn test_tracking_command_spec(
+  extension_id : String,
+  js_namespace : String,
+  registered : Array[String],
+  dependencies? : Array[String] = [],
+) -> @proton_command.AppCommandExtensionSpec {
+  @proton_command.AppCommandExtensionSpec::new(
+    extension_id,
+    js_namespace,
+    [],
+    fn(_context) {
+      registered.push(extension_id)
+      Ok(())
+    },
+    dependencies~,
   )
 }
 
@@ -230,6 +266,52 @@ test "core spec command wrapper destroys runtime core host" {
       assert_eq(destroyed.val, 2)
     }
     _ => fail("expected command host")
+  }
+}
+
+///|
+test "command host registers extension dependencies before dependents" {
+  let dependency_id = "examples/base"
+  let extension_id = "examples/feature"
+  let manifest = test_command_manifest_ids([dependency_id, extension_id])
+  let registered : Array[String] = []
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  command_extensions[extension_id] = test_tracking_command_spec(
+    extension_id,
+    "feature",
+    registered,
+    dependencies=[dependency_id],
+  )
+  command_extensions[dependency_id] = test_tracking_command_spec(
+    dependency_id, "base", registered,
+  )
+  match build_command_host(manifest, command_extensions, None) {
+    Ok(Some(host)) => {
+      close_command_host(Some(host))
+      @debug.assert_eq(registered, [dependency_id, extension_id])
+    }
+    _ => fail("expected command host")
+  }
+}
+
+///|
+test "command host rejects missing extension dependencies" {
+  let extension_id = "examples/feature"
+  let dependency_id = "examples/base"
+  let manifest = test_command_manifest(extension_id)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  command_extensions[extension_id] = test_command_spec(
+    extension_id,
+    "feature",
+    [],
+    dependencies=[dependency_id],
+  )
+  match build_command_host(manifest, command_extensions, None) {
+    Err(error) =>
+      assert_eq(
+        error, "command extension examples/feature requires missing dependency examples/base",
+      )
+    Ok(_) => fail("expected missing dependency error")
   }
 }
 
