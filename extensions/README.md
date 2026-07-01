@@ -1,17 +1,19 @@
 # Extensions
 
-`justjavac/proton_ext` currently contains metadata and implementation pieces for
-future Proton extension tooling.
+`justjavac/proton_ext` contains Proton extension packages for the native DLL
+route. Generated app-command extensions expose host capabilities through the
+Proton bridge and keep metadata for catalog/codegen validation.
 
-These packages are not part of the active native DLL runtime route yet. The
-current supported route is:
+The current supported route is:
 
 ```text
-MoonBit app -> justjavac/proton -> proton dynamic library
+MoonBit app -> justjavac/proton -> proton dynamic library -> command bridge
 ```
 
-Do not treat these packages as a runnable app API until the native DLL route has
-an implemented bridge/event layer that exposes extension calls.
+Applications register extensions with `.extension(...)`. Inline HTML entries
+can call generated proxies such as `window.__MoonBit__.fs.readText(...)` or the
+low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
+extension and example.
 
 ## Packages
 
@@ -29,7 +31,7 @@ an implemented bridge/event layer that exposes extension calls.
 
 ## Current Rule
 
-Extension metadata may be useful to code generation, catalog checks, and future
-bridge work. Applications may keep `.extension(...)` calls in top-level Proton
-code, but pages cannot call those extensions until the native bridge/event layer
-exists.
+Extension metadata is used by code generation, catalog checks, dependency
+planning, and generated command bridge packages. Applications should register
+extensions in top-level Proton code with `.extension(...)`; `moon.proton`
+extension settings are not the active configuration surface.
