@@ -2279,7 +2279,6 @@ static void proton_engine_cef_shutdown(void) {
     cef_shutdown();
     g_proton_cef_initialized = 0;
   }
-  proton_engine_unload_cef_library();
 }
 
 static void proton_engine_check_cef_api_hash(void) {
@@ -2440,12 +2439,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   if (runtime->owns_cef_runtime) {
     proton_engine_runtime_clear_bridge_queue(runtime);
     proton_engine_bridge_pending_clear_all();
-    if (g_proton_app_terminating) {
-      g_proton_cef_initialized = 0;
-      g_proton_cef_library_loaded = 0;
-    } else {
-      proton_engine_cef_shutdown();
-    }
+    proton_engine_cef_shutdown();
     proton_engine_teardown_wait_source();
     runtime->owns_cef_runtime = 0;
   }
