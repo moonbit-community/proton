@@ -412,6 +412,17 @@ static bool proton_engine_module_dir(char *out, size_t out_len) {
 }
 
 static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
+  // TODO: Resolve bundled runtime paths once in the public ABI layer and pass
+  // explicit paths into the engine. macOS app packaging should generate the
+  // standard CEF Helper.app layout instead of relying on environment overrides.
+  const char *env_root = getenv("PROTON_RUNTIME_ROOT");
+  if (env_root == NULL || env_root[0] == '\0') {
+    env_root = getenv("PROTON_NATIVE_DIST");
+  }
+  if (env_root != NULL && env_root[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_root);
+    return written > 0 && (size_t)written < out_len;
+  }
   if (!proton_engine_module_dir(out, out_len)) {
     return false;
   }
@@ -423,6 +434,11 @@ static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
 }
 
 static bool proton_engine_default_helper_path(char *out, size_t out_len) {
+  const char *env_helper = getenv("PROTON_HELPER_PATH");
+  if (env_helper != NULL && env_helper[0] != '\0') {
+    int written = snprintf(out, out_len, "%s", env_helper);
+    return written > 0 && (size_t)written < out_len;
+  }
   char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
   if (!proton_engine_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
