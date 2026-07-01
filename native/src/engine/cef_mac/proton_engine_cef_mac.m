@@ -2162,12 +2162,29 @@ static void proton_engine_runtime_create_pending_browsers(
       }
       pending_window->browser_create_pending = 0;
       char error[512] = {0};
+      // TODO(CEF issue 3810): See
+      // https://github.com/chromiumembedded/cef/issues/3810. Keep browser
+      // creation scheduled after the macOS run loop is pumping, and don't let
+      // CEF's initial navigation touch Proton resources before cef_browser_t has
+      // been registered to this window. Create about:blank first, then navigate
+      // after browser_id exists.
       int32_t status = proton_engine_window_create_browser(
-          pending_window, pending_window->initial_url, error, sizeof(error));
+          pending_window, "about:blank", error, sizeof(error));
       if (status != PROTON_OK) {
         proton_engine_debug_log("create_browser_failed status=%d error=%s",
                                 status, error);
         proton_engine_window_mark_closed(pending_window);
+      } else if (pending_window->initial_url != NULL &&
+                 pending_window->initial_url[0] != '\0' &&
+                 strcmp(pending_window->initial_url, "about:blank") != 0) {
+        status = proton_engine_window_load_url(pending_window,
+                                               pending_window->initial_url,
+                                               error, sizeof(error));
+        if (status != PROTON_OK) {
+          proton_engine_debug_log("load_initial_url_failed status=%d error=%s",
+                                  status, error);
+          proton_engine_window_mark_closed(pending_window);
+        }
       }
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     });
