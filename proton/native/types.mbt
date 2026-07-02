@@ -46,6 +46,13 @@ pub(all) enum BridgeResponse {
 } derive(Debug)
 
 ///|
+pub(all) enum DialogLevel {
+  Info
+  Warning
+  Error
+} derive(Debug, Eq)
+
+///|
 pub(all) struct BridgeConfig {
   raw_json : String?
   ops : Array[String]
@@ -132,6 +139,11 @@ struct Runtime {
 struct Window {
   mut handle : Int64
 }
+
+///|
+struct WindowRef {
+  handle : Int64
+} derive(Debug, Eq)
 
 ///|
 struct RuntimeConfig {
@@ -232,6 +244,11 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     height: 600,
     initial_url: "about:blank",
   }
+}
+
+///|
+pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
+  WindowRef::{ handle, }
 }
 
 ///|

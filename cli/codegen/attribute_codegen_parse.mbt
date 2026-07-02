@@ -417,6 +417,7 @@ fn parse_command_from_func(
     return_type,
     is_async: func.is_async is Some(_),
     has_context: params.any(fn(param) { param.is_context }),
+    has_request_context: params.any(fn(param) { param.is_request_context }),
     returns_result: result_ok_type(return_type) is Some(_),
   })
 }
@@ -680,6 +681,8 @@ fn parse_ast_params(
               param_type,
               is_context: name == "context" &&
               param_type == "@proton_command.AppCommandExtensionContext",
+              is_request_context: name == "request_context" &&
+              param_type == "@proton_command.AppCommandRequestContext",
             })
         }
       DiscardPositional(..) =>
@@ -789,9 +792,13 @@ fn validate_parsed_module(parsed : ParsedProtonModule) -> Result[Unit, String] {
       }
     }
     let mut context_count = 0
+    let mut request_context_count = 0
     for param in command.params {
       if param.is_context {
         context_count = context_count + 1
+      }
+      if param.is_request_context {
+        request_context_count = request_context_count + 1
       }
     }
     guard context_count <= 1 else {
@@ -799,6 +806,20 @@ fn validate_parsed_module(parsed : ParsedProtonModule) -> Result[Unit, String] {
         "only one context parameter is supported by #proton.command: " +
         command.function_name,
       )
+    }
+    guard request_context_count <= 1 else {
+      return Err(
+        "only one request_context parameter is supported by #proton.command: " +
+        command.function_name,
+      )
+    }
+    if command.has_request_context {
+      guard command.is_async && command.returns_result else {
+        return Err(
+          "request_context parameter requires async Result command in #proton.command: " +
+          command.function_name,
+        )
+      }
     }
   }
   match

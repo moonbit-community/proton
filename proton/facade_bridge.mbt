@@ -380,7 +380,9 @@ async fn dispatch_bridge_request(
   request : @native.BridgeRequest,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
-  let response = host.dispatch_ipc_with_event_sender(
+  let request_context = @core.AppCommandRequestContext::new(request.window())
+  let response = host.dispatch_ipc_with_context_and_event_sender(
+    request_context,
     @ipc.IpcOpRequest::new(
       request_id.to_string(),
       request.op(),
