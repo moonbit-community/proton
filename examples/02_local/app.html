@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Local File</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f7f9;
+        color: #1f2933;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+
+      main {
+        width: min(560px, calc(100vw - 48px));
+      }
+
+      h1 {
+        margin: 0 0 16px;
+        font-size: 34px;
+        letter-spacing: 0;
+      }
+
+      dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 10px 16px;
+        margin: 0;
+        padding: 20px;
+        border: 1px solid #d6dbe1;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      dt {
+        font-weight: 700;
+      }
+
+      dd {
+        margin: 0;
+        word-break: break-all;
+      }
+
+      .ok {
+        color: #067647;
+        font-weight: 700;
+      }
+
+      .fail {
+        color: #b42318;
+        font-weight: 700;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          background: #181c20;
+          color: #eef2f6;
+        }
+
+        dl {
+          background: #22272d;
+          border-color: #3b4652;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Local File</h1>
+      <dl>
+        <dt>Status</dt>
+        <dd id="status">Checking...</dd>
+        <dt>Protocol</dt>
+        <dd id="protocol"></dd>
+        <dt>Location</dt>
+        <dd id="location"></dd>
+      </dl>
+    </main>
+    <script>
+      const protocol = window.location.protocol;
+      const isLocal = protocol === "file:";
+
+      document.getElementById("status").textContent = isLocal
+        ? "Loaded from local file"
+        : "Unexpected entry protocol";
+      document.getElementById("status").className = isLocal ? "ok" : "fail";
+      document.getElementById("protocol").textContent = protocol;
+      document.getElementById("location").textContent = window.location.href;
+    </script>
+  </body>
+</html>
