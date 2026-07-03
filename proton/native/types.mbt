@@ -28,6 +28,10 @@ pub(all) struct RuntimeWaitReady {
 struct RuntimeEvent {
   event_type : String
   has_window : Bool
+  /// Set on `dialog_completed` events only.
+  dialog_request : UInt64?
+  dialog_accepted : Bool
+  dialog_path : String?
 } derive(Debug, Eq)
 
 ///|
@@ -78,6 +82,29 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+pub fn RuntimeEvent::is_dialog_completed(self : RuntimeEvent) -> Bool {
+  self.event_type == "dialog_completed"
+}
+
+///|
+/// The async dialog request this event settles; None on other event types.
+pub fn RuntimeEvent::dialog_request(self : RuntimeEvent) -> UInt64? {
+  self.dialog_request
+}
+
+///|
+/// Whether the user confirmed the dialog (as opposed to cancelling it).
+pub fn RuntimeEvent::dialog_accepted(self : RuntimeEvent) -> Bool {
+  self.dialog_accepted
+}
+
+///|
+/// The picked path of an accepted `dialog_completed` event.
+pub fn RuntimeEvent::dialog_path(self : RuntimeEvent) -> String? {
+  self.dialog_path
 }
 
 ///|

@@ -184,6 +184,8 @@ async fn run_window_pump(runtime : @native.Runtime) -> Result[Unit, String] {
           did_work = true
           if event.is_window_closed() {
             closed = true
+          } else if event.is_dialog_completed() {
+            settle_dialog_event(event)
           }
         }
       }
@@ -232,6 +234,8 @@ async fn run_bridge_pump(
             did_work = true
             if event.is_window_closed() {
               closed = true
+            } else if event.is_dialog_completed() {
+              settle_dialog_event(event)
             }
           }
         }

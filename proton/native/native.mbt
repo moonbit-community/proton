@@ -148,7 +148,22 @@ fn decode_runtime_event_json(
       event_type,
     ) {
       let has_window = object.get("window") is Some(_)
-      Ok(RuntimeEvent::{ event_type, has_window })
+      let dialog_request = match object.get("request") {
+        Some(Number(value, ..)) => Some(value.to_uint64())
+        _ => None
+      }
+      let dialog_accepted = object.get("accepted") is Some(True)
+      let dialog_path = match object.get("path") {
+        Some(String(value)) if !value.is_empty() => Some(value)
+        _ => None
+      }
+      Ok(RuntimeEvent::{
+        event_type,
+        has_window,
+        dialog_request,
+        dialog_accepted,
+        dialog_path,
+      })
     })
   })
 }
@@ -725,4 +740,46 @@ pub fn save_file_dialog(
   path : String?,
 ) -> Result[String?, NativeError] {
   file_dialog_path(window, title, path, proton_window_save_file_dialog_ffi)
+}
+
+///|
+pub(all) enum FileDialogMode {
+  OpenFile
+  SaveFile
+  ChooseDirectory
+} derive(Debug, Eq)
+
+///|
+fn file_dialog_mode_to_int(mode : FileDialogMode) -> Int {
+  match mode {
+    OpenFile => 0
+    SaveFile => 1
+    ChooseDirectory => 2
+  }
+}
+
+///|
+/// Shows a file panel without blocking the message pump. The outcome arrives
+/// later as a `dialog_completed` runtime event whose `dialog_request` matches
+/// `request_id`.
+pub fn begin_file_dialog(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+  mode : FileDialogMode,
+  request_id : UInt64,
+) -> Result[Unit, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let path_buffer = optional_dialog_text_buffer(path)
+  status_to_result(
+    proton_window_file_dialog_begin_ffi(
+      window.handle,
+      title_buffer,
+      dialog_text_payload_len(title_buffer),
+      path_buffer,
+      dialog_text_payload_len(path_buffer),
+      file_dialog_mode_to_int(mode),
+      request_id,
+    ),
+  )
 }

@@ -59,7 +59,8 @@
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
 #define PROTON_MAX_EVENTS 32
-#define PROTON_MAX_EVENT_BYTES 512
+/* Sized so a dialog_completed event can carry an escaped filesystem path. */
+#define PROTON_MAX_EVENT_BYTES 1024
 #define PROTON_MAX_BRIDGE_BYTES 1048576
 #define PROTON_MAX_BRIDGE_CONFIG_BYTES 65536
 #define PROTON_MAX_BRIDGE_OPS 256
@@ -1047,6 +1048,106 @@ static bool proton_runtime_enqueue_window_event(proton_runtime_slot_t *runtime,
   return proton_runtime_enqueue_event(runtime, event_json);
 }
 
+/* Escapes `value` as JSON string contents. Returns false when the escaped
+ * form does not fit in `out`. */
+static bool proton_json_escape_into(const char *value, char *out,
+                                    size_t out_len) {
+  size_t used = 0;
+  for (const unsigned char *p = (const unsigned char *)value; *p != '\0';
+       p++) {
+    char piece[8];
+    size_t piece_len;
+    switch (*p) {
+    case '"':
+    case '\\':
+      piece[0] = '\\';
+      piece[1] = (char)*p;
+      piece_len = 2;
+      break;
+    case '\n':
+      memcpy(piece, "\\n", 2);
+      piece_len = 2;
+      break;
+    case '\r':
+      memcpy(piece, "\\r", 2);
+      piece_len = 2;
+      break;
+    case '\t':
+      memcpy(piece, "\\t", 2);
+      piece_len = 2;
+      break;
+    default:
+      if (*p < 0x20) {
+        snprintf(piece, sizeof(piece), "\\u%04x", (unsigned)*p);
+        piece_len = 6;
+      } else {
+        piece[0] = (char)*p;
+        piece_len = 1;
+      }
+      break;
+    }
+    if (used + piece_len + 1 > out_len) {
+      return false;
+    }
+    memcpy(out + used, piece, piece_len);
+    used += piece_len;
+  }
+  if (used + 1 > out_len) {
+    return false;
+  }
+  out[used] = '\0';
+  return true;
+}
+
+static int32_t proton_runtime_sync_engine_dialog_results(
+    proton_runtime_slot_t *runtime) {
+  for (;;) {
+    uint64_t request_id = 0;
+    int32_t accepted = 0;
+    int32_t has_result = 0;
+    int32_t path_len = 0;
+    char path[PROTON_MAX_PATH_BYTES];
+    char engine_error[512] = {0};
+    int32_t status = proton_engine_poll_dialog_result(
+        &request_id, &accepted, path, (int32_t)sizeof(path), &path_len,
+        &has_result, engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+    if (!has_result) {
+      return PROTON_OK;
+    }
+    char escaped[PROTON_MAX_EVENT_BYTES];
+    if (!proton_json_escape_into(path, escaped, sizeof(escaped))) {
+      /* An oversized path cannot be delivered; report the pick as cancelled
+       * so the waiting request settles instead of hanging. */
+      escaped[0] = '\0';
+      accepted = 0;
+    }
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int written = snprintf(
+        event_json, sizeof(event_json),
+        "{\"type\":\"dialog_completed\",\"request\":%llu,\"accepted\":%s,"
+        "\"path\":\"%s\"}",
+        (unsigned long long)request_id, accepted ? "true" : "false", escaped);
+    if (written < 0 || written >= (int)sizeof(event_json)) {
+      int fallback = snprintf(
+          event_json, sizeof(event_json),
+          "{\"type\":\"dialog_completed\",\"request\":%llu,"
+          "\"accepted\":false,\"path\":\"\"}",
+          (unsigned long long)request_id);
+      if (fallback < 0 || fallback >= (int)sizeof(event_json)) {
+        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                                "failed to encode dialog event");
+      }
+    }
+    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                              "failed to queue dialog_completed event");
+    }
+  }
+}
+
 static int32_t proton_get_runtime(proton_runtime_id_t handle,
                                   proton_runtime_slot_t **out_slot) {
   uint64_t raw = (uint64_t)handle;
@@ -1472,6 +1573,10 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
     if (status != PROTON_OK) {
       return status;
     }
+    status = proton_runtime_sync_engine_dialog_results(slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
     if (slot->event_count > 0) {
       ready_mask |= PROTON_WAIT_EVENT;
     }
@@ -1519,6 +1624,10 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
                             "out_required_len is required");
   }
   status = proton_runtime_sync_engine_closed_windows(runtime, slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_runtime_sync_engine_dialog_results(slot);
   if (status != PROTON_OK) {
     return status;
   }
@@ -2136,6 +2245,38 @@ int32_t proton_window_open_file_dialog(
   status = proton_engine_window_open_file_dialog(
       slot->engine_window, title_utf8, title_len, path_utf8, path_len,
       buffer, buffer_len, out_required_len, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_file_dialog_begin(
+    proton_window_id_t window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int32_t mode,
+    uint64_t request_id) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_require_dialog_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_utf8_arg("dialog title", title_utf8, title_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_utf8_arg("dialog path", path_utf8, path_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_file_dialog_begin(
+      slot->engine_window, title_utf8, title_len, path_utf8, path_len, mode,
+      request_id, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

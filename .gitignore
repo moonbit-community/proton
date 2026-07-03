@@ -41,3 +41,4 @@ bisect.coverage
 # Package prebuilt Proton artifacts are intentionally shipped.
 !proton/prebuilt/
 !proton/prebuilt/**
+.repos/

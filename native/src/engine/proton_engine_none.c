@@ -344,3 +344,48 @@ int32_t proton_engine_window_save_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
       out_required_len, error, error_len);
 }
+
+int32_t proton_engine_window_file_dialog_begin(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int32_t mode,
+    uint64_t request_id,
+    char *error,
+    size_t error_len) {
+  (void)window;
+  (void)title_utf8;
+  (void)title_len;
+  (void)path_utf8;
+  (void)path_len;
+  (void)mode;
+  (void)request_id;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_poll_dialog_result(
+    uint64_t *out_request_id,
+    int32_t *out_accepted,
+    char *path_buffer,
+    int32_t path_buffer_len,
+    int32_t *out_path_len,
+    int32_t *out_has_result,
+    char *error,
+    size_t error_len) {
+  (void)out_request_id;
+  (void)out_accepted;
+  (void)path_buffer;
+  (void)path_buffer_len;
+  (void)error;
+  (void)error_len;
+  if (out_path_len != NULL) {
+    *out_path_len = 0;
+  }
+  if (out_has_result != NULL) {
+    *out_has_result = 0;
+  }
+  return PROTON_OK;
+}

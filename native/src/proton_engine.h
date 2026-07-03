@@ -146,6 +146,30 @@ int32_t proton_engine_window_save_file_dialog(
     int32_t *out_required_len,
     char *error,
     size_t error_len);
+/* Non-blocking file panel: shows the panel and returns immediately; the
+ * outcome is delivered later through proton_engine_poll_dialog_result. mode:
+ * 0 = open file, 1 = save file, 2 = choose directory. */
+int32_t proton_engine_window_file_dialog_begin(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int32_t mode,
+    uint64_t request_id,
+    char *error,
+    size_t error_len);
+/* Pops one completed async dialog outcome. *out_has_result stays 0 when the
+ * queue is empty; PROTON_OK either way. */
+int32_t proton_engine_poll_dialog_result(
+    uint64_t *out_request_id,
+    int32_t *out_accepted,
+    char *path_buffer,
+    int32_t path_buffer_len,
+    int32_t *out_path_len,
+    int32_t *out_has_result,
+    char *error,
+    size_t error_len);
 
 const char *proton_engine_name(void);
 

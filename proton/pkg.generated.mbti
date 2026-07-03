@@ -21,6 +21,8 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 
 pub fn last_error_message() -> String
 
+pub async fn pick_file_dialog(@native.WindowRef, title? : String, initial_path? : String, mode? : @native.FileDialogMode) -> Result[String?, String]
+
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Result[Unit, @native.NativeError]
 
 pub fn runtime_info() -> Result[@native.RuntimeInfo, @native.NativeError]

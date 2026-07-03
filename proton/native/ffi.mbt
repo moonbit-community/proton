@@ -218,6 +218,18 @@ extern "C" fn proton_window_save_file_dialog_ffi(
 ) -> Int = "proton_window_save_file_dialog"
 
 ///|
+#borrow(title, path)
+extern "C" fn proton_window_file_dialog_begin_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  mode : Int,
+  request_id : UInt64,
+) -> Int = "proton_window_file_dialog_begin"
+
+///|
 #borrow(buffer)
 extern "C" fn proton_last_error_message_ffi(
   buffer : FixedArray[Byte],

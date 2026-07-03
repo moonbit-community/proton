@@ -3653,3 +3653,149 @@ int32_t proton_engine_window_save_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
       out_required_len, YES, error, error_len);
 }
+
+/* Async file panels: outcomes are staged in a ring the runtime drains from
+ * poll_event, so nothing here ever nests a modal run loop. All access happens
+ * on the main thread (begin is guarded, AppKit delivers completion handlers
+ * there), so the ring needs no locking. */
+
+#define PROTON_ENGINE_MAX_DIALOG_RESULTS 16
+#define PROTON_ENGINE_DIALOG_PATH_MAX 4096
+
+typedef struct proton_engine_dialog_result {
+  uint64_t request_id;
+  int32_t accepted;
+  char path[PROTON_ENGINE_DIALOG_PATH_MAX];
+} proton_engine_dialog_result_t;
+
+static proton_engine_dialog_result_t
+    g_dialog_results[PROTON_ENGINE_MAX_DIALOG_RESULTS];
+static uint32_t g_dialog_result_head = 0;
+static uint32_t g_dialog_result_count = 0;
+
+static void proton_engine_push_dialog_result(uint64_t request_id,
+                                             int32_t accepted,
+                                             NSString *path) {
+  if (g_dialog_result_count >= PROTON_ENGINE_MAX_DIALOG_RESULTS) {
+    proton_engine_debug_log("dialog_result_dropped request=%llu",
+                            (unsigned long long)request_id);
+    return;
+  }
+  uint32_t index = (g_dialog_result_head + g_dialog_result_count) %
+                   PROTON_ENGINE_MAX_DIALOG_RESULTS;
+  proton_engine_dialog_result_t *slot = &g_dialog_results[index];
+  slot->request_id = request_id;
+  slot->path[0] = '\0';
+  const char *utf8 = path != nil ? [path UTF8String] : NULL;
+  if (utf8 != NULL && strlen(utf8) < sizeof(slot->path)) {
+    memcpy(slot->path, utf8, strlen(utf8) + 1);
+    slot->accepted = accepted;
+  } else {
+    /* A path that does not fit is unusable; report the pick as cancelled
+     * rather than hand back a truncated path. */
+    slot->accepted = utf8 == NULL ? accepted : 0;
+  }
+  g_dialog_result_count++;
+  proton_engine_debug_log("dialog_completed request=%llu accepted=%d",
+                          (unsigned long long)request_id, slot->accepted);
+}
+
+int32_t proton_engine_window_file_dialog_begin(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int32_t mode,
+    uint64_t request_id,
+    char *error,
+    size_t error_len) {
+  int32_t status =
+      proton_engine_require_dialog_main_thread(window, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (mode < 0 || mode > 2) {
+    proton_engine_set_message(error, error_len,
+                              "unsupported file dialog mode");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  BOOL save_mode = mode == 1;
+  @autoreleasepool {
+    NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
+                                   : [NSOpenPanel openPanel];
+    NSString *title = proton_engine_string_from_utf8(title_utf8, title_len);
+    if ([title length] > 0) {
+      [panel setTitle:title];
+      /* NSOpenPanel has ignored setTitle since 10.11; message still shows. */
+      [panel setMessage:title];
+    }
+    if (!save_mode) {
+      NSOpenPanel *open_panel = (NSOpenPanel *)panel;
+      BOOL choose_directory = mode == 2;
+      [open_panel setCanChooseFiles:!choose_directory];
+      [open_panel setCanChooseDirectories:choose_directory];
+      [open_panel setCanCreateDirectories:choose_directory];
+      [open_panel setAllowsMultipleSelection:NO];
+    }
+    proton_engine_configure_file_panel(
+        panel, proton_engine_string_from_utf8(path_utf8, path_len), save_mode);
+    [NSApp activateIgnoringOtherApps:YES];
+    /* The copied block retains the panel; do not capture `window`, the
+     * engine window may be torn down while the panel is still up. */
+    void (^completion)(NSModalResponse) = ^(NSModalResponse response) {
+      NSString *result = @"";
+      if (response == NSModalResponseOK && [panel URL] != nil) {
+        result = [[panel URL] path] ?: @"";
+      }
+      proton_engine_push_dialog_result(
+          request_id, response == NSModalResponseOK ? 1 : 0, result);
+    };
+    NSWindow *parent = window->window;
+    if (parent != nil) {
+      [panel beginSheetModalForWindow:parent completionHandler:completion];
+    } else {
+      [panel beginWithCompletionHandler:completion];
+    }
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_poll_dialog_result(
+    uint64_t *out_request_id,
+    int32_t *out_accepted,
+    char *path_buffer,
+    int32_t path_buffer_len,
+    int32_t *out_path_len,
+    int32_t *out_has_result,
+    char *error,
+    size_t error_len) {
+  if (out_request_id == NULL || out_accepted == NULL || out_path_len == NULL ||
+      out_has_result == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "dialog result out params are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_has_result = 0;
+  *out_path_len = 0;
+  if (g_dialog_result_count == 0) {
+    return PROTON_OK;
+  }
+  proton_engine_dialog_result_t *slot =
+      &g_dialog_results[g_dialog_result_head];
+  int32_t required = (int32_t)strlen(slot->path);
+  if (path_buffer == NULL || path_buffer_len <= required) {
+    proton_engine_set_message(error, error_len,
+                              "dialog path buffer too small");
+    return PROTON_ERR_BUFFER_TOO_SMALL;
+  }
+  memcpy(path_buffer, slot->path, (size_t)required + 1);
+  *out_request_id = slot->request_id;
+  *out_accepted = slot->accepted;
+  *out_path_len = required;
+  *out_has_result = 1;
+  g_dialog_result_head =
+      (g_dialog_result_head + 1) % PROTON_ENGINE_MAX_DIALOG_RESULTS;
+  g_dialog_result_count--;
+  return PROTON_OK;
+}

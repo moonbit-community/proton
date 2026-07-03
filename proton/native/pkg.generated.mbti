@@ -9,6 +9,8 @@ import {
 // Values
 pub fn abi_version() -> Int
 
+pub fn begin_file_dialog(WindowRef, String?, String?, FileDialogMode, UInt64) -> Result[Unit, NativeError]
+
 pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeError]
 
 pub fn last_error_message() -> String
@@ -75,6 +77,12 @@ pub(all) enum DialogLevel {
   Error
 } derive(Eq, @debug.Debug)
 
+pub(all) enum FileDialogMode {
+  OpenFile
+  SaveFile
+  ChooseDirectory
+} derive(Eq, @debug.Debug)
+
 pub(all) struct NativeError {
   status : Int
   message : String
@@ -106,8 +114,12 @@ pub fn RuntimeConfig::to_json_string(Self) -> String
 pub fn RuntimeConfig::unsafe_from_json(String) -> Self
 
 type RuntimeEvent derive(Eq, @debug.Debug)
+pub fn RuntimeEvent::dialog_accepted(Self) -> Bool
+pub fn RuntimeEvent::dialog_path(Self) -> String?
+pub fn RuntimeEvent::dialog_request(Self) -> UInt64?
 pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
+pub fn RuntimeEvent::is_dialog_completed(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
 
