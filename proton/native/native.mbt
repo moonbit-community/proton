@@ -839,7 +839,11 @@ async fn poll_dialog_result(
     } else if status < 0 {
       return Err(native_error(status))
     } else {
-      return Ok(@ffi.from_cstr(Bytes::from_array(buffer)))
+      // On success `required` is the payload plus its terminator, and the
+      // rest of the fixed buffer is zero fill. Decode exactly that span —
+      // from_cstr only strips the final byte, so handing it the whole buffer
+      // would keep ~64K interior NULs in the result string.
+      return Ok(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val])))
     }
   }
   Err(invalid_argument("dialog polling exited unexpectedly"))
