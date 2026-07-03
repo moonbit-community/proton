@@ -2290,9 +2290,11 @@ static int proton_engine_request_all_windows_close(void) {
   proton_engine_debug_log("window_will_close browser=%d", window->browser_id);
   window->appkit_closing = 1;
   if (window->browser != NULL) {
-    // Keep the CEF browser alive until on_before_close reports completion.
+    // AppKit has already closed the user-visible window. Publish that lifecycle
+    // edge immediately; CEF on_before_close is only browser resource cleanup.
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
+    proton_engine_window_mark_closed(window);
     proton_engine_window_request_browser_close(window, 1);
     if (window->browser_view != nil) {
       [window->browser_view removeFromSuperview];
