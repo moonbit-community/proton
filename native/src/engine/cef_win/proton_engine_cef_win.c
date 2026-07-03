@@ -3221,3 +3221,101 @@ int32_t proton_engine_window_save_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
       out_required_len, 1, error, error_len);
 }
+
+// TODO: Implement non-blocking Windows dialogs. These exports are ABI stubs so
+// that shared engine interfaces can stay additive while macOS owns the first
+// real async dialog implementation.
+int32_t proton_engine_window_begin_message_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    int32_t level,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  (void)window;
+  (void)title_utf8;
+  (void)title_len;
+  (void)message_utf8;
+  (void)message_len;
+  (void)level;
+  if (out_dialog != NULL) {
+    *out_dialog = PROTON_INVALID_HANDLE;
+  }
+  proton_engine_set_message(error, error_len,
+                            "async native dialogs are not implemented on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_window_begin_confirm_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    int32_t level,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  return proton_engine_window_begin_message_dialog(
+      window, title_utf8, title_len, message_utf8, message_len, level,
+      out_dialog, error, error_len);
+}
+
+int32_t proton_engine_window_begin_open_file_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  (void)window;
+  (void)title_utf8;
+  (void)title_len;
+  (void)path_utf8;
+  (void)path_len;
+  if (out_dialog != NULL) {
+    *out_dialog = PROTON_INVALID_HANDLE;
+  }
+  proton_engine_set_message(error, error_len,
+                            "async native dialogs are not implemented on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_window_begin_save_file_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  return proton_engine_window_begin_open_file_dialog(
+      window, title_utf8, title_len, path_utf8, path_len, out_dialog,
+      error, error_len);
+}
+
+int32_t proton_engine_window_poll_dialog_result(
+    proton_engine_window_t *window,
+    int64_t dialog,
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len,
+    char *error,
+    size_t error_len) {
+  (void)window;
+  (void)dialog;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  proton_engine_set_message(error, error_len,
+                            "async native dialogs are not implemented on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}

@@ -122,6 +122,25 @@ PROTON_API int32_t proton_window_save_file_dialog(
     proton_window_id_t window, const char *title_utf8,
     int32_t title_len, const char *path_utf8, int32_t path_len,
     char *buffer, int32_t buffer_len, int32_t *out_required_len);
+PROTON_API int32_t proton_window_begin_message_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_confirm_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_open_file_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *path_utf8, int32_t path_len,
+    int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_save_file_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *path_utf8, int32_t path_len,
+    int64_t *out_dialog);
+PROTON_API int32_t proton_window_poll_dialog_result(
+    proton_window_id_t window, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);

@@ -46,12 +46,12 @@ fn level_to_native(level : String?) -> @native.DialogLevel {
 }
 
 ///|
-fn show_message_dialog(
+async fn show_message_dialog(
   window : @native.WindowRef,
   payload : MessagePayload,
 ) -> Result[MessageReply, String] {
   match
-    @native.show_message_dialog(
+    @native.show_message_dialog_async(
       window,
       payload.title,
       payload.message,
@@ -63,12 +63,12 @@ fn show_message_dialog(
 }
 
 ///|
-fn confirm_message_dialog(
+async fn confirm_message_dialog(
   window : @native.WindowRef,
   payload : MessagePayload,
 ) -> Result[ConfirmReply, String] {
   match
-    @native.show_confirm_dialog(
+    @native.show_confirm_dialog_async(
       window,
       payload.title,
       payload.message,
@@ -80,22 +80,22 @@ fn confirm_message_dialog(
 }
 
 ///|
-fn open_file_dialog(
+async fn open_file_dialog(
   window : @native.WindowRef,
   payload : FileDialogPayload,
 ) -> Result[FileDialogReply, String] {
-  match @native.open_file_dialog(window, payload.title, payload.path) {
+  match @native.open_file_dialog_async(window, payload.title, payload.path) {
     Err(error) => Err(native_error_message(error))
     Ok(path) => Ok({ path, })
   }
 }
 
 ///|
-fn save_file_dialog(
+async fn save_file_dialog(
   window : @native.WindowRef,
   payload : FileDialogPayload,
 ) -> Result[FileDialogReply, String] {
-  match @native.save_file_dialog(window, payload.title, payload.path) {
+  match @native.save_file_dialog_async(window, payload.title, payload.path) {
     Err(error) => Err(native_error_message(error))
     Ok(path) => Ok({ path, })
   }

@@ -218,6 +218,67 @@ extern "C" fn proton_window_save_file_dialog_ffi(
 ) -> Int = "proton_window_save_file_dialog"
 
 ///|
+#cfg(not(platform="windows"))
+#borrow(title, message, out_dialog)
+extern "C" fn proton_window_begin_message_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  message : Bytes,
+  message_len : Int,
+  level : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_message_dialog"
+
+///|
+#cfg(not(platform="windows"))
+#borrow(title, message, out_dialog)
+extern "C" fn proton_window_begin_confirm_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  message : Bytes,
+  message_len : Int,
+  level : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_confirm_dialog"
+
+///|
+#cfg(not(platform="windows"))
+#borrow(title, path, out_dialog)
+extern "C" fn proton_window_begin_open_file_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_open_file_dialog"
+
+///|
+#cfg(not(platform="windows"))
+#borrow(title, path, out_dialog)
+extern "C" fn proton_window_begin_save_file_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_save_file_dialog"
+
+///|
+#cfg(not(platform="windows"))
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_poll_dialog_result_ffi(
+  window : Int64,
+  dialog : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_poll_dialog_result"
+
+///|
 #borrow(buffer)
 extern "C" fn proton_last_error_message_ffi(
   buffer : FixedArray[Byte],
