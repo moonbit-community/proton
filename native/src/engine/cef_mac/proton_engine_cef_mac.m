@@ -52,6 +52,10 @@
 #define PROTON_ENGINE_BRIDGE_CONTEXT_DISPOSED_MESSAGE \
   "proton.bridge.context_disposed"
 #define PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION "__protonNativeInvokeOp"
+// Grace period after a forced browser close before the pump-side watchdog
+// forces the completion CEF's OnBeforeClose owes us. Clean closes complete in
+// milliseconds; this only fires when CEF's close handshake wedges.
+#define PROTON_ENGINE_CLOSE_WATCHDOG_SECONDS 1.5
 
 typedef struct proton_engine_client proton_engine_client_t;
 
@@ -73,6 +77,11 @@ struct proton_engine_window {
   id delegate;
   int appkit_closing;
   int browser_close_requested;
+  // When a browser close is requested we wait for CEF's OnBeforeClose to report
+  // completion. If that callback never arrives (CEF's external-pump close
+  // handshake wedges under load), this deadline lets a pump-side watchdog force
+  // the completion CEF owes us. 0.0 = disarmed.
+  double browser_close_deadline;
   int cef_allows_appkit_close;
   proton_engine_client_t *client;
   cef_browser_t *browser;
@@ -177,6 +186,11 @@ static int g_proton_cef_initialized = 0;
 static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
 static int g_proton_cef_shutdown_registered = 0;
+// Set when the pump-side close watchdog had to force a browser close because
+// CEF's OnBeforeClose never arrived. CEF's internal browser state is then
+// inconsistent, so cef_shutdown() would walk it and SIGBUS — the destroy path
+// skips it and lets the process exit normally.
+static int g_proton_close_handshake_forced = 0;
 static int g_proton_app_menu_installed = 0;
 static int g_proton_app_terminating = 0;
 static proton_engine_app_t g_app;
@@ -2176,6 +2190,10 @@ static void proton_engine_window_request_browser_close(
   cef_browser_host_t *host = window->browser->get_host(window->browser);
   if (host != NULL) {
     window->browser_close_requested = 1;
+    if (window->browser_close_deadline <= 0.0) {
+      window->browser_close_deadline =
+          CFAbsoluteTimeGetCurrent() + PROTON_ENGINE_CLOSE_WATCHDOG_SECONDS;
+    }
     host->close_browser(host, force_close);
     host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
@@ -2190,6 +2208,7 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
     proton_engine_debug_log("window_closed browser=%d", window->browser_id);
   }
   window->closed = 1;
+  window->browser_close_deadline = 0.0;
   proton_engine_bridge_pending_remove_browser(window->runtime,
                                               window->browser_id);
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
@@ -2206,6 +2225,10 @@ static int proton_engine_request_all_windows_close(void) {
     if (window->browser != NULL) {
       cef_browser_host_t *host = window->browser->get_host(window->browser);
       if (host != NULL) {
+        if (window->browser_close_deadline <= 0.0) {
+          window->browser_close_deadline =
+              CFAbsoluteTimeGetCurrent() + PROTON_ENGINE_CLOSE_WATCHDOG_SECONDS;
+        }
         host->close_browser(host, 1);
         host->base.release((cef_base_ref_counted_t *)host);
         continue;
@@ -2602,7 +2625,18 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_runtime_clear_bridge_queue(runtime);
     proton_engine_bridge_pending_clear_all();
     proton_engine_drain_cef_close_work();
-    proton_engine_cef_shutdown();
+    if (g_proton_close_handshake_forced) {
+      // The watchdog forced a browser close because CEF's OnBeforeClose never
+      // arrived. CEF's internal browser state is inconsistent; cef_shutdown()
+      // would walk it and SIGBUS (fault at a freed browser). Skip it and let
+      // the process exit normally — the OS reclaims CEF's threads and helper
+      // processes. Neutralize the registered atexit fallback so it does not run
+      // the same crashy path on the way out.
+      proton_engine_debug_log("cef_shutdown_skipped (close handshake forced)");
+      g_proton_cef_initialized = 0;
+    } else {
+      proton_engine_cef_shutdown();
+    }
     proton_engine_teardown_wait_source();
     runtime->owns_cef_runtime = 0;
   }
@@ -2668,6 +2702,37 @@ static void proton_engine_runtime_create_pending_browsers(
   }
 }
 
+// Unblock the host for any window whose OnBeforeClose never arrived within the
+// grace period. Under load CEF's external-pump close handshake can wedge after
+// CloseBrowser(force): OnBeforeClose never fires, so window_closed is never
+// reported and the bridge pump spins forever, orphaning the engine child. Mark
+// the window closed so the pump proceeds and the async teardown (which cancels
+// the engine) can run. We deliberately do NOT release the browser here: CEF's
+// close pipeline for it is still in-flight, so dropping our ref would free a
+// browser CEF still touches (use-after-free at cef_shutdown). The forced flag
+// tells runtime_destroy to skip cef_shutdown entirely. Idle/clean closes
+// complete far inside the deadline and never reach here.
+static void proton_engine_close_watchdog_tick(void) {
+  double now = 0.0;
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    if (window->closed || window->browser_close_deadline <= 0.0) {
+      continue;
+    }
+    if (now == 0.0) {
+      now = CFAbsoluteTimeGetCurrent();
+    }
+    if (now < window->browser_close_deadline) {
+      continue;
+    }
+    proton_engine_debug_log(
+        "close_watchdog_forced browser=%d (OnBeforeClose never arrived)",
+        window->browser_id);
+    g_proton_close_handshake_forced = 1;
+    proton_engine_window_mark_closed(window);
+  }
+}
+
 static void proton_engine_pump_appkit_cef_once(void) {
   for (;;) {
     NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
@@ -2681,6 +2746,7 @@ static void proton_engine_pump_appkit_cef_once(void) {
   }
   [NSApp updateWindows];
   cef_do_message_loop_work();
+  proton_engine_close_watchdog_tick();
 }
 
 static void proton_engine_drain_cef_close_work(void) {
@@ -3096,6 +3162,15 @@ static int32_t proton_engine_window_wait_for_browser_close(
     if (window != NULL && window->closed) {
       proton_engine_drain_cef_close_work();
     }
+    return PROTON_OK;
+  }
+  // The pump watchdog already force-marked this window closed because CEF's
+  // OnBeforeClose never arrived. The browser ref is intentionally leaked — CEF's
+  // close pipeline is unsound and the destroy path skips cef_shutdown — so no
+  // release is coming. Do not wait for browser==NULL (it would time out after
+  // 5s and surface as a spurious "poll event" error that aborts the host), and
+  // do not touch the browser.
+  if (window->closed) {
     return PROTON_OK;
   }
   proton_engine_window_request_browser_close(window, 1);
