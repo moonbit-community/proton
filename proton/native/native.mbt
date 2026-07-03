@@ -734,10 +734,7 @@ pub fn choose_directory_dialog(
   path : String?,
 ) -> Result[String?, NativeError] {
   file_dialog_path(
-    window,
-    title,
-    path,
-    proton_window_choose_directory_dialog_ffi,
+    window, title, path, proton_window_choose_directory_dialog_ffi,
   )
 }
 
@@ -883,9 +880,8 @@ pub async fn show_confirm_dialog_async(
 ) -> Result[Bool, NativeError] {
   match begin_confirm_dialog_async(window, title, message, level) {
     Err(error) => Err(error)
-    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
-      result == "1"
-    })
+    Ok(dialog) =>
+      poll_dialog_result(window, dialog).map(fn(result) { result == "1" })
   }
 }
 
@@ -909,19 +905,17 @@ pub async fn open_file_dialog_async(
 ) -> Result[String?, NativeError] {
   match
     begin_file_dialog_async(
-      window,
-      title,
-      path,
-      proton_window_begin_open_file_dialog_ffi,
+      window, title, path, proton_window_begin_open_file_dialog_ffi,
     ) {
     Err(error) => Err(error)
-    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
-      if result.is_empty() {
-        None
-      } else {
-        Some(result)
-      }
-    })
+    Ok(dialog) =>
+      poll_dialog_result(window, dialog).map(fn(result) {
+        if result.is_empty() {
+          None
+        } else {
+          Some(result)
+        }
+      })
   }
 }
 
@@ -944,19 +938,17 @@ pub async fn save_file_dialog_async(
 ) -> Result[String?, NativeError] {
   match
     begin_file_dialog_async(
-      window,
-      title,
-      path,
-      proton_window_begin_save_file_dialog_ffi,
+      window, title, path, proton_window_begin_save_file_dialog_ffi,
     ) {
     Err(error) => Err(error)
-    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
-      if result.is_empty() {
-        None
-      } else {
-        Some(result)
-      }
-    })
+    Ok(dialog) =>
+      poll_dialog_result(window, dialog).map(fn(result) {
+        if result.is_empty() {
+          None
+        } else {
+          Some(result)
+        }
+      })
   }
 }
 
@@ -979,19 +971,17 @@ pub async fn choose_directory_dialog_async(
 ) -> Result[String?, NativeError] {
   match
     begin_file_dialog_async(
-      window,
-      title,
-      path,
-      proton_window_begin_choose_directory_dialog_ffi,
+      window, title, path, proton_window_begin_choose_directory_dialog_ffi,
     ) {
     Err(error) => Err(error)
-    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
-      if result.is_empty() {
-        None
-      } else {
-        Some(result)
-      }
-    })
+    Ok(dialog) =>
+      poll_dialog_result(window, dialog).map(fn(result) {
+        if result.is_empty() {
+          None
+        } else {
+          Some(result)
+        }
+      })
   }
 }
 

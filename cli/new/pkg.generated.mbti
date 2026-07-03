@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_cli/new"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn run(String, Array[String]) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+type NewProjectOptions derive(Eq, @debug.Debug)
+
+type PlannedFile derive(Eq, @debug.Debug)
+
+type RawNewProjectOptions derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
