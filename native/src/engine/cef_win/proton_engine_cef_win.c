@@ -3008,239 +3008,31 @@ static wchar_t *proton_engine_dialog_text_copy(const char *value,
   return text;
 }
 
-static const wchar_t *proton_engine_dialog_title_or_null(
-    const wchar_t *text) {
-  return text[0] == L'\0' ? NULL : text;
-}
-
-static UINT proton_engine_dialog_icon_flags(int32_t level,
-                                            UINT default_icon) {
-  switch (level) {
-  case 1:
-    return MB_ICONWARNING;
-  case 2:
-    return MB_ICONERROR;
-  default:
-    return default_icon;
-  }
-}
-
-int32_t proton_engine_window_show_message_dialog(
+int32_t proton_engine_window_dialog_begin(
     proton_engine_window_t *window,
     const char *title_utf8,
     int32_t title_len,
     const char *message_utf8,
     int32_t message_len,
-    int32_t level,
-    char *error,
-    size_t error_len) {
-  if (window == NULL || window->hwnd == NULL) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  wchar_t *title = proton_engine_dialog_text_copy(title_utf8, title_len);
-  wchar_t *message = proton_engine_dialog_text_copy(message_utf8, message_len);
-  if (title == NULL || message == NULL) {
-    free(title);
-    free(message);
-    proton_engine_set_message(error, error_len, "failed to copy dialog text");
-    return PROTON_ERR_ENGINE;
-  }
-  MessageBoxW(
-      window->hwnd,
-      message,
-      proton_engine_dialog_title_or_null(title),
-      MB_OK | proton_engine_dialog_icon_flags(level, MB_ICONINFORMATION));
-  free(title);
-  free(message);
-  return PROTON_OK;
-}
-
-int32_t proton_engine_window_show_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed,
-    char *error,
-    size_t error_len) {
-  if (out_confirmed == NULL) {
-    proton_engine_set_message(error, error_len, "out_confirmed is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window == NULL || window->hwnd == NULL) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  wchar_t *title = proton_engine_dialog_text_copy(title_utf8, title_len);
-  wchar_t *message = proton_engine_dialog_text_copy(message_utf8, message_len);
-  if (title == NULL || message == NULL) {
-    free(title);
-    free(message);
-    proton_engine_set_message(error, error_len, "failed to copy dialog text");
-    return PROTON_ERR_ENGINE;
-  }
-  int result = MessageBoxW(
-      window->hwnd,
-      message,
-      proton_engine_dialog_title_or_null(title),
-      MB_OKCANCEL | proton_engine_dialog_icon_flags(level, MB_ICONQUESTION));
-  free(title);
-  free(message);
-  *out_confirmed = result == IDOK ? 1 : 0;
-  return PROTON_OK;
-}
-
-static int32_t proton_engine_copy_utf8_result(
-    const wchar_t *value,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  const wchar_t *source = value != NULL ? value : L"";
-  int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
-  if (required <= 0 || required > INT32_MAX) {
-    proton_engine_set_message(error, error_len, "dialog result is too large");
-    return PROTON_ERR_ENGINE;
-  }
-  *out_required_len = (int32_t)required;
-  if (buffer_len < (int32_t)required || buffer == NULL) {
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  if (WideCharToMultiByte(CP_UTF8, 0, source, -1, buffer, buffer_len, NULL,
-                          NULL) <= 0) {
-    proton_engine_set_message(error, error_len,
-                              "failed to encode dialog result");
-    return PROTON_ERR_ENGINE;
-  }
-  return PROTON_OK;
-}
-
-static int32_t proton_engine_window_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    int save_mode,
-    char *error,
-    size_t error_len) {
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window == NULL || window->hwnd == NULL) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  wchar_t file_buffer[4096] = L"";
-  wchar_t *title = proton_engine_dialog_text_copy(title_utf8, title_len);
-  wchar_t *initial_path = proton_engine_dialog_text_copy(path_utf8, path_len);
-  if (title == NULL || initial_path == NULL) {
-    free(title);
-    free(initial_path);
-    proton_engine_set_message(error, error_len, "failed to copy dialog text");
-    return PROTON_ERR_ENGINE;
-  }
-  const wchar_t filter[] = L"All Files\0*.*\0\0";
-  OPENFILENAMEW dialog = {0};
-
-  if (initial_path[0] != L'\0') {
-    wcsncpy(file_buffer, initial_path, 4095);
-    file_buffer[4095] = L'\0';
-  }
-
-  dialog.lStructSize = sizeof(dialog);
-  dialog.hwndOwner = window->hwnd;
-  dialog.lpstrFilter = filter;
-  dialog.lpstrFile = file_buffer;
-  dialog.nMaxFile = sizeof(file_buffer) / sizeof(file_buffer[0]);
-  dialog.lpstrTitle = proton_engine_dialog_title_or_null(title);
-  dialog.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST;
-  if (save_mode) {
-    dialog.Flags |= OFN_OVERWRITEPROMPT;
-    if (GetSaveFileNameW(&dialog)) {
-      int32_t status = proton_engine_copy_utf8_result(
-          file_buffer, buffer, buffer_len, out_required_len, error, error_len);
-      free(title);
-      free(initial_path);
-      return status;
-    }
-  } else {
-    dialog.Flags |= OFN_FILEMUSTEXIST;
-    if (GetOpenFileNameW(&dialog)) {
-      int32_t status = proton_engine_copy_utf8_result(
-          file_buffer, buffer, buffer_len, out_required_len, error, error_len);
-      free(title);
-      free(initial_path);
-      return status;
-    }
-  }
-  int32_t status = proton_engine_copy_utf8_result(
-      L"", buffer, buffer_len, out_required_len, error, error_len);
-  free(title);
-  free(initial_path);
-  return status;
-}
-
-int32_t proton_engine_window_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, 0, error, error_len);
-}
-
-int32_t proton_engine_window_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, 1, error, error_len);
-}
-
-int32_t proton_engine_window_file_dialog_begin(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
     const char *path_utf8,
     int32_t path_len,
     int32_t mode,
+    int32_t level,
     uint64_t request_id,
     char *error,
     size_t error_len) {
   (void)window;
   (void)title_utf8;
   (void)title_len;
+  (void)message_utf8;
+  (void)message_len;
   (void)path_utf8;
   (void)path_len;
   (void)mode;
+  (void)level;
   (void)request_id;
   proton_engine_set_message(error, error_len,
-                            "async file dialogs are not implemented on this "
+                            "async native dialogs are not implemented on this "
                             "platform yet");
   return PROTON_ERR_UNSUPPORTED;
 }

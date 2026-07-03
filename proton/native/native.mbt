@@ -637,152 +637,52 @@ fn dialog_text_payload_len(buffer : Bytes) -> Int {
 }
 
 ///|
-fn optional_path_from_dialog_buffer(bytes : Bytes) -> String? {
-  let value = @ffi.from_cstr(bytes)
-  if value.is_empty() {
-    None
-  } else {
-    Some(value)
-  }
-}
-
-///|
-let dialog_file_result_buffer_bytes = 65536
-
-///|
-/// Shows a blocking native message dialog.
-pub fn show_message_dialog(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Unit, NativeError] {
-  let title_buffer = optional_dialog_text_buffer(title)
-  let message_buffer = @ffi.to_cstr(message)
-  status_to_result(
-    proton_window_show_message_dialog_ffi(
-      window.handle,
-      title_buffer,
-      dialog_text_payload_len(title_buffer),
-      message_buffer,
-      dialog_text_payload_len(message_buffer),
-      dialog_level_to_int(level),
-    ),
-  )
-}
-
-///|
-/// Shows a blocking native confirmation dialog.
-pub fn show_confirm_dialog(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Bool, NativeError] {
-  let title_buffer = optional_dialog_text_buffer(title)
-  let message_buffer = @ffi.to_cstr(message)
-  let confirmed = Ref(0)
-  let status = proton_window_show_confirm_dialog_ffi(
-    window.handle,
-    title_buffer,
-    dialog_text_payload_len(title_buffer),
-    message_buffer,
-    dialog_text_payload_len(message_buffer),
-    dialog_level_to_int(level),
-    confirmed,
-  )
-  if status < 0 {
-    Err(native_error(status))
-  } else {
-    Ok(confirmed.val != 0)
-  }
-}
-
-///|
-fn file_dialog_path(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-  callback : (Int64, Bytes, Int, Bytes, Int, FixedArray[Byte], Int, Ref[Int]) -> Int,
-) -> Result[String?, NativeError] {
-  let title_buffer = optional_dialog_text_buffer(title)
-  let path_buffer = optional_dialog_text_buffer(path)
-  let required = Ref(0)
-  let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
-  let status = callback(
-    window.handle,
-    title_buffer,
-    dialog_text_payload_len(title_buffer),
-    path_buffer,
-    dialog_text_payload_len(path_buffer),
-    buffer,
-    buffer.length(),
-    required,
-  )
-  if status < 0 {
-    Err(native_error(status))
-  } else {
-    Ok(optional_path_from_dialog_buffer(Bytes::from_array(buffer)))
-  }
-}
-
-///|
-/// Shows a blocking native open-file dialog.
-pub fn open_file_dialog(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  file_dialog_path(window, title, path, proton_window_open_file_dialog_ffi)
-}
-
-///|
-/// Shows a blocking native save-file dialog.
-pub fn save_file_dialog(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  file_dialog_path(window, title, path, proton_window_save_file_dialog_ffi)
-}
-
-///|
-pub(all) enum FileDialogMode {
+pub(all) enum DialogMode {
+  Message
+  Confirm
   OpenFile
   SaveFile
   ChooseDirectory
 } derive(Debug, Eq)
 
 ///|
-fn file_dialog_mode_to_int(mode : FileDialogMode) -> Int {
+fn dialog_mode_to_int(mode : DialogMode) -> Int {
   match mode {
-    OpenFile => 0
-    SaveFile => 1
-    ChooseDirectory => 2
+    Message => 0
+    Confirm => 1
+    OpenFile => 2
+    SaveFile => 3
+    ChooseDirectory => 4
   }
 }
 
 ///|
-/// Shows a file panel without blocking the message pump. The outcome arrives
+/// Shows a native dialog without blocking the message pump. The outcome arrives
 /// later as a `dialog_completed` runtime event whose `dialog_request` matches
 /// `request_id`.
-pub fn begin_file_dialog(
+pub fn begin_dialog(
   window : WindowRef,
   title : String?,
+  message : String?,
   path : String?,
-  mode : FileDialogMode,
+  mode : DialogMode,
+  level : DialogLevel,
   request_id : UInt64,
 ) -> Result[Unit, NativeError] {
   let title_buffer = optional_dialog_text_buffer(title)
+  let message_buffer = optional_dialog_text_buffer(message)
   let path_buffer = optional_dialog_text_buffer(path)
   status_to_result(
-    proton_window_file_dialog_begin_ffi(
+    proton_window_dialog_begin_ffi(
       window.handle,
       title_buffer,
       dialog_text_payload_len(title_buffer),
+      message_buffer,
+      dialog_text_payload_len(message_buffer),
       path_buffer,
       dialog_text_payload_len(path_buffer),
-      file_dialog_mode_to_int(mode),
+      dialog_mode_to_int(mode),
+      dialog_level_to_int(level),
       request_id,
     ),
   )

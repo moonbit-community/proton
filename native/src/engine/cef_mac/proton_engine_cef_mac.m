@@ -3445,75 +3445,6 @@ static int32_t proton_engine_require_dialog_main_thread(
   return PROTON_OK;
 }
 
-static NSModalResponse proton_engine_run_alert_sheet(NSAlert *alert,
-                                                     NSWindow *parent) {
-  [alert beginSheetModalForWindow:parent
-                 completionHandler:^(NSModalResponse returnCode) {
-                   [NSApp stopModalWithCode:returnCode];
-                 }];
-  return [NSApp runModalForWindow:[alert window]];
-}
-
-int32_t proton_engine_window_show_message_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    char *error,
-    size_t error_len) {
-  int32_t status =
-      proton_engine_require_dialog_main_thread(window, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  @autoreleasepool {
-    NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-    [alert setMessageText:proton_engine_string_from_utf8(title_utf8, title_len)];
-    [alert setInformativeText:proton_engine_string_from_utf8(message_utf8, message_len)];
-    [alert setAlertStyle:proton_engine_alert_style(level)];
-    [alert addButtonWithTitle:@"OK"];
-    [NSApp activateIgnoringOtherApps:YES];
-    (void)proton_engine_run_alert_sheet(alert, window->window);
-  }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_window_show_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed,
-    char *error,
-    size_t error_len) {
-  if (out_confirmed == NULL) {
-    proton_engine_set_message(error, error_len, "out_confirmed is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  int32_t status =
-      proton_engine_require_dialog_main_thread(window, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  @autoreleasepool {
-    NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-    [alert setMessageText:proton_engine_string_from_utf8(title_utf8, title_len)];
-    [alert setInformativeText:proton_engine_string_from_utf8(message_utf8, message_len)];
-    [alert setAlertStyle:proton_engine_alert_style(level)];
-    [alert addButtonWithTitle:@"OK"];
-    [alert addButtonWithTitle:@"Cancel"];
-    [NSApp activateIgnoringOtherApps:YES];
-    NSModalResponse response =
-        proton_engine_run_alert_sheet(alert, window->window);
-    *out_confirmed = response == NSAlertFirstButtonReturn ? 1 : 0;
-  }
-  return PROTON_OK;
-}
-
 static void proton_engine_configure_file_panel(NSSavePanel *panel,
                                                NSString *initial_path,
                                                BOOL save_mode) {
@@ -3537,124 +3468,7 @@ static void proton_engine_configure_file_panel(NSSavePanel *panel,
   }
 }
 
-static NSModalResponse proton_engine_run_file_panel_sheet(NSSavePanel *panel,
-                                                          NSWindow *parent) {
-  [panel beginSheetModalForWindow:parent
-                completionHandler:^(NSModalResponse returnCode) {
-                  [NSApp stopModalWithCode:returnCode];
-                }];
-  NSWindow *sheet = [parent attachedSheet];
-  return [NSApp runModalForWindow:(sheet != nil ? sheet : parent)];
-}
-
-static int32_t proton_engine_copy_utf8_result(
-    NSString *value,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  NSData *data = [(value != nil ? value : @"")
-      dataUsingEncoding:NSUTF8StringEncoding
-   allowLossyConversion:NO];
-  if (data == nil || [data length] > (NSUInteger)(INT32_MAX - 1)) {
-    proton_engine_set_message(error, error_len, "dialog result is too large");
-    return PROTON_ERR_ENGINE;
-  }
-  int32_t required = (int32_t)[data length] + 1;
-  *out_required_len = required;
-  if (buffer == NULL || buffer_len < required) {
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  if ([data length] > 0) {
-    memcpy(buffer, [data bytes], [data length]);
-  }
-  buffer[required - 1] = 0;
-  return PROTON_OK;
-}
-
-static int32_t proton_engine_window_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    BOOL save_mode,
-    char *error,
-    size_t error_len) {
-  int32_t status =
-      proton_engine_require_dialog_main_thread(window, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  @autoreleasepool {
-    NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
-                                   : [NSOpenPanel openPanel];
-    NSString *title = proton_engine_string_from_utf8(title_utf8, title_len);
-    if ([title length] > 0) {
-      [panel setTitle:title];
-    }
-    if (!save_mode) {
-      NSOpenPanel *open_panel = (NSOpenPanel *)panel;
-      [open_panel setCanChooseFiles:YES];
-      [open_panel setCanChooseDirectories:NO];
-      [open_panel setAllowsMultipleSelection:NO];
-    }
-    proton_engine_configure_file_panel(
-        panel, proton_engine_string_from_utf8(path_utf8, path_len), save_mode);
-    [NSApp activateIgnoringOtherApps:YES];
-    NSModalResponse response =
-        proton_engine_run_file_panel_sheet(panel, window->window);
-    NSString *result = @"";
-    if (response == NSModalResponseOK && [panel URL] != nil) {
-      result = [[panel URL] path] ?: @"";
-    }
-    return proton_engine_copy_utf8_result(
-        result, buffer, buffer_len, out_required_len, error, error_len);
-  }
-}
-
-int32_t proton_engine_window_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, NO, error, error_len);
-}
-
-int32_t proton_engine_window_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, YES, error, error_len);
-}
-
-/* Async file panels: outcomes are staged in a ring the runtime drains from
+/* Async native dialogs: outcomes are staged in a ring the runtime drains from
  * poll_event, so nothing here ever nests a modal run loop. All access happens
  * on the main thread (begin is guarded, AppKit delivers completion handlers
  * there), so the ring needs no locking. */
@@ -3700,7 +3514,40 @@ static void proton_engine_push_dialog_result(uint64_t request_id,
                           (unsigned long long)request_id, slot->accepted);
 }
 
-int32_t proton_engine_window_file_dialog_begin(
+static int32_t proton_engine_window_alert_dialog_begin(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    int32_t mode,
+    int32_t level,
+    uint64_t request_id,
+    char *error,
+    size_t error_len) {
+  (void)error;
+  (void)error_len;
+  @autoreleasepool {
+    NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+    [alert setMessageText:proton_engine_string_from_utf8(title_utf8, title_len)];
+    [alert setInformativeText:proton_engine_string_from_utf8(message_utf8, message_len)];
+    [alert setAlertStyle:proton_engine_alert_style(level)];
+    [alert addButtonWithTitle:@"OK"];
+    if (mode == 1) {
+      [alert addButtonWithTitle:@"Cancel"];
+    }
+    [NSApp activateIgnoringOtherApps:YES];
+    void (^completion)(NSModalResponse) = ^(NSModalResponse response) {
+      (void)alert;
+      proton_engine_push_dialog_result(
+          request_id, response == NSAlertFirstButtonReturn ? 1 : 0, @"");
+    };
+    [alert beginSheetModalForWindow:window->window completionHandler:completion];
+  }
+  return PROTON_OK;
+}
+
+static int32_t proton_engine_window_file_dialog_begin(
     proton_engine_window_t *window,
     const char *title_utf8,
     int32_t title_len,
@@ -3710,17 +3557,9 @@ int32_t proton_engine_window_file_dialog_begin(
     uint64_t request_id,
     char *error,
     size_t error_len) {
-  int32_t status =
-      proton_engine_require_dialog_main_thread(window, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (mode < 0 || mode > 2) {
-    proton_engine_set_message(error, error_len,
-                              "unsupported file dialog mode");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  BOOL save_mode = mode == 1;
+  (void)error;
+  (void)error_len;
+  BOOL save_mode = mode == 3;
   @autoreleasepool {
     NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
                                    : [NSOpenPanel openPanel];
@@ -3732,7 +3571,7 @@ int32_t proton_engine_window_file_dialog_begin(
     }
     if (!save_mode) {
       NSOpenPanel *open_panel = (NSOpenPanel *)panel;
-      BOOL choose_directory = mode == 2;
+      BOOL choose_directory = mode == 4;
       [open_panel setCanChooseFiles:!choose_directory];
       [open_panel setCanChooseDirectories:choose_directory];
       [open_panel setCanCreateDirectories:choose_directory];
@@ -3759,6 +3598,38 @@ int32_t proton_engine_window_file_dialog_begin(
     }
   }
   return PROTON_OK;
+}
+
+int32_t proton_engine_window_dialog_begin(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int32_t mode,
+    int32_t level,
+    uint64_t request_id,
+    char *error,
+    size_t error_len) {
+  int32_t status =
+      proton_engine_require_dialog_main_thread(window, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (mode == 0 || mode == 1) {
+    return proton_engine_window_alert_dialog_begin(
+        window, title_utf8, title_len, message_utf8, message_len, mode, level,
+        request_id, error, error_len);
+  }
+  if (mode >= 2 && mode <= 4) {
+    return proton_engine_window_file_dialog_begin(
+        window, title_utf8, title_len, path_utf8, path_len, mode, request_id,
+        error, error_len);
+  }
+  proton_engine_set_message(error, error_len, "unsupported dialog mode");
+  return PROTON_ERR_INVALID_ARGUMENT;
 }
 
 int32_t proton_engine_poll_dialog_result(

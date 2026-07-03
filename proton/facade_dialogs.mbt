@@ -1,14 +1,12 @@
-// Async native file dialogs. `pick_file_dialog` shows the panel through the
-// non-blocking engine API and suspends its coroutine until the runtime pump
-// sees the matching `dialog_completed` event, so the window, bridge and CEF
-// message loop all stay live while the panel is open — unlike the synchronous
-// `@native.open_file_dialog` family, which nests a modal run loop and freezes
-// the host until the panel settles.
+// Async native dialogs. Each function starts a dialog through the non-blocking
+// engine API and suspends its coroutine until the runtime pump sees the matching
+// `dialog_completed` event, so the window, bridge and CEF message loop all stay
+// live while the dialog is open.
 
 ///|
-priv enum DialogOutcome {
-  Picked(String)
-  Cancelled
+priv struct DialogOutcome {
+  accepted : Bool
+  path : String?
 }
 
 ///|
@@ -30,34 +28,33 @@ fn settle_dialog_event(event : @native.RuntimeEvent) -> Unit {
   guard event.dialog_request() is Some(request_id) else { return }
   guard pending_dialogs.get(request_id) is Some(queue) else { return }
   pending_dialogs.remove(request_id)
-  let outcome = if event.dialog_accepted() && event.dialog_path() is Some(path) {
-    DialogOutcome::Picked(path)
-  } else {
-    DialogOutcome::Cancelled
+  let outcome = DialogOutcome::{
+    accepted: event.dialog_accepted(),
+    path: event.dialog_path(),
   }
   let delivered = queue.try_put(outcome) catch { _ => false }
   ignore(delivered)
 }
 
 ///|
-/// Shows a native file panel and waits for the user to settle it without
-/// blocking the runtime pump. Returns `Ok(None)` when the user cancels.
-pub async fn pick_file_dialog(
+async fn begin_dialog_and_wait(
   window : @native.WindowRef,
-  title? : String,
-  initial_path? : String,
-  mode? : @native.FileDialogMode = OpenFile,
-) -> Result[String?, String] {
+  title : String?,
+  message : String?,
+  path : String?,
+  mode : @native.DialogMode,
+  level : @native.DialogLevel,
+) -> Result[DialogOutcome, String] {
   let request_id = next_dialog_request_id()
   let queue : @aqueue.Queue[DialogOutcome] = @aqueue.Queue(
     kind=@aqueue.Unbounded,
   )
   pending_dialogs.set(request_id, queue)
   match
-    @native.begin_file_dialog(window, title, initial_path, mode, request_id) {
+    @native.begin_dialog(window, title, message, path, mode, level, request_id) {
     Err(error) => {
       pending_dialogs.remove(request_id)
-      return Err(native_error_message("begin file dialog", error))
+      return Err(native_error_message("begin dialog", error))
     }
     Ok(_) => ()
   }
@@ -69,8 +66,50 @@ pub async fn pick_file_dialog(
       raise error
     }
   }
-  match outcome {
-    Picked(path) => Ok(Some(path))
-    Cancelled => Ok(None)
+  Ok(outcome)
+}
+
+///|
+/// Shows a native message dialog without blocking the runtime pump.
+pub async fn show_message_dialog(
+  window : @native.WindowRef,
+  title : String?,
+  message : String,
+  level? : @native.DialogLevel = Info,
+) -> Result[Unit, String] {
+  match
+    begin_dialog_and_wait(window, title, Some(message), None, Message, level) {
+    Err(error) => Err(error)
+    Ok(_) => Ok(())
+  }
+}
+
+///|
+/// Shows a native confirmation dialog without blocking the runtime pump.
+pub async fn show_confirm_dialog(
+  window : @native.WindowRef,
+  title : String?,
+  message : String,
+  level? : @native.DialogLevel = Info,
+) -> Result[Bool, String] {
+  match
+    begin_dialog_and_wait(window, title, Some(message), None, Confirm, level) {
+    Err(error) => Err(error)
+    Ok(outcome) => Ok(outcome.accepted)
+  }
+}
+
+///|
+/// Shows a native file panel and waits for the user to settle it without
+/// blocking the runtime pump. Returns `Ok(None)` when the user cancels.
+pub async fn pick_file_dialog(
+  window : @native.WindowRef,
+  title? : String,
+  initial_path? : String,
+  mode? : @native.DialogMode = OpenFile,
+) -> Result[String?, String] {
+  match begin_dialog_and_wait(window, title, None, initial_path, mode, Info) {
+    Err(error) => Err(error)
+    Ok(outcome) => if outcome.accepted { Ok(outcome.path) } else { Ok(None) }
   }
 }

@@ -105,57 +105,19 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
                                                  const char *bridge_json,
                                                  char *error,
                                                  size_t error_len);
-int32_t proton_engine_window_show_message_dialog(
+/* Non-blocking native dialog. The outcome is delivered later through
+ * proton_engine_poll_dialog_result. mode: 0 = message, 1 = confirm,
+ * 2 = open file, 3 = save file, 4 = choose directory. */
+int32_t proton_engine_window_dialog_begin(
     proton_engine_window_t *window,
     const char *title_utf8,
     int32_t title_len,
     const char *message_utf8,
     int32_t message_len,
-    int32_t level,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_show_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
-/* Non-blocking file panel: shows the panel and returns immediately; the
- * outcome is delivered later through proton_engine_poll_dialog_result. mode:
- * 0 = open file, 1 = save file, 2 = choose directory. */
-int32_t proton_engine_window_file_dialog_begin(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
     const char *path_utf8,
     int32_t path_len,
     int32_t mode,
+    int32_t level,
     uint64_t request_id,
     char *error,
     size_t error_len);

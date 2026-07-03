@@ -3098,13 +3098,17 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_show_message_dialog(
+int32_t proton_engine_window_dialog_begin(
     proton_engine_window_t *window,
     const char *title_utf8,
     int32_t title_len,
     const char *message_utf8,
     int32_t message_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int32_t mode,
     int32_t level,
+    uint64_t request_id,
     char *error,
     size_t error_len) {
   (void)window;
@@ -3112,93 +3116,13 @@ int32_t proton_engine_window_show_message_dialog(
   (void)title_len;
   (void)message_utf8;
   (void)message_len;
-  (void)level;
-  proton_engine_set_message(
-      error, error_len,
-      "native dialog extension is not implemented on Linux");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-int32_t proton_engine_window_show_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed,
-    char *error,
-    size_t error_len) {
-  if (out_confirmed != NULL) {
-    *out_confirmed = 0;
-  }
-  return proton_engine_window_show_message_dialog(
-      window, title_utf8, title_len, message_utf8, message_len, level,
-      error, error_len);
-}
-
-int32_t proton_engine_window_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)path_utf8;
-  (void)path_len;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  proton_engine_set_message(
-      error, error_len,
-      "native dialog extension is not implemented on Linux");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-int32_t proton_engine_window_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_open_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, error, error_len);
-}
-
-int32_t proton_engine_window_file_dialog_begin(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int32_t mode,
-    uint64_t request_id,
-    char *error,
-    size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
   (void)path_utf8;
   (void)path_len;
   (void)mode;
+  (void)level;
   (void)request_id;
   proton_engine_set_message(error, error_len,
-                            "async file dialogs are not implemented on this "
+                            "async native dialogs are not implemented on this "
                             "platform yet");
   return PROTON_ERR_UNSUPPORTED;
 }

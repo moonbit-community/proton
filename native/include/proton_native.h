@@ -106,29 +106,16 @@ PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
 PROTON_API int32_t proton_window_install_bridge_json(
     proton_window_id_t window, const char *bridge_json);
-PROTON_API int32_t proton_window_show_message_dialog(
+/* Shows a native dialog without blocking. The outcome arrives later as a
+ * "dialog_completed" runtime event carrying request, accepted and optional
+ * path.
+ * mode: 0 = message, 1 = confirm, 2 = open file, 3 = save file,
+ * 4 = choose directory. level: 0 = info, 1 = warning, 2 = error. */
+PROTON_API int32_t proton_window_dialog_begin(
     proton_window_id_t window, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
-    int32_t level);
-PROTON_API int32_t proton_window_show_confirm_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *message_utf8, int32_t message_len,
-    int32_t level, int32_t *out_confirmed);
-PROTON_API int32_t proton_window_open_file_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *path_utf8, int32_t path_len,
-    char *buffer, int32_t buffer_len, int32_t *out_required_len);
-PROTON_API int32_t proton_window_save_file_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *path_utf8, int32_t path_len,
-    char *buffer, int32_t buffer_len, int32_t *out_required_len);
-/* Shows a file panel without blocking; the outcome arrives later as a
- * "dialog_completed" runtime event carrying request, accepted and path.
- * mode: 0 = open file, 1 = save file, 2 = choose directory. */
-PROTON_API int32_t proton_window_file_dialog_begin(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *path_utf8, int32_t path_len,
-    int32_t mode, uint64_t request_id);
+    const char *path_utf8, int32_t path_len, int32_t mode, int32_t level,
+    uint64_t request_id);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);

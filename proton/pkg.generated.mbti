@@ -21,13 +21,17 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 
 pub fn last_error_message() -> String
 
-pub async fn pick_file_dialog(@native.WindowRef, title? : String, initial_path? : String, mode? : @native.FileDialogMode) -> Result[String?, String]
+pub async fn pick_file_dialog(@native.WindowRef, title? : String, initial_path? : String, mode? : @native.DialogMode) -> Result[String?, String]
 
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Result[Unit, @native.NativeError]
 
 pub fn runtime_info() -> Result[@native.RuntimeInfo, @native.NativeError]
 
 pub fn runtime_info_json() -> Result[String, @native.NativeError]
+
+pub async fn show_confirm_dialog(@native.WindowRef, String?, String, level? : @native.DialogLevel) -> Result[Bool, String]
+
+pub async fn show_message_dialog(@native.WindowRef, String?, String, level? : @native.DialogLevel) -> Result[Unit, String]
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 

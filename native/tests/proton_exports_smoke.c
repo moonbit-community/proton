@@ -75,16 +75,18 @@ static const char *const expected_exports[] = {
     "proton_window_load_html",
     "proton_window_eval",
     "proton_window_install_bridge_json",
-    "proton_window_show_message_dialog",
-    "proton_window_show_confirm_dialog",
-    "proton_window_open_file_dialog",
-    "proton_window_save_file_dialog",
+    "proton_window_dialog_begin",
     "proton_last_error_message",
 };
 
 static const char *const removed_exports[] = {
     "proton_available",
     "proton_window_init_script",
+    "proton_window_show_message_dialog",
+    "proton_window_show_confirm_dialog",
+    "proton_window_open_file_dialog",
+    "proton_window_save_file_dialog",
+    "proton_window_file_dialog_begin",
 };
 
 int main(void) {

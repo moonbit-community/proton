@@ -27,15 +27,6 @@ struct FileDialogReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-fn native_error_message(error : @native.NativeError) -> String {
-  if error.message.is_empty() {
-    "dialog operation failed"
-  } else {
-    error.message
-  }
-}
-
-///|
 /// Maps the public dialog level string to the native dialog level.
 fn level_to_native(level : String?) -> @native.DialogLevel {
   match level {
@@ -46,35 +37,35 @@ fn level_to_native(level : String?) -> @native.DialogLevel {
 }
 
 ///|
-fn show_message_dialog(
+async fn show_message_dialog(
   window : @native.WindowRef,
   payload : MessagePayload,
 ) -> Result[MessageReply, String] {
   match
-    @native.show_message_dialog(
+    @proton.show_message_dialog(
       window,
       payload.title,
       payload.message,
-      level_to_native(payload.level),
+      level=level_to_native(payload.level),
     ) {
-    Err(error) => Err(native_error_message(error))
+    Err(error) => Err(error)
     Ok(_) => Ok({ acknowledged: true })
   }
 }
 
 ///|
-fn confirm_message_dialog(
+async fn confirm_message_dialog(
   window : @native.WindowRef,
   payload : MessagePayload,
 ) -> Result[ConfirmReply, String] {
   match
-    @native.show_confirm_dialog(
+    @proton.show_confirm_dialog(
       window,
       payload.title,
       payload.message,
-      level_to_native(payload.level),
+      level=level_to_native(payload.level),
     ) {
-    Err(error) => Err(native_error_message(error))
+    Err(error) => Err(error)
     Ok(confirmed) => Ok({ confirmed, })
   }
 }
@@ -83,7 +74,7 @@ fn confirm_message_dialog(
 async fn pick_file_dialog(
   window : @native.WindowRef,
   payload : FileDialogPayload,
-  mode : @native.FileDialogMode,
+  mode : @native.DialogMode,
 ) -> Result[String?, String] {
   match (payload.title, payload.path) {
     (None, None) => @proton.pick_file_dialog(window, mode~)
