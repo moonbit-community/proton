@@ -218,6 +218,19 @@ extern "C" fn proton_window_save_file_dialog_ffi(
 ) -> Int = "proton_window_save_file_dialog"
 
 ///|
+#borrow(title, path, buffer, out_required_len)
+extern "C" fn proton_window_choose_directory_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_choose_directory_dialog"
+
+///|
 #cfg(not(platform="windows"))
 #borrow(title, message, out_dialog)
 extern "C" fn proton_window_begin_message_dialog_ffi(
@@ -266,6 +279,18 @@ extern "C" fn proton_window_begin_save_file_dialog_ffi(
   path_len : Int,
   out_dialog : Ref[Int64],
 ) -> Int = "proton_window_begin_save_file_dialog"
+
+///|
+#cfg(not(platform="windows"))
+#borrow(title, path, out_dialog)
+extern "C" fn proton_window_begin_choose_directory_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_choose_directory_dialog"
 
 ///|
 #cfg(not(platform="windows"))

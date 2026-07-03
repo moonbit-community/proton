@@ -3854,6 +3854,33 @@ static int32_t proton_engine_copy_utf8_result(
   return PROTON_OK;
 }
 
+enum {
+  PROTON_ENGINE_FILE_DIALOG_OPEN = 0,
+  PROTON_ENGINE_FILE_DIALOG_SAVE = 1,
+  PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY = 2,
+};
+
+static NSSavePanel *proton_engine_make_file_panel(int32_t mode,
+                                                  NSString *title,
+                                                  NSString *path) {
+  BOOL save_mode = mode == PROTON_ENGINE_FILE_DIALOG_SAVE;
+  NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
+                                 : [NSOpenPanel openPanel];
+  if ([title length] > 0) {
+    [panel setTitle:title];
+  }
+  if (!save_mode) {
+    NSOpenPanel *open_panel = (NSOpenPanel *)panel;
+    BOOL choose_directories =
+        mode == PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY;
+    [open_panel setCanChooseFiles:!choose_directories];
+    [open_panel setCanChooseDirectories:choose_directories];
+    [open_panel setAllowsMultipleSelection:NO];
+  }
+  proton_engine_configure_file_panel(panel, path, save_mode);
+  return panel;
+}
+
 static int32_t proton_engine_window_file_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -3863,7 +3890,7 @@ static int32_t proton_engine_window_file_dialog(
     char *buffer,
     int32_t buffer_len,
     int32_t *out_required_len,
-    BOOL save_mode,
+    int32_t mode,
     char *error,
     size_t error_len) {
   int32_t status =
@@ -3872,20 +3899,9 @@ static int32_t proton_engine_window_file_dialog(
     return status;
   }
   @autoreleasepool {
-    NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
-                                   : [NSOpenPanel openPanel];
-    NSString *title = proton_engine_string_from_utf8(title_utf8, title_len);
-    if ([title length] > 0) {
-      [panel setTitle:title];
-    }
-    if (!save_mode) {
-      NSOpenPanel *open_panel = (NSOpenPanel *)panel;
-      [open_panel setCanChooseFiles:YES];
-      [open_panel setCanChooseDirectories:NO];
-      [open_panel setAllowsMultipleSelection:NO];
-    }
-    proton_engine_configure_file_panel(
-        panel, proton_engine_string_from_utf8(path_utf8, path_len), save_mode);
+    NSSavePanel *panel = proton_engine_make_file_panel(
+        mode, proton_engine_string_from_utf8(title_utf8, title_len),
+        proton_engine_string_from_utf8(path_utf8, path_len));
     [NSApp activateIgnoringOtherApps:YES];
     NSModalResponse response =
         proton_engine_run_file_panel_sheet(panel, window->window);
@@ -3911,7 +3927,7 @@ int32_t proton_engine_window_open_file_dialog(
     size_t error_len) {
   return proton_engine_window_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, NO, error, error_len);
+      out_required_len, PROTON_ENGINE_FILE_DIALOG_OPEN, error, error_len);
 }
 
 int32_t proton_engine_window_save_file_dialog(
@@ -3927,7 +3943,24 @@ int32_t proton_engine_window_save_file_dialog(
     size_t error_len) {
   return proton_engine_window_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, YES, error, error_len);
+      out_required_len, PROTON_ENGINE_FILE_DIALOG_SAVE, error, error_len);
+}
+
+int32_t proton_engine_window_choose_directory_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len,
+    char *error,
+    size_t error_len) {
+  return proton_engine_window_file_dialog(
+      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
+      out_required_len, PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, error,
+      error_len);
 }
 
 int32_t proton_engine_window_begin_message_dialog(
@@ -4034,7 +4067,7 @@ static int32_t proton_engine_window_begin_file_dialog(
     int32_t title_len,
     const char *path_utf8,
     int32_t path_len,
-    BOOL save_mode,
+    int32_t mode,
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
@@ -4048,18 +4081,7 @@ static int32_t proton_engine_window_begin_file_dialog(
   NSString *path = [proton_engine_string_from_utf8(path_utf8, path_len) retain];
   status = proton_engine_dialog_begin_on_parent(
       window, request, ^(NSWindow *parent) {
-        NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
-                                       : [NSOpenPanel openPanel];
-        if ([title length] > 0) {
-          [panel setTitle:title];
-        }
-        if (!save_mode) {
-          NSOpenPanel *open_panel = (NSOpenPanel *)panel;
-          [open_panel setCanChooseFiles:YES];
-          [open_panel setCanChooseDirectories:NO];
-          [open_panel setAllowsMultipleSelection:NO];
-        }
-        proton_engine_configure_file_panel(panel, path, save_mode);
+        NSSavePanel *panel = proton_engine_make_file_panel(mode, title, path);
         [panel beginSheetModalForWindow:parent
                       completionHandler:^(NSModalResponse returnCode) {
                         NSString *result = @"";
@@ -4095,8 +4117,8 @@ int32_t proton_engine_window_begin_open_file_dialog(
     char *error,
     size_t error_len) {
   return proton_engine_window_begin_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, NO, out_dialog,
-      error, error_len);
+      window, title_utf8, title_len, path_utf8, path_len,
+      PROTON_ENGINE_FILE_DIALOG_OPEN, out_dialog, error, error_len);
 }
 
 int32_t proton_engine_window_begin_save_file_dialog(
@@ -4109,8 +4131,23 @@ int32_t proton_engine_window_begin_save_file_dialog(
     char *error,
     size_t error_len) {
   return proton_engine_window_begin_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, YES, out_dialog,
-      error, error_len);
+      window, title_utf8, title_len, path_utf8, path_len,
+      PROTON_ENGINE_FILE_DIALOG_SAVE, out_dialog, error, error_len);
+}
+
+int32_t proton_engine_window_begin_choose_directory_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  return proton_engine_window_begin_file_dialog(
+      window, title_utf8, title_len, path_utf8, path_len,
+      PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
+      error_len);
 }
 
 int32_t proton_engine_window_poll_dialog_result(

@@ -9,6 +9,10 @@ import {
 // Values
 pub fn abi_version() -> Int
 
+pub fn choose_directory_dialog(WindowRef, String?, String?) -> Result[String?, NativeError]
+
+pub async fn choose_directory_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
+
 pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeError]
 
 pub fn last_error_message() -> String

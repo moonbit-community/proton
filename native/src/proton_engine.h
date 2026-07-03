@@ -146,6 +146,17 @@ int32_t proton_engine_window_save_file_dialog(
     int32_t *out_required_len,
     char *error,
     size_t error_len);
+int32_t proton_engine_window_choose_directory_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len,
+    char *error,
+    size_t error_len);
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -176,6 +187,15 @@ int32_t proton_engine_window_begin_open_file_dialog(
     char *error,
     size_t error_len);
 int32_t proton_engine_window_begin_save_file_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_begin_choose_directory_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
     int32_t title_len,

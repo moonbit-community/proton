@@ -728,6 +728,20 @@ pub fn save_file_dialog(
 }
 
 ///|
+pub fn choose_directory_dialog(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  file_dialog_path(
+    window,
+    title,
+    path,
+    proton_window_choose_directory_dialog_ffi,
+  )
+}
+
+///|
 #cfg(not(platform="windows"))
 fn begin_message_dialog_async(
   window : WindowRef,
@@ -954,4 +968,39 @@ pub async fn save_file_dialog_async(
   path : String?,
 ) -> Result[String?, NativeError] {
   save_file_dialog(window, title, path)
+}
+
+///|
+#cfg(not(platform="windows"))
+pub async fn choose_directory_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  match
+    begin_file_dialog_async(
+      window,
+      title,
+      path,
+      proton_window_begin_choose_directory_dialog_ffi,
+    ) {
+    Err(error) => Err(error)
+    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    })
+  }
+}
+
+///|
+#cfg(platform="windows")
+pub async fn choose_directory_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  choose_directory_dialog(window, title, path)
 }

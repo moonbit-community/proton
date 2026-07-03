@@ -2216,6 +2216,37 @@ int32_t proton_window_save_file_dialog(
   return PROTON_OK;
 }
 
+int32_t proton_window_choose_directory_dialog(
+    proton_window_id_t window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_require_dialog_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_file_dialog_args(
+      title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
+      out_required_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_choose_directory_dialog(
+      slot->engine_window, title_utf8, title_len, path_utf8, path_len,
+      buffer, buffer_len, out_required_len, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_begin_message_dialog(
     proton_window_id_t window,
     const char *title_utf8,
@@ -2343,6 +2374,41 @@ int32_t proton_window_begin_save_file_dialog(
   }
   char engine_error[512] = {0};
   status = proton_engine_window_begin_save_file_dialog(
+      slot->engine_window, title_utf8, title_len, path_utf8, path_len,
+      out_dialog, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_begin_choose_directory_dialog(
+    proton_window_id_t window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog) {
+  int32_t status = proton_validate_begin_dialog(out_dialog);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_window_slot_t *slot = NULL;
+  status = proton_require_dialog_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_utf8_arg("dialog title", title_utf8, title_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_utf8_arg("dialog path", path_utf8, path_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_begin_choose_directory_dialog(
       slot->engine_window, title_utf8, title_len, path_utf8, path_len,
       out_dialog, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
