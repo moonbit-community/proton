@@ -87,6 +87,7 @@ struct proton_engine_window {
   int browser_create_pending;
   int browser_create_scheduled;
   int window_listed;
+  int destroy_after_before_close;
   uint64_t native_id;
   int width;
   int height;
@@ -1302,11 +1303,13 @@ proton_engine_get_browser_process_handler(cef_app_t *self) {
 
 static void proton_engine_window_mark_closed(proton_engine_window_t *window);
 static void proton_engine_window_release_browser(proton_engine_window_t *window);
+static void proton_engine_window_free(proton_engine_window_t *window);
 static int32_t proton_engine_window_create_browser(proton_engine_window_t *window,
                                                    const char *initial_url,
                                                    char *error,
                                                    size_t error_len);
 static void proton_engine_drain_cef_close_work(void);
+static void proton_engine_free_deferred_closed_windows(void);
 
 static int CEF_CALLBACK proton_engine_on_before_popup(
     cef_life_span_handler_t *self,
@@ -1352,6 +1355,10 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     proton_engine_window_release_browser(window);
     if (window->window != nil && !window->appkit_closing) {
       [window->window close];
+    }
+    if (window->destroy_after_before_close) {
+      proton_engine_window_list_remove(window);
+      proton_engine_window_free(window);
     }
   }
 }
@@ -2621,6 +2628,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_bridge_pending_clear_all();
     proton_engine_drain_cef_close_work();
     proton_engine_cef_shutdown();
+    proton_engine_free_deferred_closed_windows();
     proton_engine_teardown_wait_source();
     runtime->owns_cef_runtime = 0;
   }
@@ -2713,6 +2721,18 @@ static void proton_engine_drain_cef_close_work(void) {
     if (proton_engine_get_scheduled_pump_delay_ms() != 0) {
       break;
     }
+  }
+}
+
+static void proton_engine_free_deferred_closed_windows(void) {
+  proton_engine_window_t *window = g_windows;
+  while (window != NULL) {
+    proton_engine_window_t *next = window->next;
+    if (window->destroy_after_before_close) {
+      proton_engine_window_list_remove(window);
+      proton_engine_window_free(window);
+    }
+    window = next;
   }
 }
 
@@ -3135,6 +3155,23 @@ static int32_t proton_engine_window_wait_for_browser_close(
   return PROTON_OK;
 }
 
+static void proton_engine_window_free(proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  if (window->delegate != nil) {
+    [window->delegate release];
+    window->delegate = nil;
+  }
+  free(window->client);
+  free(window->html_url);
+  free(window->html);
+  free(window->asset_root);
+  free(window->bridge_config_json);
+  free(window->initial_url);
+  free(window);
+}
+
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
                                      char *error,
                                      size_t error_len) {
@@ -3145,6 +3182,18 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   if (window->browser != NULL) {
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
+    if (window->closed && window->appkit_closing) {
+      proton_engine_window_request_browser_close(window, 1);
+      proton_engine_drain_cef_close_work();
+      if (window->browser != NULL) {
+        proton_engine_debug_log("browser_close_deferred browser=%d",
+                                window->browser_id);
+        window->destroy_after_before_close = 1;
+        window->runtime = NULL;
+        proton_engine_window_release_browser(window);
+        return PROTON_OK;
+      }
+    }
     int32_t status =
         proton_engine_window_wait_for_browser_close(window, error, error_len);
     if (status != PROTON_OK) {
@@ -3162,17 +3211,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
       [native_window close];
     }
   }
-  if (window->delegate != nil) {
-    [window->delegate release];
-    window->delegate = nil;
-  }
-  free(window->client);
-  free(window->html_url);
-  free(window->html);
-  free(window->asset_root);
-  free(window->bridge_config_json);
-  free(window->initial_url);
-  free(window);
+  proton_engine_window_free(window);
   return PROTON_OK;
 }
 
