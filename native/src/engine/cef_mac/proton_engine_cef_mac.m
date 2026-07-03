@@ -2295,7 +2295,6 @@ static int proton_engine_request_all_windows_close(void) {
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
     proton_engine_window_mark_closed(window);
-    proton_engine_window_request_browser_close(window, 1);
     if (window->browser_view != nil) {
       [window->browser_view removeFromSuperview];
     }
