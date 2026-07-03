@@ -593,3 +593,365 @@ pub fn Window::install_bridge(
     ),
   )
 }
+
+///|
+fn dialog_level_to_int(level : DialogLevel) -> Int {
+  match level {
+    Info => 0
+    Warning => 1
+    Error => 2
+  }
+}
+
+///|
+fn optional_dialog_text_buffer(value : String?) -> Bytes {
+  match value {
+    Some(value) => @ffi.to_cstr(value)
+    None => @ffi.to_cstr("")
+  }
+}
+
+///|
+fn dialog_text_payload_len(buffer : Bytes) -> Int {
+  let len = buffer.length()
+  if len >= 1 {
+    len - 1
+  } else {
+    len
+  }
+}
+
+///|
+fn optional_path_from_dialog_buffer(bytes : Bytes) -> String? {
+  let value = @ffi.from_cstr(bytes)
+  if value.is_empty() {
+    None
+  } else {
+    Some(value)
+  }
+}
+
+///|
+let dialog_file_result_buffer_bytes = 65536
+
+///|
+pub fn show_message_dialog(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Unit, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let message_buffer = @ffi.to_cstr(message)
+  status_to_result(
+    proton_window_show_message_dialog_ffi(
+      window.handle,
+      title_buffer,
+      dialog_text_payload_len(title_buffer),
+      message_buffer,
+      dialog_text_payload_len(message_buffer),
+      dialog_level_to_int(level),
+    ),
+  )
+}
+
+///|
+pub fn show_confirm_dialog(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Bool, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let message_buffer = @ffi.to_cstr(message)
+  let confirmed = Ref(0)
+  let status = proton_window_show_confirm_dialog_ffi(
+    window.handle,
+    title_buffer,
+    dialog_text_payload_len(title_buffer),
+    message_buffer,
+    dialog_text_payload_len(message_buffer),
+    dialog_level_to_int(level),
+    confirmed,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(confirmed.val != 0)
+  }
+}
+
+///|
+fn file_dialog_path(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+  callback : (Int64, Bytes, Int, Bytes, Int, FixedArray[Byte], Int, Ref[Int]) -> Int,
+) -> Result[String?, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let path_buffer = optional_dialog_text_buffer(path)
+  let required = Ref(0)
+  let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
+  let status = callback(
+    window.handle,
+    title_buffer,
+    dialog_text_payload_len(title_buffer),
+    path_buffer,
+    dialog_text_payload_len(path_buffer),
+    buffer,
+    buffer.length(),
+    required,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(optional_path_from_dialog_buffer(Bytes::from_array(buffer)))
+  }
+}
+
+///|
+pub fn open_file_dialog(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  file_dialog_path(window, title, path, proton_window_open_file_dialog_ffi)
+}
+
+///|
+pub fn save_file_dialog(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  file_dialog_path(window, title, path, proton_window_save_file_dialog_ffi)
+}
+
+///|
+#cfg(not(platform="windows"))
+fn begin_message_dialog_async(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Int64, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let message_buffer = @ffi.to_cstr(message)
+  let dialog = Ref(proton_invalid_handle)
+  let status = proton_window_begin_message_dialog_ffi(
+    window.handle,
+    title_buffer,
+    dialog_text_payload_len(title_buffer),
+    message_buffer,
+    dialog_text_payload_len(message_buffer),
+    dialog_level_to_int(level),
+    dialog,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(dialog.val)
+  }
+}
+
+///|
+#cfg(not(platform="windows"))
+fn begin_confirm_dialog_async(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Int64, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let message_buffer = @ffi.to_cstr(message)
+  let dialog = Ref(proton_invalid_handle)
+  let status = proton_window_begin_confirm_dialog_ffi(
+    window.handle,
+    title_buffer,
+    dialog_text_payload_len(title_buffer),
+    message_buffer,
+    dialog_text_payload_len(message_buffer),
+    dialog_level_to_int(level),
+    dialog,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(dialog.val)
+  }
+}
+
+///|
+#cfg(not(platform="windows"))
+fn begin_file_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+  callback : (Int64, Bytes, Int, Bytes, Int, Ref[Int64]) -> Int,
+) -> Result[Int64, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let path_buffer = optional_dialog_text_buffer(path)
+  let dialog = Ref(proton_invalid_handle)
+  let status = callback(
+    window.handle,
+    title_buffer,
+    dialog_text_payload_len(title_buffer),
+    path_buffer,
+    dialog_text_payload_len(path_buffer),
+    dialog,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(dialog.val)
+  }
+}
+
+///|
+#cfg(not(platform="windows"))
+async fn poll_dialog_result(
+  window : WindowRef,
+  dialog : Int64,
+) -> Result[String, NativeError] {
+  let required = Ref(0)
+  let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
+  while true {
+    let status = proton_window_poll_dialog_result_ffi(
+      window.handle,
+      dialog,
+      buffer,
+      buffer.length(),
+      required,
+    )
+    if status == proton_event_none {
+      @async.sleep(1)
+    } else if status < 0 {
+      return Err(native_error(status))
+    } else {
+      return Ok(@ffi.from_cstr(Bytes::from_array(buffer)))
+    }
+  }
+  Err(invalid_argument("dialog polling exited unexpectedly"))
+}
+
+///|
+#cfg(not(platform="windows"))
+pub async fn show_message_dialog_async(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Unit, NativeError] {
+  match begin_message_dialog_async(window, title, message, level) {
+    Err(error) => Err(error)
+    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(_) { () })
+  }
+}
+
+///|
+#cfg(platform="windows")
+pub async fn show_message_dialog_async(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Unit, NativeError] {
+  show_message_dialog(window, title, message, level)
+}
+
+///|
+#cfg(not(platform="windows"))
+pub async fn show_confirm_dialog_async(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Bool, NativeError] {
+  match begin_confirm_dialog_async(window, title, message, level) {
+    Err(error) => Err(error)
+    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
+      result == "1"
+    })
+  }
+}
+
+///|
+#cfg(platform="windows")
+pub async fn show_confirm_dialog_async(
+  window : WindowRef,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Bool, NativeError] {
+  show_confirm_dialog(window, title, message, level)
+}
+
+///|
+#cfg(not(platform="windows"))
+pub async fn open_file_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  match
+    begin_file_dialog_async(
+      window,
+      title,
+      path,
+      proton_window_begin_open_file_dialog_ffi,
+    ) {
+    Err(error) => Err(error)
+    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    })
+  }
+}
+
+///|
+#cfg(platform="windows")
+pub async fn open_file_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  open_file_dialog(window, title, path)
+}
+
+///|
+#cfg(not(platform="windows"))
+pub async fn save_file_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  match
+    begin_file_dialog_async(
+      window,
+      title,
+      path,
+      proton_window_begin_save_file_dialog_ffi,
+    ) {
+    Err(error) => Err(error)
+    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(result) {
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    })
+  }
+}
+
+///|
+#cfg(platform="windows")
+pub async fn save_file_dialog_async(
+  window : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[String?, NativeError] {
+  save_file_dialog(window, title, path)
+}

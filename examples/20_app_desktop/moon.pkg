@@ -2,6 +2,7 @@ import {
   "moonbitlang/async",
   "justjavac/proton_ext/clipboard",
   "justjavac/proton_ext/dialog",
+  "justjavac/proton_ext/fs",
   "justjavac/proton",
 }
 

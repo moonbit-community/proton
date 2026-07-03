@@ -38,6 +38,7 @@ pub fn AppCommandExtensionContext::new(@core.AppCommandHost, String, String, opt
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply, emits_events? : Bool) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply, emits_events? : Bool) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result_with_context(Self, String, async (@core.AppCommandRequestContext, Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::op_name(Self, String) -> String
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::options(Self) -> Json?
@@ -94,6 +95,7 @@ pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExten
 pub fn AppCommandsConfig::op_names(Self) -> Array[String]
 
 // Type aliases
+pub using @core {type AppCommandRequestContext}
 
 // Traits
 

@@ -13,6 +13,10 @@ pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeE
 
 pub fn last_error_message() -> String
 
+pub fn open_file_dialog(WindowRef, String?, String?) -> Result[String?, NativeError]
+
+pub async fn open_file_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
+
 pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
 
 pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
@@ -28,6 +32,18 @@ pub let runtime_wait_event : Int
 pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
+
+pub fn save_file_dialog(WindowRef, String?, String?) -> Result[String?, NativeError]
+
+pub async fn save_file_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
+
+pub fn show_confirm_dialog(WindowRef, String?, String, DialogLevel) -> Result[Bool, NativeError]
+
+pub async fn show_confirm_dialog_async(WindowRef, String?, String, DialogLevel) -> Result[Bool, NativeError]
+
+pub fn show_message_dialog(WindowRef, String?, String, DialogLevel) -> Result[Unit, NativeError]
+
+pub async fn show_message_dialog_async(WindowRef, String?, String, DialogLevel) -> Result[Unit, NativeError]
 
 // Errors
 
@@ -60,6 +76,12 @@ pub(all) enum BridgeResponse {
   Err(request_id~ : Int64, code~ : String, message~ : String)
 } derive(@debug.Debug)
 pub fn BridgeResponse::to_json_string(Self) -> String
+
+pub(all) enum DialogLevel {
+  Info
+  Warning
+  Error
+} derive(Eq, @debug.Debug)
 
 pub(all) struct NativeError {
   status : Int
@@ -133,6 +155,9 @@ type WindowConfig derive(Eq, @debug.Debug)
 pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String) -> Self
 pub fn WindowConfig::to_json_string(Self) -> String
 pub fn WindowConfig::unsafe_from_json(String) -> Self
+
+type WindowRef derive(Eq, @debug.Debug)
+pub fn WindowRef::unsafe_from_handle(Int64) -> Self
 
 // Type aliases
 

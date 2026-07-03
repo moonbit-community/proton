@@ -1,0 +1,18 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/core/json",
+  "justjavac/proton/command" @proton_command,
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+  targets: {
+    "app.mbt": [ "native" ],
+    "main.mbt": [ "native" ],
+  },
+)

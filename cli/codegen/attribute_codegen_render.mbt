@@ -78,11 +78,18 @@ fn render_payloads_and_wrappers(
     }
     builder.write_string("fn ")
     builder.write_string(wrapper_name(command))
-    if command.has_context {
+    if command.has_context || command.has_request_context {
       builder.write_string("(\n")
-      builder.write_string(
-        "  context : @proton_command.AppCommandExtensionContext,\n",
-      )
+      if command.has_context {
+        builder.write_string(
+          "  context : @proton_command.AppCommandExtensionContext,\n",
+        )
+      }
+      if command.has_request_context {
+        builder.write_string(
+          "  request_context : @proton_command.AppCommandRequestContext,\n",
+        )
+      }
       builder.write_string("  payload : ")
       builder.write_string(command_payload_type(command))
       builder.write_string(",\n")
@@ -153,14 +160,28 @@ fn render_extension_spec(
     builder.write_string("(")
     builder.write_string(mbt_string(command.js_name))
     builder.write_string(", ")
-    if command.has_context {
+    if command.has_context || command.has_request_context {
       if command.is_async {
         builder.write_string("async ")
       }
-      builder.write_string("fn(payload) {\n")
+      if command.has_request_context {
+        builder.write_string("fn(request_context, payload) {\n")
+      } else {
+        builder.write_string("fn(payload) {\n")
+      }
       builder.write_string("        ")
       builder.write_string(wrapper_name(command))
-      builder.write_string("(context, payload)\n")
+      builder.write_string("(")
+      let wrapper_args : Array[String] = []
+      if command.has_context {
+        wrapper_args.push("context")
+      }
+      if command.has_request_context {
+        wrapper_args.push("request_context")
+      }
+      wrapper_args.push("payload")
+      builder.write_string(wrapper_args.join(", "))
+      builder.write_string(")\n")
       builder.write_string("      }")
     } else {
       builder.write_string(wrapper_name(command))
@@ -226,14 +247,15 @@ fn codegen_warnings(parsed : ParsedProtonModule) -> Array[String] {
 
 ///|
 fn registration_method(command : ParsedProtonCommand) -> String {
+  let suffix = if command.has_request_context { "_with_context" } else { "" }
   if command.is_async && command.returns_result {
-    "op_async_result"
+    "op_async_result" + suffix
   } else if command.is_async {
-    "op_async"
+    "op_async" + suffix
   } else if command.returns_result {
-    "op_result"
+    "op_result" + suffix
   } else {
-    "op"
+    "op" + suffix
   }
 }
 
@@ -250,7 +272,9 @@ fn command_payload_type(command : ParsedProtonCommand) -> String {
 fn command_payload_params(
   command : ParsedProtonCommand,
 ) -> Array[ParsedProtonParam] {
-  command.params.filter(fn(param) { !param.is_context })
+  command.params.filter(fn(param) {
+    !param.is_context && !param.is_request_context
+  })
 }
 
 ///|
@@ -269,6 +293,8 @@ fn render_payload_arguments(command : ParsedProtonCommand) -> String {
   for param in command.params {
     if param.is_context {
       args.push("context")
+    } else if param.is_request_context {
+      args.push("request_context")
     } else {
       args.push("payload." + param.name)
     }

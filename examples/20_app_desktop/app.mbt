@@ -213,11 +213,11 @@ let resource : String =
   #|    <body>
   #|        <div class="shell">
   #|            <div class="hero">
-  #|                <h1>__MoonBit__ App Runtime + Dialog + Clipboard</h1>
+  #|                <h1>__MoonBit__ App Runtime + Dialog + Clipboard + Files</h1>
   #|                <p>
   #|                    This example uses <code>window.__MoonBit__.dialog</code> and
-  #|                    <code>window.__MoonBit__.clipboard</code> to bridge native
-  #|                    desktop UI and clipboard actions into a __MoonBit__ runtime app.
+  #|                    <code>window.__MoonBit__.clipboard</code>, then writes selected
+  #|                    save destinations through <code>ext:fs/write_file</code>.
   #|                </p>
   #|            </div>
   #|            <div class="layout">
@@ -231,7 +231,7 @@ let resource : String =
   #|                            </label>
   #|                            <label>
   #|                                Message / clipboard text
-  #|                                <textarea id="message">__MoonBit__ runtime bridge is talking to native Windows dialogs and the system clipboard.</textarea>
+  #|                                <textarea id="message">__MoonBit__ runtime bridge is talking to native dialogs, files, and the system clipboard.</textarea>
   #|                            </label>
   #|                            <label>
   #|                                Suggested file path
@@ -322,6 +322,11 @@ let resource : String =
   #|
   #|            app.events.on("dialog.activity", renderEvent);
   #|            app.events.on("clipboard.activity", renderEvent);
+  #|            app.events.on("fs.activity", renderEvent);
+  #|
+  #|            async function fsOp(name, payload) {
+  #|                return app.core.invokeOp("ext:fs/" + name, payload);
+  #|            }
   #|
   #|            document.getElementById("messageBtn").addEventListener("click", async () => {
   #|                setBusy(true);
@@ -384,8 +389,12 @@ let resource : String =
   #|                    selection.textContent = reply.path || "(cancelled)";
   #|                    if (reply.path) {
   #|                        filePathInput.value = reply.path;
+  #|                        await fsOp("write_file", {
+  #|                            path: reply.path,
+  #|                            content: messageInput.value,
+  #|                        });
   #|                    }
-  #|                    setNotice(reply.path ? "Picked a save path." : "Save file dialog cancelled.");
+  #|                    setNotice(reply.path ? "Saved the message text to the selected file." : "Save file dialog cancelled.");
   #|                } catch (error) {
   #|                    setNotice("Save file dialog failed: " + String(error), "error");
   #|                }

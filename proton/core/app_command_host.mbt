@@ -14,6 +14,26 @@ struct AppCommandHost {
 }
 
 ///|
+/// Request-scoped context for one bridged app command dispatch.
+pub struct AppCommandRequestContext {
+  window : Int64
+}
+
+///|
+pub fn AppCommandRequestContext::new(
+  window : Int64,
+) -> AppCommandRequestContext {
+  AppCommandRequestContext::{ window, }
+}
+
+///|
+pub fn AppCommandRequestContext::window(
+  self : AppCommandRequestContext,
+) -> Int64 {
+  self.window
+}
+
+///|
 /// Creates an empty app command host.
 pub fn AppCommandHost::new() -> AppCommandHost {
   AppCommandHost::{
@@ -67,6 +87,16 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result
 }
 
 ///|
+/// Registers an async app command that receives request-scoped context and can fail.
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result_with_context(
+  self : AppCommandHost,
+  name : String,
+  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
+) -> Unit {
+  self.host.op_async_result_with_context(name, callback)
+}
+
+///|
 /// Returns registered command names in registration order.
 pub fn AppCommandHost::registered_ops(self : AppCommandHost) -> Array[String] {
   self.host.registered_ops()
@@ -79,6 +109,16 @@ pub async fn AppCommandHost::dispatch_ipc(
   request : @ipc.IpcOpRequest,
 ) -> @ipc.IpcOpResponse {
   self.host.dispatch_async(request)
+}
+
+///|
+/// Dispatches one IPC request with request-scoped context.
+pub async fn AppCommandHost::dispatch_ipc_with_context(
+  self : AppCommandHost,
+  context : AppCommandRequestContext,
+  request : @ipc.IpcOpRequest,
+) -> @ipc.IpcOpResponse {
+  self.host.dispatch_async_with_context(context, request)
 }
 
 ///|
@@ -100,6 +140,29 @@ pub async fn AppCommandHost::dispatch_ipc_with_event_sender(
     }
     (None, _) => self.host.dispatch_async(request)
     (_, false) => self.host.dispatch_async(request)
+  }
+}
+
+///|
+/// Dispatches one IPC request with request-scoped context and a scoped event sender.
+pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(
+  self : AppCommandHost,
+  context : AppCommandRequestContext,
+  request : @ipc.IpcOpRequest,
+  emit : (async (@ipc.IpcExtensionEvent) -> Unit)?,
+) -> @ipc.IpcOpResponse {
+  match (emit, self.event_scoped_ops.contains(request.name)) {
+    (Some(sender), true) => {
+      self.event_scope_mutex.acquire()
+      self.scoped_event_sender = Some(sender)
+      defer {
+        self.scoped_event_sender = None
+        self.event_scope_mutex.release()
+      }
+      self.host.dispatch_async_with_context(context, request)
+    }
+    (None, _) => self.host.dispatch_async_with_context(context, request)
+    (_, false) => self.host.dispatch_async_with_context(context, request)
   }
 }
 
