@@ -80,23 +80,39 @@ fn confirm_message_dialog(
 }
 
 ///|
-fn open_file_dialog(
+async fn pick_file_dialog(
+  window : @native.WindowRef,
+  payload : FileDialogPayload,
+  mode : @native.FileDialogMode,
+) -> Result[String?, String] {
+  match (payload.title, payload.path) {
+    (None, None) => @proton.pick_file_dialog(window, mode~)
+    (Some(title), None) => @proton.pick_file_dialog(window, title~, mode~)
+    (None, Some(initial_path)) =>
+      @proton.pick_file_dialog(window, initial_path~, mode~)
+    (Some(title), Some(initial_path)) =>
+      @proton.pick_file_dialog(window, title~, initial_path~, mode~)
+  }
+}
+
+///|
+async fn open_file_dialog(
   window : @native.WindowRef,
   payload : FileDialogPayload,
 ) -> Result[FileDialogReply, String] {
-  match @native.open_file_dialog(window, payload.title, payload.path) {
-    Err(error) => Err(native_error_message(error))
+  match pick_file_dialog(window, payload, OpenFile) {
+    Err(error) => Err(error)
     Ok(path) => Ok({ path, })
   }
 }
 
 ///|
-fn save_file_dialog(
+async fn save_file_dialog(
   window : @native.WindowRef,
   payload : FileDialogPayload,
 ) -> Result[FileDialogReply, String] {
-  match @native.save_file_dialog(window, payload.title, payload.path) {
-    Err(error) => Err(native_error_message(error))
+  match pick_file_dialog(window, payload, SaveFile) {
+    Err(error) => Err(error)
     Ok(path) => Ok({ path, })
   }
 }

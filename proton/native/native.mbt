@@ -650,6 +650,7 @@ fn optional_path_from_dialog_buffer(bytes : Bytes) -> String? {
 let dialog_file_result_buffer_bytes = 65536
 
 ///|
+/// Shows a blocking native message dialog.
 pub fn show_message_dialog(
   window : WindowRef,
   title : String?,
@@ -671,6 +672,7 @@ pub fn show_message_dialog(
 }
 
 ///|
+/// Shows a blocking native confirmation dialog.
 pub fn show_confirm_dialog(
   window : WindowRef,
   title : String?,
@@ -725,6 +727,7 @@ fn file_dialog_path(
 }
 
 ///|
+/// Shows a blocking native open-file dialog.
 pub fn open_file_dialog(
   window : WindowRef,
   title : String?,
@@ -734,6 +737,7 @@ pub fn open_file_dialog(
 }
 
 ///|
+/// Shows a blocking native save-file dialog.
 pub fn save_file_dialog(
   window : WindowRef,
   title : String?,
