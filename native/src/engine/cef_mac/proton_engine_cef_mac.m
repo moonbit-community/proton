@@ -2695,18 +2695,28 @@ static void proton_engine_runtime_create_pending_browsers(
 }
 
 static void proton_engine_pump_appkit_cef_once(void) {
-  for (;;) {
-    NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                        untilDate:[NSDate distantPast]
-                                           inMode:NSDefaultRunLoopMode
-                                          dequeue:YES];
-    if (event == nil) {
-      break;
+  // The host drives this pump from its own event loop and never enters the
+  // AppKit run loop, so nothing ever drains the thread's autorelease state.
+  // Without this pool every tick's autoreleased objects (NSEvent, AppKit
+  // window-cache enumeration, CEF's ObjC work) are immortal — and with
+  // Chromium's allocator shim owning the default malloc zone they pile up
+  // inside PartitionAlloc's reservation until the address space fragments
+  // into hundreds of thousands of VM regions and an allocation finally
+  // traps. Observed as an overnight-idle SIGTRAP under autoreleaseFullPage.
+  @autoreleasepool {
+    for (;;) {
+      NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                          untilDate:[NSDate distantPast]
+                                             inMode:NSDefaultRunLoopMode
+                                            dequeue:YES];
+      if (event == nil) {
+        break;
+      }
+      [NSApp sendEvent:event];
     }
-    [NSApp sendEvent:event];
+    [NSApp updateWindows];
+    cef_do_message_loop_work();
   }
-  [NSApp updateWindows];
-  cef_do_message_loop_work();
 }
 
 static void proton_engine_drain_cef_close_work(void) {
@@ -2830,7 +2840,11 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
   if (wait_timeout > 0) {
     CFTimeInterval seconds = ((CFTimeInterval)wait_timeout) / 1000.0;
-    run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
+    // Same reasoning as the pump: run-loop sources and timers autorelease,
+    // and no outer pool exists on the host's main thread.
+    @autoreleasepool {
+      run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
+    }
   }
   CFAbsoluteTime elapsed = CFAbsoluteTimeGetCurrent() - start_time;
 
