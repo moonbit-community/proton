@@ -2704,6 +2704,7 @@ static void proton_engine_pump_appkit_cef_once(void) {
   // into hundreds of thousands of VM regions and an allocation finally
   // traps. Observed as an overnight-idle SIGTRAP under autoreleaseFullPage.
   @autoreleasepool {
+    bool sent_event = false;
     for (;;) {
       NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                           untilDate:[NSDate distantPast]
@@ -2713,8 +2714,16 @@ static void proton_engine_pump_appkit_cef_once(void) {
         break;
       }
       [NSApp sendEvent:event];
+      sent_event = true;
     }
-    [NSApp updateWindows];
+    // AppKit's own loop only updates windows after dispatching an event.
+    // This pump runs ~60x/s at idle; an unconditional updateWindows posts
+    // window-cache notifications (and their allocation churn) on every one
+    // of those empty ticks, which slowly burns PartitionAlloc address space
+    // via Chromium's allocator shim.
+    if (sent_event) {
+      [NSApp updateWindows];
+    }
     cef_do_message_loop_work();
   }
 }
