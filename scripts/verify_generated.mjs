@@ -46,6 +46,8 @@ function tempOutputPath(fileName) {
 }
 
 try {
+  run("node", [path.join(repoRoot, "scripts", "verify_release_metadata.mjs")]);
+
   const codegenExtensions = [
     "auto_launch",
     "clipboard",

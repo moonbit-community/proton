@@ -298,7 +298,7 @@ let resource : String =
   #|                                <textarea id="content">
   #|Hello from the fs extension metadata example.
   #|
-  #| The current native DLL route records extension settings but does not expose filesystem calls to pages yet.</textarea
+  #| The current native DLL route exposes filesystem calls through command extensions.</textarea
   #|                                >
   #|                            </label>
   #|                            <div class="actions">
@@ -419,7 +419,7 @@ let resource : String =
   #|            var activityLog = [];
   #|            if (!app || !app.core || !app.core.invokeOp) {
   #|                setNotice(
-  #|                    "Extension calls are not exposed by the current native DLL route yet.",
+  #|                    "The MoonBit command bridge is not available for this page.",
   #|                    "error",
   #|                );
   #|                buttons.forEach(function (button) {

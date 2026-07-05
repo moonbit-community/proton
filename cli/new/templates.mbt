@@ -1,5 +1,5 @@
 ///|
-let default_proton_version = "0.1.6"
+let default_proton_version = "0.1.10"
 
 ///|
 let default_async_version = "0.19.4"

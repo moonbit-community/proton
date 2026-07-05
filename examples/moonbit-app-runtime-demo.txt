@@ -1,4 +1,3 @@
 Hello from the Proton app runtime.
 
-This page is kept as static sample content while native extension calls are
-not exposed to pages yet.
+This page is static sample content for native extension filesystem examples.

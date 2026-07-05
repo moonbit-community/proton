@@ -12,8 +12,9 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 
 ## `verify_generated.mjs`
 
-Checks that committed generated MoonBit files match their sources. It writes
-fresh outputs to a temp directory and compares them against the repository.
+Checks that release metadata is aligned and that committed generated MoonBit
+files match their sources. It writes fresh outputs to a temp directory and
+compares them against the repository.
 
 ```sh
 node ./scripts/verify_generated.mjs
@@ -28,6 +29,15 @@ Run this before publishing `proton` or `proton_ext`, and after changing any of:
 Published library packages consume committed generated files directly; do not
 put `dev_build` or repository-relative codegen rules back into `proton` or
 `proton_ext` package metadata.
+
+## `verify_release_metadata.mjs`
+
+Checks that `proton/prebuilt/*/manifest.json` and the `proton new` template
+default version match `proton/moon.mod`.
+
+```sh
+node ./scripts/verify_release_metadata.mjs
+```
 
 ## `e2e_bridge_smoke.mjs`
 

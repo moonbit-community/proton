@@ -1,16 +1,20 @@
 # Extensions
 
-`justjavac/proton_ext` contains command extensions that plug into the active
-native DLL runtime route:
+`justjavac/proton_ext` contains Proton extension packages for the native DLL
+route. Generated app-command extensions expose host capabilities through the
+Proton bridge and keep metadata for catalog/codegen validation.
+
+The current supported route is:
 
 ```text
-MoonBit app -> justjavac/proton -> proton dynamic library -> extension bridge
+MoonBit app -> justjavac/proton -> proton dynamic library -> command bridge
 ```
 
-Apps register extensions with `.extension(...)`. Inline HTML pages call the
-generated JavaScript proxies through `window.__MoonBit__.<namespace>` and
-subscribe to events through either `window.__MoonBit__.events.on(...)` or
-`window.__MoonBit__.<namespace>.on(...)`.
+Applications register extensions with `.extension(...)`. Inline HTML entries
+can call generated proxies through `window.__MoonBit__.<namespace>` or the
+low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
+extension and example. Pages subscribe to events through either
+`window.__MoonBit__.events.on(...)` or `window.__MoonBit__.<namespace>.on(...)`.
 
 ## Packages
 
@@ -26,6 +30,13 @@ subscribe to events through either `window.__MoonBit__.events.on(...)` or
 - `auto_launch`: startup-entry helper definitions
 - `keepawake`: keep-awake helper definitions
 - `microphone`: microphone discovery/capture helper definitions
+
+## Extension Metadata
+
+Extension metadata is used by code generation, catalog checks, dependency
+planning, and generated command bridge packages. Applications should register
+extensions in top-level Proton code with `.extension(...)`; `moon.proton`
+extension settings are not the active configuration surface.
 
 ## Tray Notes
 

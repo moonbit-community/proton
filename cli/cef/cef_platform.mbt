@@ -64,58 +64,137 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn current_platform() -> ProtonPlatform {
-  if @path.sep == '\\' {
-    {
-      id: "win32-x64",
-      cef_suffix: "_windows64_minimal",
-      default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal",
-      supported: true,
+async fn current_platform() -> ProtonPlatform {
+  match platform_from_override(@env.get_env_var("PROTON_CEF_PLATFORM")) {
+    Some(platform) => platform
+    None =>
+      platform_from_host(
+        windows=@path.sep == '\\',
+        macos=is_macos_host(),
+        arch=detect_host_arch(),
+      )
+  }
+}
+
+///|
+fn platform_from_override(value : String?) -> ProtonPlatform? {
+  match value {
+    Some("win32-x64") => Some(win32_x64_platform())
+    Some("darwin-arm64") => Some(darwin_arm64_platform())
+    Some("darwin-x64") => Some(darwin_x64_platform())
+    Some("linux-x64") => Some(linux_x64_platform())
+    _ => None
+  }
+}
+
+///|
+fn platform_from_host(
+  windows~ : Bool,
+  macos~ : Bool,
+  arch~ : String?,
+) -> ProtonPlatform {
+  if windows {
+    win32_x64_platform()
+  } else if macos {
+    match normalized_host_arch(arch) {
+      Some("arm64") => darwin_arm64_platform()
+      Some("x64") => darwin_x64_platform()
+      Some(value) => unsupported_platform("darwin-" + value)
+      None => unsupported_platform("darwin-unknown")
     }
   } else {
-    match @env.get_env_var("PROTON_CEF_PLATFORM") {
-      Some("darwin-arm64") =>
-        {
-          id: "darwin-arm64",
-          cef_suffix: "_macosarm64_minimal",
-          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
-          supported: true,
-        }
-      Some("darwin-x64") =>
-        {
-          id: "darwin-x64",
-          cef_suffix: "_macosx64_minimal",
-          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosx64_minimal",
-          supported: false,
-        }
-      Some("linux-x64") =>
-        {
-          id: "linux-x64",
-          cef_suffix: "_linux64_minimal",
-          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
-          supported: true,
-        }
-      _ if is_macos_host() =>
-        {
-          id: "darwin-arm64",
-          cef_suffix: "_macosarm64_minimal",
-          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
-          supported: true,
-        }
-      _ =>
-        {
-          id: "linux-x64",
-          cef_suffix: "_linux64_minimal",
-          default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
-          supported: true,
-        }
+    match normalized_host_arch(arch) {
+      Some("arm64") => unsupported_platform("linux-arm64")
+      _ => linux_x64_platform()
     }
+  }
+}
+
+///|
+fn normalized_host_arch(value : String?) -> String? {
+  match value {
+    Some(value) =>
+      match value.trim().to_lower() {
+        "arm64" | "aarch64" => Some("arm64")
+        "x64" | "x86_64" | "amd64" => Some("x64")
+        "" => None
+        other => Some(other.to_owned())
+      }
+    None => None
+  }
+}
+
+///|
+async fn detect_host_arch() -> String? {
+  match @env.get_env_var("PROCESSOR_ARCHITEW6432") {
+    Some(value) => return Some(value)
+    None => ()
+  }
+  match @env.get_env_var("PROCESSOR_ARCHITECTURE") {
+    Some(value) => return Some(value)
+    None => ()
+  }
+  let (code, output) = @process.collect_output_merged("uname", ["-m"]) catch {
+    _ => return None
+  }
+  guard code == 0 else { return None }
+  let text = output.text() catch { _ => return None }
+  let trimmed = text.trim()
+  if trimmed == "" {
+    None
+  } else {
+    Some(trimmed.to_owned())
   }
 }
 
 ///|
 fn is_macos_host() -> Bool {
   path_exists("/System/Library/CoreServices/SystemVersion.plist")
+}
+
+///|
+fn win32_x64_platform() -> ProtonPlatform {
+  {
+    id: "win32-x64",
+    cef_suffix: "_windows64_minimal",
+    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal",
+    supported: true,
+  }
+}
+
+///|
+fn darwin_arm64_platform() -> ProtonPlatform {
+  {
+    id: "darwin-arm64",
+    cef_suffix: "_macosarm64_minimal",
+    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
+    supported: true,
+  }
+}
+
+///|
+fn darwin_x64_platform() -> ProtonPlatform {
+  {
+    id: "darwin-x64",
+    cef_suffix: "_macosx64_minimal",
+    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosx64_minimal",
+    supported: false,
+  }
+}
+
+///|
+fn linux_x64_platform() -> ProtonPlatform {
+  {
+    id: "linux-x64",
+    cef_suffix: "_linux64_minimal",
+    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
+    supported: true,
+  }
+}
+
+///|
+fn unsupported_platform(id : String) -> ProtonPlatform {
+  { id, cef_suffix: "", default_cef_name: "", supported: false }
 }
 
 ///|

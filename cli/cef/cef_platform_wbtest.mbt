@@ -1,11 +1,6 @@
 ///|
 test "darwin arm64 platform has proton and runtime artifact lists" {
-  let platform = ProtonPlatform::{
-    id: "darwin-arm64",
-    cef_suffix: "_macosarm64_minimal",
-    default_cef_name: "cef_binary_test_macosarm64_minimal",
-    supported: true,
-  }
+  let platform = darwin_arm64_platform()
   let prebuilt = proton_prebuilt_relative_files(platform)
   assert_true(prebuilt.contains("bin/cef_process"))
   assert_true(prebuilt.contains("lib/libproton.dylib"))
@@ -19,4 +14,44 @@ test "darwin arm64 platform has proton and runtime artifact lists" {
     ),
   )
   assert_true(runtime.contains("Resources/icudtl.dat"))
+}
+
+///|
+test "host platform detection keeps macOS CPU architecture" {
+  let arm64 = platform_from_host(windows=false, macos=true, arch=Some("arm64"))
+  assert_eq(arm64.id, "darwin-arm64")
+  assert_true(arm64.supported)
+  let x64 = platform_from_host(windows=false, macos=true, arch=Some("x86_64"))
+  assert_eq(x64.id, "darwin-x64")
+  assert_false(x64.supported)
+  assert_eq(x64.cef_suffix, "_macosx64_minimal")
+}
+
+///|
+test "host platform detection does not guess arm64 for unknown macOS arch" {
+  let unknown = platform_from_host(
+    windows=false,
+    macos=true,
+    arch=Some("powerpc"),
+  )
+  assert_eq(unknown.id, "darwin-powerpc")
+  assert_false(unknown.supported)
+}
+
+///|
+test "platform override accepts stable platform ids" {
+  match platform_from_override(Some("darwin-x64")) {
+    Some(platform) => {
+      assert_eq(platform.id, "darwin-x64")
+      assert_false(platform.supported)
+    }
+    None => abort("expected darwin-x64 override")
+  }
+  match platform_from_override(Some("linux-x64")) {
+    Some(platform) => {
+      assert_eq(platform.id, "linux-x64")
+      assert_true(platform.supported)
+    }
+    None => abort("expected linux-x64 override")
+  }
 }

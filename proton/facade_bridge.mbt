@@ -7,29 +7,33 @@ fn build_command_host(
   let host = @core.AppCommandHost::new()
   let destroy_hooks : Array[() -> Unit] = []
   let mut has_commands = false
-  for id, spec in command_extensions {
-    match manifest.extension_setting(id) {
-      Some(setting) =>
-        if setting.is_enabled() {
-          let context = @proton_command.AppCommandExtensionContext::new(
-            host,
-            id,
-            spec.js_namespace(),
-            options=setting.options(),
-            base_dir~,
-          )
-          match spec.register(context) {
-            Err(error) => {
-              close_command_host_runtime(host, destroy_hooks)
-              return Err(error)
-            }
-            Ok(_) => {
-              has_commands = true
-              destroy_hooks.push(fn() { spec.destroy(context) })
-            }
-          }
-        }
-      None => ()
+  let ordered_ids = match
+    enabled_command_extension_order(manifest, command_extensions) {
+    Err(error) => {
+      close_command_host_runtime(host, destroy_hooks)
+      return Err(error)
+    }
+    Ok(ids) => ids
+  }
+  for id in ordered_ids {
+    let spec = command_extensions[id]
+    let setting = manifest.extension_setting(id).unwrap()
+    let context = @proton_command.AppCommandExtensionContext::new(
+      host,
+      id,
+      spec.js_namespace(),
+      options=setting.options(),
+      base_dir~,
+    )
+    match spec.register(context) {
+      Err(error) => {
+        close_command_host_runtime(host, destroy_hooks)
+        return Err(error)
+      }
+      Ok(_) => {
+        has_commands = true
+        destroy_hooks.push(fn() { spec.destroy(context) })
+      }
     }
   }
   if has_commands {
@@ -54,47 +58,156 @@ fn close_command_host_runtime(
 }
 
 ///|
+fn enabled_command_extension_order(
+  manifest : @manifest.AppManifest,
+  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+) -> Result[Array[String], String] {
+  let visit_state : Map[String, Int] = {}
+  let ordered : Array[String] = []
+  for id, _spec in command_extensions {
+    match manifest.extension_setting(id) {
+      Some(setting) if setting.is_enabled() =>
+        match
+          visit_enabled_command_extension(
+            id,
+            None,
+            manifest,
+            command_extensions,
+            visit_state,
+            ordered,
+          ) {
+          Err(error) => return Err(error)
+          Ok(_) => ()
+        }
+      None => ()
+      _ => ()
+    }
+  }
+  Ok(ordered)
+}
+
+///|
+fn visit_enabled_command_extension(
+  id : String,
+  requested_by : String?,
+  manifest : @manifest.AppManifest,
+  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  visit_state : Map[String, Int],
+  ordered : Array[String],
+) -> Result[Unit, String] {
+  match visit_state.get(id) {
+    Some(2) => return Ok(())
+    Some(1) =>
+      return Err("command extension dependency cycle detected at: " + id)
+    _ => ()
+  }
+  let spec = match
+    require_enabled_command_extension(
+      id, requested_by, manifest, command_extensions,
+    ) {
+    Err(error) => return Err(error)
+    Ok(spec) => spec
+  }
+  visit_state[id] = 1
+  for dependency in spec.dependencies() {
+    match
+      visit_enabled_command_extension(
+        dependency,
+        Some(id),
+        manifest,
+        command_extensions,
+        visit_state,
+        ordered,
+      ) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+  }
+  visit_state[id] = 2
+  ordered.push(id)
+  Ok(())
+}
+
+///|
+fn require_enabled_command_extension(
+  id : String,
+  requested_by : String?,
+  manifest : @manifest.AppManifest,
+  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+) -> Result[@proton_command.AppCommandExtensionSpec, String] {
+  match manifest.extension_setting(id) {
+    Some(setting) if setting.is_enabled() => ()
+    Some(_) =>
+      return Err(
+        command_extension_dependency_error(id, requested_by, "disabled"),
+      )
+    None =>
+      return Err(
+        command_extension_dependency_error(id, requested_by, "missing"),
+      )
+  }
+  match command_extensions.get(id) {
+    Some(spec) => Ok(spec)
+    None =>
+      Err(command_extension_dependency_error(id, requested_by, "unregistered"))
+  }
+}
+
+///|
+fn command_extension_dependency_error(
+  id : String,
+  requested_by : String?,
+  state : String,
+) -> String {
+  match requested_by {
+    Some(parent) =>
+      "command extension " + parent + " requires " + state + " dependency " + id
+    None => "enabled command extension is " + state + ": " + id
+  }
+}
+
+///|
 fn build_command_proxy_script(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> Result[String?, String] {
   let specs : Array[Json] = []
   let scripts : Array[String] = []
-  for id, spec in command_extensions {
-    match manifest.extension_setting(id) {
-      Some(setting) =>
-        if setting.is_enabled() {
-          let js_namespace = spec.js_namespace()
-          if command_proxy_name_is_invalid(js_namespace) {
-            return Err(
-              "command extension namespace cannot be exposed to JavaScript: " +
-              js_namespace,
-            )
-          }
-          let apis : Array[Json] = []
-          for api in spec.apis() {
-            let api_name = api.api_name()
-            if command_proxy_name_is_invalid(api_name) {
-              return Err(
-                "command extension API cannot be exposed to JavaScript: " +
-                js_namespace +
-                "." +
-                api_name,
-              )
-            }
-            apis.push(Json::string(api_name))
-          }
-          specs.push(
-            Json::object({
-              "namespace": Json::string(js_namespace),
-              "apis": Json::array(apis),
-            }),
-          )
-          for script in spec.scripts() {
-            scripts.push(script)
-          }
-        }
-      None => ()
+  let ordered_ids = match
+    enabled_command_extension_order(manifest, command_extensions) {
+    Err(error) => return Err(error)
+    Ok(ids) => ids
+  }
+  for id in ordered_ids {
+    let spec = command_extensions[id]
+    let js_namespace = spec.js_namespace()
+    if command_proxy_name_is_invalid(js_namespace) {
+      return Err(
+        "command extension namespace cannot be exposed to JavaScript: " +
+        js_namespace,
+      )
+    }
+    let apis : Array[Json] = []
+    for api in spec.apis() {
+      let api_name = api.api_name()
+      if command_proxy_name_is_invalid(api_name) {
+        return Err(
+          "command extension API cannot be exposed to JavaScript: " +
+          js_namespace +
+          "." +
+          api_name,
+        )
+      }
+      apis.push(Json::string(api_name))
+    }
+    specs.push(
+      Json::object({
+        "namespace": Json::string(js_namespace),
+        "apis": Json::array(apis),
+      }),
+    )
+    for script in spec.scripts() {
+      scripts.push(script)
     }
   }
   if specs.length() == 0 {
