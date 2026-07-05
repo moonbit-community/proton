@@ -11,6 +11,14 @@ import {
 // Values
 pub async fn emit_tray_activity(@command.AppCommandExtensionContext, TrayActivity) -> Unit
 
+pub async fn emit_tray_click_event(@command.AppCommandExtensionContext, TrayClickEvent) -> Unit
+
+pub async fn emit_tray_double_click_event(@command.AppCommandExtensionContext, TrayDoubleClickEvent) -> Unit
+
+pub async fn emit_tray_menu_item_click_event(@command.AppCommandExtensionContext, TrayMenuItemClickEvent) -> Unit
+
+pub async fn emit_tray_right_click_event(@command.AppCommandExtensionContext, TrayRightClickEvent) -> Unit
+
 pub fn extension() -> @extension.Extension
 
 // Errors
@@ -18,19 +26,41 @@ pub fn extension() -> @extension.Extension
 // Types and methods
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+type ProtonDestroyPayload derive(@json.FromJson)
+
+type ProtonDrainEventsPayload derive(@json.FromJson)
+
 type ProtonHidePayload derive(@json.FromJson)
+
+type ProtonSetIconPayload derive(@json.FromJson)
+
+type ProtonSetMenuPayload derive(@json.FromJson)
 
 type ProtonSetTooltipPayload derive(@json.FromJson)
 
 type ProtonShowPayload derive(@json.FromJson)
 
+type ProtonSupportPayload derive(@json.FromJson)
+
 type TrayActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TrayClickEvent derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TrayDoubleClickEvent derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TrayEventReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TrayMenuItemClickEvent derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TrayMenuItemPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type TrayMenuPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type TrayReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type TrayShowPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type TrayRightClickEvent derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
-type TrayTooltipPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+type TraySupportReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

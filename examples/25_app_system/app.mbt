@@ -43,10 +43,7 @@ let resource : String =
   #|        min-height: 100vh;
   #|        font-family: "Segoe UI", system-ui, sans-serif;
   #|        color: var(--ink);
-  #|        background:
-  #|          radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 28%),
-  #|          radial-gradient(circle at bottom left, rgba(154, 52, 18, 0.12), transparent 32%),
-  #|          var(--bg);
+  #|        background: var(--bg);
   #|      }
   #|
   #|      main {
@@ -59,7 +56,7 @@ let resource : String =
   #|        margin: 0 0 10px;
   #|        font-size: clamp(2.4rem, 4vw, 4.1rem);
   #|        line-height: 0.95;
-  #|        letter-spacing: -0.04em;
+  #|        letter-spacing: 0;
   #|      }
   #|
   #|      .lead {
@@ -91,7 +88,7 @@ let resource : String =
   #|        margin: 0 0 14px;
   #|        font-size: 1.05rem;
   #|        text-transform: uppercase;
-  #|        letter-spacing: 0.12em;
+  #|        letter-spacing: 0;
   #|        color: var(--accent);
   #|      }
   #|
@@ -176,10 +173,7 @@ let resource : String =
   #|    <main>
   #|      <h1>System extensions under one runtime.</h1>
   #|      <p class="lead">
-  #|        This example exercises <code>notification</code>, <code>tray</code>,
-  #|        and <code>globalHotkey</code> through <code>window.__MoonBit__</code>.
-  #|        On Windows, try registering <code>Ctrl+Shift+K</code>, then press it
-  #|        while the app is focused elsewhere.
+  #|        Notification, tray, and global hotkey events share the same runtime log.
   #|      </p>
   #|      <section class="layout">
   #|        <div class="stack">
@@ -211,8 +205,10 @@ let resource : String =
   #|              <input id="tray-tooltip" value="__MoonBit__ system runtime is active" />
   #|            </label>
   #|            <div class="actions">
+  #|              <button class="secondary" id="check-tray-support">Check Support</button>
   #|              <button id="show-tray">Show Tray</button>
   #|              <button class="secondary" id="set-tray-tooltip">Update Tooltip</button>
+  #|              <button class="secondary" id="install-tray-menu">Install Menu</button>
   #|              <button class="secondary" id="hide-tray">Hide Tray</button>
   #|            </div>
   #|          </article>
@@ -252,15 +248,17 @@ let resource : String =
   #|        const notificationBody = document.getElementById("notification-body");
   #|        const trayTooltip = document.getElementById("tray-tooltip");
   #|        const shortcutAccelerator = document.getElementById("shortcut-accelerator");
+  #|        let trayMenuChecked = false;
   #|
   #|        const appendLog = (label, payload) => {
   #|          const item = document.createElement("li");
-  #|          item.innerHTML =
-  #|            "<strong>" +
-  #|            label +
-  #|            "</strong><br><code>" +
-  #|            JSON.stringify(payload) +
-  #|            "</code>";
+  #|          const title = document.createElement("strong");
+  #|          title.textContent = label;
+  #|          const details = document.createElement("code");
+  #|          details.textContent = JSON.stringify(payload);
+  #|          item.appendChild(title);
+  #|          item.appendChild(document.createElement("br"));
+  #|          item.appendChild(details);
   #|          eventLog.prepend(item);
   #|          statusLine.textContent = label;
   #|        };
@@ -276,11 +274,58 @@ let resource : String =
   #|          });
   #|        };
   #|
+  #|        const trayMenuItems = () => [
+  #|          { id: "notify", label: "Show Notification", kind: "normal", enabled: true },
+  #|          { id: "log-state", label: "Log Runtime State", kind: "normal", enabled: true },
+  #|          { kind: "separator" },
+  #|          { id: "checked-state", label: "Checked State", kind: "checkbox", checked: trayMenuChecked, enabled: true },
+  #|          { id: "hide-tray", label: "Hide Tray", kind: "normal", enabled: true },
+  #|        ];
+  #|
+  #|        const installTrayMenu = () =>
+  #|          app.tray.setMenu({
+  #|            items: trayMenuItems(),
+  #|          });
+  #|
   #|        app.events.on("notification.activity", (event) => {
   #|          appendLog("notification.activity", event);
   #|        });
   #|        app.events.on("tray.activity", (event) => {
   #|          appendLog("tray.activity", event);
+  #|        });
+  #|        ["click", "rightClick", "doubleClick"].forEach((eventName) => {
+  #|          app.tray.on(eventName, (event) => {
+  #|            appendLog("tray." + eventName, event.payload);
+  #|          });
+  #|        });
+  #|        app.tray.on("menuItemClick", async (event) => {
+  #|          appendLog("tray.menuItemClick", event.payload);
+  #|          const itemId = event.payload && event.payload.item_id;
+  #|          try {
+  #|            if (itemId === "notify") {
+  #|              const payload = await app.notification.show({
+  #|                title: notificationTitle.value.trim(),
+  #|                body: "Tray menu item selected.",
+  #|                level: "info",
+  #|              });
+  #|              appendLog("tray.menu.notify", payload);
+  #|            } else if (itemId === "log-state") {
+  #|              appendLog("tray.menu.log-state", {
+  #|                tooltip: trayTooltip.value.trim(),
+  #|                accelerator: shortcutAccelerator.value.trim(),
+  #|                checked: trayMenuChecked,
+  #|              });
+  #|            } else if (itemId === "checked-state") {
+  #|              trayMenuChecked = !trayMenuChecked;
+  #|              const payload = await installTrayMenu();
+  #|              appendLog("tray.menu.checked-state", payload);
+  #|            } else if (itemId === "hide-tray") {
+  #|              const payload = await app.tray.hide({});
+  #|              appendLog("tray.menu.hide-tray", payload);
+  #|            }
+  #|          } catch (error) {
+  #|            appendLog("tray.menu.failed", { message: String(error) });
+  #|          }
   #|        });
   #|        app.events.on("globalHotkey.activity", (event) => {
   #|          appendLog("globalHotkey.activity", event);
@@ -297,9 +342,12 @@ let resource : String =
   #|          }),
   #|        );
   #|
+  #|        bindAction("check-tray-support", () => app.tray.support({}));
+  #|
   #|        bindAction("show-tray", () =>
   #|          app.tray.show({
   #|            tooltip: trayTooltip.value.trim(),
+  #|            menu: { items: trayMenuItems() },
   #|          }),
   #|        );
   #|
@@ -308,6 +356,8 @@ let resource : String =
   #|            tooltip: trayTooltip.value.trim(),
   #|          }),
   #|        );
+  #|
+  #|        bindAction("install-tray-menu", installTrayMenu);
   #|
   #|        bindAction("hide-tray", () => app.tray.hide({}));
   #|

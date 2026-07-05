@@ -1,17 +1,16 @@
 # Extensions
 
-`justjavac/proton_ext` currently contains metadata and implementation pieces for
-future Proton extension tooling.
-
-These packages are not part of the active native DLL runtime route yet. The
-current supported route is:
+`justjavac/proton_ext` contains command extensions that plug into the active
+native DLL runtime route:
 
 ```text
-MoonBit app -> justjavac/proton -> proton dynamic library
+MoonBit app -> justjavac/proton -> proton dynamic library -> extension bridge
 ```
 
-Do not treat these packages as a runnable app API until the native DLL route has
-an implemented bridge/event layer that exposes extension calls.
+Apps register extensions with `.extension(...)`. Inline HTML pages call the
+generated JavaScript proxies through `window.__MoonBit__.<namespace>` and
+subscribe to events through either `window.__MoonBit__.events.on(...)` or
+`window.__MoonBit__.<namespace>.on(...)`.
 
 ## Packages
 
@@ -21,15 +20,27 @@ an implemented bridge/event layer that exposes extension calls.
 - `clipboard`: clipboard helper definitions
 - `shell`: open/reveal host path helper definitions
 - `notification`: native notification helper definitions
-- `tray`: tray icon helper definitions
+- `tray`: native tray icon lifecycle, tooltip/icon updates, flat context menus,
+  and tray/menu events
 - `global_hotkey`: global hotkey helper definitions
 - `auto_launch`: startup-entry helper definitions
 - `keepawake`: keep-awake helper definitions
 - `microphone`: microphone discovery/capture helper definitions
 
-## Current Rule
+## Tray Notes
 
-Extension metadata may be useful to code generation, catalog checks, and future
-bridge work. Applications may keep `.extension(...)` calls in top-level Proton
-code, but pages cannot call those extensions until the native bridge/event layer
-exists.
+The tray extension is backed by `justjavac/tray`, which owns the platform tray
+native-stub. Proton native C stays limited to the CEF-backed runtime, windows,
+and bridge ABI. The v1 API exposes `support`, `show`, `hide`, `setIcon`,
+`setTooltip`, `setMenu`, and `destroy`.
+
+Tray menus are flat. Supported item kinds are `normal`, `separator`, and
+`checkbox`; nested submenus remain outside the Proton v1 surface. Native tray
+events are pumped by the extension and forwarded as extension events named
+`click`, `rightClick`, `doubleClick`, and `menuItemClick`.
+
+Windows is the baseline for tray-icon click, right-click, and double-click
+events. Menu item clicks are the portable event path across Windows, Linux, and
+macOS when the desktop backend supports menu activation. Linux support depends
+on GTK 3 plus AppIndicator or Ayatana AppIndicator being available in the
+desktop session.

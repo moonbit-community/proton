@@ -46,6 +46,10 @@ moon -C examples run 01_run --target native
 - `19_*` through `35_*`: extension and app-capability examples for filesystem,
   path, shell, desktop integration, notification, tray, hotkey, auto-launch,
   keepawake, and microphone behavior.
+- `25_app_system`: combined notification, tray, and global-hotkey runtime with
+  tray support reporting and menu items that trigger visible app actions.
+- `28_app_tray`: focused tray support reporting, lifecycle, tooltip/icon update,
+  flat menu, menu-item events, and platform-specific tray-icon click events.
 - `37_native_mvp`: direct native-window MVP smoke for the native DLL route.
 - `38_*` and `39_*`: inline HTML command-extension proxy examples backed by the
   native DLL bridge.
@@ -63,3 +67,10 @@ moon -C examples run 01_run --target native
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
 metadata.
+
+Tray v1 is implemented by the `tray` extension through `justjavac/tray`; Proton
+native C does not expose a tray ABI. Windows is the baseline for tray-icon
+click/right-click/double-click events. Menu item clicks are the portable event
+path across Windows, Linux, and macOS when the desktop backend supports menu
+activation. Linux needs GTK 3 plus AppIndicator or Ayatana AppIndicator in the
+desktop session.
