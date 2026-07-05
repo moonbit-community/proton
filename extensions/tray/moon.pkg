@@ -10,5 +10,9 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
-  targets: { "extension.g.mbt": [ "native" ], "extension.mbt": [ "native" ] },
+  targets: {
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
 )
