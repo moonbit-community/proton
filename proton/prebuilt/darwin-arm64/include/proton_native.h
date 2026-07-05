@@ -150,6 +150,11 @@ PROTON_API int32_t proton_window_poll_dialog_result(
     proton_window_id_t window, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);
 
+PROTON_API int32_t proton_app_post_notification(
+    const char *title_utf8, int32_t title_len,
+    const char *body_utf8, int32_t body_len,
+    const char *payload_utf8, int32_t payload_len);
+
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);
 
