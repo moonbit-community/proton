@@ -79,6 +79,7 @@ static const char *const expected_exports[] = {
     "proton_window_show_confirm_dialog",
     "proton_window_open_file_dialog",
     "proton_window_save_file_dialog",
+    "proton_app_post_notification",
     "proton_last_error_message",
 };
 

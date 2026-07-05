@@ -136,6 +136,7 @@ if(PROTON_WITH_ENGINE)
       "-framework Cocoa"
       "-framework AppKit"
       "-framework Foundation"
+      "-framework UserNotifications"
       "-lc++"
     )
     set_target_properties(proton PROPERTIES LINKER_LANGUAGE CXX)

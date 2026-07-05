@@ -28,6 +28,7 @@ pub(all) struct RuntimeWaitReady {
 struct RuntimeEvent {
   event_type : String
   has_window : Bool
+  payload : String?
 } derive(Debug, Eq)
 
 ///|
@@ -78,6 +79,17 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+/// The payload of a clicked system notification (the string given to
+/// `post_notification`), or `None` for every other event kind.
+pub fn RuntimeEvent::notification_click_payload(self : RuntimeEvent) -> String? {
+  if self.event_type == "notification_clicked" {
+    self.payload
+  } else {
+    None
+  }
 }
 
 ///|

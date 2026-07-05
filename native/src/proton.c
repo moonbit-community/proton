@@ -1048,6 +1048,90 @@ static bool proton_runtime_enqueue_window_event(proton_runtime_slot_t *runtime,
   return proton_runtime_enqueue_event(runtime, event_json);
 }
 
+// Escape `value` as JSON string contents into `out` (without the quotes).
+// Returns false when the escaped text would not fit.
+static bool proton_json_escape_into(const char *value,
+                                    char *out,
+                                    size_t out_len) {
+  size_t written = 0;
+  for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
+    char escaped[8];
+    size_t escaped_len;
+    switch (*p) {
+    case '"':
+      memcpy(escaped, "\\\"", 2);
+      escaped_len = 2;
+      break;
+    case '\\':
+      memcpy(escaped, "\\\\", 2);
+      escaped_len = 2;
+      break;
+    case '\n':
+      memcpy(escaped, "\\n", 2);
+      escaped_len = 2;
+      break;
+    case '\r':
+      memcpy(escaped, "\\r", 2);
+      escaped_len = 2;
+      break;
+    case '\t':
+      memcpy(escaped, "\\t", 2);
+      escaped_len = 2;
+      break;
+    default:
+      if (*p < 0x20) {
+        escaped_len = (size_t)snprintf(escaped, sizeof(escaped), "\\u%04x",
+                                       (unsigned)*p);
+      } else {
+        escaped[0] = (char)*p;
+        escaped_len = 1;
+      }
+      break;
+    }
+    if (written + escaped_len >= out_len) {
+      return false;
+    }
+    memcpy(out + written, escaped, escaped_len);
+    written += escaped_len;
+  }
+  if (written >= out_len) {
+    return false;
+  }
+  out[written] = '\0';
+  return true;
+}
+
+// Drain clicked-notification payloads out of the engine into this runtime's
+// event queue as `notification_clicked` events. Notifications are app-level,
+// so whichever runtime polls first carries them — in practice apps run one.
+static void proton_runtime_sync_notification_clicks(
+    proton_runtime_slot_t *runtime) {
+  for (;;) {
+    char payload[PROTON_MAX_EVENT_BYTES];
+    int32_t present = 0;
+    if (proton_engine_take_notification_click(payload, sizeof(payload),
+                                              &present) != PROTON_OK ||
+        present == 0) {
+      return;
+    }
+    char escaped[PROTON_MAX_EVENT_BYTES];
+    if (!proton_json_escape_into(payload, escaped, sizeof(escaped))) {
+      continue;
+    }
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int written =
+        snprintf(event_json, sizeof(event_json),
+                 "{\"type\":\"notification_clicked\",\"payload\":\"%s\"}",
+                 escaped);
+    if (written < 0 || written >= (int)sizeof(event_json)) {
+      continue;
+    }
+    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      return;
+    }
+  }
+}
+
 static int32_t proton_get_runtime(proton_runtime_id_t handle,
                                   proton_runtime_slot_t **out_slot) {
   uint64_t raw = (uint64_t)handle;
@@ -1529,6 +1613,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
   if (status != PROTON_OK) {
     return status;
   }
+  proton_runtime_sync_notification_clicks(slot);
   if (slot->event_count == 0) {
     *out_required_len = 0;
     g_last_error[0] = '\0';
@@ -2147,6 +2232,39 @@ int32_t proton_window_show_confirm_dialog(
   status = proton_engine_window_show_confirm_dialog(
       slot->engine_window, title_utf8, title_len, message_utf8,
       message_len, level, out_confirmed, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_app_post_notification(
+    const char *title_utf8,
+    int32_t title_len,
+    const char *body_utf8,
+    int32_t body_len,
+    const char *payload_utf8,
+    int32_t payload_len) {
+  int32_t status = proton_validate_utf8_arg(
+      "notification title", title_utf8, title_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_utf8_arg(
+      "notification body", body_utf8, body_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_utf8_arg(
+      "notification payload", payload_utf8, payload_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_post_notification(
+      title_utf8, title_len, body_utf8, body_len, payload_utf8, payload_len,
+      engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

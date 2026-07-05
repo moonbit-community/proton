@@ -233,6 +233,9 @@ async fn run_bridge_pump(
             if event.is_window_closed() {
               closed = true
             }
+            if event.notification_click_payload() is Some(payload) {
+              forward_notification_click(window, payload)
+            }
           }
         }
       }

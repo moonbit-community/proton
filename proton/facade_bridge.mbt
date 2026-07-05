@@ -336,6 +336,22 @@ fn install_extension_event_sender(
 }
 
 ///|
+/// Hands a clicked notification's payload to the page as the reserved
+/// `proton.notification_clicked` extension event, so the app's frontend can
+/// react (e.g. jump to the conversation the notification announced).
+fn forward_notification_click(
+  window : @native.Window,
+  payload : String,
+) -> Unit {
+  let event = @ipc.IpcExtensionEvent::new(
+    "proton",
+    "notification_clicked",
+    Json::object({ "payload": Json::string(payload) }),
+  )
+  ignore(window.eval(extension_event_dispatch_script(event, None)))
+}
+
+///|
 fn extension_event_sender(
   window : @native.Window,
   page_instance : String?,

@@ -148,7 +148,12 @@ fn decode_runtime_event_json(
       event_type,
     ) {
       let has_window = object.get("window") is Some(_)
-      Ok(RuntimeEvent::{ event_type, has_window })
+      let payload = if object.get("payload") is Some(String(value)) {
+        Some(value)
+      } else {
+        None
+      }
+      Ok(RuntimeEvent::{ event_type, has_window, payload })
     })
   })
 }
@@ -679,6 +684,36 @@ pub fn show_confirm_dialog(
   } else {
     Ok(confirmed.val != 0)
   }
+}
+
+///|
+/// Posts a system notification (macOS notification center). App-level: no
+/// window handle needed. The first call asks the user for permission; a
+/// denied permission drops notifications silently. Unsupported off macOS and
+/// outside an app bundle.
+///
+/// `payload` is an opaque string carried on the notification: when the user
+/// clicks it, the runtime emits a `notification_clicked` event holding this
+/// string (see `RuntimeEvent::notification_click_payload`), and the app's
+/// windows are brought forward.
+pub fn post_notification(
+  title : String?,
+  body : String,
+  payload? : String,
+) -> Result[Unit, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let body_buffer = @ffi.to_cstr(body)
+  let payload_buffer = optional_dialog_text_buffer(payload)
+  status_to_result(
+    proton_app_post_notification_ffi(
+      title_buffer,
+      dialog_text_payload_len(title_buffer),
+      body_buffer,
+      dialog_text_payload_len(body_buffer),
+      payload_buffer,
+      dialog_text_payload_len(payload_buffer),
+    ),
+  )
 }
 
 ///|

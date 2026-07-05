@@ -304,6 +304,17 @@ extern "C" fn proton_window_poll_dialog_result_ffi(
 ) -> Int = "proton_window_poll_dialog_result"
 
 ///|
+#borrow(title, body, payload)
+extern "C" fn proton_app_post_notification_ffi(
+  title : Bytes,
+  title_len : Int,
+  body : Bytes,
+  body_len : Int,
+  payload : Bytes,
+  payload_len : Int,
+) -> Int = "proton_app_post_notification"
+
+///|
 #borrow(buffer)
 extern "C" fn proton_last_error_message_ffi(
   buffer : FixedArray[Byte],

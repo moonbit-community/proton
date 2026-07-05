@@ -21,6 +21,8 @@ pub fn open_file_dialog(WindowRef, String?, String?) -> Result[String?, NativeEr
 
 pub async fn open_file_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
 
+pub fn post_notification(String?, String, payload? : String) -> Result[Unit, NativeError]
+
 pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
 
 pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
@@ -122,6 +124,7 @@ pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
+pub fn RuntimeEvent::notification_click_payload(Self) -> String?
 
 pub(all) struct RuntimeInfo {
   abi_version : Int
