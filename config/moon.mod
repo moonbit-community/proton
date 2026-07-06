@@ -5,6 +5,7 @@ version = "0.1.4"
 import {
   "moonbitlang/lexer@0.3.4",
   "moonbitlang/parser@0.3.2",
+  "moonbitlang/x@0.4.43",
 }
 
 repository = "https://github.com/moonbit-community/proton"

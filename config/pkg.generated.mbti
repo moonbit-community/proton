@@ -7,6 +7,10 @@ import {
 }
 
 // Values
+pub fn load_project_config_from_file(String) -> Result[ProjectConfig, String]
+
+pub fn load_project_config_from_text(String, String, name? : String) -> Result[ProjectConfig, String]
+
 pub fn parse_moon_ext(name? : String, String) -> (Ast, Array[@basic.Report])
 
 pub fn parse_moon_mod(name? : String, String) -> (Ast, Array[@basic.Report])
@@ -29,6 +33,80 @@ pub(all) struct ConfigField {
   key : String
   key_loc : @basic.Location
   value : Ast
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ProjectBundleConfig {
+  active : Bool
+  targets : Array[String]
+  icon : Array[String]
+  resources : Array[String]
+  output : String
+} derive(Eq, @debug.Debug)
+pub fn ProjectBundleConfig::active(Self) -> Bool
+pub fn ProjectBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], output? : String) -> Self
+pub fn ProjectBundleConfig::output(Self) -> String
+
+pub(all) struct ProjectConfig {
+  base_dir : String
+  window : ProjectWindowConfig
+  entry : ProjectEntry
+  metadata : ProjectMetadata
+  frontend : ProjectFrontendConfig?
+  bundle : ProjectBundleConfig?
+  debug : Int
+} derive(Eq, @debug.Debug)
+pub fn ProjectConfig::base_dir(Self) -> String
+pub fn ProjectConfig::bundle(Self) -> ProjectBundleConfig?
+pub fn ProjectConfig::debug(Self) -> Int
+pub fn ProjectConfig::entry(Self) -> ProjectEntry
+pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
+pub fn ProjectConfig::metadata(Self) -> ProjectMetadata
+pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, debug? : Int) -> Self
+pub fn ProjectConfig::window(Self) -> ProjectWindowConfig
+
+pub(all) enum ProjectEntry {
+  Html(String)
+  Url(String)
+  File(String)
+  Asset(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ProjectFrontendConfig {
+  dev_url : String?
+  dist : String?
+  before_dev : String?
+  before_build : String?
+  cwd : String?
+} derive(Eq, @debug.Debug)
+pub fn ProjectFrontendConfig::before_build(Self) -> String?
+pub fn ProjectFrontendConfig::before_dev(Self) -> String?
+pub fn ProjectFrontendConfig::cwd(Self) -> String?
+pub fn ProjectFrontendConfig::dev_url(Self) -> String?
+pub fn ProjectFrontendConfig::dist(Self) -> String?
+pub fn ProjectFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, cwd? : String?) -> Self
+
+pub(all) struct ProjectMetadata {
+  product_name : String
+  identifier : String?
+  version : String?
+  description : String?
+  license : String?
+} derive(Eq, @debug.Debug)
+pub fn ProjectMetadata::new(String, identifier? : String?, version? : String?, description? : String?, license? : String?) -> Self
+
+pub(all) struct ProjectWindowConfig {
+  title : String
+  width : Int
+  height : Int
+  size_hint : ProjectWindowSizeHint
+} derive(Eq, @debug.Debug)
+pub fn ProjectWindowConfig::new(String, Int, Int, size_hint? : ProjectWindowSizeHint) -> Self
+
+pub(all) enum ProjectWindowSizeHint {
+  WindowSizeNone
+  WindowSizeMin
+  WindowSizeMax
+  WindowSizeFixed
 } derive(Eq, @debug.Debug)
 
 // Type aliases
