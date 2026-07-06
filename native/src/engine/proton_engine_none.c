@@ -96,6 +96,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len) {
+  (void)runtime;
+  (void)menu_json;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -391,6 +401,19 @@ int32_t proton_engine_post_notification(
 }
 
 int32_t proton_engine_take_notification_click(
+    char *buffer,
+    size_t buffer_len,
+    int32_t *out_present) {
+  (void)buffer;
+  (void)buffer_len;
+  if (out_present == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_present = 0;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_take_menu_command(
     char *buffer,
     size_t buffer_len,
     int32_t *out_present) {

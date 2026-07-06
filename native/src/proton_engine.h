@@ -37,6 +37,10 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len);
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len);
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -175,6 +179,10 @@ int32_t proton_engine_take_notification_click(
     char *buffer,
     size_t buffer_len,
     int32_t *out_present);
+
+int32_t proton_engine_take_menu_command(char *buffer,
+                                        size_t buffer_len,
+                                        int32_t *out_present);
 
 const char *proton_engine_name(void);
 

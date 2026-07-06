@@ -54,6 +54,27 @@ pub(all) enum DialogLevel {
 } derive(Debug, Eq)
 
 ///|
+struct MenuBar {
+  raw_json : String?
+  menus : Array[Menu]
+} derive(Debug, Eq)
+
+///|
+struct Menu {
+  label : String
+  items : Array[MenuItem]
+} derive(Debug, Eq)
+
+///|
+struct MenuItem {
+  kind : String
+  id : String?
+  label : String?
+  key : String?
+  role : String?
+} derive(Debug, Eq)
+
+///|
 pub(all) struct BridgeConfig {
   raw_json : String?
   ops : Array[String]
@@ -86,6 +107,17 @@ pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
 /// `post_notification`), or `None` for every other event kind.
 pub fn RuntimeEvent::notification_click_payload(self : RuntimeEvent) -> String? {
   if self.event_type == "notification_clicked" {
+    self.payload
+  } else {
+    None
+  }
+}
+
+///|
+/// The command id for an app-menu command item click, or `None` for every
+/// other event kind.
+pub fn RuntimeEvent::menu_command_id(self : RuntimeEvent) -> String? {
+  if self.event_type == "menu_command" {
     self.payload
   } else {
     None
@@ -259,6 +291,44 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
 }
 
 ///|
+pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
+  { raw_json: None, menus }
+}
+
+///|
+pub fn MenuBar::unsafe_from_json(raw_json : String) -> MenuBar {
+  { raw_json: Some(raw_json), menus: [] }
+}
+
+///|
+pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
+  { label, items }
+}
+
+///|
+pub fn MenuItem::command(
+  id : String,
+  label : String,
+  key? : String,
+) -> MenuItem {
+  { kind: "command", id: Some(id), label: Some(label), key, role: None }
+}
+
+///|
+pub fn MenuItem::separator() -> MenuItem {
+  { kind: "separator", id: None, label: None, key: None, role: None }
+}
+
+///|
+pub fn MenuItem::role(
+  role : String,
+  label? : String,
+  key? : String,
+) -> MenuItem {
+  { kind: "role", id: None, label, key, role: Some(role) }
+}
+
+///|
 pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
   WindowRef::{ handle, }
 }
@@ -336,6 +406,36 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
           repr=self.height.to_string(),
         ),
         "initial_url": Json::string(self.initial_url),
+      }).stringify()
+  }
+}
+
+///|
+fn MenuItem::to_json(self : MenuItem) -> Json {
+  let fields : Map[String, Json] = { "kind": Json::string(self.kind) }
+  set_optional_string_field(fields, "id", self.id)
+  set_optional_string_field(fields, "label", self.label)
+  set_optional_string_field(fields, "key", self.key)
+  set_optional_string_field(fields, "role", self.role)
+  Json::object(fields)
+}
+
+///|
+fn Menu::to_json(self : Menu) -> Json {
+  Json::object({
+    "label": Json::string(self.label),
+    "items": Json::array(self.items.map(fn(item) { item.to_json() })),
+  })
+}
+
+///|
+pub fn MenuBar::to_json_string(self : MenuBar) -> String {
+  match self.raw_json {
+    Some(raw) => raw
+    None =>
+      Json::object({
+        "abi_version": Json::number(1.0, repr="1"),
+        "menus": Json::array(self.menus.map(fn(menu) { menu.to_json() })),
       }).stringify()
   }
 }

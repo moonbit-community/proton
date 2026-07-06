@@ -79,6 +79,19 @@ pub(all) enum DialogLevel {
   Error
 } derive(Eq, @debug.Debug)
 
+type Menu derive(Eq, @debug.Debug)
+pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
+
+type MenuBar derive(Eq, @debug.Debug)
+pub fn MenuBar::new(menus~ : Array[Menu]) -> Self
+pub fn MenuBar::to_json_string(Self) -> String
+pub fn MenuBar::unsafe_from_json(String) -> Self
+
+type MenuItem derive(Eq, @debug.Debug)
+pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::role(String, label? : String, key? : String) -> Self
+pub fn MenuItem::separator() -> Self
+
 pub(all) struct NativeError {
   status : Int
   message : String
@@ -100,6 +113,7 @@ pub fn Runtime::poll_event_json(Self) -> Result[String?, NativeError]
 pub fn Runtime::quit(Self) -> Result[Unit, NativeError]
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Result[Unit, NativeError]
 pub fn Runtime::run(Self) -> Result[Unit, NativeError]
+pub fn Runtime::set_menu(Self, MenuBar) -> Result[Unit, NativeError]
 pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> Result[RuntimeWaitReady, NativeError]
 
 type RuntimeConfig derive(Eq, @debug.Debug)
@@ -114,6 +128,7 @@ pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
+pub fn RuntimeEvent::menu_command_id(Self) -> String?
 pub fn RuntimeEvent::notification_click_payload(Self) -> String?
 
 pub(all) struct RuntimeInfo {

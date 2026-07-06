@@ -14,6 +14,7 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
         self.command_extensions,
         app_config_base_dir(self.file_path),
         self.asset_dir,
+        self.menu,
       )
   }
 }
@@ -33,7 +34,9 @@ async fn run_manifest(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
   asset_dir : String?,
+  menu : @native.MenuBar?,
 ) -> Result[Unit, String] {
+  let forward_menu_events = menu is Some(_)
   let helper_path = macos_bundled_helper_path()
   let runtime = match
     @native.Runtime::new(
@@ -44,6 +47,17 @@ async fn run_manifest(
     ) {
     Ok(runtime) => runtime
     Err(error) => return Err(native_error_message("create runtime", error))
+  }
+  match menu {
+    Some(menu) =>
+      match native_unit_result("set menu", runtime.set_menu(menu)) {
+        Err(error) => {
+          ignore(runtime.destroy())
+          return Err(error)
+        }
+        Ok(_) => ()
+      }
+    None => ()
   }
   let window = match
     @native.Window::new(
@@ -72,7 +86,11 @@ async fn run_manifest(
     Ok(host) => host
   }
   let command_proxy_script = match
-    build_command_proxy_script(manifest, command_extensions) {
+    build_command_proxy_script(
+      manifest,
+      command_extensions,
+      install_event_bus=forward_menu_events,
+    ) {
     Err(error) => {
       close_command_host(command_host)
       ignore(window.destroy())
@@ -123,8 +141,9 @@ async fn run_manifest(
         }
         Ok(_) => {
           let run_result = match command_host {
-            Some(host) => run_bridge_pump(runtime, window, host.host)
-            None => run_window_pump(runtime)
+            Some(host) =>
+              run_bridge_pump(runtime, window, host.host, forward_menu_events)
+            None => run_window_pump(runtime, window, forward_menu_events)
           }
           close_command_host(command_host)
           let destroy_result = native_unit_result(
@@ -164,7 +183,11 @@ fn CommandHostRuntime::close(self : CommandHostRuntime) -> Unit {
 }
 
 ///|
-async fn run_window_pump(runtime : @native.Runtime) -> Result[Unit, String] {
+async fn run_window_pump(
+  runtime : @native.Runtime,
+  window : @native.Window,
+  forward_menu_events : Bool,
+) -> Result[Unit, String] {
   let mut closed = false
   let mut idle_delay = 0
   let mut runtime_wait_supported = true
@@ -184,6 +207,11 @@ async fn run_window_pump(runtime : @native.Runtime) -> Result[Unit, String] {
           did_work = true
           if event.is_window_closed() {
             closed = true
+          }
+          if forward_menu_events {
+            if event.menu_command_id() is Some(command_id) {
+              forward_menu_command(window, command_id)
+            }
           }
         }
       }
@@ -210,6 +238,7 @@ async fn run_bridge_pump(
   runtime : @native.Runtime,
   window : @native.Window,
   host : @core.AppCommandHost,
+  forward_menu_events : Bool,
 ) -> Result[Unit, String] {
   @async.with_task_group(group => {
     let mut closed = false
@@ -235,6 +264,11 @@ async fn run_bridge_pump(
             }
             if event.notification_click_payload() is Some(payload) {
               forward_notification_click(window, payload)
+            }
+            if forward_menu_events {
+              if event.menu_command_id() is Some(command_id) {
+                forward_menu_command(window, command_id)
+              }
             }
           }
         }

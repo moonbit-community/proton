@@ -186,6 +186,33 @@ test "typed configs generate stable JSON for native ABI" {
   assert_true(bridge_json.contains("\"abi_version\":1"))
   assert_true(bridge_json.contains("\"namespace\":\"__MoonBit__\""))
   assert_true(bridge_json.contains("\"name\":\"ext:app/ping\""))
+  let menu_json = MenuBar::new(menus=[
+    Menu::new("Demo", items=[
+      MenuItem::command("demo.refresh", "Refresh", key="r"),
+      MenuItem::separator(),
+      MenuItem::role("close", label="Close Window", key="w"),
+    ]),
+  ]).to_json_string()
+  assert_true(menu_json.contains("\"abi_version\":1"))
+  assert_true(menu_json.contains("\"menus\""))
+  assert_true(menu_json.contains("\"kind\":\"command\""))
+  assert_true(menu_json.contains("\"id\":\"demo.refresh\""))
+  assert_true(menu_json.contains("\"role\":\"close\""))
+}
+
+///|
+test "runtime event decodes menu command payload" {
+  match
+    decode_runtime_event_json(
+      "{\"type\":\"menu_command\",\"payload\":\"demo.refresh\"}",
+    ) {
+    Ok(event) => {
+      inspect(event.event_type(), content="menu_command")
+      assert_true(event.menu_command_id() == Some("demo.refresh"))
+      assert_true(event.notification_click_payload() is None)
+    }
+    Err(error) => fail(error.message)
+  }
 }
 
 ///|

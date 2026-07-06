@@ -2513,6 +2513,18 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
+// TODO: Implement app menu rendering and command events on Windows.
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len) {
+  (void)runtime;
+  (void)menu_json;
+  proton_engine_set_message(error, error_len,
+                            "native app menus are not implemented on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -3108,6 +3120,19 @@ int32_t proton_engine_post_notification(
 }
 
 int32_t proton_engine_take_notification_click(
+    char *buffer,
+    size_t buffer_len,
+    int32_t *out_present) {
+  (void)buffer;
+  (void)buffer_len;
+  if (out_present == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_present = 0;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_take_menu_command(
     char *buffer,
     size_t buffer_len,
     int32_t *out_present) {

@@ -342,6 +342,19 @@ pub fn Runtime::wait(
 }
 
 ///|
+pub fn Runtime::set_menu(
+  self : Runtime,
+  menu : MenuBar,
+) -> Result[Unit, NativeError] {
+  status_to_result(
+    proton_runtime_set_menu_json_ffi(
+      self.handle,
+      @ffi.to_cstr(menu.to_json_string()),
+    ),
+  )
+}
+
+///|
 pub fn Runtime::quit(self : Runtime) -> Result[Unit, NativeError] {
   status_to_result(proton_runtime_quit_ffi(self.handle))
 }

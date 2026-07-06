@@ -96,6 +96,7 @@ pub fn config(path : String) -> App {
     size_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
+    menu: None,
     extension_settings: {},
     command_extensions: {},
     validation_errors: [],
@@ -170,6 +171,13 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 /// Serves same-origin resources for inline HTML entries from `path`.
 pub fn App::asset_dir(self : App, path : String) -> App {
   self.asset_dir = Some(path)
+  self
+}
+
+///|
+/// Sets the app-level native menu bar.
+pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
+  self.menu = Some(menu)
   self
 }
 
