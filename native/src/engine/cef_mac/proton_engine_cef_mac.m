@@ -88,7 +88,8 @@ struct proton_engine_window {
   int browser_create_pending;
   int browser_create_scheduled;
   int window_listed;
-  int destroy_after_before_close;
+  int browser_before_close_seen;
+  int finalize_after_browser_close;
   uint64_t native_id;
   int width;
   int height;
@@ -1305,12 +1306,14 @@ proton_engine_get_browser_process_handler(cef_app_t *self) {
 static void proton_engine_window_mark_closed(proton_engine_window_t *window);
 static void proton_engine_window_release_browser(proton_engine_window_t *window);
 static void proton_engine_window_free(proton_engine_window_t *window);
+static void proton_engine_window_finalize_if_ready(
+    proton_engine_window_t *window);
 static int32_t proton_engine_window_create_browser(proton_engine_window_t *window,
                                                    const char *initial_url,
                                                    char *error,
                                                    size_t error_len);
 static void proton_engine_drain_cef_close_work(void);
-static void proton_engine_free_deferred_closed_windows(void);
+static void proton_engine_free_deferred_finalizing_windows(void);
 
 static int CEF_CALLBACK proton_engine_on_before_popup(
     cef_life_span_handler_t *self,
@@ -1352,15 +1355,13 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   if (window != NULL) {
     proton_engine_debug_log("browser_before_close browser=%d",
                             window->browser_id);
+    window->browser_before_close_seen = 1;
     proton_engine_window_mark_closed(window);
     proton_engine_window_release_browser(window);
     if (window->window != nil && !window->appkit_closing) {
       [window->window close];
     }
-    if (window->destroy_after_before_close) {
-      proton_engine_window_list_remove(window);
-      proton_engine_window_free(window);
-    }
+    proton_engine_window_finalize_if_ready(window);
   }
 }
 
@@ -2629,7 +2630,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_bridge_pending_clear_all();
     proton_engine_drain_cef_close_work();
     proton_engine_cef_shutdown();
-    proton_engine_free_deferred_closed_windows();
+    proton_engine_free_deferred_finalizing_windows();
     proton_engine_teardown_wait_source();
     runtime->owns_cef_runtime = 0;
   }
@@ -2744,13 +2745,14 @@ static void proton_engine_drain_cef_close_work(void) {
   }
 }
 
-static void proton_engine_free_deferred_closed_windows(void) {
+static void proton_engine_free_deferred_finalizing_windows(void) {
   proton_engine_window_t *window = g_windows;
   while (window != NULL) {
     proton_engine_window_t *next = window->next;
-    if (window->destroy_after_before_close) {
-      proton_engine_window_list_remove(window);
-      proton_engine_window_free(window);
+    if (window->finalize_after_browser_close) {
+      window->browser_before_close_seen = 1;
+      proton_engine_window_release_browser(window);
+      proton_engine_window_finalize_if_ready(window);
     }
     window = next;
   }
@@ -3150,35 +3152,6 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
-static int32_t proton_engine_window_wait_for_browser_close(
-    proton_engine_window_t *window,
-    char *error,
-    size_t error_len) {
-  if (window == NULL || window->browser == NULL) {
-    if (window != NULL && window->closed) {
-      proton_engine_drain_cef_close_work();
-    }
-    return PROTON_OK;
-  }
-  proton_engine_window_request_browser_close(window, 1);
-  CFAbsoluteTime deadline = CFAbsoluteTimeGetCurrent() + 5.0;
-  while (window->browser != NULL) {
-    proton_engine_pump_appkit_cef_once();
-    if (window->browser == NULL) {
-      proton_engine_drain_cef_close_work();
-      return PROTON_OK;
-    }
-    if (CFAbsoluteTimeGetCurrent() >= deadline) {
-      proton_engine_set_message(error, error_len,
-                                "timed out waiting for browser close");
-      return PROTON_ERR_ENGINE;
-    }
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, true);
-  }
-  proton_engine_drain_cef_close_work();
-  return PROTON_OK;
-}
-
 static void proton_engine_window_free(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
@@ -3196,6 +3169,58 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   free(window);
 }
 
+static void proton_engine_window_detach_native_window(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == nil) {
+    if (window != NULL) {
+      window->content_view = nil;
+      window->browser_view = nil;
+    }
+    return;
+  }
+  NSWindow *native_window = window->window;
+  window->window = nil;
+  window->content_view = nil;
+  window->browser_view = nil;
+  [native_window setDelegate:nil];
+  [native_window close];
+}
+
+static void proton_engine_window_defer_finalize(
+    proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  if (!window->finalize_after_browser_close && window->browser_id != 0) {
+    proton_engine_debug_log("browser_close_deferred browser=%d",
+                            window->browser_id);
+  }
+  window->finalize_after_browser_close = 1;
+  window->browser_create_pending = 0;
+  window->browser_create_scheduled = 0;
+  window->runtime = NULL;
+  if (window->client != NULL) {
+    window->client->window = NULL;
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static void proton_engine_window_finalize_if_ready(
+    proton_engine_window_t *window) {
+  if (window == NULL || !window->finalize_after_browser_close) {
+    return;
+  }
+  if (window->browser_id != 0 && !window->browser_before_close_seen) {
+    return;
+  }
+  proton_engine_window_list_remove(window);
+  if (window->client != NULL) {
+    window->client->window = NULL;
+  }
+  proton_engine_window_detach_native_window(window);
+  proton_engine_window_free(window);
+}
+
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
                                      char *error,
                                      size_t error_len) {
@@ -3203,39 +3228,18 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  (void)error;
+  (void)error_len;
+  proton_engine_window_mark_closed(window);
   if (window->browser != NULL) {
-    proton_engine_bridge_pending_remove_browser(window->runtime,
-                                                window->browser_id);
-    if (window->closed && window->appkit_closing) {
-      proton_engine_window_request_browser_close(window, 1);
-      proton_engine_drain_cef_close_work();
-      if (window->browser != NULL) {
-        proton_engine_debug_log("browser_close_deferred browser=%d",
-                                window->browser_id);
-        window->destroy_after_before_close = 1;
-        window->runtime = NULL;
-        proton_engine_window_release_browser(window);
-        return PROTON_OK;
-      }
-    }
-    int32_t status =
-        proton_engine_window_wait_for_browser_close(window, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
-    }
+    proton_engine_window_request_browser_close(window, 1);
+    proton_engine_window_defer_finalize(window);
+    proton_engine_window_release_browser(window);
+    proton_engine_window_finalize_if_ready(window);
+    return PROTON_OK;
   }
-  proton_engine_window_list_remove(window);
-  if (window->window != nil) {
-    NSWindow *native_window = window->window;
-    window->window = nil;
-    window->content_view = nil;
-    window->browser_view = nil;
-    [native_window setDelegate:nil];
-    if (!window->closed) {
-      [native_window close];
-    }
-  }
-  proton_engine_window_free(window);
+  proton_engine_window_defer_finalize(window);
+  proton_engine_window_finalize_if_ready(window);
   return PROTON_OK;
 }
 
