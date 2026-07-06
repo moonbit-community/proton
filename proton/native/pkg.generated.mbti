@@ -9,15 +9,11 @@ import {
 // Values
 pub fn abi_version() -> Int
 
-pub fn choose_directory_dialog(WindowRef, String?, String?) -> Result[String?, NativeError]
-
 pub async fn choose_directory_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
 
 pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeError]
 
 pub fn last_error_message() -> String
-
-pub fn open_file_dialog(WindowRef, String?, String?) -> Result[String?, NativeError]
 
 pub async fn open_file_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
 
@@ -39,15 +35,9 @@ pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
 
-pub fn save_file_dialog(WindowRef, String?, String?) -> Result[String?, NativeError]
-
 pub async fn save_file_dialog_async(WindowRef, String?, String?) -> Result[String?, NativeError]
 
-pub fn show_confirm_dialog(WindowRef, String?, String, DialogLevel) -> Result[Bool, NativeError]
-
 pub async fn show_confirm_dialog_async(WindowRef, String?, String, DialogLevel) -> Result[Bool, NativeError]
-
-pub fn show_message_dialog(WindowRef, String?, String, DialogLevel) -> Result[Unit, NativeError]
 
 pub async fn show_message_dialog_async(WindowRef, String?, String, DialogLevel) -> Result[Unit, NativeError]
 

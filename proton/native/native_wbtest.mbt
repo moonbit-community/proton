@@ -43,18 +43,6 @@ test "runtime wait ready mask helpers" {
 }
 
 ///|
-test "dialog empty text buffer becomes None path" {
-  debug_inspect(
-    optional_path_from_dialog_buffer(@ffi.to_cstr("")),
-    content="None",
-  )
-  debug_inspect(
-    optional_path_from_dialog_buffer(@ffi.to_cstr("demo.txt")),
-    content="Some(\"demo.txt\")",
-  )
-}
-
-///|
 test "runtime wait reports queued native events without consuming them" {
   let runtime = Runtime::new().unwrap()
   let empty_ready = runtime
