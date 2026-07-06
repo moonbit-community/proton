@@ -38,6 +38,7 @@ fn frontend_summary_json(frontend : ProtonFrontendConfig?) -> Json {
         "dist": optional_string_json(frontend.dist()),
         "before_dev": optional_string_json(frontend.before_dev()),
         "before_build": optional_string_json(frontend.before_build()),
+        "cwd": optional_string_json(frontend.cwd()),
       })
   }
 }
