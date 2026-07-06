@@ -61,6 +61,7 @@ moon -C examples run 01_run --target native
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_child_process_close_repro`: minimal bridge request with a long-lived child
   process for macOS close-lifecycle debugging.
+- `48_app_menu`: native app menu API with macOS menu command events.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle

@@ -170,6 +170,7 @@ fn command_extension_dependency_error(
 fn build_command_proxy_script(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  install_event_bus? : Bool = false,
 ) -> Result[String?, String] {
   let specs : Array[Json] = []
   let scripts : Array[String] = []
@@ -210,7 +211,7 @@ fn build_command_proxy_script(
       scripts.push(script)
     }
   }
-  if specs.length() == 0 {
+  if specs.length() == 0 && scripts.length() == 0 && !install_event_bus {
     Ok(None)
   } else {
     let script = command_proxy_bootstrap_script(Json::array(specs).stringify())
@@ -259,6 +260,15 @@ fn command_proxy_bootstrap_script(specs_json : String) -> String {
   "      payload: payload === undefined ? null : payload\n" +
   "    };\n" +
   "    return emitExact(event.extension + '.' + event.name, event);\n" +
+  "  };\n" +
+  "  events['@@emitFrontendEvent'] = function(event) {\n" +
+  "    if (!event || typeof event !== 'object') { return null; }\n" +
+  "    var name = String(event.name || '');\n" +
+  "    if (!name) { return null; }\n" +
+  "    return emitExact(name, {\n" +
+  "      name: name,\n" +
+  "      payload: event.payload === undefined ? null : event.payload\n" +
+  "    });\n" +
   "  };\n" +
   "  events.on = function(name, listener) {\n" +
   "    if (typeof listener !== 'function') {\n" +
@@ -349,6 +359,37 @@ fn forward_notification_click(
     Json::object({ "payload": Json::string(payload) }),
   )
   ignore(window.eval(extension_event_dispatch_script(event, None)))
+}
+
+///|
+fn forward_menu_command(window : @native.Window, command_id : String) -> Unit {
+  let payload = Json::object({ "command_id": Json::string(command_id) })
+  ignore(window.eval(frontend_event_dispatch_script("menu.command", payload)))
+}
+
+///|
+fn frontend_event_dispatch_script(
+  event_name : String,
+  payload : Json,
+) -> String {
+  let event = Json::object({
+    "name": Json::string(event_name),
+    "payload": payload,
+  }).stringify()
+  let e = StringBuilder(size_hint=event.length() + 256)
+  e <+
+    $|(function(){
+    $|  if (!window.location || window.location.protocol !== 'proton:') { return; }
+    $|  var root = window.__MoonBit__;
+    $|  var events = root && root.events;
+    $|  var emit = events && events['@@emitFrontendEvent'];
+    $|  if (typeof emit === 'function') {
+    $|    emit(
+    $|\{event}
+    $|);
+    $|  }
+    $|})();
+  e.to_string()
 }
 
 ///|

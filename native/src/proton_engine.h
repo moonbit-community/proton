@@ -37,6 +37,10 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len);
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len);
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -105,58 +109,6 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
                                                  const char *bridge_json,
                                                  char *error,
                                                  size_t error_len);
-int32_t proton_engine_window_show_message_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_show_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
-int32_t proton_engine_window_choose_directory_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -227,6 +179,10 @@ int32_t proton_engine_take_notification_click(
     char *buffer,
     size_t buffer_len,
     int32_t *out_present);
+
+int32_t proton_engine_take_menu_command(char *buffer,
+                                        size_t buffer_len,
+                                        int32_t *out_present);
 
 const char *proton_engine_name(void);
 

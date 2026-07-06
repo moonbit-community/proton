@@ -342,6 +342,19 @@ pub fn Runtime::wait(
 }
 
 ///|
+pub fn Runtime::set_menu(
+  self : Runtime,
+  menu : MenuBar,
+) -> Result[Unit, NativeError] {
+  status_to_result(
+    proton_runtime_set_menu_json_ffi(
+      self.handle,
+      @ffi.to_cstr(menu.to_json_string()),
+    ),
+  )
+}
+
+///|
 pub fn Runtime::quit(self : Runtime) -> Result[Unit, NativeError] {
   status_to_result(proton_runtime_quit_ffi(self.handle))
 }
@@ -627,64 +640,7 @@ fn dialog_text_payload_len(buffer : Bytes) -> Int {
 }
 
 ///|
-fn optional_path_from_dialog_buffer(bytes : Bytes) -> String? {
-  let value = @ffi.from_cstr(bytes)
-  if value.is_empty() {
-    None
-  } else {
-    Some(value)
-  }
-}
-
-///|
 let dialog_file_result_buffer_bytes = 65536
-
-///|
-pub fn show_message_dialog(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Unit, NativeError] {
-  let title_buffer = optional_dialog_text_buffer(title)
-  let message_buffer = @ffi.to_cstr(message)
-  status_to_result(
-    proton_window_show_message_dialog_ffi(
-      window.handle,
-      title_buffer,
-      dialog_text_payload_len(title_buffer),
-      message_buffer,
-      dialog_text_payload_len(message_buffer),
-      dialog_level_to_int(level),
-    ),
-  )
-}
-
-///|
-pub fn show_confirm_dialog(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Bool, NativeError] {
-  let title_buffer = optional_dialog_text_buffer(title)
-  let message_buffer = @ffi.to_cstr(message)
-  let confirmed = Ref(0)
-  let status = proton_window_show_confirm_dialog_ffi(
-    window.handle,
-    title_buffer,
-    dialog_text_payload_len(title_buffer),
-    message_buffer,
-    dialog_text_payload_len(message_buffer),
-    dialog_level_to_int(level),
-    confirmed,
-  )
-  if status < 0 {
-    Err(native_error(status))
-  } else {
-    Ok(confirmed.val != 0)
-  }
-}
 
 ///|
 /// Posts a system notification (macOS notification center). App-level: no
@@ -717,64 +673,6 @@ pub fn post_notification(
 }
 
 ///|
-fn file_dialog_path(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-  callback : (Int64, Bytes, Int, Bytes, Int, FixedArray[Byte], Int, Ref[Int]) -> Int,
-) -> Result[String?, NativeError] {
-  let title_buffer = optional_dialog_text_buffer(title)
-  let path_buffer = optional_dialog_text_buffer(path)
-  let required = Ref(0)
-  let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
-  let status = callback(
-    window.handle,
-    title_buffer,
-    dialog_text_payload_len(title_buffer),
-    path_buffer,
-    dialog_text_payload_len(path_buffer),
-    buffer,
-    buffer.length(),
-    required,
-  )
-  if status < 0 {
-    Err(native_error(status))
-  } else {
-    Ok(optional_path_from_dialog_buffer(Bytes::from_array(buffer)))
-  }
-}
-
-///|
-pub fn open_file_dialog(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  file_dialog_path(window, title, path, proton_window_open_file_dialog_ffi)
-}
-
-///|
-pub fn save_file_dialog(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  file_dialog_path(window, title, path, proton_window_save_file_dialog_ffi)
-}
-
-///|
-pub fn choose_directory_dialog(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  file_dialog_path(
-    window, title, path, proton_window_choose_directory_dialog_ffi,
-  )
-}
-
-///|
-#cfg(not(platform="windows"))
 fn begin_message_dialog_async(
   window : WindowRef,
   title : String?,
@@ -801,7 +699,6 @@ fn begin_message_dialog_async(
 }
 
 ///|
-#cfg(not(platform="windows"))
 fn begin_confirm_dialog_async(
   window : WindowRef,
   title : String?,
@@ -828,7 +725,6 @@ fn begin_confirm_dialog_async(
 }
 
 ///|
-#cfg(not(platform="windows"))
 fn begin_file_dialog_async(
   window : WindowRef,
   title : String?,
@@ -854,7 +750,6 @@ fn begin_file_dialog_async(
 }
 
 ///|
-#cfg(not(platform="windows"))
 async fn poll_dialog_result(
   window : WindowRef,
   dialog : Int64,
@@ -885,7 +780,6 @@ async fn poll_dialog_result(
 }
 
 ///|
-#cfg(not(platform="windows"))
 pub async fn show_message_dialog_async(
   window : WindowRef,
   title : String?,
@@ -899,18 +793,6 @@ pub async fn show_message_dialog_async(
 }
 
 ///|
-#cfg(platform="windows")
-pub async fn show_message_dialog_async(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Unit, NativeError] {
-  show_message_dialog(window, title, message, level)
-}
-
-///|
-#cfg(not(platform="windows"))
 pub async fn show_confirm_dialog_async(
   window : WindowRef,
   title : String?,
@@ -925,18 +807,6 @@ pub async fn show_confirm_dialog_async(
 }
 
 ///|
-#cfg(platform="windows")
-pub async fn show_confirm_dialog_async(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Bool, NativeError] {
-  show_confirm_dialog(window, title, message, level)
-}
-
-///|
-#cfg(not(platform="windows"))
 pub async fn open_file_dialog_async(
   window : WindowRef,
   title : String?,
@@ -959,17 +829,6 @@ pub async fn open_file_dialog_async(
 }
 
 ///|
-#cfg(platform="windows")
-pub async fn open_file_dialog_async(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  open_file_dialog(window, title, path)
-}
-
-///|
-#cfg(not(platform="windows"))
 pub async fn save_file_dialog_async(
   window : WindowRef,
   title : String?,
@@ -992,17 +851,6 @@ pub async fn save_file_dialog_async(
 }
 
 ///|
-#cfg(platform="windows")
-pub async fn save_file_dialog_async(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  save_file_dialog(window, title, path)
-}
-
-///|
-#cfg(not(platform="windows"))
 pub async fn choose_directory_dialog_async(
   window : WindowRef,
   title : String?,
@@ -1022,14 +870,4 @@ pub async fn choose_directory_dialog_async(
         }
       })
   }
-}
-
-///|
-#cfg(platform="windows")
-pub async fn choose_directory_dialog_async(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  choose_directory_dialog(window, title, path)
 }

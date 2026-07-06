@@ -70,6 +70,8 @@ PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                                        uint32_t interest_mask,
                                        uint32_t timeout_ms,
                                        uint32_t *out_ready_mask);
+PROTON_API int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,
+                                                const char *menu_json);
 PROTON_API int32_t proton_runtime_poll_event_json(
     proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);
@@ -106,26 +108,6 @@ PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
 PROTON_API int32_t proton_window_install_bridge_json(
     proton_window_id_t window, const char *bridge_json);
-PROTON_API int32_t proton_window_show_message_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *message_utf8, int32_t message_len,
-    int32_t level);
-PROTON_API int32_t proton_window_show_confirm_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *message_utf8, int32_t message_len,
-    int32_t level, int32_t *out_confirmed);
-PROTON_API int32_t proton_window_open_file_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *path_utf8, int32_t path_len,
-    char *buffer, int32_t buffer_len, int32_t *out_required_len);
-PROTON_API int32_t proton_window_save_file_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *path_utf8, int32_t path_len,
-    char *buffer, int32_t buffer_len, int32_t *out_required_len);
-PROTON_API int32_t proton_window_choose_directory_dialog(
-    proton_window_id_t window, const char *title_utf8,
-    int32_t title_len, const char *path_utf8, int32_t path_len,
-    char *buffer, int32_t buffer_len, int32_t *out_required_len);
 PROTON_API int32_t proton_window_begin_message_dialog(
     proton_window_id_t window, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,

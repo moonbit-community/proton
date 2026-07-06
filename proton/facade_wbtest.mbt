@@ -205,6 +205,30 @@ test "command proxy script ignores disabled command extensions" {
 }
 
 ///|
+test "command proxy can install event bus without command extensions" {
+  let extension_id = "examples/async-add"
+  let manifest = test_command_manifest(extension_id, enabled=false)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  command_extensions[extension_id] = test_command_spec(extension_id, "add", [
+    "slowAdd",
+  ])
+  match
+    build_command_proxy_script(
+      manifest,
+      command_extensions,
+      install_event_bus=true,
+    ) {
+    Ok(Some(script)) => {
+      assert_true(script.contains("root.events = events;"))
+      assert_true(script.contains("events.on = function(name, listener)"))
+      assert_true(script.contains("events['@@emitFrontendEvent']"))
+      assert_true(script.contains("var specs = [];"))
+    }
+    _ => fail("expected event bus bootstrap script")
+  }
+}
+
+///|
 test "command host close runs extension destroy hooks once" {
   let extension_id = "examples/destroy"
   let destroyed = Ref(0)

@@ -96,6 +96,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len) {
+  (void)runtime;
+  (void)menu_json;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -262,105 +272,6 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
                                  proton_engine_unavailable_message());
 }
 
-int32_t proton_engine_window_show_message_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    char *error,
-    size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)message_utf8;
-  (void)message_len;
-  (void)level;
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
-int32_t proton_engine_window_show_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed,
-    char *error,
-    size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)message_utf8;
-  (void)message_len;
-  (void)level;
-  if (out_confirmed != NULL) {
-    *out_confirmed = 0;
-  }
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
-int32_t proton_engine_window_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)path_utf8;
-  (void)path_len;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
-int32_t proton_engine_window_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_open_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, error, error_len);
-}
-
-int32_t proton_engine_window_choose_directory_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_open_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len, error, error_len);
-}
-
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -490,6 +401,19 @@ int32_t proton_engine_post_notification(
 }
 
 int32_t proton_engine_take_notification_click(
+    char *buffer,
+    size_t buffer_len,
+    int32_t *out_present) {
+  (void)buffer;
+  (void)buffer_len;
+  if (out_present == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_present = 0;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_take_menu_command(
     char *buffer,
     size_t buffer_len,
     int32_t *out_present) {

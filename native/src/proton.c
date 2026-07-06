@@ -64,6 +64,7 @@
 #define PROTON_MAX_BRIDGE_CONFIG_BYTES 65536
 #define PROTON_MAX_BRIDGE_OPS 256
 #define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
+#define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
 #define PROTON_HANDLE_INDEX_MASK 0x00000000ffffffffULL
@@ -345,6 +346,11 @@ static const char *const proton_bridge_response_keys[] = {
     "ok",
     "payload",
     "error",
+};
+
+static const char *const proton_menu_config_keys[] = {
+    "abi_version",
+    "menus",
 };
 
 static bool proton_path_exists(const char *path) {
@@ -930,6 +936,40 @@ static int32_t proton_validate_bridge_config_json(const char *bridge_json) {
   return PROTON_OK;
 }
 
+static int32_t proton_validate_menu_config_json(const char *menu_json) {
+  if (menu_json != NULL && strlen(menu_json) > PROTON_MAX_MENU_CONFIG_BYTES) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "menu config is too large");
+  }
+  int32_t status = proton_validate_abi_config(
+      menu_json, "menu", proton_menu_config_keys,
+      sizeof(proton_menu_config_keys) / sizeof(proton_menu_config_keys[0]));
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  if (!proton_json_parse(&doc, menu_json) ||
+      !proton_json_root_object(&doc, &root)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "menu config must be a JSON object");
+  }
+
+  proton_json_value_t menus;
+  if (!proton_json_object_get(&doc, root, "menus", &menus)) {
+    proton_json_dispose(&doc);
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "menu config requires menus");
+  }
+  if (!proton_json_is_array(&doc, menus)) {
+    status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "menu config menus must be an array");
+  }
+  proton_json_dispose(&doc);
+  return status;
+}
+
 static int32_t proton_validate_bridge_response_json(const char *response_json) {
   int32_t status = proton_validate_abi_config(
       response_json, "bridge response", proton_bridge_response_keys,
@@ -1123,6 +1163,35 @@ static void proton_runtime_sync_notification_clicks(
         snprintf(event_json, sizeof(event_json),
                  "{\"type\":\"notification_clicked\",\"payload\":\"%s\"}",
                  escaped);
+    if (written < 0 || written >= (int)sizeof(event_json)) {
+      continue;
+    }
+    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      return;
+    }
+  }
+}
+
+// Drain app-menu commands out of the engine into this runtime's event queue.
+// Menus are app-level, so whichever runtime polls first carries them — in
+// practice apps run one runtime.
+static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
+  for (;;) {
+    char command_id[PROTON_MAX_EVENT_BYTES];
+    int32_t present = 0;
+    if (proton_engine_take_menu_command(command_id, sizeof(command_id),
+                                        &present) != PROTON_OK ||
+        present == 0) {
+      return;
+    }
+    char escaped[PROTON_MAX_EVENT_BYTES];
+    if (!proton_json_escape_into(command_id, escaped, sizeof(escaped))) {
+      continue;
+    }
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int written =
+        snprintf(event_json, sizeof(event_json),
+                 "{\"type\":\"menu_command\",\"payload\":\"%s\"}", escaped);
     if (written < 0 || written >= (int)sizeof(event_json)) {
       continue;
     }
@@ -1563,6 +1632,8 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
     if (status != PROTON_OK) {
       return status;
     }
+    proton_runtime_sync_notification_clicks(slot);
+    proton_runtime_sync_menu_commands(slot);
     if (slot->event_count > 0) {
       ready_mask |= PROTON_WAIT_EVENT;
     }
@@ -1597,6 +1668,36 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   return PROTON_OK;
 }
 
+int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,
+                                     const char *menu_json) {
+  int32_t status = proton_validate_menu_config_json(menu_json);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_runtime_slot_t *slot = NULL;
+  status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_require_runtime_owner_thread(slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime menu requires native engine");
+  }
+
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_set_menu_json(
+      slot->engine_runtime, menu_json, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
                                        char *buffer, int32_t buffer_len,
                                        int32_t *out_required_len) {
@@ -1614,6 +1715,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
     return status;
   }
   proton_runtime_sync_notification_clicks(slot);
+  proton_runtime_sync_menu_commands(slot);
   if (slot->event_count == 0) {
     *out_required_len = 0;
     g_last_error[0] = '\0';
@@ -2116,34 +2218,6 @@ static int32_t proton_validate_dialog_text(const char *title_utf8,
                                      message_len);
 }
 
-static int32_t proton_validate_file_dialog_args(
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len) {
-  if (out_required_len == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
-  }
-  if (buffer_len < 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "dialog result buffer length must not be negative");
-  }
-  if (buffer_len > 0 && buffer == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "dialog result buffer is required");
-  }
-  int32_t status =
-      proton_validate_utf8_arg("dialog title", title_utf8, title_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  return proton_validate_utf8_arg("dialog path", path_utf8, path_len);
-}
-
 static int32_t proton_validate_begin_dialog(int64_t *out_dialog) {
   if (out_dialog == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -2178,67 +2252,6 @@ static int32_t proton_validate_poll_dialog_result_args(
   return PROTON_OK;
 }
 
-int32_t proton_window_show_message_dialog(
-    proton_window_id_t window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_require_dialog_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_validate_dialog_text(
-      title_utf8, title_len, message_utf8, message_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_show_message_dialog(
-      slot->engine_window, title_utf8, title_len, message_utf8,
-      message_len, level, engine_error, sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_show_confirm_dialog(
-    proton_window_id_t window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int32_t *out_confirmed) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_require_dialog_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_validate_dialog_text(
-      title_utf8, title_len, message_utf8, message_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (out_confirmed == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_confirmed is required");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_show_confirm_dialog(
-      slot->engine_window, title_utf8, title_len, message_utf8,
-      message_len, level, out_confirmed, engine_error, sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
 int32_t proton_app_post_notification(
     const char *title_utf8,
     int32_t title_len,
@@ -2265,99 +2278,6 @@ int32_t proton_app_post_notification(
   status = proton_engine_post_notification(
       title_utf8, title_len, body_utf8, body_len, payload_utf8, payload_len,
       engine_error, sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_open_file_dialog(
-    proton_window_id_t window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_require_dialog_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_validate_file_dialog_args(
-      title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_open_file_dialog(
-      slot->engine_window, title_utf8, title_len, path_utf8, path_len,
-      buffer, buffer_len, out_required_len, engine_error, sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_save_file_dialog(
-    proton_window_id_t window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_require_dialog_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_validate_file_dialog_args(
-      title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_save_file_dialog(
-      slot->engine_window, title_utf8, title_len, path_utf8, path_len,
-      buffer, buffer_len, out_required_len, engine_error, sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_choose_directory_dialog(
-    proton_window_id_t window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_require_dialog_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_validate_file_dialog_args(
-      title_utf8, title_len, path_utf8, path_len, buffer, buffer_len,
-      out_required_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_choose_directory_dialog(
-      slot->engine_window, title_utf8, title_len, path_utf8, path_len,
-      buffer, buffer_len, out_required_len, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
