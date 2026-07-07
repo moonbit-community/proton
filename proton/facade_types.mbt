@@ -2,6 +2,7 @@
 /// High-level application facade for ordinary Proton apps.
 struct App {
   file_path : String?
+  auto_config : Bool
   mut window : @manifest.WindowManifest
   mut entry : @manifest.AppEntry
   mut debug_level_value : Int
@@ -15,6 +16,12 @@ struct App {
 }
 
 ///|
+priv struct ResolvedAppConfig {
+  manifest : @manifest.AppManifest
+  base_dir : String?
+}
+
+///|
 priv struct BridgeDispatchTask {
   request_id : Int64
   task : @async.Task[@native.BridgeResponse]
@@ -25,4 +32,9 @@ priv struct CommandHostRuntime {
   host : @core.AppCommandHost
   destroy_hooks : Array[() -> Unit]
   mut closed : Bool
+}
+
+///|
+priv struct BridgePagePolicy {
+  dev_origin : String?
 }

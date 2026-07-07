@@ -6,13 +6,13 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
     Some(error) => return Err(error)
     None => ()
   }
-  match self.resolved_manifest() {
+  match self.resolved_app_config() {
     Err(error) => Err(error)
-    Ok(manifest) =>
+    Ok(resolved) =>
       run_manifest(
-        manifest,
+        resolved.manifest,
         self.command_extensions,
-        app_config_base_dir(self.file_path),
+        resolved.base_dir,
       )
   }
 }
@@ -79,13 +79,29 @@ async fn run_manifest(
     }
     Ok(script) => script
   }
+  let bridge_policy = match bridge_page_policy_for_manifest(manifest) {
+    Err(error) => {
+      close_command_host(command_host)
+      ignore(window.destroy())
+      ignore(runtime.destroy())
+      return Err(error)
+    }
+    Ok(policy) => policy
+  }
   match command_host {
     Some(host) => {
       let ops = host.host.registered_ops()
+      let dev_origins = bridge_page_policy_dev_origins(bridge_policy)
+      let dev_bootstrap_script = match bridge_policy.dev_origin {
+        Some(_) => command_proxy_script
+        None => None
+      }
       match
         native_unit_result(
           "install bridge",
-          window.install_bridge(@native.BridgeConfig::new(ops~)),
+          window.install_bridge(
+            @native.BridgeConfig::new(ops~, dev_origins~, dev_bootstrap_script~),
+          ),
         ) {
         Err(error) => {
           host.close()
@@ -93,7 +109,8 @@ async fn run_manifest(
           ignore(runtime.destroy())
           return Err(error)
         }
-        Ok(_) => install_extension_event_sender(window, host.host)
+        Ok(_) =>
+          install_extension_event_sender(window, host.host, bridge_policy)
       }
     }
     None => ()
@@ -115,7 +132,8 @@ async fn run_manifest(
         }
         Ok(_) => {
           let run_result = match command_host {
-            Some(host) => run_bridge_pump(runtime, window, host.host)
+            Some(host) =>
+              run_bridge_pump(runtime, window, host.host, bridge_policy)
             None => run_window_pump(runtime)
           }
           close_command_host(command_host)
@@ -129,14 +147,6 @@ async fn run_manifest(
           }
         }
       }
-  }
-}
-
-///|
-fn app_config_base_dir(file_path : String?) -> String? {
-  match file_path {
-    Some(path) => Some((path : @mbpath.Path).dirname().to_string())
-    None => None
   }
 }
 
@@ -202,6 +212,7 @@ async fn run_bridge_pump(
   runtime : @native.Runtime,
   window : @native.Window,
   host : @core.AppCommandHost,
+  policy : BridgePagePolicy,
 ) -> Result[Unit, String] {
   @async.with_task_group(group => {
     let mut closed = false
@@ -239,7 +250,7 @@ async fn run_bridge_pump(
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
-              () => dispatch_bridge_request(window, host, request),
+              () => dispatch_bridge_request(window, host, request, policy),
               no_wait=true,
               allow_failure=true,
             )
