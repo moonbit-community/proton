@@ -185,7 +185,19 @@ test "typed configs generate stable JSON for native ABI" {
   let bridge_json = bridge_config.to_json_string()
   assert_true(bridge_json.contains("\"abi_version\":1"))
   assert_true(bridge_json.contains("\"namespace\":\"__MoonBit__\""))
+  assert_true(bridge_json.contains("\"mode\":\"app_only\""))
   assert_true(bridge_json.contains("\"name\":\"ext:app/ping\""))
+  assert_true(!bridge_json.contains("\"dev_bootstrap_script\""))
+  let dev_bridge_json = BridgeConfig::new(
+    ops=["ext:app/ping"],
+    dev_origins=["http://localhost:5173"],
+    dev_bootstrap_script=Some("window.__protonDev = true;"),
+  ).to_json_string()
+  assert_true(dev_bridge_json.contains("\"mode\":\"app_and_dev_origins\""))
+  assert_true(dev_bridge_json.contains("\"dev_origins\""))
+  assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
+  assert_true(dev_bridge_json.contains("\"dev_bootstrap_script\""))
+  assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
 }
 
 ///|
@@ -199,6 +211,30 @@ test "bridge ABI wrappers validate config and poll empty queue" {
   debug_inspect(runtime.do_message_loop_work(), content="Ok(())")
   debug_inspect(
     window.install_bridge(BridgeConfig::new(ops=["ext:app/ping"])),
+    content="Ok(())",
+  )
+  debug_inspect(
+    window.install_bridge(
+      BridgeConfig::new(
+        ops=["ext:app/ping"],
+        dev_origins=["http://localhost:5173"],
+        dev_bootstrap_script=Some("window.__protonDev = true;"),
+      ),
+    ),
+    content="Ok(())",
+  )
+  let large_script = StringBuilder::new()
+  for _ in 0..<7000 {
+    large_script.write_string("window.__protonDevLarge = true;\n")
+  }
+  debug_inspect(
+    window.install_bridge(
+      BridgeConfig::new(
+        ops=["ext:app/ping"],
+        dev_origins=["http://localhost:5173"],
+        dev_bootstrap_script=Some(large_script.to_string()),
+      ),
+    ),
     content="Ok(())",
   )
   debug_inspect(runtime.poll_bridge_request(), content="Ok(None)")
@@ -260,6 +296,38 @@ test "bridge config rejects unsafe schema variants" {
     (
       "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"request_timeout_ms\":0}",
       "request_timeout_ms",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"unknown\"},\"ops\":[]}",
+      "origin_policy.mode",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_only\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[]}",
+      "dev_origins requires",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[]},\"ops\":[]}",
+      "dev_origins must not be empty",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173/app\"]},\"ops\":[]}",
+      "invalid origin",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://user@localhost:5173\"]},\"ops\":[]}",
+      "invalid origin",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://local host:5173\"]},\"ops\":[]}",
+      "invalid origin",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"file://tmp\"]},\"ops\":[]}",
+      "invalid origin",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[],\"dev_bootstrap_script\":false}",
+      "dev_bootstrap_script",
     ),
   ]
   for _, item in cases {

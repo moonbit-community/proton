@@ -51,6 +51,8 @@ pub(all) struct BridgeConfig {
   ops : Array[String]
   max_payload_bytes : Int
   request_timeout_ms : Int
+  dev_origins : Array[String]
+  dev_bootstrap_script : String?
 } derive(Debug, Eq)
 
 ///|
@@ -239,8 +241,17 @@ pub fn BridgeConfig::new(
   ops~ : Array[String],
   max_payload_bytes? : Int = 1048576,
   request_timeout_ms? : Int = 30000,
+  dev_origins? : Array[String] = [],
+  dev_bootstrap_script? : String? = None,
 ) -> BridgeConfig {
-  { raw_json: None, ops, max_payload_bytes, request_timeout_ms }
+  {
+    raw_json: None,
+    ops,
+    max_payload_bytes,
+    request_timeout_ms,
+    dev_origins: copy_strings(dev_origins),
+    dev_bootstrap_script,
+  }
 }
 
 ///|
@@ -250,7 +261,14 @@ pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
     ops: [],
     max_payload_bytes: 1048576,
     request_timeout_ms: 30000,
+    dev_origins: [],
+    dev_bootstrap_script: None,
   }
+}
+
+///|
+fn copy_strings(values : Array[String]) -> Array[String] {
+  values.map(fn(value) { value })
 }
 
 ///|
@@ -319,10 +337,20 @@ pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
       let ops_json = self.ops.map(fn(name) {
         Json::object({ "name": Json::string(name) })
       })
-      Json::object({
+      let origin_policy = if self.dev_origins.length() == 0 {
+        Json::object({ "mode": Json::string("app_only") })
+      } else {
+        Json::object({
+          "mode": Json::string("app_and_dev_origins"),
+          "dev_origins": Json::array(
+            self.dev_origins.map(fn(origin) { Json::string(origin) }),
+          ),
+        })
+      }
+      let fields : Map[String, Json] = {
         "abi_version": Json::number(1.0, repr="1"),
         "namespace": Json::string("__MoonBit__"),
-        "origin_policy": Json::object({ "mode": Json::string("app_only") }),
+        "origin_policy": origin_policy,
         "ops": Json::array(ops_json),
         "max_payload_bytes": Json::number(
           self.max_payload_bytes.to_double(),
@@ -332,7 +360,13 @@ pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
           self.request_timeout_ms.to_double(),
           repr=self.request_timeout_ms.to_string(),
         ),
-      }).stringify()
+      }
+      set_optional_string_field(
+        fields,
+        "dev_bootstrap_script",
+        self.dev_bootstrap_script,
+      )
+      Json::object(fields).stringify()
     }
   }
 }
