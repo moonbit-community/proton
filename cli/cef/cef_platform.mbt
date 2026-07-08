@@ -77,6 +77,13 @@ async fn current_platform() -> ProtonPlatform {
 }
 
 ///|
+/// Returns the stable platform id used by `cef setup` and runtime manifests.
+pub async fn current_platform_id() -> String {
+  let platform = current_platform()
+  platform.id
+}
+
+///|
 fn platform_from_override(value : String?) -> ProtonPlatform? {
   match value {
     Some("win32-x64") => Some(win32_x64_platform())
