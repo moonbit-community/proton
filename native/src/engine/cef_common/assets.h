@@ -142,6 +142,18 @@ static const char *proton_engine_asset_mime_type(const char *path) {
   if (strcmp(dot, ".txt") == 0) {
     return "text/plain";
   }
+  if (strcmp(dot, ".woff") == 0) {
+    return "font/woff";
+  }
+  if (strcmp(dot, ".woff2") == 0) {
+    return "font/woff2";
+  }
+  if (strcmp(dot, ".ttf") == 0) {
+    return "font/ttf";
+  }
+  if (strcmp(dot, ".otf") == 0) {
+    return "font/otf";
+  }
   return "application/octet-stream";
 }
 

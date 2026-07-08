@@ -644,6 +644,12 @@ static const char *proton_engine_mime_type_for_path(const char *path) {
   if (_stricmp(ext, ".woff2") == 0) {
     return "font/woff2";
   }
+  if (_stricmp(ext, ".ttf") == 0) {
+    return "font/ttf";
+  }
+  if (_stricmp(ext, ".otf") == 0) {
+    return "font/otf";
+  }
   return "application/octet-stream";
 }
 
@@ -1233,8 +1239,15 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
   }
   cef_string_t scheme = {0};
   proton_engine_set_string(&scheme, "proton");
+  // STANDARD gives proton:// documents a real origin (instead of an opaque
+  // "null" one) and CORS_ENABLED lets that origin be the target of CORS-mode
+  // requests. Without both, every CORS-mode subresource fetch — notably
+  // @font-face loads, which are always CORS-mode — is rejected by the
+  // network layer even though the scheme handler serves the bytes fine.
   registrar->add_custom_scheme(
-      registrar, &scheme, CEF_SCHEME_OPTION_SECURE | CEF_SCHEME_OPTION_FETCH_ENABLED);
+      registrar, &scheme,
+      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
+          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
   cef_string_clear(&scheme);
 }
 
