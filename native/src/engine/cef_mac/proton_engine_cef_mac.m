@@ -1,6 +1,11 @@
 #include "../../proton_engine.h"
 #include "../../proton_json.h"
 
+#include "dialog.h"
+#include "menu.h"
+#include "scheme.h"
+#include "window.h"
+
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"
 #include "include/capi/cef_browser_process_handler_capi.h"
@@ -12,9 +17,6 @@
 #include "include/capi/cef_load_handler_capi.h"
 #include "include/capi/cef_process_message_capi.h"
 #include "include/capi/cef_render_process_handler_capi.h"
-#include "include/capi/cef_request_capi.h"
-#include "include/capi/cef_resource_handler_capi.h"
-#include "include/capi/cef_response_capi.h"
 #include "include/capi/cef_scheme_capi.h"
 #include "include/capi/cef_values_capi.h"
 #include "include/capi/cef_v8_capi.h"
@@ -23,7 +25,6 @@
 #include "include/wrapper/cef_library_loader.h"
 
 #import <Cocoa/Cocoa.h>
-#import <UserNotifications/UserNotifications.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <dispatch/dispatch.h>
 
@@ -41,8 +42,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-@class ProtonMenuCommandTarget;
 
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
@@ -145,32 +144,12 @@ typedef struct {
   proton_engine_ref_counted_t refs;
 } proton_engine_scheme_factory_t;
 
-typedef struct {
-  cef_resource_handler_t handler;
-  proton_engine_ref_counted_t refs;
-  char *data;
-  char *mime;
-  size_t len;
-  size_t offset;
-} proton_engine_resource_handler_t;
-
 typedef struct proton_engine_bridge_pending {
   int64_t request_id;
   int browser_id;
   int renderer_pending_id;
   struct proton_engine_bridge_pending *next;
 } proton_engine_bridge_pending_t;
-
-typedef struct proton_engine_dialog_request {
-  int64_t id;
-  uint64_t window_native_id;
-  int refs;
-  int completed;
-  int32_t status;
-  char *result;
-  char error[512];
-  struct proton_engine_dialog_request *next;
-} proton_engine_dialog_request_t;
 
 typedef struct {
   char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES];
@@ -193,9 +172,7 @@ static int g_proton_cef_initialized = 0;
 static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
 static int g_proton_cef_shutdown_registered = 0;
-static int g_proton_app_menu_installed = 0;
 static int g_proton_app_terminating = 0;
-static ProtonMenuCommandTarget *g_menu_command_target = nil;
 static proton_engine_app_t g_app;
 static proton_engine_browser_process_handler_t g_browser_process_handler;
 static proton_engine_render_process_handler_t g_render_process_handler;
@@ -206,17 +183,11 @@ static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
 static uint64_t g_next_window_native_id = 1;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
-static int64_t g_next_dialog_id = 1;
-static proton_engine_dialog_request_t *g_dialog_requests = NULL;
-static pthread_mutex_t g_dialog_lock = PTHREAD_MUTEX_INITIALIZER;
 static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static CFRunLoopRef g_wait_run_loop = NULL;
 static CFRunLoopSourceRef g_wait_source = NULL;
-
-static void proton_engine_dialog_complete_window_closed(uint64_t native_id);
-static void proton_engine_enqueue_menu_command(NSString *command_id);
 
 static void proton_engine_set_message(char *error,
                                       size_t error_len,
@@ -622,195 +593,6 @@ static int proton_engine_url_is_proton(const char *url) {
   return url != NULL && strncmp(url, "proton://", 9) == 0;
 }
 
-static const char *proton_engine_mime_type_for_path(const char *path) {
-  const char *ext = path != NULL ? strrchr(path, '.') : NULL;
-  if (ext == NULL) {
-    return "application/octet-stream";
-  }
-  if (strcmp(ext, ".css") == 0) {
-    return "text/css";
-  }
-  if (strcmp(ext, ".js") == 0 || strcmp(ext, ".mjs") == 0) {
-    return "text/javascript";
-  }
-  if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) {
-    return "text/html";
-  }
-  if (strcmp(ext, ".json") == 0) {
-    return "application/json";
-  }
-  if (strcmp(ext, ".svg") == 0) {
-    return "image/svg+xml";
-  }
-  if (strcmp(ext, ".png") == 0) {
-    return "image/png";
-  }
-  if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) {
-    return "image/jpeg";
-  }
-  if (strcmp(ext, ".gif") == 0) {
-    return "image/gif";
-  }
-  if (strcmp(ext, ".webp") == 0) {
-    return "image/webp";
-  }
-  if (strcmp(ext, ".woff") == 0) {
-    return "font/woff";
-  }
-  if (strcmp(ext, ".woff2") == 0) {
-    return "font/woff2";
-  }
-  if (strcmp(ext, ".ttf") == 0) {
-    return "font/ttf";
-  }
-  if (strcmp(ext, ".otf") == 0) {
-    return "font/otf";
-  }
-  return "application/octet-stream";
-}
-
-static bool proton_engine_relative_asset_path_is_safe(const char *path) {
-  if (path == NULL || path[0] == '\0' || path[0] == '/') {
-    return false;
-  }
-  const char *segment = path;
-  for (const char *cursor = path;; cursor++) {
-    char ch = *cursor;
-    if (ch == '\\') {
-      return false;
-    }
-    if (ch == '/' || ch == '\0') {
-      size_t len = (size_t)(cursor - segment);
-      if (len == 0 || (len == 1 && segment[0] == '.') ||
-          (len == 2 && segment[0] == '.' && segment[1] == '.')) {
-        return false;
-      }
-      if (ch == '\0') {
-        return true;
-      }
-      segment = cursor + 1;
-    }
-  }
-}
-
-static int proton_engine_hex_value(char ch) {
-  if (ch >= '0' && ch <= '9') {
-    return ch - '0';
-  }
-  if (ch >= 'a' && ch <= 'f') {
-    return ch - 'a' + 10;
-  }
-  if (ch >= 'A' && ch <= 'F') {
-    return ch - 'A' + 10;
-  }
-  return -1;
-}
-
-static char *proton_engine_decode_relative_url_path(const char *path) {
-  if (path == NULL) {
-    return NULL;
-  }
-  size_t len = strcspn(path, "?#");
-  char *decoded = (char *)malloc(len + 1);
-  if (decoded == NULL) {
-    return NULL;
-  }
-  size_t out = 0;
-  for (size_t index = 0; index < len; index++) {
-    if (path[index] == '%' && index + 2 < len) {
-      int high = proton_engine_hex_value(path[index + 1]);
-      int low = proton_engine_hex_value(path[index + 2]);
-      if (high >= 0 && low >= 0) {
-        decoded[out++] = (char)((high << 4) | low);
-        index += 2;
-        continue;
-      }
-    }
-    decoded[out++] = path[index];
-  }
-  decoded[out] = '\0';
-  return decoded;
-}
-
-static bool proton_engine_url_asset_relative_path(const char *base_url,
-                                                  const char *url,
-                                                  char **out_path) {
-  if (out_path == NULL) {
-    return false;
-  }
-  *out_path = NULL;
-  if (base_url == NULL || url == NULL || strcmp(base_url, url) == 0) {
-    return false;
-  }
-  const char *path_start = NULL;
-  size_t base_len = strlen(base_url);
-  if (base_len > 0 && base_url[base_len - 1] == '/') {
-    if (strncmp(url, base_url, base_len) != 0) {
-      return false;
-    }
-    path_start = url + base_len;
-  } else {
-    const char *slash = strrchr(base_url, '/');
-    if (slash == NULL) {
-      return false;
-    }
-    size_t prefix_len = (size_t)(slash - base_url) + 1;
-    if (strncmp(url, base_url, prefix_len) != 0) {
-      return false;
-    }
-    path_start = url + prefix_len;
-  }
-  char *decoded = proton_engine_decode_relative_url_path(path_start);
-  if (decoded == NULL) {
-    return false;
-  }
-  if (!proton_engine_relative_asset_path_is_safe(decoded)) {
-    free(decoded);
-    return false;
-  }
-  *out_path = decoded;
-  return true;
-}
-
-static bool proton_engine_read_file_bytes(const char *path,
-                                          char **out_data,
-                                          size_t *out_len) {
-  if (out_data == NULL || out_len == NULL) {
-    return false;
-  }
-  *out_data = NULL;
-  *out_len = 0;
-  FILE *file = fopen(path, "rb");
-  if (file == NULL) {
-    return false;
-  }
-  if (fseek(file, 0, SEEK_END) != 0) {
-    fclose(file);
-    return false;
-  }
-  long size = ftell(file);
-  if (size < 0) {
-    fclose(file);
-    return false;
-  }
-  rewind(file);
-  char *data = (char *)malloc((size_t)size + 1);
-  if (data == NULL) {
-    fclose(file);
-    return false;
-  }
-  size_t read = fread(data, 1, (size_t)size, file);
-  fclose(file);
-  if (read != (size_t)size) {
-    free(data);
-    return false;
-  }
-  data[read] = '\0';
-  *out_data = data;
-  *out_len = read;
-  return true;
-}
-
 static proton_engine_client_t *proton_engine_client_from_base(
     cef_client_t *client) {
   return (proton_engine_client_t *)client;
@@ -865,6 +647,50 @@ static proton_engine_window_t *proton_engine_window_from_native_id(
     }
   }
   return NULL;
+}
+
+uint64_t proton_engine_window_native_id(proton_engine_window_t *window) {
+  return window != NULL ? window->native_id : 0;
+}
+
+NSWindow *proton_engine_window_get_native_window(proton_engine_window_t *window) {
+  return window != NULL ? window->window : nil;
+}
+
+NSWindow *proton_engine_window_retain_native_window(
+    proton_engine_window_t *window) {
+  NSWindow *native_window = proton_engine_window_get_native_window(window);
+  return native_window != nil ? [native_window retain] : nil;
+}
+
+int proton_engine_window_is_closed_or_missing(proton_engine_window_t *window) {
+  return window == NULL || window->window == nil || window->closed;
+}
+
+proton_engine_window_t *proton_engine_window_lookup_native_id(
+    uint64_t native_id) {
+  return proton_engine_window_from_native_id(native_id);
+}
+
+proton_engine_window_t *proton_engine_window_lookup_browser(
+    cef_browser_t *browser) {
+  return proton_engine_window_from_browser(browser);
+}
+
+const char *proton_engine_window_html_url(proton_engine_window_t *window) {
+  return window != NULL ? window->html_url : NULL;
+}
+
+const char *proton_engine_window_html(proton_engine_window_t *window,
+                                     size_t *len) {
+  if (len != NULL) {
+    *len = window != NULL ? window->html_len : 0;
+  }
+  return window != NULL ? window->html : NULL;
+}
+
+const char *proton_engine_window_asset_root(proton_engine_window_t *window) {
+  return window != NULL ? window->asset_root : NULL;
 }
 
 static int proton_engine_runtime_has_pending_platform_work(
@@ -1076,194 +902,6 @@ static void proton_engine_bridge_pending_clear_all(void) {
                           (unsigned long long)removed);
 }
 
-static int CEF_CALLBACK proton_engine_resource_open(
-    cef_resource_handler_t *self,
-    cef_request_t *request,
-    int *handle_request,
-    cef_callback_t *callback) {
-  (void)request;
-  (void)callback;
-  if (self == NULL || handle_request == NULL) {
-    return 0;
-  }
-  *handle_request = 1;
-  return 1;
-}
-
-static int CEF_CALLBACK proton_engine_resource_release(
-    cef_base_ref_counted_t *base) {
-  proton_engine_ref_counted_t *refs =
-      (proton_engine_ref_counted_t *)((char *)base + base->size);
-  int value =
-      atomic_fetch_sub_explicit(&refs->refs, 1, memory_order_acq_rel) - 1;
-  if (value <= 0) {
-    proton_engine_resource_handler_t *handler =
-        (proton_engine_resource_handler_t *)base;
-    free(handler->data);
-    free(handler->mime);
-    free(handler);
-    return 1;
-  }
-  return 0;
-}
-
-static void CEF_CALLBACK proton_engine_resource_get_response_headers(
-    cef_resource_handler_t *self,
-    cef_response_t *response,
-    int64_t *response_length,
-    cef_string_t *redirectUrl) {
-  (void)redirectUrl;
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)self;
-  if (response != NULL) {
-    cef_string_t mime = {0};
-    cef_string_t charset = {0};
-    proton_engine_set_string(&mime,
-                             handler->mime != NULL ? handler->mime
-                                                   : "application/octet-stream");
-    proton_engine_set_string(&charset, "utf-8");
-    response->set_status(response, 200);
-    response->set_mime_type(response, &mime);
-    response->set_charset(response, &charset);
-    cef_string_clear(&mime);
-    cef_string_clear(&charset);
-  }
-  if (response_length != NULL) {
-    *response_length = (int64_t)handler->len;
-  }
-}
-
-static int CEF_CALLBACK proton_engine_resource_read(
-    cef_resource_handler_t *self,
-    void *data_out,
-    int bytes_to_read,
-    int *bytes_read,
-    cef_resource_read_callback_t *callback) {
-  (void)callback;
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)self;
-  if (handler == NULL || data_out == NULL || bytes_read == NULL ||
-      bytes_to_read <= 0) {
-    return 0;
-  }
-  size_t remaining = handler->offset < handler->len
-                         ? handler->len - handler->offset
-                         : 0;
-  if (remaining == 0) {
-    *bytes_read = 0;
-    return 0;
-  }
-  size_t to_copy = remaining < (size_t)bytes_to_read ? remaining
-                                                     : (size_t)bytes_to_read;
-  memcpy(data_out, handler->data + handler->offset, to_copy);
-  handler->offset += to_copy;
-  *bytes_read = (int)to_copy;
-  return 1;
-}
-
-static void CEF_CALLBACK proton_engine_resource_cancel(
-    cef_resource_handler_t *self) {
-  (void)self;
-}
-
-static cef_resource_handler_t *proton_engine_resource_handler_create(
-    const char *data,
-    size_t len,
-    const char *mime) {
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)calloc(1, sizeof(*handler));
-  if (handler == NULL) {
-    return NULL;
-  }
-  proton_engine_init_ref_counted(
-      (cef_base_ref_counted_t *)&handler->handler.base,
-      sizeof(handler->handler), &handler->refs);
-  handler->handler.base.release = proton_engine_resource_release;
-  handler->data = proton_engine_strdup_len(data, len);
-  handler->mime = proton_engine_strdup(mime != NULL ? mime
-                                                    : "application/octet-stream");
-  if (handler->data == NULL || handler->mime == NULL) {
-    free(handler->data);
-    free(handler->mime);
-    free(handler);
-    return NULL;
-  }
-  handler->len = len;
-  handler->handler.open = proton_engine_resource_open;
-  handler->handler.get_response_headers =
-      proton_engine_resource_get_response_headers;
-  handler->handler.read = proton_engine_resource_read;
-  handler->handler.cancel = proton_engine_resource_cancel;
-  return &handler->handler;
-}
-
-static cef_resource_handler_t *proton_engine_resource_handler_for_window(
-    proton_engine_window_t *window,
-    const char *url) {
-  if (window == NULL || url == NULL || window->html_url == NULL) {
-    return NULL;
-  }
-  if (strcmp(window->html_url, url) == 0 && window->html != NULL) {
-    return proton_engine_resource_handler_create(window->html, window->html_len,
-                                                 "text/html");
-  }
-  if (window->asset_root == NULL || window->asset_root[0] == '\0') {
-    return NULL;
-  }
-  char *relative_path = NULL;
-  if (!proton_engine_url_asset_relative_path(window->html_url, url,
-                                             &relative_path)) {
-    return NULL;
-  }
-  char path[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
-  bool joined = proton_engine_join_path(path, sizeof(path), window->asset_root,
-                                        relative_path);
-  const char *mime = proton_engine_mime_type_for_path(relative_path);
-  free(relative_path);
-  if (!joined) {
-    return NULL;
-  }
-  char *data = NULL;
-  size_t len = 0;
-  if (!proton_engine_read_file_bytes(path, &data, &len)) {
-    return NULL;
-  }
-  cef_resource_handler_t *handler =
-      proton_engine_resource_handler_create(data, len, mime);
-  free(data);
-  return handler;
-}
-
-static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
-    cef_scheme_handler_factory_t *self,
-    cef_browser_t *browser,
-    cef_frame_t *frame,
-    const cef_string_t *scheme_name,
-    cef_request_t *request) {
-  (void)self;
-  (void)frame;
-  (void)scheme_name;
-  char *url = NULL;
-  if (request != NULL) {
-    url = proton_engine_userfree_to_utf8(request->get_url(request));
-  }
-  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
-  cef_resource_handler_t *handler =
-      proton_engine_resource_handler_for_window(window, url);
-  if (handler == NULL) {
-    proton_engine_debug_log("scheme_create miss browser=%d url=%s",
-                            proton_engine_browser_id(browser),
-                            url != NULL ? url : "");
-    free(url);
-    return NULL;
-  }
-  proton_engine_debug_log("scheme_create browser=%d url=%s handler=1",
-                          proton_engine_browser_id(browser),
-                          url != NULL ? url : "");
-  free(url);
-  return handler;
-}
-
 static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
     cef_scheme_registrar_t *registrar) {
@@ -1275,8 +913,8 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
   proton_engine_set_string(&scheme, "proton");
   // STANDARD gives proton:// documents a real origin (instead of an opaque
   // "null" one) and CORS_ENABLED lets that origin be the target of CORS-mode
-  // requests. Without both, every CORS-mode subresource fetch — notably
-  // @font-face loads, which are always CORS-mode — is rejected by the
+  // requests. Without both, every CORS-mode subresource fetch - notably
+  // @font-face loads, which are always CORS-mode - is rejected by the
   // network layer even though the scheme handler serves the bytes fine.
   registrar->add_custom_scheme(
       registrar, &scheme,
@@ -2366,349 +2004,11 @@ static int proton_engine_request_all_windows_close(void) {
 }
 @end
 
-@interface ProtonMenuCommandTarget : NSObject
-- (void)performMenuCommand:(id)sender;
-@end
-
-@implementation ProtonMenuCommandTarget
-- (void)performMenuCommand:(id)sender {
-  id represented = nil;
-  if ([sender respondsToSelector:@selector(representedObject)]) {
-    represented = [sender representedObject];
-  }
-  if ([represented isKindOfClass:[NSString class]]) {
-    proton_engine_enqueue_menu_command((NSString *)represented);
-  }
-}
-@end
-
-static NSString *proton_engine_application_name(void) {
-  NSString *name =
-      [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
-  if (name == nil || [name length] == 0) {
-    name = [[NSProcessInfo processInfo] processName];
-  }
-  if (name == nil || [name length] == 0) {
-    name = @"Proton";
-  }
-  return name;
-}
-
-static NSMenuItem *proton_engine_add_menu_item(NSMenu *menu,
-                                               NSString *title,
-                                               SEL action,
-                                               NSString *key) {
-  return [menu addItemWithTitle:title action:action keyEquivalent:key];
-}
-
-static void proton_engine_add_top_level_menu(NSMenu *main_menu,
-                                             NSString *title,
-                                             NSMenu *submenu) {
-  NSMenuItem *item = proton_engine_add_menu_item(main_menu, title, nil, @"");
-  [main_menu setSubmenu:submenu forItem:item];
-}
-
-static NSMenu *proton_engine_create_app_menu(NSString *app_name) {
-  NSMenu *app_menu = [[NSMenu alloc] initWithTitle:app_name];
-  proton_engine_add_menu_item(
-      app_menu, [NSString stringWithFormat:@"Hide %@", app_name],
-      @selector(hide:), @"h");
-  NSMenuItem *hide_others = proton_engine_add_menu_item(
-      app_menu, @"Hide Others", @selector(hideOtherApplications:), @"h");
-  [hide_others setKeyEquivalentModifierMask:
-                   NSEventModifierFlagOption | NSEventModifierFlagCommand];
-  proton_engine_add_menu_item(app_menu, @"Show All",
-                              @selector(unhideAllApplications:), @"");
-  [app_menu addItem:[NSMenuItem separatorItem]];
-  proton_engine_add_menu_item(
-      app_menu, [NSString stringWithFormat:@"Quit %@", app_name],
-      @selector(terminate:), @"q");
-  return app_menu;
-}
-
-static NSMenu *proton_engine_create_edit_menu(void) {
-  NSMenu *edit_menu = [[NSMenu alloc] initWithTitle:@"Edit"];
-  proton_engine_add_menu_item(edit_menu, @"Undo", @selector(undo:), @"z");
-  proton_engine_add_menu_item(edit_menu, @"Redo", @selector(redo:), @"Z");
-  [edit_menu addItem:[NSMenuItem separatorItem]];
-  proton_engine_add_menu_item(edit_menu, @"Cut", @selector(cut:), @"x");
-  proton_engine_add_menu_item(edit_menu, @"Copy", @selector(copy:), @"c");
-  proton_engine_add_menu_item(edit_menu, @"Paste", @selector(paste:), @"v");
-  proton_engine_add_menu_item(edit_menu, @"Select All", @selector(selectAll:),
-                              @"a");
-  return edit_menu;
-}
-
-static NSMenu *proton_engine_create_window_menu(void) {
-  NSMenu *window_menu = [[NSMenu alloc] initWithTitle:@"Window"];
-  proton_engine_add_menu_item(window_menu, @"Minimize",
-                              @selector(performMiniaturize:), @"m");
-  proton_engine_add_menu_item(window_menu, @"Zoom", @selector(performZoom:),
-                              @"");
-  proton_engine_add_menu_item(window_menu, @"Close", @selector(performClose:),
-                              @"w");
-  return window_menu;
-}
-
-static NSString *proton_engine_menu_string(NSDictionary *object,
-                                           NSString *key) {
-  id value = [object objectForKey:key];
-  if (![value isKindOfClass:[NSString class]]) {
-    return nil;
-  }
-  return (NSString *)value;
-}
-
-static SEL proton_engine_menu_role_selector(NSString *role) {
-  if ([role isEqualToString:@"quit"]) {
-    return @selector(terminate:);
-  }
-  if ([role isEqualToString:@"hide"]) {
-    return @selector(hide:);
-  }
-  if ([role isEqualToString:@"hide_others"]) {
-    return @selector(hideOtherApplications:);
-  }
-  if ([role isEqualToString:@"show_all"]) {
-    return @selector(unhideAllApplications:);
-  }
-  if ([role isEqualToString:@"close"]) {
-    return @selector(performClose:);
-  }
-  if ([role isEqualToString:@"minimize"]) {
-    return @selector(performMiniaturize:);
-  }
-  if ([role isEqualToString:@"zoom"]) {
-    return @selector(performZoom:);
-  }
-  if ([role isEqualToString:@"undo"]) {
-    return @selector(undo:);
-  }
-  if ([role isEqualToString:@"redo"]) {
-    return @selector(redo:);
-  }
-  if ([role isEqualToString:@"cut"]) {
-    return @selector(cut:);
-  }
-  if ([role isEqualToString:@"copy"]) {
-    return @selector(copy:);
-  }
-  if ([role isEqualToString:@"paste"]) {
-    return @selector(paste:);
-  }
-  if ([role isEqualToString:@"select_all"]) {
-    return @selector(selectAll:);
-  }
-  return NULL;
-}
-
-static NSString *proton_engine_menu_role_label(NSString *role,
-                                               NSString *app_name) {
-  if ([role isEqualToString:@"quit"]) {
-    return [NSString stringWithFormat:@"Quit %@", app_name];
-  }
-  if ([role isEqualToString:@"hide"]) {
-    return [NSString stringWithFormat:@"Hide %@", app_name];
-  }
-  if ([role isEqualToString:@"hide_others"]) {
-    return @"Hide Others";
-  }
-  if ([role isEqualToString:@"show_all"]) {
-    return @"Show All";
-  }
-  if ([role isEqualToString:@"close"]) {
-    return @"Close";
-  }
-  if ([role isEqualToString:@"minimize"]) {
-    return @"Minimize";
-  }
-  if ([role isEqualToString:@"zoom"]) {
-    return @"Zoom";
-  }
-  if ([role isEqualToString:@"select_all"]) {
-    return @"Select All";
-  }
-  NSString *first = [[role substringToIndex:1] uppercaseString];
-  NSString *rest = [[role substringFromIndex:1] stringByReplacingOccurrencesOfString:@"_"
-                                                                          withString:@" "];
-  return [first stringByAppendingString:rest];
-}
-
-static NSString *proton_engine_menu_role_key(NSString *role) {
-  if ([role isEqualToString:@"quit"]) {
-    return @"q";
-  }
-  if ([role isEqualToString:@"hide"] || [role isEqualToString:@"hide_others"]) {
-    return @"h";
-  }
-  if ([role isEqualToString:@"close"]) {
-    return @"w";
-  }
-  if ([role isEqualToString:@"minimize"]) {
-    return @"m";
-  }
-  if ([role isEqualToString:@"undo"]) {
-    return @"z";
-  }
-  if ([role isEqualToString:@"redo"]) {
-    return @"Z";
-  }
-  if ([role isEqualToString:@"cut"]) {
-    return @"x";
-  }
-  if ([role isEqualToString:@"copy"]) {
-    return @"c";
-  }
-  if ([role isEqualToString:@"paste"]) {
-    return @"v";
-  }
-  if ([role isEqualToString:@"select_all"]) {
-    return @"a";
-  }
-  return @"";
-}
-
-static int proton_engine_add_custom_menu_item(NSMenu *menu,
-                                              NSDictionary *item,
-                                              NSString *app_name,
-                                              char *error,
-                                              size_t error_len) {
-  NSString *kind = proton_engine_menu_string(item, @"kind");
-  if ([kind isEqualToString:@"separator"]) {
-    [menu addItem:[NSMenuItem separatorItem]];
-    return 1;
-  }
-  if ([kind isEqualToString:@"command"]) {
-    NSString *label = proton_engine_menu_string(item, @"label");
-    NSString *command_id = proton_engine_menu_string(item, @"id");
-    NSString *key = proton_engine_menu_string(item, @"key");
-    if (label == nil || command_id == nil) {
-      proton_engine_set_message(error, error_len,
-                                "menu command requires label and id");
-      return 0;
-    }
-    if (g_menu_command_target == nil) {
-      g_menu_command_target = [ProtonMenuCommandTarget new];
-    }
-    NSMenuItem *menu_item = proton_engine_add_menu_item(
-        menu, label, @selector(performMenuCommand:), key != nil ? key : @"");
-    [menu_item setTarget:g_menu_command_target];
-    [menu_item setRepresentedObject:command_id];
-    return 1;
-  }
-  if ([kind isEqualToString:@"role"]) {
-    NSString *role = proton_engine_menu_string(item, @"role");
-    SEL selector = proton_engine_menu_role_selector(role);
-    if (selector == NULL) {
-      proton_engine_set_message(error, error_len, "menu role is unsupported");
-      return 0;
-    }
-    NSString *label = proton_engine_menu_string(item, @"label");
-    NSString *key = proton_engine_menu_string(item, @"key");
-    NSMenuItem *menu_item = proton_engine_add_menu_item(
-        menu, label != nil ? label : proton_engine_menu_role_label(role, app_name),
-        selector, key != nil ? key : proton_engine_menu_role_key(role));
-    if ([role isEqualToString:@"hide_others"]) {
-      [menu_item setKeyEquivalentModifierMask:
-                     NSEventModifierFlagOption | NSEventModifierFlagCommand];
-    }
-    return 1;
-  }
-  proton_engine_set_message(error, error_len, "menu item kind is unsupported");
-  return 0;
-}
-
-static NSMenu *proton_engine_create_custom_menu(NSDictionary *definition,
-                                                NSString *app_name,
-                                                char *error,
-                                                size_t error_len) {
-  NSString *label = proton_engine_menu_string(definition, @"label");
-  NSArray *items = [definition objectForKey:@"items"];
-  if (label == nil || ![items isKindOfClass:[NSArray class]]) {
-    proton_engine_set_message(error, error_len,
-                              "menu requires label and items");
-    return nil;
-  }
-  NSMenu *menu = [[NSMenu alloc] initWithTitle:label];
-  for (id item in items) {
-    if (![item isKindOfClass:[NSDictionary class]] ||
-        !proton_engine_add_custom_menu_item(
-            menu, (NSDictionary *)item, app_name, error, error_len)) {
-      return nil;
-    }
-  }
-  return menu;
-}
-
-static BOOL proton_engine_menu_definitions_include_label(NSArray *menus,
-                                                         NSString *label) {
-  for (id item in menus) {
-    if ([item isKindOfClass:[NSDictionary class]]) {
-      NSString *value = proton_engine_menu_string((NSDictionary *)item, @"label");
-      if (value != nil && [value caseInsensitiveCompare:label] == NSOrderedSame) {
-        return YES;
-      }
-    }
-  }
-  return NO;
-}
-
-static int proton_engine_install_menu_definitions(NSArray *menus,
-                                                  char *error,
-                                                  size_t error_len) {
-  NSString *app_name = proton_engine_application_name();
-  NSMenu *main_menu = [[NSMenu alloc] initWithTitle:@""];
-  NSMenu *window_menu = nil;
-  proton_engine_add_top_level_menu(
-      main_menu, app_name, proton_engine_create_app_menu(app_name));
-
-  for (id definition in menus) {
-    if (![definition isKindOfClass:[NSDictionary class]]) {
-      proton_engine_set_message(error, error_len, "menu definition is invalid");
-      return 0;
-    }
-    NSString *label = proton_engine_menu_string((NSDictionary *)definition, @"label");
-    NSMenu *menu = proton_engine_create_custom_menu(
-        (NSDictionary *)definition, app_name, error, error_len);
-    if (menu == nil || label == nil) {
-      return 0;
-    }
-    proton_engine_add_top_level_menu(main_menu, label, menu);
-    if ([label caseInsensitiveCompare:@"Window"] == NSOrderedSame) {
-      window_menu = menu;
-    }
-  }
-
-  if (!proton_engine_menu_definitions_include_label(menus, @"Edit")) {
-    proton_engine_add_top_level_menu(
-        main_menu, @"Edit", proton_engine_create_edit_menu());
-  }
-  if (!proton_engine_menu_definitions_include_label(menus, @"Window")) {
-    window_menu = proton_engine_create_window_menu();
-    proton_engine_add_top_level_menu(main_menu, @"Window", window_menu);
-  }
-
-  [NSApp setMainMenu:main_menu];
-  if (window_menu != nil) {
-    [NSApp setWindowsMenu:window_menu];
-  }
-  g_proton_app_menu_installed = 1;
-  return 1;
-}
-
-static void proton_engine_install_default_app_menu(void) {
-  if (g_proton_app_menu_installed) {
-    return;
-  }
-  char error[256] = {0};
-  (void)proton_engine_install_menu_definitions(@[], error, sizeof(error));
-}
-
 static void proton_engine_ensure_appkit(void) {
   [ProtonApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   [NSApp finishLaunching];
-  proton_engine_install_default_app_menu();
+  proton_engine_menu_install_default();
 }
 
 static char *proton_engine_data_url_for_html(const char *html) {
@@ -2812,6 +2112,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (!proton_engine_load_cef_library(&config, error, error_len)) {
     return PROTON_ERR_ENGINE;
   }
+  proton_engine_menu_set_signal_callback(proton_engine_signal_wait_source);
+  proton_engine_dialog_set_signal_callback(proton_engine_signal_wait_source);
   proton_engine_ensure_appkit();
   proton_engine_init_handlers();
   proton_engine_check_cef_api_hash();
@@ -3163,34 +2465,6 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
-static int32_t proton_engine_runtime_set_menu_json_on_main(
-    const char *menu_json,
-    char *error,
-    size_t error_len) {
-  NSData *data =
-      [NSData dataWithBytes:menu_json length:strlen(menu_json)];
-  NSError *json_error = nil;
-  id parsed = [NSJSONSerialization JSONObjectWithData:data
-                                             options:0
-                                               error:&json_error];
-  if (![parsed isKindOfClass:[NSDictionary class]]) {
-    proton_engine_set_message(error, error_len,
-                              "menu config must be a JSON object");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  id menus = [(NSDictionary *)parsed objectForKey:@"menus"];
-  if (![menus isKindOfClass:[NSArray class]]) {
-    proton_engine_set_message(error, error_len,
-                              "menu config requires menus array");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_install_menu_definitions(
-          (NSArray *)menus, error, error_len)) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  return PROTON_OK;
-}
-
 int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                                             const char *menu_json,
                                             char *error,
@@ -3208,7 +2482,7 @@ int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
   char main_error[512] = {0};
   char *main_error_buffer = main_error;
   void (^work)(void) = ^{
-    status = proton_engine_runtime_set_menu_json_on_main(
+    status = proton_engine_menu_set_json_on_main(
         menu_json, main_error_buffer, sizeof(main_error));
   };
   if ([NSThread isMainThread]) {
@@ -3823,768 +3097,5 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
   free(window->bridge_config_json);
   window->bridge_config_json = copy;
   window->public_window_id = public_window;
-  return PROTON_OK;
-}
-
-static NSString *proton_engine_string_from_utf8(
-    const char *value,
-    int32_t value_len) {
-  if (value == NULL || value_len <= 0) {
-    return @"";
-  }
-  NSString *text = [[NSString alloc]
-      initWithBytes:value
-             length:(NSUInteger)value_len
-           encoding:NSUTF8StringEncoding];
-  return text != nil ? [text autorelease] : @"";
-}
-
-static void proton_engine_dialog_lock(void) {
-  pthread_mutex_lock(&g_dialog_lock);
-}
-
-static void proton_engine_dialog_unlock(void) {
-  pthread_mutex_unlock(&g_dialog_lock);
-}
-
-static proton_engine_dialog_request_t *proton_engine_dialog_request_find_locked(
-    uint64_t window_native_id,
-    int64_t id) {
-  for (proton_engine_dialog_request_t *request = g_dialog_requests;
-       request != NULL; request = request->next) {
-    if (request->id == id && request->window_native_id == window_native_id) {
-      return request;
-    }
-  }
-  return NULL;
-}
-
-static proton_engine_dialog_request_t *
-proton_engine_dialog_request_remove_locked(uint64_t window_native_id,
-                                           int64_t id) {
-  proton_engine_dialog_request_t **cursor = &g_dialog_requests;
-  while (*cursor != NULL) {
-    proton_engine_dialog_request_t *request = *cursor;
-    if (request->id == id && request->window_native_id == window_native_id) {
-      *cursor = request->next;
-      request->next = NULL;
-      return request;
-    }
-    cursor = &request->next;
-  }
-  return NULL;
-}
-
-static void proton_engine_dialog_request_free(
-    proton_engine_dialog_request_t *request) {
-  if (request == NULL) {
-    return;
-  }
-  free(request->result);
-  free(request);
-}
-
-static void proton_engine_dialog_request_retain(
-    proton_engine_dialog_request_t *request) {
-  if (request == NULL) {
-    return;
-  }
-  proton_engine_dialog_lock();
-  request->refs++;
-  proton_engine_dialog_unlock();
-}
-
-static void proton_engine_dialog_request_release(
-    proton_engine_dialog_request_t *request) {
-  if (request == NULL) {
-    return;
-  }
-  int should_free = 0;
-  proton_engine_dialog_lock();
-  request->refs--;
-  should_free = request->refs == 0;
-  proton_engine_dialog_unlock();
-  if (should_free) {
-    proton_engine_dialog_request_free(request);
-  }
-}
-
-static int32_t proton_engine_dialog_request_create(
-    proton_engine_window_t *window,
-    proton_engine_dialog_request_t **out_request,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  if (out_request == NULL || out_dialog == NULL) {
-    proton_engine_set_message(error, error_len, "out_dialog is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_request = NULL;
-  *out_dialog = PROTON_INVALID_HANDLE;
-  if (window == NULL || window->window == nil) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-
-  proton_engine_dialog_request_t *request =
-      (proton_engine_dialog_request_t *)calloc(1, sizeof(*request));
-  if (request == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate dialog request");
-    return PROTON_ERR_ENGINE;
-  }
-
-  proton_engine_dialog_lock();
-  request->id = g_next_dialog_id++;
-  if (g_next_dialog_id == 0) {
-    g_next_dialog_id = 1;
-  }
-  request->refs = 1;
-  request->window_native_id = window->native_id;
-  request->next = g_dialog_requests;
-  g_dialog_requests = request;
-  proton_engine_dialog_unlock();
-
-  *out_request = request;
-  *out_dialog = request->id;
-  return PROTON_OK;
-}
-
-static void proton_engine_dialog_complete(
-    proton_engine_dialog_request_t *request,
-    int32_t status,
-    const char *result,
-    const char *error_message) {
-  if (request == NULL) {
-    return;
-  }
-  char *result_copy = NULL;
-  if (status == PROTON_OK) {
-    result_copy = proton_engine_strdup(result != NULL ? result : "");
-    if (result_copy == NULL) {
-      status = PROTON_ERR_ENGINE;
-      error_message = "failed to copy dialog result";
-    }
-  }
-
-  proton_engine_dialog_lock();
-  if (!request->completed) {
-    request->completed = 1;
-    request->status = status;
-    request->result = result_copy;
-    result_copy = NULL;
-    snprintf(request->error, sizeof(request->error), "%s",
-             error_message != NULL ? error_message : "");
-  }
-  proton_engine_dialog_unlock();
-  free(result_copy);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-}
-
-static char *proton_engine_dialog_result_from_string(NSString *value) {
-  NSData *data = [(value != nil ? value : @"")
-      dataUsingEncoding:NSUTF8StringEncoding
-   allowLossyConversion:NO];
-  if (data == nil || [data length] > (NSUInteger)(INT32_MAX - 1)) {
-    return NULL;
-  }
-  char *copy = (char *)malloc([data length] + 1);
-  if (copy == NULL) {
-    return NULL;
-  }
-  if ([data length] > 0) {
-    memcpy(copy, [data bytes], [data length]);
-  }
-  copy[[data length]] = '\0';
-  return copy;
-}
-
-static void proton_engine_dialog_complete_string(
-    proton_engine_dialog_request_t *request,
-    NSString *value) {
-  char *result = proton_engine_dialog_result_from_string(value);
-  if (result == NULL) {
-    proton_engine_dialog_complete(request, PROTON_ERR_ENGINE, NULL,
-                                  "failed to encode dialog result");
-    return;
-  }
-  proton_engine_dialog_complete(request, PROTON_OK, result, NULL);
-  free(result);
-}
-
-static void proton_engine_dialog_complete_window_closed(uint64_t native_id) {
-  proton_engine_dialog_lock();
-  for (proton_engine_dialog_request_t *request = g_dialog_requests;
-       request != NULL; request = request->next) {
-    if (request->window_native_id == native_id && !request->completed) {
-      request->completed = 1;
-      request->status = PROTON_ERR_DESTROYED;
-      snprintf(request->error, sizeof(request->error), "%s",
-               "window closed before dialog completed");
-    }
-  }
-  proton_engine_dialog_unlock();
-}
-
-static int32_t proton_engine_dialog_begin_on_parent(
-    proton_engine_window_t *window,
-    proton_engine_dialog_request_t *request,
-    void (^start_dialog)(NSWindow *parent),
-    void (^cleanup_without_start)(void)) {
-  if (window == NULL || request == NULL || start_dialog == nil) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  uint64_t native_id = window->native_id;
-  NSWindow *parent = [window->window retain];
-  proton_engine_dialog_request_retain(request);
-  dispatch_async(dispatch_get_main_queue(), ^{
-    @autoreleasepool {
-      proton_engine_window_t *current =
-          proton_engine_window_from_native_id(native_id);
-      if (current == NULL || current->window == nil || current->closed) {
-        if (cleanup_without_start != nil) {
-          cleanup_without_start();
-        }
-        [parent release];
-        proton_engine_dialog_complete(request, PROTON_ERR_DESTROYED, NULL,
-                                      "window closed before dialog started");
-        proton_engine_dialog_request_release(request);
-        return;
-      }
-      [NSApp activateIgnoringOtherApps:YES];
-      start_dialog(parent);
-    }
-  });
-  return PROTON_OK;
-}
-
-static NSAlertStyle proton_engine_alert_style(int32_t level) {
-  switch (level) {
-  case 1:
-    return NSAlertStyleWarning;
-  case 2:
-    return NSAlertStyleCritical;
-  default:
-    return NSAlertStyleInformational;
-  }
-}
-
-// Clicked-notification payloads waiting for the host to poll them. Clicks
-// arrive on a UserNotifications queue while the host only speaks the
-// runtime's poll protocol, so the queue bridges the two; overflow drops the
-// oldest-first surplus (a click burst beyond this is already stale).
-#define PROTON_ENGINE_MAX_MENU_COMMANDS 32
-#define PROTON_ENGINE_MAX_MENU_COMMAND_BYTES 256
-static char g_menu_commands[PROTON_ENGINE_MAX_MENU_COMMANDS]
-                           [PROTON_ENGINE_MAX_MENU_COMMAND_BYTES];
-static uint32_t g_menu_command_head = 0;
-static uint32_t g_menu_command_count = 0;
-static pthread_mutex_t g_menu_command_lock = PTHREAD_MUTEX_INITIALIZER;
-
-static void proton_engine_enqueue_menu_command(NSString *command_id) {
-  const char *utf8 = command_id != nil ? [command_id UTF8String] : "";
-  if (utf8 == NULL || strlen(utf8) >= PROTON_ENGINE_MAX_MENU_COMMAND_BYTES) {
-    return;
-  }
-  pthread_mutex_lock(&g_menu_command_lock);
-  if (g_menu_command_count < PROTON_ENGINE_MAX_MENU_COMMANDS) {
-    uint32_t index =
-        (g_menu_command_head + g_menu_command_count) %
-        PROTON_ENGINE_MAX_MENU_COMMANDS;
-    snprintf(g_menu_commands[index], PROTON_ENGINE_MAX_MENU_COMMAND_BYTES,
-             "%s", utf8);
-    g_menu_command_count++;
-  }
-  pthread_mutex_unlock(&g_menu_command_lock);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-}
-
-int32_t proton_engine_take_menu_command(char *buffer,
-                                        size_t buffer_len,
-                                        int32_t *out_present) {
-  if (out_present == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_present = 0;
-  pthread_mutex_lock(&g_menu_command_lock);
-  if (g_menu_command_count > 0) {
-    const char *command_id = g_menu_commands[g_menu_command_head];
-    size_t command_len = strlen(command_id);
-    if (buffer == NULL || buffer_len <= command_len) {
-      pthread_mutex_unlock(&g_menu_command_lock);
-      return PROTON_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(buffer, command_id, command_len + 1);
-    g_menu_command_head =
-        (g_menu_command_head + 1) % PROTON_ENGINE_MAX_MENU_COMMANDS;
-    g_menu_command_count--;
-    *out_present = 1;
-  }
-  pthread_mutex_unlock(&g_menu_command_lock);
-  return PROTON_OK;
-}
-
-#define PROTON_ENGINE_MAX_NOTIFICATION_CLICKS 16
-#define PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES 4096
-static char g_notification_clicks[PROTON_ENGINE_MAX_NOTIFICATION_CLICKS]
-                                 [PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES];
-static uint32_t g_notification_click_head = 0;
-static uint32_t g_notification_click_count = 0;
-static pthread_mutex_t g_notification_click_lock = PTHREAD_MUTEX_INITIALIZER;
-
-static NSString *const ProtonEngineNotificationPayloadKey = @"proton_payload";
-
-static void proton_engine_enqueue_notification_click(NSString *payload) {
-  const char *utf8 = payload != nil ? [payload UTF8String] : "";
-  if (utf8 == NULL ||
-      strlen(utf8) >= PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES) {
-    return;
-  }
-  pthread_mutex_lock(&g_notification_click_lock);
-  if (g_notification_click_count < PROTON_ENGINE_MAX_NOTIFICATION_CLICKS) {
-    uint32_t index =
-        (g_notification_click_head + g_notification_click_count) %
-        PROTON_ENGINE_MAX_NOTIFICATION_CLICKS;
-    snprintf(g_notification_clicks[index],
-             PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES, "%s", utf8);
-    g_notification_click_count++;
-  }
-  pthread_mutex_unlock(&g_notification_click_lock);
-}
-
-int32_t proton_engine_take_notification_click(char *buffer,
-                                              size_t buffer_len,
-                                              int32_t *out_present) {
-  if (out_present == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_present = 0;
-  pthread_mutex_lock(&g_notification_click_lock);
-  if (g_notification_click_count > 0) {
-    const char *payload = g_notification_clicks[g_notification_click_head];
-    size_t payload_len = strlen(payload);
-    if (buffer == NULL || buffer_len <= payload_len) {
-      pthread_mutex_unlock(&g_notification_click_lock);
-      return PROTON_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(buffer, payload, payload_len + 1);
-    g_notification_click_head =
-        (g_notification_click_head + 1) % PROTON_ENGINE_MAX_NOTIFICATION_CLICKS;
-    g_notification_click_count--;
-    *out_present = 1;
-  }
-  pthread_mutex_unlock(&g_notification_click_lock);
-  return PROTON_OK;
-}
-
-// Reveals the app the way clicking its Dock icon would: activate, restore
-// any miniaturized windows, and bring the key candidate forward.
-static void proton_engine_reveal_app_windows(void) {
-  [NSApp activateIgnoringOtherApps:YES];
-  NSWindow *front = nil;
-  for (NSWindow *window in [NSApp windows]) {
-    if ([window isMiniaturized]) {
-      [window deminiaturize:nil];
-    }
-    if (front == nil && [window canBecomeKeyWindow] &&
-        ([window isVisible] || [window isMiniaturized])) {
-      front = window;
-    }
-  }
-  if (front != nil) {
-    [front makeKeyAndOrderFront:nil];
-  }
-}
-
-// Routes notification clicks back to the app: the payload is queued for the
-// runtime's event poll and the window is pulled forward. Foreground
-// presentation is deliberately NOT implemented — the delegate default keeps
-// banners suppressed while the app is frontmost, matching what users expect
-// from a "task finished while I was elsewhere" notification.
-@interface ProtonEngineNotificationDelegate
-    : NSObject <UNUserNotificationCenterDelegate>
-@end
-
-@implementation ProtonEngineNotificationDelegate
-
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center
-    didReceiveNotificationResponse:(UNNotificationResponse *)response
-             withCompletionHandler:(void (^)(void))completionHandler {
-  (void)center;
-  NSDictionary *user_info =
-      response.notification.request.content.userInfo;
-  id payload = [user_info objectForKey:ProtonEngineNotificationPayloadKey];
-  if ([payload isKindOfClass:[NSString class]]) {
-    proton_engine_enqueue_notification_click((NSString *)payload);
-  }
-  dispatch_async(dispatch_get_main_queue(), ^{
-    proton_engine_reveal_app_windows();
-  });
-  completionHandler();
-}
-
-@end
-
-int32_t proton_engine_post_notification(const char *title_utf8,
-                                        int32_t title_len,
-                                        const char *body_utf8,
-                                        int32_t body_len,
-                                        const char *payload_utf8,
-                                        int32_t payload_len,
-                                        char *error,
-                                        size_t error_len) {
-  // UNUserNotificationCenter aborts with an ObjC exception outside an app
-  // bundle, so refuse cleanly instead.
-  if ([[NSBundle mainBundle] bundleIdentifier] == nil) {
-    proton_engine_set_message(
-        error, error_len,
-        "notifications require an app bundle with a bundle identifier");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  @autoreleasepool {
-    NSString *title = proton_engine_string_from_utf8(title_utf8, title_len);
-    NSString *body = proton_engine_string_from_utf8(body_utf8, body_len);
-    NSString *payload =
-        proton_engine_string_from_utf8(payload_utf8, payload_len);
-    UNUserNotificationCenter *center =
-        [UNUserNotificationCenter currentNotificationCenter];
-    static ProtonEngineNotificationDelegate *g_notification_delegate = nil;
-    static dispatch_once_t g_notification_delegate_once;
-    dispatch_once(&g_notification_delegate_once, ^{
-      g_notification_delegate =
-          [[ProtonEngineNotificationDelegate alloc] init];
-    });
-    if ([center delegate] == nil) {
-      [center setDelegate:g_notification_delegate];
-    }
-    // Repeat requests after the user has answered complete immediately
-    // without UI, so asking on every post is safe. Denied permission drops
-    // the notification silently — same as any other notifying app.
-    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert |
-                                             UNAuthorizationOptionSound)
-                          completionHandler:^(BOOL granted,
-                                              NSError *auth_error) {
-      (void)auth_error;
-      if (!granted) {
-        return;
-      }
-      @autoreleasepool {
-        UNMutableNotificationContent *content =
-            [[[UNMutableNotificationContent alloc] init] autorelease];
-        if ([title length] > 0) {
-          [content setTitle:title];
-        }
-        [content setBody:body];
-        [content setSound:[UNNotificationSound defaultSound]];
-        if ([payload length] > 0) {
-          [content setUserInfo:@{
-            ProtonEngineNotificationPayloadKey : payload
-          }];
-        }
-        UNNotificationRequest *request = [UNNotificationRequest
-            requestWithIdentifier:[[NSUUID UUID] UUIDString]
-                          content:content
-                          trigger:nil];
-        [[UNUserNotificationCenter currentNotificationCenter]
-            addNotificationRequest:request
-             withCompletionHandler:nil];
-      }
-    }];
-  }
-  return PROTON_OK;
-}
-
-static void proton_engine_configure_file_panel(NSSavePanel *panel,
-                                               NSString *initial_path,
-                                               BOOL save_mode) {
-  if (initial_path == nil || [initial_path length] == 0) {
-    return;
-  }
-  BOOL is_dir = NO;
-  NSFileManager *file_manager = [NSFileManager defaultManager];
-  if ([file_manager fileExistsAtPath:initial_path isDirectory:&is_dir] &&
-      is_dir) {
-    [panel setDirectoryURL:[NSURL fileURLWithPath:initial_path]];
-    return;
-  }
-  NSString *directory = [initial_path stringByDeletingLastPathComponent];
-  NSString *name = [initial_path lastPathComponent];
-  if ([directory length] > 0) {
-    [panel setDirectoryURL:[NSURL fileURLWithPath:directory]];
-  }
-  if (save_mode && [name length] > 0) {
-    [panel setNameFieldStringValue:name];
-  }
-}
-
-enum {
-  PROTON_ENGINE_FILE_DIALOG_OPEN = 0,
-  PROTON_ENGINE_FILE_DIALOG_SAVE = 1,
-  PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY = 2,
-};
-
-static NSSavePanel *proton_engine_make_file_panel(int32_t mode,
-                                                  NSString *title,
-                                                  NSString *path) {
-  BOOL save_mode = mode == PROTON_ENGINE_FILE_DIALOG_SAVE;
-  NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
-                                 : [NSOpenPanel openPanel];
-  if ([title length] > 0) {
-    [panel setTitle:title];
-  }
-  if (!save_mode) {
-    NSOpenPanel *open_panel = (NSOpenPanel *)panel;
-    BOOL choose_directories =
-        mode == PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY;
-    [open_panel setCanChooseFiles:!choose_directories];
-    [open_panel setCanChooseDirectories:choose_directories];
-    [open_panel setAllowsMultipleSelection:NO];
-  }
-  proton_engine_configure_file_panel(panel, path, save_mode);
-  return panel;
-}
-
-int32_t proton_engine_window_begin_message_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  proton_engine_dialog_request_t *request = NULL;
-  int32_t status = proton_engine_dialog_request_create(
-      window, &request, out_dialog, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  NSString *title = [proton_engine_string_from_utf8(title_utf8, title_len) retain];
-  NSString *message =
-      [proton_engine_string_from_utf8(message_utf8, message_len) retain];
-  status = proton_engine_dialog_begin_on_parent(
-      window, request, ^(NSWindow *parent) {
-        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-        [alert setMessageText:title];
-        [alert setInformativeText:message];
-        [alert setAlertStyle:proton_engine_alert_style(level)];
-        [alert addButtonWithTitle:@"OK"];
-        [alert beginSheetModalForWindow:parent
-                      completionHandler:^(NSModalResponse returnCode) {
-                        (void)returnCode;
-                        proton_engine_dialog_complete(request, PROTON_OK, "",
-                                                      NULL);
-                        [title release];
-                        [message release];
-                        [parent release];
-                        proton_engine_dialog_request_release(request);
-                      }];
-      }, ^{
-        [title release];
-        [message release];
-      });
-  if (status != PROTON_OK) {
-    [title release];
-    [message release];
-    proton_engine_dialog_request_release(request);
-  }
-  return status;
-}
-
-int32_t proton_engine_window_begin_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  proton_engine_dialog_request_t *request = NULL;
-  int32_t status = proton_engine_dialog_request_create(
-      window, &request, out_dialog, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  NSString *title = [proton_engine_string_from_utf8(title_utf8, title_len) retain];
-  NSString *message =
-      [proton_engine_string_from_utf8(message_utf8, message_len) retain];
-  status = proton_engine_dialog_begin_on_parent(
-      window, request, ^(NSWindow *parent) {
-        NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-        [alert setMessageText:title];
-        [alert setInformativeText:message];
-        [alert setAlertStyle:proton_engine_alert_style(level)];
-        [alert addButtonWithTitle:@"OK"];
-        [alert addButtonWithTitle:@"Cancel"];
-        [alert beginSheetModalForWindow:parent
-                      completionHandler:^(NSModalResponse returnCode) {
-                        const char *result =
-                            returnCode == NSAlertFirstButtonReturn ? "1" : "0";
-                        proton_engine_dialog_complete(request, PROTON_OK,
-                                                      result, NULL);
-                        [title release];
-                        [message release];
-                        [parent release];
-                        proton_engine_dialog_request_release(request);
-                      }];
-      }, ^{
-        [title release];
-        [message release];
-      });
-  if (status != PROTON_OK) {
-    [title release];
-    [message release];
-    proton_engine_dialog_request_release(request);
-  }
-  return status;
-}
-
-static int32_t proton_engine_window_begin_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int32_t mode,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  proton_engine_dialog_request_t *request = NULL;
-  int32_t status = proton_engine_dialog_request_create(
-      window, &request, out_dialog, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  NSString *title = [proton_engine_string_from_utf8(title_utf8, title_len) retain];
-  NSString *path = [proton_engine_string_from_utf8(path_utf8, path_len) retain];
-  status = proton_engine_dialog_begin_on_parent(
-      window, request, ^(NSWindow *parent) {
-        NSSavePanel *panel = proton_engine_make_file_panel(mode, title, path);
-        [panel beginSheetModalForWindow:parent
-                      completionHandler:^(NSModalResponse returnCode) {
-                        NSString *result = @"";
-                        if (returnCode == NSModalResponseOK &&
-                            [panel URL] != nil) {
-                          result = [[panel URL] path] ?: @"";
-                        }
-                        proton_engine_dialog_complete_string(request, result);
-                        [title release];
-                        [path release];
-                        [parent release];
-                        proton_engine_dialog_request_release(request);
-                      }];
-      }, ^{
-        [title release];
-        [path release];
-      });
-  if (status != PROTON_OK) {
-    [title release];
-    [path release];
-    proton_engine_dialog_request_release(request);
-  }
-  return status;
-}
-
-int32_t proton_engine_window_begin_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_begin_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len,
-      PROTON_ENGINE_FILE_DIALOG_OPEN, out_dialog, error, error_len);
-}
-
-int32_t proton_engine_window_begin_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_begin_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len,
-      PROTON_ENGINE_FILE_DIALOG_SAVE, out_dialog, error, error_len);
-}
-
-int32_t proton_engine_window_begin_choose_directory_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
-  return proton_engine_window_begin_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len,
-      PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
-      error_len);
-}
-
-int32_t proton_engine_window_poll_dialog_result(
-    proton_engine_window_t *window,
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  proton_engine_dialog_lock();
-  proton_engine_dialog_request_t *request =
-      proton_engine_dialog_request_find_locked(window->native_id, dialog);
-  if (request == NULL) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog request is unknown");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (!request->completed) {
-    proton_engine_dialog_unlock();
-    return PROTON_EVENT_NONE;
-  }
-  if (request->status != PROTON_OK) {
-    int32_t status = request->status;
-    char request_error[sizeof(request->error)];
-    snprintf(request_error, sizeof(request_error), "%s", request->error);
-    request = proton_engine_dialog_request_remove_locked(
-        window->native_id, dialog);
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, request_error);
-    proton_engine_dialog_request_release(request);
-    return status;
-  }
-  const char *result = request->result != NULL ? request->result : "";
-  int32_t required = (int32_t)strlen(result) + 1;
-  *out_required_len = required;
-  if (buffer == NULL || buffer_len < required) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, result, (size_t)required);
-  request = proton_engine_dialog_request_remove_locked(window->native_id, dialog);
-  proton_engine_dialog_unlock();
-  proton_engine_dialog_request_release(request);
   return PROTON_OK;
 }
