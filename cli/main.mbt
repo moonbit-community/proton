@@ -4,6 +4,8 @@ fn print_usage() -> Unit {
     #|Usage:
     #|  proton_cli version
     #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
+    #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
+    #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
     #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
@@ -215,11 +217,14 @@ fn parse_global_args(args : Array[String]) -> (String, Array[String]) {
       } else {
         rest.push(args[index])
         index = index + 1
+        break
       }
     } else {
-      rest.push(args[index])
-      index = index + 1
+      break
     }
+  }
+  for arg in args[index:] {
+    rest.push(arg)
   }
   (cwd, rest)
 }
@@ -336,6 +341,22 @@ async fn main {
   } else if args.length() >= 1 && args[0] == "new" {
     @new_project.run(cwd, args[1:].to_owned()).map_err(fn(message) {
       CliError::CommandError(message)
+    })
+  } else if args.length() >= 1 && args[0] == "dev" {
+    @dev.run(cwd, args[1:].to_owned()).map_err(fn(error) {
+      match error {
+        UsageError(message, usage_is_embedded) =>
+          CliError::UsageError(message, usage_is_embedded)
+        CommandError(message) => CliError::CommandError(message)
+      }
+    })
+  } else if args.length() >= 1 && args[0] == "build" {
+    @build.run(cwd, args[1:].to_owned()).map_err(fn(error) {
+      match error {
+        UsageError(message, usage_is_embedded) =>
+          CliError::UsageError(message, usage_is_embedded)
+        CommandError(message) => CliError::CommandError(message)
+      }
     })
   } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(cwd, args[1:].to_owned())
