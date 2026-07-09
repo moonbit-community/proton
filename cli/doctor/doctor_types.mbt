@@ -164,9 +164,11 @@ priv struct DoctorAppEntry {
 
 ///|
 priv struct DoctorFrontendConfig {
+  before_dev : String?
   before_build : String?
   dist : String?
   dev_url : String?
+  cwd : String?
 }
 
 ///|

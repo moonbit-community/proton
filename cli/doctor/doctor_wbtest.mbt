@@ -9,6 +9,14 @@ fn ensure_test_dir(path : String) -> Unit {
 }
 
 ///|
+fn assert_test_path_suffix(value : String, suffix : String) -> Unit {
+  let normalized = value.replace_all(old="\\", new="/")
+  guard normalized.has_suffix(suffix) else {
+    abort("expected path suffix `" + suffix + "`, got `" + value + "`")
+  }
+}
+
+///|
 test "moon_config adapter reads module deps and package imports" {
   let dir = "target/proton-doctor-config"
   ensure_test_dir(dir)
@@ -120,9 +128,11 @@ test "moon.proton reader extracts app and frontend fields" {
       #|debug = true
       #|
       #|frontend = {
+      #|  before_dev: "npm run dev",
       #|  before_build: "npm run build",
       #|  dist: "dist",
       #|  dev_url: "http://localhost:5173/",
+      #|  cwd: "frontend",
       #|}
       #|
     ),
@@ -134,13 +144,26 @@ test "moon.proton reader extracts app and frontend fields" {
   assert_eq(config.window.title, "Demo")
   assert_eq(config.window.width, 960)
   assert_eq(config.entry.kind, "file")
-  assert_eq(config.entry.value, "app.html")
+  assert_test_path_suffix(
+    config.entry.value,
+    "proton-doctor-app-config/app.html",
+  )
   assert_true(config.debug)
   match config.frontend {
     Some(frontend) => {
+      @debug.assert_eq(frontend.before_dev, Some("npm run dev"))
       @debug.assert_eq(frontend.before_build, Some("npm run build"))
-      @debug.assert_eq(frontend.dist, Some("dist"))
+      match frontend.dist {
+        Some(dist) =>
+          assert_test_path_suffix(dist, "proton-doctor-app-config/dist")
+        None => abort("expected frontend.dist")
+      }
       @debug.assert_eq(frontend.dev_url, Some("http://localhost:5173/"))
+      match frontend.cwd {
+        Some(cwd) =>
+          assert_test_path_suffix(cwd, "proton-doctor-app-config/frontend")
+        None => abort("expected frontend.cwd")
+      }
     }
     None => abort("expected frontend")
   }

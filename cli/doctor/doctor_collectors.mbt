@@ -558,6 +558,7 @@ fn push_loaded_app(
   lines.push(DoctorLine::new(Neutral, "debug: \{config.debug}"))
   match config.frontend {
     Some(frontend) => {
+      push_optional_app_line(lines, "before_dev_command", frontend.before_dev)
       push_optional_app_line(
         lines,
         "before_build_command",
@@ -565,6 +566,7 @@ fn push_loaded_app(
       )
       push_optional_app_line(lines, "frontend_dist", frontend.dist)
       push_optional_app_line(lines, "dev_url", frontend.dev_url)
+      push_optional_app_line(lines, "frontend_cwd", frontend.cwd)
     }
     None => ()
   }
