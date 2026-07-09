@@ -382,5 +382,5 @@ fn print_success(options : NewProjectOptions, checked~ : Bool) -> Unit {
   println("Next steps:")
   println("  cd " + options.target_dir)
   println("  proton_cli cef setup")
-  println("  moon run app --target native")
+  println("  proton_cli dev")
 }

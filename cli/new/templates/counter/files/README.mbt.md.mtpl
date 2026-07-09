@@ -18,7 +18,7 @@ moon check --target native --diagnostic-limit 80
 ## Run
 
 ```sh
-moon run app --target native
+proton_cli dev
 ```
 
 ## Layout

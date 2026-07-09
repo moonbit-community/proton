@@ -154,13 +154,14 @@ test "templates receive final module title and size" {
   guard find_planned_file(files, "app/main.mbt") is Some(main_mbt) else {
     abort("missing app/main.mbt")
   }
-  assert_true(main_mbt.contains("\"Demo App\""))
-  assert_true(main_mbt.contains("width=1000"))
-  assert_true(main_mbt.contains("height=700"))
+  assert_true(main_mbt.contains("@proton.app()"))
   guard find_planned_file(files, "moon.proton") is Some(config) else {
     abort("missing moon.proton")
   }
   assert_true(config.contains("product_name = \"Demo App\""))
+  assert_true(config.contains("title: \"Demo App\""))
+  assert_true(config.contains("width: 1000"))
+  assert_true(config.contains("height: 700"))
 }
 
 ///|

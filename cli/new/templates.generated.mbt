@@ -81,13 +81,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|///|
           #|async fn main {
-          #|  @proton.asset(
-          #|    {{title_mbt}},
-          #|    "app/app.html",
-          #|    width={{width}},
-          #|    height={{height}},
-          #|    debug=true,
-          #|  ).extension(@counter.extension()).run_or_abort()
+          #|  @proton.app().extension(@counter.extension()).run_or_abort()
           #|}
           #|
       ),
@@ -372,7 +366,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|project root with:
           #|
           #|```sh
-          #|moon run app --target native
+          #|proton_cli dev
           #|```
           #|
       ),
@@ -389,7 +383,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|- Format with `moon fmt`.
           #|- Check with `moon check --target native --diagnostic-limit 80`.
-          #|- Run with `moon run app --target native` from the project root.
+          #|- Run with `proton_cli dev` from the project root.
           #|- If the Proton runtime is not configured, run `proton_cli cef setup`.
           #|
           #|## Project Notes
@@ -425,7 +419,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|## Run
           #|
           #|```sh
-          #|moon run app --target native
+          #|proton_cli dev
           #|```
           #|
           #|## Layout
