@@ -590,19 +590,6 @@ static bool proton_engine_relative_asset_path_is_safe(const char *path) {
   }
 }
 
-static int proton_engine_hex_value(char ch) {
-  if (ch >= '0' && ch <= '9') {
-    return ch - '0';
-  }
-  if (ch >= 'a' && ch <= 'f') {
-    return ch - 'a' + 10;
-  }
-  if (ch >= 'A' && ch <= 'F') {
-    return ch - 'A' + 10;
-  }
-  return -1;
-}
-
 static char *proton_engine_decode_relative_url_path(const char *path) {
   if (path == NULL) {
     return NULL;
