@@ -54,6 +54,7 @@ $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 node ./scripts/e2e_bridge_smoke.mjs 38_async_extension_add 39_sync_async_extensions
 node ./scripts/e2e_bridge_smoke.mjs 40_event_broadcast
 node ./scripts/e2e_bridge_smoke.mjs 41_app_commands 42_attribute_codegen_commands 45_bridge_multi_window
+node ./scripts/e2e_bridge_smoke.mjs 47_dev_extension_js
 ```
 
 The `e2e/` MoonBit module is part of `moon.work`. The script checks that
