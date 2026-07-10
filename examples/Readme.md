@@ -63,6 +63,8 @@ moon -C examples run 01_run --target native
 - `44_project_config`: `moon.proton` project config decoding
 - `45_bridge_multi_window`: multi-window bridge smoke.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
+- `47_dev_extension_js`: Vite dev-server injection smoke for extension
+  JavaScript helpers and events.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle

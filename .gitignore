@@ -6,6 +6,8 @@ dist/
 
 # CMake build directories and cache
 build/
+!cli/build/
+!cli/build/**
 bin/
 native/build*/
 native/dist-engine/
@@ -28,6 +30,9 @@ Desktop.ini
 *.log
 *.bak
 *.orig
+
+# Frontend package installs
+node_modules/
 
 # Coverage-related files
 moonbit-coverage-*.txt
