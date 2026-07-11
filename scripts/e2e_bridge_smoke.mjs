@@ -1861,12 +1861,9 @@ function spawnApp(env, scenario) {
     }
     const viteCommand = [
       "npm",
-      "exec",
-      "--yes",
-      "--package",
-      "vite@7.0.0",
+      "run",
+      "dev",
       "--",
-      "vite",
       "--host",
       "127.0.0.1",
       "--port",
