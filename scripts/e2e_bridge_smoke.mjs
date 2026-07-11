@@ -937,7 +937,7 @@ async function buildDevExtensionJsFrontend(env) {
   const frontendDir = path.join(repoRoot, "examples", "47_dev_extension_js", "frontend");
   const hadNodeModules = fs.existsSync(path.join(frontendDir, "node_modules"));
   try {
-    if (!hadNodeModules) {
+    if (!frontendDependenciesReady(frontendDir)) {
       await runCollectedChild(
         spawnNpm(["ci", "--no-audit", "--no-fund"], {
           cwd: frontendDir,
@@ -975,6 +975,24 @@ async function buildDevExtensionJsFrontend(env) {
   }
 }
 
+///|
+function frontendDependenciesReady(frontendDir) {
+  return (
+    fs.existsSync(path.join(frontendDir, "node_modules")) &&
+    fs.existsSync(frontendViteBin(frontendDir))
+  );
+}
+
+///|
+function frontendViteBin(frontendDir) {
+  const binDir = path.join(frontendDir, "node_modules", ".bin");
+  if (process.platform === "win32") {
+    return path.join(binDir, "vite.cmd");
+  }
+  return path.join(binDir, "vite");
+}
+
+///|
 async function runCollectedChild(child, label) {
   const output = collectOutput(child);
   try {
