@@ -347,3 +347,14 @@ test "frontend dev url validation runs without server wait" {
     Err(_) => abort("expected command error")
   }
 }
+
+///|
+async test "ready path validates curl probe availability" {
+  require_dev_ok(validate_ready_probe(None))
+  match validate_ready_probe(Some("/ready")) {
+    Ok(_) => ()
+    Err(CommandError(message)) =>
+      assert_true(message.contains("--ready-path requires curl"))
+    Err(_) => abort("expected command error")
+  }
+}

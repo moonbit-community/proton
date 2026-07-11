@@ -702,6 +702,10 @@ async fn wait_for_frontend(
         Ok(endpoint) => endpoint
         Err(message) => return Err(CommandError(message))
       }
+      match validate_ready_probe(ready_path) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
       println("Waiting for frontend dev server: " + endpoint.url)
       let mut elapsed = 0
       while elapsed <= timeout_ms {
@@ -728,6 +732,46 @@ async fn wait_for_frontend(
       )
     }
   }
+}
+
+///|
+async fn validate_ready_probe(ready_path : String?) -> Result[Unit, DevError] {
+  match ready_path {
+    Some(_) =>
+      if command_exists("curl") {
+        Ok(())
+      } else {
+        Err(
+          CommandError(
+            "--ready-path requires curl on PATH; install curl or omit --ready-path to use TCP readiness",
+          ),
+        )
+      }
+    None => Ok(())
+  }
+}
+
+///|
+async fn command_exists(command : String) -> Bool {
+  let args = if @path.sep == '\\' {
+    ["/c", "where", command, ">NUL", "2>NUL"]
+  } else {
+    ["-c", "command -v " + shell_quote(command) + " >/dev/null 2>&1"]
+  }
+  let program = if @path.sep == '\\' { "cmd" } else { "sh" }
+  let code = @process.run(
+    program,
+    args,
+    no_console_window=true,
+  ) catch {
+    _ => return false
+  }
+  code == 0
+}
+
+///|
+fn shell_quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\\''") + "'"
 }
 
 ///|
