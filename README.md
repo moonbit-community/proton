@@ -94,10 +94,44 @@ proton_cli new my-counter --title "My Counter"
 `proton_cli new` generates a native-first MoonBit project with `app/` as the
 runnable package, `extensions/counter/` as a reusable command-bridge extension,
 `moon.proton`, `AGENTS.md`, `README.mbt.md`, `LICENSE`, and `.gitignore`. It
-uses `@proton.asset(...)` for `app/app.html` and runs
-`moon check --target native --diagnostic-limit 80` by default. Use `--no-check`
-to skip that check, or `-y/--yes` in scripts to accept defaults and skip
-prompts.
+uses `@proton.app()` to load the nearest `moon.proton` config. It runs the
+native check by default; use `--no-check` to skip that check, or `-y/--yes` in
+scripts to accept defaults and skip prompts.
+
+Run a scaffolded app through the development supervisor:
+
+```powershell
+cd my-counter
+proton_cli cef setup
+proton_cli dev
+```
+
+For Vite, Next, or another frontend dev server, add a `frontend` block to
+`moon.proton`:
+
+```moonbit
+frontend = {
+  dev_url: "http://127.0.0.1:5173",
+  dist: "frontend/dist",
+  cwd: "frontend",
+  before_dev: "npm run dev -- --host 127.0.0.1 --strictPort",
+  before_build: "npm run build",
+}
+```
+
+The `before_dev` and `before_build` examples assume `frontend/package.json`
+defines matching `dev` and `build` scripts, as a Vite or Next app normally
+does.
+
+`proton_cli dev` starts `before_dev` in `frontend.cwd` when present, waits for
+the `dev_url` TCP port, then runs `moon run app --target native` with
+development and runtime environment variables injected. Vite/Next own HMR;
+Proton keeps command handlers in the MoonBit app process.
+
+For release builds, `proton_cli build` runs `frontend.before_build`, validates
+`frontend.dist` and the production entry, then runs `moon build <package>
+--target native`. Platform installers and zip assembly are still separate
+follow-up work.
 
 `proton/native_link_config.mjs` resolves link inputs in this order:
 
