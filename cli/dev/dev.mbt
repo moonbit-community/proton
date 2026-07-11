@@ -759,11 +759,7 @@ async fn command_exists(command : String) -> Bool {
     ["-c", "command -v " + shell_quote(command) + " >/dev/null 2>&1"]
   }
   let program = if @path.sep == '\\' { "cmd" } else { "sh" }
-  let code = @process.run(
-    program,
-    args,
-    no_console_window=true,
-  ) catch {
+  let code = @process.run(program, args, no_console_window=true) catch {
     _ => return false
   }
   code == 0
