@@ -858,7 +858,6 @@ async function runDevExtensionJsProductionSmoke(env) {
   let client = null;
   try {
     await buildDevExtensionJsFrontend(env);
-    cleanupWorkspaceProcesses();
     child = spawnMoonExampleApp(env, "47_dev_extension_js");
     output = collectOutput(child);
     await Promise.race([
@@ -928,7 +927,6 @@ async function runDevExtensionJsProductionSmoke(env) {
     if (child) {
       await terminateTree(child);
     }
-    cleanupWorkspaceProcesses();
     if (!hadDist) {
       removeTreeIfExists(frontendDist);
     }
@@ -1240,7 +1238,6 @@ async function runNonProtonProbe(client, allowedOp) {
 }
 
 async function runWindowCloseLifecycleProbe(env, scenario) {
-  cleanupWorkspaceProcesses();
   const child = spawnApp(env, scenario);
   const output = collectOutput(child);
   let client = null;
@@ -1278,12 +1275,10 @@ async function runWindowCloseLifecycleProbe(env, scenario) {
       client.close();
     }
     await terminateTree(child);
-    cleanupWorkspaceProcesses();
   }
 }
 
 async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
-  cleanupWorkspaceProcesses();
   const child = spawnApp(env, scenario);
   const output = collectOutput(child);
   let client = null;
@@ -1321,7 +1316,6 @@ async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
       client.close();
     }
     await terminateTree(child);
-    cleanupWorkspaceProcesses();
   }
 }
 
@@ -1956,60 +1950,6 @@ async function terminateTree(child) {
   ]);
 }
 
-function cleanupWorkspaceProcesses() {
-  if (process.platform !== "win32") {
-    const result = spawnSync("ps", ["-axo", "pid=,command="], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    });
-    if (result.status !== 0) {
-      return;
-    }
-    const candidates = [];
-    for (const line of result.stdout.split(/\r?\n/)) {
-      const match = line.match(/^\s*(\d+)\s+(.*)$/);
-      if (!match) {
-        continue;
-      }
-      const pid = Number(match[1]);
-      const command = match[2];
-      if (
-        pid !== process.pid &&
-        command.includes(repoRoot) &&
-        !command.includes("scripts/e2e_bridge_smoke.mjs")
-      ) {
-        candidates.push(pid);
-      }
-    }
-    for (const pid of candidates) {
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch {
-        // Best-effort cleanup only.
-      }
-    }
-    return;
-  }
-  const script = `
-$root = (Resolve-Path -LiteralPath '${repoRoot.replace(/'/g, "''")}').Path
-Get-CimInstance Win32_Process |
-  Where-Object {
-    ($_.CommandLine -like "*$root*") -or
-    ($_.ExecutablePath -like "$root\\_build\\native\\*") -or
-    ($_.ExecutablePath -like "$root\\.proton\\runtimes\\*\\bin\\cef_process.exe") -or
-    ($_.ExecutablePath -like "$root\\native\\dist\\bin\\cef_process.exe")
-  } |
-  Where-Object { $_.ProcessId -ne $PID } |
-  ForEach-Object {
-    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {}
-  }
-`;
-  spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], {
-    cwd: repoRoot,
-    stdio: "ignore",
-  });
-}
-
 function closeWindowsForProcessTree(rootPid) {
   if (process.platform !== "win32") {
     process.kill(rootPid, "SIGTERM");
@@ -2109,7 +2049,6 @@ async function runScenario(name, hasMoonBitE2e) {
   fs.mkdirSync(path.join(repoRoot, "target"), { recursive: true });
   removeIfExists(path.join(repoRoot, "target", "proton-native.log"));
   removeIfExists(path.join(repoRoot, "examples", "target", "app-commands.probe.json"));
-  cleanupWorkspaceProcesses();
   const child = spawnApp(env, name);
   const output = collectOutput(child);
   let result = null;
@@ -2140,7 +2079,6 @@ async function runScenario(name, hasMoonBitE2e) {
     ]);
   } finally {
     await terminateTree(child);
-    cleanupWorkspaceProcesses();
     if (name === "47_dev_extension_js" && !activeDevFrontendHadNodeModules) {
       removeTreeIfExists(
         path.join(repoRoot, "examples", name, "frontend", "node_modules"),
