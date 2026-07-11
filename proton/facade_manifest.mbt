@@ -115,7 +115,49 @@ fn implicit_config_path() -> String? {
   if @mbfs.path_exists(default_config_file) {
     Some(default_config_file)
   } else {
+    bundled_config_path()
+  }
+}
+
+///|
+fn bundled_config_path() -> String? {
+  let argv = @sys.get_cli_args()
+  guard argv.length() > 0 else { return None }
+  let executable : @mbpath.Path = argv[0]
+  let executable = executable.resolve()
+  let executable_dir = facade_path_parent(executable.to_string())
+  let adjacent = @mbpath.Path(executable_dir)
+    .join(default_config_file)
+    .normalize()
+    .to_string()
+  if @mbfs.path_exists(adjacent) {
+    return Some(adjacent)
+  }
+  let resources = @mbpath.Path(executable_dir)
+    .join("../Resources/moon.proton")
+    .normalize()
+    .to_string()
+  if @mbfs.path_exists(resources) {
+    Some(resources)
+  } else {
     None
+  }
+}
+
+///|
+fn facade_path_parent(path : String) -> String {
+  let slash = path.rev_find("/")
+  let backslash = path.rev_find("\\")
+  let index = match (slash, backslash) {
+    (Some(a), Some(b)) => Some(if a > b { a } else { b })
+    (Some(a), None) => Some(a)
+    (None, Some(b)) => Some(b)
+    (None, None) => None
+  }
+  match index {
+    Some(index) if index > 0 =>
+      path.unsafe_substring(start=0, end=index).to_string()
+    _ => "."
   }
 }
 
