@@ -44,13 +44,17 @@ pub async fn run(
     Ok(config) => config
     Err(message) => return Err(CommandError(message))
   }
+  match validate_release_config(config) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
   if raw.run_frontend_build {
     match run_frontend_build(root, config) {
       Ok(_) => ()
       Err(error) => return Err(error)
     }
   }
-  match validate_release_inputs(root, config) {
+  match validate_release_files(root, config) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
@@ -271,7 +275,27 @@ fn resolve_frontend_cwd(
 }
 
 ///|
-fn validate_release_inputs(
+fn validate_release_config(
+  config : BuildProjectConfig,
+) -> Result[Unit, BuildError] {
+  match config.frontend {
+    Some(frontend) =>
+      match frontend.dist() {
+        Some(_) => ()
+        None =>
+          return Err(
+            CommandError(
+              "frontend.dist is required for release builds when frontend is configured",
+            ),
+          )
+      }
+    None => ()
+  }
+  validate_production_entry_kind(config.entry, config.frontend)
+}
+
+///|
+fn validate_release_files(
   root : String,
   config : BuildProjectConfig,
 ) -> Result[Unit, BuildError] {
@@ -289,20 +313,15 @@ fn validate_release_inputs(
             )
           }
         }
-        None =>
-          return Err(
-            CommandError(
-              "frontend.dist is required for release builds when frontend is configured",
-            ),
-          )
+        None => ()
       }
     None => ()
   }
-  validate_production_entry(config.entry, config.frontend)
+  validate_production_entry_file(config.entry)
 }
 
 ///|
-fn validate_production_entry(
+fn validate_production_entry_kind(
   entry : @proton_config.ProjectEntry,
   frontend : @proton_config.ProjectFrontendConfig?,
 ) -> Result[Unit, BuildError] {
@@ -317,6 +336,13 @@ fn validate_production_entry(
       }
     None => ()
   }
+  Ok(())
+}
+
+///|
+fn validate_production_entry_file(
+  entry : @proton_config.ProjectEntry,
+) -> Result[Unit, BuildError] {
   match entry {
     File(path) | Asset(path) =>
       if !path_exists(path) {

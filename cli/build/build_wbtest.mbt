@@ -215,9 +215,8 @@ test "project config parsing keeps active bundle metadata out of build validatio
 ///|
 test "production entry validation requires file-backed entry" {
   match
-    validate_production_entry(
+    validate_production_entry_file(
       @proton_config.ProjectEntry::Asset("target/proton-build-missing.html"),
-      None,
     ) {
     Ok(_) => abort("expected missing production entry")
     Err(CommandError(message)) =>
@@ -231,7 +230,7 @@ test "production entry validation requires file-backed entry" {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
   require_build_ok(
-    validate_production_entry(@proton_config.ProjectEntry::Asset(file), None),
+    validate_production_entry_file(@proton_config.ProjectEntry::Asset(file)),
   )
 }
 
@@ -243,10 +242,28 @@ test "frontend release rejects url production entry" {
     ),
   )
   match
-    validate_production_entry(
+    validate_production_entry_kind(
       @proton_config.ProjectEntry::Url("http://localhost:5173"),
       frontend,
     ) {
+    Ok(_) => abort("expected url production entry to be rejected")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("frontend production entry"))
+    Err(_) => abort("expected command error")
+  }
+}
+
+///|
+test "frontend release config preflight rejects url entry" {
+  let config = BuildProjectConfig::{
+    entry: @proton_config.ProjectEntry::Url("http://localhost:5173"),
+    frontend: Some(
+      @proton_config.ProjectFrontendConfig::new(
+        dist=Some("target/proton-build-entry"),
+      ),
+    ),
+  }
+  match validate_release_config(config) {
     Ok(_) => abort("expected url production entry to be rejected")
     Err(CommandError(message)) =>
       assert_true(message.contains("frontend production entry"))
@@ -266,7 +283,7 @@ test "frontend release requires dist" {
       ),
     ),
   }
-  match validate_release_inputs("target/proton-build-entry", config) {
+  match validate_release_config(config) {
     Ok(_) => abort("expected missing frontend dist to fail")
     Err(CommandError(message)) =>
       assert_true(message.contains("frontend.dist is required"))
@@ -279,7 +296,7 @@ test "production entry validation rejects directories" {
   let dir = "target/proton-build-entry-dir"
   ensure_build_test_dir(dir)
   match
-    validate_production_entry(@proton_config.ProjectEntry::Asset(dir), None) {
+    validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir)) {
     Ok(_) => abort("expected directory production entry to be rejected")
     Err(CommandError(message)) =>
       assert_true(message.contains("production entry is not a file"))
