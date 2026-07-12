@@ -22,3 +22,9 @@ frontend = {
   before_dev: "npm run dev -- --host 127.0.0.1 --strictPort",
   before_build: "npm run build",
 }
+
+bundle = {
+  active: true,
+  targets: ["app", "zip"],
+  output: "target/proton-dist",
+}
