@@ -295,13 +295,6 @@ static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
   }
 }
 
-static const char *proton_engine_log_url(const char *url) {
-  if (url == NULL) {
-    return "";
-  }
-  return strncmp(url, "data:", 5) == 0 ? "data:..." : url;
-}
-
 static void proton_engine_set_message(char *error,
                                       size_t error_len,
                                       const char *message) {
