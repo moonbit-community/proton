@@ -320,8 +320,24 @@ async fn wait_for_runtime_idle(
   runtime_wait_supported : Bool,
 ) -> Result[(Int, Bool), String] {
   if runtime_wait_supported {
-    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
-      Ok(_) => Ok((0, true))
+    // `Runtime::wait` is a synchronous FFI call: it blocks the OS thread,
+    // freezing the cooperative async event loop for its whole timeout. A
+    // blocking 16ms wait therefore starves every host-side task — an
+    // embedded HTTP server's accept loop and streaming writes, subprocess
+    // pipes — reducing them to one scheduler step per pump lap. So probe
+    // CEF without blocking (timeout 0) and spend the idle time inside
+    // `@async.sleep`, where the event loop runs freely and host IO flows at
+    // full speed; the backoff caps at 16ms, so a CEF event arriving
+    // mid-sleep waits at most one frame.
+    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=0) {
+      Ok(ready) =>
+        if ready.mask != @native.runtime_wait_none {
+          Ok((0, true))
+        } else {
+          sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
+            (next_delay, true)
+          })
+        }
       Err(error) =>
         if is_runtime_wait_unsupported(error) {
           sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
