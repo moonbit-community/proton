@@ -358,3 +358,44 @@ async test "ready path validates curl probe availability" {
     Err(_) => abort("expected command error")
   }
 }
+
+///|
+#cfg(not(platform="windows"))
+async test "frontend cancellation terminates child processes" {
+  let dir = "target/proton-dev-cancel-tree"
+  ensure_dev_test_dir(dir)
+  let pid_path = join_path(dir, "child.pid")
+  @mbfs.remove_file(pid_path) catch {
+    _ => ()
+  }
+  @async.with_task_group(group => {
+    let process = match
+      maybe_start_frontend(
+        group,
+        dir,
+        Some("sleep 30 & echo $! > child.pid; wait"),
+        true,
+        {},
+      ) {
+      Ok(Some(process)) => process
+      _ => abort("expected frontend process")
+    }
+    let mut attempts = 0
+    while !@mbfs.path_exists(pid_path) && attempts < 50 {
+      @async.sleep(20)
+      attempts = attempts + 1
+    }
+    assert_true(@mbfs.path_exists(pid_path))
+    let child_pid = @mbfs.read_file_to_string(pid_path, encoding="utf8")
+      .trim()
+      .to_owned()
+    process.cancel()
+    ignore(process.wait() catch { _ => -1 })
+    let alive = @process.run("sh", [
+      "-c", "kill -0 \"$1\" 2>/dev/null", "proton-child-check", child_pid,
+    ]) catch {
+      _ => 1
+    }
+    assert_true(alive != 0)
+  })
+}
