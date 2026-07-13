@@ -108,6 +108,230 @@ test "package executable name is filesystem safe" {
 }
 
 ///|
+test "macOS package metadata validation rejects unsafe values" {
+  match validate_product_name("Demo/App") {
+    Ok(_) => abort("expected unsafe product name")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("path-unsafe character"))
+    Err(_) => abort("expected command error")
+  }
+  match validate_product_name("Demo\nApp") {
+    Ok(_) => abort("expected control character error")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("ASCII control character"))
+    Err(_) => abort("expected command error")
+  }
+  match validate_bundle_identifier("demo") {
+    Ok(_) => abort("expected reverse-DNS identifier error")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("reverse-DNS bundle identifier"))
+    Err(_) => abort("expected command error")
+  }
+  match validate_bundle_identifier("com.example.bad_value") {
+    Ok(_) => abort("expected identifier character error")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("unsupported character"))
+    Err(_) => abort("expected command error")
+  }
+}
+
+///|
+test "macOS version normalizes semantic prerelease to plist versions" {
+  let old_build = @sys.get_env_var("PROTON_MACOS_BUILD_NUMBER")
+  @sys.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
+  defer restore_package_env("PROTON_MACOS_BUILD_NUMBER", old_build)
+  match validate_macos_version("1.2.3-beta.1") {
+    Ok((short_version, bundle_version)) => {
+      assert_eq(short_version, "1.2.3")
+      assert_eq(bundle_version, "1.2.3")
+    }
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match validate_macos_version("1.2.3+release.4") {
+    Ok((short_version, bundle_version)) => {
+      assert_eq(short_version, "1.2.3")
+      assert_eq(bundle_version, "1.2.3")
+    }
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  @sys.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.7")
+  match validate_macos_version("1.2.3") {
+    Ok((short_version, bundle_version)) => {
+      assert_eq(short_version, "1.2.3")
+      assert_eq(bundle_version, "42.7")
+    }
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  @sys.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.beta")
+  match validate_macos_version("1.2.3") {
+    Ok(_) => abort("expected invalid build number error")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("PROTON_MACOS_BUILD_NUMBER"))
+    Err(_) => abort("expected command error")
+  }
+  @sys.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
+  match validate_macos_version("1.two.3") {
+    Ok(_) => abort("expected numeric version error")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("must be numeric"))
+    Err(_) => abort("expected command error")
+  }
+}
+
+///|
+test "default macOS entitlements enable CEF JIT without disabling validation" {
+  let entitlements = default_macos_entitlements(allow_untrusted_libraries=false)
+  assert_true(entitlements.contains("com.apple.security.cs.allow-jit"))
+  assert_true(
+    entitlements.contains(
+      "com.apple.security.cs.allow-unsigned-executable-memory",
+    ),
+  )
+  assert_false(entitlements.contains("disable-library-validation"))
+  let adhoc_entitlements = default_macos_entitlements(
+    allow_untrusted_libraries=true,
+  )
+  assert_true(adhoc_entitlements.contains("disable-library-validation"))
+}
+
+///|
+test "macOS signing args apply hardened runtime entitlements to app code" {
+  let args = macos_codesign_args(
+    "Developer ID Application: Example",
+    "Demo.app",
+    runtime_options=true,
+    deep=false,
+    entitlements=Some("proton.entitlements"),
+  )
+  assert_true(args.contains("--timestamp"))
+  assert_true(args.contains("--options"))
+  assert_true(args.contains("runtime"))
+  assert_true(args.contains("--entitlements"))
+  assert_true(args.contains("proton.entitlements"))
+  assert_false(args.contains("--deep"))
+  assert_eq(args[args.length() - 1], "Demo.app")
+}
+
+///|
+test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
+  let old = @sys.get_env_var("PROTON_MACOS_ALLOW_ADHOC")
+  defer restore_package_env("PROTON_MACOS_ALLOW_ADHOC", old)
+  @sys.unset_env_var("PROTON_MACOS_ALLOW_ADHOC")
+  assert_false(macos_adhoc_signing_allowed())
+  match validate_macos_signing_identity("-", notarize=false) {
+    Ok(_) => abort("expected ad-hoc signing rejection")
+    Err(_) => ()
+  }
+  @sys.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "yes")
+  assert_true(macos_adhoc_signing_allowed())
+  match validate_macos_signing_identity("-", notarize=false) {
+    Ok(is_adhoc) => assert_true(is_adhoc)
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match
+    validate_macos_signing_identity("Apple Development: Example", notarize=true) {
+    Ok(is_adhoc) => assert_false(is_adhoc)
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match validate_macos_signing_identity("-", notarize=true) {
+    Ok(_) => abort("expected ad-hoc notarization rejection")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("Developer ID Application"))
+    Err(_) => abort("expected command error")
+  }
+  @sys.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "false")
+  assert_false(macos_adhoc_signing_allowed())
+}
+
+///|
+test "macOS framework signing uses deep sealing without app entitlements" {
+  let args = macos_codesign_args(
+    "Developer ID Application: Example",
+    "Chromium Embedded Framework.framework",
+    runtime_options=false,
+    deep=true,
+    entitlements=Some("proton.entitlements"),
+  )
+  assert_true(args.contains("--deep"))
+  assert_false(args.contains("--options"))
+  assert_false(args.contains("--entitlements"))
+}
+
+///|
+test "macOS icon plist entry is conditional" {
+  assert_eq(macos_icon_plist_entry(None), "")
+  assert_true(macos_icon_plist_entry(Some("icon.icns")).contains("AppIcon"))
+}
+
+///|
+async test "macOS icon selection stages icns and rejects a missing source" {
+  let root = resolve_path("target", "proton-package-macos-icon")
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let resources = resolve_path(root, "Resources")
+  let icon = resolve_path(root, "Demo.ICNS")
+  match ensure_dir(resources) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match write_text(icon, "test-icns") {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match first_macos_icon(["icon.png", icon]) {
+    Some(selected) => assert_eq(selected, icon)
+    None => abort("expected .icns icon selection")
+  }
+  let plan = PackagePlan::{
+    root,
+    workspace_root: root,
+    build_target_dir: resolve_path(root, "build"),
+    app_package: "app",
+    config_path: resolve_path(root, "moon.proton"),
+    product_name: "Demo",
+    identifier: "dev.proton.demo",
+    version: "1.0.0",
+    macos_version: "1.0.0",
+    bundle_version: "1.0.0",
+    targets: ["app"],
+    output: root,
+    build: false,
+    base_dir: root,
+    frontend_dist: None,
+    entry_path: None,
+    resources: [],
+    icons: ["icon.png", icon],
+    macos_icon: Some(icon),
+    sign: false,
+    notarize: false,
+  }
+  match stage_macos_icon(plan, resources) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let staged = @mbfs.read_file_to_string(
+    resolve_path(resources, "AppIcon.icns"),
+    encoding="utf8",
+  ) catch {
+    error => abort(@debug.render(@debug.to_repr(error)))
+  }
+  assert_eq(staged, "test-icns")
+  assert_true(macos_info_plist(plan, "demo").contains("CFBundleIconFile"))
+  match remove_tree(icon) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match stage_macos_icon(plan, resources) {
+    Ok(_) => abort("expected missing macOS icon failure")
+    Err(CommandError(message)) =>
+      assert_true(message.contains("icon is missing"))
+    Err(_) => abort("expected command error")
+  }
+}
+
+///|
 test "macOS plist contains bundle identity and executable" {
   let plan = PackagePlan::{
     root: ".",
@@ -118,6 +342,8 @@ test "macOS plist contains bundle identity and executable" {
     product_name: "Demo & App",
     identifier: "dev.proton.demo",
     version: "1.2.3",
+    macos_version: "1.2.3",
+    bundle_version: "1.2.3",
     targets: ["app"],
     output: "target",
     build: false,
@@ -126,6 +352,7 @@ test "macOS plist contains bundle identity and executable" {
     entry_path: None,
     resources: [],
     icons: [],
+    macos_icon: None,
     sign: false,
     notarize: false,
   }
@@ -134,6 +361,143 @@ test "macOS plist contains bundle identity and executable" {
   assert_true(plist.contains("<string>dev.proton.demo</string>"))
   assert_true(plist.contains("<string>demo-app</string>"))
   assert_true(plist.contains("<string>1.2.3</string>"))
+  assert_false(plist.contains("CFBundleIconFile"))
+}
+
+///|
+async test "macOS staged app promotion rolls back when staging is missing" {
+  let root = "target/proton-package-macos-promotion"
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let destination = resolve_path(root, "Demo.app")
+  let marker = resolve_path(destination, "Contents/old.txt")
+  match ensure_dir(path_parent(marker)) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match write_text(marker, "old") {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match promote_staged_app(resolve_path(root, "missing.app"), destination) {
+    Ok(_) => abort("expected staging promotion failure")
+    Err(_) => ()
+  }
+  assert_true(@mbfs.path_exists(marker))
+  assert_false(@mbfs.path_exists(destination + ".backup"))
+}
+
+///|
+async test "macOS notarization validates success and cleans failed upload" {
+  guard is_macos_host() else { return }
+  let root = resolve_path("target", "proton-package-notarization-flow")
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let tools = resolve_path(root, "tools")
+  let app = resolve_path(root, "Demo.app")
+  let log = resolve_path(root, "commands.log")
+  for dir in [tools, resolve_path(app, "Contents")] {
+    match ensure_dir(dir) {
+      Ok(_) => ()
+      Err(error) => abort(@debug.render(@debug.to_repr(error)))
+    }
+  }
+  let xcrun = resolve_path(tools, "xcrun")
+  let spctl = resolve_path(tools, "spctl")
+  let script = "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" + log + "\"\nexit 0\n"
+  for path in [xcrun, spctl] {
+    match write_text(path, script) {
+      Ok(_) => ()
+      Err(error) => abort(@debug.render(@debug.to_repr(error)))
+    }
+    @async_fs.chmod(path, 0o755) catch {
+      error => abort(@debug.render(@debug.to_repr(error)))
+    }
+  }
+  let old_path = @sys.get_env_var("PATH")
+  let old_profile = @sys.get_env_var("PROTON_NOTARY_PROFILE")
+  defer restore_package_env("PATH", old_path)
+  defer restore_package_env("PROTON_NOTARY_PROFILE", old_profile)
+  @sys.set_env_var("PATH", tools + ":" + old_path.unwrap_or(""))
+  @sys.set_env_var("PROTON_NOTARY_PROFILE", "test-profile")
+  let plan = PackagePlan::{
+    root,
+    workspace_root: root,
+    build_target_dir: resolve_path(root, "build"),
+    app_package: "app",
+    config_path: resolve_path(root, "moon.proton"),
+    product_name: "Demo",
+    identifier: "dev.proton.demo",
+    version: "1.0.0",
+    macos_version: "1.0.0",
+    bundle_version: "1.0.0",
+    targets: ["app"],
+    output: root,
+    build: false,
+    base_dir: root,
+    frontend_dist: None,
+    entry_path: None,
+    resources: [],
+    icons: [],
+    macos_icon: None,
+    sign: true,
+    notarize: true,
+  }
+  match notarize_macos_app(plan, app) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
+    error => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let archive = resolve_path(root, ".demo.notary.zip")
+  assert_eq(
+    commands,
+    "notarytool submit " +
+    archive +
+    " --keychain-profile test-profile --wait\n" +
+    "stapler staple " +
+    app +
+    "\n" +
+    "stapler validate " +
+    app +
+    "\n" +
+    "--assess --type execute --verbose=4 " +
+    app +
+    "\n",
+  )
+  assert_false(@mbfs.path_exists(archive))
+  match write_text(log, "") {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let failing_script = "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" +
+    log +
+    "\"\nif [ \"$1\" = \"notarytool\" ]; then exit 42; fi\nexit 0\n"
+  match write_text(xcrun, failing_script) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match notarize_macos_app(plan, app) {
+    Ok(_) => abort("expected notarization submission failure")
+    Err(CommandError(message)) => {
+      assert_true(message.contains("notarytool submit"))
+      assert_true(message.contains("42"))
+    }
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let failed_commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
+    error => abort(@debug.render(@debug.to_repr(error)))
+  }
+  assert_eq(
+    failed_commands,
+    "notarytool submit " + archive + " --keychain-profile test-profile --wait\n",
+  )
+  assert_false(@mbfs.path_exists(archive))
 }
 
 ///|
@@ -164,6 +528,8 @@ async test "release executable lookup stays inside package target dir" {
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
+    macos_version: "1.0.0",
+    bundle_version: "1.0.0",
     targets: ["app"],
     output: resolve_path(root, "output"),
     build: false,
@@ -172,6 +538,7 @@ async test "release executable lookup stays inside package target dir" {
     entry_path: None,
     resources: [],
     icons: [],
+    macos_icon: None,
     sign: false,
     notarize: false,
   }
@@ -266,6 +633,8 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",
+    macos_version: "1.0.0",
+    bundle_version: "1.0.0",
     targets: ["app"],
     output,
     build: false,
@@ -274,6 +643,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     entry_path: None,
     resources: [],
     icons: [],
+    macos_icon: None,
     sign: false,
     notarize: false,
   }
