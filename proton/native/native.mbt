@@ -210,7 +210,7 @@ fn decode_bridge_request_json(
     }
     let raw_payload = match object.get("payload") {
       Some(value) => value
-      None => Json::object({})
+      None => Json::empty_object()
     }
     let (payload, page_instance) = decode_bridge_payload_envelope(raw_payload)
     decode_int64_json(request_id_json, "bridge request_id").bind(fn(

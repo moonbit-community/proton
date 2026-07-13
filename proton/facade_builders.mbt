@@ -97,8 +97,8 @@ pub fn config(path : String) -> App {
     entry_overridden: false,
     debug_overridden: false,
     menu: None,
-    extension_settings: {},
-    command_extensions: {},
+    extension_settings: Map([]),
+    command_extensions: Map([]),
     validation_errors: [],
   }
 }

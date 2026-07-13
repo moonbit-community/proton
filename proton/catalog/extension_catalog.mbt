@@ -10,7 +10,7 @@ pub struct ExtensionCatalog {
 /// Discovery order is tracked alongside descriptor lookup so later tooling and
 /// generated output stay deterministic.
 pub fn ExtensionCatalog::new() -> ExtensionCatalog {
-  ExtensionCatalog::{ descriptors: {}, discovery_order: [] }
+  ExtensionCatalog::{ descriptors: Map([]), discovery_order: [] }
 }
 
 ///|

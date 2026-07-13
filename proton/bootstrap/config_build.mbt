@@ -239,7 +239,7 @@ fn build_extension_settings(
   json : Json?,
 ) -> Result[Map[String, @manifest.ExtensionSetting], String] {
   match json {
-    None => Ok({})
+    None => Ok(Map([]))
     Some(Object(object)) => build_extension_settings_from_object(object)
     Some(_) => Err("expected object for app manifest.extensions")
   }
@@ -250,7 +250,7 @@ fn build_extension_settings(
 fn build_extension_settings_from_object(
   object : Map[String, Json],
 ) -> Result[Map[String, @manifest.ExtensionSetting], String] {
-  let settings : Map[String, @manifest.ExtensionSetting] = {}
+  let settings : Map[String, @manifest.ExtensionSetting] = Map([])
   for name, value in object {
     guard normalize_keyword(name) != "" else {
       return Err("app manifest.extensions contains an empty key")

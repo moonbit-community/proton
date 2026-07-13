@@ -88,7 +88,7 @@ test "extension specs copy mutable array inputs" {
 
 ///|
 test "extension build context exposes option snapshots" {
-  let options = Json::object({ "nested": Json::object({}) })
+  let options = Json::object({ "nested": Json::empty_object() })
   let context = ExtensionBuildContext::new(options=Some(options))
   match options {
     Object(object) => object["late"] = Json::boolean(true)
