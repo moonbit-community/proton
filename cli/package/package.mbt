@@ -32,6 +32,8 @@ struct PackagePlan {
   product_name : String
   identifier : String
   version : String
+  macos_version : String
+  bundle_version : String
   targets : Array[String]
   output : String
   build : Bool
@@ -40,6 +42,7 @@ struct PackagePlan {
   entry_path : String?
   resources : Array[String]
   icons : Array[String]
+  macos_icon : String?
   sign : Bool
   notarize : Bool
 } derive(Debug, Eq)
@@ -206,6 +209,10 @@ fn build_package_plan(
       return Err(CommandError("bundle config is required for proton package"))
   }
   let metadata = project.metadata()
+  let product_name = match validate_product_name(metadata.product_name) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   let identifier = match metadata.identifier {
     Some(identifier) => identifier
     None =>
@@ -217,6 +224,22 @@ fn build_package_plan(
       return Err(
         CommandError("moon.mod version is required for proton package"),
       )
+  }
+  let identifier = match validate_bundle_identifier(identifier) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let version = version.trim().to_owned()
+  guard version != "" else {
+    return Err(CommandError("moon.mod version is required for proton package"))
+  }
+  let (macos_version, bundle_version) = if is_macos_host() {
+    match validate_macos_version(version) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+  } else {
+    (version, version)
   }
   let targets = if raw.targets.length() > 0 {
     copy_strings(raw.targets)
@@ -244,9 +267,11 @@ fn build_package_plan(
     build_target_dir: package_build_target_dir(workspace_root, identifier),
     app_package: raw.app_package,
     config_path,
-    product_name: metadata.product_name,
+    product_name,
     identifier,
     version,
+    macos_version,
+    bundle_version,
     targets,
     output,
     build: raw.build,
@@ -255,9 +280,163 @@ fn build_package_plan(
     entry_path,
     resources: copy_strings(bundle.resources),
     icons: copy_strings(bundle.icon),
+    macos_icon: first_macos_icon(bundle.icon),
     sign: raw.sign,
     notarize: raw.notarize,
   })
+}
+
+///|
+fn validate_product_name(value : String) -> Result[String, PackageError] {
+  let value = value.trim().to_owned()
+  guard value != "" else {
+    return Err(CommandError("product_name is required for proton package"))
+  }
+  for char in value {
+    let code = char.to_int()
+    if code < 32 || code == 127 {
+      return Err(
+        CommandError("product_name contains an ASCII control character"),
+      )
+    }
+    if char == '/' || char == '\\' || char == ':' {
+      return Err(
+        CommandError(
+          "product_name contains a path-unsafe character: " + char.to_string(),
+        ),
+      )
+    }
+  }
+  Ok(value)
+}
+
+///|
+fn validate_bundle_identifier(value : String) -> Result[String, PackageError] {
+  let value = value.trim().to_owned()
+  let components : Array[StringView] = value.split(".").collect()
+  guard components.length() >= 2 else {
+    return Err(
+      CommandError(
+        "identifier must be a reverse-DNS bundle identifier: " + value,
+      ),
+    )
+  }
+  for component in components {
+    guard component.length() > 0 else {
+      return Err(
+        CommandError("identifier contains an empty component: " + value),
+      )
+    }
+    let mut at_start = true
+    for char in component {
+      if at_start {
+        guard char.is_ascii_alphabetic() || char.is_ascii_digit() else {
+          return Err(
+            CommandError(
+              "identifier component must start with an ASCII letter or digit: " +
+              value,
+            ),
+          )
+        }
+        at_start = false
+      }
+      guard char.is_ascii_alphabetic() || char.is_ascii_digit() || char == '-' else {
+        return Err(
+          CommandError("identifier contains an unsupported character: " + value),
+        )
+      }
+    }
+  }
+  Ok(value)
+}
+
+///|
+fn validate_macos_version(
+  value : String,
+) -> Result[(String, String), PackageError] {
+  let value = value.trim().to_owned()
+  let core = match value.split_once("-") {
+    Some((core, _)) => core.to_owned()
+    None => value
+  }
+  let core = match core.split_once("+") {
+    Some((core, _)) => core.to_owned()
+    None => core
+  }
+  let components : Array[StringView] = core.split(".").collect()
+  guard components.length() >= 1 && components.length() <= 3 else {
+    return Err(
+      CommandError(
+        "macOS version must contain one to three numeric components: " + core,
+      ),
+    )
+  }
+  let normalized : Array[String] = []
+  for component in components {
+    guard component.length() > 0 else {
+      return Err(
+        CommandError("macOS version contains an empty component: " + core),
+      )
+    }
+    for char in component {
+      guard char.is_ascii_digit() else {
+        return Err(
+          CommandError("macOS version components must be numeric: " + core),
+        )
+      }
+    }
+    normalized.push(component.to_owned())
+  }
+  while normalized.length() < 3 {
+    normalized.push("0")
+  }
+  let short_version = normalized.join(".")
+  let bundle_version = match @sys.get_env_var("PROTON_MACOS_BUILD_NUMBER") {
+    Some(build) if build.trim().to_owned() != "" =>
+      match validate_bundle_version(build.trim().to_owned()) {
+        Ok(build) => build
+        Err(error) => return Err(error)
+      }
+    _ => short_version
+  }
+  Ok((short_version, bundle_version))
+}
+
+///|
+fn validate_bundle_version(value : String) -> Result[String, PackageError] {
+  let components : Array[StringView] = value.split(".").collect()
+  guard components.length() >= 1 && components.length() <= 3 else {
+    return Err(
+      CommandError(
+        "PROTON_MACOS_BUILD_NUMBER must contain one to three numeric components",
+      ),
+    )
+  }
+  for component in components {
+    guard component.length() > 0 else {
+      return Err(
+        CommandError("PROTON_MACOS_BUILD_NUMBER contains an empty component"),
+      )
+    }
+    for char in component {
+      guard char.is_ascii_digit() else {
+        return Err(
+          CommandError("PROTON_MACOS_BUILD_NUMBER components must be numeric"),
+        )
+      }
+    }
+  }
+  Ok(value)
+}
+
+///|
+fn first_macos_icon(icons : Array[String]) -> String? {
+  for icon in icons {
+    if icon.to_lower().has_suffix(".icns") {
+      return Some(icon)
+    }
+  }
+  None
 }
 
 ///|
@@ -315,13 +494,16 @@ async fn execute_package_plan(plan : PackagePlan) -> Result[Unit, PackageError] 
   }
   if @path.sep == '\\' {
     stage_windows_portable(plan, executable, runtime)
-  } else if @mbfs.path_exists(
-      "/System/Library/CoreServices/SystemVersion.plist",
-    ) {
+  } else if is_macos_host() {
     stage_macos_app(plan, executable, runtime)
   } else {
     Err(CommandError("proton package currently supports macOS and Windows"))
   }
+}
+
+///|
+fn is_macos_host() -> Bool {
+  @mbfs.path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
 ///|
@@ -476,12 +658,30 @@ async fn stage_macos_app(
   executable : String,
   runtime : String,
 ) -> Result[Unit, PackageError] {
-  let app = resolve_path(plan.output, plan.product_name + ".app")
+  let staging = macos_staging_app_path(plan)
+  let result = stage_macos_app_impl(plan, executable, runtime)
+  match result {
+    Ok(_) => Ok(())
+    Err(error) => {
+      ignore(remove_tree(staging))
+      Err(error)
+    }
+  }
+}
+
+///|
+async fn stage_macos_app_impl(
+  plan : PackagePlan,
+  executable : String,
+  runtime : String,
+) -> Result[Unit, PackageError] {
+  let final_app = resolve_path(plan.output, plan.product_name + ".app")
+  let executable_name = package_executable_name(plan.product_name)
+  let app = macos_staging_app_path(plan)
   let contents = resolve_path(app, "Contents")
   let macos = resolve_path(contents, "MacOS")
   let resources = resolve_path(contents, "Resources")
   let frameworks = resolve_path(contents, "Frameworks")
-  let executable_name = package_executable_name(plan.product_name)
   let helper_app = resolve_path(frameworks, plan.product_name + " Helper.app")
   let helper_macos = resolve_path(helper_app, "Contents/MacOS")
   match remove_tree(app) {
@@ -564,14 +764,69 @@ async fn stage_macos_app(
       Ok(_) => ()
     }
   }
-  println("Packaged macOS app: " + app)
+  match promote_staged_app(app, final_app) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  println("Packaged macOS app: " + final_app)
   if plan.targets.contains("zip") {
-    match create_zip(plan, app) {
+    match create_zip(plan, final_app) {
       Err(error) => return Err(error)
       Ok(_) => ()
     }
   }
   Ok(())
+}
+
+///|
+fn macos_staging_app_path(plan : PackagePlan) -> String {
+  resolve_path(
+    plan.output,
+    "." + package_executable_name(plan.product_name) + ".staging.app",
+  )
+}
+
+///|
+async fn promote_staged_app(
+  staging : String,
+  destination : String,
+) -> Result[Unit, PackageError] {
+  let backup = destination + ".backup"
+  match remove_tree(backup) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  let had_destination = @mbfs.path_exists(destination)
+  if had_destination {
+    @async_fs.rename(destination, backup) catch {
+      error =>
+        return Err(
+          CommandError(
+            "failed to preserve existing macOS app: " +
+            @debug.render(@debug.to_repr(error)),
+          ),
+        )
+    }
+  }
+  @async_fs.rename(staging, destination) catch {
+    error => {
+      if had_destination {
+        @async_fs.rename(backup, destination) catch {
+          _ => ()
+        }
+      }
+      return Err(
+        CommandError(
+          "failed to promote staged macOS app: " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
+    }
+  }
+  match remove_tree(backup) {
+    Err(error) => return Err(error)
+    Ok(_) => Ok(())
+  }
 }
 
 ///|
@@ -700,15 +955,15 @@ async fn stage_macos_icon(
   plan : PackagePlan,
   resources : String,
 ) -> Result[Unit, PackageError] {
-  for icon in plan.icons {
-    if icon.to_lower().has_suffix(".icns") {
+  match plan.macos_icon {
+    None => Ok(())
+    Some(icon) => {
       guard @mbfs.path_exists(icon) else {
         return Err(CommandError("macOS icon is missing: " + icon))
       }
-      return copy_file(icon, resolve_path(resources, "AppIcon.icns"))
+      copy_file(icon, resolve_path(resources, "AppIcon.icns"))
     }
   }
-  Ok(())
 }
 
 ///|
@@ -963,11 +1218,11 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
     #|<key>CFBundleDisplayName</key><string>{{PRODUCT}}</string>
     #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
     #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
-    #|<key>CFBundleIconFile</key><string>AppIcon</string>
+    #|{{ICON}}
     #|<key>CFBundleName</key><string>{{PRODUCT}}</string>
     #|<key>CFBundlePackageType</key><string>APPL</string>
-    #|<key>CFBundleShortVersionString</key><string>{{VERSION}}</string>
-    #|<key>CFBundleVersion</key><string>{{VERSION}}</string>
+    #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
+    #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
     #|<key>LSMinimumSystemVersion</key><string>12.0</string>
     #|<key>NSHighResolutionCapable</key><true/>
     #|</dict></plist>
@@ -977,6 +1232,17 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
   .replace_all(old="{{EXECUTABLE}}", new=xml_escape(executable))
   .replace_all(old="{{IDENTIFIER}}", new=xml_escape(plan.identifier))
   .replace_all(old="{{VERSION}}", new=xml_escape(plan.version))
+  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
+  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
+  .replace_all(old="{{ICON}}", new=macos_icon_plist_entry(plan.macos_icon))
+}
+
+///|
+fn macos_icon_plist_entry(icon : String?) -> String {
+  match icon {
+    Some(_) => "<key>CFBundleIconFile</key><string>AppIcon</string>"
+    None => ""
+  }
 }
 
 ///|
@@ -989,14 +1255,16 @@ fn helper_info_plist(plan : PackagePlan) -> String {
     #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}.helper</string>
     #|<key>CFBundleName</key><string>{{PRODUCT}} Helper</string>
     #|<key>CFBundlePackageType</key><string>APPL</string>
-    #|<key>CFBundleShortVersionString</key><string>{{VERSION}}</string>
-    #|<key>CFBundleVersion</key><string>{{VERSION}}</string>
+    #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
+    #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
     #|</dict></plist>
     #|
   template
   .replace_all(old="{{PRODUCT}}", new=xml_escape(plan.product_name))
   .replace_all(old="{{IDENTIFIER}}", new=xml_escape(plan.identifier))
   .replace_all(old="{{VERSION}}", new=xml_escape(plan.version))
+  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
+  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
 }
 
 ///|
@@ -1011,6 +1279,7 @@ fn write_package_manifest(
     "product_name": Json::string(plan.product_name),
     "identifier": Json::string(plan.identifier),
     "version": Json::string(plan.version),
+    "bundle_version": Json::string(plan.bundle_version),
     "targets": Json::array(
       plan.targets.map(fn(target) { Json::string(target) }),
     ),
@@ -1055,7 +1324,17 @@ async fn sign_macos_app(
         ),
       )
   }
+  let is_adhoc = match
+    validate_macos_signing_identity(identity, notarize=plan.notarize) {
+    Ok(is_adhoc) => is_adhoc
+    Err(error) => return Err(error)
+  }
   let contents = resolve_path(app, "Contents")
+  let entitlements = match
+    resolve_macos_entitlements(app, allow_untrusted_libraries=is_adhoc) {
+    Ok(path) => path
+    Err(error) => return Err(error)
+  }
   let helper = resolve_path(
     contents,
     "Frameworks/" + plan.product_name + " Helper.app",
@@ -1083,8 +1362,9 @@ async fn sign_macos_app(
       codesign_target(
         identity,
         target,
-        runtime_options=target == app,
+        runtime_options=target == helper || target == main || target == app,
         deep=target.has_suffix(".framework"),
+        entitlements=Some(entitlements),
       ) {
       Err(error) => return Err(error)
       Ok(_) => ()
@@ -1102,10 +1382,87 @@ async fn sign_macos_app(
       )
   }
   if code == 0 {
-    Ok(())
+    if is_adhoc {
+      Ok(())
+    } else {
+      verify_macos_developer_id(app)
+    }
   } else {
     Err(
       CommandError("codesign verification exited with code " + code.to_string()),
+    )
+  }
+}
+
+///|
+fn validate_macos_signing_identity(
+  identity : String,
+  notarize~ : Bool,
+) -> Result[Bool, PackageError] {
+  if identity != "-" {
+    return Ok(false)
+  }
+  if !macos_adhoc_signing_allowed() {
+    return Err(
+      CommandError(
+        "ad-hoc signing is not a release path; set PROTON_MACOS_ALLOW_ADHOC=1 only for local diagnostics",
+      ),
+    )
+  }
+  if notarize {
+    return Err(
+      CommandError(
+        "--notarize requires a Developer ID Application identity; ad-hoc signing is diagnostic only",
+      ),
+    )
+  }
+  Ok(true)
+}
+
+///|
+fn macos_adhoc_signing_allowed() -> Bool {
+  match @sys.get_env_var("PROTON_MACOS_ALLOW_ADHOC") {
+    Some(value) =>
+      match value.trim().to_owned().to_lower() {
+        "1" | "true" | "yes" | "on" => true
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
+async fn verify_macos_developer_id(app : String) -> Result[Unit, PackageError] {
+  let (code, output) = @process.collect_output_merged("codesign", [
+    "--display", "--verbose=4", app,
+  ]) catch {
+    error =>
+      return Err(
+        CommandError(
+          "failed to inspect macOS signing authority: " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  guard code == 0 else {
+    return Err(CommandError("failed to inspect macOS signing authority"))
+  }
+  let text = output.text() catch {
+    error =>
+      return Err(
+        CommandError(
+          "failed to decode macOS signing authority: " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  if text.contains("Authority=Developer ID Application:") {
+    Ok(())
+  } else {
+    Err(
+      CommandError(
+        "macOS release signing must use a Developer ID Application identity",
+      ),
     )
   }
 }
@@ -1116,23 +1473,15 @@ async fn codesign_target(
   target : String,
   runtime_options~ : Bool,
   deep~ : Bool,
+  entitlements~ : String?,
 ) -> Result[Unit, PackageError] {
-  let args : Array[String] = ["--force", "--timestamp", "--sign", identity]
-  if deep {
-    args.push("--deep")
-  }
-  if runtime_options {
-    args.push("--options")
-    args.push("runtime")
-  }
-  match @sys.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
-    Some(path) if path.trim().to_owned() != "" && runtime_options => {
-      args.push("--entitlements")
-      args.push(path.trim().to_owned())
-    }
-    _ => ()
-  }
-  args.push(target)
+  let args = macos_codesign_args(
+    identity,
+    target,
+    runtime_options~,
+    deep~,
+    entitlements~,
+  )
   let code = @process.run("codesign", args) catch {
     error =>
       return Err(
@@ -1156,6 +1505,77 @@ async fn codesign_target(
 }
 
 ///|
+fn macos_codesign_args(
+  identity : String,
+  target : String,
+  runtime_options~ : Bool,
+  deep~ : Bool,
+  entitlements~ : String?,
+) -> Array[String] {
+  let args : Array[String] = ["--force", "--timestamp", "--sign", identity]
+  if deep {
+    args.push("--deep")
+  }
+  if runtime_options {
+    args.push("--options")
+    args.push("runtime")
+  }
+  match entitlements {
+    Some(path) if runtime_options => {
+      args.push("--entitlements")
+      args.push(path)
+    }
+    _ => ()
+  }
+  args.push(target)
+  args
+}
+
+///|
+fn resolve_macos_entitlements(
+  app : String,
+  allow_untrusted_libraries~ : Bool,
+) -> Result[String, PackageError] {
+  match @sys.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
+    Some(path) if path.trim().to_owned() != "" => {
+      let path = @path.Path(path.trim().to_owned()).resolve().to_string()
+      if path_is_file(path) {
+        Ok(path)
+      } else {
+        Err(CommandError("macOS entitlements file is missing: " + path))
+      }
+    }
+    _ => {
+      let path = resolve_path(app, "Contents/Resources/proton.entitlements")
+      match
+        write_text(path, default_macos_entitlements(allow_untrusted_libraries~)) {
+        Ok(_) => Ok(path)
+        Err(error) => Err(error)
+      }
+    }
+  }
+}
+
+///|
+fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
+  let library_validation = if allow_untrusted_libraries {
+    "<key>com.apple.security.cs.disable-library-validation</key><true/>\n"
+  } else {
+    ""
+  }
+  (
+    #|<?xml version="1.0" encoding="UTF-8"?>
+    #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    #|<plist version="1.0"><dict>
+    #|<key>com.apple.security.cs.allow-jit</key><true/>
+    #|<key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+    #|{{LIBRARY_VALIDATION}}
+    #|</dict></plist>
+    #|
+  ).replace_all(old="{{LIBRARY_VALIDATION}}", new=library_validation)
+}
+
+///|
 async fn notarize_macos_app(
   plan : PackagePlan,
   app : String,
@@ -1165,7 +1585,28 @@ async fn notarize_macos_app(
       profile.trim().to_owned()
     _ => return Err(CommandError("--notarize requires PROTON_NOTARY_PROFILE"))
   }
-  let archive = resolve_path(plan.output, path_basename(app) + ".notary.zip")
+  let archive = resolve_path(
+    plan.output,
+    "." + package_executable_name(plan.product_name) + ".notary.zip",
+  )
+  match remove_tree(archive) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  let result = submit_macos_notarization(app, archive, profile)
+  let cleanup = remove_tree(archive)
+  match result {
+    Err(error) => Err(error)
+    Ok(_) => cleanup
+  }
+}
+
+///|
+async fn submit_macos_notarization(
+  app : String,
+  archive : String,
+  profile : String,
+) -> Result[Unit, PackageError] {
   let zip_code = @process.run("ditto", [
     "-c", "-k", "--keepParent", app, archive,
   ]) catch {
@@ -1178,7 +1619,11 @@ async fn notarize_macos_app(
       )
   }
   guard zip_code == 0 else {
-    return Err(CommandError("failed to create notarization archive"))
+    return Err(
+      CommandError(
+        "notarization archive command exited with code " + zip_code.to_string(),
+      ),
+    )
   }
   let submit_code = @process.run("xcrun", [
     "notarytool", "submit", archive, "--keychain-profile", profile, "--wait",
@@ -1192,7 +1637,11 @@ async fn notarize_macos_app(
       )
   }
   guard submit_code == 0 else {
-    return Err(CommandError("notarytool submit failed"))
+    return Err(
+      CommandError(
+        "notarytool submit exited with code " + submit_code.to_string(),
+      ),
+    )
   }
   let staple_code = @process.run("xcrun", ["stapler", "staple", app]) catch {
     error =>
@@ -1203,10 +1652,46 @@ async fn notarize_macos_app(
         ),
       )
   }
-  if staple_code == 0 {
+  guard staple_code == 0 else {
+    return Err(
+      CommandError("stapler exited with code " + staple_code.to_string()),
+    )
+  }
+  let validate_code = @process.run("xcrun", ["stapler", "validate", app]) catch {
+    error =>
+      return Err(
+        CommandError(
+          "failed to validate notarization ticket: " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  guard validate_code == 0 else {
+    return Err(
+      CommandError(
+        "stapler validate exited with code " + validate_code.to_string(),
+      ),
+    )
+  }
+  let assess_code = @process.run("spctl", [
+    "--assess", "--type", "execute", "--verbose=4", app,
+  ]) catch {
+    error =>
+      return Err(
+        CommandError(
+          "failed to run Gatekeeper assessment: " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  if assess_code == 0 {
     Ok(())
   } else {
-    Err(CommandError("stapler failed"))
+    Err(
+      CommandError(
+        "Gatekeeper assessment exited with code " + assess_code.to_string(),
+      ),
+    )
   }
 }
 
