@@ -354,24 +354,22 @@ async fn wait_for_runtime_idle(
   runtime_wait_supported : Bool,
 ) -> Result[(Int, Bool), String] {
   if runtime_wait_supported {
-    // `Runtime::wait` is a synchronous FFI call: it blocks the OS thread,
-    // freezing the cooperative async event loop for its whole timeout. A
-    // blocking 16ms wait therefore starves every host-side task — an
-    // embedded HTTP server's accept loop and streaming writes, subprocess
-    // pipes — reducing them to one scheduler step per pump lap. So probe
-    // CEF without blocking (timeout 0) and spend the idle time inside
-    // `@async.sleep`, where the event loop runs freely and host IO flows at
-    // full speed; the backoff caps at 16ms, so a CEF event arriving
-    // mid-sleep waits at most one frame.
-    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=0) {
-      Ok(ready) =>
-        if ready.mask != @native.runtime_wait_none {
-          Ok((0, true))
-        } else {
-          sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
-            (next_delay, true)
-          })
+    // The blocking 16ms wait is deliberate: it is the pump cadence CEF's
+    // close handshake was built against, and replacing it with a
+    // non-blocking probe + `@async.sleep` backoff makes the close-time
+    // OnBeforeClose hang readily reproducible. `Runtime::wait` does block
+    // the OS thread — and with it the cooperative async event loop — for
+    // up to the timeout, so a timed-out lap (CEF fully idle) yields one
+    // zero-length event-loop slice before waiting again; host-side IO
+    // (server sockets, subprocess pipes) then advances at least once per
+    // 16ms instead of starving outright.
+    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
+      Ok(ready) => {
+        if ready.mask == @native.runtime_wait_none {
+          @async.sleep(0)
         }
+        Ok((0, true))
+      }
       Err(error) =>
         if is_runtime_wait_unsupported(error) {
           sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
