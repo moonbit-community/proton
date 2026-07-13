@@ -359,15 +359,14 @@ async fn wait_for_runtime_idle(
     // non-blocking probe + `@async.sleep` backoff makes the close-time
     // OnBeforeClose hang readily reproducible. `Runtime::wait` does block
     // the OS thread — and with it the cooperative async event loop — for
-    // up to the timeout, so a timed-out lap (CEF fully idle) yields one
-    // zero-length event-loop slice before waiting again; host-side IO
-    // (server sockets, subprocess pipes) then advances at least once per
-    // 16ms instead of starving outright.
+    // up to the timeout, so every lap ends in one zero-length event-loop
+    // slice; host-side IO (server sockets, subprocess pipes) then advances
+    // at least once per lap. The yield must be unconditional: CEF's own
+    // timers keep the wait's ready mask non-empty for long stretches, so a
+    // yield gated on a timed-out lap can starve host IO indefinitely.
     match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
-      Ok(ready) => {
-        if ready.mask == @native.runtime_wait_none {
-          @async.sleep(0)
-        }
+      Ok(_) => {
+        @async.sleep(0)
         Ok((0, true))
       }
       Err(error) =>
