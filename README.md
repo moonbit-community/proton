@@ -128,15 +128,9 @@ the `dev_url` TCP port, then runs `moon run app --target native` with
 development and runtime environment variables injected. Vite/Next own HMR;
 Proton keeps command handlers in the MoonBit app process.
 
-For release builds, `proton_cli build` runs `frontend.before_build`, validates
-`frontend.dist` and the production entry, then runs `moon build <package>
---target native`. `proton_cli package` consumes that release build for bundle
-and zip assembly.
-
-`proton_cli package` builds and stages a release application from the same
-`moon.proton` config and active `.proton/runtime.json` used by development. It
-does not download or link a second native runtime. Enable the existing bundle
-block first:
+`proton_cli package` builds a release application from the same `moon.proton`
+configuration and active `.proton/runtime.json` used by development. Enable the
+bundle block first:
 
 ```moonbit
 bundle = {
@@ -156,28 +150,9 @@ proton_cli package app --dry-run
 proton_cli package app --no-build --target zip
 ```
 
-On macOS this creates a standard `.app` with the CEF helper nested under
-`Contents/Frameworks/<Product> Helper.app`; the active Proton runtime and app
-resources live under `Contents/Resources`. Formal distribution signing uses a
-Developer ID identity and an optional notarytool keychain profile:
-
-```sh
-PROTON_MACOS_SIGNING_IDENTITY="Developer ID Application: Example Inc. (TEAMID)" \
-  proton_cli package app --sign
-
-PROTON_MACOS_SIGNING_IDENTITY="Developer ID Application: Example Inc. (TEAMID)" \
-PROTON_NOTARY_PROFILE="proton-notary" \
-  proton_cli package app --notarize
-```
-
-Set `PROTON_MACOS_ENTITLEMENTS` to pass a custom entitlements plist. Ad-hoc
-signing is intentionally not treated as a release path because current Chromium
-peer validation requires a real Apple-anchored identity.
-
-On Windows the `app` target creates a portable directory and `zip` archives it.
-Authenticode signing uses `signtool` with `PROTON_WINDOWS_CERTIFICATE` and the
-optional `PROTON_WINDOWS_CERTIFICATE_PASSWORD` and
-`PROTON_WINDOWS_TIMESTAMP_URL` environment variables.
+See [Packaging and signing](docs/packaging.md) for platform layouts, metadata
+validation, local ad-hoc testing, Developer ID signing, notarization, Gatekeeper
+assessment, and Windows Authenticode configuration.
 
 `proton/native_link_config.mjs` resolves link inputs in this order:
 

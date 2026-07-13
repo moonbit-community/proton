@@ -59,3 +59,22 @@ node ./scripts/e2e_bridge_smoke.mjs 47_dev_extension_js
 
 The `e2e/` MoonBit module is part of `moon.work`. The script checks that
 workspace membership before running the MoonBit e2e probe.
+
+## `macos_package_smoke.mjs`
+
+Runs the development-mode macOS packaging regression with an explicit ad-hoc
+identity. It builds and packages `47_dev_extension_js`, verifies every nested
+signature plus the plist, entitlements, archive, and staging cleanup, then
+extracts the zip to a temporary directory and confirms that the real CEF bundle
+starts with three nested Helper.app processes.
+
+Set up the darwin runtime and frontend dependencies first, then run:
+
+```sh
+moon -C cli run . -- -C .. cef setup
+npm --prefix examples/47_dev_extension_js/frontend ci
+node ./scripts/macos_package_smoke.mjs
+```
+
+This is a local development check. It does not replace Developer ID signing,
+Apple notarization, or the final Gatekeeper assessment used for a release.
