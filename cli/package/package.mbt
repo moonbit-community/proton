@@ -26,6 +26,7 @@ struct RawPackageOptions {
 struct PackagePlan {
   root : String
   workspace_root : String
+  build_target_dir : String
   app_package : String
   config_path : String
   product_name : String
@@ -236,9 +237,11 @@ fn build_package_plan(
     File(path) | Asset(path) => Some(path)
     Html(_) | Url(_) => None
   }
+  let workspace_root = find_workspace_root_from(project.base_dir())
   Ok(PackagePlan::{
     root: find_project_root_from(project.base_dir()),
-    workspace_root: find_workspace_root_from(project.base_dir()),
+    workspace_root,
+    build_target_dir: package_build_target_dir(workspace_root, identifier),
     app_package: raw.app_package,
     config_path,
     product_name: metadata.product_name,
@@ -271,6 +274,7 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  version: " + plan.version)
   println("  targets: " + plan.targets.join(", "))
   println("  output: " + plan.output)
+  println("  build target: " + plan.build_target_dir)
   let build = if plan.build { "yes" } else { "no" }
   println("  build: " + build)
   println("  sign: " + bool_text(plan.sign))
@@ -299,8 +303,9 @@ async fn execute_package_plan(plan : PackagePlan) -> Result[Unit, PackageError] 
     None =>
       return Err(
         CommandError(
-          "release executable not found under " +
-          resolve_path(plan.workspace_root, "_build/native/release/build"),
+          "package release executable not found under " +
+          plan.build_target_dir +
+          "; run proton package without --no-build first",
         ),
       )
   }
@@ -321,7 +326,15 @@ async fn execute_package_plan(plan : PackagePlan) -> Result[Unit, PackageError] 
 
 ///|
 async fn run_release_build(plan : PackagePlan) -> Result[Unit, PackageError] {
-  let args = [plan.app_package, "--config", plan.config_path, "--", "--release"]
+  let args = [
+    plan.app_package,
+    "--config",
+    plan.config_path,
+    "--",
+    "--release",
+    "--target-dir",
+    plan.build_target_dir,
+  ]
   let old_rpath = @sys.get_env_var("PROTON_PACKAGE_RPATH")
   if @path.sep != '\\' {
     @sys.set_env_var(
@@ -349,7 +362,7 @@ fn restore_package_env(name : String, value : String?) -> Unit {
 
 ///|
 fn find_release_executable(plan : PackagePlan) -> String? {
-  let root = resolve_path(plan.workspace_root, "_build/native/release/build")
+  let root = resolve_path(plan.build_target_dir, "native/release/build")
   let package_name = path_basename(plan.app_package)
   find_named_file(root, package_name + ".exe")
 }
@@ -371,7 +384,7 @@ fn find_named_file(root : String, name : String) -> String? {
 }
 
 ///|
-fn read_active_runtime(root : String) -> Result[String, PackageError] {
+async fn read_active_runtime(root : String) -> Result[String, PackageError] {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim().to_owned() != "" =>
       return require_runtime(resolve_path(root, value.trim().to_owned()))
@@ -394,7 +407,28 @@ fn read_active_runtime(root : String) -> Result[String, PackageError] {
       )
   }
   match json {
-    Object(fields) =>
+    Object(fields) => {
+      let platform = match fields.get("platform") {
+        Some(String(platform)) => platform
+        _ =>
+          return Err(
+            CommandError(
+              "active Proton runtime manifest has no string platform: " +
+              manifest_path,
+            ),
+          )
+      }
+      let expected_platform = @cef.current_platform_id()
+      guard platform == expected_platform else {
+        return Err(
+          CommandError(
+            "active Proton runtime platform mismatch: expected " +
+            expected_platform +
+            ", got " +
+            platform,
+          ),
+        )
+      }
       match fields.get("dist") {
         Some(String(dist)) => require_runtime(resolve_path(root, dist))
         _ =>
@@ -405,6 +439,7 @@ fn read_active_runtime(root : String) -> Result[String, PackageError] {
             ),
           )
       }
+    }
     _ =>
       Err(
         CommandError(
@@ -413,6 +448,17 @@ fn read_active_runtime(root : String) -> Result[String, PackageError] {
         ),
       )
   }
+}
+
+///|
+fn package_build_target_dir(
+  workspace_root : String,
+  identifier : String,
+) -> String {
+  resolve_path(
+    workspace_root,
+    "target/proton-package-build/" + package_executable_name(identifier),
+  )
 }
 
 ///|

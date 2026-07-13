@@ -94,6 +94,11 @@ test "package plan defaults to app and zip" {
   @debug.assert_eq(plan.targets, ["app", "zip"])
   assert_eq(plan.identifier, "dev.proton.demo")
   assert_eq(plan.version, "1.0.0")
+  assert_true(
+    normalize_slashes(plan.build_target_dir).has_suffix(
+      "/target/proton-package-build/dev-proton-demo",
+    ),
+  )
 }
 
 ///|
@@ -107,6 +112,7 @@ test "macOS plist contains bundle identity and executable" {
   let plan = PackagePlan::{
     root: ".",
     workspace_root: ".",
+    build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
     config_path: "moon.proton",
     product_name: "Demo & App",
@@ -128,6 +134,95 @@ test "macOS plist contains bundle identity and executable" {
   assert_true(plist.contains("<string>dev.proton.demo</string>"))
   assert_true(plist.contains("<string>demo-app</string>"))
   assert_true(plist.contains("<string>1.2.3</string>"))
+}
+
+///|
+async test "release executable lookup stays inside package target dir" {
+  let root = "target/proton-package-executable-lookup"
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let package_target = resolve_path(root, "package-target")
+  let unrelated = resolve_path(
+    root, "workspace/native/release/build/other/app.exe",
+  )
+  match ensure_dir(path_parent(unrelated)) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match write_text(unrelated, "wrong") {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let plan = PackagePlan::{
+    root,
+    workspace_root: resolve_path(root, "workspace"),
+    build_target_dir: package_target,
+    app_package: "app",
+    config_path: resolve_path(root, "moon.proton"),
+    product_name: "Demo",
+    identifier: "dev.proton.demo",
+    version: "1.0.0",
+    targets: ["app"],
+    output: resolve_path(root, "output"),
+    build: false,
+    base_dir: root,
+    frontend_dist: None,
+    entry_path: None,
+    resources: [],
+    icons: [],
+    sign: false,
+    notarize: false,
+  }
+  @debug.assert_eq(find_release_executable(plan), None)
+  let expected = resolve_path(
+    package_target, "native/release/build/vendor/app/app.exe",
+  )
+  match ensure_dir(path_parent(expected)) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match write_text(expected, "right") {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  @debug.assert_eq(find_release_executable(plan), Some(expected))
+}
+
+///|
+async test "active runtime rejects another platform" {
+  let root = "target/proton-package-runtime-platform"
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match ensure_dir(resolve_path(root, ".proton")) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let old_dist = @sys.get_env_var("PROTON_NATIVE_DIST")
+  @sys.unset_env_var("PROTON_NATIVE_DIST")
+  defer restore_package_env("PROTON_NATIVE_DIST", old_dist)
+  let expected = @cef.current_platform_id()
+  let other = if expected == "win32-x64" { "darwin-arm64" } else { "win32-x64" }
+  let manifest = Json::object({
+    "platform": Json::string(other),
+    "dist": Json::string("runtime"),
+  }).stringify()
+  match write_text(resolve_path(root, ".proton/runtime.json"), manifest) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match read_active_runtime(resolve_path(root, ".")) {
+    Ok(_) => abort("expected platform mismatch")
+    Err(CommandError(message)) => {
+      assert_true(message.contains("active Proton runtime platform mismatch"))
+      assert_true(message.contains("expected " + expected))
+      assert_true(message.contains("got " + other))
+    }
+    Err(_) => abort("expected command error")
+  }
 }
 
 ///|
@@ -165,6 +260,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
   let plan = PackagePlan::{
     root,
     workspace_root: root,
+    build_target_dir: resolve_path(root, "package-build"),
     app_package: "app",
     config_path: config,
     product_name: "Demo App",
