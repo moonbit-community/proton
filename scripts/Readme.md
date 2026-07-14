@@ -78,3 +78,26 @@ node ./scripts/macos_package_smoke.mjs
 
 This is a local development check. It does not replace Developer ID signing,
 Apple notarization, or the final Gatekeeper assessment used for a release.
+
+## `windows_package_smoke.ps1`
+
+Runs the Windows portable packaging regression with a temporary self-signed
+Code Signing certificate. It packages `47_dev_extension_js` with `--sign`,
+verifies the Proton-owned executable, helper, and DLL with Authenticode, checks
+the runtime layout and zip, extracts to a path containing spaces, launches the
+real CEF application, confirms the CDP page comes from the extracted package,
+and checks the helper executable path and cleanup.
+
+Set up the `win32-x64` runtime first:
+
+```powershell
+moon -C cli run . -- -C .. cef setup
+powershell -NoProfile -File scripts\windows_package_smoke.ps1
+```
+
+The script temporarily installs its self-signed certificate in the current
+user trust store so `signtool verify /pa /all /v` can validate the development
+signature. It removes the certificate, PFX, temporary directories, and any
+remaining processes in `finally`. If local policy blocks temporary certificate
+creation or trust, the smoke fails with a diagnostic. This check does not
+replace a CA-issued release certificate or RFC3161 timestamp validation.

@@ -121,12 +121,66 @@ The notarization flow:
 
 ## Windows signing
 
-On Windows, the `app` target creates a portable directory and `zip` archives
-it. Authenticode signing uses these environment variables:
+On Windows, the `app` target creates a portable directory beside a sibling
+staging directory. Proton validates the full layout, signs and verifies it when
+requested, then atomically replaces the previous directory through a backup.
+An interrupted backup is restored on the next run, and failed signing or
+promotion leaves the previous package in place. The `zip` target is also built
+and verified through a staging archive before replacement.
+
+The portable root contains the application executable, `proton.dll`,
+`cef_process.exe`, the CEF runtime DLLs and upstream resource data files
+required beside `libcef.dll` (including `icudtl.dat`), `Resources/` with the
+same resource data and all locales, `moon.proton`,
+the production frontend and entry assets, bundle resources, and
+`proton-package.json`. Build-time import libraries (`proton.lib` and
+`libcef.lib`) and the CEF `bootstrap*.exe` samples are not distributed. The
+runtime file list follows CEF's published `CEF_BINARY_FILES` and
+`CEF_RESOURCE_FILES` definitions:
+
+<https://github.com/chromiumembedded/cef/blob/76d244268947a52f43755983ef83766a353a1335/cmake/cef_variables.cmake.in>
+
+The generated zip keeps the portable directory as its top-level entry, so it
+can be extracted to an arbitrary ordinary directory, including paths that
+contain spaces.
+
+Authenticode signing uses these environment variables:
 
 - `PROTON_WINDOWS_CERTIFICATE`
 - `PROTON_WINDOWS_CERTIFICATE_PASSWORD`
 - `PROTON_WINDOWS_TIMESTAMP_URL`
 
-The certificate path is required when `--sign` is used; the password and
-timestamp URL are optional.
+The certificate path is required when `--sign` is used and must point to an
+existing PFX/P12 file. Proton signs only its own binaries: the main executable,
+`cef_process.exe`, and `proton.dll`. Every target must exist before signing.
+Signing uses SHA-256 and, by default, the RFC3161 timestamp service at
+`http://timestamp.digicert.com`. After every signature Proton runs:
+
+```powershell
+signtool verify /pa /all /v <target>
+```
+
+The Microsoft signatures on `d3dcompiler_47.dll` and `dxil.dll` are verified
+but those third-party files are not re-signed. Other CEF binaries are preserved
+unchanged.
+
+For an offline development-only diagnostic, set
+`PROTON_WINDOWS_TIMESTAMP_URL=none` (an empty value is also accepted). Do not
+disable timestamping for a formal release. The certificate password is passed
+only to `signtool`; Proton does not include it in command diagnostics.
+
+After setting up the `win32-x64` runtime, run the repeatable development smoke:
+
+```powershell
+moon -C cli run . -- -C .. cef setup
+powershell -NoProfile -File scripts\windows_package_smoke.ps1
+```
+
+The smoke creates a temporary self-signed code-signing certificate and PFX,
+temporarily trusts that certificate for `/pa` verification, packages with
+`--sign`, checks the portable layout and zip, extracts to a path containing
+spaces, launches the real application, verifies its CDP page and helper path,
+and confirms helper cleanup. The certificate, PFX, processes, and temporary
+directories are removed in `finally`. This is a development pipeline check;
+it does not replace a CA-issued Authenticode certificate, RFC3161 timestamping,
+or release validation on the target distribution environment.
