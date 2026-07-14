@@ -634,7 +634,11 @@ async test "release executable lookup stays inside package target dir" {
     Ok(_) => ()
     Err(error) => abort(@debug.render(@debug.to_repr(error)))
   }
-  @debug.assert_eq(find_release_executable(plan), Some(expected))
+  match find_release_executable(plan) {
+    Some(actual) =>
+      assert_eq(normalize_slashes(actual), normalize_slashes(expected))
+    None => abort("expected release executable")
+  }
 }
 
 ///|
@@ -675,31 +679,17 @@ async test "active runtime rejects another platform" {
 ///|
 async test "Windows portable staging flattens runtime bin beside app executable" {
   let root = "target/proton-package-windows-layout"
-  let runtime = resolve_path(root, "runtime")
   let output = resolve_path(root, "output")
   match remove_tree(root) {
     Ok(_) => ()
     Err(error) => abort(@debug.render(@debug.to_repr(error)))
   }
-  for dir in [resolve_path(runtime, "bin"), resolve_path(runtime, "Resources")] {
-    match ensure_dir(dir) {
-      Ok(_) => ()
-      Err(error) => abort(@debug.render(@debug.to_repr(error)))
-    }
-  }
+  let runtime = prepare_windows_test_runtime(root)
   let executable = resolve_path(root, "demo.exe")
   let config = resolve_path(root, "moon.proton")
-  for
-    item in [
-      (resolve_path(runtime, "bin/proton.dll"), "dll"),
-      (resolve_path(runtime, "bin/cef_process.exe"), "helper"),
-      (resolve_path(runtime, "bin/libcef.dll"), "cef"),
-      (resolve_path(runtime, "Resources/icudtl.dat"), "data"),
-      (executable, "exe"),
-      (config, "config"),
-    ] {
+  for item in [(executable, "exe"), (config, "config")] {
     let (path, text) = item
-    match write_text(path, text) {
+    match write_windows_test_file(path, text) {
       Ok(_) => ()
       Err(error) => abort(@debug.render(@debug.to_repr(error)))
     }
@@ -727,7 +717,15 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     sign: false,
     notarize: false,
   }
-  match stage_windows_portable(plan, executable, runtime) {
+  match
+    stage_windows_portable_with_options(
+      plan,
+      executable,
+      runtime,
+      default_windows_sign_tool(),
+      None,
+      false,
+    ) {
     Ok(_) => ()
     Err(error) => abort(@debug.render(@debug.to_repr(error)))
   }
