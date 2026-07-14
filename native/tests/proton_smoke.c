@@ -1,6 +1,7 @@
 #include "proton_native.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -182,6 +183,42 @@ static int prepare_probe_layout(char *config,
            "\"helper_path\":\"missing-helper\"}");
   return 0;
 }
+
+#ifdef _WIN32
+static int expect_flat_windows_bundled_probe(void) {
+  mkdir_one("probe-portable");
+  mkdir_one("probe-portable" PATH_SEP "Resources");
+  mkdir_one("probe-portable" PATH_SEP "Resources" PATH_SEP "locales");
+  if (write_empty_file("probe-portable" PATH_SEP "libcef.dll") ||
+      write_empty_file("probe-portable" PATH_SEP "cef_process.exe") ||
+      write_empty_file("probe-portable" PATH_SEP "Resources" PATH_SEP
+                       "icudtl.dat")) {
+    return 1;
+  }
+  char previous[32768] = {0};
+  const char *previous_value = getenv("PROTON_RUNTIME_ROOT");
+  if (previous_value != NULL) {
+    snprintf(previous, sizeof(previous), "%s", previous_value);
+  }
+  if (_putenv_s("PROTON_RUNTIME_ROOT", "probe-portable") != 0) {
+    return fail("failed to set PROTON_RUNTIME_ROOT for flat layout probe");
+  }
+  int32_t status = proton_runtime_probe_json(
+      "{\"abi_version\":1,\"use_bundled\":true}");
+  if (previous[0] != '\0') {
+    _putenv_s("PROTON_RUNTIME_ROOT", previous);
+  } else {
+    _putenv_s("PROTON_RUNTIME_ROOT", "");
+  }
+  if (status != PROTON_OK) {
+    char error[512] = {0};
+    proton_last_error_message(error, (int32_t)sizeof(error));
+    fprintf(stderr, "flat Windows portable probe failed: %s\n", error);
+  }
+  return expect_status("runtime_probe flat Windows portable layout", status,
+                       PROTON_OK);
+}
+#endif
 
 static int expect_event(proton_runtime_id_t runtime, const char *type) {
   char tiny[1];
@@ -385,6 +422,11 @@ int main(void) {
                     PROTON_OK)) {
     return 1;
   }
+#ifdef _WIN32
+  if (expect_flat_windows_bundled_probe()) {
+    return 1;
+  }
+#endif
   if (!g_runtime_available) {
     proton_runtime_id_t probed_runtime = PROTON_INVALID_HANDLE;
     int32_t probed_create_status =

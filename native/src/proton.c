@@ -489,6 +489,10 @@ static bool proton_default_helper_path(char *out, size_t out_len) {
     return false;
   }
 #ifdef _WIN32
+  if (proton_join_path(out, out_len, runtime_root, "cef_process.exe") &&
+      proton_path_exists(out)) {
+    return true;
+  }
   return proton_join_path(out, out_len, bin_dir, "cef_process.exe");
 #else
   return proton_join_path(out, out_len, bin_dir, "cef_process");
