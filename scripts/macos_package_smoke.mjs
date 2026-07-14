@@ -18,7 +18,11 @@ const archivePath = `${appPath}.zip`;
 const timeoutMs = Number(
   process.env.PROTON_MACOS_PACKAGE_SMOKE_TIMEOUT_MS ?? "30000",
 );
+const shutdownTimeoutMs = Number(
+  process.env.PROTON_MACOS_PACKAGE_SMOKE_SHUTDOWN_TIMEOUT_MS ?? "5000",
+);
 let appProcess = null;
+let appProcessClosed = false;
 let appLog = null;
 let appSpawnError = null;
 let tempDir = null;
@@ -151,11 +155,53 @@ function processExists(pid) {
   }
 }
 
-async function waitForExit(child) {
-  if (child.exitCode !== null) {
+async function waitForExit(child, timeout = shutdownTimeoutMs) {
+  if (
+    child.exitCode !== null ||
+    child.signalCode !== null ||
+    (child === appProcess && appProcessClosed)
+  ) {
+    return true;
+  }
+  return await new Promise((resolve) => {
+    let settled = false;
+    const finish = (exited) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      child.off("exit", onExit);
+      child.off("close", onExit);
+      child.off("error", onError);
+      resolve(exited);
+    };
+    const onExit = () => finish(true);
+    const onError = () => finish(true);
+    const timer = setTimeout(() => finish(false), timeout);
+    child.once("exit", onExit);
+    child.once("close", onExit);
+    child.once("error", onError);
+  });
+}
+
+async function stopAppProcess() {
+  if (
+    !appProcess ||
+    appProcessClosed ||
+    appProcess.exitCode !== null ||
+    appProcess.signalCode !== null
+  ) {
     return;
   }
-  await new Promise((resolve) => child.once("exit", resolve));
+  appProcess.kill("SIGTERM");
+  if (await waitForExit(appProcess)) {
+    return;
+  }
+  appProcess.kill("SIGKILL");
+  if (!(await waitForExit(appProcess, 2000))) {
+    fail(`packaged app process ${appProcess.pid} did not terminate`);
+  }
 }
 
 async function waitForHelpersToExit(helpers) {
@@ -276,6 +322,8 @@ async function launchBundle() {
     executableName,
   );
   appLog = path.join(tempDir, "app.log");
+  appProcessClosed = false;
+  appSpawnError = null;
   const logFd = fs.openSync(appLog, "w");
   let logOpen = true;
   const closeLog = () => {
@@ -293,8 +341,13 @@ async function launchBundle() {
     stdio: ["ignore", logFd, logFd],
   });
   appProcess.once("spawn", closeLog);
+  appProcess.once("close", () => {
+    appProcessClosed = true;
+    closeLog();
+  });
   appProcess.once("error", (error) => {
     appSpawnError = error;
+    appProcessClosed = true;
     closeLog();
   });
   const page = await waitForPage(cdpPort);
@@ -312,16 +365,12 @@ async function launchBundle() {
   }
   console.log(`CDP page: ${page.url}`);
   console.log(`CEF helpers: ${helpers.length}`);
-  appProcess.kill("SIGTERM");
-  await waitForExit(appProcess);
+  await stopAppProcess();
   await waitForHelpersToExit(helpers);
 }
 
 async function cleanup() {
-  if (appProcess && appProcess.exitCode === null) {
-    appProcess.kill("SIGTERM");
-    await waitForExit(appProcess);
-  }
+  await stopAppProcess();
   if (tempDir) {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -386,5 +435,10 @@ try {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 } finally {
-  await cleanup();
+  try {
+    await cleanup();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }
