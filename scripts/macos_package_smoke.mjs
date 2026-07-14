@@ -82,24 +82,50 @@ async function chooseCdpPort() {
   fail(`no available CDP port found starting at ${requested}`);
 }
 
-function readJson(url) {
+function readJson(url, requestTimeoutMs) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let timer = null;
+    const finish = (callback, value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      callback(value);
+    };
     const request = http.get(url, (response) => {
       const chunks = [];
       response.on("data", (chunk) => chunks.push(chunk));
+      response.once("aborted", () => {
+        finish(reject, new Error(`HTTP response aborted: ${url}`));
+      });
+      response.once("error", (error) => finish(reject, error));
       response.on("end", () => {
         if (response.statusCode !== 200) {
-          reject(new Error(`HTTP ${response.statusCode}`));
+          finish(reject, new Error(`HTTP ${response.statusCode}`));
           return;
         }
         try {
-          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+          finish(
+            resolve,
+            JSON.parse(Buffer.concat(chunks).toString("utf8")),
+          );
         } catch (error) {
-          reject(error);
+          finish(reject, error);
         }
       });
     });
-    request.once("error", reject);
+    request.once("error", (error) => finish(reject, error));
+    timer = setTimeout(() => {
+      const error = new Error(
+        `HTTP request timed out after ${requestTimeoutMs}ms: ${url}`,
+      );
+      finish(reject, error);
+      request.destroy(error);
+    }, requestTimeoutMs);
   });
 }
 
@@ -114,7 +140,12 @@ async function waitForPage(port) {
       fail(`packaged app exited early with code ${appProcess.exitCode}`);
     }
     try {
-      const targets = await readJson(`http://127.0.0.1:${port}/json/list`);
+      const remainingMs = Math.max(1, deadline - Date.now());
+      const requestTimeoutMs = Math.min(1000, remainingMs);
+      const targets = await readJson(
+        `http://127.0.0.1:${port}/json/list`,
+        requestTimeoutMs,
+      );
       const page = targets.find((target) => target.type === "page");
       if (page) {
         return page;
