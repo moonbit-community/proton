@@ -125,6 +125,7 @@ priv struct DoctorOptions {
   cwd : String
   dry_run : Bool
   verbose : Bool
+  deep : Bool
   json : Bool
   json_lines : Bool
   quiet : Bool
@@ -137,13 +138,14 @@ fn DoctorOptions::new(
   cwd~ : String,
   dry_run~ : Bool,
   verbose~ : Bool,
+  deep~ : Bool,
   json~ : Bool,
   json_lines~ : Bool,
   quiet~ : Bool,
   sections~ : Array[String],
   output~ : String?,
 ) -> DoctorOptions {
-  { cwd, dry_run, verbose, json, json_lines, quiet, sections, output }
+  { cwd, dry_run, verbose, deep, json, json_lines, quiet, sections, output }
 }
 
 ///|
@@ -167,6 +169,15 @@ priv struct ProjectDoctorInfo {
   moon_pkg_path : String?
   moon_proton_path : String?
   app_json_path : String?
+}
+
+///|
+priv struct DoctorRuntimeManifest {
+  schema_version : Int
+  platform : String
+  proton_version : String
+  cef_version : String
+  dist : String
 }
 
 ///|

@@ -89,6 +89,7 @@ test "doctor options filter sections" {
     cwd=".",
     dry_run=false,
     verbose=false,
+    deep=false,
     json=false,
     json_lines=false,
     quiet=false,
@@ -118,6 +119,48 @@ test "doctor reports invalid runtime manifests" {
   match resolve_native_dist(project) {
     Err(message) => assert_true(message.contains("failed to parse"))
     Ok(_) => abort("expected invalid runtime manifest error")
+  }
+}
+
+///|
+test "doctor validates runtime manifest schema" {
+  let dir = "target/proton-doctor-runtime-schema"
+  let proton_dir = path_join(dir, ".proton")
+  ensure_test_dir(dir)
+  @mbfs.create_dir(proton_dir) catch {
+    _ => ()
+  }
+  let manifest_path = path_join(proton_dir, "runtime.json")
+  @mbfs.write_string_to_file(
+    manifest_path,
+    (
+      #|{"schema_version":1,"platform":"darwin-arm64","proton_version":"0.1.5","cef_version":"cef-test","dist":"runtime"}
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let project = discover_project(dir)
+  match runtime_manifest_from_project(project) {
+    Ok(Some(manifest)) => {
+      assert_eq(manifest.schema_version, 1)
+      assert_eq(manifest.platform, "darwin-arm64")
+      assert_eq(manifest.dist, "runtime")
+    }
+    _ => abort("expected valid runtime manifest")
+  }
+  @mbfs.write_string_to_file(
+    manifest_path,
+    (
+      #|{"schema_version":1,"platform":"darwin-arm64","proton_version":"0.1.5","cef_version":"cef-test","dist":"runtime","extra":true}
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match runtime_manifest_from_project(project) {
+    Err(message) => assert_true(message.contains("unknown field `extra`"))
+    _ => abort("expected unknown runtime manifest field error")
   }
 }
 

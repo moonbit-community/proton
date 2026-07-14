@@ -1,6 +1,7 @@
 import {
   "justjavac/proton_config",
   "justjavac/proton_cli/cef",
+  "justjavac/ffi",
   "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
@@ -14,3 +15,7 @@ import {
 }
 
 supported_targets = "native"
+
+options(
+  "native-stub": [ "doctor_native_probe.c" ],
+)

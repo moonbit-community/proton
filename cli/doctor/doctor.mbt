@@ -29,7 +29,10 @@ async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
     sections.push(collect_project(project))
   }
   if options.includes("environment") {
-    sections.push(collect_environment(project))
+    sections.push(collect_environment())
+  }
+  if options.includes("runtime") {
+    sections.push(collect_runtime(project, deep=options.deep))
   }
   if options.includes("packages") {
     sections.push(
@@ -55,6 +58,7 @@ pub async fn run(
   cwd~ : String,
   dry_run~ : Bool,
   verbose~ : Bool,
+  deep~ : Bool,
   json~ : Bool,
   json_lines~ : Bool,
   quiet~ : Bool,
@@ -72,6 +76,7 @@ pub async fn run(
     cwd~,
     dry_run~,
     verbose~,
+    deep~,
     json~,
     json_lines~,
     quiet~,

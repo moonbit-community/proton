@@ -2,7 +2,7 @@
 package "justjavac/proton_cli/doctor"
 
 // Values
-pub async fn run(cwd~ : String, dry_run~ : Bool, verbose~ : Bool, json~ : Bool) -> Result[Unit, String]
+pub async fn run(cwd~ : String, dry_run~ : Bool, verbose~ : Bool, deep~ : Bool, json~ : Bool, json_lines~ : Bool, quiet~ : Bool, sections~ : Array[String], output~ : String?) -> Result[Bool, String]
 
 // Errors
 

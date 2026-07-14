@@ -69,9 +69,27 @@ fn path_is_absolute_like(path : String) -> Bool {
 }
 
 ///|
-fn runtime_dist_from_manifest(
+fn runtime_manifest_string_field(
+  object : Map[String, Json],
+  field : String,
+  manifest_path : String,
+) -> Result[String, String] {
+  match object.get(field) {
+    Some(String(value)) => Ok(value)
+    _ =>
+      Err(
+        "Proton runtime manifest has no string `" +
+        field +
+        "`: " +
+        manifest_path,
+      )
+  }
+}
+
+///|
+fn runtime_manifest_from_project(
   project : ProjectDoctorInfo,
-) -> Result[String?, String] {
+) -> Result[DoctorRuntimeManifest?, String] {
   let manifest_path = path_join(
     path_join(project.root, ".proton"),
     "runtime.json",
@@ -84,17 +102,66 @@ fn runtime_dist_from_manifest(
     _ => return Err("failed to parse Proton runtime manifest: " + manifest_path)
   }
   match json {
-    Object(object) =>
-      match object.get("dist") {
-        Some(String(dist)) =>
-          if path_is_absolute_like(dist) {
-            Ok(Some(dist))
-          } else {
-            Ok(Some(path_join(project.root, dist)))
-          }
-        _ =>
-          Err("Proton runtime manifest has no string `dist`: " + manifest_path)
+    Object(object) => {
+      let allowed = [
+        "schema_version", "platform", "proton_version", "cef_version", "dist",
+      ]
+      for key in object.keys() {
+        if !allowed.contains(key) {
+          return Err(
+            "Proton runtime manifest has unknown field `" +
+            key +
+            "`: " +
+            manifest_path,
+          )
+        }
       }
+      let schema_version : Int = match object.get("schema_version") {
+        Some(value) =>
+          @json.from_json(value) catch {
+            _ =>
+              return Err(
+                "Proton runtime manifest has invalid `schema_version`: " +
+                manifest_path,
+              )
+          }
+        None =>
+          return Err(
+            "Proton runtime manifest has no `schema_version`: " + manifest_path,
+          )
+      }
+      guard schema_version == 1 else {
+        return Err(
+          "Proton runtime manifest schema_version must be 1: " + manifest_path,
+        )
+      }
+      runtime_manifest_string_field(object, "platform", manifest_path)
+      .bind(fn(platform) {
+        runtime_manifest_string_field(object, "proton_version", manifest_path).bind(fn(
+            proton_version,
+          ) {
+            runtime_manifest_string_field(object, "cef_version", manifest_path).bind(fn(
+                cef_version,
+              ) {
+                runtime_manifest_string_field(object, "dist", manifest_path).map(fn(
+                    dist,
+                  ) {
+                    {
+                      schema_version,
+                      platform,
+                      proton_version,
+                      cef_version,
+                      dist,
+                    }
+                  },
+                )
+              },
+            )
+          },
+        )
+      })
+      .map(fn(manifest) { Some(manifest) })
+    }
     _ => Err("Proton runtime manifest must be a JSON object: " + manifest_path)
   }
 }
@@ -113,13 +180,22 @@ fn development_native_dist(project : ProjectDoctorInfo) -> String {
 }
 
 ///|
-fn resolve_native_dist(project : ProjectDoctorInfo) -> Result[String, String] {
+fn resolve_native_dist(
+  project : ProjectDoctorInfo,
+) -> Result[(String, DoctorRuntimeManifest?), String] {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => Ok(root)
+    Some(root) => Ok((root, None))
     None =>
-      match runtime_dist_from_manifest(project) {
-        Ok(Some(path)) => Ok(path)
-        Ok(None) => Ok(development_native_dist(project))
+      match runtime_manifest_from_project(project) {
+        Ok(Some(manifest)) => {
+          let path = if path_is_absolute_like(manifest.dist) {
+            manifest.dist
+          } else {
+            path_join(project.root, manifest.dist)
+          }
+          Ok((path, Some(manifest)))
+        }
+        Ok(None) => Ok((development_native_dist(project), None))
         Err(message) => Err(message)
       }
   }
@@ -287,14 +363,262 @@ async fn host_os_line() -> DoctorLine {
 }
 
 ///|
-async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
+fn runtime_library_relative_path(platform_id : String) -> String? {
+  match platform_id {
+    "win32-x64" => Some("bin\\proton.dll")
+    "darwin-arm64" | "darwin-x64" => Some("lib/libproton.dylib")
+    "linux-x64" => Some("lib/libproton.so")
+    _ => None
+  }
+}
+
+///|
+fn runtime_helper_relative_path(platform_id : String) -> String {
+  if platform_id == "win32-x64" {
+    "bin\\cef_process.exe"
+  } else {
+    "bin/cef_process"
+  }
+}
+
+///|
+fn json_object_int(object : Map[String, Json], field : String) -> Int? {
+  match object.get(field) {
+    Some(value) =>
+      try @json.from_json(value) catch {
+        _ => None
+      } noraise {
+        value => Some(value)
+      }
+    None => None
+  }
+}
+
+///|
+fn json_object_string(object : Map[String, Json], field : String) -> String? {
+  match object.get(field) {
+    Some(String(value)) => Some(value)
+    _ => None
+  }
+}
+
+///|
+fn json_object_bool(object : Map[String, Json], field : String) -> Bool? {
+  match object.get(field) {
+    Some(True) => Some(true)
+    Some(False) => Some(false)
+    _ => None
+  }
+}
+
+///|
+fn push_deep_runtime_probe(
+  lines : Array[DoctorLine],
+  native_dist : String,
+  platform_id : String,
+) -> Unit {
+  let library_relative = match runtime_library_relative_path(platform_id) {
+    Some(path) => path
+    None => {
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.unsupported_platform",
+          Warn,
+          "deep runtime probe is unavailable for " + platform_id,
+        ),
+      )
+      return
+    }
+  }
+  let library_path = path_join(native_dist, library_relative)
+  let config = Json::object({
+    "abi_version": Json::number(1.0, repr="1"),
+    "runtime_root": Json::string(native_dist),
+    "helper_path": Json::string(
+      path_join(native_dist, runtime_helper_relative_path(platform_id)),
+    ),
+  }).stringify()
+  match doctor_native_probe(library_path, config) {
+    Object(object) => {
+      match json_object_string(object, "load_error") {
+        Some(message) => {
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.load_failed",
+              Error,
+              "failed to load Proton dynamic library",
+              hint=message,
+            ),
+          )
+          return
+        }
+        None => ()
+      }
+      match json_object_string(object, "symbol_error") {
+        Some(message) => {
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.symbol_missing",
+              Error,
+              "Proton dynamic library is missing required ABI symbols",
+              hint=message,
+            ),
+          )
+          return
+        }
+        None => ()
+      }
+      match json_object_int(object, "abi_version") {
+        Some(1) =>
+          lines.push(
+            DoctorLine::coded("runtime.deep.abi", Ok, "Proton ABI version: 1"),
+          )
+        Some(version) =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.abi_mismatch",
+              Error,
+              "Proton ABI version mismatch: expected 1, got \{version}",
+            ),
+          )
+        None =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.abi_missing",
+              Error,
+              "Proton ABI version probe returned no value",
+            ),
+          )
+      }
+      match json_object_int(object, "info_status") {
+        Some(status) if status >= 0 => {
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.info",
+              Ok,
+              "runtime info ABI call succeeded",
+            ),
+          )
+          match object.get("info") {
+            Some(Object(info)) => {
+              let build_mode = json_object_string(info, "build_mode").unwrap_or(
+                "unknown",
+              )
+              let platform = json_object_string(info, "platform").unwrap_or(
+                "unknown",
+              )
+              if json_object_bool(info, "runtime_available") == Some(true) {
+                lines.push(
+                  DoctorLine::coded(
+                    "runtime.deep.engine",
+                    Ok,
+                    "native engine available: build_mode=" +
+                    build_mode +
+                    ", platform=" +
+                    platform,
+                  ),
+                )
+              } else {
+                lines.push(
+                  DoctorLine::coded(
+                    "runtime.deep.engine_unavailable",
+                    Error,
+                    "Proton library does not include the native engine",
+                  ),
+                )
+              }
+            }
+            _ =>
+              lines.push(
+                DoctorLine::coded(
+                  "runtime.deep.info_invalid",
+                  Error,
+                  "runtime info ABI returned invalid JSON",
+                ),
+              )
+          }
+        }
+        _ =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.info_failed",
+              Error,
+              "runtime info ABI call failed",
+            ),
+          )
+      }
+      match json_object_int(object, "probe_status") {
+        Some(status) if status >= 0 =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.probe",
+              Ok,
+              "runtime layout probe succeeded",
+            ),
+          )
+        _ =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.probe_failed",
+              Error,
+              "runtime layout probe failed",
+              hint=json_object_string(object, "probe_error").unwrap_or(
+                "native probe failed",
+              ),
+            ),
+          )
+      }
+      match json_object_int(object, "smoke_status") {
+        Some(status) if status >= 0 =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.smoke",
+              Ok,
+              "runtime create/destroy smoke test succeeded",
+            ),
+          )
+        _ =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.smoke_failed",
+              Error,
+              "runtime create/destroy smoke test failed",
+              hint=json_object_string(object, "probe_error").unwrap_or(
+                "native smoke test failed",
+              ),
+            ),
+          )
+      }
+    }
+    _ =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.invalid_result",
+          Error,
+          "native deep probe returned an invalid result",
+        ),
+      )
+  }
+}
+
+///|
+async fn collect_environment() -> DoctorSection {
   let lines : Array[DoctorLine] = []
   lines.push(host_os_line())
   lines.push(tool_version_line("moon", ["moon"], ["version"]))
   lines.push(tool_version_line("node", ["node"], ["--version"]))
   lines.push(npm_version_line())
-  let native_dist = match resolve_native_dist(project) {
-    Ok(path) => path
+  DoctorSection::new("environment", "Environment", section_status(lines), lines)
+}
+
+///|
+async fn collect_runtime(
+  project : ProjectDoctorInfo,
+  deep~ : Bool,
+) -> DoctorSection {
+  let lines : Array[DoctorLine] = []
+  let (native_dist, manifest) = match resolve_native_dist(project) {
+    Ok(value) => value
     Err(message) => {
       lines.push(
         DoctorLine::coded(
@@ -305,12 +629,58 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
         ),
       )
       return DoctorSection::new(
-        "environment",
-        "Environment",
+        "runtime",
+        "Runtime",
         section_status(lines),
         lines,
       )
     }
+  }
+  let platform_id = @cef.current_platform_id()
+  let mut platform_matches = true
+  match manifest {
+    Some(manifest) => {
+      lines.push(
+        DoctorLine::coded(
+          "runtime.manifest.schema",
+          Ok,
+          "runtime manifest schema: \{manifest.schema_version}",
+        ),
+      )
+      if manifest.platform == platform_id {
+        lines.push(
+          DoctorLine::coded(
+            "runtime.manifest.platform",
+            Ok,
+            "runtime manifest platform: " + manifest.platform,
+          ),
+        )
+      } else {
+        platform_matches = false
+        lines.push(
+          DoctorLine::coded(
+            "runtime.manifest.platform_mismatch",
+            Error,
+            "runtime platform mismatch: expected " +
+            platform_id +
+            ", got " +
+            manifest.platform,
+            hint="run `proton_cli cef setup` for the current platform",
+          ),
+        )
+      }
+      lines.push(
+        DoctorLine::coded(
+          "runtime.manifest.versions",
+          Neutral,
+          "runtime versions: proton=" +
+          manifest.proton_version +
+          ", cef=" +
+          manifest.cef_version,
+        ),
+      )
+    }
+    None => ()
   }
   if @mbfs.path_exists(native_dist) {
     lines.push(
@@ -342,7 +712,6 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       )
     }
     let missing : Array[String] = []
-    let platform_id = @cef.current_platform_id()
     let required_files = @cef.runtime_required_relative_files_for_platform(
       platform_id,
     )
@@ -368,6 +737,17 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
         ),
       )
     }
+    if deep && platform_matches {
+      push_deep_runtime_probe(lines, native_dist, platform_id)
+    } else if deep {
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.skipped_platform_mismatch",
+          Warn,
+          "deep runtime probe skipped because the manifest platform does not match the host",
+        ),
+      )
+    }
   } else {
     lines.push(
       DoctorLine::coded(
@@ -378,7 +758,7 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       ),
     )
   }
-  DoctorSection::new("environment", "Environment", section_status(lines), lines)
+  DoctorSection::new("runtime", "Runtime", section_status(lines), lines)
 }
 
 ///|

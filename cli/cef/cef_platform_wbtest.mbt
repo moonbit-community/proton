@@ -29,6 +29,14 @@ test "public runtime layout lookup follows stable platform ids" {
 }
 
 ///|
+test "runtime manifests carry an explicit schema version" {
+  let manifest = runtime_manifest_json(
+    "0.1.5", "darwin-arm64", "cef-test", ".proton/runtime",
+  )
+  assert_true(manifest.contains("\"schema_version\":1"))
+}
+
+///|
 test "host platform detection keeps macOS CPU architecture" {
   let arm64 = platform_from_host(windows=false, macos=true, arch=Some("arm64"))
   assert_eq(arm64.id, "darwin-arm64")
