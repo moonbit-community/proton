@@ -44,6 +44,30 @@ test "doctor report records failing sections" {
 }
 
 ///|
+test "doctor report summarizes line statuses" {
+  let report = DoctorReport::new(
+    [
+      DoctorSection::new("Environment", Error, [
+        DoctorLine::coded("environment.os", Ok, "OS"),
+        DoctorLine::coded("runtime.missing", Missing, "runtime"),
+        DoctorLine::coded("runtime.version", Unknown, "version"),
+        DoctorLine::coded("environment.node", Warn, "node"),
+      ]),
+    ],
+    dry_run=false,
+  )
+  let summary = report.summary()
+  assert_eq(summary.total, 4)
+  assert_eq(summary.passed, 1)
+  assert_eq(summary.errors, 1)
+  assert_eq(summary.warnings, 1)
+  assert_eq(summary.unknown, 1)
+  assert_true(
+    render_doctor_json(report).contains("\"code\": \"environment.os\""),
+  )
+}
+
+///|
 test "doctor reports invalid runtime manifests" {
   let dir = "target/proton-doctor-invalid-runtime"
   let proton_dir = path_join(dir, ".proton")
@@ -275,6 +299,8 @@ test "text renderer uses utf8 symbols and dry run note" {
       #|    hint: install Visual Studio
       #|
       #|- doctor is read-only; no files will be changed
+      #|
+      #|Summary: 0 errors, 1 warnings, 1 passed, 0 unknown
       #|
     ),
   )

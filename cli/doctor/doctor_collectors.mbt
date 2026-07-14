@@ -252,7 +252,7 @@ async fn host_os_line() -> DoctorLine {
         None => uname_value("-m")
       }
   }
-  DoctorLine::new(Ok, "OS: " + host_os_label(system, arch))
+  DoctorLine::coded("environment.os", Ok, "OS: " + host_os_label(system, arch))
 }
 
 ///|

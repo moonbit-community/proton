@@ -34,6 +34,7 @@ fn DoctorStatus::json_name(self : DoctorStatus) -> String {
 
 ///|
 priv struct DoctorLine {
+  code : String
   status : DoctorStatus
   text : String
   hint : String?
@@ -45,7 +46,17 @@ fn DoctorLine::new(
   text : String,
   hint? : String,
 ) -> DoctorLine {
-  { status, text, hint }
+  { code: "doctor.unspecified", status, text, hint }
+}
+
+///|
+fn DoctorLine::coded(
+  code : String,
+  status : DoctorStatus,
+  text : String,
+  hint? : String,
+) -> DoctorLine {
+  { code, status, text, hint }
 }
 
 ///|
@@ -81,6 +92,39 @@ fn DoctorReport::new(
 ///|
 fn DoctorReport::has_errors(self : DoctorReport) -> Bool {
   self.sections.any(fn(section) { section.status == Error })
+}
+
+///|
+priv struct DoctorSummary {
+  total : Int
+  passed : Int
+  warnings : Int
+  errors : Int
+  unknown : Int
+  neutral : Int
+}
+
+///|
+fn DoctorReport::summary(self : DoctorReport) -> DoctorSummary {
+  let mut total = 0
+  let mut passed = 0
+  let mut warnings = 0
+  let mut errors = 0
+  let mut unknown = 0
+  let mut neutral = 0
+  for section in self.sections {
+    for line in section.lines {
+      total += 1
+      match line.status {
+        Ok => passed += 1
+        Warn => warnings += 1
+        Error | Missing => errors += 1
+        Unknown => unknown += 1
+        Neutral => neutral += 1
+      }
+    }
+  }
+  { total, passed, warnings, errors, unknown, neutral }
 }
 
 ///|
