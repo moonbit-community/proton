@@ -390,6 +390,32 @@ async test "macOS staged app promotion rolls back when staging is missing" {
 }
 
 ///|
+async test "macOS staged app promotion recovers an interrupted backup" {
+  let root = "target/proton-package-macos-stale-backup"
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let destination = resolve_path(root, "Demo.app")
+  let backup = destination + ".backup"
+  let marker = resolve_path(backup, "Contents/old.txt")
+  match ensure_dir(path_parent(marker)) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match write_text(marker, "old") {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match promote_staged_app(resolve_path(root, "missing.app"), destination) {
+    Ok(_) => abort("expected staging promotion failure")
+    Err(_) => ()
+  }
+  assert_true(@mbfs.path_exists(resolve_path(destination, "Contents/old.txt")))
+  assert_false(@mbfs.path_exists(backup))
+}
+
+///|
 async test "macOS notarization validates success and cleans failed upload" {
   guard is_macos_host() else { return }
   let root = resolve_path("target", "proton-package-notarization-flow")
@@ -498,6 +524,24 @@ async test "macOS notarization validates success and cleans failed upload" {
     "notarytool submit " + archive + " --keychain-profile test-profile --wait\n",
   )
   assert_false(@mbfs.path_exists(archive))
+}
+
+///|
+test "macOS notarization reports operation and cleanup failures" {
+  match
+    finish_macos_notarization(
+      Err(CommandError("submit failed")),
+      Err(CommandError("cleanup failed")),
+      ".demo.notary.zip",
+    ) {
+    Ok(_) => abort("expected combined notarization failure")
+    Err(CommandError(message)) => {
+      assert_true(message.contains(".demo.notary.zip"))
+      assert_true(message.contains("submit failed"))
+      assert_true(message.contains("cleanup failed"))
+    }
+    Err(_) => abort("expected command error")
+  }
 }
 
 ///|

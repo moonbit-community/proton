@@ -792,9 +792,25 @@ async fn promote_staged_app(
   destination : String,
 ) -> Result[Unit, PackageError] {
   let backup = destination + ".backup"
-  match remove_tree(backup) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
+  if @mbfs.path_exists(backup) {
+    if @mbfs.path_exists(destination) {
+      match remove_tree(backup) {
+        Err(error) => return Err(error)
+        Ok(_) => ()
+      }
+    } else {
+      @async_fs.rename(backup, destination) catch {
+        error =>
+          return Err(
+            CommandError(
+              "failed to restore interrupted macOS app promotion from " +
+              backup +
+              ": " +
+              @debug.render(@debug.to_repr(error)),
+            ),
+          )
+      }
+    }
   }
   let had_destination = @mbfs.path_exists(destination)
   if had_destination {
@@ -812,7 +828,17 @@ async fn promote_staged_app(
     error => {
       if had_destination {
         @async_fs.rename(backup, destination) catch {
-          _ => ()
+          rollback_error =>
+            return Err(
+              CommandError(
+                "failed to promote staged macOS app: " +
+                @debug.render(@debug.to_repr(error)) +
+                "; rollback also failed and the previous app remains at " +
+                backup +
+                ": " +
+                @debug.render(@debug.to_repr(rollback_error)),
+              ),
+            )
         }
       }
       return Err(
@@ -824,7 +850,15 @@ async fn promote_staged_app(
     }
   }
   match remove_tree(backup) {
-    Err(error) => return Err(error)
+    Err(error) =>
+      Err(
+        CommandError(
+          "macOS app was promoted but its backup could not be removed: " +
+          backup +
+          ": " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
     Ok(_) => Ok(())
   }
 }
@@ -1595,8 +1629,31 @@ async fn notarize_macos_app(
   }
   let result = submit_macos_notarization(app, archive, profile)
   let cleanup = remove_tree(archive)
+  finish_macos_notarization(result, cleanup, archive)
+}
+
+///|
+fn finish_macos_notarization(
+  result : Result[Unit, PackageError],
+  cleanup : Result[Unit, PackageError],
+  archive : String,
+) -> Result[Unit, PackageError] {
   match result {
-    Err(error) => Err(error)
+    Err(error) =>
+      match cleanup {
+        Ok(_) => Err(error)
+        Err(cleanup_error) =>
+          Err(
+            CommandError(
+              "macOS notarization failed and the temporary archive could not be removed: " +
+              archive +
+              "; notarization error: " +
+              @debug.render(@debug.to_repr(error)) +
+              "; cleanup error: " +
+              @debug.render(@debug.to_repr(cleanup_error)),
+            ),
+          )
+      }
     Ok(_) => cleanup
   }
 }
