@@ -48,6 +48,13 @@ struct PackagePlan {
 } derive(Debug, Eq)
 
 ///|
+struct MacosCodeSignTarget {
+  path : String
+  runtime_options : Bool
+  deep : Bool
+} derive(Debug, Eq)
+
+///|
 pub async fn run(
   cwd : String,
   args : Array[String],
@@ -1379,53 +1386,83 @@ async fn sign_macos_app(
   )
   let libproton = resolve_path(contents, "Resources/proton/lib/libproton.dylib")
   let runtime_bin = resolve_path(contents, "Resources/proton/bin")
-  for
-    target in [
-      cef_framework,
-      resolve_path(runtime_bin, "libEGL.dylib"),
-      resolve_path(runtime_bin, "libGLESv2.dylib"),
-      resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
-      resolve_path(runtime_bin, "cef_process"),
-      libproton,
-      helper,
-      main,
-      app,
-    ] {
-    guard @mbfs.path_exists(target) else { continue }
+  let targets = [
+    MacosCodeSignTarget::{
+      path: cef_framework,
+      runtime_options: false,
+      deep: true,
+    },
+    MacosCodeSignTarget::{
+      path: resolve_path(runtime_bin, "libEGL.dylib"),
+      runtime_options: false,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: resolve_path(runtime_bin, "libGLESv2.dylib"),
+      runtime_options: false,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
+      runtime_options: false,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: resolve_path(runtime_bin, "cef_process"),
+      runtime_options: false,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: libproton,
+      runtime_options: false,
+      deep: false,
+    },
+    MacosCodeSignTarget::{ path: helper, runtime_options: true, deep: false },
+    MacosCodeSignTarget::{ path: main, runtime_options: true, deep: false },
+    MacosCodeSignTarget::{ path: app, runtime_options: true, deep: true },
+  ]
+  match require_macos_codesign_targets(targets) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  for target in targets {
     match
       codesign_target(
         identity,
-        target,
-        runtime_options=target == helper || target == main || target == app,
-        deep=target.has_suffix(".framework"),
+        target.path,
+        runtime_options=target.runtime_options,
+        deep=target.deep,
         entitlements=Some(entitlements),
       ) {
       Err(error) => return Err(error)
       Ok(_) => ()
     }
   }
-  let code = @process.run("codesign", [
-    "--verify", "--deep", "--strict", "--verbose=2", app,
-  ]) catch {
-    error =>
-      return Err(
-        CommandError(
-          "failed to verify macOS signature: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
-      )
-  }
-  if code == 0 {
-    if is_adhoc {
-      Ok(())
-    } else {
-      verify_macos_developer_id(app)
+  for target in targets {
+    match verify_macos_codesign_target(target.path, deep=target.deep) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
     }
-  } else {
-    Err(
-      CommandError("codesign verification exited with code " + code.to_string()),
-    )
   }
+  if is_adhoc {
+    Ok(())
+  } else {
+    verify_macos_developer_id(app)
+  }
+}
+
+///|
+fn require_macos_codesign_targets(
+  targets : Array[MacosCodeSignTarget],
+) -> Result[Unit, PackageError] {
+  for target in targets {
+    guard @mbfs.path_exists(target.path) else {
+      return Err(
+        CommandError("required macOS signing target is missing: " + target.path),
+      )
+    }
+  }
+  Ok(())
 }
 
 ///|
@@ -1536,6 +1573,49 @@ async fn codesign_target(
       ),
     )
   }
+}
+
+///|
+async fn verify_macos_codesign_target(
+  target : String,
+  deep~ : Bool,
+) -> Result[Unit, PackageError] {
+  let args = macos_codesign_verify_args(target, deep~)
+  let code = @process.run("codesign", args) catch {
+    error =>
+      return Err(
+        CommandError(
+          "failed to verify macOS signature for " +
+          target +
+          ": " +
+          @debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  if code == 0 {
+    Ok(())
+  } else {
+    Err(
+      CommandError(
+        "codesign verification exited with code " +
+        code.to_string() +
+        ": " +
+        target,
+      ),
+    )
+  }
+}
+
+///|
+fn macos_codesign_verify_args(target : String, deep~ : Bool) -> Array[String] {
+  let args : Array[String] = ["--verify"]
+  if deep {
+    args.push("--deep")
+  }
+  args.push("--strict")
+  args.push("--verbose=2")
+  args.push(target)
+  args
 }
 
 ///|

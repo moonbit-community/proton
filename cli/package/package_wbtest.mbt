@@ -258,6 +258,42 @@ test "macOS framework signing uses deep sealing without app entitlements" {
 }
 
 ///|
+async test "macOS signing rejects a missing required target" {
+  let missing = resolve_path("target", "proton-package-missing-signing-target")
+  match remove_tree(missing) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  match
+    require_macos_codesign_targets([
+      MacosCodeSignTarget::{
+        path: missing,
+        runtime_options: false,
+        deep: false,
+      },
+    ]) {
+    Ok(_) => abort("expected missing signing target failure")
+    Err(CommandError(message)) => {
+      assert_true(message.contains("required macOS signing target is missing"))
+      assert_true(message.contains(missing))
+    }
+    Err(_) => abort("expected command error")
+  }
+}
+
+///|
+test "macOS signature verification args seal nested bundles deeply" {
+  let app_args = macos_codesign_verify_args("Demo.app", deep=true)
+  @debug.assert_eq(app_args, [
+    "--verify", "--deep", "--strict", "--verbose=2", "Demo.app",
+  ])
+  let dylib_args = macos_codesign_verify_args("libproton.dylib", deep=false)
+  @debug.assert_eq(dylib_args, [
+    "--verify", "--strict", "--verbose=2", "libproton.dylib",
+  ])
+}
+
+///|
 test "macOS icon plist entry is conditional" {
   assert_eq(macos_icon_plist_entry(None), "")
   assert_true(macos_icon_plist_entry(Some("icon.icns")).contains("AppIcon"))
