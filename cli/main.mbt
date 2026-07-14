@@ -324,9 +324,10 @@ async fn run_doctor_from_args(
     )
   }
   for section in sections {
-    if !["project", "environment", "runtime", "packages", "extensions", "app"].contains(
-        section,
-      ) {
+    if ![
+        "project", "environment", "runtime", "platform", "packages", "extensions",
+        "app",
+      ].contains(section) {
       return Err(
         CliError::UsageError("unknown doctor section: " + section, false),
       )

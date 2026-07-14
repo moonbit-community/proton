@@ -641,6 +641,185 @@ async fn collect_environment() -> DoctorSection {
 }
 
 ///|
+async fn platform_command_line(
+  code : String,
+  label : String,
+  command : String,
+  args : Array[String],
+  failure_status : DoctorStatus,
+) -> DoctorLine {
+  let (status, output) = @process.collect_output_merged(command, args) catch {
+    _ =>
+      return DoctorLine::coded(
+        code + ".missing",
+        Unknown,
+        label + ": command not available",
+        hint=command,
+      )
+  }
+  let text = output.text() catch { _ => "" }
+  match first_non_empty_line(text) {
+    Some(line) if status == 0 =>
+      DoctorLine::coded(code, Ok, label + ": " + line)
+    Some(line) =>
+      DoctorLine::coded(
+        code + ".failed",
+        failure_status,
+        label + ": command exited with code " + status.to_string(),
+        hint=line,
+      )
+    None if status == 0 => DoctorLine::coded(code, Ok, label + ": succeeded")
+    None =>
+      DoctorLine::coded(
+        code + ".failed",
+        failure_status,
+        label + ": command exited with code " + status.to_string(),
+      )
+  }
+}
+
+///|
+async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
+  let lines : Array[DoctorLine] = []
+  let platform_id = @cef.current_platform_id()
+  lines.push(DoctorLine::coded("platform.id", Ok, "platform: " + platform_id))
+  let runtime = resolve_native_dist(project)
+  match runtime {
+    Err(message) =>
+      lines.push(
+        DoctorLine::coded(
+          "platform.runtime_manifest",
+          Error,
+          "platform runtime unavailable",
+          hint=message,
+        ),
+      )
+    Ok((native_dist, _)) => {
+      match runtime_library_relative_path(platform_id) {
+        Some(relative) => {
+          let library_path = path_join(native_dist, relative)
+          if @mbfs.path_exists(library_path) {
+            lines.push(
+              platform_command_line(
+                "platform.library.file",
+                "native library",
+                "file",
+                [library_path],
+                Warn,
+              ),
+            )
+            if platform_id == "linux-x64" {
+              lines.push(
+                platform_command_line(
+                  "platform.library.ldd",
+                  "native library dependencies",
+                  "ldd",
+                  [library_path],
+                  Error,
+                ),
+              )
+            } else if platform_id == "darwin-arm64" ||
+              platform_id == "darwin-x64" {
+              lines.push(
+                platform_command_line(
+                  "platform.library.codesign",
+                  "native library signature",
+                  "codesign",
+                  ["--verify", "--deep", "--strict", library_path],
+                  Warn,
+                ),
+              )
+              lines.push(
+                platform_command_line(
+                  "platform.library.quarantine",
+                  "native library quarantine",
+                  "xattr",
+                  ["-p", "com.apple.quarantine", library_path],
+                  Neutral,
+                ),
+              )
+            }
+          } else {
+            lines.push(
+              DoctorLine::coded(
+                "platform.library.missing",
+                Unknown,
+                "native library not found: " + library_path,
+              ),
+            )
+          }
+        }
+        None => ()
+      }
+      let helper_path = path_join(
+        native_dist,
+        runtime_helper_relative_path(platform_id),
+      )
+      if @mbfs.path_exists(helper_path) {
+        lines.push(
+          platform_command_line(
+            "platform.helper.file",
+            "runtime helper",
+            "file",
+            [helper_path],
+            Warn,
+          ),
+        )
+      } else {
+        lines.push(
+          DoctorLine::coded(
+            "platform.helper.missing",
+            Unknown,
+            "runtime helper not found: " + helper_path,
+          ),
+        )
+      }
+    }
+  }
+  if platform_id == "win32-x64" {
+    lines.push(
+      platform_command_line(
+        "platform.msvc",
+        "MSVC compiler",
+        "where",
+        ["cl"],
+        Warn,
+      ),
+    )
+    lines.push(
+      platform_command_line(
+        "platform.dumpbin",
+        "dumpbin",
+        "where",
+        ["dumpbin"],
+        Unknown,
+      ),
+    )
+  } else if platform_id == "linux-x64" {
+    let display = @sys.get_env_var("DISPLAY")
+    let wayland = @sys.get_env_var("WAYLAND_DISPLAY")
+    if display is None && wayland is None {
+      lines.push(
+        DoctorLine::coded(
+          "platform.display.headless",
+          Warn,
+          "no DISPLAY or WAYLAND_DISPLAY is set; GUI launch may require a headless setup",
+        ),
+      )
+    } else {
+      lines.push(
+        DoctorLine::coded(
+          "platform.display",
+          Ok,
+          "display environment is configured",
+        ),
+      )
+    }
+  }
+  DoctorSection::new("platform", "Platform", section_status(lines), lines)
+}
+
+///|
 async fn collect_runtime(
   project : ProjectDoctorInfo,
   deep~ : Bool,

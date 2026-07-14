@@ -34,6 +34,9 @@ async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
   if options.includes("runtime") {
     sections.push(collect_runtime(project, deep=options.deep))
   }
+  if options.includes("platform") {
+    sections.push(collect_platform(project))
+  }
   if options.includes("packages") {
     sections.push(
       collect_packages(
