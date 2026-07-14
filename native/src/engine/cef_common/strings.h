@@ -25,6 +25,13 @@ static char *proton_engine_strdup(const char *value) {
                                   value != NULL ? strlen(value) : 0);
 }
 
+static const char *proton_engine_log_url(const char *url) {
+  if (url == NULL) {
+    return "";
+  }
+  return strncmp(url, "data:", 5) == 0 ? "data:..." : url;
+}
+
 static char *proton_engine_userfree_to_utf8(cef_string_userfree_t value) {
   if (value == NULL) {
     return NULL;

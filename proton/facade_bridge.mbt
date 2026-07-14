@@ -456,7 +456,9 @@ fn url_origin(url : String) -> Result[String, String] {
   if !dev_origin_authority_is_valid(authority) {
     return Err("dev bridge URL has invalid origin: " + url)
   }
-  Ok(scheme + "://" + authority)
+  canonical_dev_origin_authority(authority, scheme).map(fn(authority) {
+    scheme + "://" + authority
+  })
 }
 
 ///|
@@ -477,6 +479,82 @@ fn dev_origin_authority_is_valid(authority : String) -> Bool {
     }
   }
   true
+}
+
+///|
+fn canonical_dev_origin_authority(
+  authority : String,
+  scheme : String,
+) -> Result[String, String] {
+  if authority.has_prefix("[") {
+    let (host_part, suffix) = match authority.split_once("]") {
+      Some(parts) => parts
+      None => return Err("dev bridge URL has invalid IPv6 origin: " + authority)
+    }
+    let host_text = host_part.to_owned()
+    let host = host_text
+      .unsafe_substring(start=1, end=host_text.length())
+      .to_string()
+    if host == "" {
+      return Err("dev bridge URL host must not be empty")
+    }
+    if suffix != "" && !suffix.has_prefix(":") {
+      return Err("dev bridge URL has invalid IPv6 origin: " + authority)
+    }
+    canonical_dev_origin_port_suffix(suffix.to_owned(), scheme).map(fn(port) {
+      "[" + host.to_lower() + "]" + port
+    })
+  } else {
+    let first_colon = authority.find(":")
+    let last_colon = authority.rev_find(":")
+    if first_colon != last_colon {
+      return Err("dev bridge IPv6 origins must use brackets: " + authority)
+    }
+    match first_colon {
+      None => Ok(authority.to_lower())
+      Some(index) => {
+        let host = authority.unsafe_substring(start=0, end=index).to_string()
+        let port = authority
+          .unsafe_substring(start=index + 1, end=authority.length())
+          .to_string()
+        if host == "" {
+          return Err("dev bridge URL host must not be empty")
+        }
+        if port == "" {
+          return Err("dev bridge URL port must not be empty")
+        }
+        canonical_dev_origin_port_suffix(port, scheme).map(fn(port) {
+          host.to_lower() + port
+        })
+      }
+    }
+  }
+}
+
+///|
+fn canonical_dev_origin_port_suffix(
+  port : String,
+  scheme : String,
+) -> Result[String, String] {
+  if port == "" {
+    return Ok("")
+  }
+  let text = if port.has_prefix(":") { port[1:].to_owned() } else { port }
+  if text == "" {
+    return Err("dev bridge URL port must not be empty")
+  }
+  let value = @string.parse_int(text[:]) catch {
+    _ => return Err("dev bridge URL port must be an integer: " + text)
+  }
+  if value <= 0 || value > 65535 {
+    return Err("dev bridge URL port is out of range: " + text)
+  }
+  let default_port = if scheme == "http" { 80 } else { 443 }
+  if value == default_port {
+    Ok("")
+  } else {
+    Ok(":" + value.to_string())
+  }
 }
 
 ///|

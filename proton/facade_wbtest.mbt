@@ -218,6 +218,18 @@ test "dev bridge page policy parses exact http origins" {
     Ok(origin) => assert_eq(origin, "http://[::1]:5173")
     Err(error) => fail(error)
   }
+  match url_origin("HTTP://LOCALHOST:80/app") {
+    Ok(origin) => assert_eq(origin, "http://localhost")
+    Err(error) => fail(error)
+  }
+  match url_origin("https://Example.COM:443/app") {
+    Ok(origin) => assert_eq(origin, "https://example.com")
+    Err(error) => fail(error)
+  }
+  match url_origin("http://LOCALHOST:05173/app") {
+    Ok(origin) => assert_eq(origin, "http://localhost:5173")
+    Err(error) => fail(error)
+  }
   match url_origin("ftp://localhost:5173/app") {
     Err(error) => assert_true(error.contains("http or https"))
     Ok(_) => fail("expected non-http dev origin to fail")
@@ -229,6 +241,14 @@ test "dev bridge page policy parses exact http origins" {
   match url_origin("http://local\\host:5173/app") {
     Err(error) => assert_true(error.contains("invalid origin"))
     Ok(_) => fail("expected backslash dev origin to fail")
+  }
+  match url_origin("http://localhost:/app") {
+    Err(error) => assert_true(error.contains("port must not be empty"))
+    Ok(_) => fail("expected empty dev origin port to fail")
+  }
+  match url_origin("http://[::1]5173/app") {
+    Err(error) => assert_true(error.contains("invalid IPv6 origin"))
+    Ok(_) => fail("expected invalid IPv6 dev origin to fail")
   }
 }
 

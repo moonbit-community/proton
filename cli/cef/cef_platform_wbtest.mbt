@@ -55,3 +55,24 @@ test "platform override accepts stable platform ids" {
     None => abort("expected linux-x64 override")
   }
 }
+
+///|
+test "CEF archive names cannot escape generated directories" {
+  for
+    name in [
+      "../cef", "cef/../../outside", "cef\\..\\outside", "/tmp/cef", "C:\\cef", ".",
+      "..", "",
+    ] {
+    match validate_cef_name(name) {
+      Ok(_) => abort("expected unsafe CEF name to fail: " + name)
+      Err(_) => ()
+    }
+  }
+  match
+    validate_cef_name(
+      "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
+    ) {
+    Ok(_) => ()
+    Err(_) => abort("expected default CEF name to pass")
+  }
+}
