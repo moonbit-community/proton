@@ -228,6 +228,19 @@ async function waitForCdpEndpoint() {
   throw new Error(`CDP endpoint did not start on ${cdpPort}: ${lastError?.message ?? "timeout"}`);
 }
 
+async function waitForCdpEndpointToStop() {
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    try {
+      await httpJson(`http://127.0.0.1:${cdpPort}/json/version`, 500);
+      await sleep(100);
+    } catch {
+      return;
+    }
+  }
+  throw new Error(`CDP endpoint did not stop on ${cdpPort}`);
+}
+
 async function waitForPageTarget() {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -1902,6 +1915,7 @@ function spawnApp(env, scenario) {
       String(timeoutMs),
     ], {
       cwd: appWorkdir,
+      detached: process.platform !== "win32",
       env: {
         ...env,
         PROTON_NO_UPDATE_CHECK: "1",
@@ -1930,6 +1944,7 @@ function spawnMoonExampleApp(env, scenario) {
     "120",
   ], {
     cwd: appWorkdir,
+    detached: process.platform !== "win32",
     env: appEnv,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -1947,17 +1962,41 @@ function collectOutput(child) {
 }
 
 async function terminateTree(child) {
-  if (!child || child.exitCode !== null || child.signalCode !== null) {
+  if (!child) {
     return;
   }
   if (process.platform === "win32") {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      return;
+    }
     await new Promise((resolve) => {
       spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
         stdio: "ignore",
       }).once("exit", resolve);
     });
   } else {
-    child.kill("SIGTERM");
+    const signalGroup = (signal) => {
+      try {
+        process.kill(-child.pid, signal);
+        return true;
+      } catch (error) {
+        if (error?.code === "ESRCH") {
+          return false;
+        }
+        throw error;
+      }
+    };
+    signalGroup("SIGTERM");
+    if (child.exitCode === null && child.signalCode === null) {
+      await Promise.race([
+        new Promise((resolve) => child.once("exit", resolve)),
+        sleep(5000),
+      ]);
+    }
+    if (signalGroup(0)) {
+      signalGroup("SIGKILL");
+    }
+    return;
   }
   if (child.exitCode !== null || child.signalCode !== null) {
     return;
@@ -2097,6 +2136,9 @@ async function runScenario(name, hasMoonBitE2e) {
     ]);
   } finally {
     await terminateTree(child);
+    if (process.platform !== "win32") {
+      await waitForCdpEndpointToStop();
+    }
     if (name === "47_dev_extension_js" && !activeDevFrontendHadNodeModules) {
       removeTreeIfExists(
         path.join(repoRoot, "examples", name, "frontend", "node_modules"),
