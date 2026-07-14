@@ -7,7 +7,7 @@ fn print_usage() -> Unit {
     #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
     #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
     #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
-    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]
+    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
     #|
@@ -269,22 +269,78 @@ async fn run_doctor_from_args(
   let mut dry_run = false
   let mut verbose = false
   let mut json = false
-  for arg in args {
+  let mut json_lines = false
+  let mut quiet = false
+  let sections : Array[String] = []
+  let mut output : String? = None
+  let mut index = 0
+  while index < args.length() {
+    let arg = args[index]
     match arg {
       "--dry-run" => dry_run = true
       "--verbose" => verbose = true
       "--json" => json = true
+      "--json-lines" => json_lines = true
+      "--quiet" => quiet = true
+      "--section" => {
+        guard index + 1 < args.length() else {
+          return Err(CliError::UsageError("missing value for --section", false))
+        }
+        sections.push(args[index + 1])
+        index += 1
+      }
+      "--output" => {
+        guard index + 1 < args.length() else {
+          return Err(CliError::UsageError("missing value for --output", false))
+        }
+        output = Some(resolve_cli_path(cwd, args[index + 1]))
+        index += 1
+      }
       "-h" | "--help" => {
         println(
-          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]",
+          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
         )
         return Ok(())
       }
       _ =>
         return Err(CliError::UsageError("unknown doctor option: " + arg, false))
     }
+    index += 1
   }
-  match @doctor.run(cwd~, dry_run~, verbose~, json~) {
+  if json && json_lines {
+    return Err(
+      CliError::UsageError(
+        "--json and --json-lines are mutually exclusive", false,
+      ),
+    )
+  }
+  if quiet && (json || json_lines) {
+    return Err(
+      CliError::UsageError(
+        "--quiet cannot be combined with --json or --json-lines", false,
+      ),
+    )
+  }
+  for section in sections {
+    if !["project", "environment", "packages", "extensions", "app"].contains(
+        section,
+      ) {
+      return Err(
+        CliError::UsageError("unknown doctor section: " + section, false),
+      )
+    }
+  }
+  match
+    @doctor.run(
+      cwd~,
+      dry_run~,
+      verbose~,
+      json~,
+      json_lines~,
+      quiet~,
+      sections~,
+      output~,
+    ) {
     Ok(true) => Ok(())
     Ok(false) => Err(CliError::ReportedError)
     Err(message) => Err(CliError::CommandError(message))

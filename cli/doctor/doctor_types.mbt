@@ -41,15 +41,6 @@ priv struct DoctorLine {
 }
 
 ///|
-fn DoctorLine::new(
-  status : DoctorStatus,
-  text : String,
-  hint? : String,
-) -> DoctorLine {
-  { code: "doctor.unspecified", status, text, hint }
-}
-
-///|
 fn DoctorLine::coded(
   code : String,
   status : DoctorStatus,
@@ -61,6 +52,7 @@ fn DoctorLine::coded(
 
 ///|
 priv struct DoctorSection {
+  id : String
   title : String
   status : DoctorStatus
   lines : Array[DoctorLine]
@@ -68,11 +60,12 @@ priv struct DoctorSection {
 
 ///|
 fn DoctorSection::new(
+  id : String,
   title : String,
   status : DoctorStatus,
   lines : Array[DoctorLine],
 ) -> DoctorSection {
-  { title, status, lines }
+  { id, title, status, lines }
 }
 
 ///|
@@ -133,6 +126,10 @@ priv struct DoctorOptions {
   dry_run : Bool
   verbose : Bool
   json : Bool
+  json_lines : Bool
+  quiet : Bool
+  sections : Array[String]
+  output : String?
 }
 
 ///|
@@ -141,8 +138,17 @@ fn DoctorOptions::new(
   dry_run~ : Bool,
   verbose~ : Bool,
   json~ : Bool,
+  json_lines~ : Bool,
+  quiet~ : Bool,
+  sections~ : Array[String],
+  output~ : String?,
 ) -> DoctorOptions {
-  { cwd, dry_run, verbose, json }
+  { cwd, dry_run, verbose, json, json_lines, quiet, sections, output }
+}
+
+///|
+fn DoctorOptions::includes(self : DoctorOptions, section : String) -> Bool {
+  self.sections.length() == 0 || self.sections.contains(section)
 }
 
 ///|

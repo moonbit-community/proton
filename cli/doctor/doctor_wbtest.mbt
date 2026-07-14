@@ -32,12 +32,12 @@ test "doctor formats host OS labels" {
 ///|
 test "doctor report records failing sections" {
   let healthy = DoctorReport::new(
-    [DoctorSection::new("Environment", Ok, [])],
+    [DoctorSection::new("environment", "Environment", Ok, [])],
     dry_run=false,
   )
   assert_false(healthy.has_errors())
   let unhealthy = DoctorReport::new(
-    [DoctorSection::new("Environment", Error, [])],
+    [DoctorSection::new("environment", "Environment", Error, [])],
     dry_run=false,
   )
   assert_true(unhealthy.has_errors())
@@ -47,7 +47,7 @@ test "doctor report records failing sections" {
 test "doctor report summarizes line statuses" {
   let report = DoctorReport::new(
     [
-      DoctorSection::new("Environment", Error, [
+      DoctorSection::new("environment", "Environment", Error, [
         DoctorLine::coded("environment.os", Ok, "OS"),
         DoctorLine::coded("runtime.missing", Missing, "runtime"),
         DoctorLine::coded("runtime.version", Unknown, "version"),
@@ -65,6 +65,38 @@ test "doctor report summarizes line statuses" {
   assert_true(
     render_doctor_json(report).contains("\"code\": \"environment.os\""),
   )
+}
+
+///|
+test "doctor json lines carries section and summary records" {
+  let report = DoctorReport::new(
+    [
+      DoctorSection::new("environment", "Environment", Ok, [
+        DoctorLine::coded("environment.os", Ok, "OS"),
+      ]),
+    ],
+    dry_run=false,
+  )
+  let rendered = render_doctor_json_lines(report)
+  assert_true(rendered.contains("\"section\":\"environment\""))
+  assert_true(rendered.contains("\"type\":\"summary\""))
+  assert_false(rendered.contains("doctor.unspecified"))
+}
+
+///|
+test "doctor options filter sections" {
+  let options = DoctorOptions::new(
+    cwd=".",
+    dry_run=false,
+    verbose=false,
+    json=false,
+    json_lines=false,
+    quiet=false,
+    sections=["packages"],
+    output=None,
+  )
+  assert_true(options.includes("packages"))
+  assert_false(options.includes("environment"))
 }
 
 ///|
@@ -283,9 +315,14 @@ test "moon.proton reader rejects manifest extensions" {
 test "text renderer uses utf8 symbols and dry run note" {
   let report = DoctorReport::new(
     [
-      DoctorSection::new("Environment", Ok, [
-        DoctorLine::new(Ok, "OS: Windows x86_64"),
-        DoctorLine::new(Warn, "MSVC: not found", hint="install Visual Studio"),
+      DoctorSection::new("environment", "Environment", Ok, [
+        DoctorLine::coded("environment.os", Ok, "OS: Windows x86_64"),
+        DoctorLine::coded(
+          "environment.msvc.missing",
+          Warn,
+          "MSVC: not found",
+          hint="install Visual Studio",
+        ),
       ]),
     ],
     dry_run=true,
@@ -310,8 +347,12 @@ test "text renderer uses utf8 symbols and dry run note" {
 test "json renderer does not include utf8 status symbols" {
   let report = DoctorReport::new(
     [
-      DoctorSection::new("Packages", Missing, [
-        DoctorLine::new(Missing, "justjavac/proton: not declared"),
+      DoctorSection::new("packages", "Packages", Missing, [
+        DoctorLine::coded(
+          "packages.dependency.justjavac/proton.missing",
+          Missing,
+          "justjavac/proton: not declared",
+        ),
       ]),
     ],
     dry_run=false,

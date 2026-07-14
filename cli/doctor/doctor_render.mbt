@@ -72,12 +72,63 @@ fn doctor_summary_to_json(summary : DoctorSummary) -> Json {
 ///|
 fn doctor_section_to_json(section : DoctorSection) -> Json {
   Json::object({
+    "id": Json::string(section.id),
     "title": Json::string(section.title),
     "status": Json::string(section.status.json_name()),
     "lines": Json::array(
       section.lines.map(fn(line) { doctor_line_to_json(line) }),
     ),
   })
+}
+
+///|
+fn render_doctor_json_lines(report : DoctorReport) -> String {
+  let lines : Array[String] = []
+  for section in report.sections {
+    for line in section.lines {
+      let value = doctor_line_to_json(line)
+      match value {
+        Object(fields) => {
+          fields["section"] = Json::string(section.id)
+          lines.push(Json::object(fields).stringify())
+        }
+        _ => ()
+      }
+    }
+  }
+  lines.push(
+    Json::object({
+      "type": Json::string("summary"),
+      "summary": doctor_summary_to_json(report.summary()),
+    }).stringify(),
+  )
+  lines.join("\n") + "\n"
+}
+
+///|
+fn render_doctor_quiet(report : DoctorReport) -> String {
+  let builder = StringBuilder()
+  for section in report.sections {
+    for line in section.lines {
+      if line.status == Error || line.status == Missing || line.status == Warn {
+        builder.write_string(line.status.symbol())
+        builder.write_string(" [")
+        builder.write_string(line.code)
+        builder.write_string("] ")
+        builder.write_string(line.text)
+        builder.write_string("\n")
+      }
+    }
+  }
+  let summary = report.summary()
+  builder.write_string(
+    "Summary: " +
+    summary.errors.to_string() +
+    " errors, " +
+    summary.warnings.to_string() +
+    " warnings\n",
+  )
+  builder.to_string()
 }
 
 ///|

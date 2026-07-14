@@ -24,20 +24,29 @@ async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
   let module_config = read_project_moon_mod(project)
   let package_config = read_project_moon_pkg(project)
   let sections : Array[DoctorSection] = []
-  if options.verbose {
+  if options.includes("project") &&
+    (options.verbose || options.sections.contains("project")) {
     sections.push(collect_project(project))
   }
-  sections.push(collect_environment(project))
-  sections.push(
-    collect_packages(
-      project,
-      module_config,
-      package_config,
-      verbose=options.verbose,
-    ),
-  )
-  sections.push(collect_extensions(project, package_config))
-  sections.push(collect_app(project))
+  if options.includes("environment") {
+    sections.push(collect_environment(project))
+  }
+  if options.includes("packages") {
+    sections.push(
+      collect_packages(
+        project,
+        module_config,
+        package_config,
+        verbose=options.verbose,
+      ),
+    )
+  }
+  if options.includes("extensions") {
+    sections.push(collect_extensions(project, package_config))
+  }
+  if options.includes("app") {
+    sections.push(collect_app(project))
+  }
   DoctorReport::new(sections, dry_run=options.dry_run)
 }
 
@@ -47,6 +56,10 @@ pub async fn run(
   dry_run~ : Bool,
   verbose~ : Bool,
   json~ : Bool,
+  json_lines~ : Bool,
+  quiet~ : Bool,
+  sections~ : Array[String],
+  output~ : String?,
 ) -> Result[Bool, String] {
   if !@mbfs.path_exists(cwd) {
     return Err("cwd does not exist: " + cwd)
@@ -55,12 +68,32 @@ pub async fn run(
   if !cwd_is_dir {
     return Err("cwd is not a directory: " + cwd)
   }
-  let options = DoctorOptions::new(cwd~, dry_run~, verbose~, json~)
+  let options = DoctorOptions::new(
+    cwd~,
+    dry_run~,
+    verbose~,
+    json~,
+    json_lines~,
+    quiet~,
+    sections~,
+    output~,
+  )
   let report = build_doctor_report(options)
-  if options.json {
-    println(render_doctor_json(report))
+  let rendered = if options.json {
+    render_doctor_json(report) + "\n"
+  } else if options.json_lines {
+    render_doctor_json_lines(report)
+  } else if options.quiet {
+    render_doctor_quiet(report)
   } else {
-    println(render_doctor_text(report))
+    render_doctor_text(report)
+  }
+  match options.output {
+    Some(path) =>
+      @mbfs.write_string_to_file(path, rendered, encoding="utf8") catch {
+        _ => return Err("failed to write doctor output: " + path)
+      }
+    None => println(rendered)
   }
   Ok(!report.has_errors())
 }

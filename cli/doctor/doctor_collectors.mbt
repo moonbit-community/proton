@@ -56,6 +56,11 @@ fn option_string_or(value : String?, fallback : String) -> String {
 }
 
 ///|
+fn diagnostic_component(value : String) -> String {
+  value.replace_all(old="/", new=".").replace_all(old="\\", new=".")
+}
+
+///|
 fn path_is_absolute_like(path : String) -> Bool {
   path.has_prefix("\\") ||
   path.has_prefix("/") ||
@@ -126,11 +131,26 @@ fn moon_config_error_line(
   error : MoonConfigReadError,
 ) -> DoctorLine {
   match error {
-    MissingFile(path) => DoctorLine::new(Missing, "\{label}: missing \{path}")
+    MissingFile(path) =>
+      DoctorLine::coded(
+        "packages.config." + diagnostic_component(label) + ".missing",
+        Missing,
+        "\{label}: missing \{path}",
+      )
     ReadFailed(path, message) =>
-      DoctorLine::new(Error, "\{label}: failed to read \{path}", hint=message)
+      DoctorLine::coded(
+        "packages.config." + diagnostic_component(label) + ".read_failed",
+        Error,
+        "\{label}: failed to read \{path}",
+        hint=message,
+      )
     ParseFailed(path, message) =>
-      DoctorLine::new(Error, "\{label}: failed to parse \{path}", hint=message)
+      DoctorLine::coded(
+        "packages.config." + diagnostic_component(label) + ".parse_failed",
+        Error,
+        "\{label}: failed to parse \{path}",
+        hint=message,
+      )
   }
 }
 
@@ -159,9 +179,14 @@ async fn tool_version_line(
     match first_non_empty_line(text) {
       Some(line) =>
         if code == 0 {
-          return DoctorLine::new(Ok, label + ": " + line)
+          return DoctorLine::coded(
+            "environment.tool." + label,
+            Ok,
+            label + ": " + line,
+          )
         } else {
-          return DoctorLine::new(
+          return DoctorLine::coded(
+            "environment.tool." + label + ".failed",
             Warn,
             label + ": version command exited with code " + code.to_string(),
             hint=line,
@@ -169,16 +194,22 @@ async fn tool_version_line(
         }
       None =>
         if code == 0 {
-          return DoctorLine::new(Unknown, label + ": version output is empty")
+          return DoctorLine::coded(
+            "environment.tool." + label + ".empty",
+            Unknown,
+            label + ": version output is empty",
+          )
         } else {
-          return DoctorLine::new(
+          return DoctorLine::coded(
+            "environment.tool." + label + ".failed",
             Warn,
             label + ": version command exited with code " + code.to_string(),
           )
         }
     }
   }
-  DoctorLine::new(
+  DoctorLine::coded(
+    "environment.tool." + label + ".missing",
     Missing,
     label + ": not found",
     hint="make sure one of `" +
@@ -266,28 +297,48 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
     Ok(path) => path
     Err(message) => {
       lines.push(
-        DoctorLine::new(
+        DoctorLine::coded(
+          "runtime.manifest.invalid",
           Error,
           "Proton runtime manifest is invalid",
           hint=message,
         ),
       )
-      return DoctorSection::new("Environment", section_status(lines), lines)
+      return DoctorSection::new(
+        "environment",
+        "Environment",
+        section_status(lines),
+        lines,
+      )
     }
   }
   if @mbfs.path_exists(native_dist) {
-    lines.push(DoctorLine::new(Ok, "Proton native dist: " + native_dist))
+    lines.push(
+      DoctorLine::coded(
+        "runtime.dist",
+        Ok,
+        "Proton native dist: " + native_dist,
+      ),
+    )
     let version_path = path_join(native_dist, "version.txt")
     if @mbfs.path_exists(version_path) {
       let version = @mbfs.read_file_to_string(version_path, encoding="utf8") catch {
         _ => "unknown"
       }
       lines.push(
-        DoctorLine::new(Ok, "runtime version: " + version.trim().to_owned()),
+        DoctorLine::coded(
+          "runtime.version",
+          Ok,
+          "runtime version: " + version.trim().to_owned(),
+        ),
       )
     } else {
       lines.push(
-        DoctorLine::new(Unknown, "runtime version: version.txt missing"),
+        DoctorLine::coded(
+          "runtime.version.missing",
+          Unknown,
+          "runtime version: version.txt missing",
+        ),
       )
     }
     let missing : Array[String] = []
@@ -302,26 +353,32 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
     }
     if missing.length() == 0 {
       lines.push(
-        DoctorLine::new(
+        DoctorLine::coded(
+          "runtime.layout",
           Ok,
           "native layout: required files found (" + platform_id + ")",
         ),
       )
     } else {
       lines.push(
-        DoctorLine::new(Error, "native layout: missing " + missing.join(", ")),
+        DoctorLine::coded(
+          "runtime.layout.missing",
+          Error,
+          "native layout: missing " + missing.join(", "),
+        ),
       )
     }
   } else {
     lines.push(
-      DoctorLine::new(
+      DoctorLine::coded(
+        "runtime.dist.missing",
         Missing,
         "Proton native dist: not found",
         hint="run `proton_cli cef setup`, or set PROTON_NATIVE_DIST",
       ),
     )
   }
-  DoctorSection::new("Environment", section_status(lines), lines)
+  DoctorSection::new("environment", "Environment", section_status(lines), lines)
 }
 
 ///|
@@ -335,32 +392,49 @@ fn option_path_or_missing(value : String?) -> String {
 ///|
 fn collect_project(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
-  lines.push(DoctorLine::new(Neutral, "root: " + project.root))
-  lines.push(DoctorLine::new(Neutral, "package_dir: " + project.package_dir))
   lines.push(
-    DoctorLine::new(
+    DoctorLine::coded("project.root", Neutral, "root: " + project.root),
+  )
+  lines.push(
+    DoctorLine::coded(
+      "project.package_dir",
+      Neutral,
+      "package_dir: " + project.package_dir,
+    ),
+  )
+  lines.push(
+    DoctorLine::coded(
+      "project.moon_mod",
       Neutral,
       "moon.mod: " + option_path_or_missing(project.moon_mod_path),
     ),
   )
   lines.push(
-    DoctorLine::new(
+    DoctorLine::coded(
+      "project.moon_pkg",
       Neutral,
       "moon.pkg: " + option_path_or_missing(project.moon_pkg_path),
     ),
   )
   lines.push(
-    DoctorLine::new(
+    DoctorLine::coded(
+      "project.moon_proton",
       Neutral,
       "moon.proton: " + option_path_or_missing(project.moon_proton_path),
     ),
   )
   match project.app_json_path {
     Some(path) =>
-      lines.push(DoctorLine::new(Neutral, "legacy app.json: " + path))
+      lines.push(
+        DoctorLine::coded(
+          "project.legacy_app_json",
+          Neutral,
+          "legacy app.json: " + path,
+        ),
+      )
     None => ()
   }
-  DoctorSection::new("Project", Neutral, lines)
+  DoctorSection::new("project", "Project", Neutral, lines)
 }
 
 ///|
@@ -379,7 +453,13 @@ fn collect_packages(
     }
     None => {
       if project.mode != PlainDirectory {
-        lines.push(DoctorLine::new(Missing, "moon.mod: missing"))
+        lines.push(
+          DoctorLine::coded(
+            "packages.moon_mod.missing",
+            Missing,
+            "moon.mod: missing",
+          ),
+        )
       }
       None
     }
@@ -392,7 +472,13 @@ fn collect_packages(
     }
     None => {
       if project.mode == AppProject {
-        lines.push(DoctorLine::new(Warn, "moon.pkg: missing"))
+        lines.push(
+          DoctorLine::coded(
+            "packages.moon_pkg.missing",
+            Warn,
+            "moon.pkg: missing",
+          ),
+        )
       }
       None
     }
@@ -400,16 +486,29 @@ fn collect_packages(
   match module_value {
     Some(config) => {
       lines.push(
-        DoctorLine::new(
+        DoctorLine::coded(
+          "packages.module",
           Neutral,
           "module: " + option_string_or(config.name, "unknown"),
         ),
       )
       if verbose {
-        lines.push(DoctorLine::new(Neutral, "moon.mod path: " + config.path))
+        lines.push(
+          DoctorLine::coded(
+            "packages.moon_mod.path",
+            Neutral,
+            "moon.mod path: " + config.path,
+          ),
+        )
         match config.version {
           Some(version) =>
-            lines.push(DoctorLine::new(Neutral, "module version: " + version))
+            lines.push(
+              DoctorLine::coded(
+                "packages.module.version",
+                Neutral,
+                "module version: " + version,
+              ),
+            )
           None => ()
         }
       }
@@ -422,7 +521,13 @@ fn collect_packages(
     ] {
     match dependency_version(module_value, dep) {
       Some(version) =>
-        lines.push(DoctorLine::new(Neutral, dep + ": " + version))
+        lines.push(
+          DoctorLine::coded(
+            "packages.dependency." + diagnostic_component(dep),
+            Neutral,
+            dep + ": " + version,
+          ),
+        )
       None =>
         if dep == "justjavac/proton_ext" &&
           package_imports_with_prefix(package_value, "justjavac/proton_ext/").length() ==
@@ -430,7 +535,11 @@ fn collect_packages(
           ()
         } else {
           lines.push(
-            DoctorLine::new(Missing, dep + ": not declared in moon.mod"),
+            DoctorLine::coded(
+              "packages.dependency." + diagnostic_component(dep) + ".missing",
+              Missing,
+              dep + ": not declared in moon.mod",
+            ),
           )
         }
     }
@@ -439,7 +548,8 @@ fn collect_packages(
     match dependency_version(module_value, "justjavac/proton") {
       None =>
         lines.push(
-          DoctorLine::new(
+          DoctorLine::coded(
+            "packages.proton.import_without_dependency",
             Warn,
             "justjavac/proton imported by moon.pkg but missing in moon.mod",
           ),
@@ -450,17 +560,30 @@ fn collect_packages(
   if verbose {
     match package_value {
       Some(config) => {
-        lines.push(DoctorLine::new(Neutral, "moon.pkg path: " + config.path))
+        lines.push(
+          DoctorLine::coded(
+            "packages.moon_pkg.path",
+            Neutral,
+            "moon.pkg path: " + config.path,
+          ),
+        )
         match config.is_main {
           Some(value) =>
-            lines.push(DoctorLine::new(Neutral, "is-main: \{value}"))
+            lines.push(
+              DoctorLine::coded(
+                "packages.is_main",
+                Neutral,
+                "is-main: \{value}",
+              ),
+            )
           None => ()
         }
         for item in config.imports {
           match item.package_alias {
             Some(package_alias) =>
               lines.push(
-                DoctorLine::new(
+                DoctorLine::coded(
+                  "packages.import.alias",
                   Neutral,
                   "import alias: " + item.package_path + " as " + package_alias,
                 ),
@@ -472,7 +595,7 @@ fn collect_packages(
       None => ()
     }
   }
-  DoctorSection::new("Packages", section_status(lines), lines)
+  DoctorSection::new("packages", "Packages", section_status(lines), lines)
 }
 
 ///|
@@ -500,15 +623,31 @@ fn collect_extensions(
     0
   }
   let lines : Array[DoctorLine] = []
-  lines.push(DoctorLine::new(Neutral, "discovered: \{discovered}"))
+  lines.push(
+    DoctorLine::coded(
+      "extensions.discovered",
+      Neutral,
+      "discovered: \{discovered}",
+    ),
+  )
   if imported.length() > 0 {
     lines.push(
-      DoctorLine::new(Neutral, "imported packages: " + imported.join(", ")),
+      DoctorLine::coded(
+        "extensions.imported",
+        Neutral,
+        "imported packages: " + imported.join(", "),
+      ),
     )
   } else {
-    lines.push(DoctorLine::new(Neutral, "imported packages: none"))
+    lines.push(
+      DoctorLine::coded(
+        "extensions.imported",
+        Neutral,
+        "imported packages: none",
+      ),
+    )
   }
-  DoctorSection::new("Extensions", section_status(lines), lines)
+  DoctorSection::new("extensions", "Extensions", section_status(lines), lines)
 }
 
 ///|
@@ -567,10 +706,11 @@ fn push_entry_existence(
   match entry.kind {
     "file" =>
       if @mbfs.path_exists(path) {
-        lines.push(DoctorLine::new(Ok, "entry file exists"))
+        lines.push(DoctorLine::coded("app.entry.file", Ok, "entry file exists"))
       } else {
         lines.push(
-          DoctorLine::new(
+          DoctorLine::coded(
+            "app.entry.file.missing",
             Error,
             "entry file missing: " + project_relative_path(project, path),
           ),
@@ -578,10 +718,13 @@ fn push_entry_existence(
       }
     "asset" =>
       if @mbfs.path_exists(path) {
-        lines.push(DoctorLine::new(Ok, "entry asset exists"))
+        lines.push(
+          DoctorLine::coded("app.entry.asset", Ok, "entry asset exists"),
+        )
       } else {
         lines.push(
-          DoctorLine::new(
+          DoctorLine::coded(
+            "app.entry.asset.missing",
             Warn,
             "entry asset missing: " + project_relative_path(project, path),
             hint="run frontend.before_build before release builds",
@@ -599,7 +742,10 @@ fn push_optional_app_line(
   value : String?,
 ) -> Unit {
   match value {
-    Some(value) => lines.push(DoctorLine::new(Neutral, label + ": " + value))
+    Some(value) =>
+      lines.push(
+        DoctorLine::coded("app." + label, Neutral, label + ": " + value),
+      )
     None => ()
   }
 }
@@ -612,7 +758,8 @@ fn push_loaded_app(
 ) -> Unit {
   let window = config.window
   lines.push(
-    DoctorLine::new(
+    DoctorLine::coded(
+      "app.window",
       Neutral,
       "window: \"" +
       window.title +
@@ -625,10 +772,14 @@ fn push_loaded_app(
     ),
   )
   lines.push(
-    DoctorLine::new(Neutral, "entry: " + entry_text(project, config.entry)),
+    DoctorLine::coded(
+      "app.entry",
+      Neutral,
+      "entry: " + entry_text(project, config.entry),
+    ),
   )
   push_entry_existence(lines, project, config.entry)
-  lines.push(DoctorLine::new(Neutral, "debug: \{config.debug}"))
+  lines.push(DoctorLine::coded("app.debug", Neutral, "debug: \{config.debug}"))
   match config.frontend {
     Some(frontend) => {
       push_optional_app_line(lines, "before_dev_command", frontend.before_dev)
@@ -654,23 +805,36 @@ fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
         Ok(config) => push_loaded_app(lines, project, config)
         Err(error) =>
           lines.push(
-            DoctorLine::new(Error, "moon.proton: failed to load", hint=error),
+            DoctorLine::coded(
+              "app.config.invalid",
+              Error,
+              "moon.proton: failed to load",
+              hint=error,
+            ),
           )
       }
     None =>
       match project.app_json_path {
         Some(path) =>
           lines.push(
-            DoctorLine::new(
+            DoctorLine::coded(
+              "app.config.legacy",
               Warn,
               "app.json: legacy runtime manifest found at " + path,
               hint="create moon.proton; app.json is no longer the user-facing Proton config",
             ),
           )
-        None => lines.push(DoctorLine::new(Warn, "moon.proton: not found"))
+        None =>
+          lines.push(
+            DoctorLine::coded(
+              "app.config.missing",
+              Warn,
+              "moon.proton: not found",
+            ),
+          )
       }
   }
-  DoctorSection::new("App", section_status(lines), lines)
+  DoctorSection::new("app", "App", section_status(lines), lines)
 }
 
 ///|
