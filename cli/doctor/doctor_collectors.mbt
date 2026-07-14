@@ -1138,21 +1138,153 @@ fn collect_extensions(
       package_imports_with_prefix(Some(config), "justjavac/proton_ext/")
     _ => []
   }
-  let extension_root = path_join(project.root, "extensions")
+  let nested_extension_root = path_join(project.root, "extensions")
+  let extension_root = if @mbfs.path_exists(nested_extension_root) {
+    nested_extension_root
+  } else {
+    project.root
+  }
+  let lines : Array[DoctorLine] = []
+  let namespaces : Map[String, String] = {}
   let discovered = if @mbfs.path_exists(extension_root) {
     let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
     let mut count = 0
     for entry in entries {
-      let ext_path = path_join(path_join(extension_root, entry), "moon.ext")
+      let extension_dir = path_join(extension_root, entry)
+      let ext_path = path_join(extension_dir, "moon.ext")
       if (@mbfs.is_file(ext_path) catch { _ => false }) {
         count += 1
+        match @codegen.read_moon_ext_identity(ext_path) {
+          Ok((id, js_namespace)) => {
+            lines.push(
+              DoctorLine::coded(
+                "extensions.metadata",
+                Ok,
+                "extension metadata valid: " +
+                id +
+                " (namespace " +
+                js_namespace +
+                ")",
+              ),
+            )
+            match namespaces.get(js_namespace) {
+              Some(previous) =>
+                lines.push(
+                  DoctorLine::coded(
+                    "extensions.namespace.duplicate",
+                    Error,
+                    "duplicate extension namespace `" +
+                    js_namespace +
+                    "`: " +
+                    previous +
+                    " and " +
+                    ext_path,
+                  ),
+                )
+              None => namespaces[js_namespace] = ext_path
+            }
+          }
+          Err(error) =>
+            lines.push(
+              DoctorLine::coded(
+                "extensions.metadata.invalid",
+                Error,
+                "invalid extension metadata: " + ext_path,
+                hint=error,
+              ),
+            )
+        }
+        let moon_pkg_path = path_join(extension_dir, "moon.pkg")
+        if !@mbfs.path_exists(moon_pkg_path) {
+          lines.push(
+            DoctorLine::coded(
+              "extensions.moon_pkg.missing",
+              Error,
+              "extension package is missing moon.pkg: " + extension_dir,
+            ),
+          )
+        }
+        let source_path = path_join(extension_dir, "extension.mbt")
+        if !@mbfs.path_exists(source_path) {
+          lines.push(
+            DoctorLine::coded(
+              "extensions.source.missing",
+              Error,
+              "extension metadata has no extension.mbt: " + extension_dir,
+            ),
+          )
+        } else {
+          let source = @mbfs.read_file_to_string(source_path, encoding="utf8") catch {
+            _ => ""
+          }
+          let generated_path = path_join(extension_dir, "extension.g.mbt")
+          if source.contains("#proton.") {
+            match
+              @codegen.generate_app_commands_from_file_with_metadata(
+                source_path,
+              ) {
+              Ok(generated) =>
+                if !@mbfs.path_exists(generated_path) {
+                  lines.push(
+                    DoctorLine::coded(
+                      "extensions.generated.missing",
+                      Error,
+                      "generated extension file is missing: " + generated_path,
+                    ),
+                  )
+                } else {
+                  let committed = @mbfs.read_file_to_string(
+                    generated_path,
+                    encoding="utf8",
+                  ) catch {
+                    _ => ""
+                  }
+                  if committed == generated.source {
+                    lines.push(
+                      DoctorLine::coded(
+                        "extensions.generated.current",
+                        Ok,
+                        "generated extension file is current: " + generated_path,
+                      ),
+                    )
+                  } else {
+                    lines.push(
+                      DoctorLine::coded(
+                        "extensions.generated.stale",
+                        Error,
+                        "generated extension file is stale: " + generated_path,
+                        hint="regenerate it with `proton_cli codegen`",
+                      ),
+                    )
+                  }
+                }
+              Err(error) =>
+                lines.push(
+                  DoctorLine::coded(
+                    "extensions.codegen.invalid",
+                    Error,
+                    "extension command generation failed: " + source_path,
+                    hint=error,
+                  ),
+                )
+            }
+          } else if @mbfs.path_exists(generated_path) {
+            lines.push(
+              DoctorLine::coded(
+                "extensions.generated.unexpected",
+                Warn,
+                "generated extension file exists without #proton attributes: " +
+                generated_path,
+              ),
+            )
+          }
+        }
       }
     }
     count
   } else {
     0
   }
-  let lines : Array[DoctorLine] = []
   lines.push(
     DoctorLine::coded(
       "extensions.discovered",

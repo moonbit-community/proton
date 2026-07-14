@@ -12,6 +12,8 @@ pub fn generate_app_commands_from_file_with_metadata(String) -> Result[ProtonCom
 
 pub fn generate_app_commands_from_source(String, String, String) -> Result[ProtonCommandCodegenOutput, String]
 
+pub fn read_moon_ext_identity(String) -> Result[(String, String), String]
+
 // Errors
 
 // Types and methods
