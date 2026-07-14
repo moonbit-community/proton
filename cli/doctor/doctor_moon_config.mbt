@@ -152,6 +152,8 @@ fn read_moon_mod(
           name: ast_string(ast_field(ast, "name")),
           version: ast_string(ast_field(ast, "version")),
           imports: parse_deps(ast),
+          preferred_target: ast_string(ast_field(ast, "preferred_target")),
+          supported_targets: ast_string(ast_field(ast, "supported_targets")),
         })
       }
     }

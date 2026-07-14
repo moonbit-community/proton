@@ -23,6 +23,25 @@ test "doctor paths use the host separator" {
 }
 
 ///|
+test "doctor project boundary rejects parent paths" {
+  let project = discover_project("target/proton-doctor-boundary")
+  assert_true(
+    path_is_within_project(
+      project,
+      path_join("target/proton-doctor-boundary", "app.html"),
+    ),
+  )
+  assert_false(path_is_within_project(project, "target/outside.html"))
+}
+
+///|
+test "doctor compares dependency major minor versions" {
+  @debug.assert_eq(version_major_minor("0.1.5"), Some("0.1"))
+  @debug.assert_eq(version_major_minor("1.2.0-beta.1"), Some("1.2"))
+  assert_true(version_major_minor("invalid") is None)
+}
+
+///|
 test "doctor formats host OS labels" {
   assert_eq(host_os_label(Some("Darwin"), Some("arm64")), "macOS arm64")
   assert_eq(host_os_label(Some("Linux"), Some("x86_64")), "Linux x86_64")
@@ -186,6 +205,11 @@ test "moon_config adapter reads module deps and package imports" {
       #|
       #|source = ""
       #|
+      #|options(
+      #|  preferred_target: "native",
+      #|  supported_targets: "+native",
+      #|)
+      #|
     ),
     encoding="utf8",
   ) catch {
@@ -210,6 +234,8 @@ test "moon_config adapter reads module deps and package imports" {
   }
   let module_config = read_moon_mod(moon_mod_path).unwrap()
   @debug.assert_eq(module_config.name, Some("justjavac/proton-demo"))
+  @debug.assert_eq(module_config.preferred_target, Some("native"))
+  @debug.assert_eq(module_config.supported_targets, Some("+native"))
   @debug.assert_eq(
     dependency_version(Some(module_config), "justjavac/proton"),
     Some("0.1.10"),

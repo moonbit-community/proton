@@ -48,6 +48,27 @@ fn package_imports_with_prefix(
 }
 
 ///|
+fn module_name_from_package(package_path : String) -> String? {
+  match package_path.split("/").collect() {
+    [owner, module_name, ..] =>
+      Some(owner.to_owned() + "/" + module_name.to_owned())
+    _ => None
+  }
+}
+
+///|
+fn module_has_dependency(
+  config : MoonModuleConfig?,
+  module_name : String,
+) -> Bool {
+  match config {
+    Some(config) =>
+      config.imports.any(fn(dep) { dep.module_name == module_name })
+    None => false
+  }
+}
+
+///|
 fn option_string_or(value : String?, fallback : String) -> String {
   match value {
     Some(value) => value
@@ -58,6 +79,14 @@ fn option_string_or(value : String?, fallback : String) -> String {
 ///|
 fn diagnostic_component(value : String) -> String {
   value.replace_all(old="/", new=".").replace_all(old="\\", new=".")
+}
+
+///|
+fn version_major_minor(version : String) -> String? {
+  match version.split(".").collect() {
+    [major, minor, ..] => Some(major.to_owned() + "." + minor.to_owned())
+    _ => None
+  }
 }
 
 ///|
@@ -892,36 +921,125 @@ fn collect_packages(
           None => ()
         }
       }
+      match config.preferred_target {
+        Some("native") =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.target.preferred",
+              Ok,
+              "preferred target: native",
+            ),
+          )
+        Some(target) =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.target.preferred_non_native",
+              Warn,
+              "preferred target is " +
+              target +
+              "; Proton apps require native builds",
+            ),
+          )
+        None =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.target.preferred_missing",
+              Unknown,
+              "preferred target is not declared",
+            ),
+          )
+      }
+      match config.supported_targets {
+        Some(targets) if targets.contains("native") =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.target.native",
+              Ok,
+              "native target is supported",
+            ),
+          )
+        Some(targets) =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.target.native_missing",
+              Error,
+              "supported targets do not include native: " + targets,
+            ),
+          )
+        None =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.target.unspecified",
+              Unknown,
+              "supported targets are not explicitly declared",
+            ),
+          )
+      }
     }
     None => ()
   }
+  match
+    (
+      dependency_version(module_value, "justjavac/proton"),
+      dependency_version(module_value, "justjavac/proton_ext"),
+    ) {
+    (Some(proton), Some(extension)) =>
+      if version_major_minor(proton) != version_major_minor(extension) {
+        lines.push(
+          DoctorLine::coded(
+            "packages.version.proton_extension_mismatch",
+            Warn,
+            "proton and proton_ext should use the same major/minor version: " +
+            proton +
+            " vs " +
+            extension,
+          ),
+        )
+      }
+    _ => ()
+  }
+  let is_proton_project = project.mode == AppProject ||
+    module_has_dependency(module_value, "justjavac/proton") ||
+    package_has_import(package_value, "justjavac/proton") ||
+    package_imports_with_prefix(package_value, "justjavac/proton_ext/").length() >
+    0
   for
     dep in [
       "justjavac/proton", "justjavac/proton_ext", "moonbitlang/async", "moonbitlang/x",
     ] {
-    match dependency_version(module_value, dep) {
-      Some(version) =>
-        lines.push(
-          DoctorLine::coded(
-            "packages.dependency." + diagnostic_component(dep),
-            Neutral,
-            dep + ": " + version,
-          ),
-        )
-      None =>
-        if dep == "justjavac/proton_ext" &&
-          package_imports_with_prefix(package_value, "justjavac/proton_ext/").length() ==
-          0 {
-          ()
-        } else {
+    if module_has_dependency(module_value, dep) {
+      match dependency_version(module_value, dep) {
+        Some(version) =>
           lines.push(
             DoctorLine::coded(
-              "packages.dependency." + diagnostic_component(dep) + ".missing",
-              Missing,
-              dep + ": not declared in moon.mod",
+              "packages.dependency." + diagnostic_component(dep),
+              Neutral,
+              dep + ": " + version,
             ),
           )
-        }
+        None =>
+          lines.push(
+            DoctorLine::coded(
+              "packages.dependency." + diagnostic_component(dep),
+              Neutral,
+              dep + ": declared without a pinned version",
+            ),
+          )
+      }
+    } else if !is_proton_project {
+      ()
+    } else if dep == "justjavac/proton_ext" &&
+      package_imports_with_prefix(package_value, "justjavac/proton_ext/").length() ==
+      0 {
+      ()
+    } else {
+      lines.push(
+        DoctorLine::coded(
+          "packages.dependency." + diagnostic_component(dep) + ".missing",
+          Missing,
+          dep + ": not declared in moon.mod",
+        ),
+      )
     }
   }
   if package_has_import(package_value, "justjavac/proton") {
@@ -936,6 +1054,38 @@ fn collect_packages(
         )
       Some(_) => ()
     }
+  }
+  match package_value {
+    Some(config) =>
+      for item in config.imports {
+        match module_name_from_package(item.package_path) {
+          Some(module_name) => {
+            let is_current_module = match module_value {
+              Some(module_config_value) =>
+                module_config_value.name == Some(module_name)
+              None => false
+            }
+            let is_core = module_name == "moonbitlang/core"
+            if !is_current_module &&
+              !is_core &&
+              !module_has_dependency(module_value, module_name) {
+              lines.push(
+                DoctorLine::coded(
+                  "packages.import.missing_dependency",
+                  Error,
+                  "package import `" +
+                  item.package_path +
+                  "` requires module dependency `" +
+                  module_name +
+                  "`",
+                ),
+              )
+            }
+          }
+          None => ()
+        }
+      }
+    None => ()
   }
   if verbose {
     match package_value {
@@ -1048,6 +1198,13 @@ fn project_relative_path(project : ProjectDoctorInfo, path : String) -> String {
 }
 
 ///|
+fn path_is_within_project(project : ProjectDoctorInfo, path : String) -> Bool {
+  let root = @path.Path(project.root).resolve().to_string()
+  let resolved = @path.Path(path).resolve().to_string()
+  resolved == root || resolved.has_prefix(root + @path.sep.to_string())
+}
+
+///|
 fn entry_path(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
   if entry.kind == "file" || entry.kind == "asset" {
     if entry.value.has_prefix("\\") ||
@@ -1083,6 +1240,17 @@ fn push_entry_existence(
   entry : DoctorAppEntry,
 ) -> Unit {
   let path = entry_path(project, entry)
+  if (entry.kind == "file" || entry.kind == "asset") &&
+    !path_is_within_project(project, path) {
+    lines.push(
+      DoctorLine::coded(
+        "app.entry.outside_project",
+        Error,
+        "entry path is outside the project root: " + path,
+      ),
+    )
+    return
+  }
   match entry.kind {
     "file" =>
       if @mbfs.path_exists(path) {
@@ -1131,12 +1299,70 @@ fn push_optional_app_line(
 }
 
 ///|
+fn push_frontend_path_check(
+  lines : Array[DoctorLine],
+  project : ProjectDoctorInfo,
+  code : String,
+  label : String,
+  value : String?,
+  required~ : Bool,
+) -> Unit {
+  match value {
+    Some(path) => {
+      let exists = @mbfs.is_dir(path) catch { _ => false }
+      if !path_is_within_project(project, path) {
+        lines.push(
+          DoctorLine::coded(
+            code + ".outside_project",
+            Error,
+            label + " is outside the project root: " + path,
+          ),
+        )
+      } else if exists {
+        lines.push(DoctorLine::coded(code, Ok, label + " exists: " + path))
+      } else if required {
+        lines.push(
+          DoctorLine::coded(
+            code + ".missing",
+            Error,
+            label + " is missing: " + path,
+          ),
+        )
+      } else {
+        lines.push(
+          DoctorLine::coded(
+            code + ".missing",
+            Warn,
+            label + " is missing: " + path,
+          ),
+        )
+      }
+    }
+    None => ()
+  }
+}
+
+///|
 fn push_loaded_app(
   lines : Array[DoctorLine],
   project : ProjectDoctorInfo,
   config : DoctorAppConfig,
 ) -> Unit {
   let window = config.window
+  if window.title.trim() == "" {
+    lines.push(
+      DoctorLine::coded("app.window.title_empty", Warn, "window title is empty"),
+    )
+  }
+  if window.width <= 0 || window.height <= 0 {
+    lines.push(
+      DoctorLine::coded(
+        "app.window.invalid_size",
+        Error,
+        "window width and height must be positive",
+      ),
+    )
+  }
   lines.push(
     DoctorLine::coded(
       "app.window",
@@ -1171,6 +1397,55 @@ fn push_loaded_app(
       push_optional_app_line(lines, "frontend_dist", frontend.dist)
       push_optional_app_line(lines, "dev_url", frontend.dev_url)
       push_optional_app_line(lines, "frontend_cwd", frontend.cwd)
+      push_frontend_path_check(
+        lines,
+        project,
+        "app.frontend.cwd",
+        "frontend cwd",
+        frontend.cwd,
+        required=true,
+      )
+      push_frontend_path_check(
+        lines,
+        project,
+        "app.frontend.dist",
+        "frontend dist",
+        frontend.dist,
+        required=false,
+      )
+      match frontend.dev_url {
+        Some(url) if !(url.has_prefix("http://") || url.has_prefix("https://")) =>
+          lines.push(
+            DoctorLine::coded(
+              "app.frontend.dev_url_invalid",
+              Error,
+              "frontend dev_url must use http or https: " + url,
+            ),
+          )
+        _ => ()
+      }
+      match frontend.before_dev {
+        Some(command) if command.trim() == "" =>
+          lines.push(
+            DoctorLine::coded(
+              "app.frontend.before_dev_empty",
+              Warn,
+              "frontend before_dev command is empty",
+            ),
+          )
+        _ => ()
+      }
+      match frontend.before_build {
+        Some(command) if command.trim() == "" =>
+          lines.push(
+            DoctorLine::coded(
+              "app.frontend.before_build_empty",
+              Warn,
+              "frontend before_build command is empty",
+            ),
+          )
+        _ => ()
+      }
     }
     None => ()
   }
@@ -1182,7 +1457,20 @@ fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
   match project.moon_proton_path {
     Some(path) =>
       match read_proton_project_config(path) {
-        Ok(config) => push_loaded_app(lines, project, config)
+        Ok(config) => {
+          push_loaded_app(lines, project, config)
+          match project.app_json_path {
+            Some(legacy) =>
+              lines.push(
+                DoctorLine::coded(
+                  "app.config.conflict",
+                  Warn,
+                  "moon.proton and legacy app.json both exist: " + legacy,
+                ),
+              )
+            None => ()
+          }
+        }
         Err(error) =>
           lines.push(
             DoctorLine::coded(

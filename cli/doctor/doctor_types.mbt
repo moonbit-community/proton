@@ -198,6 +198,8 @@ priv struct MoonModuleConfig {
   name : String?
   version : String?
   imports : Array[MoonDependency]
+  preferred_target : String?
+  supported_targets : String?
 }
 
 ///|
