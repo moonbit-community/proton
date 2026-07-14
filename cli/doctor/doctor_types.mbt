@@ -79,6 +79,11 @@ fn DoctorReport::new(
 }
 
 ///|
+fn DoctorReport::has_errors(self : DoctorReport) -> Bool {
+  self.sections.any(fn(section) { section.status == Error })
+}
+
+///|
 priv struct DoctorOptions {
   cwd : String
   dry_run : Bool

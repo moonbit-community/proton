@@ -319,6 +319,17 @@ fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
 }
 
 ///|
+/// Returns the required runtime layout for a stable Proton platform id.
+pub fn runtime_required_relative_files_for_platform(
+  platform_id : String,
+) -> Array[String] {
+  match platform_from_override(Some(platform_id)) {
+    Some(platform) => runtime_required_relative_files(platform)
+    None => []
+  }
+}
+
+///|
 fn all_exist(root : String, files : Array[String]) -> Bool {
   guard files.length() > 0 else { return false }
   for file in files {

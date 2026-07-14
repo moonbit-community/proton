@@ -33,6 +33,7 @@ priv struct CliVersion {
 priv enum CliError {
   UsageError(String, Bool)
   CommandError(String)
+  ReportedError
 }
 
 ///|
@@ -283,9 +284,11 @@ async fn run_doctor_from_args(
         return Err(CliError::UsageError("unknown doctor option: " + arg, false))
     }
   }
-  @doctor.run(cwd~, dry_run~, verbose~, json~).map_err(fn(message) {
-    CliError::CommandError(message)
-  })
+  match @doctor.run(cwd~, dry_run~, verbose~, json~) {
+    Ok(true) => Ok(())
+    Ok(false) => Err(CliError::ReportedError)
+    Err(message) => Err(CliError::CommandError(message))
+  }
 }
 
 ///|
@@ -393,5 +396,6 @@ async fn main {
       print_error_message(message)
       @sys.exit(1)
     }
+    Err(CliError::ReportedError) => @sys.exit(1)
   }
 }

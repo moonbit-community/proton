@@ -64,62 +64,60 @@ fn path_is_absolute_like(path : String) -> Bool {
 }
 
 ///|
-fn runtime_dist_from_manifest(project : ProjectDoctorInfo) -> String? {
+fn runtime_dist_from_manifest(
+  project : ProjectDoctorInfo,
+) -> Result[String?, String] {
   let manifest_path = path_join(
     path_join(project.root, ".proton"),
     "runtime.json",
   )
-  guard @mbfs.path_exists(manifest_path) else { return None }
+  guard @mbfs.path_exists(manifest_path) else { return Ok(None) }
   let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
-    _ => return None
+    _ => return Err("failed to read Proton runtime manifest: " + manifest_path)
   }
-  let json = @json.parse(text) catch { _ => return None }
+  let json = @json.parse(text) catch {
+    _ => return Err("failed to parse Proton runtime manifest: " + manifest_path)
+  }
   match json {
     Object(object) =>
       match object.get("dist") {
         Some(String(dist)) =>
           if path_is_absolute_like(dist) {
-            Some(dist)
+            Ok(Some(dist))
           } else {
-            Some(path_join(project.root, dist))
+            Ok(Some(path_join(project.root, dist)))
           }
-        _ => None
+        _ =>
+          Err("Proton runtime manifest has no string `dist`: " + manifest_path)
       }
-    _ => None
+    _ => Err("Proton runtime manifest must be a JSON object: " + manifest_path)
   }
 }
 
 ///|
-fn resolve_native_dist(project : ProjectDoctorInfo) -> String {
+fn development_native_dist(project : ProjectDoctorInfo) -> String {
+  let project_dist = path_join(path_join(project.root, "native"), "dist")
+  if @mbfs.path_exists(project_dist) {
+    project_dist
+  } else {
+    match find_up(project.root, "native") {
+      Some(path) => path_join(path, "dist")
+      None => project_dist
+    }
+  }
+}
+
+///|
+fn resolve_native_dist(project : ProjectDoctorInfo) -> Result[String, String] {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => root
+    Some(root) => Ok(root)
     None =>
       match runtime_dist_from_manifest(project) {
-        Some(path) => path
-        None => {
-          let project_dist = path_join(
-            path_join(project.root, "native"),
-            "dist",
-          )
-          if @mbfs.path_exists(project_dist) {
-            project_dist
-          } else {
-            match find_up(project.root, "native") {
-              Some(path) => path_join(path, "dist")
-              None => project_dist
-            }
-          }
-        }
+        Ok(Some(path)) => Ok(path)
+        Ok(None) => Ok(development_native_dist(project))
+        Err(message) => Err(message)
       }
   }
-}
-
-///|
-fn native_dist_required_layout_files() -> Array[String] {
-  [
-    "bin\\proton.dll", "bin\\cef_process.exe", "lib\\proton.lib", "bin\\libcef.dll",
-    "bin\\icudtl.dat", "Resources\\icudtl.dat", "Resources\\locales",
-  ]
 }
 
 ///|
@@ -199,13 +197,84 @@ async fn npm_version_line() -> DoctorLine {
 }
 
 ///|
+fn host_os_label(system : String?, arch : String?) -> String {
+  let os = match system {
+    Some(value) =>
+      match value.trim().to_lower() {
+        "darwin" => "macOS"
+        "linux" => "Linux"
+        "windows" | "windows_nt" => "Windows"
+        other if other != "" => other.to_owned()
+        _ => "unknown"
+      }
+    None => if @path.sep == '\\' { "Windows" } else { "unknown" }
+  }
+  let cpu = match arch {
+    Some(value) =>
+      match value.trim().to_lower() {
+        "aarch64" => "arm64"
+        "amd64" | "x64" => "x86_64"
+        other if other != "" => other.to_owned()
+        _ => "unknown"
+      }
+    None => "unknown"
+  }
+  os + " " + cpu
+}
+
+///|
+async fn uname_value(option : String) -> String? {
+  let (code, output) = @process.collect_output_merged("uname", [option]) catch {
+    _ => return None
+  }
+  guard code == 0 else { return None }
+  let value = output.text() catch { _ => return None }
+  let value = value.trim().to_owned()
+  if value == "" {
+    None
+  } else {
+    Some(value)
+  }
+}
+
+///|
+async fn host_os_line() -> DoctorLine {
+  let system = if @path.sep == '\\' {
+    Some("Windows")
+  } else {
+    uname_value("-s")
+  }
+  let arch = match @sys.get_env_var("PROCESSOR_ARCHITEW6432") {
+    Some(value) => Some(value)
+    None =>
+      match @sys.get_env_var("PROCESSOR_ARCHITECTURE") {
+        Some(value) => Some(value)
+        None => uname_value("-m")
+      }
+  }
+  DoctorLine::new(Ok, "OS: " + host_os_label(system, arch))
+}
+
+///|
 async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
-  lines.push(DoctorLine::new(Ok, "OS: Windows x86_64"))
+  lines.push(host_os_line())
   lines.push(tool_version_line("moon", ["moon"], ["version"]))
   lines.push(tool_version_line("node", ["node"], ["--version"]))
   lines.push(npm_version_line())
-  let native_dist = resolve_native_dist(project)
+  let native_dist = match resolve_native_dist(project) {
+    Ok(path) => path
+    Err(message) => {
+      lines.push(
+        DoctorLine::new(
+          Error,
+          "Proton runtime manifest is invalid",
+          hint=message,
+        ),
+      )
+      return DoctorSection::new("Environment", section_status(lines), lines)
+    }
+  }
   if @mbfs.path_exists(native_dist) {
     lines.push(DoctorLine::new(Ok, "Proton native dist: " + native_dist))
     let version_path = path_join(native_dist, "version.txt")
@@ -222,14 +291,21 @@ async fn collect_environment(project : ProjectDoctorInfo) -> DoctorSection {
       )
     }
     let missing : Array[String] = []
-    for required in native_dist_required_layout_files() {
+    let platform_id = @cef.current_platform_id()
+    let required_files = @cef.runtime_required_relative_files_for_platform(
+      platform_id,
+    )
+    for required in required_files {
       if !@mbfs.path_exists(path_join(native_dist, required)) {
         missing.push(required)
       }
     }
     if missing.length() == 0 {
       lines.push(
-        DoctorLine::new(Ok, "native layout: DLL, helper, lib, Resources found"),
+        DoctorLine::new(
+          Ok,
+          "native layout: required files found (" + platform_id + ")",
+        ),
       )
     } else {
       lines.push(
@@ -409,10 +485,7 @@ fn collect_extensions(
       package_imports_with_prefix(Some(config), "justjavac/proton_ext/")
     _ => []
   }
-  let extension_root = match find_up(project.root, "extensions") {
-    Some(path) => path
-    None => path_join(project.root, "extensions")
-  }
+  let extension_root = path_join(project.root, "extensions")
   let discovered = if @mbfs.path_exists(extension_root) {
     let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
     let mut count = 0

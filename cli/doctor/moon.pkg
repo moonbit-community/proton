@@ -1,5 +1,6 @@
 import {
   "justjavac/proton_config",
+  "justjavac/proton_cli/cef",
   "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
@@ -7,6 +8,7 @@ import {
   "moonbitlang/core/string",
   "moonbitlang/lexer/basic" @lexer_basic,
   "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path",
   "moonbitlang/x/sys",
   "moonbitlang/moon_config",
 }

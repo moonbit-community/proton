@@ -47,7 +47,7 @@ pub async fn run(
   dry_run~ : Bool,
   verbose~ : Bool,
   json~ : Bool,
-) -> Result[Unit, String] {
+) -> Result[Bool, String] {
   if !@mbfs.path_exists(cwd) {
     return Err("cwd does not exist: " + cwd)
   }
@@ -62,5 +62,5 @@ pub async fn run(
   } else {
     println(render_doctor_text(report))
   }
-  Ok(())
+  Ok(!report.has_errors())
 }

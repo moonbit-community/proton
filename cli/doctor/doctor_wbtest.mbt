@@ -17,6 +17,55 @@ fn assert_test_path_suffix(value : String, suffix : String) -> Unit {
 }
 
 ///|
+test "doctor paths use the host separator" {
+  let joined = path_join("..", "examples")
+  assert_eq(joined, ".." + @path.sep.to_string() + "examples")
+}
+
+///|
+test "doctor formats host OS labels" {
+  assert_eq(host_os_label(Some("Darwin"), Some("arm64")), "macOS arm64")
+  assert_eq(host_os_label(Some("Linux"), Some("x86_64")), "Linux x86_64")
+  assert_eq(host_os_label(Some("Windows_NT"), Some("AMD64")), "Windows x86_64")
+}
+
+///|
+test "doctor report records failing sections" {
+  let healthy = DoctorReport::new(
+    [DoctorSection::new("Environment", Ok, [])],
+    dry_run=false,
+  )
+  assert_false(healthy.has_errors())
+  let unhealthy = DoctorReport::new(
+    [DoctorSection::new("Environment", Error, [])],
+    dry_run=false,
+  )
+  assert_true(unhealthy.has_errors())
+}
+
+///|
+test "doctor reports invalid runtime manifests" {
+  let dir = "target/proton-doctor-invalid-runtime"
+  let proton_dir = path_join(dir, ".proton")
+  ensure_test_dir(dir)
+  @mbfs.create_dir(proton_dir) catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(
+    path_join(proton_dir, "runtime.json"),
+    "{ invalid",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let project = discover_project(dir)
+  match resolve_native_dist(project) {
+    Err(message) => assert_true(message.contains("failed to parse"))
+    Ok(_) => abort("expected invalid runtime manifest error")
+  }
+}
+
+///|
 test "moon_config adapter reads module deps and package imports" {
   let dir = "target/proton-doctor-config"
   ensure_test_dir(dir)
@@ -35,6 +84,8 @@ test "moon_config adapter reads module deps and package imports" {
       #|  "moonbitlang/async@0.19.0",
       #|  "moonbitlang/x@0.4.43",
       #|}
+      #|
+      #|source = ""
       #|
     ),
     encoding="utf8",
