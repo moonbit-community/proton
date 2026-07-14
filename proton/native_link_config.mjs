@@ -97,8 +97,8 @@ function defaultDist() {
     return activeDist;
   }
   return firstExistingDist([
-    packagePrebuiltDist(),
     path.resolve(moduleRoot, "..", "native", "dist"),
+    packagePrebuiltDist(),
   ]);
 }
 

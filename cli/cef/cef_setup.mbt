@@ -19,6 +19,24 @@ fn match_value(matches : @argparse.Matches, name : String) -> String? {
 }
 
 ///|
+fn validate_cef_name(name : String) -> Result[Unit, CefError] {
+  if name == "" || name == "." || name == ".." {
+    return Err(CefError::CommandError("Invalid CEF archive name: " + name))
+  }
+  for ch in name {
+    if !(ch.is_ascii_alphabetic() ||
+      ch.is_ascii_digit() ||
+      ch == '_' ||
+      ch == '-' ||
+      ch == '.' ||
+      ch == '+') {
+      return Err(CefError::CommandError("Invalid CEF archive name: " + name))
+    }
+  }
+  Ok(())
+}
+
+///|
 pub async fn run_setup(
   cwd : String,
   args : Array[String],
@@ -35,6 +53,10 @@ pub async fn run_setup(
   let name = match match_value(matches, "name") {
     Some(name) => name
     None => platform.default_cef_name
+  }
+  match validate_cef_name(name) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
   }
   let url = match_value(matches, "url")
   let root = match project_root(cwd) {

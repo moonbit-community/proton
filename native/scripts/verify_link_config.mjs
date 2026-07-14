@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -10,6 +11,7 @@ const nativeRoot = path.resolve(scriptDir, "..");
 const repoRoot = path.resolve(nativeRoot, "..");
 const dist = path.resolve(process.argv[2] ?? path.join(nativeRoot, "dist"));
 const configScript = path.join(repoRoot, "proton", "native_link_config.mjs");
+const developmentDist = path.join(nativeRoot, "dist");
 
 function fail(message) {
   console.error(message);
@@ -30,6 +32,24 @@ function requireDir(dirPath, label) {
 
 function normalizedForLink(filePath) {
   return filePath.replace(/\\/g, "/");
+}
+
+function readLinkConfig(payload, cwd = repoRoot) {
+  const result = spawnSync(process.execPath, [configScript], {
+    cwd,
+    input: JSON.stringify(payload),
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    fail(result.stderr.trim() || "proton/native_link_config.mjs failed");
+  }
+
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`proton/native_link_config.mjs returned invalid JSON: ${error.message}`);
+  }
 }
 
 const binDir = path.join(dist, "bin");
@@ -54,23 +74,7 @@ if (process.platform === "win32") {
   expectedLinkNeedle = `-L"${normalizedForLink(libDir)}"`;
 }
 
-const payload = JSON.stringify({ env: { PROTON_NATIVE_DIST: dist } });
-const result = spawnSync(process.execPath, [configScript], {
-  cwd: repoRoot,
-  input: payload,
-  encoding: "utf8",
-});
-
-if (result.status !== 0) {
-  fail(result.stderr.trim() || "proton/native_link_config.mjs failed");
-}
-
-let config;
-try {
-  config = JSON.parse(result.stdout);
-} catch (error) {
-  fail(`proton/native_link_config.mjs returned invalid JSON: ${error.message}`);
-}
+const config = readLinkConfig({ env: { PROTON_NATIVE_DIST: dist } });
 
 const vars = config?.vars ?? {};
 if (vars.PROTON_NATIVE_RUNTIME_DIR !== normalizedForLink(binDir)) {
@@ -104,27 +108,35 @@ if (!linkFlags.includes(expectedLinkNeedle)) {
 
 if (process.platform === "darwin") {
   const packageRpath = "@executable_path/../Resources/proton/lib";
-  const packagePayload = JSON.stringify({
+  const packageConfig = readLinkConfig({
     env: {
       PROTON_NATIVE_DIST: dist,
       PROTON_PACKAGE_RPATH: packageRpath,
     },
   });
-  const packageResult = spawnSync(process.execPath, [configScript], {
-    cwd: repoRoot,
-    input: packagePayload,
-    encoding: "utf8",
-  });
-  if (packageResult.status !== 0) {
-    fail(packageResult.stderr.trim() || "package rpath link config failed");
-  }
-  const packageConfig = JSON.parse(packageResult.stdout);
   const packageFlags = packageConfig?.vars?.PROTON_NATIVE_LINK_FLAGS ?? "";
   if (!packageFlags.includes(packageRpath)) {
     fail(`package rpath is missing from native link flags: ${packageFlags}`);
   }
   if (packageFlags.includes(`-rpath,\"${normalizedForLink(libDir)}\"`)) {
     fail(`package link flags retain the absolute runtime rpath: ${packageFlags}`);
+  }
+}
+
+if (fs.existsSync(developmentDist)) {
+  const isolatedCwd = fs.mkdtempSync(
+    path.join(os.tmpdir(), "proton-link-config-"),
+  );
+  try {
+    const defaultConfig = readLinkConfig({ env: {} }, isolatedCwd);
+    const defaultRoot = defaultConfig?.vars?.PROTON_RUNTIME_ROOT ?? "";
+    if (defaultRoot !== normalizedForLink(developmentDist)) {
+      fail(
+        `default native dist mismatch: expected ${normalizedForLink(developmentDist)}, got ${defaultRoot}`,
+      );
+    }
+  } finally {
+    fs.rmSync(isolatedCwd, { recursive: true, force: true });
   }
 }
 

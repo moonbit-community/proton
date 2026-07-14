@@ -684,8 +684,46 @@ fn frontend_cancel_handler() -> @process.CancellationHandler {
       )
     })
   } else {
-    @process.graceful_cancel(timeout=1000)
+    @process.CancellationHandler(async fn(pid) {
+      terminate_unix_frontend_tree(pid, "TERM")
+      @async.sleep(1000)
+      terminate_unix_frontend_tree(pid, "KILL")
+    })
   }
+}
+
+///|
+async fn terminate_unix_frontend_tree(pid : Int, signal : String) -> Unit {
+  ignore(
+    @process.run(
+      "sh",
+      [
+        "-c",
+        unix_frontend_tree_kill_script(),
+        "proton-frontend-cancel",
+        pid.to_string(),
+        signal,
+      ],
+      no_console_window=true,
+    ),
+  )
+}
+
+///|
+fn unix_frontend_tree_kill_script() -> String {
+  (
+    #|kill_tree() {
+    #|  parent="$1"
+    #|  signal="$2"
+    #|  if command -v pgrep >/dev/null 2>&1; then
+    #|    for child in $(pgrep -P "$parent" 2>/dev/null); do
+    #|      kill_tree "$child" "$signal"
+    #|    done
+    #|  fi
+    #|  kill "-$signal" "$parent" 2>/dev/null || true
+    #|}
+    #|kill_tree "$1" "$2"
+  )
 }
 
 ///|

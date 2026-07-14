@@ -541,6 +541,17 @@ int main(void) {
   }
   status = proton_runtime_respond_bridge_request_json(
       runtime,
+      "{\"abi_version\":1,\"request_id\":\"1\",\"ok\":false,"
+      "\"error\":{\"code\":\"op_failed\",\"message\":\"no pending request\"}}");
+  if (expect_status("respond_bridge_request rejects quoted request_id", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_last_error_contains("positive request_id")) {
+    return 1;
+  }
+  status = proton_runtime_respond_bridge_request_json(
+      runtime,
       "{\"abi_version\":1,\"request_id\":1,\"ok\":false,"
       "\"error\":{\"code\":\"op_failed\",\"message\":\"no pending request\"}}");
   if (expect_status("respond_bridge_request without engine", status,
@@ -630,6 +641,19 @@ int main(void) {
   }
 
   runtime = PROTON_INVALID_HANDLE;
+  status = proton_runtime_create_json("{\"abi_version\":\"1\"}", &runtime);
+  if (expect_status("runtime_create rejects quoted abi_version", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (runtime != PROTON_INVALID_HANDLE) {
+    return fail("quoted runtime abi_version should leave out handle invalid");
+  }
+  if (expect_last_error_contains("abi_version")) {
+    return 1;
+  }
+
+  runtime = PROTON_INVALID_HANDLE;
   status = proton_runtime_create_json("{\"abi_version\":1,}", &runtime);
   if (expect_status("runtime_create rejects trailing comma", status,
                     PROTON_ERR_INVALID_ARGUMENT)) {
@@ -677,6 +701,20 @@ int main(void) {
     return 1;
   }
   window = PROTON_INVALID_HANDLE;
+  status = proton_window_create_json(
+      runtime,
+      "{\"abi_version\":1,\"title\":\"Bad\",\"width\":\"320\",\"height\":240}",
+      &window);
+  if (expect_status("window_create rejects quoted width", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (window != PROTON_INVALID_HANDLE) {
+    return fail("quoted window width should leave out handle invalid");
+  }
+  if (expect_last_error_contains("width and height")) {
+    return 1;
+  }
   status = proton_window_create_json(
       runtime, "{\"abi_version\":1,\"title\":\"Bad\"}", &window);
   if (expect_status("window_create rejects missing size", status,

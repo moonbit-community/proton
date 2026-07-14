@@ -32,7 +32,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb
 
       - name: moon version
         run: |
@@ -46,19 +46,10 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup Node.js on Windows
-        if: ${{ matrix.os == 'windows-latest' }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Build Proton ABI smoke runtime on Windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          cmake -S native -B native\build -DCMAKE_INSTALL_PREFIX=native\dist
-          cmake --build native\build --config Debug
-          cmake --install native\build --config Debug
-          ctest --test-dir native\build -C Debug --output-on-failure
 
       - name: Install Proton CLI for pre-build codegen on Unix
         if: ${{ matrix.os != 'windows-latest' }}
@@ -71,7 +62,29 @@ jobs:
         run: |
           moon install --path cli --bin target/proton-tools
 
-      - name: Assemble active Proton runtime on Windows
+      - name: Build active Proton engine runtime on Unix
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          moon -C cli run . -- -C .. cef setup
+          runtime="$PWD/$(node -p "require('./.proton/runtime.json').dist")"
+          platform=$(node -p "require('./.proton/runtime.json').platform")
+          cef_name=$(node -p "require('./.proton/runtime.json').cef_version")
+          cef_root="$PWD/.proton/cache/cef/$platform/$cef_name"
+          cmake -S native -B native/build-engine \
+            -DCMAKE_INSTALL_PREFIX="$runtime" \
+            -DPROTON_WITH_ENGINE=ON \
+            -DPROTON_ENGINE_ROOT="$cef_root"
+          cmake --build native/build-engine
+          cmake --install native/build-engine
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a ctest --test-dir native/build-engine --output-on-failure
+          else
+            ctest --test-dir native/build-engine --output-on-failure
+          fi
+          node native/scripts/verify_link_config.mjs "$runtime"
+          echo "$runtime/bin" >> "$GITHUB_PATH"
+
+      - name: Build active Proton engine runtime on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           $ErrorActionPreference = "Stop"
@@ -80,7 +93,16 @@ jobs:
           if (!(Test-Path .proton\runtime.json)) {
             throw "missing .proton\runtime.json"
           }
-          $runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+          $manifest = Get-Content .proton\runtime.json | ConvertFrom-Json
+          $runtime = Join-Path $PWD $manifest.dist
+          $cefRoot = Join-Path $PWD ".proton\cache\cef\$($manifest.platform)\$($manifest.cef_version)"
+          cmake -S native -B native\build-engine `
+            "-DCMAKE_INSTALL_PREFIX=$runtime" `
+            -DPROTON_WITH_ENGINE=ON `
+            "-DPROTON_ENGINE_ROOT=$cefRoot"
+          cmake --build native\build-engine --config Debug
+          cmake --install native\build-engine --config Debug
+          ctest --test-dir native\build-engine -C Debug --output-on-failure
           if (!(Test-Path "$runtime\bin\proton.dll")) {
             throw "missing active proton.dll"
           }
@@ -95,7 +117,9 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon check --target native --deny-warn
-          moon -C cli test codegen --target native
+          moon -C proton test native --target native --diagnostic-limit 80
+          moon -C cli test --target native --diagnostic-limit 80
+          moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Check framework modules on Windows
         if: ${{ matrix.os == 'windows-latest' }}
@@ -105,7 +129,9 @@ jobs:
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
-          moon -C cli test codegen --target native
+          moon -C proton test native --target native --diagnostic-limit 80
+          moon -C cli test --target native --diagnostic-limit 80
+          moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Check extension catalog on Unix
         if: ${{ matrix.os != 'windows-latest' }}
@@ -142,7 +168,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          node .\scripts\e2e_bridge_smoke.mjs 41_app_commands
+          node .\scripts\e2e_bridge_smoke.mjs 41_app_commands 47_dev_extension_js
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}

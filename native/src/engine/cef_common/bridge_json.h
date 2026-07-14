@@ -29,7 +29,7 @@ static int proton_engine_json_read_int64_field(const char *json,
   }
   bool ok = proton_json_root_object(&doc, &root) &&
             proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_int64(&doc, value, out_value);
+            proton_json_read_int64_string_or_number(&doc, value, out_value);
   proton_json_dispose(&doc);
   return ok ? 1 : 0;
 }
