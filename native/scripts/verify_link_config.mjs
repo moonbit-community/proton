@@ -106,6 +106,23 @@ if (!linkFlags.includes(expectedLinkNeedle)) {
   );
 }
 
+if (process.platform === "darwin") {
+  const packageRpath = "@executable_path/../Resources/proton/lib";
+  const packageConfig = readLinkConfig({
+    env: {
+      PROTON_NATIVE_DIST: dist,
+      PROTON_PACKAGE_RPATH: packageRpath,
+    },
+  });
+  const packageFlags = packageConfig?.vars?.PROTON_NATIVE_LINK_FLAGS ?? "";
+  if (!packageFlags.includes(packageRpath)) {
+    fail(`package rpath is missing from native link flags: ${packageFlags}`);
+  }
+  if (packageFlags.includes(`-rpath,\"${normalizedForLink(libDir)}\"`)) {
+    fail(`package link flags retain the absolute runtime rpath: ${packageFlags}`);
+  }
+}
+
 if (fs.existsSync(developmentDist)) {
   const isolatedCwd = fs.mkdtempSync(
     path.join(os.tmpdir(), "proton-link-config-"),

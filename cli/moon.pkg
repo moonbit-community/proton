@@ -16,6 +16,7 @@ import {
   "justjavac/proton_cli/dev",
   "justjavac/proton_cli/doctor",
   "justjavac/proton_cli/new" @new_project,
+  "justjavac/proton_cli/package",
 }
 
 import {

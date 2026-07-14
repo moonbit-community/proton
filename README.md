@@ -128,10 +128,31 @@ the `dev_url` TCP port, then runs `moon run app --target native` with
 development and runtime environment variables injected. Vite/Next own HMR;
 Proton keeps command handlers in the MoonBit app process.
 
-For release builds, `proton_cli build` runs `frontend.before_build`, validates
-`frontend.dist` and the production entry, then runs `moon build <package>
---target native`. Platform installers and zip assembly are still separate
-follow-up work.
+`proton_cli package` builds a release application from the same `moon.proton`
+configuration and active `.proton/runtime.json` used by development. Enable the
+bundle block first:
+
+```moonbit
+bundle = {
+  active: true,
+  targets: ["app", "zip"],
+  icon: ["icons/icon.icns", "icons/icon.ico"],
+  resources: ["resources/**"],
+  output: "target/proton-dist",
+}
+```
+
+Then package the current platform:
+
+```sh
+proton_cli package app
+proton_cli package app --dry-run
+proton_cli package app --no-build --target zip
+```
+
+See [Packaging and signing](docs/packaging.md) for platform layouts, metadata
+validation, local ad-hoc testing, Developer ID signing, notarization, Gatekeeper
+assessment, and Windows Authenticode configuration.
 
 `proton/native_link_config.mjs` resolves link inputs in this order:
 

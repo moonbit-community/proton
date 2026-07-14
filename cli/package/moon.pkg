@@ -1,0 +1,18 @@
+import {
+  "justjavac/proton_config",
+  "justjavac/proton_cli/build",
+  "justjavac/proton_cli/cef",
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path",
+  "moonbitlang/x/sys",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
+supported_targets = "native"
