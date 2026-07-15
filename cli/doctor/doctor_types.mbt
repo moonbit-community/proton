@@ -213,6 +213,10 @@ priv struct MoonModuleConfig {
   imports : Array[MoonDependency]
   preferred_target : String?
   supported_targets : String?
+  readme : String?
+  repository : String?
+  license : String?
+  description : String?
 }
 
 ///|

@@ -7,7 +7,7 @@ fn print_usage() -> Unit {
     #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
     #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
     #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
-    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--run] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
+    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
     #|
@@ -284,6 +284,7 @@ async fn run_doctor_from_args(
       "--deep" => deep = true
       "--run" => run_frontend = true
       "--frontend" => sections.push("frontend")
+      "--release" => sections.push("release")
       "--json" => json = true
       "--json-lines" => json_lines = true
       "--quiet" => quiet = true
@@ -303,7 +304,7 @@ async fn run_doctor_from_args(
       }
       "-h" | "--help" => {
         println(
-          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--run] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
+          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
         )
         return Ok(())
       }
@@ -334,7 +335,7 @@ async fn run_doctor_from_args(
   for section in sections {
     if ![
         "project", "environment", "runtime", "platform", "packages", "extensions",
-        "app", "frontend",
+        "app", "frontend", "release",
       ].contains(section) {
       return Err(
         CliError::UsageError("unknown doctor section: " + section, false),

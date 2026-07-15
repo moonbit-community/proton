@@ -296,6 +296,17 @@ fn proton_prebuilt_relative_files(platform : ProtonPlatform) -> Array[String] {
 }
 
 ///|
+/// Returns the Proton-only prebuilt artifact list for a stable platform id.
+pub fn proton_prebuilt_relative_files_for_platform(
+  platform_id : String,
+) -> Array[String] {
+  match platform_from_override(Some(platform_id)) {
+    Some(platform) => proton_prebuilt_relative_files(platform)
+    None => []
+  }
+}
+
+///|
 fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
   if platform.id == "win32-x64" {
     [

@@ -40,6 +40,9 @@ async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
   if options.includes("frontend") {
     sections.push(collect_frontend(project, run=options.run_frontend))
   }
+  if options.sections.contains("release") {
+    sections.push(collect_release(project))
+  }
   if options.includes("packages") {
     sections.push(
       collect_packages(

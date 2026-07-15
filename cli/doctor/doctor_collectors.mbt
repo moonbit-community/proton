@@ -1379,6 +1379,315 @@ async fn collect_frontend(
 }
 
 ///|
+fn collect_relative_files(
+  root : String,
+  relative : String,
+  depth : Int,
+) -> Array[String] {
+  guard depth >= 0 else { return [] }
+  let directory = if relative == "" { root } else { path_join(root, relative) }
+  let entries = @mbfs.read_dir(directory) catch { _ => [] }
+  let files : Array[String] = []
+  for entry in entries {
+    let child_relative = if relative == "" {
+      entry
+    } else {
+      relative + "/" + entry
+    }
+    let child = path_join(root, child_relative)
+    let is_file = @mbfs.is_file(child) catch { _ => false }
+    let is_dir = @mbfs.is_dir(child) catch { _ => false }
+    if is_file {
+      files.push(child_relative.replace_all(old="\\", new="/"))
+    } else if is_dir {
+      for nested in collect_relative_files(root, child_relative, depth - 1) {
+        files.push(nested)
+      }
+    }
+  }
+  files
+}
+
+///|
+fn push_release_metadata_line(
+  lines : Array[DoctorLine],
+  field : String,
+  value : String?,
+) -> Unit {
+  match value {
+    Some(value) if value.trim() != "" =>
+      lines.push(
+        DoctorLine::coded("release.metadata." + field, Ok, field + ": " + value),
+      )
+    _ =>
+      lines.push(
+        DoctorLine::coded(
+          "release.metadata." + field + ".missing",
+          Error,
+          "release metadata is missing `" + field + "`",
+        ),
+      )
+  }
+}
+
+///|
+async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
+  let lines : Array[DoctorLine] = []
+  let module_config = match read_project_moon_mod(project) {
+    Some(Ok(config)) => config
+    Some(Err(error)) => {
+      lines.push(moon_config_error_line("moon.mod", error))
+      return DoctorSection::new(
+        "release",
+        "Release",
+        section_status(lines),
+        lines,
+      )
+    }
+    None => {
+      lines.push(
+        DoctorLine::coded(
+          "release.moon_mod.missing",
+          Error,
+          "release preflight requires moon.mod",
+        ),
+      )
+      return DoctorSection::new(
+        "release",
+        "Release",
+        section_status(lines),
+        lines,
+      )
+    }
+  }
+  push_release_metadata_line(lines, "name", module_config.name)
+  push_release_metadata_line(lines, "version", module_config.version)
+  push_release_metadata_line(lines, "readme", module_config.readme)
+  push_release_metadata_line(lines, "repository", module_config.repository)
+  push_release_metadata_line(lines, "license", module_config.license)
+  push_release_metadata_line(lines, "description", module_config.description)
+  match module_config.readme {
+    Some(readme) => {
+      let readme_path = if path_is_absolute_like(readme) {
+        readme
+      } else {
+        path_join(project.root, readme)
+      }
+      if !@mbfs.path_exists(readme_path) {
+        lines.push(
+          DoctorLine::coded(
+            "release.metadata.readme_file_missing",
+            Error,
+            "release readme file is missing: " + readme_path,
+          ),
+        )
+      }
+    }
+    None => ()
+  }
+  match module_config.repository {
+    Some(repository) if !(repository.has_prefix("https://") ||
+      repository.has_prefix("http://")) =>
+      lines.push(
+        DoctorLine::coded(
+          "release.metadata.repository_invalid",
+          Error,
+          "repository must be an http or https URL: " + repository,
+        ),
+      )
+    _ => ()
+  }
+
+  let module_name = module_config.name.unwrap_or("")
+  let excluded = module_name.has_suffix("/examples") ||
+    module_name.has_suffix("/e2e")
+  if excluded {
+    lines.push(
+      DoctorLine::coded(
+        "release.publish.excluded",
+        Neutral,
+        "module is intentionally excluded from publishing: " + module_name,
+      ),
+    )
+  } else {
+    let (status, output) = collect_command_status(
+      "moon",
+      ["publish", "--dry-run"],
+      Some(project.root),
+    )
+    if status == 0 {
+      lines.push(
+        DoctorLine::coded(
+          "release.publish.dry_run",
+          Ok,
+          "moon publish --dry-run succeeded",
+        ),
+      )
+    } else {
+      lines.push(
+        DoctorLine::coded(
+          "release.publish.dry_run_failed",
+          Error,
+          "moon publish --dry-run failed",
+          hint=first_non_empty_line(output).unwrap_or("publish dry-run failed"),
+        ),
+      )
+    }
+  }
+
+  match find_up(project.root, "scripts") {
+    Some(scripts_dir) => {
+      let verifier = @path.Path(path_join(scripts_dir, "verify_generated.mjs"))
+        .resolve()
+        .to_string()
+      if @mbfs.path_exists(verifier) {
+        let repository_root = @path.Path(
+            path_parent(scripts_dir).unwrap_or(project.root),
+          )
+          .resolve()
+          .to_string()
+        let (status, output) = collect_command_status(
+          "node",
+          [verifier],
+          Some(repository_root),
+        )
+        if status == 0 {
+          lines.push(
+            DoctorLine::coded(
+              "release.generated",
+              Ok,
+              "generated files are current",
+            ),
+          )
+        } else {
+          lines.push(
+            DoctorLine::coded(
+              "release.generated.stale",
+              Error,
+              "generated file verification failed",
+              hint=first_non_empty_line(output).unwrap_or(
+                "generated files are stale",
+              ),
+            ),
+          )
+        }
+      }
+    }
+    None => ()
+  }
+
+  let prebuilt_candidates = [
+    path_join(project.root, "prebuilt"),
+    path_join(path_join(project.root, "proton"), "prebuilt"),
+  ]
+  for prebuilt_root in prebuilt_candidates {
+    let prebuilt_exists = @mbfs.is_dir(prebuilt_root) catch { _ => false }
+    if prebuilt_exists {
+      let mut forbidden_count = 0
+      for platform_id in ["win32-x64", "darwin-arm64", "linux-x64"] {
+        let platform_root = path_join(prebuilt_root, platform_id)
+        let platform_exists = @mbfs.is_dir(platform_root) catch { _ => false }
+        if platform_exists {
+          let allowed = @cef.proton_prebuilt_relative_files_for_platform(
+            platform_id,
+          )
+          let normalized_allowed = allowed.map(fn(file) {
+            file.replace_all(old="\\", new="/")
+          })
+          normalized_allowed.push("include/proton_native.h")
+          normalized_allowed.push("manifest.json")
+          for file in collect_relative_files(platform_root, "", 5) {
+            if !normalized_allowed.contains(file) {
+              forbidden_count += 1
+              lines.push(
+                DoctorLine::coded(
+                  "release.prebuilt.forbidden",
+                  Error,
+                  "forbidden file in Proton prebuilt artifacts: " +
+                  platform_id +
+                  "/" +
+                  file,
+                ),
+              )
+            }
+          }
+        }
+      }
+      if forbidden_count == 0 {
+        lines.push(
+          DoctorLine::coded(
+            "release.prebuilt.checked",
+            Ok,
+            "Proton prebuilt directories contain only allowed artifacts",
+          ),
+        )
+      }
+      break
+    }
+  }
+
+  let platform_id = @cef.current_platform_id()
+  if platform_id.has_prefix("darwin-") {
+    match @sys.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
+      Some(_) =>
+        lines.push(
+          DoctorLine::coded(
+            "release.signing.macos",
+            Ok,
+            "macOS signing identity is configured",
+          ),
+        )
+      None =>
+        lines.push(
+          DoctorLine::coded(
+            "release.signing.macos_missing",
+            Warn,
+            "PROTON_MACOS_SIGNING_IDENTITY is not configured",
+          ),
+        )
+    }
+    match @sys.get_env_var("PROTON_NOTARY_PROFILE") {
+      Some(_) =>
+        lines.push(
+          DoctorLine::coded(
+            "release.notary",
+            Ok,
+            "notary profile is configured",
+          ),
+        )
+      None =>
+        lines.push(
+          DoctorLine::coded(
+            "release.notary.missing",
+            Warn,
+            "PROTON_NOTARY_PROFILE is not configured",
+          ),
+        )
+    }
+  } else if platform_id == "win32-x64" {
+    match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
+      Some(_) =>
+        lines.push(
+          DoctorLine::coded(
+            "release.signing.windows",
+            Ok,
+            "Windows certificate is configured",
+          ),
+        )
+      None =>
+        lines.push(
+          DoctorLine::coded(
+            "release.signing.windows_missing",
+            Warn,
+            "PROTON_WINDOWS_CERTIFICATE is not configured",
+          ),
+        )
+    }
+  }
+  DoctorSection::new("release", "Release", section_status(lines), lines)
+}
+
+///|
 fn option_path_or_missing(value : String?) -> String {
   match value {
     Some(path) => path
