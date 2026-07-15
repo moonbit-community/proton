@@ -38,7 +38,9 @@ if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
 endif()
 
 add_library(proton SHARED
+  src/proton_config.c
   src/proton_json.c
+  src/proton_state.c
   src/proton.c
   ${PROTON_ENGINE_SOURCES}
 )
