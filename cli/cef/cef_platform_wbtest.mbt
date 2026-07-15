@@ -17,6 +17,26 @@ test "darwin arm64 platform has proton and runtime artifact lists" {
 }
 
 ///|
+test "public runtime layout lookup follows stable platform ids" {
+  let macos = runtime_required_relative_files_for_platform("darwin-arm64")
+  assert_true(macos.contains("lib/libproton.dylib"))
+  assert_false(macos.contains("bin\\proton.dll"))
+  let windows = runtime_required_relative_files_for_platform("win32-x64")
+  assert_true(windows.contains("bin\\proton.dll"))
+  assert_true(
+    runtime_required_relative_files_for_platform("unknown").length() == 0,
+  )
+}
+
+///|
+test "runtime manifests carry an explicit schema version" {
+  let manifest = runtime_manifest_json(
+    "0.1.5", "darwin-arm64", "cef-test", ".proton/runtime",
+  )
+  assert_true(manifest.contains("\"schema_version\":1"))
+}
+
+///|
 test "host platform detection keeps macOS CPU architecture" {
   let arm64 = platform_from_host(windows=false, macos=true, arch=Some("arm64"))
   assert_eq(arm64.id, "darwin-arm64")

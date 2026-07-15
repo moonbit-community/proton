@@ -108,6 +108,18 @@ fn read_moon_ext_codegen_config_file(
 }
 
 ///|
+/// Validates a `moon.ext` file and returns its extension id and JavaScript namespace.
+pub fn read_moon_ext_identity(
+  path : String,
+) -> Result[(String, String), String] {
+  try read_moon_ext_codegen_config_file(path) catch {
+    err => Err(@debug.render(@debug.to_repr(err)))
+  } noraise {
+    result => result
+  }
+}
+
+///|
 fn read_moon_ext_codegen_config(
   path : String,
   text : String,

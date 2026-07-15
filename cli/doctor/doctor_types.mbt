@@ -34,22 +34,25 @@ fn DoctorStatus::json_name(self : DoctorStatus) -> String {
 
 ///|
 priv struct DoctorLine {
+  code : String
   status : DoctorStatus
   text : String
   hint : String?
 }
 
 ///|
-fn DoctorLine::new(
+fn DoctorLine::coded(
+  code : String,
   status : DoctorStatus,
   text : String,
   hint? : String,
 ) -> DoctorLine {
-  { status, text, hint }
+  { code, status, text, hint }
 }
 
 ///|
 priv struct DoctorSection {
+  id : String
   title : String
   status : DoctorStatus
   lines : Array[DoctorLine]
@@ -57,11 +60,12 @@ priv struct DoctorSection {
 
 ///|
 fn DoctorSection::new(
+  id : String,
   title : String,
   status : DoctorStatus,
   lines : Array[DoctorLine],
 ) -> DoctorSection {
-  { title, status, lines }
+  { id, title, status, lines }
 }
 
 ///|
@@ -79,11 +83,56 @@ fn DoctorReport::new(
 }
 
 ///|
+fn DoctorReport::has_errors(self : DoctorReport) -> Bool {
+  self.sections.any(fn(section) { section.status == Error })
+}
+
+///|
+priv struct DoctorSummary {
+  total : Int
+  passed : Int
+  warnings : Int
+  errors : Int
+  unknown : Int
+  neutral : Int
+}
+
+///|
+fn DoctorReport::summary(self : DoctorReport) -> DoctorSummary {
+  let mut total = 0
+  let mut passed = 0
+  let mut warnings = 0
+  let mut errors = 0
+  let mut unknown = 0
+  let mut neutral = 0
+  for section in self.sections {
+    for line in section.lines {
+      total += 1
+      match line.status {
+        Ok => passed += 1
+        Warn => warnings += 1
+        Error | Missing => errors += 1
+        Unknown => unknown += 1
+        Neutral => neutral += 1
+      }
+    }
+  }
+  { total, passed, warnings, errors, unknown, neutral }
+}
+
+///|
 priv struct DoctorOptions {
   cwd : String
   dry_run : Bool
   verbose : Bool
+  deep : Bool
+  run_frontend : Bool
+  fix : Bool
   json : Bool
+  json_lines : Bool
+  quiet : Bool
+  sections : Array[String]
+  output : String?
 }
 
 ///|
@@ -91,9 +140,33 @@ fn DoctorOptions::new(
   cwd~ : String,
   dry_run~ : Bool,
   verbose~ : Bool,
+  deep~ : Bool,
+  run_frontend~ : Bool,
+  fix~ : Bool,
   json~ : Bool,
+  json_lines~ : Bool,
+  quiet~ : Bool,
+  sections~ : Array[String],
+  output~ : String?,
 ) -> DoctorOptions {
-  { cwd, dry_run, verbose, json }
+  {
+    cwd,
+    dry_run,
+    verbose,
+    deep,
+    run_frontend,
+    fix,
+    json,
+    json_lines,
+    quiet,
+    sections,
+    output,
+  }
+}
+
+///|
+fn DoctorOptions::includes(self : DoctorOptions, section : String) -> Bool {
+  self.sections.length() == 0 || self.sections.contains(section)
 }
 
 ///|
@@ -115,6 +188,15 @@ priv struct ProjectDoctorInfo {
 }
 
 ///|
+priv struct DoctorRuntimeManifest {
+  schema_version : Int
+  platform : String
+  proton_version : String
+  cef_version : String
+  dist : String
+}
+
+///|
 priv struct MoonDependency {
   module_name : String
   version : String?
@@ -132,6 +214,12 @@ priv struct MoonModuleConfig {
   name : String?
   version : String?
   imports : Array[MoonDependency]
+  preferred_target : String?
+  supported_targets : String?
+  readme : String?
+  repository : String?
+  license : String?
+  description : String?
 }
 
 ///|

@@ -5,7 +5,7 @@ fn path_join(base : String, name : String) -> String {
   } else if base.has_suffix("\\") || base.has_suffix("/") {
     base + name
   } else {
-    base + "\\" + name
+    base + @path.sep.to_string() + name
   }
 }
 

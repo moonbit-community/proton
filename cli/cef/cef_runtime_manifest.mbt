@@ -6,6 +6,7 @@ fn runtime_manifest_json(
   dist : String,
 ) -> String {
   Json::object({
+    "schema_version": Json::number(1.0, repr="1"),
     "platform": Json::string(platform),
     "proton_version": Json::string(proton_version),
     "cef_version": Json::string(cef_name),
