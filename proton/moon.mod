@@ -14,7 +14,7 @@ readme = "README.md"
 
 repository = "https://github.com/moonbit-community/proton"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [ "proton", "gui", "web", "desktop-app" ]
 

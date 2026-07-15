@@ -10,7 +10,7 @@ import {
 
 repository = "https://github.com/moonbit-community/proton"
 
-license = "MIT"
+license = "Apache-2.0"
 
 description = "Typed config parser for Proton moon.proton and moon.ext files."
 

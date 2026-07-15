@@ -20,7 +20,7 @@ readme = "README.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/extensions"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [ "proton", "extension", "filesystem" ]
 

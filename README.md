@@ -304,4 +304,4 @@ node scripts\e2e_bridge_smoke.mjs 41_app_commands
 
 ## License
 
-MIT. See [LICENSE.md](LICENSE.md).
+Apache License 2.0. See [LICENSE.md](LICENSE.md).
