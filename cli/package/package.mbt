@@ -255,9 +255,10 @@ fn build_package_plan(
   } else {
     ["app", "zip"]
   }
+  let base_dir = resolve_path(project.base_dir(), ".")
   let output = match raw.output {
-    Some(output) => resolve_path(project.base_dir(), output)
-    None => bundle.output()
+    Some(output) => resolve_path(base_dir, output)
+    None => resolve_path(base_dir, bundle.output())
   }
   let frontend_dist = match project.frontend() {
     Some(frontend) => frontend.dist()
@@ -267,9 +268,9 @@ fn build_package_plan(
     File(path) | Asset(path) => Some(path)
     Html(_) | Url(_) => None
   }
-  let workspace_root = find_workspace_root_from(project.base_dir())
+  let workspace_root = find_workspace_root_from(base_dir)
   Ok(PackagePlan::{
-    root: find_project_root_from(project.base_dir()),
+    root: find_project_root_from(base_dir),
     workspace_root,
     build_target_dir: package_build_target_dir(workspace_root, identifier),
     app_package: raw.app_package,
@@ -282,7 +283,7 @@ fn build_package_plan(
     targets,
     output,
     build: raw.build,
-    base_dir: project.base_dir(),
+    base_dir,
     frontend_dist,
     entry_path,
     resources: copy_strings(bundle.resources),
@@ -871,71 +872,6 @@ async fn promote_staged_app(
 }
 
 ///|
-async fn stage_windows_portable(
-  plan : PackagePlan,
-  executable : String,
-  runtime : String,
-) -> Result[Unit, PackageError] {
-  let output = resolve_path(
-    plan.output,
-    package_executable_name(plan.product_name),
-  )
-  match remove_tree(output) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match ensure_dir(output) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match copy_tree(resolve_path(runtime, "bin"), output) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  let runtime_resources = resolve_path(runtime, "Resources")
-  if @mbfs.path_exists(runtime_resources) {
-    match copy_tree(runtime_resources, resolve_path(output, "Resources")) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-  }
-  match
-    copy_file(
-      executable,
-      resolve_path(output, package_executable_name(plan.product_name) + ".exe"),
-    ) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match copy_file(plan.config_path, resolve_path(output, "moon.proton")) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match stage_project_inputs(plan, output) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match write_package_manifest(plan, output, "windows-portable") {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  if plan.sign {
-    match sign_windows_portable(plan, output) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-  }
-  println("Packaged Windows portable app: " + output)
-  if plan.targets.contains("zip") {
-    match create_zip(plan, output) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-  }
-  Ok(())
-}
-
-///|
 async fn stage_project_inputs(
   plan : PackagePlan,
   destination : String,
@@ -1073,8 +1009,18 @@ fn package_executable_name(product_name : String) -> String {
 ///|
 async fn ensure_dir(path : String) -> Result[Unit, PackageError] {
   guard !@mbfs.path_exists(path) else { return Ok(()) }
-  @async_fs.mkdir(path, recursive=true) catch {
-    error =>
+  let parent = path_parent(path)
+  if parent != path && !@mbfs.path_exists(parent) {
+    match ensure_dir(parent) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+  }
+  @async_fs.mkdir(path) catch {
+    error => {
+      if @mbfs.path_exists(path) {
+        return Ok(())
+      }
       return Err(
         CommandError(
           "failed to create directory " +
@@ -1083,6 +1029,7 @@ async fn ensure_dir(path : String) -> Result[Unit, PackageError] {
           @debug.render(@debug.to_repr(error)),
         ),
       )
+    }
   }
   Ok(())
 }
@@ -1188,8 +1135,9 @@ async fn copy_tree(
     Ok(_) => ()
   }
   let code = if @path.sep == '\\' {
-    @process.run("robocopy", [
-      source, destination, "/E", "/COPY:DAT", "/DCOPY:DAT", "/NFL", "/NDL",
+    let (code, _) = @process.collect_output_merged("robocopy", [
+      source, destination, "/E", "/COPY:DAT", "/DCOPY:DAT", "/NFL", "/NDL", "/NJH",
+      "/NJS", "/NP", "/R:2", "/W:1",
     ]) catch {
       error =>
         return Err(
@@ -1201,8 +1149,11 @@ async fn copy_tree(
           ),
         )
     }
+    code
   } else {
-    @process.run("ditto", [source, destination]) catch {
+    let (code, _) = @process.collect_output_merged("ditto", [
+      source, destination,
+    ]) catch {
       error =>
         return Err(
           CommandError(
@@ -1213,6 +1164,7 @@ async fn copy_tree(
           ),
         )
     }
+    code
   }
   if code == 0 || (@path.sep == '\\' && code < 8) {
     Ok(())
@@ -1833,61 +1785,6 @@ async fn submit_macos_notarization(
 }
 
 ///|
-async fn sign_windows_portable(
-  plan : PackagePlan,
-  output : String,
-) -> Result[Unit, PackageError] {
-  let certificate = match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
-    Some(path) if path.trim().to_owned() != "" => path.trim().to_owned()
-    _ =>
-      return Err(
-        CommandError("--sign requires PROTON_WINDOWS_CERTIFICATE on Windows"),
-      )
-  }
-  let password = @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE_PASSWORD").unwrap_or(
-    "",
-  )
-  let timestamp = @sys.get_env_var("PROTON_WINDOWS_TIMESTAMP_URL").unwrap_or(
-    "http://timestamp.digicert.com",
-  )
-  let executable = resolve_path(
-    output,
-    package_executable_name(plan.product_name) + ".exe",
-  )
-  let helper = resolve_path(output, "cef_process.exe")
-  let proton = resolve_path(output, "proton.dll")
-  for target in [helper, proton, executable] {
-    guard @mbfs.path_exists(target) else { continue }
-    let args : Array[String] = ["sign", "/fd", "SHA256", "/f", certificate]
-    if password != "" {
-      args.push("/p")
-      args.push(password)
-    }
-    args.push("/tr")
-    args.push(timestamp)
-    args.push("/td")
-    args.push("SHA256")
-    args.push(target)
-    let code = @process.run("signtool", args) catch {
-      error =>
-        return Err(
-          CommandError(
-            "failed to run signtool: " + @debug.render(@debug.to_repr(error)),
-          ),
-        )
-    }
-    guard code == 0 else {
-      return Err(
-        CommandError(
-          "signtool exited with code " + code.to_string() + ": " + target,
-        ),
-      )
-    }
-  }
-  Ok(())
-}
-
-///|
 async fn create_zip(
   plan : PackagePlan,
   source : String,
@@ -2029,12 +1926,45 @@ fn path_is_dir(path : String) -> Bool {
 }
 
 ///|
+fn package_path_is_absolute(path : String) -> Bool {
+  if @path.sep == '\\' {
+    if path.has_prefix("\\") {
+      return true
+    }
+    guard path.length() >= 3 else { return false }
+    let drive = path[0]
+    ((drive >= 65 && drive <= 90) || (drive >= 97 && drive <= 122)) &&
+    path[1] == ':' &&
+    path[2] == '\\'
+  } else {
+    path.has_prefix("/")
+  }
+}
+
+///|
 fn resolve_path(base : String, child : String) -> String {
+  let base = if @path.sep == '\\' {
+    base.replace_all(old="/", new="\\")
+  } else {
+    base.replace_all(old="\\", new="/")
+  }
+  let child = if @path.sep == '\\' {
+    child.replace_all(old="/", new="\\")
+  } else {
+    child.replace_all(old="\\", new="/")
+  }
   let path : @path.Path = child
-  if path.is_absolute() {
+  if package_path_is_absolute(child) {
     path.normalize().resolve().to_string()
   } else {
-    @path.Path(base).join(child).normalize().resolve().to_string()
+    let combined = if base == "" {
+      child
+    } else if base.has_suffix(@path.sep.to_string()) {
+      base + child
+    } else {
+      base + @path.sep.to_string() + child
+    }
+    @path.Path(combined).normalize().resolve().to_string()
   }
 }
 

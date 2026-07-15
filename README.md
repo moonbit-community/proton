@@ -152,7 +152,11 @@ proton_cli package app --no-build --target zip
 
 See [Packaging and signing](docs/packaging.md) for platform layouts, metadata
 validation, local ad-hoc testing, Developer ID signing, notarization, Gatekeeper
-assessment, and Windows Authenticode configuration.
+assessment, and Windows portable/Authenticode configuration. Windows packages
+are staged atomically, contain only runtime files (not import libraries or CEF
+sample executables), and are verified before replacing an existing package.
+Run `powershell -NoProfile -File scripts\windows_package_smoke.ps1` for the
+temporary self-signed development regression after `cef setup`.
 
 `proton/native_link_config.mjs` resolves link inputs in this order:
 

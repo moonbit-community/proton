@@ -102,6 +102,51 @@ test "package plan defaults to app and zip" {
 }
 
 ///|
+#cfg(not(platform="windows"))
+test "macOS package paths normalize absolute and relative inputs" {
+  let base = resolve_path("target", "proton package path base")
+  assert_eq(resolve_path(base, "/"), "/")
+  assert_eq(
+    resolve_path(base, "/tmp/proton absolute path"),
+    "/tmp/proton absolute path",
+  )
+  assert_eq(
+    resolve_path(base, "relative/file.txt"),
+    base + "/relative/file.txt",
+  )
+  assert_eq(
+    resolve_path(base, ".proton/runtime.json"),
+    base + "/.proton/runtime.json",
+  )
+  assert_eq(
+    resolve_path(base, "directory with spaces/file.txt"),
+    base + "/directory with spaces/file.txt",
+  )
+  assert_eq(
+    resolve_path(base, "../sibling"),
+    resolve_path(path_parent(base), "sibling"),
+  )
+  assert_eq(resolve_path(base, "nested\\child.txt"), base + "/nested/child.txt")
+  assert_eq(resolve_path(base, "\\tmp\\proton path"), "/tmp/proton path")
+}
+
+///|
+#cfg(not(platform="windows"))
+async test "macOS ensure_dir recursively creates absolute paths with spaces" {
+  let root = resolve_path("target", "proton package ensure dir")
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let nested = resolve_path(root, "parent with spaces/child/grandchild")
+  match ensure_dir(nested) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  assert_true(path_is_dir(nested))
+}
+
+///|
 test "package executable name is filesystem safe" {
   assert_eq(package_executable_name("My Proton App!"), "my-proton-app")
   assert_eq(package_executable_name("  ---  "), "proton-app")
@@ -634,7 +679,11 @@ async test "release executable lookup stays inside package target dir" {
     Ok(_) => ()
     Err(error) => abort(@debug.render(@debug.to_repr(error)))
   }
-  @debug.assert_eq(find_release_executable(plan), Some(expected))
+  match find_release_executable(plan) {
+    Some(actual) =>
+      assert_eq(normalize_slashes(actual), normalize_slashes(expected))
+    None => abort("expected release executable")
+  }
 }
 
 ///|
@@ -675,31 +724,17 @@ async test "active runtime rejects another platform" {
 ///|
 async test "Windows portable staging flattens runtime bin beside app executable" {
   let root = "target/proton-package-windows-layout"
-  let runtime = resolve_path(root, "runtime")
   let output = resolve_path(root, "output")
   match remove_tree(root) {
     Ok(_) => ()
     Err(error) => abort(@debug.render(@debug.to_repr(error)))
   }
-  for dir in [resolve_path(runtime, "bin"), resolve_path(runtime, "Resources")] {
-    match ensure_dir(dir) {
-      Ok(_) => ()
-      Err(error) => abort(@debug.render(@debug.to_repr(error)))
-    }
-  }
+  let runtime = prepare_windows_test_runtime(root)
   let executable = resolve_path(root, "demo.exe")
   let config = resolve_path(root, "moon.proton")
-  for
-    item in [
-      (resolve_path(runtime, "bin/proton.dll"), "dll"),
-      (resolve_path(runtime, "bin/cef_process.exe"), "helper"),
-      (resolve_path(runtime, "bin/libcef.dll"), "cef"),
-      (resolve_path(runtime, "Resources/icudtl.dat"), "data"),
-      (executable, "exe"),
-      (config, "config"),
-    ] {
+  for item in [(executable, "exe"), (config, "config")] {
     let (path, text) = item
-    match write_text(path, text) {
+    match write_windows_test_file(path, text) {
       Ok(_) => ()
       Err(error) => abort(@debug.render(@debug.to_repr(error)))
     }
@@ -727,7 +762,15 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     sign: false,
     notarize: false,
   }
-  match stage_windows_portable(plan, executable, runtime) {
+  match
+    stage_windows_portable_with_options(
+      plan,
+      executable,
+      runtime,
+      default_windows_sign_tool(),
+      None,
+      false,
+    ) {
     Ok(_) => ()
     Err(error) => abort(@debug.render(@debug.to_repr(error)))
   }
