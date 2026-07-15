@@ -81,6 +81,8 @@ static const char *const expected_exports[] = {
 static const char *const removed_exports[] = {
     "proton_available",
     "proton_window_init_script",
+    "proton_engine_name",
+    "proton_json_parse",
 };
 
 int main(void) {

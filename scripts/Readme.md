@@ -12,9 +12,10 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 
 ## `verify_generated.mjs`
 
-Checks that release metadata is aligned and that committed generated MoonBit
-files match their sources. It writes fresh outputs to a temp directory and
-compares them against the repository.
+Checks release metadata and prebuilt ABI metadata, checks the host platform's
+prebuilt exports, then checks that committed generated MoonBit files match
+their sources. It writes fresh outputs to a temp directory and compares them
+against the repository.
 
 ```sh
 node ./scripts/verify_generated.mjs
@@ -40,6 +41,24 @@ CLI's embedded version string.
 ```sh
 node ./scripts/verify_release_metadata.mjs
 ```
+
+## `verify_prebuilt_abi.mjs`
+
+Checks every shipped Proton prebuilt manifest, declared artifact, and public
+header. Pass a platform id to also inspect that platform's dynamic-library
+exports against the `PROTON_API` declarations in `native/include/proton_native.h`:
+
+```sh
+node ./scripts/verify_prebuilt_abi.mjs --metadata-only
+node ./scripts/verify_prebuilt_abi.mjs darwin-arm64
+node ./scripts/verify_prebuilt_abi.mjs linux-x64
+node ./scripts/verify_prebuilt_abi.mjs win32-x64
+```
+
+CI runs the matching symbol check on each platform. Unix builds hide internal
+symbols by default, while `PROTON_API` remains the public ABI export marker.
+Any extra `proton_*` export fails; platform-specific exceptions are not part of
+the shipped ABI.
 
 ## `e2e_bridge_smoke.mjs`
 

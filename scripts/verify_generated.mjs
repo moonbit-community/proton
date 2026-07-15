@@ -45,8 +45,26 @@ function tempOutputPath(fileName) {
   return path.join(tempRoot, fileName);
 }
 
+function hostPrebuiltPlatform() {
+  if (process.platform === "win32") {
+    return "win32-x64";
+  }
+  if (process.platform === "darwin") {
+    return "darwin-arm64";
+  }
+  if (process.platform === "linux") {
+    return "linux-x64";
+  }
+  return null;
+}
+
 try {
   run("node", [path.join(repoRoot, "scripts", "verify_release_metadata.mjs")]);
+  const platform = hostPrebuiltPlatform();
+  run("node", [
+    path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
+    platform ?? "--metadata-only",
+  ]);
 
   const codegenExtensions = [
     "auto_launch",
