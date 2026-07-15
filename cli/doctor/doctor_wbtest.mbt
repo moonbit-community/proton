@@ -82,6 +82,49 @@ async test "frontend run captures build command output" {
 }
 
 ///|
+test "doctor fix regenerates extensions and honors dry run" {
+  let root = "target/proton-doctor-fix"
+  let extension_dir = path_join(root, "sample")
+  ensure_test_dir(root)
+  @mbfs.create_dir(extension_dir) catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(
+    path_join(extension_dir, "moon.ext"),
+    "id = \"company/sample\"\nnamespace = \"sample\"\n",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(extension_dir, "extension.mbt"),
+    "#proton.command\nfn ping() -> Unit {}\n",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let generated_path = path_join(extension_dir, "extension.g.mbt")
+  @mbfs.write_string_to_file(generated_path, "stale", encoding="utf8") catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let project = discover_project(root)
+  let plan = apply_doctor_fixes(project, dry_run=true)
+  assert_true(plan.lines.any(fn(line) { line.code == "fix.generated.plan" }))
+  let stale = @mbfs.read_file_to_string(generated_path, encoding="utf8") catch {
+    _ => abort("failed to read stale generated file")
+  }
+  assert_eq(stale, "stale")
+  let applied = apply_doctor_fixes(project, dry_run=false)
+  assert_true(
+    applied.lines.any(fn(line) { line.code == "fix.generated.applied" }),
+  )
+  let generated = @mbfs.read_file_to_string(generated_path, encoding="utf8") catch {
+    _ => abort("failed to read generated file")
+  }
+  assert_true(generated.contains("__proton_command_ping"))
+}
+
+///|
 test "doctor formats host OS labels" {
   assert_eq(host_os_label(Some("Darwin"), Some("arm64")), "macOS arm64")
   assert_eq(host_os_label(Some("Linux"), Some("x86_64")), "Linux x86_64")
@@ -150,6 +193,7 @@ test "doctor options filter sections" {
     verbose=false,
     deep=false,
     run_frontend=false,
+    fix=false,
     json=false,
     json_lines=false,
     quiet=false,

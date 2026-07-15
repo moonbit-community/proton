@@ -21,9 +21,18 @@ fn read_project_moon_pkg(
 ///|
 async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
   let project = discover_project(options.cwd)
+  let fix_section = if options.fix {
+    Some(apply_doctor_fixes(project, dry_run=options.dry_run))
+  } else {
+    None
+  }
   let module_config = read_project_moon_mod(project)
   let package_config = read_project_moon_pkg(project)
   let sections : Array[DoctorSection] = []
+  match fix_section {
+    Some(section) => sections.push(section)
+    None => ()
+  }
   if options.includes("project") &&
     (options.verbose || options.sections.contains("project")) {
     sections.push(collect_project(project))
@@ -69,6 +78,7 @@ pub async fn run(
   verbose~ : Bool,
   deep~ : Bool,
   run_frontend~ : Bool,
+  fix~ : Bool,
   json~ : Bool,
   json_lines~ : Bool,
   quiet~ : Bool,
@@ -88,6 +98,7 @@ pub async fn run(
     verbose~,
     deep~,
     run_frontend~,
+    fix~,
     json~,
     json_lines~,
     quiet~,

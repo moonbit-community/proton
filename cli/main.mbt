@@ -7,7 +7,7 @@ fn print_usage() -> Unit {
     #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
     #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
     #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
-    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
+    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
     #|
@@ -270,6 +270,7 @@ async fn run_doctor_from_args(
   let mut verbose = false
   let mut deep = false
   let mut run_frontend = false
+  let mut fix = false
   let mut json = false
   let mut json_lines = false
   let mut quiet = false
@@ -283,6 +284,7 @@ async fn run_doctor_from_args(
       "--verbose" => verbose = true
       "--deep" => deep = true
       "--run" => run_frontend = true
+      "--fix" => fix = true
       "--frontend" => sections.push("frontend")
       "--release" => sections.push("release")
       "--json" => json = true
@@ -304,7 +306,7 @@ async fn run_doctor_from_args(
       }
       "-h" | "--help" => {
         println(
-          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
+          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
         )
         return Ok(())
       }
@@ -349,6 +351,7 @@ async fn run_doctor_from_args(
       verbose~,
       deep~,
       run_frontend~,
+      fix~,
       json~,
       json_lines~,
       quiet~,

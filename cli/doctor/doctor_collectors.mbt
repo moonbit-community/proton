@@ -2035,12 +2035,7 @@ fn collect_extensions(
       package_imports_with_prefix(Some(config), "justjavac/proton_ext/")
     _ => []
   }
-  let nested_extension_root = path_join(project.root, "extensions")
-  let extension_root = if @mbfs.path_exists(nested_extension_root) {
-    nested_extension_root
-  } else {
-    project.root
-  }
+  let extension_root = extension_root_for_project(project)
   let lines : Array[DoctorLine] = []
   let namespaces : Map[String, String] = {}
   let discovered = if @mbfs.path_exists(extension_root) {
@@ -2207,6 +2202,106 @@ fn collect_extensions(
     )
   }
   DoctorSection::new("extensions", "Extensions", section_status(lines), lines)
+}
+
+///|
+fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
+  let nested_extension_root = path_join(project.root, "extensions")
+  if @mbfs.path_exists(nested_extension_root) {
+    nested_extension_root
+  } else {
+    project.root
+  }
+}
+
+///|
+fn write_doctor_fix(path : String, text : String) -> Bool {
+  try @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
+    _ => return false
+  } noraise {
+    _ => true
+  }
+}
+
+///|
+fn apply_doctor_fixes(
+  project : ProjectDoctorInfo,
+  dry_run~ : Bool,
+) -> DoctorSection {
+  let lines : Array[DoctorLine] = []
+  let extension_root = extension_root_for_project(project)
+  let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
+  let mut changed = 0
+  for entry in entries {
+    let extension_dir = path_join(extension_root, entry)
+    let source_path = path_join(extension_dir, "extension.mbt")
+    let metadata_path = path_join(extension_dir, "moon.ext")
+    if !(@mbfs.is_file(source_path) catch { _ => false }) ||
+      !(@mbfs.is_file(metadata_path) catch { _ => false }) {
+      continue
+    }
+    let source = @mbfs.read_file_to_string(source_path, encoding="utf8") catch {
+      _ => ""
+    }
+    if !source.contains("#proton.") {
+      continue
+    }
+    let generated_path = path_join(extension_dir, "extension.g.mbt")
+    match @codegen.generate_app_commands_from_file_with_metadata(source_path) {
+      Ok(generated) => {
+        let current = @mbfs.read_file_to_string(generated_path, encoding="utf8") catch {
+          _ => ""
+        }
+        if current != generated.source {
+          changed += 1
+          if dry_run {
+            lines.push(
+              DoctorLine::coded(
+                "fix.generated.plan",
+                Neutral,
+                "would regenerate " + generated_path,
+              ),
+            )
+          } else if write_doctor_fix(generated_path, generated.source) {
+            lines.push(
+              DoctorLine::coded(
+                "fix.generated.applied",
+                Ok,
+                "regenerated " + generated_path,
+              ),
+            )
+          } else {
+            lines.push(
+              DoctorLine::coded(
+                "fix.generated.failed",
+                Error,
+                "failed to regenerate " + generated_path,
+              ),
+            )
+          }
+        }
+      }
+      Err(error) =>
+        lines.push(
+          DoctorLine::coded(
+            "fix.generated.invalid",
+            Error,
+            "cannot regenerate " + source_path,
+            hint=error,
+          ),
+        )
+    }
+  }
+  if changed == 0 && lines.length() == 0 {
+    lines.push(
+      DoctorLine::coded(
+        "fix.none",
+        Neutral,
+        "no safe automatic fixes are available",
+      ),
+    )
+  }
+  DoctorSection::new("fixes", "Fixes", section_status(lines), lines)
 }
 
 ///|

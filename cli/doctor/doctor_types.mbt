@@ -127,6 +127,7 @@ priv struct DoctorOptions {
   verbose : Bool
   deep : Bool
   run_frontend : Bool
+  fix : Bool
   json : Bool
   json_lines : Bool
   quiet : Bool
@@ -141,6 +142,7 @@ fn DoctorOptions::new(
   verbose~ : Bool,
   deep~ : Bool,
   run_frontend~ : Bool,
+  fix~ : Bool,
   json~ : Bool,
   json_lines~ : Bool,
   quiet~ : Bool,
@@ -153,6 +155,7 @@ fn DoctorOptions::new(
     verbose,
     deep,
     run_frontend,
+    fix,
     json,
     json_lines,
     quiet,
