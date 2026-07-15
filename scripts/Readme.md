@@ -33,7 +33,9 @@ put `dev_build` or repository-relative codegen rules back into `proton` or
 ## `verify_release_metadata.mjs`
 
 Checks that `proton/prebuilt/*/manifest.json` and the `proton new` template
-default version match `proton/moon.mod`.
+default version match `proton/moon.mod`. It also checks the published-module
+dependency chain from `proton_config` into `proton` and `proton_cli`, plus the
+CLI's embedded version string.
 
 ```sh
 node ./scripts/verify_release_metadata.mjs

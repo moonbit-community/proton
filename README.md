@@ -18,8 +18,9 @@ directly and does not provide a compatibility layer for the old runtime route.
 
 CMake is the only native build entry point.
 
-For release packaging, build the Windows engine-backed native runtime, then
-stage only the Proton artifacts into `proton/prebuilt/win32-x64/`:
+For release packaging, build the engine-backed native runtime for the target
+platform, then stage only the Proton artifacts into
+`proton/prebuilt/<platform>/`. For example, on Windows:
 
 ```powershell
 cmake -S native -B native\build-engine `
@@ -30,21 +31,24 @@ cmake --build native\build-engine --config Debug
 cmake --install native\build-engine --config Debug
 ```
 
-The package ships these files:
+The published module uses the same platform layout everywhere:
 
 ```text
+proton/prebuilt/<platform>/bin/cef_process(.exe)
 proton/prebuilt/win32-x64/bin/proton.dll
-proton/prebuilt/win32-x64/bin/cef_process.exe
 proton/prebuilt/win32-x64/lib/proton.lib
-proton/prebuilt/win32-x64/include/proton_native.h
+proton/prebuilt/darwin-*/lib/libproton.dylib
+proton/prebuilt/linux-*/lib/libproton.so
+proton/prebuilt/<platform>/include/proton_native.h
+proton/prebuilt/<platform>/manifest.json
 ```
 
 CEF files are not shipped in the package. `proton_cli cef setup` downloads or
 reuses CEF and assembles the complete project runtime under `.proton/`.
 
-Platform prebuilds live under `proton/prebuilt/<platform>/`. The currently
-shipped prebuild is `win32-x64`; macOS packaging should use `darwin-arm64`
-and/or `darwin-x64` with the same Proton-only rule.
+The currently shipped prebuilds are `win32-x64`, `darwin-arm64`, and
+`linux-x64`. Adding another platform requires the same Proton-only artifact
+rule and a matching manifest.
 
 The ABI-only build is still useful for binding tests:
 
@@ -54,9 +58,9 @@ cmake --build native\build --config Debug
 cmake --install native\build --config Debug
 ```
 
-On non-Windows platforms the CMake install layout uses `libproton.so` or
-`libproton.dylib`. Engine-backed CMake builds are wired for Windows and macOS;
-`proton_cli cef setup` packaging is currently Windows-only.
+`proton_cli cef setup` detects the host platform, requires a matching Proton
+prebuild, downloads or reuses the platform CEF archive, and writes the active
+runtime manifest under `.proton/runtime.json`.
 
 ## Link From MoonBit
 
@@ -78,17 +82,16 @@ options(
 )
 ```
 
-Install the CLI and assemble the active native runtime:
+Install the CLI:
 
 ```powershell
 moon install justjavac/proton_cli
-proton_cli cef setup
 ```
 
 Create a new native app scaffold:
 
 ```powershell
-proton_cli new my-counter --title "My Counter"
+proton_cli new my-counter --title "My Counter" --identifier "com.example.my-counter"
 ```
 
 `proton_cli new` generates a native-first MoonBit project with `app/` as the
@@ -97,6 +100,13 @@ runnable package, `extensions/counter/` as a reusable command-bridge extension,
 uses `@proton.app()` to load the nearest `moon.proton` config. It runs the
 native check by default; use `--no-check` to skip that check, or `-y/--yes` in
 scripts to accept defaults and skip prompts.
+
+The scaffold includes a reverse-DNS application identifier and an active
+`bundle` block targeting both the platform application and zip archive. When
+`--identifier` is omitted, Proton derives `dev.proton.<project-name>`.
+
+See [Creating a Proton project](docs/new-project.md) for all creation options,
+the generated layout, and the complete development and packaging workflow.
 
 Run a scaffolded app through the development supervisor:
 
@@ -129,8 +139,9 @@ development and runtime environment variables injected. Vite/Next own HMR;
 Proton keeps command handlers in the MoonBit app process.
 
 `proton_cli package` builds a release application from the same `moon.proton`
-configuration and active `.proton/runtime.json` used by development. Enable the
-bundle block first:
+configuration and active `.proton/runtime.json` used by development. Projects
+created by the current `proton_cli new` already contain an active bundle block.
+For an existing project, add one manually:
 
 ```moonbit
 bundle = {

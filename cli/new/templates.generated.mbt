@@ -39,6 +39,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "moon.proton.mtpl",
       template_source: (
           #|product_name = {{title_mbt}}
+          #|identifier = {{identifier_mbt}}
           #|
           #|window = {
           #|  title: {{title_mbt}},
@@ -53,6 +54,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|debug = true
+          #|
+          #|bundle = {
+          #|  active: true,
+          #|  targets: ["app", "zip"],
+          #|  output: "target/proton-dist",
+          #|}
           #|
       ),
     },
@@ -384,6 +391,9 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- Format with `moon fmt`.
           #|- Check with `moon check --target native --diagnostic-limit 80`.
           #|- Run with `proton_cli dev` from the project root.
+          #|- Build with `proton_cli build`.
+          #|- Inspect packaging with `proton_cli package app --dry-run`.
+          #|- Package with `proton_cli package app`.
           #|- If the Proton runtime is not configured, run `proton_cli cef setup`.
           #|
           #|## Project Notes
@@ -422,11 +432,27 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli dev
           #|```
           #|
+          #|## Build
+          #|
+          #|```sh
+          #|proton_cli build
+          #|```
+          #|
+          #|## Package
+          #|
+          #|Inspect the resolved package plan, then create the application and zip archive:
+          #|
+          #|```sh
+          #|proton_cli package app --dry-run
+          #|proton_cli package app
+          #|```
+          #|
           #|## Layout
           #|
           #|- `app/` is the runnable application.
           #|- `extensions/counter/` is the counter extension used by the app.
           #|- `extensions/counter/` cannot be run directly.
+          #|- `target/proton-dist/` contains packaged application artifacts.
           #|
       ),
     },

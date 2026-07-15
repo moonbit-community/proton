@@ -3,7 +3,7 @@ fn print_usage() -> Unit {
   let usage =
     #|Usage:
     #|  proton_cli version
-    #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
+    #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--identifier <id>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
     #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
     #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
     #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
@@ -17,7 +17,7 @@ fn print_usage() -> Unit {
 }
 
 ///|
-let cli_current_version : String = "0.1.5"
+let cli_current_version : String = "0.1.6"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"

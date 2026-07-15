@@ -92,6 +92,59 @@ fn slug_to_title(slug : String) -> String {
 }
 
 ///|
+fn default_bundle_identifier(slug : String) -> String {
+  let component = slug
+    .replace_all(old="_", new="-")
+    .replace_all(old=".", new="-")
+  let component = if component == "" {
+    "app"
+  } else if starts_with_ascii_alphanumeric(component) {
+    component
+  } else {
+    "app-" + component
+  }
+  "dev.proton." + component
+}
+
+///|
+fn starts_with_ascii_alphanumeric(value : String) -> Bool {
+  for char in value {
+    return char.is_ascii_alphabetic() || char.is_ascii_digit()
+  }
+  false
+}
+
+///|
+fn validate_bundle_identifier(identifier : String) -> Result[Unit, String] {
+  let value = identifier.trim().to_owned()
+  let components : Array[StringView] = value.split(".").collect()
+  guard components.length() >= 2 else {
+    return Err("identifier must be a reverse-DNS bundle identifier: " + value)
+  }
+  for component in components {
+    guard component.length() > 0 else {
+      return Err("identifier contains an empty component: " + value)
+    }
+    let mut at_start = true
+    for char in component {
+      if at_start {
+        guard char.is_ascii_alphabetic() || char.is_ascii_digit() else {
+          return Err(
+            "identifier component must start with an ASCII letter or digit: " +
+            value,
+          )
+        }
+        at_start = false
+      }
+      guard char.is_ascii_alphabetic() || char.is_ascii_digit() || char == '-' else {
+        return Err("identifier contains an unsupported character: " + value)
+      }
+    }
+  }
+  Ok(())
+}
+
+///|
 fn parse_positive_int(value : String, label : String) -> Result[Int, String] {
   let parsed = @string.parse_int(value[:]) catch {
     _ => return Err(label + " must be a positive integer: " + value)
