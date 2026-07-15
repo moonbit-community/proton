@@ -214,7 +214,7 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
   let root = "target/proton package windows layout with spaces"
   let (executable, _) = prepare_windows_test_inputs(root)
   let runtime = prepare_windows_test_runtime(root)
-  let plan = windows_test_plan(root, ["app", "zip"], false)
+  let plan = windows_test_plan(root, ["app"], false)
   let output = windows_portable_output(plan)
   match ensure_dir(output) {
     Err(error) => abort(package_error_text(error))
@@ -252,6 +252,27 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
   }
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))
   assert_false(@mbfs.path_exists(output + ".backup"))
+}
+
+///|
+#cfg(platform="windows")
+async test "Windows portable zip is atomic and extracts from paths with spaces" {
+  let root = "target/proton-package-windows-zip with spaces"
+  let (executable, _) = prepare_windows_test_inputs(root)
+  let runtime = prepare_windows_test_runtime(root)
+  let plan = windows_test_plan(root, ["app", "zip"], false)
+  match
+    stage_windows_portable_with_options(
+      plan,
+      executable,
+      runtime,
+      default_windows_sign_tool(),
+      None,
+      false,
+    ) {
+    Err(error) => abort(package_error_text(error))
+    Ok(_) => ()
+  }
   let archive = windows_archive_path(plan)
   assert_true(path_is_file(archive))
   assert_false(@mbfs.path_exists(windows_archive_staging_path(plan)))
@@ -372,6 +393,7 @@ async test "Windows signing rejects a missing target before invoking signtool" {
 }
 
 ///|
+#cfg(platform="windows")
 async test "Windows signing failure does not leak the certificate password" {
   let root = "target/proton-package-windows-sign-failure"
   let (_, _) = prepare_windows_test_inputs(root)
@@ -412,6 +434,7 @@ async test "Windows signing failure does not leak the certificate password" {
 }
 
 ///|
+#cfg(platform="windows")
 async test "Windows signing failure blocks promotion" {
   let root = "target/proton-package-windows-sign-promotion-failure"
   let (executable, _) = prepare_windows_test_inputs(root)
@@ -448,6 +471,7 @@ async test "Windows signing failure blocks promotion" {
 }
 
 ///|
+#cfg(platform="windows")
 async test "Windows signature verification failure blocks promotion" {
   let root = "target/proton-package-windows-verify-failure"
   let (executable, _) = prepare_windows_test_inputs(root)
