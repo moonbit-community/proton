@@ -291,9 +291,8 @@ int32_t proton_engine_window_begin_message_dialog(
   if (out_dialog != NULL) {
     *out_dialog = PROTON_INVALID_HANDLE;
   }
-  proton_engine_set_message(error, error_len,
-                            "async native dialogs require the CEF engine");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_set_error(
+      error, error_len, "async native dialogs require the CEF engine");
 }
 
 int32_t proton_engine_window_begin_confirm_dialog(
@@ -328,9 +327,8 @@ int32_t proton_engine_window_begin_open_file_dialog(
   if (out_dialog != NULL) {
     *out_dialog = PROTON_INVALID_HANDLE;
   }
-  proton_engine_set_message(error, error_len,
-                            "async native dialogs require the CEF engine");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_set_error(
+      error, error_len, "async native dialogs require the CEF engine");
 }
 
 int32_t proton_engine_window_begin_save_file_dialog(
@@ -376,9 +374,8 @@ int32_t proton_engine_window_poll_dialog_result(
   if (out_required_len != NULL) {
     *out_required_len = 0;
   }
-  proton_engine_set_message(error, error_len,
-                            "async native dialogs require the CEF engine");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_set_error(
+      error, error_len, "async native dialogs require the CEF engine");
 }
 
 int32_t proton_engine_post_notification(
