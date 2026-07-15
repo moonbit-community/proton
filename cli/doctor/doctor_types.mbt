@@ -126,6 +126,7 @@ priv struct DoctorOptions {
   dry_run : Bool
   verbose : Bool
   deep : Bool
+  run_frontend : Bool
   json : Bool
   json_lines : Bool
   quiet : Bool
@@ -139,13 +140,25 @@ fn DoctorOptions::new(
   dry_run~ : Bool,
   verbose~ : Bool,
   deep~ : Bool,
+  run_frontend~ : Bool,
   json~ : Bool,
   json_lines~ : Bool,
   quiet~ : Bool,
   sections~ : Array[String],
   output~ : String?,
 ) -> DoctorOptions {
-  { cwd, dry_run, verbose, deep, json, json_lines, quiet, sections, output }
+  {
+    cwd,
+    dry_run,
+    verbose,
+    deep,
+    run_frontend,
+    json,
+    json_lines,
+    quiet,
+    sections,
+    output,
+  }
 }
 
 ///|

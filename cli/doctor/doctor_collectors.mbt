@@ -679,6 +679,26 @@ async fn platform_command_line(
 }
 
 ///|
+async fn collect_command_status(
+  command : String,
+  args : Array[String],
+  cwd : String?,
+) -> (Int, String) {
+  let result = match cwd {
+    Some(cwd) =>
+      @process.collect_output_merged(command, args, cwd~) catch {
+        _ => return (-1, "")
+      }
+    None =>
+      @process.collect_output_merged(command, args) catch {
+        _ => return (-1, "")
+      }
+  }
+  let (status, output) = result
+  (status, output.text() catch { _ => "" })
+}
+
+///|
 async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   let platform_id = @cef.current_platform_id()
@@ -967,6 +987,395 @@ async fn collect_runtime(
     )
   }
   DoctorSection::new("runtime", "Runtime", section_status(lines), lines)
+}
+
+///|
+fn frontend_script_name(command : String) -> String? {
+  let trimmed = command.trim()
+  let rest = if trimmed.has_prefix("npm run ") {
+    Some(trimmed[8:])
+  } else if trimmed.has_prefix("yarn ") {
+    Some(trimmed[5:])
+  } else if trimmed.has_prefix("pnpm ") {
+    Some(trimmed[5:])
+  } else if trimmed.has_prefix("bun run ") {
+    Some(trimmed[8:])
+  } else {
+    None
+  }
+  match rest {
+    Some(rest) =>
+      match rest.trim().split(" ").collect() {
+        [name, ..] if name != "" => Some(name.to_owned())
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn push_frontend_dist_diagnostics(
+  lines : Array[DoctorLine],
+  project : ProjectDoctorInfo,
+  dist : String?,
+) -> Unit {
+  push_frontend_path_check(
+    lines,
+    project,
+    "frontend.dist",
+    "frontend dist",
+    dist,
+    required=false,
+  )
+  match dist {
+    Some(dist) => {
+      let exists = @mbfs.is_dir(dist) catch { _ => false }
+      if exists {
+        let entries = @mbfs.read_dir(dist) catch { _ => [] }
+        if entries.length() > 0 {
+          lines.push(
+            DoctorLine::coded(
+              "frontend.dist.nonempty",
+              Ok,
+              "frontend dist is non-empty",
+            ),
+          )
+        } else {
+          lines.push(
+            DoctorLine::coded(
+              "frontend.dist.empty",
+              Warn,
+              "frontend dist is empty",
+            ),
+          )
+        }
+      }
+    }
+    None => ()
+  }
+}
+
+///|
+async fn collect_frontend(
+  project : ProjectDoctorInfo,
+  run~ : Bool,
+) -> DoctorSection {
+  let lines : Array[DoctorLine] = []
+  let config = match project.moon_proton_path {
+    Some(path) =>
+      match read_proton_project_config(path) {
+        Ok(config) => config
+        Err(error) => {
+          lines.push(
+            DoctorLine::coded(
+              "frontend.config.invalid",
+              Error,
+              "moon.proton failed to load",
+              hint=error,
+            ),
+          )
+          return DoctorSection::new(
+            "frontend",
+            "Frontend",
+            section_status(lines),
+            lines,
+          )
+        }
+      }
+    None => {
+      lines.push(
+        DoctorLine::coded(
+          "frontend.config.missing",
+          Neutral,
+          "moon.proton has no frontend configuration",
+        ),
+      )
+      return DoctorSection::new(
+        "frontend",
+        "Frontend",
+        section_status(lines),
+        lines,
+      )
+    }
+  }
+  let frontend = match config.frontend {
+    Some(frontend) => frontend
+    None => {
+      lines.push(
+        DoctorLine::coded(
+          "frontend.not_configured",
+          Neutral,
+          "frontend is not configured",
+        ),
+      )
+      return DoctorSection::new(
+        "frontend",
+        "Frontend",
+        section_status(lines),
+        lines,
+      )
+    }
+  }
+  let frontend_root = frontend.cwd.unwrap_or(project.root)
+  if !path_is_within_project(project, frontend_root) {
+    lines.push(
+      DoctorLine::coded(
+        "frontend.cwd.outside_project",
+        Error,
+        "frontend cwd is outside the project root: " + frontend_root,
+      ),
+    )
+    return DoctorSection::new(
+      "frontend",
+      "Frontend",
+      section_status(lines),
+      lines,
+    )
+  }
+  if !(@mbfs.is_dir(frontend_root) catch { _ => false }) {
+    lines.push(
+      DoctorLine::coded(
+        "frontend.cwd.missing",
+        Error,
+        "frontend cwd is missing: " + frontend_root,
+      ),
+    )
+    return DoctorSection::new(
+      "frontend",
+      "Frontend",
+      section_status(lines),
+      lines,
+    )
+  }
+  lines.push(
+    DoctorLine::coded("frontend.cwd", Ok, "frontend cwd: " + frontend_root),
+  )
+  let package_path = path_join(frontend_root, "package.json")
+  let package_json = if @mbfs.path_exists(package_path) {
+    let text = @mbfs.read_file_to_string(package_path, encoding="utf8") catch {
+      _ => ""
+    }
+    let parsed = @json.parse(text) catch { _ => Json::null() }
+    match parsed {
+      Object(object) => {
+        lines.push(
+          DoctorLine::coded("frontend.package_json", Ok, "package.json found"),
+        )
+        Some(object)
+      }
+      _ => {
+        lines.push(
+          DoctorLine::coded(
+            "frontend.package_json.invalid",
+            Error,
+            "package.json is invalid",
+          ),
+        )
+        None
+      }
+    }
+  } else {
+    lines.push(
+      DoctorLine::coded(
+        "frontend.package_json.missing",
+        Warn,
+        "package.json is missing",
+      ),
+    )
+    None
+  }
+  let lock_candidates = [
+    ("package-lock.json", "npm"),
+    ("pnpm-lock.yaml", "pnpm"),
+    ("yarn.lock", "yarn"),
+    ("bun.lockb", "bun"),
+  ]
+  let mut manager : String? = None
+  let mut lock_count = 0
+  for item in lock_candidates {
+    let (lock_name, candidate) = item
+    if @mbfs.path_exists(path_join(frontend_root, lock_name)) {
+      lock_count += 1
+      if manager is None {
+        manager = Some(candidate)
+      }
+      lines.push(
+        DoctorLine::coded(
+          "frontend.lockfile",
+          Ok,
+          "lockfile: " + lock_name + " (" + candidate + ")",
+        ),
+      )
+    }
+  }
+  if lock_count > 1 {
+    lines.push(
+      DoctorLine::coded(
+        "frontend.lockfile.multiple",
+        Warn,
+        "multiple package-manager lockfiles were found",
+      ),
+    )
+  }
+  match manager {
+    Some(manager) =>
+      lines.push(
+        platform_command_line(
+          "frontend.manager",
+          manager,
+          manager,
+          ["--version"],
+          Warn,
+        ),
+      )
+    None =>
+      lines.push(
+        DoctorLine::coded(
+          "frontend.lockfile.missing",
+          Unknown,
+          "no supported package-manager lockfile found",
+        ),
+      )
+  }
+  match package_json {
+    Some(object) =>
+      match object.get("scripts") {
+        Some(Object(scripts)) =>
+          for
+            item in [
+              ("dev", frontend.before_dev),
+              ("build", frontend.before_build),
+            ] {
+            let (label, command) = item
+            match (command, frontend_script_name(command.unwrap_or(""))) {
+              (Some(_), Some(script_name)) if !scripts.contains(script_name) =>
+                lines.push(
+                  DoctorLine::coded(
+                    "frontend.script.missing",
+                    Error,
+                    "package.json is missing script `" +
+                    script_name +
+                    "` for " +
+                    label,
+                  ),
+                )
+              (Some(_), Some(script_name)) =>
+                lines.push(
+                  DoctorLine::coded(
+                    "frontend.script",
+                    Ok,
+                    "package.json script exists: " + script_name,
+                  ),
+                )
+              _ => ()
+            }
+          }
+        _ =>
+          lines.push(
+            DoctorLine::coded(
+              "frontend.scripts.missing",
+              Warn,
+              "package.json has no scripts object",
+            ),
+          )
+      }
+    None => ()
+  }
+  if !run {
+    push_frontend_dist_diagnostics(lines, project, frontend.dist)
+  }
+  if run {
+    match frontend.before_build {
+      Some(command) => {
+        let (shell, args) = if @path.sep == '\\' {
+          ("cmd", ["/c", command])
+        } else {
+          ("sh", ["-c", command])
+        }
+        let (status, output) = collect_command_status(
+          shell,
+          args,
+          Some(frontend_root),
+        )
+        if status == 0 {
+          lines.push(
+            DoctorLine::coded(
+              "frontend.before_build.run",
+              Ok,
+              "before_build completed",
+            ),
+          )
+        } else {
+          lines.push(
+            DoctorLine::coded(
+              "frontend.before_build.failed",
+              Error,
+              "before_build failed with code " + status.to_string(),
+              hint=first_non_empty_line(output).unwrap_or(
+                "build command failed",
+              ),
+            ),
+          )
+        }
+      }
+      None =>
+        lines.push(
+          DoctorLine::coded(
+            "frontend.before_build.not_configured",
+            Neutral,
+            "before_build is not configured",
+          ),
+        )
+    }
+    match frontend.dev_url {
+      Some(url) => {
+        let (status, body) = collect_command_status(
+          "curl",
+          ["-fsS", "--max-time", "2", url],
+          None,
+        )
+        if status == 0 {
+          let normalized = body.to_lower()
+          if normalized.contains("<html") || normalized.contains("<!doctype") {
+            lines.push(
+              DoctorLine::coded(
+                "frontend.dev_url.html",
+                Ok,
+                "dev_url is reachable and returned HTML",
+              ),
+            )
+          } else {
+            lines.push(
+              DoctorLine::coded(
+                "frontend.dev_url.non_html",
+                Warn,
+                "dev_url is reachable but did not return HTML",
+              ),
+            )
+          }
+        } else {
+          lines.push(
+            DoctorLine::coded(
+              "frontend.dev_url.unreachable",
+              Warn,
+              "dev_url is not reachable",
+            ),
+          )
+        }
+      }
+      None => ()
+    }
+    push_frontend_dist_diagnostics(lines, project, frontend.dist)
+  } else {
+    lines.push(
+      DoctorLine::coded(
+        "frontend.run.skipped",
+        Neutral,
+        "frontend commands and URL probes skipped; use --run",
+      ),
+    )
+  }
+  DoctorSection::new("frontend", "Frontend", section_status(lines), lines)
 }
 
 ///|

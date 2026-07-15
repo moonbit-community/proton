@@ -42,6 +42,46 @@ test "doctor compares dependency major minor versions" {
 }
 
 ///|
+test "doctor extracts frontend script names" {
+  @debug.assert_eq(
+    frontend_script_name("npm run build -- --mode prod"),
+    Some("build"),
+  )
+  @debug.assert_eq(frontend_script_name("pnpm dev"), Some("dev"))
+  @debug.assert_eq(frontend_script_name("bun run test"), Some("test"))
+  assert_true(frontend_script_name("vite build") is None)
+}
+
+///|
+async test "frontend run captures build command output" {
+  let dir = "target/proton-doctor-frontend-run"
+  ensure_test_dir(dir)
+  @mbfs.write_string_to_file(
+    path_join(dir, "moon.proton"),
+    (
+      #|window = { title: "Demo", width: 800, height: 600 }
+      #|entry = { kind: "html", value: "<h1>Demo</h1>" }
+      #|frontend = { before_build: "npm --version", cwd: "." }
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(dir, "package.json"),
+    "{\"scripts\":{}}",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let section = collect_frontend(discover_project(dir), run=true)
+  assert_true(
+    section.lines.any(fn(line) { line.code == "frontend.before_build.run" }),
+  )
+}
+
+///|
 test "doctor formats host OS labels" {
   assert_eq(host_os_label(Some("Darwin"), Some("arm64")), "macOS arm64")
   assert_eq(host_os_label(Some("Linux"), Some("x86_64")), "Linux x86_64")
@@ -109,6 +149,7 @@ test "doctor options filter sections" {
     dry_run=false,
     verbose=false,
     deep=false,
+    run_frontend=false,
     json=false,
     json_lines=false,
     quiet=false,

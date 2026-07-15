@@ -15,6 +15,10 @@ import {
   "moonbitlang/moon_config",
 }
 
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
 supported_targets = "native"
 
 options(

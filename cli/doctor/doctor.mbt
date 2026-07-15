@@ -37,6 +37,9 @@ async fn build_doctor_report(options : DoctorOptions) -> DoctorReport {
   if options.includes("platform") {
     sections.push(collect_platform(project))
   }
+  if options.includes("frontend") {
+    sections.push(collect_frontend(project, run=options.run_frontend))
+  }
   if options.includes("packages") {
     sections.push(
       collect_packages(
@@ -62,6 +65,7 @@ pub async fn run(
   dry_run~ : Bool,
   verbose~ : Bool,
   deep~ : Bool,
+  run_frontend~ : Bool,
   json~ : Bool,
   json_lines~ : Bool,
   quiet~ : Bool,
@@ -80,6 +84,7 @@ pub async fn run(
     dry_run~,
     verbose~,
     deep~,
+    run_frontend~,
     json~,
     json_lines~,
     quiet~,
