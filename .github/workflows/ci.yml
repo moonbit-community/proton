@@ -51,6 +51,21 @@ jobs:
         with:
           node-version: 24
 
+      - name: Test prebuilt ABI verifier
+        run: node --test scripts/verify_prebuilt_abi_test.mjs
+
+      - name: Verify Linux prebuilt ABI
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: node scripts/verify_prebuilt_abi.mjs linux-x64
+
+      - name: Verify macOS prebuilt ABI
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: node scripts/verify_prebuilt_abi.mjs darwin-arm64
+
+      - name: Verify Windows prebuilt ABI
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: node scripts/verify_prebuilt_abi.mjs win32-x64
+
       - name: Install Proton CLI for pre-build codegen on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
