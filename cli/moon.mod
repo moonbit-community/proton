@@ -19,7 +19,7 @@ readme = "codegen/README.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/cli"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [ "proton", "cli", "codegen" ]
 
