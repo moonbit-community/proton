@@ -334,10 +334,16 @@ async fn run_doctor_from_args(
       CliError::UsageError("--run requires the frontend section", false),
     )
   }
+  if fix && sections.length() > 0 && !sections.contains("fixes") {
+    sections.push("fixes")
+  }
+  if sections.contains("fixes") && !fix {
+    return Err(CliError::UsageError("the fixes section requires --fix", false))
+  }
   for section in sections {
     if ![
         "project", "environment", "runtime", "platform", "packages", "extensions",
-        "app", "frontend", "release",
+        "app", "frontend", "release", "fixes",
       ].contains(section) {
       return Err(
         CliError::UsageError("unknown doctor section: " + section, false),

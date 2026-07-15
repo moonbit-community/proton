@@ -271,6 +271,18 @@ fn first_non_empty_line(text : String) -> String? {
 }
 
 ///|
+fn last_non_empty_line(text : String) -> String? {
+  let mut result : String? = None
+  for raw in text.replace(old="\r\n", new="\n").split("\n") {
+    let line = raw.trim().to_owned()
+    if line != "" {
+      result = Some(line)
+    }
+  }
+  result
+}
+
+///|
 async fn tool_version_line(
   label : String,
   commands : Array[String],
@@ -1529,7 +1541,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
           "release.publish.dry_run_failed",
           Error,
           "moon publish --dry-run failed",
-          hint=first_non_empty_line(output).unwrap_or("publish dry-run failed"),
+          hint=last_non_empty_line(output).unwrap_or("publish dry-run failed"),
         ),
       )
     }
@@ -1565,7 +1577,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
               "release.generated.stale",
               Error,
               "generated file verification failed",
-              hint=first_non_empty_line(output).unwrap_or(
+              hint=last_non_empty_line(output).unwrap_or(
                 "generated files are stale",
               ),
             ),

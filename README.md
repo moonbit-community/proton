@@ -158,6 +158,56 @@ sample executables), and are verified before replacing an existing package.
 Run `powershell -NoProfile -File scripts\windows_package_smoke.ps1` for the
 temporary self-signed development regression after `cef setup`.
 
+### Diagnose a Proton project
+
+`proton_cli doctor` is a read-only health check for the current project. The
+default run checks the environment, active runtime, host platform, frontend
+configuration, packages, extensions, and app configuration:
+
+```sh
+proton_cli doctor
+```
+
+Use the deeper checks when investigating a machine or a release candidate:
+
+```sh
+proton_cli doctor --deep                 # runtime manifest and ABI smoke test
+proton_cli doctor --frontend             # frontend package/config checks
+proton_cli doctor --frontend --run       # also run before_build and probe dev_url
+proton_cli doctor --release              # publish, generated files, and signing preflight
+```
+
+The release section intentionally reports missing local signing/notarization
+configuration and other publish failures; it does not change project files.
+Frontend commands and URL probes only run when `--run` is explicitly supplied.
+
+For automation, select sections and choose a stable output format:
+
+```sh
+proton_cli doctor --section runtime --section platform --json
+proton_cli doctor --json-lines --output target/doctor.jsonl
+proton_cli doctor --quiet
+```
+
+`--json` emits one schema-versioned object, while `--json-lines` emits one
+diagnostic per line followed by a summary record. Every diagnostic has a
+stable `code`, `status`, and `text`; `--quiet` prints only warnings and
+failures. `--verbose` includes the project section, and `--output` writes the
+selected rendering to a file instead of stdout.
+
+The only automatic repair supported today is regenerating stale extension
+artifacts through the existing code generator:
+
+```sh
+proton_cli doctor --fix --dry-run   # show the planned changes
+proton_cli doctor --fix             # apply only safe generated-file repairs
+```
+
+`--fix` never overwrites runtime manifests, dependencies, signing settings, or
+other user configuration. When sections are selected, the `fixes` result is
+included automatically; `--section fixes` is also available with `--fix`.
+Run the doctor again after applying fixes.
+
 `proton/native_link_config.mjs` resolves link inputs in this order:
 
 1. `PROTON_NATIVE_DIST`

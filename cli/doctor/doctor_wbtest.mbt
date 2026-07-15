@@ -364,6 +364,10 @@ test "doctor collector extracts first non-empty version line" {
     Some("moon 0.1.0"),
   )
   @debug.assert_eq(first_non_empty_line("\r\n\n"), None)
+  @debug.assert_eq(
+    last_non_empty_line("\r\nfirst\n  final diagnostic  \n"),
+    Some("final diagnostic"),
+  )
 }
 
 ///|
