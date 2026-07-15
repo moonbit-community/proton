@@ -6,9 +6,13 @@ development. Packaging does not download or link a second native runtime.
 
 ## Bundle configuration
 
-Enable the bundle block in `moon.proton`:
+Projects created by the current `proton_cli new` already include a reverse-DNS
+identifier and an active bundle targeting `app` and `zip`. Existing projects
+must add an `identifier` and enable the bundle block in `moon.proton`:
 
 ```moonbit
+identifier = "com.example.my-app"
+
 bundle = {
   active: true,
   targets: ["app", "zip"],
