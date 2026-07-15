@@ -102,6 +102,51 @@ test "package plan defaults to app and zip" {
 }
 
 ///|
+#cfg(not(platform="windows"))
+test "macOS package paths normalize absolute and relative inputs" {
+  let base = resolve_path("target", "proton package path base")
+  assert_eq(resolve_path(base, "/"), "/")
+  assert_eq(
+    resolve_path(base, "/tmp/proton absolute path"),
+    "/tmp/proton absolute path",
+  )
+  assert_eq(
+    resolve_path(base, "relative/file.txt"),
+    base + "/relative/file.txt",
+  )
+  assert_eq(
+    resolve_path(base, ".proton/runtime.json"),
+    base + "/.proton/runtime.json",
+  )
+  assert_eq(
+    resolve_path(base, "directory with spaces/file.txt"),
+    base + "/directory with spaces/file.txt",
+  )
+  assert_eq(
+    resolve_path(base, "../sibling"),
+    resolve_path(path_parent(base), "sibling"),
+  )
+  assert_eq(resolve_path(base, "nested\\child.txt"), base + "/nested/child.txt")
+  assert_eq(resolve_path(base, "\\tmp\\proton path"), "/tmp/proton path")
+}
+
+///|
+#cfg(not(platform="windows"))
+async test "macOS ensure_dir recursively creates absolute paths with spaces" {
+  let root = resolve_path("target", "proton package ensure dir")
+  match remove_tree(root) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let nested = resolve_path(root, "parent with spaces/child/grandchild")
+  match ensure_dir(nested) {
+    Ok(_) => ()
+    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+  }
+  assert_true(path_is_dir(nested))
+}
+
+///|
 test "package executable name is filesystem safe" {
   assert_eq(package_executable_name("My Proton App!"), "my-proton-app")
   assert_eq(package_executable_name("  ---  "), "proton-app")
