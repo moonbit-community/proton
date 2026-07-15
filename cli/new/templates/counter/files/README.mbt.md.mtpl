@@ -21,8 +21,24 @@ moon check --target native --diagnostic-limit 80
 proton_cli dev
 ```
 
+## Build
+
+```sh
+proton_cli build
+```
+
+## Package
+
+Inspect the resolved package plan, then create the application and zip archive:
+
+```sh
+proton_cli package app --dry-run
+proton_cli package app
+```
+
 ## Layout
 
 - `app/` is the runnable application.
 - `extensions/counter/` is the counter extension used by the app.
 - `extensions/counter/` cannot be run directly.
+- `target/proton-dist/` contains packaged application artifacts.

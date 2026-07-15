@@ -11,6 +11,7 @@ priv struct TemplateContext {
   title_mbt : String
   module_name : String
   module_mbt : String
+  identifier_mbt : String
   module_counter_import_mbt : String
   counter_extension_id_mbt : String
   width : Int
@@ -42,6 +43,7 @@ struct PlannedFile {
 fn template_context(
   title : String,
   module_name : String,
+  identifier : String,
   width : Int,
   height : Int,
 ) -> TemplateContext {
@@ -51,6 +53,7 @@ fn template_context(
     title_mbt: mbt_string(title),
     module_name,
     module_mbt: mbt_string(module_name),
+    identifier_mbt: mbt_string(identifier),
     module_counter_import_mbt: mbt_string(module_name + "/extensions/counter"),
     counter_extension_id_mbt: mbt_string(module_name + "/counter"),
     width,
@@ -68,6 +71,7 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "title_mbt", value: context.title_mbt },
     { name: "module_name", value: context.module_name },
     { name: "module_mbt", value: context.module_mbt },
+    { name: "identifier_mbt", value: context.identifier_mbt },
     {
       name: "module_counter_import_mbt",
       value: context.module_counter_import_mbt,
@@ -146,10 +150,11 @@ fn validate_template_placeholders(
 fn plan_project_files(
   title : String,
   module_name : String,
+  identifier : String,
   width : Int,
   height : Int,
 ) -> Result[Array[PlannedFile], String] {
-  let context = template_context(title, module_name, width, height)
+  let context = template_context(title, module_name, identifier, width, height)
   let files : Array[PlannedFile] = []
   for spec in template_specs() {
     match render_template(spec, context) {

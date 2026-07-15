@@ -19,6 +19,7 @@ fn must_plan(options : NewProjectOptions) -> Array[PlannedFile] {
     plan_project_files(
       options.title,
       options.module_name,
+      options.identifier,
       options.width,
       options.height,
     ) {
@@ -43,6 +44,7 @@ test "default new options" {
   assert_eq(options.target_dir, "counter")
   assert_eq(options.title, "Counter")
   assert_eq(options.module_name, "counter")
+  assert_eq(options.identifier, "dev.proton.counter")
   assert_eq(options.width, 960)
   assert_eq(options.height, 640)
   assert_true(options.run_check)
@@ -56,6 +58,7 @@ test "path slug drives default title and module" {
   assert_eq(options.target_dir, "tools/my-counter")
   assert_eq(options.title, "My Counter")
   assert_eq(options.module_name, "my-counter")
+  assert_eq(options.identifier, "dev.proton.my-counter")
 }
 
 ///|
@@ -68,16 +71,19 @@ test "current directory path uses cwd basename as default slug" {
   assert_eq(options.target_dir, ".")
   assert_eq(options.title, "Sample App")
   assert_eq(options.module_name, "sample-app")
+  assert_eq(options.identifier, "dev.proton.sample-app")
 }
 
 ///|
 test "explicit title module size and flags override defaults" {
   let options = must_options([
-    "demo", "--title", "Demo App", "--module", "justjavac/demo", "--width", "1024",
-    "--height", "720", "--no-check", "--dry-run", "-y",
+    "demo", "--title", "Demo App", "--module", "justjavac/demo", "--identifier",
+    "com.justjavac.demo", "--width", "1024", "--height", "720", "--no-check", "--dry-run",
+    "-y",
   ])
   assert_eq(options.title, "Demo App")
   assert_eq(options.module_name, "justjavac/demo")
+  assert_eq(options.identifier, "com.justjavac.demo")
   assert_eq(options.width, 1024)
   assert_eq(options.height, 720)
   assert_false(options.run_check)
@@ -123,6 +129,28 @@ test "invalid module fails" {
 }
 
 ///|
+test "default identifier normalizes common slug separators" {
+  assert_eq(must_options(["my_app.demo"]).identifier, "dev.proton.my-app-demo")
+}
+
+///|
+test "invalid identifier fails" {
+  match options_from_raw(".", must_parse(["demo", "--identifier", "demo"])) {
+    Ok(_) => abort("expected identifier to fail")
+    Err(message) =>
+      assert_true(message.contains("reverse-DNS bundle identifier"))
+  }
+  match
+    options_from_raw(
+      ".",
+      must_parse(["demo", "--identifier", "com.example.bad_value"]),
+    ) {
+    Ok(_) => abort("expected identifier character to fail")
+    Err(message) => assert_true(message.contains("unsupported character"))
+  }
+}
+
+///|
 test "file plan contains expected scaffold paths" {
   let files = must_plan(must_options(["my-counter"]))
   for
@@ -141,8 +169,8 @@ test "file plan contains expected scaffold paths" {
 test "templates receive final module title and size" {
   let files = must_plan(
     must_options([
-      "demo", "--title", "Demo App", "--module", "justjavac/demo", "--width", "1000",
-      "--height", "700",
+      "demo", "--title", "Demo App", "--module", "justjavac/demo", "--identifier",
+      "com.justjavac.demo", "--width", "1000", "--height", "700",
     ]),
   )
   guard find_planned_file(files, "app/moon.pkg") is Some(app_pkg) else {
@@ -159,9 +187,14 @@ test "templates receive final module title and size" {
     abort("missing moon.proton")
   }
   assert_true(config.contains("product_name = \"Demo App\""))
+  assert_true(config.contains("identifier = \"com.justjavac.demo\""))
   assert_true(config.contains("title: \"Demo App\""))
   assert_true(config.contains("width: 1000"))
   assert_true(config.contains("height: 700"))
+  assert_true(config.contains("bundle = {"))
+  assert_true(config.contains("active: true"))
+  assert_true(config.contains("targets: [\"app\", \"zip\"]"))
+  assert_true(config.contains("output: \"target/proton-dist\""))
 }
 
 ///|
@@ -177,7 +210,7 @@ test "user title can contain template braces" {
 
 ///|
 test "template render error names template" {
-  let context = template_context("Demo", "demo", 960, 640)
+  let context = template_context("Demo", "demo", "dev.proton.demo", 960, 640)
   let result = render_template(
     {
       output_path: "broken",
