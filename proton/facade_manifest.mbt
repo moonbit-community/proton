@@ -18,6 +18,7 @@ fn App::new(
     entry_overridden: false,
     debug_overridden: false,
     menu: None,
+    notification_click_handler: None,
     extension_settings: {},
     command_extensions: {},
     validation_errors: [],

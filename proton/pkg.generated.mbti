@@ -43,6 +43,7 @@ pub fn App::entry_url(Self, String) -> Self
 pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
+pub fn App::on_notification_click(Self, async (String) -> Unit) -> Self
 pub async fn App::run(Self) -> Result[Unit, String]
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self

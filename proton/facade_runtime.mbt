@@ -15,6 +15,7 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
         app_config_base_dir(self.file_path),
         self.asset_dir,
         self.menu,
+        self.notification_click_handler,
       )
   }
 }
@@ -35,6 +36,7 @@ async fn run_manifest(
   base_dir : String?,
   asset_dir : String?,
   menu : @native.MenuBar?,
+  notification_click_handler : (async (String) -> Unit)?,
 ) -> Result[Unit, String] {
   let forward_menu_events = menu is Some(_)
   let helper_path = macos_bundled_helper_path()
@@ -142,8 +144,17 @@ async fn run_manifest(
         Ok(_) => {
           let run_result = match command_host {
             Some(host) =>
-              run_bridge_pump(runtime, window, host.host, forward_menu_events)
-            None => run_window_pump(runtime, window, forward_menu_events)
+              run_bridge_pump(
+                runtime,
+                window,
+                host.host,
+                forward_menu_events,
+                notification_click_handler,
+              )
+            None =>
+              run_window_pump(
+                runtime, window, forward_menu_events, notification_click_handler,
+              )
           }
           close_command_host(command_host)
           let destroy_result = native_unit_result(
@@ -187,6 +198,7 @@ async fn run_window_pump(
   runtime : @native.Runtime,
   window : @native.Window,
   forward_menu_events : Bool,
+  notification_click_handler : (async (String) -> Unit)?,
 ) -> Result[Unit, String] {
   let mut closed = false
   let mut idle_delay = 0
@@ -207,6 +219,13 @@ async fn run_window_pump(
           did_work = true
           if event.is_window_closed() {
             closed = true
+          }
+          if event.notification_click_payload() is Some(payload) {
+            dispatch_notification_click(
+              payload,
+              notification_click_handler,
+              None,
+            )
           }
           if forward_menu_events {
             if event.menu_command_id() is Some(command_id) {
@@ -239,6 +258,7 @@ async fn run_bridge_pump(
   window : @native.Window,
   host : @core.AppCommandHost,
   forward_menu_events : Bool,
+  notification_click_handler : (async (String) -> Unit)?,
 ) -> Result[Unit, String] {
   @async.with_task_group(group => {
     let mut closed = false
@@ -263,7 +283,11 @@ async fn run_bridge_pump(
               closed = true
             }
             if event.notification_click_payload() is Some(payload) {
-              forward_notification_click(window, payload)
+              dispatch_notification_click(
+                payload,
+                notification_click_handler,
+                Some(payload => forward_notification_click(window, payload)),
+              )
             }
             if forward_menu_events {
               if event.menu_command_id() is Some(command_id) {
@@ -345,6 +369,25 @@ async fn run_bridge_pump(
     }
     Ok(())
   })
+}
+
+///|
+/// Keep native click handling best effort while preserving cancellation. The
+/// fallback is supplied only by the bridge pump, which retains the legacy page
+/// event when an app-level handler is not installed.
+async fn dispatch_notification_click(
+  payload : String,
+  handler : (async (String) -> Unit)?,
+  fallback : ((String) -> Unit)?,
+) -> Unit {
+  if handler is Some(handler) {
+    handler(payload) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => ()
+    }
+  } else if fallback is Some(fallback) {
+    fallback(payload)
+  }
 }
 
 ///|

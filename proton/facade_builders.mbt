@@ -97,6 +97,7 @@ pub fn config(path : String) -> App {
     entry_overridden: false,
     debug_overridden: false,
     menu: None,
+    notification_click_handler: None,
     extension_settings: {},
     command_extensions: {},
     validation_errors: [],
@@ -178,6 +179,20 @@ pub fn App::asset_dir(self : App, path : String) -> App {
 /// Sets the app-level native menu bar.
 pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
   self.menu = Some(menu)
+  self
+}
+
+///|
+/// Handles clicks on system notifications posted by this application.
+///
+/// The handler receives the opaque payload passed to
+/// `@native.post_notification`. Handler failures are best effort and do not
+/// stop the app; task cancellation still propagates through the run loop.
+pub fn App::on_notification_click(
+  self : App,
+  handler : async (String) -> Unit,
+) -> App {
+  self.notification_click_handler = Some(handler)
   self
 }
 

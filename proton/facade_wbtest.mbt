@@ -70,6 +70,76 @@ fn test_tracking_command_spec(
 }
 
 ///|
+priv suberror NotificationClickHandlerFailure
+
+///|
+async test "notification click handler takes precedence over legacy fallback" {
+  let handled : Array[String] = []
+  let forwarded : Array[String] = []
+  let app = html("Test", "<html></html>").on_notification_click(payload => {
+    handled.push(payload)
+  })
+  dispatch_notification_click(
+    "notification-payload",
+    app.notification_click_handler,
+    Some(payload => forwarded.push(payload)),
+  )
+  @debug.assert_eq(handled, ["notification-payload"])
+  assert_true(forwarded.is_empty())
+}
+
+///|
+async test "notification click handler failures are best effort" {
+  let fallback_called = Ref(false)
+  dispatch_notification_click(
+    "notification-payload",
+    Some(_ => raise NotificationClickHandlerFailure),
+    Some(_ => fallback_called.val = true),
+  )
+  assert_false(fallback_called.val)
+}
+
+///|
+async test "notification click dispatch preserves legacy and inert defaults" {
+  let forwarded : Array[String] = []
+  dispatch_notification_click(
+    "legacy-payload",
+    None,
+    Some(payload => forwarded.push(payload)),
+  )
+  dispatch_notification_click("window-payload", None, None)
+  @debug.assert_eq(forwarded, ["legacy-payload"])
+}
+
+///|
+async test "notification click handler propagates task cancellation" {
+  let entered = Ref(false)
+  @async.with_task_group(group => {
+    let task = group.spawn(
+      () => {
+        dispatch_notification_click(
+          "notification-payload",
+          Some(async fn(_) {
+            entered.val = true
+            @async.sleep(1_000)
+          }),
+          None,
+        )
+      },
+      allow_failure=true,
+    )
+    @async.sleep(1)
+    assert_true(entered.val)
+    task.cancel()
+    try task.wait() catch {
+      error => assert_true(@async.is_cancellation_error(error))
+    } noraise {
+      _ => fail("cancelled notification handler completed normally")
+    }
+  })
+}
+
+///|
 test "command proxy rejects unsafe JS property names" {
   assert_true(command_proxy_name_is_invalid(""))
   assert_true(command_proxy_name_is_invalid("   "))

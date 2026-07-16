@@ -11,6 +11,7 @@ struct App {
   mut entry_overridden : Bool
   mut debug_overridden : Bool
   mut menu : @native.MenuBar?
+  mut notification_click_handler : (async (String) -> Unit)?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   validation_errors : Array[String]
