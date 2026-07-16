@@ -1,4 +1,26 @@
-# Repository Guidelines
+# Proton Maintainer Guide
+
+This document is for contributors and release maintainers working on the Proton
+repository itself. It defines the architecture boundaries, source layout,
+validation expectations, generated-file policy, and release procedure.
+
+Application developers should start with [README.md](README.md). Do not move
+repository build steps, native ABI internals, prebuilt synchronization, or
+package publication instructions into the root README unless an application
+developer must perform them.
+
+## Maintainer Workflow
+
+- Read the nearest package README before changing a subsystem, but treat this
+  file and `native/CMakeLists.txt` as the repository-wide maintenance rules.
+- Preserve the single native DLL runtime route and the public root facade.
+- Use the smallest relevant checks while iterating, then expand validation in
+  proportion to the affected runtime, platform, generated code, or release
+  surface.
+- Keep generated sources and user-facing examples synchronized with their
+  templates and implementation.
+- Never publish from an unverified dependency chain or use repository-local
+  overrides for the final release smoke test.
 
 ## Project Structure
 - `native/`: standalone CMake project for the Proton native runtime. It builds
