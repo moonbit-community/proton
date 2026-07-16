@@ -73,6 +73,62 @@ fn test_tracking_command_spec(
 priv suberror NotificationClickHandlerFailure
 
 ///|
+priv suberror RuntimeBodyFailure
+
+///|
+async test "native runtime cleanup runs once when the pump raises" {
+  let cleanups = Ref(0)
+  try
+    run_with_cleanup(
+      async fn() {
+        @async.sleep(0)
+        raise RuntimeBodyFailure
+      },
+      () => {
+        cleanups.val = cleanups.val + 1
+        Ok(())
+      },
+    )
+  catch {
+    RuntimeBodyFailure => ()
+    error => raise error
+  } noraise {
+    _ => fail("raising pump completed normally")
+  }
+  assert_eq(cleanups.val, 1)
+}
+
+///|
+async test "native runtime cleanup runs once when the pump is cancelled" {
+  let cleanups = Ref(0)
+  @async.with_task_group(group => {
+    let task = group.spawn(
+      () => {
+        run_with_cleanup(
+          async fn() {
+            @async.sleep(1_000)
+            Ok(())
+          },
+          () => {
+            cleanups.val = cleanups.val + 1
+            Ok(())
+          },
+        )
+      },
+      allow_failure=true,
+    )
+    @async.sleep(1)
+    task.cancel()
+    try task.wait() catch {
+      error => assert_true(@async.is_cancellation_error(error))
+    } noraise {
+      _ => fail("cancelled pump completed normally")
+    }
+    assert_eq(cleanups.val, 1)
+  })
+}
+
+///|
 async test "notification click handler takes precedence over legacy fallback" {
   let handled : Array[String] = []
   let forwarded : Array[String] = []

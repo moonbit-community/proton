@@ -33,6 +33,7 @@ endif()
 
 add_library(proton SHARED
   src/proton_json.c
+  src/proton_notification_queue.c
   src/proton.c
   ${PROTON_ENGINE_SOURCE}
 )
@@ -293,14 +294,20 @@ if(BUILD_TESTING)
   add_executable(proton_exports_smoke
     tests/proton_exports_smoke.c
   )
+  add_executable(proton_notification_queue_test
+    tests/proton_notification_queue_test.c
+    src/proton_notification_queue.c
+  )
 
   target_link_libraries(proton_smoke PRIVATE proton)
+  target_include_directories(proton_notification_queue_test PRIVATE src)
   if(NOT WIN32)
     target_link_libraries(proton_exports_smoke PRIVATE ${CMAKE_DL_LIBS})
   endif()
 
   add_test(NAME proton_smoke COMMAND proton_smoke)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
+  add_test(NAME proton_notification_queue_test COMMAND proton_notification_queue_test)
 
   if(WIN32)
     set(PROTON_TEST_PATH_MODIFICATIONS

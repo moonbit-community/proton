@@ -1141,32 +1141,55 @@ static bool proton_json_escape_into(const char *value,
   return true;
 }
 
+static bool proton_notification_click_event_json(const char *payload,
+                                                 size_t payload_len,
+                                                 char *event_json,
+                                                 size_t event_json_len) {
+  char terminated[PROTON_MAX_EVENT_BYTES];
+  if ((payload == NULL && payload_len > 0) ||
+      payload_len >= sizeof(terminated)) {
+    return false;
+  }
+  if (payload_len > 0) {
+    memcpy(terminated, payload, payload_len);
+  }
+  terminated[payload_len] = '\0';
+  char escaped[PROTON_MAX_EVENT_BYTES];
+  if (!proton_json_escape_into(terminated, escaped, sizeof(escaped))) {
+    return false;
+  }
+  int written =
+      snprintf(event_json, event_json_len,
+               "{\"type\":\"notification_clicked\",\"payload\":\"%s\"}",
+               escaped);
+  return written >= 0 && (size_t)written < event_json_len;
+}
+
+static bool proton_runtime_accept_notification_click(const char *payload,
+                                                     void *context) {
+  proton_runtime_slot_t *runtime = (proton_runtime_slot_t *)context;
+  char event_json[PROTON_MAX_EVENT_BYTES];
+  if (!proton_notification_click_event_json(payload, strlen(payload), event_json,
+                                            sizeof(event_json))) {
+    fprintf(stderr,
+            "proton: discarded a notification click payload that cannot fit "
+            "the runtime event envelope\n");
+    return true;
+  }
+  return proton_runtime_enqueue_event(runtime, event_json);
+}
+
 // Drain clicked-notification payloads out of the engine into this runtime's
 // event queue as `notification_clicked` events. Notifications are app-level,
 // so whichever runtime polls first carries them — in practice apps run one.
 static void proton_runtime_sync_notification_clicks(
     proton_runtime_slot_t *runtime) {
   for (;;) {
-    char payload[PROTON_MAX_EVENT_BYTES];
-    int32_t present = 0;
-    if (proton_engine_take_notification_click(payload, sizeof(payload),
-                                              &present) != PROTON_OK ||
-        present == 0) {
-      return;
-    }
-    char escaped[PROTON_MAX_EVENT_BYTES];
-    if (!proton_json_escape_into(payload, escaped, sizeof(escaped))) {
-      continue;
-    }
-    char event_json[PROTON_MAX_EVENT_BYTES];
-    int written =
-        snprintf(event_json, sizeof(event_json),
-                 "{\"type\":\"notification_clicked\",\"payload\":\"%s\"}",
-                 escaped);
-    if (written < 0 || written >= (int)sizeof(event_json)) {
-      continue;
-    }
-    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+    int32_t delivered = 0;
+    if (proton_engine_try_deliver_notification_click(
+            proton_runtime_accept_notification_click, runtime, &delivered) !=
+            PROTON_OK ||
+        delivered == 0) {
       return;
     }
   }
@@ -2273,6 +2296,15 @@ int32_t proton_app_post_notification(
       "notification payload", payload_utf8, payload_len);
   if (status != PROTON_OK) {
     return status;
+  }
+  char click_event[PROTON_MAX_EVENT_BYTES];
+  if (payload_len > 0 &&
+      !proton_notification_click_event_json(payload_utf8, (size_t)payload_len,
+                                            click_event,
+                                            sizeof(click_event))) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "notification payload is too large for click routing");
   }
   char engine_error[512] = {0};
   status = proton_engine_post_notification(

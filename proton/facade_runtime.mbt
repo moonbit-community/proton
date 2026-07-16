@@ -141,32 +141,49 @@ async fn run_manifest(
           ignore(runtime.destroy())
           Err(error)
         }
-        Ok(_) => {
-          let run_result = match command_host {
-            Some(host) =>
-              run_bridge_pump(
-                runtime,
-                window,
-                host.host,
-                forward_menu_events,
-                notification_click_handler,
-              )
-            None =>
-              run_window_pump(
-                runtime, window, forward_menu_events, notification_click_handler,
-              )
-          }
-          close_command_host(command_host)
-          let destroy_result = native_unit_result(
-            "destroy runtime",
-            runtime.destroy(),
+        Ok(_) =>
+          run_with_cleanup(
+            async fn() {
+              match command_host {
+                Some(host) =>
+                  run_bridge_pump(
+                    runtime,
+                    window,
+                    host.host,
+                    forward_menu_events,
+                    notification_click_handler,
+                  )
+                None =>
+                  run_window_pump(
+                    runtime, window, forward_menu_events, notification_click_handler,
+                  )
+              }
+            },
+            () => {
+              close_command_host(command_host)
+              native_unit_result("destroy runtime", runtime.destroy())
+            },
           )
-          match run_result {
-            Err(error) => Err(error)
-            Ok(_) => destroy_result
-          }
-        }
       }
+  }
+}
+
+///|
+/// Run the native pump behind one cleanup boundary. Synchronous cleanup still
+/// runs while cancellation is unwinding; on the ordinary path its error is
+/// returned only when the pump itself succeeded.
+async fn run_with_cleanup(
+  body : async () -> Result[Unit, String],
+  cleanup : () -> Result[Unit, String],
+) -> Result[Unit, String] {
+  let cleaned = Ref(false)
+  defer (if !cleaned.val { ignore(cleanup()) })
+  let body_result = body()
+  let cleanup_result = cleanup()
+  cleaned.val = true
+  match body_result {
+    Err(error) => Err(error)
+    Ok(_) => cleanup_result
   }
 }
 

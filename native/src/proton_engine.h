@@ -3,6 +3,7 @@
 
 #include "proton_native.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -175,10 +176,14 @@ int32_t proton_engine_post_notification(
     char *error,
     size_t error_len);
 
-int32_t proton_engine_take_notification_click(
-    char *buffer,
-    size_t buffer_len,
-    int32_t *out_present);
+typedef bool (*proton_engine_notification_click_consumer_t)(
+    const char *payload,
+    void *context);
+
+int32_t proton_engine_try_deliver_notification_click(
+    proton_engine_notification_click_consumer_t consumer,
+    void *context,
+    int32_t *out_delivered);
 
 int32_t proton_engine_take_menu_command(char *buffer,
                                         size_t buffer_len,

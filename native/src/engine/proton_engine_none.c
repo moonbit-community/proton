@@ -400,16 +400,16 @@ int32_t proton_engine_post_notification(
                                  proton_engine_unavailable_message());
 }
 
-int32_t proton_engine_take_notification_click(
-    char *buffer,
-    size_t buffer_len,
-    int32_t *out_present) {
-  (void)buffer;
-  (void)buffer_len;
-  if (out_present == NULL) {
+int32_t proton_engine_try_deliver_notification_click(
+    proton_engine_notification_click_consumer_t consumer,
+    void *context,
+    int32_t *out_delivered) {
+  (void)consumer;
+  (void)context;
+  if (out_delivered == NULL) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  *out_present = 0;
+  *out_delivered = 0;
   return PROTON_OK;
 }
 

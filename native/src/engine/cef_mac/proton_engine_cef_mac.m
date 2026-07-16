@@ -1,5 +1,6 @@
 #include "../../proton_engine.h"
 #include "../../proton_json.h"
+#include "../../proton_notification_queue.h"
 
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"
@@ -43,6 +44,8 @@
 #include <unistd.h>
 
 @class ProtonMenuCommandTarget;
+
+static void proton_engine_install_notification_delegate(void);
 
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
@@ -2706,6 +2709,7 @@ static void proton_engine_install_default_app_menu(void) {
 
 static void proton_engine_ensure_appkit(void) {
   [ProtonApplication sharedApplication];
+  proton_engine_install_notification_delegate();
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   [NSApp finishLaunching];
   proton_engine_install_default_app_menu();
@@ -4124,54 +4128,44 @@ int32_t proton_engine_take_menu_command(char *buffer,
   return PROTON_OK;
 }
 
-#define PROTON_ENGINE_MAX_NOTIFICATION_CLICKS 16
-#define PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES 4096
-static char g_notification_clicks[PROTON_ENGINE_MAX_NOTIFICATION_CLICKS]
-                                 [PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES];
-static uint32_t g_notification_click_head = 0;
-static uint32_t g_notification_click_count = 0;
+static proton_notification_queue_t g_notification_clicks;
 static pthread_mutex_t g_notification_click_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static NSString *const ProtonEngineNotificationPayloadKey = @"proton_payload";
 
-static void proton_engine_enqueue_notification_click(NSString *payload) {
+static bool proton_engine_enqueue_notification_click(NSString *payload) {
   const char *utf8 = payload != nil ? [payload UTF8String] : "";
-  if (utf8 == NULL ||
-      strlen(utf8) >= PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES) {
-    return;
+  if (utf8 == NULL) {
+    return false;
   }
   pthread_mutex_lock(&g_notification_click_lock);
-  if (g_notification_click_count < PROTON_ENGINE_MAX_NOTIFICATION_CLICKS) {
-    uint32_t index =
-        (g_notification_click_head + g_notification_click_count) %
-        PROTON_ENGINE_MAX_NOTIFICATION_CLICKS;
-    snprintf(g_notification_clicks[index],
-             PROTON_ENGINE_MAX_NOTIFICATION_PAYLOAD_BYTES, "%s", utf8);
-    g_notification_click_count++;
-  }
+  bool accepted =
+      proton_notification_queue_try_push(&g_notification_clicks, utf8);
   pthread_mutex_unlock(&g_notification_click_lock);
+  if (accepted) {
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  } else {
+    fprintf(stderr,
+            "proton: notification click queue rejected an oversized payload "
+            "or allocation failed\n");
+  }
+  return accepted;
 }
 
-int32_t proton_engine_take_notification_click(char *buffer,
-                                              size_t buffer_len,
-                                              int32_t *out_present) {
-  if (out_present == NULL) {
+int32_t proton_engine_try_deliver_notification_click(
+    proton_engine_notification_click_consumer_t consumer,
+    void *context,
+    int32_t *out_delivered) {
+  if (consumer == NULL || out_delivered == NULL) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  *out_present = 0;
+  *out_delivered = 0;
   pthread_mutex_lock(&g_notification_click_lock);
-  if (g_notification_click_count > 0) {
-    const char *payload = g_notification_clicks[g_notification_click_head];
-    size_t payload_len = strlen(payload);
-    if (buffer == NULL || buffer_len <= payload_len) {
-      pthread_mutex_unlock(&g_notification_click_lock);
-      return PROTON_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(buffer, payload, payload_len + 1);
-    g_notification_click_head =
-        (g_notification_click_head + 1) % PROTON_ENGINE_MAX_NOTIFICATION_CLICKS;
-    g_notification_click_count--;
-    *out_present = 1;
+  proton_notification_delivery_t delivery =
+      proton_notification_queue_try_deliver(
+          &g_notification_clicks, consumer, context);
+  if (delivery == PROTON_NOTIFICATION_QUEUE_DELIVERED) {
+    *out_delivered = 1;
   }
   pthread_mutex_unlock(&g_notification_click_lock);
   return PROTON_OK;
@@ -4225,6 +4219,23 @@ static void proton_engine_reveal_app_windows(void) {
 
 @end
 
+static ProtonEngineNotificationDelegate *g_notification_delegate = nil;
+static dispatch_once_t g_notification_delegate_once;
+
+static void proton_engine_install_notification_delegate(void) {
+  if ([[NSBundle mainBundle] bundleIdentifier] == nil) {
+    return;
+  }
+  UNUserNotificationCenter *center =
+      [UNUserNotificationCenter currentNotificationCenter];
+  dispatch_once(&g_notification_delegate_once, ^{
+    g_notification_delegate = [[ProtonEngineNotificationDelegate alloc] init];
+  });
+  if ([center delegate] == nil) {
+    [center setDelegate:g_notification_delegate];
+  }
+}
+
 int32_t proton_engine_post_notification(const char *title_utf8,
                                         int32_t title_len,
                                         const char *body_utf8,
@@ -4248,15 +4259,7 @@ int32_t proton_engine_post_notification(const char *title_utf8,
         proton_engine_string_from_utf8(payload_utf8, payload_len);
     UNUserNotificationCenter *center =
         [UNUserNotificationCenter currentNotificationCenter];
-    static ProtonEngineNotificationDelegate *g_notification_delegate = nil;
-    static dispatch_once_t g_notification_delegate_once;
-    dispatch_once(&g_notification_delegate_once, ^{
-      g_notification_delegate =
-          [[ProtonEngineNotificationDelegate alloc] init];
-    });
-    if ([center delegate] == nil) {
-      [center setDelegate:g_notification_delegate];
-    }
+    proton_engine_install_notification_delegate();
     // Repeat requests after the user has answered complete immediately
     // without UI, so asking on every post is safe. Denied permission drops
     // the notification silently — same as any other notifying app.
