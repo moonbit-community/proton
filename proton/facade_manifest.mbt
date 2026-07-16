@@ -10,6 +10,7 @@ fn App::new(
   App::{
     file_path: None,
     asset_dir: None,
+    cache_dir: None,
     window: @manifest.WindowManifest::new(title, width, height, size_hint~),
     entry,
     debug_level_value: debug,

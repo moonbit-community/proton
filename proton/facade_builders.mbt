@@ -84,6 +84,7 @@ pub fn config(path : String) -> App {
   App::{
     file_path: Some(path),
     asset_dir: None,
+    cache_dir: None,
     window: @manifest.WindowManifest::new(
       "Proton",
       900,
@@ -172,6 +173,16 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 /// Serves same-origin resources for inline HTML entries from `path`.
 pub fn App::asset_dir(self : App, path : String) -> App {
   self.asset_dir = Some(path)
+  self
+}
+
+///|
+/// Uses `path` as this run's native browser profile directory.
+///
+/// The caller owns the directory lifecycle and may remove it only after
+/// `App::run` has returned and the native runtime has been destroyed.
+pub fn App::cache_dir(self : App, path : String) -> App {
+  self.cache_dir = Some(path)
   self
 }
 

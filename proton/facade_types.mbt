@@ -3,6 +3,7 @@
 struct App {
   file_path : String?
   mut asset_dir : String?
+  mut cache_dir : String?
   mut window : @manifest.WindowManifest
   mut entry : @manifest.AppEntry
   mut debug_level_value : Int

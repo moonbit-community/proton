@@ -14,6 +14,7 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
         self.command_extensions,
         app_config_base_dir(self.file_path),
         self.asset_dir,
+        self.cache_dir,
         self.menu,
         self.notification_click_handler,
       )
@@ -35,6 +36,7 @@ async fn run_manifest(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
   asset_dir : String?,
+  cache_dir : String?,
   menu : @native.MenuBar?,
   notification_click_handler : (async (String) -> Unit)?,
 ) -> Result[Unit, String] {
@@ -44,6 +46,7 @@ async fn run_manifest(
     @native.Runtime::new(
       config=@native.RuntimeConfig::bundled(
         helper_path?,
+        cache_dir?,
         remote_debugging_port=debug_port(manifest.debug),
       ),
     ) {

@@ -76,6 +76,12 @@ priv suberror NotificationClickHandlerFailure
 priv suberror RuntimeBodyFailure
 
 ///|
+test "app cache directory reaches the facade runtime configuration" {
+  let app = url("Test", "https://example.invalid").cache_dir("profile")
+  assert_eq(app.cache_dir, Some("profile"))
+}
+
+///|
 async test "native runtime cleanup runs once when the pump raises" {
   let cleanups = Ref(0)
   try
