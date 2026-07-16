@@ -13,6 +13,7 @@ struct App {
   mut debug_overridden : Bool
   mut menu : @native.MenuBar?
   mut notification_click_handler : (async (String) -> Unit)?
+  mut before_runtime_cleanup_handler : (() -> Unit raise)?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   validation_errors : Array[String]
@@ -29,4 +30,10 @@ priv struct CommandHostRuntime {
   host : @core.AppCommandHost
   destroy_hooks : Array[() -> Unit]
   mut closed : Bool
+}
+
+///|
+priv struct RuntimeCleanupBoundary {
+  before_cleanup : (() -> Unit raise)?
+  mut started : Bool
 }

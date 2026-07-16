@@ -17,6 +17,7 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
         self.cache_dir,
         self.menu,
         self.notification_click_handler,
+        self.before_runtime_cleanup_handler,
       )
   }
 }
@@ -39,6 +40,7 @@ async fn run_manifest(
   cache_dir : String?,
   menu : @native.MenuBar?,
   notification_click_handler : (async (String) -> Unit)?,
+  before_runtime_cleanup_handler : (() -> Unit raise)?,
 ) -> Result[Unit, String] {
   let forward_menu_events = menu is Some(_)
   let helper_path = macos_bundled_helper_path()
@@ -53,11 +55,15 @@ async fn run_manifest(
     Ok(runtime) => runtime
     Err(error) => return Err(native_error_message("create runtime", error))
   }
+  let runtime_cleanup = RuntimeCleanupBoundary::{
+    before_cleanup: before_runtime_cleanup_handler,
+    started: false,
+  }
   match menu {
     Some(menu) =>
       match native_unit_result("set menu", runtime.set_menu(menu)) {
         Err(error) => {
-          ignore(runtime.destroy())
+          ignore(cleanup_native_app_once(runtime_cleanup, runtime, None, None))
           return Err(error)
         }
         Ok(_) => ()
@@ -76,7 +82,7 @@ async fn run_manifest(
     ) {
     Ok(window) => window
     Err(error) => {
-      ignore(runtime.destroy())
+      ignore(cleanup_native_app_once(runtime_cleanup, runtime, None, None))
       return Err(native_error_message("create window", error))
     }
   }
@@ -84,8 +90,9 @@ async fn run_manifest(
   let command_host = match
     build_command_host(manifest, command_extensions, base_dir) {
     Err(error) => {
-      ignore(window.destroy())
-      ignore(runtime.destroy())
+      ignore(
+        cleanup_native_app_once(runtime_cleanup, runtime, Some(window), None),
+      )
       return Err(error)
     }
     Ok(host) => host
@@ -97,9 +104,14 @@ async fn run_manifest(
       install_event_bus=forward_menu_events,
     ) {
     Err(error) => {
-      close_command_host(command_host)
-      ignore(window.destroy())
-      ignore(runtime.destroy())
+      ignore(
+        cleanup_native_app_once(
+          runtime_cleanup,
+          runtime,
+          Some(window),
+          command_host,
+        ),
+      )
       return Err(error)
     }
     Ok(script) => script
@@ -113,9 +125,14 @@ async fn run_manifest(
           window.install_bridge(@native.BridgeConfig::new(ops~)),
         ) {
         Err(error) => {
-          host.close()
-          ignore(window.destroy())
-          ignore(runtime.destroy())
+          ignore(
+            cleanup_native_app_once(
+              runtime_cleanup,
+              runtime,
+              Some(window),
+              command_host,
+            ),
+          )
           return Err(error)
         }
         Ok(_) => install_extension_event_sender(window, host.host)
@@ -131,17 +148,27 @@ async fn run_manifest(
       asset_dir,
     ) {
     Err(error) => {
-      close_command_host(command_host)
-      ignore(window.destroy())
-      ignore(runtime.destroy())
+      ignore(
+        cleanup_native_app_once(
+          runtime_cleanup,
+          runtime,
+          Some(window),
+          command_host,
+        ),
+      )
       Err(error)
     }
     Ok(_) =>
       match native_unit_result("show window", window.show()) {
         Err(error) => {
-          close_command_host(command_host)
-          ignore(window.destroy())
-          ignore(runtime.destroy())
+          ignore(
+            cleanup_native_app_once(
+              runtime_cleanup,
+              runtime,
+              Some(window),
+              command_host,
+            ),
+          )
           Err(error)
         }
         Ok(_) =>
@@ -163,12 +190,54 @@ async fn run_manifest(
               }
             },
             () => {
-              close_command_host(command_host)
-              native_unit_result("destroy runtime", runtime.destroy())
+              cleanup_native_app_once(
+                runtime_cleanup,
+                runtime,
+                Some(window),
+                command_host,
+              )
             },
           )
       }
   }
+}
+
+///|
+/// Tears down every native resource behind one exactly-once boundary. The
+/// callback is run before the command host, window, or runtime can enter a
+/// blocking native destructor.
+fn cleanup_native_app_once(
+  boundary : RuntimeCleanupBoundary,
+  runtime : @native.Runtime,
+  window : @native.Window?,
+  command_host : CommandHostRuntime?,
+) -> Result[Unit, String] {
+  boundary.run(() => {
+    close_command_host(command_host)
+    match window {
+      Some(value) => ignore(value.destroy())
+      None => ()
+    }
+    native_unit_result("destroy runtime", runtime.destroy())
+  })
+}
+
+///|
+fn RuntimeCleanupBoundary::run(
+  self : RuntimeCleanupBoundary,
+  cleanup : () -> Result[Unit, String],
+) -> Result[Unit, String] {
+  if self.started {
+    return Ok(())
+  }
+  self.started = true
+  match self.before_cleanup {
+    // The hook is an early warning for an external deadline. Its failure must
+    // never suppress the native cleanup it is meant to guard.
+    Some(handler) => handler() catch { _ => () }
+    None => ()
+  }
+  cleanup()
 }
 
 ///|

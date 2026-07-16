@@ -20,6 +20,7 @@ fn App::new(
     debug_overridden: false,
     menu: None,
     notification_click_handler: None,
+    before_runtime_cleanup_handler: None,
     extension_settings: {},
     command_extensions: {},
     validation_errors: [],

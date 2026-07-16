@@ -99,6 +99,7 @@ pub fn config(path : String) -> App {
     debug_overridden: false,
     menu: None,
     notification_click_handler: None,
+    before_runtime_cleanup_handler: None,
     extension_settings: {},
     command_extensions: {},
     validation_errors: [],
@@ -204,6 +205,22 @@ pub fn App::on_notification_click(
   handler : async (String) -> Unit,
 ) -> App {
   self.notification_click_handler = Some(handler)
+  self
+}
+
+///|
+/// Runs `handler` immediately before native application cleanup starts.
+///
+/// The callback is invoked at most once after a runtime has been created,
+/// including ordinary window close, run-loop failure, and cancellation. It is
+/// synchronous so callers can arm an external cleanup deadline before the
+/// command host, window, or runtime enters native teardown. Callback failures
+/// are best effort and never prevent native cleanup.
+pub fn App::on_before_runtime_cleanup(
+  self : App,
+  handler : () -> Unit raise,
+) -> App {
+  self.before_runtime_cleanup_handler = Some(handler)
   self
 }
 

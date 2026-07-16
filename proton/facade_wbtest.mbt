@@ -82,6 +82,56 @@ test "app cache directory reaches the facade runtime configuration" {
 }
 
 ///|
+test "app exposes its before-runtime-cleanup callback" {
+  let called = Ref(false)
+  let app = url("Test", "https://example.invalid").on_before_runtime_cleanup(() => {
+    called.val = true
+  })
+  match app.before_runtime_cleanup_handler {
+    Some(handler) => handler()
+    None => fail("before-runtime-cleanup callback was not configured")
+  }
+  assert_true(called.val)
+}
+
+///|
+test "runtime cleanup boundary signals once before cleanup" {
+  let events : Array[String] = []
+  let boundary = RuntimeCleanupBoundary::{
+    before_cleanup: Some(() => events.push("before")),
+    started: false,
+  }
+  let first = boundary.run(() => {
+    events.push("host")
+    events.push("window")
+    events.push("runtime")
+    Ok(())
+  })
+  let second = boundary.run(() => {
+    events.push("unexpected second cleanup")
+    Ok(())
+  })
+  assert_true(first is Ok(_))
+  assert_true(second is Ok(_))
+  @debug.assert_eq(events, ["before", "host", "window", "runtime"])
+}
+
+///|
+test "runtime cleanup still runs when its early callback fails" {
+  let cleanup_called = Ref(false)
+  let boundary = RuntimeCleanupBoundary::{
+    before_cleanup: Some(fn() raise { raise RuntimeBodyFailure }),
+    started: false,
+  }
+  let result = boundary.run(() => {
+    cleanup_called.val = true
+    Ok(())
+  })
+  assert_true(result is Ok(_))
+  assert_true(cleanup_called.val)
+}
+
+///|
 async test "native runtime cleanup runs once when the pump raises" {
   let cleanups = Ref(0)
   try
