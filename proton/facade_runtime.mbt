@@ -327,7 +327,8 @@ async fn run_window_pump(
 
     if did_work {
       idle_delay = 0
-      @async.sleep(0)
+      // Keep a continuously active CEF pump behind ready host IO coroutines.
+      @async.sleep(1)
     } else {
       match wait_for_runtime_idle(runtime, idle_delay, runtime_wait_supported) {
         Err(error) => return Err(error)
@@ -438,7 +439,8 @@ async fn run_bridge_pump(
 
       if did_work {
         idle_delay = 0
-        @async.sleep(0)
+        // Keep a continuously active bridge behind ready host IO coroutines.
+        @async.sleep(1)
       } else if pending.length() > 0 {
         idle_delay = 0
         @async.sleep(1)
@@ -486,8 +488,21 @@ async fn wait_for_runtime_idle(
   runtime_wait_supported : Bool,
 ) -> Result[(Int, Bool), String] {
   if runtime_wait_supported {
-    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
-      Ok(_) => Ok((0, true))
+    // Native wait is synchronous, so it must only poll here. Sleeping inside
+    // it would block MoonBit's cooperative scheduler and throttle unrelated
+    // async work, including a loopback HTTP server serving the page itself.
+    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=0) {
+      Ok(ready) =>
+        if ready.is_timeout() {
+          sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
+            (next_delay, true)
+          })
+        } else {
+          // A positive timer turn prevents a continuously ready native pump
+          // from staying ahead of already-ready host IO coroutines.
+          @async.sleep(1)
+          Ok((0, true))
+        }
       Err(error) =>
         if is_runtime_wait_unsupported(error) {
           sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
