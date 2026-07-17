@@ -26,6 +26,7 @@ bool proton_json_parse(proton_json_doc_t *doc, const char *json);
 void proton_json_dispose(proton_json_doc_t *doc);
 bool proton_json_root_object(const proton_json_doc_t *doc,
                              proton_json_value_t *out_value);
+bool proton_json_is_single_value(const proton_json_doc_t *doc);
 bool proton_json_object_get(const proton_json_doc_t *doc,
                             proton_json_value_t object,
                             const char *field_name,

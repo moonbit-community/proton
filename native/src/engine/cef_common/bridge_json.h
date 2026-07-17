@@ -18,6 +18,18 @@ static int proton_engine_bridge_op_is_valid(const char *op) {
   return 1;
 }
 
+static int proton_engine_bridge_payload_is_valid(const char *payload_json,
+                                                  size_t max_bytes) {
+  if (payload_json == NULL || strlen(payload_json) > max_bytes) {
+    return 0;
+  }
+  proton_json_doc_t doc;
+  int valid = proton_json_parse(&doc, payload_json) &&
+              proton_json_is_single_value(&doc);
+  proton_json_dispose(&doc);
+  return valid;
+}
+
 static int proton_engine_json_read_int64_field(const char *json,
                                                const char *field_name,
                                                int64_t *out_value) {

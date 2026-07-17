@@ -1420,8 +1420,9 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   int pending_id = arguments[0]->get_int_value(arguments[0]);
   char *op = proton_engine_v8_value_to_utf8(arguments[1]);
   char *payload_json = proton_engine_v8_value_to_utf8(arguments[2]);
-  if (!proton_engine_bridge_op_is_valid(op) || payload_json == NULL ||
-      strlen(payload_json) > PROTON_ENGINE_MAX_BRIDGE_BYTES) {
+  if (!proton_engine_bridge_op_is_valid(op) ||
+      !proton_engine_bridge_payload_is_valid(
+          payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES)) {
     proton_engine_debug_log(
         "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
         pending_id, op != NULL ? op : "",
@@ -1681,8 +1682,8 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     free(payload_json);
     return 1;
   }
-  if (payload_json == NULL ||
-      strlen(payload_json) > PROTON_ENGINE_MAX_BRIDGE_BYTES) {
+  if (!proton_engine_bridge_payload_is_valid(
+      payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES)) {
     proton_engine_debug_log("bridge_reject_payload_too_large browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
