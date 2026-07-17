@@ -585,11 +585,22 @@ int main(void) {
       runtime,
       "{\"abi_version\":1,\"request_id\":\"1\",\"ok\":false,"
       "\"error\":{\"code\":\"op_failed\",\"message\":\"no pending request\"}}");
-  if (expect_status("respond_bridge_request rejects quoted request_id", status,
-                    PROTON_ERR_INVALID_ARGUMENT)) {
+  if (expect_status("respond_bridge_request accepts quoted request_id", status,
+                    PROTON_ERR_UNSUPPORTED)) {
     return 1;
   }
-  if (expect_last_error_contains("positive request_id")) {
+  if (expect_last_error_contains("native engine")) {
+    return 1;
+  }
+  status = proton_runtime_respond_bridge_request_json(
+      runtime,
+      "{\"abi_version\":1,\"request_id\":2147483648,\"ok\":false,"
+      "\"error\":{\"code\":\"op_failed\",\"message\":\"no pending request\"}}");
+  if (expect_status("respond_bridge_request accepts 64-bit request_id", status,
+                    PROTON_ERR_UNSUPPORTED)) {
+    return 1;
+  }
+  if (expect_last_error_contains("native engine")) {
     return 1;
   }
   status = proton_runtime_respond_bridge_request_json(

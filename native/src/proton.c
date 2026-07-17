@@ -1072,9 +1072,10 @@ static int32_t proton_validate_bridge_response_json(const char *response_json) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge response must be a JSON object");
   }
-  int32_t request_id = 0;
+  int64_t request_id = 0;
   if (!proton_json_object_get(&doc, root, "request_id", &value) ||
-      !proton_json_read_int32(&doc, value, &request_id) || request_id <= 0) {
+      !proton_json_read_int64_string_or_number(&doc, value, &request_id) ||
+      request_id <= 0) {
     proton_json_dispose(&doc);
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge response requires positive request_id");
