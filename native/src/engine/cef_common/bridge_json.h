@@ -49,6 +49,25 @@ static int proton_engine_bridge_config_read_max_payload(
   return ok;
 }
 
+static int proton_engine_bridge_config_read_request_timeout(
+    const char *bridge_config_json,
+    int32_t *out_value) {
+  if (bridge_config_json == NULL || out_value == NULL) {
+    return 0;
+  }
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  if (!proton_json_parse(&doc, bridge_config_json)) {
+    return 0;
+  }
+  int ok = proton_json_root_object(&doc, &root) &&
+           proton_json_object_get(&doc, root, "request_timeout_ms", &value) &&
+           proton_json_read_int32(&doc, value, out_value);
+  proton_json_dispose(&doc);
+  return ok;
+}
+
 static int proton_engine_json_read_int64_field(const char *json,
                                                const char *field_name,
                                                int64_t *out_value) {

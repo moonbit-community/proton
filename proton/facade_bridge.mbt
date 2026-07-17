@@ -387,14 +387,25 @@ async fn dispatch_bridge_request(
   policy : BridgePagePolicy,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
-  let response = host.dispatch_ipc_with_event_sender(
-    @ipc.IpcOpRequest::new(
-      request_id.to_string(),
-      request.op(),
-      request.payload(),
-    ),
-    Some(extension_event_sender(window, request.page_instance(), policy)),
-  )
+  let response = match
+    @async.with_timeout_opt(policy.request_timeout_ms, () => {
+      host.dispatch_ipc_with_event_sender(
+        @ipc.IpcOpRequest::new(
+          request_id.to_string(),
+          request.op(),
+          request.payload(),
+        ),
+        Some(extension_event_sender(window, request.page_instance(), policy)),
+      )
+    }) {
+    Some(response) => response
+    None =>
+      return @native.BridgeResponse::Err(
+        request_id~,
+        code="request_timeout",
+        message="bridge request timed out",
+      )
+  }
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
   } else {
@@ -408,7 +419,7 @@ async fn dispatch_bridge_request(
 
 ///|
 fn default_bridge_page_policy() -> BridgePagePolicy {
-  BridgePagePolicy::{ dev_origin: None }
+  BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 }
 }
 
 ///|
@@ -421,7 +432,10 @@ fn bridge_page_policy_for_manifest(
   match manifest.entry {
     @manifest.AppEntry::Url(url) =>
       url_origin(url).map(fn(origin) {
-        BridgePagePolicy::{ dev_origin: Some(origin) }
+        BridgePagePolicy::{
+          dev_origin: Some(origin),
+          request_timeout_ms: 30000,
+        }
       })
     _ => Ok(default_bridge_page_policy())
   }

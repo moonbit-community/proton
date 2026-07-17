@@ -192,6 +192,7 @@ test "extension event dispatch script can target a page instance" {
   let event = @ipc.IpcExtensionEvent::new("ticker", "done", Json::null())
   let script = extension_event_dispatch_script(event, Some("page-1"), BridgePagePolicy::{
     dev_origin: Some("http://localhost:5173"),
+    request_timeout_ms: 30000,
   })
   assert_true(
     script.contains("window.location.origin !== \"http://localhost:5173\""),

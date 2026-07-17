@@ -1755,6 +1755,22 @@ static void proton_engine_inject_bridge_script(cef_browser_t *browser,
   }
   int is_dev_page = proton_engine_bridge_config_is_dev_page(
       window->bridge_config_json, frame_url);
+  int32_t request_timeout_ms = 30000;
+  proton_engine_bridge_config_read_request_timeout(
+      window->bridge_config_json, &request_timeout_ms);
+  char timeout_script[256];
+  snprintf(timeout_script, sizeof(timeout_script),
+           "if(!Object.prototype.hasOwnProperty.call(window,"
+           "'__protonBridgeRequestTimeoutMs')){Object.defineProperty(window,"
+           "'__protonBridgeRequestTimeoutMs',{value:%d});}",
+           request_timeout_ms);
+  cef_string_t timeout_code = {0};
+  cef_string_t timeout_url = {0};
+  proton_engine_set_string(&timeout_code, timeout_script);
+  proton_engine_set_string(&timeout_url, "proton://bridge/config.js");
+  frame->execute_java_script(frame, &timeout_code, &timeout_url, 1);
+  cef_string_clear(&timeout_code);
+  cef_string_clear(&timeout_url);
   const char *script =
       "(function(){"
       "if(typeof window.__protonNativeInvokeOp!=='function'){return;}"
@@ -1767,6 +1783,7 @@ static void proton_engine_inject_bridge_script(cef_browser_t *browser,
       "var entry=pending[id];"
       "if(!entry){return;}"
       "delete pending[id];"
+      "clearTimeout(entry.timer);"
       "if(ok){"
       "try{entry.resolve(JSON.parse(payloadJson));}"
       "catch(error){entry.reject(error);}"
@@ -1779,13 +1796,17 @@ static void proton_engine_inject_bridge_script(cef_browser_t *browser,
       "return new Promise(function(resolve,reject){"
       "var id=nextId++;"
       "if(nextId>2147483640){nextId=1;}"
-      "pending[id]={resolve:resolve,reject:reject};"
+      "var timer=setTimeout(function(){"
+      "var entry=pending[id];if(!entry){return;}delete pending[id];"
+      "entry.reject(new Error('bridge request timed out'));"
+      "},window.__protonBridgeRequestTimeoutMs);"
+      "pending[id]={resolve:resolve,reject:reject,timer:timer};"
       "var json;"
       "try{json=JSON.stringify({__proton_page_instance:pageInstance,payload:payload===undefined?null:payload});}"
-      "catch(error){delete pending[id];reject(error);return;}"
+      "catch(error){clearTimeout(timer);delete pending[id];reject(error);return;}"
       "if(json===undefined){json='null';}"
       "try{window.__protonNativeInvokeOp(id,String(name),json);}"
-      "catch(error){delete pending[id];reject(error);}"
+      "catch(error){clearTimeout(timer);delete pending[id];reject(error);}"
       "});"
       "};"
       "api.core=core;"

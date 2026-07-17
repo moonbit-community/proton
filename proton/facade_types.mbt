@@ -37,4 +37,5 @@ priv struct CommandHostRuntime {
 ///|
 priv struct BridgePagePolicy {
   dev_origin : String?
+  request_timeout_ms : Int
 }
