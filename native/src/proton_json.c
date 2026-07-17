@@ -198,8 +198,9 @@ bool proton_json_root_object(const proton_json_doc_t *doc,
 
 bool proton_json_is_single_value(const proton_json_doc_t *doc) {
   const jsmntok_t *tokens = proton_json_tokens(doc);
-  return doc != NULL && tokens != NULL && doc->token_count == 1 &&
-         tokens[0].start >= 0 && tokens[0].end >= tokens[0].start;
+  return doc != NULL && tokens != NULL && doc->token_count > 0 &&
+         tokens[0].start >= 0 && tokens[0].end >= tokens[0].start &&
+         proton_json_subtree_end(doc, 0) == doc->token_count;
 }
 
 bool proton_json_object_get(const proton_json_doc_t *doc,

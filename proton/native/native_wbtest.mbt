@@ -485,7 +485,10 @@ test "runtime config requires top-level abi_version" {
   match result {
     Err(error) => {
       inspect(error.status, content="-1")
-      assert_true(error.message.contains("abi_version"))
+      inspect(
+        error.message,
+        content="runtime field has invalid type or range: cache_dir",
+      )
     }
     Ok(_) => fail("expected nested abi_version to fail")
   }

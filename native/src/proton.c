@@ -209,9 +209,12 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       valid = proton_json_read_string(doc, value, text, sizeof(text));
     }
   } else if (strcmp(config_name, "bridge") == 0) {
-    if (strcmp(key, "namespace") == 0 ||
-        strcmp(key, "dev_bootstrap_script") == 0) {
+    if (strcmp(key, "namespace") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
+    } else if (strcmp(key, "dev_bootstrap_script") == 0) {
+      char *script = proton_json_copy_string(doc, value);
+      valid = script != NULL;
+      free(script);
     } else if (strcmp(key, "max_payload_bytes") == 0 ||
                strcmp(key, "request_timeout_ms") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
