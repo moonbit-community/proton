@@ -6,6 +6,7 @@ fn cef_setup_arg_parser() -> @argparse.Command {
     options=[
       OptionArg("name", about="CEF binary directory/archive name"),
       OptionArg("url", about="Full CEF archive URL"),
+      OptionArg("sha256", about="Expected SHA-256 for a custom CEF archive"),
     ],
   )
 }
@@ -59,6 +60,16 @@ pub async fn run_setup(
     Err(error) => return Err(error)
   }
   let url = match_value(matches, "url")
+  let sha256 = match
+    resolve_cef_archive_sha256(
+      platform,
+      name,
+      url,
+      match_value(matches, "sha256"),
+    ) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   let root = match project_root(cwd) {
     Ok(root) => root
     Err(error) => return Err(error)
@@ -78,7 +89,7 @@ pub async fn run_setup(
   )
   let relative_dist = relative_runtime_dist(proton_version, platform, name)
   let runtime_dir = path_join(root, relative_dist)
-  match ensure_cef_cache(name, url, root, cache_dir, platform) {
+  match ensure_cef_cache(name, url, sha256, root, cache_dir, platform) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }

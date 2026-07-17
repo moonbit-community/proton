@@ -6,6 +6,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/crypto",
   "moonbitlang/x/path",
 }
 

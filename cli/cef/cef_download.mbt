@@ -20,6 +20,7 @@ async fn make_temp_dir() -> Result[String, CefError] {
 async fn download_file(
   url : String,
   destination : String,
+  expected_sha256 : String,
 ) -> Result[Unit, CefError] {
   println("[INFO] Downloading CEF: " + url)
   let code = @process.run("curl", ["-L", "--fail", "--output", destination, url]) catch {
@@ -37,7 +38,75 @@ async fn download_file(
       ),
     )
   }
-  Ok(())
+  verify_file_sha256(destination, expected_sha256)
+}
+
+///|
+async fn verify_file_sha256(
+  path : String,
+  expected : String,
+) -> Result[Unit, CefError] {
+  let file = @async_fs.open(path, mode=ReadOnly) catch {
+    err =>
+      return Err(
+        CefError::CommandError(
+          "Failed to open downloaded CEF archive: " +
+          @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
+  defer file.close()
+  let hasher = @crypto.SHA256::new()
+  let buffer = FixedArray::make(1024 * 1024, b'\x00')
+  while file.read(buffer) is read && read > 0 {
+    hasher.update(buffer.unsafe_reinterpret_as_bytes()[:read])
+  }
+  let actual = @crypto.bytes_to_hex_string(hasher.finalize())
+  if actual == expected {
+    Ok(())
+  } else {
+    Err(
+      CefError::CommandError(
+        "CEF archive SHA-256 mismatch: expected " + expected + ", got " + actual,
+      ),
+    )
+  }
+}
+
+///|
+fn valid_sha256(value : String) -> Bool {
+  if value.length() != 64 {
+    return false
+  }
+  for ch in value {
+    guard ch.is_ascii_digit() || (ch >= 'a' && ch <= 'f') else { return false }
+  }
+  true
+}
+
+///|
+fn resolve_cef_archive_sha256(
+  platform : ProtonPlatform,
+  name : String,
+  url : String?,
+  provided : String?,
+) -> Result[String, CefError] {
+  match provided {
+    Some(value) => {
+      let normalized = value.trim().to_owned().to_lower()
+      if valid_sha256(normalized) {
+        return Ok(normalized)
+      }
+      return Err(CefError::CommandError("Invalid CEF archive SHA-256"))
+    }
+    None => ()
+  }
+  if url is None && name == platform.default_cef_name {
+    return Ok(platform.default_cef_sha256)
+  }
+  Err(
+    CefError::CommandError("Custom CEF archive name or URL requires --sha256"),
+  )
 }
 
 ///|

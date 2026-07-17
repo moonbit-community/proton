@@ -33,6 +33,7 @@ async fn install_cef_root(
   extracted_root : String,
   install_dir : String,
   name : String,
+  sha256 : String,
   root : String,
   platform : ProtonPlatform,
 ) -> Result[Unit, CefError] {
@@ -65,6 +66,18 @@ async fn install_cef_root(
         ),
       )
   }
+  @mbfs.write_string_to_file(
+    path_join(install_dir, "sha256.txt"),
+    sha256 + "\n",
+    encoding="utf8",
+  ) catch {
+    err =>
+      return Err(
+        CefError::CommandError(
+          "Failed to write CEF checksum: " + @debug.render(@debug.to_repr(err)),
+        ),
+      )
+  }
   match validate_cef_root(install_dir, platform) {
     Ok(_) => ()
     Err(error) => return Err(error)
@@ -76,24 +89,30 @@ async fn install_cef_root(
 async fn ensure_cef_cache(
   name : String,
   url : String?,
+  sha256 : String,
   root : String,
   cache_dir : String,
   platform : ProtonPlatform,
 ) -> Result[Unit, CefError] {
-  if installed_version(cache_dir) == name {
+  if installed_version(cache_dir) == name &&
+    installed_checksum(cache_dir) == sha256 {
     return normalize_cef_runtime_layout(cache_dir)
   }
   let legacy_cache = path_join(root, ".cef-cache")
-  if installed_version(legacy_cache) == name {
-    return install_cef_root(legacy_cache, cache_dir, name, root, platform)
+  if installed_version(legacy_cache) == name &&
+    installed_checksum(legacy_cache) == sha256 {
+    return install_cef_root(
+      legacy_cache, cache_dir, name, sha256, root, platform,
+    )
   }
-  setup_downloaded_cef(name, url, root, cache_dir, platform)
+  setup_downloaded_cef(name, url, sha256, root, cache_dir, platform)
 }
 
 ///|
 async fn setup_downloaded_cef(
   name : String,
   url : String?,
+  sha256 : String,
   root : String,
   install_dir : String,
   platform : ProtonPlatform,
@@ -103,7 +122,8 @@ async fn setup_downloaded_cef(
     Err(error) => return Err(error)
   }
   let archive_path = path_join(temp_dir, name + ".tar.bz2")
-  let setup_result = match download_file(archive_url(name, url), archive_path) {
+  let setup_result = match
+    download_file(archive_url(name, url), archive_path, sha256) {
     Err(error) => Err(error)
     Ok(_) =>
       match extract_tar_bz2(archive_path, temp_dir) {
@@ -113,7 +133,7 @@ async fn setup_downloaded_cef(
             Err(error) => Err(error)
             Ok(extracted_root) =>
               install_cef_root(
-                extracted_root, install_dir, name, root, platform,
+                extracted_root, install_dir, name, sha256, root, platform,
               )
           }
       }
@@ -133,6 +153,18 @@ fn installed_version(install_dir : String) -> String {
   let version_path = path_join(install_dir, "version.txt")
   if path_is_file(version_path) {
     @mbfs.read_file_to_string(version_path, encoding="utf8").trim().to_owned() catch {
+      _ => ""
+    }
+  } else {
+    ""
+  }
+}
+
+///|
+fn installed_checksum(install_dir : String) -> String {
+  let checksum_path = path_join(install_dir, "sha256.txt")
+  if path_is_file(checksum_path) {
+    @mbfs.read_file_to_string(checksum_path, encoding="utf8").trim().to_owned() catch {
       _ => ""
     }
   } else {

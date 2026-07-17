@@ -96,3 +96,48 @@ test "CEF archive names cannot escape generated directories" {
     Err(_) => abort("expected default CEF name to pass")
   }
 }
+
+///|
+test "default CEF archives have pinned SHA-256 digests" {
+  for
+    platform in [
+      win32_x64_platform(),
+      darwin_arm64_platform(),
+      linux_x64_platform(),
+    ] {
+    match
+      resolve_cef_archive_sha256(
+        platform,
+        platform.default_cef_name,
+        None,
+        None,
+      ) {
+      Ok(value) => assert_true(valid_sha256(value))
+      Err(_) => abort("expected default CEF checksum")
+    }
+  }
+}
+
+///|
+test "custom CEF archives require a valid SHA-256 digest" {
+  let platform = darwin_arm64_platform()
+  match
+    resolve_cef_archive_sha256(
+      platform,
+      "custom",
+      Some("https://example.test/cef"),
+      None,
+    ) {
+    Err(_) => ()
+    Ok(_) => abort("expected missing custom checksum to fail")
+  }
+  match resolve_cef_archive_sha256(platform, "custom", None, Some("invalid")) {
+    Err(_) => ()
+    Ok(_) => abort("expected invalid custom checksum to fail")
+  }
+  let uppercase = "C105F69C0D4DC14331BE12CEE967EEB73FA4897A6ECDE244051318491CD381C7"
+  match resolve_cef_archive_sha256(platform, "custom", None, Some(uppercase)) {
+    Ok(value) => assert_eq(value, uppercase.to_lower())
+    Err(_) => abort("expected explicit checksum to pass")
+  }
+}
