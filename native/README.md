@@ -93,8 +93,10 @@ On Linux, the engine build expects `Release/libcef.so` under the runtime root,
 plus `Resources/icudtl.dat` and `Resources/locales/`. This switches the build
 to `src/engine/cef_linux/proton_engine_cef_linux.c`.
 
-`proton_cli cef setup` runtime assembly is wired for Windows and Linux. macOS
-packaging still needs the matching CLI/prebuilt setup path. The CEF-backed
+`proton_cli cef setup` runtime assembly is wired for Windows, macOS Apple
+Silicon, and Linux. The setup command verifies the pinned SHA-256 of the
+default CEF archive; custom `--name` or `--url` downloads require a matching
+`--sha256` value. The CEF-backed
 `load_html` implementation serves HTML through the internal `proton://` scheme
 so the loaded document keeps the supplied Proton origin and relative URL base.
 For v1, `base_url` must use the `proton://` scheme.
