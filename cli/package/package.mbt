@@ -1074,7 +1074,7 @@ async fn copy_file(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  if @path.sep != '\\' {
+  if is_macos_host() {
     let code = @process.run("ditto", [source, destination]) catch {
       error =>
         return Err(
@@ -1150,9 +1150,24 @@ async fn copy_tree(
         )
     }
     code
-  } else {
+  } else if is_macos_host() {
     let (code, _) = @process.collect_output_merged("ditto", [
       source, destination,
+    ]) catch {
+      error =>
+        return Err(
+          CommandError(
+            "failed to copy directory " +
+            source +
+            ": " +
+            @debug.render(@debug.to_repr(error)),
+          ),
+        )
+    }
+    code
+  } else {
+    let (code, _) = @process.collect_output_merged("cp", [
+      "-R", source, destination,
     ]) catch {
       error =>
         return Err(
