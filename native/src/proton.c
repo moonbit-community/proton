@@ -176,6 +176,67 @@ typedef struct {
   int32_t status;
 } proton_abi_validation_t;
 
+static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
+                                           const char *config_name,
+                                           const char *key,
+                                           proton_json_value_t value) {
+  char text[PROTON_MAX_PATH_BYTES];
+  int32_t integer = 0;
+  bool boolean = false;
+  bool valid = true;
+  if (strcmp(key, "abi_version") == 0) {
+    return true;
+  }
+  if (strcmp(config_name, "runtime") == 0) {
+    if (strcmp(key, "use_bundled") == 0) {
+      valid = proton_json_read_bool(doc, value, &boolean);
+    } else if (strcmp(key, "remote_debugging_port") == 0) {
+      valid = proton_json_read_int32(doc, value, &integer) && integer >= 0 &&
+              integer <= 65535;
+    } else if (strcmp(key, "runtime_root") == 0 ||
+               strcmp(key, "helper_path") == 0 ||
+               strcmp(key, "subprocess_path") == 0 ||
+               strcmp(key, "resources_dir") == 0 ||
+               strcmp(key, "locales_dir") == 0 ||
+               strcmp(key, "cache_dir") == 0) {
+      valid = proton_json_read_string(doc, value, text, sizeof(text));
+    }
+  } else if (strcmp(config_name, "window") == 0) {
+    if (strcmp(key, "width") == 0 || strcmp(key, "height") == 0) {
+      valid = proton_json_read_int32(doc, value, &integer);
+    } else if (strcmp(key, "title") == 0 ||
+               strcmp(key, "initial_url") == 0) {
+      valid = proton_json_read_string(doc, value, text, sizeof(text));
+    }
+  } else if (strcmp(config_name, "bridge") == 0) {
+    if (strcmp(key, "namespace") == 0 ||
+        strcmp(key, "dev_bootstrap_script") == 0) {
+      valid = proton_json_read_string(doc, value, text, sizeof(text));
+    } else if (strcmp(key, "max_payload_bytes") == 0 ||
+               strcmp(key, "request_timeout_ms") == 0) {
+      valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
+    } else if (strcmp(key, "origin_policy") == 0) {
+      valid = proton_json_is_object(doc, value);
+    } else if (strcmp(key, "ops") == 0) {
+      valid = proton_json_is_array(doc, value);
+    }
+  } else if (strcmp(config_name, "bridge response") == 0) {
+    if (strcmp(key, "request_id") == 0) {
+      int64_t request_id = 0;
+      valid = proton_json_read_int64_string_or_number(doc, value, &request_id);
+    } else if (strcmp(key, "ok") == 0) {
+      valid = proton_json_read_bool(doc, value, &boolean);
+    }
+  }
+  if (!valid) {
+    char message[192];
+    snprintf(message, sizeof(message), "%s field has invalid type or range: %s",
+             config_name, key);
+    proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+  }
+  return valid;
+}
+
 static bool proton_validate_abi_field(const char *key,
                                       proton_json_value_t value,
                                       void *user_data) {
@@ -201,6 +262,11 @@ static bool proton_validate_abi_field(const char *key,
           proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
       return false;
     }
+  }
+  if (!proton_validate_abi_field_type(validation->doc,
+                                      validation->config_name, key, value)) {
+    validation->status = PROTON_ERR_INVALID_ARGUMENT;
+    return false;
   }
   return true;
 }

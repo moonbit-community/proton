@@ -581,6 +581,16 @@ int main(void) {
   if (expect_last_error_contains("unknown field: debug")) {
     return 1;
   }
+  status = proton_window_install_bridge_json(
+      window,
+      "{\"abi_version\":1,\"ops\":[],\"max_payload_bytes\":\"small\"}");
+  if (expect_status("window_install_bridge_json rejects invalid field type", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_last_error_contains("invalid type or range")) {
+    return 1;
+  }
   status = proton_runtime_respond_bridge_request_json(
       runtime,
       "{\"abi_version\":1,\"request_id\":\"1\",\"ok\":false,"
@@ -743,7 +753,7 @@ int main(void) {
   if (runtime != PROTON_INVALID_HANDLE) {
     return fail("nested abi_version config should leave out handle invalid");
   }
-  if (expect_last_error_contains("abi_version")) {
+  if (expect_last_error_contains("invalid type or range")) {
     return 1;
   }
 
@@ -765,7 +775,7 @@ int main(void) {
   if (window != PROTON_INVALID_HANDLE) {
     return fail("quoted window width should leave out handle invalid");
   }
-  if (expect_last_error_contains("width and height")) {
+  if (expect_last_error_contains("invalid type or range")) {
     return 1;
   }
   status = proton_window_create_json(
