@@ -1558,7 +1558,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
     return 1;
   }
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
-  if (!proton_engine_url_is_proton(frame_url)) {
+  if (!proton_engine_url_is_bridge_candidate(frame_url)) {
     browser->base.release((cef_base_ref_counted_t *)browser);
     frame->base.release((cef_base_ref_counted_t *)frame);
     context->base.release((cef_base_ref_counted_t *)context);
@@ -1566,7 +1566,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
     free(payload_json);
     free(frame_url);
     proton_engine_set_string(exception,
-                             "bridge is not available for this origin");
+                             "bridge is not available for this page");
     return 1;
   }
   free(frame_url);
@@ -1593,7 +1593,7 @@ static void CEF_CALLBACK proton_engine_on_context_created(
     return;
   }
   char *url = proton_engine_userfree_to_utf8(frame->get_url(frame));
-  if (!proton_engine_url_is_proton(url)) {
+  if (!proton_engine_url_is_bridge_candidate(url)) {
     free(url);
     return;
   }
@@ -1755,9 +1755,25 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
                           browser_id, renderer_pending_id,
                           op != NULL ? op : "");
 
+  char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
+  int page_allowed =
+      window != NULL && window->bridge_config_json != NULL &&
+      proton_engine_bridge_config_allows_page(window->bridge_config_json,
+                                              frame_url);
   if (window == NULL || window->runtime == NULL ||
-      window->bridge_config_json == NULL ||
-      !proton_engine_bridge_config_allows_op(window->bridge_config_json, op)) {
+      window->bridge_config_json == NULL || !page_allowed) {
+    proton_engine_debug_log(
+        "bridge_reject_origin_not_allowed browser=%d pending=%d url=%s",
+        browser_id, renderer_pending_id, proton_engine_log_url(frame_url));
+    proton_engine_reject_renderer_request(frame, renderer_pending_id,
+                                          "bridge origin is not allowed");
+    free(frame_url);
+    free(op);
+    free(payload_json);
+    return 1;
+  }
+  free(frame_url);
+  if (!proton_engine_bridge_config_allows_op(window->bridge_config_json, op)) {
     proton_engine_debug_log("bridge_reject_not_allowed browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
@@ -1827,15 +1843,18 @@ static void proton_engine_inject_bridge_script(cef_browser_t *browser,
     return;
   }
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
-  if (!proton_engine_url_is_proton(frame_url)) {
+  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  if (window == NULL || window->bridge_config_json == NULL) {
     free(frame_url);
     return;
   }
-  free(frame_url);
-  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
-  if (window == NULL || window->bridge_config_json == NULL) {
+  if (!proton_engine_bridge_config_allows_page(window->bridge_config_json,
+                                               frame_url)) {
+    free(frame_url);
     return;
   }
+  int is_dev_page = proton_engine_bridge_config_is_dev_page(
+      window->bridge_config_json, frame_url);
   const char *script =
       "(function(){"
       "if(typeof window.__protonNativeInvokeOp!=='function'){return;}"
@@ -1881,6 +1900,27 @@ static void proton_engine_inject_bridge_script(cef_browser_t *browser,
   frame->execute_java_script(frame, &code, &url, 1);
   cef_string_clear(&code);
   cef_string_clear(&url);
+  if (is_dev_page) {
+    char *dev_script =
+        proton_engine_bridge_config_copy_dev_bootstrap_script(
+            window->bridge_config_json);
+    if (dev_script != NULL && dev_script[0] != '\0') {
+      char *wrapped_dev_script =
+          proton_engine_bridge_wrap_dev_bootstrap_script(dev_script);
+      if (wrapped_dev_script != NULL) {
+        cef_string_t dev_code = {0};
+        cef_string_t dev_url = {0};
+        proton_engine_set_string(&dev_code, wrapped_dev_script);
+        proton_engine_set_string(&dev_url, "proton://bridge/dev-bootstrap.js");
+        frame->execute_java_script(frame, &dev_code, &dev_url, 1);
+        cef_string_clear(&dev_code);
+        cef_string_clear(&dev_url);
+        free(wrapped_dev_script);
+      }
+    }
+    free(dev_script);
+  }
+  free(frame_url);
 }
 
 static void CEF_CALLBACK proton_engine_on_load_start(

@@ -12,11 +12,30 @@ function readText(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
-function protonModuleVersion() {
-  const text = readText("proton/moon.mod");
+function moduleVersion(relativePath) {
+  const text = readText(relativePath);
   const match = text.match(/^version\s*=\s*"([^"]+)"/m);
   if (!match) {
-    throw new Error("proton/moon.mod is missing a version field");
+    throw new Error(`${relativePath} is missing a version field`);
+  }
+  return match[1];
+}
+
+function moduleImportVersion(relativePath, moduleName) {
+  const text = readText(relativePath);
+  const escapedName = moduleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = text.match(new RegExp(`"${escapedName}@([^"]+)"`));
+  if (!match) {
+    throw new Error(`${relativePath} is missing ${moduleName} dependency`);
+  }
+  return match[1];
+}
+
+function cliEmbeddedVersion() {
+  const text = readText("cli/main.mbt");
+  const match = text.match(/^let cli_current_version\s*:\s*String\s*=\s*"([^"]+)"/m);
+  if (!match) {
+    throw new Error("cli/main.mbt is missing cli_current_version");
   }
   return match[1];
 }
@@ -64,9 +83,22 @@ function checkTemplateDefaults(expectedVersion) {
   );
 }
 
-const expectedVersion = protonModuleVersion();
-checkPrebuiltManifests(expectedVersion);
-checkTemplateDefaults(expectedVersion);
+const protonVersion = moduleVersion("proton/moon.mod");
+const configVersion = moduleVersion("config/moon.mod");
+const cliVersion = moduleVersion("cli/moon.mod");
+checkPrebuiltManifests(protonVersion);
+checkTemplateDefaults(protonVersion);
+checkEqual(
+  "proton/moon.mod proton_config dependency",
+  moduleImportVersion("proton/moon.mod", "justjavac/proton_config"),
+  configVersion,
+);
+checkEqual(
+  "cli/moon.mod proton_config dependency",
+  moduleImportVersion("cli/moon.mod", "justjavac/proton_config"),
+  configVersion,
+);
+checkEqual("cli/main.mbt cli_current_version", cliEmbeddedVersion(), cliVersion);
 
 if (failures.length > 0) {
   console.error("Release metadata is stale:");
@@ -75,5 +107,7 @@ if (failures.length > 0) {
   }
   process.exitCode = 1;
 } else {
-  console.log(`[OK] Release metadata matches proton ${expectedVersion}.`);
+  console.log(
+    `[OK] Release metadata matches config ${configVersion}, proton ${protonVersion}, and CLI ${cliVersion}.`,
+  );
 }

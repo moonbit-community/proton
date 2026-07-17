@@ -11,7 +11,7 @@ readme = "README.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/e2e"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [ "proton", "cef", "cdp", "e2e" ]
 

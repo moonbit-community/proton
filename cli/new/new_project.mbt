@@ -3,6 +3,7 @@ struct RawNewProjectOptions {
   path : String?
   title : String?
   module_name : String?
+  identifier : String?
   width : String?
   height : String?
   check : Bool?
@@ -18,6 +19,7 @@ struct NewProjectOptions {
   resolved_target_dir : String
   title : String
   module_name : String
+  identifier : String
   width : Int
   height : Int
   run_check : Bool
@@ -52,6 +54,7 @@ pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, String] {
     plan_project_files(
       options.title,
       options.module_name,
+      options.identifier,
       options.width,
       options.height,
     ) {
@@ -111,6 +114,11 @@ fn new_arg_parser() -> @argparse.Command {
     options=[
       OptionArg("title", long="title", about="Application and window title"),
       OptionArg("module", long="module", about="moon.mod module name"),
+      OptionArg(
+        "identifier",
+        long="identifier",
+        about="Reverse-DNS application bundle identifier",
+      ),
       OptionArg("width", long="width", about="Window width in pixels"),
       OptionArg("height", long="height", about="Window height in pixels"),
     ],
@@ -131,6 +139,7 @@ fn parse_new_args(args : Array[String]) -> RawNewProjectOptions raise {
     path: match_value(matches, "path"),
     title: match_value(matches, "title"),
     module_name: match_value(matches, "module"),
+    identifier: match_value(matches, "identifier"),
     width: match_value(matches, "width"),
     height: match_value(matches, "height"),
     check: match_flag(matches, "check"),
@@ -165,6 +174,7 @@ fn options_from_raw(
   let slug = project_slug(cwd, target_dir)
   let title = raw.title.unwrap_or(slug_to_title(slug))
   let module_name = raw.module_name.unwrap_or(slug)
+  let identifier = raw.identifier.unwrap_or(default_bundle_identifier(slug))
   let width = match raw.width {
     Some(value) =>
       match parse_positive_int(value, "width") {
@@ -188,6 +198,7 @@ fn options_from_raw(
     resolved_target_dir: resolve_new_path(cwd, target_dir),
     title,
     module_name,
+    identifier,
     width,
     height,
     run_check,
@@ -211,6 +222,10 @@ fn validate_options(
     Err(message) => return Err(message)
   }
   match validate_module_name(options.module_name) {
+    Ok(_) => ()
+    Err(message) => return Err(message)
+  }
+  match validate_bundle_identifier(options.identifier) {
     Ok(_) => ()
     Err(message) => return Err(message)
   }
@@ -382,5 +397,8 @@ fn print_success(options : NewProjectOptions, checked~ : Bool) -> Unit {
   println("Next steps:")
   println("  cd " + options.target_dir)
   println("  proton_cli cef setup")
-  println("  moon run app --target native")
+  println("  proton_cli dev")
+  println("  proton_cli build")
+  println("  proton_cli package app --dry-run")
+  println("  proton_cli package app")
 }

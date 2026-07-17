@@ -1,0 +1,30 @@
+product_name = "Proton Dev Extension JS"
+identifier = "com.justjavac.proton.dev-extension-js"
+
+window = {
+  title: "Proton Dev Extension JS",
+  width: 900,
+  height: 620,
+  size_hint: "none",
+}
+
+entry = {
+  kind: "asset",
+  value: "frontend/dist/index.html",
+}
+
+debug = true
+
+frontend = {
+  dev_url: "http://127.0.0.1:5173",
+  dist: "frontend/dist",
+  cwd: "frontend",
+  before_dev: "npm run dev -- --host 127.0.0.1 --strictPort",
+  before_build: "npm run build",
+}
+
+bundle = {
+  active: true,
+  targets: ["app", "zip"],
+  output: "target/proton-dist",
+}

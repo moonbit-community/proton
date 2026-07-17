@@ -9,7 +9,8 @@ dev_build(rule: "embed", input: "hello.html", output: "hello.mbt")
 
 formatter(ignore: [ "hello.mbt" ])
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: { "main.mbt": [ "native" ] },
 )

@@ -77,6 +77,13 @@ async fn current_platform() -> ProtonPlatform {
 }
 
 ///|
+/// Returns the stable platform id used by `cef setup` and runtime manifests.
+pub async fn current_platform_id() -> String {
+  let platform = current_platform()
+  platform.id
+}
+
+///|
 fn platform_from_override(value : String?) -> ProtonPlatform? {
   match value {
     Some("win32-x64") => Some(win32_x64_platform())
@@ -289,6 +296,17 @@ fn proton_prebuilt_relative_files(platform : ProtonPlatform) -> Array[String] {
 }
 
 ///|
+/// Returns the Proton-only prebuilt artifact list for a stable platform id.
+pub fn proton_prebuilt_relative_files_for_platform(
+  platform_id : String,
+) -> Array[String] {
+  match platform_from_override(Some(platform_id)) {
+    Some(platform) => proton_prebuilt_relative_files(platform)
+    None => []
+  }
+}
+
+///|
 fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
   if platform.id == "win32-x64" {
     [
@@ -308,6 +326,17 @@ fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
     ]
   } else {
     []
+  }
+}
+
+///|
+/// Returns the required runtime layout for a stable Proton platform id.
+pub fn runtime_required_relative_files_for_platform(
+  platform_id : String,
+) -> Array[String] {
+  match platform_from_override(Some(platform_id)) {
+    Some(platform) => runtime_required_relative_files(platform)
+    None => []
   }
 }
 

@@ -51,6 +51,7 @@ struct ProtonFrontendConfig {
   dist : String?
   before_dev : String?
   before_build : String?
+  cwd : String?
 }
 
 ///|
@@ -59,8 +60,9 @@ pub fn ProtonFrontendConfig::new(
   dist? : String? = None,
   before_dev? : String? = None,
   before_build? : String? = None,
+  cwd? : String? = None,
 ) -> ProtonFrontendConfig {
-  ProtonFrontendConfig::{ dev_url, dist, before_dev, before_build }
+  ProtonFrontendConfig::{ dev_url, dist, before_dev, before_build, cwd }
 }
 
 ///|
@@ -83,6 +85,11 @@ pub fn ProtonFrontendConfig::before_build(
   self : ProtonFrontendConfig,
 ) -> String? {
   self.before_build
+}
+
+///|
+pub fn ProtonFrontendConfig::cwd(self : ProtonFrontendConfig) -> String? {
+  self.cwd
 }
 
 ///|
@@ -206,6 +213,8 @@ pub fn ProtonProjectConfig::dev_manifest(
           manifest.window,
           @manifest.AppEntry::Url(url),
           debug=manifest.debug,
+          windows=manifest.windows,
+          extensions=manifest.extensions,
         ),
         base_dir=self.manifest.base_dir(),
       )

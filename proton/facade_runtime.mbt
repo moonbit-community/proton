@@ -6,13 +6,13 @@ pub async fn App::run(self : App) -> Result[Unit, String] {
     Some(error) => return Err(error)
     None => ()
   }
-  match self.resolved_manifest() {
+  match self.resolved_app_config() {
     Err(error) => Err(error)
-    Ok(manifest) =>
+    Ok(resolved) =>
       run_manifest(
-        manifest,
+        resolved.manifest,
         self.command_extensions,
-        app_config_base_dir(self.file_path),
+        resolved.base_dir,
         self.asset_dir,
         self.cache_dir,
         self.menu,
@@ -116,13 +116,34 @@ async fn run_manifest(
     }
     Ok(script) => script
   }
+  let bridge_policy = match bridge_page_policy_for_manifest(manifest) {
+    Err(error) => {
+      ignore(
+        cleanup_native_app_once(
+          runtime_cleanup,
+          runtime,
+          Some(window),
+          command_host,
+        ),
+      )
+      return Err(error)
+    }
+    Ok(policy) => policy
+  }
   match command_host {
     Some(host) => {
       let ops = host.host.registered_ops()
+      let dev_origins = bridge_page_policy_dev_origins(bridge_policy)
+      let dev_bootstrap_script = match bridge_policy.dev_origin {
+        Some(_) => command_proxy_script
+        None => None
+      }
       match
         native_unit_result(
           "install bridge",
-          window.install_bridge(@native.BridgeConfig::new(ops~)),
+          window.install_bridge(
+            @native.BridgeConfig::new(ops~, dev_origins~, dev_bootstrap_script~),
+          ),
         ) {
         Err(error) => {
           ignore(
@@ -135,7 +156,8 @@ async fn run_manifest(
           )
           return Err(error)
         }
-        Ok(_) => install_extension_event_sender(window, host.host)
+        Ok(_) =>
+          install_extension_event_sender(window, host.host, bridge_policy)
       }
     }
     None => ()
@@ -180,12 +202,13 @@ async fn run_manifest(
                     runtime,
                     window,
                     host.host,
+                    bridge_policy,
                     forward_menu_events,
                     notification_click_handler,
                   )
                 None =>
                   run_window_pump(
-                    runtime, window, forward_menu_events, notification_click_handler,
+                    runtime, window, bridge_policy, forward_menu_events, notification_click_handler,
                   )
               }
             },
@@ -260,14 +283,6 @@ async fn run_with_cleanup(
 }
 
 ///|
-fn app_config_base_dir(file_path : String?) -> String? {
-  match file_path {
-    Some(path) => Some((path : @mbpath.Path).dirname().to_string())
-    None => None
-  }
-}
-
-///|
 fn close_command_host(host : CommandHostRuntime?) -> Unit {
   match host {
     Some(value) => value.close()
@@ -286,6 +301,7 @@ fn CommandHostRuntime::close(self : CommandHostRuntime) -> Unit {
 async fn run_window_pump(
   runtime : @native.Runtime,
   window : @native.Window,
+  policy : BridgePagePolicy,
   forward_menu_events : Bool,
   notification_click_handler : (async (String) -> Unit)?,
 ) -> Result[Unit, String] {
@@ -318,7 +334,7 @@ async fn run_window_pump(
           }
           if forward_menu_events {
             if event.menu_command_id() is Some(command_id) {
-              forward_menu_command(window, command_id)
+              forward_menu_command(window, command_id, policy)
             }
           }
         }
@@ -347,6 +363,7 @@ async fn run_bridge_pump(
   runtime : @native.Runtime,
   window : @native.Window,
   host : @core.AppCommandHost,
+  policy : BridgePagePolicy,
   forward_menu_events : Bool,
   notification_click_handler : (async (String) -> Unit)?,
 ) -> Result[Unit, String] {
@@ -376,12 +393,14 @@ async fn run_bridge_pump(
               dispatch_notification_click(
                 payload,
                 notification_click_handler,
-                Some(payload => forward_notification_click(window, payload)),
+                Some(payload => {
+                  forward_notification_click(window, payload, policy)
+                }),
               )
             }
             if forward_menu_events {
               if event.menu_command_id() is Some(command_id) {
-                forward_menu_command(window, command_id)
+                forward_menu_command(window, command_id, policy)
               }
             }
           }
@@ -398,7 +417,7 @@ async fn run_bridge_pump(
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
-              () => dispatch_bridge_request(window, host, request),
+              () => dispatch_bridge_request(window, host, request, policy),
               no_wait=true,
               allow_failure=true,
             )

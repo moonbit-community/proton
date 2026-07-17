@@ -1,4 +1,26 @@
-# Repository Guidelines
+# Proton Maintainer Guide
+
+This document is for contributors and release maintainers working on the Proton
+repository itself. It defines the architecture boundaries, source layout,
+validation expectations, generated-file policy, and release procedure.
+
+Application developers should start with [README.md](README.md). Do not move
+repository build steps, native ABI internals, prebuilt synchronization, or
+package publication instructions into the root README unless an application
+developer must perform them.
+
+## Maintainer Workflow
+
+- Read the nearest package README before changing a subsystem, but treat this
+  file and `native/CMakeLists.txt` as the repository-wide maintenance rules.
+- Preserve the single native DLL runtime route and the public root facade.
+- Use the smallest relevant checks while iterating, then expand validation in
+  proportion to the affected runtime, platform, generated code, or release
+  surface.
+- Keep generated sources and user-facing examples synchronized with their
+  templates and implementation.
+- Never publish from an unverified dependency chain or use repository-local
+  overrides for the final release smoke test.
 
 ## Project Structure
 - `native/`: standalone CMake project for the Proton native runtime. It builds
@@ -34,6 +56,7 @@
 - Sync release artifacts into `proton/prebuilt/<platform>/`; only include the
   Proton DLL/shared library, import library if any, helper executable, public
   header, and manifest.
+- `node scripts/verify_prebuilt_abi.mjs <platform>`
 - `moon -C cli run . -- -C .. cef setup`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C proton test native --target native --diagnostic-limit 80`
@@ -60,6 +83,70 @@ native checks before handing off larger refactors.
 - Before publishing `proton` or `proton_ext`, run `node scripts/verify_generated.mjs`; it regenerates outputs in a temp directory and fails if committed generated files are stale.
 - Keep release validation for standalone users explicit: run `moon publish --dry-run` in each published module, and smoke-check an independent app with remote `justjavac/proton` and `justjavac/proton_ext` dependencies after publishing.
 - Keep `examples/` and `e2e/` out of release publishing unless explicitly requested; they are validation/demo modules, not release packages.
+
+### Release Checklist
+
+- Publish the dependency chain in this order: `justjavac/proton_config`, then
+  `justjavac/proton`, then `justjavac/proton_cli`. For the currently prepared
+  release, the chain is `proton_config 0.1.5` -> `proton 0.1.10` ->
+  `proton_cli 0.1.6`.
+- Before publishing, keep these values aligned:
+  - `config/moon.mod` version;
+  - the `justjavac/proton_config@...` requirements in `proton/moon.mod` and
+    `cli/moon.mod`;
+  - `proton/moon.mod`, `proton/prebuilt/*/manifest.json`, and
+    `cli/new/templates.mbt`'s `default_proton_version`;
+  - `cli/moon.mod` and `cli/main.mbt`'s `cli_current_version`.
+- Run the release checks before the first publish:
+
+  ```sh
+  moon fmt --check
+  node scripts/verify_generated.mjs
+  moon -C cli test --target native --diagnostic-limit 80
+  moon -C proton check --target native --diagnostic-limit 80
+  ```
+
+- Dry-run and publish each module separately, waiting until the new version is
+  visible in the Mooncakes manifest before moving to its dependent module:
+
+  ```sh
+  moon -C config publish --dry-run
+  moon -C config publish
+
+  moon -C proton publish --dry-run
+  moon -C proton publish
+
+  moon -C cli publish --dry-run
+  moon -C cli publish
+  ```
+
+- Never publish `proton_cli` while the version referenced by the `proton new`
+  template is absent from Mooncakes. A template dependency must be published
+  and independently resolvable before the CLI release becomes visible.
+- Some Moon CLI versions print a final generic failure after a successful
+  dry-run response. Treat the dry run as accepted only when the server reports
+  `202 Accepted` and explicitly says no changes were made. Compilation,
+  dependency-resolution, validation, or non-202 server errors are failures.
+- After all packages are visible, install the registry CLI and run a smoke test
+  from a temporary directory outside this repository and outside any parent
+  `moon.work`. Do not use symlinks, local module members, or source overrides:
+
+  ```sh
+  moon install justjavac/proton_cli
+  tmp_dir="$(mktemp -d)"
+  proton_cli -C "$tmp_dir" new release-smoke \
+    --title "Release Smoke" \
+    --identifier "com.example.proton-release-smoke" \
+    -y --no-git
+  proton_cli -C "$tmp_dir/release-smoke" cef setup
+  proton_cli -C "$tmp_dir/release-smoke" build
+  proton_cli -C "$tmp_dir/release-smoke" package app --dry-run
+  proton_cli -C "$tmp_dir/release-smoke" package app
+  ```
+
+- The release is not complete until the independent scaffold passes its default
+  `moon check`, native build, package-plan validation, and real package creation
+  using registry dependencies and the setup-managed runtime.
 
 ## Coding Conventions
 - Use MoonBit with 2-space indentation and `///|` top-level separators.

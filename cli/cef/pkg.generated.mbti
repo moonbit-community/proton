@@ -2,7 +2,13 @@
 package "justjavac/proton_cli/cef"
 
 // Values
+pub async fn current_platform_id() -> String
+
+pub fn proton_prebuilt_relative_files_for_platform(String) -> Array[String]
+
 pub async fn run_setup(String, Array[String]) -> Result[Unit, CefError]
+
+pub fn runtime_required_relative_files_for_platform(String) -> Array[String]
 
 // Errors
 

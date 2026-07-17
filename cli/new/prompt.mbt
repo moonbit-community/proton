@@ -41,8 +41,12 @@ async fn prompt_new_project_options(
   let slug = project_slug(defaults.cwd, target_dir)
   let title_default = raw.title.unwrap_or(slug_to_title(slug))
   let module_default = raw.module_name.unwrap_or(slug)
+  let identifier_default = raw.identifier.unwrap_or(
+    default_bundle_identifier(slug),
+  )
   let title = prompt_text("App title", title_default)
   let module_name = prompt_text("Module name", module_default)
+  let identifier = prompt_text("Bundle identifier", identifier_default)
   let width_text = prompt_text("Window width", defaults.width.to_string())
   let height_text = prompt_text("Window height", defaults.height.to_string())
   let run_check = prompt_bool(
@@ -63,6 +67,7 @@ async fn prompt_new_project_options(
     resolved_target_dir: resolve_new_path(defaults.cwd, target_dir),
     title,
     module_name,
+    identifier,
     width,
     height,
     run_check,
@@ -76,6 +81,7 @@ async fn confirm_create(options : NewProjectOptions) -> Bool {
   println("Project directory: " + options.target_dir)
   println("App title: " + options.title)
   println("Module name: " + options.module_name)
+  println("Bundle identifier: " + options.identifier)
   println(
     "Window: " + options.width.to_string() + "x" + options.height.to_string(),
   )

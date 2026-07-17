@@ -79,10 +79,23 @@ pub fn asset(
 }
 
 ///|
+/// Creates an application from `PROTON_CONFIG_PATH`, `moon.proton` in the
+/// current working directory, or code-only defaults.
+pub fn app() -> App {
+  config_app(None, auto_config=true)
+}
+
+///|
 /// Creates an application backed by a `moon.proton` config file.
 pub fn config(path : String) -> App {
+  config_app(Some(path), auto_config=false)
+}
+
+///|
+fn config_app(path : String?, auto_config~ : Bool) -> App {
   App::{
-    file_path: Some(path),
+    file_path: path,
+    auto_config,
     asset_dir: None,
     cache_dir: None,
     window: @manifest.WindowManifest::new(

@@ -3,8 +3,11 @@ fn print_usage() -> Unit {
   let usage =
     #|Usage:
     #|  proton_cli version
-    #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
-    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]
+    #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--identifier <id>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
+    #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
+    #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
+    #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
+    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
     #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
     #|
@@ -14,7 +17,7 @@ fn print_usage() -> Unit {
 }
 
 ///|
-let cli_current_version : String = "0.1.5"
+let cli_current_version : String = "0.1.6"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"
@@ -30,6 +33,7 @@ priv struct CliVersion {
 priv enum CliError {
   UsageError(String, Bool)
   CommandError(String)
+  ReportedError
 }
 
 ///|
@@ -215,11 +219,14 @@ fn parse_global_args(args : Array[String]) -> (String, Array[String]) {
       } else {
         rest.push(args[index])
         index = index + 1
+        break
       }
     } else {
-      rest.push(args[index])
-      index = index + 1
+      break
     }
+  }
+  for arg in args[index:] {
+    rest.push(arg)
   }
   (cwd, rest)
 }
@@ -261,25 +268,106 @@ async fn run_doctor_from_args(
 ) -> Result[Unit, CliError] {
   let mut dry_run = false
   let mut verbose = false
+  let mut deep = false
+  let mut run_frontend = false
+  let mut fix = false
   let mut json = false
-  for arg in args {
+  let mut json_lines = false
+  let mut quiet = false
+  let sections : Array[String] = []
+  let mut output : String? = None
+  let mut index = 0
+  while index < args.length() {
+    let arg = args[index]
     match arg {
       "--dry-run" => dry_run = true
       "--verbose" => verbose = true
+      "--deep" => deep = true
+      "--run" => run_frontend = true
+      "--fix" => fix = true
+      "--frontend" => sections.push("frontend")
+      "--release" => sections.push("release")
       "--json" => json = true
+      "--json-lines" => json_lines = true
+      "--quiet" => quiet = true
+      "--section" => {
+        guard index + 1 < args.length() else {
+          return Err(CliError::UsageError("missing value for --section", false))
+        }
+        sections.push(args[index + 1])
+        index += 1
+      }
+      "--output" => {
+        guard index + 1 < args.length() else {
+          return Err(CliError::UsageError("missing value for --output", false))
+        }
+        output = Some(resolve_cli_path(cwd, args[index + 1]))
+        index += 1
+      }
       "-h" | "--help" => {
         println(
-          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--json]",
+          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
         )
         return Ok(())
       }
       _ =>
         return Err(CliError::UsageError("unknown doctor option: " + arg, false))
     }
+    index += 1
   }
-  @doctor.run(cwd~, dry_run~, verbose~, json~).map_err(fn(message) {
-    CliError::CommandError(message)
-  })
+  if json && json_lines {
+    return Err(
+      CliError::UsageError(
+        "--json and --json-lines are mutually exclusive", false,
+      ),
+    )
+  }
+  if quiet && (json || json_lines) {
+    return Err(
+      CliError::UsageError(
+        "--quiet cannot be combined with --json or --json-lines", false,
+      ),
+    )
+  }
+  if run_frontend && sections.length() > 0 && !sections.contains("frontend") {
+    return Err(
+      CliError::UsageError("--run requires the frontend section", false),
+    )
+  }
+  if fix && sections.length() > 0 && !sections.contains("fixes") {
+    sections.push("fixes")
+  }
+  if sections.contains("fixes") && !fix {
+    return Err(CliError::UsageError("the fixes section requires --fix", false))
+  }
+  for section in sections {
+    if ![
+        "project", "environment", "runtime", "platform", "packages", "extensions",
+        "app", "frontend", "release", "fixes",
+      ].contains(section) {
+      return Err(
+        CliError::UsageError("unknown doctor section: " + section, false),
+      )
+    }
+  }
+  match
+    @doctor.run(
+      cwd~,
+      dry_run~,
+      verbose~,
+      deep~,
+      run_frontend~,
+      fix~,
+      json~,
+      json_lines~,
+      quiet~,
+      sections~,
+      output~,
+    ) {
+    Ok(true) => Ok(())
+    Ok(false) => Err(CliError::ReportedError)
+    Err(message) => Err(CliError::CommandError(message))
+  }
 }
 
 ///|
@@ -337,6 +425,30 @@ async fn main {
     @new_project.run(cwd, args[1:].to_owned()).map_err(fn(message) {
       CliError::CommandError(message)
     })
+  } else if args.length() >= 1 && args[0] == "dev" {
+    @dev.run(cwd, args[1:].to_owned()).map_err(fn(error) {
+      match error {
+        UsageError(message, usage_is_embedded) =>
+          CliError::UsageError(message, usage_is_embedded)
+        CommandError(message) => CliError::CommandError(message)
+      }
+    })
+  } else if args.length() >= 1 && args[0] == "build" {
+    @build.run(cwd, args[1:].to_owned()).map_err(fn(error) {
+      match error {
+        UsageError(message, usage_is_embedded) =>
+          CliError::UsageError(message, usage_is_embedded)
+        CommandError(message) => CliError::CommandError(message)
+      }
+    })
+  } else if args.length() >= 1 && args[0] == "package" {
+    @package.run(cwd, args[1:].to_owned()).map_err(fn(error) {
+      match error {
+        UsageError(message, usage_is_embedded) =>
+          CliError::UsageError(message, usage_is_embedded)
+        CommandError(message) => CliError::CommandError(message)
+      }
+    })
   } else if args.length() >= 1 && args[0] == "codegen" {
     run_codegen(cwd, args[1:].to_owned())
   } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
@@ -363,5 +475,6 @@ async fn main {
       print_error_message(message)
       @sys.exit(1)
     }
+    Err(CliError::ReportedError) => @sys.exit(1)
   }
 }

@@ -63,6 +63,22 @@ test "cli version command text and aliases" {
 }
 
 ///|
+test "global cwd parsing only consumes leading flags" {
+  let (cwd, args) = parse_global_args([
+    "-C", "repo", "dev", "app", "--", "-C", "app-cwd",
+  ])
+  assert_eq(cwd, "repo")
+  @debug.assert_eq(args, ["dev", "app", "--", "-C", "app-cwd"])
+}
+
+///|
+test "global cwd parsing preserves command arguments after subcommand" {
+  let (cwd, args) = parse_global_args(["dev", "app", "--", "--cwd", "app-cwd"])
+  assert_eq(cwd, ".")
+  @debug.assert_eq(args, ["dev", "app", "--", "--cwd", "app-cwd"])
+}
+
+///|
 fn moon_mod_version_from_source(path : String, source : String) -> String? {
   let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
   guard reports.length() == 0 else { return None }

@@ -45,9 +45,10 @@ pub fn ProtonBundleConfig::targets(Self) -> Array[String]
 type ProtonFrontendConfig
 pub fn ProtonFrontendConfig::before_build(Self) -> String?
 pub fn ProtonFrontendConfig::before_dev(Self) -> String?
+pub fn ProtonFrontendConfig::cwd(Self) -> String?
 pub fn ProtonFrontendConfig::dev_url(Self) -> String?
 pub fn ProtonFrontendConfig::dist(Self) -> String?
-pub fn ProtonFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?) -> Self
+pub fn ProtonFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, cwd? : String?) -> Self
 
 type ProtonProjectConfig
 pub fn ProtonProjectConfig::bundle(Self) -> ProtonBundleConfig?

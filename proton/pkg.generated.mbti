@@ -9,6 +9,8 @@ import {
 // Values
 pub fn abi_version() -> Int
 
+pub fn app() -> App
+
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn config(String) -> App

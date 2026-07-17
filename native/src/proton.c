@@ -61,8 +61,9 @@
 #define PROTON_MAX_EVENTS 32
 #define PROTON_MAX_EVENT_BYTES 512
 #define PROTON_MAX_BRIDGE_BYTES 1048576
-#define PROTON_MAX_BRIDGE_CONFIG_BYTES 65536
+#define PROTON_MAX_BRIDGE_CONFIG_BYTES PROTON_MAX_BRIDGE_BYTES
 #define PROTON_MAX_BRIDGE_OPS 256
+#define PROTON_MAX_BRIDGE_DEV_ORIGINS 16
 #define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
 #define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
@@ -338,6 +339,7 @@ static const char *const proton_bridge_config_keys[] = {
     "ops",
     "max_payload_bytes",
     "request_timeout_ms",
+    "dev_bootstrap_script",
 };
 
 static const char *const proton_bridge_response_keys[] = {
@@ -495,6 +497,10 @@ static bool proton_default_helper_path(char *out, size_t out_len) {
     return false;
   }
 #ifdef _WIN32
+  if (proton_join_path(out, out_len, runtime_root, "cef_process.exe") &&
+      proton_path_exists(out)) {
+    return true;
+  }
   return proton_join_path(out, out_len, bin_dir, "cef_process.exe");
 #else
   return proton_join_path(out, out_len, bin_dir, "cef_process");
@@ -721,8 +727,86 @@ static bool proton_bridge_op_name_valid(const char *name) {
 typedef struct {
   const proton_json_doc_t *doc;
   bool has_mode;
+  bool has_dev_origins;
+  char mode[32];
   int32_t status;
 } proton_bridge_origin_policy_validation_t;
+
+static bool proton_bridge_dev_origin_valid(const char *origin) {
+  const char *authority = NULL;
+  if (origin == NULL) {
+    return false;
+  }
+  if (strncmp(origin, "http://", 7) == 0) {
+    authority = origin + 7;
+  } else if (strncmp(origin, "https://", 8) == 0) {
+    authority = origin + 8;
+  } else {
+    return false;
+  }
+  if (*authority == '\0') {
+    return false;
+  }
+  for (const char *cursor = authority; *cursor != '\0'; cursor++) {
+    unsigned char ch = (unsigned char)*cursor;
+    if (ch <= 0x20 || ch >= 0x7f || ch == '/' || ch == '?' || ch == '#' ||
+        ch == '@' || ch == '"' || ch == '\\') {
+      return false;
+    }
+  }
+  return true;
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t count;
+  int32_t status;
+} proton_bridge_dev_origins_validation_t;
+
+static bool proton_validate_bridge_dev_origin_item(proton_json_value_t value,
+                                                   void *user_data) {
+  proton_bridge_dev_origins_validation_t *validation =
+      (proton_bridge_dev_origins_validation_t *)user_data;
+  if (validation->count >= PROTON_MAX_BRIDGE_DEV_ORIGINS) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge origin_policy.dev_origins array is too large");
+    return false;
+  }
+  char origin[PROTON_MAX_PATH_BYTES];
+  if (!proton_json_read_string(validation->doc, value, origin, sizeof(origin)) ||
+      !proton_bridge_dev_origin_valid(origin)) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge origin_policy.dev_origins contains invalid origin");
+    return false;
+  }
+  validation->count++;
+  return true;
+}
+
+static int32_t proton_validate_bridge_dev_origins(
+    const proton_json_doc_t *doc,
+    proton_json_value_t value,
+    size_t *out_count) {
+  if (!proton_json_is_array(doc, value)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge origin_policy.dev_origins must be an array");
+  }
+  proton_bridge_dev_origins_validation_t validation = {doc, 0, PROTON_OK};
+  if (!proton_json_array_each(doc, value,
+                              proton_validate_bridge_dev_origin_item,
+                              &validation) &&
+      validation.status == PROTON_OK) {
+    validation.status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge origin_policy.dev_origins array is malformed");
+  }
+  if (out_count != NULL) {
+    *out_count = validation.count;
+  }
+  return validation.status;
+}
 
 static bool proton_validate_bridge_origin_policy_field(
     const char *key,
@@ -730,22 +814,44 @@ static bool proton_validate_bridge_origin_policy_field(
     void *user_data) {
   proton_bridge_origin_policy_validation_t *validation =
       (proton_bridge_origin_policy_validation_t *)user_data;
-  if (strcmp(key, "mode") != 0) {
+  if (strcmp(key, "mode") == 0) {
+    char mode[32];
+    if (!proton_json_read_string(validation->doc, value, mode, sizeof(mode)) ||
+        (strcmp(mode, "app_only") != 0 &&
+         strcmp(mode, "app_and_dev_origins") != 0)) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT,
+          "bridge origin_policy.mode must be app_only or app_and_dev_origins");
+      return false;
+    }
+    snprintf(validation->mode, sizeof(validation->mode), "%s", mode);
+    validation->has_mode = true;
+    return true;
+  }
+  if (strcmp(key, "dev_origins") == 0) {
+    size_t count = 0;
+    int32_t status =
+        proton_validate_bridge_dev_origins(validation->doc, value, &count);
+    if (status != PROTON_OK) {
+      validation->status = status;
+      return false;
+    }
+    validation->has_dev_origins = true;
+    if (count == 0) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT,
+          "bridge origin_policy.dev_origins must not be empty");
+      return false;
+    }
+    return true;
+  }
+  {
     char message[160];
     snprintf(message, sizeof(message),
              "bridge origin_policy contains unknown field: %s", key);
     validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
     return false;
   }
-  char mode[32];
-  if (!proton_json_read_string(validation->doc, value, mode, sizeof(mode)) ||
-      strcmp(mode, "app_only") != 0) {
-    validation->status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT, "bridge origin_policy.mode must be app_only");
-    return false;
-  }
-  validation->has_mode = true;
-  return true;
 }
 
 static int32_t proton_validate_bridge_origin_policy(
@@ -756,7 +862,7 @@ static int32_t proton_validate_bridge_origin_policy(
                             "bridge origin_policy must be an object");
   }
   proton_bridge_origin_policy_validation_t validation = {
-      doc, false, PROTON_OK};
+      doc, false, false, "", PROTON_OK};
   if (!proton_json_object_each(doc, value,
                                proton_validate_bridge_origin_policy_field,
                                &validation) &&
@@ -770,6 +876,18 @@ static int32_t proton_validate_bridge_origin_policy(
   if (!validation.has_mode) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "bridge origin_policy requires mode");
+  }
+  if (strcmp(validation.mode, "app_only") == 0 &&
+      validation.has_dev_origins) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge origin_policy.dev_origins requires app_and_dev_origins mode");
+  }
+  if (strcmp(validation.mode, "app_and_dev_origins") == 0 &&
+      !validation.has_dev_origins) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge origin_policy.app_and_dev_origins requires dev_origins");
   }
   return PROTON_OK;
 }
@@ -899,6 +1017,16 @@ static int32_t proton_validate_bridge_config_json(const char *bridge_json) {
       proton_json_dispose(&doc);
       return status;
     }
+  }
+
+  if (proton_json_object_get(&doc, root, "dev_bootstrap_script", &value)) {
+    char *script = proton_json_copy_string(&doc, value);
+    if (script == NULL) {
+      proton_json_dispose(&doc);
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "bridge dev_bootstrap_script must be a string");
+    }
+    free(script);
   }
 
   if (!proton_json_object_get(&doc, root, "ops", &value)) {

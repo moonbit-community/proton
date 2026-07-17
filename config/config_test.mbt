@@ -74,3 +74,99 @@ test "parser requires separators inside arrays and objects" {
   inspect(reports[0].msg, content="expected `,` or `}` after object field")
   inspect(reports[1].msg, content="expected `,` or `]` after array item")
 }
+
+///|
+test "project config rejects unsupported window size_hint" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|  size_hint: "stretch",
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(_) => abort("expected unsupported size_hint")
+    Err(message) =>
+      assert_true(message.contains("unsupported window size_hint"))
+  }
+}
+
+///|
+test "project config rebases file entry and frontend paths from config directory" {
+  let base_dir = "target/proton-config/subdir"
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "frontend/dist/index.html",
+    #|}
+    #|
+    #|frontend = {
+    #|  dev_url: "http://localhost:5173",
+    #|  dist: "frontend/dist",
+    #|  cwd: "frontend",
+    #|}
+    #|
+    #|bundle = {
+    #|  icon: ["icons/icon.ico"],
+    #|  resources: ["resources/**"],
+    #|  output: "target/proton-dist",
+    #|}
+    #|
+  let config = match load_project_config_from_text(source, base_dir) {
+    Ok(config) => config
+    Err(error) => abort(error)
+  }
+  match config.entry() {
+    Asset(path) =>
+      assert_true(
+        normalize_test_path(path).has_suffix(
+          "target/proton-config/subdir/frontend/dist/index.html",
+        ),
+      )
+    _ => abort("expected asset entry")
+  }
+  let frontend = config.frontend().unwrap()
+  assert_true(
+    normalize_test_path(frontend.dist().unwrap()).has_suffix(
+      "target/proton-config/subdir/frontend/dist",
+    ),
+  )
+  assert_true(
+    normalize_test_path(frontend.cwd().unwrap()).has_suffix(
+      "target/proton-config/subdir/frontend",
+    ),
+  )
+  let bundle = config.bundle().unwrap()
+  assert_true(
+    normalize_test_path(bundle.icon[0]).has_suffix(
+      "target/proton-config/subdir/icons/icon.ico",
+    ),
+  )
+  assert_true(
+    normalize_test_path(bundle.resources[0]).has_suffix(
+      "target/proton-config/subdir/resources/**",
+    ),
+  )
+  assert_true(
+    normalize_test_path(bundle.output()).has_suffix(
+      "target/proton-config/subdir/target/proton-dist",
+    ),
+  )
+}
+
+///|
+fn normalize_test_path(path : String) -> String {
+  path.replace(old="\\", new="/")
+}

@@ -239,7 +239,8 @@ fn command_proxy_bootstrap_script(specs_json : String) -> String {
   ";\n" +
   "  var existing = window.__MoonBit__;\n" +
   "  var root = existing && typeof existing === 'object' ? existing : {};\n" +
-  "  var exactListeners = Object.create(null);\n" +
+  "  var exactListeners = root['@@exactListeners'] && typeof root['@@exactListeners'] === 'object' ? root['@@exactListeners'] : Object.create(null);\n" +
+  "  root['@@exactListeners'] = exactListeners;\n" +
   "  var events = root.events && typeof root.events === 'object' ? root.events : {};\n" +
   "  function ensureExactListeners(name) {\n" +
   "    if (!Array.isArray(exactListeners[name])) { exactListeners[name] = []; }\n" +
@@ -341,8 +342,9 @@ fn command_proxy_bootstrap_script(specs_json : String) -> String {
 fn install_extension_event_sender(
   window : @native.Window,
   host : @core.AppCommandHost,
+  policy : BridgePagePolicy,
 ) -> Unit {
-  host.set_event_sender(extension_event_sender(window, None))
+  host.set_event_sender(extension_event_sender(window, None, policy))
 }
 
 ///|
@@ -352,25 +354,33 @@ fn install_extension_event_sender(
 fn forward_notification_click(
   window : @native.Window,
   payload : String,
+  policy : BridgePagePolicy,
 ) -> Unit {
   let event = @ipc.IpcExtensionEvent::new(
     "proton",
     "notification_clicked",
     Json::object({ "payload": Json::string(payload) }),
   )
-  ignore(window.eval(extension_event_dispatch_script(event, None)))
+  ignore(window.eval(extension_event_dispatch_script(event, None, policy)))
 }
 
 ///|
-fn forward_menu_command(window : @native.Window, command_id : String) -> Unit {
+fn forward_menu_command(
+  window : @native.Window,
+  command_id : String,
+  policy : BridgePagePolicy,
+) -> Unit {
   let payload = Json::object({ "command_id": Json::string(command_id) })
-  ignore(window.eval(frontend_event_dispatch_script("menu.command", payload)))
+  ignore(
+    window.eval(frontend_event_dispatch_script("menu.command", payload, policy)),
+  )
 }
 
 ///|
 fn frontend_event_dispatch_script(
   event_name : String,
   payload : Json,
+  policy : BridgePagePolicy,
 ) -> String {
   let event = Json::object({
     "name": Json::string(event_name),
@@ -379,7 +389,7 @@ fn frontend_event_dispatch_script(
   let e = StringBuilder(size_hint=event.length() + 256)
   e <+
     $|(function(){
-    $|  if (!window.location || window.location.protocol !== 'proton:') { return; }
+    $|\{bridge_page_policy_guard_script(policy)}
     $|  var root = window.__MoonBit__;
     $|  var events = root && root.events;
     $|  var emit = events && events['@@emitFrontendEvent'];
@@ -396,9 +406,12 @@ fn frontend_event_dispatch_script(
 fn extension_event_sender(
   window : @native.Window,
   page_instance : String?,
+  policy : BridgePagePolicy,
 ) -> async (@ipc.IpcExtensionEvent) -> Unit {
   async fn(event) {
-    ignore(window.eval(extension_event_dispatch_script(event, page_instance)))
+    ignore(
+      window.eval(extension_event_dispatch_script(event, page_instance, policy)),
+    )
     @async.sleep(0)
   }
 }
@@ -407,6 +420,7 @@ fn extension_event_sender(
 fn extension_event_dispatch_script(
   event : @ipc.IpcExtensionEvent,
   page_instance : String?,
+  policy : BridgePagePolicy,
 ) -> String {
   let page_instance_check = match page_instance {
     Some(value) =>
@@ -416,7 +430,7 @@ fn extension_event_dispatch_script(
     None => ""
   }
   "(function(){\n" +
-  "  if (!window.location || window.location.protocol !== 'proton:') { return; }\n" +
+  bridge_page_policy_guard_script(policy) +
   "  var event = " +
   ToJson::to_json(event).stringify() +
   ";\n" +
@@ -435,6 +449,7 @@ async fn dispatch_bridge_request(
   window : @native.Window,
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
+  policy : BridgePagePolicy,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(request.window())
@@ -445,7 +460,7 @@ async fn dispatch_bridge_request(
       request.op(),
       request.payload(),
     ),
-    Some(extension_event_sender(window, request.page_instance())),
+    Some(extension_event_sender(window, request.page_instance(), policy)),
   )
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
@@ -455,5 +470,177 @@ async fn dispatch_bridge_request(
       _ => response.body.stringify()
     }
     @native.BridgeResponse::Err(request_id~, code="op_failed", message~)
+  }
+}
+
+///|
+fn default_bridge_page_policy() -> BridgePagePolicy {
+  BridgePagePolicy::{ dev_origin: None }
+}
+
+///|
+fn bridge_page_policy_for_manifest(
+  manifest : @manifest.AppManifest,
+) -> Result[BridgePagePolicy, String] {
+  if !proton_dev_mode_enabled() {
+    return Ok(default_bridge_page_policy())
+  }
+  match manifest.entry {
+    @manifest.AppEntry::Url(url) =>
+      url_origin(url).map(fn(origin) {
+        BridgePagePolicy::{ dev_origin: Some(origin) }
+      })
+    _ => Ok(default_bridge_page_policy())
+  }
+}
+
+///|
+fn url_origin(url : String) -> Result[String, String] {
+  let (scheme_view, rest_view) = match url.split_once("://") {
+    Some(parts) => parts
+    None =>
+      return Err("dev bridge URL must include http:// or https://: " + url)
+  }
+  let scheme = scheme_view.to_owned().to_lower()
+  if scheme != "http" && scheme != "https" {
+    return Err("dev bridge URL must use http or https: " + url)
+  }
+  let rest = rest_view.to_owned()
+  if rest == "" {
+    return Err("dev bridge URL is missing host: " + url)
+  }
+  let mut end = rest.length()
+  for delimiter in ["/", "?", "#"] {
+    match rest.find(delimiter) {
+      Some(index) if index < end => end = index
+      _ => ()
+    }
+  }
+  if end == 0 {
+    return Err("dev bridge URL is missing host: " + url)
+  }
+  let authority = rest.unsafe_substring(start=0, end~).to_string()
+  if !dev_origin_authority_is_valid(authority) {
+    return Err("dev bridge URL has invalid origin: " + url)
+  }
+  canonical_dev_origin_authority(authority, scheme).map(fn(authority) {
+    scheme + "://" + authority
+  })
+}
+
+///|
+fn dev_origin_authority_is_valid(authority : String) -> Bool {
+  if authority == "" || authority.contains("@") {
+    return false
+  }
+  for ch in authority {
+    let code = ch.to_int()
+    if code <= 0x20 ||
+      code >= 0x7f ||
+      ch == '/' ||
+      ch == '?' ||
+      ch == '#' ||
+      ch == '"' ||
+      ch == '\\' {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn canonical_dev_origin_authority(
+  authority : String,
+  scheme : String,
+) -> Result[String, String] {
+  if authority.has_prefix("[") {
+    let (host_part, suffix) = match authority.split_once("]") {
+      Some(parts) => parts
+      None => return Err("dev bridge URL has invalid IPv6 origin: " + authority)
+    }
+    let host_text = host_part.to_owned()
+    let host = host_text
+      .unsafe_substring(start=1, end=host_text.length())
+      .to_string()
+    if host == "" {
+      return Err("dev bridge URL host must not be empty")
+    }
+    if suffix != "" && !suffix.has_prefix(":") {
+      return Err("dev bridge URL has invalid IPv6 origin: " + authority)
+    }
+    canonical_dev_origin_port_suffix(suffix.to_owned(), scheme).map(fn(port) {
+      "[" + host.to_lower() + "]" + port
+    })
+  } else {
+    let first_colon = authority.find(":")
+    let last_colon = authority.rev_find(":")
+    if first_colon != last_colon {
+      return Err("dev bridge IPv6 origins must use brackets: " + authority)
+    }
+    match first_colon {
+      None => Ok(authority.to_lower())
+      Some(index) => {
+        let host = authority.unsafe_substring(start=0, end=index).to_string()
+        let port = authority
+          .unsafe_substring(start=index + 1, end=authority.length())
+          .to_string()
+        if host == "" {
+          return Err("dev bridge URL host must not be empty")
+        }
+        if port == "" {
+          return Err("dev bridge URL port must not be empty")
+        }
+        canonical_dev_origin_port_suffix(port, scheme).map(fn(port) {
+          host.to_lower() + port
+        })
+      }
+    }
+  }
+}
+
+///|
+fn canonical_dev_origin_port_suffix(
+  port : String,
+  scheme : String,
+) -> Result[String, String] {
+  if port == "" {
+    return Ok("")
+  }
+  let text = if port.has_prefix(":") { port[1:].to_owned() } else { port }
+  if text == "" {
+    return Err("dev bridge URL port must not be empty")
+  }
+  let value = @string.parse_int(text[:]) catch {
+    _ => return Err("dev bridge URL port must be an integer: " + text)
+  }
+  if value <= 0 || value > 65535 {
+    return Err("dev bridge URL port is out of range: " + text)
+  }
+  let default_port = if scheme == "http" { 80 } else { 443 }
+  if value == default_port {
+    Ok("")
+  } else {
+    Ok(":" + value.to_string())
+  }
+}
+
+///|
+fn bridge_page_policy_dev_origins(policy : BridgePagePolicy) -> Array[String] {
+  match policy.dev_origin {
+    Some(origin) => [origin]
+    None => []
+  }
+}
+
+///|
+fn bridge_page_policy_guard_script(policy : BridgePagePolicy) -> String {
+  match policy.dev_origin {
+    None =>
+      "  if (!window.location || window.location.protocol !== 'proton:') { return; }\n"
+    Some(origin) =>
+      "  if (!window.location) { return; }\n" +
+      "  if (window.location.protocol !== 'proton:' && window.location.origin !== " +
+      Json::string(origin).stringify() +
+      ") { return; }\n"
   }
 }

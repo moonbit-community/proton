@@ -1,0 +1,15 @@
+import {
+  "justjavac/proton_config",
+  "justjavac/proton_cli/cef",
+  "moonbitlang/async",
+  "moonbitlang/async/process",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "native"

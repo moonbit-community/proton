@@ -12,6 +12,9 @@ const requestedCdpPort = process.env.PROTON_BRIDGE_E2E_CDP_PORT
   ? Number(process.env.PROTON_BRIDGE_E2E_CDP_PORT)
   : null;
 let cdpPort = requestedCdpPort ?? 9222;
+let activeDevFrontendUrl = null;
+let activeDevFrontendPort = null;
+let activeDevFrontendHadNodeModules = false;
 const rawArgs = process.argv.slice(2);
 const scenarios = [];
 let appWorkdir = repoRoot;
@@ -39,6 +42,17 @@ function fail(message) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function npmCommand() {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
+}
+
+function spawnNpm(args, options) {
+  if (process.platform === "win32") {
+    return spawn("cmd", ["/c", npmCommand(), ...args], options);
+  }
+  return spawn(npmCommand(), args, options);
 }
 
 function canBindPort(port) {
@@ -83,7 +97,8 @@ function ensureSupportedScenario(name) {
     name !== "41_app_commands" &&
     name !== "42_attribute_codegen_commands" &&
     name !== "45_bridge_multi_window" &&
-    name !== "46_asset_sidecar_resources"
+    name !== "46_asset_sidecar_resources" &&
+    name !== "47_dev_extension_js"
   ) {
     fail(`Unsupported bridge smoke scenario: ${name}`);
   }
@@ -94,6 +109,9 @@ function supportsMoonBitE2eScenario(name) {
 }
 
 function activeRuntimeDist() {
+  if (process.env.PROTON_NATIVE_DIST) {
+    return path.resolve(repoRoot, process.env.PROTON_NATIVE_DIST);
+  }
   const manifestPath = path.join(repoRoot, ".proton", "runtime.json");
   if (fs.existsSync(manifestPath)) {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -151,6 +169,14 @@ function removeIfExists(filePath) {
   }
 }
 
+function removeTreeIfExists(filePath) {
+  try {
+    fs.rmSync(filePath, { recursive: true, force: true });
+  } catch {
+    // Best-effort cleanup only.
+  }
+}
+
 function httpJson(url, timeout = 3000) {
   return new Promise((resolve, reject) => {
     const request = http.get(url, { timeout }, (response) => {
@@ -178,6 +204,15 @@ function httpJson(url, timeout = 3000) {
   });
 }
 
+async function chooseDevFrontendPort() {
+  for (let candidate = 5173; candidate < 5253; candidate += 1) {
+    if (candidate !== cdpPort && await canBindPort(candidate)) {
+      return candidate;
+    }
+  }
+  fail("no available Vite dev-server port found starting at 5173");
+}
+
 async function waitForCdpEndpoint() {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
@@ -191,6 +226,19 @@ async function waitForCdpEndpoint() {
     }
   }
   throw new Error(`CDP endpoint did not start on ${cdpPort}: ${lastError?.message ?? "timeout"}`);
+}
+
+async function waitForCdpEndpointToStop() {
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    try {
+      await httpJson(`http://127.0.0.1:${cdpPort}/json/version`, 500);
+      await sleep(100);
+    } catch {
+      return;
+    }
+  }
+  throw new Error(`CDP endpoint did not stop on ${cdpPort}`);
 }
 
 async function waitForPageTarget() {
@@ -425,7 +473,7 @@ async function runCdpProbe() {
     assertProbeResult(result);
     const queueFull = await runQueueFullProbe(client);
     const reload = await runReloadProbe(client);
-    const nonProton = await runNonProtonProbe(client);
+    const nonProton = await runNonProtonProbe(client, "ext:app/ping");
     return { ...result, queueFull, reload, nonProton };
   } finally {
     client.close();
@@ -682,6 +730,303 @@ async function runEventBroadcastReloadProbe(client) {
   return result;
 }
 
+async function runDevExtensionJsProbe() {
+  await waitForCdpEndpoint();
+  const page = await waitForPageTargetByTitle("Proton Dev Extension JS");
+  const client = new CdpClient(page.webSocketDebuggerUrl);
+  await client.open();
+  try {
+    await client.send("Runtime.enable");
+    await waitForExpression(
+      client,
+      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && window.__MoonBit__?.events?.['@@emitExtensionEvent'])",
+      "window.__MoonBit__ dev ticker bridge",
+    );
+    const result = await client.evaluate(
+      `(
+        async () => {
+          window.__devExtensionProbe = [];
+          window.__MoonBit__.ticker.on("tick", (event) => {
+            window.__devExtensionProbe.push({
+              kind: "tick",
+              run_id: event.payload.run_id,
+              index: event.payload.index,
+              total: event.payload.total,
+            });
+          });
+          window.__MoonBit__.ticker.on("done", (event) => {
+            window.__devExtensionProbe.push({
+              kind: "done",
+              run_id: event.payload.run_id,
+              total: event.payload.total,
+            });
+          });
+          const reply = await window.__MoonBit__.ticker.start({
+            run_id: 9201,
+            count: 2,
+            interval_ms: 50,
+          });
+          return {
+            url: location.href,
+            origin: location.origin,
+            title: document.title,
+            scriptElementCount: document.scripts.length,
+            protonScriptElementCount: Array.from(document.scripts).filter((script) => {
+              const text = (script.src || "") + "\\n" + (script.textContent || "");
+              return /proton|moonbit/i.test(text);
+            }).length,
+            hasBridge: typeof window.__MoonBit__?.core?.invokeOp === "function",
+            hasProxy: typeof window.__MoonBit__?.ticker?.start === "function",
+            hasEventProxy: typeof window.__MoonBit__?.ticker?.on === "function",
+            reply,
+            events: window.__devExtensionProbe,
+          };
+        }
+      )()`,
+      true,
+    );
+    assertDevExtensionJsProbeResult(result);
+    const reload = await runDevExtensionJsReloadProbe(client);
+    const nonDevOrigin = await runNonProtonProbe(client, "ext:ticker/start");
+    return { ...result, reload, nonDevOrigin };
+  } finally {
+    client.close();
+  }
+}
+
+async function runDevExtensionJsReloadProbe(client) {
+  await client.send("Page.enable");
+  await client.evaluate(
+    `(() => {
+      const start = window.__MoonBit__?.ticker?.start;
+      if (typeof start === "function") {
+        void start({
+          run_id: 9300,
+          count: 5,
+          interval_ms: 50,
+        }).catch(() => {});
+      }
+      location.reload();
+      return true;
+    })()`,
+  );
+  await waitForExpression(
+    client,
+    `Boolean(
+      window.__MoonBit__?.ticker?.start &&
+      window.__MoonBit__?.ticker?.on &&
+      performance.getEntriesByType("navigation")[0]?.type === "reload"
+    )`,
+    "dev extension bridge after reload",
+  );
+  const result = await client.evaluate(
+    `(
+      async () => {
+        window.__devExtensionReloadProbe = [];
+        window.__MoonBit__.ticker.on("tick", (event) => {
+          window.__devExtensionReloadProbe.push({
+            kind: "tick",
+            run_id: event.payload.run_id,
+            index: event.payload.index,
+            total: event.payload.total,
+          });
+        });
+        window.__MoonBit__.ticker.on("done", (event) => {
+          window.__devExtensionReloadProbe.push({
+            kind: "done",
+            run_id: event.payload.run_id,
+            total: event.payload.total,
+          });
+        });
+        const reply = await window.__MoonBit__.ticker.start({
+          run_id: 9301,
+          count: 1,
+          interval_ms: 50,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        return {
+          url: location.href,
+          origin: location.origin,
+          title: document.title,
+          hasBridge: typeof window.__MoonBit__?.core?.invokeOp === "function",
+          hasProxy: typeof window.__MoonBit__?.ticker?.start === "function",
+          hasEventProxy: typeof window.__MoonBit__?.ticker?.on === "function",
+          navigationType: performance.getEntriesByType("navigation")[0]?.type,
+          reply,
+          events: window.__devExtensionReloadProbe,
+        };
+      }
+    )()`,
+    true,
+  );
+  assertDevExtensionJsReloadProbeResult(result);
+  return result;
+}
+
+async function runDevExtensionJsProductionSmoke(env) {
+  const frontendDist = path.join(repoRoot, "examples", "47_dev_extension_js", "frontend", "dist");
+  const hadDist = fs.existsSync(frontendDist);
+  let child = null;
+  let output = () => "";
+  let client = null;
+  try {
+    await buildDevExtensionJsFrontend(env);
+    child = spawnMoonExampleApp(env, "47_dev_extension_js");
+    output = collectOutput(child);
+    await Promise.race([
+      waitForCdpEndpoint(),
+      new Promise((_, reject) => {
+        child.once("exit", (code, signal) => {
+          reject(new Error(`production app exited before CDP started: code=${code} signal=${signal}\n${output()}`));
+        });
+      }),
+      sleep(timeoutMs).then(() => {
+        throw new Error(`production bridge smoke timed out after ${timeoutMs}ms\n${output()}`);
+      }),
+    ]);
+    const page = await waitForPageTargetByTitle("Proton Dev Extension JS");
+    client = new CdpClient(page.webSocketDebuggerUrl);
+    await client.open();
+    await client.send("Runtime.enable");
+    await waitForExpression(
+      client,
+      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)",
+      "window.__MoonBit__ production ticker bridge",
+    );
+    const result = await client.evaluate(
+      `(
+        async () => {
+          window.__productionExtensionProbe = [];
+          window.__MoonBit__.ticker.on("tick", (event) => {
+            window.__productionExtensionProbe.push({
+              kind: "tick",
+              run_id: event.payload.run_id,
+              index: event.payload.index,
+              total: event.payload.total,
+            });
+          });
+          window.__MoonBit__.ticker.on("done", (event) => {
+            window.__productionExtensionProbe.push({
+              kind: "done",
+              run_id: event.payload.run_id,
+              total: event.payload.total,
+            });
+          });
+          const reply = await window.__MoonBit__.ticker.start({
+            run_id: 9401,
+            count: 2,
+            interval_ms: 50,
+          });
+          return {
+            url: location.href,
+            origin: location.origin,
+            title: document.title,
+            hasBridge: typeof window.__MoonBit__?.core?.invokeOp === "function",
+            hasProxy: typeof window.__MoonBit__?.ticker?.start === "function",
+            hasEventProxy: typeof window.__MoonBit__?.ticker?.on === "function",
+            reply,
+            events: window.__productionExtensionProbe,
+          };
+        }
+      )()`,
+      true,
+    );
+    assertDevExtensionJsProductionProbeResult(result);
+    return result;
+  } finally {
+    if (client) {
+      client.close();
+    }
+    if (child) {
+      await terminateTree(child);
+    }
+    if (!hadDist) {
+      removeTreeIfExists(frontendDist);
+    }
+  }
+}
+
+async function buildDevExtensionJsFrontend(env) {
+  const frontendDir = path.join(repoRoot, "examples", "47_dev_extension_js", "frontend");
+  const hadNodeModules = fs.existsSync(path.join(frontendDir, "node_modules"));
+  try {
+    if (!frontendDependenciesReady(frontendDir)) {
+      await runCollectedChild(
+        spawnNpm(["ci", "--no-audit", "--no-fund"], {
+          cwd: frontendDir,
+          env: process.env,
+          stdio: ["ignore", "pipe", "pipe"],
+        }),
+        "npm ci for dev extension JS",
+      );
+    }
+    await runCollectedChild(
+      spawn("moon", [
+        "-C",
+        path.join(repoRoot, "cli"),
+        "run",
+        ".",
+        "--",
+        "-C",
+        repoRoot,
+        "build",
+        "examples/47_dev_extension_js",
+      ], {
+        cwd: appWorkdir,
+        env: {
+          ...env,
+          PROTON_NO_UPDATE_CHECK: "1",
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+      "proton_cli build dev extension JS",
+    );
+  } finally {
+    if (!hadNodeModules) {
+      removeTreeIfExists(path.join(frontendDir, "node_modules"));
+    }
+  }
+}
+
+///|
+function frontendDependenciesReady(frontendDir) {
+  return (
+    fs.existsSync(path.join(frontendDir, "node_modules")) &&
+    fs.existsSync(frontendViteBin(frontendDir))
+  );
+}
+
+///|
+function frontendViteBin(frontendDir) {
+  const binDir = path.join(frontendDir, "node_modules", ".bin");
+  if (process.platform === "win32") {
+    return path.join(binDir, "vite.cmd");
+  }
+  return path.join(binDir, "vite");
+}
+
+///|
+async function runCollectedChild(child, label) {
+  const output = collectOutput(child);
+  try {
+    const exit = await Promise.race([
+      new Promise((resolve, reject) => {
+        child.once("error", reject);
+        child.once("exit", (code, signal) => resolve({ code, signal }));
+      }),
+      sleep(timeoutMs).then(() => {
+        throw new Error(`${label} timed out after ${timeoutMs}ms\n${output()}`);
+      }),
+    ]);
+    if (exit.code !== 0) {
+      throw new Error(`${label} failed: code=${exit.code} signal=${exit.signal}\n${output()}`);
+    }
+  } catch (error) {
+    await terminateTree(child);
+    throw error;
+  }
+}
+
 async function runAttributeCodegenCommandProbe() {
   await waitForCdpEndpoint();
   const page = await waitForPageTargetByTitle("Proton Attribute Codegen");
@@ -877,7 +1222,7 @@ async function runReloadProbe(client) {
   return result;
 }
 
-async function runNonProtonProbe(client) {
+async function runNonProtonProbe(client, allowedOp) {
   await client.send("Page.enable");
   const filePath = path.join(repoRoot, "target", "non-proton-bridge-probe.html");
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -900,9 +1245,17 @@ async function runNonProtonProbe(client) {
   const address = httpServer.address();
   const httpUrl = `http://127.0.0.1:${address.port}/probe.html`;
   try {
-    const about = await navigateAndReadBridgeGlobals(client, "about:blank");
-    const file = await navigateAndReadBridgeGlobals(client, fileUrl);
-    const httpPage = await navigateAndReadBridgeGlobals(client, httpUrl);
+    const about = await navigateAndReadBridgeGlobals(
+      client,
+      "about:blank",
+      allowedOp,
+    );
+    const file = await navigateAndReadBridgeGlobals(client, fileUrl, allowedOp);
+    const httpPage = await navigateAndReadBridgeGlobals(
+      client,
+      httpUrl,
+      allowedOp,
+    );
     const result = { about, file, http: httpPage };
     assertNonProtonProbeResult(result);
     return result;
@@ -911,11 +1264,11 @@ async function runNonProtonProbe(client) {
       httpServer.close(resolve);
       httpServer.closeAllConnections?.();
     });
+    removeIfExists(filePath);
   }
 }
 
 async function runWindowCloseLifecycleProbe(env, scenario) {
-  cleanupWorkspaceProcesses();
   const child = spawnApp(env, scenario);
   const output = collectOutput(child);
   let client = null;
@@ -953,12 +1306,10 @@ async function runWindowCloseLifecycleProbe(env, scenario) {
       client.close();
     }
     await terminateTree(child);
-    cleanupWorkspaceProcesses();
   }
 }
 
 async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
-  cleanupWorkspaceProcesses();
   const child = spawnApp(env, scenario);
   const output = collectOutput(child);
   let client = null;
@@ -996,11 +1347,10 @@ async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
       client.close();
     }
     await terminateTree(child);
-    cleanupWorkspaceProcesses();
   }
 }
 
-async function navigateAndReadBridgeGlobals(client, url) {
+async function navigateAndReadBridgeGlobals(client, url, allowedOp) {
   await client.send("Page.navigate", { url });
   await waitForExpression(
     client,
@@ -1008,12 +1358,54 @@ async function navigateAndReadBridgeGlobals(client, url) {
     `navigation to ${url}`,
   );
   return await client.evaluate(
-    `({
-      url: location.href,
-      title: document.title,
-      hasBridge: Boolean(window.__MoonBit__?.core?.invokeOp),
-      hasNativeInvoke: typeof window.__protonNativeInvokeOp === "function"
-    })`,
+    `(
+      async () => {
+        let nativeProbe = null;
+        if (typeof window.__protonNativeInvokeOp === "function") {
+          nativeProbe = await new Promise((resolve) => {
+            const pendingId = 770001;
+            const timer = setTimeout(() => {
+              resolve({ resolved: false, ok: null, error: "timeout" });
+            }, 1000);
+            window.__protonBridgeResolve = function(id, ok, payloadJson, errorMessage) {
+              if (id !== pendingId) {
+                return;
+              }
+              clearTimeout(timer);
+              resolve({
+                resolved: true,
+                ok: Boolean(ok),
+                payloadJson: String(payloadJson || ""),
+                error: String(errorMessage || ""),
+              });
+            };
+            try {
+              window.__protonNativeInvokeOp(
+                pendingId,
+                ${JSON.stringify(allowedOp)},
+                "{}",
+              );
+            } catch (error) {
+              clearTimeout(timer);
+              resolve({
+                resolved: true,
+                threw: true,
+                ok: false,
+                error: String(error && error.message ? error.message : error),
+              });
+            }
+          });
+        }
+        return {
+          url: location.href,
+          title: document.title,
+          hasBridge: Boolean(window.__MoonBit__?.core?.invokeOp),
+          hasNativeInvoke: typeof window.__protonNativeInvokeOp === "function",
+          nativeProbe,
+        };
+      }
+    )()`,
+    true,
   );
 }
 
@@ -1256,6 +1648,121 @@ function assertEventBroadcastReloadProbeResult(result) {
   }
 }
 
+function assertDevExtensionJsProbeResult(result) {
+  if (!result || typeof result !== "object") {
+    throw new Error(`dev extension JS probe returned non-object: ${JSON.stringify(result)}`);
+  }
+  if (!activeDevFrontendUrl || !String(result.url ?? "").startsWith(activeDevFrontendUrl)) {
+    throw new Error(`expected dev URL ${activeDevFrontendUrl}, got ${result.url}`);
+  }
+  if (result.origin !== activeDevFrontendUrl) {
+    throw new Error(`expected dev origin ${activeDevFrontendUrl}, got ${result.origin}`);
+  }
+  if (result.title !== "Proton Dev Extension JS") {
+    throw new Error(`unexpected dev page title: ${result.title}`);
+  }
+  if (result.protonScriptElementCount !== 0) {
+    throw new Error(`dev page should not contain manual Proton bridge script tags: ${JSON.stringify(result)}`);
+  }
+  if (
+    result.hasBridge !== true ||
+    result.hasProxy !== true ||
+    result.hasEventProxy !== true
+  ) {
+    throw new Error(`dev extension bridge was not installed: ${JSON.stringify(result)}`);
+  }
+  if (result.reply?.done?.run_id !== 9201 || result.reply?.done?.total !== 2) {
+    throw new Error(`unexpected dev extension reply: ${JSON.stringify(result.reply)}`);
+  }
+  const events = Array.isArray(result.events) ? result.events : [];
+  const tickEvents = events.filter((event) => event.kind === "tick");
+  const doneEvents = events.filter((event) => event.kind === "done");
+  if (
+    tickEvents.length !== 2 ||
+    tickEvents[0]?.index !== 1 ||
+    tickEvents[1]?.index !== 2
+  ) {
+    throw new Error(`unexpected dev tick events: ${JSON.stringify(events)}`);
+  }
+  if (doneEvents.length !== 1 || doneEvents[0]?.run_id !== 9201 || doneEvents[0]?.total !== 2) {
+    throw new Error(`unexpected dev done events: ${JSON.stringify(events)}`);
+  }
+}
+
+function assertDevExtensionJsReloadProbeResult(result) {
+  if (!result || typeof result !== "object") {
+    throw new Error(`dev extension JS reload probe returned non-object: ${JSON.stringify(result)}`);
+  }
+  if (!activeDevFrontendUrl || !String(result.url ?? "").startsWith(activeDevFrontendUrl)) {
+    throw new Error(`expected dev URL after reload ${activeDevFrontendUrl}, got ${result.url}`);
+  }
+  if (result.origin !== activeDevFrontendUrl) {
+    throw new Error(`expected dev origin after reload ${activeDevFrontendUrl}, got ${result.origin}`);
+  }
+  if (result.title !== "Proton Dev Extension JS") {
+    throw new Error(`unexpected dev page title after reload: ${result.title}`);
+  }
+  if (
+    result.hasBridge !== true ||
+    result.hasProxy !== true ||
+    result.hasEventProxy !== true
+  ) {
+    throw new Error(`dev extension bridge was not reinstalled after reload: ${JSON.stringify(result)}`);
+  }
+  if (result.navigationType !== "reload") {
+    throw new Error(`expected dev reload navigation type, got ${result.navigationType}`);
+  }
+  if (result.reply?.done?.run_id !== 9301 || result.reply?.done?.total !== 1) {
+    throw new Error(`unexpected dev reload reply: ${JSON.stringify(result.reply)}`);
+  }
+  const events = Array.isArray(result.events) ? result.events : [];
+  const currentRunDone = events.filter((event) =>
+    event.kind === "done" && event.run_id === 9301 && event.total === 1
+  );
+  if (currentRunDone.length !== 1) {
+    throw new Error(`dev reload did not deliver current done event: ${JSON.stringify(events)}`);
+  }
+  const staleEvents = events.filter((event) => event.run_id === 9300);
+  if (staleEvents.length !== 0) {
+    throw new Error(`dev reload delivered stale pre-reload events: ${JSON.stringify(events)}`);
+  }
+}
+
+function assertDevExtensionJsProductionProbeResult(result) {
+  if (!result || typeof result !== "object") {
+    throw new Error(`dev extension JS production probe returned non-object: ${JSON.stringify(result)}`);
+  }
+  if (!String(result.url || "").startsWith("proton://app/")) {
+    throw new Error(`expected production URL to use proton://app/, got ${result.url}`);
+  }
+  if (result.title !== "Proton Dev Extension JS") {
+    throw new Error(`unexpected production page title: ${result.title}`);
+  }
+  if (
+    result.hasBridge !== true ||
+    result.hasProxy !== true ||
+    result.hasEventProxy !== true
+  ) {
+    throw new Error(`production extension bridge was not installed: ${JSON.stringify(result)}`);
+  }
+  if (result.reply?.done?.run_id !== 9401 || result.reply?.done?.total !== 2) {
+    throw new Error(`unexpected production extension reply: ${JSON.stringify(result.reply)}`);
+  }
+  const events = Array.isArray(result.events) ? result.events : [];
+  const tickEvents = events.filter((event) => event.kind === "tick");
+  const doneEvents = events.filter((event) => event.kind === "done");
+  if (
+    tickEvents.length !== 2 ||
+    tickEvents[0]?.index !== 1 ||
+    tickEvents[1]?.index !== 2
+  ) {
+    throw new Error(`unexpected production tick events: ${JSON.stringify(events)}`);
+  }
+  if (doneEvents.length !== 1 || doneEvents[0]?.run_id !== 9401 || doneEvents[0]?.total !== 2) {
+    throw new Error(`unexpected production done events: ${JSON.stringify(events)}`);
+  }
+}
+
 function assertAttributeCodegenCommandProbeResult(result) {
   if (!result || typeof result !== "object") {
     throw new Error(`attribute codegen probe returned non-object: ${JSON.stringify(result)}`);
@@ -1358,14 +1865,74 @@ function assertNonProtonProbeResult(result) {
     if (page.hasBridge !== false) {
       throw new Error(`${name} page unexpectedly has window.__MoonBit__.core.invokeOp`);
     }
-    if (page.hasNativeInvoke !== false) {
-      throw new Error(`${name} page unexpectedly has __protonNativeInvokeOp`);
+    if (page.hasNativeInvoke === true) {
+      if (
+        !page.nativeProbe ||
+        page.nativeProbe.resolved !== true ||
+        page.nativeProbe.ok !== false ||
+        !String(page.nativeProbe.error || "").includes("origin")
+      ) {
+        throw new Error(`${name} page native bridge was not origin-rejected: ${JSON.stringify(page)}`);
+      }
     }
   }
 }
 
 function spawnApp(env, scenario) {
   fs.mkdirSync(appWorkdir, { recursive: true });
+  if (scenario === "47_dev_extension_js") {
+    if (!activeDevFrontendUrl || activeDevFrontendPort === null) {
+      throw new Error("dev frontend URL was not prepared for 47_dev_extension_js");
+    }
+    const viteCommand = [
+      "npm",
+      "run",
+      "dev",
+      "--",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(activeDevFrontendPort),
+      "--strictPort",
+    ].join(" ");
+    return spawn("moon", [
+      "-C",
+      path.join(repoRoot, "cli"),
+      "run",
+      ".",
+      "--",
+      "-C",
+      repoRoot,
+      "dev",
+      `examples/${scenario}`,
+      "--url",
+      activeDevFrontendUrl,
+      "--command",
+      viteCommand,
+      "--frontend-cwd",
+      `examples/${scenario}/frontend`,
+      "--timeout-ms",
+      String(timeoutMs),
+    ], {
+      cwd: appWorkdir,
+      detached: process.platform !== "win32",
+      env: {
+        ...env,
+        PROTON_NO_UPDATE_CHECK: "1",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
+  return spawnMoonExampleApp(env, scenario);
+}
+
+function spawnMoonExampleApp(env, scenario) {
+  const appEnv = {
+    ...env,
+  };
+  if (scenario === "47_dev_extension_js") {
+    appEnv.PROTON_CONFIG_PATH = path.join(repoRoot, "examples", scenario, "moon.proton");
+  }
   return spawn("moon", [
     "-C",
     path.join(repoRoot, "examples"),
@@ -1377,7 +1944,8 @@ function spawnApp(env, scenario) {
     "120",
   ], {
     cwd: appWorkdir,
-    env,
+    detached: process.platform !== "win32",
+    env: appEnv,
     stdio: ["ignore", "pipe", "pipe"],
   });
 }
@@ -1394,17 +1962,41 @@ function collectOutput(child) {
 }
 
 async function terminateTree(child) {
-  if (!child || child.exitCode !== null || child.signalCode !== null) {
+  if (!child) {
     return;
   }
   if (process.platform === "win32") {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      return;
+    }
     await new Promise((resolve) => {
       spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
         stdio: "ignore",
       }).once("exit", resolve);
     });
   } else {
-    child.kill("SIGTERM");
+    const signalGroup = (signal) => {
+      try {
+        process.kill(-child.pid, signal);
+        return true;
+      } catch (error) {
+        if (error?.code === "ESRCH") {
+          return false;
+        }
+        throw error;
+      }
+    };
+    signalGroup("SIGTERM");
+    if (child.exitCode === null && child.signalCode === null) {
+      await Promise.race([
+        new Promise((resolve) => child.once("exit", resolve)),
+        sleep(5000),
+      ]);
+    }
+    if (signalGroup(0)) {
+      signalGroup("SIGKILL");
+    }
+    return;
   }
   if (child.exitCode !== null || child.signalCode !== null) {
     return;
@@ -1413,60 +2005,6 @@ async function terminateTree(child) {
     new Promise((resolve) => child.once("exit", resolve)),
     sleep(5000),
   ]);
-}
-
-function cleanupWorkspaceProcesses() {
-  if (process.platform !== "win32") {
-    const result = spawnSync("ps", ["-axo", "pid=,command="], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    });
-    if (result.status !== 0) {
-      return;
-    }
-    const candidates = [];
-    for (const line of result.stdout.split(/\r?\n/)) {
-      const match = line.match(/^\s*(\d+)\s+(.*)$/);
-      if (!match) {
-        continue;
-      }
-      const pid = Number(match[1]);
-      const command = match[2];
-      if (
-        pid !== process.pid &&
-        command.includes(repoRoot) &&
-        !command.includes("scripts/e2e_bridge_smoke.mjs")
-      ) {
-        candidates.push(pid);
-      }
-    }
-    for (const pid of candidates) {
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch {
-        // Best-effort cleanup only.
-      }
-    }
-    return;
-  }
-  const script = `
-$root = (Resolve-Path -LiteralPath '${repoRoot.replace(/'/g, "''")}').Path
-Get-CimInstance Win32_Process |
-  Where-Object {
-    ($_.CommandLine -like "*$root*") -or
-    ($_.ExecutablePath -like "$root\\_build\\native\\*") -or
-    ($_.ExecutablePath -like "$root\\.proton\\runtimes\\*\\bin\\cef_process.exe") -or
-    ($_.ExecutablePath -like "$root\\native\\dist\\bin\\cef_process.exe")
-  } |
-  Where-Object { $_.ProcessId -ne $PID } |
-  ForEach-Object {
-    try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {}
-  }
-`;
-  spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], {
-    cwd: repoRoot,
-    stdio: "ignore",
-  });
 }
 
 function closeWindowsForProcessTree(rootPid) {
@@ -1555,10 +2093,19 @@ async function closeScenarioWindow(client, rootPid) {
 async function runScenario(name, hasMoonBitE2e) {
   ensureSupportedScenario(name);
   const env = pathEnvWithNativeRuntime();
+  activeDevFrontendUrl = null;
+  activeDevFrontendPort = null;
+  activeDevFrontendHadNodeModules = false;
+  if (name === "47_dev_extension_js") {
+    activeDevFrontendPort = await chooseDevFrontendPort();
+    activeDevFrontendUrl = `http://127.0.0.1:${activeDevFrontendPort}`;
+    activeDevFrontendHadNodeModules = fs.existsSync(
+      path.join(repoRoot, "examples", name, "frontend", "node_modules"),
+    );
+  }
   fs.mkdirSync(path.join(repoRoot, "target"), { recursive: true });
   removeIfExists(path.join(repoRoot, "target", "proton-native.log"));
   removeIfExists(path.join(repoRoot, "examples", "target", "app-commands.probe.json"));
-  cleanupWorkspaceProcesses();
   const child = spawnApp(env, name);
   const output = collectOutput(child);
   let result = null;
@@ -1589,7 +2136,14 @@ async function runScenario(name, hasMoonBitE2e) {
     ]);
   } finally {
     await terminateTree(child);
-    cleanupWorkspaceProcesses();
+    if (process.platform !== "win32") {
+      await waitForCdpEndpointToStop();
+    }
+    if (name === "47_dev_extension_js" && !activeDevFrontendHadNodeModules) {
+      removeTreeIfExists(
+        path.join(repoRoot, "examples", name, "frontend", "node_modules"),
+      );
+    }
   }
   if (name === "41_app_commands") {
     const lifecycle = await runWindowCloseLifecycleProbe(env, name);
@@ -1601,6 +2155,9 @@ async function runScenario(name, hasMoonBitE2e) {
       name,
     );
     result.cdpResult.lifecycle = lifecycle;
+  }
+  if (name === "47_dev_extension_js") {
+    result.cdpResult.production = await runDevExtensionJsProductionSmoke(env);
   }
   console.log(`bridge e2e passed: ${name}`);
   console.log(JSON.stringify(result.cdpResult));
@@ -1624,6 +2181,9 @@ async function runCdpScenarioProbe(name) {
   }
   if (name === "46_asset_sidecar_resources") {
     return await runAssetSidecarResourcesProbe();
+  }
+  if (name === "47_dev_extension_js") {
+    return await runDevExtensionJsProbe();
   }
   return await runCdpProbe();
 }
@@ -1653,6 +2213,9 @@ function assertNativeLogScenarioGuards(name) {
       "ext:add/addLater",
       "ext:add/reportProbe",
     ]);
+  }
+  if (name === "47_dev_extension_js") {
+    return assertNativeLogOpsEnqueued(["ext:ticker/start"]);
   }
   return assertNativeLogBridgeGuards();
 }

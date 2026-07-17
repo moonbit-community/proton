@@ -8,7 +8,7 @@ import {
   "moonbitlang/async@0.20.0",
   "justjavac/clipboard@0.1.5",
   "justjavac/notification@0.1.0",
-  "justjavac/tray@0.1.0",
+  "justjavac/tray@0.1.7",
   "justjavac/global_hotkey@0.1.4",
   "justjavac/proton@0.1.6",
   "justjavac/microphone@0.1.3",
@@ -20,7 +20,7 @@ readme = "README.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/extensions"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [ "proton", "extension", "filesystem" ]
 

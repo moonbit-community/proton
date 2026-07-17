@@ -23,6 +23,14 @@ fn assert_string(value : String, expected : String, label : String) -> Unit {
 }
 
 ///|
+fn assert_path_suffix(value : String, suffix : String, label : String) -> Unit {
+  let normalized = value.replace_all(old="\\", new="/")
+  guard normalized.has_suffix(suffix) else {
+    abort(label + ": expected suffix `" + suffix + "`, got `" + value + "`")
+  }
+}
+
+///|
 fn assert_bool(value : Bool, expected : Bool, label : String) -> Unit {
   guard value == expected else {
     abort(label + " did not match expected value")
@@ -70,16 +78,20 @@ fn main {
     "http://localhost:5173",
     "frontend.dev_url",
   )
-  assert_string(
+  assert_path_suffix(
     require_some(frontend.dist(), "frontend.dist"),
-    "frontend/dist",
+    "44_project_config/frontend/dist",
     "frontend.dist",
   )
 
   let bundle = require_some(config.bundle(), "bundle")
   assert_bool(bundle.active(), true, "bundle.active")
   assert_strings(bundle.targets(), ["app", "zip"], "bundle.targets")
-  assert_string(bundle.output(), "target/proton-dist", "bundle.output")
+  assert_path_suffix(
+    bundle.output(),
+    "44_project_config/target/proton-dist",
+    "bundle.output",
+  )
 
   match config.dev_manifest().manifest().entry {
     @manifest.AppEntry::Url(url) =>

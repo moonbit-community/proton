@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_cli/dev"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn run(String, Array[String]) -> Result[Unit, DevError]
+
+// Errors
+
+// Types and methods
+pub(all) enum DevError {
+  UsageError(String, Bool)
+  CommandError(String)
+}
+
+type DevRuntime derive(Eq, @debug.Debug)
+
+type DevUrlEndpoint derive(Eq, @debug.Debug)
+
+type RawDevOptions derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

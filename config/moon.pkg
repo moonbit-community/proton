@@ -1,10 +1,13 @@
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/string",
   "moonbitlang/lexer",
   "moonbitlang/lexer/basic",
   "moonbitlang/lexer/tokens",
   "moonbitlang/parser/basic" @parser_basic,
   "moonbitlang/parser/moon_config",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path" @mbpath,
 }
 
 supported_targets = "native"
@@ -16,6 +19,10 @@ options(
     "imports.mbt": [ "native" ],
     "moon_mod.mbt": [ "native" ],
     "parser.mbt": [ "native" ],
+    "project_config.mbt": [ "native" ],
+    "project_decode.mbt": [ "native" ],
+    "project_paths.mbt": [ "native" ],
+    "result_zip.mbt": [ "native" ],
     "config_test.mbt": [ "native" ],
   },
 )

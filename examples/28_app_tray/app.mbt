@@ -43,10 +43,7 @@ let resource : String =
   #|        min-height: 100vh;
   #|        color: var(--ink);
   #|        font-family: "Segoe UI", system-ui, sans-serif;
-  #|        background:
-  #|          radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 30%),
-  #|          radial-gradient(circle at bottom left, rgba(107, 114, 128, 0.14), transparent 34%),
-  #|          var(--bg);
+  #|        background: var(--bg);
   #|      }
   #|
   #|      main {
@@ -59,7 +56,7 @@ let resource : String =
   #|        margin: 0 0 10px;
   #|        font-size: clamp(2.4rem, 4vw, 4rem);
   #|        line-height: 0.96;
-  #|        letter-spacing: -0.04em;
+  #|        letter-spacing: 0;
   #|      }
   #|
   #|      .lead,
@@ -95,7 +92,7 @@ let resource : String =
   #|        margin: 0 0 14px;
   #|        font-size: 1.02rem;
   #|        text-transform: uppercase;
-  #|        letter-spacing: 0.12em;
+  #|        letter-spacing: 0;
   #|        color: var(--accent);
   #|      }
   #|
@@ -159,11 +156,10 @@ let resource : String =
   #|  </head>
   #|  <body>
   #|    <main>
-  #|      <h1>Tray controls as a focused example.</h1>
+  #|      <h1>Tray runtime console.</h1>
   #|      <p class="lead">
-  #|        This example isolates the Windows-native <code>tray</code> extension.
-  #|        You can show the tray icon, update its tooltip, and hide it again while
-  #|        watching <code>tray.activity</code> events.
+  #|        Tray state, command replies, and native tray events are shown in the
+  #|        runtime log.
   #|      </p>
   #|      <section class="layout">
   #|        <div class="stack">
@@ -173,10 +169,18 @@ let resource : String =
   #|              Tooltip
   #|              <input id="tray-tooltip" value="__MoonBit__ tray example is active" />
   #|            </label>
+  #|            <label style="margin-top: 12px;">
+  #|              Icon Path
+  #|              <input id="tray-icon" placeholder="icons/app.ico" />
+  #|            </label>
   #|            <div class="actions">
+  #|              <button class="secondary" id="check-support">Check Support</button>
   #|              <button id="show-tray">Show Tray</button>
   #|              <button class="secondary" id="set-tooltip">Update Tooltip</button>
+  #|              <button class="secondary" id="set-icon">Set Icon</button>
+  #|              <button class="secondary" id="set-menu">Install Menu</button>
   #|              <button class="secondary" id="hide-tray">Hide Tray</button>
+  #|              <button class="secondary" id="destroy-tray">Destroy Tray</button>
   #|            </div>
   #|          </article>
   #|        </div>
@@ -192,6 +196,7 @@ let resource : String =
   #|      const statusLine = document.getElementById("status-line");
   #|      const eventLog = document.getElementById("event-log");
   #|      const tooltipInput = document.getElementById("tray-tooltip");
+  #|      const iconInput = document.getElementById("tray-icon");
   #|
   #|      function appendEvent(label, payload) {
   #|        const item = document.createElement("li");
@@ -199,44 +204,157 @@ let resource : String =
   #|        eventLog.prepend(item);
   #|      }
   #|
-  #|      window.__MoonBit__.events.on("tray.activity", (payload) => {
-  #|        statusLine.textContent = "Tray activity received.";
-  #|        appendEvent("tray.activity", payload);
-  #|      });
+  #|      function readyApp() {
+  #|        const app = window.__MoonBit__;
+  #|        if (
+  #|          app &&
+  #|          app.tray &&
+  #|          app.events &&
+  #|          app.core &&
+  #|          typeof app.core.invokeOp === "function"
+  #|        ) {
+  #|          return app;
+  #|        }
+  #|        return null;
+  #|      }
+  #|
+  #|      function waitForBridge(timeoutMs = 4000) {
+  #|        return new Promise((resolve, reject) => {
+  #|          const startedAt = Date.now();
+  #|          const poll = () => {
+  #|            const app = readyApp();
+  #|            if (app) {
+  #|              resolve(app);
+  #|              return;
+  #|            }
+  #|            if (Date.now() - startedAt >= timeoutMs) {
+  #|              reject(new Error("MoonBit bridge is not available"));
+  #|              return;
+  #|            }
+  #|            window.setTimeout(poll, 50);
+  #|          };
+  #|          poll();
+  #|        });
+  #|      }
+  #|
+  #|      async function withTray(action) {
+  #|        const app = await waitForBridge();
+  #|        return action(app.tray, app);
+  #|      }
+  #|
+  #|      function trayMenuItems() {
+  #|        return [
+  #|          { id: "show-window", label: "Show Window", kind: "normal", enabled: true },
+  #|          { id: "refresh-tooltip", label: "Refresh Tooltip", kind: "normal", enabled: true },
+  #|          { kind: "separator" },
+  #|          { id: "launch-login", label: "Launch at Login", kind: "checkbox", checked: false, enabled: true },
+  #|          { id: "destroy-tray", label: "Destroy Tray", kind: "normal", enabled: true },
+  #|        ];
+  #|      }
+  #|
+  #|      function trayOptions() {
+  #|        const tooltip = tooltipInput.value.trim();
+  #|        const icon = iconInput.value.trim();
+  #|        return {
+  #|          tooltip: tooltip || undefined,
+  #|          icon: icon || undefined,
+  #|          menu: { items: trayMenuItems() },
+  #|        };
+  #|      }
+  #|
+  #|      async function runAction(label, action) {
+  #|        try {
+  #|          const result = await action();
+  #|          statusLine.textContent = label;
+  #|          appendEvent(label, result);
+  #|        } catch (error) {
+  #|          statusLine.textContent = label + " failed: " + String(error);
+  #|          appendEvent(label + ".error", { message: String(error) });
+  #|        }
+  #|      }
+  #|
+  #|      async function checkTraySupport() {
+  #|        await runAction("tray.support", () => withTray((tray) => tray.support({})));
+  #|      }
+  #|
+  #|      async function attachTrayListeners() {
+  #|        const app = await waitForBridge();
+  #|
+  #|        app.events.on("tray.activity", (event) => {
+  #|          statusLine.textContent = "Tray activity received.";
+  #|          appendEvent("tray.activity", event);
+  #|        });
+  #|
+  #|        ["click", "rightClick", "doubleClick", "menuItemClick"].forEach((eventName) => {
+  #|          app.tray.on(eventName, async (event) => {
+  #|            appendEvent("tray." + eventName, event.payload);
+  #|            if (eventName !== "menuItemClick") {
+  #|              return;
+  #|            }
+  #|
+  #|            const itemId = event.payload && event.payload.item_id;
+  #|            if (itemId === "refresh-tooltip") {
+  #|              await runAction("tray.menu.refresh-tooltip", () =>
+  #|                app.tray.setTooltip({
+  #|                  tooltip: tooltipInput.value.trim() || "__MoonBit__ tray example is active",
+  #|                }),
+  #|              );
+  #|            } else if (itemId === "destroy-tray") {
+  #|              await runAction("tray.menu.destroy-tray", () =>
+  #|                app.tray.destroy({}),
+  #|              );
+  #|            } else if (itemId === "show-window") {
+  #|              statusLine.textContent = "Tray menu selected Show Window.";
+  #|            }
+  #|          });
+  #|        });
+  #|      }
   #|
   #|      document.getElementById("show-tray").addEventListener("click", async () => {
-  #|        try {
-  #|          const result = await window.__MoonBit__.tray.show({
-  #|            tooltip: tooltipInput.value || undefined,
-  #|          });
-  #|          statusLine.textContent = "Tray is visible.";
-  #|          appendEvent("tray.show", result);
-  #|        } catch (error) {
-  #|          statusLine.textContent = "Tray show failed: " + String(error);
-  #|        }
+  #|        await runAction("tray.show", () => withTray((tray) => tray.show(trayOptions())));
   #|      });
   #|
+  #|      document.getElementById("check-support").addEventListener("click", checkTraySupport);
+  #|
   #|      document.getElementById("set-tooltip").addEventListener("click", async () => {
-  #|        try {
-  #|          const result = await window.__MoonBit__.tray.setTooltip({
-  #|            tooltip: tooltipInput.value,
-  #|          });
-  #|          statusLine.textContent = "Tray tooltip updated.";
-  #|          appendEvent("tray.setTooltip", result);
-  #|        } catch (error) {
-  #|          statusLine.textContent = "Tray update failed: " + String(error);
-  #|        }
+  #|        await runAction("tray.setTooltip", () =>
+  #|          withTray((tray) =>
+  #|            tray.setTooltip({
+  #|              tooltip: tooltipInput.value.trim() || "__MoonBit__ tray example is active",
+  #|            }),
+  #|          ),
+  #|        );
+  #|      });
+  #|
+  #|      document.getElementById("set-icon").addEventListener("click", async () => {
+  #|        await runAction("tray.setIcon", () =>
+  #|          withTray((tray) => {
+  #|            const icon = iconInput.value.trim();
+  #|            return tray.setIcon(icon ? { icon } : {});
+  #|          }),
+  #|        );
+  #|      });
+  #|
+  #|      document.getElementById("set-menu").addEventListener("click", async () => {
+  #|        await runAction("tray.setMenu", () =>
+  #|          withTray((tray) => tray.setMenu({ items: trayMenuItems() })),
+  #|        );
   #|      });
   #|
   #|      document.getElementById("hide-tray").addEventListener("click", async () => {
-  #|        try {
-  #|          const result = await window.__MoonBit__.tray.hide({});
-  #|          statusLine.textContent = "Tray is hidden.";
-  #|          appendEvent("tray.hide", result);
-  #|        } catch (error) {
-  #|          statusLine.textContent = "Tray hide failed: " + String(error);
-  #|        }
+  #|        await runAction("tray.hide", () => withTray((tray) => tray.hide({})));
   #|      });
+  #|
+  #|      document.getElementById("destroy-tray").addEventListener("click", async () => {
+  #|        await runAction("tray.destroy", () => withTray((tray) => tray.destroy({})));
+  #|      });
+  #|
+  #|      attachTrayListeners()
+  #|        .then(checkTraySupport)
+  #|        .catch((error) => {
+  #|          statusLine.textContent = "Bridge setup failed: " + String(error);
+  #|          appendEvent("bridge.error", { message: String(error) });
+  #|        });
   #|    </script>
   #|  </body>
   #|</html>

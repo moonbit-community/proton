@@ -51,9 +51,14 @@ bool proton_json_read_int32(const proton_json_doc_t *doc,
 bool proton_json_read_int64(const proton_json_doc_t *doc,
                             proton_json_value_t value,
                             int64_t *out);
+bool proton_json_read_int64_string_or_number(const proton_json_doc_t *doc,
+                                             proton_json_value_t value,
+                                             int64_t *out);
 bool proton_json_read_bool(const proton_json_doc_t *doc,
                            proton_json_value_t value,
                            bool *out);
+char *proton_json_copy_string(const proton_json_doc_t *doc,
+                              proton_json_value_t value);
 char *proton_json_copy_raw(const proton_json_doc_t *doc,
                            proton_json_value_t value);
 

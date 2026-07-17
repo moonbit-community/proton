@@ -8,6 +8,7 @@ import {
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
+  "moonbitlang/x/sys",
   "justjavac/proton/bootstrap",
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/core",

@@ -49,8 +49,10 @@ pub(all) struct BridgeConfig {
   ops : Array[String]
   max_payload_bytes : Int
   request_timeout_ms : Int
+  dev_origins : Array[String]
+  dev_bootstrap_script : String?
 } derive(Eq, @debug.Debug)
-pub fn BridgeConfig::new(ops~ : Array[String], max_payload_bytes? : Int, request_timeout_ms? : Int) -> Self
+pub fn BridgeConfig::new(ops~ : Array[String], max_payload_bytes? : Int, request_timeout_ms? : Int, dev_origins? : Array[String], dev_bootstrap_script? : String?) -> Self
 pub fn BridgeConfig::to_json_string(Self) -> String
 pub fn BridgeConfig::unsafe_from_json(String) -> Self
 

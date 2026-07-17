@@ -302,17 +302,18 @@ bool proton_json_read_int32(const proton_json_doc_t *doc,
   return true;
 }
 
-bool proton_json_read_int64(const proton_json_doc_t *doc,
-                            proton_json_value_t value,
-                            int64_t *out) {
+static bool proton_json_read_int64_impl(const proton_json_doc_t *doc,
+                                        proton_json_value_t value,
+                                        int64_t *out,
+                                        bool allow_string) {
   const jsmntok_t *tokens = proton_json_tokens(doc);
   if (doc == NULL || tokens == NULL || out == NULL || value.index < 0 ||
       value.index >= doc->token_count) {
     return false;
   }
   const jsmntok_t *token = &tokens[value.index];
-  bool quoted = token->type == JSMN_STRING;
-  if (token->type != JSMN_PRIMITIVE && !quoted) {
+  if (token->type != JSMN_PRIMITIVE &&
+      (!allow_string || token->type != JSMN_STRING)) {
     return false;
   }
   int len = token->end - token->start;
@@ -329,8 +330,19 @@ bool proton_json_read_int64(const proton_json_doc_t *doc,
     return false;
   }
   *out = (int64_t)parsed;
-  (void)quoted;
   return true;
+}
+
+bool proton_json_read_int64(const proton_json_doc_t *doc,
+                            proton_json_value_t value,
+                            int64_t *out) {
+  return proton_json_read_int64_impl(doc, value, out, false);
+}
+
+bool proton_json_read_int64_string_or_number(const proton_json_doc_t *doc,
+                                             proton_json_value_t value,
+                                             int64_t *out) {
+  return proton_json_read_int64_impl(doc, value, out, true);
 }
 
 bool proton_json_read_bool(const proton_json_doc_t *doc,
@@ -353,6 +365,29 @@ bool proton_json_read_bool(const proton_json_doc_t *doc,
     return true;
   }
   return false;
+}
+
+char *proton_json_copy_string(const proton_json_doc_t *doc,
+                              proton_json_value_t value) {
+  const jsmntok_t *tokens = proton_json_tokens(doc);
+  if (doc == NULL || tokens == NULL || value.index < 0 ||
+      value.index >= doc->token_count ||
+      tokens[value.index].type != JSMN_STRING) {
+    return NULL;
+  }
+  int len = tokens[value.index].end - tokens[value.index].start;
+  if (len < 0) {
+    return NULL;
+  }
+  char *copy = (char *)malloc((size_t)len + 1);
+  if (copy == NULL) {
+    return NULL;
+  }
+  if (!proton_json_copy_string_token(doc, value.index, copy, (size_t)len + 1)) {
+    free(copy);
+    return NULL;
+  }
+  return copy;
 }
 
 char *proton_json_copy_raw(const proton_json_doc_t *doc,

@@ -284,6 +284,7 @@ test "command proxy script reflects enabled command extension metadata" {
       )
       assert_true(script.contains("window.__MoonBit__ = root;"))
       assert_true(script.contains("root.events = events;"))
+      assert_true(script.contains("root['@@exactListeners'] = exactListeners"))
       assert_true(script.contains("events['@@emitExtensionEvent']"))
       assert_true(script.contains("events.on = function(name, listener)"))
       assert_true(script.contains("target.on = (function(ns)"))
@@ -302,7 +303,11 @@ test "extension event dispatch script calls page event emitter with JSON data" {
       "index": Json::number(1),
     }),
   )
-  let script = extension_event_dispatch_script(event, None)
+  let script = extension_event_dispatch_script(
+    event,
+    None,
+    default_bridge_page_policy(),
+  )
   assert_true(script.contains("window.location.protocol !== 'proton:'"))
   assert_true(script.contains("events['@@emitExtensionEvent']"))
   assert_true(script.contains("event.extension_namespace"))
@@ -367,9 +372,66 @@ test "asset url path encoding escapes browser url delimiters" {
 ///|
 test "extension event dispatch script can target a page instance" {
   let event = @ipc.IpcExtensionEvent::new("ticker", "done", Json::null())
-  let script = extension_event_dispatch_script(event, Some("page-1"))
+  let script = extension_event_dispatch_script(event, Some("page-1"), BridgePagePolicy::{
+    dev_origin: Some("http://localhost:5173"),
+  })
+  assert_true(
+    script.contains("window.location.origin !== \"http://localhost:5173\""),
+  )
   assert_true(script.contains("root.core['@@pageInstance']"))
   assert_true(script.contains("\"page-1\""))
+}
+
+///|
+test "dev bridge page policy parses exact http origins" {
+  match url_origin("http://localhost:5173/app") {
+    Ok(origin) => assert_eq(origin, "http://localhost:5173")
+    Err(error) => fail(error)
+  }
+  match url_origin("https://localhost/app") {
+    Ok(origin) => assert_eq(origin, "https://localhost")
+    Err(error) => fail(error)
+  }
+  match url_origin("http://127.0.0.1:3000") {
+    Ok(origin) => assert_eq(origin, "http://127.0.0.1:3000")
+    Err(error) => fail(error)
+  }
+  match url_origin("http://[::1]:5173/app") {
+    Ok(origin) => assert_eq(origin, "http://[::1]:5173")
+    Err(error) => fail(error)
+  }
+  match url_origin("HTTP://LOCALHOST:80/app") {
+    Ok(origin) => assert_eq(origin, "http://localhost")
+    Err(error) => fail(error)
+  }
+  match url_origin("https://Example.COM:443/app") {
+    Ok(origin) => assert_eq(origin, "https://example.com")
+    Err(error) => fail(error)
+  }
+  match url_origin("http://LOCALHOST:05173/app") {
+    Ok(origin) => assert_eq(origin, "http://localhost:5173")
+    Err(error) => fail(error)
+  }
+  match url_origin("ftp://localhost:5173/app") {
+    Err(error) => assert_true(error.contains("http or https"))
+    Ok(_) => fail("expected non-http dev origin to fail")
+  }
+  match url_origin("http://local\"host:5173/app") {
+    Err(error) => assert_true(error.contains("invalid origin"))
+    Ok(_) => fail("expected quoted dev origin to fail")
+  }
+  match url_origin("http://local\\host:5173/app") {
+    Err(error) => assert_true(error.contains("invalid origin"))
+    Ok(_) => fail("expected backslash dev origin to fail")
+  }
+  match url_origin("http://localhost:/app") {
+    Err(error) => assert_true(error.contains("port must not be empty"))
+    Ok(_) => fail("expected empty dev origin port to fail")
+  }
+  match url_origin("http://[::1]5173/app") {
+    Err(error) => assert_true(error.contains("invalid IPv6 origin"))
+    Ok(_) => fail("expected invalid IPv6 dev origin to fail")
+  }
 }
 
 ///|
@@ -581,4 +643,130 @@ test "command proxy injection uses first head body or prepend fallback" {
   let injected_bare = inject_command_proxy_script(bare_html, Some("x"))
   assert_true(injected_bare.has_prefix("<script>x</script>\n<main>"))
   inspect(inject_command_proxy_script(bare_html, None), content="<main></main>")
+}
+
+///|
+fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-facade-dev") catch {
+    _ => ()
+  }
+  let frontend = match dev_url {
+    Some(url) => "\nfrontend = {\n  dev_url: \"" + url + "\",\n}\n"
+    None => ""
+  }
+  let base =
+    #|window = {
+    #|  title: "Dev Test",
+    #|  width: 320,
+    #|  height: 240,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "app.html",
+    #|}
+    #|
+    #|debug = true
+    #|
+  @mbfs.write_string_to_file(path, base + frontend, encoding="utf8") catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+}
+
+///|
+fn restore_env_var(name : String, value : String?) -> Unit {
+  match value {
+    Some(value) => @env.set_env_var(name, value)
+    None => @env.unset_env_var(name)
+  }
+}
+
+///|
+test "implicit config path honors PROTON_CONFIG_PATH" {
+  let config_path = "target/proton-facade-dev/implicit-env.moon.proton"
+  write_facade_dev_config(config_path)
+  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
+  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
+
+  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
+  @debug.assert_eq(implicit_config_path(), Some(config_path))
+}
+
+///|
+test "config API overrides manifest fields and keeps base dir" {
+  let config_path = "target/proton-facade-dev/api-overrides.moon.proton"
+  write_facade_dev_config(config_path)
+  let old_dev = @env.get_env_var("PROTON_DEV")
+  let old_mode = @env.get_env_var("PROTON_MODE")
+  defer restore_env_var("PROTON_MODE", old_mode)
+  defer restore_env_var("PROTON_DEV", old_dev)
+
+  @env.unset_env_var("PROTON_DEV")
+  @env.unset_env_var("PROTON_MODE")
+  let resolved = match
+    config(config_path)
+    .title("Code Title")
+    .size(width=640, height=480)
+    .entry_html("<main>code</main>")
+    .debug(enabled=false)
+    .resolved_app_config() {
+    Ok(resolved) => resolved
+    Err(error) => abort(error)
+  }
+  let manifest = resolved.manifest
+  assert_eq(manifest.window.title, "Code Title")
+  assert_eq(manifest.window.width, 640)
+  assert_eq(manifest.window.height, 480)
+  assert_eq(manifest.debug, 0)
+  match manifest.entry {
+    @manifest.AppEntry::Html(html) => assert_eq(html, "<main>code</main>")
+    _ => fail("expected API entry override")
+  }
+  match resolved.base_dir {
+    Some(base_dir) =>
+      assert_true(
+        base_dir
+        .replace_all(old="\\", new="/")
+        .has_suffix("target/proton-facade-dev"),
+      )
+    None => fail("expected config base dir")
+  }
+}
+
+///|
+test "dev manifest uses env override or frontend dev_url" {
+  let override_path = "target/proton-facade-dev/env-override.moon.proton"
+  write_facade_dev_config(override_path, dev_url="http://localhost:5173")
+  let old_dev = @env.get_env_var("PROTON_DEV")
+  let old_url = @env.get_env_var("PROTON_FRONTEND_URL")
+  defer restore_env_var("PROTON_FRONTEND_URL", old_url)
+  defer restore_env_var("PROTON_DEV", old_dev)
+
+  @env.set_env_var("PROTON_DEV", "1")
+  @env.set_env_var("PROTON_FRONTEND_URL", "http://localhost:3000")
+  let override_manifest = match config(override_path).resolved_app_config() {
+    Ok(resolved) => resolved.manifest
+    Err(error) => abort(error)
+  }
+  match override_manifest.entry {
+    @manifest.AppEntry::Url(url) =>
+      inspect(url, content="http://localhost:3000")
+    _ => fail("expected dev URL entry")
+  }
+
+  let config_path = "target/proton-facade-dev/config-dev-url.moon.proton"
+  write_facade_dev_config(config_path, dev_url="http://localhost:5173")
+  @env.unset_env_var("PROTON_FRONTEND_URL")
+  let config_manifest = match config(config_path).resolved_app_config() {
+    Ok(resolved) => resolved.manifest
+    Err(error) => abort(error)
+  }
+  match config_manifest.entry {
+    @manifest.AppEntry::Url(url) =>
+      inspect(url, content="http://localhost:5173")
+    _ => fail("expected dev URL entry")
+  }
 }

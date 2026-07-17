@@ -11,9 +11,12 @@ import {
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
   "justjavac/proton_cli/cef",
+  "justjavac/proton_cli/build",
   "justjavac/proton_cli/codegen",
+  "justjavac/proton_cli/dev",
   "justjavac/proton_cli/doctor",
   "justjavac/proton_cli/new" @new_project,
+  "justjavac/proton_cli/package",
 }
 
 import {
@@ -22,7 +25,8 @@ import {
 
 supported_targets = "native"
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: { "main.mbt": [ "native" ] },
 )

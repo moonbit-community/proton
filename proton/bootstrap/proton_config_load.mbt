@@ -11,18 +11,17 @@ pub fn load_proton_manifest_from_file(
 pub fn load_config_manifest_from_file(
   path : String,
 ) -> Result[LoadedAppManifest, String] {
-  guard path.has_suffix("moon.proton") else {
-    return Err("config manifest must be moon.proton")
-  }
-  load_proton_manifest_from_file(path)
+  load_proton_project_config_from_file(path).map(fn(config) {
+    config.manifest()
+  })
 }
 
 ///|
 pub fn load_proton_project_config_from_file(
   path : String,
 ) -> Result[ProtonProjectConfig, String] {
-  read_app_manifest_text(path).bind(fn(text) {
-    load_proton_project_config_from_text(text, config_base_dir(path), path)
+  @proton_config.load_project_config_from_file(path).map(fn(project) {
+    proton_project_config_from_project_config(project)
   })
 }
 
@@ -49,16 +48,98 @@ fn load_proton_manifest_from_text(
 }
 
 ///|
-fn load_proton_project_config_from_text(
-  text : String,
-  base_dir : String,
-  name : String,
-) -> Result[ProtonProjectConfig, String] {
-  let (ast, reports) = @proton_config.parse_moon_proton(name~, text)
-  if reports.length() > 0 {
-    return Err(render_config_reports(reports))
+fn proton_project_config_from_project_config(
+  project : @proton_config.ProjectConfig,
+) -> ProtonProjectConfig {
+  let loaded = LoadedAppManifest::new(
+    @manifest.AppManifest::new(
+      proton_window_from_project_window(project.window()),
+      proton_entry_from_project_entry(project.entry()),
+      debug=project.debug(),
+    ),
+    base_dir=Some(project.base_dir()),
+  )
+  ProtonProjectConfig::new(
+    loaded,
+    proton_metadata_from_project_metadata(project.metadata()),
+    frontend=project.frontend().map(proton_frontend_from_project_frontend),
+    bundle=project.bundle().map(proton_bundle_from_project_bundle),
+  )
+}
+
+///|
+fn proton_window_from_project_window(
+  window : @proton_config.ProjectWindowConfig,
+) -> @manifest.WindowManifest {
+  @manifest.WindowManifest::new(
+    window.title,
+    window.width,
+    window.height,
+    size_hint=proton_size_hint_from_project_size_hint(window.size_hint),
+  )
+}
+
+///|
+fn proton_size_hint_from_project_size_hint(
+  size_hint : @proton_config.ProjectWindowSizeHint,
+) -> @manifest.WindowSizeHint {
+  match size_hint {
+    WindowSizeNone => @manifest.WindowSizeHint::None
+    WindowSizeMin => @manifest.WindowSizeHint::Min
+    WindowSizeMax => @manifest.WindowSizeHint::Max
+    WindowSizeFixed => @manifest.WindowSizeHint::Fixed
   }
-  decode_proton_project_config(ast, base_dir)
+}
+
+///|
+fn proton_entry_from_project_entry(
+  entry : @proton_config.ProjectEntry,
+) -> @manifest.AppEntry {
+  match entry {
+    Html(value) => @manifest.AppEntry::Html(value)
+    Url(value) => @manifest.AppEntry::Url(value)
+    File(value) => @manifest.AppEntry::File(value)
+    Asset(value) => @manifest.AppEntry::Asset(value)
+  }
+}
+
+///|
+fn proton_metadata_from_project_metadata(
+  metadata : @proton_config.ProjectMetadata,
+) -> ProtonAppMetadata {
+  ProtonAppMetadata::new(
+    metadata.product_name,
+    identifier=metadata.identifier,
+    version=metadata.version,
+    description=metadata.description,
+    license=metadata.license,
+  )
+}
+
+///|
+fn proton_frontend_from_project_frontend(
+  frontend : @proton_config.ProjectFrontendConfig,
+) -> ProtonFrontendConfig {
+  ProtonFrontendConfig::new(
+    dev_url=frontend.dev_url(),
+    dist=frontend.dist(),
+    before_dev=frontend.before_dev(),
+    before_build=frontend.before_build(),
+    cwd=frontend.cwd(),
+  )
+}
+
+///|
+fn proton_bundle_from_project_bundle(
+  bundle : @proton_config.ProjectBundleConfig,
+) -> ProtonBundleConfig {
+  ProtonBundleConfig::new(
+    active=bundle.active,
+    targets=bundle.targets,
+    icon=bundle.icon,
+    resources=bundle.resources,
+    output=bundle.output(),
+  )
 }
 
 ///|
@@ -82,54 +163,6 @@ fn decode_proton_manifest(
         })
       })
     _ => Err("moon.proton root must be a field list")
-  }
-}
-
-///|
-fn decode_proton_project_config(
-  ast : @proton_config.Ast,
-  base_dir : String,
-) -> Result[ProtonProjectConfig, String] {
-  match ast {
-    Obj(fields, _) =>
-      decode_proton_manifest(ast, base_dir).bind(fn(loaded) {
-        zip3(
-          decode_proton_app_metadata(
-            fields,
-            base_dir,
-            loaded.manifest().window.title,
-          ),
-          optional_proton_frontend(fields),
-          optional_proton_bundle(fields),
-        ).bind(fn(values) {
-          let (metadata, frontend, bundle) = values
-          validate_proton_bundle_release_metadata(metadata, bundle).map(fn(_) {
-            ProtonProjectConfig::new(loaded, metadata, frontend~, bundle~)
-          })
-        })
-      })
-    _ => Err("moon.proton root must be a field list")
-  }
-}
-
-///|
-fn validate_proton_bundle_release_metadata(
-  metadata : ProtonAppMetadata,
-  bundle : ProtonBundleConfig?,
-) -> Result[Unit, String] {
-  match bundle {
-    Some(bundle) if bundle.active() => {
-      guard metadata.identifier() is Some(_) else {
-        return Err(
-          "moon.proton identifier is required when bundle.active = true",
-        )
-      }
-      guard metadata.version() is Some(_) else {
-        return Err("moon.mod version is required when bundle.active = true")
-      }
-      Ok(())
-    }
-    _ => Ok(())
   }
 }
 
@@ -165,130 +198,6 @@ fn validate_top_level_fields(
         return Err("moon.proton field `windows` is not supported in v1")
       other => return Err("unknown moon.proton field: " + other)
     }
-  }
-  Ok(())
-}
-
-///|
-fn decode_proton_app_metadata(
-  fields : Array[@proton_config.ConfigField],
-  base_dir : String,
-  fallback_product_name : String,
-) -> Result[ProtonAppMetadata, String] {
-  zip2(
-    optional_string_config_field(fields, "product_name", "product_name"),
-    optional_string_config_field(fields, "identifier", "identifier"),
-  ).map(fn(values) {
-    let (product_name, identifier) = values
-    let moon_mod = read_nearest_moon_mod_metadata(base_dir)
-    ProtonAppMetadata::new(
-      product_name.unwrap_or(fallback_product_name),
-      identifier~,
-      version=moon_mod.version,
-      description=moon_mod.description,
-      license=moon_mod.license,
-    )
-  })
-}
-
-///|
-fn optional_proton_frontend(
-  fields : Array[@proton_config.ConfigField],
-) -> Result[ProtonFrontendConfig?, String] {
-  match find_config_field(fields, "frontend") {
-    None => Ok(None)
-    Some(Obj(frontend_fields, _)) =>
-      validate_object_fields(frontend_fields, "frontend", [
-        "dev_url", "dist", "before_dev", "before_build",
-      ]).bind(fn(_) {
-        zip4(
-          optional_string_config_field(
-            frontend_fields, "dev_url", "frontend.dev_url",
-          ),
-          optional_string_config_field(frontend_fields, "dist", "frontend.dist"),
-          optional_string_config_field(
-            frontend_fields, "before_dev", "frontend.before_dev",
-          ),
-          optional_string_config_field(
-            frontend_fields, "before_build", "frontend.before_build",
-          ),
-        ).map(fn(values) {
-          let (dev_url, dist, before_dev, before_build) = values
-          Some(
-            ProtonFrontendConfig::new(
-              dev_url~,
-              dist~,
-              before_dev~,
-              before_build~,
-            ),
-          )
-        })
-      })
-    Some(_) => Err("moon.proton field `frontend` must be an object")
-  }
-}
-
-///|
-fn optional_proton_bundle(
-  fields : Array[@proton_config.ConfigField],
-) -> Result[ProtonBundleConfig?, String] {
-  match find_config_field(fields, "bundle") {
-    None => Ok(None)
-    Some(Obj(bundle_fields, _)) =>
-      validate_object_fields(bundle_fields, "bundle", [
-        "active", "targets", "icon", "resources", "output",
-      ]).bind(fn(_) {
-        zip5(
-          optional_bool_config_field(
-            bundle_fields, "active", "bundle.active", false,
-          ),
-          optional_string_array_config_field(
-            bundle_fields, "targets", "bundle.targets",
-          ),
-          optional_string_array_config_field(
-            bundle_fields, "icon", "bundle.icon",
-          ),
-          optional_string_array_config_field(
-            bundle_fields, "resources", "bundle.resources",
-          ),
-          optional_string_config_field(bundle_fields, "output", "bundle.output").map(fn(
-              output,
-            ) {
-              output.unwrap_or("target/proton-dist")
-            },
-          ),
-        ).bind(fn(values) {
-          let (active, targets, icon, resources, output) = values
-          validate_proton_bundle_targets(targets).map(fn(_) {
-            Some(
-              ProtonBundleConfig::new(
-                active~,
-                targets~,
-                icon~,
-                resources~,
-                output~,
-              ),
-            )
-          })
-        })
-      })
-    Some(_) => Err("moon.proton field `bundle` must be an object")
-  }
-}
-
-///|
-fn validate_proton_bundle_targets(
-  targets : Array[String],
-) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
-  for target in targets {
-    guard target == "app" || target == "zip" else {
-      return Err("bundle.targets contains unsupported target: " + target)
-    }
-    guard !seen.contains(target) else {
-      return Err("bundle.targets contains duplicate target: " + target)
-    }
-    seen[target] = ()
   }
   Ok(())
 }
@@ -456,47 +365,6 @@ fn optional_string_config_field(
 }
 
 ///|
-fn optional_bool_config_field(
-  fields : Array[@proton_config.ConfigField],
-  key : String,
-  label : String,
-  default : Bool,
-) -> Result[Bool, String] {
-  match find_config_field(fields, key) {
-    None => Ok(default)
-    Some(Bool(value, _)) => Ok(value)
-    Some(_) => Err(label + " must be a bool")
-  }
-}
-
-///|
-fn optional_string_array_config_field(
-  fields : Array[@proton_config.ConfigField],
-  key : String,
-  label : String,
-) -> Result[Array[String], String] {
-  match find_config_field(fields, key) {
-    None => Ok([])
-    Some(Arr(items, _)) => {
-      let values : Array[String] = []
-      for item in items {
-        match item {
-          Str(value, _) =>
-            if value == "" {
-              return Err(label + " must not contain empty strings")
-            } else {
-              values.push(value)
-            }
-          _ => return Err(label + " must be a string array")
-        }
-      }
-      Ok(values)
-    }
-    Some(_) => Err(label + " must be a string array")
-  }
-}
-
-///|
 fn required_positive_int_config_field(
   fields : Array[@proton_config.ConfigField],
   key : String,
@@ -530,83 +398,6 @@ fn find_config_field(
     }
   }
   None
-}
-
-///|
-priv struct MoonModMetadata {
-  mut version : String?
-  mut description : String?
-  mut license : String?
-}
-
-///|
-fn MoonModMetadata::new() -> MoonModMetadata {
-  MoonModMetadata::{ version: None, description: None, license: None }
-}
-
-///|
-fn read_nearest_moon_mod_metadata(start_dir : String) -> MoonModMetadata {
-  match find_nearest_moon_mod(start_dir) {
-    None => MoonModMetadata::new()
-    Some(path) => read_moon_mod_metadata(path)
-  }
-}
-
-///|
-fn find_nearest_moon_mod(start_dir : String) -> String? {
-  for current = start_dir, depth = 0; depth < 16; {
-    let candidate = join_path_string(current, "moon.mod")
-    if (@mbfs.is_file(candidate) catch { _ => false }) {
-      return Some(candidate)
-    }
-    let parent = dirname_string(current)
-    if parent == current || parent == "" {
-      return None
-    }
-    continue parent, depth + 1
-  } nobreak {
-    None
-  }
-}
-
-///|
-fn read_moon_mod_metadata(path : String) -> MoonModMetadata {
-  let text = @mbfs.read_file_to_string(path) catch {
-    _ => return MoonModMetadata::new()
-  }
-  let metadata = MoonModMetadata::new()
-  let (ast, _reports) = @proton_config.parse_moon_mod(name=path, text)
-  match ast {
-    Obj(fields, _) => {
-      metadata.version = moon_mod_string_field(fields, "version")
-      metadata.description = moon_mod_string_field(fields, "description")
-      metadata.license = moon_mod_string_field(fields, "license")
-    }
-    _ => ()
-  }
-  metadata
-}
-
-///|
-fn moon_mod_string_field(
-  fields : Array[@proton_config.ConfigField],
-  key : String,
-) -> String? {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Str(value, _) => return Some(value)
-        _ => return None
-      }
-    }
-  }
-  None
-}
-
-///|
-fn join_path_string(base : String, child : String) -> String {
-  let base_path : @mbpath.Path = base
-  base_path.join(child).normalize().to_string()
 }
 
 ///|

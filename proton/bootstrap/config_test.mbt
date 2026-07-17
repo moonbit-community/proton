@@ -100,14 +100,51 @@ test "load_proton_manifest_from_file rebases file entry and bool debug" {
 }
 
 ///|
-test "load_config_manifest_from_file only accepts moon.proton" {
+test "load_config_manifest_from_file accepts explicit config filenames" {
   match load_config_manifest_from_file(manifest_test_path("moon.proton")) {
     Err(error) => abort(error)
     Ok(loaded) => assert_eq(loaded.manifest().debug, 1)
   }
-  match load_config_manifest_from_file("target/app.json") {
-    Ok(_) => abort("expected moon.proton suffix error")
-    Err(error) => assert_eq(error, "config manifest must be moon.proton")
+
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-alt-config") catch {
+    _ => ()
+  }
+  let config_path = "target/proton-alt-config/proton.dev"
+  @mbfs.write_string_to_file(
+    config_path,
+    (
+      #|window = {
+      #|  title: "Alt Config",
+      #|  width: 720,
+      #|  height: 480,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "url",
+      #|  value: "http://localhost:5173",
+      #|}
+      #|
+      #|debug = true
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  match load_config_manifest_from_file(config_path) {
+    Err(error) => abort(error)
+    Ok(loaded) => {
+      let manifest = loaded.manifest()
+      assert_eq(manifest.window.title, "Alt Config")
+      assert_eq(manifest.debug, 1)
+      match manifest.entry {
+        Url(url) => assert_eq(url, "http://localhost:5173")
+        _ => abort("expected url entry")
+      }
+    }
   }
 }
 
@@ -216,6 +253,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|frontend = {
       #|  dev_url: "http://localhost:5173",
       #|  dist: "frontend/dist",
+      #|  cwd: "frontend",
       #|  before_dev: "npm run dev",
       #|  before_build: "npm run build",
       #|}
@@ -251,7 +289,16 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     None => abort("expected frontend config")
     Some(frontend) => {
       @debug.assert_eq(frontend.dev_url(), Some("http://localhost:5173"))
-      @debug.assert_eq(frontend.dist(), Some("frontend/dist"))
+      assert_true(
+        normalize_test_slashes(frontend.dist().unwrap()).has_suffix(
+          "target/proton-project-config/frontend/dist",
+        ),
+      )
+      assert_true(
+        normalize_test_slashes(frontend.cwd().unwrap()).has_suffix(
+          "target/proton-project-config/frontend",
+        ),
+      )
       @debug.assert_eq(frontend.before_dev(), Some("npm run dev"))
       @debug.assert_eq(frontend.before_build(), Some("npm run build"))
     }
@@ -262,9 +309,21 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     Some(bundle) => {
       assert_true(bundle.active())
       @debug.assert_eq(bundle.targets(), ["app", "zip"])
-      @debug.assert_eq(bundle.icon(), ["icons/icon.ico"])
-      @debug.assert_eq(bundle.resources(), ["resources/**"])
-      assert_eq(bundle.output(), "target/proton-dist")
+      assert_true(
+        normalize_test_slashes(bundle.icon()[0]).has_suffix(
+          "target/proton-project-config/icons/icon.ico",
+        ),
+      )
+      assert_true(
+        normalize_test_slashes(bundle.resources()[0]).has_suffix(
+          "target/proton-project-config/resources/**",
+        ),
+      )
+      assert_true(
+        normalize_test_slashes(bundle.output()).has_suffix(
+          "target/proton-project-config/target/proton-dist",
+        ),
+      )
 
       let targets = bundle.targets()
       targets.push("mutated")
@@ -325,10 +384,15 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       match summary.get("bundle") {
         Some(Object(bundle)) => {
           @debug.assert_eq(bundle.get("active"), Some(Json::boolean(true)))
-          @debug.assert_eq(
-            bundle.get("output"),
-            Some(Json::string("target/proton-dist")),
-          )
+          match bundle.get("output") {
+            Some(String(output)) =>
+              assert_true(
+                normalize_test_slashes(output).has_suffix(
+                  "target/proton-project-config/target/proton-dist",
+                ),
+              )
+            _ => abort("expected bundle output summary")
+          }
         }
         _ => abort("expected bundle summary")
       }
@@ -409,7 +473,46 @@ test "load_proton_project_config_from_file validates tooling blocks" {
 }
 
 ///|
-test "load_proton_project_config_from_file validates active bundle metadata" {
+test "load_config_manifest_from_file validates project tooling blocks" {
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir("target/proton-config-manifest-invalid") catch {
+    _ => ()
+  }
+  let config_path = "target/proton-config-manifest-invalid/moon.proton"
+  @mbfs.write_string_to_file(
+    config_path,
+    (
+      #|window = {
+      #|  title: "Invalid",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|frontend = {
+      #|  before_buid: "npm run build",
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+
+  match load_config_manifest_from_file(config_path) {
+    Ok(_) => abort("expected frontend validation error")
+    Err(error) => assert_eq(error, "unknown frontend field: before_buid")
+  }
+}
+
+///|
+test "load_proton_project_config_from_file preserves active bundle without release metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -453,56 +556,12 @@ test "load_proton_project_config_from_file validates active bundle metadata" {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
   match load_proton_project_config_from_file(missing_identifier) {
-    Ok(_) => abort("expected identifier validation error")
-    Err(error) =>
-      assert_eq(
-        error, "moon.proton identifier is required when bundle.active = true",
-      )
-  }
-
-  @mbfs.create_dir("target/proton-project-bundle-no-version") catch {
-    _ => ()
-  }
-  @mbfs.write_string_to_file(
-    "target/proton-project-bundle-no-version/moon.mod",
-    (
-      #|name = "vendor/no-version"
-      #|
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
-  }
-  let missing_version = "target/proton-project-bundle-no-version/moon.proton"
-  @mbfs.write_string_to_file(
-    missing_version,
-    (
-      #|identifier = "com.vendor.app"
-      #|
-      #|window = {
-      #|  title: "Bundle App",
-      #|  width: 900,
-      #|  height: 700,
-      #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|bundle = {
-      #|  active: true,
-      #|}
-      #|
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
-  }
-  match load_proton_project_config_from_file(missing_version) {
-    Ok(_) => abort("expected version validation error")
-    Err(error) =>
-      assert_eq(error, "moon.mod version is required when bundle.active = true")
+    Ok(config) =>
+      match config.bundle() {
+        Some(bundle) => assert_true(bundle.active())
+        None => abort("expected active bundle")
+      }
+    Err(error) => abort(error)
   }
 }
 

@@ -94,6 +94,8 @@ static const char *const removed_exports[] = {
     "proton_window_open_file_dialog",
     "proton_window_save_file_dialog",
     "proton_window_choose_directory_dialog",
+    "proton_engine_name",
+    "proton_json_parse",
 };
 
 int main(void) {

@@ -1,4 +1,5 @@
 product_name = {{title_mbt}}
+identifier = {{identifier_mbt}}
 
 window = {
   title: {{title_mbt}},
@@ -13,3 +14,9 @@ entry = {
 }
 
 debug = true
+
+bundle = {
+  active: true,
+  targets: ["app", "zip"],
+  output: "target/proton-dist",
+}
