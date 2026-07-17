@@ -45,14 +45,20 @@ function tempOutputPath(fileName) {
   return path.join(tempRoot, fileName);
 }
 
-function hostPrebuiltPlatform() {
-  if (process.platform === "win32") {
+export function hostPrebuiltPlatform({
+  platform = process.platform,
+  arch = process.arch,
+} = {}) {
+  if (platform === "win32") {
     return "win32-x64";
   }
-  if (process.platform === "darwin") {
-    return "darwin-arm64";
+  if (platform === "darwin") {
+    if (arch === "arm64" || arch === "x64") {
+      return `darwin-${arch}`;
+    }
+    return null;
   }
-  if (process.platform === "linux") {
+  if (platform === "linux") {
     return "linux-x64";
   }
   return null;

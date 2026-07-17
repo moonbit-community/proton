@@ -13,6 +13,10 @@ const platformLayouts = {
     libraryKey: "shared_lib",
     requiredArtifactKeys: ["shared_lib", "helper", "header"],
   },
+  "darwin-x64": {
+    libraryKey: "shared_lib",
+    requiredArtifactKeys: ["shared_lib", "helper", "header"],
+  },
   "linux-x64": {
     libraryKey: "shared_lib",
     requiredArtifactKeys: ["shared_lib", "helper", "header"],
@@ -23,7 +27,9 @@ const platformLayouts = {
     requiredArtifactKeys: ["dll", "helper", "import_lib", "header"],
   },
 };
-const requiredPlatforms = Object.keys(platformLayouts).sort();
+// Only platforms with committed release artifacts are mandatory. Additional
+// layouts may be declared here ahead of publishing their first prebuilt.
+const requiredPlatforms = ["darwin-arm64", "linux-x64", "win32-x64"];
 
 export function publicAbiSymbols(headerText) {
   const symbols = new Set();
