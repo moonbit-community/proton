@@ -10,7 +10,7 @@ build/
 !cli/build/**
 bin/
 native/build*/
-native/dist-engine/
+native/dist*/
 CMakeUserPresets.json
 *.cmake
 
