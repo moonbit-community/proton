@@ -82,6 +82,7 @@ struct proton_engine_window {
   char *html;
   size_t html_len;
   char *bridge_config_json;
+  int32_t max_bridge_payload_bytes;
   char *initial_url;
   int browser_create_pending;
   int browser_create_scheduled;
@@ -1683,7 +1684,7 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 1;
   }
   if (!proton_engine_bridge_payload_is_valid(
-      payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES)) {
+      payload_json, window->max_bridge_payload_bytes)) {
     proton_engine_debug_log("bridge_reject_payload_too_large browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
@@ -3222,6 +3223,9 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
   }
   free(window->bridge_config_json);
   window->bridge_config_json = copy;
+  window->max_bridge_payload_bytes = PROTON_ENGINE_MAX_BRIDGE_BYTES;
+  proton_engine_bridge_config_read_max_payload(
+      bridge_json, &window->max_bridge_payload_bytes);
   window->public_window_id = public_window;
   return PROTON_OK;
 }
