@@ -61,8 +61,8 @@ async fn main {
 The root package also supports URL, file, asset, and project-config entries
 through `@proton.url`, `@proton.file`, `@proton.asset`, and `@proton.config`.
 
-On macOS, web content can extend beneath the native titlebar while retaining
-the system traffic-light controls:
+On macOS and Windows, web content can extend beneath the native titlebar while
+retaining the system window controls:
 
 ```moonbit
 window = {
@@ -74,11 +74,21 @@ window = {
 ```
 
 `titlebar_style` accepts `"default"` and `"overlay"`. Overlay rendering is
-currently implemented and shipped for macOS. Windows and Linux support still
-requires rebuilt platform prebuilts and native window integration. The page
-must reserve space for the window controls. This setting does not define HTML
-drag regions.
-See `examples/48_titlebar_overlay` for a minimal macOS layout example.
+implemented and shipped for macOS and Windows. Linux keeps the default
+titlebar. On Windows, Proton reserves a fixed native drag handle at the leading
+edge of the caption band. Its width follows the live system caption-button
+width, with the current-DPI metric as a fallback; the rest of the titlebar
+remains available to web controls. Web content placed over the leading handle
+does not receive mouse input, so pages should use it for an app icon or other
+drag-only chrome and must also reserve
+the native caption-button area. Overlay windows request DWM's dark caption
+appearance so the native controls blend with dark application chrome. This
+setting does not implement
+`-webkit-app-region` or another HTML drag-region API.
+Typed window configs send `titlebar_style` only when the loaded runtime reports
+the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
+the field and retain their default titlebar behavior.
+See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
 
 Code-only apps can select the same style through the facade:
 

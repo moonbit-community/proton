@@ -12,6 +12,10 @@ enabled only with `PROTON_WITH_ENGINE=ON`.
 availability, build mode, platform, and public feature flags using the same
 caller-owned buffer pattern as event polling.
 
+Engine builds on macOS and Windows report the `titlebar_overlay` feature.
+ABI-only and Linux builds do not report it, allowing typed window configs to
+omit the optional field when the loaded DLL cannot implement the behavior.
+
 `proton_runtime_wait` lets the MoonBit facade block until selected runtime work
 is ready, then drain it through the existing poll APIs. Ready masks are wake
 reasons, not ownership transfer: callers still drain `proton_runtime_poll_*`
@@ -84,6 +88,25 @@ plus `Resources/icudtl.dat` and `Resources/locales/`. This switches the build
 to `src/engine/cef_win/proton_engine_cef_win.c`, which wires
 `cef_execute_process`, `cef_initialize`, the CEF app instance, a Win32 parent
 window, and a minimal CEF child browser path.
+
+Windows `titlebar_style: "overlay"` keeps `WS_OVERLAPPEDWINDOW` and removes the
+standard non-client frame through `WM_NCCALCSIZE`, so the CEF child fills the
+client area through the top of the window. Overlay windows add
+`WS_CLIPCHILDREN` so parent background painting cannot cover the CEF child;
+default windows keep their existing style. Resize hit targets use
+`SM_CXSIZEFRAME`, `SM_CYSIZEFRAME`, and `SM_CXPADDEDBORDER` at the current DPI.
+The fixed native drag handle occupies one live caption-button width at the
+leading edge below the top resize border. `WM_GETTITLEBARINFOEX` supplies the
+live caption band and button cluster, with `SM_CXSIZE` and `SM_CYCAPTION` as
+pre-show fallbacks. DWM caption-button hit testing takes precedence. The rest
+of the titlebar returns `HTCLIENT`, so web menus and inputs can remain
+interactive. Web content over the leading handle cannot receive mouse input,
+and Proton does not provide `-webkit-app-region` or another HTML drag/no-drag
+channel. Overlay windows request `DWMWA_USE_IMMERSIVE_DARK_MODE` so the native
+caption controls blend with dark web chrome; Windows and high-contrast policy
+may still adjust their final colors.
+Maximized overlay windows use the monitor work area, and `WM_DPICHANGED`
+applies the system-provided window rectangle.
 
 On macOS, the engine build expects
 `Release/Chromium Embedded Framework.framework` under the runtime root and

@@ -159,7 +159,7 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
 
 ///|
 /// Sets whether web content remains below or extends beneath the native
-/// titlebar. Overlay rendering is currently implemented on macOS.
+/// titlebar. Overlay rendering is currently implemented on macOS and Windows.
 pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
   self.titlebar_style_overridden = true
   self.window = @manifest.WindowManifest::new(

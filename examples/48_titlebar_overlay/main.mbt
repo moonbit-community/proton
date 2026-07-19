@@ -8,109 +8,129 @@ async fn main {
     #|  <meta name="viewport" content="width=device-width, initial-scale=1">
     #|  <title>Proton Overlay</title>
     #|  <style>
+    #|    :root { color-scheme: dark; font-family: "Segoe UI", -apple-system, sans-serif; }
     #|    * { box-sizing: border-box; }
-    #|    html, body { margin: 0; min-height: 100%; }
-    #|    body {
-    #|      color: #27292c;
-    #|      background: #fff;
-    #|      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-    #|    }
+    #|    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    #|    body { color: #cccccc; background: #181818; }
+    #|    button, input { font: inherit; }
     #|    .titlebar {
-    #|      height: 30px;
+    #|      height: 40px;
     #|      display: flex;
     #|      align-items: center;
-    #|      gap: 13px;
-    #|      padding: 3px 10px 3px 96px;
-    #|      color: #606367;
-    #|      background: #f8f8fa;
-    #|      border-bottom: 1px solid #e1e2e4;
+    #|      gap: 6px;
+    #|      padding: 4px 150px 4px 96px;
+    #|      color: #c7c7c7;
+    #|      background: #202020;
+    #|      border-bottom: 1px solid #151515;
+    #|      user-select: none;
     #|    }
-    #|    .history {
-    #|      display: flex;
-    #|      align-items: center;
-    #|      gap: 12px;
-    #|      height: 16px;
-    #|    }
-    #|    .history svg {
-    #|      width: 16px;
-    #|      height: 16px;
-    #|      fill: none;
-    #|      stroke: currentColor;
-    #|      stroke-width: 1.7;
-    #|      stroke-linecap: round;
-    #|      stroke-linejoin: round;
-    #|    }
-    #|    .history .disabled { color: #b7b9bc; }
-    #|    .command {
-    #|      width: 190px;
-    #|      height: 24px;
-    #|      display: flex;
-    #|      align-items: center;
-    #|      overflow: hidden;
-    #|      color: #5f6266;
-    #|      background: #fff;
-    #|      border: 1px solid #d8dadd;
-    #|      border-radius: 8px;
-    #|      box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    #|    .brand {
+    #|      width: 22px;
+    #|      height: 22px;
+    #|      display: grid;
+    #|      flex: 0 0 22px;
+    #|      place-items: center;
+    #|      border-radius: 5px;
+    #|      color: #08111b;
+    #|      background: #35a8ff;
     #|      font-size: 12px;
+    #|      font-weight: 700;
     #|    }
-    #|    .branch { flex: 1; padding: 0 10px; white-space: nowrap; }
-    #|    .count {
-    #|      height: 100%;
-    #|      display: flex;
-    #|      align-items: center;
-    #|      gap: 5px;
-    #|      padding: 0 10px;
-    #|      color: #202226;
-    #|      background: #e7effa;
-    #|      border-left: 1px solid #e0e1e3;
+    #|    .menu, .history, .actions { display: flex; align-items: center; gap: 2px; }
+    #|    .titlebar button {
+    #|      height: 28px;
+    #|      border: 0;
+    #|      border-radius: 5px;
+    #|      color: inherit;
+    #|      background: transparent;
+    #|      cursor: pointer;
     #|    }
-    #|    .dot { width: 8px; height: 8px; border-radius: 50%; background: #24272b; }
-    #|    .actions {
-    #|      margin-left: auto;
-    #|      display: flex;
-    #|      align-items: center;
-    #|      gap: 13px;
+    #|    .menu button { padding: 0 8px; font-size: 13px; }
+    #|    .history button, .actions button { width: 28px; padding: 0; font-size: 17px; }
+    #|    .titlebar button:hover { color: #fff; background: #363636; }
+    #|    .command { min-width: 150px; max-width: 420px; flex: 1; margin: 0 8px; }
+    #|    .command input {
+    #|      width: 100%;
+    #|      height: 28px;
+    #|      border: 1px solid #555;
+    #|      border-radius: 6px;
+    #|      outline: 0;
+    #|      color: #ddd;
+    #|      background: #2a2a2a;
+    #|      padding: 0 12px;
+    #|      text-align: center;
     #|    }
-    #|    .actions svg {
-    #|      width: 17px;
-    #|      height: 17px;
-    #|      fill: none;
-    #|      stroke: currentColor;
-    #|      stroke-width: 1.6;
-    #|      stroke-linecap: round;
-    #|      stroke-linejoin: round;
-    #|    }
-    #|    .divider { width: 1px; height: 18px; background: #c7c9cc; }
+    #|    .command input:focus { border-color: #6a9fd3; box-shadow: 0 0 0 1px #6a9fd3; }
+    #|    .actions { margin-left: auto; }
     #|    main {
-    #|      min-height: calc(100vh - 30px);
+    #|      height: calc(100% - 40px);
     #|      display: grid;
     #|      place-items: center;
     #|      padding: 48px 32px 64px;
     #|      text-align: center;
     #|    }
-    #|    h1 { margin: 0 0 8px; font-size: 25px; font-weight: 620; letter-spacing: -.025em; }
-    #|    p { margin: 0; color: #777b80; font-size: 13px; }
+    #|    .card { width: min(650px, 100%); }
+    #|    .eyebrow { color: #7aa2d6; font-size: 12px; letter-spacing: .12em; }
+    #|    h1 { margin: 12px 0; color: #f0f0f0; font-size: 34px; letter-spacing: -.03em; }
+    #|    p { margin: 0 auto; color: #aaa; font-size: 14px; line-height: 1.7; }
+    #|    output {
+    #|      display: block;
+    #|      margin-top: 24px;
+    #|      border-left: 2px solid #2f81f7;
+    #|      background: #202020;
+    #|      color: #b8d7f5;
+    #|      padding: 12px 14px;
+    #|      font-family: Consolas, monospace;
+    #|      font-size: 12px;
+    #|      text-align: left;
+    #|    }
+    #|    @media (max-width: 760px) {
+    #|      .titlebar { padding-right: 138px; }
+    #|      .menu button:nth-child(n + 3), .actions { display: none; }
+    #|    }
     #|  </style>
     #|</head>
     #|<body>
     #|  <header class="titlebar">
-    #|    <div class="history">
-    #|      <svg viewBox="0 0 20 20"><path d="m13 3-7 7 7 7"/></svg>
-    #|      <svg class="disabled" viewBox="0 0 20 20"><path d="m7 3 7 7-7 7"/></svg>
+    #|    <span class="brand" title="Web-rendered application icon">P</span>
+    #|    <nav class="menu" aria-label="Application menu">
+    #|      <button type="button" data-action="File menu">File</button>
+    #|      <button type="button" data-action="Edit menu">Edit</button>
+    #|      <button type="button" data-action="View menu">View</button>
+    #|      <button type="button" data-action="Run menu">Run</button>
+    #|    </nav>
+    #|    <div class="history" aria-label="Navigation">
+    #|      <button type="button" data-action="Back">&#8592;</button>
+    #|      <button type="button" data-action="Forward">&#8594;</button>
     #|    </div>
-    #|    <div class="command"><div class="branch">fix-titlebar</div><div class="count"><i class="dot"></i>6</div></div>
-    #|    <div class="actions">
-    #|      <svg viewBox="0 0 20 20"><path d="M3 4h6v12H3zM11 4h6v5h-6zM11 11h6v5h-6z"/></svg>
-    #|      <span class="divider"></span>
-    #|      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="7.5" r="2.2"/><path d="M5.8 15.2c.9-2.4 2.3-3.5 4.2-3.5s3.3 1.1 4.2 3.5"/></svg>
-    #|      <svg viewBox="0 0 20 20"><path d="m10 2.5 1.5 2 2.5-.2.7 2.4 2.2 1.2-1 2.3 1 2.3-2.2 1.2-.7 2.4-2.5-.2-1.5 2-1.5-2-2.5.2-.7-2.4-2.2-1.2 1-2.3-1-2.3 2.2-1.2.7-2.4 2.5.2z"/><circle cx="10" cy="10" r="2"/></svg>
+    #|    <label class="command">
+    #|      <input id="command" value="moonbit-webview" aria-label="Command center">
+    #|    </label>
+    #|    <div class="actions" aria-label="Layout actions">
+    #|      <button type="button" data-action="Layout">&#9638;</button>
+    #|      <button type="button" data-action="Panel">&#9645;</button>
     #|    </div>
     #|  </header>
-    #|  <main><div><h1>沉浸式标题栏</h1><p>网页内容已延伸到 macOS 原生标题栏下方</p></div></main>
+    #|  <main>
+    #|    <div class="card">
+    #|      <div class="eyebrow">PROTON TITLEBAR OVERLAY</div>
+    #|      <h1>网页组件已进入原生标题栏</h1>
+    #|      <p>Windows 请拖动最左侧预留区域，或双击该区域最大化/恢复；右侧最小化、最大化和关闭按钮仍由系统绘制。macOS 保留左侧 traffic-light 控件。</p>
+    #|      <output id="log">请点击标题栏按钮或编辑中间输入框。</output>
+    #|    </div>
+    #|  </main>
+    #|  <script>
+    #|    const log = document.querySelector('#log');
+    #|    document.querySelectorAll('[data-action]').forEach((button) => {
+    #|      button.addEventListener('click', () => { log.textContent = button.dataset.action + ' received a web click.'; });
+    #|    });
+    #|    document.querySelector('#command').addEventListener('input', (event) => {
+    #|      log.textContent = 'Command input: ' + (event.target.value || '(empty)');
+    #|    });
+    #|  </script>
     #|</body>
     #|</html>
-  @proton.html("Proton Overlay", html, width=800, height=520, debug=true)
+  @proton.html("Proton Overlay", html, width=1000, height=640, debug=true)
   .titlebar_style(@proton.TitlebarStyle::Overlay)
   .run_or_abort()
 }
