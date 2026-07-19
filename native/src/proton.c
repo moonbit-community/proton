@@ -56,7 +56,7 @@
 #define PROTON_RUNTIME_WAIT_FEATURE ""
 #endif
 
-#if PROTON_WITH_ENGINE && defined(__APPLE__)
+#if PROTON_WITH_ENGINE && (defined(_WIN32) || defined(__APPLE__))
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
 #else
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ""

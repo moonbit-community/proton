@@ -76,6 +76,8 @@ static int expect_runtime_info(void) {
                      strstr(buffer, "\"build_mode\":\"abi-only\"") != NULL;
   int has_runtime = strstr(buffer, "\"runtime_available\":true") != NULL &&
                     strstr(buffer, "\"build_mode\":\"runtime\"") != NULL;
+  int has_titlebar_overlay =
+      strstr(buffer, "\"titlebar_overlay\"") != NULL;
   if (strstr(buffer, "\"abi_version\":1") == NULL ||
       (!has_abi_only && !has_runtime) ||
       strstr(buffer, "\"base_abi\"") == NULL ||
@@ -85,6 +87,17 @@ static int expect_runtime_info(void) {
     fprintf(stderr, "unexpected runtime info: %s\n", buffer);
     return 1;
   }
+#if defined(_WIN32) || defined(__APPLE__)
+  if (has_titlebar_overlay != has_runtime) {
+    fprintf(stderr, "unexpected titlebar overlay capability: %s\n", buffer);
+    return 1;
+  }
+#else
+  if (has_titlebar_overlay) {
+    fprintf(stderr, "unsupported titlebar overlay capability: %s\n", buffer);
+    return 1;
+  }
+#endif
   g_runtime_available = has_runtime;
   return 0;
 }
@@ -821,6 +834,19 @@ int main(void) {
     return 1;
   }
   if (expect_last_error_contains("titlebar_style")) {
+    return 1;
+  }
+  status = proton_window_create_json(
+      runtime,
+      "{\"abi_version\":1,\"title\":\"Default\",\"width\":320,"
+      "\"height\":240,\"titlebar_style\":\"default\"}",
+      &window);
+  if (expect_status("window_create accepts default titlebar style", status,
+                    PROTON_OK)) {
+    return 1;
+  }
+  if (expect_status("default window_destroy", proton_window_destroy(window),
+                    PROTON_OK)) {
     return 1;
   }
   status = proton_window_create_json(

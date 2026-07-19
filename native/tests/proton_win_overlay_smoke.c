@@ -130,8 +130,9 @@ int main(void) {
     return 1;
   }
   if (strstr(info, "\"runtime_available\":true") == NULL ||
-      strstr(info, "\"platform\":\"windows\"") == NULL) {
-    fprintf(stderr, "Windows engine runtime metadata missing: %s\n", info);
+      strstr(info, "\"platform\":\"windows\"") == NULL ||
+      strstr(info, "\"titlebar_overlay\"") == NULL) {
+    fprintf(stderr, "Windows engine overlay capability missing: %s\n", info);
     return 1;
   }
 

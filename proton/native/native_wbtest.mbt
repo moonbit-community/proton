@@ -24,8 +24,11 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(typed.features.contains("base_abi"))
   assert_true(typed.features.contains("event_polling"))
   assert_true(typed.features.contains("bridge_polling"))
-  if typed.platform == "macos" && typed.runtime_available {
+  if (typed.platform == "macos" || typed.platform == "windows") &&
+    typed.runtime_available {
     assert_true(typed.features.contains("titlebar_overlay"))
+  } else {
+    assert_false(typed.features.contains("titlebar_overlay"))
   }
 }
 
@@ -576,7 +579,7 @@ test "window config accepts overlay titlebar style" {
 }
 
 ///|
-test "bundled macOS engine creates overlay window when runtime is available" {
+test "bundled engine creates overlay window when capability is available" {
   match runtime_info() {
     Ok(info) if info.features.contains("titlebar_overlay") => ()
     _ => return
