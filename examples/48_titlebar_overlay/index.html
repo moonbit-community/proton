@@ -14,10 +14,12 @@
       color-scheme: dark;
       font-family: "Segoe UI", -apple-system, sans-serif;
       --leading-controls-reserve: 96px;
+      --titlebar-height: 40px;
     }
 
     :root.is-windows {
       --leading-controls-reserve: 56px;
+      --titlebar-height: 32px;
     }
 
     * {
@@ -43,7 +45,7 @@
     }
 
     .titlebar {
-      height: 40px;
+      height: var(--titlebar-height);
       display: flex;
       align-items: center;
       gap: 6px;
@@ -52,6 +54,12 @@
       background: #000;
       border-bottom: 1px solid #242424;
       user-select: none;
+      -webkit-app-region: drag;
+    }
+
+    :root.is-windows .titlebar {
+      padding-top: 2px;
+      padding-bottom: 2px;
     }
 
     .brand {
@@ -132,7 +140,7 @@
     }
 
     main {
-      height: calc(100% - 40px);
+      height: calc(100% - var(--titlebar-height));
       display: grid;
       place-items: center;
       padding: 48px 32px 64px;
@@ -218,7 +226,9 @@
   </main>
   <script>
     // Assign after DOM creation so CEF emits the initial region update.
-    document.querySelector('.titlebar').style.webkitAppRegion = 'drag';
+    setTimeout(() => {
+      document.querySelector('.titlebar').style.webkitAppRegion = 'drag';
+    }, 0);
 
     const log = document.querySelector('#log');
     document.querySelectorAll('[data-action]').forEach((button) => {

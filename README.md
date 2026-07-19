@@ -75,13 +75,16 @@ window = {
 
 `titlebar_style` accepts `"default"` and `"overlay"`. Overlay rendering is
 implemented and shipped for macOS and Windows. Linux keeps the default
-titlebar. On Windows, Proton consumes CEF's native draggable-region updates:
-set `-webkit-app-region: drag` on draggable web chrome and
-`-webkit-app-region: no-drag` on interactive descendants. These are CEF-provided
-regions, not an Electron compatibility shim. Until the page reports its first
-region update, Proton keeps a small DPI-aware leading drag fallback. Pages must
-also reserve the native caption-button area. Overlay windows request DWM's dark
-caption appearance so the native controls blend with dark application chrome.
+titlebar. On Windows, Proton consumes CEF's native draggable-region updates.
+Set `-webkit-app-region: no-drag` on interactive descendants, then assign
+`element.style.webkitAppRegion = "drag"` to the draggable container after it
+exists in the DOM. The post-DOM assignment is required by the currently shipped
+CEF build to emit its initial region update; later changes are reported directly
+by CEF. These are CEF-provided regions, not an Electron compatibility shim.
+Until the page reports its first region update, Proton keeps a small DPI-aware
+leading drag fallback. Pages must also reserve the native caption-button area.
+Overlay windows request DWM's dark caption appearance so the native controls
+blend with dark application chrome.
 Typed window configs send `titlebar_style` only when the loaded runtime reports
 the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
 the field and retain their default titlebar behavior.
