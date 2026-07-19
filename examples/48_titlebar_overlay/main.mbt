@@ -7,8 +7,16 @@ async fn main {
     #|  <meta charset="utf-8">
     #|  <meta name="viewport" content="width=device-width, initial-scale=1">
     #|  <title>Proton Overlay</title>
+    #|  <script>
+    #|    document.documentElement.classList.add(navigator.userAgent.includes('Windows') ? 'is-windows' : 'is-other');
+    #|  </script>
     #|  <style>
-    #|    :root { color-scheme: dark; font-family: "Segoe UI", -apple-system, sans-serif; }
+    #|    :root {
+    #|      color-scheme: dark;
+    #|      font-family: "Segoe UI", -apple-system, sans-serif;
+    #|      --leading-controls-reserve: 96px;
+    #|    }
+    #|    :root.is-windows { --leading-controls-reserve: 56px; }
     #|    * { box-sizing: border-box; }
     #|    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     #|    body { color: #cccccc; background: #181818; }
@@ -18,10 +26,10 @@ async fn main {
     #|      display: flex;
     #|      align-items: center;
     #|      gap: 6px;
-    #|      padding: 4px 150px 4px 96px;
+    #|      padding: 4px 150px 4px var(--leading-controls-reserve);
     #|      color: #c7c7c7;
-    #|      background: #202020;
-    #|      border-bottom: 1px solid #151515;
+    #|      background: #000;
+    #|      border-bottom: 1px solid #242424;
     #|      user-select: none;
     #|    }
     #|    .brand {
@@ -44,6 +52,7 @@ async fn main {
     #|      color: inherit;
     #|      background: transparent;
     #|      cursor: pointer;
+    #|      -webkit-app-region: no-drag;
     #|    }
     #|    .menu button { padding: 0 8px; font-size: 13px; }
     #|    .history button, .actions button { width: 28px; padding: 0; font-size: 17px; }
@@ -59,6 +68,7 @@ async fn main {
     #|      background: #2a2a2a;
     #|      padding: 0 12px;
     #|      text-align: center;
+    #|      -webkit-app-region: no-drag;
     #|    }
     #|    .command input:focus { border-color: #6a9fd3; box-shadow: 0 0 0 1px #6a9fd3; }
     #|    .actions { margin-left: auto; }
@@ -115,11 +125,13 @@ async fn main {
     #|    <div class="card">
     #|      <div class="eyebrow">PROTON TITLEBAR OVERLAY</div>
     #|      <h1>网页组件已进入原生标题栏</h1>
-    #|      <p>Windows 请拖动最左侧预留区域，或双击该区域最大化/恢复；右侧最小化、最大化和关闭按钮仍由系统绘制。macOS 保留左侧 traffic-light 控件。</p>
+    #|      <p>拖动标题栏空白区域，或双击空白区域最大化/恢复；按钮和输入框保持网页交互。Windows 右侧窗口按钮仍由系统绘制，macOS 保留左侧 traffic-light 控件。</p>
     #|      <output id="log">请点击标题栏按钮或编辑中间输入框。</output>
     #|    </div>
     #|  </main>
     #|  <script>
+    #|    // Assign after DOM creation so CEF emits the initial region update.
+    #|    document.querySelector('.titlebar').style.webkitAppRegion = 'drag';
     #|    const log = document.querySelector('#log');
     #|    document.querySelectorAll('[data-action]').forEach((button) => {
     #|      button.addEventListener('click', () => { log.textContent = button.dataset.action + ' received a web click.'; });
