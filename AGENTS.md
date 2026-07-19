@@ -89,7 +89,7 @@ native checks before handing off larger refactors.
 - Publish the dependency chain in this order: `justjavac/proton_config`, then
   `justjavac/proton`, then `justjavac/proton_cli`. For the currently prepared
   release, the chain is `proton_config 0.1.5` -> `proton 0.1.10` ->
-  `proton_cli 0.1.6`.
+  `proton_cli 0.1.7`.
 - Before publishing, keep these values aligned:
   - `config/moon.mod` version;
   - the `justjavac/proton_config@...` requirements in `proton/moon.mod` and
