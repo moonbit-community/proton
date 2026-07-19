@@ -78,6 +78,7 @@ currently implemented and shipped for macOS. Windows and Linux support still
 requires rebuilt platform prebuilts and native window integration. The page
 must reserve space for the window controls. This setting does not define HTML
 drag regions.
+See `examples/48_titlebar_overlay` for a minimal macOS layout example.
 
 Code-only apps can select the same style through the facade:
 
