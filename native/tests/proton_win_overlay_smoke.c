@@ -63,6 +63,10 @@ typedef struct {
   LONG height;
 } largest_child_t;
 
+typedef struct {
+  HWND hwnd;
+} renderer_child_t;
+
 static BOOL CALLBACK find_process_window(HWND hwnd, LPARAM data) {
   DWORD process_id = 0;
   GetWindowThreadProcessId(hwnd, &process_id);
@@ -104,6 +108,16 @@ static BOOL CALLBACK find_largest_visible_child(HWND child, LPARAM data) {
   return TRUE;
 }
 
+static BOOL CALLBACK find_renderer_child(HWND child, LPARAM data) {
+  char class_name[128];
+  if (GetClassNameA(child, class_name, (int)sizeof(class_name)) > 0 &&
+      strstr(class_name, "RenderWidgetHost") != NULL) {
+    ((renderer_child_t *)data)->hwnd = child;
+    return FALSE;
+  }
+  return TRUE;
+}
+
 static HWND deepest_child_from_screen_point(HWND parent, POINT screen_point) {
   HWND current = parent;
   for (;;) {
@@ -118,6 +132,20 @@ static HWND deepest_child_from_screen_point(HWND parent, POINT screen_point) {
     }
     current = child;
   }
+}
+
+static LRESULT hit_test_deepest_child(HWND parent, POINT client_point) {
+  POINT screen_point = client_point;
+  if (!ClientToScreen(parent, &screen_point)) {
+    return HTERROR;
+  }
+  HWND target = deepest_child_from_screen_point(parent, screen_point);
+  if (target == NULL || target == parent || !IsChild(parent, target)) {
+    return HTERROR;
+  }
+  return SendMessageW(
+      target, WM_NCHITTEST, 0,
+      MAKELPARAM((SHORT)screen_point.x, (SHORT)screen_point.y));
 }
 
 static int expect_browser_covers_client(void) {
@@ -251,6 +279,121 @@ static int expect_overlay_hit_targets(void) {
   return 0;
 }
 
+static int expect_web_draggable_regions(proton_runtime_id_t runtime,
+                                        proton_window_id_t window) {
+  HWND parent = NULL;
+  int renderer_ready = 0;
+  for (int attempt = 0; attempt < 500; attempt++) {
+    if (proton_runtime_do_message_loop_work(runtime) != PROTON_OK) {
+      fprintf(stderr, "overlay message loop failed before loading HTML\n");
+      return 1;
+    }
+    largest_child_t parent_window = {0};
+    EnumWindows(find_process_window, (LPARAM)&parent_window);
+    parent = parent_window.hwnd;
+    renderer_child_t renderer = {0};
+    if (parent != NULL) {
+      EnumChildWindows(parent, find_renderer_child, (LPARAM)&renderer);
+    }
+    if (renderer.hwnd != NULL) {
+      renderer_ready = 1;
+      break;
+    }
+    Sleep(10);
+  }
+  if (!renderer_ready) {
+    fprintf(stderr, "overlay renderer HWND did not become available\n");
+    return 1;
+  }
+
+  const char *html =
+      "<!doctype html><html><head><style>"
+      "html,body{margin:0;width:100%;height:100%;}"
+      "#bar{height:64px;-webkit-app-region:drag;}"
+      "#control{position:absolute;left:200px;top:8px;width:120px;height:40px;"
+      "-webkit-app-region:no-drag;}"
+      "</style></head><body><div id=\"bar\"><button id=\"control\">control"
+      "</button></div><script>"
+      "setTimeout(function(){"
+      "document.querySelector('#bar').style.webkitAppRegion='drag';"
+      "},0);"
+      "</script></body></html>";
+  char temp_dir[MAX_PATH];
+  char html_path[MAX_PATH];
+  char html_url[MAX_PATH + 16];
+  DWORD temp_len = GetTempPathA((DWORD)sizeof(temp_dir), temp_dir);
+  if (temp_len == 0 || temp_len >= sizeof(temp_dir) ||
+      snprintf(html_path, sizeof(html_path), "%sproton-overlay-%lu.html",
+               temp_dir, (unsigned long)GetCurrentProcessId()) >=
+          (int)sizeof(html_path)) {
+    fprintf(stderr, "overlay draggable HTML temp file could not be created\n");
+    return 1;
+  }
+  FILE *file = fopen(html_path, "wb");
+  if (file == NULL) {
+    DeleteFileA(html_path);
+    fprintf(stderr, "overlay draggable HTML temp file could not be written\n");
+    return 1;
+  }
+  const size_t html_len = strlen(html);
+  const int write_failed = fwrite(html, 1, html_len, file) != html_len;
+  const int close_failed = fclose(file) != 0;
+  if (write_failed || close_failed) {
+    DeleteFileA(html_path);
+    fprintf(stderr, "overlay draggable HTML temp file could not be written\n");
+    return 1;
+  }
+  for (char *cursor = html_path; *cursor != '\0'; cursor++) {
+    if (*cursor == '\\') {
+      *cursor = '/';
+    }
+  }
+  snprintf(html_url, sizeof(html_url), "file:///%s", html_path);
+  if (expect_status("overlay load draggable HTML",
+                    proton_window_load_url(window, html_url), PROTON_OK)) {
+    DeleteFileA(html_path);
+    return 1;
+  }
+
+  int passed = 0;
+  for (int attempt = 0; attempt < 500; attempt++) {
+    if (proton_runtime_do_message_loop_work(runtime) != PROTON_OK) {
+      fprintf(stderr, "overlay message loop failed while loading HTML\n");
+      return 1;
+    }
+    largest_child_t parent_window = {0};
+    EnumWindows(find_process_window, (LPARAM)&parent_window);
+    HWND parent = parent_window.hwnd;
+    if (parent != NULL) {
+      UINT dpi = GetDpiForWindow(parent);
+      if (dpi == 0) {
+        dpi = USER_DEFAULT_SCREEN_DPI;
+      }
+      POINT drag_point = {
+          .x = MulDiv(100, dpi, USER_DEFAULT_SCREEN_DPI),
+          .y = MulDiv(32, dpi, USER_DEFAULT_SCREEN_DPI),
+      };
+      POINT control_point = {
+          .x = MulDiv(250, dpi, USER_DEFAULT_SCREEN_DPI),
+          .y = MulDiv(24, dpi, USER_DEFAULT_SCREEN_DPI),
+      };
+      LRESULT drag_hit = hit_test_deepest_child(parent, drag_point);
+      LRESULT control_hit = hit_test_deepest_child(parent, control_point);
+      if (drag_hit == HTCAPTION && control_hit == HTCLIENT) {
+        passed = 1;
+        break;
+      }
+    }
+    Sleep(10);
+  }
+  DeleteFileA(html_path);
+  if (passed) {
+    return 0;
+  }
+  fprintf(stderr, "CEF draggable regions did not reach the child HWND\n");
+  return 1;
+}
+
 int main(void) {
   char info[256];
   int32_t required = 0;
@@ -306,7 +449,6 @@ int main(void) {
     proton_runtime_destroy(runtime);
     return 1;
   }
-
   if (expect_status("overlay window_show", proton_window_show(window),
                     PROTON_OK) ||
       expect_status("overlay window_set_size",
@@ -316,6 +458,11 @@ int main(void) {
     return 1;
   }
   if (expect_browser_covers_client() || expect_overlay_hit_targets()) {
+    proton_window_destroy(window);
+    proton_runtime_destroy(runtime);
+    return 1;
+  }
+  if (expect_web_draggable_regions(runtime, window)) {
     proton_window_destroy(window);
     proton_runtime_destroy(runtime);
     return 1;

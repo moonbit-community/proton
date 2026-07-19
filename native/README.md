@@ -99,13 +99,16 @@ CEF's `on_draggable_regions_changed` callback supplies the computed
 `-webkit-app-region: drag/no-drag` rectangles for Overlay pages. Proton stores
 those regions, subtracts every no-drag rectangle from the draggable area, and
 subclasses the current CEF child HWND hierarchy so native hit testing reaches
-the parent window without clipping Chromium rendering. This is CEF's native
-region channel, not an Electron compatibility shim. Before the first region
-update, a fallback drag handle occupies one live caption-button width at the
-leading edge below the top resize border. `WM_GETTITLEBARINFOEX` supplies the
-live caption band and button cluster, with `SM_CXSIZE` and `SM_CYCAPTION` as
-pre-show fallbacks. DWM caption-button hit testing takes precedence. Once CEF
-reports regions, ordinary web content and no-drag controls return `HTCLIENT`.
+the parent window without clipping Chromium rendering. With the currently
+shipped CEF build, pages assign `element.style.webkitAppRegion = "drag"` after
+the draggable element exists in the DOM to trigger the initial update; static
+`no-drag` descendants are included in that update. This is CEF's native region
+channel, not an Electron compatibility shim. Before the first region update, a
+fallback drag handle occupies one live caption-button width at the leading edge
+below the top resize border. `WM_GETTITLEBARINFOEX` supplies the live caption
+band and button cluster, with `SM_CXSIZE` and `SM_CYCAPTION` as pre-show
+fallbacks. DWM caption-button hit testing takes precedence. Once CEF reports
+regions, ordinary web content and no-drag controls return `HTCLIENT`.
 Overlay windows request `DWMWA_USE_IMMERSIVE_DARK_MODE` so the native caption
 controls blend with dark web chrome; Windows and high-contrast policy may still
 adjust their final colors.

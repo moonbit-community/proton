@@ -2247,25 +2247,32 @@ static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     return;
   }
 
-  free(window->draggable_regions);
-  window->draggable_regions = NULL;
-  window->draggable_region_count = 0;
-  window->draggable_regions_reported = 1;
-  if (regions_count > 0 && regions != NULL &&
-      regions_count <= SIZE_MAX / sizeof(proton_win_titlebar_region_t)) {
+  if (regions_count == 0) {
+    free(window->draggable_regions);
+    window->draggable_regions = NULL;
+    window->draggable_region_count = 0;
+    window->draggable_regions_reported = 1;
+  } else if (regions != NULL &&
+             regions_count <=
+                 SIZE_MAX / sizeof(proton_win_titlebar_region_t)) {
     proton_win_titlebar_region_t *copy =
         (proton_win_titlebar_region_t *)malloc(regions_count * sizeof(*copy));
-    if (copy != NULL) {
-      for (size_t i = 0; i < regions_count; i++) {
-        copy[i].x = regions[i].bounds.x;
-        copy[i].y = regions[i].bounds.y;
-        copy[i].width = regions[i].bounds.width;
-        copy[i].height = regions[i].bounds.height;
-        copy[i].draggable = regions[i].draggable;
-      }
-      window->draggable_regions = copy;
-      window->draggable_region_count = regions_count;
+    if (copy == NULL) {
+      proton_engine_verbose_log("draggable_regions_allocation_failed count=%zu",
+                                regions_count);
+      return;
     }
+    for (size_t i = 0; i < regions_count; i++) {
+      copy[i].x = regions[i].bounds.x;
+      copy[i].y = regions[i].bounds.y;
+      copy[i].width = regions[i].bounds.width;
+      copy[i].height = regions[i].bounds.height;
+      copy[i].draggable = regions[i].draggable;
+    }
+    free(window->draggable_regions);
+    window->draggable_regions = copy;
+    window->draggable_region_count = regions_count;
+    window->draggable_regions_reported = 1;
   }
 
   cef_browser_host_t *host = browser->get_host(browser);

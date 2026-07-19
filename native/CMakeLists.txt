@@ -121,6 +121,29 @@ if(PROTON_WITH_ENGINE)
       C_STANDARD_REQUIRED ON
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
+    set(PROTON_ENGINE_TEST_RUNTIME_DIR
+      "${CMAKE_BINARY_DIR}/test-runtime"
+    )
+    add_custom_command(TARGET cef_process POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+              "${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin"
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+              "${PROTON_ENGINE_TEST_RUNTIME_DIR}/Resources"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              ${PROTON_ENGINE_RUNTIME_DLLS}
+              "${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              ${PROTON_ENGINE_RUNTIME_DATA}
+              "${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              $<TARGET_FILE:cef_process>
+              $<TARGET_FILE:proton>
+              "${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin"
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+              "${PROTON_ENGINE_RESOURCES_DIR}"
+              "${PROTON_ENGINE_TEST_RUNTIME_DIR}/Resources"
+      VERBATIM
+    )
     install(FILES ${PROTON_ENGINE_RUNTIME_DLLS} DESTINATION bin)
     install(FILES ${PROTON_ENGINE_RUNTIME_DATA} DESTINATION bin)
     install(DIRECTORY "${PROTON_ENGINE_RESOURCES_DIR}/" DESTINATION Resources)
@@ -332,6 +355,7 @@ if(BUILD_TESTING)
       tests/proton_win_overlay_smoke.c
     )
     target_link_libraries(proton_win_overlay_smoke PRIVATE proton)
+    add_dependencies(proton_win_overlay_smoke cef_process)
     set_target_properties(proton_win_overlay_smoke PROPERTIES
       C_STANDARD 11
       C_STANDARD_REQUIRED ON
@@ -339,7 +363,7 @@ if(BUILD_TESTING)
     add_test(NAME proton_win_overlay_smoke COMMAND proton_win_overlay_smoke)
     set_tests_properties(proton_win_overlay_smoke PROPERTIES
       ENVIRONMENT
-        "PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_ROOT};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
+        "PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_TEST_RUNTIME_DIR};PROTON_TEST_HELPER_PATH=${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
     )
   endif()
 
@@ -379,7 +403,7 @@ if(BUILD_TESTING)
       if(TARGET proton_win_overlay_smoke)
         set_tests_properties(proton_win_overlay_smoke PROPERTIES
           ENVIRONMENT
-            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_ROOT};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
+            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_TEST_RUNTIME_DIR};PROTON_TEST_HELPER_PATH=${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
         )
       endif()
     endif()
