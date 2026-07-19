@@ -56,6 +56,12 @@
 #define PROTON_RUNTIME_WAIT_FEATURE ""
 #endif
 
+#if PROTON_WITH_ENGINE && defined(__APPLE__)
+#define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
+#else
+#define PROTON_TITLEBAR_OVERLAY_FEATURE ""
+#endif
+
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
 #define PROTON_MAX_EVENTS 32
@@ -1401,7 +1407,7 @@ int32_t proton_runtime_info_json(char *buffer,
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
-      PROTON_RUNTIME_WAIT_FEATURE "]}",
+      PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
   if (required < 0 || required >= (int)sizeof(info)) {

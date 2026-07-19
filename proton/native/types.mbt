@@ -142,6 +142,14 @@ pub(all) enum TitlebarStyle {
 } derive(Debug, Eq)
 
 ///|
+fn titlebar_overlay_config_supported() -> Bool {
+  match runtime_info() {
+    Ok(info) => info.features.contains("titlebar_overlay")
+    Err(_) => false
+  }
+}
+
+///|
 struct RuntimeConfig {
   raw_json : String?
   use_bundled : Bool
@@ -338,7 +346,9 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
       match self.titlebar_style {
         TitlebarStyle::Default => ()
         TitlebarStyle::Overlay =>
-          fields["titlebar_style"] = Json::string("overlay")
+          if titlebar_overlay_config_supported() {
+            fields["titlebar_style"] = Json::string("overlay")
+          }
       }
       Json::object(fields).stringify()
     }

@@ -2018,7 +2018,14 @@ static int32_t proton_engine_parse_window_config(
   if (proton_engine_parse_json_string_field(
           config_json, "titlebar_style", titlebar_style,
           sizeof(titlebar_style))) {
-    config->titlebar_overlay = strcmp(titlebar_style, "overlay") == 0;
+    if (strcmp(titlebar_style, "overlay") == 0) {
+      config->titlebar_overlay = 1;
+    } else if (strcmp(titlebar_style, "default") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window titlebar_style must be default or overlay");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
   }
   return PROTON_OK;
 }
