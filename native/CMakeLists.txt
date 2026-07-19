@@ -11,10 +11,14 @@ endif()
 option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" OFF)
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
 set(PROTON_ENGINE_SOURCE src/engine/proton_engine_none.c)
+set(PROTON_ENGINE_EXTRA_SOURCES)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
     set(PROTON_ENGINE_SOURCE src/engine/cef_win/proton_engine_cef_win.c)
+    list(APPEND PROTON_ENGINE_EXTRA_SOURCES
+      src/engine/cef_win/proton_win_titlebar.c
+    )
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
     set(PROTON_ENGINE_SOURCE src/engine/cef_mac/proton_engine_cef_mac.m)
@@ -35,6 +39,7 @@ add_library(proton SHARED
   src/proton_json.c
   src/proton.c
   ${PROTON_ENGINE_SOURCE}
+  ${PROTON_ENGINE_EXTRA_SOURCES}
 )
 
 target_include_directories(proton
@@ -98,7 +103,7 @@ if(PROTON_WITH_ENGINE)
       "${PROTON_ENGINE_ROOT}/Release/*.json"
       "${PROTON_ENGINE_ROOT}/Release/*.pak"
     )
-    target_link_libraries(proton PRIVATE "${PROTON_ENGINE_IMPORT_LIB}")
+    target_link_libraries(proton PRIVATE "${PROTON_ENGINE_IMPORT_LIB}" dwmapi)
     add_executable(cef_process
       src/cef_process.c
     )
@@ -305,6 +310,35 @@ if(BUILD_TESTING)
   add_test(NAME proton_smoke COMMAND proton_smoke)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
 
+  if(WIN32 AND PROTON_WITH_ENGINE)
+    add_executable(proton_win_titlebar_test
+      tests/proton_win_titlebar_test.c
+      src/engine/cef_win/proton_win_titlebar.c
+    )
+    target_include_directories(proton_win_titlebar_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_win
+    )
+    set_target_properties(proton_win_titlebar_test PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_win_titlebar_test COMMAND proton_win_titlebar_test)
+
+    add_executable(proton_win_overlay_smoke
+      tests/proton_win_overlay_smoke.c
+    )
+    target_link_libraries(proton_win_overlay_smoke PRIVATE proton)
+    set_target_properties(proton_win_overlay_smoke PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_win_overlay_smoke COMMAND proton_win_overlay_smoke)
+    set_tests_properties(proton_win_overlay_smoke PROPERTIES
+      ENVIRONMENT
+        "PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_ROOT};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
+    )
+  endif()
+
   if(WIN32)
     set(PROTON_TEST_PATH_MODIFICATIONS
       "PATH=path_list_prepend:$<TARGET_FILE_DIR:proton>"
@@ -321,6 +355,11 @@ if(BUILD_TESTING)
       set_tests_properties(proton_exports_smoke PROPERTIES
         ENVIRONMENT_MODIFICATION "${PROTON_TEST_PATH_MODIFICATIONS}"
       )
+      if(TARGET proton_win_overlay_smoke)
+        set_tests_properties(proton_win_overlay_smoke PROPERTIES
+          ENVIRONMENT_MODIFICATION "${PROTON_TEST_PATH_MODIFICATIONS}"
+        )
+      endif()
     else()
       if(PROTON_WITH_ENGINE)
         set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>;${PROTON_ENGINE_ROOT}/Release;$ENV{PATH}")
@@ -333,6 +372,12 @@ if(BUILD_TESTING)
       set_tests_properties(proton_exports_smoke PROPERTIES
         ENVIRONMENT "PATH=${PROTON_TEST_PATH}"
       )
+      if(TARGET proton_win_overlay_smoke)
+        set_tests_properties(proton_win_overlay_smoke PROPERTIES
+          ENVIRONMENT
+            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_ROOT};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
+        )
+      endif()
     endif()
   elseif(APPLE)
     set_tests_properties(proton_smoke PROPERTIES

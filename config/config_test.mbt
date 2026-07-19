@@ -98,6 +98,27 @@ test "project config rejects unsupported window size_hint" {
 }
 
 ///|
+test "project config parses default titlebar style" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|  titlebar_style: "default",
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(config) => assert_true(config.window.titlebar_style == TitlebarDefault)
+    Err(message) => abort(message)
+  }
+}
+
+///|
 test "project config parses overlay titlebar style" {
   let source =
     #|window = {
