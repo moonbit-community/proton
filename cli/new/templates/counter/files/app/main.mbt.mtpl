@@ -1,4 +1,6 @@
 ///|
 async fn main {
-  @proton.app().extension(@counter.extension()).run_or_abort()
+  @proton.config("moon.proton")
+  .extension(@counter.extension())
+  .run_or_abort()
 }

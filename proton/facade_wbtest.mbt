@@ -491,6 +491,42 @@ test "implicit config path honors PROTON_CONFIG_PATH" {
 }
 
 ///|
+test "default config API honors PROTON_CONFIG_PATH" {
+  let config_path = "target/proton-facade-dev/config-api-env.moon.proton"
+  write_facade_dev_config(config_path)
+  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
+  let old_dev = @env.get_env_var("PROTON_DEV")
+  let old_mode = @env.get_env_var("PROTON_MODE")
+  defer restore_env_var("PROTON_MODE", old_mode)
+  defer restore_env_var("PROTON_DEV", old_dev)
+  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
+
+  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
+  @env.unset_env_var("PROTON_DEV")
+  @env.unset_env_var("PROTON_MODE")
+  let app = config("moon.proton")
+  @debug.assert_eq(app.file_path, Some(config_path))
+  let resolved = match app.resolved_app_config() {
+    Ok(resolved) => resolved
+    Err(error) => abort(error)
+  }
+  assert_eq(resolved.manifest.window.title, "Dev Test")
+}
+
+///|
+test "config API keeps non-default paths explicit" {
+  let config_path = "target/proton-facade-dev/explicit.moon.proton"
+  let env_path = "target/proton-facade-dev/explicit-env.moon.proton"
+  write_facade_dev_config(config_path)
+  write_facade_dev_config(env_path)
+  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
+  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
+
+  @env.set_env_var("PROTON_CONFIG_PATH", env_path)
+  @debug.assert_eq(config(config_path).file_path, Some(config_path))
+}
+
+///|
 test "config API overrides manifest fields and keeps base dir" {
   let config_path = "target/proton-facade-dev/api-overrides.moon.proton"
   write_facade_dev_config(config_path)
