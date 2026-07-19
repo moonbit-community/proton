@@ -18,6 +18,7 @@ fn App::new(
     debug_level_value: debug,
     title_overridden: false,
     size_overridden: false,
+    titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
     extension_settings: {},
@@ -251,6 +252,11 @@ fn App::warn_config_overrides(self : App) -> Unit {
       "warning: Proton API App::size overrides moon.proton window.width/window.height",
     )
   }
+  if self.titlebar_style_overridden {
+    println(
+      "warning: Proton API App::titlebar_style overrides moon.proton window.titlebar_style",
+    )
+  }
   if self.entry_overridden {
     println("warning: Proton API App::entry_* overrides moon.proton entry")
   }
@@ -296,10 +302,16 @@ fn App::merged_window(
   } else {
     window.height
   }
+  let titlebar_style = if self.titlebar_style_overridden {
+    self.window.titlebar_style
+  } else {
+    window.titlebar_style
+  }
   @manifest.WindowManifest::new(
     title,
     width,
     height,
     size_hint=window.size_hint,
+    titlebar_style~,
   )
 }

@@ -136,6 +136,12 @@ struct Window {
 }
 
 ///|
+pub(all) enum TitlebarStyle {
+  Default
+  Overlay
+} derive(Debug, Eq)
+
+///|
 struct RuntimeConfig {
   raw_json : String?
   use_bundled : Bool
@@ -154,6 +160,7 @@ struct WindowConfig {
   width : Int
   height : Int
   initial_url : String
+  titlebar_style : TitlebarStyle
 } derive(Debug, Eq)
 
 ///|
@@ -221,8 +228,9 @@ pub fn WindowConfig::new(
   width? : Int = 800,
   height? : Int = 600,
   initial_url? : String = "about:blank",
+  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
 ) -> WindowConfig {
-  { raw_json: None, title, width, height, initial_url }
+  { raw_json: None, title, width, height, initial_url, titlebar_style }
 }
 
 ///|
@@ -233,6 +241,7 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     width: 800,
     height: 600,
     initial_url: "about:blank",
+    titlebar_style: TitlebarStyle::Default,
   }
 }
 
@@ -312,8 +321,8 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
 pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
   match self.raw_json {
     Some(raw) => raw
-    None =>
-      Json::object({
+    None => {
+      let fields : Map[String, Json] = {
         "abi_version": Json::number(1.0, repr="1"),
         "title": Json::string(self.title),
         "width": Json::number(
@@ -325,7 +334,14 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
           repr=self.height.to_string(),
         ),
         "initial_url": Json::string(self.initial_url),
-      }).stringify()
+      }
+      match self.titlebar_style {
+        TitlebarStyle::Default => ()
+        TitlebarStyle::Overlay =>
+          fields["titlebar_style"] = Json::string("overlay")
+      }
+      Json::object(fields).stringify()
+    }
   }
 }
 

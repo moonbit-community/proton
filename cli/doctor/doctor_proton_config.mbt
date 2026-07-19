@@ -26,6 +26,19 @@ fn doctor_window_from_project_window(
     width: window.width,
     height: window.height,
     size_hint: doctor_size_hint_from_project_size_hint(window.size_hint),
+    titlebar_style: doctor_titlebar_style_from_project_titlebar_style(
+      window.titlebar_style,
+    ),
+  }
+}
+
+///|
+fn doctor_titlebar_style_from_project_titlebar_style(
+  style : @proton_config.ProjectTitlebarStyle,
+) -> String {
+  match style {
+    TitlebarDefault => "default"
+    TitlebarOverlay => "overlay"
   }
 }
 

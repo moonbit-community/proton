@@ -505,6 +505,7 @@ test "config API overrides manifest fields and keeps base dir" {
     config(config_path)
     .title("Code Title")
     .size(width=640, height=480)
+    .titlebar_style(TitlebarStyle::Overlay)
     .entry_html("<main>code</main>")
     .debug(enabled=false)
     .resolved_app_config() {
@@ -515,6 +516,7 @@ test "config API overrides manifest fields and keeps base dir" {
   assert_eq(manifest.window.title, "Code Title")
   assert_eq(manifest.window.width, 640)
   assert_eq(manifest.window.height, 480)
+  assert_eq(manifest.window.titlebar_style, @manifest.TitlebarStyle::Overlay)
   assert_eq(manifest.debug, 0)
   match manifest.entry {
     @manifest.AppEntry::Html(html) => assert_eq(html, "<main>code</main>")

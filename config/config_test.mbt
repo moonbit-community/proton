@@ -98,6 +98,49 @@ test "project config rejects unsupported window size_hint" {
 }
 
 ///|
+test "project config parses overlay titlebar style" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|  titlebar_style: "overlay",
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(config) => assert_true(config.window.titlebar_style == TitlebarOverlay)
+    Err(message) => abort(message)
+  }
+}
+
+///|
+test "project config rejects unsupported titlebar style" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|  titlebar_style: "hiddenInset",
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(_) => abort("expected unsupported titlebar style")
+    Err(message) =>
+      assert_true(message.contains("unsupported window titlebar_style"))
+  }
+}
+
+///|
 test "project config rebases file entry and frontend paths from config directory" {
   let base_dir = "target/proton-config/subdir"
   let source =

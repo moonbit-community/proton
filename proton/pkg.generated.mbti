@@ -47,6 +47,7 @@ pub async fn App::run(Self) -> Result[Unit, String]
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
+pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
 
 // Type aliases
 pub using @native {type NativeError}
@@ -60,6 +61,8 @@ pub using @native {type RuntimeConfig}
 pub using @native {type RuntimeEvent}
 
 pub using @native {type RuntimeInfo}
+
+pub using @native {type TitlebarStyle}
 
 pub using @native {type Window}
 

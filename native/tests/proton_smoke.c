@@ -811,6 +811,31 @@ int main(void) {
   if (expect_last_error_contains("unknown field: resizable")) {
     return 1;
   }
+  status = proton_window_create_json(
+      runtime,
+      "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,"
+      "\"titlebar_style\":\"hidden_inset\"}",
+      &window);
+  if (expect_status("window_create rejects unsupported titlebar style", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_last_error_contains("titlebar_style")) {
+    return 1;
+  }
+  status = proton_window_create_json(
+      runtime,
+      "{\"abi_version\":1,\"title\":\"Overlay\",\"width\":320,"
+      "\"height\":240,\"titlebar_style\":\"overlay\"}",
+      &window);
+  if (expect_status("window_create accepts overlay titlebar style", status,
+                    PROTON_OK)) {
+    return 1;
+  }
+  if (expect_status("overlay window_destroy", proton_window_destroy(window),
+                    PROTON_OK)) {
+    return 1;
+  }
   if (expect_status("runtime_destroy after invalid window",
                     proton_runtime_destroy(runtime), PROTON_OK)) {
     return 1;

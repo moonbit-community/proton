@@ -61,6 +61,31 @@ async fn main {
 The root package also supports URL, file, asset, and project-config entries
 through `@proton.url`, `@proton.file`, `@proton.asset`, and `@proton.config`.
 
+On macOS, web content can extend beneath the native titlebar while retaining
+the system traffic-light controls:
+
+```moonbit
+window = {
+  title: "My App",
+  width: 900,
+  height: 700,
+  titlebar_style: "overlay",
+}
+```
+
+`titlebar_style` accepts `"default"` and `"overlay"`. Overlay rendering is
+currently implemented and shipped for macOS. Windows and Linux support still
+requires rebuilt platform prebuilts and native window integration. The page
+must reserve space for the window controls. This setting does not define HTML
+drag regions.
+
+Code-only apps can select the same style through the facade:
+
+```moonbit
+@proton.html("My App", html)
+.titlebar_style(@proton.TitlebarStyle::Overlay)
+```
+
 ## Frontend projects
 
 Vite, Next, and similar tools can be configured in `moon.proton`:

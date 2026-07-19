@@ -113,9 +113,9 @@ fn required_project_window(
     match value {
       Obj(window_fields, _) =>
         validate_object_fields(window_fields, "window", [
-          "title", "width", "height", "size_hint",
+          "title", "width", "height", "size_hint", "titlebar_style",
         ]).bind(fn(_) {
-          zip4(
+          zip5(
             required_string_config_field(window_fields, "title", "window.title"),
             required_positive_int_config_field(
               window_fields, "width", "window.width",
@@ -126,14 +126,38 @@ fn required_project_window(
             optional_string_config_field(
               window_fields, "size_hint", "window.size_hint",
             ).bind(parse_project_size_hint),
+            optional_string_config_field(
+              window_fields, "titlebar_style", "window.titlebar_style",
+            ).bind(parse_project_titlebar_style),
           ).map(fn(values) {
-            let (title, width, height, size_hint) = values
-            ProjectWindowConfig::new(title, width, height, size_hint~)
+            let (title, width, height, size_hint, titlebar_style) = values
+            ProjectWindowConfig::new(
+              title,
+              width,
+              height,
+              size_hint~,
+              titlebar_style~,
+            )
           })
         })
       _ => Err("moon.proton window must be an object")
     }
   })
+}
+
+///|
+fn parse_project_titlebar_style(
+  titlebar_style : String?,
+) -> Result[ProjectTitlebarStyle, String] {
+  match titlebar_style {
+    None => Ok(TitlebarDefault)
+    Some(titlebar_style) =>
+      match normalize_keyword(titlebar_style) {
+        "default" => Ok(TitlebarDefault)
+        "overlay" => Ok(TitlebarOverlay)
+        _ => Err("unsupported window titlebar_style: " + titlebar_style)
+      }
+  }
 }
 
 ///|

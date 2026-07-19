@@ -94,13 +94,19 @@ pub(all) struct ProjectMetadata {
 } derive(Eq, @debug.Debug)
 pub fn ProjectMetadata::new(String, identifier? : String?, version? : String?, description? : String?, license? : String?) -> Self
 
+pub(all) enum ProjectTitlebarStyle {
+  TitlebarDefault
+  TitlebarOverlay
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ProjectWindowConfig {
   title : String
   width : Int
   height : Int
   size_hint : ProjectWindowSizeHint
+  titlebar_style : ProjectTitlebarStyle
 } derive(Eq, @debug.Debug)
-pub fn ProjectWindowConfig::new(String, Int, Int, size_hint? : ProjectWindowSizeHint) -> Self
+pub fn ProjectWindowConfig::new(String, Int, Int, size_hint? : ProjectWindowSizeHint, titlebar_style? : ProjectTitlebarStyle) -> Self
 
 pub(all) enum ProjectWindowSizeHint {
   WindowSizeNone

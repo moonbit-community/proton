@@ -551,6 +551,44 @@ test "window config rejects unknown fields" {
 }
 
 ///|
+test "typed window config serializes overlay titlebar style" {
+  let config = WindowConfig::new(titlebar_style=TitlebarStyle::Overlay)
+  assert_true(
+    config.to_json_string().contains("\"titlebar_style\":\"overlay\""),
+  )
+}
+
+///|
+test "window config accepts overlay titlebar style" {
+  let runtime = Runtime::new().unwrap()
+  let window = Window::new(
+    runtime,
+    config=WindowConfig::new(titlebar_style=TitlebarStyle::Overlay),
+  ).unwrap()
+  debug_inspect(window.destroy(), content="Ok(())")
+  debug_inspect(runtime.destroy(), content="Ok(())")
+}
+
+///|
+test "window config rejects unsupported titlebar style" {
+  let runtime = Runtime::new().unwrap()
+  let result = Window::new(
+    runtime,
+    config=WindowConfig::unsafe_from_json(
+      "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"titlebar_style\":\"hidden_inset\"}",
+    ),
+  )
+  match result {
+    Err(error) => {
+      inspect(error.status, content="-1")
+      assert_true(error.message.contains("invalid type or range"))
+    }
+    Ok(_) => fail("expected unsupported titlebar style to fail")
+  }
+  debug_inspect(runtime.destroy(), content="Ok(())")
+}
+
+///|
 test "window config requires abi_version 1" {
   let runtime = Runtime::new().unwrap()
   let result = Window::new(

@@ -76,7 +76,20 @@ fn proton_window_from_project_window(
     window.width,
     window.height,
     size_hint=proton_size_hint_from_project_size_hint(window.size_hint),
+    titlebar_style=proton_titlebar_style_from_project_titlebar_style(
+      window.titlebar_style,
+    ),
   )
+}
+
+///|
+fn proton_titlebar_style_from_project_titlebar_style(
+  style : @proton_config.ProjectTitlebarStyle,
+) -> @manifest.TitlebarStyle {
+  match style {
+    TitlebarDefault => @manifest.TitlebarStyle::Default
+    TitlebarOverlay => @manifest.TitlebarStyle::Overlay
+  }
 }
 
 ///|
