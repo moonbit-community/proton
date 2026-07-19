@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <stdint.h>
 
 typedef struct {
   int x;
@@ -21,10 +22,23 @@ typedef struct {
   LRESULT system_hit_test;
 } proton_win_titlebar_hit_test_input_t;
 
+typedef struct {
+  int x;
+  int y;
+  int width;
+  int height;
+  int draggable;
+} proton_win_titlebar_region_t;
+
 LRESULT proton_win_titlebar_hit_test(
     const proton_win_titlebar_hit_test_input_t *input);
 
 LRESULT proton_win_titlebar_caption_button_hit(POINT point,
                                                const RECT *button_bounds);
+
+int proton_win_titlebar_point_in_draggable_regions(
+    POINT point,
+    size_t region_count,
+    const proton_win_titlebar_region_t *regions);
 
 #endif

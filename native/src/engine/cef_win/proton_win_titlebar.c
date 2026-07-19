@@ -26,6 +26,44 @@ LRESULT proton_win_titlebar_caption_button_hit(POINT point,
   return HTCLOSE;
 }
 
+int proton_win_titlebar_point_in_draggable_regions(
+    POINT point,
+    size_t region_count,
+    const proton_win_titlebar_region_t *regions) {
+  if (region_count == 0 || regions == NULL) {
+    return 0;
+  }
+  int draggable = 0;
+  for (size_t i = 0; i < region_count; i++) {
+    const proton_win_titlebar_region_t *region = &regions[i];
+    const int64_t right = (int64_t)region->x + region->width;
+    const int64_t bottom = (int64_t)region->y + region->height;
+    const int inside =
+        region->width > 0 && region->height > 0 && point.x >= region->x &&
+        (int64_t)point.x < right && point.y >= region->y &&
+        (int64_t)point.y < bottom;
+    if (inside && region->draggable) {
+      draggable = 1;
+    }
+  }
+  if (!draggable) {
+    return 0;
+  }
+  for (size_t i = 0; i < region_count; i++) {
+    const proton_win_titlebar_region_t *region = &regions[i];
+    const int64_t right = (int64_t)region->x + region->width;
+    const int64_t bottom = (int64_t)region->y + region->height;
+    const int inside =
+        region->width > 0 && region->height > 0 && point.x >= region->x &&
+        (int64_t)point.x < right && point.y >= region->y &&
+        (int64_t)point.y < bottom;
+    if (inside && !region->draggable) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 LRESULT proton_win_titlebar_hit_test(
     const proton_win_titlebar_hit_test_input_t *input) {
   if (input == NULL || input->width <= 0 || input->height <= 0) {

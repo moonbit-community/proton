@@ -166,6 +166,50 @@ static int test_content_drag_and_maximized(int dpi) {
                     proton_win_titlebar_hit_test(&input), HTMAXBUTTON);
 }
 
+static int test_web_draggable_regions(int dpi) {
+  const proton_win_titlebar_region_t regions[] = {
+      {.x = 0,
+       .y = 0,
+       .width = MulDiv(800, dpi, USER_DEFAULT_SCREEN_DPI),
+       .height = MulDiv(40, dpi, USER_DEFAULT_SCREEN_DPI),
+       .draggable = 1},
+      {.x = MulDiv(280, dpi, USER_DEFAULT_SCREEN_DPI),
+       .y = MulDiv(4, dpi, USER_DEFAULT_SCREEN_DPI),
+       .width = MulDiv(240, dpi, USER_DEFAULT_SCREEN_DPI),
+       .height = MulDiv(32, dpi, USER_DEFAULT_SCREEN_DPI),
+       .draggable = 0},
+  };
+  POINT drag_point = {
+      .x = MulDiv(100, dpi, USER_DEFAULT_SCREEN_DPI),
+      .y = MulDiv(20, dpi, USER_DEFAULT_SCREEN_DPI),
+  };
+  POINT control_point = {
+      .x = MulDiv(320, dpi, USER_DEFAULT_SCREEN_DPI),
+      .y = MulDiv(20, dpi, USER_DEFAULT_SCREEN_DPI),
+  };
+  POINT content_point = {
+      .x = MulDiv(100, dpi, USER_DEFAULT_SCREEN_DPI),
+      .y = MulDiv(80, dpi, USER_DEFAULT_SCREEN_DPI),
+  };
+  if (!proton_win_titlebar_point_in_draggable_regions(
+          drag_point, sizeof(regions) / sizeof(regions[0]), regions)) {
+    fprintf(stderr, "web drag region was not draggable at %d DPI\n", dpi);
+    return 1;
+  }
+  if (proton_win_titlebar_point_in_draggable_regions(
+          control_point, sizeof(regions) / sizeof(regions[0]), regions)) {
+    fprintf(stderr, "web no-drag control was draggable at %d DPI\n", dpi);
+    return 1;
+  }
+  if (proton_win_titlebar_point_in_draggable_regions(
+          content_point, sizeof(regions) / sizeof(regions[0]), regions)) {
+    fprintf(stderr, "web content outside titlebar was draggable at %d DPI\n",
+            dpi);
+    return 1;
+  }
+  return 0;
+}
+
 int main(void) {
   const int dpis[] = {96, 120, 144, 192};
   int failures = 0;
@@ -173,6 +217,7 @@ int main(void) {
     failures += test_resize_edges_and_corners(dpis[i]);
     failures += test_caption_buttons(dpis[i]);
     failures += test_content_drag_and_maximized(dpis[i]);
+    failures += test_web_draggable_regions(dpis[i]);
   }
   return failures == 0 ? 0 : 1;
 }

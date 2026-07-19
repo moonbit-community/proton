@@ -95,16 +95,20 @@ client area through the top of the window. Overlay windows add
 `WS_CLIPCHILDREN` so parent background painting cannot cover the CEF child;
 default windows keep their existing style. Resize hit targets use
 `SM_CXSIZEFRAME`, `SM_CYSIZEFRAME`, and `SM_CXPADDEDBORDER` at the current DPI.
-The fixed native drag handle occupies one live caption-button width at the
+CEF's `on_draggable_regions_changed` callback supplies the computed
+`-webkit-app-region: drag/no-drag` rectangles for Overlay pages. Proton stores
+those regions, subtracts every no-drag rectangle from the draggable area, and
+subclasses the current CEF child HWND hierarchy so native hit testing reaches
+the parent window without clipping Chromium rendering. This is CEF's native
+region channel, not an Electron compatibility shim. Before the first region
+update, a fallback drag handle occupies one live caption-button width at the
 leading edge below the top resize border. `WM_GETTITLEBARINFOEX` supplies the
 live caption band and button cluster, with `SM_CXSIZE` and `SM_CYCAPTION` as
-pre-show fallbacks. DWM caption-button hit testing takes precedence. The rest
-of the titlebar returns `HTCLIENT`, so web menus and inputs can remain
-interactive. Web content over the leading handle cannot receive mouse input,
-and Proton does not provide `-webkit-app-region` or another HTML drag/no-drag
-channel. Overlay windows request `DWMWA_USE_IMMERSIVE_DARK_MODE` so the native
-caption controls blend with dark web chrome; Windows and high-contrast policy
-may still adjust their final colors.
+pre-show fallbacks. DWM caption-button hit testing takes precedence. Once CEF
+reports regions, ordinary web content and no-drag controls return `HTCLIENT`.
+Overlay windows request `DWMWA_USE_IMMERSIVE_DARK_MODE` so the native caption
+controls blend with dark web chrome; Windows and high-contrast policy may still
+adjust their final colors.
 Maximized overlay windows use the monitor work area, and `WM_DPICHANGED`
 applies the system-provided window rectangle.
 

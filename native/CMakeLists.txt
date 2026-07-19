@@ -103,7 +103,11 @@ if(PROTON_WITH_ENGINE)
       "${PROTON_ENGINE_ROOT}/Release/*.json"
       "${PROTON_ENGINE_ROOT}/Release/*.pak"
     )
-    target_link_libraries(proton PRIVATE "${PROTON_ENGINE_IMPORT_LIB}" dwmapi)
+    target_link_libraries(proton PRIVATE
+      "${PROTON_ENGINE_IMPORT_LIB}"
+      comctl32
+      dwmapi
+    )
     add_executable(cef_process
       src/cef_process.c
     )
