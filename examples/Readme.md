@@ -65,6 +65,8 @@ moon -C examples run 01_run --target native
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Vite dev-server injection smoke for extension
   JavaScript helpers and events.
+- `48_child_process_close_repro`: long-lived child process and pending bridge
+  request for macOS close-lifecycle regression testing.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
