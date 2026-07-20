@@ -24,6 +24,9 @@ if(PROTON_WITH_ENGINE)
     set(PROTON_ENGINE_SOURCE src/engine/cef_mac/proton_engine_cef_mac.m)
   elseif(UNIX)
     set(PROTON_ENGINE_SOURCE src/engine/cef_linux/proton_engine_cef_linux.c)
+    list(APPEND PROTON_ENGINE_EXTRA_SOURCES
+      src/engine/cef_linux/proton_linux_titlebar.c
+    )
   else()
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
@@ -364,6 +367,48 @@ if(BUILD_TESTING)
     set_tests_properties(proton_win_overlay_smoke PROPERTIES
       ENVIRONMENT
         "PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_TEST_RUNTIME_DIR};PROTON_TEST_HELPER_PATH=${PROTON_ENGINE_TEST_RUNTIME_DIR}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache"
+    )
+  elseif(UNIX AND NOT APPLE AND PROTON_WITH_ENGINE)
+    add_executable(proton_linux_titlebar_test
+      tests/proton_linux_titlebar_test.c
+      src/engine/cef_linux/proton_linux_titlebar.c
+    )
+    target_include_directories(proton_linux_titlebar_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_linux
+    )
+    set_target_properties(proton_linux_titlebar_test PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_linux_titlebar_test COMMAND proton_linux_titlebar_test)
+
+    add_executable(proton_linux_overlay_smoke
+      tests/proton_linux_overlay_smoke.c
+    )
+    target_link_libraries(proton_linux_overlay_smoke PRIVATE
+      proton
+      "${PROTON_ENGINE_SHARED_LIB}"
+      PkgConfig::PROTON_X11
+    )
+    target_link_options(proton_linux_overlay_smoke PRIVATE
+      "LINKER:--no-as-needed"
+    )
+    add_dependencies(proton_linux_overlay_smoke cef_process)
+    set_target_properties(proton_linux_overlay_smoke PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_linux_overlay_smoke COMMAND proton_linux_overlay_smoke)
+    set_tests_properties(proton_linux_overlay_smoke PROPERTIES
+      ENVIRONMENT
+        "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:${PROTON_ENGINE_ROOT}/Release:$ENV{LD_LIBRARY_PATH};PROTON_RUNTIME_ROOT=${PROTON_ENGINE_ROOT};PROTON_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_ROOT};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke-cache;PROTON_TEST_LOG_PATH=${CMAKE_CURRENT_BINARY_DIR}/overlay-smoke.log"
+    )
+    add_test(NAME proton_linux_overlay_hidpi_smoke
+      COMMAND proton_linux_overlay_smoke
+    )
+    set_tests_properties(proton_linux_overlay_hidpi_smoke PROPERTIES
+      ENVIRONMENT
+        "GDK_SCALE=2;LD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:${PROTON_ENGINE_ROOT}/Release:$ENV{LD_LIBRARY_PATH};PROTON_RUNTIME_ROOT=${PROTON_ENGINE_ROOT};PROTON_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_ENGINE_ROOT=${PROTON_ENGINE_ROOT};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_CURRENT_BINARY_DIR}/overlay-hidpi-smoke-cache;PROTON_TEST_LOG_PATH=${CMAKE_CURRENT_BINARY_DIR}/overlay-hidpi-smoke.log"
     )
   endif()
 
