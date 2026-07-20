@@ -950,16 +950,7 @@ async function buildDevExtensionJsFrontend(env) {
   const frontendDir = path.join(repoRoot, "examples", "47_dev_extension_js", "frontend");
   const hadNodeModules = fs.existsSync(path.join(frontendDir, "node_modules"));
   try {
-    if (!frontendDependenciesReady(frontendDir)) {
-      await runCollectedChild(
-        spawnNpm(["ci", "--no-audit", "--no-fund"], {
-          cwd: frontendDir,
-          env: process.env,
-          stdio: ["ignore", "pipe", "pipe"],
-        }),
-        "npm ci for dev extension JS",
-      );
-    }
+    await ensureFrontendDependencies(frontendDir);
     await runCollectedChild(
       spawn("moon", [
         "-C",
@@ -986,6 +977,21 @@ async function buildDevExtensionJsFrontend(env) {
       removeTreeIfExists(path.join(frontendDir, "node_modules"));
     }
   }
+}
+
+///|
+async function ensureFrontendDependencies(frontendDir) {
+  if (frontendDependenciesReady(frontendDir)) {
+    return;
+  }
+  await runCollectedChild(
+    spawnNpm(["ci", "--no-audit", "--no-fund"], {
+      cwd: frontendDir,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    }),
+    "npm ci for dev extension JS",
+  );
 }
 
 ///|
@@ -2097,11 +2103,13 @@ async function runScenario(name, hasMoonBitE2e) {
   activeDevFrontendPort = null;
   activeDevFrontendHadNodeModules = false;
   if (name === "47_dev_extension_js") {
+    const frontendDir = path.join(repoRoot, "examples", name, "frontend");
     activeDevFrontendPort = await chooseDevFrontendPort();
     activeDevFrontendUrl = `http://127.0.0.1:${activeDevFrontendPort}`;
     activeDevFrontendHadNodeModules = fs.existsSync(
-      path.join(repoRoot, "examples", name, "frontend", "node_modules"),
+      path.join(frontendDir, "node_modules"),
     );
+    await ensureFrontendDependencies(frontendDir);
   }
   fs.mkdirSync(path.join(repoRoot, "target"), { recursive: true });
   removeIfExists(path.join(repoRoot, "target", "proton-native.log"));
