@@ -27,7 +27,8 @@ pub(all) struct RuntimeWaitReady {
 ///|
 struct RuntimeEvent {
   event_type : String
-  has_window : Bool
+  window : Int64?
+  menu_command_id : String?
 } derive(Debug, Eq)
 
 ///|
@@ -53,6 +54,30 @@ pub(all) enum DialogLevel {
 } derive(Debug, Eq)
 
 ///|
+/// An application-level native menu bar.
+struct MenuBar {
+  raw_json : String?
+  menus : Array[Menu]
+} derive(Debug, Eq)
+
+///|
+/// A top-level native menu and its items.
+struct Menu {
+  label : String
+  items : Array[MenuItem]
+} derive(Debug, Eq)
+
+///|
+/// A command, separator, or platform role in a native menu.
+struct MenuItem {
+  kind : String
+  id : String?
+  label : String?
+  key : String?
+  role : String?
+} derive(Debug, Eq)
+
+///|
 pub(all) struct BridgeConfig {
   raw_json : String?
   ops : Array[String]
@@ -69,7 +94,14 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
 
 ///|
 pub fn RuntimeEvent::has_window(self : RuntimeEvent) -> Bool {
-  self.has_window
+  self.window is Some(_)
+}
+
+///|
+/// Returns the window associated with this event when one exists. For an app
+/// menu command this is the focused window at click time.
+pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
+  self.window
 }
 
 ///|
@@ -80,6 +112,17 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+/// The command id for an app-menu command item click, or `None` for every
+/// other event kind.
+pub fn RuntimeEvent::menu_command_id(self : RuntimeEvent) -> String? {
+  if self.event_type == "menu_command" {
+    self.menu_command_id
+  } else {
+    None
+  }
 }
 
 ///|
@@ -249,6 +292,50 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
 }
 
 ///|
+/// Creates an application-level menu bar.
+pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
+  { raw_json: None, menus }
+}
+
+///|
+/// Creates a menu bar from unchecked native ABI JSON.
+pub fn MenuBar::unsafe_from_json(raw_json : String) -> MenuBar {
+  { raw_json: Some(raw_json), menus: [] }
+}
+
+///|
+/// Creates a top-level menu.
+pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
+  { label, items }
+}
+
+///|
+/// Creates an app command item. Activating it emits `menu_command`.
+pub fn MenuItem::command(
+  id : String,
+  label : String,
+  key? : String,
+) -> MenuItem {
+  { kind: "command", id: Some(id), label: Some(label), key, role: None }
+}
+
+///|
+/// Creates a menu separator.
+pub fn MenuItem::separator() -> MenuItem {
+  { kind: "separator", id: None, label: None, key: None, role: None }
+}
+
+///|
+/// Creates an item backed by a platform menu role such as `close` or `quit`.
+pub fn MenuItem::role(
+  role : String,
+  label? : String,
+  key? : String,
+) -> MenuItem {
+  { kind: "role", id: None, label, key, role: Some(role) }
+}
+
+///|
 pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
   WindowRef::{ handle, }
 }
@@ -342,6 +429,37 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
           repr=self.height.to_string(),
         ),
         "initial_url": Json::string(self.initial_url),
+      }).stringify()
+  }
+}
+
+///|
+fn MenuItem::to_json(self : MenuItem) -> Json {
+  let fields : Map[String, Json] = { "kind": Json::string(self.kind) }
+  set_optional_string_field(fields, "id", self.id)
+  set_optional_string_field(fields, "label", self.label)
+  set_optional_string_field(fields, "key", self.key)
+  set_optional_string_field(fields, "role", self.role)
+  Json::object(fields)
+}
+
+///|
+fn Menu::to_json(self : Menu) -> Json {
+  Json::object({
+    "label": Json::string(self.label),
+    "items": Json::array(self.items.map(fn(item) { item.to_json() })),
+  })
+}
+
+///|
+/// Encodes this menu bar for the native ABI.
+pub fn MenuBar::to_json_string(self : MenuBar) -> String {
+  match self.raw_json {
+    Some(raw) => raw
+    None =>
+      Json::object({
+        "abi_version": Json::number(1.0, repr="1"),
+        "menus": Json::array(self.menus.map(fn(menu) { menu.to_json() })),
       }).stringify()
   }
 }

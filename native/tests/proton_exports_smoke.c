@@ -60,6 +60,7 @@ static const char *const expected_exports[] = {
     "proton_runtime_quit",
     "proton_runtime_do_message_loop_work",
     "proton_runtime_wait",
+    "proton_runtime_set_menu_json",
     "proton_runtime_poll_event_json",
     "proton_runtime_poll_bridge_request_json",
     "proton_runtime_respond_bridge_request_json",

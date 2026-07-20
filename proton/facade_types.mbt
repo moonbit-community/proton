@@ -10,6 +10,7 @@ struct App {
   mut size_overridden : Bool
   mut entry_overridden : Bool
   mut debug_overridden : Bool
+  mut menu : @native.MenuBar?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   validation_errors : Array[String]

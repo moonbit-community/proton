@@ -203,6 +203,28 @@ test "extension event dispatch script can target a page instance" {
 }
 
 ///|
+test "frontend menu event dispatch preserves policy and focused window" {
+  let script = frontend_event_dispatch_script(
+    "menu.command",
+    Json::object({
+      "command_id": Json::string("demo.refresh"),
+      "window": Json::string("17"),
+    }),
+    BridgePagePolicy::{
+      dev_origin: Some("http://localhost:5173"),
+      request_timeout_ms: 30000,
+    },
+  )
+  assert_true(
+    script.contains("window.location.origin !== \"http://localhost:5173\""),
+  )
+  assert_true(script.contains("events['@@emitFrontendEvent']"))
+  assert_true(script.contains("\"name\":\"menu.command\""))
+  assert_true(script.contains("\"command_id\":\"demo.refresh\""))
+  assert_true(script.contains("\"window\":\"17\""))
+}
+
+///|
 test "dev bridge page policy parses exact http origins" {
   match url_origin("http://localhost:5173/app") {
     Ok(origin) => assert_eq(origin, "http://localhost:5173")
@@ -267,6 +289,33 @@ test "command proxy script ignores disabled command extensions" {
     build_command_proxy_script(manifest, command_extensions),
     content="Ok(None)",
   )
+}
+
+///|
+test "command proxy can install event bus without command extensions" {
+  let extension_id = "examples/async-add"
+  let manifest = test_command_manifest(extension_id, enabled=false)
+  let command_extensions : Map[
+    String,
+    @proton_command.AppCommandExtensionSpec,
+  ] = Map([])
+  command_extensions[extension_id] = test_command_spec(extension_id, "add", [
+    "slowAdd",
+  ])
+  match
+    build_command_proxy_script(
+      manifest,
+      command_extensions,
+      install_event_bus=true,
+    ) {
+    Ok(Some(script)) => {
+      assert_true(script.contains("root.events = events;"))
+      assert_true(script.contains("events.on = function(name, listener)"))
+      assert_true(script.contains("events['@@emitFrontendEvent']"))
+      assert_true(script.contains("var specs = [];"))
+    }
+    _ => fail("expected event bus bootstrap script")
+  }
 }
 
 ///|

@@ -96,6 +96,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len) {
+  (void)runtime;
+  (void)menu_json;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -357,4 +367,21 @@ int32_t proton_engine_window_poll_dialog_result(
   proton_engine_set_message(error, error_len,
                             "async native dialogs require the CEF engine");
   return PROTON_ERR_UNSUPPORTED;
+}
+// TODO: Drain menu commands when this engine grows a native menu backend.
+int32_t proton_engine_take_menu_command(
+    proton_engine_runtime_t *runtime,
+    char *buffer,
+    size_t buffer_len,
+    proton_window_id_t *out_focused_window,
+    int32_t *out_present) {
+  (void)runtime;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_focused_window == NULL || out_present == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_focused_window = PROTON_INVALID_HANDLE;
+  *out_present = 0;
+  return PROTON_OK;
 }

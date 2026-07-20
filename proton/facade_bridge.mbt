@@ -170,6 +170,7 @@ fn command_extension_dependency_error(
 fn build_command_proxy_script(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  install_event_bus? : Bool = false,
 ) -> Result[String?, String] {
   let specs : Array[Json] = []
   let scripts : Array[String] = []
@@ -210,7 +211,7 @@ fn build_command_proxy_script(
       scripts.push(script)
     }
   }
-  if specs.length() == 0 {
+  if specs.length() == 0 && scripts.length() == 0 && !install_event_bus {
     Ok(None)
   } else {
     let script = command_proxy_bootstrap_script(Json::array(specs).stringify())
@@ -260,6 +261,15 @@ fn command_proxy_bootstrap_script(specs_json : String) -> String {
   "      payload: payload === undefined ? null : payload\n" +
   "    };\n" +
   "    return emitExact(event.extension + '.' + event.name, event);\n" +
+  "  };\n" +
+  "  events['@@emitFrontendEvent'] = function(event) {\n" +
+  "    if (!event || typeof event !== 'object') { return null; }\n" +
+  "    var name = String(event.name || '');\n" +
+  "    if (!name) { return null; }\n" +
+  "    return emitExact(name, {\n" +
+  "      name: name,\n" +
+  "      payload: event.payload === undefined ? null : event.payload\n" +
+  "    });\n" +
   "  };\n" +
   "  events.on = function(name, listener) {\n" +
   "    if (typeof listener !== 'function') {\n" +
@@ -335,6 +345,55 @@ fn install_extension_event_sender(
   policy : BridgePagePolicy,
 ) -> Unit {
   host.set_event_sender(extension_event_sender(window, None, policy))
+}
+
+///|
+fn forward_menu_command(
+  window : @native.Window,
+  command_id : String,
+  focused_window : Int64?,
+  policy : BridgePagePolicy,
+) -> Unit {
+  let fields : Map[String, Json] = { "command_id": Json::string(command_id) }
+  match focused_window {
+    Some(window) => fields["window"] = Json::string(window.to_string())
+    None => ()
+  }
+  ignore(
+    window.eval(
+      frontend_event_dispatch_script(
+        "menu.command",
+        Json::object(fields),
+        policy,
+      ),
+    ),
+  )
+}
+
+///|
+fn frontend_event_dispatch_script(
+  event_name : String,
+  payload : Json,
+  policy : BridgePagePolicy,
+) -> String {
+  let event = Json::object({
+    "name": Json::string(event_name),
+    "payload": payload,
+  }).stringify()
+  let e = StringBuilder(size_hint=event.length() + 256)
+  e <+
+    $|(function(){
+    $|\{bridge_page_policy_guard_script(policy)}
+    $|  var root = window.__MoonBit__;
+    $|  var events = root && root.events;
+    $|  var emit = events && events['@@emitFrontendEvent'];
+    $|  if (typeof emit === 'function') {
+    $|    emit(
+    $|\{event}
+    $|);
+    $|  }
+    $|})();
+  e.to_string()
 }
 
 ///|

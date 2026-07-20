@@ -78,6 +78,13 @@ extern "C" fn proton_runtime_wait_ffi(
 ) -> Int = "proton_runtime_wait"
 
 ///|
+#borrow(menu_json)
+extern "C" fn proton_runtime_set_menu_json_ffi(
+  runtime : Int64,
+  menu_json : Bytes,
+) -> Int = "proton_runtime_set_menu_json"
+
+///|
 #borrow(buffer, out_required_len)
 extern "C" fn proton_runtime_poll_event_json_ffi(
   runtime : Int64,

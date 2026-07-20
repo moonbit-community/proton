@@ -147,8 +147,23 @@ fn decode_runtime_event_json(
     decode_string_json(event_type_json, "runtime event type").bind(fn(
       event_type,
     ) {
-      let has_window = object.get("window") is Some(_)
-      Ok(RuntimeEvent::{ event_type, has_window })
+      let window = match object.get("window") {
+        None => None
+        Some(value) =>
+          match decode_int64_json(value, "runtime event window") {
+            Err(error) => return Err(error)
+            Ok(window) => Some(window)
+          }
+      }
+      let menu_command_id = match object.get("command_id") {
+        None => None
+        Some(value) =>
+          match decode_string_json(value, "runtime event command id") {
+            Err(error) => return Err(error)
+            Ok(command_id) => Some(command_id)
+          }
+      }
+      Ok(RuntimeEvent::{ event_type, window, menu_command_id })
     })
   })
 }
@@ -334,6 +349,20 @@ pub fn Runtime::wait(
   } else {
     Ok(RuntimeWaitReady::{ mask: ready_mask.val })
   }
+}
+
+///|
+/// Replaces the application-level native menu bar for this runtime.
+pub fn Runtime::set_menu(
+  self : Runtime,
+  menu : MenuBar,
+) -> Result[Unit, NativeError] {
+  status_to_result(
+    proton_runtime_set_menu_json_ffi(
+      self.handle,
+      @ffi.to_cstr(menu.to_json_string()),
+    ),
+  )
 }
 
 ///|
