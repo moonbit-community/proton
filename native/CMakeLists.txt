@@ -10,16 +10,21 @@ endif()
 
 option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" OFF)
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
-set(PROTON_ENGINE_SOURCE src/engine/proton_engine_none.c)
+set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
-    set(PROTON_ENGINE_SOURCE src/engine/cef_win/proton_engine_cef_win.c)
+    set(PROTON_ENGINE_SOURCES src/engine/cef_win/proton_engine_cef_win.c)
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
-    set(PROTON_ENGINE_SOURCE src/engine/cef_mac/proton_engine_cef_mac.m)
+    set(PROTON_ENGINE_SOURCES
+      src/engine/cef_mac/proton_engine_cef_mac.m
+      src/engine/cef_mac/dialog.m
+      src/engine/cef_mac/menu.m
+      src/engine/cef_mac/scheme.m
+    )
   elseif(UNIX)
-    set(PROTON_ENGINE_SOURCE src/engine/cef_linux/proton_engine_cef_linux.c)
+    set(PROTON_ENGINE_SOURCES src/engine/cef_linux/proton_engine_cef_linux.c)
   else()
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
@@ -32,9 +37,11 @@ if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
 endif()
 
 add_library(proton SHARED
+  src/proton_config.c
   src/proton_json.c
+  src/proton_state.c
   src/proton.c
-  ${PROTON_ENGINE_SOURCE}
+  ${PROTON_ENGINE_SOURCES}
 )
 
 target_include_directories(proton
