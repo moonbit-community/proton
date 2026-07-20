@@ -182,7 +182,7 @@ test "templates receive final module title and size" {
   guard find_planned_file(files, "app/main.mbt") is Some(main_mbt) else {
     abort("missing app/main.mbt")
   }
-  assert_true(main_mbt.contains("@proton.app()"))
+  assert_true(main_mbt.contains("@proton.config(\"moon.proton\")"))
   guard find_planned_file(files, "moon.proton") is Some(config) else {
     abort("missing moon.proton")
   }
@@ -195,6 +195,16 @@ test "templates receive final module title and size" {
   assert_true(config.contains("active: true"))
   assert_true(config.contains("targets: [\"app\", \"zip\"]"))
   assert_true(config.contains("output: \"target/proton-dist\""))
+  guard find_planned_file(files, "README.mbt.md") is Some(readme) else {
+    abort("missing README.mbt.md")
+  }
+  assert_true(readme.contains("## Dev"))
+  assert_true(readme.contains("proton_cli dev"))
+  assert_true(readme.contains("## Build"))
+  assert_true(readme.contains("proton_cli build"))
+  assert_true(readme.contains("## Bundle"))
+  assert_true(readme.contains("bundle = {"))
+  assert_true(readme.contains("proton_cli package app --dry-run"))
 }
 
 ///|

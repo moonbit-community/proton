@@ -1,6 +1,6 @@
 name = "justjavac/proton"
 
-version = "0.1.10"
+version = "0.1.11"
 
 import {
   "justjavac/ffi@0.2.1",
