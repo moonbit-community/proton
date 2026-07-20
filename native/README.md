@@ -12,8 +12,8 @@ enabled only with `PROTON_WITH_ENGINE=ON`.
 availability, build mode, platform, and public feature flags using the same
 caller-owned buffer pattern as event polling.
 
-Engine builds on macOS and Windows report the `titlebar_overlay` feature.
-ABI-only and Linux builds do not report it, allowing typed window configs to
+Engine builds on macOS, Windows, and Linux report the `titlebar_overlay`
+feature. ABI-only builds do not report it, allowing typed window configs to
 omit the optional field when the loaded DLL cannot implement the behavior.
 
 `proton_runtime_wait` lets the MoonBit facade block until selected runtime work
@@ -122,6 +122,20 @@ switches the build to `src/engine/cef_mac/proton_engine_cef_mac.m`.
 On Linux, the engine build expects `Release/libcef.so` under the runtime root,
 plus `Resources/icudtl.dat` and `Resources/locales/`. This switches the build
 to `src/engine/cef_linux/proton_engine_cef_linux.c`.
+
+Linux `titlebar_style: "overlay"` uses GTK client chrome on the existing X11
+engine path. The CEF child fills the complete client area, while GTK-native
+minimize, maximize/restore, and close buttons are raised above the browser in
+the top-right corner. The window remains resizable through GTK's themed
+`decoration-resize-handle` metric, and GTK maximize/unmaximize continues to use
+the desktop work area. CEF's `on_draggable_regions_changed` callback supplies
+the computed `-webkit-app-region: drag/no-drag` rectangles; ordinary web
+content and no-drag controls remain interactive. Before the first region
+update, one native caption-button width at the leading edge acts as a fallback
+drag handle. Proton selects the X server's `DefaultVisual`, as required by the
+CEF GTK/X11 embedding path, and manually keeps the CEF X11 child sized to the
+GTK content allocation. The current Linux engine intentionally forces X11, so
+WSLg uses this behavior through XWayland; native Wayland is not yet supported.
 
 `proton_cli cef setup` runtime assembly is wired for Windows, macOS Apple
 Silicon, and Linux. The setup command verifies the pinned SHA-256 of the
