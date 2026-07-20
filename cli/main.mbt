@@ -17,7 +17,7 @@ fn print_usage() -> Unit {
 }
 
 ///|
-let cli_current_version : String = "0.1.7"
+let cli_current_version : String = "0.1.8"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"
