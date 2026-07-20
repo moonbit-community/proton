@@ -56,6 +56,10 @@ developer must perform them.
 - Sync release artifacts into `proton/prebuilt/<platform>/`; only include the
   Proton DLL/shared library, import library if any, helper executable, public
   header, and manifest.
+- Build release artifacts with the Release configuration and install or stage
+  stripped Proton binaries. On macOS, generate any required dSYMs from the
+  unstripped build outputs first, then strip and stage the final binaries before
+  code signing and notarization.
 - `node scripts/verify_prebuilt_abi.mjs <platform>`
 - `moon -C cli run . -- -C .. cef setup`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
