@@ -2914,3 +2914,36 @@ int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
   window->public_window_id = public_window;
   return PROTON_OK;
 }
+
+int32_t proton_engine_post_notification(
+    const char *title_utf8,
+    int32_t title_len,
+    const char *body_utf8,
+    int32_t body_len,
+    const char *payload_utf8,
+    int32_t payload_len,
+    char *error,
+    size_t error_len) {
+  (void)title_utf8;
+  (void)title_len;
+  (void)body_utf8;
+  (void)body_len;
+  (void)payload_utf8;
+  (void)payload_len;
+  proton_engine_set_message(error, error_len,
+                            "notifications are not implemented on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_take_notification_click(
+    char *buffer,
+    size_t buffer_len,
+    int32_t *out_present) {
+  (void)buffer;
+  (void)buffer_len;
+  if (out_present == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_present = 0;
+  return PROTON_OK;
+}

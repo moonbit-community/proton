@@ -43,6 +43,21 @@ test "runtime wait ready mask helpers" {
 }
 
 ///|
+test "notification click runtime events expose only their payload" {
+  let notification = decode_runtime_event_json(
+    "{\"type\":\"notification_clicked\",\"payload\":\"run-42\"}",
+  ).unwrap()
+  debug_inspect(
+    notification.notification_click_payload(),
+    content="Some(\"run-42\")",
+  )
+  let window = decode_runtime_event_json(
+    "{\"type\":\"window_closed\",\"window\":1,\"payload\":\"ignored\"}",
+  ).unwrap()
+  debug_inspect(window.notification_click_payload(), content="None")
+}
+
+///|
 test "runtime wait reports queued native events without consuming them" {
   let runtime = Runtime::new().unwrap()
   let empty_ready = runtime

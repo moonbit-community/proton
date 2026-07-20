@@ -148,7 +148,12 @@ fn decode_runtime_event_json(
       event_type,
     ) {
       let has_window = object.get("window") is Some(_)
-      Ok(RuntimeEvent::{ event_type, has_window })
+      let payload = if object.get("payload") is Some(String(value)) {
+        Some(value)
+      } else {
+        None
+      }
+      Ok(RuntimeEvent::{ event_type, has_window, payload })
     })
   })
 }
@@ -573,6 +578,52 @@ pub fn Window::install_bridge(
     proton_window_install_bridge_json_ffi(
       self.handle,
       @ffi.to_cstr(config.to_json_string()),
+    ),
+  )
+}
+
+///|
+fn optional_notification_text_buffer(value : String?) -> Bytes {
+  match value {
+    Some(value) => @ffi.to_cstr(value)
+    None => @ffi.to_cstr("")
+  }
+}
+
+///|
+fn notification_text_payload_len(buffer : Bytes) -> Int {
+  let len = buffer.length()
+  if len >= 1 {
+    len - 1
+  } else {
+    len
+  }
+}
+
+///|
+/// Posts a system notification. The first call may ask the user for
+/// permission. This is currently supported by the macOS engine and returns an
+/// unsupported error on other engines or outside an app bundle.
+///
+/// `payload` is carried by the notification. Clicking it emits a runtime event
+/// exposed by `RuntimeEvent::notification_click_payload` and reveals the app's
+/// windows.
+pub fn post_notification(
+  title : String?,
+  body : String,
+  payload? : String,
+) -> Result[Unit, NativeError] {
+  let title_buffer = optional_notification_text_buffer(title)
+  let body_buffer = @ffi.to_cstr(body)
+  let payload_buffer = optional_notification_text_buffer(payload)
+  status_to_result(
+    proton_app_post_notification_ffi(
+      title_buffer,
+      notification_text_payload_len(title_buffer),
+      body_buffer,
+      notification_text_payload_len(body_buffer),
+      payload_buffer,
+      notification_text_payload_len(payload_buffer),
     ),
   )
 }

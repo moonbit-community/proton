@@ -338,6 +338,22 @@ fn install_extension_event_sender(
 }
 
 ///|
+/// Hands a clicked notification's payload to the page as the reserved
+/// `proton.notification_clicked` extension event.
+fn forward_notification_click(
+  window : @native.Window,
+  payload : String,
+  policy : BridgePagePolicy,
+) -> Unit {
+  let event = @ipc.IpcExtensionEvent::new(
+    "proton",
+    "notification_clicked",
+    Json::object({ "payload": Json::string(payload) }),
+  )
+  ignore(window.eval(extension_event_dispatch_script(event, None, policy)))
+}
+
+///|
 fn extension_event_sender(
   window : @native.Window,
   page_instance : String?,
