@@ -19,9 +19,10 @@ struct ProtonMessagePayload {
 ///|
 async fn __proton_command_message(
   context : @proton_command.AppCommandExtensionContext,
+  request_context : @proton_command.AppCommandRequestContext,
   payload : ProtonMessagePayload,
 ) -> Result[MessageReply, String] {
-  message(context, payload.message, payload.title, payload.level)
+  message(context, request_context, payload.message, payload.title, payload.level)
 }
 
 ///|
@@ -34,9 +35,10 @@ struct ProtonConfirmPayload {
 ///|
 async fn __proton_command_confirm(
   context : @proton_command.AppCommandExtensionContext,
+  request_context : @proton_command.AppCommandRequestContext,
   payload : ProtonConfirmPayload,
 ) -> Result[ConfirmReply, String] {
-  confirm(context, payload.message, payload.title, payload.level)
+  confirm(context, request_context, payload.message, payload.title, payload.level)
 }
 
 ///|
@@ -48,9 +50,10 @@ struct ProtonOpenFilePayload {
 ///|
 async fn __proton_command_open_file(
   context : @proton_command.AppCommandExtensionContext,
+  request_context : @proton_command.AppCommandRequestContext,
   payload : ProtonOpenFilePayload,
 ) -> Result[FileDialogReply, String] {
-  open_file(context, payload.title, payload.path)
+  open_file(context, request_context, payload.title, payload.path)
 }
 
 ///|
@@ -62,9 +65,10 @@ struct ProtonSaveFilePayload {
 ///|
 async fn __proton_command_save_file(
   context : @proton_command.AppCommandExtensionContext,
+  request_context : @proton_command.AppCommandRequestContext,
   payload : ProtonSaveFilePayload,
 ) -> Result[FileDialogReply, String] {
-  save_file(context, payload.title, payload.path)
+  save_file(context, request_context, payload.title, payload.path)
 }
 
 ///|
@@ -84,17 +88,17 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("saveFile"),
     ],
     fn(context) {
-      context.op_async_result("message", async fn(payload) {
-        __proton_command_message(context, payload)
+      context.op_async_result_with_context("message", async fn(request_context, payload) {
+        __proton_command_message(context, request_context, payload)
       }, emits_events=true)
-      context.op_async_result("confirm", async fn(payload) {
-        __proton_command_confirm(context, payload)
+      context.op_async_result_with_context("confirm", async fn(request_context, payload) {
+        __proton_command_confirm(context, request_context, payload)
       }, emits_events=true)
-      context.op_async_result("openFile", async fn(payload) {
-        __proton_command_open_file(context, payload)
+      context.op_async_result_with_context("openFile", async fn(request_context, payload) {
+        __proton_command_open_file(context, request_context, payload)
       }, emits_events=true)
-      context.op_async_result("saveFile", async fn(payload) {
-        __proton_command_save_file(context, payload)
+      context.op_async_result_with_context("saveFile", async fn(request_context, payload) {
+        __proton_command_save_file(context, request_context, payload)
       }, emits_events=true)
       Ok(())
     },
