@@ -87,7 +87,7 @@ static int expect_runtime_info(void) {
     fprintf(stderr, "unexpected runtime info: %s\n", buffer);
     return 1;
   }
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
   if (has_titlebar_overlay != has_runtime) {
     fprintf(stderr, "unexpected titlebar overlay capability: %s\n", buffer);
     return 1;

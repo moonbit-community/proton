@@ -56,7 +56,8 @@
 #define PROTON_RUNTIME_WAIT_FEATURE ""
 #endif
 
-#if PROTON_WITH_ENGINE && (defined(_WIN32) || defined(__APPLE__))
+#if PROTON_WITH_ENGINE && \
+    (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
 #else
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ""
@@ -644,8 +645,16 @@ static int32_t proton_find_engine_library(const char *runtime_root,
   return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                           "runtime framework path is too long");
 #else
+  char release_dir[PROTON_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
   char lib_dir[PROTON_MAX_PATH_BYTES] = {0};
+  if (proton_join_path(release_dir, sizeof(release_dir), runtime_root,
+                       "Release") &&
+      proton_join_path(engine_lib, engine_lib_len, release_dir,
+                       "libcef.so") &&
+      proton_path_exists(engine_lib)) {
+    return PROTON_OK;
+  }
   if (proton_join_path(engine_lib, engine_lib_len, runtime_root,
                        "libcef.so") &&
       proton_path_exists(engine_lib)) {

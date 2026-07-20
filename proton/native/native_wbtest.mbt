@@ -24,7 +24,11 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(typed.features.contains("base_abi"))
   assert_true(typed.features.contains("event_polling"))
   assert_true(typed.features.contains("bridge_polling"))
-  if (typed.platform == "macos" || typed.platform == "windows") &&
+  if (
+      typed.platform == "macos" ||
+      typed.platform == "windows" ||
+      typed.platform == "linux"
+    ) &&
     typed.runtime_available {
     assert_true(typed.features.contains("titlebar_overlay"))
   } else {
