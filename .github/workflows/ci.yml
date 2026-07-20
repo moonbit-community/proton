@@ -3,7 +3,24 @@ name: ci
 on: [push, pull_request]
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: moon version
+        run: moon version --all
+
+      - name: Format check
+        run: moon fmt --check
+
   moonbit:
+    needs: format
     strategy:
       matrix:
         os:
@@ -123,10 +140,6 @@ jobs:
           }
           node native\scripts\verify_link_config.mjs $runtime
           (Resolve-Path "$runtime\bin").Path | Out-File -FilePath $env:GITHUB_PATH -Append
-
-      - name: Format check
-        run: |
-          moon fmt --check
 
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}

@@ -85,9 +85,7 @@ test "doctor discovers generated app package and derives dependencies" {
       #|  "generated-app/extensions/counter",
       #|}
       #|
-      #|options(
-      #|  "is-main": true,
-      #|)
+      #|pkgtype(kind: "executable")
       #|
     ),
     encoding="utf8",
@@ -402,9 +400,7 @@ test "moon_config adapter reads module deps and package imports" {
       #|  "justjavac/proton_ext/fs" @fs,
       #|}
       #|
-      #|options(
-      #|  "is-main": true,
-      #|)
+      #|pkgtype(kind: "executable")
       #|
     ),
     encoding="utf8",
@@ -420,6 +416,7 @@ test "moon_config adapter reads module deps and package imports" {
     Some("0.1.10"),
   )
   let package_config = read_moon_pkg(moon_pkg_path).unwrap()
+  @debug.assert_eq(package_config.is_main, Some(true))
   assert_true(
     package_config.imports.any(fn(item) {
       item.package_path == "justjavac/proton"

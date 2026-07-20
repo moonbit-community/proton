@@ -43,7 +43,7 @@ pub async fn run_setup(
   args : Array[String],
 ) -> Result[Unit, CefError] {
   let cmd = cef_setup_arg_parser()
-  let matches = cmd.parse(argv=args, env={}) catch {
+  let matches = cmd.parse(argv=args, env=Map([])) catch {
     err => return Err(CefError::UsageError(err.to_string(), true))
   }
   let platform = current_platform()

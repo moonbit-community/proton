@@ -153,7 +153,7 @@ fn read_moon_ext_codegen_fields(
 fn validate_moon_ext_codegen_fields(
   fields : Array[@proton_config.ConfigField],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Bool] = {}
+  let seen : Map[String, Bool] = Map([])
   for field in fields {
     guard !seen.contains(field.key) else {
       return Err("duplicate moon.ext field: " + field.key)
@@ -840,7 +840,7 @@ fn validate_duplicate_names(
   local_names : Array[String],
   package_names : Array[String],
 ) -> Result[Unit, String] {
-  let names : Map[String, Bool] = {}
+  let names : Map[String, Bool] = Map([])
   for name in package_names {
     names[name] = true
   }

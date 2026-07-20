@@ -373,7 +373,7 @@ async fn run_doctor_from_args(
 ///|
 fn run_codegen(cwd : String, args : Array[String]) -> Result[Unit, CliError] {
   let cmd = codegen_arg_parser()
-  let matches = cmd.parse(argv=args, env={}) catch {
+  let matches = cmd.parse(argv=args, env=Map([])) catch {
     err => return Err(CliError::UsageError(err.to_string(), true))
   }
   let input = match match_value(matches, "input_file") {

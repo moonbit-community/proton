@@ -20,8 +20,8 @@ fn App::new(
     size_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
-    extension_settings: {},
-    command_extensions: {},
+    extension_settings: Map([]),
+    command_extensions: Map([]),
     validation_errors: [],
   }
 }
@@ -266,7 +266,7 @@ fn merge_extension_settings(
   base : Map[String, @manifest.ExtensionSetting],
   overrides : Map[String, @manifest.ExtensionSetting],
 ) -> Map[String, @manifest.ExtensionSetting] {
-  let merged : Map[String, @manifest.ExtensionSetting] = {}
+  let merged : Map[String, @manifest.ExtensionSetting] = Map([])
   for name, setting in base {
     merged[name] = setting
   }

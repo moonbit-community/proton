@@ -134,7 +134,7 @@ fn new_arg_parser() -> @argparse.Command {
 
 ///|
 fn parse_new_args(args : Array[String]) -> RawNewProjectOptions raise {
-  let matches = new_arg_parser().parse(argv=args, env={})
+  let matches = new_arg_parser().parse(argv=args, env=Map([]))
   {
     path: match_value(matches, "path"),
     title: match_value(matches, "title"),

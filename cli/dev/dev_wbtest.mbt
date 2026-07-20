@@ -375,7 +375,7 @@ async test "frontend cancellation terminates child processes" {
         dir,
         Some("sleep 30 & echo $! > child.pid; wait"),
         true,
-        {},
+        Map([]),
       ) {
       Ok(Some(process)) => process
       _ => abort("expected frontend process")

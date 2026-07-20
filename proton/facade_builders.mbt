@@ -116,8 +116,8 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     size_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
-    extension_settings: {},
-    command_extensions: {},
+    extension_settings: Map([]),
+    command_extensions: Map([]),
     validation_errors: [],
   }
 }

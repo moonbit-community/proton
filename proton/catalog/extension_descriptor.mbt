@@ -380,7 +380,7 @@ fn decode_moon_ext_fields(
 fn validate_moon_ext_fields(
   fields : Array[@proton_config.ConfigField],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
       return Err("duplicate moon.ext field: " + field.key)
@@ -509,7 +509,7 @@ fn render_config_reports(reports : Array[@basic.Report]) -> String {
 fn validate_moon_ext_platforms(
   platforms : Array[String],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for platform in platforms {
     guard platform == "windows" || platform == "macos" || platform == "linux" else {
       return Err(
@@ -529,7 +529,7 @@ fn validate_moon_ext_dependencies(
   id : String,
   dependencies : Array[String],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for dependency in dependencies {
     guard dependency != "" else {
       return Err("moon.ext dependencies must not contain empty values")

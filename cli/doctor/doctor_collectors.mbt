@@ -1999,7 +1999,7 @@ fn collect_extensions(
   }
   let extension_root = extension_root_for_project(project)
   let lines : Array[DoctorLine] = []
-  let namespaces : Map[String, String] = {}
+  let namespaces : Map[String, String] = Map([])
   let discovered = if @mbfs.path_exists(extension_root) {
     let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
     let mut count = 0

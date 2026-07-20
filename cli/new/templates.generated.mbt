@@ -75,8 +75,9 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|supported_targets = "native"
           #|
+          #|pkgtype(kind: "executable")
+          #|
           #|options(
-          #|  "is-main": true,
           #|  targets: { "main.mbt": [ "native" ] },
           #|)
           #|

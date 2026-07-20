@@ -33,7 +33,7 @@ test "error responses require a string body" {
     version: protocol_version(),
     id: "req-err",
     status: 1,
-    body: Json::object({}),
+    body: Json::empty_object(),
   }
   guard invalid.validate() is Err(message) &&
     message == "IPC error response body must be a string" else {

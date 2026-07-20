@@ -73,7 +73,7 @@ fn decode_project_config(
 fn validate_project_top_level_fields(
   fields : Array[ConfigField],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
       return Err("duplicate moon.proton field: " + field.key)
@@ -338,7 +338,7 @@ fn optional_project_bundle(
 fn validate_project_bundle_targets(
   targets : Array[String],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for target in targets {
     guard target == "app" || target == "zip" else {
       return Err("bundle.targets contains unsupported target: " + target)
@@ -381,7 +381,7 @@ fn validate_object_fields(
   label : String,
   allowed : Array[String],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
       return Err("duplicate " + label + " field: " + field.key)

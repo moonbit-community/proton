@@ -12,7 +12,7 @@ test "extension setting helpers preserve enabled state and options" {
 
 ///|
 test "extension setting options are deep snapshots" {
-  let options = Json::object({ "nested": Json::object({}) })
+  let options = Json::object({ "nested": Json::empty_object() })
   let enabled = ExtensionSetting::enabled(options=Some(options))
   match options {
     Object(object) => object["late"] = Json::boolean(true)

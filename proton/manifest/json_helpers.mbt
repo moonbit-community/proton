@@ -9,7 +9,7 @@ fn clone_json(json : Json) -> Json {
 
 ///|
 fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
-  let cloned : Map[String, Json] = {}
+  let cloned : Map[String, Json] = Map([])
   for key, value in object {
     cloned.set(key, clone_json(value))
   }
