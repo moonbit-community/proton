@@ -87,6 +87,8 @@ struct proton_engine_window {
   int browser_create_pending;
   int browser_create_scheduled;
   int window_listed;
+  int browser_before_close_seen;
+  int finalize_after_browser_close;
   uint64_t native_id;
   int width;
   int height;
@@ -1048,9 +1050,12 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
   }
   cef_string_t scheme = {0};
   proton_engine_set_string(&scheme, "proton");
+  // Give proton:// documents a real origin and allow CORS-mode same-origin
+  // resources such as @font-face to reach the custom scheme handler.
   registrar->add_custom_scheme(
       registrar, &scheme,
-      CEF_SCHEME_OPTION_SECURE | CEF_SCHEME_OPTION_FETCH_ENABLED);
+      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
+          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
   cef_string_clear(&scheme);
 }
 
@@ -1090,11 +1095,15 @@ proton_engine_get_browser_process_handler(cef_app_t *self) {
 
 static void proton_engine_window_mark_closed(proton_engine_window_t *window);
 static void proton_engine_window_release_browser(proton_engine_window_t *window);
+static void proton_engine_window_free(proton_engine_window_t *window);
+static void proton_engine_window_finalize_if_ready(
+    proton_engine_window_t *window);
 static int32_t proton_engine_window_create_browser(proton_engine_window_t *window,
                                                    const char *initial_url,
                                                    char *error,
                                                    size_t error_len);
 static void proton_engine_drain_cef_close_work(void);
+static void proton_engine_free_deferred_finalizing_windows(void);
 
 static int CEF_CALLBACK proton_engine_on_before_popup(
     cef_life_span_handler_t *self,
@@ -1136,11 +1145,13 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   if (window != NULL) {
     proton_engine_debug_log("browser_before_close browser=%d",
                             window->browser_id);
+    window->browser_before_close_seen = 1;
     proton_engine_window_mark_closed(window);
     proton_engine_window_release_browser(window);
     if (window->window != nil && !window->appkit_closing) {
       [window->window close];
     }
+    proton_engine_window_finalize_if_ready(window);
   }
 }
 
@@ -2139,10 +2150,11 @@ static int proton_engine_request_all_windows_close(void) {
   proton_engine_debug_log("window_will_close browser=%d", window->browser_id);
   window->appkit_closing = 1;
   if (window->browser != NULL) {
-    // Keep the CEF browser alive until on_before_close reports completion.
+    // AppKit has already closed the user-visible window. Publish that lifecycle
+    // edge immediately; CEF on_before_close is only browser resource cleanup.
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
-    proton_engine_window_request_browser_close(window, 1);
+    proton_engine_window_mark_closed(window);
     if (window->browser_view != nil) {
       [window->browser_view removeFromSuperview];
     }
@@ -2469,6 +2481,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_bridge_pending_clear_all();
     proton_engine_drain_cef_close_work();
     proton_engine_cef_shutdown();
+    proton_engine_free_deferred_finalizing_windows();
     proton_engine_teardown_wait_source();
     runtime->owns_cef_runtime = 0;
   }
@@ -2535,18 +2548,37 @@ static void proton_engine_runtime_create_pending_browsers(
 }
 
 static void proton_engine_pump_appkit_cef_once(void) {
-  for (;;) {
-    NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                        untilDate:[NSDate distantPast]
-                                           inMode:NSDefaultRunLoopMode
-                                          dequeue:YES];
-    if (event == nil) {
-      break;
+  // The host drives this pump from its own event loop and never enters the
+  // AppKit run loop, so nothing ever drains the thread's autorelease state.
+  // Without this pool every tick's autoreleased objects (NSEvent, AppKit
+  // window-cache enumeration, CEF's ObjC work) are immortal — and with
+  // Chromium's allocator shim owning the default malloc zone they pile up
+  // inside PartitionAlloc's reservation until the address space fragments
+  // into hundreds of thousands of VM regions and an allocation finally
+  // traps. Observed as an overnight-idle SIGTRAP under autoreleaseFullPage.
+  @autoreleasepool {
+    bool sent_event = false;
+    for (;;) {
+      NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                          untilDate:[NSDate distantPast]
+                                             inMode:NSDefaultRunLoopMode
+                                            dequeue:YES];
+      if (event == nil) {
+        break;
+      }
+      [NSApp sendEvent:event];
+      sent_event = true;
     }
-    [NSApp sendEvent:event];
+    // AppKit's own loop only updates windows after dispatching an event.
+    // This pump runs ~60x/s at idle; an unconditional updateWindows posts
+    // window-cache notifications (and their allocation churn) on every one
+    // of those empty ticks, which slowly burns PartitionAlloc address space
+    // via Chromium's allocator shim.
+    if (sent_event) {
+      [NSApp updateWindows];
+    }
+    cef_do_message_loop_work();
   }
-  [NSApp updateWindows];
-  cef_do_message_loop_work();
 }
 
 static void proton_engine_drain_cef_close_work(void) {
@@ -2561,6 +2593,19 @@ static void proton_engine_drain_cef_close_work(void) {
     if (proton_engine_get_scheduled_pump_delay_ms() != 0) {
       break;
     }
+  }
+}
+
+static void proton_engine_free_deferred_finalizing_windows(void) {
+  proton_engine_window_t *window = g_windows;
+  while (window != NULL) {
+    proton_engine_window_t *next = window->next;
+    if (window->finalize_after_browser_close) {
+      window->browser_before_close_seen = 1;
+      proton_engine_window_release_browser(window);
+      proton_engine_window_finalize_if_ready(window);
+    }
+    window = next;
   }
 }
 
@@ -2658,7 +2703,11 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
   if (wait_timeout > 0) {
     CFTimeInterval seconds = ((CFTimeInterval)wait_timeout) / 1000.0;
-    run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
+    // Same reasoning as the pump: run-loop sources and timers autorelease,
+    // and no outer pool exists on the host's main thread.
+    @autoreleasepool {
+      run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
+    }
   }
   CFAbsoluteTime elapsed = CFAbsoluteTimeGetCurrent() - start_time;
 
@@ -2953,33 +3002,72 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
-static int32_t proton_engine_window_wait_for_browser_close(
-    proton_engine_window_t *window,
-    char *error,
-    size_t error_len) {
-  if (window == NULL || window->browser == NULL) {
-    if (window != NULL && window->closed) {
-      proton_engine_drain_cef_close_work();
-    }
-    return PROTON_OK;
+static void proton_engine_window_free(proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
   }
-  proton_engine_window_request_browser_close(window, 1);
-  CFAbsoluteTime deadline = CFAbsoluteTimeGetCurrent() + 5.0;
-  while (window->browser != NULL) {
-    proton_engine_pump_appkit_cef_once();
-    if (window->browser == NULL) {
-      proton_engine_drain_cef_close_work();
-      return PROTON_OK;
-    }
-    if (CFAbsoluteTimeGetCurrent() >= deadline) {
-      proton_engine_set_message(error, error_len,
-                                "timed out waiting for browser close");
-      return PROTON_ERR_ENGINE;
-    }
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, true);
+  if (window->delegate != nil) {
+    [window->delegate release];
+    window->delegate = nil;
   }
-  proton_engine_drain_cef_close_work();
-  return PROTON_OK;
+  free(window->client);
+  free(window->html_url);
+  free(window->html);
+  free(window->bridge_config_json);
+  free(window->initial_url);
+  free(window);
+}
+
+static void proton_engine_window_detach_native_window(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == nil) {
+    if (window != NULL) {
+      window->content_view = nil;
+      window->browser_view = nil;
+    }
+    return;
+  }
+  NSWindow *native_window = window->window;
+  window->window = nil;
+  window->content_view = nil;
+  window->browser_view = nil;
+  [native_window setDelegate:nil];
+  [native_window close];
+}
+
+static void proton_engine_window_defer_finalize(
+    proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  if (!window->finalize_after_browser_close && window->browser_id != 0) {
+    proton_engine_debug_log("browser_close_deferred browser=%d",
+                            window->browser_id);
+  }
+  window->finalize_after_browser_close = 1;
+  window->browser_create_pending = 0;
+  window->browser_create_scheduled = 0;
+  window->runtime = NULL;
+  if (window->client != NULL) {
+    window->client->window = NULL;
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static void proton_engine_window_finalize_if_ready(
+    proton_engine_window_t *window) {
+  if (window == NULL || !window->finalize_after_browser_close) {
+    return;
+  }
+  if (window->browser_id != 0 && !window->browser_before_close_seen) {
+    return;
+  }
+  proton_engine_window_list_remove(window);
+  if (window->client != NULL) {
+    window->client->window = NULL;
+  }
+  proton_engine_window_detach_native_window(window);
+  proton_engine_window_free(window);
 }
 
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
@@ -2989,36 +3077,18 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  (void)error;
+  (void)error_len;
+  proton_engine_window_mark_closed(window);
   if (window->browser != NULL) {
-    proton_engine_bridge_pending_remove_browser(window->runtime,
-                                                window->browser_id);
-    int32_t status =
-        proton_engine_window_wait_for_browser_close(window, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
-    }
+    proton_engine_window_request_browser_close(window, 1);
+    proton_engine_window_defer_finalize(window);
+    proton_engine_window_release_browser(window);
+    proton_engine_window_finalize_if_ready(window);
+    return PROTON_OK;
   }
-  proton_engine_window_list_remove(window);
-  if (window->window != nil) {
-    NSWindow *native_window = window->window;
-    window->window = nil;
-    window->content_view = nil;
-    window->browser_view = nil;
-    [native_window setDelegate:nil];
-    if (!window->closed) {
-      [native_window close];
-    }
-  }
-  if (window->delegate != nil) {
-    [window->delegate release];
-    window->delegate = nil;
-  }
-  free(window->client);
-  free(window->html);
-  free(window->html_url);
-  free(window->bridge_config_json);
-  free(window->initial_url);
-  free(window);
+  proton_engine_window_defer_finalize(window);
+  proton_engine_window_finalize_if_ready(window);
   return PROTON_OK;
 }
 

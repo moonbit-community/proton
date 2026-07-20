@@ -320,8 +320,14 @@ async fn wait_for_runtime_idle(
   runtime_wait_supported : Bool,
 ) -> Result[(Int, Bool), String] {
   if runtime_wait_supported {
+    // Runtime::wait blocks the OS thread for up to one pump interval. Yield
+    // after every lap so host-side async IO and subprocess tasks still run
+    // when CEF continuously reports scheduled work.
     match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
-      Ok(_) => Ok((0, true))
+      Ok(_) => {
+        @async.sleep(0)
+        Ok((0, true))
+      }
       Err(error) =>
         if is_runtime_wait_unsupported(error) {
           sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
