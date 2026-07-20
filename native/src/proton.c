@@ -106,6 +106,7 @@ typedef struct {
   bool occupied;
   bool destroyed;
   bool visible;
+  bool closed_event_sent;
   proton_runtime_id_t runtime;
   proton_engine_window_t *engine_window;
   int32_t width;
@@ -1338,6 +1339,22 @@ static void proton_window_clear_bridge(proton_window_slot_t *window) {
   window->bridge_enabled = false;
 }
 
+static int32_t proton_window_enqueue_closed_once(
+    proton_runtime_slot_t *runtime,
+    proton_window_slot_t *window,
+    proton_window_id_t window_handle) {
+  if (window == NULL || window->closed_event_sent) {
+    return PROTON_OK;
+  }
+  if (!proton_runtime_enqueue_window_event(runtime, "window_closed",
+                                           window_handle)) {
+    return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                            "failed to queue window_closed event");
+  }
+  window->closed_event_sent = true;
+  return PROTON_OK;
+}
+
 static int32_t proton_runtime_sync_engine_closed_windows(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime) {
@@ -1351,21 +1368,11 @@ static int32_t proton_runtime_sync_engine_closed_windows(
 
     proton_window_id_t window_handle =
         proton_make_window_handle(window->generation, i);
-    if (!proton_runtime_enqueue_window_event(runtime, "window_closed",
-                                             window_handle)) {
-      return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                              "failed to queue window_closed event");
-    }
-
-    char engine_error[512] = {0};
-    int32_t status = proton_engine_window_destroy(
-        window->engine_window, engine_error, sizeof(engine_error));
+    int32_t status =
+        proton_window_enqueue_closed_once(runtime, window, window_handle);
     if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
+      return status;
     }
-    window->engine_window = NULL;
-    proton_window_clear_bridge(window);
-    window->destroyed = true;
     window->visible = false;
   }
   return PROTON_OK;
@@ -1870,6 +1877,7 @@ int32_t proton_window_create_json(proton_runtime_id_t runtime,
       slot->occupied = true;
       slot->destroyed = false;
       slot->visible = false;
+      slot->closed_event_sent = false;
       slot->runtime = runtime;
       slot->engine_window = engine_window;
       slot->width = width;
@@ -1922,9 +1930,9 @@ int32_t proton_window_destroy(proton_window_id_t window) {
   if (status != PROTON_OK) {
     return status;
   }
-  if (!proton_runtime_enqueue_window_event(runtime, "window_closed", window)) {
-    return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                            "failed to queue window_closed event");
+  status = proton_window_enqueue_closed_once(runtime, slot, window);
+  if (status != PROTON_OK) {
+    return status;
   }
 
   if (slot->engine_window != NULL) {
@@ -2003,9 +2011,9 @@ int32_t proton_window_close(proton_window_id_t window) {
     if (status != PROTON_OK) {
       return status;
     }
-    if (!proton_runtime_enqueue_window_event(runtime, "window_closed", window)) {
-      return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                              "failed to queue window_closed event");
+    status = proton_window_enqueue_closed_once(runtime, slot, window);
+    if (status != PROTON_OK) {
+      return status;
     }
     slot->destroyed = true;
     slot->visible = false;
