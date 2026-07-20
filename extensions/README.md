@@ -23,7 +23,7 @@ extension and example. Pages subscribe to events through either
 - `dialog`: native dialog helper definitions
 - `clipboard`: clipboard helper definitions
 - `shell`: open/reveal host path helper definitions
-- `notification`: native notification helper definitions
+- `notification`: macOS system notifications and notification-click events
 - `tray`: native tray icon lifecycle, tooltip/icon updates, flat context menus,
   and tray/menu events
 - `global_hotkey`: global hotkey helper definitions
@@ -55,3 +55,11 @@ events. Menu item clicks are the portable event path across Windows, Linux, and
 macOS when the desktop backend supports menu activation. Linux support depends
 on GTK 3 plus AppIndicator or Ayatana AppIndicator being available in the
 desktop session.
+
+## Notification Notes
+
+The notification extension owns its macOS `UNUserNotificationCenter` delegate;
+the Proton engine does not expose notification-specific ABI. `show` accepts an
+optional string payload, and clicks are pumped into `notification.click`
+events. macOS notifications require a packaged app bundle with a bundle
+identifier. Windows and Linux backends remain unimplemented.

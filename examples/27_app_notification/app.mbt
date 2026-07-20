@@ -174,8 +174,7 @@ let resource : String =
   #|      <h1>Notification as its own runtime surface.</h1>
   #|      <p class="lead">
   #|        This example isolates <code>notification.show(...)</code> and its
-  #|        <code>notification.activity</code> event stream. It is Windows-only in
-  #|        the current native implementation.
+  #|        activity and click event streams on macOS.
   #|      </p>
   #|      <section class="layout">
   #|        <div class="stack">
@@ -194,6 +193,10 @@ let resource : String =
   #|            <label style="margin-top: 12px;">
   #|              Body
   #|              <textarea id="notification-body">This is the standalone notification example.</textarea>
+  #|            </label>
+  #|            <label style="margin-top: 12px;">
+  #|              Click payload
+  #|              <input id="notification-payload" value="standalone-example" />
   #|            </label>
   #|            <div class="actions">
   #|              <button id="show-notification">Show Notification</button>
@@ -224,6 +227,11 @@ let resource : String =
   #|        appendEvent("notification.activity", payload);
   #|      });
   #|
+  #|      window.__MoonBit__.events.on("notification.click", (payload) => {
+  #|        statusLine.textContent = "Notification click received.";
+  #|        appendEvent("notification.click", payload);
+  #|      });
+  #|
   #|      document.getElementById("clear-log").addEventListener("click", () => {
   #|        eventLog.innerHTML = "";
   #|        statusLine.textContent = "Waiting for notification activity.";
@@ -234,6 +242,7 @@ let resource : String =
   #|          title: document.getElementById("notification-title").value || undefined,
   #|          body: document.getElementById("notification-body").value,
   #|          level: document.getElementById("notification-level").value || undefined,
+  #|          payload: document.getElementById("notification-payload").value || undefined,
   #|        };
   #|        try {
   #|          const result = await window.__MoonBit__.notification.show(payload);
