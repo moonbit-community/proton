@@ -3,12 +3,16 @@ struct NotificationPayload {
   title : String?
   body : String
   level : String?
+  payload : String?
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 struct NotificationReply {
   shown : Bool
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 #proton.event(name="activity")
@@ -19,18 +23,15 @@ struct NotificationActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-/// Verifies that native notification support is available on this platform.
-fn ensure_supported() -> Result[Unit, String] {
-  @sys_notification.ensure_supported()
-}
+struct NotificationDrainReply {
+  count : Int
+} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-/// Runs a notification operation only when the platform is supported.
-fn[Reply] with_supported(
-  callback : () -> Result[Reply, String],
-) -> Result[Reply, String] {
-  ensure_supported().bind(fn(_) { callback() })
-}
+#proton.event(name="click")
+struct NotificationClick {
+  payload : String?
+} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
 /// Rejects empty notification bodies before calling the native package.
@@ -43,27 +44,48 @@ fn ensure_body(body : String) -> Result[String, String] {
 }
 
 ///|
-/// Maps the public notification level string to the native enum.
-fn level_to_native(level : String?) -> @sys_notification.NotificationLevel {
-  match level {
-    Some("warning") => @sys_notification.NotificationLevel::Warning
-    Some("error") => @sys_notification.NotificationLevel::Error
-    _ => @sys_notification.NotificationLevel::Info
-  }
-}
-
-///|
 /// Shows one native notification and converts the result into the extension reply shape.
 fn show_notification(
   payload : NotificationPayload,
 ) -> Result[NotificationReply, String] {
   ensure_body(payload.body).bind(fn(body) {
-    @sys_notification.show(
-      body,
-      title=payload.title,
-      level=level_to_native(payload.level),
-    ).map(fn(_) { NotificationReply::{ shown: true } })
+    notification_native_ensure_supported().bind(fn(_) {
+      notification_native_show(
+        payload.title.unwrap_or("Lepus"),
+        body,
+        payload.payload,
+      ).map(fn(_) { NotificationReply::{ shown: true } })
+    })
   })
+}
+
+///|
+#proton.script
+fn notification_click_poller_script() -> String {
+  (
+    #|(() => {
+    #|  const root = window.__MoonBit__;
+    #|  const notification = root && root.notification;
+    #|  if (!notification || typeof notification.drainClicks !== "function") {
+    #|    return;
+    #|  }
+    #|  if (notification.__protonClickPoller) {
+    #|    return;
+    #|  }
+    #|  notification.__protonClickPoller = window.setInterval(() => {
+    #|    notification.drainClicks({}).catch(() => {});
+    #|  }, 100);
+    #|})();
+  )
+}
+
+///|
+#proton.destroy
+fn cleanup_notification(
+  context : @proton_command.AppCommandExtensionContext,
+) -> Unit {
+  ignore(context.extension_id())
+  notification_native_cleanup()
 }
 
 ///|
@@ -74,9 +96,10 @@ async fn show(
   title : String?,
   body : String,
   level : String?,
+  payload : String?,
 ) -> Result[NotificationReply, String] {
-  let payload = NotificationPayload::{ title, body, level }
-  match with_supported(fn() { show_notification(payload) }) {
+  let request = NotificationPayload::{ title, body, level, payload }
+  match show_notification(request) {
     Err(error) => Err(error)
     Ok(reply) => {
       emit_notification_activity(context, NotificationActivity::{
@@ -87,4 +110,27 @@ async fn show(
       Ok(reply)
     }
   }
+}
+
+///|
+/// Drains native notification clicks into extension events.
+#proton.command(name="drainClicks")
+async fn drain_clicks(
+  context : @proton_command.AppCommandExtensionContext,
+  _payload : EmptyPayload?,
+) -> Result[NotificationDrainReply, String] {
+  let mut count = 0
+  while true {
+    match notification_native_take_click() {
+      Err(error) => return Err(error)
+      Ok(None) => break
+      Ok(Some(click)) => {
+        emit_notification_click(context, NotificationClick::{
+          payload: click.payload,
+        })
+        count += 1
+      }
+    }
+  }
+  Ok(NotificationDrainReply::{ count, })
 }

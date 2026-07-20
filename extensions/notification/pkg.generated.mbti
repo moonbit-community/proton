@@ -11,16 +11,26 @@ import {
 // Values
 pub async fn emit_notification_activity(@command.AppCommandExtensionContext, NotificationActivity) -> Unit
 
+pub async fn emit_notification_click(@command.AppCommandExtensionContext, NotificationClick) -> Unit
+
 pub fn extension() -> @extension.Extension
 
 // Errors
 
 // Types and methods
+type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 type NotificationActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type NotificationClick derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type NotificationDrainReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type NotificationPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 type NotificationReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+type ProtonDrainClicksPayload derive(@json.FromJson)
 
 type ProtonShowPayload derive(@json.FromJson)
 

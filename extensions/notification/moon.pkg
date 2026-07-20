@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/notification" @sys_notification,
+  "justjavac/ffi",
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/extension" @proton_extension,
 }
@@ -14,9 +14,11 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
+  "native-stub": [ "notification_native.m" ],
   targets: {
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
+    "notification_native.mbt": [ "native" ],
   },
 )
