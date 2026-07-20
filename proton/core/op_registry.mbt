@@ -1,7 +1,10 @@
 ///|
 priv struct OpRegistry {
   handlers : Map[String, (Json) -> Result[Json, String]]
-  async_handlers : Map[String, async (Json) -> Result[Json, String]]
+  async_handlers : Map[
+    String,
+    async (AppCommandRequestContext, Json) -> Result[Json, String],
+  ]
 }
 
 ///|
@@ -30,7 +33,7 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_result(
   guard validate_op_name(name) is Ok(_) else {
     abort("OpRegistry::handle_result: op name must not be empty")
   }
-  guard self.handlers.get(name) is None && self.async_handlers.get(name) is None else {
+  guard self.handler_name_available(name) else {
     abort("OpRegistry::handle_result: op already registered: " + name)
   }
   self.handlers.set(name, fn(payload_json) {
@@ -63,13 +66,42 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result(
   guard validate_op_name(name) is Ok(_) else {
     abort("OpRegistry::handle_async_result: op name must not be empty")
   }
-  guard self.handlers.get(name) is None && self.async_handlers.get(name) is None else {
+  guard self.handler_name_available(name) else {
     abort("OpRegistry::handle_async_result: op already registered: " + name)
   }
-  self.async_handlers.set(name, async fn(payload_json) {
+  self.async_handlers.set(name, async fn(_context, payload_json) {
     let result = try {
       let payload : Payload = @json.from_json(payload_json)
       callback(payload).map(fn(reply) { ToJson::to_json(reply) })
+    } catch {
+      err => Err(err.to_string())
+    }
+    result
+  })
+}
+
+///|
+/// Registers a typed async op handler that receives request-scoped context and can fail.
+fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result_with_context(
+  self : OpRegistry,
+  name : String,
+  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
+) -> Unit {
+  guard validate_op_name(name) is Ok(_) else {
+    abort(
+      "OpRegistry::handle_async_result_with_context: op name must not be empty",
+    )
+  }
+  guard self.handler_name_available(name) else {
+    abort(
+      "OpRegistry::handle_async_result_with_context: op already registered: " +
+      name,
+    )
+  }
+  self.async_handlers.set(name, async fn(context, payload_json) {
+    let result = try {
+      let payload : Payload = @json.from_json(payload_json)
+      callback(context, payload).map(fn(reply) { ToJson::to_json(reply) })
     } catch {
       err => Err(err.to_string())
     }
@@ -84,8 +116,26 @@ async fn OpRegistry::call_async_direct(
   name : String,
   payload : Json,
 ) -> Result[Json, String] {
+  self.call_async_direct_with_context(
+    AppCommandRequestContext::new(0L),
+    name,
+    payload,
+  )
+}
+
+///|
+/// Runs a previously registered async op handler with request-scoped context.
+async fn OpRegistry::call_async_direct_with_context(
+  self : OpRegistry,
+  context : AppCommandRequestContext,
+  name : String,
+  payload : Json,
+) -> Result[Json, String] {
   match self.async_handlers.get(name) {
-    Some(handler) => handler(payload) catch { err => Err(err.to_string()) }
+    Some(handler) =>
+      handler(context, payload) catch {
+        err => Err(err.to_string())
+      }
     None => self.call(name, payload)
   }
 }
@@ -107,6 +157,11 @@ fn OpRegistry::call(
     Some(handler) => handler(payload)
     None => Err("Unknown op: " + name)
   }
+}
+
+///|
+fn OpRegistry::handler_name_available(self : OpRegistry, name : String) -> Bool {
+  self.handlers.get(name) is None && self.async_handlers.get(name) is None
 }
 
 ///|

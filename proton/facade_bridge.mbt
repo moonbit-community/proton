@@ -387,9 +387,11 @@ async fn dispatch_bridge_request(
   policy : BridgePagePolicy,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
+  let request_context = @core.AppCommandRequestContext::new(request.window())
   let response = match
     @async.with_timeout_opt(policy.request_timeout_ms, () => {
-      host.dispatch_ipc_with_event_sender(
+      host.dispatch_ipc_with_context_and_event_sender(
+        request_context,
         @ipc.IpcOpRequest::new(
           request_id.to_string(),
           request.op(),

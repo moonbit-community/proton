@@ -1,7 +1,7 @@
 ///|
 async fn main {
   let app = @proton.html(
-      "MoonBit App Runtime + Dialog + Clipboard",
+      "MoonBit App Runtime + Dialog + Clipboard + Files",
       resource,
       width=900,
       height=680,
@@ -9,5 +9,6 @@ async fn main {
     )
     .extension(@dialog.extension())
     .extension(@clipboard.extension())
+    .extension(@fs.extension())
   app.run_or_abort()
 }

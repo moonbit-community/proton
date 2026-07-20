@@ -21,17 +21,26 @@ pub fn replacement(String, String) -> TemplateReplacement
 type AppCommandHost
 pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
+pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
+pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(Self, AppCommandRequestContext, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit)?) -> @ipc.IpcOpResponse
 pub async fn AppCommandHost::dispatch_ipc_with_event_sender(Self, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit)?) -> @ipc.IpcOpResponse
 pub async fn[Payload : ToJson] AppCommandHost::emit_extension(Self, String, String, Payload) -> Unit
 pub fn AppCommandHost::new() -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Result[Reply, String]) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
 pub fn AppCommandHost::registered_ops(Self) -> Array[String]
 pub fn AppCommandHost::scope_events_for_op(Self, String) -> Unit
 pub fn AppCommandHost::seal_registrations(Self) -> Unit
 pub fn AppCommandHost::set_event_sender(Self, async (@ipc.IpcExtensionEvent) -> Unit) -> Unit
+
+pub struct AppCommandRequestContext {
+  window : Int64
+}
+pub fn AppCommandRequestContext::new(Int64) -> Self
+pub fn AppCommandRequestContext::window(Self) -> Int64
 
 type Extension
 pub fn Extension::id(Self) -> String
@@ -71,12 +80,14 @@ type MbtProcessHost
 pub fn MbtProcessHost::close(Self) -> Unit
 pub fn MbtProcessHost::dispatch(Self, @ipc.IpcOpRequest, (@ipc.IpcOpResponse) -> Unit) -> Unit
 pub async fn MbtProcessHost::dispatch_async(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
+pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub fn MbtProcessHost::dispatch_json(Self, String, (@ipc.IpcOpResponse) -> Unit) -> Unit
 pub async fn MbtProcessHost::dispatch_json_async(Self, String) -> @ipc.IpcOpResponse
 pub fn MbtProcessHost::new() -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Result[Reply, String]) -> Unit
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
 pub fn MbtProcessHost::registered_ops(Self) -> Array[String]
 
