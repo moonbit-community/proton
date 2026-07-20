@@ -117,6 +117,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
+    menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
     validation_errors: [],
@@ -205,6 +206,13 @@ pub fn App::entry_file(self : App, path : String) -> App {
 /// Overrides the primary app entry with an asset path.
 pub fn App::entry_asset(self : App, path : String) -> App {
   self.set_entry(@manifest.AppEntry::Asset(path))
+}
+
+///|
+/// Sets the app-level native menu bar.
+pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
+  self.menu = Some(menu)
+  self
 }
 
 ///|

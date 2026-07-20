@@ -21,6 +21,7 @@ fn App::new(
     titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
+    menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
     validation_errors: [],

@@ -3351,6 +3351,18 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
+// TODO: Implement app menu rendering and command events on Linux.
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len) {
+  (void)runtime;
+  (void)menu_json;
+  proton_engine_set_message(error, error_len,
+                            "native app menus are not implemented on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -4029,4 +4041,21 @@ int32_t proton_engine_window_poll_dialog_result(
   proton_engine_set_message(error, error_len,
                             "async native dialog extension is not implemented on Linux");
   return PROTON_ERR_UNSUPPORTED;
+}
+// TODO: Drain Linux menu commands once the native menu backend is implemented.
+int32_t proton_engine_take_menu_command(
+    proton_engine_runtime_t *runtime,
+    char *buffer,
+    size_t buffer_len,
+    proton_window_id_t *out_focused_window,
+    int32_t *out_present) {
+  (void)runtime;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_focused_window == NULL || out_present == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_focused_window = PROTON_INVALID_HANDLE;
+  *out_present = 0;
+  return PROTON_OK;
 }

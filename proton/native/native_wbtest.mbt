@@ -208,6 +208,33 @@ test "typed configs generate stable JSON for native ABI" {
   assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
   assert_true(dev_bridge_json.contains("\"dev_bootstrap_script\""))
   assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
+  let menu_json = MenuBar::new(menus=[
+    Menu::new("Demo", items=[
+      MenuItem::command("demo.refresh", "Refresh", key="r"),
+      MenuItem::separator(),
+      MenuItem::role("close", label="Close Window", key="w"),
+    ]),
+  ]).to_json_string()
+  assert_true(menu_json.contains("\"abi_version\":1"))
+  assert_true(menu_json.contains("\"menus\""))
+  assert_true(menu_json.contains("\"kind\":\"command\""))
+  assert_true(menu_json.contains("\"id\":\"demo.refresh\""))
+  assert_true(menu_json.contains("\"role\":\"close\""))
+}
+
+///|
+test "runtime event decodes menu command payload" {
+  match
+    decode_runtime_event_json(
+      "{\"type\":\"menu_command\",\"command_id\":\"demo.refresh\",\"window\":\"17\"}",
+    ) {
+    Ok(event) => {
+      inspect(event.event_type(), content="menu_command")
+      assert_true(event.menu_command_id() == Some("demo.refresh"))
+      assert_true(event.window_id() == Some(17L))
+    }
+    Err(error) => fail(error.message)
+  }
 }
 
 ///|

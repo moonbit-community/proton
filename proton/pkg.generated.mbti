@@ -43,6 +43,7 @@ pub fn App::entry_html(Self, String) -> Self
 pub fn App::entry_url(Self, String) -> Self
 pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
+pub fn App::menu(Self, @native.MenuBar) -> Self
 pub async fn App::run(Self) -> Result[Unit, String]
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
@@ -50,6 +51,12 @@ pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
 
 // Type aliases
+pub using @native {type Menu}
+
+pub using @native {type MenuBar}
+
+pub using @native {type MenuItem}
+
 pub using @native {type NativeError}
 
 pub using @native {type ProcessResult}
