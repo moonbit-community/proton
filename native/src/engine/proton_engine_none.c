@@ -248,16 +248,21 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                  proton_engine_unavailable_message());
 }
 
-int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
-                                                 proton_window_id_t public_window,
-                                                 const char *bridge_json,
-                                                 char *error,
-                                                 size_t error_len) {
+int32_t proton_engine_window_emit_bridge_event_json(
+    proton_engine_window_t *window,
+    const char *event_json,
+    char *error,
+    size_t error_len) {
   (void)window;
-  (void)public_window;
-  (void)bridge_json;
+  (void)event_json;
   return proton_engine_set_error(error, error_len,
                                  proton_engine_unavailable_message());
+}
+
+void proton_engine_window_bind_public_id(proton_engine_window_t *window,
+                                         proton_window_id_t public_window) {
+  (void)window;
+  (void)public_window;
 }
 
 int32_t proton_engine_window_begin_message_dialog(

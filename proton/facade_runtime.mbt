@@ -57,41 +57,18 @@ async fn run_manifest(
       }
     None => ()
   }
-  let window = match
-    @native.Window::new(
-      runtime,
-      config=@native.WindowConfig::new(
-        title=manifest.window.title,
-        width=manifest.window.width,
-        height=manifest.window.height,
-        initial_url="about:blank",
-      ),
-    ) {
-    Ok(window) => window
-    Err(error) => {
-      ignore(runtime.destroy())
-      return Err(native_error_message("create window", error))
-    }
-  }
-
   let command_host = match
     build_command_host(manifest, command_extensions, base_dir) {
     Err(error) => {
-      ignore(window.destroy())
       ignore(runtime.destroy())
       return Err(error)
     }
     Ok(host) => host
   }
-  let command_proxy_script = match
-    build_command_proxy_script(
-      manifest,
-      command_extensions,
-      install_event_bus=forward_menu_events,
-    ) {
+  let frontend = match
+    build_bridge_frontend_config(manifest, command_extensions) {
     Err(error) => {
       close_command_host(command_host)
-      ignore(window.destroy())
       ignore(runtime.destroy())
       return Err(error)
     }
@@ -100,40 +77,53 @@ async fn run_manifest(
   let bridge_policy = match bridge_page_policy_for_manifest(manifest) {
     Err(error) => {
       close_command_host(command_host)
-      ignore(window.destroy())
       ignore(runtime.destroy())
       return Err(error)
     }
     Ok(policy) => policy
   }
-  match command_host {
-    Some(host) => {
-      let ops = host.host.registered_ops()
-      let dev_origins = bridge_page_policy_dev_origins(bridge_policy)
-      let dev_bootstrap_script = match bridge_policy.dev_origin {
-        Some(_) => command_proxy_script
-        None => None
-      }
-      match
-        native_unit_result(
-          "install bridge",
-          window.install_bridge(
-            @native.BridgeConfig::new(ops~, dev_origins~, dev_bootstrap_script~),
-          ),
-        ) {
-        Err(error) => {
-          host.close()
-          ignore(window.destroy())
-          ignore(runtime.destroy())
-          return Err(error)
-        }
-        Ok(_) =>
-          install_extension_event_sender(window, host.host, bridge_policy)
-      }
+  let ops = match command_host {
+    Some(host) => host.host.registered_ops()
+    None => []
+  }
+  let bridge = if ops.length() > 0 ||
+    frontend.extensions.length() > 0 ||
+    frontend.initialization_script is Some(_) ||
+    forward_menu_events {
+    Some(
+      @native.BridgeConfig::new(
+        ops~,
+        dev_origins=bridge_page_policy_dev_origins(bridge_policy),
+        extensions=frontend.extensions,
+        initialization_script=frontend.initialization_script,
+      ),
+    )
+  } else {
+    None
+  }
+  let window = match
+    @native.Window::new(
+      runtime,
+      config=@native.WindowConfig::new(
+        title=manifest.window.title,
+        width=manifest.window.width,
+        height=manifest.window.height,
+        initial_url="about:blank",
+        bridge?,
+      ),
+    ) {
+    Ok(window) => window
+    Err(error) => {
+      close_command_host(command_host)
+      ignore(runtime.destroy())
+      return Err(native_error_message("create window", error))
     }
+  }
+  match command_host {
+    Some(host) => install_extension_event_sender(window, host.host)
     None => ()
   }
-  match load_entry_after_create(window, manifest.entry, command_proxy_script) {
+  match load_entry_after_create(window, manifest.entry) {
     Err(error) => {
       close_command_host(command_host)
       ignore(window.destroy())
@@ -158,10 +148,7 @@ async fn run_manifest(
                 bridge_policy,
                 forward_menu_events,
               )
-            None =>
-              run_window_pump(
-                runtime, window, bridge_policy, forward_menu_events,
-              )
+            None => run_window_pump(runtime, window, forward_menu_events)
           }
           close_command_host(command_host)
           let destroy_result = native_unit_result(
@@ -196,7 +183,6 @@ fn CommandHostRuntime::close(self : CommandHostRuntime) -> Unit {
 async fn run_window_pump(
   runtime : @native.Runtime,
   window : @native.Window,
-  policy : BridgePagePolicy,
   forward_menu_events : Bool,
 ) -> Result[Unit, String] {
   let mut closed = false
@@ -221,12 +207,7 @@ async fn run_window_pump(
           }
           if forward_menu_events {
             if event.menu_command_id() is Some(command_id) {
-              forward_menu_command(
-                window,
-                command_id,
-                event.window_id(),
-                policy,
-              )
+              forward_menu_command(window, command_id, event.window_id())
             }
           }
         }
@@ -281,12 +262,7 @@ async fn run_bridge_pump(
             }
             if forward_menu_events {
               if event.menu_command_id() is Some(command_id) {
-                forward_menu_command(
-                  window,
-                  command_id,
-                  event.window_id(),
-                  policy,
-                )
+                forward_menu_command(window, command_id, event.window_id())
               }
             }
           }

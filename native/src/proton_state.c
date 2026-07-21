@@ -225,15 +225,6 @@ int32_t proton_runtime_poll_event(proton_runtime_slot_t *runtime,
   return PROTON_OK;
 }
 
-void proton_window_clear_bridge(proton_window_slot_t *window) {
-  if (window == NULL) {
-    return;
-  }
-  free(window->bridge_config_json);
-  window->bridge_config_json = NULL;
-  window->bridge_enabled = false;
-}
-
 int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
                                   proton_runtime_id_t runtime_handle,
                                   proton_engine_window_t *engine_window,
@@ -259,7 +250,6 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
     slot->engine_window = engine_window;
     slot->width = width;
     slot->height = height;
-    proton_window_clear_bridge(slot);
     *out_window = proton_make_window_handle(slot->generation, i);
     if (!proton_runtime_enqueue_window_event(runtime, "window_created",
                                              *out_window)) {
@@ -280,7 +270,6 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
 }
 
 void proton_window_slot_destroy(proton_window_slot_t *slot) {
-  proton_window_clear_bridge(slot);
   proton_window_slot_close(slot);
 }
 

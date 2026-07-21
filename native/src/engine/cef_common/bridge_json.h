@@ -49,25 +49,6 @@ static int proton_engine_bridge_config_read_max_payload(
   return ok;
 }
 
-static int proton_engine_bridge_config_read_request_timeout(
-    const char *bridge_config_json,
-    int32_t *out_value) {
-  if (bridge_config_json == NULL || out_value == NULL) {
-    return 0;
-  }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, bridge_config_json)) {
-    return 0;
-  }
-  int ok = proton_json_root_object(&doc, &root) &&
-           proton_json_object_get(&doc, root, "request_timeout_ms", &value) &&
-           proton_json_read_int32(&doc, value, out_value);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
 static int proton_engine_json_read_int64_field(const char *json,
                                                const char *field_name,
                                                int64_t *out_value) {
@@ -259,48 +240,6 @@ static int proton_engine_bridge_config_allows_page(
   return allowed;
 }
 
-static int proton_engine_bridge_config_is_dev_page(
-    const char *bridge_config_json,
-    const char *url) {
-  if (proton_engine_url_is_proton_app(url)) {
-    return 0;
-  }
-  return proton_engine_bridge_config_allows_page(bridge_config_json, url);
-}
-
-static char *proton_engine_bridge_config_copy_dev_bootstrap_script(
-    const char *bridge_config_json) {
-  return proton_engine_json_copy_string_field(bridge_config_json,
-                                              "dev_bootstrap_script");
-}
-
-static char *proton_engine_bridge_wrap_dev_bootstrap_script(
-    const char *script) {
-  if (script == NULL) {
-    return NULL;
-  }
-  const char *prefix =
-      "if(window.__protonBridgeInstalled&&"
-      "!window.__protonDevBootstrapInstalled){"
-      "window.__protonDevBootstrapInstalled=true;\n";
-  const char *suffix = "\n}";
-  size_t prefix_len = strlen(prefix);
-  size_t script_len = strlen(script);
-  size_t suffix_len = strlen(suffix);
-  if (script_len > SIZE_MAX - prefix_len - suffix_len - 1) {
-    return NULL;
-  }
-  char *wrapped = (char *)malloc(prefix_len + script_len + suffix_len + 1);
-  if (wrapped == NULL) {
-    return NULL;
-  }
-  memcpy(wrapped, prefix, prefix_len);
-  memcpy(wrapped + prefix_len, script, script_len);
-  memcpy(wrapped + prefix_len + script_len, suffix, suffix_len);
-  wrapped[prefix_len + script_len + suffix_len] = '\0';
-  return wrapped;
-}
-
 typedef struct {
   const proton_json_doc_t *doc;
   const char *op;
@@ -344,79 +283,6 @@ static int proton_engine_bridge_config_allows_op(const char *bridge_config_json,
   }
   proton_json_dispose(&doc);
   return match.allowed;
-}
-
-static char *proton_engine_js_quote_string(const char *value) {
-  if (value == NULL) {
-    value = "";
-  }
-  size_t len = strlen(value);
-  size_t cap = len * 2 + 3;
-  char *quoted = (char *)malloc(cap);
-  if (quoted == NULL) {
-    return NULL;
-  }
-  size_t out = 0;
-  quoted[out++] = '"';
-  for (size_t i = 0; i < len; i++) {
-    unsigned char ch = (unsigned char)value[i];
-    if (out + 7 >= cap) {
-      size_t next_cap = cap * 2;
-      char *next = (char *)realloc(quoted, next_cap);
-      if (next == NULL) {
-        free(quoted);
-        return NULL;
-      }
-      quoted = next;
-      cap = next_cap;
-    }
-    switch (ch) {
-    case '\\':
-      quoted[out++] = '\\';
-      quoted[out++] = '\\';
-      break;
-    case '"':
-      quoted[out++] = '\\';
-      quoted[out++] = '"';
-      break;
-    case '\b':
-      quoted[out++] = '\\';
-      quoted[out++] = 'b';
-      break;
-    case '\f':
-      quoted[out++] = '\\';
-      quoted[out++] = 'f';
-      break;
-    case '\n':
-      quoted[out++] = '\\';
-      quoted[out++] = 'n';
-      break;
-    case '\r':
-      quoted[out++] = '\\';
-      quoted[out++] = 'r';
-      break;
-    case '\t':
-      quoted[out++] = '\\';
-      quoted[out++] = 't';
-      break;
-    default:
-      if (ch < 0x20) {
-        static const char hex[] = "0123456789abcdef";
-        quoted[out++] = '\\';
-        quoted[out++] = 'u';
-        quoted[out++] = '0';
-        quoted[out++] = '0';
-        quoted[out++] = hex[(ch >> 4) & 0xf];
-        quoted[out++] = hex[ch & 0xf];
-      } else {
-        quoted[out++] = (char)ch;
-      }
-      break;
-    }
-  }
-  quoted[out++] = '"';
-  quoted[out] = '\0';
-  return quoted;
 }
 
 #endif

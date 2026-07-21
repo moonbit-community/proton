@@ -75,7 +75,7 @@ static const char *const expected_exports[] = {
     "proton_window_load_url",
     "proton_window_load_html",
     "proton_window_eval",
-    "proton_window_install_bridge_json",
+    "proton_window_emit_bridge_event_json",
     "proton_window_begin_message_dialog",
     "proton_window_begin_confirm_dialog",
     "proton_window_begin_open_file_dialog",
@@ -95,6 +95,7 @@ static const char *const removed_exports[] = {
     "proton_window_open_file_dialog",
     "proton_window_save_file_dialog",
     "proton_window_choose_directory_dialog",
+    "proton_window_install_bridge_json",
 };
 
 int main(void) {

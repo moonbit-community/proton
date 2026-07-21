@@ -516,7 +516,14 @@ int main(void) {
   if (expect_status("window_create",
                     proton_window_create_json(
                         runtime, "{\"abi_version\":1,\"title\":\"Smoke\","
-                                 "\"width\":320,\"height\":240}",
+                                 "\"width\":320,\"height\":240,"
+                                 "\"bridge\":{\"abi_version\":1,"
+                                 "\"namespace\":\"__MoonBit__\","
+                                 "\"origin_policy\":{\"mode\":\"app_only\"},"
+                                 "\"ops\":[{\"name\":\"ext:app/ping\"}],"
+                                 "\"max_payload_bytes\":1048576,"
+                                 "\"request_timeout_ms\":30000,"
+                                 "\"extensions\":[]}}",
                         &window),
                     PROTON_OK)) {
     return 1;
@@ -539,17 +546,6 @@ int main(void) {
                     proton_runtime_do_message_loop_work(runtime), PROTON_OK)) {
     return 1;
   }
-  if (expect_status("window_install_bridge_json",
-                    proton_window_install_bridge_json(
-                        window,
-                        "{\"abi_version\":1,\"namespace\":\"__MoonBit__\","
-                        "\"origin_policy\":{\"mode\":\"app_only\"},"
-                        "\"ops\":[{\"name\":\"ext:app/ping\"}],"
-                        "\"max_payload_bytes\":1048576,"
-                        "\"request_timeout_ms\":30000}"),
-                    PROTON_OK)) {
-    return 1;
-  }
   if (expect_bridge_request_none(runtime)) {
     return 1;
   }
@@ -561,34 +557,19 @@ int main(void) {
   if (expect_last_error_contains("native engine")) {
     return 1;
   }
-  status = proton_window_install_bridge_json(
+  status = proton_window_emit_bridge_event_json(
       window,
-      "{\"abi_version\":1,\"namespace\":\"Other\",\"ops\":[]}");
-  if (expect_status("window_install_bridge_json rejects namespace", status,
-                    PROTON_ERR_INVALID_ARGUMENT)) {
+      "{\"abi_version\":1,\"kind\":\"frontend\","
+      "\"name\":\"smoke\",\"payload\":null}");
+  if (expect_status("emit_bridge_event without engine", status, PROTON_OK)) {
     return 1;
   }
-  if (expect_last_error_contains("namespace")) {
-    return 1;
-  }
-  status = proton_window_install_bridge_json(
+  status = proton_window_emit_bridge_event_json(
       window,
-      "{\"abi_version\":1,\"ops\":[],\"debug\":true}");
-  if (expect_status("window_install_bridge_json rejects unknown field", status,
+      "{\"abi_version\":1,\"kind\":\"unknown\","
+      "\"name\":\"smoke\",\"payload\":null}");
+  if (expect_status("emit_bridge_event rejects kind", status,
                     PROTON_ERR_INVALID_ARGUMENT)) {
-    return 1;
-  }
-  if (expect_last_error_contains("unknown field: debug")) {
-    return 1;
-  }
-  status = proton_window_install_bridge_json(
-      window,
-      "{\"abi_version\":1,\"ops\":[],\"max_payload_bytes\":\"small\"}");
-  if (expect_status("window_install_bridge_json rejects invalid field type", status,
-                    PROTON_ERR_INVALID_ARGUMENT)) {
-    return 1;
-  }
-  if (expect_last_error_contains("invalid type or range")) {
     return 1;
   }
   status = proton_runtime_respond_bridge_request_json(

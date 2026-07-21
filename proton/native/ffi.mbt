@@ -160,11 +160,11 @@ extern "C" fn proton_window_load_html_ffi(
 extern "C" fn proton_window_eval_ffi(window : Int64, script : Bytes) -> Int = "proton_window_eval"
 
 ///|
-#borrow(bridge_json)
-extern "C" fn proton_window_install_bridge_json_ffi(
+#borrow(event_json)
+extern "C" fn proton_window_emit_bridge_event_json_ffi(
   window : Int64,
-  bridge_json : Bytes,
-) -> Int = "proton_window_install_bridge_json"
+  event_json : Bytes,
+) -> Int = "proton_window_emit_bridge_event_json"
 
 ///|
 #borrow(title, message, out_dialog)

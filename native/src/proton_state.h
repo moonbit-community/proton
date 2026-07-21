@@ -45,8 +45,6 @@ typedef struct {
   proton_engine_window_t *engine_window;
   int32_t width;
   int32_t height;
-  bool bridge_enabled;
-  char *bridge_config_json;
 } proton_window_slot_t;
 
 PROTON_INTERNAL int32_t proton_runtime_slot_create(
@@ -81,8 +79,6 @@ proton_window_slot_destroy(proton_window_slot_t *slot);
 PROTON_INTERNAL void proton_window_slot_close(proton_window_slot_t *slot);
 PROTON_INTERNAL int32_t
 proton_get_window(proton_window_id_t handle, proton_window_slot_t **out_slot);
-PROTON_INTERNAL void
-proton_window_clear_bridge(proton_window_slot_t *window);
 PROTON_INTERNAL int32_t proton_window_enqueue_closed_once(
     proton_runtime_slot_t *runtime, proton_window_slot_t *window,
     proton_window_id_t window_handle);

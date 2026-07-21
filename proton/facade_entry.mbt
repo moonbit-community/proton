@@ -2,35 +2,16 @@
 fn load_entry_after_create(
   window : @native.Window,
   entry : @manifest.AppEntry,
-  command_proxy_script : String?,
 ) -> Result[Unit, String] {
   match entry {
     @manifest.AppEntry::Html(html) =>
-      native_unit_result(
-        "load html",
-        window.load_html(
-          inject_command_proxy_script(html, command_proxy_script),
-          "proton://app/",
-        ),
-      )
+      native_unit_result("load html", window.load_html(html, "proton://app/"))
     @manifest.AppEntry::Url(url) =>
       native_unit_result("load url", window.load_url(url))
     @manifest.AppEntry::File(path) =>
-      load_file_entry_after_create(
-        window, "load file", path, command_proxy_script,
-      )
+      load_file_entry_after_create(window, "load file", path)
     @manifest.AppEntry::Asset(path) =>
-      load_file_entry_after_create(
-        window, "load asset", path, command_proxy_script,
-      )
-  }
-}
-
-///|
-fn inject_command_proxy_script(html : String, script : String?) -> String {
-  match script {
-    None => html
-    Some(value) => inject_html_bootstrap(html, script_tag(value))
+      load_file_entry_after_create(window, "load asset", path)
   }
 }
 
@@ -39,24 +20,17 @@ fn load_file_entry_after_create(
   window : @native.Window,
   action : String,
   path : String,
-  command_proxy_script : String?,
 ) -> Result[Unit, String] {
-  match command_proxy_script {
-    None => native_unit_result(action, window.load_url(file_url(path)))
-    Some(script) =>
-      match read_file_entry_html(path, action) {
-        Err(error) => Err(error)
-        Ok(html) => {
-          let bootstrap = base_tag(asset_base_url(path)) + script_tag(script)
-          native_unit_result(
-            action,
-            window.load_html(
-              inject_html_bootstrap(html, bootstrap),
-              asset_document_url(path),
-            ),
-          )
-        }
-      }
+  match read_file_entry_html(path, action) {
+    Err(error) => Err(error)
+    Ok(html) =>
+      native_unit_result(
+        action,
+        window.load_html(
+          inject_html_bootstrap(html, base_tag(asset_base_url(path))),
+          asset_document_url(path),
+        ),
+      )
   }
 }
 
@@ -86,13 +60,6 @@ fn inject_html_bootstrap(html : String, bootstrap : String) -> String {
   } else {
     bootstrap + html
   }
-}
-
-///|
-fn script_tag(script : String) -> String {
-  "<script>" +
-  script.replace_all(old="</script", new="<\\/script") +
-  "</script>\n"
 }
 
 ///|
@@ -127,24 +94,6 @@ fn native_error_message(action : String, error : @native.NativeError) -> String 
   error.status.to_string() +
   ": " +
   error.message
-}
-
-///|
-fn file_url(path : String) -> String {
-  if path.has_prefix("file://") {
-    path
-  } else {
-    let file_path : @mbpath.Path = path
-    let normalized = file_path
-      .resolve()
-      .to_string()
-      .replace_all(old="\\", new="/")
-    if normalized.has_prefix("/") {
-      "file://" + normalized
-    } else {
-      "file:///" + normalized
-    }
-  }
 }
 
 ///|

@@ -218,11 +218,14 @@ fn decode_bridge_request_json(
           message: "failed to decode bridge request JSON: missing op",
         })
     }
-    let raw_payload = match object.get("payload") {
+    let payload = match object.get("payload") {
       Some(value) => value
       None => Json::empty_object()
     }
-    let (payload, page_instance) = decode_bridge_payload_envelope(raw_payload)
+    let page_instance = match object.get("page_instance") {
+      Some(String(value)) => Some(value)
+      _ => None
+    }
     decode_int64_json(request_id_json, "bridge request_id").bind(fn(
       request_id,
     ) {
@@ -233,19 +236,6 @@ fn decode_bridge_request_json(
       })
     })
   })
-}
-
-///|
-fn decode_bridge_payload_envelope(payload : Json) -> (Json, String?) {
-  match payload {
-    Object(object) =>
-      match object.get("__proton_page_instance") {
-        Some(String(page_instance)) =>
-          (object.get("payload").unwrap_or(Json::null()), Some(page_instance))
-        _ => (payload, None)
-      }
-    _ => (payload, None)
-  }
 }
 
 ///|
@@ -594,14 +584,14 @@ pub fn Window::eval(
 }
 
 ///|
-pub fn Window::install_bridge(
+pub fn Window::emit_bridge_event_json(
   self : Window,
-  config : BridgeConfig,
+  event_json : String,
 ) -> Result[Unit, NativeError] {
   status_to_result(
-    proton_window_install_bridge_json_ffi(
+    proton_window_emit_bridge_event_json_ffi(
       self.handle,
-      @ffi.to_cstr(config.to_json_string()),
+      @ffi.to_cstr(event_json),
     ),
   )
 }

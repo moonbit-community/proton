@@ -198,8 +198,8 @@ pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
 /// Registers one extension setting with the app facade.
 ///
 /// The native DLL route exposes command extensions through
-/// `window.__MoonBit__.core.invokeOp(...)` and a generated high-level proxy for
-/// inline HTML entries.
+/// `window.__MoonBit__.core.invokeOp(...)` and generated high-level proxies.
+/// The renderer installs the bridge before the page's first script executes.
 pub fn App::extension(
   self : App,
   extension : @proton_extension.Extension,

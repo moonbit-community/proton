@@ -84,7 +84,15 @@ pub(all) struct BridgeConfig {
   max_payload_bytes : Int
   request_timeout_ms : Int
   dev_origins : Array[String]
-  dev_bootstrap_script : String?
+  extensions : Array[BridgeExtensionConfig]
+  initialization_script : String?
+} derive(Debug, Eq)
+
+///|
+/// One JavaScript namespace installed by the renderer bootstrap.
+pub(all) struct BridgeExtensionConfig {
+  js_namespace : String
+  apis : Array[String]
 } derive(Debug, Eq)
 
 ///|
@@ -209,6 +217,7 @@ struct WindowConfig {
   width : Int
   height : Int
   initial_url : String
+  bridge : BridgeConfig?
 } derive(Debug, Eq)
 
 ///|
@@ -276,8 +285,9 @@ pub fn WindowConfig::new(
   width? : Int = 800,
   height? : Int = 600,
   initial_url? : String = "about:blank",
+  bridge? : BridgeConfig,
 ) -> WindowConfig {
-  { raw_json: None, title, width, height, initial_url }
+  { raw_json: None, title, width, height, initial_url, bridge }
 }
 
 ///|
@@ -288,6 +298,7 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     width: 800,
     height: 600,
     initial_url: "about:blank",
+    bridge: None,
   }
 }
 
@@ -346,7 +357,8 @@ pub fn BridgeConfig::new(
   max_payload_bytes? : Int = 1048576,
   request_timeout_ms? : Int = 30000,
   dev_origins? : Array[String] = [],
-  dev_bootstrap_script? : String? = None,
+  extensions? : Array[BridgeExtensionConfig] = [],
+  initialization_script? : String? = None,
 ) -> BridgeConfig {
   {
     raw_json: None,
@@ -354,7 +366,8 @@ pub fn BridgeConfig::new(
     max_payload_bytes,
     request_timeout_ms,
     dev_origins: copy_strings(dev_origins),
-    dev_bootstrap_script,
+    extensions: extensions.map(fn(extension) { extension.copy() }),
+    initialization_script,
   }
 }
 
@@ -366,8 +379,24 @@ pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
     max_payload_bytes: 1048576,
     request_timeout_ms: 30000,
     dev_origins: [],
-    dev_bootstrap_script: None,
+    extensions: [],
+    initialization_script: None,
   }
+}
+
+///|
+pub fn BridgeExtensionConfig::new(
+  js_namespace : String,
+  apis~ : Array[String],
+) -> BridgeExtensionConfig {
+  { js_namespace, apis: copy_strings(apis) }
+}
+
+///|
+fn BridgeExtensionConfig::copy(
+  self : BridgeExtensionConfig,
+) -> BridgeExtensionConfig {
+  { js_namespace: self.js_namespace, apis: copy_strings(self.apis) }
 }
 
 ///|
@@ -416,8 +445,8 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
 pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
   match self.raw_json {
     Some(raw) => raw
-    None =>
-      Json::object({
+    None => {
+      let fields : Map[String, Json] = {
         "abi_version": Json::number(1.0, repr="1"),
         "title": Json::string(self.title),
         "width": Json::number(
@@ -429,7 +458,13 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
           repr=self.height.to_string(),
         ),
         "initial_url": Json::string(self.initial_url),
-      }).stringify()
+      }
+      match self.bridge {
+        Some(bridge) => fields.set("bridge", bridge.to_json())
+        None => ()
+      }
+      Json::object(fields).stringify()
+    }
   }
 }
 
@@ -465,9 +500,9 @@ pub fn MenuBar::to_json_string(self : MenuBar) -> String {
 }
 
 ///|
-pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
+fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
   match self.raw_json {
-    Some(raw) => raw
+    Some(raw) => @json.parse(raw) catch { _ => Json::null() }
     None => {
       let ops_json = self.ops.map(fn(name) {
         Json::object({ "name": Json::string(name) })
@@ -495,15 +530,30 @@ pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
           self.request_timeout_ms.to_double(),
           repr=self.request_timeout_ms.to_string(),
         ),
+        "extensions": Json::array(
+          self.extensions.map(fn(extension) {
+            Json::object({
+              "namespace": Json::string(extension.js_namespace),
+              "apis": Json::array(
+                extension.apis.map(fn(api) { Json::string(api) }),
+              ),
+            })
+          }),
+        ),
       }
       set_optional_string_field(
         fields,
-        "dev_bootstrap_script",
-        self.dev_bootstrap_script,
+        "initialization_script",
+        self.initialization_script,
       )
-      Json::object(fields).stringify()
+      Json::object(fields)
     }
   }
+}
+
+///|
+pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
+  self.to_json().stringify()
 }
 
 ///|

@@ -610,6 +610,9 @@ int32_t proton_window_create_json(proton_runtime_id_t runtime,
     }
     return status;
   }
+  if (engine_window != NULL) {
+    proton_engine_window_bind_public_id(engine_window, *out_window);
+  }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -854,38 +857,25 @@ int32_t proton_window_eval(proton_window_id_t window, const char *script) {
   return PROTON_OK;
 }
 
-int32_t proton_window_install_bridge_json(proton_window_id_t window,
-                                          const char *bridge_json) {
+int32_t proton_window_emit_bridge_event_json(proton_window_id_t window,
+                                              const char *event_json) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  status = proton_config_validate_bridge(bridge_json);
+  status = proton_config_validate_bridge_event(event_json);
   if (status != PROTON_OK) {
     return status;
   }
-
-  char *bridge_copy = proton_strdup(bridge_json);
-  if (bridge_copy == NULL) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "failed to allocate bridge config");
-  }
-
   if (slot->engine_window != NULL) {
     char engine_error[512] = {0};
-    status = proton_engine_window_install_bridge_json(
-        slot->engine_window, window, bridge_json, engine_error,
-        sizeof(engine_error));
+    status = proton_engine_window_emit_bridge_event_json(
+        slot->engine_window, event_json, engine_error, sizeof(engine_error));
     if (status != PROTON_OK) {
-      free(bridge_copy);
       return proton_set_engine_status(status, engine_error);
     }
   }
-
-  free(slot->bridge_config_json);
-  slot->bridge_config_json = bridge_copy;
-  slot->bridge_enabled = true;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

@@ -34,6 +34,8 @@
 #define PROTON_MAX_BRIDGE_OPS 256
 #define PROTON_MAX_BRIDGE_DEV_ORIGINS 16
 #define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
+#define PROTON_MAX_BRIDGE_EXTENSIONS 128
+#define PROTON_MAX_BRIDGE_APIS 256
 #define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
 
@@ -88,11 +90,13 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
     } else if (strcmp(key, "title") == 0 ||
                strcmp(key, "initial_url") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
+    } else if (strcmp(key, "bridge") == 0) {
+      valid = proton_json_is_object(doc, value);
     }
   } else if (strcmp(config_name, "bridge") == 0) {
     if (strcmp(key, "namespace") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
-    } else if (strcmp(key, "dev_bootstrap_script") == 0) {
+    } else if (strcmp(key, "initialization_script") == 0) {
       char *script = proton_json_copy_string(doc, value);
       valid = script != NULL;
       free(script);
@@ -101,7 +105,8 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
     } else if (strcmp(key, "origin_policy") == 0) {
       valid = proton_json_is_object(doc, value);
-    } else if (strcmp(key, "ops") == 0) {
+    } else if (strcmp(key, "ops") == 0 ||
+               strcmp(key, "extensions") == 0) {
       valid = proton_json_is_array(doc, value);
     }
   } else if (strcmp(config_name, "bridge response") == 0) {
@@ -110,6 +115,11 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       valid = proton_json_read_int64_string_or_number(doc, value, &request_id);
     } else if (strcmp(key, "ok") == 0) {
       valid = proton_json_read_bool(doc, value, &boolean);
+    }
+  } else if (strcmp(config_name, "bridge event") == 0) {
+    if (strcmp(key, "kind") == 0 || strcmp(key, "extension") == 0 ||
+        strcmp(key, "name") == 0 || strcmp(key, "page_instance") == 0) {
+      valid = proton_json_read_string(doc, value, text, sizeof(text));
     }
   }
   if (!valid) {
@@ -277,6 +287,7 @@ static const char *const proton_window_config_keys[] = {
     "width",
     "height",
     "initial_url",
+    "bridge",
 };
 
 static const char *const proton_bridge_config_keys[] = {
@@ -286,7 +297,8 @@ static const char *const proton_bridge_config_keys[] = {
     "ops",
     "max_payload_bytes",
     "request_timeout_ms",
-    "dev_bootstrap_script",
+    "extensions",
+    "initialization_script",
 };
 
 static const char *const proton_bridge_response_keys[] = {
@@ -295,6 +307,15 @@ static const char *const proton_bridge_response_keys[] = {
     "ok",
     "payload",
     "error",
+};
+
+static const char *const proton_bridge_event_keys[] = {
+    "abi_version",
+    "kind",
+    "extension",
+    "name",
+    "payload",
+    "page_instance",
 };
 
 static const char *const proton_menu_config_keys[] = {
@@ -926,6 +947,147 @@ static int32_t proton_validate_bridge_ops(const proton_json_doc_t *doc,
   return validation.status;
 }
 
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t api_count;
+  int32_t status;
+} proton_bridge_apis_validation_t;
+
+static bool proton_validate_bridge_api_item(proton_json_value_t value,
+                                            void *user_data) {
+  proton_bridge_apis_validation_t *validation =
+      (proton_bridge_apis_validation_t *)user_data;
+  char name[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
+  if (validation->api_count >= PROTON_MAX_BRIDGE_APIS) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge extension APIs array is too large");
+    return false;
+  }
+  if (!proton_json_read_string(validation->doc, value, name, sizeof(name)) ||
+      !proton_bridge_op_name_valid(name) || strcmp(name, "then") == 0) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge extension API name is invalid");
+    return false;
+  }
+  validation->api_count++;
+  return true;
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  bool has_namespace;
+  bool has_apis;
+  int32_t status;
+} proton_bridge_extension_validation_t;
+
+static bool proton_validate_bridge_extension_field(const char *key,
+                                                   proton_json_value_t value,
+                                                   void *user_data) {
+  proton_bridge_extension_validation_t *validation =
+      (proton_bridge_extension_validation_t *)user_data;
+  if (strcmp(key, "namespace") == 0) {
+    char name[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
+    if (!proton_json_read_string(validation->doc, value, name, sizeof(name)) ||
+        !proton_bridge_op_name_valid(name) || strcmp(name, "core") == 0 ||
+        strcmp(name, "events") == 0) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT, "bridge extension namespace is invalid");
+      return false;
+    }
+    validation->has_namespace = true;
+    return true;
+  }
+  if (strcmp(key, "apis") == 0) {
+    if (!proton_json_is_array(validation->doc, value)) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT, "bridge extension APIs must be an array");
+      return false;
+    }
+    proton_bridge_apis_validation_t apis = {
+        validation->doc, 0, PROTON_OK};
+    if (!proton_json_array_each(validation->doc, value,
+                                proton_validate_bridge_api_item, &apis) &&
+        apis.status == PROTON_OK) {
+      apis.status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT, "bridge extension APIs are malformed");
+    }
+    if (apis.status != PROTON_OK) {
+      validation->status = apis.status;
+      return false;
+    }
+    validation->has_apis = true;
+    return true;
+  }
+  {
+    char message[160];
+    snprintf(message, sizeof(message),
+             "bridge extension contains unknown field: %s", key);
+    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    return false;
+  }
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t extension_count;
+  int32_t status;
+} proton_bridge_extensions_validation_t;
+
+static bool proton_validate_bridge_extension_item(proton_json_value_t value,
+                                                  void *user_data) {
+  proton_bridge_extensions_validation_t *validation =
+      (proton_bridge_extensions_validation_t *)user_data;
+  if (validation->extension_count >= PROTON_MAX_BRIDGE_EXTENSIONS) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge extensions array is too large");
+    return false;
+  }
+  if (!proton_json_is_object(validation->doc, value)) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge extension must be an object");
+    return false;
+  }
+  proton_bridge_extension_validation_t extension = {
+      validation->doc, false, false, PROTON_OK};
+  if (!proton_json_object_each(validation->doc, value,
+                               proton_validate_bridge_extension_field,
+                               &extension) &&
+      extension.status == PROTON_OK) {
+    extension.status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge extension is malformed");
+  }
+  if (extension.status != PROTON_OK) {
+    validation->status = extension.status;
+    return false;
+  }
+  if (!extension.has_namespace || !extension.has_apis) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge extension requires namespace and APIs");
+    return false;
+  }
+  validation->extension_count++;
+  return true;
+}
+
+static int32_t proton_validate_bridge_extensions(
+    const proton_json_doc_t *doc,
+    proton_json_value_t value) {
+  if (!proton_json_is_array(doc, value)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge extensions must be an array");
+  }
+  proton_bridge_extensions_validation_t validation = {doc, 0, PROTON_OK};
+  if (!proton_json_array_each(doc, value,
+                              proton_validate_bridge_extension_item,
+                              &validation) &&
+      validation.status == PROTON_OK) {
+    validation.status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge extensions array is malformed");
+  }
+  return validation.status;
+}
+
 int32_t proton_config_validate_bridge(const char *bridge_json) {
   if (bridge_json != NULL && strlen(bridge_json) > PROTON_MAX_BRIDGE_CONFIG_BYTES) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -966,12 +1128,12 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
     }
   }
 
-  if (proton_json_object_get(&doc, root, "dev_bootstrap_script", &value)) {
+  if (proton_json_object_get(&doc, root, "initialization_script", &value)) {
     char *script = proton_json_copy_string(&doc, value);
     if (script == NULL) {
       proton_json_dispose(&doc);
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge dev_bootstrap_script must be a string");
+                              "bridge initialization_script must be a string");
     }
     free(script);
   }
@@ -1005,6 +1167,17 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                               "bridge request_timeout_ms is invalid");
     }
+  }
+
+  if (!proton_json_object_get(&doc, root, "extensions", &value)) {
+    proton_json_dispose(&doc);
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge config requires extensions");
+  }
+  status = proton_validate_bridge_extensions(&doc, value);
+  if (status != PROTON_OK) {
+    proton_json_dispose(&doc);
+    return status;
   }
 
   proton_json_dispose(&doc);
@@ -1080,6 +1253,52 @@ int32_t proton_config_validate_bridge_response(const char *response_json) {
   return PROTON_OK;
 }
 
+int32_t proton_config_validate_bridge_event(const char *event_json) {
+  int32_t status = proton_validate_abi_config(
+      event_json, "bridge event", proton_bridge_event_keys,
+      sizeof(proton_bridge_event_keys) / sizeof(proton_bridge_event_keys[0]));
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t value;
+  char kind[32];
+  char name[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
+  if (!proton_json_parse(&doc, event_json) ||
+      !proton_json_root_object(&doc, &root)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge event must be a JSON object");
+  }
+  if (!proton_json_object_get(&doc, root, "kind", &value) ||
+      !proton_json_read_string(&doc, value, kind, sizeof(kind)) ||
+      (strcmp(kind, "frontend") != 0 && strcmp(kind, "extension") != 0)) {
+    proton_json_dispose(&doc);
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge event kind must be frontend or extension");
+  }
+  if (!proton_json_object_get(&doc, root, "name", &value) ||
+      !proton_json_read_string(&doc, value, name, sizeof(name)) ||
+      name[0] == '\0') {
+    proton_json_dispose(&doc);
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge event requires a non-empty name");
+  }
+  if (strcmp(kind, "extension") == 0) {
+    char extension[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
+    if (!proton_json_object_get(&doc, root, "extension", &value) ||
+        !proton_json_read_string(&doc, value, extension,
+                                 sizeof(extension)) ||
+        extension[0] == '\0') {
+      proton_json_dispose(&doc);
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "extension bridge event requires extension");
+    }
+  }
+  proton_json_dispose(&doc);
+  return PROTON_OK;
+}
+
 int32_t proton_config_validate_runtime(const char *config_json) {
   return proton_validate_abi_config(
       config_json, "runtime", proton_runtime_config_keys,
@@ -1095,5 +1314,30 @@ int32_t proton_config_validate_window(const char *config_json,
   if (status != PROTON_OK) {
     return status;
   }
-  return proton_validate_window_config(config_json, out_width, out_height);
+  status = proton_validate_window_config(config_json, out_width, out_height);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t bridge;
+  if (!proton_json_parse(&doc, config_json) ||
+      !proton_json_root_object(&doc, &root)) {
+    proton_json_dispose(&doc);
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window config must be a JSON object");
+  }
+  if (proton_json_object_get(&doc, root, "bridge", &bridge)) {
+    char *bridge_json = proton_json_copy_raw(&doc, bridge);
+    proton_json_dispose(&doc);
+    if (bridge_json == NULL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "window bridge config is malformed");
+    }
+    status = proton_config_validate_bridge(bridge_json);
+    free(bridge_json);
+    return status;
+  }
+  proton_json_dispose(&doc);
+  return PROTON_OK;
 }
