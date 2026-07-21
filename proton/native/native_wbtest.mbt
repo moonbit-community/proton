@@ -185,12 +185,18 @@ test "typed configs generate stable JSON for native ABI" {
   assert_true(bundled_json.contains("\"use_bundled\":true"))
   assert_true(!bundled_json.contains("\"runtime_root\""))
   assert_true(!bundled_json.contains("\"helper_path\""))
-  let window_config = WindowConfig::new(title="Typed", width=320, height=240)
+  let window_config = WindowConfig::new(
+    title="Typed",
+    width=320,
+    height=240,
+    bridge=BridgeConfig::new(ops=["ext:app/ping"]),
+  )
   let window_json = window_config.to_json_string()
   assert_true(window_json.contains("\"abi_version\":1"))
   assert_true(window_json.contains("\"title\":\"Typed\""))
   assert_true(window_json.contains("\"width\":320"))
   assert_true(window_json.contains("\"height\":240"))
+  assert_true(window_json.contains("\"bridge\""))
   let bridge_config = BridgeConfig::new(ops=["ext:app/ping"])
   let bridge_json = bridge_config.to_json_string()
   assert_true(bridge_json.contains("\"abi_version\":1"))
@@ -201,12 +207,12 @@ test "typed configs generate stable JSON for native ABI" {
   let dev_bridge_json = BridgeConfig::new(
     ops=["ext:app/ping"],
     dev_origins=["http://localhost:5173"],
-    dev_bootstrap_script=Some("window.__protonDev = true;"),
+    initialization_script=Some("window.__protonDev = true;"),
   ).to_json_string()
   assert_true(dev_bridge_json.contains("\"mode\":\"app_and_dev_origins\""))
   assert_true(dev_bridge_json.contains("\"dev_origins\""))
   assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
-  assert_true(dev_bridge_json.contains("\"dev_bootstrap_script\""))
+  assert_true(dev_bridge_json.contains("\"initialization_script\""))
   assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
   let menu_json = MenuBar::new(menus=[
     Menu::new("Demo", items=[
@@ -238,46 +244,54 @@ test "runtime event decodes menu command payload" {
 }
 
 ///|
+test "bridge request keeps transport metadata outside the payload" {
+  match
+    decode_bridge_request_json(
+      "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
+      "\"op\":\"ext:add/sum\",\"payload\":{\"left\":20,\"right\":22}," +
+      "\"page_instance\":\"page-1\"}",
+    ) {
+    Ok(request) => {
+      inspect(request.request_id(), content="7")
+      inspect(request.window(), content="11")
+      inspect(request.op(), content="ext:add/sum")
+      assert_eq(
+        request.payload(),
+        Json::object({ "left": Json::number(20), "right": Json::number(22) }),
+      )
+      assert_eq(request.page_instance(), Some("page-1"))
+    }
+    Err(error) => fail(error.message)
+  }
+}
+
+///|
 test "bridge ABI wrappers validate config and poll empty queue" {
   let runtime = Runtime::new().unwrap()
-  let window = Window::new(runtime).unwrap()
+  let large_script = StringBuilder::new()
+  for _ in 0..<7000 {
+    large_script.write_string("window.__protonDevLarge = true;\n")
+  }
+  let window = Window::new(
+    runtime,
+    config=WindowConfig::new(
+      bridge=BridgeConfig::new(
+        ops=["ext:app/ping"],
+        dev_origins=["http://localhost:5173"],
+        initialization_script=Some(large_script.to_string()),
+      ),
+    ),
+  ).unwrap()
   match runtime.poll_event() {
     Ok(Some(event)) => inspect(event.event_type(), content="window_created")
     _ => fail("expected window_created event")
   }
   debug_inspect(runtime.do_message_loop_work(), content="Ok(())")
-  debug_inspect(
-    window.install_bridge(BridgeConfig::new(ops=["ext:app/ping"])),
-    content="Ok(())",
-  )
-  debug_inspect(
-    window.install_bridge(
-      BridgeConfig::new(
-        ops=["ext:app/ping"],
-        dev_origins=["http://localhost:5173"],
-        dev_bootstrap_script=Some("window.__protonDev = true;"),
-      ),
-    ),
-    content="Ok(())",
-  )
-  let large_script = StringBuilder::new()
-  for _ in 0..<7000 {
-    large_script.write_string("window.__protonDevLarge = true;\n")
-  }
-  debug_inspect(
-    window.install_bridge(
-      BridgeConfig::new(
-        ops=["ext:app/ping"],
-        dev_origins=["http://localhost:5173"],
-        dev_bootstrap_script=Some(large_script.to_string()),
-      ),
-    ),
-    content="Ok(())",
-  )
   debug_inspect(runtime.poll_bridge_request(), content="Ok(None)")
-  let invalid = window.install_bridge(
-    BridgeConfig::unsafe_from_json(
-      "{\"abi_version\":1,\"namespace\":\"Other\",\"ops\":[]}",
+  let invalid = Window::new(
+    runtime,
+    config=WindowConfig::unsafe_from_json(
+      "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":{\"abi_version\":1,\"namespace\":\"Other\",\"ops\":[],\"extensions\":[]}}",
     ),
   )
   match invalid {
@@ -312,11 +326,6 @@ test "bridge ABI wrappers validate config and poll empty queue" {
 ///|
 test "bridge config rejects unsafe schema variants" {
   let runtime = Runtime::new().unwrap()
-  let window = Window::new(runtime).unwrap()
-  match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
-    _ => fail("expected window_created event")
-  }
   let cases = [
     (
       "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"debug\":true}",
@@ -363,24 +372,23 @@ test "bridge config rejects unsafe schema variants" {
       "invalid origin",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[],\"dev_bootstrap_script\":false}",
-      "dev_bootstrap_script",
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[],\"extensions\":[],\"initialization_script\":false}",
+      "initialization_script",
     ),
   ]
   for _, item in cases {
     let (raw, expected) = item
-    match window.install_bridge(BridgeConfig::unsafe_from_json(raw)) {
+    let window_json = "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":" +
+      raw +
+      "}"
+    match
+      Window::new(runtime, config=WindowConfig::unsafe_from_json(window_json)) {
       Err(error) => {
         inspect(error.status, content="-1")
         assert_true(error.message.contains(expected))
       }
       Ok(_) => fail("expected invalid bridge config: " + expected)
     }
-  }
-  debug_inspect(window.destroy(), content="Ok(())")
-  match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_closed")
-    _ => fail("expected window_closed event")
   }
   debug_inspect(runtime.destroy(), content="Ok(())")
 }

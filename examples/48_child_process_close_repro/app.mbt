@@ -56,19 +56,12 @@ let resource : String =
   #|        log.textContent += `${new Date().toISOString()} ${message}\n`;
   #|      }
   #|
-  #|      async function waitForBridge() {
-  #|        for (let attempt = 0; attempt < 80; attempt += 1) {
-  #|          if (window.__MoonBit__?.core?.invokeOp) {
-  #|            return window.__MoonBit__.core.invokeOp;
-  #|          }
-  #|          await new Promise(resolve => setTimeout(resolve, 25));
-  #|        }
-  #|        throw new Error("bridge is not available");
-  #|      }
-  #|
   #|      async function startHold() {
-  #|        append("waiting for window.__MoonBit__.core.invokeOp");
-  #|        const invokeOp = await waitForBridge();
+  #|        append("checking window.__MoonBit__.core.invokeOp");
+  #|        const invokeOp = window.__MoonBit__?.core?.invokeOp;
+  #|        if (typeof invokeOp !== "function") {
+  #|          throw new Error("bridge is not available");
+  #|        }
   #|        append('calling core.invokeOp("ext:child/hold")');
   #|        status.textContent = "bridge request pending with child process";
   #|        invokeOp("ext:child/hold", {}).then(

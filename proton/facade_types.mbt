@@ -41,3 +41,9 @@ priv struct BridgePagePolicy {
   dev_origin : String?
   request_timeout_ms : Int
 }
+
+///|
+priv struct BridgeFrontendConfig {
+  extensions : Array[@native.BridgeExtensionConfig]
+  initialization_script : String?
+}

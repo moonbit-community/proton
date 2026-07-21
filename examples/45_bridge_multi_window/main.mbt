@@ -83,6 +83,7 @@ fn create_window(
         width=520,
         height=420,
         initial_url="about:blank",
+        bridge=@native.BridgeConfig::new(ops=["ext:multi/identify"]),
       ),
     ) {
     Ok(window) => Ok(window)
@@ -96,16 +97,9 @@ fn setup_window(
   label : String,
 ) -> Result[Unit, String] {
   native_unit_result(
-    "install bridge " + label,
-    window.install_bridge(@native.BridgeConfig::new(ops=["ext:multi/identify"])),
-  )
-  .bind(fn(_) {
-    native_unit_result(
-      "load html " + label,
-      window.load_html(page_html(label), "proton://app/" + label),
-    )
-  })
-  .bind(fn(_) { native_unit_result("show window " + label, window.show()) })
+    "load html " + label,
+    window.load_html(page_html(label), "proton://app/" + label),
+  ).bind(fn(_) { native_unit_result("show window " + label, window.show()) })
 }
 
 ///|

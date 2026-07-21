@@ -34,6 +34,9 @@ if(PROTON_WITH_ENGINE)
   else()
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
+  list(APPEND PROTON_ENGINE_SOURCES
+    src/engine/cef_common/bridge_renderer.c
+  )
 endif()
 
 if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)

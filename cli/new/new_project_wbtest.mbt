@@ -198,6 +198,12 @@ test "templates receive final module title and size" {
   guard find_planned_file(files, "README.mbt.md") is Some(readme) else {
     abort("missing README.mbt.md")
   }
+  guard find_planned_file(files, "app/app.html") is Some(app_html) else {
+    abort("missing app/app.html")
+  }
+  assert_false(app_html.contains("window.__MoonBit__.ready"))
+  assert_true(app_html.contains("window.__MoonBit__.core.invokeOp"))
+  assert_false(app_html.contains("waitForBridge"))
   assert_true(readme.contains("## Dev"))
   assert_true(readme.contains("proton_cli dev"))
   assert_true(readme.contains("## Build"))

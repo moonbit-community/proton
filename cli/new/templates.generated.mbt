@@ -276,23 +276,19 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|        }
           #|      }
           #|
-          #|      function waitForBridge(attempt = 0) {
-          #|        if (window.__MoonBit__?.core?.invokeOp) {
+          #|      async function initialize() {
+          #|        try {
           #|          setEnabled(true);
           #|          setStatus("Bridge ready", "ok");
-          #|          void refresh();
-          #|          return;
+          #|          await refresh();
+          #|        } catch (error) {
+          #|          setStatus(String(error), "err");
           #|        }
-          #|        if (attempt > 100) {
-          #|          setStatus("Bridge timed out", "err");
-          #|          return;
-          #|        }
-          #|        window.setTimeout(() => waitForBridge(attempt + 1), 25);
           #|      }
           #|
           #|      incrementButton.addEventListener("click", () => void run("increment"));
           #|      resetButton.addEventListener("click", () => void run("reset"));
-          #|      window.addEventListener("load", () => waitForBridge());
+          #|      window.addEventListener("load", () => void initialize());
           #|    </script>
           #|  </body>
           #|</html>

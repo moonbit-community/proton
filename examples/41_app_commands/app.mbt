@@ -253,24 +253,18 @@ let resource : String =
   #|        }
   #|      }
   #|
-  #|      function waitForBridge(attempt = 0) {
-  #|        if (window.__MoonBit__?.core?.invokeOp) {
+  #|      async function initialize() {
+  #|        try {
   #|          setStatus(bridgeEl, "Ready", "ok");
-  #|          void runProbe();
-  #|          return;
+  #|          await runProbe();
+  #|        } catch (error) {
+  #|          setStatus(bridgeEl, String(error), "err");
   #|        }
-  #|        if (attempt > 80) {
-  #|          setStatus(bridgeEl, "Timed out", "err");
-  #|          return;
-  #|        }
-  #|        window.setTimeout(() => waitForBridge(attempt + 1), 25);
   #|      }
   #|
   #|      runButton.addEventListener("click", () => void runProbe());
   #|      failButton.addEventListener("click", () => void callFailure());
-  #|      window.addEventListener("load", () => {
-  #|        waitForBridge();
-  #|      });
+  #|      window.addEventListener("load", () => void initialize());
   #|    </script>
   #|  </body>
   #|</html>

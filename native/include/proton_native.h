@@ -101,8 +101,8 @@ PROTON_API int32_t proton_window_load_html(proton_window_id_t window,
                                            const char *base_url);
 PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
-PROTON_API int32_t proton_window_install_bridge_json(
-    proton_window_id_t window, const char *bridge_json);
+PROTON_API int32_t proton_window_emit_bridge_event_json(
+    proton_window_id_t window, const char *event_json);
 PROTON_API int32_t proton_window_begin_message_dialog(
     proton_window_id_t window, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
