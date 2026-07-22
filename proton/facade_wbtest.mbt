@@ -153,6 +153,37 @@ test "app run errors retain typed bridge diagnostics" {
 }
 
 ///|
+test "bridge startup timeout is finite and configurable" {
+  let default_app = html("Test", "<html></html>")
+  inspect(default_app.bridge_startup_timeout_value_ms, content="30000")
+  let configured = default_app.bridge_startup_timeout_ms(2500)
+  inspect(configured.bridge_startup_timeout_value_ms, content="2500")
+  assert_eq(configured.validation_error(), None)
+  assert_eq(
+    configured.bridge_startup_timeout_ms(0).validation_error(),
+    Some("bridge startup timeout must be positive"),
+  )
+}
+
+///|
+test "bridge startup timeout retains the last lifecycle state" {
+  let state = @native.BridgeLifecycleState::{
+    abi_version: 1,
+    revision: "7",
+    outcome: "pending",
+    page_instance: "page-1",
+    url: "proton://app/",
+    failure_pending: false,
+  }
+  let diagnostic = bridge_startup_timeout_diagnostic(state, 2500)
+  assert_eq(diagnostic.stage, "prepare")
+  assert_eq(diagnostic.code, "bridge_startup_timeout")
+  assert_eq(diagnostic.page_instance, "page-1")
+  assert_eq(diagnostic.url, "proton://app/")
+  assert_true(diagnostic.message.contains("2500 ms"))
+}
+
+///|
 test "extension events use structured bridge transport JSON" {
   let event = @ipc.IpcExtensionEvent::new(
     "ticker",

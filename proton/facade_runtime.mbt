@@ -16,6 +16,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
         self.command_extensions,
         resolved.base_dir,
         self.menu,
+        self.bridge_startup_timeout_value_ms,
       )
   }
 }
@@ -62,6 +63,7 @@ async fn run_manifest(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
   menu : @native.MenuBar?,
+  bridge_startup_timeout_ms : Int,
 ) -> Unit raise AppRunError {
   let forward_menu_events = menu is Some(_)
   let helper_path = macos_bundled_helper_path() catch {
@@ -160,7 +162,9 @@ async fn run_manifest(
       Ok(_) => ()
     }
     if bridge is Some(_) {
-      wait_for_bridge_startup(runtime, window, forward_menu_events) catch {
+      wait_for_bridge_startup(
+        runtime, window, forward_menu_events, bridge_startup_timeout_ms,
+      ) catch {
         error => raise normalize_async_run_error(error)
       }
     }
@@ -297,55 +301,110 @@ async fn wait_for_bridge_startup(
   runtime : @native.Runtime,
   window : @native.Window,
   forward_menu_events : Bool,
+  timeout_ms : Int,
 ) -> Unit raise AppRunError {
-  while true {
-    match runtime.do_message_loop_work() {
-      Err(error) => raise native_run_error("pump runtime during startup", error)
-      Ok(_) => ()
+  let completed = @async.with_timeout_opt(timeout_ms, () => {
+    wait_for_bridge_startup_until_terminal(runtime, window, forward_menu_events)
+  }) catch {
+    error => raise normalize_async_run_error(error)
+  }
+  match completed {
+    Some(_) => ()
+    None => {
+      let state = pump_bridge_startup_once(runtime, window, forward_menu_events)
+      if bridge_startup_is_ready(state) {
+        return
+      }
+      raise BridgeStartupError(
+        bridge_startup_timeout_diagnostic(state, timeout_ms),
+      )
     }
-    let mut polling_events = true
-    while polling_events {
-      match runtime.poll_event() {
-        Err(error) => raise native_run_error("poll startup event", error)
-        Ok(None) => polling_events = false
-        Ok(Some(event)) => {
-          if event.is_window_closed() {
-            raise EntryLoadError("window closed before startup completed")
-          }
-          if forward_menu_events {
-            if event.menu_command_id() is Some(command_id) {
-              forward_menu_command(window, command_id, event.window_id())
-            }
+  }
+}
+
+///|
+async fn wait_for_bridge_startup_until_terminal(
+  runtime : @native.Runtime,
+  window : @native.Window,
+  forward_menu_events : Bool,
+) -> Unit {
+  while true {
+    let state = pump_bridge_startup_once(runtime, window, forward_menu_events)
+    if bridge_startup_is_ready(state) {
+      return
+    }
+    @async.sleep(1)
+  }
+}
+
+///|
+fn pump_bridge_startup_once(
+  runtime : @native.Runtime,
+  window : @native.Window,
+  forward_menu_events : Bool,
+) -> @native.BridgeLifecycleState raise AppRunError {
+  match runtime.do_message_loop_work() {
+    Err(error) => raise native_run_error("pump runtime during startup", error)
+    Ok(_) => ()
+  }
+  let mut polling_events = true
+  while polling_events {
+    match runtime.poll_event() {
+      Err(error) => raise native_run_error("poll startup event", error)
+      Ok(None) => polling_events = false
+      Ok(Some(event)) => {
+        if event.is_window_closed() {
+          raise EntryLoadError("window closed before startup completed")
+        }
+        if forward_menu_events {
+          if event.menu_command_id() is Some(command_id) {
+            forward_menu_command(window, command_id, event.window_id())
           }
         }
       }
     }
-    let state = match window.bridge_lifecycle_state() {
-      Err(error) => raise native_run_error("read bridge startup state", error)
-      Ok(state) => state
-    }
-    if state.url != "about:blank" {
-      match state.outcome {
-        "ready" => return
-        "failed" =>
-          match bridge_failure(window, state) {
-            Err(error) =>
-              raise native_run_error("read bridge startup failure", error)
-            Ok(diagnostic) => raise BridgeStartupError(diagnostic)
-          }
-        "ineligible" =>
-          raise BridgeStartupError(
-            bridge_protocol_diagnostic(
-              state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
-            ),
-          )
-        _ => ()
-      }
-    }
-    @async.sleep(1) catch {
-      error => raise normalize_async_run_error(error)
+  }
+  let state = match window.bridge_lifecycle_state() {
+    Err(error) => raise native_run_error("read bridge startup state", error)
+    Ok(state) => state
+  }
+  if state.url != "about:blank" {
+    match state.outcome {
+      "failed" =>
+        match bridge_failure(window, state) {
+          Err(error) =>
+            raise native_run_error("read bridge startup failure", error)
+          Ok(diagnostic) => raise BridgeStartupError(diagnostic)
+        }
+      "ineligible" =>
+        raise BridgeStartupError(
+          bridge_protocol_diagnostic(
+            state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
+          ),
+        )
+      _ => ()
     }
   }
+  state
+}
+
+///|
+fn bridge_startup_is_ready(state : @native.BridgeLifecycleState) -> Bool {
+  state.url != "about:blank" && state.outcome == "ready"
+}
+
+///|
+fn bridge_startup_timeout_diagnostic(
+  state : @native.BridgeLifecycleState,
+  timeout_ms : Int,
+) -> @native.BridgeDiagnostic {
+  bridge_protocol_diagnostic(
+    state,
+    "bridge_startup_timeout",
+    "the native bridge did not become ready within " +
+    timeout_ms.to_string() +
+    " ms",
+  )
 }
 
 ///|
