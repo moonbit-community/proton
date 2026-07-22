@@ -14,12 +14,14 @@
 
 typedef struct proton_engine_dialog_request {
   int64_t id;
-  uint64_t window_native_id;
+  int owner_kind;
+  uintptr_t owner_id;
   int refs;
   int completed;
   int32_t status;
   char *result;
   char error[512];
+  void *platform_state;
   struct proton_engine_dialog_request *next;
 } proton_engine_dialog_request_t;
 
@@ -76,11 +78,13 @@ static void proton_engine_dialog_unlock(void) {
 }
 
 static proton_engine_dialog_request_t *proton_engine_dialog_request_find_locked(
-    uint64_t window_native_id,
+    int owner_kind,
+    uintptr_t owner_id,
     int64_t id) {
   for (proton_engine_dialog_request_t *request = g_dialog_requests;
        request != NULL; request = request->next) {
-    if (request->id == id && request->window_native_id == window_native_id) {
+    if (request->id == id && request->owner_kind == owner_kind &&
+        request->owner_id == owner_id) {
       return request;
     }
   }
@@ -88,12 +92,14 @@ static proton_engine_dialog_request_t *proton_engine_dialog_request_find_locked(
 }
 
 static proton_engine_dialog_request_t *
-proton_engine_dialog_request_remove_locked(uint64_t window_native_id,
+proton_engine_dialog_request_remove_locked(int owner_kind,
+                                           uintptr_t owner_id,
                                            int64_t id) {
   proton_engine_dialog_request_t **cursor = &g_dialog_requests;
   while (*cursor != NULL) {
     proton_engine_dialog_request_t *request = *cursor;
-    if (request->id == id && request->window_native_id == window_native_id) {
+    if (request->id == id && request->owner_kind == owner_kind &&
+        request->owner_id == owner_id) {
       *cursor = request->next;
       request->next = NULL;
       return request;
@@ -137,8 +143,14 @@ static void proton_engine_dialog_request_release(
   }
 }
 
-static int32_t proton_engine_dialog_request_create(
-    proton_engine_window_t *window,
+enum {
+  PROTON_ENGINE_DIALOG_OWNER_WINDOW = 1,
+  PROTON_ENGINE_DIALOG_OWNER_RUNTIME = 2,
+};
+
+static int32_t proton_engine_dialog_request_create_for_owner(
+    int owner_kind,
+    uintptr_t owner_id,
     proton_engine_dialog_request_t **out_request,
     int64_t *out_dialog,
     char *error,
@@ -149,8 +161,8 @@ static int32_t proton_engine_dialog_request_create(
   }
   *out_request = NULL;
   *out_dialog = PROTON_INVALID_HANDLE;
-  if (window == NULL || proton_engine_window_get_native_window(window) == nil) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
+  if (owner_id == 0) {
+    proton_engine_set_message(error, error_len, "dialog owner is not initialized");
     return PROTON_ERR_INVALID_HANDLE;
   }
 
@@ -168,7 +180,8 @@ static int32_t proton_engine_dialog_request_create(
     g_next_dialog_id = 1;
   }
   request->refs = 1;
-  request->window_native_id = proton_engine_window_native_id(window);
+  request->owner_kind = owner_kind;
+  request->owner_id = owner_id;
   request->next = g_dialog_requests;
   g_dialog_requests = request;
   proton_engine_dialog_unlock();
@@ -176,6 +189,22 @@ static int32_t proton_engine_dialog_request_create(
   *out_request = request;
   *out_dialog = request->id;
   return PROTON_OK;
+}
+
+static int32_t proton_engine_dialog_request_create(
+    proton_engine_window_t *window,
+    proton_engine_dialog_request_t **out_request,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  if (window == NULL || proton_engine_window_get_native_window(window) == nil) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_dialog_request_create_for_owner(
+      PROTON_ENGINE_DIALOG_OWNER_WINDOW,
+      (uintptr_t)proton_engine_window_native_id(window), out_request,
+      out_dialog, error, error_len);
 }
 
 static void proton_engine_dialog_complete(
@@ -210,6 +239,105 @@ static void proton_engine_dialog_complete(
     g_dialog_signal_callback(PROTON_WAIT_PLATFORM);
   }
 }
+
+static NSAlertStyle proton_engine_alert_style(int32_t level);
+
+@interface ProtonRuntimeAlertController : NSObject {
+ @private
+  proton_engine_dialog_request_t *request_;
+  NSAlert *alert_;
+  NSModalSession session_;
+  BOOL dismissed_;
+  BOOL finished_;
+}
+- (instancetype)initWithRequest:(proton_engine_dialog_request_t *)request
+                           title:(NSString *)title
+                         message:(NSString *)message
+                           level:(int32_t)level;
+- (void)show;
+- (void)tick;
+- (void)cancel;
+- (void)dismiss:(id)sender;
+@end
+
+@implementation ProtonRuntimeAlertController
+- (instancetype)initWithRequest:(proton_engine_dialog_request_t *)request
+                           title:(NSString *)title
+                         message:(NSString *)message
+                           level:(int32_t)level {
+  self = [super init];
+  if (self != nil) {
+    request_ = request;
+    alert_ = [[NSAlert alloc] init];
+    [alert_ setMessageText:title];
+    [alert_ setInformativeText:message];
+    [alert_ setAlertStyle:proton_engine_alert_style(level)];
+    NSButton *button = [alert_ addButtonWithTitle:@"OK"];
+    [button setTarget:self];
+    [button setAction:@selector(dismiss:)];
+    session_ = nil;
+    dismissed_ = NO;
+    finished_ = NO;
+    [self retain];
+  }
+  return self;
+}
+
+- (void)show {
+  if (@available(macOS 14.0, *)) {
+    [NSApp activate];
+  } else {
+    [NSApp activateIgnoringOtherApps:YES];
+  }
+  session_ = [NSApp beginModalSessionForWindow:[alert_ window]];
+  [self tick];
+}
+
+- (void)tick {
+  if (session_ == nil || finished_) {
+    return;
+  }
+  NSModalResponse response = [NSApp runModalSession:session_];
+  if (!dismissed_ && response == NSModalResponseContinue) {
+    return;
+  }
+  finished_ = YES;
+  [NSApp endModalSession:session_];
+  session_ = nil;
+  request_->platform_state = NULL;
+  proton_engine_dialog_complete(request_, PROTON_OK, "", NULL);
+  [[alert_ window] orderOut:nil];
+  [alert_ release];
+  alert_ = nil;
+  proton_engine_dialog_request_release(request_);
+  request_ = NULL;
+  [self release];
+}
+
+- (void)dismiss:(id)sender {
+  (void)sender;
+  dismissed_ = YES;
+  [NSApp stopModal];
+}
+
+- (void)cancel {
+  if (finished_) {
+    return;
+  }
+  finished_ = YES;
+  if (session_ != nil) {
+    [NSApp endModalSession:session_];
+    session_ = nil;
+  }
+  request_->platform_state = NULL;
+  [[alert_ window] orderOut:nil];
+  [alert_ release];
+  alert_ = nil;
+  proton_engine_dialog_request_release(request_);
+  request_ = NULL;
+  [self release];
+}
+@end
 
 static char *proton_engine_dialog_result_from_string(NSString *value) {
   NSData *data = [(value != nil ? value : @"")
@@ -246,7 +374,8 @@ void proton_engine_dialog_complete_window_closed(uint64_t native_id) {
   proton_engine_dialog_lock();
   for (proton_engine_dialog_request_t *request = g_dialog_requests;
        request != NULL; request = request->next) {
-    if (request->window_native_id == native_id && !request->completed) {
+    if (request->owner_kind == PROTON_ENGINE_DIALOG_OWNER_WINDOW &&
+        request->owner_id == (uintptr_t)native_id && !request->completed) {
       request->completed = 1;
       request->status = PROTON_ERR_DESTROYED;
       snprintf(request->error, sizeof(request->error), "%s",
@@ -254,6 +383,38 @@ void proton_engine_dialog_complete_window_closed(uint64_t native_id) {
     }
   }
   proton_engine_dialog_unlock();
+}
+
+void proton_engine_dialog_dispose_runtime(void *runtime) {
+  proton_engine_dialog_request_t *removed = NULL;
+  proton_engine_dialog_lock();
+  proton_engine_dialog_request_t **cursor = &g_dialog_requests;
+  while (*cursor != NULL) {
+    proton_engine_dialog_request_t *request = *cursor;
+    if (request->owner_kind == PROTON_ENGINE_DIALOG_OWNER_RUNTIME &&
+        request->owner_id == (uintptr_t)runtime) {
+      *cursor = request->next;
+      request->next = removed;
+      removed = request;
+      continue;
+    }
+    cursor = &request->next;
+  }
+  proton_engine_dialog_unlock();
+
+  while (removed != NULL) {
+    proton_engine_dialog_request_t *request = removed;
+    removed = request->next;
+    request->next = NULL;
+    ProtonRuntimeAlertController *controller =
+        request->platform_state != NULL
+            ? (ProtonRuntimeAlertController *)request->platform_state
+            : nil;
+    [controller retain];
+    [controller cancel];
+    [controller release];
+    proton_engine_dialog_request_release(request);
+  }
 }
 
 static int32_t proton_engine_dialog_begin_on_parent(
@@ -297,6 +458,118 @@ static NSAlertStyle proton_engine_alert_style(int32_t level) {
   default:
     return NSAlertStyleInformational;
   }
+}
+
+int32_t proton_engine_runtime_begin_message_dialog(
+    proton_engine_runtime_t *runtime,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    int32_t level,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len) {
+  proton_engine_dialog_request_t *request = NULL;
+  int32_t status = proton_engine_dialog_request_create_for_owner(
+      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, &request,
+      out_dialog, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  NSString *title = proton_engine_string_from_utf8(title_utf8, title_len);
+  NSString *message = proton_engine_string_from_utf8(message_utf8, message_len);
+  proton_engine_dialog_request_retain(request);
+  ProtonRuntimeAlertController *controller =
+      [[ProtonRuntimeAlertController alloc] initWithRequest:request
+                                                     title:title
+                                                   message:message
+                                                     level:level];
+  if (controller == nil) {
+    proton_engine_dialog_complete(request, PROTON_ERR_PLATFORM, NULL,
+                                  "failed to create runtime alert");
+    proton_engine_dialog_request_release(request);
+  } else {
+    request->platform_state = controller;
+    [controller show];
+    [controller release];
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_poll_dialog_result(
+    proton_engine_runtime_t *runtime,
+    int64_t dialog,
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len,
+    char *error,
+    size_t error_len) {
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (out_required_len == NULL) {
+    proton_engine_set_message(error, error_len, "out_required_len is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_dialog_lock();
+  proton_engine_dialog_request_t *request =
+      proton_engine_dialog_request_find_locked(
+          PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
+  if (request == NULL) {
+    proton_engine_dialog_unlock();
+    proton_engine_set_message(error, error_len, "dialog request is unknown");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  ProtonRuntimeAlertController *controller =
+      request->platform_state != NULL
+          ? (ProtonRuntimeAlertController *)request->platform_state
+          : nil;
+  [controller retain];
+  proton_engine_dialog_unlock();
+  [controller tick];
+  [controller release];
+  proton_engine_dialog_lock();
+  request = proton_engine_dialog_request_find_locked(
+      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
+  if (request == NULL) {
+    proton_engine_dialog_unlock();
+    proton_engine_set_message(error, error_len, "dialog request is unknown");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (!request->completed) {
+    proton_engine_dialog_unlock();
+    return PROTON_EVENT_NONE;
+  }
+  if (request->status != PROTON_OK) {
+    int32_t request_status = request->status;
+    char request_error[sizeof(request->error)];
+    snprintf(request_error, sizeof(request_error), "%s", request->error);
+    request = proton_engine_dialog_request_remove_locked(
+        PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
+    proton_engine_dialog_unlock();
+    proton_engine_set_message(error, error_len, request_error);
+    proton_engine_dialog_request_release(request);
+    return request_status;
+  }
+  const char *result = request->result != NULL ? request->result : "";
+  int32_t required = (int32_t)strlen(result) + 1;
+  *out_required_len = required;
+  if (buffer == NULL || buffer_len < required) {
+    proton_engine_dialog_unlock();
+    proton_engine_set_message(error, error_len, "dialog result buffer too small");
+    return PROTON_ERR_BUFFER_TOO_SMALL;
+  }
+  memcpy(buffer, result, (size_t)required);
+  request = proton_engine_dialog_request_remove_locked(
+      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
+  proton_engine_dialog_unlock();
+  proton_engine_dialog_request_release(request);
+  return PROTON_OK;
 }
 
 static void proton_engine_configure_file_panel(NSSavePanel *panel,
@@ -558,7 +831,9 @@ int32_t proton_engine_window_poll_dialog_result(
 
   proton_engine_dialog_lock();
   proton_engine_dialog_request_t *request =
-      proton_engine_dialog_request_find_locked(proton_engine_window_native_id(window), dialog);
+      proton_engine_dialog_request_find_locked(
+          PROTON_ENGINE_DIALOG_OWNER_WINDOW,
+          (uintptr_t)proton_engine_window_native_id(window), dialog);
   if (request == NULL) {
     proton_engine_dialog_unlock();
     proton_engine_set_message(error, error_len, "dialog request is unknown");
@@ -573,7 +848,8 @@ int32_t proton_engine_window_poll_dialog_result(
     char request_error[sizeof(request->error)];
     snprintf(request_error, sizeof(request_error), "%s", request->error);
     request = proton_engine_dialog_request_remove_locked(
-        proton_engine_window_native_id(window), dialog);
+        PROTON_ENGINE_DIALOG_OWNER_WINDOW,
+        (uintptr_t)proton_engine_window_native_id(window), dialog);
     proton_engine_dialog_unlock();
     proton_engine_set_message(error, error_len, request_error);
     proton_engine_dialog_request_release(request);
@@ -588,7 +864,9 @@ int32_t proton_engine_window_poll_dialog_result(
     return PROTON_ERR_BUFFER_TOO_SMALL;
   }
   memcpy(buffer, result, (size_t)required);
-  request = proton_engine_dialog_request_remove_locked(proton_engine_window_native_id(window), dialog);
+  request = proton_engine_dialog_request_remove_locked(
+      PROTON_ENGINE_DIALOG_OWNER_WINDOW,
+      (uintptr_t)proton_engine_window_native_id(window), dialog);
   proton_engine_dialog_unlock();
   proton_engine_dialog_request_release(request);
   return PROTON_OK;

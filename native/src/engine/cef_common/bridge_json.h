@@ -1,6 +1,8 @@
 #ifndef PROTON_ENGINE_CEF_COMMON_BRIDGE_JSON_H
 #define PROTON_ENGINE_CEF_COMMON_BRIDGE_JSON_H
 
+#include "bridge_policy.h"
+
 static int proton_engine_bridge_op_is_valid(const char *op) {
   if (op == NULL || op[0] == '\0') {
     return 0;
@@ -117,127 +119,6 @@ static char *proton_engine_json_copy_string_field(const char *json,
   }
   proton_json_dispose(&doc);
   return copy;
-}
-
-static int proton_engine_url_is_proton_app(const char *url) {
-  return url != NULL && strncmp(url, "proton://", 9) == 0;
-}
-
-static int proton_engine_url_is_bridge_candidate(const char *url) {
-  return proton_engine_url_is_proton_app(url) ||
-         (url != NULL &&
-          (strncmp(url, "http://", 7) == 0 ||
-           strncmp(url, "https://", 8) == 0));
-}
-
-static char *proton_engine_url_origin(const char *url) {
-  size_t prefix_len = 0;
-  if (url == NULL) {
-    return NULL;
-  }
-  if (strncmp(url, "http://", 7) == 0) {
-    prefix_len = 7;
-  } else if (strncmp(url, "https://", 8) == 0) {
-    prefix_len = 8;
-  } else {
-    return NULL;
-  }
-  const char *authority = url + prefix_len;
-  if (*authority == '\0') {
-    return NULL;
-  }
-  const char *end = authority;
-  while (*end != '\0' && *end != '/' && *end != '?' && *end != '#') {
-    end++;
-  }
-  if (end == authority) {
-    return NULL;
-  }
-  return proton_engine_strdup_len(url, (size_t)(end - url));
-}
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  const char *origin;
-  int matched;
-} proton_engine_bridge_origin_match_t;
-
-static bool proton_engine_bridge_origin_match_item(proton_json_value_t value,
-                                                   void *user_data) {
-  proton_engine_bridge_origin_match_t *match =
-      (proton_engine_bridge_origin_match_t *)user_data;
-  char candidate[PROTON_ENGINE_MAX_PATH_BYTES];
-  if (proton_json_read_string(match->doc, value, candidate,
-                              sizeof(candidate)) &&
-      strcmp(candidate, match->origin) == 0) {
-    match->matched = 1;
-    return false;
-  }
-  return true;
-}
-
-static int proton_engine_bridge_origin_policy_allows_origin(
-    const proton_json_doc_t *doc,
-    proton_json_value_t policy,
-    const char *origin) {
-  proton_json_value_t mode_value;
-  proton_json_value_t origins_value;
-  char mode[32];
-  if (doc == NULL || origin == NULL ||
-      !proton_json_object_get(doc, policy, "mode", &mode_value) ||
-      !proton_json_read_string(doc, mode_value, mode, sizeof(mode))) {
-    return 0;
-  }
-  if (strcmp(mode, "app_and_dev_origins") != 0) {
-    return 0;
-  }
-  if (!proton_json_object_get(doc, policy, "dev_origins", &origins_value) ||
-      !proton_json_is_array(doc, origins_value)) {
-    return 0;
-  }
-  proton_engine_bridge_origin_match_t match = {doc, origin, 0};
-  proton_json_array_each(doc, origins_value,
-                         proton_engine_bridge_origin_match_item, &match);
-  return match.matched;
-}
-
-static int proton_engine_bridge_config_allows_dev_origin(
-    const char *bridge_config_json,
-    const char *origin) {
-  if (bridge_config_json == NULL || origin == NULL) {
-    return 0;
-  }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t policy;
-  if (!proton_json_parse(&doc, bridge_config_json)) {
-    return 0;
-  }
-  int allowed = 0;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, "origin_policy", &policy) &&
-      proton_json_is_object(&doc, policy)) {
-    allowed =
-        proton_engine_bridge_origin_policy_allows_origin(&doc, policy, origin);
-  }
-  proton_json_dispose(&doc);
-  return allowed;
-}
-
-static int proton_engine_bridge_config_allows_page(
-    const char *bridge_config_json,
-    const char *url) {
-  if (proton_engine_url_is_proton_app(url)) {
-    return 1;
-  }
-  char *origin = proton_engine_url_origin(url);
-  if (origin == NULL) {
-    return 0;
-  }
-  int allowed =
-      proton_engine_bridge_config_allows_dev_origin(bridge_config_json, origin);
-  free(origin);
-  return allowed;
 }
 
 typedef struct {

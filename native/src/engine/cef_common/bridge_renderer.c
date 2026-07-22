@@ -1,6 +1,7 @@
 #include "bridge_renderer.h"
 
 #include "../../proton_json.h"
+#include "bridge_policy.h"
 
 #include <stddef.h>
 #include <stdarg.h>
@@ -21,6 +22,10 @@ typedef struct proton_engine_bridge_browser_config {
   int browser_id;
   size_t instance_count;
   char *config_json;
+  char *lifecycle_outcome;
+  char *lifecycle_page_instance;
+  char *lifecycle_url;
+  char *lifecycle_diagnostic_json;
   struct proton_engine_bridge_browser_config *next;
 } proton_engine_bridge_browser_config_t;
 
@@ -34,6 +39,17 @@ typedef struct proton_engine_bridge_context {
 
 static proton_engine_bridge_browser_config_t *g_browser_configs = NULL;
 static proton_engine_bridge_context_t *g_contexts = NULL;
+static uint64_t g_next_page_instance = 1;
+
+static char *proton_engine_bridge_strdup(const char *value) {
+  const char *source = value != NULL ? value : "";
+  size_t len = strlen(source);
+  char *copy = (char *)malloc(len + 1);
+  if (copy != NULL) {
+    memcpy(copy, source, len + 1);
+  }
+  return copy;
+}
 
 static unsigned long proton_engine_bridge_process_id(void) {
 #if defined(_WIN32)
@@ -106,21 +122,412 @@ proton_engine_bridge_find_browser_config(cef_browser_t *browser) {
   return NULL;
 }
 
-static char *proton_engine_bridge_copy_string_field(const char *json,
-                                                    const char *field_name) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, json)) {
+static char *proton_engine_bridge_frame_url(cef_frame_t *frame) {
+  return frame != NULL
+             ? proton_engine_bridge_userfree_to_utf8(frame->get_url(frame))
+             : NULL;
+}
+
+static char *proton_engine_bridge_new_page_instance(void) {
+  char value[96];
+  uint64_t sequence = g_next_page_instance++;
+  if (g_next_page_instance == 0) {
+    g_next_page_instance = 1;
+  }
+  int written = snprintf(value, sizeof(value), "%lu-%llu",
+                         proton_engine_bridge_process_id(),
+                         (unsigned long long)sequence);
+  if (written <= 0 || (size_t)written >= sizeof(value)) {
     return NULL;
   }
-  char *copy = NULL;
+  char *copy = (char *)malloc((size_t)written + 1);
+  if (copy != NULL) {
+    memcpy(copy, value, (size_t)written + 1);
+  }
+  return copy;
+}
+
+typedef struct {
+  char *buffer;
+  size_t capacity;
+  size_t length;
+  int truncated;
+  int overflowed;
+} proton_engine_bridge_json_writer_t;
+
+static void proton_engine_bridge_json_raw(
+    proton_engine_bridge_json_writer_t *writer, const char *value) {
+  size_t len = strlen(value);
+  if (writer->length + len >= writer->capacity) {
+    writer->truncated = 1;
+    writer->overflowed = 1;
+    return;
+  }
+  memcpy(writer->buffer + writer->length, value, len);
+  writer->length += len;
+  writer->buffer[writer->length] = '\0';
+}
+
+static void proton_engine_bridge_json_string(
+    proton_engine_bridge_json_writer_t *writer, const char *value) {
+  proton_engine_bridge_json_raw(writer, "\"");
+  const unsigned char *cursor =
+      (const unsigned char *)(value != NULL ? value : "");
+  while (*cursor != '\0') {
+    char escaped[7] = {0};
+    switch (*cursor) {
+    case '\"':
+      memcpy(escaped, "\\\"", 3);
+      break;
+    case '\\':
+      memcpy(escaped, "\\\\", 3);
+      break;
+    case '\n':
+      memcpy(escaped, "\\n", 3);
+      break;
+    case '\r':
+      memcpy(escaped, "\\r", 3);
+      break;
+    case '\t':
+      memcpy(escaped, "\\t", 3);
+      break;
+    default:
+      if (*cursor < 0x20) {
+        snprintf(escaped, sizeof(escaped), "\\u%04x", *cursor);
+      } else {
+        escaped[0] = (char)*cursor;
+      }
+      break;
+    }
+    size_t escaped_len = strlen(escaped);
+    if (writer->length + escaped_len + 2 >= writer->capacity) {
+      writer->truncated = 1;
+      break;
+    }
+    proton_engine_bridge_json_raw(writer, escaped);
+    cursor++;
+  }
+  proton_engine_bridge_json_raw(writer, "\"");
+}
+
+static void proton_engine_bridge_json_limited_string(
+    proton_engine_bridge_json_writer_t *writer, const char *value,
+    size_t max_bytes) {
+  const char *source = value != NULL ? value : "";
+  size_t source_len = strlen(source);
+  if (source_len <= max_bytes) {
+    proton_engine_bridge_json_string(writer, source);
+    return;
+  }
+  size_t prefix_len = max_bytes;
+  while (prefix_len > 0 &&
+         (((const unsigned char *)source)[prefix_len] & 0xc0) == 0x80) {
+    prefix_len--;
+  }
+  char *prefix = (char *)malloc(prefix_len + 1);
+  if (prefix == NULL) {
+    writer->truncated = 1;
+    proton_engine_bridge_json_string(writer, "");
+    return;
+  }
+  memcpy(prefix, source, prefix_len);
+  prefix[prefix_len] = '\0';
+  writer->truncated = 1;
+  proton_engine_bridge_json_string(writer, prefix);
+  free(prefix);
+}
+
+static void proton_engine_bridge_json_optional_string(
+    proton_engine_bridge_json_writer_t *writer, const char *field_name,
+    const char *value, size_t max_bytes) {
+  if (value == NULL || value[0] == '\0') {
+    return;
+  }
+  size_t checkpoint = writer->length;
+  int was_truncated = writer->truncated;
+  int was_overflowed = writer->overflowed;
+  writer->overflowed = 0;
+  proton_engine_bridge_json_raw(writer, ",\"");
+  proton_engine_bridge_json_raw(writer, field_name);
+  proton_engine_bridge_json_raw(writer, "\":");
+  proton_engine_bridge_json_limited_string(writer, value, max_bytes);
+  int field_overflowed = writer->overflowed;
+  if (field_overflowed) {
+    writer->length = checkpoint;
+    writer->buffer[checkpoint] = '\0';
+  }
+  writer->truncated = was_truncated || writer->truncated;
+  writer->overflowed = was_overflowed || field_overflowed;
+}
+
+static char *proton_engine_bridge_exception_string(
+    cef_v8_exception_t *exception,
+    cef_string_userfree_t(CEF_CALLBACK *getter)(cef_v8_exception_t *)) {
+  return exception != NULL && getter != NULL
+             ? proton_engine_bridge_userfree_to_utf8(getter(exception))
+             : NULL;
+}
+
+static char *proton_engine_bridge_diagnostic_json(
+    const char *stage, const char *code, const char *message,
+    const char *page_instance, const char *url, const char *owner,
+    const char *source_url, cef_v8_exception_t *exception) {
+  enum { capacity = 65536 };
+  char *json = (char *)calloc(capacity, 1);
+  if (json == NULL) {
+    return NULL;
+  }
+  char *exception_message = proton_engine_bridge_exception_string(
+      exception, exception != NULL ? exception->get_message : NULL);
+  char *source_line = proton_engine_bridge_exception_string(
+      exception, exception != NULL ? exception->get_source_line : NULL);
+  char *resource = proton_engine_bridge_exception_string(
+      exception, exception != NULL ? exception->get_script_resource_name
+                                   : NULL);
+  proton_engine_bridge_json_writer_t writer = {json, capacity - 64, 0, 0, 0};
+  proton_engine_bridge_json_raw(&writer, "{\"abi_version\":1,\"stage\":");
+  proton_engine_bridge_json_limited_string(&writer, stage, 64);
+  proton_engine_bridge_json_raw(&writer, ",\"code\":");
+  proton_engine_bridge_json_limited_string(&writer, code, 128);
+  proton_engine_bridge_json_raw(&writer, ",\"message\":");
+  proton_engine_bridge_json_limited_string(
+      &writer, exception_message != NULL ? exception_message : message, 4096);
+  proton_engine_bridge_json_raw(&writer, ",\"page_instance\":");
+  proton_engine_bridge_json_limited_string(&writer, page_instance, 128);
+  proton_engine_bridge_json_raw(&writer, ",\"url\":");
+  proton_engine_bridge_json_limited_string(&writer, url, 4096);
+  proton_engine_bridge_json_optional_string(&writer, "owner", owner, 1024);
+  const char *resolved_source_url = resource != NULL && resource[0] != '\0'
+                                        ? resource
+                                        : source_url;
+  proton_engine_bridge_json_optional_string(
+      &writer, "source_url", resolved_source_url, 4096);
+  proton_engine_bridge_json_optional_string(&writer, "source_line", source_line,
+                                            4096);
+  if (exception != NULL) {
+    char location[96];
+    snprintf(location, sizeof(location),
+             ",\"line\":%d,\"column\":%d",
+             exception->get_line_number(exception),
+             exception->get_start_column(exception));
+    proton_engine_bridge_json_raw(&writer, location);
+  }
+  writer.capacity = capacity;
+  proton_engine_bridge_json_raw(
+      &writer, writer.truncated ? ",\"details_truncated\":true}"
+                                : ",\"details_truncated\":false}");
+  free(exception_message);
+  free(source_line);
+  free(resource);
+  return json;
+}
+
+static void proton_engine_bridge_record_lifecycle(
+    cef_frame_t *frame, const char *outcome, const char *page_instance,
+    const char *url, const char *diagnostic_json) {
+  cef_browser_t *browser = frame->get_browser(frame);
+  proton_engine_bridge_browser_config_t *config =
+      proton_engine_bridge_find_browser_config(browser);
+  if (config != NULL) {
+    char *next_outcome = proton_engine_bridge_strdup(outcome);
+    char *next_page_instance = proton_engine_bridge_strdup(page_instance);
+    char *next_url = proton_engine_bridge_strdup(url);
+    char *next_diagnostic = diagnostic_json != NULL
+                                ? proton_engine_bridge_strdup(diagnostic_json)
+                                : NULL;
+    if (next_outcome != NULL && next_page_instance != NULL &&
+        next_url != NULL &&
+        (diagnostic_json == NULL || next_diagnostic != NULL)) {
+      free(config->lifecycle_outcome);
+      free(config->lifecycle_page_instance);
+      free(config->lifecycle_url);
+      free(config->lifecycle_diagnostic_json);
+      config->lifecycle_outcome = next_outcome;
+      config->lifecycle_page_instance = next_page_instance;
+      config->lifecycle_url = next_url;
+      config->lifecycle_diagnostic_json = next_diagnostic;
+    } else {
+      free(next_outcome);
+      free(next_page_instance);
+      free(next_url);
+      free(next_diagnostic);
+    }
+  }
+  if (browser != NULL) {
+    browser->base.release((cef_base_ref_counted_t *)browser);
+  }
+}
+
+static void proton_engine_bridge_send_lifecycle(
+    cef_frame_t *frame, const char *outcome, const char *page_instance,
+    const char *url, const char *diagnostic_json) {
+  if (frame == NULL || outcome == NULL || page_instance == NULL || url == NULL) {
+    return;
+  }
+  cef_string_t message_name = {0};
+  proton_engine_bridge_set_string(&message_name,
+                                  PROTON_ENGINE_BRIDGE_LIFECYCLE_MESSAGE);
+  cef_process_message_t *message = cef_process_message_create(&message_name);
+  cef_string_clear(&message_name);
+  if (message == NULL) {
+    proton_engine_bridge_log("bridge_lifecycle_send outcome=%s created=0",
+                             outcome);
+    proton_engine_bridge_record_lifecycle(frame, outcome, page_instance, url,
+                                          diagnostic_json);
+    return;
+  }
+  cef_list_value_t *args = message->get_argument_list(message);
+  int populated = args != NULL && args->set_size(args, 4);
+  const char *values[] = {outcome, page_instance, url,
+                          diagnostic_json != NULL ? diagnostic_json : ""};
+  for (size_t index = 0; populated && index < 4; index++) {
+    cef_string_t value = {0};
+    proton_engine_bridge_set_string(&value, values[index]);
+    populated = args->set_string(args, index, &value);
+    cef_string_clear(&value);
+  }
+  if (args != NULL) {
+    args->base.release((cef_base_ref_counted_t *)args);
+  }
+  if (populated) {
+    frame->send_process_message(frame, PID_BROWSER, message);
+    proton_engine_bridge_log("bridge_lifecycle_send outcome=%s page=%s",
+                             outcome, page_instance);
+  } else {
+    proton_engine_bridge_log(
+        "bridge_lifecycle_send outcome=%s page=%s populated=0", outcome,
+        page_instance);
+    message->base.release((cef_base_ref_counted_t *)message);
+  }
+  proton_engine_bridge_record_lifecycle(frame, outcome, page_instance, url,
+                                        diagnostic_json);
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  cef_v8_context_t *context;
+  cef_frame_t *frame;
+  const char *page_instance;
+  const char *url;
+  size_t index;
+  int failed;
+} proton_engine_bridge_initialization_t;
+
+static void proton_engine_bridge_source_component(char *out, size_t out_len,
+                                                  const char *value) {
+  if (out == NULL || out_len == 0) {
+    return;
+  }
+  size_t offset = 0;
+  for (const unsigned char *cursor = (const unsigned char *)value;
+       cursor != NULL && *cursor != '\0' && offset + 1 < out_len; cursor++) {
+    unsigned char ch = *cursor;
+    out[offset++] = (char)(((ch >= 'a' && ch <= 'z') ||
+                            (ch >= 'A' && ch <= 'Z') ||
+                            (ch >= '0' && ch <= '9') || ch == '-' ||
+                            ch == '_' || ch == '.')
+                               ? ch
+                               : '_');
+  }
+  out[offset] = '\0';
+}
+
+static bool proton_engine_bridge_initialize_unit(proton_json_value_t value,
+                                                 void *user_data) {
+  proton_engine_bridge_initialization_t *initialization =
+      (proton_engine_bridge_initialization_t *)user_data;
+  proton_json_value_t owner_value;
+  proton_json_value_t name_value;
+  proton_json_value_t source_value;
+  char *owner = NULL;
+  char *name = NULL;
+  char *source = NULL;
+  const proton_json_doc_t *doc = initialization->doc;
+  if (!proton_json_is_object(doc, value) ||
+      !proton_json_object_get(doc, value, "owner", &owner_value) ||
+      !proton_json_object_get(doc, value, "name", &name_value) ||
+      !proton_json_object_get(doc, value, "source", &source_value)) {
+    initialization->failed = 1;
+    return false;
+  }
+  owner = proton_json_copy_string(doc, owner_value);
+  name = proton_json_copy_string(doc, name_value);
+  source = proton_json_copy_string(doc, source_value);
+  if (owner == NULL || name == NULL || source == NULL) {
+    free(owner);
+    free(name);
+    free(source);
+    initialization->failed = 1;
+    return false;
+  }
+  char owner_component[96];
+  char name_component[96];
+  proton_engine_bridge_source_component(owner_component,
+                                        sizeof(owner_component), owner);
+  proton_engine_bridge_source_component(name_component, sizeof(name_component),
+                                        name);
+  char source_url[256];
+  snprintf(source_url, sizeof(source_url),
+           "proton://bridge/initialization/%zu/%s/%s.js",
+           initialization->index++, owner_component, name_component);
+  cef_string_t code = {0};
+  cef_string_t script_url = {0};
+  proton_engine_bridge_set_string(&code, source);
+  proton_engine_bridge_set_string(&script_url, source_url);
+  cef_v8_value_t *result = NULL;
+  cef_v8_exception_t *exception = NULL;
+  int evaluated = initialization->context->eval(
+      initialization->context, &code, &script_url, 1, &result, &exception);
+  cef_string_clear(&code);
+  cef_string_clear(&script_url);
+  if (result != NULL) {
+    result->base.release((cef_base_ref_counted_t *)result);
+  }
+  if (!evaluated || exception != NULL) {
+    char *diagnostic = proton_engine_bridge_diagnostic_json(
+        "initialization", "bridge_initialization_failed",
+        "bridge initialization failed", initialization->page_instance,
+        initialization->url, owner, source_url, exception);
+    proton_engine_bridge_send_lifecycle(
+        initialization->frame, "failed", initialization->page_instance,
+        initialization->url, diagnostic);
+    free(diagnostic);
+    initialization->failed = 1;
+  }
+  if (exception != NULL) {
+    exception->base.release((cef_base_ref_counted_t *)exception);
+  }
+  free(owner);
+  free(name);
+  free(source);
+  return initialization->failed == 0;
+}
+
+static int proton_engine_bridge_initialize_units(
+    const char *config_json, cef_v8_context_t *context, cef_frame_t *frame,
+    const char *page_instance, const char *url) {
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t units;
+  if (!proton_json_parse(&doc, config_json)) {
+    return 0;
+  }
+  int initialized = 1;
   if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, field_name, &value)) {
-    copy = proton_json_copy_string(&doc, value);
+      proton_json_object_get(&doc, root, "initialization_units", &units)) {
+    if (!proton_json_is_array(&doc, units)) {
+      initialized = 0;
+    } else {
+      proton_engine_bridge_initialization_t initialization = {
+          &doc, context, frame, page_instance, url, 0, 0};
+      proton_json_array_each(&doc, units,
+                             proton_engine_bridge_initialize_unit,
+                             &initialization);
+      initialized = !initialization.failed;
+    }
   }
   proton_json_dispose(&doc);
-  return copy;
+  return initialized;
 }
 
 static cef_v8_value_t *proton_engine_bridge_get_property(
@@ -228,10 +635,12 @@ static void proton_engine_bridge_send_context_disposed(
   cef_list_value_t *args = message->get_argument_list(message);
   int sent = 0;
   if (args != NULL) {
-    cef_string_t value = {0};
-    proton_engine_bridge_set_string(&value, page_instance);
-    sent = args->set_string(args, 0, &value);
-    cef_string_clear(&value);
+    if (args->set_size(args, 1)) {
+      cef_string_t value = {0};
+      proton_engine_bridge_set_string(&value, page_instance);
+      sent = args->set_string(args, 0, &value);
+      cef_string_clear(&value);
+    }
     args->base.release((cef_base_ref_counted_t *)args);
   }
   if (sent) {
@@ -304,10 +713,13 @@ int proton_engine_bridge_send_event(cef_browser_t *browser,
   cef_list_value_t *args = message->get_argument_list(message);
   int sent = 0;
   if (args != NULL) {
-    cef_string_t event = {0};
-    proton_engine_bridge_set_string(&event, event_json);
-    int populated = args->set_string(args, 0, &event);
-    cef_string_clear(&event);
+    int populated = args->set_size(args, 1);
+    if (populated) {
+      cef_string_t event = {0};
+      proton_engine_bridge_set_string(&event, event_json);
+      populated = args->set_string(args, 0, &event);
+      cef_string_clear(&event);
+    }
     args->base.release((cef_base_ref_counted_t *)args);
     if (populated) {
       frame->send_process_message(frame, PID_RENDERER, message);
@@ -319,6 +731,22 @@ int proton_engine_bridge_send_event(cef_browser_t *browser,
   }
   frame->base.release((cef_base_ref_counted_t *)frame);
   return sent;
+}
+
+int proton_engine_bridge_send_lifecycle_probe(cef_frame_t *frame) {
+  if (frame == NULL || !frame->is_main(frame)) {
+    return 0;
+  }
+  cef_string_t message_name = {0};
+  proton_engine_bridge_set_string(
+      &message_name, PROTON_ENGINE_BRIDGE_LIFECYCLE_PROBE_MESSAGE);
+  cef_process_message_t *message = cef_process_message_create(&message_name);
+  cef_string_clear(&message_name);
+  if (message == NULL) {
+    return 0;
+  }
+  frame->send_process_message(frame, PID_RENDERER, message);
+  return 1;
 }
 
 static int proton_engine_bridge_store_browser_config(
@@ -393,6 +821,10 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
       }
       *config_cursor = entry->next;
       free(entry->config_json);
+      free(entry->lifecycle_outcome);
+      free(entry->lifecycle_page_instance);
+      free(entry->lifecycle_url);
+      free(entry->lifecycle_diagnostic_json);
       free(entry);
       break;
     }
@@ -424,8 +856,37 @@ void proton_engine_bridge_renderer_on_context_created(
   }
   proton_engine_bridge_browser_config_t *browser_config =
       proton_engine_bridge_find_browser_config(browser);
-  if (browser_config == NULL || browser_config->config_json == NULL ||
-      !context->enter(context)) {
+  if (browser_config == NULL || browser_config->config_json == NULL) {
+    return;
+  }
+
+  char *url = proton_engine_bridge_frame_url(frame);
+  char *page_instance = proton_engine_bridge_new_page_instance();
+  if (url == NULL || page_instance == NULL) {
+    free(url);
+    free(page_instance);
+    return;
+  }
+  proton_engine_bridge_send_lifecycle(frame, "pending", page_instance, url,
+                                      NULL);
+  if (!proton_engine_bridge_config_allows_page(browser_config->config_json,
+                                                url)) {
+    proton_engine_bridge_send_lifecycle(frame, "ineligible", page_instance,
+                                        url, NULL);
+    free(url);
+    free(page_instance);
+    return;
+  }
+  if (!context->enter(context)) {
+    char *diagnostic = proton_engine_bridge_diagnostic_json(
+        "prepare", "bridge_context_enter_failed",
+        "failed to enter the main frame JavaScript context", page_instance,
+        url, NULL, NULL, NULL);
+    proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
+                                        diagnostic);
+    free(diagnostic);
+    free(url);
+    free(page_instance);
     return;
   }
 
@@ -452,9 +913,14 @@ void proton_engine_bridge_renderer_on_context_created(
 
   static const char invocation_separator[] =
       "(globalThis." PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION ",";
+  static const char invocation_page_separator[] = ",\"";
+  static const char invocation_suffix[] = "\")";
   size_t config_len = strlen(browser_config->config_json);
+  size_t page_instance_len = strlen(page_instance);
   size_t invocation_len = proton_engine_bridge_bootstrap_source_len +
-                          sizeof(invocation_separator) - 1 + config_len + 1;
+                          sizeof(invocation_separator) - 1 + config_len +
+                          sizeof(invocation_page_separator) - 1 +
+                          page_instance_len + sizeof(invocation_suffix) - 1;
   char *invocation = NULL;
   if (native_installed && invocation_len >= config_len) {
     invocation = (char *)malloc(invocation_len + 1);
@@ -469,7 +935,14 @@ void proton_engine_bridge_renderer_on_context_created(
     offset += sizeof(invocation_separator) - 1;
     memcpy(invocation + offset, browser_config->config_json, config_len);
     offset += config_len;
-    invocation[offset++] = ')';
+    memcpy(invocation + offset, invocation_page_separator,
+           sizeof(invocation_page_separator) - 1);
+    offset += sizeof(invocation_page_separator) - 1;
+    memcpy(invocation + offset, page_instance, page_instance_len);
+    offset += page_instance_len;
+    memcpy(invocation + offset, invocation_suffix,
+           sizeof(invocation_suffix) - 1);
+    offset += sizeof(invocation_suffix) - 1;
     invocation[offset] = '\0';
   }
 
@@ -490,30 +963,24 @@ void proton_engine_bridge_renderer_on_context_created(
     global->delete_value_bykey(global, &native_key);
   }
   cef_string_clear(&native_key);
-  if (exception != NULL) {
-    exception->base.release((cef_base_ref_counted_t *)exception);
-  }
-
-  if (!evaluated && dispatcher != NULL) {
+  if ((!evaluated || exception != NULL) && dispatcher != NULL) {
     dispatcher->base.release((cef_base_ref_counted_t *)dispatcher);
     dispatcher = NULL;
   }
-  if (dispatcher != NULL && dispatcher->is_object(dispatcher)) {
-    cef_v8_value_t *page_instance_value = proton_engine_bridge_get_property(
-        dispatcher, "pageInstance");
-    char *page_instance = NULL;
-    if (page_instance_value != NULL &&
-        page_instance_value->is_string(page_instance_value)) {
-      page_instance = proton_engine_bridge_userfree_to_utf8(
-          page_instance_value->get_string_value(page_instance_value));
-    }
-    if (page_instance_value != NULL) {
-      page_instance_value->base.release(
-          (cef_base_ref_counted_t *)page_instance_value);
-    }
+  if (!evaluated || exception != NULL || dispatcher == NULL ||
+      !dispatcher->is_object(dispatcher)) {
+    char *diagnostic = proton_engine_bridge_diagnostic_json(
+        "bootstrap", "bridge_bootstrap_failed",
+        dispatcher == NULL ? "bridge bootstrap returned no dispatcher"
+                           : "bridge bootstrap returned an invalid dispatcher",
+        page_instance, url, NULL, "proton://bridge/bootstrap.js", exception);
+    proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
+                                        diagnostic);
+    free(diagnostic);
+  } else {
     proton_engine_bridge_context_t *entry =
         (proton_engine_bridge_context_t *)calloc(1, sizeof(*entry));
-    if (entry != NULL && page_instance != NULL && page_instance[0] != '\0') {
+    if (entry != NULL) {
       int browser_id = browser->get_identifier(browser);
       proton_engine_bridge_context_t **cursor = &g_contexts;
       while (*cursor != NULL) {
@@ -539,35 +1006,28 @@ void proton_engine_bridge_renderer_on_context_created(
       page_instance = NULL;
       proton_engine_bridge_log("renderer_bridge_context browser=%d installed=1",
                                entry->browser_id);
-
-      char *initialization_script = proton_engine_bridge_copy_string_field(
-          browser_config->config_json, "initialization_script");
-      if (initialization_script != NULL && initialization_script[0] != '\0') {
-        cef_string_t code = {0};
-        cef_string_t script_url = {0};
-        proton_engine_bridge_set_string(&code, initialization_script);
-        proton_engine_bridge_set_string(
-            &script_url, "proton://bridge/extensions.js");
-        cef_v8_value_t *result = NULL;
-        cef_v8_exception_t *script_exception = NULL;
-        (void)context->eval(context, &code, &script_url, 1, &result,
-                            &script_exception);
-        if (result != NULL) {
-          result->base.release((cef_base_ref_counted_t *)result);
-        }
-        if (script_exception != NULL) {
-          script_exception->base.release(
-              (cef_base_ref_counted_t *)script_exception);
-        }
-        cef_string_clear(&code);
-        cef_string_clear(&script_url);
+      int initialized = proton_engine_bridge_initialize_units(
+          browser_config->config_json, context, frame, entry->page_instance,
+          url);
+      if (initialized) {
+        proton_engine_bridge_send_lifecycle(
+            frame, "ready", entry->page_instance, url, NULL);
       }
-      free(initialization_script);
     } else {
-      free(entry);
+      char *diagnostic = proton_engine_bridge_diagnostic_json(
+          "prepare", "bridge_context_allocation_failed",
+          "failed to allocate bridge context state", page_instance, url, NULL,
+          NULL, NULL);
+      proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
+                                          diagnostic);
+      free(diagnostic);
     }
-    free(page_instance);
   }
+  if (exception != NULL) {
+    exception->base.release((cef_base_ref_counted_t *)exception);
+  }
+  free(page_instance);
+  free(url);
   if (dispatcher != NULL) {
     dispatcher->base.release((cef_base_ref_counted_t *)dispatcher);
   }
@@ -700,6 +1160,56 @@ static int proton_engine_bridge_dispatch_event(
   return 1;
 }
 
+static int proton_engine_bridge_handle_lifecycle_probe(
+    cef_browser_t *browser, cef_frame_t *frame) {
+  proton_engine_bridge_browser_config_t *config =
+      proton_engine_bridge_find_browser_config(browser);
+  if (config == NULL || config->config_json == NULL) {
+    return 1;
+  }
+  char *url = proton_engine_bridge_frame_url(frame);
+  if (url == NULL || strcmp(url, "about:blank") == 0) {
+    free(url);
+    return 1;
+  }
+  int same_page = config->lifecycle_url != NULL &&
+                  strcmp(config->lifecycle_url, url) == 0 &&
+                  config->lifecycle_page_instance != NULL;
+  if (same_page && config->lifecycle_outcome != NULL &&
+      strcmp(config->lifecycle_outcome, "pending") != 0) {
+    proton_engine_bridge_send_lifecycle(
+        frame, config->lifecycle_outcome, config->lifecycle_page_instance, url,
+        config->lifecycle_diagnostic_json);
+    free(url);
+    return 1;
+  }
+
+  char *page_instance =
+      same_page ? proton_engine_bridge_strdup(config->lifecycle_page_instance)
+                : proton_engine_bridge_new_page_instance();
+  if (page_instance == NULL) {
+    free(url);
+    return 1;
+  }
+  proton_engine_bridge_send_lifecycle(frame, "pending", page_instance, url,
+                                      NULL);
+  if (!proton_engine_bridge_config_allows_page(config->config_json, url)) {
+    proton_engine_bridge_send_lifecycle(frame, "ineligible", page_instance,
+                                        url, NULL);
+  } else {
+    char *diagnostic = proton_engine_bridge_diagnostic_json(
+        "prepare", "bridge_lifecycle_missing",
+        "main frame finished loading without a terminal bridge lifecycle outcome",
+        page_instance, url, NULL, NULL, NULL);
+    proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
+                                        diagnostic);
+    free(diagnostic);
+  }
+  free(page_instance);
+  free(url);
+  return 1;
+}
+
 int proton_engine_bridge_renderer_on_process_message_received(
     cef_browser_t *browser,
     cef_frame_t *frame,
@@ -717,10 +1227,16 @@ int proton_engine_bridge_renderer_on_process_message_received(
   int is_response = strcmp(message_name,
                            PROTON_ENGINE_BRIDGE_RESPONSE_MESSAGE) == 0;
   int is_event = strcmp(message_name, PROTON_ENGINE_BRIDGE_EVENT_MESSAGE) == 0;
+  int is_lifecycle_probe =
+      strcmp(message_name, PROTON_ENGINE_BRIDGE_LIFECYCLE_PROBE_MESSAGE) == 0;
   proton_engine_bridge_log(
-      "renderer_bridge_message browser=%d response=%d event=%d",
-      browser->get_identifier(browser), is_response, is_event);
+      "renderer_bridge_message browser=%d response=%d event=%d probe=%d",
+      browser->get_identifier(browser), is_response, is_event,
+      is_lifecycle_probe);
   free(message_name);
+  if (is_lifecycle_probe) {
+    return proton_engine_bridge_handle_lifecycle_probe(browser, frame);
+  }
   if (!is_response && !is_event) {
     return 0;
   }

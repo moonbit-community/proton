@@ -53,6 +53,14 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     const char *response_json,
     char *error,
     size_t error_len);
+int32_t proton_engine_runtime_begin_message_dialog(
+    proton_engine_runtime_t *runtime, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog, char *error, size_t error_len);
+int32_t proton_engine_runtime_poll_dialog_result(
+    proton_engine_runtime_t *runtime, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len);
 
 int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                          const char *config_json,
@@ -104,6 +112,14 @@ int32_t proton_engine_window_emit_bridge_event_json(
     size_t error_len);
 void proton_engine_window_bind_public_id(proton_engine_window_t *window,
                                          proton_window_id_t public_window);
+uint64_t proton_engine_window_bridge_revision(
+    proton_engine_window_t *window);
+int32_t proton_engine_window_bridge_state_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_window_take_bridge_failure_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,

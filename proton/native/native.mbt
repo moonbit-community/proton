@@ -163,7 +163,15 @@ fn decode_runtime_event_json(
             Ok(command_id) => Some(command_id)
           }
       }
-      Ok(RuntimeEvent::{ event_type, window, menu_command_id })
+      let revision = match object.get("revision") {
+        None => None
+        Some(value) =>
+          match decode_int64_json(value, "runtime event revision") {
+            Err(error) => return Err(error)
+            Ok(revision) => Some(revision)
+          }
+      }
+      Ok(RuntimeEvent::{ event_type, window, menu_command_id, revision })
     })
   })
 }
@@ -507,6 +515,12 @@ pub fn Window::show(self : Window) -> Result[Unit, NativeError] {
 }
 
 ///|
+/// Borrows this owning window handle for APIs that must not destroy it.
+pub fn Window::as_ref(self : Window) -> WindowRef {
+  WindowRef::unsafe_from_handle(self.handle)
+}
+
+///|
 pub fn Window::hide(self : Window) -> Result[Unit, NativeError] {
   status_to_result(proton_window_hide_ffi(self.handle))
 }
@@ -597,6 +611,85 @@ pub fn Window::emit_bridge_event_json(
 }
 
 ///|
+fn window_bridge_json(
+  window : Window,
+  query : (Int64, FixedArray[Byte], Int, Ref[Int]) -> Int,
+  optional : Bool,
+) -> Result[String?, NativeError] {
+  let required = Ref(0)
+  let scratch = FixedArray::make(1, b'\x00')
+  let status = query(window.handle, scratch, 0, required)
+  if optional && status == proton_event_none {
+    return Ok(None)
+  }
+  if status != proton_err_buffer_too_small && status < 0 {
+    return Err(native_error(status))
+  }
+  let buffer = FixedArray::make(required.val + 1, b'\x00')
+  let second_status = query(window.handle, buffer, buffer.length(), required)
+  if second_status < 0 {
+    Err(native_error(second_status))
+  } else {
+    Ok(Some(@ffi.from_cstr(Bytes::from_array(buffer))))
+  }
+}
+
+///|
+pub fn Window::bridge_lifecycle_state(
+  self : Window,
+) -> Result[BridgeLifecycleState, NativeError] {
+  window_bridge_json(self, proton_window_bridge_state_json_ffi, false).bind(fn(
+    text,
+  ) {
+    match text {
+      None => Err(invalid_argument("bridge lifecycle state is missing"))
+      Some(text) =>
+        decode_native_json(text, "bridge lifecycle state").bind(fn(json) {
+          try @json.from_json(json) catch {
+            error =>
+              Err(
+                invalid_argument(
+                  "failed to decode bridge lifecycle state JSON: " +
+                  error.to_string(),
+                ),
+              )
+          } noraise {
+            state => Ok(state)
+          }
+        })
+    }
+  })
+}
+
+///|
+pub fn Window::take_bridge_failure(
+  self : Window,
+) -> Result[BridgeDiagnostic?, NativeError] {
+  window_bridge_json(self, proton_window_take_bridge_failure_json_ffi, true).bind(fn(
+      text,
+    ) {
+      match text {
+        None => Ok(None)
+        Some(text) =>
+          decode_native_json(text, "bridge diagnostic").bind(fn(json) {
+            try @json.from_json(json) catch {
+              error =>
+                Err(
+                  invalid_argument(
+                    "failed to decode bridge diagnostic JSON: " +
+                    error.to_string(),
+                  ),
+                )
+            } noraise {
+              diagnostic => Ok(Some(diagnostic))
+            }
+          })
+      }
+    },
+  )
+}
+
+///|
 fn dialog_level_to_int(level : DialogLevel) -> Int {
   match level {
     Info => 0
@@ -649,6 +742,55 @@ fn begin_message_dialog_async(
     Err(native_error(status))
   } else {
     Ok(dialog.val)
+  }
+}
+
+///|
+pub fn Runtime::begin_message_dialog(
+  self : Runtime,
+  title : String?,
+  message : String,
+  level : DialogLevel,
+) -> Result[Int64, NativeError] {
+  let title_buffer = optional_dialog_text_buffer(title)
+  let message_buffer = @ffi.to_cstr(message)
+  let dialog = Ref(proton_invalid_handle)
+  let status = proton_runtime_begin_message_dialog_ffi(
+    self.handle,
+    title_buffer,
+    dialog_text_payload_len(title_buffer),
+    message_buffer,
+    dialog_text_payload_len(message_buffer),
+    dialog_level_to_int(level),
+    dialog,
+  )
+  if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(dialog.val)
+  }
+}
+
+///|
+pub fn Runtime::poll_message_dialog(
+  self : Runtime,
+  dialog : Int64,
+) -> Result[Bool, NativeError] {
+  let required = Ref(0)
+  let buffer = FixedArray::make(1, b'\x00')
+  let status = proton_runtime_poll_dialog_result_ffi(
+    self.handle,
+    dialog,
+    buffer,
+    buffer.length(),
+    required,
+  )
+  if status == proton_event_none {
+    Ok(false)
+  } else if status < 0 {
+    Err(native_error(status))
+  } else {
+    Ok(true)
   }
 }
 

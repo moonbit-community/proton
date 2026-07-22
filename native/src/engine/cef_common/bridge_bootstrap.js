@@ -1,4 +1,4 @@
-(function installMoonBitBridge(nativeInvoke, rawConfig) {
+(function installMoonBitBridge(nativeInvoke, rawConfig, pageInstance) {
   "use strict";
 
   if (typeof nativeInvoke !== "function") {
@@ -10,27 +10,14 @@
     throw new TypeError("Proton bridge config must be an object");
   }
 
-  const pageUrl = String(globalThis.location && globalThis.location.href || "");
-  const policy = config.origin_policy || {};
-  let pageAllowed = pageUrl.startsWith("proton://");
-  if (!pageAllowed && policy.mode === "app_and_dev_origins") {
-    try {
-      const pageOrigin = new URL(pageUrl).origin;
-      pageAllowed = Array.isArray(policy.dev_origins) &&
-        policy.dev_origins.includes(pageOrigin);
-    } catch (_) {
-      pageAllowed = false;
-    }
-  }
-  if (!pageAllowed) {
-    return null;
+  if (typeof pageInstance !== "string" || !pageInstance) {
+    throw new TypeError("Proton bridge requires a native page instance");
   }
 
   const requestTimeoutMs = Number.isInteger(config.request_timeout_ms) &&
       config.request_timeout_ms > 0
     ? config.request_timeout_ms
     : 30000;
-  const pageInstance = `${Date.now()}-${String(Math.random()).slice(2)}`;
   const pending = new Map();
   const listeners = new Map();
   let nextRequestId = 1;

@@ -497,6 +497,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
   if (status != PROTON_OK) {
     return status;
   }
+  proton_runtime_sync_engine_bridge_lifecycle(runtime, slot);
   proton_runtime_sync_menu_commands(slot);
   status = proton_runtime_poll_event(slot, buffer, buffer_len,
                                      out_required_len);
@@ -963,7 +964,115 @@ static int32_t proton_validate_poll_dialog_result_args(
   return PROTON_OK;
 }
 
+static int32_t proton_window_bridge_json(
+    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len,
+    int32_t (*query)(proton_engine_window_t *, char *, int32_t, int32_t *,
+                     char *, size_t)) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  *out_required_len = 0;
+  if (buffer_len < 0 || (buffer_len > 0 && buffer == NULL)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge JSON buffer is invalid");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "bridge lifecycle requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = query(slot->engine_window, buffer, buffer_len, out_required_len,
+                 engine_error, sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
+}
 
+int32_t proton_window_bridge_state_json(proton_window_id_t window,
+                                        char *buffer, int32_t buffer_len,
+                                        int32_t *out_required_len) {
+  return proton_window_bridge_json(window, buffer, buffer_len,
+                                   out_required_len,
+                                   proton_engine_window_bridge_state_json);
+}
+
+int32_t proton_window_take_bridge_failure_json(
+    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len) {
+  return proton_window_bridge_json(
+      window, buffer, buffer_len, out_required_len,
+      proton_engine_window_take_bridge_failure_json);
+}
+
+int32_t proton_runtime_begin_message_dialog(
+    proton_runtime_id_t runtime, const char *title_utf8, int32_t title_len,
+    const char *message_utf8, int32_t message_len, int32_t level,
+    int64_t *out_dialog) {
+  int32_t status = proton_validate_begin_dialog(out_dialog);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_validate_dialog_text(title_utf8, title_len, message_utf8,
+                                       message_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_runtime_slot_t *slot = NULL;
+  status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime dialog requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_begin_message_dialog(
+      slot->engine_runtime, title_utf8, title_len, message_utf8, message_len,
+      level, out_dialog, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_poll_dialog_result(
+    proton_runtime_id_t runtime, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len) {
+  int32_t status = proton_validate_poll_dialog_result_args(
+      dialog, buffer, buffer_len, out_required_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_runtime_slot_t *slot = NULL;
+  status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime dialog requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_poll_dialog_result(
+      slot->engine_runtime, dialog, buffer, buffer_len, out_required_len,
+      engine_error, sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
+}
 
 int32_t proton_window_begin_message_dialog(
     proton_window_id_t window,

@@ -13,6 +13,9 @@
 #define PROTON_ENGINE_BRIDGE_EVENT_MESSAGE "proton.bridge.event"
 #define PROTON_ENGINE_BRIDGE_CONTEXT_DISPOSED_MESSAGE \
   "proton.bridge.context_disposed"
+#define PROTON_ENGINE_BRIDGE_LIFECYCLE_MESSAGE "proton.bridge.lifecycle"
+#define PROTON_ENGINE_BRIDGE_LIFECYCLE_PROBE_MESSAGE \
+  "proton.bridge.lifecycle.probe"
 #define PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION "__protonNativeInvokeOp"
 
 cef_value_t *proton_engine_bridge_renderer_extra_info_value(
@@ -20,6 +23,7 @@ cef_value_t *proton_engine_bridge_renderer_extra_info_value(
 
 int proton_engine_bridge_send_event(cef_browser_t *browser,
                                     const char *event_json);
+int proton_engine_bridge_send_lifecycle_probe(cef_frame_t *frame);
 
 void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_created(
     cef_render_process_handler_t *self,

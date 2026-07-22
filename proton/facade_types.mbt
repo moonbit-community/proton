@@ -44,5 +44,15 @@ priv struct BridgePagePolicy {
 ///|
 priv struct BridgeFrontendConfig {
   extensions : Array[@native.BridgeExtensionConfig]
-  initialization_script : String?
+  initialization_units : Array[@native.BridgeInitializationUnit]
 }
+
+///|
+/// Failures produced while configuring, starting, or running an application.
+pub(all) suberror AppRunError {
+  ConfigurationError(String)
+  NativeRuntimeError(@native.NativeError)
+  EntryLoadError(String)
+  BridgeStartupError(@native.BridgeDiagnostic)
+  BridgeRuntimeError(@native.BridgeDiagnostic)
+} derive(Debug)

@@ -246,6 +246,7 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
     slot->destroyed = false;
     slot->visible = false;
     slot->closed_event_sent = false;
+    slot->bridge_notified_revision = 0;
     slot->runtime = runtime_handle;
     slot->engine_window = engine_window;
     slot->width = width;
@@ -348,6 +349,34 @@ int32_t proton_runtime_sync_engine_closed_windows(
     window->visible = false;
   }
   return PROTON_OK;
+}
+
+void proton_runtime_sync_engine_bridge_lifecycle(
+    proton_runtime_id_t runtime_handle, proton_runtime_slot_t *runtime) {
+  for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
+    proton_window_slot_t *window = &g_windows[i];
+    if (!window->occupied || window->destroyed ||
+        window->runtime != runtime_handle || window->engine_window == NULL) {
+      continue;
+    }
+    uint64_t revision =
+        proton_engine_window_bridge_revision(window->engine_window);
+    if (revision == 0 || revision == window->bridge_notified_revision) {
+      continue;
+    }
+    proton_window_id_t window_handle =
+        proton_make_window_handle(window->generation, i);
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int written = snprintf(
+        event_json, sizeof(event_json),
+        "{\"type\":\"bridge_lifecycle_changed\",\"window\":\"%lld\","
+        "\"revision\":\"%llu\"}",
+        (long long)window_handle, (unsigned long long)revision);
+    if (written > 0 && written < (int)sizeof(event_json) &&
+        proton_runtime_enqueue_event(runtime, event_json)) {
+      window->bridge_notified_revision = revision;
+    }
+  }
 }
 
 int32_t proton_destroy_windows_for_runtime(proton_runtime_id_t runtime) {

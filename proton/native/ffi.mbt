@@ -110,6 +110,28 @@ extern "C" fn proton_runtime_respond_bridge_request_json_ffi(
 ) -> Int = "proton_runtime_respond_bridge_request_json"
 
 ///|
+#borrow(title, message, out_dialog)
+extern "C" fn proton_runtime_begin_message_dialog_ffi(
+  runtime : Int64,
+  title : Bytes,
+  title_len : Int,
+  message : Bytes,
+  message_len : Int,
+  level : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_runtime_begin_message_dialog"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_runtime_poll_dialog_result_ffi(
+  runtime : Int64,
+  dialog : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_runtime_poll_dialog_result"
+
+///|
 #borrow(config_json, out_window)
 extern "C" fn proton_window_create_json_ffi(
   runtime : Int64,
@@ -165,6 +187,24 @@ extern "C" fn proton_window_emit_bridge_event_json_ffi(
   window : Int64,
   event_json : Bytes,
 ) -> Int = "proton_window_emit_bridge_event_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_bridge_state_json_ffi(
+  window : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_bridge_state_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_take_bridge_failure_json_ffi(
+  window : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_take_bridge_failure_json"
 
 ///|
 #borrow(title, message, out_dialog)

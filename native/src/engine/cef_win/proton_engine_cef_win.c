@@ -14,12 +14,14 @@
 #include "include/capi/cef_load_handler_capi.h"
 #include "include/capi/cef_process_message_capi.h"
 #include "include/capi/cef_render_process_handler_capi.h"
+#include "include/capi/cef_request_handler_capi.h"
 #include "include/capi/cef_scheme_capi.h"
 #include "include/capi/cef_values_capi.h"
 #include "include/capi/cef_v8_capi.h"
 #include "include/internal/cef_string.h"
 
 #include "../cef_common/bridge_renderer.h"
+#include "../cef_common/bridge_lifecycle.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -63,6 +65,7 @@ struct proton_engine_window {
   size_t html_len;
   char *bridge_config_json;
   int32_t max_bridge_payload_bytes;
+  proton_engine_bridge_lifecycle_t bridge_lifecycle;
   int width;
   int height;
   int closed;
@@ -97,6 +100,11 @@ typedef struct {
   cef_load_handler_t handler;
   proton_engine_ref_counted_t refs;
 } proton_engine_load_handler_t;
+
+typedef struct {
+  cef_request_handler_t handler;
+  proton_engine_ref_counted_t refs;
+} proton_engine_request_handler_t;
 
 typedef struct {
   cef_scheme_handler_factory_t factory;
@@ -150,6 +158,7 @@ static proton_engine_render_process_handler_t
     g_proton_engine_render_process_handler;
 static proton_engine_v8_handler_t g_proton_engine_v8_handler;
 static proton_engine_load_handler_t g_proton_engine_load_handler;
+static proton_engine_request_handler_t g_proton_engine_request_handler;
 static proton_engine_scheme_factory_t g_proton_engine_scheme_factory;
 static CRITICAL_SECTION g_proton_engine_window_lock;
 static proton_engine_window_t *g_proton_engine_windows;
@@ -183,6 +192,10 @@ static void CEF_CALLBACK proton_engine_on_load_error(
     cef_errorcode_t errorCode,
     const cef_string_t *errorText,
     const cef_string_t *failedUrl);
+static void CEF_CALLBACK proton_engine_on_render_process_terminated(
+    cef_request_handler_t *self, cef_browser_t *browser,
+    cef_termination_status_t status, int error_code,
+    const cef_string_t *error_string);
 
 static void proton_engine_log_to_env(const char *env_name,
                                      const char *format,
@@ -1318,11 +1331,51 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
   int is_context_disposed =
       message_name != NULL &&
       strcmp(message_name, PROTON_ENGINE_BRIDGE_CONTEXT_DISPOSED_MESSAGE) == 0;
+  int is_lifecycle =
+      message_name != NULL &&
+      strcmp(message_name, PROTON_ENGINE_BRIDGE_LIFECYCLE_MESSAGE) == 0;
   free(message_name);
+  int browser_id = proton_engine_browser_id(browser);
+  proton_engine_window_t *window =
+      proton_engine_find_window_by_browser_id(browser_id);
+  if (is_lifecycle) {
+    cef_list_value_t *args = message->get_argument_list(message);
+    if (window != NULL && frame->is_main(frame) && args != NULL &&
+        args->get_size(args) >= 4) {
+      char *outcome = proton_engine_userfree_to_utf8(args->get_string(args, 0));
+      char *page_instance =
+          proton_engine_userfree_to_utf8(args->get_string(args, 1));
+      char *url = proton_engine_userfree_to_utf8(args->get_string(args, 2));
+      char *diagnostic =
+          proton_engine_userfree_to_utf8(args->get_string(args, 3));
+      cef_frame_t *main_frame = browser->get_main_frame(browser);
+      char *current_url =
+          main_frame != NULL
+              ? proton_engine_userfree_to_utf8(main_frame->get_url(main_frame))
+              : NULL;
+      if (url != NULL && current_url != NULL && strcmp(url, current_url) == 0) {
+        proton_engine_bridge_lifecycle_update(
+            &window->bridge_lifecycle, outcome, page_instance, current_url,
+            diagnostic != NULL && diagnostic[0] != '\0' ? diagnostic : NULL);
+      }
+      free(current_url);
+      if (main_frame != NULL) {
+        main_frame->base.release((cef_base_ref_counted_t *)main_frame);
+      }
+      free(outcome);
+      free(page_instance);
+      free(url);
+      free(diagnostic);
+      if (g_proton_engine_pump_event != NULL) {
+        SetEvent(g_proton_engine_pump_event);
+      }
+    }
+    if (args != NULL) {
+      args->base.release((cef_base_ref_counted_t *)args);
+    }
+    return 1;
+  }
   if (is_context_disposed) {
-    int browser_id = proton_engine_browser_id(browser);
-    proton_engine_window_t *window =
-        proton_engine_find_window_by_browser_id(browser_id);
     cef_list_value_t *args = message->get_argument_list(message);
     char *page_instance = args != NULL && args->get_size(args) >= 1
                               ? proton_engine_userfree_to_utf8(
@@ -1358,9 +1411,6 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
                             proton_engine_browser_id(browser),
                             renderer_pending_id, op != NULL ? op : "");
 
-  int browser_id = proton_engine_browser_id(browser);
-  proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(browser_id);
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
   int page_allowed =
       window != NULL && window->bridge_config_json != NULL &&
@@ -1512,6 +1562,10 @@ static void proton_engine_init_app(void) {
       (cef_base_ref_counted_t *)&g_proton_engine_load_handler.handler.base,
       sizeof(g_proton_engine_load_handler.handler),
       &g_proton_engine_load_handler.refs);
+  proton_engine_init_ref_counted(
+      (cef_base_ref_counted_t *)&g_proton_engine_request_handler.handler.base,
+      sizeof(g_proton_engine_request_handler.handler),
+      &g_proton_engine_request_handler.refs);
   g_proton_engine_browser_process_handler.handler.on_schedule_message_pump_work =
       proton_engine_on_schedule_message_pump_work;
   g_proton_engine_render_process_handler.handler.on_web_kit_initialized =
@@ -1534,6 +1588,8 @@ static void proton_engine_init_app(void) {
   g_proton_engine_load_handler.handler.on_load_end = proton_engine_on_load_end;
   g_proton_engine_load_handler.handler.on_load_error =
       proton_engine_on_load_error;
+  g_proton_engine_request_handler.handler.on_render_process_terminated =
+      proton_engine_on_render_process_terminated;
   g_proton_engine_app.app.on_before_command_line_processing =
       proton_engine_on_before_command_line_processing;
   g_proton_engine_app.app.on_register_custom_schemes =
@@ -1728,6 +1784,8 @@ static void proton_engine_register_window_class(void) {
 
 static cef_load_handler_t *CEF_CALLBACK
 proton_engine_client_get_load_handler(cef_client_t *self);
+static cef_request_handler_t *CEF_CALLBACK
+proton_engine_client_get_request_handler(cef_client_t *self);
 
 static proton_engine_client_t *proton_engine_client_new(
     proton_engine_window_t *window) {
@@ -1742,6 +1800,8 @@ static proton_engine_client_t *proton_engine_client_new(
   client->client.on_process_message_received =
       proton_engine_client_on_process_message_received;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
+  client->client.get_request_handler =
+      proton_engine_client_get_request_handler;
   return client;
 }
 
@@ -1786,6 +1846,13 @@ static void CEF_CALLBACK proton_engine_on_load_end(
                             proton_engine_browser_id(browser),
                             frame != NULL ? frame->is_main(frame) : 0,
                             httpStatusCode, proton_engine_log_url(url));
+  proton_engine_window_t *window =
+      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+  if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
+      frame->is_main(frame) && url != NULL &&
+      strcmp(url, "about:blank") != 0) {
+    (void)proton_engine_bridge_send_lifecycle_probe(frame);
+  }
   free(url);
 }
 
@@ -1803,14 +1870,69 @@ static void CEF_CALLBACK proton_engine_on_load_error(
                           proton_engine_browser_id(browser),
                           frame != NULL ? frame->is_main(frame) : 0, errorCode,
                           text != NULL ? text : "", proton_engine_log_url(url));
+  proton_engine_window_t *window =
+      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+  if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
+      frame->is_main(frame) && url != NULL) {
+    proton_engine_bridge_lifecycle_report_browser_failure(
+        &window->bridge_lifecycle, url, "entry_load_failed",
+        text != NULL && text[0] != '\0' ? text : "main frame failed to load",
+        0);
+  }
   free(text);
   free(url);
+}
+
+static void CEF_CALLBACK proton_engine_on_render_process_terminated(
+    cef_request_handler_t *self, cef_browser_t *browser,
+    cef_termination_status_t status, int error_code,
+    const cef_string_t *error_string) {
+  (void)self;
+  proton_engine_window_t *window =
+      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+  if (window == NULL || window->bridge_config_json == NULL || window->closed) {
+    return;
+  }
+  cef_frame_t *frame = browser != NULL ? browser->get_main_frame(browser) : NULL;
+  char *url =
+      frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
+                    : NULL;
+  char *detail = proton_engine_cef_string_to_utf8(error_string);
+  if (url != NULL &&
+      !(window->bridge_lifecycle.outcome != NULL &&
+        strcmp(window->bridge_lifecycle.outcome, "ineligible") == 0 &&
+        window->bridge_lifecycle.url != NULL &&
+        strcmp(window->bridge_lifecycle.url, url) == 0)) {
+    char message[1024];
+    snprintf(message, sizeof(message),
+             "renderer process terminated (status=%d, error=%d)%s%s",
+             (int)status, error_code,
+             detail != NULL && detail[0] != '\0' ? ": " : "",
+             detail != NULL ? detail : "");
+    proton_engine_bridge_lifecycle_report_browser_failure(
+        &window->bridge_lifecycle, url, "renderer_process_terminated", message,
+        0);
+    if (g_proton_engine_pump_event != NULL) {
+      SetEvent(g_proton_engine_pump_event);
+    }
+  }
+  free(detail);
+  free(url);
+  if (frame != NULL) {
+    frame->base.release((cef_base_ref_counted_t *)frame);
+  }
 }
 
 static cef_load_handler_t *CEF_CALLBACK
 proton_engine_client_get_load_handler(cef_client_t *self) {
   (void)self;
   return &g_proton_engine_load_handler.handler;
+}
+
+static cef_request_handler_t *CEF_CALLBACK
+proton_engine_client_get_request_handler(cef_client_t *self) {
+  (void)self;
+  return &g_proton_engine_request_handler.handler;
 }
 
 static int32_t proton_engine_window_create_browser(
@@ -2470,6 +2592,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   free(window->html_url);
   free(window->html);
   free(window->bridge_config_json);
+  proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
   return PROTON_OK;
 }
@@ -2684,9 +2807,69 @@ void proton_engine_window_bind_public_id(proton_engine_window_t *window,
   }
 }
 
+uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
+  return window != NULL
+             ? proton_engine_bridge_lifecycle_revision(&window->bridge_lifecycle)
+             : 0;
+}
+
+int32_t proton_engine_window_bridge_state_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_state_json(
+      &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
+}
+
+int32_t proton_engine_window_take_bridge_failure_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_take_failure_json(
+      &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
+}
+
 // TODO: Implement non-blocking Windows dialogs. These exports are ABI stubs so
 // that shared engine interfaces can stay async-only while macOS owns the first
 // real async dialog implementation.
+int32_t proton_engine_runtime_begin_message_dialog(
+    proton_engine_runtime_t *runtime, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog, char *error, size_t error_len) {
+  (void)runtime;
+  (void)title_utf8;
+  (void)title_len;
+  (void)message_utf8;
+  (void)message_len;
+  (void)level;
+  if (out_dialog != NULL) {
+    *out_dialog = PROTON_INVALID_HANDLE;
+  }
+  proton_engine_set_message(error, error_len,
+                            "runtime dialogs are not implemented on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_runtime_poll_dialog_result(
+    proton_engine_runtime_t *runtime, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len) {
+  (void)dialog;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return proton_engine_runtime_begin_message_dialog(
+      runtime, NULL, 0, NULL, 0, 0, NULL, error, error_len);
+}
+
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,

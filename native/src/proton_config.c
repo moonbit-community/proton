@@ -36,6 +36,7 @@
 #define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
 #define PROTON_MAX_BRIDGE_EXTENSIONS 128
 #define PROTON_MAX_BRIDGE_APIS 256
+#define PROTON_MAX_BRIDGE_INITIALIZATION_UNITS 256
 #define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
 
@@ -96,10 +97,8 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
   } else if (strcmp(config_name, "bridge") == 0) {
     if (strcmp(key, "namespace") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
-    } else if (strcmp(key, "initialization_script") == 0) {
-      char *script = proton_json_copy_string(doc, value);
-      valid = script != NULL;
-      free(script);
+    } else if (strcmp(key, "initialization_units") == 0) {
+      valid = proton_json_is_array(doc, value);
     } else if (strcmp(key, "max_payload_bytes") == 0 ||
                strcmp(key, "request_timeout_ms") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
@@ -298,7 +297,7 @@ static const char *const proton_bridge_config_keys[] = {
     "max_payload_bytes",
     "request_timeout_ms",
     "extensions",
-    "initialization_script",
+    "initialization_units",
 };
 
 static const char *const proton_bridge_response_keys[] = {
@@ -1088,6 +1087,108 @@ static int32_t proton_validate_bridge_extensions(
   return validation.status;
 }
 
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t unit_count;
+  int32_t status;
+} proton_bridge_initialization_validation_t;
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  bool has_owner;
+  bool has_name;
+  bool has_source;
+  int32_t status;
+} proton_bridge_initialization_item_validation_t;
+
+static bool proton_validate_bridge_initialization_field(
+    const char *key, proton_json_value_t value, void *user_data) {
+  proton_bridge_initialization_item_validation_t *validation =
+      (proton_bridge_initialization_item_validation_t *)user_data;
+  bool *present = NULL;
+  if (strcmp(key, "owner") == 0) {
+    present = &validation->has_owner;
+  } else if (strcmp(key, "name") == 0) {
+    present = &validation->has_name;
+  } else if (strcmp(key, "source") == 0) {
+    present = &validation->has_source;
+  } else {
+    char message[192];
+    snprintf(message, sizeof(message),
+             "bridge initialization unit contains unknown field: %s", key);
+    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    return false;
+  }
+  char *text = proton_json_copy_string(validation->doc, value);
+  if (text == NULL || (present != &validation->has_source && text[0] == '\0')) {
+    free(text);
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge initialization unit fields must be strings");
+    return false;
+  }
+  free(text);
+  *present = true;
+  return true;
+}
+
+static bool proton_validate_bridge_initialization_item(
+    proton_json_value_t value, void *user_data) {
+  proton_bridge_initialization_validation_t *validation =
+      (proton_bridge_initialization_validation_t *)user_data;
+  if (validation->unit_count >= PROTON_MAX_BRIDGE_INITIALIZATION_UNITS) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge initialization_units array is too large");
+    return false;
+  }
+  if (!proton_json_is_object(validation->doc, value)) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge initialization unit must be an object");
+    return false;
+  }
+  proton_bridge_initialization_item_validation_t item = {
+      validation->doc, false, false, false, PROTON_OK};
+  if (!proton_json_object_each(validation->doc, value,
+                               proton_validate_bridge_initialization_field,
+                               &item) &&
+      item.status == PROTON_OK) {
+    item.status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge initialization unit is malformed");
+  }
+  if (item.status != PROTON_OK) {
+    validation->status = item.status;
+    return false;
+  }
+  if (!item.has_owner || !item.has_name || !item.has_source) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge initialization unit requires owner, name, and source");
+    return false;
+  }
+  validation->unit_count++;
+  return true;
+}
+
+static int32_t proton_validate_bridge_initialization_units(
+    const proton_json_doc_t *doc, proton_json_value_t value) {
+  if (!proton_json_is_array(doc, value)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge initialization_units must be an array");
+  }
+  proton_bridge_initialization_validation_t validation = {doc, 0, PROTON_OK};
+  if (!proton_json_array_each(doc, value,
+                              proton_validate_bridge_initialization_item,
+                              &validation) &&
+      validation.status == PROTON_OK) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge initialization_units array is malformed");
+  }
+  return validation.status;
+}
+
 int32_t proton_config_validate_bridge(const char *bridge_json) {
   if (bridge_json != NULL && strlen(bridge_json) > PROTON_MAX_BRIDGE_CONFIG_BYTES) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -1128,14 +1229,12 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
     }
   }
 
-  if (proton_json_object_get(&doc, root, "initialization_script", &value)) {
-    char *script = proton_json_copy_string(&doc, value);
-    if (script == NULL) {
+  if (proton_json_object_get(&doc, root, "initialization_units", &value)) {
+    status = proton_validate_bridge_initialization_units(&doc, value);
+    if (status != PROTON_OK) {
       proton_json_dispose(&doc);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge initialization_script must be a string");
+      return status;
     }
-    free(script);
   }
 
   if (!proton_json_object_get(&doc, root, "ops", &value)) {
