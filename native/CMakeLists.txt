@@ -35,6 +35,7 @@ if(PROTON_WITH_ENGINE)
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
   list(APPEND PROTON_ENGINE_SOURCES
+    src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_renderer.c
   )
 endif()
@@ -50,6 +51,7 @@ add_library(proton SHARED
   src/proton_json.c
   src/proton_state.c
   src/proton.c
+  src/engine/cef_common/bridge_lifecycle.c
   ${PROTON_ENGINE_SOURCES}
 )
 
@@ -298,6 +300,10 @@ set_target_properties(proton PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
+if(WIN32)
+  set_target_properties(proton PROPERTIES PREFIX "")
+endif()
+
 install(TARGETS proton
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
@@ -309,6 +315,8 @@ install(FILES include/proton_native.h DESTINATION include)
 if(BUILD_TESTING)
   add_executable(proton_smoke
     tests/proton_smoke.c
+    src/engine/cef_common/bridge_lifecycle.c
+    src/proton_json.c
   )
   add_executable(proton_exports_smoke
     tests/proton_exports_smoke.c

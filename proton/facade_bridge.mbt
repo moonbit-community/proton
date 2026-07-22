@@ -172,7 +172,7 @@ fn build_bridge_frontend_config(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> Result[BridgeFrontendConfig, String] {
   let extensions : Array[@native.BridgeExtensionConfig] = []
-  let scripts : Array[String] = []
+  let initialization_units : Array[@native.BridgeInitializationUnit] = []
   let ordered_ids = match
     enabled_command_extension_order(manifest, command_extensions) {
     Err(error) => return Err(error)
@@ -201,18 +201,18 @@ fn build_bridge_frontend_config(
       apis.push(api_name)
     }
     extensions.push(@native.BridgeExtensionConfig::new(js_namespace, apis~))
-    for script in spec.scripts() {
-      scripts.push(script)
+    let scripts = spec.scripts()
+    for index, script in scripts {
+      initialization_units.push(
+        @native.BridgeInitializationUnit::new(
+          id,
+          "script-" + index.to_string(),
+          script,
+        ),
+      )
     }
   }
-  Ok(BridgeFrontendConfig::{
-    extensions,
-    initialization_script: if scripts.length() == 0 {
-      None
-    } else {
-      Some(scripts.join("\n"))
-    },
-  })
+  Ok(BridgeFrontendConfig::{ extensions, initialization_units })
 }
 
 ///|

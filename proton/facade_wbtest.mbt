@@ -97,10 +97,59 @@ test "bridge frontend config reflects enabled command extension metadata" {
       inspect(config.extensions.length(), content="1")
       inspect(config.extensions[0].js_namespace, content="add")
       assert_eq(config.extensions[0].apis, ["slowAdd"])
-      assert_eq(config.initialization_script, None)
+      assert_eq(config.initialization_units, [])
     }
     Err(error) => fail(error)
   }
+}
+
+///|
+test "bridge frontend config preserves initialization unit ownership" {
+  let extension_id = "examples/scripts"
+  let manifest = test_command_manifest(extension_id)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
+    extension_id,
+    "scripts",
+    [],
+    fn(_context) { Ok(()) },
+    scripts=["globalThis.first = true;", "globalThis.second = true;"],
+  )
+  match build_bridge_frontend_config(manifest, command_extensions) {
+    Err(error) => fail(error)
+    Ok(config) => {
+      inspect(config.initialization_units.length(), content="2")
+      inspect(config.initialization_units[0].owner, content="examples/scripts")
+      inspect(config.initialization_units[0].name, content="script-0")
+      inspect(
+        config.initialization_units[1].source,
+        content="globalThis.second = true;",
+      )
+    }
+  }
+}
+
+///|
+test "app run errors retain typed bridge diagnostics" {
+  let diagnostic = @native.BridgeDiagnostic::{
+    abi_version: 1,
+    stage: "bootstrap",
+    code: "bridge_bootstrap_failed",
+    message: "bootstrap exploded",
+    page_instance: "page-1",
+    url: "proton://app/",
+    owner: None,
+    source_url: None,
+    source_line: None,
+    line: None,
+    column: None,
+    stack: None,
+    additional_failure_count: None,
+    details_truncated: false,
+  }
+  let error = BridgeStartupError(diagnostic)
+  assert_true(app_run_error_text(error).contains("bridge_bootstrap_failed"))
 }
 
 ///|
@@ -266,7 +315,7 @@ test "bridge frontend config ignores disabled command extensions" {
   match build_bridge_frontend_config(manifest, command_extensions) {
     Ok(config) => {
       assert_eq(config.extensions, [])
-      assert_eq(config.initialization_script, None)
+      assert_eq(config.initialization_units, [])
     }
     Err(error) => fail(error)
   }
@@ -284,7 +333,7 @@ test "bridge frontend config can omit command extensions" {
   match build_bridge_frontend_config(manifest, command_extensions) {
     Ok(config) => {
       inspect(config.extensions.length(), content="0")
-      assert_eq(config.initialization_script, None)
+      assert_eq(config.initialization_units, [])
     }
     Err(error) => fail(error)
   }

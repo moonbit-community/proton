@@ -41,6 +41,7 @@ typedef struct {
   bool destroyed;
   bool visible;
   bool closed_event_sent;
+  uint64_t bridge_notified_revision;
   proton_runtime_id_t runtime;
   proton_engine_window_t *engine_window;
   int32_t width;
@@ -85,6 +86,8 @@ PROTON_INTERNAL int32_t proton_window_enqueue_closed_once(
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_closed_windows(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
+PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
+    proton_runtime_id_t runtime_handle, proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t
 proton_destroy_windows_for_runtime(proton_runtime_id_t runtime);
 

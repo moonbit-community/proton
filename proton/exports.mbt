@@ -7,6 +7,8 @@ pub using @native {
   runtime_info,
   runtime_info_json,
   type NativeError,
+  type BridgeDiagnostic,
+  type BridgeLifecycleState,
   type Menu,
   type MenuBar,
   type MenuItem,

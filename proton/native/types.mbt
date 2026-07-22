@@ -29,7 +29,36 @@ struct RuntimeEvent {
   event_type : String
   window : Int64?
   menu_command_id : String?
+  revision : Int64?
 } derive(Debug, Eq)
+
+///|
+pub(all) struct BridgeLifecycleState {
+  abi_version : Int
+  revision : String
+  outcome : String
+  page_instance : String
+  url : String
+  failure_pending : Bool
+} derive(Debug, Eq, FromJson)
+
+///|
+pub(all) struct BridgeDiagnostic {
+  abi_version : Int
+  stage : String
+  code : String
+  message : String
+  page_instance : String
+  url : String
+  owner : String?
+  source_url : String?
+  source_line : String?
+  line : Int?
+  column : Int?
+  stack : String?
+  additional_failure_count : Int?
+  details_truncated : Bool
+} derive(Debug, Eq, FromJson)
 
 ///|
 pub(all) struct BridgeRequest {
@@ -85,7 +114,7 @@ pub(all) struct BridgeConfig {
   request_timeout_ms : Int
   dev_origins : Array[String]
   extensions : Array[BridgeExtensionConfig]
-  initialization_script : String?
+  initialization_units : Array[BridgeInitializationUnit]
 } derive(Debug, Eq)
 
 ///|
@@ -93,6 +122,14 @@ pub(all) struct BridgeConfig {
 pub(all) struct BridgeExtensionConfig {
   js_namespace : String
   apis : Array[String]
+} derive(Debug, Eq)
+
+///|
+/// One ordered JavaScript initialization unit owned by an extension.
+pub(all) struct BridgeInitializationUnit {
+  owner : String
+  name : String
+  source : String
 } derive(Debug, Eq)
 
 ///|
@@ -120,6 +157,11 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+pub fn RuntimeEvent::is_bridge_lifecycle_changed(self : RuntimeEvent) -> Bool {
+  self.event_type == "bridge_lifecycle_changed"
 }
 
 ///|
@@ -375,7 +417,7 @@ pub fn BridgeConfig::new(
   request_timeout_ms? : Int = 30000,
   dev_origins? : Array[String] = [],
   extensions? : Array[BridgeExtensionConfig] = [],
-  initialization_script? : String? = None,
+  initialization_units? : Array[BridgeInitializationUnit] = [],
 ) -> BridgeConfig {
   {
     raw_json: None,
@@ -384,7 +426,7 @@ pub fn BridgeConfig::new(
     request_timeout_ms,
     dev_origins: copy_strings(dev_origins),
     extensions: extensions.map(fn(extension) { extension.copy() }),
-    initialization_script,
+    initialization_units: initialization_units.map(fn(unit) { unit.copy() }),
   }
 }
 
@@ -397,7 +439,7 @@ pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
     request_timeout_ms: 30000,
     dev_origins: [],
     extensions: [],
-    initialization_script: None,
+    initialization_units: [],
   }
 }
 
@@ -407,6 +449,22 @@ pub fn BridgeExtensionConfig::new(
   apis~ : Array[String],
 ) -> BridgeExtensionConfig {
   { js_namespace, apis: copy_strings(apis) }
+}
+
+///|
+pub fn BridgeInitializationUnit::new(
+  owner : String,
+  name : String,
+  source : String,
+) -> BridgeInitializationUnit {
+  { owner, name, source }
+}
+
+///|
+fn BridgeInitializationUnit::copy(
+  self : BridgeInitializationUnit,
+) -> BridgeInitializationUnit {
+  { owner: self.owner, name: self.name, source: self.source }
 }
 
 ///|
@@ -565,10 +623,17 @@ fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
           }),
         ),
       }
-      set_optional_string_field(
-        fields,
-        "initialization_script",
-        self.initialization_script,
+      fields.set(
+        "initialization_units",
+        Json::array(
+          self.initialization_units.map(fn(unit) {
+            Json::object({
+              "owner": Json::string(unit.owner),
+              "name": Json::string(unit.name),
+              "source": Json::string(unit.source),
+            })
+          }),
+        ),
       )
       Json::object(fields)
     }

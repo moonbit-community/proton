@@ -207,12 +207,14 @@ test "typed configs generate stable JSON for native ABI" {
   let dev_bridge_json = BridgeConfig::new(
     ops=["ext:app/ping"],
     dev_origins=["http://localhost:5173"],
-    initialization_script=Some("window.__protonDev = true;"),
+    initialization_units=[
+      BridgeInitializationUnit::new("test", "dev", "window.__protonDev = true;"),
+    ],
   ).to_json_string()
   assert_true(dev_bridge_json.contains("\"mode\":\"app_and_dev_origins\""))
   assert_true(dev_bridge_json.contains("\"dev_origins\""))
   assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
-  assert_true(dev_bridge_json.contains("\"initialization_script\""))
+  assert_true(dev_bridge_json.contains("\"initialization_units\""))
   assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
   let menu_json = MenuBar::new(menus=[
     Menu::new("Demo", items=[
@@ -278,7 +280,13 @@ test "bridge ABI wrappers validate config and poll empty queue" {
       bridge=BridgeConfig::new(
         ops=["ext:app/ping"],
         dev_origins=["http://localhost:5173"],
-        initialization_script=Some(large_script.to_string()),
+        initialization_units=[
+          BridgeInitializationUnit::new(
+            "test",
+            "large",
+            large_script.to_string(),
+          ),
+        ],
       ),
     ),
   ).unwrap()
@@ -372,8 +380,12 @@ test "bridge config rejects unsafe schema variants" {
       "invalid origin",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[],\"extensions\":[],\"initialization_script\":false}",
-      "initialization_script",
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[],\"extensions\":[],\"initialization_units\":false}",
+      "initialization_units",
+    ),
+    (
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"initialization_units\":[{\"owner\":\"test\",\"name\":\"setup\",\"source\":\"\",\"unexpected\":true}]}",
+      "unknown field: unexpected",
     ),
   ]
   for _, item in cases {

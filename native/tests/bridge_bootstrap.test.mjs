@@ -32,6 +32,7 @@ function createBridge(url = "proton://app/") {
       request_timeout_ms: 1000,
       extensions: [{ namespace: "add", apis: ["sum"] }],
     },
+    "renderer-page-1",
   );
   return { calls, context, dispatcher };
 }
@@ -115,8 +116,7 @@ test("rejects pending requests when the context is disposed", async () => {
   );
 });
 
-test("does not expose the bridge to unlisted origins", () => {
-  const { context, dispatcher } = createBridge("https://example.com/");
-  assert.equal(dispatcher, null);
-  assert.equal(context.__MoonBit__, undefined);
+test("uses the page instance assigned by native", () => {
+  const { dispatcher } = createBridge("https://example.com/");
+  assert.equal(dispatcher.pageInstance, "renderer-page-1");
 });

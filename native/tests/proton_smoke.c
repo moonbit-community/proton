@@ -1,4 +1,6 @@
 #include "proton_native.h"
+#include "../src/engine/cef_common/bridge_lifecycle.h"
+#include "../src/proton_json.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +35,191 @@ static int fail(const char *message) {
 }
 
 static int g_runtime_available = 0;
+static int expect_status(const char *label, int32_t actual, int32_t expected);
+
+static int expect_valid_json(const char *label, const char *json) {
+  proton_json_doc_t doc;
+  if (!proton_json_parse(&doc, json)) {
+    fprintf(stderr, "%s: invalid JSON\n", label);
+    return 1;
+  }
+  proton_json_dispose(&doc);
+  return 0;
+}
+
+static int expect_bridge_lifecycle_state(void) {
+  static const char first_failure[] =
+      "{\"abi_version\":1,\"stage\":\"bootstrap\","
+      "\"code\":\"first_failure\",\"message\":\"first\","
+      "\"page_instance\":\"page-1\",\"url\":\"proton://app/\","
+      "\"details_truncated\":false}";
+  static const char second_failure[] =
+      "{\"abi_version\":1,\"stage\":\"initialization\","
+      "\"code\":\"second_failure\",\"message\":\"second\","
+      "\"page_instance\":\"page-1\",\"url\":\"proton://app/\","
+      "\"details_truncated\":false}";
+  proton_engine_bridge_lifecycle_t lifecycle;
+  proton_engine_bridge_lifecycle_init(&lifecycle);
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-1", "proton://app/", NULL) ||
+      !proton_engine_bridge_lifecycle_update(
+          &lifecycle, "ready", "page-1", "proton://app/", NULL)) {
+    return fail("bridge lifecycle rejected the ready transition");
+  }
+  char ready_state[512];
+  int32_t required = 0;
+  if (proton_engine_bridge_lifecycle_state_json(
+          &lifecycle, ready_state, (int32_t)sizeof(ready_state), &required) !=
+          PROTON_OK ||
+      strstr(ready_state, "\"outcome\":\"ready\"") == NULL) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle did not expose the ready transition");
+  }
+  if (proton_engine_bridge_lifecycle_update(
+          &lifecycle, "failed", "page-1", "proton://app/", first_failure)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle changed a terminal outcome");
+  }
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-failure-1", "proton://app/", NULL) ||
+      !proton_engine_bridge_lifecycle_update(
+          &lifecycle, "failed", "page-failure-1", "proton://app/",
+          first_failure)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle rejected the first failure");
+  }
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-failure-2", "proton://app/", NULL) ||
+      !proton_engine_bridge_lifecycle_update(
+          &lifecycle, "failed", "page-failure-2", "proton://app/",
+          second_failure)) {
+    return fail("bridge lifecycle rejected a valid transition");
+  }
+  required = 0;
+  if (expect_status("bridge failure length probe",
+                    proton_engine_bridge_lifecycle_take_failure_json(
+                        &lifecycle, NULL, 0, &required),
+                    PROTON_ERR_BUFFER_TOO_SMALL) ||
+      required <= 0) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return 1;
+  }
+  char *failure = (char *)calloc((size_t)required + 1, 1);
+  if (failure == NULL) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("failed to allocate bridge failure test buffer");
+  }
+  if (expect_status("bridge failure consume",
+                    proton_engine_bridge_lifecycle_take_failure_json(
+                        &lifecycle, failure, required + 1, &required),
+                    PROTON_OK) ||
+      strstr(failure, "first_failure") == NULL ||
+      strstr(failure, "second_failure") != NULL ||
+      strstr(failure, "\"page_instance\":\"page-failure-1\"") == NULL ||
+      strstr(failure, "\"additional_failure_count\":1") == NULL) {
+    free(failure);
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge failure latch did not preserve the first failure");
+  }
+  free(failure);
+  if (expect_status("bridge failure consumed",
+                    proton_engine_bridge_lifecycle_take_failure_json(
+                        &lifecycle, NULL, 0, &required),
+                    PROTON_EVENT_NONE)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return 1;
+  }
+  proton_engine_bridge_lifecycle_update(
+      &lifecycle, "pending", "page-2", "proton://app/reload", NULL);
+  if (proton_engine_bridge_lifecycle_update(
+          &lifecycle, "ready", "page-1", "proton://app/", NULL)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle accepted a stale terminal outcome");
+  }
+  char state[512];
+  if (expect_status("bridge lifecycle state",
+                    proton_engine_bridge_lifecycle_state_json(
+                        &lifecycle, state, (int32_t)sizeof(state), &required),
+                    PROTON_OK) ||
+      strstr(state, "\"outcome\":\"pending\"") == NULL ||
+      strstr(state, "\"page_instance\":\"page-2\"") == NULL) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle state lost the current page");
+  }
+  proton_engine_bridge_lifecycle_dispose(&lifecycle);
+
+  proton_engine_bridge_lifecycle_init(&lifecycle);
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-ready", "proton://app/", NULL) ||
+      !proton_engine_bridge_lifecycle_update(
+          &lifecycle, "ready", "page-ready", "proton://app/", NULL) ||
+      !proton_engine_bridge_lifecycle_report_browser_failure(
+          &lifecycle, "proton://app/", "renderer_process_terminated",
+          "renderer process terminated", 0)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("browser failure did not replace a terminated ready context");
+  }
+  if (proton_engine_bridge_lifecycle_state_json(
+          &lifecycle, state, (int32_t)sizeof(state), &required) != PROTON_OK ||
+      strstr(state, "\"outcome\":\"failed\"") == NULL ||
+      strstr(state, "\"page_instance\":\"browser-process-") == NULL) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("browser failure did not expose a synthetic failed attempt");
+  }
+  if (proton_engine_bridge_lifecycle_update(
+          &lifecycle, "unknown", "page-invalid", "proton://app/", NULL)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle accepted an unknown outcome");
+  }
+  proton_engine_bridge_lifecycle_dispose(&lifecycle);
+
+  size_t stack_len = 70000;
+  char *large_failure = (char *)malloc(stack_len + 256);
+  if (large_failure == NULL) {
+    return fail("failed to allocate large bridge diagnostic");
+  }
+  int prefix = snprintf(
+      large_failure, stack_len + 256,
+      "{\"abi_version\":1,\"stage\":\"initialization\","
+      "\"code\":\"large\",\"message\":\"large\","
+      "\"page_instance\":\"page-large\",\"url\":\"proton://app/\","
+      "\"stack\":\"");
+  memset(large_failure + prefix, 'x', stack_len);
+  static const char large_suffix[] = "\",\"details_truncated\":false}";
+  memcpy(large_failure + prefix + stack_len, large_suffix,
+         sizeof(large_suffix));
+  proton_engine_bridge_lifecycle_init(&lifecycle);
+  proton_engine_bridge_lifecycle_update(
+      &lifecycle, "pending", "page-large", "proton://app/", NULL);
+  proton_engine_bridge_lifecycle_update(
+      &lifecycle, "failed", "page-large", "proton://app/", large_failure);
+  free(large_failure);
+  required = 0;
+  if (expect_status("large bridge failure probe",
+                    proton_engine_bridge_lifecycle_take_failure_json(
+                        &lifecycle, NULL, 0, &required),
+                    PROTON_ERR_BUFFER_TOO_SMALL) ||
+      required <= 0 || required >= 65536) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("large bridge diagnostic was not bounded");
+  }
+  failure = (char *)calloc((size_t)required + 1, 1);
+  if (failure == NULL ||
+      proton_engine_bridge_lifecycle_take_failure_json(
+          &lifecycle, failure, required + 1, &required) != PROTON_OK ||
+      strstr(failure, "\"details_truncated\":true") == NULL ||
+      strstr(failure, "\"stage\":\"initialization\"") == NULL ||
+      strstr(failure, "\"code\":\"large\"") == NULL ||
+      strstr(failure, "\"message\":\"large\"") == NULL ||
+      expect_valid_json("large bridge diagnostic", failure)) {
+    free(failure);
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("large bridge diagnostic did not report truncation");
+  }
+  free(failure);
+  proton_engine_bridge_lifecycle_dispose(&lifecycle);
+  return 0;
+}
 
 static int expect_status(const char *label, int32_t actual, int32_t expected) {
   if (actual != expected) {
@@ -412,6 +599,10 @@ int main(void) {
   char installed_probe_config[256];
   char missing_helper_config[256];
   int32_t status = PROTON_OK;
+
+  if (expect_bridge_lifecycle_state()) {
+    return 1;
+  }
 
   if (expect_status("abi_version", proton_abi_version(), PROTON_ABI_VERSION)) {
     return 1;
