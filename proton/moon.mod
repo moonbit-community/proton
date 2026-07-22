@@ -1,10 +1,10 @@
 name = "justjavac/proton"
 
-version = "0.1.11"
+version = "0.1.12"
 
 import {
   "justjavac/ffi@0.2.1",
-  "justjavac/proton_config@0.1.5",
+  "justjavac/proton_config@0.1.6",
   "moonbitlang/async@0.19.4",
   "moonbitlang/x@0.4.43",
   "moonbitlang/lexer@0.3.4",
