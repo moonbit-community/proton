@@ -298,6 +298,12 @@ test "doctor options filter sections" {
 
 ///|
 test "doctor reports invalid runtime manifests" {
+  let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
+  defer (match previous {
+    Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
+    None => @sys.unset_env_var("PROTON_NATIVE_DIST")
+  })
+  @sys.unset_env_var("PROTON_NATIVE_DIST")
   let dir = "target/proton-doctor-invalid-runtime"
   let proton_dir = path_join(dir, ".proton")
   ensure_test_dir(dir)
