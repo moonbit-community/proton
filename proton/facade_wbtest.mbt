@@ -8,7 +8,7 @@ fn test_command_manifest(
   } else {
     @manifest.ExtensionSetting::disabled()
   }
-  let extensions : Map[String, @manifest.ExtensionSetting] = {}
+  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
   extensions[extension_id] = setting
   @manifest.AppManifest::new(
     @manifest.WindowManifest::new("Test", 320, 240),
@@ -21,7 +21,7 @@ fn test_command_manifest(
 fn test_command_manifest_ids(
   extension_ids : Array[String],
 ) -> @manifest.AppManifest {
-  let extensions : Map[String, @manifest.ExtensionSetting] = {}
+  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
   for id in extension_ids {
     extensions[id] = @manifest.ExtensionSetting::enabled()
   }
@@ -87,7 +87,8 @@ test "command proxy rejects unsafe JS property names" {
 test "command proxy script reflects enabled command extension metadata" {
   let extension_id = "examples/async-add"
   let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
@@ -257,7 +258,8 @@ test "dev bridge page policy parses exact http origins" {
 test "command proxy script ignores disabled command extensions" {
   let extension_id = "examples/async-add"
   let manifest = test_command_manifest(extension_id, enabled=false)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
@@ -272,7 +274,8 @@ test "command host close runs extension destroy hooks once" {
   let extension_id = "examples/destroy"
   let destroyed = Ref(0)
   let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
     extension_id,
     "destroyTest",
@@ -321,7 +324,8 @@ test "core spec command wrapper destroys runtime core host" {
   }
   assert_eq(destroyed.val, 1)
   let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   command_extensions[extension_id] = command_spec
   match build_command_host(manifest, command_extensions, None) {
     Ok(Some(host)) => {
@@ -338,7 +342,8 @@ test "command host registers extension dependencies before dependents" {
   let extension_id = "examples/feature"
   let manifest = test_command_manifest_ids([dependency_id, extension_id])
   let registered : Array[String] = []
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   command_extensions[extension_id] = test_tracking_command_spec(
     extension_id,
     "feature",
@@ -362,7 +367,8 @@ test "command host rejects missing extension dependencies" {
   let extension_id = "examples/feature"
   let dependency_id = "examples/base"
   let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   command_extensions[extension_id] = test_command_spec(
     extension_id,
     "feature",
@@ -385,7 +391,7 @@ test "command proxy script rejects invalid namespace and API names" {
   let namespace_extensions : Map[
     String,
     @proton_command.AppCommandExtensionSpec,
-  ] = {}
+  ] = Map([])
   namespace_extensions[namespace_extension_id] = test_command_spec(
     namespace_extension_id,
     "core",
@@ -403,7 +409,8 @@ test "command proxy script rejects invalid namespace and API names" {
 
   let api_extension_id = "examples/bad-api"
   let api_manifest = test_command_manifest(api_extension_id)
-  let api_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = {}
+  let api_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
   api_extensions[api_extension_id] = test_command_spec(
     api_extension_id,
     "add",
@@ -488,6 +495,42 @@ test "implicit config path honors PROTON_CONFIG_PATH" {
 
   @env.set_env_var("PROTON_CONFIG_PATH", config_path)
   @debug.assert_eq(implicit_config_path(), Some(config_path))
+}
+
+///|
+test "default config API honors PROTON_CONFIG_PATH" {
+  let config_path = "target/proton-facade-dev/config-api-env.moon.proton"
+  write_facade_dev_config(config_path)
+  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
+  let old_dev = @env.get_env_var("PROTON_DEV")
+  let old_mode = @env.get_env_var("PROTON_MODE")
+  defer restore_env_var("PROTON_MODE", old_mode)
+  defer restore_env_var("PROTON_DEV", old_dev)
+  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
+
+  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
+  @env.unset_env_var("PROTON_DEV")
+  @env.unset_env_var("PROTON_MODE")
+  let app = config("moon.proton")
+  @debug.assert_eq(app.file_path, Some(config_path))
+  let resolved = match app.resolved_app_config() {
+    Ok(resolved) => resolved
+    Err(error) => abort(error)
+  }
+  assert_eq(resolved.manifest.window.title, "Dev Test")
+}
+
+///|
+test "config API keeps non-default paths explicit" {
+  let config_path = "target/proton-facade-dev/explicit.moon.proton"
+  let env_path = "target/proton-facade-dev/explicit-env.moon.proton"
+  write_facade_dev_config(config_path)
+  write_facade_dev_config(env_path)
+  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
+  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
+
+  @env.set_env_var("PROTON_CONFIG_PATH", env_path)
+  @debug.assert_eq(config(config_path).file_path, Some(config_path))
 }
 
 ///|

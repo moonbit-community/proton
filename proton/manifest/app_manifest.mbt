@@ -17,7 +17,7 @@ pub fn AppManifest::new(
   entry : AppEntry,
   debug? : Int = 0,
   windows? : Array[AppWindowManifest] = [],
-  extensions? : Map[String, ExtensionSetting] = {},
+  extensions? : Map[String, ExtensionSetting] = Map([]),
 ) -> AppManifest {
   AppManifest::{
     window,
@@ -56,7 +56,7 @@ pub fn AppManifest::extension_settings(
 fn copy_extension_settings(
   settings : Map[String, ExtensionSetting],
 ) -> Map[String, ExtensionSetting] {
-  let copied : Map[String, ExtensionSetting] = {}
+  let copied : Map[String, ExtensionSetting] = Map([])
   for name, setting in settings {
     copied[name] = copy_extension_setting(setting)
   }

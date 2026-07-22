@@ -57,7 +57,7 @@ pub fn build_extension_link_plan(
   catalog : ExtensionCatalog,
   selected_ids : Array[String],
 ) -> Result[ExtensionLinkPlan, String] {
-  let visit_state : Map[String, Int] = {}
+  let visit_state : Map[String, Int] = Map([])
   let inputs : Array[ExtensionLinkInput] = []
   for id in selected_ids {
     let normalized = match normalize_selected_extension_id(id) {

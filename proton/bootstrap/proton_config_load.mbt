@@ -183,7 +183,7 @@ fn decode_proton_manifest(
 fn validate_top_level_fields(
   fields : Array[@proton_config.ConfigField],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
       return Err("duplicate moon.proton field: " + field.key)
@@ -317,7 +317,7 @@ fn validate_object_fields(
   label : String,
   allowed : Array[String],
 ) -> Result[Unit, String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
       return Err("duplicate " + label + " field: " + field.key)

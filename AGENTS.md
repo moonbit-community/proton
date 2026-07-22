@@ -56,6 +56,10 @@ developer must perform them.
 - Sync release artifacts into `proton/prebuilt/<platform>/`; only include the
   Proton DLL/shared library, import library if any, helper executable, public
   header, and manifest.
+- Build release artifacts with the Release configuration and install or stage
+  stripped Proton binaries. On macOS, generate any required dSYMs from the
+  unstripped build outputs first, then strip and stage the final binaries before
+  code signing and notarization.
 - `node scripts/verify_prebuilt_abi.mjs <platform>`
 - `moon -C cli run . -- -C .. cef setup`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
@@ -89,7 +93,7 @@ native checks before handing off larger refactors.
 - Publish the dependency chain in this order: `justjavac/proton_config`, then
   `justjavac/proton`, then `justjavac/proton_cli`. For the currently prepared
   release, the chain is `proton_config 0.1.5` -> `proton 0.1.10` ->
-  `proton_cli 0.1.6`.
+  `proton_cli 0.1.7`.
 - Before publishing, keep these values aligned:
   - `config/moon.mod` version;
   - the `justjavac/proton_config@...` requirements in `proton/moon.mod` and

@@ -888,7 +888,7 @@ async fn stage_project_inputs(
   for path in plan.resources {
     inputs.push(path)
   }
-  let copied : Map[String, Bool] = {}
+  let copied : Map[String, Bool] = Map([])
   for input in inputs {
     guard copied.get(input) is None else { continue }
     copied[input] = true

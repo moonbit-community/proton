@@ -184,26 +184,32 @@ native/dist/
 ```
 
 For the package distribution layout, build the helper and engine-backed shared
-library into `native/dist`, then stage only the Proton artifacts into
-`proton/prebuilt/<platform>`:
+library in Release mode, install stripped artifacts into `native/dist`, then
+stage only the Proton artifacts into `proton/prebuilt/<platform>`:
 
 ```powershell
 cmake -S native -B native\build-engine `
   -DCMAKE_INSTALL_PREFIX=native\dist `
   -DPROTON_WITH_ENGINE=ON `
   -DPROTON_ENGINE_ROOT=.cef-cache
-cmake --build native\build-engine --config Debug
-cmake --install native\build-engine --config Debug
+cmake --build native\build-engine --config Release
+cmake --install native\build-engine --config Release --strip
 ```
 
 ```bash
 cmake -S native -B native/build-engine \
   -DCMAKE_INSTALL_PREFIX=native/dist \
+  -DCMAKE_BUILD_TYPE=Release \
   -DPROTON_WITH_ENGINE=ON \
   -DPROTON_ENGINE_ROOT=.cef-cache
 cmake --build native/build-engine
-cmake --install native/build-engine
+cmake --install native/build-engine --strip
 ```
+
+On macOS, generate and archive dSYMs from the unstripped build outputs before
+the stripped install when release crash symbols are required. Strip and stage
+the final Proton binaries before code signing; signing and notarization must
+operate on the final bytes that will be published.
 
 These commands expect the CEF SDK/runtime at `.cef-cache` and install a full
 development dist:

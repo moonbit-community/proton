@@ -87,7 +87,15 @@ pub fn app() -> App {
 
 ///|
 /// Creates an application backed by a `moon.proton` config file.
+///
+/// The default `moon.proton` path honors `PROTON_CONFIG_PATH` and packaged
+/// config discovery. Other paths are used exactly as provided.
 pub fn config(path : String) -> App {
+  let path = if path == default_config_file {
+    implicit_config_path().unwrap_or(path)
+  } else {
+    path
+  }
   config_app(Some(path), auto_config=false)
 }
 
@@ -109,8 +117,8 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
-    extension_settings: {},
-    command_extensions: {},
+    extension_settings: Map([]),
+    command_extensions: Map([]),
     validation_errors: [],
   }
 }

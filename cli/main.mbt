@@ -17,7 +17,7 @@ fn print_usage() -> Unit {
 }
 
 ///|
-let cli_current_version : String = "0.1.6"
+let cli_current_version : String = "0.1.8"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"
@@ -373,7 +373,7 @@ async fn run_doctor_from_args(
 ///|
 fn run_codegen(cwd : String, args : Array[String]) -> Result[Unit, CliError] {
   let cmd = codegen_arg_parser()
-  let matches = cmd.parse(argv=args, env={}) catch {
+  let matches = cmd.parse(argv=args, env=Map([])) catch {
     err => return Err(CliError::UsageError(err.to_string(), true))
   }
   let input = match match_value(matches, "input_file") {

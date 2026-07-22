@@ -62,7 +62,7 @@ fn enabled_command_extension_order(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> Result[Array[String], String] {
-  let visit_state : Map[String, Int] = {}
+  let visit_state : Map[String, Int] = Map([])
   let ordered : Array[String] = []
   for id, _spec in command_extensions {
     match manifest.extension_setting(id) {

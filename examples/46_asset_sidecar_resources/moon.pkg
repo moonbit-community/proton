@@ -17,8 +17,9 @@ dev_build(
 
 formatter(ignore: [ "commands.g.mbt" ])
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: {
     "commands.g.mbt": [ "native" ],
     "commands.mbt": [ "native" ],

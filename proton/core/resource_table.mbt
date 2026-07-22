@@ -10,7 +10,7 @@ struct ResourceTable[T] {
 /// Resource ids start at `1` so `0` can remain available as a sentinel in
 /// external protocols.
 pub fn[T] ResourceTable::new() -> ResourceTable[T] {
-  ResourceTable::{ next_rid: 1, values: {} }
+  ResourceTable::{ next_rid: 1, values: Map([]) }
 }
 
 ///|

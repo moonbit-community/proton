@@ -165,12 +165,31 @@ fn read_moon_mod(
 }
 
 ///|
+/// Adapts the canonical executable package declaration emitted by current
+/// MoonBit formatters for the moon_config parser, which still expects the
+/// legacy `options("is-main": true)` representation.
+fn normalize_moon_pkg_source(source : String) -> (String, Bool) {
+  let lines : Array[String] = []
+  let mut is_executable = false
+  for line in source.split("\n") {
+    if line.trim() == "pkgtype(kind: \"executable\")" {
+      is_executable = true
+      lines.push("")
+    } else {
+      lines.push(line.to_owned())
+    }
+  }
+  (lines.join("\n"), is_executable)
+}
+
+///|
 fn read_moon_pkg(
   path : String,
 ) -> Result[MoonPackageConfig, MoonConfigReadError] {
   match read_moon_file(path) {
     Err(err) => Err(err)
     Ok(source) => {
+      let (source, is_executable) = normalize_moon_pkg_source(source)
       let (ast, reports) = @moon_config.parse_moon_pkg(name=path, source)
       if reports.length() > 0 {
         Err(MoonConfigReadError::ParseFailed(path, report_messages(reports)))
@@ -178,7 +197,11 @@ fn read_moon_pkg(
         Ok({
           path,
           imports: parse_pkg_imports(ast),
-          is_main: ast_bool(ast_field(ast, "is-main")),
+          is_main: if is_executable {
+            Some(true)
+          } else {
+            ast_bool(ast_field(ast, "is-main"))
+          },
         })
       }
     }

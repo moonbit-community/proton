@@ -34,15 +34,19 @@ runtime cache and should not be committed.
 
 ## Application entry
 
-Generated projects load `moon.proton` with `@proton.app()`:
+Generated projects explicitly load `moon.proton` with `@proton.config(...)`:
 
 ```moonbit
 async fn main {
-  @proton.app()
+  @proton.config("moon.proton")
   .extension(@counter.extension())
   .run_or_abort()
 }
 ```
+
+The default config name honors `PROTON_CONFIG_PATH` (including
+`proton_cli dev --config`) and resolves the packaged config location when the
+application is bundled. Non-default paths are used exactly as provided.
 
 For a small application, inline HTML can be opened directly:
 
@@ -111,21 +115,46 @@ frontend = {
 }
 ```
 
-`proton_cli dev` starts the frontend development server and launches the app.
-The build and package commands use the generated files from `frontend.dist`.
+`proton_cli dev` runs `frontend.before_dev`, waits for `frontend.dev_url`, and
+launches the app in development mode. `proton_cli build` runs
+`frontend.before_build`, validates `frontend.dist`, and builds the MoonBit app
+for the native target.
 
-## Build and package
+## Build
 
 ```sh
 moon check --target native --diagnostic-limit 80
 proton_cli build
+proton_cli build -- --release
+```
+
+Arguments after `--` are passed to `moon build`; Proton always selects the
+native target.
+
+## Bundle and package
+
+The `bundle` block in `moon.proton` enables package creation and selects its
+default targets and output directory:
+
+```moonbit
+bundle = {
+  active: true,
+  targets: ["app", "zip"],
+  output: "target/proton-dist",
+}
+```
+
+Inspect the resolved bundle plan before creating artifacts:
+
+```sh
 proton_cli package app --dry-run
 proton_cli package app
 ```
 
+The package command performs a release build unless `--no-build` is supplied.
 Package output is written to `target/proton-dist` by default. Icons, resources,
 output targets, signing, and notarization are configured through `moon.proton`
-and the package command options.
+and package command options.
 
 ## Diagnose a project
 

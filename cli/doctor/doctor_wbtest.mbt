@@ -35,6 +35,98 @@ test "doctor project boundary rejects parent paths" {
 }
 
 ///|
+test "doctor discovers generated app package and derives dependencies" {
+  let root = "target/proton-doctor-generated-app"
+  let app_dir = path_join(root, "app")
+  ensure_test_dir(root)
+  @mbfs.create_dir(app_dir) catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(
+    path_join(root, "moon.proton"),
+    (
+      #|window = { title: "Demo", width: 800, height: 600 }
+      #|entry = { kind: "asset", value: "app/app.html" }
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(root, "moon.mod"),
+    (
+      #|name = "generated-app"
+      #|
+      #|version = "0.1.0"
+      #|
+      #|import {
+      #|  "justjavac/proton@0.1.10",
+      #|  "moonbitlang/async@0.19.4",
+      #|  "example/tool@1.2.3",
+      #|}
+      #|
+      #|options(
+      #|  preferred_target: "native",
+      #|  supported_targets: "+native",
+      #|)
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(app_dir, "moon.pkg"),
+    (
+      #|import {
+      #|  "justjavac/proton",
+      #|  "moonbitlang/async",
+      #|  "generated-app/extensions/counter",
+      #|}
+      #|
+      #|pkgtype(kind: "executable")
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let project = discover_project(root)
+  match project.moon_pkg_path {
+    Some(path) =>
+      assert_test_path_suffix(path, "proton-doctor-generated-app/app/moon.pkg")
+    None => abort("expected generated app moon.pkg")
+  }
+  assert_test_path_suffix(
+    project.package_dir,
+    "proton-doctor-generated-app/app",
+  )
+  let module_config = read_project_moon_mod(project)
+  let package_config = read_project_moon_pkg(project)
+  let section = collect_packages(
+    project,
+    module_config,
+    package_config,
+    verbose=false,
+  )
+  assert_false(
+    section.lines.any(fn(line) {
+      line.status == Error || line.status == Missing
+    }),
+  )
+  assert_true(
+    section.lines.any(fn(line) {
+      line.code == "packages.dependency.example.tool" &&
+      line.text == "example/tool: 1.2.3"
+    }),
+  )
+  assert_false(
+    section.lines.any(fn(line) { line.code.contains("moonbitlang.x") }),
+  )
+}
+
+///|
 test "doctor compares dependency major minor versions" {
   @debug.assert_eq(version_major_minor("0.1.5"), Some("0.1"))
   @debug.assert_eq(version_major_minor("1.2.0-beta.1"), Some("1.2"))
@@ -308,9 +400,7 @@ test "moon_config adapter reads module deps and package imports" {
       #|  "justjavac/proton_ext/fs" @fs,
       #|}
       #|
-      #|options(
-      #|  "is-main": true,
-      #|)
+      #|pkgtype(kind: "executable")
       #|
     ),
     encoding="utf8",
@@ -326,7 +416,12 @@ test "moon_config adapter reads module deps and package imports" {
     Some("0.1.10"),
   )
   let package_config = read_moon_pkg(moon_pkg_path).unwrap()
-  assert_true(package_has_import(Some(package_config), "justjavac/proton"))
+  @debug.assert_eq(package_config.is_main, Some(true))
+  assert_true(
+    package_config.imports.any(fn(item) {
+      item.package_path == "justjavac/proton"
+    }),
+  )
   @debug.assert_eq(
     package_imports_with_prefix(Some(package_config), "justjavac/proton_ext/"),
     ["justjavac/proton_ext/fs"],

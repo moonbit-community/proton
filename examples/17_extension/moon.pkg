@@ -11,7 +11,8 @@ dev_build(rule: "embed", input: "extension.html", output: "extension.mbt")
 
 formatter(ignore: [ "extension.mbt" ])
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: { "main.mbt": [ "native" ], "math_extension.mbt": [ "native" ] },
 )

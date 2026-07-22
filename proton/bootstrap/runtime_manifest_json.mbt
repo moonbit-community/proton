@@ -11,7 +11,7 @@ fn clone_json(json : Json) -> Json {
 ///|
 /// Deep-clones a JSON object map entry by entry.
 fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
-  let cloned : Map[String, Json] = {}
+  let cloned : Map[String, Json] = Map([])
   for key, value in object {
     cloned.set(key, clone_json(value))
   }
@@ -54,7 +54,7 @@ fn window_manifest_to_json(window : @manifest.WindowManifest) -> Json {
 ///|
 /// Converts one manifest entry into its internal runtime JSON object form.
 fn app_entry_to_json(entry : @manifest.AppEntry) -> Json {
-  let object : Map[String, Json] = {}
+  let object : Map[String, Json] = Map([])
   match entry {
     Html(value) => {
       object["kind"] = Json::string("html")
@@ -100,7 +100,7 @@ pub fn app_manifest_to_json(manifest : @manifest.AppManifest) -> Json {
     )
   }
   if manifest.extensions.length() > 0 {
-    let extensions : Map[String, Json] = {}
+    let extensions : Map[String, Json] = Map([])
     for name, setting in manifest.extensions {
       extensions[name] = extension_setting_to_json(setting)
     }

@@ -7,8 +7,9 @@ import {
 
 supported_targets = "native"
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: {
     "cdp_eval.mbt": [ "native" ],
     "env.mbt": [ "native" ],

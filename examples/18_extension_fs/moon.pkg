@@ -10,7 +10,8 @@ dev_build(rule: "embed", input: "fs.html", output: "fs.mbt")
 
 formatter(ignore: [ "fs.mbt" ])
 
+pkgtype(kind: "executable")
+
 options(
-  "is-main": true,
   targets: { "main.mbt": [ "native" ] },
 )

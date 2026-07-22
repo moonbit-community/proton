@@ -2,11 +2,11 @@
 /// Creates an extension host.
 pub fn ExtensionHost::new() -> ExtensionHost {
   ExtensionHost::{
-    extension_ids: {},
-    extension_namespaces: {},
-    apis: {},
-    api_names: {},
-    destroy_hooks: {},
+    extension_ids: Map([]),
+    extension_namespaces: Map([]),
+    apis: Map([]),
+    api_names: Map([]),
+    destroy_hooks: Map([]),
     op_registry: OpRegistry::new(),
   }
 }

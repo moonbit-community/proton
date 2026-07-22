@@ -14,21 +14,6 @@ fn dependency_version(config : MoonModuleConfig?, name : String) -> String? {
 }
 
 ///|
-fn package_has_import(config : MoonPackageConfig?, name : String) -> Bool {
-  match config {
-    Some(config) => {
-      for item in config.imports {
-        if item.package_path == name {
-          return true
-        }
-      }
-      false
-    }
-    None => false
-  }
-}
-
-///|
 fn package_imports_with_prefix(
   config : MoonPackageConfig?,
   prefix : String,
@@ -1907,62 +1892,22 @@ fn collect_packages(
       }
     _ => ()
   }
-  let is_proton_project = project.mode == AppProject ||
-    module_has_dependency(module_value, "justjavac/proton") ||
-    package_has_import(package_value, "justjavac/proton") ||
-    package_imports_with_prefix(package_value, "justjavac/proton_ext/").length() >
-    0
-  for
-    dep in [
-      "justjavac/proton", "justjavac/proton_ext", "moonbitlang/async", "moonbitlang/x",
-    ] {
-    if module_has_dependency(module_value, dep) {
-      match dependency_version(module_value, dep) {
-        Some(version) =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.dependency." + diagnostic_component(dep),
-              Neutral,
-              dep + ": " + version,
-            ),
-          )
-        None =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.dependency." + diagnostic_component(dep),
-              Neutral,
-              dep + ": declared without a pinned version",
-            ),
-          )
-      }
-    } else if !is_proton_project {
-      ()
-    } else if dep == "justjavac/proton_ext" &&
-      package_imports_with_prefix(package_value, "justjavac/proton_ext/").length() ==
-      0 {
-      ()
-    } else {
-      lines.push(
-        DoctorLine::coded(
-          "packages.dependency." + diagnostic_component(dep) + ".missing",
-          Missing,
-          dep + ": not declared in moon.mod",
-        ),
-      )
-    }
-  }
-  if package_has_import(package_value, "justjavac/proton") {
-    match dependency_version(module_value, "justjavac/proton") {
-      None =>
+  match module_value {
+    Some(config) =>
+      for dep in config.imports {
+        let version = match dep.version {
+          Some(version) => version
+          None => "declared without a pinned version"
+        }
         lines.push(
           DoctorLine::coded(
-            "packages.proton.import_without_dependency",
-            Warn,
-            "justjavac/proton imported by moon.pkg but missing in moon.mod",
+            "packages.dependency." + diagnostic_component(dep.module_name),
+            Neutral,
+            dep.module_name + ": " + version,
           ),
         )
-      Some(_) => ()
-    }
+      }
+    None => ()
   }
   match package_value {
     Some(config) =>
@@ -1971,7 +1916,12 @@ fn collect_packages(
           Some(module_name) => {
             let is_current_module = match module_value {
               Some(module_config_value) =>
-                module_config_value.name == Some(module_name)
+                match module_config_value.name {
+                  Some(current_module) =>
+                    item.package_path == current_module ||
+                    item.package_path.has_prefix(current_module + "/")
+                  None => false
+                }
               None => false
             }
             let is_core = module_name == "moonbitlang/core"
@@ -2049,7 +1999,7 @@ fn collect_extensions(
   }
   let extension_root = extension_root_for_project(project)
   let lines : Array[DoctorLine] = []
-  let namespaces : Map[String, String] = {}
+  let namespaces : Map[String, String] = Map([])
   let discovered = if @mbfs.path_exists(extension_root) {
     let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
     let mut count = 0

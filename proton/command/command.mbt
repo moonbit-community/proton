@@ -316,7 +316,7 @@ pub fn AppCommandExtensionSpec::scripts(
 
 ///|
 pub fn AppCommandExtensionRegistry::new() -> AppCommandExtensionRegistry {
-  AppCommandExtensionRegistry::{ specs: {}, registration_order: [] }
+  AppCommandExtensionRegistry::{ specs: Map([]), registration_order: [] }
 }
 
 ///|
@@ -487,7 +487,7 @@ fn clone_json(json : Json) -> Json {
 
 ///|
 fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
-  let cloned : Map[String, Json] = {}
+  let cloned : Map[String, Json] = Map([])
   for key, value in object {
     cloned.set(key, clone_json(value))
   }
