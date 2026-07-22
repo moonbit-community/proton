@@ -11,6 +11,8 @@ pub async fn run(String, Array[String]) -> Result[Unit, PackageError]
 // Errors
 
 // Types and methods
+type MacosCodeSignTarget derive(Eq, @debug.Debug)
+
 pub(all) enum PackageError {
   UsageError(String, Bool)
   CommandError(String)
@@ -19,6 +21,10 @@ pub(all) enum PackageError {
 type PackagePlan derive(Eq, @debug.Debug)
 
 type RawPackageOptions derive(Eq, @debug.Debug)
+
+type WindowsSignTool derive(Eq, @debug.Debug)
+
+type WindowsSigningConfig derive(Eq, @debug.Debug)
 
 // Type aliases
 
