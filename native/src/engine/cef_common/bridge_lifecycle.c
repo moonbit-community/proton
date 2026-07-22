@@ -427,6 +427,17 @@ int proton_engine_bridge_lifecycle_report_browser_failure(
       lifecycle, "failed", page_instance, url, diagnostic);
 }
 
+int proton_engine_bridge_lifecycle_report_load_failure(
+    proton_engine_bridge_lifecycle_t *lifecycle, const char *url,
+    const char *message, int navigation_cancelled) {
+  // A cancelled navigation is normal browser control flow, not a bridge fault.
+  if (navigation_cancelled) {
+    return 0;
+  }
+  return proton_engine_bridge_lifecycle_report_browser_failure(
+      lifecycle, url, "entry_load_failed", message, 0);
+}
+
 uint64_t proton_engine_bridge_lifecycle_revision(
     const proton_engine_bridge_lifecycle_t *lifecycle) {
   return lifecycle != NULL ? lifecycle->revision : 0;

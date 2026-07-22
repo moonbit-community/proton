@@ -1874,10 +1874,10 @@ static void CEF_CALLBACK proton_engine_on_load_error(
       proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
   if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
       frame->is_main(frame) && url != NULL) {
-    proton_engine_bridge_lifecycle_report_browser_failure(
-        &window->bridge_lifecycle, url, "entry_load_failed",
+    proton_engine_bridge_lifecycle_report_load_failure(
+        &window->bridge_lifecycle, url,
         text != NULL && text[0] != '\0' ? text : "main frame failed to load",
-        0);
+        errorCode == ERR_ABORTED);
   }
   free(text);
   free(url);

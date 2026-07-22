@@ -1686,7 +1686,6 @@ static void CEF_CALLBACK proton_engine_on_load_error(
     cef_errorcode_t errorCode, const cef_string_t *errorText,
     const cef_string_t *failedUrl) {
   (void)self;
-  (void)errorCode;
   if (frame == NULL || !frame->is_main(frame)) {
     return;
   }
@@ -1694,11 +1693,11 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   char *message = proton_engine_cef_string_to_utf8(errorText);
   char *url = proton_engine_cef_string_to_utf8(failedUrl);
   if (window != NULL && window->bridge_config_json != NULL && url != NULL) {
-    proton_engine_bridge_lifecycle_report_browser_failure(
-        &window->bridge_lifecycle, url, "entry_load_failed",
+    proton_engine_bridge_lifecycle_report_load_failure(
+        &window->bridge_lifecycle, url,
         message != NULL && message[0] != '\0' ? message
                                                : "main frame failed to load",
-        0);
+        errorCode == ERR_ABORTED);
   }
   free(message);
   free(url);

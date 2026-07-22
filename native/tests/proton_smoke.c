@@ -149,6 +149,28 @@ static int expect_bridge_lifecycle_state(void) {
   proton_engine_bridge_lifecycle_dispose(&lifecycle);
 
   proton_engine_bridge_lifecycle_init(&lifecycle);
+  if (proton_engine_bridge_lifecycle_report_load_failure(
+          &lifecycle, "proton://app/replaced", "navigation aborted", 1) ||
+      proton_engine_bridge_lifecycle_revision(&lifecycle) != 0 ||
+      proton_engine_bridge_lifecycle_state_json(
+          &lifecycle, state, (int32_t)sizeof(state), &required) != PROTON_OK ||
+      strstr(state, "\"outcome\":\"none\"") == NULL ||
+      proton_engine_bridge_lifecycle_take_failure_json(
+          &lifecycle, NULL, 0, &required) != PROTON_EVENT_NONE) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("cancelled navigation changed bridge lifecycle state");
+  }
+  if (!proton_engine_bridge_lifecycle_report_load_failure(
+          &lifecycle, "proton://app/missing", "not found", 0) ||
+      proton_engine_bridge_lifecycle_state_json(
+          &lifecycle, state, (int32_t)sizeof(state), &required) != PROTON_OK ||
+      strstr(state, "\"outcome\":\"failed\"") == NULL) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("load failure did not change bridge lifecycle state");
+  }
+  proton_engine_bridge_lifecycle_dispose(&lifecycle);
+
+  proton_engine_bridge_lifecycle_init(&lifecycle);
   if (!proton_engine_bridge_lifecycle_update(
           &lifecycle, "pending", "page-ready", "proton://app/", NULL) ||
       !proton_engine_bridge_lifecycle_update(
