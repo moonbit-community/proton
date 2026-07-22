@@ -11,11 +11,15 @@ struct App {
   mut titlebar_style_overridden : Bool
   mut entry_overridden : Bool
   mut debug_overridden : Bool
+  mut bridge_startup_timeout_value_ms : Int
   mut menu : @native.MenuBar?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   validation_errors : Array[String]
 }
+
+///|
+let default_bridge_startup_timeout_ms = 30000
 
 ///|
 priv struct ResolvedAppConfig {

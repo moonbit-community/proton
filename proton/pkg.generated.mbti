@@ -4,6 +4,7 @@ package "justjavac/proton"
 import {
   "justjavac/proton/extension",
   "justjavac/proton/native",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -32,9 +33,17 @@ pub fn runtime_info_json() -> Result[String, @native.NativeError]
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 // Errors
+pub(all) suberror AppRunError {
+  ConfigurationError(String)
+  NativeRuntimeError(@native.NativeError)
+  EntryLoadError(String)
+  BridgeStartupError(@native.BridgeDiagnostic)
+  BridgeRuntimeError(@native.BridgeDiagnostic)
+} derive(@debug.Debug)
 
 // Types and methods
 type App
+pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::entry_asset(Self, String) -> Self
@@ -44,13 +53,17 @@ pub fn App::entry_url(Self, String) -> Self
 pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
-pub async fn App::run(Self) -> Result[Unit, String]
+pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
 
 // Type aliases
+pub using @native {type BridgeDiagnostic}
+
+pub using @native {type BridgeLifecycleState}
+
 pub using @native {type Menu}
 
 pub using @native {type MenuBar}

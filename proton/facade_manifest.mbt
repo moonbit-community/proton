@@ -21,6 +21,7 @@ fn App::new(
     titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
+    bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
     menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
@@ -37,7 +38,11 @@ fn App::set_entry(self : App, entry : @manifest.AppEntry) -> App {
 
 ///|
 fn App::validation_error(self : App) -> String? {
-  self.validation_errors.get(0)
+  if self.bridge_startup_timeout_value_ms <= 0 {
+    Some("bridge startup timeout must be positive")
+  } else {
+    self.validation_errors.get(0)
+  }
 }
 
 ///|
