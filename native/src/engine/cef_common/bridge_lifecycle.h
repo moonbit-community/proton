@@ -23,6 +23,9 @@ int proton_engine_bridge_lifecycle_update(
 int proton_engine_bridge_lifecycle_report_browser_failure(
     proton_engine_bridge_lifecycle_t *lifecycle, const char *url,
     const char *code, const char *message, int only_if_no_outcome);
+int proton_engine_bridge_lifecycle_report_load_failure(
+    proton_engine_bridge_lifecycle_t *lifecycle, const char *url,
+    const char *message, int navigation_cancelled);
 uint64_t proton_engine_bridge_lifecycle_revision(
     const proton_engine_bridge_lifecycle_t *lifecycle);
 int32_t proton_engine_bridge_lifecycle_state_json(
