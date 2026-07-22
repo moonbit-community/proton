@@ -24,6 +24,16 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(typed.features.contains("base_abi"))
   assert_true(typed.features.contains("event_polling"))
   assert_true(typed.features.contains("bridge_polling"))
+  if (
+      typed.platform == "macos" ||
+      typed.platform == "windows" ||
+      typed.platform == "linux"
+    ) &&
+    typed.runtime_available {
+    assert_true(typed.features.contains("titlebar_overlay"))
+  } else {
+    assert_false(typed.features.contains("titlebar_overlay"))
+  }
 }
 
 ///|
@@ -546,6 +556,72 @@ test "window config rejects unknown fields" {
       assert_true(error.message.contains("unknown field: resizable"))
     }
     Ok(_) => fail("expected unknown window field to fail")
+  }
+  debug_inspect(runtime.destroy(), content="Ok(())")
+}
+
+///|
+test "typed window config serializes overlay titlebar style" {
+  let config = WindowConfig::new(titlebar_style=TitlebarStyle::Overlay)
+  let json = config.to_json_string()
+  match runtime_info() {
+    Ok(info) if info.features.contains("titlebar_overlay") =>
+      assert_true(json.contains("\"titlebar_style\":\"overlay\""))
+    _ => assert_false(json.contains("\"titlebar_style\""))
+  }
+}
+
+///|
+test "window config accepts overlay titlebar style" {
+  let runtime = Runtime::new().unwrap()
+  let window = Window::new(
+    runtime,
+    config=WindowConfig::new(titlebar_style=TitlebarStyle::Overlay),
+  ).unwrap()
+  debug_inspect(window.destroy(), content="Ok(())")
+  debug_inspect(runtime.destroy(), content="Ok(())")
+}
+
+///|
+test "bundled engine creates overlay window when capability is available" {
+  match runtime_info() {
+    Ok(info) if info.features.contains("titlebar_overlay") => ()
+    _ => return
+  }
+  let runtime_config = RuntimeConfig::bundled()
+  match runtime_config.probe() {
+    Err(_) => return
+    Ok(_) => ()
+  }
+  let runtime = Runtime::new(config=runtime_config).unwrap()
+  let window = Window::new(
+    runtime,
+    config=WindowConfig::new(
+      title="Overlay Engine Smoke",
+      width=320,
+      height=240,
+      titlebar_style=TitlebarStyle::Overlay,
+    ),
+  ).unwrap()
+  debug_inspect(window.destroy(), content="Ok(())")
+  debug_inspect(runtime.destroy(), content="Ok(())")
+}
+
+///|
+test "window config rejects unsupported titlebar style" {
+  let runtime = Runtime::new().unwrap()
+  let result = Window::new(
+    runtime,
+    config=WindowConfig::unsafe_from_json(
+      "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"titlebar_style\":\"hidden_inset\"}",
+    ),
+  )
+  match result {
+    Err(error) => {
+      inspect(error.status, content="-1")
+      assert_true(error.message.contains("invalid type or range"))
+    }
+    Ok(_) => fail("expected unsupported titlebar style to fail")
   }
   debug_inspect(runtime.destroy(), content="Ok(())")
 }

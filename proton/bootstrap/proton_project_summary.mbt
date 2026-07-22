@@ -65,6 +65,9 @@ fn window_summary_json(window : @manifest.WindowManifest) -> Json {
     "width": ToJson::to_json(window.width),
     "height": ToJson::to_json(window.height),
     "size_hint": Json::string(size_hint_summary_text(window.size_hint)),
+    "titlebar_style": Json::string(
+      titlebar_style_summary_text(window.titlebar_style),
+    ),
   })
 }
 
@@ -90,6 +93,16 @@ fn size_hint_summary_text(size_hint : @manifest.WindowSizeHint) -> String {
     Fixed => "fixed"
     Min => "min"
     Max => "max"
+  }
+}
+
+///|
+fn titlebar_style_summary_text(
+  titlebar_style : @manifest.TitlebarStyle,
+) -> String {
+  match titlebar_style {
+    Default => "default"
+    Overlay => "overlay"
   }
 }
 

@@ -145,8 +145,13 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon check --target native --deny-warn
-          moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test --target native --diagnostic-limit 80
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C proton test native --target native --diagnostic-limit 80
+            xvfb-run -a moon -C cli test --target native --diagnostic-limit 80
+          else
+            moon -C proton test native --target native --diagnostic-limit 80
+            moon -C cli test --target native --diagnostic-limit 80
+          fi
           moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Check framework modules on Windows

@@ -478,6 +478,7 @@ test "moon.proton reader extracts app and frontend fields" {
       #|  width: 960,
       #|  height: 720,
       #|  size_hint: "none",
+      #|  titlebar_style: "overlay",
       #|}
       #|
       #|entry = {

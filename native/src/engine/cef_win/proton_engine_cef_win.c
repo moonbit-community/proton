@@ -3,6 +3,11 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commctrl.h>
+#include <dwmapi.h>
+#include <windowsx.h>
+
+#include "proton_win_titlebar.h"
 
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"
@@ -10,6 +15,7 @@
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_client_capi.h"
 #include "include/capi/cef_command_line_capi.h"
+#include "include/capi/cef_drag_handler_capi.h"
 #include "include/capi/cef_frame_capi.h"
 #include "include/capi/cef_load_handler_capi.h"
 #include "include/capi/cef_process_message_capi.h"
@@ -68,6 +74,10 @@ struct proton_engine_window {
   int32_t max_bridge_payload_bytes;
   int width;
   int height;
+  int titlebar_overlay;
+  proton_win_titlebar_region_t *draggable_regions;
+  size_t draggable_region_count;
+  int draggable_regions_reported;
   int closed;
   struct proton_engine_window *next;
 };
@@ -100,6 +110,11 @@ typedef struct {
   cef_load_handler_t handler;
   proton_engine_ref_counted_t refs;
 } proton_engine_load_handler_t;
+
+typedef struct {
+  cef_drag_handler_t handler;
+  proton_engine_ref_counted_t refs;
+} proton_engine_drag_handler_t;
 
 typedef struct {
   cef_scheme_handler_factory_t factory;
@@ -151,6 +166,7 @@ static proton_engine_render_process_handler_t
     g_proton_engine_render_process_handler;
 static proton_engine_v8_handler_t g_proton_engine_v8_handler;
 static proton_engine_load_handler_t g_proton_engine_load_handler;
+static proton_engine_drag_handler_t g_proton_engine_drag_handler;
 static proton_engine_scheme_factory_t g_proton_engine_scheme_factory;
 static CRITICAL_SECTION g_proton_engine_window_lock;
 static proton_engine_window_t *g_proton_engine_windows;
@@ -184,6 +200,12 @@ static void CEF_CALLBACK proton_engine_on_load_error(
     cef_errorcode_t errorCode,
     const cef_string_t *errorText,
     const cef_string_t *failedUrl);
+static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
+    cef_drag_handler_t *self,
+    cef_browser_t *browser,
+    cef_frame_t *frame,
+    size_t regions_count,
+    const cef_draggable_region_t *regions);
 static void proton_engine_inject_bridge_script(cef_browser_t *browser,
                                                cef_frame_t *frame);
 
@@ -1559,6 +1581,10 @@ static void proton_engine_init_app(void) {
       (cef_base_ref_counted_t *)&g_proton_engine_load_handler.handler.base,
       sizeof(g_proton_engine_load_handler.handler),
       &g_proton_engine_load_handler.refs);
+  proton_engine_init_ref_counted(
+      (cef_base_ref_counted_t *)&g_proton_engine_drag_handler.handler.base,
+      sizeof(g_proton_engine_drag_handler.handler),
+      &g_proton_engine_drag_handler.refs);
   g_proton_engine_browser_process_handler.handler.on_schedule_message_pump_work =
       proton_engine_on_schedule_message_pump_work;
   g_proton_engine_render_process_handler.handler.on_web_kit_initialized =
@@ -1577,6 +1603,8 @@ static void proton_engine_init_app(void) {
   g_proton_engine_load_handler.handler.on_load_end = proton_engine_on_load_end;
   g_proton_engine_load_handler.handler.on_load_error =
       proton_engine_on_load_error;
+  g_proton_engine_drag_handler.handler.on_draggable_regions_changed =
+      proton_engine_on_draggable_regions_changed;
   g_proton_engine_app.app.on_before_command_line_processing =
       proton_engine_on_before_command_line_processing;
   g_proton_engine_app.app.on_register_custom_schemes =
@@ -1701,27 +1729,433 @@ static void proton_engine_browser_release(cef_browser_t *browser) {
   }
 }
 
+static int proton_engine_overlay_frame_top_thickness(HWND hwnd) {
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  return GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) +
+         GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+}
+
+static int proton_engine_overlay_caption_band_height(HWND hwnd) {
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  return proton_engine_overlay_frame_top_thickness(hwnd) +
+         GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
+}
+
+static int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out) {
+  if (hwnd == NULL || out == NULL) {
+    return 0;
+  }
+  TITLEBARINFOEX info;
+  memset(&info, 0, sizeof(info));
+  info.cbSize = sizeof(info);
+  SendMessageW(hwnd, WM_GETTITLEBARINFOEX, 0, (LPARAM)&info);
+
+  const int indices[] = {2, 3, 5};
+  RECT cluster = {0};
+  int found = 0;
+  for (size_t i = 0; i < sizeof(indices) / sizeof(indices[0]); i++) {
+    RECT rect = info.rgrect[indices[i]];
+    if (rect.right <= rect.left || rect.bottom <= rect.top) {
+      continue;
+    }
+    if (!found) {
+      cluster = rect;
+      found = 1;
+    } else {
+      cluster.left = min(cluster.left, rect.left);
+      cluster.top = min(cluster.top, rect.top);
+      cluster.right = max(cluster.right, rect.right);
+      cluster.bottom = max(cluster.bottom, rect.bottom);
+    }
+  }
+  if (!found) {
+    return 0;
+  }
+
+  POINT top_left = {cluster.left, cluster.top};
+  POINT bottom_right = {cluster.right, cluster.bottom};
+  if (!ScreenToClient(hwnd, &top_left) ||
+      !ScreenToClient(hwnd, &bottom_right)) {
+    return 0;
+  }
+  out->left = top_left.x;
+  out->top = top_left.y;
+  out->right = bottom_right.x;
+  out->bottom = bottom_right.y;
+  return out->right > out->left && out->bottom > out->top;
+}
+
+static void proton_engine_overlay_apply_frame(HWND hwnd) {
+  const BOOL use_dark_caption = TRUE;
+  (void)DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                              &use_dark_caption,
+                              sizeof(use_dark_caption));
+  MARGINS margins = {
+      .cxLeftWidth = 0,
+      .cxRightWidth = 0,
+      .cyTopHeight = proton_engine_overlay_caption_band_height(hwnd),
+      .cyBottomHeight = 0,
+  };
+  (void)DwmExtendFrameIntoClientArea(hwnd, &margins);
+}
+
+static int proton_engine_overlay_drag_strip_rect(HWND hwnd, RECT *out) {
+  if (hwnd == NULL || out == NULL) {
+    return 0;
+  }
+
+  RECT client;
+  RECT window_rect;
+  if (!GetClientRect(hwnd, &client) || !GetWindowRect(hwnd, &window_rect)) {
+    return 0;
+  }
+
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  const int padded_border =
+      GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+  const int resize_border_y =
+      GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padded_border;
+  const int caption_height = GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
+  int drag_handle_width = GetSystemMetricsForDpi(SM_CXSIZE, dpi);
+
+  RECT caption_buttons;
+  const int has_caption_buttons =
+      proton_engine_overlay_caption_buttons_rect(hwnd, &caption_buttons);
+  if (has_caption_buttons) {
+    const int live_caption_button_width =
+        (caption_buttons.right - caption_buttons.left) / 3;
+    if (live_caption_button_width > 0) {
+      drag_handle_width = live_caption_button_width;
+    }
+  }
+
+  POINT client_origin = {0, 0};
+  if (!ClientToScreen(hwnd, &client_origin)) {
+    return 0;
+  }
+  const int client_top = client_origin.y - window_rect.top;
+  const int drag_top_in_window = IsZoomed(hwnd) ? client_top : resize_border_y;
+
+  out->left = client.left;
+  out->right = min(client.right, client.left + drag_handle_width);
+  out->top = max(client.top, drag_top_in_window - client_top);
+  out->bottom = has_caption_buttons
+                    ? min(client.bottom, caption_buttons.bottom)
+                    : min(client.bottom, out->top + caption_height);
+  return out->right > out->left && out->bottom > out->top;
+}
+
+static void proton_engine_overlay_subtract_rect(HRGN destination,
+                                                const RECT *rect) {
+  if (destination == NULL || rect == NULL || rect->right <= rect->left ||
+      rect->bottom <= rect->top) {
+    return;
+  }
+  HRGN region =
+      CreateRectRgn(rect->left, rect->top, rect->right, rect->bottom);
+  if (region != NULL) {
+    CombineRgn(destination, destination, region, RGN_DIFF);
+    DeleteObject(region);
+  }
+}
+
+static LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam);
+
+static LRESULT CALLBACK proton_engine_overlay_child_proc(
+    HWND hwnd,
+    UINT msg,
+    WPARAM wparam,
+    LPARAM lparam,
+    UINT_PTR subclass_id,
+    DWORD_PTR ref_data) {
+  proton_engine_window_t *window = (proton_engine_window_t *)ref_data;
+  if (msg == WM_NCDESTROY) {
+    RemoveWindowSubclass(hwnd, proton_engine_overlay_child_proc, subclass_id);
+    return DefSubclassProc(hwnd, msg, wparam, lparam);
+  }
+  if (window == NULL || !window->titlebar_overlay || window->hwnd == NULL ||
+      !IsWindow(window->hwnd)) {
+    return DefSubclassProc(hwnd, msg, wparam, lparam);
+  }
+
+  if (msg == WM_PARENTNOTIFY && LOWORD(wparam) == WM_CREATE) {
+    HWND child = (HWND)lparam;
+    if (child != NULL) {
+      SetWindowSubclass(child, proton_engine_overlay_child_proc, subclass_id,
+                        ref_data);
+    }
+  }
+
+  if (msg == WM_NCHITTEST) {
+    LRESULT hit = proton_engine_overlay_hit_test(window->hwnd, lparam);
+    if (hit != HTCLIENT && hit != HTNOWHERE) {
+      return hit;
+    }
+  } else if ((msg == WM_NCLBUTTONDOWN || msg == WM_NCLBUTTONUP ||
+              msg == WM_NCLBUTTONDBLCLK || msg == WM_NCRBUTTONDOWN ||
+              msg == WM_NCRBUTTONUP || msg == WM_NCRBUTTONDBLCLK) &&
+             wparam != HTCLIENT && wparam != HTNOWHERE) {
+    return SendMessageW(window->hwnd, msg, wparam, lparam);
+  }
+  return DefSubclassProc(hwnd, msg, wparam, lparam);
+}
+
+static BOOL CALLBACK proton_engine_overlay_subclass_descendant(HWND hwnd,
+                                                               LPARAM data) {
+  if (!SetWindowSubclass(hwnd, proton_engine_overlay_child_proc, 1,
+                         (DWORD_PTR)data)) {
+    proton_engine_verbose_log("overlay_subclass_failed hwnd=%p error=%lu",
+                              (void *)hwnd, GetLastError());
+  }
+  return TRUE;
+}
+
+static void proton_engine_overlay_subclass_browser(
+    proton_engine_window_t *window,
+    HWND browser_hwnd) {
+  if (window == NULL || browser_hwnd == NULL || !window->titlebar_overlay) {
+    return;
+  }
+  if (!SetWindowSubclass(browser_hwnd, proton_engine_overlay_child_proc, 1,
+                         (DWORD_PTR)window)) {
+    proton_engine_verbose_log("overlay_subclass_failed hwnd=%p error=%lu",
+                              (void *)browser_hwnd, GetLastError());
+  }
+  EnumChildWindows(browser_hwnd, proton_engine_overlay_subclass_descendant,
+                   (LPARAM)window);
+}
+
+static void proton_engine_resize_browser(proton_engine_window_t *window,
+                                         int width,
+                                         int height) {
+  if (window == NULL || window->browser == NULL) {
+    return;
+  }
+  cef_browser_host_t *host = window->browser->get_host(window->browser);
+  if (host == NULL) {
+    return;
+  }
+  HWND child = host->get_window_handle(host);
+  if (child != NULL) {
+    SetWindowPos(child, NULL, 0, 0, width, height, SWP_NOZORDER);
+    if (window->titlebar_overlay) {
+      proton_engine_overlay_subclass_browser(window, child);
+      RECT client;
+      if (GetClientRect(window->hwnd, &client)) {
+        HRGN browser_region = CreateRectRgn(client.left, client.top,
+                                            client.right, client.bottom);
+        RECT cluster;
+        if (browser_region != NULL &&
+            proton_engine_overlay_caption_buttons_rect(window->hwnd,
+                                                        &cluster)) {
+          cluster.left = max(cluster.left, client.left);
+          cluster.top = max(cluster.top, client.top);
+          cluster.right = min(cluster.right, client.right);
+          cluster.bottom = min(cluster.bottom, client.bottom);
+          proton_engine_overlay_subtract_rect(browser_region, &cluster);
+        }
+        if (browser_region != NULL) {
+          if (SetWindowRgn(child, browser_region, TRUE) != 0) {
+            browser_region = NULL;
+          }
+          if (browser_region != NULL) {
+            DeleteObject(browser_region);
+          }
+        }
+      }
+    }
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+}
+
+static LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam) {
+  LRESULT system_hit_test = HTNOWHERE;
+  (void)DwmDefWindowProc(hwnd, WM_NCHITTEST, 0, lparam, &system_hit_test);
+
+  POINT client_point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+  ScreenToClient(hwnd, &client_point);
+  RECT caption_buttons;
+  const int has_caption_buttons =
+      proton_engine_overlay_caption_buttons_rect(hwnd, &caption_buttons);
+  if (has_caption_buttons) {
+    LRESULT caption_hit = proton_win_titlebar_caption_button_hit(
+        client_point, &caption_buttons);
+    if (caption_hit != HTNOWHERE) {
+      system_hit_test = caption_hit;
+    }
+  }
+
+  RECT window_rect;
+  if (!GetWindowRect(hwnd, &window_rect)) {
+    return DefWindowProcW(hwnd, WM_NCHITTEST, 0, lparam);
+  }
+
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  const int padded_border =
+      GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+  const int resize_border_x =
+      GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + padded_border;
+  const int resize_border_y =
+      GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padded_border;
+  const int maximized = IsZoomed(hwnd);
+  POINT client_origin = {0, 0};
+  ClientToScreen(hwnd, &client_origin);
+  const int client_left = client_origin.x - window_rect.left;
+  const int client_top = client_origin.y - window_rect.top;
+  RECT drag_strip = {0};
+  proton_engine_window_t *window =
+      (proton_engine_window_t *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+  if (window == NULL || !window->draggable_regions_reported) {
+    (void)proton_engine_overlay_drag_strip_rect(hwnd, &drag_strip);
+  }
+
+  proton_win_titlebar_hit_test_input_t input = {
+      .x = GET_X_LPARAM(lparam) - window_rect.left,
+      .y = GET_Y_LPARAM(lparam) - window_rect.top,
+      .width = window_rect.right - window_rect.left,
+      .height = window_rect.bottom - window_rect.top,
+      .resize_border_x = resize_border_x,
+      .resize_border_y = resize_border_y,
+      .drag_strip_left = client_left + drag_strip.left,
+      .drag_strip_right = client_left + drag_strip.right,
+      .drag_strip_top = client_top + drag_strip.top,
+      .drag_strip_bottom = client_top + drag_strip.bottom,
+      .maximized = maximized,
+      .system_hit_test = system_hit_test,
+  };
+  LRESULT hit = proton_win_titlebar_hit_test(&input);
+  if (hit == HTCLIENT && window != NULL &&
+      proton_win_titlebar_point_in_draggable_regions(
+          client_point, window->draggable_region_count,
+          window->draggable_regions)) {
+    return HTCAPTION;
+  }
+  return hit;
+}
+
 static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                                   UINT msg,
                                                   WPARAM wparam,
                                                   LPARAM lparam) {
   proton_engine_window_t *window =
       (proton_engine_window_t *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
-  (void)wparam;
   switch (msg) {
-  case WM_SIZE:
-    if (window != NULL && window->browser != NULL) {
-      cef_browser_host_t *host = window->browser->get_host(window->browser);
-      if (host != NULL) {
-        HWND child = host->get_window_handle(host);
-        if (child != NULL) {
-          SetWindowPos(child, NULL, 0, 0, LOWORD(lparam), HIWORD(lparam),
-                       SWP_NOZORDER);
-        }
-        host->base.release((cef_base_ref_counted_t *)host);
+  case WM_NCCREATE: {
+    CREATESTRUCTW *create = (CREATESTRUCTW *)lparam;
+    window = (proton_engine_window_t *)create->lpCreateParams;
+    if (window != NULL) {
+      window->hwnd = hwnd;
+      SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)window);
+    }
+    break;
+  }
+  case WM_NCCALCSIZE:
+    if (window != NULL && window->titlebar_overlay && wparam == TRUE) {
+      NCCALCSIZE_PARAMS *params = (NCCALCSIZE_PARAMS *)lparam;
+      LONG proposed_top = params->rgrc[0].top;
+      LRESULT result = DefWindowProcW(hwnd, msg, wparam, lparam);
+      if (result != 0) {
+        return result;
+      }
+      params->rgrc[0].top =
+          proposed_top +
+          (IsZoomed(hwnd) ? proton_engine_overlay_frame_top_thickness(hwnd)
+                          : 0);
+      return 0;
+    }
+    break;
+  case WM_NCHITTEST:
+    if (window != NULL && window->titlebar_overlay) {
+      return proton_engine_overlay_hit_test(hwnd, lparam);
+    }
+    break;
+  case WM_GETMINMAXINFO:
+    if (window != NULL && window->titlebar_overlay) {
+      HMONITOR monitor =
+          MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+      MONITORINFO monitor_info;
+      memset(&monitor_info, 0, sizeof(monitor_info));
+      monitor_info.cbSize = sizeof(monitor_info);
+      if (monitor != NULL && GetMonitorInfoW(monitor, &monitor_info)) {
+        MINMAXINFO *minmax = (MINMAXINFO *)lparam;
+        minmax->ptMaxPosition.x =
+            monitor_info.rcWork.left - monitor_info.rcMonitor.left;
+        minmax->ptMaxPosition.y =
+            monitor_info.rcWork.top - monitor_info.rcMonitor.top;
+        minmax->ptMaxSize.x =
+            monitor_info.rcWork.right - monitor_info.rcWork.left;
+        minmax->ptMaxSize.y =
+            monitor_info.rcWork.bottom - monitor_info.rcWork.top;
+        return 0;
       }
     }
+    break;
+  case WM_DPICHANGED:
+    if (window != NULL && window->titlebar_overlay) {
+      RECT *suggested = (RECT *)lparam;
+      SetWindowPos(hwnd, NULL, suggested->left, suggested->top,
+                   suggested->right - suggested->left,
+                   suggested->bottom - suggested->top,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+      proton_engine_overlay_apply_frame(hwnd);
+      RECT client;
+      if (GetClientRect(hwnd, &client)) {
+        proton_engine_resize_browser(window, client.right - client.left,
+                                     client.bottom - client.top);
+      }
+      return 0;
+    }
+    break;
+  case WM_PARENTNOTIFY:
+    if (window != NULL && window->titlebar_overlay &&
+        LOWORD(wparam) == WM_CREATE) {
+      proton_engine_overlay_subclass_browser(window, (HWND)lparam);
+    }
+    break;
+  case WM_ACTIVATE:
+    if (window != NULL && window->titlebar_overlay) {
+      proton_engine_overlay_apply_frame(hwnd);
+      RECT client;
+      if (GetClientRect(hwnd, &client)) {
+        proton_engine_resize_browser(window, client.right - client.left,
+                                     client.bottom - client.top);
+      }
+    }
+    break;
+  case WM_SIZE:
+    if (window != NULL) {
+      proton_engine_resize_browser(window, LOWORD(lparam), HIWORD(lparam));
+    }
     return 0;
+  case WM_ERASEBKGND:
+    if (window != NULL && window->titlebar_overlay) {
+      RECT client;
+      GetClientRect(hwnd, &client);
+      FillRect((HDC)wparam, &client, (HBRUSH)GetStockObject(BLACK_BRUSH));
+      return 1;
+    }
+    break;
+  case WM_PAINT:
+    if (window != NULL && window->titlebar_overlay) {
+      PAINTSTRUCT paint;
+      HDC dc = BeginPaint(hwnd, &paint);
+      FillRect(dc, &paint.rcPaint, (HBRUSH)GetStockObject(BLACK_BRUSH));
+      EndPaint(hwnd, &paint);
+      return 0;
+    }
+    break;
   case WM_CLOSE:
     if (window != NULL) {
       proton_engine_debug_log("window_wm_close browser=%d", window->browser_id);
@@ -1751,6 +2185,12 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   default:
     break;
   }
+  if (window != NULL && window->titlebar_overlay) {
+    LRESULT dwm_result = 0;
+    if (DwmDefWindowProc(hwnd, msg, wparam, lparam, &dwm_result)) {
+      return dwm_result;
+    }
+  }
   return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
@@ -1771,6 +2211,8 @@ static void proton_engine_register_window_class(void) {
 
 static cef_load_handler_t *CEF_CALLBACK
 proton_engine_client_get_load_handler(cef_client_t *self);
+static cef_drag_handler_t *CEF_CALLBACK
+proton_engine_client_get_drag_handler(cef_client_t *self);
 
 static proton_engine_client_t *proton_engine_client_new(
     proton_engine_window_t *window) {
@@ -1785,7 +2227,63 @@ static proton_engine_client_t *proton_engine_client_new(
   client->client.on_process_message_received =
       proton_engine_client_on_process_message_received;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
+  client->client.get_drag_handler = proton_engine_client_get_drag_handler;
   return client;
+}
+
+static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
+    cef_drag_handler_t *self,
+    cef_browser_t *browser,
+    cef_frame_t *frame,
+    size_t regions_count,
+    const cef_draggable_region_t *regions) {
+  (void)self;
+  if (browser == NULL || frame == NULL || !frame->is_main(frame)) {
+    return;
+  }
+  proton_engine_window_t *window =
+      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+  if (window == NULL || !window->titlebar_overlay) {
+    return;
+  }
+
+  if (regions_count == 0) {
+    free(window->draggable_regions);
+    window->draggable_regions = NULL;
+    window->draggable_region_count = 0;
+    window->draggable_regions_reported = 1;
+  } else if (regions != NULL &&
+             regions_count <=
+                 SIZE_MAX / sizeof(proton_win_titlebar_region_t)) {
+    proton_win_titlebar_region_t *copy =
+        (proton_win_titlebar_region_t *)malloc(regions_count * sizeof(*copy));
+    if (copy == NULL) {
+      proton_engine_verbose_log("draggable_regions_allocation_failed count=%zu",
+                                regions_count);
+      return;
+    }
+    for (size_t i = 0; i < regions_count; i++) {
+      copy[i].x = regions[i].bounds.x;
+      copy[i].y = regions[i].bounds.y;
+      copy[i].width = regions[i].bounds.width;
+      copy[i].height = regions[i].bounds.height;
+      copy[i].draggable = regions[i].draggable;
+    }
+    free(window->draggable_regions);
+    window->draggable_regions = copy;
+    window->draggable_region_count = regions_count;
+    window->draggable_regions_reported = 1;
+  }
+
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host != NULL) {
+    HWND browser_hwnd = host->get_window_handle(host);
+    proton_engine_overlay_subclass_browser(window, browser_hwnd);
+    host->base.release((cef_base_ref_counted_t *)host);
+  }
+  proton_engine_verbose_log("draggable_regions browser=%d count=%zu",
+                            window->browser_id,
+                            window->draggable_region_count);
 }
 
 static void CEF_CALLBACK proton_engine_on_loading_state_change(
@@ -1973,6 +2471,12 @@ proton_engine_client_get_load_handler(cef_client_t *self) {
   return &g_proton_engine_load_handler.handler;
 }
 
+static cef_drag_handler_t *CEF_CALLBACK
+proton_engine_client_get_drag_handler(cef_client_t *self) {
+  (void)self;
+  return &g_proton_engine_drag_handler.handler;
+}
+
 static int32_t proton_engine_window_create_browser(
     proton_engine_window_t *window,
     const char *initial_url,
@@ -2022,6 +2526,8 @@ static int32_t proton_engine_window_create_browser(
       GetCurrentThreadId(), window->browser_id,
       proton_engine_log_url(initial_url), rect.right - rect.left,
       rect.bottom - rect.top);
+  proton_engine_resize_browser(window, rect.right - rect.left,
+                               rect.bottom - rect.top);
   return PROTON_OK;
 }
 
@@ -2503,6 +3009,8 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   int32_t height = 0;
   char title[512] = {0};
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES] = {0};
+  char titlebar_style[32] = {0};
+  int titlebar_overlay = 0;
   if (!proton_engine_parse_json_int_field(config_json, "width", &width) ||
       !proton_engine_parse_json_int_field(config_json, "height", &height) ||
       width <= 0 || height <= 0) {
@@ -2519,6 +3027,18 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                              sizeof(initial_url))) {
     snprintf(initial_url, sizeof(initial_url), "about:blank");
   }
+  if (proton_engine_parse_json_string_field(config_json, "titlebar_style",
+                                            titlebar_style,
+                                            sizeof(titlebar_style))) {
+    if (strcmp(titlebar_style, "overlay") == 0) {
+      titlebar_overlay = 1;
+    } else if (strcmp(titlebar_style, "default") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window titlebar_style must be default or overlay");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+  }
 
   proton_engine_register_window_class();
   proton_engine_window_t *window =
@@ -2529,6 +3049,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   }
   window->width = width;
   window->height = height;
+  window->titlebar_overlay = titlebar_overlay;
   window->runtime = runtime;
   window->client = (cef_client_t *)proton_engine_client_new(window);
   if (window->client == NULL) {
@@ -2540,17 +3061,26 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   wchar_t wide_title[512];
   proton_engine_utf8_to_wide(title, wide_title,
                              (int)(sizeof(wide_title) / sizeof(wide_title[0])));
+  DWORD window_style = WS_OVERLAPPEDWINDOW;
+  if (window->titlebar_overlay) {
+    window_style |= WS_CLIPCHILDREN;
+  }
   window->hwnd = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS, wide_title,
-                                 WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                                 CW_USEDEFAULT, width, height, NULL, NULL,
-                                 GetModuleHandleW(NULL), NULL);
+                                 window_style, CW_USEDEFAULT, CW_USEDEFAULT,
+                                 width, height, NULL, NULL,
+                                 GetModuleHandleW(NULL), window);
   if (window->hwnd == NULL) {
     free(window->client);
     free(window);
     proton_engine_set_message(error, error_len, "window creation failed");
     return PROTON_ERR_PLATFORM;
   }
-  SetWindowLongPtrW(window->hwnd, GWLP_USERDATA, (LONG_PTR)window);
+  if (window->titlebar_overlay) {
+    proton_engine_overlay_apply_frame(window->hwnd);
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                     SWP_FRAMECHANGED);
+  }
   ShowWindow(window->hwnd, SW_SHOW);
 
   int32_t status =
@@ -2561,6 +3091,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
     free(window->html_url);
     free(window->html);
     free(window->bridge_config_json);
+    free(window->draggable_regions);
     free(window);
     return status;
   }
@@ -2600,6 +3131,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   free(window->html_url);
   free(window->html);
   free(window->bridge_config_json);
+  free(window->draggable_regions);
   free(window);
   return PROTON_OK;
 }

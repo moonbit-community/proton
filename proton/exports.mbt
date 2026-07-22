@@ -12,6 +12,7 @@ pub using @native {
   type RuntimeConfig,
   type RuntimeEvent,
   type RuntimeInfo,
+  type TitlebarStyle,
   type Window,
   type WindowConfig,
 }

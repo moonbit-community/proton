@@ -8,6 +8,22 @@ pub(all) enum WindowSizeHint {
 } derive(Debug, Eq)
 
 ///|
+/// Controls whether web content remains below or extends beneath the native
+/// titlebar. Platforms without overlay support keep the default titlebar.
+pub(all) enum TitlebarStyle {
+  Default
+  Overlay
+} derive(Debug, Eq)
+
+///|
+pub impl Show for TitlebarStyle with fn output(self, logger) {
+  match self {
+    Default => logger.write_string("Default")
+    Overlay => logger.write_string("Overlay")
+  }
+}
+
+///|
 pub impl Show for WindowSizeHint with fn output(self, logger) {
   match self {
     None => logger.write_string("None")
@@ -24,6 +40,7 @@ pub struct WindowManifest {
   width : Int
   height : Int
   size_hint : WindowSizeHint
+  titlebar_style : TitlebarStyle
 } derive(Debug, Eq)
 
 ///|
@@ -36,6 +53,8 @@ pub impl Show for WindowManifest with fn output(self, logger) {
   logger.write_object(self.height)
   logger.write_string(", size_hint: ")
   logger.write_object(self.size_hint)
+  logger.write_string(", titlebar_style: ")
+  logger.write_object(self.titlebar_style)
   logger.write_string(" }")
 }
 
@@ -67,8 +86,9 @@ pub fn WindowManifest::new(
   width : Int,
   height : Int,
   size_hint? : WindowSizeHint = WindowSizeHint::None,
+  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
 ) -> WindowManifest {
-  WindowManifest::{ title, width, height, size_hint }
+  WindowManifest::{ title, width, height, size_hint, titlebar_style }
 }
 
 ///|

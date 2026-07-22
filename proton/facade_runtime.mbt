@@ -51,6 +51,10 @@ async fn run_manifest(
         width=manifest.window.width,
         height=manifest.window.height,
         initial_url="about:blank",
+        titlebar_style=match manifest.window.titlebar_style {
+          @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
+          @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
+        },
       ),
     ) {
     Ok(window) => window

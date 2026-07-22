@@ -642,6 +642,7 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
       900,
       640,
       size_hint=@manifest.WindowSizeHint::Min,
+      titlebar_style=@manifest.TitlebarStyle::Overlay,
     ),
     @manifest.AppEntry::Asset("frontend/index.html"),
     debug=1,
@@ -672,6 +673,10 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
   let roundtripped = loaded.manifest()
   assert_eq(roundtripped.window.title, "Roundtrip")
   assert_eq(roundtripped.window.size_hint, @manifest.WindowSizeHint::Min)
+  assert_eq(
+    roundtripped.window.titlebar_style,
+    @manifest.TitlebarStyle::Overlay,
+  )
   match roundtripped.entry {
     Asset(path) => assert_eq(path, "frontend/index.html")
     _ => abort("expected asset entry")

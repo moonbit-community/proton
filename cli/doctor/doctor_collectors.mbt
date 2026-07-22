@@ -2460,7 +2460,9 @@ fn push_loaded_app(
       "x" +
       window.height.to_string() +
       " size_hint=" +
-      window.size_hint,
+      window.size_hint +
+      " titlebar_style=" +
+      window.titlebar_style,
     ),
   )
   lines.push(

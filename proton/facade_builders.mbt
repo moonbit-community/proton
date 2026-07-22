@@ -114,6 +114,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     debug_level_value: 0,
     title_overridden: false,
     size_overridden: false,
+    titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
     extension_settings: Map([]),
@@ -145,6 +146,7 @@ pub fn App::title(self : App, title : String) -> App {
     self.window.width,
     self.window.height,
     size_hint=self.window.size_hint,
+    titlebar_style=self.window.titlebar_style,
   )
   self
 }
@@ -158,6 +160,25 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
     width,
     height,
     size_hint=self.window.size_hint,
+    titlebar_style=self.window.titlebar_style,
+  )
+  self
+}
+
+///|
+/// Sets whether web content remains below or extends beneath the native
+/// titlebar. Overlay rendering is currently implemented on macOS and Windows.
+pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
+  self.titlebar_style_overridden = true
+  self.window = @manifest.WindowManifest::new(
+    self.window.title,
+    self.window.width,
+    self.window.height,
+    size_hint=self.window.size_hint,
+    titlebar_style=match style {
+      Default => @manifest.TitlebarStyle::Default
+      Overlay => @manifest.TitlebarStyle::Overlay
+    },
   )
   self
 }

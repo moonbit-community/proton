@@ -171,6 +171,7 @@ typedef struct {
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
   int32_t width;
   int32_t height;
+  int titlebar_overlay;
 } proton_engine_window_config_t;
 
 static int g_proton_cef_initialized = 0;
@@ -2013,6 +2014,19 @@ static int32_t proton_engine_parse_window_config(
   proton_engine_parse_json_string_field(config_json, "initial_url",
                                         config->initial_url,
                                         sizeof(config->initial_url));
+  char titlebar_style[32] = {0};
+  if (proton_engine_parse_json_string_field(
+          config_json, "titlebar_style", titlebar_style,
+          sizeof(titlebar_style))) {
+    if (strcmp(titlebar_style, "overlay") == 0) {
+      config->titlebar_overlay = 1;
+    } else if (strcmp(titlebar_style, "default") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window titlebar_style must be default or overlay");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+  }
   return PROTON_OK;
 }
 
@@ -2910,6 +2924,9 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                      NSWindowStyleMaskMiniaturizable |
                      NSWindowStyleMaskResizable;
+  if (config.titlebar_overlay) {
+    style |= NSWindowStyleMaskFullSizeContentView;
+  }
   NSString *title = [NSString stringWithUTF8String:config.title];
   window->window = [[NSWindow alloc] initWithContentRect:rect
                                                styleMask:style
@@ -2923,6 +2940,10 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   }
   [window->window setReleasedWhenClosed:YES];
   [window->window setTitle:title != nil ? title : @"Proton"];
+  if (config.titlebar_overlay) {
+    [window->window setTitleVisibility:NSWindowTitleHidden];
+    [window->window setTitlebarAppearsTransparent:YES];
+  }
   [window->window center];
   window->content_view = [window->window contentView];
   ProtonWindowDelegate *delegate = [[ProtonWindowDelegate alloc] init];

@@ -56,6 +56,13 @@
 #define PROTON_RUNTIME_WAIT_FEATURE ""
 #endif
 
+#if PROTON_WITH_ENGINE && \
+    (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
+#define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
+#else
+#define PROTON_TITLEBAR_OVERLAY_FEATURE ""
+#endif
+
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
 #define PROTON_MAX_EVENTS 32
@@ -205,8 +212,12 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
     if (strcmp(key, "width") == 0 || strcmp(key, "height") == 0) {
       valid = proton_json_read_int32(doc, value, &integer);
     } else if (strcmp(key, "title") == 0 ||
-               strcmp(key, "initial_url") == 0) {
+               strcmp(key, "initial_url") == 0 ||
+               strcmp(key, "titlebar_style") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
+      if (valid && strcmp(key, "titlebar_style") == 0) {
+        valid = strcmp(text, "default") == 0 || strcmp(text, "overlay") == 0;
+      }
     }
   } else if (strcmp(config_name, "bridge") == 0) {
     if (strcmp(key, "namespace") == 0) {
@@ -396,6 +407,7 @@ static const char *const proton_window_config_keys[] = {
     "width",
     "height",
     "initial_url",
+    "titlebar_style",
 };
 
 static const char *const proton_bridge_config_keys[] = {
@@ -633,8 +645,16 @@ static int32_t proton_find_engine_library(const char *runtime_root,
   return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                           "runtime framework path is too long");
 #else
+  char release_dir[PROTON_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
   char lib_dir[PROTON_MAX_PATH_BYTES] = {0};
+  if (proton_join_path(release_dir, sizeof(release_dir), runtime_root,
+                       "Release") &&
+      proton_join_path(engine_lib, engine_lib_len, release_dir,
+                       "libcef.so") &&
+      proton_path_exists(engine_lib)) {
+    return PROTON_OK;
+  }
   if (proton_join_path(engine_lib, engine_lib_len, runtime_root,
                        "libcef.so") &&
       proton_path_exists(engine_lib)) {
@@ -1396,7 +1416,7 @@ int32_t proton_runtime_info_json(char *buffer,
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
-      PROTON_RUNTIME_WAIT_FEATURE "]}",
+      PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
   if (required < 0 || required >= (int)sizeof(info)) {

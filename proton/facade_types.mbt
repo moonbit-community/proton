@@ -8,6 +8,7 @@ struct App {
   mut debug_level_value : Int
   mut title_overridden : Bool
   mut size_overridden : Bool
+  mut titlebar_style_overridden : Bool
   mut entry_overridden : Bool
   mut debug_overridden : Bool
   extension_settings : Map[String, @manifest.ExtensionSetting]
