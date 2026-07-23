@@ -7,12 +7,15 @@
 #include <stdint.h>
 
 PROTON_INTERNAL bool proton_app_runner_is_active(void);
+PROTON_INTERNAL bool proton_app_runner_engine_loop_is_running(void);
 
 #ifdef __OBJC__
 typedef int32_t (^proton_app_main_int_work_t)(void);
 typedef uint64_t (^proton_app_main_u64_work_t)(void);
 typedef void (^proton_app_main_void_work_t)(void);
 
+PROTON_INTERNAL int32_t
+proton_app_dispatch_engine_start(proton_app_main_int_work_t work);
 PROTON_INTERNAL int32_t
 proton_app_dispatch_sync_int(proton_app_main_int_work_t work);
 PROTON_INTERNAL uint64_t

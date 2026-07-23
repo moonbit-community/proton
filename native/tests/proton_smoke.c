@@ -40,10 +40,21 @@ static int expect_status(const char *label, int32_t actual, int32_t expected);
 #if defined(__APPLE__)
 static int g_app_entry_called = 0;
 static int g_app_entry_on_main_thread = 0;
+static int32_t g_app_entry_invalid_create_status = PROTON_OK;
+static int32_t g_app_entry_create_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_destroy_status = PROTON_ERR_NOT_INITIALIZED;
 
 static void smoke_app_entry(void) {
   g_app_entry_called = 1;
   g_app_entry_on_main_thread = pthread_main_np() != 0;
+  proton_runtime_id_t runtime = PROTON_INVALID_HANDLE;
+  g_app_entry_invalid_create_status =
+      proton_runtime_create_json("{\"abi_version\":0}", &runtime);
+  g_app_entry_create_status =
+      proton_runtime_create_json("{\"abi_version\":1}", &runtime);
+  if (g_app_entry_create_status == PROTON_OK) {
+    g_app_entry_destroy_status = proton_runtime_destroy(runtime);
+  }
 }
 #endif
 
@@ -705,6 +716,19 @@ int main(void) {
     }
     if (!g_app_entry_called || g_app_entry_on_main_thread) {
       return fail("app_run did not execute entry on its application thread");
+    }
+    if (expect_status("app_run failed runtime create",
+                      g_app_entry_invalid_create_status,
+                      PROTON_ERR_INVALID_ARGUMENT)) {
+      return 1;
+    }
+    if (expect_status("app_run runtime create", g_app_entry_create_status,
+                      PROTON_OK)) {
+      return 1;
+    }
+    if (expect_status("app_run runtime destroy", g_app_entry_destroy_status,
+                      PROTON_OK)) {
+      return 1;
     }
   }
 #endif
