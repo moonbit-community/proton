@@ -52,6 +52,9 @@ static int32_t g_app_entry_wakeup_delay_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_wakeup_status = PROTON_ERR_NOT_INITIALIZED;
 static int g_app_entry_first_wakeup = 0;
 static int g_app_entry_second_wakeup = 0;
+static int32_t g_app_entry_window_create_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_window_show_status = PROTON_ERR_NOT_INITIALIZED;
+static int g_app_entry_browser_ready = 0;
 static int32_t g_app_entry_destroy_status = PROTON_ERR_NOT_INITIALIZED;
 static char g_app_runtime_config[256];
 static char g_app_entry_error[512];
@@ -63,6 +66,56 @@ static int consume_wakeup_byte(int fd) {
   }
   unsigned char byte = 0;
   return read(fd, &byte, sizeof(byte)) == (ssize_t)sizeof(byte);
+}
+
+static char *read_log(const char *path) {
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    return NULL;
+  }
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return NULL;
+  }
+  long size = ftell(file);
+  if (size < 0 || fseek(file, 0, SEEK_SET) != 0) {
+    fclose(file);
+    return NULL;
+  }
+  char *buffer = (char *)malloc((size_t)size + 1);
+  if (buffer == NULL) {
+    fclose(file);
+    return NULL;
+  }
+  size_t length = fread(buffer, 1, (size_t)size, file);
+  fclose(file);
+  buffer[length] = '\0';
+  return buffer;
+}
+
+static int log_contains(const char *path, const char *needle) {
+  char *log = read_log(path);
+  if (log == NULL) {
+    return 0;
+  }
+  int found = strstr(log, needle) != NULL;
+  free(log);
+  return found;
+}
+
+static int log_contains_in_order(const char *path,
+                                 const char *first,
+                                 const char *second) {
+  char *log = read_log(path);
+  if (log == NULL) {
+    return 0;
+  }
+  const char *first_match = strstr(log, first);
+  const char *second_match = strstr(log, second);
+  int ordered = first_match != NULL && second_match != NULL &&
+                first_match < second_match;
+  free(log);
+  return ordered;
 }
 
 static void smoke_app_entry(void) {
@@ -104,6 +157,24 @@ static void smoke_app_entry(void) {
       close(wakeup_pipe[1]);
     } else {
       g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
+    }
+    proton_window_id_t window = PROTON_INVALID_HANDLE;
+    g_app_entry_window_create_status = proton_window_create_json(
+        runtime,
+        "{\"abi_version\":1,\"title\":\"Managed Destroy\","
+        "\"width\":320,\"height\":240,\"initial_url\":\"about:blank\"}",
+        &window);
+    if (g_app_entry_window_create_status == PROTON_OK) {
+      g_app_entry_window_show_status = proton_window_show(window);
+      for (int attempt = 0; attempt < 100; attempt++) {
+        const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
+        if (native_log_path != NULL &&
+            log_contains(native_log_path, "create_browser id=")) {
+          g_app_entry_browser_ready = 1;
+          break;
+        }
+        usleep(10000);
+      }
     }
     g_app_entry_destroy_status = proton_runtime_destroy(runtime);
   }
@@ -786,6 +857,11 @@ int main(void) {
             (int)sizeof(g_app_runtime_config)) {
       return fail("missing managed app runner test runtime");
     }
+    const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
+    if (native_log_path == NULL) {
+      return fail("missing managed app runner native log path");
+    }
+    remove(native_log_path);
     if (expect_status("app_run", proton_app_run(smoke_app_entry), PROTON_OK)) {
       return 1;
     }
@@ -822,9 +898,29 @@ int main(void) {
     if (!g_app_entry_first_wakeup || !g_app_entry_second_wakeup) {
       return fail("app_run wakeup fd lost a consecutive notification");
     }
+    if (expect_status("app_run window create",
+                      g_app_entry_window_create_status, PROTON_OK) ||
+        expect_status("app_run window show", g_app_entry_window_show_status,
+                      PROTON_OK)) {
+      return 1;
+    }
+    if (!g_app_entry_browser_ready) {
+      return fail("app_run browser did not become ready");
+    }
     if (expect_status("app_run runtime destroy", g_app_entry_destroy_status,
                       PROTON_OK)) {
       return 1;
+    }
+    if (!log_contains_in_order(native_log_path,
+                               "browser_before_close browser=",
+                               "managed_runtime_destroy_complete")) {
+      return fail(
+          "managed runtime destroy completed before browser_before_close");
+    }
+    if (!log_contains_in_order(native_log_path,
+                               "managed_runtime_destroy_complete",
+                               "cef_shutdown")) {
+      return fail("CEF shut down before managed runtime destroy completed");
     }
   }
 #endif

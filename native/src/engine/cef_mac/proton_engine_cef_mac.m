@@ -216,6 +216,10 @@ static proton_engine_load_handler_t g_load_handler;
 static proton_engine_request_handler_t g_request_handler;
 static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
+static proton_engine_runtime_t *g_managed_shutdown_runtime = NULL;
+static pthread_mutex_t g_managed_shutdown_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t g_managed_shutdown_condition = PTHREAD_COND_INITIALIZER;
+static int g_managed_shutdown_complete = 0;
 static uint64_t g_next_window_native_id = 1;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
 static atomic_bool g_external_message_pump_enabled = ATOMIC_VAR_INIT(false);
@@ -1129,6 +1133,7 @@ static void proton_engine_window_request_browser_close(
 static void proton_engine_window_free(proton_engine_window_t *window);
 static void proton_engine_window_finalize_if_ready(
     proton_engine_window_t *window);
+static void proton_engine_complete_managed_shutdown_if_ready(void);
 static int32_t proton_engine_window_create_browser(proton_engine_window_t *window,
                                                    const char *initial_url,
                                                    char *error,
@@ -2323,6 +2328,7 @@ static char *proton_engine_data_url_for_html(const char *html) {
 
 static void proton_engine_cef_shutdown(void) {
   if (g_proton_cef_initialized) {
+    proton_engine_debug_log("cef_shutdown");
     cef_shutdown();
     g_proton_cef_initialized = 0;
   }
@@ -2489,28 +2495,137 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   return PROTON_OK;
 }
 
+static void proton_engine_complete_managed_shutdown_if_ready(void) {
+  proton_engine_runtime_t *runtime = g_managed_shutdown_runtime;
+  if (runtime == NULL || g_windows != NULL) {
+    return;
+  }
+  int completed = 0;
+  pthread_mutex_lock(&g_managed_shutdown_lock);
+  if (!g_managed_shutdown_complete) {
+    g_managed_shutdown_complete = 1;
+    pthread_cond_signal(&g_managed_shutdown_condition);
+    completed = 1;
+  }
+  pthread_mutex_unlock(&g_managed_shutdown_lock);
+  if (completed) {
+    proton_engine_debug_log("managed_browser_close_complete");
+    proton_engine_quit_app_loop();
+  }
+}
+
+static int32_t proton_engine_begin_managed_runtime_destroy(
+    proton_engine_runtime_t *runtime,
+    char *error,
+    size_t error_len) {
+  if (!pthread_main_np()) {
+    proton_engine_set_message(error, error_len,
+                              "managed runtime destroy must begin on the main "
+                              "thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (g_managed_shutdown_runtime != NULL) {
+    proton_engine_set_message(error, error_len,
+                              "managed runtime destroy is already active");
+    return PROTON_ERR_ALREADY_INITIALIZED;
+  }
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    if (!window->finalize_after_browser_close) {
+      proton_engine_set_message(
+          error, error_len,
+          "runtime destroy requires all windows to begin closing first");
+      return PROTON_ERR_ENGINE;
+    }
+  }
+
+  proton_engine_dialog_dispose_runtime(runtime);
+  proton_engine_menu_clear_runtime(runtime);
+  proton_engine_runtime_clear_bridge_queue(runtime);
+  proton_engine_bridge_pending_clear_all();
+  pthread_mutex_lock(&g_managed_shutdown_lock);
+  g_managed_shutdown_complete = 0;
+  pthread_mutex_unlock(&g_managed_shutdown_lock);
+  g_managed_shutdown_runtime = runtime;
+  proton_engine_debug_log("managed_runtime_destroy_begin");
+  proton_engine_complete_managed_shutdown_if_ready();
+  return PROTON_OK;
+}
+
+static int32_t proton_engine_finish_managed_runtime_destroy(
+    proton_engine_runtime_t *runtime,
+    char *error,
+    size_t error_len) {
+  if (!pthread_main_np()) {
+    proton_engine_set_message(error, error_len,
+                              "managed runtime destroy must finish on the main "
+                              "thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (g_managed_shutdown_runtime != runtime || g_windows != NULL ||
+      !g_managed_shutdown_complete) {
+    proton_engine_set_message(
+        error, error_len,
+        "managed runtime destroy finished before browser close completed");
+    return PROTON_ERR_ENGINE;
+  }
+  g_managed_shutdown_runtime = NULL;
+  runtime->owns_cef_runtime = 0;
+  if (runtime->bridge_lock_initialized) {
+    pthread_mutex_destroy(&runtime->bridge_lock);
+    runtime->bridge_lock_initialized = 0;
+  }
+  proton_engine_clear_wakeup_fd();
+  g_proton_cef_runtime_active = 0;
+  proton_engine_debug_log("managed_runtime_destroy_complete");
+  free(runtime);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       char *error,
                                       size_t error_len) {
-  PROTON_ENGINE_RETURN_ON_MAIN(
-      proton_engine_runtime_destroy(runtime, error, error_len));
   if (runtime == NULL) {
     proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  if (proton_app_runner_is_active()) {
+    if (pthread_main_np()) {
+      proton_engine_set_message(
+          error, error_len,
+          "managed runtime destroy cannot wait on the main thread");
+      return PROTON_ERR_WRONG_THREAD;
+    }
+    int32_t status = proton_app_dispatch_sync_int(^{
+      return proton_engine_begin_managed_runtime_destroy(runtime, error,
+                                                         error_len);
+    });
+    if (status != PROTON_OK) {
+      return status;
+    }
+    pthread_mutex_lock(&g_managed_shutdown_lock);
+    while (!g_managed_shutdown_complete) {
+      pthread_cond_wait(&g_managed_shutdown_condition,
+                        &g_managed_shutdown_lock);
+    }
+    pthread_mutex_unlock(&g_managed_shutdown_lock);
+    return proton_app_dispatch_sync_int(^{
+      return proton_engine_finish_managed_runtime_destroy(runtime, error,
+                                                          error_len);
+    });
+  }
+
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_runtime_destroy(runtime, error, error_len));
   proton_engine_dialog_dispose_runtime(runtime);
   proton_engine_menu_clear_runtime(runtime);
   if (runtime->owns_cef_runtime) {
     proton_engine_runtime_clear_bridge_queue(runtime);
     proton_engine_bridge_pending_clear_all();
-    if (proton_app_runner_is_active()) {
-      proton_engine_quit_app_loop();
-    } else {
-      proton_engine_drain_cef_close_work();
-      proton_engine_cef_shutdown();
-      proton_engine_free_deferred_finalizing_windows();
-      proton_engine_reset_external_message_pump();
-    }
+    proton_engine_drain_cef_close_work();
+    proton_engine_cef_shutdown();
+    proton_engine_free_deferred_finalizing_windows();
+    proton_engine_reset_external_message_pump();
     runtime->owns_cef_runtime = 0;
   }
   if (runtime->bridge_lock_initialized) {
@@ -2595,10 +2710,13 @@ int32_t proton_engine_finish_app(char *error, size_t error_len) {
                               "application cleanup must run on the main thread");
     return PROTON_ERR_WRONG_THREAD;
   }
-  (void)error;
-  (void)error_len;
+  if (g_windows != NULL || g_managed_shutdown_runtime != NULL) {
+    proton_engine_set_message(
+        error, error_len,
+        "application cleanup requires every browser to finish closing");
+    return PROTON_ERR_ENGINE;
+  }
   proton_engine_cef_shutdown();
-  proton_engine_free_deferred_finalizing_windows();
   proton_engine_reset_external_message_pump();
   g_proton_cef_runtime_active = 0;
   g_proton_app_terminating = 0;
@@ -3287,6 +3405,7 @@ static void proton_engine_window_finalize_if_ready(
   }
   proton_engine_window_detach_native_window(window);
   proton_engine_window_free(window);
+  proton_engine_complete_managed_shutdown_if_ready();
 }
 
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
