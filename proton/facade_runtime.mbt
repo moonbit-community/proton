@@ -1,6 +1,20 @@
 ///|
 /// Runs the configured app through the native Proton runtime.
 pub async fn App::run(self : App) -> Unit raise AppRunError {
+  guard app_runner_is_active() else {
+    let message =
+      #|Proton applications must be started with @proton.run from a synchronous main:
+      #|
+      #|fn main {
+      #|  @proton.run(() => {
+      #|    @proton.app().run_or_abort()
+      #|  })
+      #|}
+      #|
+      #|Do not call App::run directly from async fn main.
+      #|
+    raise RunnerError(message)
+  }
   match self.validation_error() {
     Some(error) => raise ConfigurationError(error)
     None => ()
@@ -29,6 +43,7 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 ///|
 fn app_run_error_text(error : AppRunError) -> String {
   match error {
+    RunnerError(message) => "application runner is not active: " + message
     ConfigurationError(message) =>
       "application configuration failed: " + message
     NativeRuntimeError(error) =>
@@ -235,6 +250,7 @@ fn native_run_error(
 ///|
 fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
+    RunnerError(message) => RunnerError(message)
     ConfigurationError(message) => ConfigurationError(message)
     NativeRuntimeError(error) => NativeRuntimeError(error)
     EntryLoadError(message) => EntryLoadError(message)
@@ -424,6 +440,7 @@ fn bridge_startup_timeout_diagnostic(
 ///|
 fn app_run_error_dialog_text(error : AppRunError) -> String {
   match error {
+    RunnerError(message) => message
     BridgeStartupError(diagnostic) =>
       "The application could not finish starting its native bridge.\n\nError code: " +
       diagnostic.code

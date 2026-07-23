@@ -153,6 +153,22 @@ test "app run errors retain typed bridge diagnostics" {
 }
 
 ///|
+async test "app run requires the Proton application runner" {
+  let mut rejected = false
+  html("Test", "<html></html>").run() catch {
+    RunnerError(message) => {
+      rejected = true
+      assert_true(message.contains("@proton.run"))
+      assert_true(message.contains("synchronous main"))
+      assert_true(message.contains("async fn main"))
+    }
+    error =>
+      fail("expected runner error, got " + @debug.render(@debug.to_repr(error)))
+  }
+  assert_true(rejected)
+}
+
+///|
 test "bridge startup timeout is finite and configurable" {
   let default_app = html("Test", "<html></html>")
   inspect(default_app.bridge_startup_timeout_value_ms, content="30000")

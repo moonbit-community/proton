@@ -55,6 +55,7 @@ priv struct BridgeFrontendConfig {
 ///|
 /// Failures produced while configuring, starting, or running an application.
 pub(all) suberror AppRunError {
+  RunnerError(String)
   ConfigurationError(String)
   NativeRuntimeError(@native.NativeError)
   EntryLoadError(String)
