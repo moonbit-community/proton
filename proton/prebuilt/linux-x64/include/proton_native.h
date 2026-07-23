@@ -70,6 +70,10 @@ PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                                        uint32_t interest_mask,
                                        uint32_t timeout_ms,
                                        uint32_t *out_ready_mask);
+PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
+                                                int32_t wakeup_fd);
+PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
+    proton_runtime_id_t runtime, int64_t *out_delay_ms);
 PROTON_API int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,
                                                 const char *menu_json);
 PROTON_API int32_t proton_runtime_poll_event_json(

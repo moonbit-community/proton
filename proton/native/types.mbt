@@ -83,6 +83,12 @@ pub(all) enum DialogLevel {
 } derive(Debug, Eq)
 
 ///|
+pub(all) enum DialogPollResult {
+  Pending
+  Ready(String)
+} derive(Debug, Eq)
+
+///|
 /// An application-level native menu bar.
 struct MenuBar {
   raw_json : String?

@@ -37,7 +37,7 @@ async fn message(
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
   emit_command_result(
     context,
-    show_message_dialog(window, payload),
+    show_message_dialog(request_context, window, payload),
     "message",
     level=payload.level,
   )
@@ -57,7 +57,7 @@ async fn confirm(
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
   emit_command_result(
     context,
-    confirm_message_dialog(window, payload),
+    confirm_message_dialog(request_context, window, payload),
     "confirm",
     level=payload.level,
   )
@@ -74,7 +74,7 @@ async fn open_file(
 ) -> Result[FileDialogReply, String] {
   let payload = FileDialogPayload::{ title, path }
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
-  let result = open_file_dialog(window, payload)
+  let result = open_file_dialog(request_context, window, payload)
   let path = file_dialog_result_path(result)
   emit_command_result(context, result, "openFile", path~)
 }
@@ -90,7 +90,7 @@ async fn save_file(
 ) -> Result[FileDialogReply, String] {
   let payload = FileDialogPayload::{ title, path }
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
-  let result = save_file_dialog(window, payload)
+  let result = save_file_dialog(request_context, window, payload)
   let path = file_dialog_result_path(result)
   emit_command_result(context, result, "saveFile", path~)
 }

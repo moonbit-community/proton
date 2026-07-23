@@ -3,6 +3,7 @@ package "justjavac/proton/core"
 
 import {
   "justjavac/proton/ipc",
+  "moonbitlang/async/cond_var",
   "moonbitlang/core/json",
 }
 
@@ -38,8 +39,12 @@ pub fn AppCommandHost::set_event_sender(Self, async (@ipc.IpcExtensionEvent) -> 
 
 pub struct AppCommandRequestContext {
   window : Int64
+  wake_signal : RuntimeWakeSignal
 }
-pub fn AppCommandRequestContext::new(Int64) -> Self
+pub fn AppCommandRequestContext::new(Int64, wake_signal? : RuntimeWakeSignal) -> Self
+pub async fn AppCommandRequestContext::wait_for_wake(Self, Int64) -> Unit
+pub fn AppCommandRequestContext::wake_revision(Self) -> Int64
+pub fn AppCommandRequestContext::wake_signal(Self) -> RuntimeWakeSignal
 pub fn AppCommandRequestContext::window(Self) -> Int64
 
 type Extension
@@ -98,6 +103,15 @@ pub fn[T] ResourceTable::get(Self[T], Int) -> T?
 pub fn[T] ResourceTable::new() -> Self[T]
 pub fn[T] ResourceTable::remove(Self[T], Int) -> T?
 pub fn[T] ResourceTable::rids(Self[T]) -> Array[Int]
+
+pub struct RuntimeWakeSignal {
+  mut revision : Int64
+  condition : @cond_var.Cond
+}
+pub fn RuntimeWakeSignal::new() -> Self
+pub fn RuntimeWakeSignal::notify(Self) -> Unit
+pub fn RuntimeWakeSignal::revision(Self) -> Int64
+pub async fn RuntimeWakeSignal::wait_for_change(Self, Int64) -> Unit
 
 type TemplateReplacement
 

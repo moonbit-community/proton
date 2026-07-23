@@ -2408,6 +2408,34 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
+// TODO: Route the existing Linux engine wake pipe through the public async
+// event-source contract.
+int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
+                                            int32_t wakeup_fd,
+                                            char *error,
+                                            size_t error_len) {
+  (void)runtime;
+  (void)wakeup_fd;
+  proton_engine_set_message(error, error_len,
+                            "runtime wakeup fd is not supported on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+// TODO: Expose scheduled pump deadlines with the Linux async event source.
+int32_t proton_engine_runtime_next_wakeup_delay_ms(
+    proton_engine_runtime_t *runtime,
+    int64_t *out_delay_ms,
+    char *error,
+    size_t error_len) {
+  (void)runtime;
+  if (out_delay_ms != NULL) {
+    *out_delay_ms = -1;
+  }
+  proton_engine_set_message(error, error_len,
+                            "runtime wakeup delay is not supported on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 // TODO: Implement app menu rendering and command events on Linux.
 int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                                             const char *menu_json,

@@ -14,16 +14,75 @@ struct AppCommandHost {
 }
 
 ///|
+/// Scheduler-local notification shared by the runtime pump and command tasks.
+/// The revision makes waiting race-free when a notification arrives between a
+/// native poll and suspension on the condition variable.
+pub struct RuntimeWakeSignal {
+  mut revision : Int64
+  condition : @async.CondVar
+}
+
+///|
+pub fn RuntimeWakeSignal::new() -> RuntimeWakeSignal {
+  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond() }
+}
+
+///|
+pub fn RuntimeWakeSignal::revision(self : RuntimeWakeSignal) -> Int64 {
+  self.revision
+}
+
+///|
+pub fn RuntimeWakeSignal::notify(self : RuntimeWakeSignal) -> Unit {
+  self.revision = self.revision + 1L
+  self.condition.broadcast()
+}
+
+///|
+pub async fn RuntimeWakeSignal::wait_for_change(
+  self : RuntimeWakeSignal,
+  revision : Int64,
+) -> Unit {
+  while self.revision == revision {
+    self.condition.wait()
+  }
+}
+
+///|
 /// Request-scoped context for one bridged app command dispatch.
 pub struct AppCommandRequestContext {
   window : Int64
+  wake_signal : RuntimeWakeSignal
 }
 
 ///|
 pub fn AppCommandRequestContext::new(
   window : Int64,
+  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
 ) -> AppCommandRequestContext {
-  AppCommandRequestContext::{ window, }
+  AppCommandRequestContext::{ window, wake_signal }
+}
+
+///|
+pub fn AppCommandRequestContext::wake_signal(
+  self : AppCommandRequestContext,
+) -> RuntimeWakeSignal {
+  self.wake_signal
+}
+
+///|
+pub fn AppCommandRequestContext::wake_revision(
+  self : AppCommandRequestContext,
+) -> Int64 {
+  self.wake_signal.revision()
+}
+
+///|
+pub async fn AppCommandRequestContext::wait_for_wake(
+  self : AppCommandRequestContext,
+  revision : Int64,
+) -> Unit {
+  self.wake_signal.wait_for_change(revision)
 }
 
 ///|

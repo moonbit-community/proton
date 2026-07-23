@@ -35,6 +35,8 @@
 #include <ctype.h>
 #include <crt_externs.h>
 #include <dlfcn.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -45,6 +47,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
@@ -191,11 +194,15 @@ static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
 static uint64_t g_next_window_native_id = 1;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
-static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
+static atomic_llong g_scheduled_pump_deadline_ms = ATOMIC_VAR_INIT(-1);
+static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static CFRunLoopRef g_wait_run_loop = NULL;
 static CFRunLoopSourceRef g_wait_source = NULL;
+static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
+static int g_wakeup_write_fd = -1;
+static atomic_bool g_wakeup_byte_pending = ATOMIC_VAR_INIT(false);
 
 static void proton_engine_set_message(char *error,
                                       size_t error_len,
@@ -230,6 +237,33 @@ static void proton_engine_debug_log(const char *format, ...) {
 
 static void proton_engine_wait_source_perform(void *info) {
   (void)info;
+}
+
+static void proton_engine_signal_wakeup_fd(unsigned char wakeup_byte) {
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  if (g_wakeup_write_fd >= 0 &&
+      !atomic_exchange_explicit(&g_wakeup_byte_pending, true,
+                                memory_order_acq_rel)) {
+    ssize_t written;
+    do {
+      written = write(g_wakeup_write_fd, &wakeup_byte, sizeof(wakeup_byte));
+    } while (written < 0 && errno == EINTR);
+    if (written < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+      atomic_store_explicit(&g_wakeup_byte_pending, false,
+                            memory_order_release);
+    }
+  }
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+}
+
+static void proton_engine_clear_wakeup_fd(void) {
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  if (g_wakeup_write_fd >= 0) {
+    close(g_wakeup_write_fd);
+    g_wakeup_write_fd = -1;
+  }
+  atomic_store_explicit(&g_wakeup_byte_pending, false, memory_order_release);
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
 }
 
 static void proton_engine_teardown_wait_source(void) {
@@ -277,22 +311,50 @@ static void proton_engine_signal_wait_source(uint32_t ready_mask) {
   if (g_wait_run_loop != NULL) {
     CFRunLoopWakeUp(g_wait_run_loop);
   }
+  proton_engine_signal_wakeup_fd((unsigned char)ready_mask);
+}
+
+static int64_t proton_engine_monotonic_time_ms(void) {
+  struct timespec now;
+  if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+    return 0;
+  }
+  return (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }
 
 static int64_t proton_engine_get_scheduled_pump_delay_ms(void) {
-  return atomic_load_explicit(&g_scheduled_pump_delay_ms, memory_order_acquire);
+  int64_t deadline = atomic_load_explicit(&g_scheduled_pump_deadline_ms,
+                                          memory_order_acquire);
+  if (deadline < 0) {
+    return -1;
+  }
+  int64_t remaining = deadline - proton_engine_monotonic_time_ms();
+  return remaining > 0 ? remaining : 0;
 }
 
 static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
-  atomic_store_explicit(&g_scheduled_pump_delay_ms, (long long)delay_ms,
+  int64_t deadline = proton_engine_monotonic_time_ms();
+  if (delay_ms > 0 && deadline <= INT64_MAX - delay_ms) {
+    deadline += delay_ms;
+  }
+  atomic_store_explicit(&g_scheduled_pump_deadline_ms, (long long)deadline,
                         memory_order_release);
+  proton_engine_debug_log("schedule_message_pump delay_ms=%lld",
+                          (long long)delay_ms);
   if (delay_ms <= 0) {
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    if (!atomic_load_explicit(&g_message_pump_active, memory_order_acquire)) {
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    }
+  } else {
+    if (!atomic_load_explicit(&g_message_pump_active, memory_order_acquire)) {
+      proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
+    }
   }
 }
 
 static void proton_engine_reset_scheduled_pump(void) {
-  atomic_store_explicit(&g_scheduled_pump_delay_ms, -1, memory_order_release);
+  atomic_store_explicit(&g_scheduled_pump_deadline_ms, -1,
+                        memory_order_release);
 }
 
 static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
@@ -2377,6 +2439,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
+  proton_engine_clear_wakeup_fd();
   g_proton_cef_runtime_active = 0;
   free(runtime);
   return PROTON_OK;
@@ -2519,9 +2582,12 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
+  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
   proton_engine_reset_scheduled_pump();
   proton_engine_runtime_create_pending_browsers(runtime);
   proton_engine_pump_appkit_cef_once();
+  atomic_store_explicit(&g_wakeup_byte_pending, false, memory_order_release);
+  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
   return PROTON_OK;
 }
 
@@ -2614,6 +2680,66 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
   }
   *out_ready_mask = ready_mask;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
+                                            int32_t wakeup_fd,
+                                            char *error,
+                                            size_t error_len) {
+  if (runtime == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+
+  int owned_fd = -1;
+  if (wakeup_fd >= 0) {
+    owned_fd = dup(wakeup_fd);
+    if (owned_fd < 0) {
+      proton_engine_set_message(error, error_len,
+                                "failed to duplicate runtime wakeup fd");
+      return PROTON_ERR_PLATFORM;
+    }
+    int flags = fcntl(owned_fd, F_GETFL);
+    if (flags < 0 || fcntl(owned_fd, F_SETFL, flags | O_NONBLOCK) < 0 ||
+        fcntl(owned_fd, F_SETFD, FD_CLOEXEC) < 0 ||
+        fcntl(owned_fd, F_SETNOSIGPIPE, 1) < 0) {
+      close(owned_fd);
+      proton_engine_set_message(error, error_len,
+                                "failed to configure runtime wakeup fd");
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  int previous_fd = g_wakeup_write_fd;
+  g_wakeup_write_fd = owned_fd;
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+  if (previous_fd >= 0) {
+    close(previous_fd);
+  }
+  if (owned_fd >= 0) {
+    proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_next_wakeup_delay_ms(
+    proton_engine_runtime_t *runtime,
+    int64_t *out_delay_ms,
+    char *error,
+    size_t error_len) {
+  if (runtime == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (out_delay_ms == NULL) {
+    proton_engine_set_message(error, error_len, "out_delay_ms is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_delay_ms = proton_engine_get_scheduled_pump_delay_ms();
+  proton_engine_debug_log("next_wakeup_delay_ms=%lld",
+                          (long long)*out_delay_ms);
   return PROTON_OK;
 }
 
@@ -2766,6 +2892,7 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
   }
   proton_engine_debug_log("bridge_response_sent request=%lld",
                           (long long)request_id);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -3134,6 +3261,7 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);
   frame->base.release((cef_base_ref_counted_t *)frame);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -3217,6 +3345,7 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
   cef_string_clear(&code);
   cef_string_clear(&script_url);
   frame->base.release((cef_base_ref_counted_t *)frame);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -3235,6 +3364,7 @@ int32_t proton_engine_window_emit_bridge_event_json(
                               "failed to send bridge event to renderer");
     return PROTON_ERR_ENGINE;
   }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 

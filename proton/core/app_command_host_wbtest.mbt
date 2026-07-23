@@ -34,3 +34,26 @@ test "panic command host rejects registration after sealing" {
   host.seal_registrations()
   host.op("app:late", fn(_payload : Unit) { "late" })
 }
+
+///|
+async test "runtime wake signal preserves notifications across wait races" {
+  let signal = RuntimeWakeSignal::new()
+  let revision = signal.revision()
+  signal.notify()
+  inspect(signal.revision(), content="1")
+  let completed = @async.with_timeout_opt(10, () => {
+    signal.wait_for_change(revision)
+  })
+  assert_true(completed is Some(_))
+}
+
+///|
+async test "request context observes its shared runtime wake signal" {
+  let signal = RuntimeWakeSignal::new()
+  let context = AppCommandRequestContext::new(7L, wake_signal=signal)
+  let revision = context.wake_revision()
+  signal.notify()
+  context.wait_for_wake(revision)
+  inspect(context.window(), content="7")
+  inspect(context.wake_revision(), content="1")
+}

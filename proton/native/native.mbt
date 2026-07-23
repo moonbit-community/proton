@@ -350,6 +350,39 @@ pub fn Runtime::wait(
 }
 
 ///|
+/// Installs the write end of a non-blocking pipe used to wake the host async
+/// runtime. The native runtime duplicates the descriptor and does not borrow
+/// the caller's ownership.
+pub fn Runtime::set_wakeup_fd(
+  self : Runtime,
+  wakeup_fd : Int,
+) -> Result[Unit, NativeError] {
+  if wakeup_fd < -1 {
+    return Err(invalid_argument("wakeup_fd must be -1 or a valid descriptor"))
+  }
+  status_to_result(proton_runtime_set_wakeup_fd_ffi(self.handle, wakeup_fd))
+}
+
+///|
+/// Returns the delay until CEF next needs its external message pump serviced,
+/// or `None` when no delayed pump is scheduled.
+pub fn Runtime::next_wakeup_delay_ms(
+  self : Runtime,
+) -> Result[Int?, NativeError] {
+  let delay = Ref(-1L)
+  let status = proton_runtime_next_wakeup_delay_ms_ffi(self.handle, delay)
+  if status < 0 {
+    Err(native_error(status))
+  } else if delay.val < 0L {
+    Ok(None)
+  } else if delay.val > 2147483647L {
+    Ok(Some(2147483647))
+  } else {
+    Ok(Some(delay.val.to_int()))
+  }
+}
+
+///|
 /// Replaces the application-level native menu bar for this runtime.
 pub fn Runtime::set_menu(
   self : Runtime,
@@ -720,8 +753,8 @@ fn dialog_text_payload_len(buffer : Bytes) -> Int {
 let dialog_file_result_buffer_bytes = 65536
 
 ///|
-fn begin_message_dialog_async(
-  window : WindowRef,
+pub fn WindowRef::begin_message_dialog(
+  self : WindowRef,
   title : String?,
   message : String,
   level : DialogLevel,
@@ -730,7 +763,7 @@ fn begin_message_dialog_async(
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
   let status = proton_window_begin_message_dialog_ffi(
-    window.handle,
+    self.handle,
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
@@ -795,8 +828,8 @@ pub fn Runtime::poll_message_dialog(
 }
 
 ///|
-fn begin_confirm_dialog_async(
-  window : WindowRef,
+pub fn WindowRef::begin_confirm_dialog(
+  self : WindowRef,
   title : String?,
   message : String,
   level : DialogLevel,
@@ -805,7 +838,7 @@ fn begin_confirm_dialog_async(
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
   let status = proton_window_begin_confirm_dialog_ffi(
-    window.handle,
+    self.handle,
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
@@ -821,7 +854,7 @@ fn begin_confirm_dialog_async(
 }
 
 ///|
-fn begin_file_dialog_async(
+fn WindowRef::begin_file_dialog(
   window : WindowRef,
   title : String?,
   path : String?,
@@ -846,124 +879,55 @@ fn begin_file_dialog_async(
 }
 
 ///|
-async fn poll_dialog_result(
-  window : WindowRef,
+pub fn WindowRef::begin_open_file_dialog(
+  self : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[Int64, NativeError] {
+  self.begin_file_dialog(title, path, proton_window_begin_open_file_dialog_ffi)
+}
+
+///|
+pub fn WindowRef::begin_save_file_dialog(
+  self : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[Int64, NativeError] {
+  self.begin_file_dialog(title, path, proton_window_begin_save_file_dialog_ffi)
+}
+
+///|
+pub fn WindowRef::begin_choose_directory_dialog(
+  self : WindowRef,
+  title : String?,
+  path : String?,
+) -> Result[Int64, NativeError] {
+  self.begin_file_dialog(
+    title, path, proton_window_begin_choose_directory_dialog_ffi,
+  )
+}
+
+///|
+pub fn WindowRef::poll_dialog_result(
+  self : WindowRef,
   dialog : Int64,
-) -> Result[String, NativeError] {
+) -> Result[DialogPollResult, NativeError] {
   let required = Ref(0)
   let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
-  while true {
-    let status = proton_window_poll_dialog_result_ffi(
-      window.handle,
-      dialog,
-      buffer,
-      buffer.length(),
-      required,
-    )
-    if status == proton_event_none {
-      @async.sleep(1)
-    } else if status < 0 {
-      return Err(native_error(status))
-    } else {
-      // On success `required` is the payload plus its terminator, and the
-      // rest of the fixed buffer is zero fill. Decode exactly that span —
-      // from_cstr only strips the final byte, so handing it the whole buffer
-      // would keep ~64K interior NULs in the result string.
-      return Ok(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val])))
-    }
-  }
-  Err(invalid_argument("dialog polling exited unexpectedly"))
-}
-
-///|
-pub async fn show_message_dialog_async(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Unit, NativeError] {
-  match begin_message_dialog_async(window, title, message, level) {
-    Err(error) => Err(error)
-    Ok(dialog) => poll_dialog_result(window, dialog).map(fn(_) { () })
-  }
-}
-
-///|
-pub async fn show_confirm_dialog_async(
-  window : WindowRef,
-  title : String?,
-  message : String,
-  level : DialogLevel,
-) -> Result[Bool, NativeError] {
-  match begin_confirm_dialog_async(window, title, message, level) {
-    Err(error) => Err(error)
-    Ok(dialog) =>
-      poll_dialog_result(window, dialog).map(fn(result) { result == "1" })
-  }
-}
-
-///|
-pub async fn open_file_dialog_async(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  match
-    begin_file_dialog_async(
-      window, title, path, proton_window_begin_open_file_dialog_ffi,
-    ) {
-    Err(error) => Err(error)
-    Ok(dialog) =>
-      poll_dialog_result(window, dialog).map(fn(result) {
-        if result.is_empty() {
-          None
-        } else {
-          Some(result)
-        }
-      })
-  }
-}
-
-///|
-pub async fn save_file_dialog_async(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  match
-    begin_file_dialog_async(
-      window, title, path, proton_window_begin_save_file_dialog_ffi,
-    ) {
-    Err(error) => Err(error)
-    Ok(dialog) =>
-      poll_dialog_result(window, dialog).map(fn(result) {
-        if result.is_empty() {
-          None
-        } else {
-          Some(result)
-        }
-      })
-  }
-}
-
-///|
-pub async fn choose_directory_dialog_async(
-  window : WindowRef,
-  title : String?,
-  path : String?,
-) -> Result[String?, NativeError] {
-  match
-    begin_file_dialog_async(
-      window, title, path, proton_window_begin_choose_directory_dialog_ffi,
-    ) {
-    Err(error) => Err(error)
-    Ok(dialog) =>
-      poll_dialog_result(window, dialog).map(fn(result) {
-        if result.is_empty() {
-          None
-        } else {
-          Some(result)
-        }
-      })
+  let status = proton_window_poll_dialog_result_ffi(
+    self.handle,
+    dialog,
+    buffer,
+    buffer.length(),
+    required,
+  )
+  if status == proton_event_none {
+    Ok(Pending)
+  } else if status < 0 {
+    Err(native_error(status))
+  } else {
+    // On success `required` is the payload plus its terminator, and the
+    // rest of the fixed buffer is zero fill. Decode exactly that span.
+    Ok(Ready(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val]))))
   }
 }
