@@ -3,6 +3,7 @@ priv struct RuntimeWakeup {
   reader : @pipe.PipeRead
   writer : @pipe.PipeWrite
   signal : @core.RuntimeWakeSignal
+  uses_native_deadline : Bool
   mut closed : Bool
 }
 
@@ -10,6 +11,10 @@ priv struct RuntimeWakeup {
 fn RuntimeWakeup::new(
   runtime : @native.Runtime,
 ) -> RuntimeWakeup raise AppRunError {
+  let uses_native_deadline = match @native.runtime_info() {
+    Err(error) => raise native_run_error("read native runtime features", error)
+    Ok(info) => !info.features.contains("managed_app_runner")
+  }
   let (reader, writer) = @pipe.pipe() catch {
     error =>
       raise NativeRuntimeError({
@@ -30,6 +35,7 @@ fn RuntimeWakeup::new(
     reader,
     writer,
     signal: @core.RuntimeWakeSignal::new(),
+    uses_native_deadline,
     closed: false,
   }
 }
@@ -49,9 +55,13 @@ async fn RuntimeWakeup::wait(
 ) -> Unit raise AppRunError {
   while true {
     let revision = self.signal.revision()
-    let delay = match runtime.next_wakeup_delay_ms() {
-      Err(error) => raise native_run_error("read runtime wakeup delay", error)
-      Ok(delay) => delay
+    let delay = if self.uses_native_deadline {
+      match runtime.next_wakeup_delay_ms() {
+        Err(error) => raise native_run_error("read runtime wakeup delay", error)
+        Ok(delay) => delay
+      }
+    } else {
+      None
     }
     if delay is Some(0) {
       return

@@ -285,7 +285,7 @@ fn extension_event_sender(
   window : @native.Window,
   page_instance : String?,
 ) -> async (@ipc.IpcExtensionEvent) -> Unit {
-  async fn(event) {
+  fn(event) {
     ignore(
       window.emit_bridge_event_json(
         bridge_event_json(
@@ -297,7 +297,6 @@ fn extension_event_sender(
         ),
       ),
     )
-    @async.sleep(0)
   }
 }
 
