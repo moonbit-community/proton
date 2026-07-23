@@ -6,6 +6,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <dispatch/dispatch.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -264,6 +265,7 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
                            level:(int32_t)level;
 - (void)show;
 - (void)tick;
+- (void)finish;
 - (void)cancel;
 - (void)dismiss:(id)sender;
 @end
@@ -305,8 +307,19 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
   if (session_ == nil || finished_) {
     return;
   }
+  if (dismissed_) {
+    [self finish];
+    return;
+  }
   NSModalResponse response = [NSApp runModalSession:session_];
-  if (!dismissed_ && response == NSModalResponseContinue) {
+  if (response == NSModalResponseContinue) {
+    return;
+  }
+  [self finish];
+}
+
+- (void)finish {
+  if (session_ == nil || finished_) {
     return;
   }
   finished_ = YES;
@@ -325,7 +338,9 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
 - (void)dismiss:(id)sender {
   (void)sender;
   dismissed_ = YES;
-  [NSApp stopModal];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self tick];
+  });
 }
 
 - (void)cancel {
