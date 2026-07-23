@@ -220,7 +220,6 @@ static uint64_t g_next_window_native_id = 1;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
 static atomic_llong g_scheduled_pump_deadline_ms = ATOMIC_VAR_INIT(-1);
 static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
-static atomic_ullong g_managed_pump_generation = ATOMIC_VAR_INIT(0);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static CFRunLoopRef g_wait_run_loop = NULL;
@@ -383,41 +382,6 @@ static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
 static void proton_engine_reset_scheduled_pump(void) {
   atomic_store_explicit(&g_scheduled_pump_deadline_ms, -1,
                         memory_order_release);
-}
-
-static void proton_engine_schedule_managed_pump(int64_t delay_ms) {
-  if (!proton_app_runner_is_active()) {
-    return;
-  }
-  // CEF permits a newer request to cancel a delayed pump, but immediate pump
-  // requests must each run. The generation therefore guards delayed work only.
-  uint64_t generation = atomic_fetch_add_explicit(
-                            &g_managed_pump_generation, 1,
-                            memory_order_acq_rel) +
-                        1;
-  int64_t bounded_delay_ms = delay_ms > 0 ? delay_ms : 0;
-  if (bounded_delay_ms > INT64_MAX / NSEC_PER_MSEC) {
-    bounded_delay_ms = INT64_MAX / NSEC_PER_MSEC;
-  }
-  bool cancelable = bounded_delay_ms > 0;
-  dispatch_time_t when =
-      dispatch_time(DISPATCH_TIME_NOW, bounded_delay_ms * NSEC_PER_MSEC);
-  dispatch_after(when, dispatch_get_main_queue(), ^{
-    if ((cancelable &&
-         generation != atomic_load_explicit(&g_managed_pump_generation,
-                                            memory_order_acquire)) ||
-        !proton_app_runner_is_active() || !g_proton_cef_initialized) {
-      return;
-    }
-    @autoreleasepool {
-      atomic_store_explicit(&g_message_pump_active, true,
-                            memory_order_release);
-      proton_engine_reset_scheduled_pump();
-      cef_do_message_loop_work();
-      atomic_store_explicit(&g_message_pump_active, false,
-                            memory_order_release);
-    }
-  });
 }
 
 static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
@@ -1139,7 +1103,6 @@ static void CEF_CALLBACK proton_engine_on_schedule_message_pump_work(
     int64_t delay_ms) {
   (void)self;
   proton_engine_set_scheduled_pump_delay_ms(delay_ms);
-  proton_engine_schedule_managed_pump(delay_ms);
 }
 
 static cef_browser_process_handler_t *CEF_CALLBACK
@@ -1262,12 +1225,10 @@ static void CEF_CALLBACK proton_engine_on_after_created(
     proton_engine_window_request_browser_close(window, 1);
     proton_engine_window_release_browser(window);
     proton_engine_window_finalize_if_ready(window);
-    proton_engine_schedule_managed_pump(0);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return;
   }
   window->initial_navigation_pending = 1;
-  proton_engine_schedule_managed_pump(0);
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
@@ -1908,7 +1869,6 @@ static void CEF_CALLBACK proton_engine_on_load_end(
       strcmp(url, "about:blank") == 0) {
     window->initial_navigation_pending = 0;
     proton_engine_window_load_initial_url(window);
-    proton_engine_schedule_managed_pump(0);
   }
   if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
       frame->is_main(frame) && url != NULL &&
@@ -2401,6 +2361,13 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
                                           proton_engine_runtime_t **out_runtime,
                                           char *error,
                                           size_t error_len) {
+  if (!pthread_main_np() && proton_app_runner_is_active() &&
+      !proton_app_runner_engine_loop_is_running()) {
+    return proton_app_dispatch_engine_start(^{
+      return proton_engine_runtime_create_json(config_json, out_runtime, error,
+                                               error_len);
+    });
+  }
   PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_runtime_create_json(
       config_json, out_runtime, error, error_len));
   if (out_runtime == NULL) {
@@ -2440,7 +2407,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.size = sizeof(settings);
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
-  settings.external_message_pump = 1;
+  settings.external_message_pump = proton_app_runner_is_active() ? 0 : 1;
   settings.log_severity = proton_engine_cef_log_severity_from_env();
   settings.remote_debugging_port = config.remote_debugging_port;
   proton_engine_set_string(&settings.browser_subprocess_path,
@@ -2520,10 +2487,14 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   if (runtime->owns_cef_runtime) {
     proton_engine_runtime_clear_bridge_queue(runtime);
     proton_engine_bridge_pending_clear_all();
-    proton_engine_drain_cef_close_work();
-    proton_engine_cef_shutdown();
-    proton_engine_free_deferred_finalizing_windows();
-    proton_engine_teardown_wait_source();
+    if (proton_app_runner_is_active()) {
+      proton_engine_quit_app_loop();
+    } else {
+      proton_engine_drain_cef_close_work();
+      proton_engine_cef_shutdown();
+      proton_engine_free_deferred_finalizing_windows();
+      proton_engine_teardown_wait_source();
+    }
     runtime->owns_cef_runtime = 0;
   }
   if (runtime->bridge_lock_initialized) {
@@ -2576,17 +2547,49 @@ static void proton_engine_runtime_create_pending_browsers(
         proton_engine_window_mark_closed(pending_window);
         proton_engine_window_finalize_if_ready(pending_window);
       }
-      proton_engine_schedule_managed_pump(0);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     });
   }
 }
 
-static void proton_engine_pump_appkit_cef_once(void) {
-  if (proton_app_runner_is_active()) {
-    cef_do_message_loop_work();
+int32_t proton_engine_run_app_loop(char *error, size_t error_len) {
+  if (!pthread_main_np()) {
+    proton_engine_set_message(error, error_len,
+                              "application loop must run on the main thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (!g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  cef_run_message_loop();
+  return PROTON_OK;
+}
+
+void proton_engine_quit_app_loop(void) {
+  if (!pthread_main_np() || !g_proton_cef_initialized) {
     return;
   }
+  cef_quit_message_loop();
+}
+
+int32_t proton_engine_finish_app(char *error, size_t error_len) {
+  if (!pthread_main_np()) {
+    proton_engine_set_message(error, error_len,
+                              "application cleanup must run on the main thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  (void)error;
+  (void)error_len;
+  proton_engine_cef_shutdown();
+  proton_engine_free_deferred_finalizing_windows();
+  proton_engine_teardown_wait_source();
+  g_proton_cef_runtime_active = 0;
+  g_proton_app_terminating = 0;
+  return PROTON_OK;
+}
+
+static void proton_engine_pump_appkit_cef_once(void) {
   // The host drives this pump from its own event loop and never enters the
   // AppKit run loop, so nothing ever drains the thread's autorelease state.
   // Without this pool every tick's autoreleased objects (NSEvent, AppKit
@@ -2691,7 +2694,6 @@ int32_t proton_engine_runtime_do_message_loop_work(
     return PROTON_ERR_NOT_INITIALIZED;
   }
   if (proton_app_runner_is_active()) {
-    proton_engine_runtime_create_pending_browsers(runtime);
     atomic_store_explicit(&g_wakeup_byte_pending, false,
                           memory_order_release);
     return PROTON_OK;
@@ -3182,6 +3184,9 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   }
   window->browser_create_pending = 1;
   proton_engine_window_list_add(window);
+  if (proton_app_runner_engine_loop_is_running()) {
+    proton_engine_runtime_create_pending_browsers(runtime);
+  }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   *out_window = window;
   return PROTON_OK;
@@ -3420,7 +3425,6 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);
   frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_schedule_managed_pump(0);
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
