@@ -44,8 +44,10 @@
 
 #if PROTON_WITH_ENGINE && defined(__APPLE__)
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
+#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
 #else
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
+#define PROTON_MANAGED_APP_RUNNER_FEATURE ""
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
@@ -188,7 +190,8 @@ int32_t proton_runtime_info_json(char *buffer,
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
-          PROTON_RUNTIME_WAKEUP_FD_FEATURE "]}",
+          PROTON_RUNTIME_WAKEUP_FD_FEATURE
+          PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
   if (required < 0 || required >= (int)sizeof(info)) {

@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/async",
   "justjavac/proton_ext/global_hotkey",
   "justjavac/proton_ext/notification",
   "justjavac/proton_ext/tray",

@@ -31,6 +31,10 @@ let proton_invalid_handle : Int64 = 0L
 extern "C" fn proton_abi_version_ffi() -> Int = "proton_abi_version"
 
 ///|
+#borrow(entry)
+extern "C" fn proton_app_run_ffi(entry : FuncRef[() -> Unit]) -> Int = "proton_app_run"
+
+///|
 #borrow(buffer, out_required_len)
 extern "C" fn proton_runtime_info_json_ffi(
   buffer : FixedArray[Byte],

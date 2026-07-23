@@ -29,6 +29,7 @@ extern "C" {
 
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
+typedef void (*proton_app_entry_t)(void);
 
 enum {
   PROTON_OK = 0,
@@ -52,6 +53,8 @@ PROTON_API int32_t proton_abi_version(void);
 PROTON_API int32_t proton_runtime_info_json(char *buffer,
                                             int32_t buffer_len,
                                             int32_t *out_required_len);
+
+PROTON_API int32_t proton_app_run(proton_app_entry_t entry);
 
 PROTON_API int32_t proton_execute_process(const char *config_json,
                                           int32_t *out_exit_code);

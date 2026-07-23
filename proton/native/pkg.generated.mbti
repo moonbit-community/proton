@@ -15,6 +15,8 @@ pub fn last_error_message() -> String
 
 pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
 
+pub fn run_app(FuncRef[() -> Unit]) -> Result[Unit, NativeError]
+
 pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
 
 pub fn runtime_info_json() -> Result[String, NativeError]

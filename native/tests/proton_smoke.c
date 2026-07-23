@@ -37,6 +37,16 @@ static int fail(const char *message) {
 static int g_runtime_available = 0;
 static int expect_status(const char *label, int32_t actual, int32_t expected);
 
+#if defined(__APPLE__)
+static int g_app_entry_called = 0;
+static int g_app_entry_on_main_thread = 0;
+
+static void smoke_app_entry(void) {
+  g_app_entry_called = 1;
+  g_app_entry_on_main_thread = pthread_main_np() != 0;
+}
+#endif
+
 static int expect_valid_json(const char *label, const char *json) {
   proton_json_doc_t doc;
   if (!proton_json_parse(&doc, json)) {
@@ -632,6 +642,10 @@ int main(void) {
   if (expect_runtime_info()) {
     return 1;
   }
+  if (expect_status("app_run rejects null entry", proton_app_run(NULL),
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
   if (prepare_probe_layout(probe_config, sizeof(probe_config),
                            installed_probe_config,
                            sizeof(installed_probe_config),
@@ -696,6 +710,17 @@ int main(void) {
   if (exit_code != 0) {
     return fail("execute_process returned unexpected exit code");
   }
+
+#if defined(__APPLE__)
+  if (g_runtime_available) {
+    if (expect_status("app_run", proton_app_run(smoke_app_entry), PROTON_OK)) {
+      return 1;
+    }
+    if (!g_app_entry_called || g_app_entry_on_main_thread) {
+      return fail("app_run did not execute entry on its application thread");
+    }
+  }
+#endif
 
   proton_runtime_id_t runtime = PROTON_INVALID_HANDLE;
   if (expect_status("runtime_create",
