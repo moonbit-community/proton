@@ -70,7 +70,14 @@ function findProjectRootWithRuntime(start) {
 }
 
 function activeRuntimeDist() {
-  const found = findProjectRootWithRuntime(process.cwd());
+  // Resolve from the module's own location first: the invoker's working
+  // directory is not stable across moon subcommands (`moon cram test`
+  // rebuilds with a scrubbed environment and a cwd outside the consuming
+  // project), and missing the runtime here silently links the checked-in
+  // prebuilt, which may be stale or incomplete.
+  const found =
+    findProjectRootWithRuntime(moduleRoot) ??
+    findProjectRootWithRuntime(process.cwd());
   if (!found) {
     return "";
   }
