@@ -1,9 +1,6 @@
 ///|
 /// Runs the configured app through the native Proton runtime.
 pub async fn App::run(self : App) -> Unit raise AppRunError {
-  @async.sleep(0) catch {
-    _ => ()
-  }
   match self.validation_error() {
     Some(error) => raise ConfigurationError(error)
     None => ()
