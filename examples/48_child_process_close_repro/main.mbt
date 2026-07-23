@@ -16,10 +16,7 @@ fn child_process_extension() -> @proton_extension.Extension {
             let process = @process.spawn(
               group,
               "sh",
-              [
-                "-c",
-                "trap 'exit 0' TERM; while :; do sleep 1; done",
-              ],
+              ["-c", "trap 'exit 0' TERM; while :; do sleep 1; done"],
               inherit_env=true,
               cancel_handler=@process.graceful_cancel(timeout=1000),
               no_wait=true,

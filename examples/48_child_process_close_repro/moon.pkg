@@ -12,8 +12,5 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
-  targets: {
-    "app.mbt": [ "native" ],
-    "main.mbt": [ "native" ],
-  },
+  targets: { "app.mbt": [ "native" ], "main.mbt": [ "native" ] },
 )
