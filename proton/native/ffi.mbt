@@ -78,6 +78,19 @@ extern "C" fn proton_runtime_wait_ffi(
 ) -> Int = "proton_runtime_wait"
 
 ///|
+extern "C" fn proton_runtime_set_wakeup_fd_ffi(
+  runtime : Int64,
+  wakeup_fd : Int,
+) -> Int = "proton_runtime_set_wakeup_fd"
+
+///|
+#borrow(out_delay_ms)
+extern "C" fn proton_runtime_next_wakeup_delay_ms_ffi(
+  runtime : Int64,
+  out_delay_ms : Ref[Int64],
+) -> Int = "proton_runtime_next_wakeup_delay_ms"
+
+///|
 #borrow(menu_json)
 extern "C" fn proton_runtime_set_menu_json_ffi(
   runtime : Int64,

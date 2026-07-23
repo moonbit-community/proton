@@ -79,6 +79,13 @@ async fn run_manifest(
     Ok(runtime) => runtime
     Err(error) => raise native_run_error("create runtime", error)
   }
+  let wakeup = RuntimeWakeup::new(runtime) catch {
+    error => {
+      ignore(runtime.destroy())
+      raise error
+    }
+  }
+  defer wakeup.close()
   match menu {
     Some(menu) =>
       match runtime.set_menu(menu) {
@@ -167,7 +174,7 @@ async fn run_manifest(
     }
     if bridge is Some(_) {
       wait_for_bridge_startup(
-        runtime, window, forward_menu_events, bridge_startup_timeout_ms,
+        runtime, window, wakeup, forward_menu_events, bridge_startup_timeout_ms,
       ) catch {
         error => raise normalize_async_run_error(error)
       }
@@ -183,18 +190,25 @@ async fn run_manifest(
           window,
           host.host,
           bridge_policy,
+          wakeup,
           forward_menu_events,
         ) catch {
           error => raise normalize_async_run_error(error)
         }
       None =>
-        run_window_pump(runtime, window, forward_menu_events, bridge is Some(_)) catch {
+        run_window_pump(
+          runtime,
+          window,
+          wakeup,
+          forward_menu_events,
+          bridge is Some(_),
+        ) catch {
           error => raise normalize_async_run_error(error)
         }
     }
   } catch {
     error => {
-      show_app_run_failure(runtime, window, error) catch {
+      show_app_run_failure(runtime, window, wakeup, error) catch {
         _ => ()
       }
       close_command_host(command_host)
@@ -219,11 +233,6 @@ fn native_run_error(
     status: error.status,
     message: action + " failed: " + error.message,
   })
-}
-
-///|
-fn native_message_run_error(message : String) -> AppRunError {
-  NativeRuntimeError({ status: -6, message })
 }
 
 ///|
@@ -304,11 +313,14 @@ fn bridge_failure(
 async fn wait_for_bridge_startup(
   runtime : @native.Runtime,
   window : @native.Window,
+  wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   timeout_ms : Int,
 ) -> Unit raise AppRunError {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
-    wait_for_bridge_startup_until_terminal(runtime, window, forward_menu_events)
+    wait_for_bridge_startup_until_terminal(
+      runtime, window, wakeup, forward_menu_events,
+    )
   }) catch {
     error => raise normalize_async_run_error(error)
   }
@@ -330,6 +342,7 @@ async fn wait_for_bridge_startup(
 async fn wait_for_bridge_startup_until_terminal(
   runtime : @native.Runtime,
   window : @native.Window,
+  wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
 ) -> Unit {
   while true {
@@ -337,7 +350,7 @@ async fn wait_for_bridge_startup_until_terminal(
     if bridge_startup_is_ready(state) {
       return
     }
-    @async.sleep(1)
+    wakeup.wait(runtime)
   }
 }
 
@@ -429,6 +442,7 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
 ///|
 async fn show_runtime_failure_dialog(
   runtime : @native.Runtime,
+  wakeup : RuntimeWakeup,
   message : String,
 ) -> Unit {
   let dialog = match
@@ -445,7 +459,40 @@ async fn show_runtime_failure_dialog(
     match runtime.poll_message_dialog(dialog) {
       Err(_) => return
       Ok(true) => return
-      Ok(false) => @async.sleep(1) catch { _ => () }
+      Ok(false) => wakeup.wait(runtime) catch { _ => return }
+    }
+  }
+}
+
+///|
+async fn show_window_failure_dialog(
+  runtime : @native.Runtime,
+  window : @native.WindowRef,
+  wakeup : RuntimeWakeup,
+  message : String,
+) -> Unit {
+  let dialog = match
+    window.begin_message_dialog(
+      Some("Application Error"),
+      message,
+      @native.DialogLevel::Error,
+    ) {
+    Err(_) => return
+    Ok(dialog) => dialog
+  }
+  while true {
+    let revision = wakeup.signal.revision()
+    match window.poll_dialog_result(dialog) {
+      Err(_) => return
+      Ok(@native.DialogPollResult::Ready(_)) => return
+      Ok(@native.DialogPollResult::Pending) =>
+        // The main pump is no longer running on this error path, so this
+        // waiter must consume the native pipe itself.
+        if wakeup.signal.revision() == revision {
+          wakeup.wait(runtime) catch {
+            _ => return
+          }
+        }
     }
   }
 }
@@ -454,20 +501,14 @@ async fn show_runtime_failure_dialog(
 async fn show_app_run_failure(
   runtime : @native.Runtime,
   window : @native.Window,
+  wakeup : RuntimeWakeup,
   error : AppRunError,
 ) -> Unit {
   let message = app_run_error_dialog_text(error)
   match error {
     BridgeRuntimeError(_) =>
-      ignore(
-        @native.show_message_dialog_async(
-          window.as_ref(),
-          Some("Application Error"),
-          message,
-          @native.DialogLevel::Error,
-        ),
-      )
-    _ => show_runtime_failure_dialog(runtime, message)
+      show_window_failure_dialog(runtime, window.as_ref(), wakeup, message)
+    _ => show_runtime_failure_dialog(runtime, wakeup, message)
   }
 }
 
@@ -475,12 +516,11 @@ async fn show_app_run_failure(
 async fn run_window_pump(
   runtime : @native.Runtime,
   window : @native.Window,
+  wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
 ) -> Unit raise AppRunError {
   let mut closed = false
-  let mut idle_delay = 0
-  let mut runtime_wait_supported = true
   while !closed {
     let mut did_work = false
     match runtime.do_message_loop_work() {
@@ -516,20 +556,12 @@ async fn run_window_pump(
     }
 
     if did_work {
-      idle_delay = 0
       @async.sleep(0) catch {
         error => raise normalize_async_run_error(error)
       }
     } else {
-      match
-        (wait_for_runtime_idle(runtime, idle_delay, runtime_wait_supported) catch {
-          error => raise normalize_async_run_error(error)
-        }) {
-        Err(error) => raise native_message_run_error(error)
-        Ok((next_delay, next_wait_supported)) => {
-          idle_delay = next_delay
-          runtime_wait_supported = next_wait_supported
-        }
+      wakeup.wait(runtime) catch {
+        error => raise normalize_async_run_error(error)
       }
     }
   }
@@ -555,12 +587,11 @@ async fn run_bridge_pump(
   window : @native.Window,
   host : @core.AppCommandHost,
   policy : BridgePagePolicy,
+  wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
 ) -> Unit raise AppRunError {
   @async.with_task_group(group => {
     let mut closed = false
-    let mut idle_delay = 0
-    let mut runtime_wait_supported = true
     let mut pending : Array[BridgeDispatchTask] = []
     while !closed {
       let mut did_work = false
@@ -603,7 +634,16 @@ async fn run_bridge_pump(
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
-              () => dispatch_bridge_request(window, host, request, policy),
+              () => {
+                defer wakeup.signal.notify()
+                dispatch_bridge_request(
+                  window,
+                  host,
+                  request,
+                  policy,
+                  wakeup.signal,
+                )
+              },
               no_wait=true,
               allow_failure=true,
             )
@@ -641,20 +681,9 @@ async fn run_bridge_pump(
       pending = remaining
 
       if did_work {
-        idle_delay = 0
         @async.sleep(0)
-      } else if pending.length() > 0 {
-        idle_delay = 0
-        @async.sleep(1)
       } else {
-        match
-          wait_for_runtime_idle(runtime, idle_delay, runtime_wait_supported) {
-          Err(error) => raise native_message_run_error(error)
-          Ok((next_delay, next_wait_supported)) => {
-            idle_delay = next_delay
-            runtime_wait_supported = next_wait_supported
-          }
-        }
+        wakeup.wait(runtime)
       }
     }
     for item in pending {
@@ -666,72 +695,10 @@ async fn run_bridge_pump(
 }
 
 ///|
-async fn wait_for_runtime_idle(
-  runtime : @native.Runtime,
-  idle_delay : Int,
-  runtime_wait_supported : Bool,
-) -> Result[(Int, Bool), String] {
-  if runtime_wait_supported {
-    // Runtime::wait blocks the OS thread for up to one pump interval. Yield
-    // after every lap so host-side async IO and subprocess tasks still run
-    // when CEF continuously reports scheduled work.
-    match runtime.wait(interest_mask=@native.runtime_wait_all, timeout_ms=16) {
-      Ok(_) => {
-        @async.sleep(0)
-        Ok((0, true))
-      }
-      Err(error) =>
-        if is_runtime_wait_unsupported(error) {
-          sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
-            (next_delay, false)
-          })
-        } else {
-          Err(native_error_message("wait runtime", error))
-        }
-    }
-  } else {
-    sleep_with_idle_backoff(idle_delay).map(fn(next_delay) {
-      (next_delay, false)
-    })
-  }
-}
-
-///|
-async fn sleep_with_idle_backoff(idle_delay : Int) -> Result[Int, String] {
-  let delay = next_idle_delay(idle_delay)
-  @async.sleep(delay)
-  Ok(delay)
-}
-
-///|
-fn is_runtime_wait_unsupported(error : @native.NativeError) -> Bool {
-  error.status == proton_err_unsupported
-}
-
-///|
-let proton_err_unsupported = -8
-
-///|
 fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {
   (error.status == -2 && error.message.contains("no longer pending")) ||
   (
     error.status == -7 &&
     error.message.contains("failed to send bridge response to renderer")
   )
-}
-
-///|
-fn next_idle_delay(current : Int) -> Int {
-  if current <= 0 {
-    1
-  } else if current >= 16 {
-    16
-  } else {
-    let next = current * 2
-    if next > 16 {
-      16
-    } else {
-      next
-    }
-  }
 }

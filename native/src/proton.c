@@ -42,6 +42,12 @@
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ""
 #endif
 
+#if PROTON_WITH_ENGINE && defined(__APPLE__)
+#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
+#else
+#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
+#endif
+
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
 static PROTON_THREAD_LOCAL char g_last_error[512];
 
@@ -181,7 +187,8 @@ int32_t proton_runtime_info_json(char *buffer,
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
-      PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE "]}",
+      PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
+          PROTON_RUNTIME_WAKEUP_FD_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
   if (required < 0 || required >= (int)sizeof(info)) {
@@ -456,6 +463,57 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   *out_ready_mask = engine_ready & engine_interest;
   g_last_error[0] = '\0';
   return PROTON_OK;
+}
+
+int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
+                                     int32_t wakeup_fd) {
+  if (wakeup_fd < -1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "wakeup_fd must be -1 or a valid descriptor");
+  }
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_require_runtime_owner_thread(slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime wakeup fd requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_set_wakeup_fd(
+      slot->engine_runtime, wakeup_fd, engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_id_t runtime,
+                                            int64_t *out_delay_ms) {
+  if (out_delay_ms == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_delay_ms is required");
+  }
+  *out_delay_ms = -1;
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_require_runtime_owner_thread(slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime wakeup delay requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_next_wakeup_delay_ms(
+      slot->engine_runtime, out_delay_ms, engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
 }
 
 int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,

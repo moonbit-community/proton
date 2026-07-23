@@ -730,6 +730,16 @@ int main(void) {
                     PROTON_ERR_INVALID_ARGUMENT)) {
     return 1;
   }
+  status = proton_runtime_set_wakeup_fd(runtime, -2);
+  if (expect_status("runtime_set_wakeup_fd rejects invalid descriptor", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  status = proton_runtime_next_wakeup_delay_ms(runtime, NULL);
+  if (expect_status("runtime_next_wakeup_delay rejects null output", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
   if (expect_runtime_wait_ready(runtime, PROTON_WAIT_EVENT,
                                 PROTON_WAIT_NONE)) {
     return 1;

@@ -37,6 +37,15 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len);
+int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
+                                            int32_t wakeup_fd,
+                                            char *error,
+                                            size_t error_len);
+int32_t proton_engine_runtime_next_wakeup_delay_ms(
+    proton_engine_runtime_t *runtime,
+    int64_t *out_delay_ms,
+    char *error,
+    size_t error_len);
 int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                                             const char *menu_json,
                                             char *error,
