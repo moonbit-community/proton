@@ -188,8 +188,10 @@ static void proton_app_request_stop_on_main(void) {
   case PROTON_APP_RUNNER_ENGINE_LOOP:
     proton_engine_quit_app_loop();
     break;
-  case PROTON_APP_RUNNER_IDLE:
   case PROTON_APP_RUNNER_STOPPING:
+    proton_app_stop_startup_loop();
+    break;
+  case PROTON_APP_RUNNER_IDLE:
     break;
   }
 }
@@ -277,6 +279,14 @@ int32_t proton_app_run(proton_app_entry_t entry) {
     break;
   }
   g_proton_app_runner_phase = PROTON_APP_RUNNER_STOPPING;
+  while (!atomic_load_explicit(&g_proton_app_worker_finished,
+                               memory_order_acquire)) {
+    // Keep servicing main-queue work until the worker has fully returned.
+    // Runtime destruction quits CEF before the MoonBit entry necessarily
+    // finishes, and the remaining cleanup may still dispatch to the main
+    // thread.
+    [NSApp run];
+  }
   int join_status = pthread_join(worker, NULL);
   char finish_error[512] = {0};
   int32_t finish_status =

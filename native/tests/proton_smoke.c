@@ -17,7 +17,9 @@
 #define EXPECTED_PLATFORM "\"platform\":\"windows\""
 #elif defined(__APPLE__)
 #include <pthread.h>
+#include <poll.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #define mkdir_one(path) mkdir(path, 0777)
 #define PATH_SEP "/"
 #define EXPECTED_PLATFORM "\"platform\":\"macos\""
@@ -42,7 +44,26 @@ static int g_app_entry_called = 0;
 static int g_app_entry_on_main_thread = 0;
 static int32_t g_app_entry_invalid_create_status = PROTON_OK;
 static int32_t g_app_entry_create_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_run_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_quit_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_loop_work_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_wait_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_wakeup_delay_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_wakeup_status = PROTON_ERR_NOT_INITIALIZED;
+static int g_app_entry_first_wakeup = 0;
+static int g_app_entry_second_wakeup = 0;
 static int32_t g_app_entry_destroy_status = PROTON_ERR_NOT_INITIALIZED;
+static char g_app_runtime_config[256];
+static char g_app_entry_error[512];
+
+static int consume_wakeup_byte(int fd) {
+  struct pollfd ready = {.fd = fd, .events = POLLIN, .revents = 0};
+  if (poll(&ready, 1, 1000) <= 0 || (ready.revents & POLLIN) == 0) {
+    return 0;
+  }
+  unsigned char byte = 0;
+  return read(fd, &byte, sizeof(byte)) == (ssize_t)sizeof(byte);
+}
 
 static void smoke_app_entry(void) {
   g_app_entry_called = 1;
@@ -51,8 +72,39 @@ static void smoke_app_entry(void) {
   g_app_entry_invalid_create_status =
       proton_runtime_create_json("{\"abi_version\":0}", &runtime);
   g_app_entry_create_status =
-      proton_runtime_create_json("{\"abi_version\":1}", &runtime);
+      proton_runtime_create_json(g_app_runtime_config, &runtime);
+  if (g_app_entry_create_status != PROTON_OK) {
+    proton_last_error_message(g_app_entry_error,
+                              (int32_t)sizeof(g_app_entry_error));
+  }
   if (g_app_entry_create_status == PROTON_OK) {
+    uint32_t ready_mask = PROTON_WAIT_NONE;
+    int64_t wakeup_delay_ms = -1;
+    g_app_entry_run_status = proton_runtime_run(runtime);
+    g_app_entry_quit_status = proton_runtime_quit(runtime);
+    g_app_entry_loop_work_status =
+        proton_runtime_do_message_loop_work(runtime);
+    g_app_entry_wait_status =
+        proton_runtime_wait(runtime, PROTON_WAIT_PLATFORM, 0, &ready_mask);
+    g_app_entry_wakeup_delay_status =
+        proton_runtime_next_wakeup_delay_ms(runtime, &wakeup_delay_ms);
+    int wakeup_pipe[2] = {-1, -1};
+    if (pipe(wakeup_pipe) == 0) {
+      g_app_entry_wakeup_status =
+          proton_runtime_set_wakeup_fd(runtime, wakeup_pipe[1]);
+      if (g_app_entry_wakeup_status == PROTON_OK) {
+        g_app_entry_first_wakeup = consume_wakeup_byte(wakeup_pipe[0]);
+        g_app_entry_wakeup_status =
+            proton_runtime_set_wakeup_fd(runtime, wakeup_pipe[1]);
+        if (g_app_entry_wakeup_status == PROTON_OK) {
+          g_app_entry_second_wakeup = consume_wakeup_byte(wakeup_pipe[0]);
+        }
+      }
+      close(wakeup_pipe[0]);
+      close(wakeup_pipe[1]);
+    } else {
+      g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
+    }
     g_app_entry_destroy_status = proton_runtime_destroy(runtime);
   }
 }
@@ -724,6 +776,16 @@ int main(void) {
 
 #if defined(__APPLE__)
   if (g_runtime_available) {
+    const char *runtime_root = getenv("PROTON_TEST_RUNTIME_ROOT");
+    const char *helper_path = getenv("PROTON_TEST_HELPER_PATH");
+    if (runtime_root == NULL || helper_path == NULL ||
+        snprintf(g_app_runtime_config, sizeof(g_app_runtime_config),
+                 "{\"abi_version\":1,\"runtime_root\":\"%s\","
+                 "\"helper_path\":\"%s\"}",
+                 runtime_root, helper_path) >=
+            (int)sizeof(g_app_runtime_config)) {
+      return fail("missing managed app runner test runtime");
+    }
     if (expect_status("app_run", proton_app_run(smoke_app_entry), PROTON_OK)) {
       return 1;
     }
@@ -737,7 +799,28 @@ int main(void) {
     }
     if (expect_status("app_run runtime create", g_app_entry_create_status,
                       PROTON_OK)) {
+      fprintf(stderr, "app_run runtime create error: %s\n", g_app_entry_error);
       return 1;
+    }
+    if (expect_status("managed runtime_run", g_app_entry_run_status,
+                      PROTON_ERR_UNSUPPORTED) ||
+        expect_status("managed runtime_quit", g_app_entry_quit_status,
+                      PROTON_ERR_UNSUPPORTED) ||
+        expect_status("managed do_message_loop_work",
+                      g_app_entry_loop_work_status, PROTON_ERR_UNSUPPORTED) ||
+        expect_status("managed runtime_wait", g_app_entry_wait_status,
+                      PROTON_ERR_UNSUPPORTED) ||
+        expect_status("managed next_wakeup_delay_ms",
+                      g_app_entry_wakeup_delay_status,
+                      PROTON_ERR_UNSUPPORTED)) {
+      return 1;
+    }
+    if (expect_status("app_run wakeup fd", g_app_entry_wakeup_status,
+                      PROTON_OK)) {
+      return 1;
+    }
+    if (!g_app_entry_first_wakeup || !g_app_entry_second_wakeup) {
+      return fail("app_run wakeup fd lost a consecutive notification");
     }
     if (expect_status("app_run runtime destroy", g_app_entry_destroy_status,
                       PROTON_OK)) {

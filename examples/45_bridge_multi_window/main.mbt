@@ -125,16 +125,28 @@ fn page_html(label : String) -> String {
 
 ///|
 async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
+  let (reader, writer) = @pipe.pipe() catch {
+    _ => return Err("create runtime wakeup pipe failed")
+  }
+  match runtime.set_wakeup_fd(writer.fd()) {
+    Err(error) => {
+      reader.close()
+      writer.close()
+      return Err(native_error_message("install runtime wakeup fd", error))
+    }
+    Ok(_) => ()
+  }
+  defer {
+    ignore(runtime.set_wakeup_fd(-1))
+    reader.close()
+    writer.close()
+  }
+  let wake_signal = @core.RuntimeWakeSignal::new()
   @async.with_task_group(group => {
     let mut closed = 0
-    let mut idle_delay = 0
     let mut pending : Array[BridgeDispatchTask] = []
     while closed < 2 {
       let mut did_work = false
-      match runtime.do_message_loop_work() {
-        Err(error) => return Err(native_error_message("pump runtime", error))
-        Ok(_) => ()
-      }
 
       let mut polling_events = true
       while polling_events {
@@ -160,7 +172,10 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
-              () => dispatch_bridge_request(request),
+              () => {
+                defer wake_signal.notify()
+                dispatch_bridge_request(request)
+              },
               no_wait=true,
               allow_failure=true,
             )
@@ -200,11 +215,12 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
       pending = remaining
 
       if did_work {
-        idle_delay = 0
         @async.sleep(0)
       } else {
-        idle_delay = next_idle_delay(idle_delay)
-        @async.sleep(idle_delay)
+        match wait_for_bridge_work(reader, wake_signal) {
+          Err(message) => return Err(message)
+          Ok(_) => ()
+        }
       }
     }
     for item in pending {
@@ -212,6 +228,33 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
     }
     Ok(())
   })
+}
+
+///|
+async fn wait_for_bridge_work(
+  reader : @pipe.PipeRead,
+  wake_signal : @core.RuntimeWakeSignal,
+) -> Result[Unit, String] {
+  let revision = wake_signal.revision()
+  let ready = @async.any([
+    () => {
+      match reader.read_some(max_len=256) {
+        None => false
+        Some(_) => true
+      }
+    },
+    () => {
+      wake_signal.wait_for_change(revision)
+      true
+    },
+  ]) catch {
+    error => return Err("wait for bridge work failed: " + error.to_string())
+  }
+  if ready {
+    Ok(())
+  } else {
+    Err("runtime wakeup pipe closed unexpectedly")
+  }
 }
 
 ///|
@@ -259,22 +302,6 @@ fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {
     error.status == -7 &&
     error.message.contains("failed to send bridge response to renderer")
   )
-}
-
-///|
-fn next_idle_delay(current : Int) -> Int {
-  if current <= 0 {
-    1
-  } else if current >= 16 {
-    16
-  } else {
-    let next = current * 2
-    if next > 16 {
-      16
-    } else {
-      next
-    }
-  }
 }
 
 ///|

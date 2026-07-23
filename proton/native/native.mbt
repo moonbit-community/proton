@@ -266,7 +266,8 @@ pub fn execute_process(
 
 ///|
 /// Runs `entry` on Proton's application thread while the process main thread
-/// owns the platform UI loop.
+/// owns the platform UI loop on runtimes that advertise
+/// `managed_app_runner`. Other platforms may execute `entry` inline.
 pub fn run_app(entry : FuncRef[() -> Unit]) -> Result[Unit, NativeError] {
   status_to_result(proton_app_run_ffi(entry))
 }
@@ -316,11 +317,18 @@ pub fn Runtime::destroy(self : Runtime) -> Result[Unit, NativeError] {
 }
 
 ///|
+/// Runs CEF's message loop for a low-level host.
+///
+/// Managed application runners own this loop and reject this operation.
 pub fn Runtime::run(self : Runtime) -> Result[Unit, NativeError] {
   status_to_result(proton_runtime_run_ffi(self.handle))
 }
 
 ///|
+/// Advances one external-message-pump iteration for a low-level host.
+///
+/// Managed application runners own the native message loop and reject this
+/// operation.
 pub fn Runtime::do_message_loop_work(
   self : Runtime,
 ) -> Result[Unit, NativeError] {
@@ -328,6 +336,10 @@ pub fn Runtime::do_message_loop_work(
 }
 
 ///|
+/// Waits for low-level external-pump work.
+///
+/// Managed application runners use `set_wakeup_fd` instead and reject this
+/// operation.
 pub fn Runtime::wait(
   self : Runtime,
   interest_mask~ : Int,
@@ -373,6 +385,9 @@ pub fn Runtime::set_wakeup_fd(
 ///|
 /// Returns the delay until CEF next needs its external message pump serviced,
 /// or `None` when no delayed pump is scheduled.
+///
+/// Managed application runners own the native message loop and reject this
+/// operation.
 pub fn Runtime::next_wakeup_delay_ms(
   self : Runtime,
 ) -> Result[Int?, NativeError] {
@@ -404,6 +419,10 @@ pub fn Runtime::set_menu(
 }
 
 ///|
+/// Requests that a low-level host's CEF message loop stop.
+///
+/// Managed application runners own the native message loop and reject this
+/// operation. Destroy the runtime to finish a managed application.
 pub fn Runtime::quit(self : Runtime) -> Result[Unit, NativeError] {
   status_to_result(proton_runtime_quit_ffi(self.handle))
 }

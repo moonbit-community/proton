@@ -170,6 +170,9 @@ if(PROTON_WITH_ENGINE)
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
               "${PROTON_ENGINE_FRAMEWORK_DIR}"
               "$<TARGET_FILE_DIR:proton>/../Frameworks/Chromium Embedded Framework.framework"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+              "${PROTON_ENGINE_RESOURCES_DIR}"
+              "$<TARGET_FILE_DIR:proton>/../Resources"
       VERBATIM
     )
     add_executable(cef_process
@@ -364,7 +367,8 @@ if(BUILD_TESTING)
     endif()
   elseif(APPLE)
     set_tests_properties(proton_smoke PROPERTIES
-      ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
+      ENVIRONMENT
+        "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_BINARY_DIR};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>"
     )
     set_tests_properties(proton_exports_smoke PROPERTIES
       ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"

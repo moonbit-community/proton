@@ -197,11 +197,18 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
-          PROTON_CDP_E2E_TIMEOUT_MS: 60000
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           node .\scripts\e2e_bridge_smoke.mjs 41_app_commands 47_dev_extension_js
+
+      - name: Run managed runner e2e on macOS
+        if: ${{ matrix.os == 'macos-latest' }}
+        env:
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+        run: |
+          node ./scripts/e2e_bridge_smoke.mjs 41_app_commands 45_bridge_multi_window
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}

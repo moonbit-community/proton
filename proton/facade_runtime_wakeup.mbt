@@ -3,7 +3,6 @@ priv struct RuntimeWakeup {
   reader : @pipe.PipeRead
   writer : @pipe.PipeWrite
   signal : @core.RuntimeWakeSignal
-  caller_pumps_runtime : Bool
   mut closed : Bool
 }
 
@@ -11,9 +10,16 @@ priv struct RuntimeWakeup {
 fn RuntimeWakeup::new(
   runtime : @native.Runtime,
 ) -> RuntimeWakeup raise AppRunError {
-  let caller_pumps_runtime = match @native.runtime_info() {
+  let runtime_info = match @native.runtime_info() {
     Err(error) => raise native_run_error("read native runtime features", error)
-    Ok(info) => !info.features.contains("managed_app_runner")
+    Ok(info) => info
+  }
+  if !runtime_info.features.contains("managed_app_runner") ||
+    !runtime_info.features.contains("runtime_wakeup_fd") {
+    raise NativeRuntimeError({
+      status: -8,
+      message: "the Proton app facade requires managed_app_runner and runtime_wakeup_fd support",
+    })
   }
   let (reader, writer) = @pipe.pipe() catch {
     error =>
@@ -35,21 +41,7 @@ fn RuntimeWakeup::new(
     reader,
     writer,
     signal: @core.RuntimeWakeSignal::new(),
-    caller_pumps_runtime,
     closed: false,
-  }
-}
-
-///|
-/// Advances CEF only when the facade owns its external message pump.
-fn RuntimeWakeup::pump(
-  self : RuntimeWakeup,
-  runtime : @native.Runtime,
-) -> Result[Unit, @native.NativeError] {
-  if self.caller_pumps_runtime {
-    runtime.do_message_loop_work()
-  } else {
-    Ok(())
   }
 }
 
@@ -62,64 +54,34 @@ fn RuntimeWakeup::close(self : RuntimeWakeup) -> Unit {
 }
 
 ///|
-async fn RuntimeWakeup::wait(
-  self : RuntimeWakeup,
-  runtime : @native.Runtime,
-) -> Unit raise AppRunError {
-  while true {
-    let revision = self.signal.revision()
-    let delay = if self.caller_pumps_runtime {
-      match runtime.next_wakeup_delay_ms() {
-        Err(error) => raise native_run_error("read runtime wakeup delay", error)
-        Ok(delay) => delay
-      }
-    } else {
-      None
-    }
-    if delay is Some(0) {
-      return
-    }
-
-    let waiters : Array[async () -> Bool] = [
-      () => {
-        match self.reader.read_some(max_len=256) {
-          None =>
-            raise NativeRuntimeError({
-              status: -6,
-              message: "runtime wakeup pipe closed unexpectedly",
-            })
-          Some(_) => {
-            self.signal.notify()
-            true
-          }
-        }
-      },
-      () => {
-        self.signal.wait_for_change(revision)
-        true
-      },
-    ]
-    match delay {
-      None => {
-        let ready = @async.any(waiters) catch {
-          error => raise normalize_async_run_error(error)
-        }
-        if ready {
-          return
-        }
-      }
-      Some(delay) => {
-        waiters.push(() => {
-          @async.sleep(delay)
+async fn RuntimeWakeup::wait(self : RuntimeWakeup) -> Unit raise AppRunError {
+  let revision = self.signal.revision()
+  let ready = @async.any([
+    () => {
+      match self.reader.read_some(max_len=256) {
+        None =>
+          raise NativeRuntimeError({
+            status: -6,
+            message: "runtime wakeup pipe closed unexpectedly",
+          })
+        Some(_) => {
+          self.signal.notify()
           true
-        })
-        let ready = @async.any(waiters) catch {
-          error => raise normalize_async_run_error(error)
-        }
-        if ready {
-          return
         }
       }
-    }
+    },
+    () => {
+      self.signal.wait_for_change(revision)
+      true
+    },
+  ]) catch {
+    error => raise normalize_async_run_error(error)
   }
+  if ready {
+    return
+  }
+  raise NativeRuntimeError({
+    status: -6,
+    message: "runtime wakeup wait completed without a notification",
+  })
 }

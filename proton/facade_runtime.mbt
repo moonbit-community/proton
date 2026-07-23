@@ -340,9 +340,7 @@ async fn wait_for_bridge_startup(
   match completed {
     Some(_) => ()
     None => {
-      let state = pump_bridge_startup_once(
-        runtime, window, wakeup, forward_menu_events,
-      )
+      let state = pump_bridge_startup_once(runtime, window, forward_menu_events)
       if bridge_startup_is_ready(state) {
         return
       }
@@ -361,13 +359,11 @@ async fn wait_for_bridge_startup_until_terminal(
   forward_menu_events : Bool,
 ) -> Unit {
   while true {
-    let state = pump_bridge_startup_once(
-      runtime, window, wakeup, forward_menu_events,
-    )
+    let state = pump_bridge_startup_once(runtime, window, forward_menu_events)
     if bridge_startup_is_ready(state) {
       return
     }
-    wakeup.wait(runtime)
+    wakeup.wait()
   }
 }
 
@@ -375,13 +371,8 @@ async fn wait_for_bridge_startup_until_terminal(
 fn pump_bridge_startup_once(
   runtime : @native.Runtime,
   window : @native.Window,
-  wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
 ) -> @native.BridgeLifecycleState raise AppRunError {
-  match wakeup.pump(runtime) {
-    Err(error) => raise native_run_error("pump runtime during startup", error)
-    Ok(_) => ()
-  }
   let mut polling_events = true
   while polling_events {
     match runtime.poll_event() {
@@ -474,18 +465,16 @@ async fn show_runtime_failure_dialog(
     Ok(dialog) => dialog
   }
   while true {
-    ignore(wakeup.pump(runtime))
     match runtime.poll_message_dialog(dialog) {
       Err(_) => return
       Ok(true) => return
-      Ok(false) => wakeup.wait(runtime) catch { _ => return }
+      Ok(false) => wakeup.wait() catch { _ => return }
     }
   }
 }
 
 ///|
 async fn show_window_failure_dialog(
-  runtime : @native.Runtime,
   window : @native.WindowRef,
   wakeup : RuntimeWakeup,
   message : String,
@@ -508,7 +497,7 @@ async fn show_window_failure_dialog(
         // The main pump is no longer running on this error path, so this
         // waiter must consume the native pipe itself.
         if wakeup.signal.revision() == revision {
-          wakeup.wait(runtime) catch {
+          wakeup.wait() catch {
             _ => return
           }
         }
@@ -526,7 +515,7 @@ async fn show_app_run_failure(
   let message = app_run_error_dialog_text(error)
   match error {
     BridgeRuntimeError(_) =>
-      show_window_failure_dialog(runtime, window.as_ref(), wakeup, message)
+      show_window_failure_dialog(window.as_ref(), wakeup, message)
     _ => show_runtime_failure_dialog(runtime, wakeup, message)
   }
 }
@@ -542,10 +531,6 @@ async fn run_window_pump(
   let mut closed = false
   while !closed {
     let mut did_work = false
-    match wakeup.pump(runtime) {
-      Err(error) => raise native_run_error("pump runtime", error)
-      Ok(_) => ()
-    }
 
     let mut polling_events = true
     while polling_events {
@@ -579,7 +564,7 @@ async fn run_window_pump(
         error => raise normalize_async_run_error(error)
       }
     } else {
-      wakeup.wait(runtime) catch {
+      wakeup.wait() catch {
         error => raise normalize_async_run_error(error)
       }
     }
@@ -614,10 +599,6 @@ async fn run_bridge_pump(
     let mut pending : Array[BridgeDispatchTask] = []
     while !closed {
       let mut did_work = false
-      match wakeup.pump(runtime) {
-        Err(error) => raise native_run_error("pump runtime", error)
-        Ok(_) => ()
-      }
 
       let mut polling_events = true
       while polling_events {
@@ -702,7 +683,7 @@ async fn run_bridge_pump(
       if did_work {
         @async.sleep(0)
       } else {
-        wakeup.wait(runtime)
+        wakeup.wait()
       }
     }
     for item in pending {

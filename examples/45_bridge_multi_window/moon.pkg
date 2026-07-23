@@ -1,9 +1,11 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/pipe",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "justjavac/proton",
+  "justjavac/proton/core",
   "justjavac/proton/native",
 }
 

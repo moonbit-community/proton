@@ -1360,6 +1360,45 @@ async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
   }
 }
 
+async function runMultiWindowCloseLifecycleProbe(env, scenario) {
+  const logPath = path.join(repoRoot, "target", "proton-native.log");
+  const initialLog = fs.existsSync(logPath)
+    ? fs.readFileSync(logPath, "utf8")
+    : "";
+  const initialClosedWindows = [
+    ...initialLog.matchAll(/window_closed browser=\d+/g),
+  ].length;
+  const child = spawnApp(env, scenario);
+  const output = collectOutput(child);
+  let client = null;
+  try {
+    await waitForCdpEndpoint();
+    const [page] = await waitForPageTargetsByTitle([
+      "Bridge Multi A",
+      "Bridge Multi B",
+    ]);
+    client = new CdpClient(page.webSocketDebuggerUrl);
+    await client.open();
+    await closeScenarioWindow(client, child.pid);
+    await waitForExit(child, output, "multi-window close lifecycle app");
+    const log = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "";
+    const closedWindows =
+      [...log.matchAll(/window_closed browser=\d+/g)].length -
+      initialClosedWindows;
+    if (closedWindows < 2) {
+      throw new Error(
+        `native log recorded ${closedWindows} closed windows; expected at least two`,
+      );
+    }
+    return { closedWindows };
+  } finally {
+    if (client) {
+      client.close();
+    }
+    await terminateTree(child);
+  }
+}
+
 async function navigateAndReadBridgeGlobals(client, url) {
   await client.send("Page.navigate", { url });
   await waitForExpression(
@@ -2120,6 +2159,12 @@ async function runScenario(name, hasMoonBitE2e) {
       name,
     );
     result.cdpResult.lifecycle = lifecycle;
+  }
+  if (name === "45_bridge_multi_window") {
+    result.cdpResult.lifecycle = await runMultiWindowCloseLifecycleProbe(
+      env,
+      name,
+    );
   }
   if (name === "47_dev_extension_js") {
     result.cdpResult.production = await runDevExtensionJsProductionSmoke(env);
