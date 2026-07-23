@@ -36,6 +36,7 @@ pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable
 
 // Errors
 pub(all) suberror AppRunError {
+  RunnerError(String)
   ConfigurationError(String)
   NativeRuntimeError(@native.NativeError)
   EntryLoadError(String)

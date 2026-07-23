@@ -2,6 +2,11 @@
 let app_main : Ref[(async () -> Unit)?] = Ref(None)
 
 ///|
+fn app_runner_is_active() -> Bool {
+  app_main.val is Some(_)
+}
+
+///|
 fn app_thread_entry() -> Unit {
   match app_main.val {
     Some(main) => @async.run_async_main(main)
