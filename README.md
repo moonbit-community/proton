@@ -37,10 +37,12 @@ runtime cache and should not be committed.
 Generated projects explicitly load `moon.proton` with `@proton.config(...)`:
 
 ```moonbit
-async fn main {
-  @proton.config("moon.proton")
-  .extension(@counter.extension())
-  .run_or_abort()
+fn main {
+  @proton.run(() => {
+    @proton.config("moon.proton")
+    .extension(@counter.extension())
+    .run_or_abort()
+  })
 }
 ```
 
@@ -51,14 +53,16 @@ application is bundled. Non-default paths are used exactly as provided.
 For a small application, inline HTML can be opened directly:
 
 ```moonbit
-async fn main {
-  @proton.html(
-    "Hello Proton",
-    "<h1>Hello from MoonBit</h1>",
-    width=900,
-    height=700,
-    debug=true,
-  ).run_or_abort()
+fn main {
+  @proton.run(() => {
+    @proton.html(
+      "Hello Proton",
+      "<h1>Hello from MoonBit</h1>",
+      width=900,
+      height=700,
+      debug=true,
+    ).run_or_abort()
+  })
 }
 ```
 

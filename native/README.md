@@ -20,6 +20,20 @@ the `runtime_wait` feature and wait on bridge queue wakeups, CEF external
 message-pump scheduling, and the platform event source. ABI-only builds still
 return `PROTON_ERR_UNSUPPORTED` for wait.
 
+On macOS, `proton_app_run` owns the process main thread and runs AppKit plus
+CEF's external message pump there. It creates one application thread for the
+MoonBit async scheduler and joins that thread before returning. Public runtime
+and window handles are created and owned by the application thread; native
+engine operations marshal to the process main thread. Native callbacks never
+enter MoonBit. They enqueue work and signal the facade's wakeup file descriptor
+so the MoonBit scheduler can resume the waiting task. Under this managed runner,
+CEF pump deadlines stay on the main dispatch queue and `proton_runtime_wait`
+is not used.
+
+Windows and Linux currently execute the `proton_app_run` callback inline,
+preserving their existing single-thread architecture until they receive
+platform-owned UI runners.
+
 It also exposes `proton_runtime_probe_json`, which validates the configured
 runtime layout before initialization. The probe checks `runtime_root`,
 `helper_path`, resources, locales, and core runtime files without loading the

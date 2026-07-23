@@ -23,6 +23,11 @@ static const char *proton_engine_unavailable_message(void) {
 #endif
 }
 
+int32_t proton_engine_prepare_app(char *error, size_t error_len) {
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_execute_process_json(const char *config_json,
                                            int32_t *out_exit_code,
                                            char *error,

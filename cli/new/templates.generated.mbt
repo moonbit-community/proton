@@ -12,7 +12,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|version = "0.1.0"
           #|
           #|import {
-          #|  "moonbitlang/async@{{async_version}}",
           #|  "justjavac/proton@{{proton_version}}",
           #|}
           #|
@@ -68,7 +67,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "app/moon.pkg.mtpl",
       template_source: (
           #|import {
-          #|  "moonbitlang/async",
           #|  "justjavac/proton",
           #|  {{module_counter_import_mbt}} @counter,
           #|}
@@ -88,10 +86,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "app/main.mbt.mtpl",
       template_source: (
           #|///|
-          #|async fn main {
-          #|  @proton.config("moon.proton")
-          #|  .extension(@counter.extension())
-          #|  .run_or_abort()
+          #|fn main {
+          #|  @proton.run(() => {
+          #|    @proton.config("moon.proton")
+          #|    .extension(@counter.extension())
+          #|    .run_or_abort()
+          #|  })
           #|}
           #|
       ),

@@ -11,12 +11,14 @@ endif()
 option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" OFF)
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
 set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
+set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
     set(PROTON_ENGINE_SOURCES src/engine/cef_win/proton_engine_cef_win.c)
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
+    set(PROTON_APP_RUNNER_SOURCE src/app_runner.m)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_mac/proton_engine_cef_mac.m
       src/engine/cef_mac/dialog.m
@@ -45,6 +47,7 @@ add_library(proton SHARED
   src/proton_json.c
   src/proton_state.c
   src/proton.c
+  ${PROTON_APP_RUNNER_SOURCE}
   src/engine/cef_common/bridge_lifecycle.c
   ${PROTON_ENGINE_SOURCES}
 )

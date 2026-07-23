@@ -265,6 +265,13 @@ pub fn execute_process(
 }
 
 ///|
+/// Runs `entry` on Proton's application thread while the process main thread
+/// owns the platform UI loop.
+pub fn run_app(entry : FuncRef[() -> Unit]) -> Result[Unit, NativeError] {
+  status_to_result(proton_app_run_ffi(entry))
+}
+
+///|
 pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Result[Unit, NativeError] {

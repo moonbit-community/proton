@@ -11,11 +11,13 @@ struct IdentifyPayload {
 } derive(FromJson)
 
 ///|
-async fn main {
-  match run_multi_window_bridge() {
-    Ok(_) => ()
-    Err(message) => abort(message)
-  }
+fn main {
+  @proton.run(() => {
+    match run_multi_window_bridge() {
+      Ok(_) => ()
+      Err(message) => abort(message)
+    }
+  })
 }
 
 ///|

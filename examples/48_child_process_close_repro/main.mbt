@@ -41,13 +41,15 @@ fn child_process_extension() -> @proton_extension.Extension {
 }
 
 ///|
-async fn main {
-  let app = @proton.html(
-    "Child Process Close Repro",
-    resource,
-    width=760,
-    height=520,
-    debug=true,
-  ).extension(child_process_extension())
-  app.run_or_abort()
+fn main {
+  @proton.run(() => {
+    let app = @proton.html(
+      "Child Process Close Repro",
+      resource,
+      width=760,
+      height=520,
+      debug=true,
+    ).extension(child_process_extension())
+    app.run_or_abort()
+  })
 }

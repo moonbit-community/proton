@@ -52,6 +52,7 @@ static void proton_print_loader_error(void) {
 static const char *const expected_exports[] = {
     "proton_abi_version",
     "proton_runtime_info_json",
+    "proton_app_run",
     "proton_execute_process",
     "proton_runtime_probe_json",
     "proton_runtime_create_json",
