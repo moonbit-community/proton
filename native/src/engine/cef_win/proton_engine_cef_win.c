@@ -7,6 +7,10 @@
 #include <dwmapi.h>
 #include <windowsx.h>
 
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
+
 #include "proton_win_titlebar.h"
 
 #include "include/cef_api_hash.h"

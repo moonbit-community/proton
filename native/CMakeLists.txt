@@ -307,6 +307,11 @@ set_target_properties(proton PROPERTIES
 )
 
 if(WIN32)
+  target_compile_definitions(proton PRIVATE
+    _WIN32_WINNT=0x0A00
+    WINVER=0x0A00
+  )
+  target_link_libraries(proton PRIVATE comctl32 dwmapi)
   set_target_properties(proton PROPERTIES PREFIX "")
 endif()
 

@@ -190,6 +190,11 @@ pub fn RuntimeWaitReady::has_platform(Self) -> Bool
 pub fn RuntimeWaitReady::is_timeout(Self) -> Bool
 pub fn RuntimeWaitReady::mask(Self) -> Int
 
+pub(all) enum TitlebarStyle {
+  Default
+  Overlay
+} derive(Eq, @debug.Debug)
+
 type Window
 pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> Result[BridgeLifecycleState, NativeError]
@@ -208,7 +213,7 @@ pub fn Window::show(Self) -> Result[Unit, NativeError]
 pub fn Window::take_bridge_failure(Self) -> Result[BridgeDiagnostic?, NativeError]
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, bridge? : BridgeConfig) -> Self
+pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, titlebar_style? : TitlebarStyle, bridge? : BridgeConfig) -> Self
 pub fn WindowConfig::to_json_string(Self) -> String
 pub fn WindowConfig::unsafe_from_json(String) -> Self
 
