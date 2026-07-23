@@ -1399,6 +1399,8 @@ static void proton_engine_init_handlers(void) {
       (cef_base_ref_counted_t *)&g_scheme_factory.factory.base,
       sizeof(g_scheme_factory.factory), &g_scheme_factory.refs);
   g_scheme_factory.factory.create = proton_engine_scheme_create;
+  proton_engine_menu_set_signal_callback(proton_engine_signal_wait_source);
+  proton_engine_dialog_set_signal_callback(proton_engine_signal_wait_source);
   initialized = 1;
 }
 
