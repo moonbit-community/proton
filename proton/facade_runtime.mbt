@@ -340,7 +340,9 @@ async fn wait_for_bridge_startup(
   match completed {
     Some(_) => ()
     None => {
-      let state = pump_bridge_startup_once(runtime, window, forward_menu_events)
+      let state = pump_bridge_startup_once(
+        runtime, window, wakeup, forward_menu_events,
+      )
       if bridge_startup_is_ready(state) {
         return
       }
@@ -359,7 +361,9 @@ async fn wait_for_bridge_startup_until_terminal(
   forward_menu_events : Bool,
 ) -> Unit {
   while true {
-    let state = pump_bridge_startup_once(runtime, window, forward_menu_events)
+    let state = pump_bridge_startup_once(
+      runtime, window, wakeup, forward_menu_events,
+    )
     if bridge_startup_is_ready(state) {
       return
     }
@@ -371,9 +375,10 @@ async fn wait_for_bridge_startup_until_terminal(
 fn pump_bridge_startup_once(
   runtime : @native.Runtime,
   window : @native.Window,
+  wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
 ) -> @native.BridgeLifecycleState raise AppRunError {
-  match runtime.do_message_loop_work() {
+  match wakeup.pump(runtime) {
     Err(error) => raise native_run_error("pump runtime during startup", error)
     Ok(_) => ()
   }
@@ -469,7 +474,7 @@ async fn show_runtime_failure_dialog(
     Ok(dialog) => dialog
   }
   while true {
-    ignore(runtime.do_message_loop_work())
+    ignore(wakeup.pump(runtime))
     match runtime.poll_message_dialog(dialog) {
       Err(_) => return
       Ok(true) => return
@@ -537,7 +542,7 @@ async fn run_window_pump(
   let mut closed = false
   while !closed {
     let mut did_work = false
-    match runtime.do_message_loop_work() {
+    match wakeup.pump(runtime) {
       Err(error) => raise native_run_error("pump runtime", error)
       Ok(_) => ()
     }
@@ -609,7 +614,7 @@ async fn run_bridge_pump(
     let mut pending : Array[BridgeDispatchTask] = []
     while !closed {
       let mut did_work = false
-      match runtime.do_message_loop_work() {
+      match wakeup.pump(runtime) {
         Err(error) => raise native_run_error("pump runtime", error)
         Ok(_) => ()
       }

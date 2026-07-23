@@ -3,7 +3,7 @@ priv struct RuntimeWakeup {
   reader : @pipe.PipeRead
   writer : @pipe.PipeWrite
   signal : @core.RuntimeWakeSignal
-  uses_native_deadline : Bool
+  caller_pumps_runtime : Bool
   mut closed : Bool
 }
 
@@ -11,7 +11,7 @@ priv struct RuntimeWakeup {
 fn RuntimeWakeup::new(
   runtime : @native.Runtime,
 ) -> RuntimeWakeup raise AppRunError {
-  let uses_native_deadline = match @native.runtime_info() {
+  let caller_pumps_runtime = match @native.runtime_info() {
     Err(error) => raise native_run_error("read native runtime features", error)
     Ok(info) => !info.features.contains("managed_app_runner")
   }
@@ -35,8 +35,21 @@ fn RuntimeWakeup::new(
     reader,
     writer,
     signal: @core.RuntimeWakeSignal::new(),
-    uses_native_deadline,
+    caller_pumps_runtime,
     closed: false,
+  }
+}
+
+///|
+/// Advances CEF only when the facade owns its external message pump.
+fn RuntimeWakeup::pump(
+  self : RuntimeWakeup,
+  runtime : @native.Runtime,
+) -> Result[Unit, @native.NativeError] {
+  if self.caller_pumps_runtime {
+    runtime.do_message_loop_work()
+  } else {
+    Ok(())
   }
 }
 
@@ -55,7 +68,7 @@ async fn RuntimeWakeup::wait(
 ) -> Unit raise AppRunError {
   while true {
     let revision = self.signal.revision()
-    let delay = if self.uses_native_deadline {
+    let delay = if self.caller_pumps_runtime {
       match runtime.next_wakeup_delay_ms() {
         Err(error) => raise native_run_error("read runtime wakeup delay", error)
         Ok(delay) => delay
