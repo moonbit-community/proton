@@ -15,6 +15,7 @@ set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
+    set(PROTON_APP_RUNNER_SOURCE src/app_runner_win.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_win/proton_engine_cef_win.c
       src/engine/cef_win/proton_win_titlebar.c
@@ -370,11 +371,24 @@ if(BUILD_TESTING)
         ENVIRONMENT "PATH=${PROTON_TEST_PATH}"
       )
     endif()
+    if(PROTON_WITH_ENGINE)
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+    endif()
   elseif(APPLE)
-    set_tests_properties(proton_smoke PROPERTIES
-      ENVIRONMENT
-        "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_BINARY_DIR};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
-    )
+    if(PROTON_WITH_ENGINE)
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_BINARY_DIR};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+    else()
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
+      )
+    endif()
     set_tests_properties(proton_exports_smoke PROPERTIES
       ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
     )

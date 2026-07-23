@@ -265,9 +265,9 @@ pub fn execute_process(
 }
 
 ///|
-/// Runs `entry` on Proton's application thread while the process main thread
-/// owns the platform UI loop on runtimes that advertise
-/// `managed_app_runner`. Other platforms may execute `entry` inline.
+/// Runs `entry` on Proton's application thread while the caller owns the
+/// platform UI loop on runtimes that advertise `managed_app_runner`. Other
+/// platforms may execute `entry` inline.
 pub fn run_app(entry : FuncRef[() -> Unit]) -> Result[Unit, NativeError] {
   status_to_result(proton_app_run_ffi(entry))
 }
@@ -380,6 +380,46 @@ pub fn Runtime::set_wakeup_fd(
     return Err(invalid_argument("wakeup_fd must be -1 or a valid descriptor"))
   }
   status_to_result(proton_runtime_set_wakeup_fd_ffi(self.handle, wakeup_fd))
+}
+
+///|
+/// Prepares a platform-owned wakeup source and returns its locator.
+///
+/// Call `activate_wakeup_source` after opening the locator for reading.
+pub fn Runtime::prepare_wakeup_source(
+  self : Runtime,
+) -> Result[String, NativeError] {
+  let required = Ref(0)
+  let scratch = FixedArray::make(1, b'\x00')
+  let status = proton_runtime_prepare_wakeup_source_ffi(
+    self.handle,
+    scratch,
+    0,
+    required,
+  )
+  if status != proton_err_buffer_too_small && status < 0 {
+    return Err(native_error(status))
+  }
+  let buffer = FixedArray::make(required.val + 1, b'\x00')
+  let second_status = proton_runtime_prepare_wakeup_source_ffi(
+    self.handle,
+    buffer,
+    buffer.length(),
+    required,
+  )
+  if second_status < 0 {
+    Err(native_error(second_status))
+  } else {
+    Ok(@ffi.from_cstr(Bytes::from_array(buffer)))
+  }
+}
+
+///|
+/// Activates a prepared wakeup source after its reader is connected.
+pub fn Runtime::activate_wakeup_source(
+  self : Runtime,
+) -> Result[Unit, NativeError] {
+  status_to_result(proton_runtime_activate_wakeup_source_ffi(self.handle))
 }
 
 ///|

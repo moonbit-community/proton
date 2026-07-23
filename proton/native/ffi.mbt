@@ -88,6 +88,18 @@ extern "C" fn proton_runtime_set_wakeup_fd_ffi(
 ) -> Int = "proton_runtime_set_wakeup_fd"
 
 ///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_runtime_prepare_wakeup_source_ffi(
+  runtime : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_runtime_prepare_wakeup_source"
+
+///|
+extern "C" fn proton_runtime_activate_wakeup_source_ffi(runtime : Int64) -> Int = "proton_runtime_activate_wakeup_source"
+
+///|
 #borrow(out_delay_ms)
 extern "C" fn proton_runtime_next_wakeup_delay_ms_ffi(
   runtime : Int64,

@@ -44,9 +44,15 @@
 
 #if PROTON_WITH_ENGINE && defined(__APPLE__)
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
+#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
+#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
+#elif PROTON_WITH_ENGINE && defined(_WIN32)
+#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
+#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ",\"runtime_wakeup_source\""
 #define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
 #else
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
+#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
 #define PROTON_MANAGED_APP_RUNNER_FEATURE ""
 #endif
 
@@ -191,6 +197,7 @@ int32_t proton_runtime_info_json(char *buffer,
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
+          PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
           PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
@@ -490,6 +497,47 @@ int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
   char engine_error[512] = {0};
   status = proton_engine_runtime_set_wakeup_fd(
       slot->engine_runtime, wakeup_fd, engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_runtime_prepare_wakeup_source(
+    proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  *out_required_len = 0;
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime wakeup source requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_prepare_wakeup_source(
+      slot->engine_runtime, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t
+proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "runtime wakeup source requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_runtime_activate_wakeup_source(
+      slot->engine_runtime, engine_error, sizeof(engine_error));
   return proton_set_engine_status(status, engine_error);
 }
 

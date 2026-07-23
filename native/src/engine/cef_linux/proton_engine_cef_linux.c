@@ -3360,6 +3360,30 @@ int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
   return PROTON_ERR_UNSUPPORTED;
 }
 
+// TODO: Provide a Linux platform-owned application runner and wakeup source.
+int32_t proton_engine_runtime_prepare_wakeup_source(
+    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  (void)runtime;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  proton_engine_set_message(error, error_len,
+                            "runtime wakeup sources are not supported on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+// TODO: Activate the Linux wakeup source once its managed runner exists.
+int32_t proton_engine_runtime_activate_wakeup_source(
+    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
+  (void)runtime;
+  proton_engine_set_message(error, error_len,
+                            "runtime wakeup sources are not supported on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 // TODO: Expose scheduled pump deadlines with the Linux async event source.
 int32_t proton_engine_runtime_next_wakeup_delay_ms(
     proton_engine_runtime_t *runtime,

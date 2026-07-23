@@ -22,21 +22,23 @@ caller still drains `proton_runtime_poll_*` until the queues are empty. Engine
 builds on Windows, macOS, and Linux expose the `runtime_wait` feature. ABI-only
 builds return `PROTON_ERR_UNSUPPORTED`.
 
-On macOS, `proton_app_run` owns the process main thread and runs AppKit plus
-CEF's native message loop there. It creates one application thread for the
-MoonBit async scheduler and joins that thread only after the application entry
-has returned. Public runtime and window handles are created and owned by the
-application thread; native engine operations marshal to the process main
-thread. Native callbacks never enter MoonBit. They enqueue work and signal the
-facade's wakeup file descriptor so the MoonBit scheduler can resume the waiting
-task. Under this managed runner, `proton_runtime_run`,
+On macOS and Windows, `proton_app_run` owns the calling UI thread and runs the
+platform UI loop plus CEF's native message loop there. It creates one
+application thread for the MoonBit async scheduler and joins that thread only
+after the application entry has returned. Public runtime and window handles
+are created and owned by the application thread; native engine operations
+marshal to the UI thread. Native callbacks never enter MoonBit. They enqueue
+work and signal the facade's wakeup source so the MoonBit scheduler can resume
+the waiting task. macOS uses a non-blocking pipe descriptor supplied by
+MoonBit. Windows exposes a platform-owned named pipe that MoonBit opens before
+activating it. Under this managed runner, `proton_runtime_run`,
 `proton_runtime_quit`, `proton_runtime_do_message_loop_work`,
 `proton_runtime_wait`, and `proton_runtime_next_wakeup_delay_ms` return
 `PROTON_ERR_UNSUPPORTED`.
 
-Windows and Linux currently execute the `proton_app_run` callback inline,
-preserving their existing single-thread architecture until they receive
-platform-owned UI runners.
+Linux currently executes the `proton_app_run` callback inline, preserving its
+existing single-thread architecture until it receives a platform-owned UI
+runner.
 
 It also exposes `proton_runtime_probe_json`, which validates the configured
 runtime layout before initialization. The probe checks `runtime_root`,

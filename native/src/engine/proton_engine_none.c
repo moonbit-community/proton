@@ -123,6 +123,26 @@ int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_runtime_prepare_wakeup_source(
+    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  (void)runtime;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_runtime_activate_wakeup_source(
+    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
+  (void)runtime;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_runtime_next_wakeup_delay_ms(
     proton_engine_runtime_t *runtime,
     int64_t *out_delay_ms,

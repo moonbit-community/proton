@@ -140,6 +140,7 @@ pub(all) enum ProcessResult {
 } derive(Eq, @debug.Debug)
 
 type Runtime
+pub fn Runtime::activate_wakeup_source(Self) -> Result[Unit, NativeError]
 pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
 pub fn Runtime::destroy(Self) -> Result[Unit, NativeError]
 pub fn Runtime::do_message_loop_work(Self) -> Result[Unit, NativeError]
@@ -150,6 +151,7 @@ pub fn Runtime::poll_bridge_request_json(Self) -> Result[String?, NativeError]
 pub fn Runtime::poll_event(Self) -> Result[RuntimeEvent?, NativeError]
 pub fn Runtime::poll_event_json(Self) -> Result[String?, NativeError]
 pub fn Runtime::poll_message_dialog(Self, Int64) -> Result[Bool, NativeError]
+pub fn Runtime::prepare_wakeup_source(Self) -> Result[String, NativeError]
 pub fn Runtime::quit(Self) -> Result[Unit, NativeError]
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Result[Unit, NativeError]
 pub fn Runtime::run(Self) -> Result[Unit, NativeError]
