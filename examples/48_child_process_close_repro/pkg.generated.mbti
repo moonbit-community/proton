@@ -1,0 +1,14 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton/examples/48_child_process_close_repro"
+
+// Values
+
+// Errors
+
+// Types and methods
+type HoldResult derive(ToJson)
+
+// Type aliases
+
+// Traits
+
