@@ -7,9 +7,9 @@ import {
 }
 
 // Values
-pub fn load_project_config_from_file(String) -> Result[ProjectConfig, String]
+pub fn load_project_config_from_file(String) -> Result[LoadedProjectConfig, String]
 
-pub fn load_project_config_from_text(String, String, name? : String) -> Result[ProjectConfig, String]
+pub fn load_project_config_from_text(String, String, name? : String) -> Result[LoadedProjectConfig, String]
 
 pub fn parse_moon_ext(name? : String, String) -> (Ast, Array[@basic.Report])
 
@@ -34,6 +34,14 @@ pub(all) struct ConfigField {
   key_loc : @basic.Location
   value : Ast
 } derive(Eq, @debug.Debug)
+
+pub(all) struct LoadedProjectConfig {
+  config : ProjectConfig
+  warnings : Array[String]
+} derive(Eq, @debug.Debug)
+pub fn LoadedProjectConfig::config(Self) -> ProjectConfig
+pub fn LoadedProjectConfig::new(ProjectConfig, warnings? : Array[String]) -> Self
+pub fn LoadedProjectConfig::warnings(Self) -> Array[String]
 
 pub(all) struct ProjectBundleConfig {
   active : Bool

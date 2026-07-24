@@ -212,3 +212,29 @@ fn copy_strings(values : Array[String]) -> Array[String] {
   }
   copy
 }
+
+///|
+pub(all) struct LoadedProjectConfig {
+  config : ProjectConfig
+  warnings : Array[String]
+} derive(Eq, Debug)
+
+///|
+pub fn LoadedProjectConfig::new(
+  config : ProjectConfig,
+  warnings? : Array[String] = [],
+) -> LoadedProjectConfig {
+  LoadedProjectConfig::{ config, warnings: copy_strings(warnings) }
+}
+
+///|
+pub fn LoadedProjectConfig::config(self : LoadedProjectConfig) -> ProjectConfig {
+  self.config
+}
+
+///|
+pub fn LoadedProjectConfig::warnings(
+  self : LoadedProjectConfig,
+) -> Array[String] {
+  self.warnings
+}

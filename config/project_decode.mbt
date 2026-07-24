@@ -1,7 +1,7 @@
 ///|
 pub fn load_project_config_from_file(
   path : String,
-) -> Result[ProjectConfig, String] {
+) -> Result[LoadedProjectConfig, String] {
   let base_dir = config_base_dir(path)
   read_project_config_text(path).bind(fn(text) {
     load_project_config_from_text(text, base_dir, name=path)
@@ -13,12 +13,14 @@ pub fn load_project_config_from_text(
   source : String,
   base_dir : String,
   name? : String = "moon.proton",
-) -> Result[ProjectConfig, String] {
+) -> Result[LoadedProjectConfig, String] {
   let (ast, reports) = parse_moon_proton(name~, source)
   if reports.length() > 0 {
     return Err(render_config_reports(reports))
   }
-  decode_project_config(ast, base_dir)
+  decode_project_config(ast, base_dir).map(fn(config) {
+    LoadedProjectConfig::new(config)
+  })
 }
 
 ///|

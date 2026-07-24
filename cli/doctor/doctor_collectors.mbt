@@ -2547,6 +2547,9 @@ fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
       match read_proton_project_config(path) {
         Ok(config) => {
           push_loaded_app(lines, project, config)
+          for warning in config.warnings {
+            lines.push(DoctorLine::coded("app.config.warning", Warn, warning))
+          }
           match project.app_json_path {
             Some(legacy) =>
               lines.push(

@@ -390,7 +390,7 @@ fn read_dev_frontend_config(
 ) -> Result[@proton_config.ProjectFrontendConfig?, String] {
   @proton_config.load_project_config_from_file(path)
   .map_err(fn(message) { "failed to load `" + path + "`: " + message })
-  .map(fn(project) { project.frontend() })
+  .map(fn(loaded) { loaded.config().frontend() })
 }
 
 ///|
