@@ -231,6 +231,60 @@ test "project config rebases file entry and frontend paths from config directory
 }
 
 ///|
+test "project config aggregates unknown and duplicate top-level fields" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+    #|legacy_runtime = true
+    #|unknown_thing = 1
+    #|permissions = {}
+    #|debug = true
+    #|debug = false
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(_) => abort("expected field validation errors")
+    Err(message) =>
+      assert_eq(
+        message, "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1\nDuplicate key 'debug' found in moon.proton.",
+      )
+  }
+}
+
+///|
+test "project config aggregates unknown and duplicate object fields" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|  title: "Other",
+    #|  extra: 1,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(_) => abort("expected field validation errors")
+    Err(message) =>
+      assert_eq(
+        message, "Duplicate key 'title' found in moon.proton field `window`.\nUnexpected key 'extra' found in moon.proton field `window`.",
+      )
+  }
+}
+
+///|
 fn normalize_test_path(path : String) -> String {
   path.replace(old="\\", new="/")
 }

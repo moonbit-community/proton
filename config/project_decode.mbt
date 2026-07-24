@@ -74,36 +74,42 @@ fn validate_project_top_level_fields(
   fields : Array[ConfigField],
 ) -> Result[Unit, String] {
   let seen : Map[String, Unit] = Map([])
+  let errors : Array[String] = []
   for field in fields {
     if seen.contains(field.key) {
-      return Err("Duplicate key '" + field.key + "' found in moon.proton.")
+      errors.push("Duplicate key '" + field.key + "' found in moon.proton.")
+      continue
     }
     seen[field.key] = ()
     match field.key {
       "window" | "entry" | "debug" => ()
       "product_name" | "identifier" =>
         match validate_optional_non_empty_string(field.value, field.key) {
-          Err(error) => return Err(error)
+          Err(error) => errors.push(error)
           Ok(_) => ()
         }
       "frontend" | "bundle" =>
         match validate_optional_object(field.value, field.key) {
-          Err(error) => return Err(error)
+          Err(error) => errors.push(error)
           Ok(_) => ()
         }
       "extensions" =>
-        return Err(
+        errors.push(
           "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
         )
       "permissions" =>
-        return Err("moon.proton field `permissions` is not supported in v1")
+        errors.push("moon.proton field `permissions` is not supported in v1")
       "windows" =>
-        return Err("moon.proton field `windows` is not supported in v1")
+        errors.push("moon.proton field `windows` is not supported in v1")
       other =>
-        return Err("Unexpected key '" + other + "' found in moon.proton.")
+        errors.push("Unexpected key '" + other + "' found in moon.proton.")
     }
   }
-  Ok(())
+  if errors.length() > 0 {
+    Err(errors.join("\n"))
+  } else {
+    Ok(())
+  }
 }
 
 ///|
@@ -407,19 +413,21 @@ fn validate_object_fields(
   allowed : Array[String],
 ) -> Result[Unit, String] {
   let seen : Map[String, Unit] = Map([])
+  let errors : Array[String] = []
   for field in fields {
     if seen.contains(field.key) {
-      return Err(
+      errors.push(
         "Duplicate key '" +
         field.key +
         "' found in moon.proton field `" +
         label +
         "`.",
       )
+      continue
     }
     seen[field.key] = ()
     if !allowed.contains(field.key) {
-      return Err(
+      errors.push(
         "Unexpected key '" +
         field.key +
         "' found in moon.proton field `" +
@@ -428,7 +436,11 @@ fn validate_object_fields(
       )
     }
   }
-  Ok(())
+  if errors.length() > 0 {
+    Err(errors.join("\n"))
+  } else {
+    Ok(())
+  }
 }
 
 ///|
