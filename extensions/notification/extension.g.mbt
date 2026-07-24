@@ -10,10 +10,19 @@ pub async fn emit_notification_activity(
 }
 
 ///|
+pub async fn emit_notification_click(
+  context : @proton_command.AppCommandExtensionContext,
+  payload : NotificationClick,
+) -> Unit {
+  context.emit("click", payload)
+}
+
+///|
 struct ProtonShowPayload {
   title : String?
   body : String
   level : String?
+  payload : String?
 } derive(FromJson)
 
 ///|
@@ -21,7 +30,20 @@ async fn __proton_command_show(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonShowPayload,
 ) -> Result[NotificationReply, String] {
-  show(context, payload.title, payload.body, payload.level)
+  show(context, payload.title, payload.body, payload.level, payload.payload)
+}
+
+///|
+struct ProtonDrainClicksPayload {
+  _payload : EmptyPayload?
+} derive(FromJson)
+
+///|
+async fn __proton_command_drain_clicks(
+  context : @proton_command.AppCommandExtensionContext,
+  payload : ProtonDrainClicksPayload,
+) -> Result[NotificationDrainReply, String] {
+  drain_clicks(context, payload._payload)
 }
 
 ///|
@@ -34,12 +56,24 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
   @proton_command.AppCommandExtensionSpec::new(
     "justjavac/proton-notification",
     "notification",
-    [@proton_command.AppCommandApiDescriptor::new("show")],
+    [
+      @proton_command.AppCommandApiDescriptor::new("show"),
+      @proton_command.AppCommandApiDescriptor::new("drainClicks"),
+    ],
     fn(context) {
       context.op_async_result("show", async fn(payload) {
         __proton_command_show(context, payload)
       }, emits_events=true)
+      context.op_async_result("drainClicks", async fn(payload) {
+        __proton_command_drain_clicks(context, payload)
+      }, emits_events=true)
       Ok(())
+    },
+    scripts=[
+      notification_click_poller_script(),
+    ],
+    on_destroy=fn(context) {
+      cleanup_notification(context)
     },
   )
 }

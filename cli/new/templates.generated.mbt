@@ -12,7 +12,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|version = "0.1.0"
           #|
           #|import {
-          #|  "moonbitlang/async@{{async_version}}",
           #|  "justjavac/proton@{{proton_version}}",
           #|}
           #|
@@ -68,7 +67,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "app/moon.pkg.mtpl",
       template_source: (
           #|import {
-          #|  "moonbitlang/async",
           #|  "justjavac/proton",
           #|  {{module_counter_import_mbt}} @counter,
           #|}
@@ -88,10 +86,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "app/main.mbt.mtpl",
       template_source: (
           #|///|
-          #|async fn main {
-          #|  @proton.config("moon.proton")
-          #|  .extension(@counter.extension())
-          #|  .run_or_abort()
+          #|fn main {
+          #|  @proton.run(() => {
+          #|    @proton.config("moon.proton")
+          #|    .extension(@counter.extension())
+          #|    .run_or_abort()
+          #|  })
           #|}
           #|
       ),
@@ -276,23 +276,19 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|        }
           #|      }
           #|
-          #|      function waitForBridge(attempt = 0) {
-          #|        if (window.__MoonBit__?.core?.invokeOp) {
+          #|      async function initialize() {
+          #|        try {
           #|          setEnabled(true);
           #|          setStatus("Bridge ready", "ok");
-          #|          void refresh();
-          #|          return;
+          #|          await refresh();
+          #|        } catch (error) {
+          #|          setStatus(String(error), "err");
           #|        }
-          #|        if (attempt > 100) {
-          #|          setStatus("Bridge timed out", "err");
-          #|          return;
-          #|        }
-          #|        window.setTimeout(() => waitForBridge(attempt + 1), 25);
           #|      }
           #|
           #|      incrementButton.addEventListener("click", () => void run("increment"));
           #|      resetButton.addEventListener("click", () => void run("reset"));
-          #|      window.addEventListener("load", () => waitForBridge());
+          #|      window.addEventListener("load", () => void initialize());
           #|    </script>
           #|  </body>
           #|</html>

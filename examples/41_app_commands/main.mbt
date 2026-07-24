@@ -94,13 +94,15 @@ fn register_app_commands(
 }
 
 ///|
-async fn main {
-  let app = @proton.html(
-    "MoonBit App Commands",
-    resource,
-    width=920,
-    height=680,
-    debug=true,
-  ).extension(app_commands_extension())
-  app.run_or_abort()
+fn main {
+  @proton.run(() => {
+    let app = @proton.html(
+      "MoonBit App Commands",
+      resource,
+      width=920,
+      height=680,
+      debug=true,
+    ).extension(app_commands_extension())
+    app.run_or_abort()
+  })
 }

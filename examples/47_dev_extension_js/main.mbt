@@ -74,6 +74,6 @@ fn ticker_extension() -> @proton_extension.Extension {
 }
 
 ///|
-async fn main {
-  @proton.app().extension(ticker_extension()).run_or_abort()
+fn main {
+  @proton.run(() => @proton.app().extension(ticker_extension()).run_or_abort())
 }

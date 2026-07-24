@@ -31,6 +31,10 @@ let proton_invalid_handle : Int64 = 0L
 extern "C" fn proton_abi_version_ffi() -> Int = "proton_abi_version"
 
 ///|
+#borrow(entry)
+extern "C" fn proton_app_run_ffi(entry : FuncRef[() -> Unit]) -> Int = "proton_app_run"
+
+///|
 #borrow(buffer, out_required_len)
 extern "C" fn proton_runtime_info_json_ffi(
   buffer : FixedArray[Byte],
@@ -78,6 +82,38 @@ extern "C" fn proton_runtime_wait_ffi(
 ) -> Int = "proton_runtime_wait"
 
 ///|
+extern "C" fn proton_runtime_set_wakeup_fd_ffi(
+  runtime : Int64,
+  wakeup_fd : Int,
+) -> Int = "proton_runtime_set_wakeup_fd"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_runtime_prepare_wakeup_source_ffi(
+  runtime : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_runtime_prepare_wakeup_source"
+
+///|
+extern "C" fn proton_runtime_activate_wakeup_source_ffi(runtime : Int64) -> Int = "proton_runtime_activate_wakeup_source"
+
+///|
+#borrow(out_delay_ms)
+extern "C" fn proton_runtime_next_wakeup_delay_ms_ffi(
+  runtime : Int64,
+  out_delay_ms : Ref[Int64],
+) -> Int = "proton_runtime_next_wakeup_delay_ms"
+
+///|
+#borrow(menu_json)
+extern "C" fn proton_runtime_set_menu_json_ffi(
+  runtime : Int64,
+  menu_json : Bytes,
+) -> Int = "proton_runtime_set_menu_json"
+
+///|
 #borrow(buffer, out_required_len)
 extern "C" fn proton_runtime_poll_event_json_ffi(
   runtime : Int64,
@@ -101,6 +137,56 @@ extern "C" fn proton_runtime_respond_bridge_request_json_ffi(
   runtime : Int64,
   response_json : Bytes,
 ) -> Int = "proton_runtime_respond_bridge_request_json"
+
+///|
+#borrow(title, message, out_dialog)
+extern "C" fn proton_runtime_begin_message_dialog_ffi(
+  runtime : Int64,
+  title : Bytes,
+  title_len : Int,
+  message : Bytes,
+  message_len : Int,
+  level : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_runtime_begin_message_dialog"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_runtime_poll_dialog_result_ffi(
+  runtime : Int64,
+  dialog : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_runtime_poll_dialog_result"
+
+///|
+#borrow(out_supported)
+extern "C" fn proton_notification_is_supported_ffi(
+  out_supported : Ref[Int],
+) -> Int = "proton_notification_is_supported"
+
+///|
+#borrow(title, body, payload)
+extern "C" fn proton_notification_show_ffi(
+  title : Bytes,
+  body : Bytes,
+  payload : Bytes,
+  has_payload : Int,
+) -> Int = "proton_notification_show"
+
+///|
+#borrow(buffer, out_required_len, out_has_payload, out_available)
+extern "C" fn proton_notification_poll_click_ffi(
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+  out_has_payload : Ref[Int],
+  out_available : Ref[Int],
+) -> Int = "proton_notification_poll_click"
+
+///|
+extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|
 #borrow(config_json, out_window)
@@ -153,11 +239,96 @@ extern "C" fn proton_window_load_html_ffi(
 extern "C" fn proton_window_eval_ffi(window : Int64, script : Bytes) -> Int = "proton_window_eval"
 
 ///|
-#borrow(bridge_json)
-extern "C" fn proton_window_install_bridge_json_ffi(
+#borrow(event_json)
+extern "C" fn proton_window_emit_bridge_event_json_ffi(
   window : Int64,
-  bridge_json : Bytes,
-) -> Int = "proton_window_install_bridge_json"
+  event_json : Bytes,
+) -> Int = "proton_window_emit_bridge_event_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_bridge_state_json_ffi(
+  window : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_bridge_state_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_take_bridge_failure_json_ffi(
+  window : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_take_bridge_failure_json"
+
+///|
+#borrow(title, message, out_dialog)
+extern "C" fn proton_window_begin_message_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  message : Bytes,
+  message_len : Int,
+  level : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_message_dialog"
+
+///|
+#borrow(title, message, out_dialog)
+extern "C" fn proton_window_begin_confirm_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  message : Bytes,
+  message_len : Int,
+  level : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_confirm_dialog"
+
+///|
+#borrow(title, path, out_dialog)
+extern "C" fn proton_window_begin_open_file_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_open_file_dialog"
+
+///|
+#borrow(title, path, out_dialog)
+extern "C" fn proton_window_begin_save_file_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_save_file_dialog"
+
+///|
+#borrow(title, path, out_dialog)
+extern "C" fn proton_window_begin_choose_directory_dialog_ffi(
+  window : Int64,
+  title : Bytes,
+  title_len : Int,
+  path : Bytes,
+  path_len : Int,
+  out_dialog : Ref[Int64],
+) -> Int = "proton_window_begin_choose_directory_dialog"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_poll_dialog_result_ffi(
+  window : Int64,
+  dialog : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_poll_dialog_result"
 
 ///|
 #borrow(buffer)

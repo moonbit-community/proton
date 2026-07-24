@@ -67,6 +67,10 @@ moon -C examples run 01_run --target native
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
   controls and compact web-rendered application chrome.
+- `48_child_process_close_repro`: long-lived child process and pending bridge
+  request for macOS close-lifecycle regression testing.
+- `49_app_menu`: app-level native menu definitions and macOS menu command
+  events with the optional focused window id.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle

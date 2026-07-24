@@ -117,6 +117,8 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
+    bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
+    menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
     validation_errors: [],
@@ -134,6 +136,13 @@ pub fn App::debug(self : App, enabled? : Bool = true) -> App {
 pub fn App::debug_level(self : App, debug : Int) -> App {
   self.debug_overridden = true
   self.debug_level_value = debug
+  self
+}
+
+///|
+/// Sets the maximum time allowed for the native bridge to become ready.
+pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
+  self.bridge_startup_timeout_value_ms = timeout_ms
   self
 }
 
@@ -208,11 +217,18 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 }
 
 ///|
+/// Sets the app-level native menu bar.
+pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
+  self.menu = Some(menu)
+  self
+}
+
+///|
 /// Registers one extension setting with the app facade.
 ///
 /// The native DLL route exposes command extensions through
-/// `window.__MoonBit__.core.invokeOp(...)` and a generated high-level proxy for
-/// inline HTML entries.
+/// `window.__MoonBit__.core.invokeOp(...)` and generated high-level proxies.
+/// The renderer installs the bridge before the page's first script executes.
 pub fn App::extension(
   self : App,
   extension : @proton_extension.Extension,

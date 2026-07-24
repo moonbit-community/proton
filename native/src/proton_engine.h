@@ -9,6 +9,11 @@
 typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
 
+int32_t proton_engine_prepare_app(char *error, size_t error_len);
+int32_t proton_engine_run_app_loop(char *error, size_t error_len);
+void proton_engine_quit_app_loop(void);
+int32_t proton_engine_finish_app(char *error, size_t error_len);
+
 int32_t proton_engine_execute_process_json(const char *config_json,
                                            int32_t *out_exit_code,
                                            char *error,
@@ -37,6 +42,24 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len);
+int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
+                                            int32_t wakeup_fd,
+                                            char *error,
+                                            size_t error_len);
+int32_t proton_engine_runtime_prepare_wakeup_source(
+    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_runtime_activate_wakeup_source(
+    proton_engine_runtime_t *runtime, char *error, size_t error_len);
+int32_t proton_engine_runtime_next_wakeup_delay_ms(
+    proton_engine_runtime_t *runtime,
+    int64_t *out_delay_ms,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
+                                            const char *menu_json,
+                                            char *error,
+                                            size_t error_len);
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,
@@ -49,6 +72,29 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     const char *response_json,
     char *error,
     size_t error_len);
+int32_t proton_engine_runtime_begin_message_dialog(
+    proton_engine_runtime_t *runtime, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog, char *error, size_t error_len);
+int32_t proton_engine_runtime_poll_dialog_result(
+    proton_engine_runtime_t *runtime, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len);
+
+int32_t proton_engine_notification_is_supported(int32_t *out_supported,
+                                                char *error,
+                                                size_t error_len);
+int32_t proton_engine_notification_show(const char *title,
+                                        const char *body,
+                                        const char *payload,
+                                        int32_t has_payload,
+                                        char *error,
+                                        size_t error_len);
+int32_t proton_engine_notification_poll_click(
+    char *buffer, int32_t buffer_len, int32_t *out_required_len,
+    int32_t *out_has_payload, int32_t *out_available, char *error,
+    size_t error_len);
+int32_t proton_engine_notification_cleanup(char *error, size_t error_len);
 
 int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                          const char *config_json,
@@ -93,12 +139,82 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len);
-int32_t proton_engine_window_install_bridge_json(proton_engine_window_t *window,
-                                                 proton_window_id_t public_window,
-                                                 const char *bridge_json,
-                                                 char *error,
-                                                 size_t error_len);
+int32_t proton_engine_window_emit_bridge_event_json(
+    proton_engine_window_t *window,
+    const char *event_json,
+    char *error,
+    size_t error_len);
+void proton_engine_window_bind_public_id(proton_engine_window_t *window,
+                                         proton_window_id_t public_window);
+uint64_t proton_engine_window_bridge_revision(
+    proton_engine_window_t *window);
+int32_t proton_engine_window_bridge_state_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_window_take_bridge_failure_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_window_begin_message_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    int32_t level,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_begin_confirm_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *message_utf8,
+    int32_t message_len,
+    int32_t level,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_begin_open_file_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_begin_save_file_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_begin_choose_directory_dialog(
+    proton_engine_window_t *window,
+    const char *title_utf8,
+    int32_t title_len,
+    const char *path_utf8,
+    int32_t path_len,
+    int64_t *out_dialog,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_poll_dialog_result(
+    proton_engine_window_t *window,
+    int64_t dialog,
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len,
+    char *error,
+    size_t error_len);
 
+int32_t proton_engine_take_menu_command(proton_engine_runtime_t *runtime,
+                                        char *buffer,
+                                        size_t buffer_len,
+                                        proton_window_id_t *out_focused_window,
+                                        int32_t *out_present);
 const char *proton_engine_name(void);
 
 #endif

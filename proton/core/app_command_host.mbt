@@ -14,6 +14,85 @@ struct AppCommandHost {
 }
 
 ///|
+/// Scheduler-local notification shared by the runtime pump and command tasks.
+/// The revision makes waiting race-free when a notification arrives between a
+/// native poll and suspension on the condition variable.
+pub struct RuntimeWakeSignal {
+  mut revision : Int64
+  condition : @async.CondVar
+}
+
+///|
+pub fn RuntimeWakeSignal::new() -> RuntimeWakeSignal {
+  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond() }
+}
+
+///|
+pub fn RuntimeWakeSignal::revision(self : RuntimeWakeSignal) -> Int64 {
+  self.revision
+}
+
+///|
+pub fn RuntimeWakeSignal::notify(self : RuntimeWakeSignal) -> Unit {
+  self.revision = self.revision + 1L
+  self.condition.broadcast()
+}
+
+///|
+pub async fn RuntimeWakeSignal::wait_for_change(
+  self : RuntimeWakeSignal,
+  revision : Int64,
+) -> Unit {
+  while self.revision == revision {
+    self.condition.wait()
+  }
+}
+
+///|
+/// Request-scoped context for one bridged app command dispatch.
+pub struct AppCommandRequestContext {
+  window : Int64
+  wake_signal : RuntimeWakeSignal
+}
+
+///|
+pub fn AppCommandRequestContext::new(
+  window : Int64,
+  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
+) -> AppCommandRequestContext {
+  AppCommandRequestContext::{ window, wake_signal }
+}
+
+///|
+pub fn AppCommandRequestContext::wake_signal(
+  self : AppCommandRequestContext,
+) -> RuntimeWakeSignal {
+  self.wake_signal
+}
+
+///|
+pub fn AppCommandRequestContext::wake_revision(
+  self : AppCommandRequestContext,
+) -> Int64 {
+  self.wake_signal.revision()
+}
+
+///|
+pub async fn AppCommandRequestContext::wait_for_wake(
+  self : AppCommandRequestContext,
+  revision : Int64,
+) -> Unit {
+  self.wake_signal.wait_for_change(revision)
+}
+
+///|
+pub fn AppCommandRequestContext::window(
+  self : AppCommandRequestContext,
+) -> Int64 {
+  self.window
+}
+
+///|
 /// Creates an empty app command host.
 pub fn AppCommandHost::new() -> AppCommandHost {
   AppCommandHost::{
@@ -67,6 +146,16 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result
 }
 
 ///|
+/// Registers an async app command that receives request-scoped context and can fail.
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result_with_context(
+  self : AppCommandHost,
+  name : String,
+  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
+) -> Unit {
+  self.host.op_async_result_with_context(name, callback)
+}
+
+///|
 /// Returns registered command names in registration order.
 pub fn AppCommandHost::registered_ops(self : AppCommandHost) -> Array[String] {
   self.host.registered_ops()
@@ -79,6 +168,16 @@ pub async fn AppCommandHost::dispatch_ipc(
   request : @ipc.IpcOpRequest,
 ) -> @ipc.IpcOpResponse {
   self.host.dispatch_async(request)
+}
+
+///|
+/// Dispatches one IPC request with request-scoped context.
+pub async fn AppCommandHost::dispatch_ipc_with_context(
+  self : AppCommandHost,
+  context : AppCommandRequestContext,
+  request : @ipc.IpcOpRequest,
+) -> @ipc.IpcOpResponse {
+  self.host.dispatch_async_with_context(context, request)
 }
 
 ///|
@@ -100,6 +199,29 @@ pub async fn AppCommandHost::dispatch_ipc_with_event_sender(
     }
     (None, _) => self.host.dispatch_async(request)
     (_, false) => self.host.dispatch_async(request)
+  }
+}
+
+///|
+/// Dispatches one IPC request with request-scoped context and a scoped event sender.
+pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(
+  self : AppCommandHost,
+  context : AppCommandRequestContext,
+  request : @ipc.IpcOpRequest,
+  emit : (async (@ipc.IpcExtensionEvent) -> Unit)?,
+) -> @ipc.IpcOpResponse {
+  match (emit, self.event_scoped_ops.contains(request.name)) {
+    (Some(sender), true) => {
+      self.event_scope_mutex.acquire()
+      self.scoped_event_sender = Some(sender)
+      defer {
+        self.scoped_event_sender = None
+        self.event_scope_mutex.release()
+      }
+      self.host.dispatch_async_with_context(context, request)
+    }
+    (None, _) => self.host.dispatch_async_with_context(context, request)
+    (_, false) => self.host.dispatch_async_with_context(context, request)
   }
 }
 

@@ -1,6 +1,7 @@
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs",
+  "moonbitlang/async/pipe",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
@@ -30,6 +31,8 @@ options(
     "facade_macos_layout.mbt": [ "native" ],
     "facade_manifest.mbt": [ "native" ],
     "facade_runtime.mbt": [ "native" ],
+    "facade_runtime_wakeup.mbt": [ "native" ],
+    "facade_runner.mbt": [ "native" ],
     "facade_types.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
   },

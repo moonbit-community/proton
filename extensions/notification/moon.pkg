@@ -1,8 +1,8 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/notification" @sys_notification,
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton/native" @proton_native,
 }
 
 import {
@@ -18,5 +18,6 @@ options(
     "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
+    "notification_native.mbt": [ "native" ],
   },
 )

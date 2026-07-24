@@ -22,6 +22,9 @@ pub struct AppCommandsConfig {
 }
 
 ///|
+pub type AppCommandRequestContext = @core.AppCommandRequestContext
+
+///|
 /// Runtime context passed to one user-process command extension during registration.
 pub struct AppCommandExtensionContext {
   host : @core.AppCommandHost
@@ -173,6 +176,20 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_
 ) -> Unit {
   let op_name = self.op_name(api_name)
   self.host.op_async_result(op_name, callback)
+  if emits_events {
+    self.host.scope_events_for_op(op_name)
+  }
+}
+
+///|
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result_with_context(
+  self : AppCommandExtensionContext,
+  api_name : String,
+  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
+  emits_events? : Bool = false,
+) -> Unit {
+  let op_name = self.op_name(api_name)
+  self.host.op_async_result_with_context(op_name, callback)
   if emits_events {
     self.host.scope_events_for_op(op_name)
   }

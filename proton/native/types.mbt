@@ -27,8 +27,38 @@ pub(all) struct RuntimeWaitReady {
 ///|
 struct RuntimeEvent {
   event_type : String
-  has_window : Bool
+  window : Int64?
+  menu_command_id : String?
+  revision : Int64?
 } derive(Debug, Eq)
+
+///|
+pub(all) struct BridgeLifecycleState {
+  abi_version : Int
+  revision : String
+  outcome : String
+  page_instance : String
+  url : String
+  failure_pending : Bool
+} derive(Debug, Eq, FromJson)
+
+///|
+pub(all) struct BridgeDiagnostic {
+  abi_version : Int
+  stage : String
+  code : String
+  message : String
+  page_instance : String
+  url : String
+  owner : String?
+  source_url : String?
+  source_line : String?
+  line : Int?
+  column : Int?
+  stack : String?
+  additional_failure_count : Int?
+  details_truncated : Bool
+} derive(Debug, Eq, FromJson)
 
 ///|
 pub(all) struct BridgeRequest {
@@ -46,13 +76,73 @@ pub(all) enum BridgeResponse {
 } derive(Debug)
 
 ///|
+pub(all) enum DialogLevel {
+  Info
+  Warning
+  Error
+} derive(Debug, Eq)
+
+///|
+pub(all) enum DialogPollResult {
+  Pending
+  Ready(String)
+} derive(Debug, Eq)
+
+///|
+/// A native notification activation, optionally carrying its application
+/// payload.
+pub(all) struct NativeNotificationClick {
+  payload : String?
+} derive(Debug, Eq)
+
+///|
+/// An application-level native menu bar.
+struct MenuBar {
+  raw_json : String?
+  menus : Array[Menu]
+} derive(Debug, Eq)
+
+///|
+/// A top-level native menu and its items.
+struct Menu {
+  label : String
+  items : Array[MenuItem]
+} derive(Debug, Eq)
+
+///|
+/// A command, separator, or platform role in a native menu.
+struct MenuItem {
+  kind : String
+  id : String?
+  label : String?
+  key : String?
+  role : String?
+} derive(Debug, Eq)
+
+///|
 pub(all) struct BridgeConfig {
   raw_json : String?
   ops : Array[String]
   max_payload_bytes : Int
   request_timeout_ms : Int
   dev_origins : Array[String]
-  dev_bootstrap_script : String?
+  extensions : Array[BridgeExtensionConfig]
+  initialization_units : Array[BridgeInitializationUnit]
+} derive(Debug, Eq)
+
+///|
+/// One JavaScript namespace installed by the renderer bootstrap.
+pub(all) struct BridgeExtensionConfig {
+  js_namespace : String
+  apis : Array[String]
+} derive(Debug, Eq)
+
+///|
+/// One ordered JavaScript initialization unit owned by an extension.
+pub(all) struct BridgeInitializationUnit {
+  owner : String
+  name : String
+  source : String
 } derive(Debug, Eq)
 
 ///|
@@ -62,7 +152,14 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
 
 ///|
 pub fn RuntimeEvent::has_window(self : RuntimeEvent) -> Bool {
-  self.has_window
+  self.window is Some(_)
+}
+
+///|
+/// Returns the window associated with this event when one exists. For an app
+/// menu command this is the focused window at click time.
+pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
+  self.window
 }
 
 ///|
@@ -73,6 +170,22 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+pub fn RuntimeEvent::is_bridge_lifecycle_changed(self : RuntimeEvent) -> Bool {
+  self.event_type == "bridge_lifecycle_changed"
+}
+
+///|
+/// The command id for an app-menu command item click, or `None` for every
+/// other event kind.
+pub fn RuntimeEvent::menu_command_id(self : RuntimeEvent) -> String? {
+  if self.event_type == "menu_command" {
+    self.menu_command_id
+  } else {
+    None
+  }
 }
 
 ///|
@@ -136,6 +249,11 @@ struct Window {
 }
 
 ///|
+struct WindowRef {
+  handle : Int64
+} derive(Debug, Eq)
+
+///|
 pub(all) enum TitlebarStyle {
   Default
   Overlay
@@ -169,6 +287,7 @@ struct WindowConfig {
   height : Int
   initial_url : String
   titlebar_style : TitlebarStyle
+  bridge : BridgeConfig?
 } derive(Debug, Eq)
 
 ///|
@@ -237,8 +356,9 @@ pub fn WindowConfig::new(
   height? : Int = 600,
   initial_url? : String = "about:blank",
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  bridge? : BridgeConfig,
 ) -> WindowConfig {
-  { raw_json: None, title, width, height, initial_url, titlebar_style }
+  { raw_json: None, title, width, height, initial_url, titlebar_style, bridge }
 }
 
 ///|
@@ -250,7 +370,57 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     height: 600,
     initial_url: "about:blank",
     titlebar_style: TitlebarStyle::Default,
+    bridge: None,
   }
+}
+
+///|
+/// Creates an application-level menu bar.
+pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
+  { raw_json: None, menus }
+}
+
+///|
+/// Creates a menu bar from unchecked native ABI JSON.
+pub fn MenuBar::unsafe_from_json(raw_json : String) -> MenuBar {
+  { raw_json: Some(raw_json), menus: [] }
+}
+
+///|
+/// Creates a top-level menu.
+pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
+  { label, items }
+}
+
+///|
+/// Creates an app command item. Activating it emits `menu_command`.
+pub fn MenuItem::command(
+  id : String,
+  label : String,
+  key? : String,
+) -> MenuItem {
+  { kind: "command", id: Some(id), label: Some(label), key, role: None }
+}
+
+///|
+/// Creates a menu separator.
+pub fn MenuItem::separator() -> MenuItem {
+  { kind: "separator", id: None, label: None, key: None, role: None }
+}
+
+///|
+/// Creates an item backed by a platform menu role such as `close` or `quit`.
+pub fn MenuItem::role(
+  role : String,
+  label? : String,
+  key? : String,
+) -> MenuItem {
+  { kind: "role", id: None, label, key, role: Some(role) }
+}
+
+///|
+pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
+  WindowRef::{ handle, }
 }
 
 ///|
@@ -259,7 +429,8 @@ pub fn BridgeConfig::new(
   max_payload_bytes? : Int = 1048576,
   request_timeout_ms? : Int = 30000,
   dev_origins? : Array[String] = [],
-  dev_bootstrap_script? : String? = None,
+  extensions? : Array[BridgeExtensionConfig] = [],
+  initialization_units? : Array[BridgeInitializationUnit] = [],
 ) -> BridgeConfig {
   {
     raw_json: None,
@@ -267,7 +438,8 @@ pub fn BridgeConfig::new(
     max_payload_bytes,
     request_timeout_ms,
     dev_origins: copy_strings(dev_origins),
-    dev_bootstrap_script,
+    extensions: extensions.map(fn(extension) { extension.copy() }),
+    initialization_units: initialization_units.map(fn(unit) { unit.copy() }),
   }
 }
 
@@ -279,8 +451,40 @@ pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
     max_payload_bytes: 1048576,
     request_timeout_ms: 30000,
     dev_origins: [],
-    dev_bootstrap_script: None,
+    extensions: [],
+    initialization_units: [],
   }
+}
+
+///|
+pub fn BridgeExtensionConfig::new(
+  js_namespace : String,
+  apis~ : Array[String],
+) -> BridgeExtensionConfig {
+  { js_namespace, apis: copy_strings(apis) }
+}
+
+///|
+pub fn BridgeInitializationUnit::new(
+  owner : String,
+  name : String,
+  source : String,
+) -> BridgeInitializationUnit {
+  { owner, name, source }
+}
+
+///|
+fn BridgeInitializationUnit::copy(
+  self : BridgeInitializationUnit,
+) -> BridgeInitializationUnit {
+  { owner: self.owner, name: self.name, source: self.source }
+}
+
+///|
+fn BridgeExtensionConfig::copy(
+  self : BridgeExtensionConfig,
+) -> BridgeExtensionConfig {
+  { js_namespace: self.js_namespace, apis: copy_strings(self.apis) }
 }
 
 ///|
@@ -350,15 +554,50 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
             fields["titlebar_style"] = Json::string("overlay")
           }
       }
+      match self.bridge {
+        Some(bridge) => fields.set("bridge", bridge.to_json())
+        None => ()
+      }
       Json::object(fields).stringify()
     }
   }
 }
 
 ///|
-pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
+fn MenuItem::to_json(self : MenuItem) -> Json {
+  let fields : Map[String, Json] = { "kind": Json::string(self.kind) }
+  set_optional_string_field(fields, "id", self.id)
+  set_optional_string_field(fields, "label", self.label)
+  set_optional_string_field(fields, "key", self.key)
+  set_optional_string_field(fields, "role", self.role)
+  Json::object(fields)
+}
+
+///|
+fn Menu::to_json(self : Menu) -> Json {
+  Json::object({
+    "label": Json::string(self.label),
+    "items": Json::array(self.items.map(fn(item) { item.to_json() })),
+  })
+}
+
+///|
+/// Encodes this menu bar for the native ABI.
+pub fn MenuBar::to_json_string(self : MenuBar) -> String {
   match self.raw_json {
     Some(raw) => raw
+    None =>
+      Json::object({
+        "abi_version": Json::number(1.0, repr="1"),
+        "menus": Json::array(self.menus.map(fn(menu) { menu.to_json() })),
+      }).stringify()
+  }
+}
+
+///|
+fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
+  match self.raw_json {
+    Some(raw) => @json.parse(raw) catch { _ => Json::null() }
     None => {
       let ops_json = self.ops.map(fn(name) {
         Json::object({ "name": Json::string(name) })
@@ -386,15 +625,37 @@ pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
           self.request_timeout_ms.to_double(),
           repr=self.request_timeout_ms.to_string(),
         ),
+        "extensions": Json::array(
+          self.extensions.map(fn(extension) {
+            Json::object({
+              "namespace": Json::string(extension.js_namespace),
+              "apis": Json::array(
+                extension.apis.map(fn(api) { Json::string(api) }),
+              ),
+            })
+          }),
+        ),
       }
-      set_optional_string_field(
-        fields,
-        "dev_bootstrap_script",
-        self.dev_bootstrap_script,
+      fields.set(
+        "initialization_units",
+        Json::array(
+          self.initialization_units.map(fn(unit) {
+            Json::object({
+              "owner": Json::string(unit.owner),
+              "name": Json::string(unit.name),
+              "source": Json::string(unit.source),
+            })
+          }),
+        ),
       )
-      Json::object(fields).stringify()
+      Json::object(fields)
     }
   }
+}
+
+///|
+pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
+  self.to_json().stringify()
 }
 
 ///|
