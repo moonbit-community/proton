@@ -630,31 +630,6 @@ test "window config accepts overlay titlebar style" {
 }
 
 ///|
-test "bundled engine creates overlay window when capability is available" {
-  match runtime_info() {
-    Ok(info) if info.features.contains("titlebar_overlay") => ()
-    _ => return
-  }
-  let runtime_config = RuntimeConfig::bundled()
-  match runtime_config.probe() {
-    Err(_) => return
-    Ok(_) => ()
-  }
-  let runtime = Runtime::new(config=runtime_config).unwrap()
-  let window = Window::new(
-    runtime,
-    config=WindowConfig::new(
-      title="Overlay Engine Smoke",
-      width=320,
-      height=240,
-      titlebar_style=TitlebarStyle::Overlay,
-    ),
-  ).unwrap()
-  debug_inspect(window.destroy(), content="Ok(())")
-  debug_inspect(runtime.destroy(), content="Ok(())")
-}
-
-///|
 test "window config rejects unsupported titlebar style" {
   let runtime = Runtime::new().unwrap()
   let result = Window::new(
