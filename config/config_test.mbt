@@ -307,6 +307,34 @@ test "project config load reports no warnings by default" {
 }
 
 ///|
+test "loaded project config carries warnings" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(loaded) => {
+      let with_warnings = LoadedProjectConfig::new(loaded.config(), warnings=[
+        "moon.proton field `legacy` is deprecated",
+      ])
+      assert_eq(with_warnings.warnings(), [
+        "moon.proton field `legacy` is deprecated",
+      ])
+      assert_eq(with_warnings.config(), loaded.config())
+    }
+    Err(message) => abort(message)
+  }
+}
+
+///|
 fn normalize_test_path(path : String) -> String {
   path.replace(old="\\", new="/")
 }
