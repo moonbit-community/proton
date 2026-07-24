@@ -16,19 +16,6 @@ pub fn load_runtime_manifest_from_json(
 }
 
 ///|
-/// Reads config text from disk with a labeled error message.
-fn read_app_manifest_text(path : String) -> Result[String, String] {
-  try @mbfs.read_file_to_string(path) catch {
-    error =>
-      Err(
-        "failed to read app manifest: " + @debug.render(@debug.to_repr(error)),
-      )
-  } noraise {
-    text => Ok(text)
-  }
-}
-
-///|
 /// Parses internal runtime manifest text and returns the root JSON object.
 fn parse_app_manifest_root_object(
   text : String,

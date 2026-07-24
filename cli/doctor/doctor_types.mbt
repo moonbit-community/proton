@@ -266,4 +266,5 @@ priv struct DoctorAppConfig {
   entry : DoctorAppEntry
   debug : Bool
   frontend : DoctorFrontendConfig?
+  warnings : Array[String]
 }

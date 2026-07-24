@@ -565,10 +565,43 @@ test "moon.proton reader rejects manifest extensions" {
   match read_proton_project_config(config_path) {
     Err(error) =>
       assert_eq(
-        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+        error,
+        "failed to load `" +
+        config_path +
+        "`: moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
       )
     Ok(_) => abort("expected moon.proton extensions to be rejected")
   }
+}
+
+///|
+test "doctor app config mapping propagates load warnings" {
+  // Mapping-level coverage: no moon.proton field currently produces warnings,
+  // so non-empty warnings are injected through the mapping function instead of
+  // a loaded config file.
+  let source =
+    #|window = {
+    #|  title: "Demo",
+    #|  width: 960,
+    #|  height: 720,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  let project = match
+    @proton_config.load_project_config_from_text(
+      source, "target/proton-doctor-warnings",
+    ) {
+    Ok(loaded) => loaded.config()
+    Err(message) => abort(message)
+  }
+  let config = doctor_app_config_from_project_config(project, [
+    "moon.proton field `legacy` is deprecated",
+  ])
+  assert_eq(config.warnings, ["moon.proton field `legacy` is deprecated"])
 }
 
 ///|

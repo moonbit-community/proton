@@ -77,8 +77,8 @@ fn expect_moon_proton_extra_field_error(
 }
 
 ///|
-test "load_proton_manifest_from_file rebases file entry and bool debug" {
-  let result = load_proton_manifest_from_file(manifest_test_path("moon.proton"))
+test "load_config_manifest_from_file rebases file entry and bool debug" {
+  let result = load_config_manifest_from_file(manifest_test_path("moon.proton"))
   match result {
     Err(error) => abort(error)
     Ok(loaded) => {
@@ -149,7 +149,7 @@ test "load_config_manifest_from_file accepts explicit config filenames" {
 }
 
 ///|
-test "load_proton_manifest_from_file rejects extension settings" {
+test "load_config_manifest_from_file rejects extension settings" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -182,27 +182,27 @@ test "load_proton_manifest_from_file rejects extension settings" {
     Ok(_) => abort("expected extensions rejection")
     Err(error) =>
       assert_eq(
-        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
       )
   }
 }
 
 ///|
-test "load_proton_manifest_from_file rejects unsupported top-level fields" {
+test "load_config_manifest_from_file rejects unsupported top-level fields" {
   expect_moon_proton_extra_field_error(
-    "version = \"1.0.0\"", "unknown moon.proton field: version",
+    "version = \"1.0.0\"", "Unexpected key 'version' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "license = \"MIT\"", "unknown moon.proton field: license",
+    "license = \"MIT\"", "Unexpected key 'license' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "description = \"App\"", "unknown moon.proton field: description",
+    "description = \"App\"", "Unexpected key 'description' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "permissions = {}", "moon.proton field `permissions` is not supported in v1",
+    "permissions = {}", "moon.proton field `permissions` is not supported in v1.",
   )
   expect_moon_proton_extra_field_error(
-    "windows = []", "moon.proton field `windows` is not supported in v1",
+    "windows = []", "moon.proton field `windows` is not supported in v1.",
   )
   expect_moon_proton_extra_field_error(
     "debug = 1", "moon.proton debug must be a bool",
@@ -468,7 +468,10 @@ test "load_proton_project_config_from_file validates tooling blocks" {
 
   match load_proton_project_config_from_file(config_path) {
     Ok(_) => abort("expected frontend validation error")
-    Err(error) => assert_eq(error, "unknown frontend field: unknown")
+    Err(error) =>
+      assert_eq(
+        error, "Unexpected key 'unknown' found in moon.proton field `frontend`.",
+      )
   }
 }
 
@@ -507,7 +510,10 @@ test "load_config_manifest_from_file validates project tooling blocks" {
 
   match load_config_manifest_from_file(config_path) {
     Ok(_) => abort("expected frontend validation error")
-    Err(error) => assert_eq(error, "unknown frontend field: before_buid")
+    Err(error) =>
+      assert_eq(
+        error, "Unexpected key 'before_buid' found in moon.proton field `frontend`.",
+      )
   }
 }
 

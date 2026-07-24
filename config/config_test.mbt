@@ -113,7 +113,8 @@ test "project config parses default titlebar style" {
     #|}
     #|
   match load_project_config_from_text(source, "target/proton-config") {
-    Ok(config) => assert_true(config.window.titlebar_style == TitlebarDefault)
+    Ok(loaded) =>
+      assert_true(loaded.config().window.titlebar_style == TitlebarDefault)
     Err(message) => abort(message)
   }
 }
@@ -134,7 +135,8 @@ test "project config parses overlay titlebar style" {
     #|}
     #|
   match load_project_config_from_text(source, "target/proton-config") {
-    Ok(config) => assert_true(config.window.titlebar_style == TitlebarOverlay)
+    Ok(loaded) =>
+      assert_true(loaded.config().window.titlebar_style == TitlebarOverlay)
     Err(message) => abort(message)
   }
 }
@@ -189,7 +191,7 @@ test "project config rebases file entry and frontend paths from config directory
     #|}
     #|
   let config = match load_project_config_from_text(source, base_dir) {
-    Ok(config) => config
+    Ok(loaded) => loaded.config()
     Err(error) => abort(error)
   }
   match config.entry() {
@@ -228,6 +230,108 @@ test "project config rebases file entry and frontend paths from config directory
       "target/proton-config/subdir/target/proton-dist",
     ),
   )
+}
+
+///|
+test "project config aggregates unknown and duplicate top-level fields" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+    #|legacy_runtime = true
+    #|unknown_thing = 1
+    #|permissions = {}
+    #|debug = true
+    #|debug = false
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(_) => abort("expected field validation errors")
+    Err(message) =>
+      assert_eq(
+        message, "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1.\nDuplicate key 'debug' found in moon.proton.",
+      )
+  }
+}
+
+///|
+test "project config aggregates unknown and duplicate object fields" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|  title: "Other",
+    #|  extra: 1,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(_) => abort("expected field validation errors")
+    Err(message) =>
+      assert_eq(
+        message, "Duplicate key 'title' found in moon.proton field `window`.\nUnexpected key 'extra' found in moon.proton field `window`.",
+      )
+  }
+}
+
+///|
+test "project config load reports no warnings by default" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(loaded) => assert_eq(loaded.warnings(), [])
+    Err(message) => abort(message)
+  }
+}
+
+///|
+test "loaded project config carries warnings" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "url",
+    #|  value: "http://localhost:5173",
+    #|}
+    #|
+  match load_project_config_from_text(source, "target/proton-config") {
+    Ok(loaded) => {
+      let with_warnings = LoadedProjectConfig::new(loaded.config(), warnings=[
+        "moon.proton field `legacy` is deprecated",
+      ])
+      assert_eq(with_warnings.warnings(), [
+        "moon.proton field `legacy` is deprecated",
+      ])
+      assert_eq(with_warnings.config(), loaded.config())
+    }
+    Err(message) => abort(message)
+  }
 }
 
 ///|

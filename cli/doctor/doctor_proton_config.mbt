@@ -1,19 +1,23 @@
 ///|
 fn read_proton_project_config(path : String) -> Result[DoctorAppConfig, String] {
-  @proton_config.load_project_config_from_file(path).map(
-    doctor_app_config_from_project_config,
-  )
+  @proton_config.load_project_config_from_file(path)
+  .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+  .map(fn(loaded) {
+    doctor_app_config_from_project_config(loaded.config(), loaded.warnings())
+  })
 }
 
 ///|
 fn doctor_app_config_from_project_config(
   project : @proton_config.ProjectConfig,
+  warnings : Array[String],
 ) -> DoctorAppConfig {
   DoctorAppConfig::{
     window: doctor_window_from_project_window(project.window()),
     entry: doctor_entry_from_project_entry(project.entry()),
     debug: project.debug() != 0,
     frontend: project.frontend().map(doctor_frontend_from_project_frontend),
+    warnings,
   }
 }
 

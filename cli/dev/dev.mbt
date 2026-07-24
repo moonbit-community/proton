@@ -388,9 +388,9 @@ fn load_dev_frontend_config(
 fn read_dev_frontend_config(
   path : String,
 ) -> Result[@proton_config.ProjectFrontendConfig?, String] {
-  @proton_config.load_project_config_from_file(path).map(fn(project) {
-    project.frontend()
-  })
+  @proton_config.load_project_config_from_file(path)
+  .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+  .map(fn(loaded) { loaded.config().frontend() })
 }
 
 ///|
