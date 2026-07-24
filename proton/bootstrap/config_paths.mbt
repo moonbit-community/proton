@@ -49,45 +49,9 @@ fn rebase_relative_path(path : String, base_dir : String?) -> String {
 }
 
 ///|
-/// Resolves the absolute directory that contains a config file path.
-fn config_base_dir(path : String) -> String {
-  let raw_dirname = dirname_string(path)
-  let config_dir : @mbpath.Path = raw_dirname
-  config_dir.resolve().to_string()
-}
-
-///|
 /// Trims and lowercases config keywords before comparison.
 fn normalize_keyword(raw : String) -> String {
   raw.trim().to_owned().to_lower()
-}
-
-///|
-/// Returns the directory portion of a path using both slash styles.
-fn dirname_string(path : String) -> String {
-  let mut separator_index : Int? = None
-  for i, ch in path {
-    if ch == '/' || ch == '\\' {
-      separator_index = Some(i)
-    }
-  }
-  match separator_index {
-    None => "."
-    Some(separator_index) => prefix_string(path, separator_index)
-  }
-}
-
-///|
-/// Copies the path prefix that ends just before `end_exclusive`.
-fn prefix_string(path : String, end_exclusive : Int) -> String {
-  let builder = StringBuilder::new(size_hint=end_exclusive)
-  for i, ch in path {
-    if i >= end_exclusive {
-      break
-    }
-    builder.write_char(ch)
-  }
-  builder.to_string()
 }
 
 ///|

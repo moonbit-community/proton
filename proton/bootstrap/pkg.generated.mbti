@@ -10,8 +10,6 @@ pub fn app_manifest_to_json(@manifest.AppManifest) -> Json
 
 pub fn load_config_manifest_from_file(String) -> Result[LoadedAppManifest, String]
 
-pub fn load_proton_manifest_from_file(String) -> Result[LoadedAppManifest, String]
-
 pub fn load_proton_project_config_from_file(String) -> Result[ProtonProjectConfig, String]
 
 pub fn load_proton_project_summary_from_file(String) -> Result[Json, String]

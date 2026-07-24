@@ -2,7 +2,6 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
-  "moonbitlang/lexer/basic",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
   "justjavac/proton_config",

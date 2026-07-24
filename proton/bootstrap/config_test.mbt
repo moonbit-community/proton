@@ -77,8 +77,8 @@ fn expect_moon_proton_extra_field_error(
 }
 
 ///|
-test "load_proton_manifest_from_file rebases file entry and bool debug" {
-  let result = load_proton_manifest_from_file(manifest_test_path("moon.proton"))
+test "load_config_manifest_from_file rebases file entry and bool debug" {
+  let result = load_config_manifest_from_file(manifest_test_path("moon.proton"))
   match result {
     Err(error) => abort(error)
     Ok(loaded) => {
@@ -149,7 +149,7 @@ test "load_config_manifest_from_file accepts explicit config filenames" {
 }
 
 ///|
-test "load_proton_manifest_from_file rejects extension settings" {
+test "load_config_manifest_from_file rejects extension settings" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -188,7 +188,7 @@ test "load_proton_manifest_from_file rejects extension settings" {
 }
 
 ///|
-test "load_proton_manifest_from_file rejects unsupported top-level fields" {
+test "load_config_manifest_from_file rejects unsupported top-level fields" {
   expect_moon_proton_extra_field_error(
     "version = \"1.0.0\"", "Unexpected key 'version' found in moon.proton.",
   )
