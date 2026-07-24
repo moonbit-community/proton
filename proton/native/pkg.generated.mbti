@@ -13,6 +13,14 @@ pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeE
 
 pub fn last_error_message() -> String
 
+pub fn notification_cleanup() -> Result[Unit, NativeError]
+
+pub fn notification_poll_click() -> Result[NativeNotificationClick?, NativeError]
+
+pub fn notification_show(String, String, payload? : String) -> Result[Unit, NativeError]
+
+pub fn notification_supported() -> Result[Bool, NativeError]
+
 pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
 
 pub fn run_app(FuncRef[() -> Unit]) -> Result[Unit, NativeError]
@@ -132,6 +140,10 @@ pub fn MenuItem::separator() -> Self
 pub(all) struct NativeError {
   status : Int
   message : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NativeNotificationClick {
+  payload : String?
 } derive(Eq, @debug.Debug)
 
 pub(all) enum ProcessResult {

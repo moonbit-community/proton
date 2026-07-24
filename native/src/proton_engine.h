@@ -81,6 +81,21 @@ int32_t proton_engine_runtime_poll_dialog_result(
     int32_t buffer_len, int32_t *out_required_len, char *error,
     size_t error_len);
 
+int32_t proton_engine_notification_is_supported(int32_t *out_supported,
+                                                char *error,
+                                                size_t error_len);
+int32_t proton_engine_notification_show(const char *title,
+                                        const char *body,
+                                        const char *payload,
+                                        int32_t has_payload,
+                                        char *error,
+                                        size_t error_len);
+int32_t proton_engine_notification_poll_click(
+    char *buffer, int32_t buffer_len, int32_t *out_required_len,
+    int32_t *out_has_payload, int32_t *out_available, char *error,
+    size_t error_len);
+int32_t proton_engine_notification_cleanup(char *error, size_t error_len);
+
 int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                          const char *config_json,
                                          proton_engine_window_t **out_window,

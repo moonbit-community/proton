@@ -14,11 +14,6 @@ static proton_library_t proton_open_library(void) {
 static void *proton_find_symbol(proton_library_t library, const char *name) {
   return (void *)GetProcAddress(library, name);
 }
-static void proton_close_library(proton_library_t library) {
-  if (library != NULL) {
-    FreeLibrary(library);
-  }
-}
 static void proton_print_loader_error(void) {
   fprintf(stderr, "LoadLibraryA(%s) failed with error %lu\n",
           PROTON_LIBRARY_NAME, (unsigned long)GetLastError());
@@ -36,11 +31,6 @@ static proton_library_t proton_open_library(void) {
 }
 static void *proton_find_symbol(proton_library_t library, const char *name) {
   return dlsym(library, name);
-}
-static void proton_close_library(proton_library_t library) {
-  if (library != NULL) {
-    dlclose(library);
-  }
 }
 static void proton_print_loader_error(void) {
   const char *message = dlerror();
@@ -71,6 +61,10 @@ static const char *const expected_exports[] = {
     "proton_runtime_respond_bridge_request_json",
     "proton_runtime_begin_message_dialog",
     "proton_runtime_poll_dialog_result",
+    "proton_notification_is_supported",
+    "proton_notification_show",
+    "proton_notification_poll_click",
+    "proton_notification_cleanup",
     "proton_window_create_json",
     "proton_window_destroy",
     "proton_window_show",
@@ -133,6 +127,7 @@ int main(void) {
     }
   }
 
-  proton_close_library(library);
+  // libproton owns a process-lifetime CEF dependency. This test verifies the
+  // exported ABI only; explicitly unloading CEF-linked libraries is unsupported.
   return failed;
 }

@@ -89,6 +89,13 @@ pub(all) enum DialogPollResult {
 } derive(Debug, Eq)
 
 ///|
+/// A native notification activation, optionally carrying its application
+/// payload.
+pub(all) struct NativeNotificationClick {
+  payload : String?
+} derive(Debug, Eq)
+
+///|
 /// An application-level native menu bar.
 struct MenuBar {
   raw_json : String?

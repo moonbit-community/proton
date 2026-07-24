@@ -12,6 +12,7 @@ option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" O
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
 set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
 set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
+set(PROTON_NOTIFICATION_SOURCE src/engine/notification_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
@@ -23,6 +24,7 @@ if(PROTON_WITH_ENGINE)
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
     set(PROTON_APP_RUNNER_SOURCE src/app_runner.m)
+    set(PROTON_NOTIFICATION_SOURCE src/engine/cef_mac/notification.m)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_mac/proton_engine_cef_mac.m
       src/engine/cef_mac/dialog.m
@@ -55,6 +57,7 @@ add_library(proton SHARED
   src/proton_state.c
   src/proton.c
   ${PROTON_APP_RUNNER_SOURCE}
+  ${PROTON_NOTIFICATION_SOURCE}
   src/engine/cef_common/bridge_lifecycle.c
   ${PROTON_ENGINE_SOURCES}
 )
@@ -158,6 +161,7 @@ if(PROTON_WITH_ENGINE)
       "-framework Cocoa"
       "-framework AppKit"
       "-framework Foundation"
+      "-framework UserNotifications"
       "-lc++"
     )
     set_target_properties(proton PROPERTIES LINKER_LANGUAGE CXX)
@@ -341,6 +345,7 @@ if(BUILD_TESTING)
 
   add_test(NAME proton_smoke COMMAND proton_smoke)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
+  set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)
     set(PROTON_TEST_PATH_MODIFICATIONS

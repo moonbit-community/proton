@@ -100,6 +100,16 @@ PROTON_API int32_t proton_runtime_poll_dialog_result(
     proton_runtime_id_t runtime, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);
 
+PROTON_API int32_t proton_notification_is_supported(int32_t *out_supported);
+PROTON_API int32_t proton_notification_show(const char *title,
+                                            const char *body,
+                                            const char *payload,
+                                            int32_t has_payload);
+PROTON_API int32_t proton_notification_poll_click(
+    char *buffer, int32_t buffer_len, int32_t *out_required_len,
+    int32_t *out_has_payload, int32_t *out_available);
+PROTON_API int32_t proton_notification_cleanup(void);
+
 PROTON_API int32_t proton_window_create_json(proton_runtime_id_t runtime,
                                              const char *config_json,
                                              proton_window_id_t *out_window);

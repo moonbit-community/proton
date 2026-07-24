@@ -161,6 +161,34 @@ extern "C" fn proton_runtime_poll_dialog_result_ffi(
 ) -> Int = "proton_runtime_poll_dialog_result"
 
 ///|
+#borrow(out_supported)
+extern "C" fn proton_notification_is_supported_ffi(
+  out_supported : Ref[Int],
+) -> Int = "proton_notification_is_supported"
+
+///|
+#borrow(title, body, payload)
+extern "C" fn proton_notification_show_ffi(
+  title : Bytes,
+  body : Bytes,
+  payload : Bytes,
+  has_payload : Int,
+) -> Int = "proton_notification_show"
+
+///|
+#borrow(buffer, out_required_len, out_has_payload, out_available)
+extern "C" fn proton_notification_poll_click_ffi(
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+  out_has_payload : Ref[Int],
+  out_available : Ref[Int],
+) -> Int = "proton_notification_poll_click"
+
+///|
+extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
+
+///|
 #borrow(config_json, out_window)
 extern "C" fn proton_window_create_json_ffi(
   runtime : Int64,

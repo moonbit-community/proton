@@ -11,3 +11,10 @@ test "public native API creates and destroys runtime and window" {
   debug_inspect(window.destroy(), content="Ok(())")
   debug_inspect(runtime.destroy(), content="Ok(())")
 }
+
+///|
+test "public native notification API exposes an empty activation queue" {
+  debug_inspect(@native.notification_supported(), content="Ok(false)")
+  debug_inspect(@native.notification_poll_click(), content="Ok(None)")
+  debug_inspect(@native.notification_cleanup(), content="Ok(())")
+}

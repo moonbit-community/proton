@@ -1190,6 +1190,65 @@ int32_t proton_runtime_poll_dialog_result(
   return status;
 }
 
+int32_t proton_notification_is_supported(int32_t *out_supported) {
+  if (out_supported == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_supported is required");
+  }
+  *out_supported = 0;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_notification_is_supported(
+      out_supported, engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_notification_show(const char *title,
+                                 const char *body,
+                                 const char *payload,
+                                 int32_t has_payload) {
+  if (title == NULL || body == NULL || payload == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "notification text is required");
+  }
+  if (has_payload != 0 && has_payload != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "has_payload must be zero or one");
+  }
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_notification_show(
+      title, body, payload, has_payload, engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_notification_poll_click(
+    char *buffer,
+    int32_t buffer_len,
+    int32_t *out_required_len,
+    int32_t *out_has_payload,
+    int32_t *out_available) {
+  if (buffer_len < 0 || (buffer == NULL && buffer_len != 0) ||
+      out_required_len == NULL || out_has_payload == NULL ||
+      out_available == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "invalid notification click output");
+  }
+  *out_required_len = 0;
+  *out_has_payload = 0;
+  *out_available = 0;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_notification_poll_click(
+      buffer, buffer_len, out_required_len, out_has_payload, out_available,
+      engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_notification_cleanup(void) {
+  char engine_error[512] = {0};
+  int32_t status =
+      proton_engine_notification_cleanup(engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
 int32_t proton_window_begin_message_dialog(
     proton_window_id_t window,
     const char *title_utf8,

@@ -973,7 +973,8 @@ int main(void) {
   }
 
 #if defined(__APPLE__) || defined(_WIN32)
-  if (g_runtime_available) {
+  if (g_runtime_available &&
+      getenv("PROTON_TEST_SKIP_MANAGED_APP_RUNNER") == NULL) {
     const char *runtime_root = getenv("PROTON_TEST_RUNTIME_ROOT");
     const char *helper_path = getenv("PROTON_TEST_HELPER_PATH");
     char escaped_runtime_root[384];
@@ -1071,6 +1072,50 @@ int main(void) {
     }
   }
 #endif
+
+  int32_t notification_supported = -1;
+  int32_t notification_required = -1;
+  int32_t notification_has_payload = -1;
+  int32_t notification_available = -1;
+  char notification_buffer[16];
+  if (expect_status("notification support rejects null output",
+                    proton_notification_is_supported(NULL),
+                    PROTON_ERR_INVALID_ARGUMENT) ||
+      expect_status("notification support query",
+                    proton_notification_is_supported(&notification_supported),
+                    PROTON_OK)) {
+    return 1;
+  }
+  if (notification_supported != 0 && notification_supported != 1) {
+    return fail("notification support query returned an invalid boolean");
+  }
+  if (expect_status("notification show rejects null text",
+                    proton_notification_show(NULL, "", "", 0),
+                    PROTON_ERR_INVALID_ARGUMENT) ||
+      expect_status("notification show rejects invalid payload flag",
+                    proton_notification_show("", "", "", 2),
+                    PROTON_ERR_INVALID_ARGUMENT) ||
+      expect_status("notification poll rejects negative buffer length",
+                    proton_notification_poll_click(
+                        notification_buffer, -1, &notification_required,
+                        &notification_has_payload, &notification_available),
+                    PROTON_ERR_INVALID_ARGUMENT) ||
+      expect_status("notification poll empty queue",
+                    proton_notification_poll_click(
+                        notification_buffer, sizeof(notification_buffer),
+                        &notification_required, &notification_has_payload,
+                        &notification_available),
+                    PROTON_OK)) {
+    return 1;
+  }
+  if (notification_required != 0 || notification_has_payload != 0 ||
+      notification_available != 0) {
+    return fail("notification poll reported a click for an empty queue");
+  }
+  if (expect_status("notification cleanup", proton_notification_cleanup(),
+                    PROTON_OK)) {
+    return 1;
+  }
 
   proton_runtime_id_t runtime = PROTON_INVALID_HANDLE;
   if (expect_status("runtime_create",
