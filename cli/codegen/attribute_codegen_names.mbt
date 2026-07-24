@@ -1,110 +1,132 @@
 ///|
-fn validate_non_empty(label : String, value : String) -> Result[Unit, String] {
+fn validate_non_empty(label : String, value : String) -> Unit raise {
   guard value.trim().to_owned() != "" else {
-    return Err(label + " must not be empty")
+    raise CommandCodegenError::InvalidName(
+      label~,
+      value~,
+      reason="must not be empty",
+    )
   }
-  Ok(())
 }
 
 ///|
-fn validate_identifier(label : String, value : String) -> Result[Unit, String] {
-  match validate_non_empty(label, value) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+fn validate_identifier(label : String, value : String) -> Unit raise {
+  validate_non_empty(label, value)
   for i, ch in value {
     if i == 0 {
       guard is_identifier_start_char(ch) else {
-        return Err(label + " must start with a lowercase letter or _")
+        raise CommandCodegenError::InvalidName(
+          label~,
+          value~,
+          reason="must start with a lowercase letter or _",
+        )
       }
     } else {
       guard is_identifier_continue_char(ch) else {
-        return Err(label + " must contain only identifier characters")
+        raise CommandCodegenError::InvalidName(
+          label~,
+          value~,
+          reason="must contain only identifier characters",
+        )
       }
     }
   }
-  Ok(())
 }
 
 ///|
-fn validate_type_identifier(
-  label : String,
-  value : String,
-) -> Result[Unit, String] {
-  match validate_non_empty(label, value) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+fn validate_type_identifier(label : String, value : String) -> Unit raise {
+  validate_non_empty(label, value)
   for i, ch in value {
     if i == 0 {
       guard 'A' <= ch && ch <= 'Z' else {
-        return Err(label + " must start with an uppercase letter")
+        raise CommandCodegenError::InvalidName(
+          label~,
+          value~,
+          reason="must start with an uppercase letter",
+        )
       }
     } else {
       guard is_identifier_continue_char(ch) else {
-        return Err(label + " must contain only identifier characters")
+        raise CommandCodegenError::InvalidName(
+          label~,
+          value~,
+          reason="must contain only identifier characters",
+        )
       }
     }
   }
-  Ok(())
 }
 
 ///|
-fn validate_js_part(label : String, value : String) -> Result[Unit, String] {
-  match validate_non_empty(label, value) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+fn validate_js_part(label : String, value : String) -> Unit raise {
+  validate_non_empty(label, value)
   guard value.find("/") is None else {
-    return Err(label + " must not contain /")
+    raise CommandCodegenError::InvalidName(
+      label~,
+      value~,
+      reason="must not contain /",
+    )
   }
   guard value != "__proto__" && value != "prototype" && value != "constructor" else {
-    return Err(label + " uses a reserved JavaScript property name")
+    raise CommandCodegenError::InvalidName(
+      label~,
+      value~,
+      reason="uses a reserved JavaScript property name",
+    )
   }
-  Ok(())
 }
 
 ///|
-fn validate_extension_id(value : String) -> Result[Unit, String] {
-  match validate_non_empty("extension id", value) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+fn validate_extension_id(value : String) -> Unit raise {
+  validate_non_empty("extension id", value)
   guard value.find("\\") is None else {
-    return Err("extension id must not contain \\")
+    raise CommandCodegenError::InvalidName(
+      label="extension id",
+      value~,
+      reason="must not contain \\",
+    )
   }
   guard value.find(" ") is None else {
-    return Err("extension id must not contain spaces")
+    raise CommandCodegenError::InvalidName(
+      label="extension id",
+      value~,
+      reason="must not contain spaces",
+    )
   }
-  Ok(())
 }
 
 ///|
-fn validate_npm_package_name(package_name : String) -> Result[Unit, String] {
+fn validate_npm_package_name(
+  package_name : String,
+) -> Unit raise CodegenMetadataError {
   guard package_name != "" else {
-    return Err("moon.ext package must not be empty")
+    raise InvalidPackageName(value=package_name, reason="must not be empty")
   }
   guard !package_name.contains("\\") &&
     (!package_name.contains("/") || package_name.has_prefix("@")) else {
-    return Err(
-      "moon.ext package must be an npm-style package name: " + package_name,
+    raise InvalidPackageName(
+      value=package_name,
+      reason="must be an npm-style package name",
     )
   }
   guard !package_name.contains("..") &&
     !package_name.contains("://") &&
     !package_name.contains(" ") else {
-    return Err("moon.ext package contains invalid characters: " + package_name)
+    raise InvalidPackageName(
+      value=package_name,
+      reason="contains invalid characters",
+    )
   }
   if package_name.has_prefix("@") {
     let parts = package_name.split("/").collect()
     guard parts.length() == 2 else {
-      return Err("moon.ext scoped package must be @scope/name: " + package_name)
+      raise InvalidPackageName(
+        value=package_name,
+        reason="scoped packages must use @scope/name",
+      )
     }
-    validate_npm_package_part(parts[0][1:].to_owned(), package_name).bind(fn(
-      _,
-    ) {
-      validate_npm_package_part(parts[1].to_owned(), package_name)
-    })
+    validate_npm_package_part(parts[0][1:].to_owned(), package_name)
+    validate_npm_package_part(parts[1].to_owned(), package_name)
   } else {
     validate_npm_package_part(package_name, package_name)
   }
@@ -114,16 +136,19 @@ fn validate_npm_package_name(package_name : String) -> Result[Unit, String] {
 fn validate_npm_package_part(
   part : String,
   package_name : String,
-) -> Result[Unit, String] {
+) -> Unit raise CodegenMetadataError {
   guard part != "" else {
-    return Err("moon.ext package contains empty name segment: " + package_name)
+    raise InvalidPackageName(
+      value=package_name,
+      reason="contains an empty name segment",
+    )
   }
   for index, ch in part {
     if index == 0 {
       guard is_lowercase_ascii(ch) || is_digit_ascii(ch) else {
-        return Err(
-          "moon.ext package segment must start with lowercase letter or digit: " +
-          package_name,
+        raise InvalidPackageName(
+          value=package_name,
+          reason="segments must start with a lowercase letter or digit",
         )
       }
     }
@@ -132,10 +157,12 @@ fn validate_npm_package_part(
       ch == '-' ||
       ch == '_' ||
       ch == '.' else {
-      return Err("moon.ext package contains invalid character: " + package_name)
+      raise InvalidPackageName(
+        value=package_name,
+        reason="contains an invalid character",
+      )
     }
   }
-  Ok(())
 }
 
 ///|

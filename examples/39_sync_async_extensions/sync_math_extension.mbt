@@ -17,7 +17,7 @@ fn sync_math_extension() -> @proton_extension.Extension {
       "examples/sync-math",
       "math",
       [@proton_command.AppCommandApiDescriptor::new("double")],
-      fn(context) {
+      fn(context) raise {
         context.op("double", fn(payload : DoublePayload) {
           DoubleReply::{
             value: payload.value,
@@ -25,7 +25,6 @@ fn sync_math_extension() -> @proton_extension.Extension {
             source: "sync command extension",
           }
         })
-        Ok(())
       },
     ),
   )

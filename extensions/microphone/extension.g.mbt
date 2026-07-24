@@ -5,7 +5,7 @@
 pub async fn emit_microphone_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : MicrophoneActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -42,7 +42,7 @@ struct ProtonConfigPayload {
 } derive(FromJson)
 
 ///|
-fn __proton_command_config(payload : ProtonConfigPayload) -> Result[CaptureConfigReply, String] {
+fn __proton_command_config(payload : ProtonConfigPayload) -> CaptureConfigReply raise MicrophoneConfigError {
   config(payload.channels, payload.sample_rate_hz, payload.sample_format, payload.echo_cancellation, payload.noise_suppression)
 }
 
@@ -61,13 +61,12 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("parseListing"),
       @proton_command.AppCommandApiDescriptor::new("config"),
     ],
-    fn(context) {
+    fn(context) raise {
       context.op_async("listDevices", async fn(payload) {
         __proton_command_list_devices(context, payload)
       }, emits_events=true)
       context.op("parseListing", __proton_command_parse_listing)
-      context.op_result("config", __proton_command_config)
-      Ok(())
+      context.op("config", __proton_command_config)
     },
   )
 }

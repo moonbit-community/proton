@@ -1,13 +1,9 @@
 ///|
 test "parse package args accepts repeated targets and overrides" {
-  let raw = match
-    parse_package_args([
-      "desktop", "--target", "app", "--target", "zip", "--output", "dist", "--no-build",
-      "--dry-run",
-    ]) {
-    Ok(raw) => raw
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  let raw = parse_package_args([
+    "desktop", "--target", "app", "--target", "zip", "--output", "dist", "--no-build",
+    "--dry-run",
+  ])
   assert_eq(raw.app_package, "desktop")
   @debug.assert_eq(raw.targets, ["app", "zip"])
   @debug.assert_eq(raw.output, Some("dist"))
@@ -17,20 +13,17 @@ test "parse package args accepts repeated targets and overrides" {
 
 ///|
 test "parse package args rejects unsupported target" {
-  match parse_package_args(["--target", "dmg"]) {
-    Ok(_) => abort("expected unsupported target")
-    Err(UsageError(message, _)) =>
-      assert_eq(message, "unsupported package target: dmg")
-    Err(_) => abort("expected usage error")
+  try parse_package_args(["--target", "dmg"]) catch {
+    PackageUsageError::UnsupportedTarget(target="dmg") => ()
+    _ => abort("expected unsupported target")
+  } noraise {
+    _ => abort("expected unsupported target")
   }
 }
 
 ///|
 test "notarize implies signing" {
-  let raw = match parse_package_args(["--notarize", "--dry-run"]) {
-    Ok(raw) => raw
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  let raw = parse_package_args(["--notarize", "--dry-run"])
   assert_true(raw.sign)
   assert_true(raw.notarize)
   assert_true(raw.dry_run)
@@ -38,10 +31,7 @@ test "notarize implies signing" {
 
 ///|
 test "sign does not require notarization" {
-  let raw = match parse_package_args(["--sign"]) {
-    Ok(raw) => raw
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  let raw = parse_package_args(["--sign"])
   assert_true(raw.sign)
   assert_false(raw.notarize)
 }
@@ -58,15 +48,12 @@ test "package plan requires active bundle" {
       version=Some("1.0.0"),
     ),
   )
-  let raw = match parse_package_args([]) {
-    Ok(raw) => raw
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match build_package_plan(raw, "moon.proton", project) {
-    Ok(_) => abort("expected missing bundle error")
-    Err(CommandError(message)) =>
-      assert_eq(message, "bundle config is required for proton package")
-    Err(_) => abort("expected command error")
+  let raw = parse_package_args([])
+  try build_package_plan(raw, "moon.proton", project) catch {
+    PackageConfigError::BundleMissing => ()
+    _ => abort("expected missing bundle error")
+  } noraise {
+    _ => abort("expected missing bundle error")
   }
 }
 
@@ -83,14 +70,8 @@ test "package plan defaults to app and zip" {
     ),
     bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
   )
-  let raw = match parse_package_args([]) {
-    Ok(raw) => raw
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  let plan = match build_package_plan(raw, "moon.proton", project) {
-    Ok(plan) => plan
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  let raw = parse_package_args([])
+  let plan = build_package_plan(raw, "moon.proton", project)
   @debug.assert_eq(plan.targets, ["app", "zip"])
   assert_eq(plan.identifier, "dev.proton.demo")
   assert_eq(plan.version, "1.0.0")
@@ -134,15 +115,9 @@ test "macOS package paths normalize absolute and relative inputs" {
 #cfg(not(platform="windows"))
 async test "macOS ensure_dir recursively creates absolute paths with spaces" {
   let root = resolve_path("target", "proton package ensure dir")
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let nested = resolve_path(root, "parent with spaces/child/grandchild")
-  match ensure_dir(nested) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  ensure_dir(nested)
   assert_true(path_is_dir(nested))
 }
 
@@ -154,29 +129,35 @@ test "package executable name is filesystem safe" {
 
 ///|
 test "macOS package metadata validation rejects unsafe values" {
-  match validate_product_name("Demo/App") {
-    Ok(_) => abort("expected unsafe product name")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("path-unsafe character"))
-    Err(_) => abort("expected command error")
+  try validate_product_name("Demo/App") catch {
+    PackagePlanError::InvalidProductName(reason~) =>
+      assert_true(reason.contains("path-unsafe character"))
+    _ => abort("expected unsafe product name")
+  } noraise {
+    _ => abort("expected unsafe product name")
   }
-  match validate_product_name("Demo\nApp") {
-    Ok(_) => abort("expected control character error")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("ASCII control character"))
-    Err(_) => abort("expected command error")
+  try validate_product_name("Demo\nApp") catch {
+    PackagePlanError::InvalidProductName(reason~) =>
+      assert_true(reason.contains("ASCII control character"))
+    _ => abort("expected control character error")
+  } noraise {
+    _ => abort("expected control character error")
   }
-  match validate_bundle_identifier("demo") {
-    Ok(_) => abort("expected reverse-DNS identifier error")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("reverse-DNS bundle identifier"))
-    Err(_) => abort("expected command error")
+  try validate_bundle_identifier("demo") catch {
+    PackagePlanError::InvalidIdentifier(identifier="demo", reason~) =>
+      assert_true(reason.contains("reverse-DNS"))
+    _ => abort("expected reverse-DNS identifier error")
+  } noraise {
+    _ => abort("expected reverse-DNS identifier error")
   }
-  match validate_bundle_identifier("com.example.bad_value") {
-    Ok(_) => abort("expected identifier character error")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("unsupported character"))
-    Err(_) => abort("expected command error")
+  try validate_bundle_identifier("com.example.bad_value") catch {
+    PackagePlanError::InvalidIdentifier(
+      identifier="com.example.bad_value",
+      reason~
+    ) => assert_true(reason.contains("unsupported character"))
+    _ => abort("expected identifier character error")
+  } noraise {
+    _ => abort("expected identifier character error")
   }
 }
 
@@ -185,41 +166,33 @@ test "macOS version normalizes semantic prerelease to plist versions" {
   let old_build = @sys.get_env_var("PROTON_MACOS_BUILD_NUMBER")
   @sys.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
   defer restore_package_env("PROTON_MACOS_BUILD_NUMBER", old_build)
-  match validate_macos_version("1.2.3-beta.1") {
-    Ok((short_version, bundle_version)) => {
-      assert_eq(short_version, "1.2.3")
-      assert_eq(bundle_version, "1.2.3")
-    }
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match validate_macos_version("1.2.3+release.4") {
-    Ok((short_version, bundle_version)) => {
-      assert_eq(short_version, "1.2.3")
-      assert_eq(bundle_version, "1.2.3")
-    }
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  let (short_version, bundle_version) = validate_macos_version("1.2.3-beta.1")
+  assert_eq(short_version, "1.2.3")
+  assert_eq(bundle_version, "1.2.3")
+  let (short_version, bundle_version) = validate_macos_version(
+    "1.2.3+release.4",
+  )
+  assert_eq(short_version, "1.2.3")
+  assert_eq(bundle_version, "1.2.3")
   @sys.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.7")
-  match validate_macos_version("1.2.3") {
-    Ok((short_version, bundle_version)) => {
-      assert_eq(short_version, "1.2.3")
-      assert_eq(bundle_version, "42.7")
-    }
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  let (short_version, bundle_version) = validate_macos_version("1.2.3")
+  assert_eq(short_version, "1.2.3")
+  assert_eq(bundle_version, "42.7")
   @sys.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.beta")
-  match validate_macos_version("1.2.3") {
-    Ok(_) => abort("expected invalid build number error")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("PROTON_MACOS_BUILD_NUMBER"))
-    Err(_) => abort("expected command error")
+  try validate_macos_version("1.2.3") catch {
+    PackagePlanError::InvalidVersion(reason~, ..) =>
+      assert_true(reason.contains("PROTON_MACOS_BUILD_NUMBER"))
+    _ => abort("expected invalid build number")
+  } noraise {
+    _ => abort("expected invalid build number error")
   }
   @sys.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
-  match validate_macos_version("1.two.3") {
-    Ok(_) => abort("expected numeric version error")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("must be numeric"))
-    Err(_) => abort("expected command error")
+  try validate_macos_version("1.two.3") catch {
+    PackagePlanError::InvalidVersion(reason~, ..) =>
+      assert_true(reason.contains("must be numeric"))
+    _ => abort("expected numeric version error")
+  } noraise {
+    _ => abort("expected numeric version error")
   }
 }
 
@@ -263,26 +236,24 @@ test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
   defer restore_package_env("PROTON_MACOS_ALLOW_ADHOC", old)
   @sys.unset_env_var("PROTON_MACOS_ALLOW_ADHOC")
   assert_false(macos_adhoc_signing_allowed())
-  match validate_macos_signing_identity("-", notarize=false) {
-    Ok(_) => abort("expected ad-hoc signing rejection")
-    Err(_) => ()
+  try validate_macos_signing_identity("-", notarize=false) catch {
+    MacosSigningError::InvalidConfiguration(_) => ()
+    _ => abort("expected ad-hoc signing rejection")
+  } noraise {
+    _ => abort("expected ad-hoc signing rejection")
   }
   @sys.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "yes")
   assert_true(macos_adhoc_signing_allowed())
-  match validate_macos_signing_identity("-", notarize=false) {
-    Ok(is_adhoc) => assert_true(is_adhoc)
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match
-    validate_macos_signing_identity("Apple Development: Example", notarize=true) {
-    Ok(is_adhoc) => assert_false(is_adhoc)
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match validate_macos_signing_identity("-", notarize=true) {
-    Ok(_) => abort("expected ad-hoc notarization rejection")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("Developer ID Application"))
-    Err(_) => abort("expected command error")
+  assert_true(validate_macos_signing_identity("-", notarize=false))
+  assert_false(
+    validate_macos_signing_identity("Apple Development: Example", notarize=true),
+  )
+  try validate_macos_signing_identity("-", notarize=true) catch {
+    MacosSigningError::InvalidConfiguration(detail~) =>
+      assert_true(detail.contains("Developer ID Application"))
+    _ => abort("expected ad-hoc notarization rejection")
+  } noraise {
+    _ => abort("expected ad-hoc notarization rejection")
   }
   @sys.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "false")
   assert_false(macos_adhoc_signing_allowed())
@@ -305,24 +276,20 @@ test "macOS framework signing uses deep sealing without app entitlements" {
 ///|
 async test "macOS signing rejects a missing required target" {
   let missing = resolve_path("target", "proton-package-missing-signing-target")
-  match remove_tree(missing) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match
+  remove_tree(missing)
+  try
     require_macos_codesign_targets([
       MacosCodeSignTarget::{
         path: missing,
         runtime_options: false,
         deep: false,
       },
-    ]) {
-    Ok(_) => abort("expected missing signing target failure")
-    Err(CommandError(message)) => {
-      assert_true(message.contains("required macOS signing target is missing"))
-      assert_true(message.contains(missing))
-    }
-    Err(_) => abort("expected command error")
+    ])
+  catch {
+    MacosSigningError::MissingTarget(path~) => assert_eq(path, missing)
+    _ => abort("expected missing signing target")
+  } noraise {
+    _ => abort("expected missing signing target failure")
   }
 }
 
@@ -347,20 +314,11 @@ test "macOS icon plist entry is conditional" {
 ///|
 async test "macOS icon selection stages icns and rejects a missing source" {
   let root = resolve_path("target", "proton-package-macos-icon")
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let resources = resolve_path(root, "Resources")
   let icon = resolve_path(root, "Demo.ICNS")
-  match ensure_dir(resources) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match write_text(icon, "test-icns") {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  ensure_dir(resources)
+  write_text(icon, "test-icns")
   match first_macos_icon(["icon.png", icon]) {
     Some(selected) => assert_eq(selected, icon)
     None => abort("expected .icns icon selection")
@@ -388,10 +346,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     sign: false,
     notarize: false,
   }
-  match stage_macos_icon(plan, resources) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  stage_macos_icon(plan, resources)
   let staged = @mbfs.read_file_to_string(
     resolve_path(resources, "AppIcon.icns"),
     encoding="utf8",
@@ -400,15 +355,12 @@ async test "macOS icon selection stages icns and rejects a missing source" {
   }
   assert_eq(staged, "test-icns")
   assert_true(macos_info_plist(plan, "demo").contains("CFBundleIconFile"))
-  match remove_tree(icon) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match stage_macos_icon(plan, resources) {
-    Ok(_) => abort("expected missing macOS icon failure")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("icon is missing"))
-    Err(_) => abort("expected command error")
+  remove_tree(icon)
+  try stage_macos_icon(plan, resources) catch {
+    PackagePlanError::MissingIcon(path~) => assert_eq(path, icon)
+    _ => abort("expected missing macOS icon")
+  } noraise {
+    _ => abort("expected missing macOS icon failure")
   }
 }
 
@@ -448,23 +400,15 @@ test "macOS plist contains bundle identity and executable" {
 ///|
 async test "macOS staged app promotion rolls back when staging is missing" {
   let root = "target/proton-package-macos-promotion"
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let destination = resolve_path(root, "Demo.app")
   let marker = resolve_path(destination, "Contents/old.txt")
-  match ensure_dir(path_parent(marker)) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match write_text(marker, "old") {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match promote_staged_app(resolve_path(root, "missing.app"), destination) {
-    Ok(_) => abort("expected staging promotion failure")
-    Err(_) => ()
+  ensure_dir(path_parent(marker))
+  write_text(marker, "old")
+  try promote_staged_app(resolve_path(root, "missing.app"), destination) catch {
+    _ => ()
+  } noraise {
+    _ => abort("expected staging promotion failure")
   }
   assert_true(@mbfs.path_exists(marker))
   assert_false(@mbfs.path_exists(destination + ".backup"))
@@ -473,24 +417,16 @@ async test "macOS staged app promotion rolls back when staging is missing" {
 ///|
 async test "macOS staged app promotion recovers an interrupted backup" {
   let root = "target/proton-package-macos-stale-backup"
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let destination = resolve_path(root, "Demo.app")
   let backup = destination + ".backup"
   let marker = resolve_path(backup, "Contents/old.txt")
-  match ensure_dir(path_parent(marker)) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match write_text(marker, "old") {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match promote_staged_app(resolve_path(root, "missing.app"), destination) {
-    Ok(_) => abort("expected staging promotion failure")
-    Err(_) => ()
+  ensure_dir(path_parent(marker))
+  write_text(marker, "old")
+  try promote_staged_app(resolve_path(root, "missing.app"), destination) catch {
+    _ => ()
+  } noraise {
+    _ => abort("expected staging promotion failure")
   }
   assert_true(@mbfs.path_exists(resolve_path(destination, "Contents/old.txt")))
   assert_false(@mbfs.path_exists(backup))
@@ -500,27 +436,18 @@ async test "macOS staged app promotion recovers an interrupted backup" {
 async test "macOS notarization validates success and cleans failed upload" {
   guard is_macos_host() else { return }
   let root = resolve_path("target", "proton-package-notarization-flow")
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let tools = resolve_path(root, "tools")
   let app = resolve_path(root, "Demo.app")
   let log = resolve_path(root, "commands.log")
   for dir in [tools, resolve_path(app, "Contents")] {
-    match ensure_dir(dir) {
-      Ok(_) => ()
-      Err(error) => abort(@debug.render(@debug.to_repr(error)))
-    }
+    ensure_dir(dir)
   }
   let xcrun = resolve_path(tools, "xcrun")
   let spctl = resolve_path(tools, "spctl")
   let script = "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" + log + "\"\nexit 0\n"
   for path in [xcrun, spctl] {
-    match write_text(path, script) {
-      Ok(_) => ()
-      Err(error) => abort(@debug.render(@debug.to_repr(error)))
-    }
+    write_text(path, script)
     @async_fs.chmod(path, 0o755) catch {
       error => abort(@debug.render(@debug.to_repr(error)))
     }
@@ -554,10 +481,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     sign: true,
     notarize: true,
   }
-  match notarize_macos_app(plan, app) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  notarize_macos_app(plan, app)
   let commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
     error => abort(@debug.render(@debug.to_repr(error)))
   }
@@ -578,24 +502,19 @@ async test "macOS notarization validates success and cleans failed upload" {
     "\n",
   )
   assert_false(@mbfs.path_exists(archive))
-  match write_text(log, "") {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  write_text(log, "")
   let failing_script = "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" +
     log +
     "\"\nif [ \"$1\" = \"notarytool\" ]; then exit 42; fi\nexit 0\n"
-  match write_text(xcrun, failing_script) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match notarize_macos_app(plan, app) {
-    Ok(_) => abort("expected notarization submission failure")
-    Err(CommandError(message)) => {
-      assert_true(message.contains("notarytool submit"))
-      assert_true(message.contains("42"))
+  write_text(xcrun, failing_script)
+  try notarize_macos_app(plan, app) catch {
+    MacosSigningError::ToolFailure(stage~, detail~) => {
+      assert_true(stage.contains("notarytool submit"))
+      assert_true(detail.contains("42"))
     }
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
+    _ => abort("expected notarization tool failure")
+  } noraise {
+    _ => abort("expected notarization submission failure")
   }
   let failed_commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
     error => abort(@debug.render(@debug.to_repr(error)))
@@ -608,42 +527,15 @@ async test "macOS notarization validates success and cleans failed upload" {
 }
 
 ///|
-test "macOS notarization reports operation and cleanup failures" {
-  match
-    finish_macos_notarization(
-      Err(CommandError("submit failed")),
-      Err(CommandError("cleanup failed")),
-      ".demo.notary.zip",
-    ) {
-    Ok(_) => abort("expected combined notarization failure")
-    Err(CommandError(message)) => {
-      assert_true(message.contains(".demo.notary.zip"))
-      assert_true(message.contains("submit failed"))
-      assert_true(message.contains("cleanup failed"))
-    }
-    Err(_) => abort("expected command error")
-  }
-}
-
-///|
 async test "release executable lookup stays inside package target dir" {
   let root = "target/proton-package-executable-lookup"
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let package_target = resolve_path(root, "package-target")
   let unrelated = resolve_path(
     root, "workspace/native/release/build/other/app.exe",
   )
-  match ensure_dir(path_parent(unrelated)) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match write_text(unrelated, "wrong") {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  ensure_dir(path_parent(unrelated))
+  write_text(unrelated, "wrong")
   let plan = PackagePlan::{
     root,
     workspace_root: resolve_path(root, "workspace"),
@@ -671,14 +563,8 @@ async test "release executable lookup stays inside package target dir" {
   let expected = resolve_path(
     package_target, "native/release/build/vendor/app/app.exe",
   )
-  match ensure_dir(path_parent(expected)) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match write_text(expected, "right") {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  ensure_dir(path_parent(expected))
+  write_text(expected, "right")
   match find_release_executable(plan) {
     Some(actual) =>
       assert_eq(normalize_slashes(actual), normalize_slashes(expected))
@@ -689,14 +575,8 @@ async test "release executable lookup stays inside package target dir" {
 ///|
 async test "active runtime rejects another platform" {
   let root = "target/proton-package-runtime-platform"
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match ensure_dir(resolve_path(root, ".proton")) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
+  ensure_dir(resolve_path(root, ".proton"))
   let old_dist = @sys.get_env_var("PROTON_NATIVE_DIST")
   @sys.unset_env_var("PROTON_NATIVE_DIST")
   defer restore_package_env("PROTON_NATIVE_DIST", old_dist)
@@ -706,18 +586,18 @@ async test "active runtime rejects another platform" {
     "platform": Json::string(other),
     "dist": Json::string("runtime"),
   }).stringify()
-  match write_text(resolve_path(root, ".proton/runtime.json"), manifest) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
-  match read_active_runtime(resolve_path(root, ".")) {
-    Ok(_) => abort("expected platform mismatch")
-    Err(CommandError(message)) => {
-      assert_true(message.contains("active Proton runtime platform mismatch"))
-      assert_true(message.contains("expected " + expected))
-      assert_true(message.contains("got " + other))
+  write_text(resolve_path(root, ".proton/runtime.json"), manifest)
+  try read_active_runtime(resolve_path(root, ".")) catch {
+    PackageRuntimeError::PlatformMismatch(
+      expected=actual_expected,
+      actual=actual_platform
+    ) => {
+      assert_eq(actual_expected, expected)
+      assert_eq(actual_platform, other)
     }
-    Err(_) => abort("expected command error")
+    _ => abort("expected platform mismatch")
+  } noraise {
+    _ => abort("expected platform mismatch")
   }
 }
 
@@ -725,19 +605,13 @@ async test "active runtime rejects another platform" {
 async test "Windows portable staging flattens runtime bin beside app executable" {
   let root = "target/proton-package-windows-layout"
   let output = resolve_path(root, "output")
-  match remove_tree(root) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  remove_tree(root)
   let runtime = prepare_windows_test_runtime(root)
   let executable = resolve_path(root, "demo.exe")
   let config = resolve_path(root, "moon.proton")
   for item in [(executable, "exe"), (config, "config")] {
     let (path, text) = item
-    match write_windows_test_file(path, text) {
-      Ok(_) => ()
-      Err(error) => abort(@debug.render(@debug.to_repr(error)))
-    }
+    write_windows_test_file(path, text)
   }
   let plan = PackagePlan::{
     root,
@@ -762,18 +636,14 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     sign: false,
     notarize: false,
   }
-  match
-    stage_windows_portable_with_options(
-      plan,
-      executable,
-      runtime,
-      default_windows_sign_tool(),
-      None,
-      false,
-    ) {
-    Ok(_) => ()
-    Err(error) => abort(@debug.render(@debug.to_repr(error)))
-  }
+  stage_windows_portable_with_options(
+    plan,
+    executable,
+    runtime,
+    default_windows_sign_tool(),
+    None,
+    false,
+  )
   let portable = resolve_path(output, "demo-app")
   assert_true(@mbfs.path_exists(resolve_path(portable, "demo-app.exe")))
   assert_true(@mbfs.path_exists(resolve_path(portable, "proton.dll")))

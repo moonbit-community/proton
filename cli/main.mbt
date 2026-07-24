@@ -30,10 +30,38 @@ priv struct CliVersion {
 }
 
 ///|
-priv enum CliError {
-  UsageError(String, Bool)
-  CommandError(String)
-  ReportedError
+priv suberror CliUsageError {
+  Invalid(message~ : String, usage_is_embedded~ : Bool)
+} derive(Debug)
+
+///|
+priv suberror CliCodegenOutputError {
+  WriteFailed(path~ : String, detail~ : String)
+} derive(Debug)
+
+///|
+fn CliUsageError::message(self : CliUsageError) -> String {
+  match self {
+    Invalid(message~, ..) => message
+  }
+}
+
+///|
+fn CliCodegenOutputError::message(self : CliCodegenOutputError) -> String {
+  match self {
+    WriteFailed(path~, detail~) =>
+      "failed to write generated source " + path + ": " + detail
+  }
+}
+
+///|
+impl Show for CliUsageError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for CliCodegenOutputError with fn output(self, logger) {
+  logger.write_string(self.message())
 }
 
 ///|
@@ -262,10 +290,7 @@ fn resolve_cli_path(cwd : String, path : String) -> String {
 }
 
 ///|
-async fn run_doctor_from_args(
-  cwd : String,
-  args : Array[String],
-) -> Result[Unit, CliError] {
+async fn run_doctor_from_args(cwd : String, args : Array[String]) -> Bool {
   let mut dry_run = false
   let mut verbose = false
   let mut deep = false
@@ -292,14 +317,20 @@ async fn run_doctor_from_args(
       "--quiet" => quiet = true
       "--section" => {
         guard index + 1 < args.length() else {
-          return Err(CliError::UsageError("missing value for --section", false))
+          raise CliUsageError::Invalid(
+            message="missing value for --section",
+            usage_is_embedded=false,
+          )
         }
         sections.push(args[index + 1])
         index += 1
       }
       "--output" => {
         guard index + 1 < args.length() else {
-          return Err(CliError::UsageError("missing value for --output", false))
+          raise CliUsageError::Invalid(
+            message="missing value for --output",
+            usage_is_embedded=false,
+          )
         }
         output = Some(resolve_cli_path(cwd, args[index + 1]))
         index += 1
@@ -308,101 +339,145 @@ async fn run_doctor_from_args(
         println(
           "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
         )
-        return Ok(())
+        return true
       }
       _ =>
-        return Err(CliError::UsageError("unknown doctor option: " + arg, false))
+        raise CliUsageError::Invalid(
+          message="unknown doctor option: " + arg,
+          usage_is_embedded=false,
+        )
     }
     index += 1
   }
   if json && json_lines {
-    return Err(
-      CliError::UsageError(
-        "--json and --json-lines are mutually exclusive", false,
-      ),
+    raise CliUsageError::Invalid(
+      message="--json and --json-lines are mutually exclusive",
+      usage_is_embedded=false,
     )
   }
   if quiet && (json || json_lines) {
-    return Err(
-      CliError::UsageError(
-        "--quiet cannot be combined with --json or --json-lines", false,
-      ),
+    raise CliUsageError::Invalid(
+      message="--quiet cannot be combined with --json or --json-lines",
+      usage_is_embedded=false,
     )
   }
   if run_frontend && sections.length() > 0 && !sections.contains("frontend") {
-    return Err(
-      CliError::UsageError("--run requires the frontend section", false),
+    raise CliUsageError::Invalid(
+      message="--run requires the frontend section",
+      usage_is_embedded=false,
     )
   }
   if fix && sections.length() > 0 && !sections.contains("fixes") {
     sections.push("fixes")
   }
   if sections.contains("fixes") && !fix {
-    return Err(CliError::UsageError("the fixes section requires --fix", false))
+    raise CliUsageError::Invalid(
+      message="the fixes section requires --fix",
+      usage_is_embedded=false,
+    )
   }
   for section in sections {
     if ![
         "project", "environment", "runtime", "platform", "packages", "extensions",
         "app", "frontend", "release", "fixes",
       ].contains(section) {
-      return Err(
-        CliError::UsageError("unknown doctor section: " + section, false),
+      raise CliUsageError::Invalid(
+        message="unknown doctor section: " + section,
+        usage_is_embedded=false,
       )
     }
   }
-  match
-    @doctor.run(
-      cwd~,
-      dry_run~,
-      verbose~,
-      deep~,
-      run_frontend~,
-      fix~,
-      json~,
-      json_lines~,
-      quiet~,
-      sections~,
-      output~,
-    ) {
-    Ok(true) => Ok(())
-    Ok(false) => Err(CliError::ReportedError)
-    Err(message) => Err(CliError::CommandError(message))
+  @doctor.run(
+    cwd~,
+    dry_run~,
+    verbose~,
+    deep~,
+    run_frontend~,
+    fix~,
+    json~,
+    json_lines~,
+    quiet~,
+    sections~,
+    output~,
+  )
+}
+
+///|
+fn run_codegen(cwd : String, args : Array[String]) -> Unit raise {
+  let cmd = codegen_arg_parser()
+  let matches = cmd.parse(argv=args, env=Map([])) catch {
+    error =>
+      raise CliUsageError::Invalid(
+        message=error.to_string(),
+        usage_is_embedded=true,
+      )
+  }
+  let input = match match_value(matches, "input_file") {
+    Some(input) => input
+    None =>
+      raise CliUsageError::Invalid(
+        message="missing input file",
+        usage_is_embedded=false,
+      )
+  }
+  let output = match match_value(matches, "output-file") {
+    Some(output) => output
+    None =>
+      raise CliUsageError::Invalid(
+        message="missing -o <output.g.mbt>",
+        usage_is_embedded=false,
+      )
+  }
+  let resolved_input = resolve_cli_path(cwd, input)
+  let resolved_output = resolve_cli_path(cwd, output)
+  let result = @codegen.generate_app_commands_from_file_with_metadata(
+    resolved_input,
+  )
+  @mbfs.write_string_to_file(resolved_output, result.source, encoding="utf8") catch {
+    error =>
+      raise CliCodegenOutputError::WriteFailed(
+        path=resolved_output,
+        detail=@debug.render(@debug.to_repr(error)),
+      )
+  }
+  for warning in result.warnings {
+    println("warning: " + warning)
   }
 }
 
 ///|
-fn run_codegen(cwd : String, args : Array[String]) -> Result[Unit, CliError] {
-  let cmd = codegen_arg_parser()
-  let matches = cmd.parse(argv=args, env=Map([])) catch {
-    err => return Err(CliError::UsageError(err.to_string(), true))
+async fn run_cli(cwd : String, args : Array[String]) -> Bool {
+  if args[0] == "doctor" {
+    return run_doctor_from_args(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "new" {
+    @new_project.run(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "dev" {
+    @dev.run(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "build" {
+    @build.run(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "package" {
+    @package.run(cwd, args[1:].to_owned())
+  } else if args.length() >= 1 && args[0] == "codegen" {
+    run_codegen(cwd, args[1:].to_owned())
+  } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
+    @cef.run_setup(cwd, args[2:].to_owned())
+  } else {
+    raise CliUsageError::Invalid(
+      message="unknown command",
+      usage_is_embedded=false,
+    )
   }
-  let input = match match_value(matches, "input_file") {
-    Some(input) => input
-    None => return Err(CliError::UsageError("missing input file", false))
+  true
+}
+
+///|
+fn exit_with_usage(message : String, usage_is_embedded : Bool) -> Bool {
+  print_error_message(message)
+  if !usage_is_embedded {
+    print_usage()
   }
-  let output = match match_value(matches, "output-file") {
-    Some(output) => output
-    None => return Err(CliError::UsageError("missing -o <output.g.mbt>", false))
-  }
-  let resolved_input = resolve_cli_path(cwd, input)
-  let resolved_output = resolve_cli_path(cwd, output)
-  match @codegen.generate_app_commands_from_file_with_metadata(resolved_input) {
-    Err(error) => Err(CliError::CommandError(error))
-    Ok(result) => {
-      @mbfs.write_string_to_file(
-        resolved_output,
-        result.source,
-        encoding="utf8",
-      ) catch {
-        err =>
-          return Err(CliError::CommandError(@debug.render(@debug.to_repr(err))))
-      }
-      for warning in result.warnings {
-        println("warning: " + warning)
-      }
-      Ok(())
-    }
-  }
+  @sys.exit(1)
+  false
 }
 
 ///|
@@ -419,62 +494,49 @@ async fn main {
     print_usage()
     return
   }
-  let result = if args.length() >= 1 && args[0] == "doctor" {
-    run_doctor_from_args(cwd, args[1:].to_owned())
-  } else if args.length() >= 1 && args[0] == "new" {
-    @new_project.run(cwd, args[1:].to_owned()).map_err(fn(message) {
-      CliError::CommandError(message)
-    })
-  } else if args.length() >= 1 && args[0] == "dev" {
-    @dev.run(cwd, args[1:].to_owned()).map_err(fn(error) {
-      match error {
-        UsageError(message, usage_is_embedded) =>
-          CliError::UsageError(message, usage_is_embedded)
-        CommandError(message) => CliError::CommandError(message)
-      }
-    })
-  } else if args.length() >= 1 && args[0] == "build" {
-    @build.run(cwd, args[1:].to_owned()).map_err(fn(error) {
-      match error {
-        UsageError(message, usage_is_embedded) =>
-          CliError::UsageError(message, usage_is_embedded)
-        CommandError(message) => CliError::CommandError(message)
-      }
-    })
-  } else if args.length() >= 1 && args[0] == "package" {
-    @package.run(cwd, args[1:].to_owned()).map_err(fn(error) {
-      match error {
-        UsageError(message, usage_is_embedded) =>
-          CliError::UsageError(message, usage_is_embedded)
-        CommandError(message) => CliError::CommandError(message)
-      }
-    })
-  } else if args.length() >= 1 && args[0] == "codegen" {
-    run_codegen(cwd, args[1:].to_owned())
-  } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
-    @cef.run_setup(cwd, args[2:].to_owned()).map_err(fn(error) {
-      match error {
-        UsageError(message, usage_is_embedded) =>
-          CliError::UsageError(message, usage_is_embedded)
-        CommandError(message) => CliError::CommandError(message)
-      }
-    })
-  } else {
-    Err(CliError::UsageError("unknown command", false))
+  let success = try run_cli(cwd, args) catch {
+    CliUsageError::Invalid(message~, usage_is_embedded~) =>
+      exit_with_usage(message, usage_is_embedded)
+    @build.BuildUsageError::InvalidArguments(message~, usage_is_embedded~) =>
+      exit_with_usage(message, usage_is_embedded)
+    @dev.DevUsageError::UnknownOption(option~) =>
+      exit_with_usage("unknown dev option: " + option, false)
+    @dev.DevUsageError::UnexpectedArgument(argument~) =>
+      exit_with_usage("unexpected dev argument: " + argument, false)
+    @dev.DevUsageError::MissingValue(option~) =>
+      exit_with_usage("missing value for " + option, false)
+    @dev.DevUsageError::EmptyValue(option~) =>
+      exit_with_usage(option + " must not be empty", false)
+    @dev.DevUsageError::InvalidNonNegativeInteger(option~, value~) =>
+      exit_with_usage(
+        option + " must be a non-negative integer: " + value,
+        false,
+      )
+    @new_project.NewProjectUsageError::Parse(message~, usage_is_embedded~) =>
+      exit_with_usage(message, usage_is_embedded)
+    @package.PackageUsageError::InvalidArguments(message~, usage_is_embedded~) =>
+      exit_with_usage(message, usage_is_embedded)
+    @package.PackageUsageError::UnsupportedTarget(target~) =>
+      exit_with_usage("unsupported package target: " + target, false)
+    @package.PackageUsageError::MissingOptionValue(option~) =>
+      exit_with_usage(option + " requires a value", false)
+    @cef.CefUsageError::Parse(message~, usage_is_embedded~) =>
+      exit_with_usage(message, usage_is_embedded)
+    @cef.CefUsageError::InvalidArchiveName(name~) =>
+      exit_with_usage("Invalid CEF archive name: " + name, false)
+    @cef.CefUsageError::InvalidChecksum(value~) =>
+      exit_with_usage("Invalid CEF archive SHA-256: " + value, false)
+    @cef.CefUsageError::MissingCustomChecksum =>
+      exit_with_usage("Custom CEF archive name or URL requires --sha256", false)
+    error => {
+      print_error_message(error.to_string())
+      @sys.exit(1)
+      false
+    }
+  } noraise {
+    success => success
   }
-  match result {
-    Ok(_) => ()
-    Err(CliError::UsageError(message, usage_is_embedded)) => {
-      print_error_message(message)
-      if !usage_is_embedded {
-        print_usage()
-      }
-      @sys.exit(1)
-    }
-    Err(CliError::CommandError(message)) => {
-      print_error_message(message)
-      @sys.exit(1)
-    }
-    Err(CliError::ReportedError) => @sys.exit(1)
+  if !success {
+    @sys.exit(1)
   }
 }

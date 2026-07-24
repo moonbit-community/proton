@@ -1,10 +1,7 @@
 ///|
 priv struct OpRegistry {
-  handlers : Map[String, (Json) -> Result[Json, String]]
-  async_handlers : Map[
-    String,
-    async (AppCommandRequestContext, Json) -> Result[Json, String],
-  ]
+  handlers : Map[String, (Json) -> Json raise OpDispatchError]
+  async_handlers : Map[String, async (AppCommandRequestContext, Json) -> Json]
 }
 
 ///|
@@ -18,94 +15,64 @@ fn OpRegistry::new() -> OpRegistry {
 fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle(
   self : OpRegistry,
   name : String,
-  callback : (Payload) -> Reply,
-) -> Unit {
-  self.handle_result(name, fn(payload) { Ok(callback(payload)) })
-}
-
-///|
-/// Registers a typed op handler that can return a string error.
-fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_result(
-  self : OpRegistry,
-  name : String,
-  callback : (Payload) -> Result[Reply, String],
-) -> Unit {
-  guard validate_op_name(name) is Ok(_) else {
-    abort("OpRegistry::handle_result: op name must not be empty")
-  }
-  guard self.handler_name_available(name) else {
-    abort("OpRegistry::handle_result: op already registered: " + name)
-  }
-  self.handlers.set(name, fn(payload_json) {
-    try {
-      let payload : Payload = @json.from_json(payload_json)
-      callback(payload).map(fn(reply) { ToJson::to_json(reply) })
-    } catch {
-      err => Err(err.to_string())
+  callback : (Payload) -> Reply raise,
+) -> Unit raise OpRegistrationError {
+  validate_op_name(name)
+  guard self.handler_name_available(name) else { raise DuplicateName(name~) }
+  self.handlers.set(name, fn(payload_json) raise OpDispatchError {
+    let payload : Payload = @json.from_json(payload_json) catch {
+      err => raise InvalidPayload(name~, detail=err.to_string())
+    }
+    try callback(payload) catch {
+      err =>
+        raise HandlerFailed(name~, detail=@debug.render(@debug.to_repr(err)))
+    } noraise {
+      reply => ToJson::to_json(reply)
     }
   })
 }
 
 ///|
-/// Registers a typed async op handler that cannot fail explicitly.
+/// Registers a typed async op handler.
 fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async(
   self : OpRegistry,
   name : String,
   callback : async (Payload) -> Reply,
-) -> Unit {
-  self.handle_async_result(name, async fn(payload) { Ok(callback(payload)) })
-}
-
-///|
-/// Registers a typed async op handler that can return a string error.
-fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result(
-  self : OpRegistry,
-  name : String,
-  callback : async (Payload) -> Result[Reply, String],
-) -> Unit {
-  guard validate_op_name(name) is Ok(_) else {
-    abort("OpRegistry::handle_async_result: op name must not be empty")
-  }
-  guard self.handler_name_available(name) else {
-    abort("OpRegistry::handle_async_result: op already registered: " + name)
-  }
+) -> Unit raise OpRegistrationError {
+  validate_op_name(name)
+  guard self.handler_name_available(name) else { raise DuplicateName(name~) }
   self.async_handlers.set(name, async fn(_context, payload_json) {
-    let result = try {
-      let payload : Payload = @json.from_json(payload_json)
-      callback(payload).map(fn(reply) { ToJson::to_json(reply) })
-    } catch {
-      err => Err(err.to_string())
+    let payload : Payload = @json.from_json(payload_json) catch {
+      err => raise InvalidPayload(name~, detail=err.to_string())
     }
-    result
+    try callback(payload) catch {
+      err =>
+        raise HandlerFailed(name~, detail=@debug.render(@debug.to_repr(err)))
+    } noraise {
+      reply => ToJson::to_json(reply)
+    }
   })
 }
 
 ///|
-/// Registers a typed async op handler that receives request-scoped context and can fail.
-fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_result_with_context(
+/// Registers a typed async op handler that receives request-scoped context.
+fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_with_context(
   self : OpRegistry,
   name : String,
-  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
-) -> Unit {
-  guard validate_op_name(name) is Ok(_) else {
-    abort(
-      "OpRegistry::handle_async_result_with_context: op name must not be empty",
-    )
-  }
-  guard self.handler_name_available(name) else {
-    abort(
-      "OpRegistry::handle_async_result_with_context: op already registered: " +
-      name,
-    )
-  }
+  callback : async (AppCommandRequestContext, Payload) -> Reply,
+) -> Unit raise OpRegistrationError {
+  validate_op_name(name)
+  guard self.handler_name_available(name) else { raise DuplicateName(name~) }
   self.async_handlers.set(name, async fn(context, payload_json) {
-    let result = try {
-      let payload : Payload = @json.from_json(payload_json)
-      callback(context, payload).map(fn(reply) { ToJson::to_json(reply) })
-    } catch {
-      err => Err(err.to_string())
+    let payload : Payload = @json.from_json(payload_json) catch {
+      err => raise InvalidPayload(name~, detail=err.to_string())
     }
-    result
+    try callback(context, payload) catch {
+      err =>
+        raise HandlerFailed(name~, detail=@debug.render(@debug.to_repr(err)))
+    } noraise {
+      reply => ToJson::to_json(reply)
+    }
   })
 }
 
@@ -115,7 +82,7 @@ async fn OpRegistry::call_async_direct(
   self : OpRegistry,
   name : String,
   payload : Json,
-) -> Result[Json, String] {
+) -> Json {
   self.call_async_direct_with_context(
     AppCommandRequestContext::new(0L),
     name,
@@ -130,12 +97,9 @@ async fn OpRegistry::call_async_direct_with_context(
   context : AppCommandRequestContext,
   name : String,
   payload : Json,
-) -> Result[Json, String] {
+) -> Json {
   match self.async_handlers.get(name) {
-    Some(handler) =>
-      handler(context, payload) catch {
-        err => Err(err.to_string())
-      }
+    Some(handler) => handler(context, payload)
     None => self.call(name, payload)
   }
 }
@@ -152,10 +116,10 @@ fn OpRegistry::call(
   self : OpRegistry,
   name : String,
   payload : Json,
-) -> Result[Json, String] {
+) -> Json raise OpDispatchError {
   match self.handlers.get(name) {
     Some(handler) => handler(payload)
-    None => Err("Unknown op: " + name)
+    None => raise UnknownOp(name~)
   }
 }
 
@@ -165,9 +129,6 @@ fn OpRegistry::handler_name_available(self : OpRegistry, name : String) -> Bool 
 }
 
 ///|
-fn validate_op_name(name : String) -> Result[Unit, String] {
-  guard name.trim().to_owned() != "" else {
-    return Err("op name must not be empty")
-  }
-  Ok(())
+fn validate_op_name(name : String) -> Unit raise OpRegistrationError {
+  guard name.trim().to_owned() != "" else { raise EmptyName }
 }

@@ -2,12 +2,14 @@
 package "justjavac/proton/examples/41_app_commands"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
 
 // Errors
+type AppCommandError derive(@debug.Debug)
 
 // Types and methods
 type FailPayload derive(@json.FromJson)

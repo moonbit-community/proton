@@ -2,20 +2,65 @@
 package "justjavac/proton_cli/dev"
 
 import {
+  "justjavac/proton_config",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn run(String, Array[String]) -> Result[Unit, DevError]
+pub async fn run(String, Array[String]) -> Unit
 
 // Errors
+pub(all) suberror DevConfigError {
+  NotFound(path~ : String)
+  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  FrontendDirectoryMissing(path~ : String)
+  FrontendDirectoryNotDirectory(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DevConfigError::message(Self) -> String
+
+pub(all) suberror DevProcessError {
+  Start(role~ : String, detail~ : String)
+  Exit(role~ : String, code~ : Int)
+} derive(Eq, @debug.Debug)
+pub fn DevProcessError::message(Self) -> String
+
+pub(all) suberror DevRuntimeError {
+  NativeDistOverride(detail~ : String)
+  Setup(detail~ : String)
+  ManifestMissing(path~ : String)
+  ManifestInvalid(path~ : String, detail~ : String)
+  ManifestField(path~ : String, field~ : String)
+  PlatformMismatch(expected~ : String, actual~ : String)
+  DirectoryMissing(label~ : String, path~ : String)
+  HelperMissing(label~ : String, path~ : String)
+  SetupRequired(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DevRuntimeError::message(Self) -> String
+
+pub(all) suberror DevServerError {
+  MissingScheme(url~ : String)
+  UnsupportedScheme(url~ : String)
+  InvalidOrigin(url~ : String)
+  InvalidHost(authority~ : String)
+  EmptyHost
+  InvalidPort(value~ : String)
+  PortOutOfRange(value~ : String)
+  ReadyProbeUnavailable
+  FrontendExited(code~ : Int)
+  Timeout(url~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DevServerError::message(Self) -> String
+
+pub(all) suberror DevUsageError {
+  UnknownOption(option~ : String)
+  UnexpectedArgument(argument~ : String)
+  MissingValue(option~ : String)
+  EmptyValue(option~ : String)
+  InvalidNonNegativeInteger(option~ : String, value~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DevUsageError::message(Self) -> String
 
 // Types and methods
-pub(all) enum DevError {
-  UsageError(String, Bool)
-  CommandError(String)
-}
-
 type DevRuntime derive(Eq, @debug.Debug)
 
 type DevUrlEndpoint derive(Eq, @debug.Debug)

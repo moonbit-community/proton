@@ -20,9 +20,9 @@ fn match_value(matches : @argparse.Matches, name : String) -> String? {
 }
 
 ///|
-fn validate_cef_name(name : String) -> Result[Unit, CefError] {
+fn validate_cef_name(name : String) -> Unit raise CefUsageError {
   if name == "" || name == "." || name == ".." {
-    return Err(CefError::CommandError("Invalid CEF archive name: " + name))
+    raise InvalidArchiveName(name~)
   }
   for ch in name {
     if !(ch.is_ascii_alphabetic() ||
@@ -31,80 +31,50 @@ fn validate_cef_name(name : String) -> Result[Unit, CefError] {
       ch == '-' ||
       ch == '.' ||
       ch == '+') {
-      return Err(CefError::CommandError("Invalid CEF archive name: " + name))
+      raise InvalidArchiveName(name~)
     }
   }
-  Ok(())
 }
 
 ///|
-pub async fn run_setup(
-  cwd : String,
-  args : Array[String],
-) -> Result[Unit, CefError] {
+pub async fn run_setup(cwd : String, args : Array[String]) -> Unit {
   let cmd = cef_setup_arg_parser()
   let matches = cmd.parse(argv=args, env=Map([])) catch {
-    err => return Err(CefError::UsageError(err.to_string(), true))
+    err =>
+      raise CefUsageError::Parse(
+        message=err.to_string(),
+        usage_is_embedded=true,
+      )
   }
   let platform = current_platform()
-  match require_supported_platform(platform) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  require_supported_platform(platform)
   let name = match match_value(matches, "name") {
     Some(name) => name
     None => platform.default_cef_name
   }
-  match validate_cef_name(name) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  validate_cef_name(name)
   let url = match_value(matches, "url")
-  let sha256 = match
-    resolve_cef_archive_sha256(
-      platform,
-      name,
-      url,
-      match_value(matches, "sha256"),
-    ) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
-  let root = match project_root(cwd) {
-    Ok(root) => root
-    Err(error) => return Err(error)
-  }
+  let sha256 = resolve_cef_archive_sha256(
+    platform,
+    name,
+    url,
+    match_value(matches, "sha256"),
+  )
+  let root = project_root(cwd)
   let proton_root = path_join(root, ".proton")
-  let prebuilt_root = match find_prebuilt_root(root, platform) {
-    Ok(path) => path
-    Err(error) => return Err(error)
-  }
-  let proton_version = match prebuilt_manifest_version(prebuilt_root) {
-    Ok(version) => version
-    Err(error) => return Err(error)
-  }
+  let prebuilt_root = find_prebuilt_root(root, platform)
+  let proton_version = prebuilt_manifest_version(prebuilt_root)
   let cache_dir = path_join(
     path_join(path_join(path_join(proton_root, "cache"), "cef"), platform.id),
     name,
   )
   let relative_dist = relative_runtime_dist(proton_version, platform, name)
   let runtime_dir = path_join(root, relative_dist)
-  match ensure_cef_cache(name, url, sha256, root, cache_dir, platform) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match validate_cef_root(cache_dir, platform) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match
-    assemble_runtime(
-      root, platform, proton_version, name, cache_dir, prebuilt_root, runtime_dir,
-      relative_dist,
-    ) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  ensure_cef_cache(name, url, sha256, root, cache_dir, platform)
+  validate_cef_root(cache_dir, platform)
+  assemble_runtime(
+    root, platform, proton_version, name, cache_dir, prebuilt_root, runtime_dir,
+    relative_dist,
+  )
   println(runtime_dir)
-  Ok(())
 }

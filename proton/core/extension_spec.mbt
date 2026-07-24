@@ -11,7 +11,7 @@ struct ExtensionSpec {
   id : String
   js_namespace : String
   dependencies : Array[String]
-  build : (ExtensionBuildContext) -> Result[Extension, String]
+  build : (ExtensionBuildContext) -> Extension raise
 }
 
 ///|
@@ -48,7 +48,7 @@ pub fn ExtensionBuildContext::base_dir(self : ExtensionBuildContext) -> String? 
 pub fn ExtensionSpec::new(
   id : String,
   js_namespace : String,
-  build : (ExtensionBuildContext) -> Result[Extension, String],
+  build : (ExtensionBuildContext) -> Extension raise,
   dependencies? : Array[String] = [],
 ) -> ExtensionSpec {
   ExtensionSpec::{
@@ -88,7 +88,7 @@ pub fn ExtensionSpec::dependencies(self : ExtensionSpec) -> Array[String] {
 pub fn ExtensionSpec::build_extension(
   self : ExtensionSpec,
   context : ExtensionBuildContext,
-) -> Result[Extension, String] {
+) -> Extension raise {
   (self.build)(context)
 }
 
@@ -96,8 +96,6 @@ pub fn ExtensionSpec::build_extension(
 /// Builds the runtime extension with default options and no base directory.
 /// It is useful for direct installation paths that do not need manifest-derived
 /// context.
-pub fn ExtensionSpec::build_default(
-  self : ExtensionSpec,
-) -> Result[Extension, String] {
+pub fn ExtensionSpec::build_default(self : ExtensionSpec) -> Extension raise {
   self.build_extension(ExtensionBuildContext::new())
 }

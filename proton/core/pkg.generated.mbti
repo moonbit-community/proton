@@ -4,6 +4,7 @@ package "justjavac/proton/core"
 import {
   "justjavac/proton/ipc",
   "moonbitlang/async/cond_var",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
@@ -17,25 +18,54 @@ pub fn render_js_template(String, Array[TemplateReplacement]) -> String
 pub fn replacement(String, String) -> TemplateReplacement
 
 // Errors
+pub(all) suberror ExtensionHostError {
+  EmptyExtensionId
+  EmptyNamespace
+  ReservedNamespace(extension_namespace~ : String)
+  DuplicateExtensionId(id~ : String)
+  DuplicateNamespace(extension_namespace~ : String)
+  EmptyApiName(extension_namespace~ : String)
+  ReservedApiName(extension_namespace~ : String, api_name~ : String)
+  DuplicateApi(extension_namespace~ : String, api_name~ : String)
+  NamespaceNotInstalled(extension_namespace~ : String)
+  EmptyEventNamespace
+  EmptyEventName(extension_namespace~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ExtensionHostError::message(Self) -> String
+
+pub(all) suberror OpDispatchError {
+  InvalidPayload(name~ : String, detail~ : String)
+  UnknownOp(name~ : String)
+  HandlerFailed(name~ : String, detail~ : String)
+  HostClosed
+  AsyncHandlerRequiresAsync(name~ : String)
+} derive(Eq, @debug.Debug)
+pub fn OpDispatchError::message(Self) -> String
+
+pub(all) suberror OpRegistrationError {
+  EmptyName
+  DuplicateName(name~ : String)
+  HostClosed
+  RegistrationSealed
+} derive(Eq, @debug.Debug)
+pub fn OpRegistrationError::message(Self) -> String
 
 // Types and methods
 type AppCommandHost
 pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(Self, AppCommandRequestContext, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit)?) -> @ipc.IpcOpResponse
-pub async fn AppCommandHost::dispatch_ipc_with_event_sender(Self, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit)?) -> @ipc.IpcOpResponse
-pub async fn[Payload : ToJson] AppCommandHost::emit_extension(Self, String, String, Payload) -> Unit
+pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(Self, AppCommandRequestContext, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit noraise)?) -> @ipc.IpcOpResponse
+pub async fn AppCommandHost::dispatch_ipc_with_event_sender(Self, @ipc.IpcOpRequest, (async (@ipc.IpcExtensionEvent) -> Unit noraise)?) -> @ipc.IpcOpResponse
+pub async fn[Payload : ToJson] AppCommandHost::emit_extension(Self, String, String, Payload) -> Unit noraise
 pub fn AppCommandHost::new() -> Self
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Result[Reply, String]) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn AppCommandHost::registered_ops(Self) -> Array[String]
 pub fn AppCommandHost::scope_events_for_op(Self, String) -> Unit
 pub fn AppCommandHost::seal_registrations(Self) -> Unit
-pub fn AppCommandHost::set_event_sender(Self, async (@ipc.IpcExtensionEvent) -> Unit) -> Unit
+pub fn AppCommandHost::set_event_sender(Self, async (@ipc.IpcExtensionEvent) -> Unit noraise) -> Unit
 
 pub struct AppCommandRequestContext {
   window : Int64
@@ -50,7 +80,7 @@ pub fn AppCommandRequestContext::window(Self) -> Int64
 type Extension
 pub fn Extension::id(Self) -> String
 pub fn Extension::js_namespace(Self) -> String
-pub fn Extension::new(String, String, (ExtensionContext) -> Unit, on_install? : (ExtensionContext) -> Unit, on_destroy? : (ExtensionContext) -> Unit, scripts? : Array[String]) -> Self
+pub fn Extension::new(String, String, (ExtensionContext) -> Unit raise, on_install? : (ExtensionContext) -> Unit raise, on_destroy? : (ExtensionContext) -> Unit raise, scripts? : Array[String]) -> Self
 pub fn Extension::scripts(Self) -> Array[String]
 
 type ExtensionBuildContext
@@ -59,27 +89,26 @@ pub fn ExtensionBuildContext::new(options? : Json?, base_dir? : String?) -> Self
 pub fn ExtensionBuildContext::options(Self) -> Json?
 
 type ExtensionContext
-pub fn[Payload : ToJson] ExtensionContext::emit(Self, String, Payload) -> Unit
+pub fn[Payload : ToJson] ExtensionContext::emit(Self, String, Payload) -> Unit raise ExtensionHostError
 pub fn ExtensionContext::id(Self) -> String
 pub fn ExtensionContext::js_namespace(Self) -> String
-pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(Self, String, (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(Self, String, (Payload) -> Reply raise?) -> Unit raise
 
 type ExtensionHost
 pub fn ExtensionHost::api_names(Self, String) -> Array[String]
-pub fn ExtensionHost::destroy(Self) -> Unit
-pub fn ExtensionHost::dispatch_op(Self, String, Json) -> Result[Json, String]
-pub fn[Payload : ToJson] ExtensionHost::emit(Self, String, String, Payload) -> Unit
-pub fn ExtensionHost::install(Self, Extension) -> Unit
+pub fn ExtensionHost::destroy(Self) -> Unit raise
+pub fn ExtensionHost::dispatch_op(Self, String, Json) -> Json raise OpDispatchError
+pub fn[Payload : ToJson] ExtensionHost::emit(Self, String, String, Payload) -> Unit raise ExtensionHostError
+pub fn ExtensionHost::install(Self, Extension) -> Unit raise
 pub fn ExtensionHost::new() -> Self
 
 type ExtensionSpec
-pub fn ExtensionSpec::build_default(Self) -> Result[Extension, String]
-pub fn ExtensionSpec::build_extension(Self, ExtensionBuildContext) -> Result[Extension, String]
+pub fn ExtensionSpec::build_default(Self) -> Extension raise
+pub fn ExtensionSpec::build_extension(Self, ExtensionBuildContext) -> Extension raise
 pub fn ExtensionSpec::dependencies(Self) -> Array[String]
 pub fn ExtensionSpec::id(Self) -> String
 pub fn ExtensionSpec::js_namespace(Self) -> String
-pub fn ExtensionSpec::new(String, String, (ExtensionBuildContext) -> Result[Extension, String], dependencies? : Array[String]) -> Self
+pub fn ExtensionSpec::new(String, String, (ExtensionBuildContext) -> Extension raise, dependencies? : Array[String]) -> Self
 
 type MbtProcessHost
 pub fn MbtProcessHost::close(Self) -> Unit
@@ -89,11 +118,9 @@ pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequest
 pub fn MbtProcessHost::dispatch_json(Self, String, (@ipc.IpcOpResponse) -> Unit) -> Unit
 pub async fn MbtProcessHost::dispatch_json_async(Self, String) -> @ipc.IpcOpResponse
 pub fn MbtProcessHost::new() -> Self
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result(Self, String, async (Payload) -> Result[Reply, String]) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Result[Reply, String]) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_result(Self, String, (Payload) -> Result[Reply, String]) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn MbtProcessHost::registered_ops(Self) -> Array[String]
 
 type ResourceTable[T]

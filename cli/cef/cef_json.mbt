@@ -1,22 +1,11 @@
 ///|
-fn read_json_file(path : String) -> Result[Json, CefError] {
+fn read_json_file(path : String) -> Json raise CefRuntimeError {
   let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    err =>
-      return Err(
-        CefError::CommandError(
-          "Failed to read " + path + ": " + @debug.render(@debug.to_repr(err)),
-        ),
-      )
+    err => raise ManifestRead(path~, detail=@debug.render(@debug.to_repr(err)))
   }
-  try @json.parse(text) catch {
+  @json.parse(text) catch {
     err =>
-      Err(
-        CefError::CommandError(
-          "Failed to parse " + path + ": " + @debug.render(@debug.to_repr(err)),
-        ),
-      )
-  } noraise {
-    json => Ok(json)
+      raise ManifestSyntax(path~, detail=@debug.render(@debug.to_repr(err)))
   }
 }
 
@@ -25,14 +14,13 @@ fn json_string_field(
   json : Json,
   field : String,
   label : String,
-) -> Result[String, CefError] {
+) -> String raise CefRuntimeError {
   match json {
     Object(object) =>
       match object.get(field) {
-        Some(String(value)) => Ok(value)
-        _ =>
-          Err(CefError::CommandError(label + " missing string field: " + field))
+        Some(String(value)) => value
+        _ => raise ManifestField(path=label, field~)
       }
-    _ => Err(CefError::CommandError(label + " must be a JSON object"))
+    _ => raise ManifestShape(path=label, detail="root must be a JSON object")
   }
 }

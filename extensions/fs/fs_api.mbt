@@ -121,40 +121,38 @@ fn bytes_written_for_text(content : String) -> Int {
 }
 
 ///|
-fn render_error(prefix : String, error : Error) -> String {
-  prefix + ": " + @debug.render(@debug.to_repr(error))
+fn fs_error_detail(error : Error) -> String {
+  @debug.render(@debug.to_repr(error))
 }
 
 ///|
 fn create_mode_from_string(
   value : String?,
-) -> Result[@async_fs.CreateMode?, String] {
+) -> @async_fs.CreateMode? raise FsError {
   match value {
-    None => Ok(None)
+    None => None
     Some(value) =>
       match value.to_lower() {
-        "open_existing" => Ok(Some(OpenExisting))
-        "truncate_existing" => Ok(Some(TruncateExisting))
-        "open_or_create" => Ok(Some(OpenOrCreate))
-        "create_or_truncate" => Ok(Some(CreateOrTruncate))
-        "create_new" => Ok(Some(CreateNew))
-        _ => Err("Unsupported fs create_mode: " + value)
+        "open_existing" => Some(OpenExisting)
+        "truncate_existing" => Some(TruncateExisting)
+        "open_or_create" => Some(OpenOrCreate)
+        "create_or_truncate" => Some(CreateOrTruncate)
+        "create_new" => Some(CreateNew)
+        _ => raise UnsupportedCreateMode(value~)
       }
   }
 }
 
 ///|
-fn sync_mode_from_string(
-  value : String?,
-) -> Result[@async_fs.SyncMode?, String] {
+fn sync_mode_from_string(value : String?) -> @async_fs.SyncMode? raise FsError {
   match value {
-    None => Ok(None)
+    None => None
     Some(value) =>
       match value.to_lower() {
-        "none" | "no_sync" => Ok(Some(NoSync))
-        "data" => Ok(Some(Data))
-        "full" => Ok(Some(Full))
-        _ => Err("Unsupported fs sync mode: " + value)
+        "none" | "no_sync" => Some(NoSync)
+        "data" => Some(Data)
+        "full" => Some(Full)
+        _ => raise UnsupportedSyncMode(value~)
       }
   }
 }
@@ -176,36 +174,28 @@ fn file_kind_to_string(kind : @async_fs.FileKind) -> String {
 ///|
 async fn read_text_file(
   payload : ReadFilePayload,
-) -> Result[ReadFileReply, String] {
+) -> ReadFileReply raise FsError {
   try {
     let data = @async_fs.read_file(
       payload.path,
       sync_timestamp=option_bool(payload.sync_timestamp, false),
     )
     let content = data.text()
-    Ok({
-      path: payload.path,
-      content,
-      bytes_read: bytes_written_for_text(content),
-    })
+    { path: payload.path, content, bytes_read: bytes_written_for_text(content) }
   } catch {
-    error => Err(render_error("Failed to read file", error))
+    error => raise ReadFailed(path=payload.path, detail=fs_error_detail(error))
   }
 }
 
 ///|
 async fn write_text_file(
   payload : WriteFilePayload,
-) -> Result[WriteFileReply, String] {
+) -> WriteFileReply raise FsError {
   let create_mode = match create_mode_from_string(payload.create_mode) {
-    Ok(Some(value)) => Some(value)
-    Ok(None) => Some(CreateOrTruncate)
-    Err(error) => return Err(error)
+    Some(value) => Some(value)
+    None => Some(CreateOrTruncate)
   }
-  let sync = match sync_mode_from_string(payload.sync) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+  let sync = sync_mode_from_string(payload.sync)
   let permission = payload.permission
   try {
     @async_fs.write_file(
@@ -216,19 +206,19 @@ async fn write_text_file(
       sync?,
       append=option_bool(payload.append, false),
     )
-    Ok({
+    {
       path: payload.path,
       bytes_written: bytes_written_for_text(payload.content),
-    })
+    }
   } catch {
-    error => Err(render_error("Failed to write file", error))
+    error => raise WriteFailed(path=payload.path, detail=fs_error_detail(error))
   }
 }
 
 ///|
-async fn exists_path(path : String) -> Result[Bool, String] {
-  Ok(@async_fs.exists(path)) catch {
-    error => Err(render_error("Failed to inspect path existence", error))
+async fn exists_path(path : String) -> Bool raise FsError {
+  @async_fs.exists(path) catch {
+    error => raise ExistsFailed(path~, detail=fs_error_detail(error))
   }
 }
 
@@ -236,46 +226,45 @@ async fn exists_path(path : String) -> Result[Bool, String] {
 async fn path_kind(
   path : String,
   follow_symlink : Bool,
-) -> Result[String, String] {
-  Ok(file_kind_to_string(@async_fs.kind(path, follow_symlink~))) catch {
-    error => Err(render_error("Failed to inspect path kind", error))
+) -> String raise FsError {
+  file_kind_to_string(@async_fs.kind(path, follow_symlink~)) catch {
+    error => raise KindFailed(path~, detail=fs_error_detail(error))
   }
 }
 
 ///|
-async fn path_size(path : String) -> Result[Int64, String] {
+async fn path_size(path : String) -> Int64 raise FsError {
   try {
     let file = @async_fs.open(path, mode=ReadOnly)
     let size = file.size()
     file.close()
-    Ok(size)
+    size
   } catch {
-    error => Err(render_error("Failed to read file size", error))
+    error => raise SizeFailed(path~, detail=fs_error_detail(error))
   }
 }
 
 ///|
 async fn readdir_entries(
   payload : ReaddirPayload,
-) -> Result[Array[String], String] {
-  Ok(
-    @async_fs.readdir(
-      payload.path,
-      include_hidden=option_bool(payload.include_hidden, false),
-      include_special=option_bool(payload.include_special, false),
-      sort=option_bool(payload.sort, true),
-    ),
+) -> Array[String] raise FsError {
+  @async_fs.readdir(
+    payload.path,
+    include_hidden=option_bool(payload.include_hidden, false),
+    include_special=option_bool(payload.include_special, false),
+    sort=option_bool(payload.sort, true),
   ) catch {
-    error => Err(render_error("Failed to read directory", error))
+    error =>
+      raise ReadDirectoryFailed(
+        path=payload.path,
+        detail=fs_error_detail(error),
+      )
   }
 }
 
 ///|
-async fn mkdir_path(payload : MkdirPayload) -> Result[Bool, String] {
-  let existed = match exists_path(payload.path) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+async fn mkdir_path(payload : MkdirPayload) -> Bool raise FsError {
+  let existed = exists_path(payload.path)
   try {
     let permission = payload.permission
     @async_fs.mkdir(
@@ -283,66 +272,73 @@ async fn mkdir_path(payload : MkdirPayload) -> Result[Bool, String] {
       permission?,
       recursive=option_bool(payload.recursive, false),
     )
-    Ok(!existed)
+    !existed
   } catch {
-    error => Err(render_error("Failed to create directory", error))
+    error =>
+      raise CreateDirectoryFailed(
+        path=payload.path,
+        detail=fs_error_detail(error),
+      )
   }
 }
 
 ///|
-async fn remove_file(path : String) -> Result[Bool, String] {
-  let existed = match exists_path(path) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+async fn remove_file(path : String) -> Bool raise FsError {
+  let existed = exists_path(path)
   if !existed {
-    return Ok(false)
+    return false
   }
   try {
     @async_fs.remove(path)
-    Ok(true)
+    true
   } catch {
-    error => Err(render_error("Failed to remove file", error))
+    error => raise RemoveFileFailed(path~, detail=fs_error_detail(error))
   }
 }
 
 ///|
-async fn remove_dir(payload : RemovePathPayload) -> Result[Bool, String] {
-  let existed = match exists_path(payload.path) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+async fn remove_dir(payload : RemovePathPayload) -> Bool raise FsError {
+  let existed = exists_path(payload.path)
   if !existed {
-    return Ok(false)
+    return false
   }
   try {
     @async_fs.rmdir(
       payload.path,
       recursive=option_bool(payload.recursive, false),
     )
-    Ok(true)
+    true
   } catch {
-    error => Err(render_error("Failed to remove directory", error))
+    error =>
+      raise RemoveDirectoryFailed(
+        path=payload.path,
+        detail=fs_error_detail(error),
+      )
   }
 }
 
 ///|
-async fn rename_path(payload : RenamePayload) -> Result[Unit, String] {
+async fn rename_path(payload : RenamePayload) -> Unit raise FsError {
   try {
     @async_fs.rename(
       payload.old_path,
       payload.new_path,
       replace=option_bool(payload.replace, false),
     )
-    Ok(())
+    ()
   } catch {
-    error => Err(render_error("Failed to rename path", error))
+    error =>
+      raise RenameFailed(
+        old_path=payload.old_path,
+        new_path=payload.new_path,
+        detail=fs_error_detail(error),
+      )
   }
 }
 
 ///|
-async fn realpath_path(path : String) -> Result[String, String] {
-  Ok(@async_fs.realpath(path)) catch {
-    error => Err(render_error("Failed to resolve real path", error))
+async fn realpath_path(path : String) -> String raise FsError {
+  @async_fs.realpath(path) catch {
+    error => raise RealpathFailed(path~, detail=fs_error_detail(error))
   }
 }

@@ -30,36 +30,24 @@ fn windows_test_plan(
 }
 
 ///|
-async fn ensure_windows_test_dir(path : String) -> Result[Unit, PackageError] {
-  guard !@mbfs.path_exists(path) else { return Ok(()) }
+async fn ensure_windows_test_dir(path : String) -> Unit {
+  guard !@mbfs.path_exists(path) else { return }
   let parent = path_parent(path)
   if parent != path && !@mbfs.path_exists(parent) {
-    match ensure_windows_test_dir(parent) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    ensure_windows_test_dir(parent)
   }
   ensure_dir(path)
 }
 
 ///|
-async fn write_windows_test_file(
-  path : String,
-  text : String,
-) -> Result[Unit, PackageError] {
-  match ensure_windows_test_dir(path_parent(path)) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+async fn write_windows_test_file(path : String, text : String) -> Unit {
+  ensure_windows_test_dir(path_parent(path))
   write_text(path, text)
 }
 
 ///|
 async fn prepare_windows_test_inputs(root : String) -> (String, String) {
-  match remove_tree(root) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  remove_tree(root)
   let executable = resolve_path(root, "build output/demo.exe")
   let config = resolve_path(root, "moon.proton")
   for
@@ -70,10 +58,7 @@ async fn prepare_windows_test_inputs(root : String) -> (String, String) {
       (resolve_path(root, "bundle resources/data.txt"), "resource"),
     ] {
     let (path, text) = item
-    match write_windows_test_file(path, text) {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(path, text)
   }
   (executable, config)
 }
@@ -82,42 +67,25 @@ async fn prepare_windows_test_inputs(root : String) -> (String, String) {
 async fn prepare_windows_test_runtime(root : String) -> String {
   let runtime = resolve_path(root, "runtime files")
   for name in windows_runtime_binary_files() {
-    match write_windows_test_file(resolve_path(runtime, "bin/" + name), name) {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(resolve_path(runtime, "bin/" + name), name)
   }
   for name in windows_runtime_root_data_files() {
-    match write_windows_test_file(resolve_path(runtime, "bin/" + name), name) {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(resolve_path(runtime, "bin/" + name), name)
   }
   for name in windows_runtime_resource_files() {
-    match
-      write_windows_test_file(resolve_path(runtime, "Resources/" + name), name) {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(resolve_path(runtime, "Resources/" + name), name)
   }
   for locale in ["en-US.pak", "fr.pak"] {
-    match
-      write_windows_test_file(
-        resolve_path(runtime, "Resources/locales/" + locale),
-        locale,
-      ) {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(
+      resolve_path(runtime, "Resources/locales/" + locale),
+      locale,
+    )
   }
   for
     extra in [
       "bin/libcef.lib", "bin/bootstrap.exe", "bin/bootstrapc.exe", "lib/proton.lib",
     ] {
-    match write_windows_test_file(resolve_path(runtime, extra), "build-only") {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(resolve_path(runtime, extra), "build-only")
   }
   runtime
 }
@@ -138,10 +106,7 @@ async fn windows_test_sign_tool(
     #|if (($mode -eq "verify-fail") -and ($kind -eq "verify")) { exit 8 }
     #|exit 0
   let text = text.replace_all(old="{{MODE}}", new=mode)
-  match write_windows_test_file(script, text) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  write_windows_test_file(script, text)
   {
     executable: "powershell",
     prefix_args: [
@@ -193,19 +158,17 @@ async test "Windows runtime validation rejects a missing required file" {
   ignore(prepare_windows_test_inputs(root))
   let runtime = prepare_windows_test_runtime(root)
   let missing = resolve_path(runtime, "bin/chrome_elf.dll")
-  match remove_tree(missing) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match require_windows_runtime_layout(runtime) {
-    Ok(_) => abort("expected missing Windows runtime failure")
-    Err(CommandError(message)) => {
+  remove_tree(missing)
+  try require_windows_runtime_layout(runtime) catch {
+    WindowsPackagingError::InvalidConfiguration(detail~) => {
       assert_true(
-        message.contains("active Windows Proton runtime is incomplete"),
+        detail.contains("active Windows Proton runtime is incomplete"),
       )
-      assert_true(message.contains(missing))
+      assert_true(detail.contains(missing))
     }
-    Err(_) => abort("expected command error")
+    _ => abort("expected incomplete Windows runtime")
+  } noraise {
+    _ => abort("expected missing Windows runtime failure")
   }
 }
 
@@ -216,26 +179,16 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app"], false)
   let output = windows_portable_output(plan)
-  match ensure_dir(output) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match write_windows_test_file(resolve_path(output, "old.txt"), "old") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match
-    stage_windows_portable_with_options(
-      plan,
-      executable,
-      runtime,
-      default_windows_sign_tool(),
-      None,
-      false,
-    ) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  ensure_dir(output)
+  write_windows_test_file(resolve_path(output, "old.txt"), "old")
+  stage_windows_portable_with_options(
+    plan,
+    executable,
+    runtime,
+    default_windows_sign_tool(),
+    None,
+    false,
+  )
   for
     required in [
       "demo-app.exe", "proton.dll", "cef_process.exe", "libcef.dll", "icudtl.dat",
@@ -261,18 +214,14 @@ async test "Windows portable zip is atomic and extracts from paths with spaces" 
   let (executable, _) = prepare_windows_test_inputs(root)
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app", "zip"], false)
-  match
-    stage_windows_portable_with_options(
-      plan,
-      executable,
-      runtime,
-      default_windows_sign_tool(),
-      None,
-      false,
-    ) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  stage_windows_portable_with_options(
+    plan,
+    executable,
+    runtime,
+    default_windows_sign_tool(),
+    None,
+    false,
+  )
   let archive = windows_archive_path(plan)
   assert_true(path_is_file(archive))
   assert_false(@mbfs.path_exists(windows_archive_staging_path(plan)))
@@ -298,26 +247,22 @@ async test "Windows portable zip is atomic and extracts from paths with spaces" 
 ///|
 async test "Windows promotion rolls back when staging is missing" {
   let root = "target/proton-package-windows-rollback"
-  match remove_tree(root) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  remove_tree(root)
   let destination = resolve_path(root, "Demo App")
   let marker = resolve_path(destination, "old.txt")
-  match write_windows_test_file(marker, "old") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match
+  write_windows_test_file(marker, "old")
+  try
     promote_windows_artifact(
       resolve_path(root, "missing staging"),
       destination,
       "Windows app",
-    ) {
-    Ok(_) => abort("expected promotion failure")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("failed to promote staged Windows app"))
-    Err(_) => abort("expected command error")
+    )
+  catch {
+    WindowsPackagingError::ToolFailure(stage~, ..) =>
+      assert_true(stage.contains("promote staged Windows app"))
+    _ => abort("expected Windows promotion failure")
+  } noraise {
+    _ => abort("expected promotion failure")
   }
   assert_true(path_is_file(marker))
   assert_false(@mbfs.path_exists(destination + ".backup"))
@@ -326,25 +271,21 @@ async test "Windows promotion rolls back when staging is missing" {
 ///|
 async test "Windows promotion restores a stale backup before continuing" {
   let root = "target/proton-package-windows-stale-backup"
-  match remove_tree(root) {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  remove_tree(root)
   let destination = resolve_path(root, "Demo App")
   let backup = destination + ".backup"
   let marker = resolve_path(backup, "old.txt")
-  match write_windows_test_file(marker, "old") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match
+  write_windows_test_file(marker, "old")
+  try
     promote_windows_artifact(
       resolve_path(root, "missing staging"),
       destination,
       "Windows app",
-    ) {
-    Ok(_) => abort("expected promotion failure")
-    Err(_) => ()
+    )
+  catch {
+    _ => ()
+  } noraise {
+    _ => abort("expected promotion failure")
   }
   assert_true(path_is_file(resolve_path(destination, "old.txt")))
   assert_false(@mbfs.path_exists(backup))
@@ -360,17 +301,11 @@ async test "Windows signing rejects a missing target before invoking signtool" {
       resolve_path(output, "demo-app.exe"),
       resolve_path(output, "proton.dll"),
     ] {
-    match write_windows_test_file(path, "binary") {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(path, "binary")
   }
   let certificate = resolve_path(root, "test certificate.pfx")
-  match write_windows_test_file(certificate, "certificate") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match
+  write_windows_test_file(certificate, "certificate")
+  try
     sign_windows_portable_configured(
       windows_test_plan(root, ["app"], true),
       output,
@@ -380,15 +315,13 @@ async test "Windows signing rejects a missing target before invoking signtool" {
         password: "",
         timestamp: Some(windows_default_timestamp_url),
       },
-    ) {
-    Ok(_) => abort("expected missing signing target failure")
-    Err(CommandError(message)) => {
-      assert_true(
-        message.contains("required Windows signing target is missing"),
-      )
-      assert_true(message.contains("cef_process.exe"))
-    }
-    Err(_) => abort("expected command error")
+    )
+  catch {
+    WindowsPackagingError::MissingTarget(path~) =>
+      assert_true(path.contains("cef_process.exe"))
+    _ => abort("expected missing Windows signing target")
+  } noraise {
+    _ => abort("expected missing signing target failure")
   }
 }
 
@@ -400,36 +333,30 @@ async test "Windows signing failure does not leak the certificate password" {
   let output = resolve_path(root, "portable")
   let plan = windows_test_plan(root, ["app"], true)
   for target in windows_owned_sign_targets(plan, output) {
-    match write_windows_test_file(target, "binary") {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(target, "binary")
   }
   for target in windows_upstream_signature_targets(output) {
-    match write_windows_test_file(target, "upstream") {
-      Err(error) => abort(package_error_text(error))
-      Ok(_) => ()
-    }
+    write_windows_test_file(target, "upstream")
   }
   let certificate = resolve_path(root, "test certificate.pfx")
-  match write_windows_test_file(certificate, "certificate") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  write_windows_test_file(certificate, "certificate")
   let password = "do-not-print-this-password"
-  match
+  try
     sign_windows_portable_configured(
       plan,
       output,
       windows_test_sign_tool(root, "sign-fail"),
       WindowsSigningConfig::{ certificate, password, timestamp: None },
-    ) {
-    Ok(_) => abort("expected signtool signing failure")
-    Err(CommandError(message)) => {
-      assert_true(message.contains("signtool sign exited with code 7"))
-      assert_false(message.contains(password))
+    )
+  catch {
+    WindowsPackagingError::ToolFailure(stage~, detail~) => {
+      assert_true(stage.contains("signtool sign"))
+      assert_true(detail.contains("7"))
+      assert_false(detail.contains(password))
     }
-    Err(_) => abort("expected command error")
+    _ => abort("expected signtool signing failure")
+  } noraise {
+    _ => abort("expected signtool signing failure")
   }
 }
 
@@ -442,16 +369,10 @@ async test "Windows signing failure blocks promotion" {
   let plan = windows_test_plan(root, ["app"], true)
   let output = windows_portable_output(plan)
   let marker = resolve_path(output, "old.txt")
-  match write_windows_test_file(marker, "old") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  write_windows_test_file(marker, "old")
   let certificate = resolve_path(root, "test certificate.pfx")
-  match write_windows_test_file(certificate, "certificate") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match
+  write_windows_test_file(certificate, "certificate")
+  try
     stage_windows_portable_with_options(
       plan,
       executable,
@@ -459,11 +380,15 @@ async test "Windows signing failure blocks promotion" {
       windows_test_sign_tool(root, "sign-fail"),
       Some(WindowsSigningConfig::{ certificate, password: "", timestamp: None }),
       false,
-    ) {
-    Ok(_) => abort("expected signtool signing failure")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("signtool sign exited with code 7"))
-    Err(_) => abort("expected command error")
+    )
+  catch {
+    WindowsPackagingError::ToolFailure(stage~, detail~) => {
+      assert_true(stage.contains("signtool sign"))
+      assert_true(detail.contains("7"))
+    }
+    _ => abort("expected signtool signing failure")
+  } noraise {
+    _ => abort("expected signtool signing failure")
   }
   assert_true(path_is_file(marker))
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))
@@ -479,16 +404,10 @@ async test "Windows signature verification failure blocks promotion" {
   let plan = windows_test_plan(root, ["app"], true)
   let output = windows_portable_output(plan)
   let marker = resolve_path(output, "old.txt")
-  match write_windows_test_file(marker, "old") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
+  write_windows_test_file(marker, "old")
   let certificate = resolve_path(root, "test certificate.pfx")
-  match write_windows_test_file(certificate, "certificate") {
-    Err(error) => abort(package_error_text(error))
-    Ok(_) => ()
-  }
-  match
+  write_windows_test_file(certificate, "certificate")
+  try
     stage_windows_portable_with_options(
       plan,
       executable,
@@ -500,15 +419,15 @@ async test "Windows signature verification failure blocks promotion" {
         timestamp: Some(windows_default_timestamp_url),
       }),
       false,
-    ) {
-    Ok(_) => abort("expected signtool verification failure")
-    Err(CommandError(message)) =>
-      assert_true(
-        message.contains(
-          "signtool verify Proton-owned signature exited with code 8",
-        ),
-      )
-    Err(_) => abort("expected command error")
+    )
+  catch {
+    WindowsPackagingError::ToolFailure(stage~, detail~) => {
+      assert_true(stage.contains("signtool verify Proton-owned signature"))
+      assert_true(detail.contains("8"))
+    }
+    _ => abort("expected signtool verification failure")
+  } noraise {
+    _ => abort("expected signtool verification failure")
   }
   assert_true(path_is_file(marker))
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))

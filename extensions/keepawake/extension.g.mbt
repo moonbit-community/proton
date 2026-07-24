@@ -5,7 +5,7 @@
 pub async fn emit_keep_awake_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : KeepAwakeActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -19,7 +19,7 @@ struct ProtonAcquirePayload {
 async fn __proton_command_acquire(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonAcquirePayload,
-) -> Result[KeepAwakeReply, String] {
+) -> KeepAwakeReply raise KeepAwakeError {
   acquire(context, payload.reason, payload.scope)
 }
 
@@ -32,7 +32,7 @@ struct ProtonReleasePayload {
 async fn __proton_command_release(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonReleasePayload,
-) -> Result[KeepAwakeReply, String] {
+) -> KeepAwakeReply raise KeepAwakeError {
   release(context, payload._payload)
 }
 
@@ -61,17 +61,16 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("release"),
       @proton_command.AppCommandApiDescriptor::new("status"),
     ],
-    fn(context) {
-      context.op_async_result("acquire", async fn(payload) {
+    fn(context) raise {
+      context.op_async("acquire", async fn(payload) {
         __proton_command_acquire(context, payload)
       }, emits_events=true)
-      context.op_async_result("release", async fn(payload) {
+      context.op_async("release", async fn(payload) {
         __proton_command_release(context, payload)
       }, emits_events=true)
       context.op("status", __proton_command_status)
-      Ok(())
     },
-    on_destroy=fn(context) {
+    on_destroy=fn(context) raise {
       cleanup_keepawake(context)
     },
   )
