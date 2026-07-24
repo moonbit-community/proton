@@ -190,13 +190,13 @@ test "load_proton_manifest_from_file rejects extension settings" {
 ///|
 test "load_proton_manifest_from_file rejects unsupported top-level fields" {
   expect_moon_proton_extra_field_error(
-    "version = \"1.0.0\"", "unknown moon.proton field: version",
+    "version = \"1.0.0\"", "Unexpected key 'version' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "license = \"MIT\"", "unknown moon.proton field: license",
+    "license = \"MIT\"", "Unexpected key 'license' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "description = \"App\"", "unknown moon.proton field: description",
+    "description = \"App\"", "Unexpected key 'description' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
     "permissions = {}", "moon.proton field `permissions` is not supported in v1",
@@ -468,7 +468,10 @@ test "load_proton_project_config_from_file validates tooling blocks" {
 
   match load_proton_project_config_from_file(config_path) {
     Ok(_) => abort("expected frontend validation error")
-    Err(error) => assert_eq(error, "unknown frontend field: unknown")
+    Err(error) =>
+      assert_eq(
+        error, "Unexpected key 'unknown' found in moon.proton field `frontend`.",
+      )
   }
 }
 
@@ -507,7 +510,10 @@ test "load_config_manifest_from_file validates project tooling blocks" {
 
   match load_config_manifest_from_file(config_path) {
     Ok(_) => abort("expected frontend validation error")
-    Err(error) => assert_eq(error, "unknown frontend field: before_buid")
+    Err(error) =>
+      assert_eq(
+        error, "Unexpected key 'before_buid' found in moon.proton field `frontend`.",
+      )
   }
 }
 

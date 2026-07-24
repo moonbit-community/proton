@@ -133,7 +133,12 @@ test "project config validation rejects unknown top-level fields" {
   write_build_test_file(path, valid_build_config + "\nlegacy_runtime = true\n")
   match read_project_config(path) {
     Ok(_) => abort("expected unknown top-level field to fail")
-    Err(message) => assert_true(message.contains("unknown moon.proton field"))
+    Err(message) =>
+      assert_true(
+        message.contains(
+          "Unexpected key 'legacy_runtime' found in moon.proton.",
+        ),
+      )
   }
 }
 

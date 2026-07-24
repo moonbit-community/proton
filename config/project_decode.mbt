@@ -76,7 +76,7 @@ fn validate_project_top_level_fields(
   let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
-      return Err("duplicate moon.proton field: " + field.key)
+      return Err("Duplicate key '" + field.key + "' found in moon.proton.")
     }
     seen[field.key] = ()
     match field.key {
@@ -99,7 +99,8 @@ fn validate_project_top_level_fields(
         return Err("moon.proton field `permissions` is not supported in v1")
       "windows" =>
         return Err("moon.proton field `windows` is not supported in v1")
-      other => return Err("unknown moon.proton field: " + other)
+      other =>
+        return Err("Unexpected key '" + other + "' found in moon.proton.")
     }
   }
   Ok(())
@@ -408,11 +409,23 @@ fn validate_object_fields(
   let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
-      return Err("duplicate " + label + " field: " + field.key)
+      return Err(
+        "Duplicate key '" +
+        field.key +
+        "' found in moon.proton field `" +
+        label +
+        "`.",
+      )
     }
     seen[field.key] = ()
     if !allowed.contains(field.key) {
-      return Err("unknown " + label + " field: " + field.key)
+      return Err(
+        "Unexpected key '" +
+        field.key +
+        "' found in moon.proton field `" +
+        label +
+        "`.",
+      )
     }
   }
   Ok(())
