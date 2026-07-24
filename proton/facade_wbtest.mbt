@@ -1,4 +1,38 @@
 ///|
+fn[T] unwrap_configuration(action : () -> T raise AppConfigurationError) -> T {
+  action() catch {
+    error => abort(error.message())
+  }
+}
+
+///|
+fn[T] unwrap_app_run(action : () -> T raise AppRunError) -> T {
+  action() catch {
+    error => abort(error.message())
+  }
+}
+
+///|
+fn[T] expect_configuration_error(
+  action : () -> T raise AppConfigurationError,
+) -> AppConfigurationError {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => abort("expected application configuration error")
+  }
+}
+
+///|
+fn[T] expect_app_run_error(action : () -> T raise AppRunError) -> AppRunError {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => abort("expected application run error")
+  }
+}
+
+///|
 fn test_command_manifest(
   extension_id : String,
   enabled? : Bool = true,
@@ -45,7 +79,7 @@ fn test_command_spec(
     api_names.map(fn(api_name) {
       @proton_command.AppCommandApiDescriptor::new(api_name)
     }),
-    fn(_context) { Ok(()) },
+    fn(_context) {  },
     dependencies~,
   )
 }
@@ -61,10 +95,7 @@ fn test_tracking_command_spec(
     extension_id,
     js_namespace,
     [],
-    fn(_context) {
-      registered.push(extension_id)
-      Ok(())
-    },
+    fn(_context) { registered.push(extension_id) },
     dependencies~,
   )
 }
@@ -92,15 +123,13 @@ test "bridge frontend config reflects enabled command extension metadata" {
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
-  match build_bridge_frontend_config(manifest, command_extensions) {
-    Ok(config) => {
-      inspect(config.extensions.length(), content="1")
-      inspect(config.extensions[0].js_namespace, content="add")
-      assert_eq(config.extensions[0].apis, ["slowAdd"])
-      assert_eq(config.initialization_units, [])
-    }
-    Err(error) => fail(error)
-  }
+  let config = unwrap_configuration(() => {
+    build_bridge_frontend_config(manifest, command_extensions)
+  })
+  inspect(config.extensions.length(), content="1")
+  inspect(config.extensions[0].js_namespace, content="add")
+  assert_eq(config.extensions[0].apis, ["slowAdd"])
+  assert_eq(config.initialization_units, [])
 }
 
 ///|
@@ -113,21 +142,19 @@ test "bridge frontend config preserves initialization unit ownership" {
     extension_id,
     "scripts",
     [],
-    fn(_context) { Ok(()) },
+    fn(_context) {  },
     scripts=["globalThis.first = true;", "globalThis.second = true;"],
   )
-  match build_bridge_frontend_config(manifest, command_extensions) {
-    Err(error) => fail(error)
-    Ok(config) => {
-      inspect(config.initialization_units.length(), content="2")
-      inspect(config.initialization_units[0].owner, content="examples/scripts")
-      inspect(config.initialization_units[0].name, content="script-0")
-      inspect(
-        config.initialization_units[1].source,
-        content="globalThis.second = true;",
-      )
-    }
-  }
+  let config = unwrap_configuration(() => {
+    build_bridge_frontend_config(manifest, command_extensions)
+  })
+  inspect(config.initialization_units.length(), content="2")
+  inspect(config.initialization_units[0].owner, content="examples/scripts")
+  inspect(config.initialization_units[0].name, content="script-0")
+  inspect(
+    config.initialization_units[1].source,
+    content="globalThis.second = true;",
+  )
 }
 
 ///|
@@ -149,7 +176,7 @@ test "app run errors retain typed bridge diagnostics" {
     details_truncated: false,
   }
   let error = BridgeStartupError(diagnostic)
-  assert_true(app_run_error_text(error).contains("bridge_bootstrap_failed"))
+  assert_true(error.message().contains("bridge_bootstrap_failed"))
 }
 
 ///|
@@ -174,11 +201,14 @@ test "bridge startup timeout is finite and configurable" {
   inspect(default_app.bridge_startup_timeout_value_ms, content="30000")
   let configured = default_app.bridge_startup_timeout_ms(2500)
   inspect(configured.bridge_startup_timeout_value_ms, content="2500")
-  assert_eq(configured.validation_error(), None)
-  assert_eq(
-    configured.bridge_startup_timeout_ms(0).validation_error(),
-    Some("bridge startup timeout must be positive"),
-  )
+  assert_true(configured.validation_error() is None)
+  match configured.bridge_startup_timeout_ms(0).validation_error() {
+    Some(InvalidSetting(name~, message~)) => {
+      assert_eq(name, "bridge_startup_timeout_ms")
+      assert_eq(message, "must be positive")
+    }
+    _ => fail("expected invalid timeout setting")
+  }
 }
 
 ///|
@@ -300,53 +330,48 @@ test "frontend menu event transport preserves focused window" {
 
 ///|
 test "dev bridge page policy parses exact http origins" {
-  match url_origin("http://localhost:5173/app") {
-    Ok(origin) => assert_eq(origin, "http://localhost:5173")
-    Err(error) => fail(error)
-  }
-  match url_origin("https://localhost/app") {
-    Ok(origin) => assert_eq(origin, "https://localhost")
-    Err(error) => fail(error)
-  }
-  match url_origin("http://127.0.0.1:3000") {
-    Ok(origin) => assert_eq(origin, "http://127.0.0.1:3000")
-    Err(error) => fail(error)
-  }
-  match url_origin("http://[::1]:5173/app") {
-    Ok(origin) => assert_eq(origin, "http://[::1]:5173")
-    Err(error) => fail(error)
-  }
-  match url_origin("HTTP://LOCALHOST:80/app") {
-    Ok(origin) => assert_eq(origin, "http://localhost")
-    Err(error) => fail(error)
-  }
-  match url_origin("https://Example.COM:443/app") {
-    Ok(origin) => assert_eq(origin, "https://example.com")
-    Err(error) => fail(error)
-  }
-  match url_origin("http://LOCALHOST:05173/app") {
-    Ok(origin) => assert_eq(origin, "http://localhost:5173")
-    Err(error) => fail(error)
-  }
-  match url_origin("ftp://localhost:5173/app") {
-    Err(error) => assert_true(error.contains("http or https"))
-    Ok(_) => fail("expected non-http dev origin to fail")
-  }
-  match url_origin("http://local\"host:5173/app") {
-    Err(error) => assert_true(error.contains("invalid origin"))
-    Ok(_) => fail("expected quoted dev origin to fail")
-  }
-  match url_origin("http://local\\host:5173/app") {
-    Err(error) => assert_true(error.contains("invalid origin"))
-    Ok(_) => fail("expected backslash dev origin to fail")
-  }
-  match url_origin("http://localhost:/app") {
-    Err(error) => assert_true(error.contains("port must not be empty"))
-    Ok(_) => fail("expected empty dev origin port to fail")
-  }
-  match url_origin("http://[::1]5173/app") {
-    Err(error) => assert_true(error.contains("invalid IPv6 origin"))
-    Ok(_) => fail("expected invalid IPv6 dev origin to fail")
+  assert_eq(
+    unwrap_configuration(() => url_origin("http://localhost:5173/app")),
+    "http://localhost:5173",
+  )
+  assert_eq(
+    unwrap_configuration(() => url_origin("https://localhost/app")),
+    "https://localhost",
+  )
+  assert_eq(
+    unwrap_configuration(() => url_origin("http://127.0.0.1:3000")),
+    "http://127.0.0.1:3000",
+  )
+  assert_eq(
+    unwrap_configuration(() => url_origin("http://[::1]:5173/app")),
+    "http://[::1]:5173",
+  )
+  assert_eq(
+    unwrap_configuration(() => url_origin("HTTP://LOCALHOST:80/app")),
+    "http://localhost",
+  )
+  assert_eq(
+    unwrap_configuration(() => url_origin("https://Example.COM:443/app")),
+    "https://example.com",
+  )
+  assert_eq(
+    unwrap_configuration(() => url_origin("http://LOCALHOST:05173/app")),
+    "http://localhost:5173",
+  )
+  for
+    item in [
+      ("ftp://localhost:5173/app", "http or https"),
+      ("http://local\"host:5173/app", "invalid origin"),
+      ("http://local\\host:5173/app", "invalid origin"),
+      ("http://localhost:/app", "port must not be empty"),
+      ("http://[::1]5173/app", "invalid IPv6 origin"),
+    ] {
+    let (url, expected_reason) = item
+    match expect_configuration_error(() => url_origin(url)) {
+      InvalidDevelopmentUrl(reason~, ..) =>
+        assert_true(reason.contains(expected_reason))
+      error => fail(error.message())
+    }
   }
 }
 
@@ -359,13 +384,11 @@ test "bridge frontend config ignores disabled command extensions" {
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
-  match build_bridge_frontend_config(manifest, command_extensions) {
-    Ok(config) => {
-      assert_eq(config.extensions, [])
-      assert_eq(config.initialization_units, [])
-    }
-    Err(error) => fail(error)
-  }
+  let config = unwrap_configuration(() => {
+    build_bridge_frontend_config(manifest, command_extensions)
+  })
+  assert_eq(config.extensions, [])
+  assert_eq(config.initialization_units, [])
 }
 
 ///|
@@ -377,13 +400,11 @@ test "bridge frontend config can omit command extensions" {
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
-  match build_bridge_frontend_config(manifest, command_extensions) {
-    Ok(config) => {
-      inspect(config.extensions.length(), content="0")
-      assert_eq(config.initialization_units, [])
-    }
-    Err(error) => fail(error)
-  }
+  let config = unwrap_configuration(() => {
+    build_bridge_frontend_config(manifest, command_extensions)
+  })
+  inspect(config.extensions.length(), content="0")
+  assert_eq(config.initialization_units, [])
 }
 
 ///|
@@ -397,24 +418,22 @@ test "command host close runs extension destroy hooks once" {
     extension_id,
     "destroyTest",
     [@proton_command.AppCommandApiDescriptor::new("ping")],
-    fn(context) {
-      context.op("ping", fn(_payload : Unit) { "pong" })
-      Ok(())
-    },
+    fn(context) raise { context.op("ping", fn(_payload : Unit) { "pong" }) },
     on_destroy=fn(context) {
       if context.extension_id() == extension_id {
         destroyed.val = destroyed.val + 1
       }
     },
   )
-  match build_command_host(manifest, command_extensions, None) {
-    Ok(Some(host)) => {
-      close_command_host(Some(host))
+  match
+    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
+    Some(host) => {
+      unwrap_app_run(() => close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
-      close_command_host(Some(host))
+      unwrap_app_run(() => close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
     }
-    _ => fail("expected command host")
+    None => fail("expected command host")
   }
 }
 
@@ -425,17 +444,19 @@ test "core spec command wrapper destroys runtime core host" {
   let core_spec = @core.ExtensionSpec::new(extension_id, "coreDestroy", fn(
     _context,
   ) {
-    Ok(
-      @core.Extension::new(
-        extension_id,
-        "coreDestroy",
-        fn(extension) { extension.op("ping", fn(_payload : Unit) { "pong" }) },
-        on_destroy=fn(_extension) { destroyed.val = destroyed.val + 1 },
-      ),
+    @core.Extension::new(
+      extension_id,
+      "coreDestroy",
+      fn(extension) raise {
+        extension.op("ping", fn(_payload : Unit) { "pong" })
+      },
+      on_destroy=fn(_extension) { destroyed.val = destroyed.val + 1 },
     )
   })
-  let command_spec = match
-    @proton_extension.from_core_spec(core_spec).command_spec() {
+  let command_spec_option = @proton_extension.from_core_spec(core_spec).command_spec() catch {
+    error => abort(error.message())
+  }
+  let command_spec = match command_spec_option {
     Some(spec) => spec
     None => fail("expected command spec")
   }
@@ -444,9 +465,10 @@ test "core spec command wrapper destroys runtime core host" {
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
   command_extensions[extension_id] = command_spec
-  match build_command_host(manifest, command_extensions, None) {
-    Ok(Some(host)) => {
-      close_command_host(Some(host))
+  match
+    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
+    Some(host) => {
+      unwrap_app_run(() => close_command_host(Some(host)))
       assert_eq(destroyed.val, 2)
     }
     _ => fail("expected command host")
@@ -470,9 +492,10 @@ test "command host registers extension dependencies before dependents" {
   command_extensions[dependency_id] = test_tracking_command_spec(
     dependency_id, "base", registered,
   )
-  match build_command_host(manifest, command_extensions, None) {
-    Ok(Some(host)) => {
-      close_command_host(Some(host))
+  match
+    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
+    Some(host) => {
+      unwrap_app_run(() => close_command_host(Some(host)))
       @debug.assert_eq(registered, [dependency_id, extension_id])
     }
     _ => fail("expected command host")
@@ -492,12 +515,18 @@ test "command host rejects missing extension dependencies" {
     [],
     dependencies=[dependency_id],
   )
-  match build_command_host(manifest, command_extensions, None) {
-    Err(error) =>
-      assert_eq(
-        error, "command extension examples/feature requires missing dependency examples/base",
-      )
-    Ok(_) => fail("expected missing dependency error")
+  match
+    expect_app_run_error(() => {
+      build_command_host(manifest, command_extensions, None)
+    }) {
+    ConfigurationError(
+      ExtensionUnavailable(extension_id=missing_id, requested_by~, state~)
+    ) => {
+      assert_eq(missing_id, dependency_id)
+      assert_eq(requested_by, Some(extension_id))
+      assert_eq(state, "missing")
+    }
+    error => fail(error.message())
   }
 }
 
@@ -514,14 +543,12 @@ test "bridge frontend config rejects invalid namespace and API names" {
     "core",
     ["slowAdd"],
   )
-  match build_bridge_frontend_config(namespace_manifest, namespace_extensions) {
-    Err(error) =>
-      assert_true(
-        error.contains(
-          "command extension namespace cannot be exposed to JavaScript: core",
-        ),
-      )
-    Ok(_) => fail("expected invalid namespace to fail")
+  match
+    expect_configuration_error(() => {
+      build_bridge_frontend_config(namespace_manifest, namespace_extensions)
+    }) {
+    InvalidJavaScriptNamespace(js_namespace~) => assert_eq(js_namespace, "core")
+    error => fail(error.message())
   }
 
   let api_extension_id = "examples/bad-api"
@@ -533,14 +560,15 @@ test "bridge frontend config rejects invalid namespace and API names" {
     "add",
     ["__proto__"],
   )
-  match build_bridge_frontend_config(api_manifest, api_extensions) {
-    Err(error) =>
-      assert_true(
-        error.contains(
-          "command extension API cannot be exposed to JavaScript: add.__proto__",
-        ),
-      )
-    Ok(_) => fail("expected invalid API name to fail")
+  match
+    expect_configuration_error(() => {
+      build_bridge_frontend_config(api_manifest, api_extensions)
+    }) {
+    InvalidJavaScriptApi(js_namespace~, api_name~) => {
+      assert_eq(js_namespace, "add")
+      assert_eq(api_name, "__proto__")
+    }
+    error => fail(error.message())
   }
 }
 
@@ -623,10 +651,7 @@ test "default config API honors PROTON_CONFIG_PATH" {
   @env.unset_env_var("PROTON_MODE")
   let app = config("moon.proton")
   @debug.assert_eq(app.file_path, Some(config_path))
-  let resolved = match app.resolved_app_config() {
-    Ok(resolved) => resolved
-    Err(error) => abort(error)
-  }
+  let resolved = unwrap_configuration(() => app.resolved_app_config())
   assert_eq(resolved.manifest.window.title, "Dev Test")
 }
 
@@ -654,17 +679,15 @@ test "config API overrides manifest fields and keeps base dir" {
 
   @env.unset_env_var("PROTON_DEV")
   @env.unset_env_var("PROTON_MODE")
-  let resolved = match
+  let resolved = unwrap_configuration(() => {
     config(config_path)
     .title("Code Title")
     .size(width=640, height=480)
     .titlebar_style(TitlebarStyle::Overlay)
     .entry_html("<main>code</main>")
     .debug(enabled=false)
-    .resolved_app_config() {
-    Ok(resolved) => resolved
-    Err(error) => abort(error)
-  }
+    .resolved_app_config()
+  })
   let manifest = resolved.manifest
   assert_eq(manifest.window.title, "Code Title")
   assert_eq(manifest.window.width, 640)
@@ -697,10 +720,9 @@ test "dev manifest uses env override or frontend dev_url" {
 
   @env.set_env_var("PROTON_DEV", "1")
   @env.set_env_var("PROTON_FRONTEND_URL", "http://localhost:3000")
-  let override_manifest = match config(override_path).resolved_app_config() {
-    Ok(resolved) => resolved.manifest
-    Err(error) => abort(error)
-  }
+  let override_manifest = unwrap_configuration(() => {
+      config(override_path).resolved_app_config()
+    }).manifest
   match override_manifest.entry {
     @manifest.AppEntry::Url(url) =>
       inspect(url, content="http://localhost:3000")
@@ -710,10 +732,9 @@ test "dev manifest uses env override or frontend dev_url" {
   let config_path = "target/proton-facade-dev/config-dev-url.moon.proton"
   write_facade_dev_config(config_path, dev_url="http://localhost:5173")
   @env.unset_env_var("PROTON_FRONTEND_URL")
-  let config_manifest = match config(config_path).resolved_app_config() {
-    Ok(resolved) => resolved.manifest
-    Err(error) => abort(error)
-  }
+  let config_manifest = unwrap_configuration(() => {
+      config(config_path).resolved_app_config()
+    }).manifest
   match config_manifest.entry {
     @manifest.AppEntry::Url(url) =>
       inspect(url, content="http://localhost:5173")

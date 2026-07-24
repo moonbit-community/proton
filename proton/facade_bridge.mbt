@@ -3,17 +3,19 @@ fn build_command_host(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
-) -> Result[CommandHostRuntime?, String] {
+) -> CommandHostRuntime? raise AppRunError {
   let host = @core.AppCommandHost::new()
-  let destroy_hooks : Array[() -> Unit] = []
+  let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let mut has_commands = false
-  let ordered_ids = match
-    enabled_command_extension_order(manifest, command_extensions) {
-    Err(error) => {
-      close_command_host_runtime(host, destroy_hooks)
-      return Err(error)
+  let ordered_ids = enabled_command_extension_order(
+    manifest, command_extensions,
+  ) catch {
+    error => {
+      close_command_host_runtime(host, destroy_hooks) catch {
+        _ => ()
+      }
+      raise ConfigurationError(error)
     }
-    Ok(ids) => ids
   }
   for id in ordered_ids {
     let spec = command_extensions[id]
@@ -25,34 +27,51 @@ fn build_command_host(
       options=setting.options(),
       base_dir~,
     )
-    match spec.register(context) {
-      Err(error) => {
-        close_command_host_runtime(host, destroy_hooks)
-        return Err(error)
-      }
-      Ok(_) => {
-        has_commands = true
-        destroy_hooks.push(fn() { spec.destroy(context) })
+    spec.register(context) catch {
+      error => {
+        close_command_host_runtime(host, destroy_hooks) catch {
+          _ => ()
+        }
+        raise CommandExtensionLifecycleError(
+          RegistrationFailed(
+            extension_id=id,
+            detail=@debug.render(@debug.to_repr(error)),
+          ),
+        )
       }
     }
+    has_commands = true
+    destroy_hooks.push(CommandExtensionDestroyHook::{
+      extension_id: id,
+      callback: fn() raise { spec.destroy(context) },
+    })
   }
   if has_commands {
     host.seal_registrations()
-    Ok(Some(CommandHostRuntime::{ host, destroy_hooks, closed: false }))
+    Some(CommandHostRuntime::{ host, destroy_hooks, closed: false })
   } else {
     close_command_host_runtime(host, destroy_hooks)
-    Ok(None)
+    None
   }
 }
 
 ///|
 fn close_command_host_runtime(
   host : @core.AppCommandHost,
-  destroy_hooks : Array[() -> Unit],
-) -> Unit {
+  destroy_hooks : Array[CommandExtensionDestroyHook],
+) -> Unit raise AppRunError {
   let hook_count = destroy_hooks.length()
   for index in 0..<hook_count {
-    destroy_hooks[hook_count - index - 1]()
+    let hook = destroy_hooks[hook_count - index - 1]
+    (hook.callback)() catch {
+      error =>
+        raise CommandExtensionLifecycleError(
+          DestroyFailed(
+            extension_id=hook.extension_id,
+            detail=@debug.render(@debug.to_repr(error)),
+          ),
+        )
+    }
   }
   host.close()
 }
@@ -61,29 +80,25 @@ fn close_command_host_runtime(
 fn enabled_command_extension_order(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-) -> Result[Array[String], String] {
+) -> Array[String] raise AppConfigurationError {
   let visit_state : Map[String, Int] = Map([])
   let ordered : Array[String] = []
   for id, _spec in command_extensions {
     match manifest.extension_setting(id) {
       Some(setting) if setting.is_enabled() =>
-        match
-          visit_enabled_command_extension(
-            id,
-            None,
-            manifest,
-            command_extensions,
-            visit_state,
-            ordered,
-          ) {
-          Err(error) => return Err(error)
-          Ok(_) => ()
-        }
+        visit_enabled_command_extension(
+          id,
+          None,
+          manifest,
+          command_extensions,
+          visit_state,
+          ordered,
+        )
       None => ()
       _ => ()
     }
   }
-  Ok(ordered)
+  ordered
 }
 
 ///|
@@ -94,38 +109,28 @@ fn visit_enabled_command_extension(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   visit_state : Map[String, Int],
   ordered : Array[String],
-) -> Result[Unit, String] {
+) -> Unit raise AppConfigurationError {
   match visit_state.get(id) {
-    Some(2) => return Ok(())
-    Some(1) =>
-      return Err("command extension dependency cycle detected at: " + id)
+    Some(2) => return
+    Some(1) => raise ExtensionDependencyCycle(extension_id=id)
     _ => ()
   }
-  let spec = match
-    require_enabled_command_extension(
-      id, requested_by, manifest, command_extensions,
-    ) {
-    Err(error) => return Err(error)
-    Ok(spec) => spec
-  }
+  let spec = require_enabled_command_extension(
+    id, requested_by, manifest, command_extensions,
+  )
   visit_state[id] = 1
   for dependency in spec.dependencies() {
-    match
-      visit_enabled_command_extension(
-        dependency,
-        Some(id),
-        manifest,
-        command_extensions,
-        visit_state,
-        ordered,
-      ) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    visit_enabled_command_extension(
+      dependency,
+      Some(id),
+      manifest,
+      command_extensions,
+      visit_state,
+      ordered,
+    )
   }
   visit_state[id] = 2
   ordered.push(id)
-  Ok(())
 }
 
 ///|
@@ -134,35 +139,30 @@ fn require_enabled_command_extension(
   requested_by : String?,
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-) -> Result[@proton_command.AppCommandExtensionSpec, String] {
+) -> @proton_command.AppCommandExtensionSpec raise AppConfigurationError {
   match manifest.extension_setting(id) {
     Some(setting) if setting.is_enabled() => ()
     Some(_) =>
-      return Err(
-        command_extension_dependency_error(id, requested_by, "disabled"),
+      raise ExtensionUnavailable(
+        extension_id=id,
+        requested_by~,
+        state="disabled",
       )
     None =>
-      return Err(
-        command_extension_dependency_error(id, requested_by, "missing"),
+      raise ExtensionUnavailable(
+        extension_id=id,
+        requested_by~,
+        state="missing",
       )
   }
   match command_extensions.get(id) {
-    Some(spec) => Ok(spec)
+    Some(spec) => spec
     None =>
-      Err(command_extension_dependency_error(id, requested_by, "unregistered"))
-  }
-}
-
-///|
-fn command_extension_dependency_error(
-  id : String,
-  requested_by : String?,
-  state : String,
-) -> String {
-  match requested_by {
-    Some(parent) =>
-      "command extension " + parent + " requires " + state + " dependency " + id
-    None => "enabled command extension is " + state + ": " + id
+      raise ExtensionUnavailable(
+        extension_id=id,
+        requested_by~,
+        state="unregistered",
+      )
   }
 }
 
@@ -170,33 +170,23 @@ fn command_extension_dependency_error(
 fn build_bridge_frontend_config(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-) -> Result[BridgeFrontendConfig, String] {
+) -> BridgeFrontendConfig raise AppConfigurationError {
   let extensions : Array[@native.BridgeExtensionConfig] = []
   let initialization_units : Array[@native.BridgeInitializationUnit] = []
-  let ordered_ids = match
-    enabled_command_extension_order(manifest, command_extensions) {
-    Err(error) => return Err(error)
-    Ok(ids) => ids
-  }
+  let ordered_ids = enabled_command_extension_order(
+    manifest, command_extensions,
+  )
   for id in ordered_ids {
     let spec = command_extensions[id]
     let js_namespace = spec.js_namespace()
     if command_proxy_name_is_invalid(js_namespace) {
-      return Err(
-        "command extension namespace cannot be exposed to JavaScript: " +
-        js_namespace,
-      )
+      raise InvalidJavaScriptNamespace(js_namespace~)
     }
     let apis : Array[String] = []
     for api in spec.apis() {
       let api_name = api.api_name()
       if command_proxy_name_is_invalid(api_name) {
-        return Err(
-          "command extension API cannot be exposed to JavaScript: " +
-          js_namespace +
-          "." +
-          api_name,
-        )
+        raise InvalidJavaScriptApi(js_namespace~, api_name~)
       }
       apis.push(api_name)
     }
@@ -212,7 +202,7 @@ fn build_bridge_frontend_config(
       )
     }
   }
-  Ok(BridgeFrontendConfig::{ extensions, initialization_units })
+  BridgeFrontendConfig::{ extensions, initialization_units }
 }
 
 ///|
@@ -236,23 +226,23 @@ fn forward_menu_command(
   window : @native.Window,
   command_id : String,
   focused_window : Int64?,
-) -> Unit {
+) -> Unit raise AppRunError {
   let fields : Map[String, Json] = { "command_id": Json::string(command_id) }
   match focused_window {
     Some(window) => fields["window"] = Json::string(window.to_string())
     None => ()
   }
-  ignore(
-    window.emit_bridge_event_json(
-      bridge_event_json(
-        "frontend",
-        "menu.command",
-        Json::object(fields),
-        None,
-        None,
-      ),
+  window.emit_bridge_event_json(
+    bridge_event_json(
+      "frontend",
+      "menu.command",
+      Json::object(fields),
+      None,
+      None,
     ),
-  )
+  ) catch {
+    error => raise native_run_error("forward menu command", error)
+  }
 }
 
 ///|
@@ -284,19 +274,19 @@ fn bridge_event_json(
 fn extension_event_sender(
   window : @native.Window,
   page_instance : String?,
-) -> async (@ipc.IpcExtensionEvent) -> Unit {
+) -> async (@ipc.IpcExtensionEvent) -> Unit noraise {
   fn(event) {
-    ignore(
-      window.emit_bridge_event_json(
-        bridge_event_json(
-          "extension",
-          event.event_name,
-          event.payload,
-          Some(event.extension_namespace),
-          page_instance,
-        ),
+    window.emit_bridge_event_json(
+      bridge_event_json(
+        "extension",
+        event.event_name,
+        event.payload,
+        Some(event.extension_namespace),
+        page_instance,
       ),
-    )
+    ) catch {
+      _ => ()
+    }
   }
 }
 
@@ -352,36 +342,37 @@ fn default_bridge_page_policy() -> BridgePagePolicy {
 ///|
 fn bridge_page_policy_for_manifest(
   manifest : @manifest.AppManifest,
-) -> Result[BridgePagePolicy, String] {
+) -> BridgePagePolicy raise AppConfigurationError {
   if !proton_dev_mode_enabled() {
-    return Ok(default_bridge_page_policy())
+    return default_bridge_page_policy()
   }
   match manifest.entry {
     @manifest.AppEntry::Url(url) =>
-      url_origin(url).map(fn(origin) {
-        BridgePagePolicy::{
-          dev_origin: Some(origin),
-          request_timeout_ms: 30000,
-        }
-      })
-    _ => Ok(default_bridge_page_policy())
+      BridgePagePolicy::{
+        dev_origin: Some(url_origin(url)),
+        request_timeout_ms: 30000,
+      }
+    _ => default_bridge_page_policy()
   }
 }
 
 ///|
-fn url_origin(url : String) -> Result[String, String] {
+fn url_origin(url : String) -> String raise AppConfigurationError {
   let (scheme_view, rest_view) = match url.split_once("://") {
     Some(parts) => parts
     None =>
-      return Err("dev bridge URL must include http:// or https://: " + url)
+      raise InvalidDevelopmentUrl(
+        url~,
+        reason="URL must include http:// or https://",
+      )
   }
   let scheme = scheme_view.to_owned().to_lower()
   if scheme != "http" && scheme != "https" {
-    return Err("dev bridge URL must use http or https: " + url)
+    raise InvalidDevelopmentUrl(url~, reason="URL must use http or https")
   }
   let rest = rest_view.to_owned()
   if rest == "" {
-    return Err("dev bridge URL is missing host: " + url)
+    raise InvalidDevelopmentUrl(url~, reason="URL is missing a host")
   }
   let mut end = rest.length()
   for delimiter in ["/", "?", "#"] {
@@ -391,15 +382,13 @@ fn url_origin(url : String) -> Result[String, String] {
     }
   }
   if end == 0 {
-    return Err("dev bridge URL is missing host: " + url)
+    raise InvalidDevelopmentUrl(url~, reason="URL is missing a host")
   }
   let authority = rest.unsafe_substring(start=0, end~).to_string()
   if !dev_origin_authority_is_valid(authority) {
-    return Err("dev bridge URL has invalid origin: " + url)
+    raise InvalidDevelopmentUrl(url~, reason="URL has an invalid origin")
   }
-  canonical_dev_origin_authority(authority, scheme).map(fn(authority) {
-    scheme + "://" + authority
-  })
+  scheme + "://" + canonical_dev_origin_authority(authority, scheme, url)
 }
 
 ///|
@@ -426,47 +415,67 @@ fn dev_origin_authority_is_valid(authority : String) -> Bool {
 fn canonical_dev_origin_authority(
   authority : String,
   scheme : String,
-) -> Result[String, String] {
+  source_url : String,
+) -> String raise AppConfigurationError {
   if authority.has_prefix("[") {
     let (host_part, suffix) = match authority.split_once("]") {
       Some(parts) => parts
-      None => return Err("dev bridge URL has invalid IPv6 origin: " + authority)
+      None =>
+        raise InvalidDevelopmentUrl(
+          url=source_url,
+          reason="URL has an invalid IPv6 origin",
+        )
     }
     let host_text = host_part.to_owned()
     let host = host_text
       .unsafe_substring(start=1, end=host_text.length())
       .to_string()
     if host == "" {
-      return Err("dev bridge URL host must not be empty")
+      raise InvalidDevelopmentUrl(
+        url=source_url,
+        reason="URL host must not be empty",
+      )
     }
     if suffix != "" && !suffix.has_prefix(":") {
-      return Err("dev bridge URL has invalid IPv6 origin: " + authority)
+      raise InvalidDevelopmentUrl(
+        url=source_url,
+        reason="URL has an invalid IPv6 origin",
+      )
     }
-    canonical_dev_origin_port_suffix(suffix.to_owned(), scheme).map(fn(port) {
-      "[" + host.to_lower() + "]" + port
-    })
+    "[" +
+    host.to_lower() +
+    "]" +
+    canonical_dev_origin_port_suffix(suffix.to_owned(), scheme, source_url)
   } else {
     let first_colon = authority.find(":")
     let last_colon = authority.rev_find(":")
     if first_colon != last_colon {
-      return Err("dev bridge IPv6 origins must use brackets: " + authority)
+      raise InvalidDevelopmentUrl(
+        url=source_url,
+        reason="IPv6 origins must use brackets",
+      )
     }
     match first_colon {
-      None => Ok(authority.to_lower())
+      None => authority.to_lower()
       Some(index) => {
         let host = authority.unsafe_substring(start=0, end=index).to_string()
         let port = authority
           .unsafe_substring(start=index + 1, end=authority.length())
           .to_string()
         if host == "" {
-          return Err("dev bridge URL host must not be empty")
+          raise InvalidDevelopmentUrl(
+            url=source_url,
+            reason="URL host must not be empty",
+          )
         }
         if port == "" {
-          return Err("dev bridge URL port must not be empty")
+          raise InvalidDevelopmentUrl(
+            url=source_url,
+            reason="URL port must not be empty",
+          )
         }
-        canonical_dev_origin_port_suffix(port, scheme).map(fn(port) {
-          host.to_lower() + port
-        })
+        host.to_lower() +
+        canonical_dev_origin_port_suffix(port, scheme, source_url)
       }
     }
   }
@@ -476,25 +485,36 @@ fn canonical_dev_origin_authority(
 fn canonical_dev_origin_port_suffix(
   port : String,
   scheme : String,
-) -> Result[String, String] {
+  source_url : String,
+) -> String raise AppConfigurationError {
   if port == "" {
-    return Ok("")
+    return ""
   }
   let text = if port.has_prefix(":") { port[1:].to_owned() } else { port }
   if text == "" {
-    return Err("dev bridge URL port must not be empty")
+    raise InvalidDevelopmentUrl(
+      url=source_url,
+      reason="URL port must not be empty",
+    )
   }
   let value = @string.parse_int(text[:]) catch {
-    _ => return Err("dev bridge URL port must be an integer: " + text)
+    _ =>
+      raise InvalidDevelopmentUrl(
+        url=source_url,
+        reason="URL port must be an integer: " + text,
+      )
   }
   if value <= 0 || value > 65535 {
-    return Err("dev bridge URL port is out of range: " + text)
+    raise InvalidDevelopmentUrl(
+      url=source_url,
+      reason="URL port is out of range: " + text,
+    )
   }
   let default_port = if scheme == "http" { 80 } else { 443 }
   if value == default_port {
-    Ok("")
+    ""
   } else {
-    Ok(":" + value.to_string())
+    ":" + value.to_string()
   }
 }
 

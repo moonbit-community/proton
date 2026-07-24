@@ -5,7 +5,7 @@
 pub async fn emit_tray_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : TrayActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -13,7 +13,7 @@ pub async fn emit_tray_activity(
 pub async fn emit_tray_click_event(
   context : @proton_command.AppCommandExtensionContext,
   payload : TrayClickEvent,
-) -> Unit {
+) -> Unit noraise {
   context.emit("click", payload)
 }
 
@@ -21,7 +21,7 @@ pub async fn emit_tray_click_event(
 pub async fn emit_tray_right_click_event(
   context : @proton_command.AppCommandExtensionContext,
   payload : TrayRightClickEvent,
-) -> Unit {
+) -> Unit noraise {
   context.emit("rightClick", payload)
 }
 
@@ -29,7 +29,7 @@ pub async fn emit_tray_right_click_event(
 pub async fn emit_tray_double_click_event(
   context : @proton_command.AppCommandExtensionContext,
   payload : TrayDoubleClickEvent,
-) -> Unit {
+) -> Unit noraise {
   context.emit("doubleClick", payload)
 }
 
@@ -37,7 +37,7 @@ pub async fn emit_tray_double_click_event(
 pub async fn emit_tray_menu_item_click_event(
   context : @proton_command.AppCommandExtensionContext,
   payload : TrayMenuItemClickEvent,
-) -> Unit {
+) -> Unit noraise {
   context.emit("menuItemClick", payload)
 }
 
@@ -62,7 +62,7 @@ struct ProtonShowPayload {
 async fn __proton_command_show(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonShowPayload,
-) -> Result[TrayReply, String] {
+) -> TrayReply raise TrayError {
   show(context, payload.icon, payload.tooltip, payload.menu)
 }
 
@@ -75,7 +75,7 @@ struct ProtonHidePayload {
 async fn __proton_command_hide(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonHidePayload,
-) -> Result[TrayReply, String] {
+) -> TrayReply raise TrayError {
   hide(context, payload._payload)
 }
 
@@ -88,7 +88,7 @@ struct ProtonSetIconPayload {
 async fn __proton_command_set_icon(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonSetIconPayload,
-) -> Result[TrayReply, String] {
+) -> TrayReply raise TrayError {
   set_icon(context, payload.icon)
 }
 
@@ -101,7 +101,7 @@ struct ProtonSetTooltipPayload {
 async fn __proton_command_set_tooltip(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonSetTooltipPayload,
-) -> Result[TrayReply, String] {
+) -> TrayReply raise TrayError {
   set_tooltip(context, payload.tooltip)
 }
 
@@ -114,7 +114,7 @@ struct ProtonSetMenuPayload {
 async fn __proton_command_set_menu(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonSetMenuPayload,
-) -> Result[TrayReply, String] {
+) -> TrayReply raise TrayError {
   set_menu(context, payload.items)
 }
 
@@ -127,7 +127,7 @@ struct ProtonDrainEventsPayload {
 async fn __proton_command_drain_events(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonDrainEventsPayload,
-) -> Result[TrayEventReply, String] {
+) -> TrayEventReply raise TrayError {
   drain_events(context, payload._payload)
 }
 
@@ -140,7 +140,7 @@ struct ProtonDestroyPayload {
 async fn __proton_command_destroy(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonDestroyPayload,
-) -> Result[TrayReply, String] {
+) -> TrayReply {
   destroy(context, payload._payload)
 }
 
@@ -164,30 +164,29 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("drainEvents"),
       @proton_command.AppCommandApiDescriptor::new("destroy"),
     ],
-    fn(context) {
+    fn(context) raise {
       context.op("support", __proton_command_support)
-      context.op_async_result("show", async fn(payload) {
+      context.op_async("show", async fn(payload) {
         __proton_command_show(context, payload)
       }, emits_events=true)
-      context.op_async_result("hide", async fn(payload) {
+      context.op_async("hide", async fn(payload) {
         __proton_command_hide(context, payload)
       }, emits_events=true)
-      context.op_async_result("setIcon", async fn(payload) {
+      context.op_async("setIcon", async fn(payload) {
         __proton_command_set_icon(context, payload)
       }, emits_events=true)
-      context.op_async_result("setTooltip", async fn(payload) {
+      context.op_async("setTooltip", async fn(payload) {
         __proton_command_set_tooltip(context, payload)
       }, emits_events=true)
-      context.op_async_result("setMenu", async fn(payload) {
+      context.op_async("setMenu", async fn(payload) {
         __proton_command_set_menu(context, payload)
       }, emits_events=true)
-      context.op_async_result("drainEvents", async fn(payload) {
+      context.op_async("drainEvents", async fn(payload) {
         __proton_command_drain_events(context, payload)
       }, emits_events=true)
-      context.op_async_result("destroy", async fn(payload) {
+      context.op_async("destroy", async fn(payload) {
         __proton_command_destroy(context, payload)
       }, emits_events=true)
-      Ok(())
     },
     scripts=[
       tray_event_poller_script(),

@@ -9,19 +9,20 @@ import {
 }
 
 // Values
-pub async fn emit_tray_activity(@command.AppCommandExtensionContext, TrayActivity) -> Unit
+pub async fn emit_tray_activity(@command.AppCommandExtensionContext, TrayActivity) -> Unit noraise
 
-pub async fn emit_tray_click_event(@command.AppCommandExtensionContext, TrayClickEvent) -> Unit
+pub async fn emit_tray_click_event(@command.AppCommandExtensionContext, TrayClickEvent) -> Unit noraise
 
-pub async fn emit_tray_double_click_event(@command.AppCommandExtensionContext, TrayDoubleClickEvent) -> Unit
+pub async fn emit_tray_double_click_event(@command.AppCommandExtensionContext, TrayDoubleClickEvent) -> Unit noraise
 
-pub async fn emit_tray_menu_item_click_event(@command.AppCommandExtensionContext, TrayMenuItemClickEvent) -> Unit
+pub async fn emit_tray_menu_item_click_event(@command.AppCommandExtensionContext, TrayMenuItemClickEvent) -> Unit noraise
 
-pub async fn emit_tray_right_click_event(@command.AppCommandExtensionContext, TrayRightClickEvent) -> Unit
+pub async fn emit_tray_right_click_event(@command.AppCommandExtensionContext, TrayRightClickEvent) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type TrayError derive(Eq, @debug.Debug)
 
 // Types and methods
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)

@@ -2,21 +2,87 @@
 package "justjavac/proton_cli/package"
 
 import {
+  "justjavac/proton_config",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn run(String, Array[String]) -> Result[Unit, PackageError]
+pub async fn run(String, Array[String]) -> Unit
 
 // Errors
+pub(all) suberror MacosSigningError {
+  InvalidConfiguration(detail~ : String)
+  MissingTarget(path~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+  Verification(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn MacosSigningError::message(Self) -> String
+
+pub(all) suberror PackageConfigError {
+  NotFound(path~ : String)
+  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  BundleInactive
+  BundleMissing
+  MissingField(field~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageConfigError::message(Self) -> String
+
+pub(all) suberror PackageFileSystemError {
+  CreateDirectory(path~ : String, detail~ : String)
+  Remove(path~ : String, detail~ : String)
+  Copy(source~ : String, destination~ : String, detail~ : String)
+  Read(path~ : String, detail~ : String)
+  Write(path~ : String, detail~ : String)
+  InvalidSource(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageFileSystemError::message(Self) -> String
+
+pub(all) suberror PackagePlanError {
+  InvalidProductName(reason~ : String)
+  InvalidIdentifier(identifier~ : String, reason~ : String)
+  InvalidVersion(version~ : String, reason~ : String)
+  UnsupportedPlatform
+  UnsupportedResourceGlob(path~ : String)
+  MissingInput(path~ : String)
+  MissingExecutable(path~ : String)
+  InputOutsideProject(path~ : String)
+  MissingIcon(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackagePlanError::message(Self) -> String
+
+pub(all) suberror PackageRuntimeError {
+  ManifestMissing(path~ : String)
+  ManifestInvalid(path~ : String, detail~ : String)
+  ManifestField(path~ : String, field~ : String)
+  PlatformMismatch(expected~ : String, actual~ : String)
+  DirectoryMissing(path~ : String)
+  HelperMissing(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageRuntimeError::message(Self) -> String
+
+pub(all) suberror PackageToolError {
+  Start(tool~ : String, detail~ : String)
+  Exit(tool~ : String, code~ : Int, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageToolError::message(Self) -> String
+
+pub(all) suberror PackageUsageError {
+  InvalidArguments(message~ : String, usage_is_embedded~ : Bool)
+  UnsupportedTarget(target~ : String)
+  MissingOptionValue(option~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageUsageError::message(Self) -> String
+
+pub(all) suberror WindowsPackagingError {
+  InvalidConfiguration(detail~ : String)
+  MissingTarget(path~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+  Verification(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn WindowsPackagingError::message(Self) -> String
 
 // Types and methods
 type MacosCodeSignTarget derive(Eq, @debug.Debug)
-
-pub(all) enum PackageError {
-  UsageError(String, Bool)
-  CommandError(String)
-} derive(@debug.Debug)
 
 type PackagePlan derive(Eq, @debug.Debug)
 

@@ -1,26 +1,13 @@
 ///|
-fn file_dialog_result_path(result : Result[FileDialogReply, String]) -> String? {
-  match result {
-    Ok(reply) => reply.path
-    Err(_) => None
-  }
-}
-
-///|
 async fn[Reply] emit_command_result(
   context : @proton_command.AppCommandExtensionContext,
-  result : Result[Reply, String],
+  reply : Reply,
   operation : String,
   path? : String? = None,
   level? : String? = None,
-) -> Result[Reply, String] {
-  match result {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_dialog_activity(context, { operation, path, level })
-      Ok(reply)
-    }
-  }
+) -> Reply noraise {
+  emit_dialog_activity(context, { operation, path, level })
+  reply
 }
 
 ///|
@@ -32,7 +19,7 @@ async fn message(
   message : String,
   title : String?,
   level : String?,
-) -> Result[MessageReply, String] {
+) -> MessageReply {
   let payload = MessagePayload::{ message, title, level }
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
   emit_command_result(
@@ -52,7 +39,7 @@ async fn confirm(
   message : String,
   title : String?,
   level : String?,
-) -> Result[ConfirmReply, String] {
+) -> ConfirmReply {
   let payload = MessagePayload::{ message, title, level }
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
   emit_command_result(
@@ -71,12 +58,11 @@ async fn open_file(
   request_context : @proton_command.AppCommandRequestContext,
   title : String?,
   path : String?,
-) -> Result[FileDialogReply, String] {
+) -> FileDialogReply {
   let payload = FileDialogPayload::{ title, path }
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
-  let result = open_file_dialog(request_context, window, payload)
-  let path = file_dialog_result_path(result)
-  emit_command_result(context, result, "openFile", path~)
+  let reply = open_file_dialog(request_context, window, payload)
+  emit_command_result(context, reply, "openFile", path=reply.path)
 }
 
 ///|
@@ -87,12 +73,11 @@ async fn save_file(
   request_context : @proton_command.AppCommandRequestContext,
   title : String?,
   path : String?,
-) -> Result[FileDialogReply, String] {
+) -> FileDialogReply {
   let payload = FileDialogPayload::{ title, path }
   let window = @native.WindowRef::unsafe_from_handle(request_context.window())
-  let result = save_file_dialog(request_context, window, payload)
-  let path = file_dialog_result_path(result)
-  emit_command_result(context, result, "saveFile", path~)
+  let reply = save_file_dialog(request_context, window, payload)
+  emit_command_result(context, reply, "saveFile", path=reply.path)
 }
 
 ///|

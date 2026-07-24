@@ -36,7 +36,7 @@ async fn prompt_bool(label : String, default : Bool) -> Bool {
 async fn prompt_new_project_options(
   raw : RawNewProjectOptions,
   defaults : NewProjectOptions,
-) -> Result[NewProjectOptions, String] {
+) -> NewProjectOptions {
   let target_dir = prompt_text("Project directory", defaults.target_dir)
   let slug = project_slug(defaults.cwd, target_dir)
   let title_default = raw.title.unwrap_or(slug_to_title(slug))
@@ -53,14 +53,8 @@ async fn prompt_new_project_options(
     "Run moon check after creation",
     defaults.run_check,
   )
-  let width = match parse_positive_int(width_text, "width") {
-    Ok(value) => value
-    Err(message) => return Err(message)
-  }
-  let height = match parse_positive_int(height_text, "height") {
-    Ok(value) => value
-    Err(message) => return Err(message)
-  }
+  let width = parse_positive_int(width_text, "width")
+  let height = parse_positive_int(height_text, "height")
   let next = NewProjectOptions::{
     ..defaults,
     target_dir,

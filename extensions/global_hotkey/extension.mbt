@@ -16,24 +16,19 @@ async fn emit_command_activity(
   context : @proton_command.AppCommandExtensionContext,
   operation : String,
   accelerator : String,
-) -> Unit {
+) -> Unit noraise {
   emit_global_hotkey_activity(context, { operation, accelerator })
 }
 
 ///|
 async fn[Reply] emit_command_result(
   context : @proton_command.AppCommandExtensionContext,
-  result : Result[Reply, String],
+  reply : Reply,
   operation : String,
   accelerator : String,
-) -> Result[Reply, String] {
-  match result {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_command_activity(context, operation, accelerator)
-      Ok(reply)
-    }
-  }
+) -> Reply noraise {
+  emit_command_activity(context, operation, accelerator)
+  reply
 }
 
 ///|
@@ -62,7 +57,7 @@ fn trigger_poller_script() -> String {
 async fn register(
   context : @proton_command.AppCommandExtensionContext,
   accelerator : String,
-) -> Result[GlobalHotkeyReply, String] {
+) -> GlobalHotkeyReply raise GlobalHotkeyError {
   emit_command_result(
     context,
     register_hotkey(app_command_manager_handle(), accelerator),
@@ -77,7 +72,7 @@ async fn register(
 async fn unregister(
   context : @proton_command.AppCommandExtensionContext,
   accelerator : String,
-) -> Result[GlobalHotkeyReply, String] {
+) -> GlobalHotkeyReply raise GlobalHotkeyError {
   emit_command_result(
     context,
     unregister_hotkey(app_command_manager_handle(), accelerator),
@@ -89,7 +84,9 @@ async fn unregister(
 ///|
 /// Lists registered global hotkeys from a generated app-command extension.
 #proton.command(name="list")
-fn list(_payload : EmptyPayload?) -> GlobalHotkeyListReply {
+fn list(
+  _payload : EmptyPayload?,
+) -> GlobalHotkeyListReply raise GlobalHotkeyError {
   list_hotkeys(app_command_manager_handle())
 }
 
@@ -99,7 +96,7 @@ fn list(_payload : EmptyPayload?) -> GlobalHotkeyListReply {
 async fn drain_triggered(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> GlobalHotkeyListReply {
+) -> GlobalHotkeyListReply raise GlobalHotkeyError {
   let reply = drain_triggered_hotkeys(app_command_manager_handle())
   for accelerator in reply.accelerators {
     emit_global_hotkey_triggered(context, { accelerator, })

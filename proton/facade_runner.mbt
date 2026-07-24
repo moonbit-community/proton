@@ -25,16 +25,16 @@ pub fn run(main : async () -> Unit) -> Unit {
   }
   app_main.val = Some(main)
   let entry : FuncRef[() -> Unit] = fn() { app_thread_entry() }
-  let result = @native.run_app(entry)
-  app_main.val = None
-  match result {
-    Ok(_) => ()
-    Err(error) =>
+  @native.run_app(entry) catch {
+    error => {
+      app_main.val = None
       abort(
         "run Proton application failed: native error " +
-        error.status.to_string() +
+        error.status().to_string() +
         ": " +
-        error.message,
+        error.message(),
       )
+    }
   }
+  app_main.val = None
 }

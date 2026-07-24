@@ -43,16 +43,10 @@ fn platform_label(platform : @sys_auto_launch.Platform) -> String {
 }
 
 ///|
-/// Converts package errors into strings that can travel over op_result.
-fn auto_launch_error(error : @sys_auto_launch.AutoLaunchError) -> String {
-  error.to_string()
-}
-
-///|
 /// Builds one launcher from JavaScript payload data.
 fn build_launcher(
   payload : AutoLaunchPayload,
-) -> Result[@sys_auto_launch.AutoLaunch, String] {
+) -> @sys_auto_launch.AutoLaunch raise AutoLaunchError {
   let launch_in_background = match payload.launch_in_background {
     Some(value) => value
     None => false
@@ -99,7 +93,10 @@ fn build_launcher(
         extra_arguments~,
       )
   }
-  launcher.map_err(auto_launch_error)
+  match launcher {
+    Ok(launcher) => launcher
+    Err(error) => raise InvalidConfiguration(detail=error.to_string())
+  }
 }
 
 ///|
@@ -142,38 +139,51 @@ fn auto_launch_support() -> SupportReply {
 ///|
 fn describe_auto_launch(
   payload : AutoLaunchPayload,
-) -> Result[AutoLaunchReply, String] {
-  build_launcher(payload).map(launcher_reply)
+) -> AutoLaunchReply raise AutoLaunchError {
+  launcher_reply(build_launcher(payload))
 }
 
 ///|
 fn is_auto_launch_enabled(
   payload : AutoLaunchPayload,
-) -> Result[EnabledReply, String] {
-  build_launcher(payload).bind(fn(launcher) {
-    launcher
-    .is_enabled()
-    .map_err(auto_launch_error)
-    .map(fn(enabled) { EnabledReply::{ enabled, } })
-  })
+) -> EnabledReply raise AutoLaunchError {
+  let launcher = build_launcher(payload)
+  match launcher.is_enabled() {
+    Ok(enabled) => EnabledReply::{ enabled, }
+    Err(error) =>
+      raise QueryFailed(
+        identifier=launcher.identifier(),
+        detail=error.to_string(),
+      )
+  }
 }
 
 ///|
-fn enable_auto_launch(payload : AutoLaunchPayload) -> Result[String, String] {
-  build_launcher(payload).bind(fn(launcher) {
-    launcher
-    .enable()
-    .map_err(auto_launch_error)
-    .map(fn(_) { launcher.identifier() })
-  })
+fn enable_auto_launch(
+  payload : AutoLaunchPayload,
+) -> String raise AutoLaunchError {
+  let launcher = build_launcher(payload)
+  match launcher.enable() {
+    Ok(_) => launcher.identifier()
+    Err(error) =>
+      raise EnableFailed(
+        identifier=launcher.identifier(),
+        detail=error.to_string(),
+      )
+  }
 }
 
 ///|
-fn disable_auto_launch(payload : AutoLaunchPayload) -> Result[String, String] {
-  build_launcher(payload).bind(fn(launcher) {
-    launcher
-    .disable()
-    .map_err(auto_launch_error)
-    .map(fn(_) { launcher.identifier() })
-  })
+fn disable_auto_launch(
+  payload : AutoLaunchPayload,
+) -> String raise AutoLaunchError {
+  let launcher = build_launcher(payload)
+  match launcher.disable() {
+    Ok(_) => launcher.identifier()
+    Err(error) =>
+      raise DisableFailed(
+        identifier=launcher.identifier(),
+        detail=error.to_string(),
+      )
+  }
 }

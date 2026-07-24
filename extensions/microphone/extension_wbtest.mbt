@@ -1,26 +1,26 @@
 ///|
 test "microphone sample format labels parse from JavaScript values" {
-  debug_inspect(parse_sample_format(Some("i16")), content="Ok(Some(I16))")
-  debug_inspect(parse_sample_format(Some("u16")), content="Ok(Some(U16))")
-  debug_inspect(parse_sample_format(Some("f32")), content="Ok(Some(F32))")
-  debug_inspect(
-    parse_sample_format(Some("pcm")),
-    content="Err(\"unknown microphone sample format: pcm\")",
-  )
+  debug_inspect(parse_sample_format(Some("i16")), content="Some(I16)")
+  debug_inspect(parse_sample_format(Some("u16")), content="Some(U16)")
+  debug_inspect(parse_sample_format(Some("f32")), content="Some(F32)")
+  let error = try parse_sample_format(Some("pcm")) catch {
+    error => error
+  } noraise {
+    _ => abort("expected unknown sample format error")
+  }
+  inspect(error.message(), content="unknown microphone sample format: pcm")
 }
 
 ///|
 test "microphone config replies expose normalized settings" {
-  let config = match
-    build_capture_config(CaptureConfigPayload::{
-      channels: Some(0),
-      sample_rate_hz: Some(4_000),
-      sample_format: Some("i16"),
-      echo_cancellation: Some(true),
-      noise_suppression: Some(false),
-    }) {
-    Ok(config) => config
-    Err(error) => abort(error)
+  let config = build_capture_config(CaptureConfigPayload::{
+    channels: Some(0),
+    sample_rate_hz: Some(4_000),
+    sample_format: Some("i16"),
+    echo_cancellation: Some(true),
+    noise_suppression: Some(false),
+  }) catch {
+    error => abort(error.message())
   }
   let reply = capture_config_reply(config)
   assert_eq(reply.channels, 1)
@@ -45,5 +45,8 @@ test "microphone parsed listings become serializable device replies" {
 ///|
 test "microphone metadata constants match generated app command extension" {
   assert_eq(extension().id(), "justjavac/proton-microphone")
-  assert_eq(extension().command_spec().unwrap().js_namespace(), "microphone")
+  let command_spec = extension().command_spec() catch {
+    error => abort(error.message())
+  }
+  assert_eq(command_spec.unwrap().js_namespace(), "microphone")
 }

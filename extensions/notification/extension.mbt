@@ -35,11 +35,11 @@ struct NotificationClick {
 
 ///|
 /// Rejects empty notification bodies before calling the native package.
-fn ensure_body(body : String) -> Result[String, String] {
+fn ensure_body(body : String) -> String raise NotificationError {
   if body.is_empty() {
-    Err("notification body must not be empty")
+    raise EmptyBody
   } else {
-    Ok(body)
+    body
   }
 }
 
@@ -47,16 +47,15 @@ fn ensure_body(body : String) -> Result[String, String] {
 /// Shows one native notification and converts the result into the extension reply shape.
 fn show_notification(
   payload : NotificationPayload,
-) -> Result[NotificationReply, String] {
-  ensure_body(payload.body).bind(fn(body) {
-    notification_native_ensure_supported().bind(fn(_) {
-      notification_native_show(
-        payload.title.unwrap_or("Lepus"),
-        body,
-        payload.payload,
-      ).map(fn(_) { NotificationReply::{ shown: true } })
-    })
-  })
+) -> NotificationReply raise NotificationError {
+  let body = ensure_body(payload.body)
+  notification_native_ensure_supported()
+  notification_native_show(
+    payload.title.unwrap_or("Lepus"),
+    body,
+    payload.payload,
+  )
+  NotificationReply::{ shown: true }
 }
 
 ///|
@@ -83,7 +82,7 @@ fn notification_click_poller_script() -> String {
 #proton.destroy
 fn cleanup_notification(
   context : @proton_command.AppCommandExtensionContext,
-) -> Unit {
+) -> Unit raise NotificationError {
   ignore(context.extension_id())
   notification_native_cleanup()
 }
@@ -97,19 +96,15 @@ async fn show(
   body : String,
   level : String?,
   payload : String?,
-) -> Result[NotificationReply, String] {
+) -> NotificationReply raise NotificationError {
   let request = NotificationPayload::{ title, body, level, payload }
-  match show_notification(request) {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_notification_activity(context, NotificationActivity::{
-        operation: "show",
-        title,
-        level,
-      })
-      Ok(reply)
-    }
-  }
+  let reply = show_notification(request)
+  emit_notification_activity(context, NotificationActivity::{
+    operation: "show",
+    title,
+    level,
+  })
+  reply
 }
 
 ///|
@@ -118,13 +113,12 @@ async fn show(
 async fn drain_clicks(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> Result[NotificationDrainReply, String] {
+) -> NotificationDrainReply raise NotificationError {
   let mut count = 0
   while true {
     match notification_native_take_click() {
-      Err(error) => return Err(error)
-      Ok(None) => break
-      Ok(Some(click)) => {
+      None => break
+      Some(click) => {
         emit_notification_click(context, NotificationClick::{
           payload: click.payload,
         })
@@ -132,5 +126,5 @@ async fn drain_clicks(
       }
     }
   }
-  Ok(NotificationDrainReply::{ count, })
+  NotificationDrainReply::{ count, }
 }

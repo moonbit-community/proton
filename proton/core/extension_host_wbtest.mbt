@@ -1,58 +1,63 @@
 ///|
-test "extension API validation rejects unusable JS properties" {
-  match validate_extension_api_name("demo", "") {
-    Err(error) =>
-      assert_eq(
-        error, "ExtensionContext::register_api: API name must not be empty: demo",
-      )
-    Ok(_) => abort("expected empty extension API name error")
-  }
-  match validate_extension_api_name("demo", "  ") {
-    Err(error) =>
-      assert_eq(
-        error, "ExtensionContext::register_api: API name must not be empty: demo",
-      )
-    Ok(_) => abort("expected blank extension API name error")
-  }
-  match validate_extension_api_name("demo", "constructor") {
-    Err(error) =>
-      assert_eq(
-        error, "ExtensionContext::register_api: reserved API name: demo.constructor",
-      )
-    Ok(_) => abort("expected reserved extension API name error")
-  }
-  match validate_extension_api_name("demo", "ping") {
-    Ok(_) => ()
-    Err(error) => abort(error)
+fn expect_extension_host_error(
+  action : () -> Unit raise ExtensionHostError,
+) -> ExtensionHostError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected extension host error")
   }
 }
 
 ///|
+test "extension API validation rejects unusable JS properties" {
+  assert_eq(
+    expect_extension_host_error(() => validate_extension_api_name("demo", "")),
+    ExtensionHostError::EmptyApiName(extension_namespace="demo"),
+  )
+  assert_eq(
+    expect_extension_host_error(() => validate_extension_api_name("demo", "  ")),
+    ExtensionHostError::EmptyApiName(extension_namespace="demo"),
+  )
+  assert_eq(
+    expect_extension_host_error(() => {
+      validate_extension_api_name("demo", "constructor")
+    }),
+    ExtensionHostError::ReservedApiName(
+      extension_namespace="demo",
+      api_name="constructor",
+    ),
+  )
+  validate_extension_api_name("demo", "ping")
+}
+
+///|
 test "extension event validation rejects invalid event targets" {
-  match validate_extension_event_target("", "done") {
-    Err(error) =>
-      assert_eq(error, "extension event namespace must not be empty")
-    Ok(_) => abort("expected empty extension event namespace error")
-  }
-  match validate_extension_event_target("  ", "done") {
-    Err(error) =>
-      assert_eq(error, "extension event namespace must not be empty")
-    Ok(_) => abort("expected blank extension event namespace error")
-  }
-  match validate_extension_event_target("demo", "") {
-    Err(error) =>
-      assert_eq(error, "extension event name must not be empty: demo")
-    Ok(_) => abort("expected empty extension event name error")
-  }
-  match validate_extension_event_target("demo", "  ") {
-    Err(error) =>
-      assert_eq(error, "extension event name must not be empty: demo")
-    Ok(_) => abort("expected blank extension event name error")
-  }
-  match validate_extension_event_target("demo", "done") {
-    Ok(_) => ()
-    Err(error) => abort(error)
-  }
+  assert_eq(
+    expect_extension_host_error(() => {
+      validate_extension_event_target("", "done")
+    }),
+    ExtensionHostError::EmptyEventNamespace,
+  )
+  assert_eq(
+    expect_extension_host_error(() => {
+      validate_extension_event_target("  ", "done")
+    }),
+    ExtensionHostError::EmptyEventNamespace,
+  )
+  assert_eq(
+    expect_extension_host_error(() => {
+      validate_extension_event_target("demo", "")
+    }),
+    ExtensionHostError::EmptyEventName(extension_namespace="demo"),
+  )
+  assert_eq(
+    expect_extension_host_error(() => {
+      validate_extension_event_target("demo", "  ")
+    }),
+    ExtensionHostError::EmptyEventName(extension_namespace="demo"),
+  )
+  validate_extension_event_target("demo", "done")
 }
 
 ///|
@@ -61,9 +66,7 @@ test "extension specs copy mutable array inputs" {
   let spec = ExtensionSpec::new(
     "vendor/demo",
     "demo",
-    fn(_context) {
-      Ok(Extension::new("vendor/demo", "demo", fn(_context) {  }))
-    },
+    fn(_context) { Extension::new("vendor/demo", "demo", fn(_context) {  }) },
     dependencies~,
   )
   dependencies.push("vendor/mutated")

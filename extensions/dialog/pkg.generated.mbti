@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_dialog_activity(@command.AppCommandExtensionContext, DialogActivity) -> Unit
+pub async fn emit_dialog_activity(@command.AppCommandExtensionContext, DialogActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type DialogError derive(Eq, @debug.Debug)
 
 // Types and methods
 type ConfirmReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)

@@ -30,17 +30,15 @@ pub struct AppCommandExtensionContext {
   base_dir : String?
 }
 pub fn AppCommandExtensionContext::base_dir(Self) -> String?
-pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(Self, String, Payload) -> Unit
+pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(Self, String, Payload) -> Unit noraise
 pub fn AppCommandExtensionContext::extension_id(Self) -> String
 pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
 pub fn AppCommandExtensionContext::js_namespace(Self) -> String
 pub fn AppCommandExtensionContext::new(@core.AppCommandHost, String, String, options? : Json?, base_dir? : String?) -> Self
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply, emits_events? : Bool) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply, emits_events? : Bool) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(Self, String, async (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result_with_context(Self, String, async (@core.AppCommandRequestContext, Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply raise?, emits_events? : Bool) -> Unit raise @core.OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply, emits_events? : Bool) -> Unit raise @core.OpRegistrationError
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_with_context(Self, String, async (@core.AppCommandRequestContext, Payload) -> Reply, emits_events? : Bool) -> Unit raise @core.OpRegistrationError
 pub fn AppCommandExtensionContext::op_name(Self, String) -> String
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(Self, String, (Payload) -> Result[Reply, String], emits_events? : Bool) -> Unit
 pub fn AppCommandExtensionContext::options(Self) -> Json?
 
 pub struct AppCommandExtensionDescriptor {
@@ -69,17 +67,17 @@ pub struct AppCommandExtensionSpec {
   apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Result[Unit, String]
-  on_destroy : (AppCommandExtensionContext) -> Unit
+  register : (AppCommandExtensionContext) -> Unit raise
+  on_destroy : (AppCommandExtensionContext) -> Unit raise
 }
 pub fn AppCommandExtensionSpec::apis(Self) -> Array[AppCommandApiDescriptor]
 pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::destroy(Self, AppCommandExtensionContext) -> Unit
+pub fn AppCommandExtensionSpec::destroy(Self, AppCommandExtensionContext) -> Unit raise
 pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
-pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Result[Unit, String], scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit) -> Self
+pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit raise) -> Self
 pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Result[Unit, String]
+pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Unit raise
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
 

@@ -7,9 +7,9 @@ import {
 }
 
 // Values
-pub fn load_project_config_from_file(String) -> Result[ProjectConfig, String]
+pub fn load_project_config_from_file(String) -> ProjectConfig raise ProjectConfigError
 
-pub fn load_project_config_from_text(String, String, name? : String) -> Result[ProjectConfig, String]
+pub fn load_project_config_from_text(String, String, name? : String) -> ProjectConfig raise ProjectConfigError
 
 pub fn parse_moon_ext(name? : String, String) -> (Ast, Array[@basic.Report])
 
@@ -18,6 +18,18 @@ pub fn parse_moon_mod(name? : String, String) -> (Ast, Array[@basic.Report])
 pub fn parse_moon_proton(name? : String, String) -> (Ast, Array[@basic.Report])
 
 // Errors
+pub(all) suberror ProjectConfigError {
+  FileRead(path~ : String, detail~ : String)
+  Syntax(name~ : String, diagnostics~ : String)
+  InvalidRoot
+  MissingField(path~ : String)
+  DuplicateField(path~ : String)
+  UnknownField(path~ : String)
+  InvalidField(path~ : String, expectation~ : String)
+  UnsupportedField(path~ : String, reason~ : String)
+  UnsupportedValue(path~ : String, value~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ProjectConfigError::message(Self) -> String
 
 // Types and methods
 pub(all) enum Ast {

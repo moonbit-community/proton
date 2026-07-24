@@ -2,16 +2,16 @@
 /// Converts the optional textual `size_hint` into the manifest enum value.
 fn parse_size_hint(
   size_hint : String?,
-) -> Result[@manifest.WindowSizeHint, String] {
+) -> @manifest.WindowSizeHint raise BootstrapError {
   match size_hint {
-    None => Ok(@manifest.WindowSizeHint::None)
+    None => @manifest.WindowSizeHint::None
     Some(size_hint) =>
       match normalize_keyword(size_hint) {
-        "none" => Ok(@manifest.WindowSizeHint::None)
-        "min" => Ok(@manifest.WindowSizeHint::Min)
-        "max" => Ok(@manifest.WindowSizeHint::Max)
-        "fixed" => Ok(@manifest.WindowSizeHint::Fixed)
-        _ => Err("unsupported window size_hint: " + size_hint)
+        "none" => @manifest.WindowSizeHint::None
+        "min" => @manifest.WindowSizeHint::Min
+        "max" => @manifest.WindowSizeHint::Max
+        "fixed" => @manifest.WindowSizeHint::Fixed
+        _ => raise UnsupportedValue(path="window.size_hint", value=size_hint)
       }
   }
 }
@@ -19,14 +19,18 @@ fn parse_size_hint(
 ///|
 fn parse_titlebar_style(
   titlebar_style : String?,
-) -> Result[@manifest.TitlebarStyle, String] {
+) -> @manifest.TitlebarStyle raise BootstrapError {
   match titlebar_style {
-    None => Ok(@manifest.TitlebarStyle::Default)
+    None => @manifest.TitlebarStyle::Default
     Some(titlebar_style) =>
       match normalize_keyword(titlebar_style) {
-        "default" => Ok(@manifest.TitlebarStyle::Default)
-        "overlay" => Ok(@manifest.TitlebarStyle::Overlay)
-        _ => Err("unsupported window titlebar_style: " + titlebar_style)
+        "default" => @manifest.TitlebarStyle::Default
+        "overlay" => @manifest.TitlebarStyle::Overlay
+        _ =>
+          raise UnsupportedValue(
+            path="window.titlebar_style",
+            value=titlebar_style,
+          )
       }
   }
 }
@@ -49,45 +53,9 @@ fn rebase_relative_path(path : String, base_dir : String?) -> String {
 }
 
 ///|
-/// Resolves the absolute directory that contains a config file path.
-fn config_base_dir(path : String) -> String {
-  let raw_dirname = dirname_string(path)
-  let config_dir : @mbpath.Path = raw_dirname
-  config_dir.resolve().to_string()
-}
-
-///|
 /// Trims and lowercases config keywords before comparison.
 fn normalize_keyword(raw : String) -> String {
   raw.trim().to_owned().to_lower()
-}
-
-///|
-/// Returns the directory portion of a path using both slash styles.
-fn dirname_string(path : String) -> String {
-  let mut separator_index : Int? = None
-  for i, ch in path {
-    if ch == '/' || ch == '\\' {
-      separator_index = Some(i)
-    }
-  }
-  match separator_index {
-    None => "."
-    Some(separator_index) => prefix_string(path, separator_index)
-  }
-}
-
-///|
-/// Copies the path prefix that ends just before `end_exclusive`.
-fn prefix_string(path : String, end_exclusive : Int) -> String {
-  let builder = StringBuilder::new(size_hint=end_exclusive)
-  for i, ch in path {
-    if i >= end_exclusive {
-      break
-    }
-    builder.write_char(ch)
-  }
-  builder.to_string()
 }
 
 ///|

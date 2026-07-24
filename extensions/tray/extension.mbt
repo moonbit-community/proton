@@ -93,70 +93,53 @@ fn tray_support() -> TraySupportReply {
 }
 
 ///|
-fn tray_operation_result(
-  operation : String,
-  result : Result[Bool, String],
-) -> Result[Bool, String] {
-  match result {
-    Ok(visible) => Ok(visible)
-    Err(error) => Err(operation + " failed: " + error)
-  }
-}
-
-///|
-fn tray_handle() -> Result[@sys_tray.Tray, String] {
+fn tray_handle() -> @sys_tray.Tray raise TrayError {
   match app_command_tray_handle.val {
-    Some(handle) => Ok(handle)
+    Some(handle) => handle
     None =>
       match @sys_tray.create(identifier="justjavac.proton.tray") {
         Ok(handle) => {
           app_command_tray_handle.val = Some(handle)
-          Ok(handle)
+          handle
         }
-        Err(error) => Err("create tray failed: " + error)
+        Err(error) => raise CreateFailed(detail=error)
       }
   }
 }
 
 ///|
-fn required_text(value : String?, label : String) -> Result[String, String] {
+fn required_text(value : String?, label : String) -> String raise TrayError {
   match value {
     Some(text) =>
       if text.trim().to_owned().is_empty() {
-        Err(label + " must not be empty")
+        raise EmptyField(field=label)
       } else {
-        Ok(text)
+        text
       }
-    None => Err(label + " is required")
+    None => raise MissingField(field=label)
   }
 }
 
 ///|
-fn optional_json_text(value : Json?, label : String) -> Result[String?, String] {
+fn optional_json_text(value : Json?, label : String) -> String? raise TrayError {
   match value {
-    None | Some(Null) => Ok(None)
-    Some(String(text)) => Ok(Some(text))
-    _ => Err(label + " must be a string or null")
+    None | Some(Null) => None
+    Some(String(text)) => Some(text)
+    _ => raise InvalidFieldType(field=label, expected="a string or null")
   }
 }
 
 ///|
 fn menu_items_to_native(
   items : Array[TrayMenuItemPayload],
-) -> Result[Array[@sys_tray.TrayMenuItem], String] {
+) -> Array[@sys_tray.TrayMenuItem] raise TrayError {
   let native_items : Array[@sys_tray.TrayMenuItem] = []
   for item in items {
     let kind = item.kind.unwrap_or("normal")
     match kind {
       "normal" => {
-        let id = match required_text(item.id, "menu item id") {
-          Ok(value) => value
-          Err(error) => return Err(error)
-        }
-        let label = match required_text(item.label, "menu item label") {
-          Ok(value) => value
-          Err(error) => return Err(error)
-        }
+        let id = required_text(item.id, "menu item id")
+        let label = required_text(item.label, "menu item label")
         native_items.push(
           @sys_tray.TrayMenuItem::normal(
             id~,
@@ -167,14 +150,8 @@ fn menu_items_to_native(
       }
       "separator" => native_items.push(@sys_tray.TrayMenuItem::separator())
       "checkbox" => {
-        let id = match required_text(item.id, "menu item id") {
-          Ok(value) => value
-          Err(error) => return Err(error)
-        }
-        let label = match required_text(item.label, "menu item label") {
-          Ok(value) => value
-          Err(error) => return Err(error)
-        }
+        let id = required_text(item.id, "menu item id")
+        let label = required_text(item.label, "menu item label")
         native_items.push(
           @sys_tray.TrayMenuItem::checkbox(
             id~,
@@ -184,17 +161,39 @@ fn menu_items_to_native(
           ),
         )
       }
-      _ => return Err("unsupported tray menu item kind: " + kind)
+      _ => raise UnsupportedMenuItemKind(kind~)
     }
   }
-  Ok(native_items)
+  native_items
 }
 
 ///|
 fn menu_payload_to_native(
   menu : TrayMenuPayload,
-) -> Result[Array[@sys_tray.TrayMenuItem], String] {
+) -> Array[@sys_tray.TrayMenuItem] raise TrayError {
   menu_items_to_native(menu.items)
+}
+
+///|
+fn set_tray_icon(
+  handle : @sys_tray.Tray,
+  icon : String?,
+) -> Bool raise TrayError {
+  match handle.set_icon(icon) {
+    Ok(visible) => visible
+    Err(error) => raise SetIconFailed(detail=error)
+  }
+}
+
+///|
+fn set_tray_menu(
+  handle : @sys_tray.Tray,
+  menu : Array[@sys_tray.TrayMenuItem],
+) -> Bool raise TrayError {
+  match handle.set_menu(menu) {
+    Ok(visible) => visible
+    Err(error) => raise SetMenuFailed(detail=error)
+  }
 }
 
 ///|
@@ -203,7 +202,7 @@ async fn emit_command_activity(
   operation : String,
   tooltip : String?,
   icon : String?,
-) -> Unit {
+) -> Unit noraise {
   emit_tray_activity(context, TrayActivity::{
     operation,
     visible: app_command_tray_visible.val,
@@ -216,7 +215,7 @@ async fn emit_command_activity(
 async fn emit_native_tray_event(
   context : @proton_command.AppCommandExtensionContext,
   event : @sys_tray.TrayEvent,
-) -> Unit {
+) -> Unit noraise {
   match event {
     Click =>
       emit_tray_click_event(context, TrayClickEvent::{
@@ -290,44 +289,29 @@ async fn show(
   icon : Json?,
   tooltip : String?,
   menu : TrayMenuPayload?,
-) -> Result[TrayReply, String] {
-  let icon = match optional_json_text(icon, "icon") {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
-  let handle = match tray_handle() {
-    Ok(handle) => handle
-    Err(error) => return Err(error)
-  }
+) -> TrayReply raise TrayError {
+  let icon = optional_json_text(icon, "icon")
+  let handle = tray_handle()
   match icon {
     Some(path) =>
-      match
-        tray_operation_result("set tray icon", handle.set_icon(Some(path))) {
-        Err(error) => return Err(error)
-        Ok(visible) => app_command_tray_visible.val = visible
-      }
+      app_command_tray_visible.val = set_tray_icon(handle, Some(path))
     None => ()
   }
   match menu {
     Some(value) =>
-      match menu_payload_to_native(value) {
-        Err(error) => return Err(error)
-        Ok(native_menu) =>
-          match
-            tray_operation_result("set tray menu", handle.set_menu(native_menu)) {
-            Err(error) => return Err(error)
-            Ok(visible) => app_command_tray_visible.val = visible
-          }
-      }
+      app_command_tray_visible.val = set_tray_menu(
+        handle,
+        menu_payload_to_native(value),
+      )
     None => ()
   }
-  match tray_operation_result("show tray", handle.show(tooltip~)) {
-    Err(error) => Err(error)
+  match handle.show(tooltip~) {
     Ok(visible) => {
       app_command_tray_visible.val = visible
       emit_command_activity(context, "show", tooltip, icon)
-      Ok(TrayReply::{ visible, })
+      TrayReply::{ visible, }
     }
+    Err(error) => raise ShowFailed(detail=error)
   }
 }
 
@@ -337,21 +321,21 @@ async fn show(
 async fn hide(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> Result[TrayReply, String] {
+) -> TrayReply raise TrayError {
   match app_command_tray_handle.val {
     None => {
       app_command_tray_visible.val = false
       emit_command_activity(context, "hide", None, None)
-      Ok(TrayReply::{ visible: false })
+      TrayReply::{ visible: false }
     }
     Some(handle) =>
-      match tray_operation_result("hide tray", handle.hide()) {
-        Err(error) => Err(error)
+      match handle.hide() {
         Ok(visible) => {
           app_command_tray_visible.val = visible
           emit_command_activity(context, "hide", None, None)
-          Ok(TrayReply::{ visible, })
+          TrayReply::{ visible, }
         }
+        Err(error) => raise HideFailed(detail=error)
       }
   }
 }
@@ -362,23 +346,12 @@ async fn hide(
 async fn set_icon(
   context : @proton_command.AppCommandExtensionContext,
   icon : Json?,
-) -> Result[TrayReply, String] {
-  let icon = match optional_json_text(icon, "icon") {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
-  let handle = match tray_handle() {
-    Ok(handle) => handle
-    Err(error) => return Err(error)
-  }
-  match tray_operation_result("set tray icon", handle.set_icon(icon)) {
-    Err(error) => Err(error)
-    Ok(visible) => {
-      app_command_tray_visible.val = visible
-      emit_command_activity(context, "setIcon", None, icon)
-      Ok(TrayReply::{ visible, })
-    }
-  }
+) -> TrayReply raise TrayError {
+  let icon = optional_json_text(icon, "icon")
+  let visible = set_tray_icon(tray_handle(), icon)
+  app_command_tray_visible.val = visible
+  emit_command_activity(context, "setIcon", None, icon)
+  TrayReply::{ visible, }
 }
 
 ///|
@@ -387,18 +360,14 @@ async fn set_icon(
 async fn set_tooltip(
   context : @proton_command.AppCommandExtensionContext,
   tooltip : String,
-) -> Result[TrayReply, String] {
-  let handle = match tray_handle() {
-    Ok(handle) => handle
-    Err(error) => return Err(error)
-  }
-  match tray_operation_result("set tray tooltip", handle.set_tooltip(tooltip)) {
-    Err(error) => Err(error)
+) -> TrayReply raise TrayError {
+  match tray_handle().set_tooltip(tooltip) {
     Ok(visible) => {
       app_command_tray_visible.val = visible
       emit_command_activity(context, "setTooltip", Some(tooltip), None)
-      Ok(TrayReply::{ visible, })
+      TrayReply::{ visible, }
     }
+    Err(error) => raise SetTooltipFailed(detail=error)
   }
 }
 
@@ -408,24 +377,11 @@ async fn set_tooltip(
 async fn set_menu(
   context : @proton_command.AppCommandExtensionContext,
   items : Array[TrayMenuItemPayload],
-) -> Result[TrayReply, String] {
-  let handle = match tray_handle() {
-    Ok(handle) => handle
-    Err(error) => return Err(error)
-  }
-  match menu_items_to_native(items) {
-    Err(error) => Err(error)
-    Ok(native_menu) =>
-      match
-        tray_operation_result("set tray menu", handle.set_menu(native_menu)) {
-        Err(error) => Err(error)
-        Ok(visible) => {
-          app_command_tray_visible.val = visible
-          emit_command_activity(context, "setMenu", None, None)
-          Ok(TrayReply::{ visible, })
-        }
-      }
-  }
+) -> TrayReply raise TrayError {
+  let visible = set_tray_menu(tray_handle(), menu_items_to_native(items))
+  app_command_tray_visible.val = visible
+  emit_command_activity(context, "setMenu", None, None)
+  TrayReply::{ visible, }
 }
 
 ///|
@@ -434,19 +390,19 @@ async fn set_menu(
 async fn drain_events(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> Result[TrayEventReply, String] {
+) -> TrayEventReply raise TrayError {
   match app_command_tray_handle.val {
-    None => Ok(TrayEventReply::{ count: 0 })
+    None => TrayEventReply::{ count: 0 }
     Some(handle) => {
       match handle.pump(blocking=false) {
         Ok(_) => ()
-        Err(error) => return Err("pump tray failed: " + error)
+        Err(error) => raise PumpFailed(detail=error)
       }
       let events = handle.drain_events()
       for event in events {
         emit_native_tray_event(context, event)
       }
-      Ok(TrayEventReply::{ count: events.length() })
+      TrayEventReply::{ count: events.length() }
     }
   }
 }
@@ -457,8 +413,8 @@ async fn drain_events(
 async fn destroy(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> Result[TrayReply, String] {
+) -> TrayReply {
   destroy_tray(app_command_tray_handle.val)
   emit_command_activity(context, "destroy", None, None)
-  Ok(TrayReply::{ visible: false })
+  TrayReply::{ visible: false }
 }

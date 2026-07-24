@@ -3,7 +3,14 @@ fn read_project_moon_mod(
   project : ProjectDoctorInfo,
 ) -> Result[MoonModuleConfig, MoonConfigReadError]? {
   match project.moon_mod_path {
-    Some(path) => Some(read_moon_mod(path))
+    Some(path) =>
+      Some(
+        try read_moon_mod(path) catch {
+          error => Err(error)
+        } noraise {
+          config => Ok(config)
+        },
+      )
     None => None
   }
 }
@@ -13,7 +20,14 @@ fn read_project_moon_pkg(
   project : ProjectDoctorInfo,
 ) -> Result[MoonPackageConfig, MoonConfigReadError]? {
   match project.moon_pkg_path {
-    Some(path) => Some(read_moon_pkg(path))
+    Some(path) =>
+      Some(
+        try read_moon_pkg(path) catch {
+          error => Err(error)
+        } noraise {
+          config => Ok(config)
+        },
+      )
     None => None
   }
 }
@@ -84,13 +98,13 @@ pub async fn run(
   quiet~ : Bool,
   sections~ : Array[String],
   output~ : String?,
-) -> Result[Bool, String] {
+) -> Bool {
   if !@mbfs.path_exists(cwd) {
-    return Err("cwd does not exist: " + cwd)
+    raise WorkingDirectoryMissing(path=cwd)
   }
   let cwd_is_dir = @mbfs.is_dir(cwd) catch { _ => false }
   if !cwd_is_dir {
-    return Err("cwd is not a directory: " + cwd)
+    raise WorkingDirectoryNotDirectory(path=cwd)
   }
   let options = DoctorOptions::new(
     cwd~,
@@ -118,9 +132,10 @@ pub async fn run(
   match options.output {
     Some(path) =>
       @mbfs.write_string_to_file(path, rendered, encoding="utf8") catch {
-        _ => return Err("failed to write doctor output: " + path)
+        error =>
+          raise OutputWrite(path~, detail=@debug.render(@debug.to_repr(error)))
       }
     None => println(rendered)
   }
-  Ok(!report.has_errors())
+  !report.has_errors()
 }

@@ -73,6 +73,28 @@ fn find_extension_summary(
 }
 
 ///|
+fn[T] expect_descriptor_error(
+  action : () -> T raise ExtensionDescriptorError,
+) -> ExtensionDescriptorError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected extension descriptor error")
+  }
+}
+
+///|
+fn[T] expect_link_error(
+  action : () -> T raise ExtensionLinkError,
+) -> ExtensionLinkError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected extension link error")
+  }
+}
+
+///|
 test "extension descriptor constructor and accessors copy mutable arrays" {
   let platforms = ["windows"]
   let dependencies = ["vendor/base"]
@@ -104,20 +126,16 @@ test "extension descriptor constructor and accessors copy mutable arrays" {
 
 ///|
 test "discover_extension_descriptor_files can target one extension package" {
-  let descriptor_paths = match
-    discover_extension_descriptor_files([builtin_extension_root("path")]) {
-    Ok(paths) => paths
-    Err(error) => abort(error)
-  }
+  let descriptor_paths = discover_extension_descriptor_files([
+    builtin_extension_root("path"),
+  ])
 
   assert_eq(descriptor_paths.length(), 1)
   assert_true(descriptor_paths[0].has_suffix("moon.ext"))
 
-  let catalog = match
-    load_extension_catalog_from_search_roots([builtin_extension_root("path")]) {
-    Ok(catalog) => catalog
-    Err(error) => abort(error)
-  }
+  let catalog = load_extension_catalog_from_search_roots([
+    builtin_extension_root("path"),
+  ])
 
   @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/proton-path"])
   let ids = catalog.descriptor_ids()
@@ -127,11 +145,15 @@ test "discover_extension_descriptor_files can target one extension package" {
 
 ///|
 test "load_extension_descriptor_from_file requires moon.ext" {
-  match load_extension_descriptor_from_file("target/rejected/extension.json") {
-    Ok(_) => abort("expected moon.ext-only error")
-    Err(error) =>
-      assert_true(error.contains("extension metadata must be moon.ext"))
-  }
+  let error = expect_descriptor_error(() => {
+    load_extension_descriptor_from_file("target/rejected/extension.json")
+  })
+  assert_eq(
+    error,
+    ExtensionDescriptorError::InvalidMetadataFile(
+      path="target/rejected/extension.json",
+    ),
+  )
 }
 
 ///|
@@ -175,10 +197,7 @@ test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let descriptor = match load_extension_descriptor_from_file(metadata_path) {
-    Ok(descriptor) => descriptor
-    Err(error) => abort(error)
-  }
+  let descriptor = load_extension_descriptor_from_file(metadata_path)
   assert_eq(descriptor.id(), "vendor/fs")
   assert_eq(descriptor.version(), "2.3.4")
   assert_eq(descriptor.description(), "Vendor extension pack")
@@ -193,11 +212,9 @@ test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
   @debug.assert_eq(descriptor.publish_package(), Some("@vendor/proton-fs"))
   @debug.assert_eq(descriptor.dependencies(), ["vendor/path"])
 
-  let descriptor_paths = match
-    discover_extension_descriptor_files(["target/moon-ext-module/fs"]) {
-    Ok(paths) => paths
-    Err(error) => abort(error)
-  }
+  let descriptor_paths = discover_extension_descriptor_files([
+    "target/moon-ext-module/fs",
+  ])
   assert_eq(descriptor_paths.length(), 1)
   assert_true(descriptor_paths[0].has_suffix("moon.ext"))
 }
@@ -224,13 +241,16 @@ test "decode moon.ext rejects invalid metadata" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_extension_descriptor_from_file(unsupported_platform) {
-    Ok(_) => abort("expected unsupported platform error")
-    Err(error) =>
-      assert_true(
-        error.contains("moon.ext platforms contains unsupported platform: ios"),
-      )
-  }
+  let error = expect_descriptor_error(() => {
+    load_extension_descriptor_from_file(unsupported_platform)
+  })
+  assert_eq(
+    error,
+    ExtensionDescriptorError::InvalidMetadata(
+      path=unsupported_platform,
+      error=ExtensionMetadataError::UnsupportedPlatform(platform="ios"),
+    ),
+  )
 
   let self_dependency = "target/moon-ext-invalid/self-dependency.moon.ext"
   @mbfs.write_string_to_file(
@@ -245,15 +265,16 @@ test "decode moon.ext rejects invalid metadata" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_extension_descriptor_from_file(self_dependency) {
-    Ok(_) => abort("expected self dependency error")
-    Err(error) =>
-      assert_true(
-        error.contains(
-          "moon.ext dependencies must not include itself: vendor/fs",
-        ),
-      )
-  }
+  let error = expect_descriptor_error(() => {
+    load_extension_descriptor_from_file(self_dependency)
+  })
+  assert_eq(
+    error,
+    ExtensionDescriptorError::InvalidMetadata(
+      path=self_dependency,
+      error=ExtensionMetadataError::SelfDependency(id="vendor/fs"),
+    ),
+  )
 
   let removed_field = "target/moon-ext-invalid/removed-field.moon.ext"
   @mbfs.write_string_to_file(
@@ -268,23 +289,24 @@ test "decode moon.ext rejects invalid metadata" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_extension_descriptor_from_file(removed_field) {
-    Ok(_) => abort("expected removed field error")
-    Err(error) =>
-      assert_true(error.contains("unknown moon.ext field: spec_symbol"))
-  }
+  let error = expect_descriptor_error(() => {
+    load_extension_descriptor_from_file(removed_field)
+  })
+  assert_eq(
+    error,
+    ExtensionDescriptorError::InvalidMetadata(
+      path=removed_field,
+      error=ExtensionMetadataError::UnknownField(field="spec_symbol"),
+    ),
+  )
 }
 
 ///|
 test "load_extension_catalog_from_search_roots treats built-in and external roots the same" {
-  let catalog = match
-    load_extension_catalog_from_search_roots([
-      builtin_extension_root("path"),
-      catalog_test_path("testdata/vendor_extensions"),
-    ]) {
-    Ok(catalog) => catalog
-    Err(error) => abort(error)
-  }
+  let catalog = load_extension_catalog_from_search_roots([
+    builtin_extension_root("path"),
+    catalog_test_path("testdata/vendor_extensions"),
+  ])
 
   let ids = catalog.descriptor_ids()
   ids.sort()
@@ -327,14 +349,10 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
     _ => abort("expected catalog summary object")
   }
 
-  let summary_from_roots = match
-    load_extension_catalog_summary_from_search_roots([
-      builtin_extension_root("path"),
-      catalog_test_path("testdata/vendor_extensions"),
-    ]) {
-    Ok(summary) => summary
-    Err(error) => abort(error)
-  }
+  let summary_from_roots = load_extension_catalog_summary_from_search_roots([
+    builtin_extension_root("path"),
+    catalog_test_path("testdata/vendor_extensions"),
+  ])
   @debug.assert_eq(summary_from_roots, catalog.to_summary_json())
 }
 
@@ -343,24 +361,16 @@ test "build_extension_link_plan expands metadata dependencies in order" {
   let fs_descriptor = stub_descriptor("justjavac/proton-fs", "fs", dependencies=[
     "justjavac/proton-path",
   ])
-  let catalog = match
-    ExtensionCatalog::from_descriptors([
-      stub_descriptor("justjavac/proton-path", "path"),
-      fs_descriptor,
-      stub_descriptor("justjavac/proton-dialog", "dialog"),
-    ]) {
-    Ok(catalog) => catalog
-    Err(error) => abort(error)
-  }
+  let catalog = ExtensionCatalog::from_descriptors([
+    stub_descriptor("justjavac/proton-path", "path"),
+    fs_descriptor,
+    stub_descriptor("justjavac/proton-dialog", "dialog"),
+  ])
   fs_descriptor.dependencies.push("vendor/mutated")
 
-  let plan = match
-    build_extension_link_plan(catalog, [
-      "justjavac/proton-fs", "justjavac/proton-dialog",
-    ]) {
-    Ok(plan) => plan
-    Err(error) => abort(error)
-  }
+  let plan = build_extension_link_plan(catalog, [
+    "justjavac/proton-fs", "justjavac/proton-dialog",
+  ])
 
   @debug.assert_eq(plan.extension_ids(), [
     "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
@@ -376,18 +386,13 @@ test "build_extension_link_plan expands metadata dependencies in order" {
 
 ///|
 test "build_extension_link_plan rejects dependency cycles" {
-  let catalog = match
-    ExtensionCatalog::from_descriptors([
-      stub_descriptor("vendor/alpha", "alpha", dependencies=["vendor/beta"]),
-      stub_descriptor("vendor/beta", "beta", dependencies=["vendor/alpha"]),
-    ]) {
-    Ok(catalog) => catalog
-    Err(error) => abort(error)
-  }
+  let catalog = ExtensionCatalog::from_descriptors([
+    stub_descriptor("vendor/alpha", "alpha", dependencies=["vendor/beta"]),
+    stub_descriptor("vendor/beta", "beta", dependencies=["vendor/alpha"]),
+  ])
 
-  match build_extension_link_plan(catalog, ["vendor/alpha"]) {
-    Ok(_) => abort("expected dependency cycle error")
-    Err(error) =>
-      assert_true(error.contains("extension dependency cycle detected"))
-  }
+  let error = expect_link_error(() => {
+    build_extension_link_plan(catalog, ["vendor/alpha"])
+  })
+  assert_eq(error, ExtensionLinkError::DependencyCycle(id="vendor/alpha"))
 }

@@ -4,12 +4,12 @@ pub fn abi_version() -> Int {
 }
 
 ///|
-pub fn runtime_info_json() -> Result[String, NativeError] {
+pub fn runtime_info_json() -> String raise NativeError {
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = proton_runtime_info_json_ffi(scratch, 0, required)
   if status != proton_err_buffer_too_small && status < 0 {
-    return Err(native_error(status))
+    raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_info_json_ffi(
@@ -18,34 +18,26 @@ pub fn runtime_info_json() -> Result[String, NativeError] {
     required,
   )
   if second_status < 0 {
-    Err(native_error(second_status))
+    raise native_error(second_status)
   } else {
-    Ok(@ffi.from_cstr(Bytes::from_array(buffer)))
+    @ffi.from_cstr(Bytes::from_array(buffer))
   }
 }
 
 ///|
-pub fn runtime_info() -> Result[RuntimeInfo, NativeError] {
-  runtime_info_json().bind(fn(text) {
-    try @json.parse(text) catch {
-      err =>
-        Err({
-          status: -1,
-          message: "failed to parse runtime info JSON: " + err.to_string(),
-        })
-    } noraise {
-      json =>
-        try @json.from_json(json) catch {
-          err =>
-            Err({
-              status: -1,
-              message: "failed to decode runtime info JSON: " + err.to_string(),
-            })
-        } noraise {
-          info => Ok(info)
-        }
-    }
-  })
+pub fn runtime_info() -> RuntimeInfo raise NativeError {
+  let text = runtime_info_json()
+  let json = @json.parse(text) catch {
+    error =>
+      raise InvalidPayload(
+        context="runtime info JSON",
+        message=error.to_string(),
+      )
+  }
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(context="runtime info", message=error.to_string())
+  }
 }
 
 ///|
@@ -61,206 +53,145 @@ pub fn last_error_message() -> String {
 
 ///|
 fn native_error(status : Int) -> NativeError {
-  { status, message: last_error_message() }
+  Status(status~, message=last_error_message())
 }
 
 ///|
-fn status_to_result(status : Int) -> Result[Unit, NativeError] {
+fn check_status(status : Int) -> Unit raise NativeError {
   if status < 0 {
-    Err(native_error(status))
-  } else {
-    Ok(())
+    raise native_error(status)
   }
 }
 
 ///|
 fn invalid_argument(message : String) -> NativeError {
-  { status: -1, message }
+  InvalidArgument(message~)
 }
 
 ///|
-fn validate_window_config(config : WindowConfig) -> Result[Unit, NativeError] {
+fn validate_window_config(config : WindowConfig) -> Unit raise NativeError {
   match config.raw_json {
-    Some(_) => Ok(())
+    Some(_) => ()
     None =>
       if config.width <= 0 || config.height <= 0 {
-        Err(invalid_argument("width and height must be positive"))
-      } else {
-        Ok(())
+        raise invalid_argument("width and height must be positive")
       }
   }
 }
 
 ///|
-fn decode_native_json(
-  text : String,
-  label : String,
-) -> Result[Json, NativeError] {
-  try @json.parse(text) catch {
-    err =>
-      Err({
-        status: -1,
-        message: "failed to parse " + label + " JSON: " + err.to_string(),
-      })
-  } noraise {
-    json => Ok(json)
+fn decode_native_json(text : String, label : String) -> Json raise NativeError {
+  @json.parse(text) catch {
+    error =>
+      raise InvalidPayload(
+        context=label + " JSON",
+        message="invalid JSON: " + error.to_string(),
+      )
   }
 }
 
 ///|
-fn decode_string_json(
-  json : Json,
-  label : String,
-) -> Result[String, NativeError] {
-  try @json.from_json(json) catch {
-    err =>
-      Err({
-        status: -1,
-        message: "failed to decode " + label + " as string: " + err.to_string(),
-      })
-  } noraise {
-    value => Ok(value)
+fn decode_string_json(json : Json, label : String) -> String raise NativeError {
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context=label,
+        message="expected string: " + error.to_string(),
+      )
   }
 }
 
 ///|
-fn decode_runtime_event_json(
-  text : String,
-) -> Result[RuntimeEvent, NativeError] {
-  decode_native_json(text, "runtime event").bind(fn(json) {
-    let object = match json {
-      Object(object) => object
-      _ =>
-        return Err({
-          status: -1,
-          message: "failed to decode runtime event JSON: expected object",
-        })
-    }
-    let event_type_json = match object.get("type") {
-      Some(value) => value
-      None =>
-        return Err({
-          status: -1,
-          message: "failed to decode runtime event JSON: missing type",
-        })
-    }
-    decode_string_json(event_type_json, "runtime event type").bind(fn(
-      event_type,
-    ) {
-      let window = match object.get("window") {
-        None => None
-        Some(value) =>
-          match decode_int64_json(value, "runtime event window") {
-            Err(error) => return Err(error)
-            Ok(window) => Some(window)
-          }
-      }
-      let menu_command_id = match object.get("command_id") {
-        None => None
-        Some(value) =>
-          match decode_string_json(value, "runtime event command id") {
-            Err(error) => return Err(error)
-            Ok(command_id) => Some(command_id)
-          }
-      }
-      let revision = match object.get("revision") {
-        None => None
-        Some(value) =>
-          match decode_int64_json(value, "runtime event revision") {
-            Err(error) => return Err(error)
-            Ok(revision) => Some(revision)
-          }
-      }
-      Ok(RuntimeEvent::{ event_type, window, menu_command_id, revision })
-    })
-  })
+fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
+  let json = decode_native_json(text, "runtime event")
+  let object = match json {
+    Object(object) => object
+    _ =>
+      raise InvalidPayload(context="runtime event", message="expected object")
+  }
+  let event_type_json = match object.get("type") {
+    Some(value) => value
+    None =>
+      raise InvalidPayload(context="runtime event", message="missing type")
+  }
+  let event_type = decode_string_json(event_type_json, "runtime event type")
+  let window = match object.get("window") {
+    None => None
+    Some(value) => Some(decode_int64_json(value, "runtime event window"))
+  }
+  let menu_command_id = match object.get("command_id") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event command id"))
+  }
+  let revision = match object.get("revision") {
+    None => None
+    Some(value) => Some(decode_int64_json(value, "runtime event revision"))
+  }
+  RuntimeEvent::{ event_type, window, menu_command_id, revision }
 }
 
 ///|
-fn decode_int64_json(json : Json, label : String) -> Result[Int64, NativeError] {
-  try @json.from_json(json) catch {
-    err =>
-      Err({
-        status: -1,
-        message: "failed to decode " + label + " as int64: " + err.to_string(),
-      })
-  } noraise {
-    value => Ok(value)
+fn decode_int64_json(json : Json, label : String) -> Int64 raise NativeError {
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context=label,
+        message="expected int64: " + error.to_string(),
+      )
   }
 }
 
 ///|
-fn decode_bridge_request_json(
-  text : String,
-) -> Result[BridgeRequest, NativeError] {
-  decode_native_json(text, "bridge request").bind(fn(json) {
-    let object = match json {
-      Object(object) => object
-      _ =>
-        return Err({
-          status: -1,
-          message: "failed to decode bridge request JSON: expected object",
-        })
-    }
-    let request_id_json = match object.get("request_id") {
-      Some(value) => value
-      None =>
-        return Err({
-          status: -1,
-          message: "failed to decode bridge request JSON: missing request_id",
-        })
-    }
-    let window_json = match object.get("window") {
-      Some(value) => value
-      None =>
-        return Err({
-          status: -1,
-          message: "failed to decode bridge request JSON: missing window",
-        })
-    }
-    let op_json = match object.get("op") {
-      Some(value) => value
-      None =>
-        return Err({
-          status: -1,
-          message: "failed to decode bridge request JSON: missing op",
-        })
-    }
-    let payload = match object.get("payload") {
-      Some(value) => value
-      None => Json::empty_object()
-    }
-    let page_instance = match object.get("page_instance") {
-      Some(String(value)) => Some(value)
-      _ => None
-    }
-    decode_int64_json(request_id_json, "bridge request_id").bind(fn(
-      request_id,
-    ) {
-      decode_int64_json(window_json, "bridge request window").bind(fn(window) {
-        decode_string_json(op_json, "bridge request op").map(fn(op) {
-          BridgeRequest::{ request_id, window, op, payload, page_instance }
-        })
-      })
-    })
-  })
+fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError {
+  let json = decode_native_json(text, "bridge request")
+  let object = match json {
+    Object(object) => object
+    _ =>
+      raise InvalidPayload(context="bridge request", message="expected object")
+  }
+  let request_id_json = match object.get("request_id") {
+    Some(value) => value
+    None =>
+      raise InvalidPayload(
+        context="bridge request",
+        message="missing request_id",
+      )
+  }
+  let window_json = match object.get("window") {
+    Some(value) => value
+    None =>
+      raise InvalidPayload(context="bridge request", message="missing window")
+  }
+  let op_json = match object.get("op") {
+    Some(value) => value
+    None => raise InvalidPayload(context="bridge request", message="missing op")
+  }
+  let payload = object.get("payload").unwrap_or(Json::empty_object())
+  let page_instance = match object.get("page_instance") {
+    Some(String(value)) => Some(value)
+    _ => None
+  }
+  let request_id = decode_int64_json(request_id_json, "bridge request_id")
+  let window = decode_int64_json(window_json, "bridge request window")
+  let op = decode_string_json(op_json, "bridge request op")
+  BridgeRequest::{ request_id, window, op, payload, page_instance }
 }
 
 ///|
 pub fn execute_process(
   config? : RuntimeConfig = RuntimeConfig::new(),
-) -> Result[ProcessResult, NativeError] {
+) -> ProcessResult raise NativeError {
   let out_exit_code = Ref(0)
   let status = proton_execute_process_ffi(
     @ffi.to_cstr(config.to_json_string()),
     out_exit_code,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else if status == proton_process_handled {
-    Ok(ProcessResult::SubprocessHandled(out_exit_code.val))
+    ProcessResult::SubprocessHandled(out_exit_code.val)
   } else {
-    Ok(ProcessResult::MainProcess)
+    ProcessResult::MainProcess
   }
 }
 
@@ -268,51 +199,50 @@ pub fn execute_process(
 /// Runs `entry` on Proton's application thread while the caller owns the
 /// platform UI loop on runtimes that advertise `managed_app_runner`. Other
 /// platforms may execute `entry` inline.
-pub fn run_app(entry : FuncRef[() -> Unit]) -> Result[Unit, NativeError] {
-  status_to_result(proton_app_run_ffi(entry))
+pub fn run_app(entry : FuncRef[() -> Unit]) -> Unit raise NativeError {
+  check_status(proton_app_run_ffi(entry))
 }
 
 ///|
 pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
-) -> Result[Unit, NativeError] {
-  status_to_result(
+) -> Unit raise NativeError {
+  check_status(
     proton_runtime_probe_json_ffi(@ffi.to_cstr(config.to_json_string())),
   )
 }
 
 ///|
-pub fn RuntimeConfig::probe(self : RuntimeConfig) -> Result[Unit, NativeError] {
+pub fn RuntimeConfig::probe(self : RuntimeConfig) -> Unit raise NativeError {
   probe_runtime(config=self)
 }
 
 ///|
 pub fn Runtime::new(
   config? : RuntimeConfig = RuntimeConfig::new(),
-) -> Result[Runtime, NativeError] {
+) -> Runtime raise NativeError {
   let out_runtime = Ref(proton_invalid_handle)
   let status = proton_runtime_create_json_ffi(
     @ffi.to_cstr(config.to_json_string()),
     out_runtime,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(Runtime::{ handle: out_runtime.val })
+    Runtime::{ handle: out_runtime.val }
   }
 }
 
 ///|
-pub fn Runtime::destroy(self : Runtime) -> Result[Unit, NativeError] {
+pub fn Runtime::destroy(self : Runtime) -> Unit raise NativeError {
   if self.handle == proton_invalid_handle {
-    return Ok(())
+    return
   }
   let status = proton_runtime_destroy_ffi(self.handle)
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
     self.handle = proton_invalid_handle
-    Ok(())
   }
 }
 
@@ -320,8 +250,8 @@ pub fn Runtime::destroy(self : Runtime) -> Result[Unit, NativeError] {
 /// Runs CEF's message loop for a low-level host.
 ///
 /// Managed application runners own this loop and reject this operation.
-pub fn Runtime::run(self : Runtime) -> Result[Unit, NativeError] {
-  status_to_result(proton_runtime_run_ffi(self.handle))
+pub fn Runtime::run(self : Runtime) -> Unit raise NativeError {
+  check_status(proton_runtime_run_ffi(self.handle))
 }
 
 ///|
@@ -329,10 +259,8 @@ pub fn Runtime::run(self : Runtime) -> Result[Unit, NativeError] {
 ///
 /// Managed application runners own the native message loop and reject this
 /// operation.
-pub fn Runtime::do_message_loop_work(
-  self : Runtime,
-) -> Result[Unit, NativeError] {
-  status_to_result(proton_runtime_do_message_loop_work_ffi(self.handle))
+pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
+  check_status(proton_runtime_do_message_loop_work_ffi(self.handle))
 }
 
 ///|
@@ -344,15 +272,15 @@ pub fn Runtime::wait(
   self : Runtime,
   interest_mask~ : Int,
   timeout_ms~ : Int,
-) -> Result[RuntimeWaitReady, NativeError] {
+) -> RuntimeWaitReady raise NativeError {
   if interest_mask == runtime_wait_none {
-    return Err(invalid_argument("interest_mask is required"))
+    raise invalid_argument("interest_mask is required")
   }
   if interest_mask.land(runtime_wait_all.lnot()) != 0 {
-    return Err(invalid_argument("interest_mask contains unsupported bits"))
+    raise invalid_argument("interest_mask contains unsupported bits")
   }
   if timeout_ms < 0 {
-    return Err(invalid_argument("timeout_ms must be non-negative"))
+    raise invalid_argument("timeout_ms must be non-negative")
   }
   let ready_mask = Ref(runtime_wait_none)
   let status = proton_runtime_wait_ffi(
@@ -362,9 +290,9 @@ pub fn Runtime::wait(
     ready_mask,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(RuntimeWaitReady::{ mask: ready_mask.val })
+    RuntimeWaitReady::{ mask: ready_mask.val }
   }
 }
 
@@ -375,11 +303,11 @@ pub fn Runtime::wait(
 pub fn Runtime::set_wakeup_fd(
   self : Runtime,
   wakeup_fd : Int,
-) -> Result[Unit, NativeError] {
+) -> Unit raise NativeError {
   if wakeup_fd < -1 {
-    return Err(invalid_argument("wakeup_fd must be -1 or a valid descriptor"))
+    raise invalid_argument("wakeup_fd must be -1 or a valid descriptor")
   }
-  status_to_result(proton_runtime_set_wakeup_fd_ffi(self.handle, wakeup_fd))
+  check_status(proton_runtime_set_wakeup_fd_ffi(self.handle, wakeup_fd))
 }
 
 ///|
@@ -388,7 +316,7 @@ pub fn Runtime::set_wakeup_fd(
 /// Call `activate_wakeup_source` after opening the locator for reading.
 pub fn Runtime::prepare_wakeup_source(
   self : Runtime,
-) -> Result[String, NativeError] {
+) -> String raise NativeError {
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = proton_runtime_prepare_wakeup_source_ffi(
@@ -398,7 +326,7 @@ pub fn Runtime::prepare_wakeup_source(
     required,
   )
   if status != proton_err_buffer_too_small && status < 0 {
-    return Err(native_error(status))
+    raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_prepare_wakeup_source_ffi(
@@ -408,9 +336,9 @@ pub fn Runtime::prepare_wakeup_source(
     required,
   )
   if second_status < 0 {
-    Err(native_error(second_status))
+    raise native_error(second_status)
   } else {
-    Ok(@ffi.from_cstr(Bytes::from_array(buffer)))
+    @ffi.from_cstr(Bytes::from_array(buffer))
   }
 }
 
@@ -418,8 +346,8 @@ pub fn Runtime::prepare_wakeup_source(
 /// Activates a prepared wakeup source after its reader is connected.
 pub fn Runtime::activate_wakeup_source(
   self : Runtime,
-) -> Result[Unit, NativeError] {
-  status_to_result(proton_runtime_activate_wakeup_source_ffi(self.handle))
+) -> Unit raise NativeError {
+  check_status(proton_runtime_activate_wakeup_source_ffi(self.handle))
 }
 
 ///|
@@ -428,19 +356,17 @@ pub fn Runtime::activate_wakeup_source(
 ///
 /// Managed application runners own the native message loop and reject this
 /// operation.
-pub fn Runtime::next_wakeup_delay_ms(
-  self : Runtime,
-) -> Result[Int?, NativeError] {
+pub fn Runtime::next_wakeup_delay_ms(self : Runtime) -> Int? raise NativeError {
   let delay = Ref(-1L)
   let status = proton_runtime_next_wakeup_delay_ms_ffi(self.handle, delay)
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else if delay.val < 0L {
-    Ok(None)
+    None
   } else if delay.val > 2147483647L {
-    Ok(Some(2147483647))
+    Some(2147483647)
   } else {
-    Ok(Some(delay.val.to_int()))
+    Some(delay.val.to_int())
   }
 }
 
@@ -449,8 +375,8 @@ pub fn Runtime::next_wakeup_delay_ms(
 pub fn Runtime::set_menu(
   self : Runtime,
   menu : MenuBar,
-) -> Result[Unit, NativeError] {
-  status_to_result(
+) -> Unit raise NativeError {
+  check_status(
     proton_runtime_set_menu_json_ffi(
       self.handle,
       @ffi.to_cstr(menu.to_json_string()),
@@ -463,12 +389,12 @@ pub fn Runtime::set_menu(
 ///
 /// Managed application runners own the native message loop and reject this
 /// operation. Destroy the runtime to finish a managed application.
-pub fn Runtime::quit(self : Runtime) -> Result[Unit, NativeError] {
-  status_to_result(proton_runtime_quit_ffi(self.handle))
+pub fn Runtime::quit(self : Runtime) -> Unit raise NativeError {
+  check_status(proton_runtime_quit_ffi(self.handle))
 }
 
 ///|
-pub fn Runtime::poll_event_json(self : Runtime) -> Result[String?, NativeError] {
+pub fn Runtime::poll_event_json(self : Runtime) -> String? raise NativeError {
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = proton_runtime_poll_event_json_ffi(
@@ -478,10 +404,10 @@ pub fn Runtime::poll_event_json(self : Runtime) -> Result[String?, NativeError] 
     required,
   )
   if status == proton_event_none {
-    return Ok(None)
+    return None
   }
   if status != proton_err_buffer_too_small && status < 0 {
-    return Err(native_error(status))
+    raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_poll_event_json_ffi(
@@ -491,31 +417,24 @@ pub fn Runtime::poll_event_json(self : Runtime) -> Result[String?, NativeError] 
     required,
   )
   if second_status < 0 {
-    Err(native_error(second_status))
+    raise native_error(second_status)
   } else {
-    Ok(Some(@ffi.from_cstr(Bytes::from_array(buffer))))
+    Some(@ffi.from_cstr(Bytes::from_array(buffer)))
   }
 }
 
 ///|
-pub fn Runtime::poll_event(
-  self : Runtime,
-) -> Result[RuntimeEvent?, NativeError] {
-  self
-  .poll_event_json()
-  .bind(fn(event_json) {
-    match event_json {
-      Some(text) =>
-        decode_runtime_event_json(text).map(fn(event) { Some(event) })
-      None => Ok(None)
-    }
-  })
+pub fn Runtime::poll_event(self : Runtime) -> RuntimeEvent? raise NativeError {
+  match self.poll_event_json() {
+    Some(text) => Some(decode_runtime_event_json(text))
+    None => None
+  }
 }
 
 ///|
 pub fn Runtime::poll_bridge_request_json(
   self : Runtime,
-) -> Result[String?, NativeError] {
+) -> String? raise NativeError {
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = proton_runtime_poll_bridge_request_json_ffi(
@@ -525,10 +444,10 @@ pub fn Runtime::poll_bridge_request_json(
     required,
   )
   if status == proton_event_none {
-    return Ok(None)
+    return None
   }
   if status != proton_err_buffer_too_small && status < 0 {
-    return Err(native_error(status))
+    raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_poll_bridge_request_json_ffi(
@@ -538,33 +457,28 @@ pub fn Runtime::poll_bridge_request_json(
     required,
   )
   if second_status < 0 {
-    Err(native_error(second_status))
+    raise native_error(second_status)
   } else {
-    Ok(Some(@ffi.from_cstr(Bytes::from_array(buffer))))
+    Some(@ffi.from_cstr(Bytes::from_array(buffer)))
   }
 }
 
 ///|
 pub fn Runtime::poll_bridge_request(
   self : Runtime,
-) -> Result[BridgeRequest?, NativeError] {
-  self
-  .poll_bridge_request_json()
-  .bind(fn(request_json) {
-    match request_json {
-      Some(text) =>
-        decode_bridge_request_json(text).map(fn(request) { Some(request) })
-      None => Ok(None)
-    }
-  })
+) -> BridgeRequest? raise NativeError {
+  match self.poll_bridge_request_json() {
+    Some(text) => Some(decode_bridge_request_json(text))
+    None => None
+  }
 }
 
 ///|
 pub fn Runtime::respond_bridge_request(
   self : Runtime,
   response : BridgeResponse,
-) -> Result[Unit, NativeError] {
-  status_to_result(
+) -> Unit raise NativeError {
+  check_status(
     proton_runtime_respond_bridge_request_json_ffi(
       self.handle,
       @ffi.to_cstr(response.to_json_string()),
@@ -576,11 +490,8 @@ pub fn Runtime::respond_bridge_request(
 pub fn Window::new(
   runtime : Runtime,
   config? : WindowConfig = WindowConfig::new(),
-) -> Result[Window, NativeError] {
-  match validate_window_config(config) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+) -> Window raise NativeError {
+  validate_window_config(config)
   let out_window = Ref(proton_invalid_handle)
   let status = proton_window_create_json_ffi(
     runtime.handle,
@@ -588,29 +499,28 @@ pub fn Window::new(
     out_window,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(Window::{ handle: out_window.val })
+    Window::{ handle: out_window.val }
   }
 }
 
 ///|
-pub fn Window::destroy(self : Window) -> Result[Unit, NativeError] {
+pub fn Window::destroy(self : Window) -> Unit raise NativeError {
   if self.handle == proton_invalid_handle {
-    return Ok(())
+    return
   }
   let status = proton_window_destroy_ffi(self.handle)
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
     self.handle = proton_invalid_handle
-    Ok(())
   }
 }
 
 ///|
-pub fn Window::show(self : Window) -> Result[Unit, NativeError] {
-  status_to_result(proton_window_show_ffi(self.handle))
+pub fn Window::show(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_show_ffi(self.handle))
 }
 
 ///|
@@ -620,37 +530,34 @@ pub fn Window::as_ref(self : Window) -> WindowRef {
 }
 
 ///|
-pub fn Window::hide(self : Window) -> Result[Unit, NativeError] {
-  status_to_result(proton_window_hide_ffi(self.handle))
+pub fn Window::hide(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_hide_ffi(self.handle))
 }
 
 ///|
-pub fn Window::close(self : Window) -> Result[Unit, NativeError] {
+pub fn Window::close(self : Window) -> Unit raise NativeError {
   if self.handle == proton_invalid_handle {
-    return Ok(())
+    return
   }
   let status = proton_window_close_ffi(self.handle)
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
     self.handle = proton_invalid_handle
-    Ok(())
   }
 }
 
 ///|
-pub fn Window::focus(self : Window) -> Result[Unit, NativeError] {
-  status_to_result(proton_window_focus_ffi(self.handle))
+pub fn Window::focus(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_focus_ffi(self.handle))
 }
 
 ///|
 pub fn Window::set_title(
   self : Window,
   title : String,
-) -> Result[Unit, NativeError] {
-  status_to_result(
-    proton_window_set_title_ffi(self.handle, @ffi.to_cstr(title)),
-  )
+) -> Unit raise NativeError {
+  check_status(proton_window_set_title_ffi(self.handle, @ffi.to_cstr(title)))
 }
 
 ///|
@@ -658,19 +565,16 @@ pub fn Window::set_size(
   self : Window,
   width : Int,
   height : Int,
-) -> Result[Unit, NativeError] {
+) -> Unit raise NativeError {
   if width <= 0 || height <= 0 {
-    return Err(invalid_argument("width and height must be positive"))
+    raise invalid_argument("width and height must be positive")
   }
-  status_to_result(proton_window_set_size_ffi(self.handle, width, height))
+  check_status(proton_window_set_size_ffi(self.handle, width, height))
 }
 
 ///|
-pub fn Window::load_url(
-  self : Window,
-  url : String,
-) -> Result[Unit, NativeError] {
-  status_to_result(proton_window_load_url_ffi(self.handle, @ffi.to_cstr(url)))
+pub fn Window::load_url(self : Window, url : String) -> Unit raise NativeError {
+  check_status(proton_window_load_url_ffi(self.handle, @ffi.to_cstr(url)))
 }
 
 ///|
@@ -678,8 +582,8 @@ pub fn Window::load_html(
   self : Window,
   html : String,
   base_url : String,
-) -> Result[Unit, NativeError] {
-  status_to_result(
+) -> Unit raise NativeError {
+  check_status(
     proton_window_load_html_ffi(
       self.handle,
       @ffi.to_cstr(html),
@@ -689,19 +593,16 @@ pub fn Window::load_html(
 }
 
 ///|
-pub fn Window::eval(
-  self : Window,
-  script : String,
-) -> Result[Unit, NativeError] {
-  status_to_result(proton_window_eval_ffi(self.handle, @ffi.to_cstr(script)))
+pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
+  check_status(proton_window_eval_ffi(self.handle, @ffi.to_cstr(script)))
 }
 
 ///|
 pub fn Window::emit_bridge_event_json(
   self : Window,
   event_json : String,
-) -> Result[Unit, NativeError] {
-  status_to_result(
+) -> Unit raise NativeError {
+  check_status(
     proton_window_emit_bridge_event_json_ffi(
       self.handle,
       @ffi.to_cstr(event_json),
@@ -714,78 +615,67 @@ fn window_bridge_json(
   window : Window,
   query : (Int64, FixedArray[Byte], Int, Ref[Int]) -> Int,
   optional : Bool,
-) -> Result[String?, NativeError] {
+) -> String? raise NativeError {
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = query(window.handle, scratch, 0, required)
   if optional && status == proton_event_none {
-    return Ok(None)
+    return None
   }
   if status != proton_err_buffer_too_small && status < 0 {
-    return Err(native_error(status))
+    raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = query(window.handle, buffer, buffer.length(), required)
   if second_status < 0 {
-    Err(native_error(second_status))
+    raise native_error(second_status)
   } else {
-    Ok(Some(@ffi.from_cstr(Bytes::from_array(buffer))))
+    Some(@ffi.from_cstr(Bytes::from_array(buffer)))
   }
 }
 
 ///|
 pub fn Window::bridge_lifecycle_state(
   self : Window,
-) -> Result[BridgeLifecycleState, NativeError] {
-  window_bridge_json(self, proton_window_bridge_state_json_ffi, false).bind(fn(
-    text,
-  ) {
-    match text {
-      None => Err(invalid_argument("bridge lifecycle state is missing"))
-      Some(text) =>
-        decode_native_json(text, "bridge lifecycle state").bind(fn(json) {
-          try @json.from_json(json) catch {
-            error =>
-              Err(
-                invalid_argument(
-                  "failed to decode bridge lifecycle state JSON: " +
-                  error.to_string(),
-                ),
-              )
-          } noraise {
-            state => Ok(state)
-          }
-        })
-    }
-  })
+) -> BridgeLifecycleState raise NativeError {
+  let text = match
+    window_bridge_json(self, proton_window_bridge_state_json_ffi, false) {
+    Some(text) => text
+    None =>
+      raise InvalidPayload(
+        context="bridge lifecycle state",
+        message="missing payload",
+      )
+  }
+  let json = decode_native_json(text, "bridge lifecycle state")
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context="bridge lifecycle state",
+        message=error.to_string(),
+      )
+  }
 }
 
 ///|
 pub fn Window::take_bridge_failure(
   self : Window,
-) -> Result[BridgeDiagnostic?, NativeError] {
-  window_bridge_json(self, proton_window_take_bridge_failure_json_ffi, true).bind(fn(
-      text,
-    ) {
-      match text {
-        None => Ok(None)
-        Some(text) =>
-          decode_native_json(text, "bridge diagnostic").bind(fn(json) {
-            try @json.from_json(json) catch {
-              error =>
-                Err(
-                  invalid_argument(
-                    "failed to decode bridge diagnostic JSON: " +
-                    error.to_string(),
-                  ),
-                )
-            } noraise {
-              diagnostic => Ok(Some(diagnostic))
-            }
-          })
+) -> BridgeDiagnostic? raise NativeError {
+  match
+    window_bridge_json(self, proton_window_take_bridge_failure_json_ffi, true) {
+    None => None
+    Some(text) => {
+      let json = decode_native_json(text, "bridge diagnostic")
+      let diagnostic : BridgeDiagnostic = @json.from_json(json) catch {
+        error =>
+          raise InvalidPayload(
+            context="bridge diagnostic",
+            message=error.to_string(),
+          )
       }
-    },
-  )
+      Some(diagnostic)
+    }
+  }
 }
 
 ///|
@@ -824,7 +714,7 @@ pub fn WindowRef::begin_message_dialog(
   title : String?,
   message : String,
   level : DialogLevel,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   let title_buffer = optional_dialog_text_buffer(title)
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
@@ -838,9 +728,9 @@ pub fn WindowRef::begin_message_dialog(
     dialog,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(dialog.val)
+    dialog.val
   }
 }
 
@@ -850,7 +740,7 @@ pub fn Runtime::begin_message_dialog(
   title : String?,
   message : String,
   level : DialogLevel,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   let title_buffer = optional_dialog_text_buffer(title)
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
@@ -864,9 +754,9 @@ pub fn Runtime::begin_message_dialog(
     dialog,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(dialog.val)
+    dialog.val
   }
 }
 
@@ -874,7 +764,7 @@ pub fn Runtime::begin_message_dialog(
 pub fn Runtime::poll_message_dialog(
   self : Runtime,
   dialog : Int64,
-) -> Result[Bool, NativeError] {
+) -> Bool raise NativeError {
   let required = Ref(0)
   let buffer = FixedArray::make(1, b'\x00')
   let status = proton_runtime_poll_dialog_result_ffi(
@@ -885,11 +775,11 @@ pub fn Runtime::poll_message_dialog(
     required,
   )
   if status == proton_event_none {
-    Ok(false)
+    false
   } else if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(true)
+    true
   }
 }
 
@@ -899,7 +789,7 @@ pub fn WindowRef::begin_confirm_dialog(
   title : String?,
   message : String,
   level : DialogLevel,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   let title_buffer = optional_dialog_text_buffer(title)
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
@@ -913,9 +803,9 @@ pub fn WindowRef::begin_confirm_dialog(
     dialog,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(dialog.val)
+    dialog.val
   }
 }
 
@@ -925,7 +815,7 @@ fn WindowRef::begin_file_dialog(
   title : String?,
   path : String?,
   callback : (Int64, Bytes, Int, Bytes, Int, Ref[Int64]) -> Int,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   let title_buffer = optional_dialog_text_buffer(title)
   let path_buffer = optional_dialog_text_buffer(path)
   let dialog = Ref(proton_invalid_handle)
@@ -938,9 +828,9 @@ fn WindowRef::begin_file_dialog(
     dialog,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(dialog.val)
+    dialog.val
   }
 }
 
@@ -949,7 +839,7 @@ pub fn WindowRef::begin_open_file_dialog(
   self : WindowRef,
   title : String?,
   path : String?,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   self.begin_file_dialog(title, path, proton_window_begin_open_file_dialog_ffi)
 }
 
@@ -958,7 +848,7 @@ pub fn WindowRef::begin_save_file_dialog(
   self : WindowRef,
   title : String?,
   path : String?,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   self.begin_file_dialog(title, path, proton_window_begin_save_file_dialog_ffi)
 }
 
@@ -967,7 +857,7 @@ pub fn WindowRef::begin_choose_directory_dialog(
   self : WindowRef,
   title : String?,
   path : String?,
-) -> Result[Int64, NativeError] {
+) -> Int64 raise NativeError {
   self.begin_file_dialog(
     title, path, proton_window_begin_choose_directory_dialog_ffi,
   )
@@ -977,7 +867,7 @@ pub fn WindowRef::begin_choose_directory_dialog(
 pub fn WindowRef::poll_dialog_result(
   self : WindowRef,
   dialog : Int64,
-) -> Result[DialogPollResult, NativeError] {
+) -> DialogPollResult raise NativeError {
   let required = Ref(0)
   let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
   let status = proton_window_poll_dialog_result_ffi(
@@ -988,12 +878,12 @@ pub fn WindowRef::poll_dialog_result(
     required,
   )
   if status == proton_event_none {
-    Ok(Pending)
+    Pending
   } else if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
     // On success `required` is the payload plus its terminator, and the
     // rest of the fixed buffer is zero fill. Decode exactly that span.
-    Ok(Ready(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val]))))
+    Ready(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val])))
   }
 }

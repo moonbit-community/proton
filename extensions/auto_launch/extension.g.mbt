@@ -5,7 +5,7 @@
 pub async fn emit_auto_launch_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : AutoLaunchActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -30,7 +30,7 @@ struct ProtonDescribePayload {
 } derive(FromJson)
 
 ///|
-fn __proton_command_describe(payload : ProtonDescribePayload) -> Result[AutoLaunchReply, String] {
+fn __proton_command_describe(payload : ProtonDescribePayload) -> AutoLaunchReply raise AutoLaunchError {
   describe(payload.name, payload.path, payload.launch_in_background, payload.background_arg, payload.extra_arguments, payload.identifier)
 }
 
@@ -45,7 +45,7 @@ struct ProtonIsEnabledPayload {
 } derive(FromJson)
 
 ///|
-fn __proton_command_is_enabled(payload : ProtonIsEnabledPayload) -> Result[EnabledReply, String] {
+fn __proton_command_is_enabled(payload : ProtonIsEnabledPayload) -> EnabledReply raise AutoLaunchError {
   is_enabled(payload.name, payload.path, payload.launch_in_background, payload.background_arg, payload.extra_arguments, payload.identifier)
 }
 
@@ -63,7 +63,7 @@ struct ProtonEnablePayload {
 async fn __proton_command_enable(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonEnablePayload,
-) -> Result[MutationReply, String] {
+) -> MutationReply raise AutoLaunchError {
   enable(context, payload.name, payload.path, payload.launch_in_background, payload.background_arg, payload.extra_arguments, payload.identifier)
 }
 
@@ -81,7 +81,7 @@ struct ProtonDisablePayload {
 async fn __proton_command_disable(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonDisablePayload,
-) -> Result[MutationReply, String] {
+) -> MutationReply raise AutoLaunchError {
   disable(context, payload.name, payload.path, payload.launch_in_background, payload.background_arg, payload.extra_arguments, payload.identifier)
 }
 
@@ -102,17 +102,16 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("enable"),
       @proton_command.AppCommandApiDescriptor::new("disable"),
     ],
-    fn(context) {
+    fn(context) raise {
       context.op("support", __proton_command_support)
-      context.op_result("describe", __proton_command_describe)
-      context.op_result("isEnabled", __proton_command_is_enabled)
-      context.op_async_result("enable", async fn(payload) {
+      context.op("describe", __proton_command_describe)
+      context.op("isEnabled", __proton_command_is_enabled)
+      context.op_async("enable", async fn(payload) {
         __proton_command_enable(context, payload)
       }, emits_events=true)
-      context.op_async_result("disable", async fn(payload) {
+      context.op_async("disable", async fn(payload) {
         __proton_command_disable(context, payload)
       }, emits_events=true)
-      Ok(())
     },
   )
 }

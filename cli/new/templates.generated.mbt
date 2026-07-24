@@ -343,7 +343,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|fn register_counter_commands(
           #|  context : @proton_command.AppCommandExtensionContext,
-          #|) -> Result[Unit, String] {
+          #|) -> Unit raise {
           #|  context.op("get", fn(_payload : Json) {
           #|    CounterReply::{ value: counter_value.val }
           #|  })
@@ -355,7 +355,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|    counter_value.val = 0
           #|    CounterReply::{ value: counter_value.val }
           #|  })
-          #|  Ok(())
           #|}
           #|
       ),

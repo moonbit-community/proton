@@ -1,10 +1,20 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/proton_cli/doctor"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
-pub async fn run(cwd~ : String, dry_run~ : Bool, verbose~ : Bool, deep~ : Bool, run_frontend~ : Bool, fix~ : Bool, json~ : Bool, json_lines~ : Bool, quiet~ : Bool, sections~ : Array[String], output~ : String?) -> Result[Bool, String]
+pub async fn run(cwd~ : String, dry_run~ : Bool, verbose~ : Bool, deep~ : Bool, run_frontend~ : Bool, fix~ : Bool, json~ : Bool, json_lines~ : Bool, quiet~ : Bool, sections~ : Array[String], output~ : String?) -> Bool
 
 // Errors
+pub(all) suberror DoctorError {
+  WorkingDirectoryMissing(path~ : String)
+  WorkingDirectoryNotDirectory(path~ : String)
+  OutputWrite(path~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DoctorError::message(Self) -> String
 
 // Types and methods
 

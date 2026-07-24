@@ -12,7 +12,7 @@ async fn emit_activity(
   operation : String,
   path? : String? = None,
   bytes? : Int? = None,
-) -> Unit {
+) -> Unit noraise {
   emit_fs_activity(context, FsActivity::{ operation, path, bytes })
 }
 
@@ -22,19 +22,15 @@ async fn read_file(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
   sync_timestamp : Bool?,
-) -> Result[ReadFileReply, String] {
-  match read_text_file({ path, sync_timestamp }) {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_activity(
-        context,
-        "read_file",
-        path=Some(reply.path),
-        bytes=Some(reply.bytes_read),
-      )
-      Ok(reply)
-    }
-  }
+) -> ReadFileReply raise FsError {
+  let reply = read_text_file({ path, sync_timestamp })
+  emit_activity(
+    context,
+    "read_file",
+    path=Some(reply.path),
+    bytes=Some(reply.bytes_read),
+  )
+  reply
 }
 
 ///|
@@ -47,26 +43,28 @@ async fn write_file(
   create_mode : String?,
   permission : Int?,
   sync : String?,
-) -> Result[WriteFileReply, String] {
-  match
-    write_text_file({ path, content, append, create_mode, permission, sync }) {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_activity(
-        context,
-        "write_file",
-        path=Some(reply.path),
-        bytes=Some(reply.bytes_written),
-      )
-      Ok(reply)
-    }
-  }
+) -> WriteFileReply raise FsError {
+  let reply = write_text_file({
+    path,
+    content,
+    append,
+    create_mode,
+    permission,
+    sync,
+  })
+  emit_activity(
+    context,
+    "write_file",
+    path=Some(reply.path),
+    bytes=Some(reply.bytes_written),
+  )
+  reply
 }
 
 ///|
 #proton.command(name="exists")
-async fn exists(path : String) -> Result[ExistsReply, String] {
-  exists_path(path).map(fn(exists) { ExistsReply::{ exists, } })
+async fn exists(path : String) -> ExistsReply raise FsError {
+  ExistsReply::{ exists: exists_path(path) }
 }
 
 ///|
@@ -75,14 +73,10 @@ async fn kind(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
   follow_symlink : Bool?,
-) -> Result[KindReply, String] {
-  match path_kind(path, option_bool(follow_symlink, true)) {
-    Err(error) => Err(error)
-    Ok(kind) => {
-      emit_activity(context, "kind", path=Some(path))
-      Ok(KindReply::{ path, kind })
-    }
-  }
+) -> KindReply raise FsError {
+  let kind = path_kind(path, option_bool(follow_symlink, true))
+  emit_activity(context, "kind", path=Some(path))
+  KindReply::{ path, kind }
 }
 
 ///|
@@ -90,14 +84,10 @@ async fn kind(
 async fn size(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
-) -> Result[SizeReply, String] {
-  match path_size(path) {
-    Err(error) => Err(error)
-    Ok(size) => {
-      emit_activity(context, "size", path=Some(path))
-      Ok(SizeReply::{ path, size })
-    }
-  }
+) -> SizeReply raise FsError {
+  let size = path_size(path)
+  emit_activity(context, "size", path=Some(path))
+  SizeReply::{ path, size }
 }
 
 ///|
@@ -108,14 +98,10 @@ async fn readdir(
   include_hidden : Bool?,
   include_special : Bool?,
   sort : Bool?,
-) -> Result[ReaddirReply, String] {
-  match readdir_entries({ path, include_hidden, include_special, sort }) {
-    Err(error) => Err(error)
-    Ok(entries) => {
-      emit_activity(context, "readdir", path=Some(path))
-      Ok(ReaddirReply::{ path, entries })
-    }
-  }
+) -> ReaddirReply raise FsError {
+  let entries = readdir_entries({ path, include_hidden, include_special, sort })
+  emit_activity(context, "readdir", path=Some(path))
+  ReaddirReply::{ path, entries }
 }
 
 ///|
@@ -125,14 +111,10 @@ async fn mkdir(
   path : String,
   permission : Int?,
   recursive : Bool?,
-) -> Result[MkdirReply, String] {
-  match mkdir_path({ path, permission, recursive }) {
-    Err(error) => Err(error)
-    Ok(created) => {
-      emit_activity(context, "mkdir", path=Some(path))
-      Ok(MkdirReply::{ path, created })
-    }
-  }
+) -> MkdirReply raise FsError {
+  let created = mkdir_path({ path, permission, recursive })
+  emit_activity(context, "mkdir", path=Some(path))
+  MkdirReply::{ path, created }
 }
 
 ///|
@@ -140,14 +122,10 @@ async fn mkdir(
 async fn remove(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
-) -> Result[RemoveFileReply, String] {
-  match remove_file(path) {
-    Err(error) => Err(error)
-    Ok(removed) => {
-      emit_activity(context, "remove", path=Some(path))
-      Ok(RemoveFileReply::{ removed, })
-    }
-  }
+) -> RemoveFileReply raise FsError {
+  let removed = remove_file(path)
+  emit_activity(context, "remove", path=Some(path))
+  RemoveFileReply::{ removed, }
 }
 
 ///|
@@ -156,14 +134,10 @@ async fn rmdir(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
   recursive : Bool?,
-) -> Result[RemovePathReply, String] {
-  match remove_dir({ path, recursive }) {
-    Err(error) => Err(error)
-    Ok(removed) => {
-      emit_activity(context, "rmdir", path=Some(path))
-      Ok(RemovePathReply::{ path, removed })
-    }
-  }
+) -> RemovePathReply raise FsError {
+  let removed = remove_dir({ path, recursive })
+  emit_activity(context, "rmdir", path=Some(path))
+  RemovePathReply::{ path, removed }
 }
 
 ///|
@@ -173,14 +147,10 @@ async fn rename(
   old_path : String,
   new_path : String,
   replace : Bool?,
-) -> Result[RenameReply, String] {
-  match rename_path({ old_path, new_path, replace }) {
-    Err(error) => Err(error)
-    Ok(_) => {
-      emit_activity(context, "rename", path=Some(new_path))
-      Ok(RenameReply::{ old_path, new_path, renamed: true })
-    }
-  }
+) -> RenameReply raise FsError {
+  rename_path({ old_path, new_path, replace })
+  emit_activity(context, "rename", path=Some(new_path))
+  RenameReply::{ old_path, new_path, renamed: true }
 }
 
 ///|
@@ -188,12 +158,8 @@ async fn rename(
 async fn realpath(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
-) -> Result[RealpathReply, String] {
-  match realpath_path(path) {
-    Err(error) => Err(error)
-    Ok(real_path) => {
-      emit_activity(context, "realpath", path=Some(real_path))
-      Ok(RealpathReply::{ path: real_path })
-    }
-  }
+) -> RealpathReply raise FsError {
+  let real_path = realpath_path(path)
+  emit_activity(context, "realpath", path=Some(real_path))
+  RealpathReply::{ path: real_path }
 }

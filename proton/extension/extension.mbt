@@ -61,9 +61,9 @@ pub fn Extension::core_spec(self : Extension) -> @core.ExtensionSpec? {
 ///|
 pub fn Extension::command_spec(
   self : Extension,
-) -> @proton_command.AppCommandExtensionSpec? {
+) -> @proton_command.AppCommandExtensionSpec? raise ExtensionAdapterError {
   match self.kind {
-    Framework(spec) => core_command_spec(spec)
+    Framework(spec) => Some(core_command_spec(spec))
     Command(spec) => Some(spec)
   }
 }
@@ -81,45 +81,55 @@ fn copy_extensions(items : Array[Extension]) -> Array[Extension] {
 ///|
 fn core_command_spec(
   spec : @core.ExtensionSpec,
-) -> @proton_command.AppCommandExtensionSpec? {
-  match core_command_descriptor(spec) {
-    Err(_) => None
-    Ok(descriptor) => {
-      let core_host_ref : Ref[@core.ExtensionHost?] = Ref(None)
-      Some(
-        @proton_command.AppCommandExtensionSpec::new(
-          spec.id(),
-          spec.js_namespace(),
-          descriptor.apis,
-          fn(context) { register_core_commands(spec, context, core_host_ref) },
-          scripts=descriptor.scripts,
-          dependencies=spec.dependencies(),
-          on_destroy=fn(_context) { destroy_core_command_host(core_host_ref) },
-        ),
-      )
-    }
-  }
+) -> @proton_command.AppCommandExtensionSpec raise ExtensionAdapterError {
+  let descriptor = core_command_descriptor(spec)
+  let core_host_ref : Ref[@core.ExtensionHost?] = Ref(None)
+  @proton_command.AppCommandExtensionSpec::new(
+    spec.id(),
+    spec.js_namespace(),
+    descriptor.apis,
+    fn(context) raise { register_core_commands(spec, context, core_host_ref) },
+    scripts=descriptor.scripts,
+    dependencies=spec.dependencies(),
+    on_destroy=fn(_context) raise { destroy_core_command_host(core_host_ref) },
+  )
 }
 
 ///|
 fn core_command_descriptor(
   spec : @core.ExtensionSpec,
-) -> Result[CoreCommandDescriptor, String] {
+) -> CoreCommandDescriptor raise ExtensionAdapterError {
   let core_host = @core.ExtensionHost::new()
-  match spec.build_default() {
-    Err(error) => Err(error)
-    Ok(extension) => {
-      let scripts = extension.scripts()
-      core_host.install(extension)
-      let apis = core_host
-        .api_names(spec.js_namespace())
-        .map(fn(api_name) {
-          @proton_command.AppCommandApiDescriptor::new(api_name)
-        })
-      core_host.destroy()
-      Ok(CoreCommandDescriptor::{ apis, scripts })
+  let extension = spec.build_default() catch {
+    error =>
+      raise DescriptorBuildFailed(
+        extension_id=spec.id(),
+        detail=@debug.render(@debug.to_repr(error)),
+      )
+  }
+  let scripts = extension.scripts()
+  core_host.install(extension) catch {
+    error => {
+      core_host.destroy() catch {
+        _ => ()
+      }
+      raise DescriptorInstallFailed(
+        extension_id=spec.id(),
+        detail=@debug.render(@debug.to_repr(error)),
+      )
     }
   }
+  let apis = core_host
+    .api_names(spec.js_namespace())
+    .map(fn(api_name) { @proton_command.AppCommandApiDescriptor::new(api_name) })
+  core_host.destroy() catch {
+    error =>
+      raise DescriptorInstallFailed(
+        extension_id=spec.id(),
+        detail=@debug.render(@debug.to_repr(error)),
+      )
+  }
+  CoreCommandDescriptor::{ apis, scripts }
 }
 
 ///|
@@ -127,31 +137,28 @@ fn register_core_commands(
   spec : @core.ExtensionSpec,
   context : @proton_command.AppCommandExtensionContext,
   core_host_ref : Ref[@core.ExtensionHost?],
-) -> Result[Unit, String] {
+) -> Unit raise {
   destroy_core_command_host(core_host_ref)
   let core_context = @core.ExtensionBuildContext::new(
     options=context.options(),
     base_dir=context.base_dir(),
   )
-  match spec.build_extension(core_context) {
-    Err(error) => Err(error)
-    Ok(extension) => {
-      let core_host = @core.ExtensionHost::new()
-      core_host.install(extension)
-      for api_name in core_host.api_names(spec.js_namespace()) {
-        let op_name = context.op_name(api_name)
-        context.op_result(api_name, fn(payload : Json) {
-          core_host.dispatch_op(op_name, payload)
-        })
-      }
-      core_host_ref.val = Some(core_host)
-      Ok(())
-    }
+  let extension = spec.build_extension(core_context)
+  let core_host = @core.ExtensionHost::new()
+  core_host.install(extension)
+  for api_name in core_host.api_names(spec.js_namespace()) {
+    let op_name = context.op_name(api_name)
+    context.op(api_name, fn(payload : Json) raise {
+      core_host.dispatch_op(op_name, payload)
+    })
   }
+  core_host_ref.val = Some(core_host)
 }
 
 ///|
-fn destroy_core_command_host(core_host_ref : Ref[@core.ExtensionHost?]) -> Unit {
+fn destroy_core_command_host(
+  core_host_ref : Ref[@core.ExtensionHost?],
+) -> Unit raise {
   match core_host_ref.val {
     Some(core_host) => {
       core_host.destroy()

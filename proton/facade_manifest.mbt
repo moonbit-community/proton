@@ -37,26 +37,33 @@ fn App::set_entry(self : App, entry : @manifest.AppEntry) -> App {
 }
 
 ///|
-fn App::validation_error(self : App) -> String? {
+fn App::validation_error(self : App) -> AppConfigurationError? {
   if self.bridge_startup_timeout_value_ms <= 0 {
-    Some("bridge startup timeout must be positive")
+    Some(
+      InvalidSetting(
+        name="bridge_startup_timeout_ms",
+        message="must be positive",
+      ),
+    )
   } else {
     self.validation_errors.get(0)
   }
 }
 
 ///|
-fn App::resolved_app_config(self : App) -> Result[ResolvedAppConfig, String] {
+fn App::resolved_app_config(
+  self : App,
+) -> ResolvedAppConfig raise AppConfigurationError {
   match self.file_path {
     Some(path) => self.resolved_config_manifest(path)
     None =>
       if self.auto_config {
         match implicit_config_path() {
           Some(path) => self.resolved_config_manifest(path)
-          None => Ok(self.inline_app_config())
+          None => self.inline_app_config()
         }
       } else {
-        Ok(self.inline_app_config())
+        self.inline_app_config()
       }
   }
 }
@@ -65,32 +72,37 @@ fn App::resolved_app_config(self : App) -> Result[ResolvedAppConfig, String] {
 fn App::resolved_config_manifest(
   self : App,
   path : String,
-) -> Result[ResolvedAppConfig, String] {
+) -> ResolvedAppConfig raise AppConfigurationError {
   if proton_dev_mode_enabled() {
-    resolved_dev_manifest(path).map(fn(loaded) { self.merge_config(loaded) })
+    self.merge_config(resolved_dev_manifest(path))
   } else {
-    @bootstrap.load_config_manifest_from_file(path).map(fn(loaded) {
-      self.merge_config(loaded)
-    })
+    let loaded = @bootstrap.load_config_manifest_from_file(path) catch {
+      error => raise Bootstrap(error)
+    }
+    self.merge_config(loaded)
   }
 }
 
 ///|
 fn resolved_dev_manifest(
   path : String,
-) -> Result[@bootstrap.LoadedAppManifest, String] {
+) -> @bootstrap.LoadedAppManifest raise AppConfigurationError {
   match proton_dev_url_override() {
-    Some(url) =>
-      @bootstrap.load_config_manifest_from_file(path).map(fn(loaded) {
-        @bootstrap.LoadedAppManifest::new(
-          manifest_with_entry(loaded.manifest(), @manifest.AppEntry::Url(url)),
-          base_dir=loaded.base_dir(),
-        )
-      })
-    None =>
-      @bootstrap.load_proton_project_config_from_file(path).map(fn(config) {
-        config.dev_manifest()
-      })
+    Some(url) => {
+      let loaded = @bootstrap.load_config_manifest_from_file(path) catch {
+        error => raise Bootstrap(error)
+      }
+      @bootstrap.LoadedAppManifest::new(
+        manifest_with_entry(loaded.manifest(), @manifest.AppEntry::Url(url)),
+        base_dir=loaded.base_dir(),
+      )
+    }
+    None => {
+      let config = @bootstrap.load_proton_project_config_from_file(path) catch {
+        error => raise Bootstrap(error)
+      }
+      config.dev_manifest()
+    }
   }
 }
 

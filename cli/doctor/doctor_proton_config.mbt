@@ -1,7 +1,9 @@
 ///|
-fn read_proton_project_config(path : String) -> Result[DoctorAppConfig, String] {
-  @proton_config.load_project_config_from_file(path).map(
-    doctor_app_config_from_project_config,
+fn read_proton_project_config(
+  path : String,
+) -> DoctorAppConfig raise @proton_config.ProjectConfigError {
+  doctor_app_config_from_project_config(
+    @proton_config.load_project_config_from_file(path),
   )
 }
 

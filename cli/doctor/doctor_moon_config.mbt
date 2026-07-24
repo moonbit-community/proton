@@ -48,20 +48,12 @@ fn ast_bool(ast : @moon_config.Ast?) -> Bool? {
 }
 
 ///|
-fn read_moon_file(path : String) -> Result[String, MoonConfigReadError] {
+fn read_moon_file(path : String) -> String raise MoonConfigReadError {
   if !@mbfs.path_exists(path) {
-    Err(MoonConfigReadError::MissingFile(path))
+    raise MissingFile(path)
   } else {
-    try @mbfs.read_file_to_string(path, encoding="utf8") catch {
-      err =>
-        Err(
-          MoonConfigReadError::ReadFailed(
-            path,
-            @debug.render(@debug.to_repr(err)),
-          ),
-        )
-    } noraise {
-      text => Ok(text)
+    @mbfs.read_file_to_string(path, encoding="utf8") catch {
+      err => raise ReadFailed(path, @debug.render(@debug.to_repr(err)))
     }
   }
 }
@@ -137,29 +129,23 @@ fn parse_pkg_imports(ast : @moon_config.Ast) -> Array[MoonPackageImport] {
 }
 
 ///|
-fn read_moon_mod(
-  path : String,
-) -> Result[MoonModuleConfig, MoonConfigReadError] {
-  match read_moon_file(path) {
-    Err(err) => Err(err)
-    Ok(source) => {
-      let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
-      if reports.length() > 0 && !reports_only_reject_source(reports) {
-        Err(MoonConfigReadError::ParseFailed(path, report_messages(reports)))
-      } else {
-        Ok({
-          path,
-          name: ast_string(ast_field(ast, "name")),
-          version: ast_string(ast_field(ast, "version")),
-          imports: parse_deps(ast),
-          preferred_target: ast_string(ast_field(ast, "preferred_target")),
-          supported_targets: ast_string(ast_field(ast, "supported_targets")),
-          readme: ast_string(ast_field(ast, "readme")),
-          repository: ast_string(ast_field(ast, "repository")),
-          license: ast_string(ast_field(ast, "license")),
-          description: ast_string(ast_field(ast, "description")),
-        })
-      }
+fn read_moon_mod(path : String) -> MoonModuleConfig raise MoonConfigReadError {
+  let source = read_moon_file(path)
+  let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
+  if reports.length() > 0 && !reports_only_reject_source(reports) {
+    raise ParseFailed(path, report_messages(reports))
+  } else {
+    {
+      path,
+      name: ast_string(ast_field(ast, "name")),
+      version: ast_string(ast_field(ast, "version")),
+      imports: parse_deps(ast),
+      preferred_target: ast_string(ast_field(ast, "preferred_target")),
+      supported_targets: ast_string(ast_field(ast, "supported_targets")),
+      readme: ast_string(ast_field(ast, "readme")),
+      repository: ast_string(ast_field(ast, "repository")),
+      license: ast_string(ast_field(ast, "license")),
+      description: ast_string(ast_field(ast, "description")),
     }
   }
 }
@@ -183,27 +169,21 @@ fn normalize_moon_pkg_source(source : String) -> (String, Bool) {
 }
 
 ///|
-fn read_moon_pkg(
-  path : String,
-) -> Result[MoonPackageConfig, MoonConfigReadError] {
-  match read_moon_file(path) {
-    Err(err) => Err(err)
-    Ok(source) => {
-      let (source, is_executable) = normalize_moon_pkg_source(source)
-      let (ast, reports) = @moon_config.parse_moon_pkg(name=path, source)
-      if reports.length() > 0 {
-        Err(MoonConfigReadError::ParseFailed(path, report_messages(reports)))
+fn read_moon_pkg(path : String) -> MoonPackageConfig raise MoonConfigReadError {
+  let source = read_moon_file(path)
+  let (source, is_executable) = normalize_moon_pkg_source(source)
+  let (ast, reports) = @moon_config.parse_moon_pkg(name=path, source)
+  if reports.length() > 0 {
+    raise ParseFailed(path, report_messages(reports))
+  } else {
+    {
+      path,
+      imports: parse_pkg_imports(ast),
+      is_main: if is_executable {
+        Some(true)
       } else {
-        Ok({
-          path,
-          imports: parse_pkg_imports(ast),
-          is_main: if is_executable {
-            Some(true)
-          } else {
-            ast_bool(ast_field(ast, "is-main"))
-          },
-        })
-      }
+        ast_bool(ast_field(ast, "is-main"))
+      },
     }
   }
 }

@@ -87,34 +87,26 @@ fn runtime_manifest_string_field(
   object : Map[String, Json],
   field : String,
   manifest_path : String,
-) -> Result[String, String] {
+) -> String raise DoctorRuntimeManifestError {
   match object.get(field) {
-    Some(String(value)) => Ok(value)
-    _ =>
-      Err(
-        "Proton runtime manifest has no string `" +
-        field +
-        "`: " +
-        manifest_path,
-      )
+    Some(String(value)) => value
+    _ => raise MissingField(path=manifest_path, field~)
   }
 }
 
 ///|
 fn runtime_manifest_from_project(
   project : ProjectDoctorInfo,
-) -> Result[DoctorRuntimeManifest?, String] {
+) -> DoctorRuntimeManifest? raise DoctorRuntimeManifestError {
   let manifest_path = path_join(
     path_join(project.root, ".proton"),
     "runtime.json",
   )
-  guard @mbfs.path_exists(manifest_path) else { return Ok(None) }
+  guard @mbfs.path_exists(manifest_path) else { return None }
   let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
-    _ => return Err("failed to read Proton runtime manifest: " + manifest_path)
+    _ => raise Read(path=manifest_path)
   }
-  let json = @json.parse(text) catch {
-    _ => return Err("failed to parse Proton runtime manifest: " + manifest_path)
-  }
+  let json = @json.parse(text) catch { _ => raise Syntax(path=manifest_path) }
   match json {
     Object(object) => {
       let allowed = [
@@ -122,61 +114,30 @@ fn runtime_manifest_from_project(
       ]
       for key in object.keys() {
         if !allowed.contains(key) {
-          return Err(
-            "Proton runtime manifest has unknown field `" +
-            key +
-            "`: " +
-            manifest_path,
-          )
+          raise UnknownField(path=manifest_path, field=key)
         }
       }
       let schema_version : Int = match object.get("schema_version") {
         Some(value) =>
           @json.from_json(value) catch {
-            _ =>
-              return Err(
-                "Proton runtime manifest has invalid `schema_version`: " +
-                manifest_path,
-              )
+            _ => raise InvalidSchema(path=manifest_path)
           }
-        None =>
-          return Err(
-            "Proton runtime manifest has no `schema_version`: " + manifest_path,
-          )
+        None => raise MissingField(path=manifest_path, field="schema_version")
       }
-      guard schema_version == 1 else {
-        return Err(
-          "Proton runtime manifest schema_version must be 1: " + manifest_path,
-        )
-      }
-      runtime_manifest_string_field(object, "platform", manifest_path)
-      .bind(fn(platform) {
-        runtime_manifest_string_field(object, "proton_version", manifest_path).bind(fn(
-            proton_version,
-          ) {
-            runtime_manifest_string_field(object, "cef_version", manifest_path).bind(fn(
-                cef_version,
-              ) {
-                runtime_manifest_string_field(object, "dist", manifest_path).map(fn(
-                    dist,
-                  ) {
-                    {
-                      schema_version,
-                      platform,
-                      proton_version,
-                      cef_version,
-                      dist,
-                    }
-                  },
-                )
-              },
-            )
-          },
-        )
-      })
-      .map(fn(manifest) { Some(manifest) })
+      guard schema_version == 1 else { raise InvalidSchema(path=manifest_path) }
+      let platform = runtime_manifest_string_field(
+        object, "platform", manifest_path,
+      )
+      let proton_version = runtime_manifest_string_field(
+        object, "proton_version", manifest_path,
+      )
+      let cef_version = runtime_manifest_string_field(
+        object, "cef_version", manifest_path,
+      )
+      let dist = runtime_manifest_string_field(object, "dist", manifest_path)
+      Some({ schema_version, platform, proton_version, cef_version, dist })
     }
-    _ => Err("Proton runtime manifest must be a JSON object: " + manifest_path)
+    _ => raise InvalidRoot(path=manifest_path)
   }
 }
 
@@ -196,21 +157,20 @@ fn development_native_dist(project : ProjectDoctorInfo) -> String {
 ///|
 fn resolve_native_dist(
   project : ProjectDoctorInfo,
-) -> Result[(String, DoctorRuntimeManifest?), String] {
+) -> (String, DoctorRuntimeManifest?) raise DoctorRuntimeManifestError {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => Ok((root, None))
+    Some(root) => (root, None)
     None =>
       match runtime_manifest_from_project(project) {
-        Ok(Some(manifest)) => {
+        Some(manifest) => {
           let path = if path_is_absolute_like(manifest.dist) {
             manifest.dist
           } else {
             path_join(project.root, manifest.dist)
           }
-          Ok((path, Some(manifest)))
+          (path, Some(manifest))
         }
-        Ok(None) => Ok((development_native_dist(project), None))
-        Err(message) => Err(message)
+        None => (development_native_dist(project), None)
       }
   }
 }
@@ -700,18 +660,18 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   let platform_id = @cef.current_platform_id()
   lines.push(DoctorLine::coded("platform.id", Ok, "platform: " + platform_id))
-  let runtime = resolve_native_dist(project)
-  match runtime {
-    Err(message) =>
+  try resolve_native_dist(project) catch {
+    error =>
       lines.push(
         DoctorLine::coded(
           "platform.runtime_manifest",
           Error,
           "platform runtime unavailable",
-          hint=message,
+          hint=error.message(),
         ),
       )
-    Ok((native_dist, _)) => {
+  } noraise {
+    (native_dist, _) => {
       match runtime_library_relative_path(platform_id) {
         Some(relative) => {
           let library_path = path_join(native_dist, relative)
@@ -842,15 +802,14 @@ async fn collect_runtime(
   deep~ : Bool,
 ) -> DoctorSection {
   let lines : Array[DoctorLine] = []
-  let (native_dist, manifest) = match resolve_native_dist(project) {
-    Ok(value) => value
-    Err(message) => {
+  let (native_dist, manifest) = try resolve_native_dist(project) catch {
+    error => {
       lines.push(
         DoctorLine::coded(
           "runtime.manifest.invalid",
           Error,
           "Proton runtime manifest is invalid",
-          hint=message,
+          hint=error.message(),
         ),
       )
       return DoctorSection::new(
@@ -860,6 +819,8 @@ async fn collect_runtime(
         lines,
       )
     }
+  } noraise {
+    value => value
   }
   let platform_id = @cef.current_platform_id()
   let mut platform_matches = true
@@ -1060,15 +1021,14 @@ async fn collect_frontend(
   let lines : Array[DoctorLine] = []
   let config = match project.moon_proton_path {
     Some(path) =>
-      match read_proton_project_config(path) {
-        Ok(config) => config
-        Err(error) => {
+      try read_proton_project_config(path) catch {
+        error => {
           lines.push(
             DoctorLine::coded(
               "frontend.config.invalid",
               Error,
               "moon.proton failed to load",
-              hint=error,
+              hint=error.message(),
             ),
           )
           return DoctorSection::new(
@@ -1078,6 +1038,8 @@ async fn collect_frontend(
             lines,
           )
         }
+      } noraise {
+        config => config
       }
     None => {
       lines.push(
@@ -2008,7 +1970,12 @@ fn collect_extensions(
       let ext_path = path_join(extension_dir, "moon.ext")
       if (@mbfs.is_file(ext_path) catch { _ => false }) {
         count += 1
-        match @codegen.read_moon_ext_identity(ext_path) {
+        let identity = try @codegen.read_moon_ext_identity(ext_path) catch {
+          error => Err(error.to_string())
+        } noraise {
+          value => Ok(value)
+        }
+        match identity {
           Ok((id, js_namespace)) => {
             lines.push(
               DoctorLine::coded(
@@ -2073,10 +2040,16 @@ fn collect_extensions(
           }
           let generated_path = path_join(extension_dir, "extension.g.mbt")
           if source.contains("#proton.") {
-            match
+            let generated_result = try
               @codegen.generate_app_commands_from_file_with_metadata(
                 source_path,
-              ) {
+              )
+            catch {
+              error => Err(error.to_string())
+            } noraise {
+              generated => Ok(generated)
+            }
+            match generated_result {
               Ok(generated) =>
                 if !@mbfs.path_exists(generated_path) {
                   lines.push(
@@ -2209,7 +2182,14 @@ fn apply_doctor_fixes(
       continue
     }
     let generated_path = path_join(extension_dir, "extension.g.mbt")
-    match @codegen.generate_app_commands_from_file_with_metadata(source_path) {
+    let generated_result = try
+      @codegen.generate_app_commands_from_file_with_metadata(source_path)
+    catch {
+      error => Err(error.to_string())
+    } noraise {
+      generated => Ok(generated)
+    }
+    match generated_result {
       Ok(generated) => {
         let current = @mbfs.read_file_to_string(generated_path, encoding="utf8") catch {
           _ => ""
@@ -2544,8 +2524,18 @@ fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   match project.moon_proton_path {
     Some(path) =>
-      match read_proton_project_config(path) {
-        Ok(config) => {
+      try read_proton_project_config(path) catch {
+        error =>
+          lines.push(
+            DoctorLine::coded(
+              "app.config.invalid",
+              Error,
+              "moon.proton: failed to load",
+              hint=error.message(),
+            ),
+          )
+      } noraise {
+        config => {
           push_loaded_app(lines, project, config)
           match project.app_json_path {
             Some(legacy) =>
@@ -2559,15 +2549,6 @@ fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
             None => ()
           }
         }
-        Err(error) =>
-          lines.push(
-            DoctorLine::coded(
-              "app.config.invalid",
-              Error,
-              "moon.proton: failed to load",
-              hint=error,
-            ),
-          )
       }
     None =>
       match project.app_json_path {

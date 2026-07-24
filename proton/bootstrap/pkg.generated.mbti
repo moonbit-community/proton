@@ -3,22 +3,34 @@ package "justjavac/proton/bootstrap"
 
 import {
   "justjavac/proton/manifest",
+  "justjavac/proton_config",
+  "moonbitlang/core/debug",
 }
 
 // Values
 pub fn app_manifest_to_json(@manifest.AppManifest) -> Json
 
-pub fn load_config_manifest_from_file(String) -> Result[LoadedAppManifest, String]
+pub fn load_config_manifest_from_file(String) -> LoadedAppManifest raise BootstrapError
 
-pub fn load_proton_manifest_from_file(String) -> Result[LoadedAppManifest, String]
+pub fn load_proton_manifest_from_file(String) -> LoadedAppManifest raise BootstrapError
 
-pub fn load_proton_project_config_from_file(String) -> Result[ProtonProjectConfig, String]
+pub fn load_proton_project_config_from_file(String) -> ProtonProjectConfig raise BootstrapError
 
-pub fn load_proton_project_summary_from_file(String) -> Result[Json, String]
+pub fn load_proton_project_summary_from_file(String) -> Json raise BootstrapError
 
-pub fn load_runtime_manifest_from_json(String) -> Result[LoadedAppManifest, String]
+pub fn load_runtime_manifest_from_json(String) -> LoadedAppManifest raise BootstrapError
 
 // Errors
+pub(all) suberror BootstrapError {
+  ProjectConfig(@proton_config.ProjectConfigError)
+  ManifestRead(path~ : String, detail~ : String)
+  InvalidJson(context~ : String, detail~ : String)
+  MissingField(path~ : String)
+  InvalidField(path~ : String, expectation~ : String)
+  UnsupportedField(path~ : String, reason~ : String)
+  UnsupportedValue(path~ : String, value~ : String)
+} derive(Eq, @debug.Debug)
+pub fn BootstrapError::message(Self) -> String
 
 // Types and methods
 type LoadedAppManifest

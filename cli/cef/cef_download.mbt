@@ -1,18 +1,15 @@
 ///|
-async fn make_temp_dir() -> Result[String, CefError] {
+async fn make_temp_dir() -> String {
   let temp_dir = @async_fs.tmpdir(prefix="proton-cef-") catch {
     err =>
-      return Err(
-        CefError::CommandError(
-          "Failed to create temp directory: " +
-          @debug.render(@debug.to_repr(err)),
-        ),
+      raise CefDownloadError::CreateTemporaryDirectory(
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
   if temp_dir == "" {
-    Err(CefError::CommandError("Failed to create temp directory"))
+    raise CefDownloadError::CreateTemporaryDirectory(detail="empty path")
   } else {
-    Ok(temp_dir)
+    temp_dir
   }
 }
 
@@ -21,38 +18,26 @@ async fn download_file(
   url : String,
   destination : String,
   expected_sha256 : String,
-) -> Result[Unit, CefError] {
+) -> Unit {
   println("[INFO] Downloading CEF: " + url)
   let code = @process.run("curl", ["-L", "--fail", "--output", destination, url]) catch {
     err =>
-      return Err(
-        CefError::CommandError(
-          "Download failed: " + @debug.render(@debug.to_repr(err)),
-        ),
+      raise CefDownloadError::Start(
+        url~,
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
-  guard code == 0 else {
-    return Err(
-      CefError::CommandError(
-        "Download failed: curl exited with code " + code.to_string(),
-      ),
-    )
-  }
+  guard code == 0 else { raise CefDownloadError::CurlExit(url~, code~) }
   verify_file_sha256(destination, expected_sha256)
 }
 
 ///|
-async fn verify_file_sha256(
-  path : String,
-  expected : String,
-) -> Result[Unit, CefError] {
+async fn verify_file_sha256(path : String, expected : String) -> Unit {
   let file = @async_fs.open(path, mode=ReadOnly) catch {
     err =>
-      return Err(
-        CefError::CommandError(
-          "Failed to open downloaded CEF archive: " +
-          @debug.render(@debug.to_repr(err)),
-        ),
+      raise CefDownloadError::OpenArchive(
+        path~,
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
   defer file.close()
@@ -62,14 +47,8 @@ async fn verify_file_sha256(
     hasher.update(buffer.unsafe_reinterpret_as_bytes()[:read])
   }
   let actual = @crypto.bytes_to_hex_string(hasher.finalize())
-  if actual == expected {
-    Ok(())
-  } else {
-    Err(
-      CefError::CommandError(
-        "CEF archive SHA-256 mismatch: expected " + expected + ", got " + actual,
-      ),
-    )
+  if actual != expected {
+    raise CefDownloadError::ChecksumMismatch(expected~, actual~)
   }
 }
 
@@ -90,47 +69,36 @@ fn resolve_cef_archive_sha256(
   name : String,
   url : String?,
   provided : String?,
-) -> Result[String, CefError] {
+) -> String raise CefUsageError {
   match provided {
     Some(value) => {
       let normalized = value.trim().to_owned().to_lower()
       if valid_sha256(normalized) {
-        return Ok(normalized)
+        return normalized
       }
-      return Err(CefError::CommandError("Invalid CEF archive SHA-256"))
+      raise InvalidChecksum(value~)
     }
     None => ()
   }
   if url is None && name == platform.default_cef_name {
-    return Ok(platform.default_cef_sha256)
+    return platform.default_cef_sha256
   }
-  Err(
-    CefError::CommandError("Custom CEF archive name or URL requires --sha256"),
-  )
+  raise MissingCustomChecksum
 }
 
 ///|
-async fn extract_tar_bz2(
-  archive_path : String,
-  destination : String,
-) -> Result[Unit, CefError] {
+async fn extract_tar_bz2(archive_path : String, destination : String) -> Unit {
   println("[INFO] Extracting: " + archive_path)
   let code = @process.run("tar", ["-xjf", archive_path, "-C", destination]) catch {
     err =>
-      return Err(
-        CefError::CommandError(
-          "tar failed: " + @debug.render(@debug.to_repr(err)),
-        ),
+      raise CefDownloadError::ExtractStart(
+        path=archive_path,
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
   guard code == 0 else {
-    return Err(
-      CefError::CommandError(
-        "tar failed: tar exited with code " + code.to_string(),
-      ),
-    )
+    raise CefDownloadError::ExtractExit(path=archive_path, code~)
   }
-  Ok(())
 }
 
 ///|
@@ -138,19 +106,17 @@ fn find_extracted_root(
   extract_dir : String,
   name : String,
   platform : ProtonPlatform,
-) -> Result[String, CefError] {
+) -> String raise {
   let named = path_join(extract_dir, name)
   if has_source_cef_files(named, platform) {
-    return Ok(named)
+    return named
   }
   let candidates : Array[String] = []
   let entries = @mbfs.read_dir(extract_dir) catch {
     err =>
-      return Err(
-        CefError::CommandError(
-          "Failed to read extract directory: " +
-          @debug.render(@debug.to_repr(err)),
-        ),
+      raise CefFileSystemError::ReadDirectory(
+        path=extract_dir,
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
   for entry in entries {
@@ -161,12 +127,7 @@ fn find_extracted_root(
     }
   }
   match candidates {
-    [candidate] => Ok(candidate)
-    _ =>
-      Err(
-        CefError::CommandError(
-          "Could not find extracted CEF root in " + extract_dir,
-        ),
-      )
+    [candidate] => candidate
+    _ => raise CefDownloadError::ExtractedRootNotFound(path=extract_dir)
   }
 }

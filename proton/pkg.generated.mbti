@@ -2,6 +2,7 @@
 package "justjavac/proton"
 
 import {
+  "justjavac/proton/bootstrap",
   "justjavac/proton/extension",
   "justjavac/proton/native",
   "moonbitlang/core/debug",
@@ -16,7 +17,7 @@ pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizab
 
 pub fn config(String) -> App
 
-pub fn execute_process(config? : @native.RuntimeConfig) -> Result[@native.ProcessResult, @native.NativeError]
+pub fn execute_process(config? : @native.RuntimeConfig) -> @native.ProcessResult raise @native.NativeError
 
 pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
@@ -24,25 +25,63 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 
 pub fn last_error_message() -> String
 
-pub fn probe_runtime(config? : @native.RuntimeConfig) -> Result[Unit, @native.NativeError]
+pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError
 
 pub fn run(async () -> Unit) -> Unit
 
-pub fn runtime_info() -> Result[@native.RuntimeInfo, @native.NativeError]
+pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 
-pub fn runtime_info_json() -> Result[String, @native.NativeError]
+pub fn runtime_info_json() -> String raise @native.NativeError
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 // Errors
+pub(all) suberror AppConfigurationError {
+  InvalidSetting(name~ : String, message~ : String)
+  Bootstrap(@bootstrap.BootstrapError)
+  ExtensionDependencyCycle(extension_id~ : String)
+  ExtensionUnavailable(extension_id~ : String, requested_by~ : String?, state~ : String)
+  ExtensionAdaptationFailed(extension_id~ : String, error~ : @extension.ExtensionAdapterError)
+  InvalidJavaScriptNamespace(js_namespace~ : String)
+  InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)
+  InvalidDevelopmentUrl(url~ : String, reason~ : String)
+} derive(@debug.Debug)
+pub fn AppConfigurationError::message(Self) -> String
+
+pub(all) suberror AppEntryError {
+  ReadFailed(path~ : String, detail~ : String)
+  NativeLoad(action~ : String, error~ : @native.NativeError)
+  ClosedDuringStartup
+} derive(@debug.Debug)
+pub fn AppEntryError::message(Self) -> String
+
 pub(all) suberror AppRunError {
   RunnerError(String)
-  ConfigurationError(String)
-  NativeRuntimeError(@native.NativeError)
-  EntryLoadError(String)
+  ConfigurationError(AppConfigurationError)
+  NativeRuntimeError(action~ : String, error~ : @native.NativeError)
+  RuntimeWakeupError(RuntimeWakeupError)
+  CommandExtensionLifecycleError(CommandExtensionLifecycleError)
+  EntryLoadError(AppEntryError)
   BridgeStartupError(@native.BridgeDiagnostic)
   BridgeRuntimeError(@native.BridgeDiagnostic)
+  UnexpectedTaskFailure(detail~ : String)
 } derive(@debug.Debug)
+pub fn AppRunError::message(Self) -> String
+
+pub(all) suberror CommandExtensionLifecycleError {
+  RegistrationFailed(extension_id~ : String, detail~ : String)
+  DestroyFailed(extension_id~ : String, detail~ : String)
+} derive(@debug.Debug)
+pub fn CommandExtensionLifecycleError::message(Self) -> String
+
+pub(all) suberror RuntimeWakeupError {
+  UnsupportedFeature(feature~ : String)
+  PipeCreateFailed(detail~ : String)
+  SourceOpenFailed(source~ : String, detail~ : String)
+  SourceClosed
+  MissingNotification
+} derive(@debug.Debug)
+pub fn RuntimeWakeupError::message(Self) -> String
 
 // Types and methods
 type App

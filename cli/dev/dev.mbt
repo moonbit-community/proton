@@ -14,12 +14,6 @@ let ready_poll_interval_ms = 100
 let ready_probe_timeout_ms = 1000
 
 ///|
-pub(all) enum DevError {
-  UsageError(String, Bool)
-  CommandError(String)
-}
-
-///|
 struct RawDevOptions {
   app_package : String
   config_path : String?
@@ -50,22 +44,16 @@ struct DevUrlEndpoint {
 } derive(Debug, Eq)
 
 ///|
-pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, DevError] {
+pub async fn run(cwd : String, args : Array[String]) -> Unit {
   if args.contains("-h") || args.contains("--help") {
     print_dev_usage()
-    return Ok(())
+    return
   }
-  let raw = match parse_dev_args(args) {
-    Ok(raw) => raw
-    Err(error) => return Err(error)
-  }
+  let raw = parse_dev_args(args)
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = find_project_root_from(cwd)
   let config_path = resolve_dev_config_path(cwd, root, raw)
-  let frontend_config = match load_dev_frontend_config(config_path) {
-    Ok(config) => config
-    Err(message) => return Err(CommandError(message))
-  }
+  let frontend_config = load_dev_frontend_config(config_path)
   let frontend_url : String? = match raw.url {
     Some(url) => Some(url)
     None =>
@@ -74,10 +62,7 @@ pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, DevError] {
         None => None
       }
   }
-  match validate_frontend_dev_url(frontend_url, raw.ready_path) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  validate_frontend_dev_url(frontend_url, raw.ready_path)
   let frontend_command : String? = match raw.command {
     Some(command) => Some(command)
     None =>
@@ -94,54 +79,34 @@ pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, DevError] {
         None => None
       }
   }
-  let frontend_working_dir = match
-    resolve_frontend_cwd(
-      root,
-      frontend_cwd,
-      frontend_command,
-      raw.start_frontend,
-    ) {
-    Ok(path) => path
-    Err(error) => return Err(error)
-  }
-  let runtime = match ensure_dev_runtime(root, raw.setup_runtime) {
-    Ok(runtime) => runtime
-    Err(error) => return Err(error)
-  }
+  let frontend_working_dir = resolve_frontend_cwd(
+    root,
+    frontend_cwd,
+    frontend_command,
+    raw.start_frontend,
+  )
+  let runtime = ensure_dev_runtime(root, raw.setup_runtime)
   let env = dev_process_env(runtime, frontend_url, config_path)
   @async.with_task_group(group => {
-    let frontend_process = match
-      maybe_start_frontend(
-        group,
-        frontend_working_dir,
-        frontend_command,
-        raw.start_frontend,
-        env,
-      ) {
-      Ok(process) => process
-      Err(error) => return Err(error)
-    }
+    let frontend_process = maybe_start_frontend(
+      group,
+      frontend_working_dir,
+      frontend_command,
+      raw.start_frontend,
+      env,
+    )
     defer cancel_frontend(frontend_process)
     if raw.wait_for_dev_server {
-      match
-        wait_for_frontend(
-          frontend_url,
-          raw.ready_path,
-          raw.timeout_ms,
-          frontend_process,
-        ) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
+      wait_for_frontend(
+        frontend_url,
+        raw.ready_path,
+        raw.timeout_ms,
+        frontend_process,
+      )
     }
-    let code = match run_app(root, raw.app_package, raw.app_args, env) {
-      Ok(code) => code
-      Err(error) => return Err(error)
-    }
-    if code == 0 {
-      Ok(())
-    } else {
-      Err(CommandError("app exited with code " + code.to_string()))
+    let code = run_app(root, raw.app_package, raw.app_args, env)
+    if code != 0 {
+      raise DevProcessError::Exit(role="app", code~)
     }
   })
 }
@@ -168,7 +133,7 @@ fn print_dev_usage() -> Unit {
 }
 
 ///|
-fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
+fn parse_dev_args(args : Array[String]) -> RawDevOptions raise DevUsageError {
   let app_args : Array[String] = []
   let mut app_package : String? = None
   let mut config_path : String? = None
@@ -189,57 +154,24 @@ fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
       }
       index = args.length()
     } else if arg == "--config" {
-      match read_option_value(args, index, "--config") {
-        Ok(value) => {
-          config_path = Some(value)
-          index = index + 2
-        }
-        Err(error) => return Err(error)
-      }
+      config_path = Some(read_option_value(args, index, "--config"))
+      index = index + 2
     } else if arg == "--url" {
-      match read_option_value(args, index, "--url") {
-        Ok(value) => {
-          url = Some(value)
-          index = index + 2
-        }
-        Err(error) => return Err(error)
-      }
+      url = Some(read_option_value(args, index, "--url"))
+      index = index + 2
     } else if arg == "--command" {
-      match read_option_value(args, index, "--command") {
-        Ok(value) => {
-          command = Some(value)
-          index = index + 2
-        }
-        Err(error) => return Err(error)
-      }
+      command = Some(read_option_value(args, index, "--command"))
+      index = index + 2
     } else if arg == "--frontend-cwd" {
-      match read_option_value(args, index, "--frontend-cwd") {
-        Ok(value) => {
-          frontend_cwd = Some(value)
-          index = index + 2
-        }
-        Err(error) => return Err(error)
-      }
+      frontend_cwd = Some(read_option_value(args, index, "--frontend-cwd"))
+      index = index + 2
     } else if arg == "--timeout-ms" {
-      match read_option_value(args, index, "--timeout-ms") {
-        Ok(value) =>
-          match parse_non_negative_int(value, "--timeout-ms") {
-            Ok(parsed) => {
-              timeout_ms = parsed
-              index = index + 2
-            }
-            Err(error) => return Err(error)
-          }
-        Err(error) => return Err(error)
-      }
+      let value = read_option_value(args, index, "--timeout-ms")
+      timeout_ms = parse_non_negative_int(value, "--timeout-ms")
+      index = index + 2
     } else if arg == "--ready-path" {
-      match read_option_value(args, index, "--ready-path") {
-        Ok(value) => {
-          ready_path = Some(value)
-          index = index + 2
-        }
-        Err(error) => return Err(error)
-      }
+      ready_path = Some(read_option_value(args, index, "--ready-path"))
+      index = index + 2
     } else if arg == "--no-dev-server-wait" {
       wait_for_dev_server = false
       index = index + 1
@@ -253,19 +185,18 @@ fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
       setup_runtime = false
       index = index + 1
     } else if arg.has_prefix("-") {
-      return Err(UsageError("unknown dev option: " + arg, false))
+      raise UnknownOption(option=arg)
     } else {
       match app_package {
         None => {
           app_package = Some(arg)
           index = index + 1
         }
-        Some(_) =>
-          return Err(UsageError("unexpected dev argument: " + arg, false))
+        Some(_) => raise UnexpectedArgument(argument=arg)
       }
     }
   }
-  Ok(RawDevOptions::{
+  RawDevOptions::{
     app_package: app_package.unwrap_or(default_package),
     config_path,
     url,
@@ -277,7 +208,7 @@ fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
     start_frontend,
     setup_runtime,
     app_args,
-  })
+  }
 }
 
 ///|
@@ -285,15 +216,15 @@ fn read_option_value(
   args : Array[String],
   index : Int,
   name : String,
-) -> Result[String, DevError] {
+) -> String raise DevUsageError {
   if index + 1 >= args.length() {
-    Err(UsageError("missing value for " + name, false))
+    raise MissingValue(option=name)
   } else {
     let value = args[index + 1]
     if value == "" {
-      Err(UsageError(name + " must not be empty", false))
+      raise EmptyValue(option=name)
     } else {
-      Ok(value)
+      value
     }
   }
 }
@@ -302,15 +233,14 @@ fn read_option_value(
 fn parse_non_negative_int(
   value : String,
   label : String,
-) -> Result[Int, DevError] {
+) -> Int raise DevUsageError {
   let parsed = @string.parse_int(value[:]) catch {
-    _ =>
-      return Err(UsageError(label + " must be a non-negative integer", false))
+    _ => raise InvalidNonNegativeInteger(option=label, value~)
   }
   if parsed < 0 {
-    Err(UsageError(label + " must be a non-negative integer", false))
+    raise InvalidNonNegativeInteger(option=label, value~)
   } else {
-    Ok(parsed)
+    parsed
   }
 }
 
@@ -320,20 +250,20 @@ fn resolve_frontend_cwd(
   frontend_cwd : String?,
   frontend_command : String?,
   start_frontend : Bool,
-) -> Result[String, DevError] {
+) -> String raise DevConfigError {
   if !start_frontend || frontend_command is None {
-    return Ok(root)
+    return root
   }
   match frontend_cwd {
-    None => Ok(root)
+    None => root
     Some(cwd) => {
       let path = resolve_path(root, cwd)
       if !path_exists(path) {
-        Err(CommandError("frontend cwd does not exist: " + path))
+        raise FrontendDirectoryMissing(path~)
       } else if !path_is_dir(path) {
-        Err(CommandError("frontend cwd is not a directory: " + path))
+        raise FrontendDirectoryNotDirectory(path~)
       } else {
-        Ok(path)
+        path
       }
     }
   }
@@ -372,12 +302,12 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 ///|
 fn load_dev_frontend_config(
   config_path : String?,
-) -> Result[@proton_config.ProjectFrontendConfig?, String] {
+) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
   match config_path {
-    None => Ok(None)
+    None => None
     Some(path) => {
       if !path_exists(path) {
-        return Err("proton dev config not found: " + path)
+        raise NotFound(path~)
       }
       read_dev_frontend_config(path)
     }
@@ -387,89 +317,63 @@ fn load_dev_frontend_config(
 ///|
 fn read_dev_frontend_config(
   path : String,
-) -> Result[@proton_config.ProjectFrontendConfig?, String] {
-  @proton_config.load_project_config_from_file(path).map(fn(project) {
-    project.frontend()
-  })
+) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
+  let project = @proton_config.load_project_config_from_file(path) catch {
+    error => raise Invalid(path~, error~)
+  }
+  project.frontend()
 }
 
 ///|
 async fn ensure_dev_runtime(
   root : String,
   setup_runtime : Bool,
-) -> Result[DevRuntime, DevError] {
+) -> DevRuntime raise DevRuntimeError {
   let native_dist_override = dev_native_dist_override(root)
-  match read_dev_runtime(root) {
-    Ok(runtime) => Ok(runtime)
-    Err(message) =>
+  read_dev_runtime(root) catch {
+    error =>
       match native_dist_override {
-        Some(_) =>
-          Err(
-            CommandError(
-              message +
-              "\n\nPROTON_NATIVE_DIST is set; unset it or point it at a valid Proton runtime.",
-            ),
-          )
-        None if setup_runtime =>
-          match @cef.run_setup(root, []) {
-            Ok(_) =>
-              read_dev_runtime(root).map_err(fn(error) { CommandError(error) })
-            Err(error) => Err(map_cef_error(error))
+        Some(_) => raise NativeDistOverride(detail=error.message())
+        None if setup_runtime => {
+          @cef.run_setup(root, []) catch {
+            error => raise Setup(detail=error.to_string())
           }
-        None =>
-          Err(
-            CommandError(
-              message +
-              "\n\nRun `proton_cli cef setup` first, or retry with `proton_cli dev --setup`.",
-            ),
-          )
+          read_dev_runtime(root)
+        }
+        None => raise SetupRequired(detail=error.message())
       }
   }
 }
 
 ///|
-fn map_cef_error(error : @cef.CefError) -> DevError {
-  match error {
-    UsageError(message, usage_is_embedded) =>
-      UsageError(message, usage_is_embedded)
-    CommandError(message) => CommandError(message)
-  }
-}
-
-///|
-async fn read_dev_runtime(root : String) -> Result[DevRuntime, String] {
+async fn read_dev_runtime(root : String) -> DevRuntime raise DevRuntimeError {
   match dev_native_dist_override(root) {
     Some(path) => return dev_runtime_from_root(path, "PROTON_NATIVE_DIST")
     None => ()
   }
   let manifest_path = runtime_manifest_path(root)
   let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
-    _ => return Err("active Proton runtime is missing: " + manifest_path)
+    _ => raise ManifestMissing(path=manifest_path)
   }
   let json = @json.parse(text) catch {
     err =>
-      return Err(
-        "failed to parse active Proton runtime manifest: " +
-        @debug.render(@debug.to_repr(err)),
+      raise ManifestInvalid(
+        path=manifest_path,
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
-  let platform = match json_string_field(json, "platform", manifest_path) {
-    Ok(value) => value
-    Err(error) => return Err(error)
+  let platform = json_string_field(json, "platform", manifest_path)
+  let expected_platform = @cef.current_platform_id() catch {
+    error =>
+      raise ManifestInvalid(
+        path=manifest_path,
+        detail="failed to detect host platform: " + error.to_string(),
+      )
   }
-  let expected_platform = @cef.current_platform_id()
   if platform != expected_platform {
-    return Err(
-      "active Proton runtime platform mismatch: expected " +
-      expected_platform +
-      ", got " +
-      platform,
-    )
+    raise PlatformMismatch(expected=expected_platform, actual=platform)
   }
-  let dist = match json_string_field(json, "dist", manifest_path) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+  let dist = json_string_field(json, "dist", manifest_path)
   dev_runtime_from_root(resolve_path(root, dist), "active Proton runtime")
 }
 
@@ -492,17 +396,17 @@ fn dev_native_dist_override(root : String) -> String? {
 fn dev_runtime_from_root(
   runtime_root : String,
   label : String,
-) -> Result[DevRuntime, String] {
+) -> DevRuntime raise DevRuntimeError {
   let bin_dir = join_path(runtime_root, "bin")
   let lib_dir = join_path(runtime_root, "lib")
   let helper_path = join_path(bin_dir, helper_executable_name())
   if !path_exists(runtime_root) {
-    return Err(label + " directory is missing: " + runtime_root)
+    raise DirectoryMissing(label~, path=runtime_root)
   }
   if !path_exists(helper_path) {
-    return Err(label + " helper is missing: " + helper_path)
+    raise HelperMissing(label~, path=helper_path)
   }
-  Ok(DevRuntime::{ root: runtime_root, bin_dir, lib_dir, helper_path })
+  DevRuntime::{ root: runtime_root, bin_dir, lib_dir, helper_path }
 }
 
 ///|
@@ -514,13 +418,10 @@ fn runtime_manifest_path(root : String) -> String {
 fn validate_frontend_dev_url(
   frontend_url : String?,
   ready_path : String?,
-) -> Result[Unit, DevError] {
+) -> Unit raise DevServerError {
   match frontend_url {
-    None => Ok(())
-    Some(url) =>
-      parse_dev_url_endpoint(url, ready_path)
-      .map(fn(_) { () })
-      .map_err(fn(message) { CommandError(message) })
+    None => ()
+    Some(url) => ignore(parse_dev_url_endpoint(url, ready_path))
   }
 }
 
@@ -529,14 +430,14 @@ fn json_string_field(
   json : Json,
   field : String,
   label : String,
-) -> Result[String, String] {
+) -> String raise DevRuntimeError {
   match json {
     Object(object) =>
       match object.get(field) {
-        Some(String(value)) => Ok(value)
-        _ => Err(label + " missing string field: " + field)
+        Some(String(value)) => value
+        _ => raise ManifestField(path=label, field~)
       }
-    _ => Err(label + " must be a JSON object")
+    _ => raise ManifestInvalid(path=label, detail="root must be a JSON object")
   }
 }
 
@@ -630,12 +531,12 @@ async fn[X] maybe_start_frontend(
   command : String?,
   start_frontend : Bool,
   env : Map[String, String],
-) -> Result[@process.Process?, DevError] {
+) -> @process.Process? raise DevProcessError {
   if !start_frontend {
-    return Ok(None)
+    return None
   }
   match command {
-    None => Ok(None)
+    None => None
     Some(command) => {
       println("Starting frontend: " + command)
       println("Frontend cwd: " + frontend_cwd)
@@ -650,14 +551,12 @@ async fn[X] maybe_start_frontend(
         no_wait=true,
       ) catch {
         err =>
-          return Err(
-            CommandError(
-              "failed to start frontend command: " +
-              @debug.render(@debug.to_repr(err)),
-            ),
+          raise Start(
+            role="frontend command",
+            detail=@debug.render(@debug.to_repr(err)),
           )
       }
-      Ok(Some(process))
+      Some(process)
     }
   }
 }
@@ -732,60 +631,40 @@ async fn wait_for_frontend(
   ready_path : String?,
   timeout_ms : Int,
   frontend_process : @process.Process?,
-) -> Result[Unit, DevError] {
+) -> Unit {
   match frontend_url {
-    None => Ok(())
+    None => ()
     Some(url) => {
-      let endpoint = match parse_dev_url_endpoint(url, ready_path) {
-        Ok(endpoint) => endpoint
-        Err(message) => return Err(CommandError(message))
-      }
-      match validate_ready_probe(ready_path) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
+      let endpoint = parse_dev_url_endpoint(url, ready_path)
+      validate_ready_probe(ready_path)
       println("Waiting for frontend dev server: " + endpoint.url)
       let mut elapsed = 0
       while elapsed <= timeout_ms {
         match frontend_exit_code(frontend_process) {
-          Some(code) =>
-            return Err(
-              CommandError(
-                "frontend command exited before the dev server became ready: " +
-                code.to_string(),
-              ),
-            )
+          Some(code) => raise DevServerError::FrontendExited(code~)
           None => ()
         }
         if server_ready(endpoint, ready_path) {
-          return Ok(())
+          return
         }
         @async.sleep(ready_poll_interval_ms)
         elapsed = elapsed + ready_poll_interval_ms
       }
-      Err(
-        CommandError(
-          "timed out waiting for frontend dev server: " + endpoint.url,
-        ),
-      )
+      raise DevServerError::Timeout(url=endpoint.url)
     }
   }
 }
 
 ///|
-async fn validate_ready_probe(ready_path : String?) -> Result[Unit, DevError] {
+async fn validate_ready_probe(ready_path : String?) -> Unit {
   match ready_path {
     Some(_) =>
       if command_exists("curl") {
-        Ok(())
+        ()
       } else {
-        Err(
-          CommandError(
-            "--ready-path requires curl on PATH; install curl or omit --ready-path to use TCP readiness",
-          ),
-        )
+        raise DevServerError::ReadyProbeUnavailable
       }
-    None => Ok(())
+    None => ()
   }
 }
 
@@ -867,28 +746,23 @@ fn dev_null_path() -> String {
 fn parse_dev_url_endpoint(
   url : String,
   ready_path : String?,
-) -> Result[DevUrlEndpoint, String] {
+) -> DevUrlEndpoint raise DevServerError {
   let wait_url = append_ready_path(url, ready_path)
   let (scheme, rest) = match wait_url.split_once("://") {
     Some((scheme, rest)) => (scheme.to_owned().to_lower(), rest.to_owned())
-    None =>
-      return Err(
-        "frontend dev URL must include http:// or https://: " + wait_url,
-      )
+    None => raise MissingScheme(url=wait_url)
   }
   let default_port = match scheme {
     "http" => 80
     "https" => 443
-    _ => return Err("frontend dev URL must be http or https: " + wait_url)
+    _ => raise UnsupportedScheme(url=wait_url)
   }
   let authority = url_authority(rest)
   if !dev_url_authority_is_valid(authority) {
-    return Err("frontend dev URL has invalid origin: " + wait_url)
+    raise InvalidOrigin(url=wait_url)
   }
-  parse_host_port(authority, default_port).map(fn(parts) {
-    let (host, port) = parts
-    DevUrlEndpoint::{ url: wait_url, host, port }
-  })
+  let (host, port) = parse_host_port(authority, default_port)
+  DevUrlEndpoint::{ url: wait_url, host, port }
 }
 
 ///|
@@ -927,56 +801,56 @@ fn dev_url_authority_is_valid(authority : String) -> Bool {
 fn parse_host_port(
   host_port : String,
   default_port : Int,
-) -> Result[(String, Int), String] {
+) -> (String, Int) raise DevServerError {
   if host_port.has_prefix("[") {
     match host_port.split_once("]") {
       Some((left, right)) => {
         let left = left.to_owned()
         let host = left.unsafe_substring(start=1, end=left.length())
         let port = if right == "" {
-          Ok(default_port)
+          default_port
         } else if right.has_prefix(":") {
           parse_port(right[1:].to_owned())
         } else {
-          Err("invalid frontend dev URL host: " + host_port)
+          raise InvalidHost(authority=host_port)
         }
         if host == "" {
-          Err("frontend dev URL host must not be empty")
+          raise EmptyHost
         } else {
-          port.map(fn(port) { (host, port) })
+          (host, port)
         }
       }
-      None => Err("invalid frontend dev URL host: " + host_port)
+      None => raise InvalidHost(authority=host_port)
     }
   } else {
     match host_port.split_once(":") {
       Some((host, port_text)) => {
         let host = host.to_owned()
         if host == "" {
-          Err("frontend dev URL host must not be empty")
+          raise EmptyHost
         } else {
-          parse_port(port_text.to_owned()).map(fn(port) { (host, port) })
+          (host, parse_port(port_text.to_owned()))
         }
       }
       None =>
         if host_port == "" {
-          Err("frontend dev URL host must not be empty")
+          raise EmptyHost
         } else {
-          Ok((host_port, default_port))
+          (host_port, default_port)
         }
     }
   }
 }
 
 ///|
-fn parse_port(text : String) -> Result[Int, String] {
+fn parse_port(text : String) -> Int raise DevServerError {
   let port = @string.parse_int(text[:]) catch {
-    _ => return Err("frontend dev URL port must be an integer: " + text)
+    _ => raise InvalidPort(value=text)
   }
   if port <= 0 || port > 65535 {
-    Err("frontend dev URL port is out of range: " + text)
+    raise PortOutOfRange(value=text)
   } else {
-    Ok(port)
+    port
   }
 }
 
@@ -1012,7 +886,7 @@ async fn run_app(
   app_package : String,
   app_args : Array[String],
   env : Map[String, String],
-) -> Result[Int, DevError] {
+) -> Int raise DevProcessError {
   let moon_args : Array[String] = ["run", app_package, "--target", "native"]
   if app_args.length() > 0 {
     moon_args.push("--")
@@ -1023,13 +897,9 @@ async fn run_app(
   println("Starting Proton app: moon " + moon_args.join(" "))
   let code = @process.run("moon", moon_args, cwd=root, extra_env=env) catch {
     err =>
-      return Err(
-        CommandError(
-          "failed to run MoonBit app: " + @debug.render(@debug.to_repr(err)),
-        ),
-      )
+      raise Start(role="MoonBit app", detail=@debug.render(@debug.to_repr(err)))
   }
-  Ok(code)
+  code
 }
 
 ///|

@@ -27,15 +27,6 @@ struct FileDialogReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-fn native_error_message(error : @native.NativeError) -> String {
-  if error.message.is_empty() {
-    "dialog operation failed"
-  } else {
-    error.message
-  }
-}
-
-///|
 /// Maps the public dialog level string to the native dialog level.
 fn level_to_native(level : String?) -> @native.DialogLevel {
   match level {
@@ -50,17 +41,25 @@ async fn wait_for_dialog_result(
   request_context : @proton_command.AppCommandRequestContext,
   window : @native.WindowRef,
   dialog : Int64,
-) -> Result[String, @native.NativeError] {
-  while true {
+  kind : String,
+) -> String {
+  let mut completed = ""
+  let mut waiting = true
+  while waiting {
     let revision = request_context.wake_revision()
-    match window.poll_dialog_result(dialog) {
-      Err(error) => return Err(error)
-      Ok(@native.DialogPollResult::Ready(result)) => return Ok(result)
-      Ok(@native.DialogPollResult::Pending) =>
+    let result = window.poll_dialog_result(dialog) catch {
+      error => raise PollFailed(kind~, error~)
+    }
+    match result {
+      @native.DialogPollResult::Ready(result) => {
+        completed = result
+        waiting = false
+      }
+      @native.DialogPollResult::Pending =>
         request_context.wait_for_wake(revision)
     }
   }
-  Err({ status: -6, message: "dialog wait exited unexpectedly" })
+  completed
 }
 
 ///|
@@ -68,23 +67,16 @@ async fn show_message_dialog(
   request_context : @proton_command.AppCommandRequestContext,
   window : @native.WindowRef,
   payload : MessagePayload,
-) -> Result[MessageReply, String] {
-  let dialog = match
-    window.begin_message_dialog(
-      payload.title,
-      payload.message,
-      level_to_native(payload.level),
-    ) {
-    Err(error) => Err(native_error_message(error))
-    Ok(dialog) => Ok(dialog)
+) -> MessageReply {
+  let dialog = window.begin_message_dialog(
+    payload.title,
+    payload.message,
+    level_to_native(payload.level),
+  ) catch {
+    error => raise BeginFailed(kind="message", error~)
   }
-  match dialog {
-    Err(error) => Err(error)
-    Ok(dialog) =>
-      wait_for_dialog_result(request_context, window, dialog)
-      .map_err(native_error_message)
-      .map(fn(_) { { acknowledged: true } })
-  }
+  ignore(wait_for_dialog_result(request_context, window, dialog, "message"))
+  { acknowledged: true }
 }
 
 ///|
@@ -92,23 +84,18 @@ async fn confirm_message_dialog(
   request_context : @proton_command.AppCommandRequestContext,
   window : @native.WindowRef,
   payload : MessagePayload,
-) -> Result[ConfirmReply, String] {
-  let dialog = match
-    window.begin_confirm_dialog(
-      payload.title,
-      payload.message,
-      level_to_native(payload.level),
-    ) {
-    Err(error) => Err(native_error_message(error))
-    Ok(dialog) => Ok(dialog)
+) -> ConfirmReply {
+  let dialog = window.begin_confirm_dialog(
+    payload.title,
+    payload.message,
+    level_to_native(payload.level),
+  ) catch {
+    error => raise BeginFailed(kind="confirm", error~)
   }
-  match dialog {
-    Err(error) => Err(error)
-    Ok(dialog) =>
-      wait_for_dialog_result(request_context, window, dialog)
-      .map_err(native_error_message)
-      .map(fn(result) { { confirmed: result == "1" } })
-  }
+  let result = wait_for_dialog_result(
+    request_context, window, dialog, "confirm",
+  )
+  { confirmed: result == "1" }
 }
 
 ///|
@@ -116,16 +103,14 @@ async fn open_file_dialog(
   request_context : @proton_command.AppCommandRequestContext,
   window : @native.WindowRef,
   payload : FileDialogPayload,
-) -> Result[FileDialogReply, String] {
-  match window.begin_open_file_dialog(payload.title, payload.path) {
-    Err(error) => Err(native_error_message(error))
-    Ok(dialog) =>
-      wait_for_dialog_result(request_context, window, dialog)
-      .map_err(native_error_message)
-      .map(fn(path) {
-        { path: if path.is_empty() { None } else { Some(path) } }
-      })
+) -> FileDialogReply {
+  let dialog = window.begin_open_file_dialog(payload.title, payload.path) catch {
+    error => raise BeginFailed(kind="open file", error~)
   }
+  let path = wait_for_dialog_result(
+    request_context, window, dialog, "open file",
+  )
+  { path: if path.is_empty() { None } else { Some(path) } }
 }
 
 ///|
@@ -133,14 +118,12 @@ async fn save_file_dialog(
   request_context : @proton_command.AppCommandRequestContext,
   window : @native.WindowRef,
   payload : FileDialogPayload,
-) -> Result[FileDialogReply, String] {
-  match window.begin_save_file_dialog(payload.title, payload.path) {
-    Err(error) => Err(native_error_message(error))
-    Ok(dialog) =>
-      wait_for_dialog_result(request_context, window, dialog)
-      .map_err(native_error_message)
-      .map(fn(path) {
-        { path: if path.is_empty() { None } else { Some(path) } }
-      })
+) -> FileDialogReply {
+  let dialog = window.begin_save_file_dialog(payload.title, payload.path) catch {
+    error => raise BeginFailed(kind="save file", error~)
   }
+  let path = wait_for_dialog_result(
+    request_context, window, dialog, "save file",
+  )
+  { path: if path.is_empty() { None } else { Some(path) } }
 }

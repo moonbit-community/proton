@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_keep_awake_activity(@command.AppCommandExtensionContext, KeepAwakeActivity) -> Unit
+pub async fn emit_keep_awake_activity(@command.AppCommandExtensionContext, KeepAwakeActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type KeepAwakeError derive(Eq, @debug.Debug)
 
 // Types and methods
 type AcquirePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)

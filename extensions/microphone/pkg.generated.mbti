@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_microphone_activity(@command.AppCommandExtensionContext, MicrophoneActivity) -> Unit
+pub async fn emit_microphone_activity(@command.AppCommandExtensionContext, MicrophoneActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type MicrophoneConfigError derive(Eq, @debug.Debug)
 
 // Types and methods
 type CaptureConfigPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)

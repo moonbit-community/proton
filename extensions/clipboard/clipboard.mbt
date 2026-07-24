@@ -10,16 +10,11 @@ struct WriteTextReply {
 
 ///|
 /// Verifies that the underlying clipboard package is available on this platform.
-fn ensure_supported() -> Result[Unit, String] {
-  @sys_clipboard.ensure_supported()
-}
-
-///|
-/// Runs a clipboard operation only when the platform is supported.
-fn[Reply] with_supported(
-  callback : () -> Result[Reply, String],
-) -> Result[Reply, String] {
-  ensure_supported().bind(fn(_) { callback() })
+fn ensure_supported() -> Unit raise ClipboardError {
+  match @sys_clipboard.ensure_supported() {
+    Ok(_) => ()
+    Err(error) => raise Unsupported(detail=error)
+  }
 }
 
 ///|
@@ -32,17 +27,19 @@ fn text_length(text : String?) -> Int? {
 }
 
 ///|
-fn read_clipboard_text() -> Result[ReadTextReply, String] {
-  with_supported(fn() {
-    @sys_clipboard.read_text().map(fn(text) { ReadTextReply::{ text, } })
-  })
+fn read_clipboard_text() -> ReadTextReply raise ClipboardError {
+  ensure_supported()
+  match @sys_clipboard.read_text() {
+    Ok(text) => ReadTextReply::{ text, }
+    Err(error) => raise ReadFailed(detail=error)
+  }
 }
 
 ///|
-fn write_clipboard_text(text : String) -> Result[WriteTextReply, String] {
-  with_supported(fn() {
-    @sys_clipboard.write_text(text).map(fn(_) {
-      WriteTextReply::{ written: true }
-    })
-  })
+fn write_clipboard_text(text : String) -> WriteTextReply raise ClipboardError {
+  ensure_supported()
+  match @sys_clipboard.write_text(text) {
+    Ok(_) => WriteTextReply::{ written: true }
+    Err(error) => raise WriteFailed(detail=error)
+  }
 }

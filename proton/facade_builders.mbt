@@ -236,10 +236,20 @@ pub fn App::extension(
 ) -> App {
   let id = extension.id()
   if id.trim().to_owned() == "" {
-    self.validation_errors.push("extension id must not be empty")
+    self.validation_errors.push(
+      InvalidSetting(name="extension.id", message="must not be empty"),
+    )
   } else {
     self.extension_settings[id] = @manifest.ExtensionSetting::enabled(options~)
-    match extension.command_spec() {
+    let command_spec = extension.command_spec() catch {
+      error => {
+        self.validation_errors.push(
+          ExtensionAdaptationFailed(extension_id=id, error~),
+        )
+        None
+      }
+    }
+    match command_spec {
       Some(spec) => self.command_extensions[id] = spec
       None => ()
     }

@@ -7,15 +7,25 @@ import {
 }
 
 // Values
-pub fn parse_ipc_frame(String) -> Result[IpcFrame, String]
+pub fn parse_ipc_frame(String) -> IpcFrame raise IpcError
 
-pub fn parse_ipc_op_request(String) -> Result[IpcOpRequest, String]
+pub fn parse_ipc_op_request(String) -> IpcOpRequest raise IpcError
 
-pub fn parse_ipc_op_response(String) -> Result[IpcOpResponse, String]
+pub fn parse_ipc_op_response(String) -> IpcOpResponse raise IpcError
 
 pub fn protocol_version() -> Int
 
 // Errors
+pub(all) suberror IpcError {
+  MalformedJson(detail~ : String)
+  InvalidPayload(kind~ : String, detail~ : String)
+  UnsupportedVersion(scope~ : String, actual~ : Int, supported~ : Int)
+  UnsupportedFrameKind(kind~ : String)
+  UnexpectedFrameKind(expected~ : String, actual~ : String)
+  EmptyField(path~ : String)
+  InvalidErrorResponseBody
+} derive(Eq, @debug.Debug)
+pub fn IpcError::message(Self) -> String
 
 // Types and methods
 pub(all) struct IpcExtensionApi {
@@ -38,21 +48,21 @@ pub(all) struct IpcExtensionEvent {
   payload : Json
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn IpcExtensionEvent::new(String, String, Json) -> Self
-pub fn IpcExtensionEvent::validate(Self) -> Result[Self, String]
+pub fn IpcExtensionEvent::validate(Self) -> Self raise IpcError
 
 pub(all) struct IpcFrame {
   version : Int
   kind : String
   payload : Json
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn IpcFrame::as_event(Self) -> Result[IpcExtensionEvent, String]
-pub fn IpcFrame::as_request(Self) -> Result[IpcOpRequest, String]
-pub fn IpcFrame::as_response(Self) -> Result[IpcOpResponse, String]
+pub fn IpcFrame::as_event(Self) -> IpcExtensionEvent raise IpcError
+pub fn IpcFrame::as_request(Self) -> IpcOpRequest raise IpcError
+pub fn IpcFrame::as_response(Self) -> IpcOpResponse raise IpcError
 pub fn IpcFrame::event(IpcExtensionEvent) -> Self
 pub fn IpcFrame::request(IpcOpRequest) -> Self
 pub fn IpcFrame::response(IpcOpResponse) -> Self
 pub fn IpcFrame::stringify(Self) -> String
-pub fn IpcFrame::validate(Self) -> Result[Self, String]
+pub fn IpcFrame::validate(Self) -> Self raise IpcError
 
 pub(all) struct IpcOpRequest {
   version : Int
@@ -62,7 +72,7 @@ pub(all) struct IpcOpRequest {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn IpcOpRequest::new(String, String, Json) -> Self
 pub fn IpcOpRequest::stringify(Self) -> String
-pub fn IpcOpRequest::validate(Self) -> Result[Self, String]
+pub fn IpcOpRequest::validate(Self) -> Self raise IpcError
 
 pub(all) struct IpcOpResponse {
   version : Int
@@ -74,7 +84,7 @@ pub fn IpcOpResponse::err(String, String) -> Self
 pub fn IpcOpResponse::is_ok(Self) -> Bool
 pub fn IpcOpResponse::ok(String, Json) -> Self
 pub fn IpcOpResponse::stringify(Self) -> String
-pub fn IpcOpResponse::validate(Self) -> Result[Self, String]
+pub fn IpcOpResponse::validate(Self) -> Self raise IpcError
 
 // Type aliases
 
