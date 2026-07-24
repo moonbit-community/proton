@@ -5,6 +5,19 @@ priv struct BridgeDispatchTask {
 }
 
 ///|
+#cfg(not(platform="windows"))
+priv struct BridgeWakeup {
+  reader : @pipe.PipeRead
+  writer : @pipe.PipeWrite
+}
+
+///|
+#cfg(platform="windows")
+priv struct BridgeWakeup {
+  reader : @fs.File
+}
+
+///|
 struct IdentifyPayload {
   label : String
   delay_ms : Int?
@@ -125,22 +138,11 @@ fn page_html(label : String) -> String {
 
 ///|
 async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
-  let (reader, writer) = @pipe.pipe() catch {
-    _ => return Err("create runtime wakeup pipe failed")
+  let wakeup = match BridgeWakeup::new(runtime) {
+    Err(message) => return Err(message)
+    Ok(wakeup) => wakeup
   }
-  match runtime.set_wakeup_fd(writer.fd()) {
-    Err(error) => {
-      reader.close()
-      writer.close()
-      return Err(native_error_message("install runtime wakeup fd", error))
-    }
-    Ok(_) => ()
-  }
-  defer {
-    ignore(runtime.set_wakeup_fd(-1))
-    reader.close()
-    writer.close()
-  }
+  defer wakeup.close(runtime)
   let wake_signal = @core.RuntimeWakeSignal::new()
   @async.with_task_group(group => {
     let mut closed = 0
@@ -217,7 +219,7 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
       if did_work {
         @async.sleep(0)
       } else {
-        match wait_for_bridge_work(reader, wake_signal) {
+        match wakeup.wait(wake_signal) {
           Err(message) => return Err(message)
           Ok(_) => ()
         }
@@ -231,14 +233,68 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
 }
 
 ///|
-async fn wait_for_bridge_work(
-  reader : @pipe.PipeRead,
+#cfg(not(platform="windows"))
+fn BridgeWakeup::new(runtime : @native.Runtime) -> Result[BridgeWakeup, String] {
+  let (reader, writer) = @pipe.pipe() catch {
+    _ => return Err("create runtime wakeup pipe failed")
+  }
+  match runtime.set_wakeup_fd(writer.fd()) {
+    Err(error) => {
+      reader.close()
+      writer.close()
+      return Err(native_error_message("install runtime wakeup fd", error))
+    }
+    Ok(_) => ()
+  }
+  Ok(BridgeWakeup::{ reader, writer })
+}
+
+///|
+#cfg(platform="windows")
+async fn BridgeWakeup::new(
+  runtime : @native.Runtime,
+) -> Result[BridgeWakeup, String] {
+  let source = match runtime.prepare_wakeup_source() {
+    Err(error) =>
+      return Err(native_error_message("prepare runtime wakeup source", error))
+    Ok(source) => source
+  }
+  let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
+    error =>
+      return Err("open runtime wakeup source failed: " + error.to_string())
+  }
+  match runtime.activate_wakeup_source() {
+    Err(error) => {
+      reader.close()
+      Err(native_error_message("activate runtime wakeup source", error))
+    }
+    Ok(_) => Ok(BridgeWakeup::{ reader, })
+  }
+}
+
+///|
+#cfg(not(platform="windows"))
+fn BridgeWakeup::close(self : BridgeWakeup, runtime : @native.Runtime) -> Unit {
+  ignore(runtime.set_wakeup_fd(-1))
+  self.reader.close()
+  self.writer.close()
+}
+
+///|
+#cfg(platform="windows")
+fn BridgeWakeup::close(self : BridgeWakeup, _runtime : @native.Runtime) -> Unit {
+  self.reader.close()
+}
+
+///|
+async fn BridgeWakeup::wait(
+  self : BridgeWakeup,
   wake_signal : @core.RuntimeWakeSignal,
 ) -> Result[Unit, String] {
   let revision = wake_signal.revision()
   let ready = @async.any([
     () => {
-      match reader.read_some(max_len=256) {
+      match self.reader.read_some(max_len=256) {
         None => false
         Some(_) => true
       }

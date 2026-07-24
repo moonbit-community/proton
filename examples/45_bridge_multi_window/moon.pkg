@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/fs",
   "moonbitlang/async/pipe",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
@@ -10,6 +11,10 @@ import {
 }
 
 supported_targets = "native"
+
+// async/fs is used only by the Windows #cfg branch.
+
+warnings = "-unused_package"
 
 pkgtype(kind: "executable")
 
