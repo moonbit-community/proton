@@ -2,11 +2,14 @@
 package "justjavac/proton_cli/new"
 
 import {
+  "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn run(String, Array[String]) -> Unit
+pub fn command() -> @argparse.Command
+
+pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
 pub(all) suberror NewProjectInputError {
@@ -42,11 +45,6 @@ pub(all) suberror NewProjectToolError {
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NewProjectToolError::message(Self) -> String
-
-pub(all) suberror NewProjectUsageError {
-  Parse(message~ : String, usage_is_embedded~ : Bool)
-} derive(Eq, @debug.Debug)
-pub fn NewProjectUsageError::message(Self) -> String
 
 pub(all) suberror NewProjectWriteError {
   CreateDirectory(path~ : String, detail~ : String)

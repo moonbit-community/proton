@@ -6,7 +6,7 @@ let default_config_file = "moon.proton"
 
 ///|
 pub(all) suberror BuildUsageError {
-  InvalidArguments(message~ : String, usage_is_embedded~ : Bool)
+  InvalidArguments(message~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -31,7 +31,7 @@ pub(all) suberror BuildProcessError {
 ///|
 pub fn BuildUsageError::message(self : BuildUsageError) -> String {
   match self {
-    InvalidArguments(message~, ..) => message
+    InvalidArguments(message~) => message
   }
 }
 
@@ -101,12 +101,64 @@ priv struct BuildProjectConfig {
 }
 
 ///|
-pub async fn run(cwd : String, args : Array[String]) -> Unit {
-  if args.contains("-h") || args.contains("--help") {
-    print_build_usage()
-    return
-  }
-  let raw = parse_build_args(args)
+/// Returns the declarative `proton_cli build` command specification.
+pub fn command() -> @argparse.Command {
+  @argparse.Command(
+    "build",
+    about="Build a Proton application for the native target",
+    flags=[
+      FlagArg(
+        "no-frontend",
+        about="Do not run the configured frontend build command",
+      ),
+    ],
+    options=[
+      OptionArg(
+        "package",
+        default_values=[default_package],
+        about="MoonBit application package",
+      ),
+      OptionArg(
+        "config",
+        allow_hyphen_values=true,
+        about="Proton project config",
+      ),
+    ],
+    positionals=[
+      PositionArg(
+        "moon-build-args",
+        num_args=ValueRange(lower=0),
+        about="Arguments passed to moon build after --",
+      ),
+    ],
+  )
+}
+
+///|
+/// Runs the build workflow from parsed command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
+  run_with_options(cwd, build_options_from_matches(matches))
+}
+
+///|
+/// Runs the release build requested by the package workflow.
+pub async fn run_release(
+  cwd : String,
+  app_package : String,
+  config_path : String,
+  moon_args : Array[String],
+) -> Unit {
+  validate_moon_build_args(moon_args)
+  run_with_options(cwd, RawBuildOptions::{
+    app_package,
+    config_path: Some(config_path),
+    run_frontend_build: true,
+    moon_args,
+  })
+}
+
+///|
+async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = find_project_root_from(cwd)
   let config_path = resolve_build_config_path(cwd, root, raw)
@@ -120,65 +172,15 @@ pub async fn run(cwd : String, args : Array[String]) -> Unit {
 }
 
 ///|
-fn print_build_usage() -> Unit {
-  println("Usage:")
-  println(
-    "  proton_cli [-C DIR] build [PACKAGE] [OPTIONS] [-- [MOON_BUILD_ARGS]...]",
-  )
-  println("")
-  println("Options:")
-  println(
-    "  --config <path>          Proton project config (default: package/cwd/root moon.proton)",
-  )
-  println("  --no-frontend            Do not run frontend.before_build")
-}
-
-///|
-fn parse_build_args(
-  args : Array[String],
+fn build_options_from_matches(
+  matches : @argparse.Matches,
 ) -> RawBuildOptions raise BuildUsageError {
-  let moon_args : Array[String] = []
-  let mut app_package : String? = None
-  let mut config_path : String? = None
-  let mut run_frontend_build = true
-  let mut index = 0
-  while index < args.length() {
-    let arg = args[index]
-    if arg == "--" {
-      for value in args[index + 1:] {
-        moon_args.push(value)
-      }
-      index = args.length()
-    } else if arg == "--config" {
-      config_path = Some(read_option_value(args, index, "--config"))
-      index = index + 2
-    } else if arg == "--no-frontend" {
-      run_frontend_build = false
-      index = index + 1
-    } else if arg.has_prefix("-") {
-      raise InvalidArguments(
-        message="unknown build option: " + arg,
-        usage_is_embedded=false,
-      )
-    } else {
-      match app_package {
-        None => {
-          app_package = Some(arg)
-          index = index + 1
-        }
-        Some(_) =>
-          raise InvalidArguments(
-            message="build accepts at most one package argument",
-            usage_is_embedded=false,
-          )
-      }
-    }
-  }
+  let moon_args = @cli_args.values(matches, "moon-build-args")
   validate_moon_build_args(moon_args)
   RawBuildOptions::{
-    app_package: app_package.unwrap_or(default_package),
-    config_path,
-    run_frontend_build,
+    app_package: @cli_args.required_value(matches, "package"),
+    config_path: @cli_args.value(matches, "config"),
+    run_frontend_build: !@cli_args.flag(matches, "no-frontend"),
     moon_args,
   }
 }
@@ -189,32 +191,7 @@ fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError 
     if arg == "--target" || arg.has_prefix("--target=") {
       raise InvalidArguments(
         message="proton build always uses --target native; remove --target from MOON_BUILD_ARGS",
-        usage_is_embedded=false,
       )
-    }
-  }
-}
-
-///|
-fn read_option_value(
-  args : Array[String],
-  index : Int,
-  flag : String,
-) -> String raise BuildUsageError {
-  if index + 1 >= args.length() {
-    raise InvalidArguments(
-      message=flag + " requires a value",
-      usage_is_embedded=false,
-    )
-  } else {
-    let value = args[index + 1]
-    if value == "" {
-      raise InvalidArguments(
-        message=flag + " requires a value",
-        usage_is_embedded=false,
-      )
-    } else {
-      value
     }
   }
 }

@@ -1,7 +1,18 @@
 ///|
-fn cef_setup_arg_parser() -> @argparse.Command {
+/// Returns the declarative `proton_cli cef` command specification.
+pub fn command() -> @argparse.Command {
   @argparse.Command(
-    "proton_cli cef setup",
+    "cef",
+    about="Manage the Proton CEF runtime",
+    subcommands=[setup_command()],
+    subcommand_required=true,
+  )
+}
+
+///|
+fn setup_command() -> @argparse.Command {
+  @argparse.Command(
+    "setup",
     about="Install the Proton CEF runtime into .proton",
     options=[
       OptionArg("name", about="CEF binary directory/archive name"),
@@ -9,14 +20,6 @@ fn cef_setup_arg_parser() -> @argparse.Command {
       OptionArg("sha256", about="Expected SHA-256 for a custom CEF archive"),
     ],
   )
-}
-
-///|
-fn match_value(matches : @argparse.Matches, name : String) -> String? {
-  match matches.values.get(name) {
-    Some([value, ..]) => Some(value)
-    _ => None
-  }
 }
 
 ///|
@@ -37,29 +40,45 @@ fn validate_cef_name(name : String) -> Unit raise CefUsageError {
 }
 
 ///|
-pub async fn run_setup(cwd : String, args : Array[String]) -> Unit {
-  let cmd = cef_setup_arg_parser()
-  let matches = cmd.parse(argv=args, env=Map([])) catch {
-    err =>
-      raise CefUsageError::Parse(
-        message=err.to_string(),
-        usage_is_embedded=true,
-      )
+/// Runs a parsed CEF management subcommand.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
+  match matches.subcommand {
+    Some(("setup", setup_matches)) => setup_from_matches(cwd, setup_matches)
+    _ => abort("argparse invariant violated: missing cef subcommand")
   }
+}
+
+///|
+/// Installs the default CEF runtime for internal CLI workflows.
+pub async fn setup_default(cwd : String) -> Unit {
+  setup(cwd, None, None, None)
+}
+
+///|
+async fn setup_from_matches(cwd : String, matches : @argparse.Matches) -> Unit {
+  setup(
+    cwd,
+    @cli_args.value(matches, "name"),
+    @cli_args.value(matches, "url"),
+    @cli_args.value(matches, "sha256"),
+  )
+}
+
+///|
+async fn setup(
+  cwd : String,
+  requested_name : String?,
+  url : String?,
+  requested_sha256 : String?,
+) -> Unit {
   let platform = current_platform()
   require_supported_platform(platform)
-  let name = match match_value(matches, "name") {
+  let name = match requested_name {
     Some(name) => name
     None => platform.default_cef_name
   }
   validate_cef_name(name)
-  let url = match_value(matches, "url")
-  let sha256 = resolve_cef_archive_sha256(
-    platform,
-    name,
-    url,
-    match_value(matches, "sha256"),
-  )
+  let sha256 = resolve_cef_archive_sha256(platform, name, url, requested_sha256)
   let root = project_root(cwd)
   let proton_root = path_join(root, ".proton")
   let prebuilt_root = find_prebuilt_root(root, platform)

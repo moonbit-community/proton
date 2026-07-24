@@ -1,8 +1,6 @@
 ///|
 pub(all) suberror PackageUsageError {
-  InvalidArguments(message~ : String, usage_is_embedded~ : Bool)
   UnsupportedTarget(target~ : String)
-  MissingOptionValue(option~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -72,9 +70,7 @@ pub(all) suberror WindowsPackagingError {
 ///|
 pub fn PackageUsageError::message(self : PackageUsageError) -> String {
   match self {
-    InvalidArguments(message~, ..) => message
     UnsupportedTarget(target~) => "unsupported package target: " + target
-    MissingOptionValue(option~) => option + " requires a value"
   }
 }
 

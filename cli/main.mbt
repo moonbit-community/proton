@@ -1,22 +1,4 @@
 ///|
-fn print_usage() -> Unit {
-  let usage =
-    #|Usage:
-    #|  proton_cli version
-    #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--identifier <id>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
-    #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
-    #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
-    #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
-    #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
-    #|  proton_cli codegen <input.mbt> -o <output.g.mbt>
-    #|  proton_cli cef setup [--name <cef_binary_name>] [--url <url>]
-    #|
-    #|Set PROTON_NO_UPDATE_CHECK=1 to skip update checks.
-    #|
-  println(usage)
-}
-
-///|
 let cli_current_version : String = "0.1.9"
 
 ///|
@@ -31,7 +13,7 @@ priv struct CliVersion {
 
 ///|
 priv suberror CliUsageError {
-  Invalid(message~ : String, usage_is_embedded~ : Bool)
+  Invalid(message~ : String)
 } derive(Debug)
 
 ///|
@@ -42,7 +24,7 @@ priv suberror CliCodegenOutputError {
 ///|
 fn CliUsageError::message(self : CliUsageError) -> String {
   match self {
-    Invalid(message~, ..) => message
+    Invalid(message~) => message
   }
 }
 
@@ -153,11 +135,6 @@ fn cli_version_text() -> String {
 }
 
 ///|
-fn is_cli_version_arg(arg : String) -> Bool {
-  arg == "version" || arg == "--version" || arg == "-V"
-}
-
-///|
 async fn fetch_latest_cli_version() -> String? {
   let (code, output) = @process.collect_output_merged("curl", [
     "-fsSL", "--max-time", "2", cli_manifest_url,
@@ -204,9 +181,9 @@ fn print_error_message(message : String) -> Unit {
 }
 
 ///|
-fn codegen_arg_parser() -> @argparse.Command {
+fn codegen_command() -> @argparse.Command {
   @argparse.Command(
-    "proton_cli codegen",
+    "codegen",
     about="Generate Proton command extension code from #proton attributes",
     options=[
       OptionArg(
@@ -227,165 +204,123 @@ fn codegen_arg_parser() -> @argparse.Command {
 }
 
 ///|
-fn match_value(matches : @argparse.Matches, name : String) -> String? {
-  match matches.values.get(name) {
-    Some([value, ..]) => Some(value)
-    _ => None
-  }
+fn doctor_command() -> @argparse.Command {
+  @argparse.Command(
+    "doctor",
+    about="Inspect and diagnose a Proton project",
+    flags=[
+      FlagArg("dry-run", about="Report changes without applying them"),
+      FlagArg("verbose", about="Include detailed project diagnostics"),
+      FlagArg("deep", about="Run deeper runtime checks"),
+      FlagArg("run", about="Select and run frontend diagnostics"),
+      FlagArg("fix", about="Select and apply safe automatic fixes"),
+      FlagArg("frontend", about="Select the frontend section"),
+      FlagArg("release", about="Select the release section"),
+      FlagArg("json", about="Render one JSON document", conflicts_with=[
+        "json-lines", "quiet",
+      ]),
+      FlagArg("json-lines", about="Render newline-delimited JSON", conflicts_with=[
+        "json", "quiet",
+      ]),
+      FlagArg("quiet", about="Render only failing diagnostics", conflicts_with=[
+        "json", "json-lines",
+      ]),
+    ],
+    options=[
+      OptionArg(
+        "section",
+        action=Append,
+        about="Section to inspect; may be repeated",
+      ),
+      OptionArg("output", about="Write the report to a file"),
+    ],
+  )
 }
 
 ///|
-fn parse_global_args(args : Array[String]) -> (String, Array[String]) {
-  let rest : Array[String] = []
-  let mut cwd = "."
-  let mut index = 0
-  while index < args.length() {
-    if args[index] == "-C" || args[index] == "--cwd" {
-      if index + 1 < args.length() {
-        cwd = args[index + 1]
-        index = index + 2
-      } else {
-        rest.push(args[index])
-        index = index + 1
-        break
-      }
-    } else {
-      break
-    }
-  }
-  for arg in args[index:] {
-    rest.push(arg)
-  }
-  (cwd, rest)
+fn version_command() -> @argparse.Command {
+  @argparse.Command("version", about="Print the Proton CLI version")
 }
 
 ///|
-fn cli_path_is_absolute(path : String) -> Bool {
-  path.has_prefix("\\") ||
-  path.has_prefix("/") ||
-  path.contains(":\\") ||
-  path.contains(":/")
-}
-
-///|
-fn path_join(base : String, child : String) -> String {
-  if base == "" {
-    child
-  } else if child == "" {
-    base
-  } else if base.has_suffix("\\") || base.has_suffix("/") {
-    base + child
-  } else {
-    base + @path.sep.to_string() + child
-  }
+fn cli_command() -> @argparse.Command {
+  @argparse.Command(
+    "proton_cli",
+    about="Build, run, diagnose, and package Proton desktop applications",
+    version=cli_version_text(),
+    options=[
+      OptionArg(
+        "cwd",
+        short='C',
+        default_values=["."],
+        allow_hyphen_values=true,
+        global=true,
+        about="Run as if started in this directory",
+      ),
+    ],
+    subcommands=[
+      version_command(),
+      @new_project.command(),
+      @dev.command(),
+      @build.command(),
+      @package.command(),
+      doctor_command(),
+      codegen_command(),
+      @cef.command(),
+    ],
+    arg_required_else_help=true,
+    subcommand_required=true,
+  )
 }
 
 ///|
 fn resolve_cli_path(cwd : String, path : String) -> String {
-  if cli_path_is_absolute(path) {
-    path
+  let candidate : @path.Path = path
+  if candidate.is_absolute() {
+    candidate.normalize().resolve().to_string()
   } else {
-    path_join(cwd, path)
+    let base : @path.Path = cwd
+    base.join(path).normalize().resolve().to_string()
   }
 }
 
 ///|
-async fn run_doctor_from_args(cwd : String, args : Array[String]) -> Bool {
-  let mut dry_run = false
-  let mut verbose = false
-  let mut deep = false
-  let mut run_frontend = false
-  let mut fix = false
-  let mut json = false
-  let mut json_lines = false
-  let mut quiet = false
-  let sections : Array[String] = []
-  let mut output : String? = None
-  let mut index = 0
-  while index < args.length() {
-    let arg = args[index]
-    match arg {
-      "--dry-run" => dry_run = true
-      "--verbose" => verbose = true
-      "--deep" => deep = true
-      "--run" => run_frontend = true
-      "--fix" => fix = true
-      "--frontend" => sections.push("frontend")
-      "--release" => sections.push("release")
-      "--json" => json = true
-      "--json-lines" => json_lines = true
-      "--quiet" => quiet = true
-      "--section" => {
-        guard index + 1 < args.length() else {
-          raise CliUsageError::Invalid(
-            message="missing value for --section",
-            usage_is_embedded=false,
-          )
-        }
-        sections.push(args[index + 1])
-        index += 1
-      }
-      "--output" => {
-        guard index + 1 < args.length() else {
-          raise CliUsageError::Invalid(
-            message="missing value for --output",
-            usage_is_embedded=false,
-          )
-        }
-        output = Some(resolve_cli_path(cwd, args[index + 1]))
-        index += 1
-      }
-      "-h" | "--help" => {
-        println(
-          "Usage: proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]",
-        )
-        return true
-      }
-      _ =>
-        raise CliUsageError::Invalid(
-          message="unknown doctor option: " + arg,
-          usage_is_embedded=false,
-        )
-    }
-    index += 1
+async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
+  let dry_run = @cli_args.flag(matches, "dry-run")
+  let verbose = @cli_args.flag(matches, "verbose")
+  let deep = @cli_args.flag(matches, "deep")
+  let run_frontend = @cli_args.flag(matches, "run")
+  let fix = @cli_args.flag(matches, "fix")
+  let json = @cli_args.flag(matches, "json")
+  let json_lines = @cli_args.flag(matches, "json-lines")
+  let quiet = @cli_args.flag(matches, "quiet")
+  let sections = @cli_args.values(matches, "section")
+  if @cli_args.flag(matches, "frontend") && !sections.contains("frontend") {
+    sections.push("frontend")
   }
-  if json && json_lines {
-    raise CliUsageError::Invalid(
-      message="--json and --json-lines are mutually exclusive",
-      usage_is_embedded=false,
-    )
+  if @cli_args.flag(matches, "release") && !sections.contains("release") {
+    sections.push("release")
   }
-  if quiet && (json || json_lines) {
-    raise CliUsageError::Invalid(
-      message="--quiet cannot be combined with --json or --json-lines",
-      usage_is_embedded=false,
-    )
+  if run_frontend && !sections.contains("frontend") {
+    sections.push("frontend")
   }
-  if run_frontend && sections.length() > 0 && !sections.contains("frontend") {
-    raise CliUsageError::Invalid(
-      message="--run requires the frontend section",
-      usage_is_embedded=false,
-    )
-  }
-  if fix && sections.length() > 0 && !sections.contains("fixes") {
+  if fix && !sections.contains("fixes") {
     sections.push("fixes")
   }
   if sections.contains("fixes") && !fix {
-    raise CliUsageError::Invalid(
-      message="the fixes section requires --fix",
-      usage_is_embedded=false,
-    )
+    raise CliUsageError::Invalid(message="the fixes section requires --fix")
   }
   for section in sections {
     if ![
         "project", "environment", "runtime", "platform", "packages", "extensions",
         "app", "frontend", "release", "fixes",
       ].contains(section) {
-      raise CliUsageError::Invalid(
-        message="unknown doctor section: " + section,
-        usage_is_embedded=false,
-      )
+      raise CliUsageError::Invalid(message="unknown doctor section: " + section)
     }
+  }
+  let output = match @cli_args.value(matches, "output") {
+    Some(path) => Some(resolve_cli_path(cwd, path))
+    None => None
   }
   @doctor.run(
     cwd~,
@@ -403,31 +338,9 @@ async fn run_doctor_from_args(cwd : String, args : Array[String]) -> Bool {
 }
 
 ///|
-fn run_codegen(cwd : String, args : Array[String]) -> Unit raise {
-  let cmd = codegen_arg_parser()
-  let matches = cmd.parse(argv=args, env=Map([])) catch {
-    error =>
-      raise CliUsageError::Invalid(
-        message=error.to_string(),
-        usage_is_embedded=true,
-      )
-  }
-  let input = match match_value(matches, "input_file") {
-    Some(input) => input
-    None =>
-      raise CliUsageError::Invalid(
-        message="missing input file",
-        usage_is_embedded=false,
-      )
-  }
-  let output = match match_value(matches, "output-file") {
-    Some(output) => output
-    None =>
-      raise CliUsageError::Invalid(
-        message="missing -o <output.g.mbt>",
-        usage_is_embedded=false,
-      )
-  }
+fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
+  let input = @cli_args.required_value(matches, "input_file")
+  let output = @cli_args.required_value(matches, "output-file")
   let resolved_input = resolve_cli_path(cwd, input)
   let resolved_output = resolve_cli_path(cwd, output)
   let result = @codegen.generate_app_commands_from_file_with_metadata(
@@ -446,36 +359,24 @@ fn run_codegen(cwd : String, args : Array[String]) -> Unit raise {
 }
 
 ///|
-async fn run_cli(cwd : String, args : Array[String]) -> Bool {
-  if args[0] == "doctor" {
-    return run_doctor_from_args(cwd, args[1:].to_owned())
-  } else if args.length() >= 1 && args[0] == "new" {
-    @new_project.run(cwd, args[1:].to_owned())
-  } else if args.length() >= 1 && args[0] == "dev" {
-    @dev.run(cwd, args[1:].to_owned())
-  } else if args.length() >= 1 && args[0] == "build" {
-    @build.run(cwd, args[1:].to_owned())
-  } else if args.length() >= 1 && args[0] == "package" {
-    @package.run(cwd, args[1:].to_owned())
-  } else if args.length() >= 1 && args[0] == "codegen" {
-    run_codegen(cwd, args[1:].to_owned())
-  } else if args.length() >= 2 && args[0] == "cef" && args[1] == "setup" {
-    @cef.run_setup(cwd, args[2:].to_owned())
-  } else {
-    raise CliUsageError::Invalid(
-      message="unknown command",
-      usage_is_embedded=false,
-    )
+async fn run_cli(cwd : String, matches : @argparse.Matches) -> Bool {
+  match matches.subcommand {
+    Some(("version", _)) => println(cli_version_text())
+    Some(("doctor", doctor_matches)) => return run_doctor(cwd, doctor_matches)
+    Some(("new", new_matches)) => @new_project.run(cwd, new_matches)
+    Some(("dev", dev_matches)) => @dev.run(cwd, dev_matches)
+    Some(("build", build_matches)) => @build.run(cwd, build_matches)
+    Some(("package", package_matches)) => @package.run(cwd, package_matches)
+    Some(("codegen", codegen_matches)) => run_codegen(cwd, codegen_matches)
+    Some(("cef", cef_matches)) => @cef.run(cwd, cef_matches)
+    _ => abort("argparse invariant violated: missing subcommand")
   }
   true
 }
 
 ///|
-fn exit_with_usage(message : String, usage_is_embedded : Bool) -> Bool {
+fn exit_with_error(message : String) -> Bool {
   print_error_message(message)
-  if !usage_is_embedded {
-    print_usage()
-  }
   @sys.exit(1)
   false
 }
@@ -484,55 +385,20 @@ fn exit_with_usage(message : String, usage_is_embedded : Bool) -> Bool {
 async fn main {
   let argv = @sys.get_cli_args()
   let raw_args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
-  let (cwd, args) = parse_global_args(raw_args)
-  if args.length() == 1 && is_cli_version_arg(args[0]) {
+  let matches = cli_command().parse(argv=raw_args, env=Map([])) catch {
+    error => {
+      let _ = exit_with_error(error.to_string())
+      return
+    }
+  }
+  let cwd = @cli_args.required_value(matches, "cwd")
+  if matches.subcommand is Some(("version", _)) {
     println(cli_version_text())
     return
   }
   check_cli_update()
-  if args.length() == 0 || args[0] == "-h" || args[0] == "--help" {
-    print_usage()
-    return
-  }
-  let success = try run_cli(cwd, args) catch {
-    CliUsageError::Invalid(message~, usage_is_embedded~) =>
-      exit_with_usage(message, usage_is_embedded)
-    @build.BuildUsageError::InvalidArguments(message~, usage_is_embedded~) =>
-      exit_with_usage(message, usage_is_embedded)
-    @dev.DevUsageError::UnknownOption(option~) =>
-      exit_with_usage("unknown dev option: " + option, false)
-    @dev.DevUsageError::UnexpectedArgument(argument~) =>
-      exit_with_usage("unexpected dev argument: " + argument, false)
-    @dev.DevUsageError::MissingValue(option~) =>
-      exit_with_usage("missing value for " + option, false)
-    @dev.DevUsageError::EmptyValue(option~) =>
-      exit_with_usage(option + " must not be empty", false)
-    @dev.DevUsageError::InvalidNonNegativeInteger(option~, value~) =>
-      exit_with_usage(
-        option + " must be a non-negative integer: " + value,
-        false,
-      )
-    @new_project.NewProjectUsageError::Parse(message~, usage_is_embedded~) =>
-      exit_with_usage(message, usage_is_embedded)
-    @package.PackageUsageError::InvalidArguments(message~, usage_is_embedded~) =>
-      exit_with_usage(message, usage_is_embedded)
-    @package.PackageUsageError::UnsupportedTarget(target~) =>
-      exit_with_usage("unsupported package target: " + target, false)
-    @package.PackageUsageError::MissingOptionValue(option~) =>
-      exit_with_usage(option + " requires a value", false)
-    @cef.CefUsageError::Parse(message~, usage_is_embedded~) =>
-      exit_with_usage(message, usage_is_embedded)
-    @cef.CefUsageError::InvalidArchiveName(name~) =>
-      exit_with_usage("Invalid CEF archive name: " + name, false)
-    @cef.CefUsageError::InvalidChecksum(value~) =>
-      exit_with_usage("Invalid CEF archive SHA-256: " + value, false)
-    @cef.CefUsageError::MissingCustomChecksum =>
-      exit_with_usage("Custom CEF archive name or URL requires --sha256", false)
-    error => {
-      print_error_message(error.to_string())
-      @sys.exit(1)
-      false
-    }
+  let success = try run_cli(cwd, matches) catch {
+    error => exit_with_error(error.to_string())
   } noraise {
     success => success
   }

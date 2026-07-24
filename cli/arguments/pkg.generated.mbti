@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_cli/arguments"
+
+import {
+  "moonbitlang/core/argparse",
+}
+
+// Values
+pub fn flag(@argparse.Matches, String) -> Bool
+
+pub fn optional_flag(@argparse.Matches, String) -> Bool?
+
+pub fn required_value(@argparse.Matches, String) -> String
+
+pub fn value(@argparse.Matches, String) -> String?
+
+pub fn values(@argparse.Matches, String) -> Array[String]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

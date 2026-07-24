@@ -44,12 +44,61 @@ struct DevUrlEndpoint {
 } derive(Debug, Eq)
 
 ///|
-pub async fn run(cwd : String, args : Array[String]) -> Unit {
-  if args.contains("-h") || args.contains("--help") {
-    print_dev_usage()
-    return
-  }
-  let raw = parse_dev_args(args)
+/// Returns the declarative `proton_cli dev` command specification.
+pub fn command() -> @argparse.Command {
+  @argparse.Command(
+    "dev",
+    about="Run a Proton app in development mode",
+    flags=[
+      FlagArg(
+        "no-dev-server-wait",
+        about="Start the app without waiting for the frontend URL",
+      ),
+      FlagArg(
+        "no-frontend",
+        about="Do not start the configured frontend command",
+      ),
+      FlagArg(
+        "setup",
+        negatable=true,
+        about="Install the runtime automatically when it is missing",
+      ),
+    ],
+    options=[
+      OptionArg(
+        "package",
+        default_values=[default_package],
+        about="MoonBit application package",
+      ),
+      OptionArg(
+        "config",
+        allow_hyphen_values=true,
+        about="Proton project config",
+      ),
+      OptionArg("url", about="Override frontend.dev_url"),
+      OptionArg("command", about="Override frontend.before_dev"),
+      OptionArg("frontend-cwd", about="Override frontend.cwd"),
+      OptionArg(
+        "timeout-ms",
+        default_values=[default_timeout_ms.to_string()],
+        about="Dev server wait timeout in milliseconds",
+      ),
+      OptionArg("ready-path", about="HTTP readiness probe path"),
+    ],
+    positionals=[
+      PositionArg(
+        "app-args",
+        num_args=ValueRange(lower=0),
+        about="Arguments passed to the application after --",
+      ),
+    ],
+  )
+}
+
+///|
+/// Runs the development workflow from parsed command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
+  let raw = dev_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = find_project_root_from(cwd)
   let config_path = resolve_dev_config_path(cwd, root, raw)
@@ -112,120 +161,22 @@ pub async fn run(cwd : String, args : Array[String]) -> Unit {
 }
 
 ///|
-fn print_dev_usage() -> Unit {
-  let usage =
-    #|Usage:
-    #|  proton_cli [-C DIR] dev [PACKAGE] [OPTIONS] [-- [APP_ARGS]...]
-    #|
-    #|Options:
-    #|  --config <path>          Proton project config (default: package/cwd/root moon.proton)
-    #|  --url <url>              Override frontend.dev_url
-    #|  --command <command>      Override frontend.before_dev
-    #|  --frontend-cwd <dir>     Override frontend.cwd
-    #|  --timeout-ms <ms>        Dev server wait timeout (default: 30000)
-    #|  --ready-path <path>      HTTP path that must return below 400
-    #|  --no-dev-server-wait     Start the app without waiting for --url
-    #|  --no-frontend            Do not start frontend.before_dev
-    #|  --setup                  Run `proton_cli cef setup` if runtime is missing
-    #|  --no-setup               Do not install the runtime automatically
-    #|
-  println(usage)
-}
-
-///|
-fn parse_dev_args(args : Array[String]) -> RawDevOptions raise DevUsageError {
-  let app_args : Array[String] = []
-  let mut app_package : String? = None
-  let mut config_path : String? = None
-  let mut url : String? = None
-  let mut command : String? = None
-  let mut frontend_cwd : String? = None
-  let mut timeout_ms = default_timeout_ms
-  let mut ready_path : String? = None
-  let mut wait_for_dev_server = true
-  let mut start_frontend = true
-  let mut setup_runtime = false
-  let mut index = 0
-  while index < args.length() {
-    let arg = args[index]
-    if arg == "--" {
-      for value in args[index + 1:] {
-        app_args.push(value)
-      }
-      index = args.length()
-    } else if arg == "--config" {
-      config_path = Some(read_option_value(args, index, "--config"))
-      index = index + 2
-    } else if arg == "--url" {
-      url = Some(read_option_value(args, index, "--url"))
-      index = index + 2
-    } else if arg == "--command" {
-      command = Some(read_option_value(args, index, "--command"))
-      index = index + 2
-    } else if arg == "--frontend-cwd" {
-      frontend_cwd = Some(read_option_value(args, index, "--frontend-cwd"))
-      index = index + 2
-    } else if arg == "--timeout-ms" {
-      let value = read_option_value(args, index, "--timeout-ms")
-      timeout_ms = parse_non_negative_int(value, "--timeout-ms")
-      index = index + 2
-    } else if arg == "--ready-path" {
-      ready_path = Some(read_option_value(args, index, "--ready-path"))
-      index = index + 2
-    } else if arg == "--no-dev-server-wait" {
-      wait_for_dev_server = false
-      index = index + 1
-    } else if arg == "--no-frontend" {
-      start_frontend = false
-      index = index + 1
-    } else if arg == "--setup" {
-      setup_runtime = true
-      index = index + 1
-    } else if arg == "--no-setup" {
-      setup_runtime = false
-      index = index + 1
-    } else if arg.has_prefix("-") {
-      raise UnknownOption(option=arg)
-    } else {
-      match app_package {
-        None => {
-          app_package = Some(arg)
-          index = index + 1
-        }
-        Some(_) => raise UnexpectedArgument(argument=arg)
-      }
-    }
-  }
+fn dev_options_from_matches(
+  matches : @argparse.Matches,
+) -> RawDevOptions raise DevUsageError {
+  let timeout = @cli_args.required_value(matches, "timeout-ms")
   RawDevOptions::{
-    app_package: app_package.unwrap_or(default_package),
-    config_path,
-    url,
-    command,
-    frontend_cwd,
-    timeout_ms,
-    ready_path,
-    wait_for_dev_server,
-    start_frontend,
-    setup_runtime,
-    app_args,
-  }
-}
-
-///|
-fn read_option_value(
-  args : Array[String],
-  index : Int,
-  name : String,
-) -> String raise DevUsageError {
-  if index + 1 >= args.length() {
-    raise MissingValue(option=name)
-  } else {
-    let value = args[index + 1]
-    if value == "" {
-      raise EmptyValue(option=name)
-    } else {
-      value
-    }
+    app_package: @cli_args.required_value(matches, "package"),
+    config_path: @cli_args.value(matches, "config"),
+    url: @cli_args.value(matches, "url"),
+    command: @cli_args.value(matches, "command"),
+    frontend_cwd: @cli_args.value(matches, "frontend-cwd"),
+    timeout_ms: parse_non_negative_int(timeout, "--timeout-ms"),
+    ready_path: @cli_args.value(matches, "ready-path"),
+    wait_for_dev_server: !@cli_args.flag(matches, "no-dev-server-wait"),
+    start_frontend: !@cli_args.flag(matches, "no-frontend"),
+    setup_runtime: @cli_args.flag(matches, "setup"),
+    app_args: @cli_args.values(matches, "app-args"),
   }
 }
 
@@ -335,7 +286,7 @@ async fn ensure_dev_runtime(
       match native_dist_override {
         Some(_) => raise NativeDistOverride(detail=error.message())
         None if setup_runtime => {
-          @cef.run_setup(root, []) catch {
+          @cef.setup_default(root) catch {
             error => raise Setup(detail=error.to_string())
           }
           read_dev_runtime(root)

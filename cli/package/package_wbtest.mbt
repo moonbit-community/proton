@@ -1,8 +1,13 @@
 ///|
+fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
+  package_options_from_matches(command().parse(argv=args, env=Map([])))
+}
+
+///|
 test "parse package args accepts repeated targets and overrides" {
   let raw = parse_package_args([
-    "desktop", "--target", "app", "--target", "zip", "--output", "dist", "--no-build",
-    "--dry-run",
+    "--package", "desktop", "--target", "app", "--target", "zip", "--output", "dist",
+    "--no-build", "--dry-run",
   ])
   assert_eq(raw.app_package, "desktop")
   @debug.assert_eq(raw.targets, ["app", "zip"])
