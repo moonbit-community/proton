@@ -1,9 +1,4 @@
 ///|
-pub(all) suberror NewProjectUsageError {
-  Parse(message~ : String, usage_is_embedded~ : Bool)
-} derive(Debug, Eq)
-
-///|
 /// Invalid values supplied while configuring a new project.
 pub(all) suberror NewProjectInputError {
   InvalidPositiveInteger(field~ : String, value~ : String)
@@ -47,13 +42,6 @@ pub(all) suberror NewProjectToolError {
   Exit(tool~ : String, code~ : Int)
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Debug, Eq)
-
-///|
-pub fn NewProjectUsageError::message(self : NewProjectUsageError) -> String {
-  match self {
-    Parse(message~, ..) => message
-  }
-}
 
 ///|
 pub fn NewProjectInputError::message(self : NewProjectInputError) -> String {
@@ -122,11 +110,6 @@ pub fn NewProjectToolError::message(self : NewProjectToolError) -> String {
       project +
       "\n  moon check --target native --diagnostic-limit 80"
   }
-}
-
-///|
-impl Show for NewProjectUsageError with fn output(self, logger) {
-  logger.write_string(self.message())
 }
 
 ///|

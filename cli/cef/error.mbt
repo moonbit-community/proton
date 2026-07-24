@@ -1,6 +1,5 @@
 ///|
 pub(all) suberror CefUsageError {
-  Parse(message~ : String, usage_is_embedded~ : Bool)
   InvalidArchiveName(name~ : String)
   InvalidChecksum(value~ : String)
   MissingCustomChecksum
@@ -56,7 +55,6 @@ pub(all) suberror CefRuntimeError {
 ///|
 pub fn CefUsageError::message(self : CefUsageError) -> String {
   match self {
-    Parse(message~, ..) => message
     InvalidArchiveName(name~) => "Invalid CEF archive name: " + name
     InvalidChecksum(value~) => "Invalid CEF archive SHA-256: " + value
     MissingCustomChecksum => "Custom CEF archive name or URL requires --sha256"

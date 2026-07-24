@@ -1,4 +1,9 @@
 ///|
+fn parse_build_args(args : Array[String]) -> RawBuildOptions raise {
+  build_options_from_matches(command().parse(argv=args, env=Map([])))
+}
+
+///|
 fn[T] expect_build_error_message(action : () -> T raise) -> String raise {
   try action() catch {
     error => error.to_string()
@@ -59,9 +64,21 @@ test "parse build args defaults and moon args" {
 }
 
 ///|
+test "moon build options require the separator" {
+  try parse_build_args(["--warn-list", "+a"]) catch {
+    error =>
+      assert_true(
+        error.to_string().contains("unexpected argument '--warn-list'"),
+      )
+  } noraise {
+    _ => fail("expected argparse to reject a moon option before --")
+  }
+}
+
+///|
 test "parse build args package and config" {
   let raw = parse_build_args([
-    "desktop", "--config", "config/moon.proton", "--no-frontend",
+    "--package", "desktop", "--config", "config/moon.proton", "--no-frontend",
   ])
   @debug.assert_eq(raw.app_package, "desktop")
   @debug.assert_eq(raw.config_path, Some("config/moon.proton"))
@@ -78,12 +95,12 @@ test "parse build args accepts explicit config path starting with dash" {
 test "parse build args rejects moon target override" {
   let first = expect_build_error_message(() => {
     parse_build_args([
-      "app", "--", "--diagnostic-limit", "80", "--target", "wasm-gc",
+      "--package", "app", "--", "--diagnostic-limit", "80", "--target", "wasm-gc",
     ])
   })
   assert_true(first.contains("always uses --target native"))
   let second = expect_build_error_message(() => {
-    parse_build_args(["app", "--", "--target=wasm-gc"])
+    parse_build_args(["--package", "app", "--", "--target=wasm-gc"])
   })
   assert_true(second.contains("always uses --target native"))
 }
@@ -112,7 +129,7 @@ test "build config discovery prefers package-local moon.proton" {
   ensure_build_test_dir(join_path(root, "desktop"))
   let package_config = join_path(join_path(root, "desktop"), "moon.proton")
   write_build_test_file(package_config, "")
-  let raw = parse_build_args(["desktop"])
+  let raw = parse_build_args(["--package", "desktop"])
   let resolved = resolve_build_config_path(root, root, raw)
   @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
 }

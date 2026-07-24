@@ -1,6 +1,8 @@
 import {
   "justjavac/proton_config",
+  "justjavac/proton_cli/arguments" @cli_args,
   "moonbitlang/async/process",
+  "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,

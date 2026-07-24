@@ -1,10 +1,6 @@
 ///|
 /// Invalid `proton dev` command-line input.
 pub(all) suberror DevUsageError {
-  UnknownOption(option~ : String)
-  UnexpectedArgument(argument~ : String)
-  MissingValue(option~ : String)
-  EmptyValue(option~ : String)
   InvalidNonNegativeInteger(option~ : String, value~ : String)
 } derive(Debug, Eq)
 
@@ -56,10 +52,6 @@ pub(all) suberror DevProcessError {
 ///|
 pub fn DevUsageError::message(self : DevUsageError) -> String {
   match self {
-    UnknownOption(option~) => "unknown dev option: " + option
-    UnexpectedArgument(argument~) => "unexpected dev argument: " + argument
-    MissingValue(option~) => "missing value for " + option
-    EmptyValue(option~) => option + " must not be empty"
     InvalidNonNegativeInteger(option~, value~) =>
       option + " must be a non-negative integer: " + value
   }

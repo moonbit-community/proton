@@ -29,15 +29,10 @@ struct NewProjectOptions {
 } derive(Debug, Eq)
 
 ///|
-pub async fn run(cwd : String, args : Array[String]) -> Unit {
+/// Creates a project from parsed `proton_cli new` command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let cwd = @path.Path(cwd).resolve().to_string()
-  let raw = parse_new_args(args) catch {
-    error =>
-      raise NewProjectUsageError::Parse(
-        message=error.to_string(),
-        usage_is_embedded=true,
-      )
-  }
+  let raw = new_options_from_matches(matches)
   let defaults = options_from_raw(cwd, raw)
   let interactive = !raw.yes && !@ci.is_ci(cwd~)
   let options = if interactive {
@@ -71,9 +66,10 @@ pub async fn run(cwd : String, args : Array[String]) -> Unit {
 }
 
 ///|
-fn new_arg_parser() -> @argparse.Command {
+/// Returns the declarative `proton_cli new` command specification.
+pub fn command() -> @argparse.Command {
   @argparse.Command(
-    "proton_cli new",
+    "new",
     about="Create a new Proton native desktop app",
     flags=[
       FlagArg(
@@ -122,35 +118,20 @@ fn new_arg_parser() -> @argparse.Command {
 }
 
 ///|
-fn parse_new_args(args : Array[String]) -> RawNewProjectOptions raise {
-  let matches = new_arg_parser().parse(argv=args, env=Map([]))
+fn new_options_from_matches(
+  matches : @argparse.Matches,
+) -> RawNewProjectOptions {
   {
-    path: match_value(matches, "path"),
-    title: match_value(matches, "title"),
-    module_name: match_value(matches, "module"),
-    identifier: match_value(matches, "identifier"),
-    width: match_value(matches, "width"),
-    height: match_value(matches, "height"),
-    check: match_flag(matches, "check"),
-    yes: match_flag(matches, "yes").unwrap_or(false),
-    git: match_flag(matches, "git"),
-    dry_run: match_flag(matches, "dry-run").unwrap_or(false),
-  }
-}
-
-///|
-fn match_value(matches : @argparse.Matches, name : String) -> String? {
-  match matches.values.get(name) {
-    Some([value, ..]) => Some(value)
-    _ => None
-  }
-}
-
-///|
-fn match_flag(matches : @argparse.Matches, name : String) -> Bool? {
-  match matches.flags.get(name) {
-    Some(value) => Some(value)
-    None => None
+    path: @cli_args.value(matches, "path"),
+    title: @cli_args.value(matches, "title"),
+    module_name: @cli_args.value(matches, "module"),
+    identifier: @cli_args.value(matches, "identifier"),
+    width: @cli_args.value(matches, "width"),
+    height: @cli_args.value(matches, "height"),
+    check: @cli_args.optional_flag(matches, "check"),
+    yes: @cli_args.flag(matches, "yes"),
+    git: @cli_args.optional_flag(matches, "git"),
+    dry_run: @cli_args.flag(matches, "dry-run"),
   }
 }
 
@@ -344,6 +325,6 @@ fn print_success(options : NewProjectOptions, checked~ : Bool) -> Unit {
   println("  proton_cli cef setup")
   println("  proton_cli dev")
   println("  proton_cli build")
-  println("  proton_cli package app --dry-run")
-  println("  proton_cli package app")
+  println("  proton_cli package --dry-run")
+  println("  proton_cli package")
 }

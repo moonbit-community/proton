@@ -2,6 +2,7 @@ import {
   "justjavac/case",
   "justjavac/ci",
   "justjavac/template",
+  "justjavac/proton_cli/arguments" @cli_args,
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",

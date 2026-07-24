@@ -49,12 +49,45 @@ struct MacosCodeSignTarget {
 } derive(Debug, Eq)
 
 ///|
-pub async fn run(cwd : String, args : Array[String]) -> Unit {
-  if args.contains("-h") || args.contains("--help") {
-    print_package_usage()
-    return
-  }
-  let raw = parse_package_args(args)
+/// Returns the declarative `proton_cli package` command specification.
+pub fn command() -> @argparse.Command {
+  @argparse.Command(
+    "package",
+    about="Package a Proton application",
+    flags=[
+      FlagArg("no-build", about="Reuse an existing release build"),
+      FlagArg("dry-run", about="Print the resolved package plan"),
+      FlagArg("sign", about="Sign the packaged application"),
+      FlagArg(
+        "notarize",
+        about="Sign, notarize, and staple a macOS application",
+      ),
+    ],
+    options=[
+      OptionArg(
+        "package",
+        default_values=[default_package],
+        about="MoonBit application package",
+      ),
+      OptionArg(
+        "config",
+        allow_hyphen_values=true,
+        about="Proton project config",
+      ),
+      OptionArg(
+        "target",
+        action=Append,
+        about="Package target (app or zip); may be repeated",
+      ),
+      OptionArg("output", about="Output directory"),
+    ],
+  )
+}
+
+///|
+/// Runs the package workflow from parsed command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
+  let raw = package_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = find_project_root_from(cwd)
   let config_path = match resolve_package_config_path(cwd, root, raw) {
@@ -73,90 +106,22 @@ pub async fn run(cwd : String, args : Array[String]) -> Unit {
 }
 
 ///|
-fn print_package_usage() -> Unit {
-  println("Usage:")
-  println("  proton_cli [-C DIR] package [PACKAGE] [OPTIONS]")
-  println("")
-  println("Options:")
-  println(
-    "  --config <path>          Proton project config (default: package/cwd/root moon.proton)",
-  )
-  println("  --target <app|zip>       Override bundle.targets; may be repeated")
-  println("  --output <dir>           Override bundle.output")
-  println("  --no-build               Reuse an existing release build")
-  println("  --dry-run                Print the resolved package plan")
-  println("  --sign                   Sign the packaged application")
-  println(
-    "  --notarize               Sign, notarize, and staple a macOS application",
-  )
-}
-
-///|
-fn parse_package_args(
-  args : Array[String],
+fn package_options_from_matches(
+  matches : @argparse.Matches,
 ) -> RawPackageOptions raise PackageUsageError {
-  let targets : Array[String] = []
-  let mut app_package : String? = None
-  let mut config_path : String? = None
-  let mut output : String? = None
-  let mut build = true
-  let mut dry_run = false
-  let mut sign = false
-  let mut notarize = false
-  let mut index = 0
-  while index < args.length() {
-    let arg = args[index]
-    if arg == "--config" || arg == "--target" || arg == "--output" {
-      let value = read_option_value(args, index, arg)
-      if arg == "--config" {
-        config_path = Some(value)
-      } else if arg == "--target" {
-        validate_package_target(value)
-        targets.push(value)
-      } else {
-        output = Some(value)
-      }
-      index = index + 2
-    } else if arg == "--no-build" {
-      build = false
-      index = index + 1
-    } else if arg == "--dry-run" {
-      dry_run = true
-      index = index + 1
-    } else if arg == "--sign" {
-      sign = true
-      index = index + 1
-    } else if arg == "--notarize" {
-      sign = true
-      notarize = true
-      index = index + 1
-    } else if arg.has_prefix("-") {
-      raise InvalidArguments(
-        message="unknown package option: " + arg,
-        usage_is_embedded=false,
-      )
-    } else {
-      match app_package {
-        None => {
-          app_package = Some(arg)
-          index = index + 1
-        }
-        Some(_) =>
-          raise InvalidArguments(
-            message="package accepts at most one package argument",
-            usage_is_embedded=false,
-          )
-      }
-    }
+  let targets = @cli_args.values(matches, "target")
+  for target in targets {
+    validate_package_target(target)
   }
+  let notarize = @cli_args.flag(matches, "notarize")
   RawPackageOptions::{
-    app_package: app_package.unwrap_or(default_package),
-    config_path,
+    app_package: @cli_args.required_value(matches, "package"),
+    config_path: @cli_args.value(matches, "config"),
     targets,
-    output,
-    build,
-    dry_run,
-    sign,
+    output: @cli_args.value(matches, "output"),
+    build: !@cli_args.flag(matches, "no-build"),
+    dry_run: @cli_args.flag(matches, "dry-run"),
+    sign: @cli_args.flag(matches, "sign") || notarize,
     notarize,
   }
 }
@@ -165,19 +130,6 @@ fn parse_package_args(
 fn validate_package_target(target : String) -> Unit raise PackageUsageError {
   if target != "app" && target != "zip" {
     raise UnsupportedTarget(target~)
-  }
-}
-
-///|
-fn read_option_value(
-  args : Array[String],
-  index : Int,
-  flag : String,
-) -> String raise PackageUsageError {
-  if index + 1 >= args.length() || args[index + 1] == "" {
-    raise MissingOptionValue(option=flag)
-  } else {
-    args[index + 1]
   }
 }
 
@@ -456,15 +408,7 @@ fn is_macos_host() -> Bool {
 
 ///|
 async fn run_release_build(plan : PackagePlan) -> Unit {
-  let args = [
-    plan.app_package,
-    "--config",
-    plan.config_path,
-    "--",
-    "--release",
-    "--target-dir",
-    plan.build_target_dir,
-  ]
+  let moon_args = ["--release", "--target-dir", plan.build_target_dir]
   let old_rpath = @sys.get_env_var("PROTON_PACKAGE_RPATH")
   if @path.sep != '\\' {
     @sys.set_env_var(
@@ -472,7 +416,7 @@ async fn run_release_build(plan : PackagePlan) -> Unit {
     )
   }
   defer restore_package_env("PROTON_PACKAGE_RPATH", old_rpath)
-  @build.run(plan.root, args)
+  @build.run_release(plan.root, plan.app_package, plan.config_path, moon_args)
 }
 
 ///|

@@ -1,6 +1,6 @@
 ///|
 fn must_parse(args : Array[String]) -> RawNewProjectOptions {
-  parse_new_args(args) catch {
+  new_options_from_matches(command().parse(argv=args, env=Map([]))) catch {
     err => abort(err.to_string())
   }
 }
@@ -225,7 +225,7 @@ test "templates receive final module title and size" {
   assert_true(readme.contains("proton_cli build"))
   assert_true(readme.contains("## Bundle"))
   assert_true(readme.contains("bundle = {"))
-  assert_true(readme.contains("proton_cli package app --dry-run"))
+  assert_true(readme.contains("proton_cli package --dry-run"))
 }
 
 ///|

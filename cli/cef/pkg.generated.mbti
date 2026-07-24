@@ -2,17 +2,22 @@
 package "justjavac/proton_cli/cef"
 
 import {
+  "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
 
 // Values
+pub fn command() -> @argparse.Command
+
 pub async fn current_platform_id() -> String
 
 pub fn proton_prebuilt_relative_files_for_platform(String) -> Array[String]
 
-pub async fn run_setup(String, Array[String]) -> Unit
+pub async fn run(String, @argparse.Matches) -> Unit
 
 pub fn runtime_required_relative_files_for_platform(String) -> Array[String]
+
+pub async fn setup_default(String) -> Unit
 
 // Errors
 pub(all) suberror CefDownloadError {
@@ -63,7 +68,6 @@ pub(all) suberror CefRuntimeError {
 pub fn CefRuntimeError::message(Self) -> String
 
 pub(all) suberror CefUsageError {
-  Parse(message~ : String, usage_is_embedded~ : Bool)
   InvalidArchiveName(name~ : String)
   InvalidChecksum(value~ : String)
   MissingCustomChecksum

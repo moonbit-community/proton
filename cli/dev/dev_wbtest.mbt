@@ -1,4 +1,9 @@
 ///|
+fn parse_dev_args(args : Array[String]) -> RawDevOptions raise {
+  dev_options_from_matches(command().parse(argv=args, env=Map([])))
+}
+
+///|
 fn ensure_dev_test_dir(path : String) -> Unit {
   @mbfs.create_dir("target") catch {
     _ => ()
@@ -44,9 +49,19 @@ test "parse dev args defaults and app args" {
 }
 
 ///|
+test "dev app options require the separator" {
+  try parse_dev_args(["--profile", "smoke"]) catch {
+    error =>
+      assert_true(error.to_string().contains("unexpected argument '--profile'"))
+  } noraise {
+    _ => fail("expected argparse to reject an app option before --")
+  }
+}
+
+///|
 test "parse dev args package and frontend overrides" {
   let raw = parse_dev_args([
-    "desktop", "--config", "config/proton.dev", "--url", "http://localhost:3000",
+    "--package", "desktop", "--config", "config/proton.dev", "--url", "http://localhost:3000",
     "--command", "npm run dev", "--frontend-cwd", "frontend", "--timeout-ms", "1200",
     "--ready-path", "/ready", "--no-frontend",
   ])
@@ -188,7 +203,7 @@ test "dev config discovery prefers package-local moon.proton" {
   @mbfs.write_string_to_file(package_config, "", encoding="utf8") catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let raw = parse_dev_args(["desktop"])
+  let raw = parse_dev_args(["--package", "desktop"])
   let resolved = resolve_dev_config_path(root, root, raw)
   @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
 }
