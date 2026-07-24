@@ -114,8 +114,11 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     debug_level_value: 0,
     title_overridden: false,
     size_overridden: false,
+    titlebar_style_overridden: false,
     entry_overridden: false,
     debug_overridden: false,
+    bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
+    menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
     validation_errors: [],
@@ -137,6 +140,13 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 }
 
 ///|
+/// Sets the maximum time allowed for the native bridge to become ready.
+pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
+  self.bridge_startup_timeout_value_ms = timeout_ms
+  self
+}
+
+///|
 /// Sets the primary window title.
 pub fn App::title(self : App, title : String) -> App {
   self.title_overridden = true
@@ -145,6 +155,7 @@ pub fn App::title(self : App, title : String) -> App {
     self.window.width,
     self.window.height,
     size_hint=self.window.size_hint,
+    titlebar_style=self.window.titlebar_style,
   )
   self
 }
@@ -158,6 +169,25 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
     width,
     height,
     size_hint=self.window.size_hint,
+    titlebar_style=self.window.titlebar_style,
+  )
+  self
+}
+
+///|
+/// Sets whether web content remains below or extends beneath the native
+/// titlebar. Overlay rendering is currently implemented on macOS and Windows.
+pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
+  self.titlebar_style_overridden = true
+  self.window = @manifest.WindowManifest::new(
+    self.window.title,
+    self.window.width,
+    self.window.height,
+    size_hint=self.window.size_hint,
+    titlebar_style=match style {
+      Default => @manifest.TitlebarStyle::Default
+      Overlay => @manifest.TitlebarStyle::Overlay
+    },
   )
   self
 }
@@ -187,11 +217,18 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 }
 
 ///|
+/// Sets the app-level native menu bar.
+pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
+  self.menu = Some(menu)
+  self
+}
+
+///|
 /// Registers one extension setting with the app facade.
 ///
 /// The native DLL route exposes command extensions through
-/// `window.__MoonBit__.core.invokeOp(...)` and a generated high-level proxy for
-/// inline HTML entries.
+/// `window.__MoonBit__.core.invokeOp(...)` and generated high-level proxies.
+/// The renderer installs the bridge before the page's first script executes.
 pub fn App::extension(
   self : App,
   extension : @proton_extension.Extension,

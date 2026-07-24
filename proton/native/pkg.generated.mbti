@@ -13,7 +13,17 @@ pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeE
 
 pub fn last_error_message() -> String
 
+pub fn notification_cleanup() -> Result[Unit, NativeError]
+
+pub fn notification_poll_click() -> Result[NativeNotificationClick?, NativeError]
+
+pub fn notification_show(String, String, payload? : String) -> Result[Unit, NativeError]
+
+pub fn notification_supported() -> Result[Bool, NativeError]
+
 pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
+
+pub fn run_app(FuncRef[() -> Unit]) -> Result[Unit, NativeError]
 
 pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
 
@@ -38,11 +48,51 @@ pub(all) struct BridgeConfig {
   max_payload_bytes : Int
   request_timeout_ms : Int
   dev_origins : Array[String]
-  dev_bootstrap_script : String?
+  extensions : Array[BridgeExtensionConfig]
+  initialization_units : Array[BridgeInitializationUnit]
 } derive(Eq, @debug.Debug)
-pub fn BridgeConfig::new(ops~ : Array[String], max_payload_bytes? : Int, request_timeout_ms? : Int, dev_origins? : Array[String], dev_bootstrap_script? : String?) -> Self
+pub fn BridgeConfig::new(ops~ : Array[String], max_payload_bytes? : Int, request_timeout_ms? : Int, dev_origins? : Array[String], extensions? : Array[BridgeExtensionConfig], initialization_units? : Array[BridgeInitializationUnit]) -> Self
 pub fn BridgeConfig::to_json_string(Self) -> String
 pub fn BridgeConfig::unsafe_from_json(String) -> Self
+
+pub(all) struct BridgeDiagnostic {
+  abi_version : Int
+  stage : String
+  code : String
+  message : String
+  page_instance : String
+  url : String
+  owner : String?
+  source_url : String?
+  source_line : String?
+  line : Int?
+  column : Int?
+  stack : String?
+  additional_failure_count : Int?
+  details_truncated : Bool
+} derive(Eq, @debug.Debug, @json.FromJson)
+
+pub(all) struct BridgeExtensionConfig {
+  js_namespace : String
+  apis : Array[String]
+} derive(Eq, @debug.Debug)
+pub fn BridgeExtensionConfig::new(String, apis~ : Array[String]) -> Self
+
+pub(all) struct BridgeInitializationUnit {
+  owner : String
+  name : String
+  source : String
+} derive(Eq, @debug.Debug)
+pub fn BridgeInitializationUnit::new(String, String, String) -> Self
+
+pub(all) struct BridgeLifecycleState {
+  abi_version : Int
+  revision : String
+  outcome : String
+  page_instance : String
+  url : String
+  failure_pending : Bool
+} derive(Eq, @debug.Debug, @json.FromJson)
 
 pub(all) struct BridgeRequest {
   request_id : Int64
@@ -63,9 +113,37 @@ pub(all) enum BridgeResponse {
 } derive(@debug.Debug)
 pub fn BridgeResponse::to_json_string(Self) -> String
 
+pub(all) enum DialogLevel {
+  Info
+  Warning
+  Error
+} derive(Eq, @debug.Debug)
+
+pub(all) enum DialogPollResult {
+  Pending
+  Ready(String)
+} derive(Eq, @debug.Debug)
+
+type Menu derive(Eq, @debug.Debug)
+pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
+
+type MenuBar derive(Eq, @debug.Debug)
+pub fn MenuBar::new(menus~ : Array[Menu]) -> Self
+pub fn MenuBar::to_json_string(Self) -> String
+pub fn MenuBar::unsafe_from_json(String) -> Self
+
+type MenuItem derive(Eq, @debug.Debug)
+pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::role(String, label? : String, key? : String) -> Self
+pub fn MenuItem::separator() -> Self
+
 pub(all) struct NativeError {
   status : Int
   message : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NativeNotificationClick {
+  payload : String?
 } derive(Eq, @debug.Debug)
 
 pub(all) enum ProcessResult {
@@ -74,16 +152,23 @@ pub(all) enum ProcessResult {
 } derive(Eq, @debug.Debug)
 
 type Runtime
+pub fn Runtime::activate_wakeup_source(Self) -> Result[Unit, NativeError]
+pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
 pub fn Runtime::destroy(Self) -> Result[Unit, NativeError]
 pub fn Runtime::do_message_loop_work(Self) -> Result[Unit, NativeError]
 pub fn Runtime::new(config? : RuntimeConfig) -> Result[Self, NativeError]
+pub fn Runtime::next_wakeup_delay_ms(Self) -> Result[Int?, NativeError]
 pub fn Runtime::poll_bridge_request(Self) -> Result[BridgeRequest?, NativeError]
 pub fn Runtime::poll_bridge_request_json(Self) -> Result[String?, NativeError]
 pub fn Runtime::poll_event(Self) -> Result[RuntimeEvent?, NativeError]
 pub fn Runtime::poll_event_json(Self) -> Result[String?, NativeError]
+pub fn Runtime::poll_message_dialog(Self, Int64) -> Result[Bool, NativeError]
+pub fn Runtime::prepare_wakeup_source(Self) -> Result[String, NativeError]
 pub fn Runtime::quit(Self) -> Result[Unit, NativeError]
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Result[Unit, NativeError]
 pub fn Runtime::run(Self) -> Result[Unit, NativeError]
+pub fn Runtime::set_menu(Self, MenuBar) -> Result[Unit, NativeError]
+pub fn Runtime::set_wakeup_fd(Self, Int) -> Result[Unit, NativeError]
 pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> Result[RuntimeWaitReady, NativeError]
 
 type RuntimeConfig derive(Eq, @debug.Debug)
@@ -96,8 +181,11 @@ pub fn RuntimeConfig::unsafe_from_json(String) -> Self
 type RuntimeEvent derive(Eq, @debug.Debug)
 pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
+pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
+pub fn RuntimeEvent::menu_command_id(Self) -> String?
+pub fn RuntimeEvent::window_id(Self) -> Int64?
 
 pub(all) struct RuntimeInfo {
   abi_version : Int
@@ -116,24 +204,41 @@ pub fn RuntimeWaitReady::has_platform(Self) -> Bool
 pub fn RuntimeWaitReady::is_timeout(Self) -> Bool
 pub fn RuntimeWaitReady::mask(Self) -> Int
 
+pub(all) enum TitlebarStyle {
+  Default
+  Overlay
+} derive(Eq, @debug.Debug)
+
 type Window
+pub fn Window::as_ref(Self) -> WindowRef
+pub fn Window::bridge_lifecycle_state(Self) -> Result[BridgeLifecycleState, NativeError]
 pub fn Window::close(Self) -> Result[Unit, NativeError]
 pub fn Window::destroy(Self) -> Result[Unit, NativeError]
+pub fn Window::emit_bridge_event_json(Self, String) -> Result[Unit, NativeError]
 pub fn Window::eval(Self, String) -> Result[Unit, NativeError]
 pub fn Window::focus(Self) -> Result[Unit, NativeError]
 pub fn Window::hide(Self) -> Result[Unit, NativeError]
-pub fn Window::install_bridge(Self, BridgeConfig) -> Result[Unit, NativeError]
 pub fn Window::load_html(Self, String, String) -> Result[Unit, NativeError]
 pub fn Window::load_url(Self, String) -> Result[Unit, NativeError]
 pub fn Window::new(Runtime, config? : WindowConfig) -> Result[Self, NativeError]
 pub fn Window::set_size(Self, Int, Int) -> Result[Unit, NativeError]
 pub fn Window::set_title(Self, String) -> Result[Unit, NativeError]
 pub fn Window::show(Self) -> Result[Unit, NativeError]
+pub fn Window::take_bridge_failure(Self) -> Result[BridgeDiagnostic?, NativeError]
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String) -> Self
+pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, titlebar_style? : TitlebarStyle, bridge? : BridgeConfig) -> Self
 pub fn WindowConfig::to_json_string(Self) -> String
 pub fn WindowConfig::unsafe_from_json(String) -> Self
+
+type WindowRef derive(Eq, @debug.Debug)
+pub fn WindowRef::begin_choose_directory_dialog(Self, String?, String?) -> Result[Int64, NativeError]
+pub fn WindowRef::begin_confirm_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
+pub fn WindowRef::begin_message_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
+pub fn WindowRef::begin_open_file_dialog(Self, String?, String?) -> Result[Int64, NativeError]
+pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Result[Int64, NativeError]
+pub fn WindowRef::poll_dialog_result(Self, Int64) -> Result[DialogPollResult, NativeError]
+pub fn WindowRef::unsafe_from_handle(Int64) -> Self
 
 // Type aliases
 

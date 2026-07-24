@@ -37,10 +37,12 @@ runtime cache and should not be committed.
 Generated projects explicitly load `moon.proton` with `@proton.config(...)`:
 
 ```moonbit
-async fn main {
-  @proton.config("moon.proton")
-  .extension(@counter.extension())
-  .run_or_abort()
+fn main {
+  @proton.run(() => {
+    @proton.config("moon.proton")
+    .extension(@counter.extension())
+    .run_or_abort()
+  })
 }
 ```
 
@@ -51,19 +53,57 @@ application is bundled. Non-default paths are used exactly as provided.
 For a small application, inline HTML can be opened directly:
 
 ```moonbit
-async fn main {
-  @proton.html(
-    "Hello Proton",
-    "<h1>Hello from MoonBit</h1>",
-    width=900,
-    height=700,
-    debug=true,
-  ).run_or_abort()
+fn main {
+  @proton.run(() => {
+    @proton.html(
+      "Hello Proton",
+      "<h1>Hello from MoonBit</h1>",
+      width=900,
+      height=700,
+      debug=true,
+    ).run_or_abort()
+  })
 }
 ```
 
 The root package also supports URL, file, asset, and project-config entries
 through `@proton.url`, `@proton.file`, `@proton.asset`, and `@proton.config`.
+
+On macOS and Windows, web content can extend beneath the native titlebar while
+retaining the system window controls:
+
+```moonbit
+window = {
+  title: "My App",
+  width: 900,
+  height: 700,
+  titlebar_style: "overlay",
+}
+```
+
+`titlebar_style` accepts `"default"` and `"overlay"`. Overlay rendering is
+implemented and shipped for macOS and Windows. Linux keeps the default
+titlebar. On Windows, Proton consumes CEF's native draggable-region updates.
+Set `-webkit-app-region: no-drag` on interactive descendants, then assign
+`element.style.webkitAppRegion = "drag"` to the draggable container after it
+exists in the DOM. The post-DOM assignment is required by the currently shipped
+CEF build to emit its initial region update; later changes are reported directly
+by CEF. These are CEF-provided regions, not an Electron compatibility shim.
+Until the page reports its first region update, Proton keeps a small DPI-aware
+leading drag fallback. Pages must also reserve the native caption-button area.
+Overlay windows request DWM's dark caption appearance so the native controls
+blend with dark application chrome.
+Typed window configs send `titlebar_style` only when the loaded runtime reports
+the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
+the field and retain their default titlebar behavior.
+See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
+
+Code-only apps can select the same style through the facade:
+
+```moonbit
+@proton.html("My App", html)
+.titlebar_style(@proton.TitlebarStyle::Overlay)
+```
 
 ## Frontend projects
 

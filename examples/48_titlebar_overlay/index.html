@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proton Overlay</title>
+  <script>
+    const platformClass = navigator.userAgent.includes('Windows')
+      ? 'is-windows'
+      : navigator.userAgent.includes('Linux')
+        ? 'is-linux'
+        : 'is-macos';
+    document.documentElement.classList.add(platformClass);
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      --titlebar-height: 30px;
+      --leading-controls-reserve: 96px;
+      --caption-controls-reserve: 10px;
+      --window-background: #fff;
+      --titlebar-background: #f8f8fa;
+      --titlebar-border: #e1e2e4;
+      --primary-text: #27292c;
+      --secondary-text: #777b80;
+      --chrome-text: #606367;
+      --disabled-text: #b7b9bc;
+      --command-background: #fff;
+      --command-border: #d8dadd;
+      --count-background: #e7effa;
+      --divider: #c7c9cc;
+    }
+
+    :root.is-windows {
+      color-scheme: dark;
+      font-family: "Segoe UI", sans-serif;
+      --titlebar-height: 32px;
+      --leading-controls-reserve: 16px;
+      --caption-controls-reserve: 150px;
+      --window-background: #181818;
+      --titlebar-background: #2b2b2b;
+      --titlebar-border: #151515;
+      --primary-text: #f0f0f0;
+      --secondary-text: #aaa;
+      --chrome-text: #c7c7c7;
+      --disabled-text: #666;
+      --command-background: #2a2a2a;
+      --command-border: #555;
+      --count-background: #25354a;
+      --divider: #555;
+    }
+
+    :root.is-linux {
+      font-family: Ubuntu, Cantarell, system-ui, sans-serif;
+      --titlebar-height: 40px;
+      --leading-controls-reserve: 16px;
+      --caption-controls-reserve: 122px;
+      --titlebar-background: #f6f5f4;
+      --titlebar-border: #d6d3d0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      color: var(--primary-text);
+      background: var(--window-background);
+    }
+
+    .titlebar {
+      height: var(--titlebar-height);
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 3px var(--caption-controls-reserve) 3px
+        var(--leading-controls-reserve);
+      color: var(--chrome-text);
+      background: var(--titlebar-background);
+      border-bottom: 1px solid var(--titlebar-border);
+      user-select: none;
+      -webkit-app-region: drag;
+    }
+
+    .history,
+    .command,
+    .actions {
+      -webkit-app-region: no-drag;
+    }
+
+    .history {
+      height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .history svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .history .disabled {
+      color: var(--disabled-text);
+    }
+
+    .command {
+      width: 190px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      color: var(--chrome-text);
+      background: var(--command-background);
+      border: 1px solid var(--command-border);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+      font-size: 12px;
+    }
+
+    .branch {
+      flex: 1;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+
+    .count {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 10px;
+      color: var(--primary-text);
+      background: var(--count-background);
+      border-left: 1px solid var(--command-border);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .actions svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .divider {
+      width: 1px;
+      height: 18px;
+      background: var(--divider);
+    }
+
+    main {
+      height: calc(100% - var(--titlebar-height));
+      display: grid;
+      place-items: center;
+      padding: 48px 32px 64px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 25px;
+      font-weight: 620;
+      letter-spacing: -.025em;
+    }
+
+    p {
+      margin: 0;
+      color: var(--secondary-text);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header class="titlebar">
+    <div class="history" aria-label="Navigation controls">
+      <svg viewBox="0 0 20 20"><path d="m13 3-7 7 7 7"/></svg>
+      <svg class="disabled" viewBox="0 0 20 20"><path d="m7 3 7 7-7 7"/></svg>
+    </div>
+    <div class="command">
+      <div class="branch">fix-titlebar</div>
+      <div class="count"><i class="dot"></i>6</div>
+    </div>
+    <div class="actions" aria-label="Window actions">
+      <svg viewBox="0 0 20 20"><path d="M3 4h6v12H3zM11 4h6v5h-6zM11 11h6v5h-6z"/></svg>
+      <span class="divider"></span>
+      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="7.5" r="2.2"/><path d="M5.8 15.2c.9-2.4 2.3-3.5 4.2-3.5s3.3 1.1 4.2 3.5"/></svg>
+      <svg viewBox="0 0 20 20"><path d="m10 2.5 1.5 2 2.5-.2.7 2.4 2.2 1.2-1 2.3 1 2.3-2.2 1.2-.7 2.4-2.5-.2-1.5 2-1.5-2-2.5.2-.7-2.4-2.2-1.2 1-2.3-1-2.3 2.2-1.2.7-2.4 2.5.2z"/><circle cx="10" cy="10" r="2"/></svg>
+    </div>
+  </header>
+  <main>
+    <div>
+      <h1>Native titlebar overlay</h1>
+      <p>Web content extends beneath the native window controls</p>
+    </div>
+  </main>
+  <script>
+    // Assign after DOM creation so CEF emits the initial region update.
+    setTimeout(() => {
+      document.querySelector('.titlebar').style.webkitAppRegion = 'drag';
+    }, 0);
+  </script>
+</body>
+</html>

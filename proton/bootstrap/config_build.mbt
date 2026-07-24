@@ -114,7 +114,7 @@ fn reject_unsupported_permissions_field(
 fn build_window_manifest_from_object(
   object : Map[String, Json],
 ) -> Result[@manifest.WindowManifest, String] {
-  zip4(
+  zip5(
     required_string_field(object, "title", "window.title"),
     required_int_field(object, "width", "window.width"),
     required_int_field(object, "height", "window.height"),
@@ -122,9 +122,19 @@ fn build_window_manifest_from_object(
       optional_field(object, "size_hint"),
       "window.size_hint",
     ).bind(parse_size_hint),
+    decode_optional_string(
+      optional_field(object, "titlebar_style"),
+      "window.titlebar_style",
+    ).bind(parse_titlebar_style),
   ).map(fn(values) {
-    let (title, width, height, size_hint) = values
-    @manifest.WindowManifest::new(title, width, height, size_hint~)
+    let (title, width, height, size_hint, titlebar_style) = values
+    @manifest.WindowManifest::new(
+      title,
+      width,
+      height,
+      size_hint~,
+      titlebar_style~,
+    )
   })
 }
 

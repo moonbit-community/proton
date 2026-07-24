@@ -71,6 +71,18 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result
 }
 
 ///|
+/// Registers an async MBT-side op that receives request-scoped context and can fail.
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result_with_context(
+  self : MbtProcessHost,
+  name : String,
+  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
+) -> Unit {
+  self.ensure_open_for_register()
+  self.registry.handle_async_result_with_context(name, callback)
+  self.op_names.push(name)
+}
+
+///|
 /// Returns registered op names in registration order.
 pub fn MbtProcessHost::registered_ops(self : MbtProcessHost) -> Array[String] {
   copy_strings(self.op_names)
@@ -143,6 +155,31 @@ pub async fn MbtProcessHost::dispatch_async(
       self.registry.call(request.name, request.payload),
     )
   }
+}
+
+///|
+/// Dispatches one decoded IPC request with request-scoped context.
+pub async fn MbtProcessHost::dispatch_async_with_context(
+  self : MbtProcessHost,
+  context : AppCommandRequestContext,
+  request : @ipc.IpcOpRequest,
+) -> @ipc.IpcOpResponse {
+  let fallback_id = ipc_request_fallback_response_id(request)
+  let request = match request.validate() {
+    Ok(request) => request
+    Err(message) => return @ipc.IpcOpResponse::err(fallback_id, message)
+  }
+  guard !self.closed else {
+    return @ipc.IpcOpResponse::err(request.id, "MBT process host is closed")
+  }
+  make_ipc_response(
+    request.id,
+    self.registry.call_async_direct_with_context(
+      context,
+      request.name,
+      request.payload,
+    ),
+  )
 }
 
 ///|

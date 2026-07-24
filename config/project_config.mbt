@@ -7,6 +7,12 @@ pub(all) enum ProjectWindowSizeHint {
 } derive(Eq, Debug)
 
 ///|
+pub(all) enum ProjectTitlebarStyle {
+  TitlebarDefault
+  TitlebarOverlay
+} derive(Eq, Debug)
+
+///|
 pub(all) enum ProjectEntry {
   Html(String)
   Url(String)
@@ -20,6 +26,7 @@ pub(all) struct ProjectWindowConfig {
   width : Int
   height : Int
   size_hint : ProjectWindowSizeHint
+  titlebar_style : ProjectTitlebarStyle
 } derive(Eq, Debug)
 
 ///|
@@ -28,8 +35,9 @@ pub fn ProjectWindowConfig::new(
   width : Int,
   height : Int,
   size_hint? : ProjectWindowSizeHint = WindowSizeNone,
+  titlebar_style? : ProjectTitlebarStyle = TitlebarDefault,
 ) -> ProjectWindowConfig {
-  ProjectWindowConfig::{ title, width, height, size_hint }
+  ProjectWindowConfig::{ title, width, height, size_hint, titlebar_style }
 }
 
 ///|

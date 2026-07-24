@@ -16,6 +16,7 @@ priv struct ParsedProtonCommand {
   return_type : String
   is_async : Bool
   has_context : Bool
+  has_request_context : Bool
   returns_result : Bool
 }
 
@@ -24,6 +25,7 @@ priv struct ParsedProtonParam {
   name : String
   param_type : String
   is_context : Bool
+  is_request_context : Bool
 }
 
 ///|

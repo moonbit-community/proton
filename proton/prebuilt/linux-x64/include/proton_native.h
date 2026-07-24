@@ -29,6 +29,7 @@ extern "C" {
 
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
+typedef void (*proton_app_entry_t)(void);
 
 enum {
   PROTON_OK = 0,
@@ -53,6 +54,8 @@ PROTON_API int32_t proton_runtime_info_json(char *buffer,
                                             int32_t buffer_len,
                                             int32_t *out_required_len);
 
+PROTON_API int32_t proton_app_run(proton_app_entry_t entry);
+
 PROTON_API int32_t proton_execute_process(const char *config_json,
                                           int32_t *out_exit_code);
 
@@ -70,6 +73,17 @@ PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                                        uint32_t interest_mask,
                                        uint32_t timeout_ms,
                                        uint32_t *out_ready_mask);
+PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
+                                                int32_t wakeup_fd);
+PROTON_API int32_t proton_runtime_prepare_wakeup_source(
+    proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+PROTON_API int32_t
+proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime);
+PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
+    proton_runtime_id_t runtime, int64_t *out_delay_ms);
+PROTON_API int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,
+                                                const char *menu_json);
 PROTON_API int32_t proton_runtime_poll_event_json(
     proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);
@@ -78,6 +92,23 @@ PROTON_API int32_t proton_runtime_poll_bridge_request_json(
     int32_t *out_required_len);
 PROTON_API int32_t proton_runtime_respond_bridge_request_json(
     proton_runtime_id_t runtime, const char *response_json);
+PROTON_API int32_t proton_runtime_begin_message_dialog(
+    proton_runtime_id_t runtime, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog);
+PROTON_API int32_t proton_runtime_poll_dialog_result(
+    proton_runtime_id_t runtime, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len);
+
+PROTON_API int32_t proton_notification_is_supported(int32_t *out_supported);
+PROTON_API int32_t proton_notification_show(const char *title,
+                                            const char *body,
+                                            const char *payload,
+                                            int32_t has_payload);
+PROTON_API int32_t proton_notification_poll_click(
+    char *buffer, int32_t buffer_len, int32_t *out_required_len,
+    int32_t *out_has_payload, int32_t *out_available);
+PROTON_API int32_t proton_notification_cleanup(void);
 
 PROTON_API int32_t proton_window_create_json(proton_runtime_id_t runtime,
                                              const char *config_json,
@@ -99,8 +130,37 @@ PROTON_API int32_t proton_window_load_html(proton_window_id_t window,
                                            const char *base_url);
 PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
-PROTON_API int32_t proton_window_install_bridge_json(
-    proton_window_id_t window, const char *bridge_json);
+PROTON_API int32_t proton_window_emit_bridge_event_json(
+    proton_window_id_t window, const char *event_json);
+PROTON_API int32_t proton_window_bridge_state_json(
+    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+PROTON_API int32_t proton_window_take_bridge_failure_json(
+    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+PROTON_API int32_t proton_window_begin_message_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_confirm_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *message_utf8, int32_t message_len,
+    int32_t level, int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_open_file_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *path_utf8, int32_t path_len,
+    int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_save_file_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *path_utf8, int32_t path_len,
+    int64_t *out_dialog);
+PROTON_API int32_t proton_window_begin_choose_directory_dialog(
+    proton_window_id_t window, const char *title_utf8,
+    int32_t title_len, const char *path_utf8, int32_t path_len,
+    int64_t *out_dialog);
+PROTON_API int32_t proton_window_poll_dialog_result(
+    proton_window_id_t window, int64_t dialog, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);

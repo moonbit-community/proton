@@ -1,8 +1,5 @@
 ///|
-let default_proton_version = "0.1.11"
-
-///|
-let default_async_version = "0.19.4"
+let default_proton_version = "0.1.12"
 
 ///|
 priv struct TemplateContext {
@@ -17,7 +14,6 @@ priv struct TemplateContext {
   width : Int
   height : Int
   proton_version : String
-  async_version : String
 }
 
 ///|
@@ -59,7 +55,6 @@ fn template_context(
     width,
     height,
     proton_version: default_proton_version,
-    async_version: default_async_version,
   }
 }
 
@@ -83,7 +78,6 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "width", value: @template.render_value(context.width) },
     { name: "height", value: @template.render_value(context.height) },
     { name: "proton_version", value: context.proton_version },
-    { name: "async_version", value: context.async_version },
   ]
 }
 

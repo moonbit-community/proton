@@ -43,6 +43,11 @@ fn window_manifest_to_json(window : @manifest.WindowManifest) -> Json {
     @manifest.WindowSizeHint::Min => object["size_hint"] = Json::string("min")
     @manifest.WindowSizeHint::Max => object["size_hint"] = Json::string("max")
   }
+  match window.titlebar_style {
+    @manifest.TitlebarStyle::Default => ()
+    @manifest.TitlebarStyle::Overlay =>
+      object["titlebar_style"] = Json::string("overlay")
+  }
   Json::object(object)
 }
 

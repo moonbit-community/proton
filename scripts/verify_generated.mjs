@@ -111,6 +111,16 @@ try {
   ]);
   compareGeneratedFile("cli/new/templates.generated.mbt", newTemplatesOutput);
 
+  const bridgeBootstrapOutput = tempOutputPath("bridge_bootstrap.generated.h");
+  run("node", [
+    path.join(repoRoot, "scripts", "generate_bridge_bootstrap.mjs"),
+    bridgeBootstrapOutput,
+  ]);
+  compareGeneratedFile(
+    "native/src/engine/cef_common/bridge_bootstrap.generated.h",
+    bridgeBootstrapOutput,
+  );
+
   if (failures.length > 0) {
     console.error(`Generated files are stale: ${failures.join(", ")}`);
     process.exitCode = 1;

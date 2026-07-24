@@ -17,6 +17,21 @@ fn parse_size_hint(
 }
 
 ///|
+fn parse_titlebar_style(
+  titlebar_style : String?,
+) -> Result[@manifest.TitlebarStyle, String] {
+  match titlebar_style {
+    None => Ok(@manifest.TitlebarStyle::Default)
+    Some(titlebar_style) =>
+      match normalize_keyword(titlebar_style) {
+        "default" => Ok(@manifest.TitlebarStyle::Default)
+        "overlay" => Ok(@manifest.TitlebarStyle::Overlay)
+        _ => Err("unsupported window titlebar_style: " + titlebar_style)
+      }
+  }
+}
+
+///|
 /// Resolves a relative config path against the config file base directory.
 fn rebase_relative_path(path : String, base_dir : String?) -> String {
   match base_dir {

@@ -1,6 +1,10 @@
 name: ci
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   format:
@@ -111,7 +115,10 @@ jobs:
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a ctest --test-dir native/build-engine --output-on-failure
           else
-            ctest --test-dir native/build-engine --output-on-failure
+            # The raw C smoke is not an app bundle. Exercise the managed macOS
+            # GUI lifecycle in the bounded example e2e step below instead.
+            PROTON_TEST_SKIP_MANAGED_APP_RUNNER=1 \
+              ctest --test-dir native/build-engine --output-on-failure
           fi
           node native/scripts/verify_link_config.mjs "$runtime"
           echo "$runtime/bin" >> "$GITHUB_PATH"
@@ -145,8 +152,13 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon check --target native --deny-warn
-          moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test --target native --diagnostic-limit 80
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C proton test native --target native --diagnostic-limit 80
+            xvfb-run -a moon -C cli test --target native --diagnostic-limit 80
+          else
+            moon -C proton test native --target native --diagnostic-limit 80
+            moon -C cli test --target native --diagnostic-limit 80
+          fi
           moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Check framework modules on Windows
@@ -192,11 +204,18 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
-          PROTON_CDP_E2E_TIMEOUT_MS: 60000
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           node .\scripts\e2e_bridge_smoke.mjs 41_app_commands 47_dev_extension_js
+
+      - name: Run managed runner e2e on macOS
+        if: ${{ matrix.os == 'macos-latest' }}
+        env:
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+        run: |
+          node ./scripts/e2e_bridge_smoke.mjs 41_app_commands 45_bridge_multi_window
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}

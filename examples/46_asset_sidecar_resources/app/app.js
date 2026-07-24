@@ -85,25 +85,25 @@ function enableControls() {
   });
 }
 
-function waitForBridge(attempt = 0) {
+function initialize() {
   const commands = window.__MoonBit__?.add;
-  if (window.__MoonBit__?.core?.invokeOp && commands?.add && commands?.addLater) {
-    enableControls();
-    setLog("Bridge ready.");
-    void runProbe();
-    return;
-  }
-  if (attempt > 80) {
-    setLog("Bridge timed out.");
+  if (
+    !window.__MoonBit__?.core?.invokeOp ||
+    !commands?.add ||
+    !commands?.addLater
+  ) {
+    setLog("Bridge is unavailable.");
     void reportProbe({
       ok: false,
-      stage: "bridge-timeout",
+      stage: "bridge-unavailable",
       has_moonbit: !!window.__MoonBit__,
       has_add: !!commands,
     });
     return;
   }
-  window.setTimeout(() => waitForBridge(attempt + 1), 25);
+  enableControls();
+  setLog("Bridge ready.");
+  void runProbe();
 }
 
 instantForm.addEventListener("submit", (event) => {
@@ -116,4 +116,4 @@ delayedForm.addEventListener("submit", (event) => {
   void runDelayedAdd();
 });
 
-window.addEventListener("load", () => waitForBridge());
+window.addEventListener("load", initialize);

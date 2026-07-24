@@ -5,17 +5,32 @@ priv struct BridgeDispatchTask {
 }
 
 ///|
+#cfg(not(platform="windows"))
+priv struct BridgeWakeup {
+  reader : @pipe.PipeRead
+  writer : @pipe.PipeWrite
+}
+
+///|
+#cfg(platform="windows")
+priv struct BridgeWakeup {
+  reader : @fs.File
+}
+
+///|
 struct IdentifyPayload {
   label : String
   delay_ms : Int?
 } derive(FromJson)
 
 ///|
-async fn main {
-  match run_multi_window_bridge() {
-    Ok(_) => ()
-    Err(message) => abort(message)
-  }
+fn main {
+  @proton.run(() => {
+    match run_multi_window_bridge() {
+      Ok(_) => ()
+      Err(message) => abort(message)
+    }
+  })
 }
 
 ///|
@@ -83,6 +98,7 @@ fn create_window(
         width=520,
         height=420,
         initial_url="about:blank",
+        bridge=@native.BridgeConfig::new(ops=["ext:multi/identify"]),
       ),
     ) {
     Ok(window) => Ok(window)
@@ -96,16 +112,9 @@ fn setup_window(
   label : String,
 ) -> Result[Unit, String] {
   native_unit_result(
-    "install bridge " + label,
-    window.install_bridge(@native.BridgeConfig::new(ops=["ext:multi/identify"])),
-  )
-  .bind(fn(_) {
-    native_unit_result(
-      "load html " + label,
-      window.load_html(page_html(label), "proton://app/" + label),
-    )
-  })
-  .bind(fn(_) { native_unit_result("show window " + label, window.show()) })
+    "load html " + label,
+    window.load_html(page_html(label), "proton://app/" + label),
+  ).bind(fn(_) { native_unit_result("show window " + label, window.show()) })
 }
 
 ///|
@@ -129,16 +138,17 @@ fn page_html(label : String) -> String {
 
 ///|
 async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
+  let wakeup = match BridgeWakeup::new(runtime) {
+    Err(message) => return Err(message)
+    Ok(wakeup) => wakeup
+  }
+  defer wakeup.close(runtime)
+  let wake_signal = @core.RuntimeWakeSignal::new()
   @async.with_task_group(group => {
     let mut closed = 0
-    let mut idle_delay = 0
     let mut pending : Array[BridgeDispatchTask] = []
     while closed < 2 {
       let mut did_work = false
-      match runtime.do_message_loop_work() {
-        Err(error) => return Err(native_error_message("pump runtime", error))
-        Ok(_) => ()
-      }
 
       let mut polling_events = true
       while polling_events {
@@ -164,7 +174,10 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
-              () => dispatch_bridge_request(request),
+              () => {
+                defer wake_signal.notify()
+                dispatch_bridge_request(request)
+              },
               no_wait=true,
               allow_failure=true,
             )
@@ -204,11 +217,12 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
       pending = remaining
 
       if did_work {
-        idle_delay = 0
         @async.sleep(0)
       } else {
-        idle_delay = next_idle_delay(idle_delay)
-        @async.sleep(idle_delay)
+        match wakeup.wait(wake_signal) {
+          Err(message) => return Err(message)
+          Ok(_) => ()
+        }
       }
     }
     for item in pending {
@@ -216,6 +230,87 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
     }
     Ok(())
   })
+}
+
+///|
+#cfg(not(platform="windows"))
+fn BridgeWakeup::new(runtime : @native.Runtime) -> Result[BridgeWakeup, String] {
+  let (reader, writer) = @pipe.pipe() catch {
+    _ => return Err("create runtime wakeup pipe failed")
+  }
+  match runtime.set_wakeup_fd(writer.fd()) {
+    Err(error) => {
+      reader.close()
+      writer.close()
+      return Err(native_error_message("install runtime wakeup fd", error))
+    }
+    Ok(_) => ()
+  }
+  Ok(BridgeWakeup::{ reader, writer })
+}
+
+///|
+#cfg(platform="windows")
+async fn BridgeWakeup::new(
+  runtime : @native.Runtime,
+) -> Result[BridgeWakeup, String] {
+  let source = match runtime.prepare_wakeup_source() {
+    Err(error) =>
+      return Err(native_error_message("prepare runtime wakeup source", error))
+    Ok(source) => source
+  }
+  let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
+    error =>
+      return Err("open runtime wakeup source failed: " + error.to_string())
+  }
+  match runtime.activate_wakeup_source() {
+    Err(error) => {
+      reader.close()
+      Err(native_error_message("activate runtime wakeup source", error))
+    }
+    Ok(_) => Ok(BridgeWakeup::{ reader, })
+  }
+}
+
+///|
+#cfg(not(platform="windows"))
+fn BridgeWakeup::close(self : BridgeWakeup, runtime : @native.Runtime) -> Unit {
+  ignore(runtime.set_wakeup_fd(-1))
+  self.reader.close()
+  self.writer.close()
+}
+
+///|
+#cfg(platform="windows")
+fn BridgeWakeup::close(self : BridgeWakeup, _runtime : @native.Runtime) -> Unit {
+  self.reader.close()
+}
+
+///|
+async fn BridgeWakeup::wait(
+  self : BridgeWakeup,
+  wake_signal : @core.RuntimeWakeSignal,
+) -> Result[Unit, String] {
+  let revision = wake_signal.revision()
+  let ready = @async.any([
+    () => {
+      match self.reader.read_some(max_len=256) {
+        None => false
+        Some(_) => true
+      }
+    },
+    () => {
+      wake_signal.wait_for_change(revision)
+      true
+    },
+  ]) catch {
+    error => return Err("wait for bridge work failed: " + error.to_string())
+  }
+  if ready {
+    Ok(())
+  } else {
+    Err("runtime wakeup pipe closed unexpectedly")
+  }
 }
 
 ///|
@@ -263,22 +358,6 @@ fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {
     error.status == -7 &&
     error.message.contains("failed to send bridge response to renderer")
   )
-}
-
-///|
-fn next_idle_delay(current : Int) -> Int {
-  if current <= 0 {
-    1
-  } else if current >= 16 {
-    16
-  } else {
-    let next = current * 2
-    if next > 16 {
-      16
-    } else {
-      next
-    }
-  }
 }
 
 ///|

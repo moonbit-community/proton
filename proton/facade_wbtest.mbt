@@ -84,7 +84,7 @@ test "command proxy rejects unsafe JS property names" {
 }
 
 ///|
-test "command proxy script reflects enabled command extension metadata" {
+test "bridge frontend config reflects enabled command extension metadata" {
   let extension_id = "examples/async-add"
   let manifest = test_command_manifest(extension_id)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
@@ -92,28 +92,115 @@ test "command proxy script reflects enabled command extension metadata" {
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
-  match build_command_proxy_script(manifest, command_extensions) {
-    Ok(Some(script)) => {
-      assert_true(script.contains("\"namespace\":\"add\""))
-      assert_true(script.contains("\"apis\":[\"slowAdd\"]"))
-      assert_true(
-        script.contains(
-          "core.invokeOp('ext:' + namespace + '/' + apiName, payload)",
-        ),
-      )
-      assert_true(script.contains("window.__MoonBit__ = root;"))
-      assert_true(script.contains("root.events = events;"))
-      assert_true(script.contains("root['@@exactListeners'] = exactListeners"))
-      assert_true(script.contains("events['@@emitExtensionEvent']"))
-      assert_true(script.contains("events.on = function(name, listener)"))
-      assert_true(script.contains("target.on = (function(ns)"))
+  match build_bridge_frontend_config(manifest, command_extensions) {
+    Ok(config) => {
+      inspect(config.extensions.length(), content="1")
+      inspect(config.extensions[0].js_namespace, content="add")
+      assert_eq(config.extensions[0].apis, ["slowAdd"])
+      assert_eq(config.initialization_units, [])
     }
-    _ => fail("expected command proxy script")
+    Err(error) => fail(error)
   }
 }
 
 ///|
-test "extension event dispatch script calls page event emitter with JSON data" {
+test "bridge frontend config preserves initialization unit ownership" {
+  let extension_id = "examples/scripts"
+  let manifest = test_command_manifest(extension_id)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
+    extension_id,
+    "scripts",
+    [],
+    fn(_context) { Ok(()) },
+    scripts=["globalThis.first = true;", "globalThis.second = true;"],
+  )
+  match build_bridge_frontend_config(manifest, command_extensions) {
+    Err(error) => fail(error)
+    Ok(config) => {
+      inspect(config.initialization_units.length(), content="2")
+      inspect(config.initialization_units[0].owner, content="examples/scripts")
+      inspect(config.initialization_units[0].name, content="script-0")
+      inspect(
+        config.initialization_units[1].source,
+        content="globalThis.second = true;",
+      )
+    }
+  }
+}
+
+///|
+test "app run errors retain typed bridge diagnostics" {
+  let diagnostic = @native.BridgeDiagnostic::{
+    abi_version: 1,
+    stage: "bootstrap",
+    code: "bridge_bootstrap_failed",
+    message: "bootstrap exploded",
+    page_instance: "page-1",
+    url: "proton://app/",
+    owner: None,
+    source_url: None,
+    source_line: None,
+    line: None,
+    column: None,
+    stack: None,
+    additional_failure_count: None,
+    details_truncated: false,
+  }
+  let error = BridgeStartupError(diagnostic)
+  assert_true(app_run_error_text(error).contains("bridge_bootstrap_failed"))
+}
+
+///|
+async test "app run requires the Proton application runner" {
+  let mut rejected = false
+  html("Test", "<html></html>").run() catch {
+    RunnerError(message) => {
+      rejected = true
+      assert_true(message.contains("@proton.run"))
+      assert_true(message.contains("synchronous main"))
+      assert_true(message.contains("async fn main"))
+    }
+    error =>
+      fail("expected runner error, got " + @debug.render(@debug.to_repr(error)))
+  }
+  assert_true(rejected)
+}
+
+///|
+test "bridge startup timeout is finite and configurable" {
+  let default_app = html("Test", "<html></html>")
+  inspect(default_app.bridge_startup_timeout_value_ms, content="30000")
+  let configured = default_app.bridge_startup_timeout_ms(2500)
+  inspect(configured.bridge_startup_timeout_value_ms, content="2500")
+  assert_eq(configured.validation_error(), None)
+  assert_eq(
+    configured.bridge_startup_timeout_ms(0).validation_error(),
+    Some("bridge startup timeout must be positive"),
+  )
+}
+
+///|
+test "bridge startup timeout retains the last lifecycle state" {
+  let state = @native.BridgeLifecycleState::{
+    abi_version: 1,
+    revision: "7",
+    outcome: "pending",
+    page_instance: "page-1",
+    url: "proton://app/",
+    failure_pending: false,
+  }
+  let diagnostic = bridge_startup_timeout_diagnostic(state, 2500)
+  assert_eq(diagnostic.stage, "prepare")
+  assert_eq(diagnostic.code, "bridge_startup_timeout")
+  assert_eq(diagnostic.page_instance, "page-1")
+  assert_eq(diagnostic.url, "proton://app/")
+  assert_true(diagnostic.message.contains("2500 ms"))
+}
+
+///|
+test "extension events use structured bridge transport JSON" {
   let event = @ipc.IpcExtensionEvent::new(
     "ticker",
     "tick",
@@ -122,47 +209,39 @@ test "extension event dispatch script calls page event emitter with JSON data" {
       "index": Json::number(1),
     }),
   )
-  let script = extension_event_dispatch_script(
-    event,
+  let event_json = bridge_event_json(
+    "extension",
+    event.event_name,
+    event.payload,
+    Some(event.extension_namespace),
     None,
-    default_bridge_page_policy(),
   )
-  assert_true(script.contains("window.location.protocol !== 'proton:'"))
-  assert_true(script.contains("events['@@emitExtensionEvent']"))
-  assert_true(script.contains("event.extension_namespace"))
-  assert_true(script.contains("\"extension_namespace\":\"ticker\""))
-  assert_true(script.contains("\"event_name\":\"tick\""))
-  assert_true(script.contains("\"text\":\"</script><p>escaped</p>\""))
-  let injected = inject_command_proxy_script("<main></main>", Some(script))
-  inspect(injected.contains("</script><p>escaped</p>"), content="false")
-  inspect(injected.contains("<\\/script><p>escaped</p>"), content="true")
+  assert_true(event_json.contains("\"kind\":\"extension\""))
+  assert_true(event_json.contains("\"extension\":\"ticker\""))
+  assert_true(event_json.contains("\"name\":\"tick\""))
+  assert_true(event_json.contains("\"text\":\"</script><p>escaped</p>\""))
 }
 
 ///|
-test "file entry bootstrap keeps relative assets under original directory" {
+test "file entry only injects a base URL for relative assets" {
   let html =
     #|<html><head><link rel="stylesheet" href="app.css"></head><body><script src="app.js"></script></body></html>
   let injected = inject_html_bootstrap(
     html,
-    base_tag("proton://app/D:/Code/proton-demo/app/") +
-    script_tag("window.__MoonBit__ = {};</script><p>tail</p>"),
+    base_tag("proton://app/D:/Code/proton-demo/app/"),
   )
   assert_true(
     injected.contains(
-      "<head>\n<base href=\"proton://app/D:/Code/proton-demo/app/\">\n<script>",
+      "<head>\n<base href=\"proton://app/D:/Code/proton-demo/app/\">",
     ),
   )
   assert_true(injected.contains("href=\"app.css\""))
   assert_true(injected.contains("src=\"app.js\""))
-  inspect(injected.contains("</script><p>tail</p>"), content="false")
-  inspect(injected.contains("<\\/script><p>tail</p>"), content="true")
+  assert_false(injected.contains("__MoonBit__"))
 }
 
 ///|
-test "file url resolves local paths" {
-  let url = file_url("app/app.html").replace_all(old="\\", new="/")
-  assert_true(url.has_prefix("file:///"))
-  assert_true(url.has_suffix("/app/app.html"))
+test "base tags escape HTML attributes" {
   inspect(
     base_tag("file:///tmp/a&b\"c/"),
     content="<base href=\"file:///tmp/a&amp;b&quot;c/\">\n",
@@ -189,17 +268,34 @@ test "asset url path encoding escapes browser url delimiters" {
 }
 
 ///|
-test "extension event dispatch script can target a page instance" {
+test "extension event transport can target a page instance" {
   let event = @ipc.IpcExtensionEvent::new("ticker", "done", Json::null())
-  let script = extension_event_dispatch_script(event, Some("page-1"), BridgePagePolicy::{
-    dev_origin: Some("http://localhost:5173"),
-    request_timeout_ms: 30000,
-  })
-  assert_true(
-    script.contains("window.location.origin !== \"http://localhost:5173\""),
+  let event_json = bridge_event_json(
+    "extension",
+    event.event_name,
+    event.payload,
+    Some(event.extension_namespace),
+    Some("page-1"),
   )
-  assert_true(script.contains("root.core['@@pageInstance']"))
-  assert_true(script.contains("\"page-1\""))
+  assert_true(event_json.contains("\"page_instance\":\"page-1\""))
+}
+
+///|
+test "frontend menu event transport preserves focused window" {
+  let event_json = bridge_event_json(
+    "frontend",
+    "menu.command",
+    Json::object({
+      "command_id": Json::string("demo.refresh"),
+      "window": Json::string("17"),
+    }),
+    None,
+    None,
+  )
+  assert_true(event_json.contains("\"kind\":\"frontend\""))
+  assert_true(event_json.contains("\"name\":\"menu.command\""))
+  assert_true(event_json.contains("\"command_id\":\"demo.refresh\""))
+  assert_true(event_json.contains("\"window\":\"17\""))
 }
 
 ///|
@@ -255,7 +351,7 @@ test "dev bridge page policy parses exact http origins" {
 }
 
 ///|
-test "command proxy script ignores disabled command extensions" {
+test "bridge frontend config ignores disabled command extensions" {
   let extension_id = "examples/async-add"
   let manifest = test_command_manifest(extension_id, enabled=false)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
@@ -263,10 +359,31 @@ test "command proxy script ignores disabled command extensions" {
   command_extensions[extension_id] = test_command_spec(extension_id, "add", [
     "slowAdd",
   ])
-  debug_inspect(
-    build_command_proxy_script(manifest, command_extensions),
-    content="Ok(None)",
+  match build_bridge_frontend_config(manifest, command_extensions) {
+    Ok(config) => {
+      assert_eq(config.extensions, [])
+      assert_eq(config.initialization_units, [])
+    }
+    Err(error) => fail(error)
+  }
+}
+
+///|
+test "bridge frontend config can omit command extensions" {
+  let extension_id = "examples/async-add"
+  let manifest = test_command_manifest(extension_id, enabled=false)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
+  command_extensions[extension_id] = test_command_spec(extension_id, "add", [
+    "slowAdd",
+  ])
+  match build_bridge_frontend_config(manifest, command_extensions) {
+    Ok(config) => {
+      inspect(config.extensions.length(), content="0")
+      assert_eq(config.initialization_units, [])
+    }
+    Err(error) => fail(error)
+  }
 }
 
 ///|
@@ -385,7 +502,7 @@ test "command host rejects missing extension dependencies" {
 }
 
 ///|
-test "command proxy script rejects invalid namespace and API names" {
+test "bridge frontend config rejects invalid namespace and API names" {
   let namespace_extension_id = "examples/bad-namespace"
   let namespace_manifest = test_command_manifest(namespace_extension_id)
   let namespace_extensions : Map[
@@ -397,7 +514,7 @@ test "command proxy script rejects invalid namespace and API names" {
     "core",
     ["slowAdd"],
   )
-  match build_command_proxy_script(namespace_manifest, namespace_extensions) {
+  match build_bridge_frontend_config(namespace_manifest, namespace_extensions) {
     Err(error) =>
       assert_true(
         error.contains(
@@ -416,7 +533,7 @@ test "command proxy script rejects invalid namespace and API names" {
     "add",
     ["__proto__"],
   )
-  match build_command_proxy_script(api_manifest, api_extensions) {
+  match build_bridge_frontend_config(api_manifest, api_extensions) {
     Err(error) =>
       assert_true(
         error.contains(
@@ -428,23 +545,16 @@ test "command proxy script rejects invalid namespace and API names" {
 }
 
 ///|
-test "command proxy injection uses first head body or prepend fallback" {
-  let script = "window.__MoonBit__ = {};</script><p>tail</p>"
+test "entry HTML injection does not install the bridge" {
   let head_html = "<html><head><title>A</title></head><head></head></html>"
-  let injected_head = inject_command_proxy_script(head_html, Some(script))
-  assert_true(injected_head.contains("<head>\n<script>"))
-  inspect(injected_head.contains("</script><p>tail</p>"), content="false")
-  inspect(injected_head.contains("<\\/script><p>tail</p>"), content="true")
-  inspect(injected_head.contains("</head><head>\n<script>"), content="false")
-
-  let body_html = "<html><body><main></main></body></html>"
-  let injected_body = inject_command_proxy_script(body_html, Some("x"))
-  assert_true(injected_body.has_prefix("<html><script>x</script>\n<body>"))
-
-  let bare_html = "<main></main>"
-  let injected_bare = inject_command_proxy_script(bare_html, Some("x"))
-  assert_true(injected_bare.has_prefix("<script>x</script>\n<main>"))
-  inspect(inject_command_proxy_script(bare_html, None), content="<main></main>")
+  let injected = inject_html_bootstrap(
+    head_html,
+    base_tag("proton://app/example/"),
+  )
+  assert_true(injected.contains("<head>\n<base href="))
+  assert_false(injected.contains("<script>"))
+  assert_false(injected.contains("__MoonBit__"))
+  inspect(injected.contains("</head><head>\n<base"), content="false")
 }
 
 ///|
@@ -548,6 +658,7 @@ test "config API overrides manifest fields and keeps base dir" {
     config(config_path)
     .title("Code Title")
     .size(width=640, height=480)
+    .titlebar_style(TitlebarStyle::Overlay)
     .entry_html("<main>code</main>")
     .debug(enabled=false)
     .resolved_app_config() {
@@ -558,6 +669,7 @@ test "config API overrides manifest fields and keeps base dir" {
   assert_eq(manifest.window.title, "Code Title")
   assert_eq(manifest.window.width, 640)
   assert_eq(manifest.window.height, 480)
+  assert_eq(manifest.window.titlebar_style, @manifest.TitlebarStyle::Overlay)
   assert_eq(manifest.debug, 0)
   match manifest.entry {
     @manifest.AppEntry::Html(html) => assert_eq(html, "<main>code</main>")

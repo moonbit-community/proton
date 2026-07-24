@@ -10,19 +10,39 @@ endif()
 
 option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" OFF)
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
-set(PROTON_ENGINE_SOURCE src/engine/proton_engine_none.c)
+set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
+set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
+set(PROTON_NOTIFICATION_SOURCE src/engine/notification_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
-    set(PROTON_ENGINE_SOURCE src/engine/cef_win/proton_engine_cef_win.c)
+    set(PROTON_APP_RUNNER_SOURCE src/app_runner_win.c)
+    set(PROTON_ENGINE_SOURCES
+      src/engine/cef_win/proton_engine_cef_win.c
+      src/engine/cef_win/proton_win_titlebar.c
+    )
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
-    set(PROTON_ENGINE_SOURCE src/engine/cef_mac/proton_engine_cef_mac.m)
+    set(PROTON_APP_RUNNER_SOURCE src/app_runner.m)
+    set(PROTON_NOTIFICATION_SOURCE src/engine/cef_mac/notification.m)
+    set(PROTON_ENGINE_SOURCES
+      src/engine/cef_mac/proton_engine_cef_mac.m
+      src/engine/cef_mac/dialog.m
+      src/engine/cef_mac/menu.m
+      src/engine/cef_mac/scheme.m
+    )
   elseif(UNIX)
-    set(PROTON_ENGINE_SOURCE src/engine/cef_linux/proton_engine_cef_linux.c)
+    set(PROTON_ENGINE_SOURCES
+      src/engine/cef_linux/proton_engine_cef_linux.c
+      src/engine/cef_linux/proton_linux_titlebar.c
+    )
   else()
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
+  list(APPEND PROTON_ENGINE_SOURCES
+    src/engine/cef_common/bridge_policy.c
+    src/engine/cef_common/bridge_renderer.c
+  )
 endif()
 
 if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
@@ -32,9 +52,14 @@ if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
 endif()
 
 add_library(proton SHARED
+  src/proton_config.c
   src/proton_json.c
+  src/proton_state.c
   src/proton.c
-  ${PROTON_ENGINE_SOURCE}
+  ${PROTON_APP_RUNNER_SOURCE}
+  ${PROTON_NOTIFICATION_SOURCE}
+  src/engine/cef_common/bridge_lifecycle.c
+  ${PROTON_ENGINE_SOURCES}
 )
 
 target_include_directories(proton
@@ -70,6 +95,7 @@ if(PROTON_WITH_ENGINE)
     set(PROTON_ENGINE_FRAMEWORK_DIR "${PROTON_ENGINE_FRAMEWORK_PARENT}/Chromium Embedded Framework.framework")
     set(PROTON_ENGINE_FRAMEWORK_BINARY "${PROTON_ENGINE_FRAMEWORK_DIR}/Chromium Embedded Framework")
     set(PROTON_ENGINE_RESOURCES_DIR "${PROTON_ENGINE_FRAMEWORK_DIR}/Resources")
+    target_compile_options(proton PRIVATE $<$<COMPILE_LANGUAGE:OBJC>:-fblocks>)
   else()
     set(PROTON_ENGINE_RESOURCES_DIR "${PROTON_ENGINE_ROOT}/Resources")
   endif()
@@ -135,6 +161,7 @@ if(PROTON_WITH_ENGINE)
       "-framework Cocoa"
       "-framework AppKit"
       "-framework Foundation"
+      "-framework UserNotifications"
       "-lc++"
     )
     set_target_properties(proton PROPERTIES LINKER_LANGUAGE CXX)
@@ -148,6 +175,9 @@ if(PROTON_WITH_ENGINE)
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
               "${PROTON_ENGINE_FRAMEWORK_DIR}"
               "$<TARGET_FILE_DIR:proton>/../Frameworks/Chromium Embedded Framework.framework"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+              "${PROTON_ENGINE_RESOURCES_DIR}"
+              "$<TARGET_FILE_DIR:proton>/../Resources"
       VERBATIM
     )
     add_executable(cef_process
@@ -281,6 +311,15 @@ set_target_properties(proton PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
+if(WIN32)
+  target_compile_definitions(proton PRIVATE
+    _WIN32_WINNT=0x0A00
+    WINVER=0x0A00
+  )
+  target_link_libraries(proton PRIVATE comctl32 dwmapi)
+  set_target_properties(proton PROPERTIES PREFIX "")
+endif()
+
 install(TARGETS proton
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
@@ -292,6 +331,8 @@ install(FILES include/proton_native.h DESTINATION include)
 if(BUILD_TESTING)
   add_executable(proton_smoke
     tests/proton_smoke.c
+    src/engine/cef_common/bridge_lifecycle.c
+    src/proton_json.c
   )
   add_executable(proton_exports_smoke
     tests/proton_exports_smoke.c
@@ -304,6 +345,7 @@ if(BUILD_TESTING)
 
   add_test(NAME proton_smoke COMMAND proton_smoke)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
+  set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)
     set(PROTON_TEST_PATH_MODIFICATIONS
@@ -334,10 +376,24 @@ if(BUILD_TESTING)
         ENVIRONMENT "PATH=${PROTON_TEST_PATH}"
       )
     endif()
+    if(PROTON_WITH_ENGINE)
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+    endif()
   elseif(APPLE)
-    set_tests_properties(proton_smoke PROPERTIES
-      ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
-    )
+    if(PROTON_WITH_ENGINE)
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_BINARY_DIR};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+    else()
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
+      )
+    endif()
     set_tests_properties(proton_exports_smoke PROPERTIES
       ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:proton>:$ENV{DYLD_LIBRARY_PATH}"
     )

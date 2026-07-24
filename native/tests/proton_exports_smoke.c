@@ -14,11 +14,6 @@ static proton_library_t proton_open_library(void) {
 static void *proton_find_symbol(proton_library_t library, const char *name) {
   return (void *)GetProcAddress(library, name);
 }
-static void proton_close_library(proton_library_t library) {
-  if (library != NULL) {
-    FreeLibrary(library);
-  }
-}
 static void proton_print_loader_error(void) {
   fprintf(stderr, "LoadLibraryA(%s) failed with error %lu\n",
           PROTON_LIBRARY_NAME, (unsigned long)GetLastError());
@@ -37,11 +32,6 @@ static proton_library_t proton_open_library(void) {
 static void *proton_find_symbol(proton_library_t library, const char *name) {
   return dlsym(library, name);
 }
-static void proton_close_library(proton_library_t library) {
-  if (library != NULL) {
-    dlclose(library);
-  }
-}
 static void proton_print_loader_error(void) {
   const char *message = dlerror();
   fprintf(stderr, "dlopen(%s) failed: %s\n", PROTON_LIBRARY_NAME,
@@ -52,6 +42,7 @@ static void proton_print_loader_error(void) {
 static const char *const expected_exports[] = {
     "proton_abi_version",
     "proton_runtime_info_json",
+    "proton_app_run",
     "proton_execute_process",
     "proton_runtime_probe_json",
     "proton_runtime_create_json",
@@ -60,9 +51,20 @@ static const char *const expected_exports[] = {
     "proton_runtime_quit",
     "proton_runtime_do_message_loop_work",
     "proton_runtime_wait",
+    "proton_runtime_set_wakeup_fd",
+    "proton_runtime_prepare_wakeup_source",
+    "proton_runtime_activate_wakeup_source",
+    "proton_runtime_next_wakeup_delay_ms",
+    "proton_runtime_set_menu_json",
     "proton_runtime_poll_event_json",
     "proton_runtime_poll_bridge_request_json",
     "proton_runtime_respond_bridge_request_json",
+    "proton_runtime_begin_message_dialog",
+    "proton_runtime_poll_dialog_result",
+    "proton_notification_is_supported",
+    "proton_notification_show",
+    "proton_notification_poll_click",
+    "proton_notification_cleanup",
     "proton_window_create_json",
     "proton_window_destroy",
     "proton_window_show",
@@ -74,7 +76,15 @@ static const char *const expected_exports[] = {
     "proton_window_load_url",
     "proton_window_load_html",
     "proton_window_eval",
-    "proton_window_install_bridge_json",
+    "proton_window_emit_bridge_event_json",
+    "proton_window_bridge_state_json",
+    "proton_window_take_bridge_failure_json",
+    "proton_window_begin_message_dialog",
+    "proton_window_begin_confirm_dialog",
+    "proton_window_begin_open_file_dialog",
+    "proton_window_begin_save_file_dialog",
+    "proton_window_begin_choose_directory_dialog",
+    "proton_window_poll_dialog_result",
     "proton_last_error_message",
 };
 
@@ -83,6 +93,12 @@ static const char *const removed_exports[] = {
     "proton_window_init_script",
     "proton_engine_name",
     "proton_json_parse",
+    "proton_window_show_message_dialog",
+    "proton_window_show_confirm_dialog",
+    "proton_window_open_file_dialog",
+    "proton_window_save_file_dialog",
+    "proton_window_choose_directory_dialog",
+    "proton_window_install_bridge_json",
 };
 
 int main(void) {
@@ -111,6 +127,7 @@ int main(void) {
     }
   }
 
-  proton_close_library(library);
+  // libproton owns a process-lifetime CEF dependency. This test verifies the
+  // exported ABI only; explicitly unloading CEF-linked libraries is unsupported.
   return failed;
 }

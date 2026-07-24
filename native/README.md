@@ -12,13 +12,33 @@ enabled only with `PROTON_WITH_ENGINE=ON`.
 availability, build mode, platform, and public feature flags using the same
 caller-owned buffer pattern as event polling.
 
-`proton_runtime_wait` lets the MoonBit facade block until selected runtime work
-is ready, then drain it through the existing poll APIs. Ready masks are wake
-reasons, not ownership transfer: callers still drain `proton_runtime_poll_*`
-until the queues are empty. Engine builds on Windows, macOS, and Linux expose
-the `runtime_wait` feature and wait on bridge queue wakeups, CEF external
-message-pump scheduling, and the platform event source. ABI-only builds still
-return `PROTON_ERR_UNSUPPORTED` for wait.
+Engine builds on macOS, Windows, and Linux report the `titlebar_overlay`
+feature. ABI-only builds do not report it, allowing typed window configs to
+omit the optional field when the loaded DLL cannot implement the behavior.
+
+`proton_runtime_wait` is a low-level primitive for hosts that own CEF's external
+message pump. It blocks until selected runtime work is ready, after which the
+caller still drains `proton_runtime_poll_*` until the queues are empty. Engine
+builds on Windows, macOS, and Linux expose the `runtime_wait` feature. ABI-only
+builds return `PROTON_ERR_UNSUPPORTED`.
+
+On macOS and Windows, `proton_app_run` owns the calling UI thread and runs the
+platform UI loop plus CEF's native message loop there. It creates one
+application thread for the MoonBit async scheduler and joins that thread only
+after the application entry has returned. Public runtime and window handles
+are created and owned by the application thread; native engine operations
+marshal to the UI thread. Native callbacks never enter MoonBit. They enqueue
+work and signal the facade's wakeup source so the MoonBit scheduler can resume
+the waiting task. macOS uses a non-blocking pipe descriptor supplied by
+MoonBit. Windows exposes a platform-owned named pipe that MoonBit opens before
+activating it. Under this managed runner, `proton_runtime_run`,
+`proton_runtime_quit`, `proton_runtime_do_message_loop_work`,
+`proton_runtime_wait`, and `proton_runtime_next_wakeup_delay_ms` return
+`PROTON_ERR_UNSUPPORTED`.
+
+Linux currently executes the `proton_app_run` callback inline, preserving its
+existing single-thread architecture until it receives a platform-owned UI
+runner.
 
 It also exposes `proton_runtime_probe_json`, which validates the configured
 runtime layout before initialization. The probe checks `runtime_root`,
@@ -85,6 +105,32 @@ to `src/engine/cef_win/proton_engine_cef_win.c`, which wires
 `cef_execute_process`, `cef_initialize`, the CEF app instance, a Win32 parent
 window, and a minimal CEF child browser path.
 
+Windows `titlebar_style: "overlay"` keeps `WS_OVERLAPPEDWINDOW` and removes the
+standard non-client frame through `WM_NCCALCSIZE`, so the CEF child fills the
+client area through the top of the window. Overlay windows add
+`WS_CLIPCHILDREN` so parent background painting cannot cover the CEF child;
+default windows keep their existing style. Resize hit targets use
+`SM_CXSIZEFRAME`, `SM_CYSIZEFRAME`, and `SM_CXPADDEDBORDER` at the current DPI.
+CEF's `on_draggable_regions_changed` callback supplies the computed
+`-webkit-app-region: drag/no-drag` rectangles for Overlay pages. Proton stores
+those regions, subtracts every no-drag rectangle from the draggable area, and
+subclasses the current CEF child HWND hierarchy so native hit testing reaches
+the parent window without clipping Chromium rendering. With the currently
+shipped CEF build, pages assign `element.style.webkitAppRegion = "drag"` after
+the draggable element exists in the DOM to trigger the initial update; static
+`no-drag` descendants are included in that update. This is CEF's native region
+channel, not an Electron compatibility shim. Before the first region update, a
+fallback drag handle occupies one live caption-button width at the leading edge
+below the top resize border. `WM_GETTITLEBARINFOEX` supplies the live caption
+band and button cluster, with `SM_CXSIZE` and `SM_CYCAPTION` as pre-show
+fallbacks. DWM caption-button hit testing takes precedence. Once CEF reports
+regions, ordinary web content and no-drag controls return `HTCLIENT`.
+Overlay windows request `DWMWA_USE_IMMERSIVE_DARK_MODE` so the native caption
+controls blend with dark web chrome; Windows and high-contrast policy may still
+adjust their final colors.
+Maximized overlay windows use the monitor work area, and `WM_DPICHANGED`
+applies the system-provided window rectangle.
+
 On macOS, the engine build expects
 `Release/Chromium Embedded Framework.framework` under the runtime root and
 switches the build to `src/engine/cef_mac/proton_engine_cef_mac.m`.
@@ -92,6 +138,20 @@ switches the build to `src/engine/cef_mac/proton_engine_cef_mac.m`.
 On Linux, the engine build expects `Release/libcef.so` under the runtime root,
 plus `Resources/icudtl.dat` and `Resources/locales/`. This switches the build
 to `src/engine/cef_linux/proton_engine_cef_linux.c`.
+
+Linux `titlebar_style: "overlay"` uses GTK client chrome on the existing X11
+engine path. The CEF child fills the complete client area, while GTK-native
+minimize, maximize/restore, and close buttons are raised above the browser in
+the top-right corner. The window remains resizable through GTK's themed
+`decoration-resize-handle` metric, and GTK maximize/unmaximize continues to use
+the desktop work area. CEF's `on_draggable_regions_changed` callback supplies
+the computed `-webkit-app-region: drag/no-drag` rectangles; ordinary web
+content and no-drag controls remain interactive. Before the first region
+update, one native caption-button width at the leading edge acts as a fallback
+drag handle. Proton selects the X server's `DefaultVisual`, as required by the
+CEF GTK/X11 embedding path, and manually keeps the CEF X11 child sized to the
+GTK content allocation. The current Linux engine intentionally forces X11, so
+WSLg uses this behavior through XWayland; native Wayland is not yet supported.
 
 `proton_cli cef setup` runtime assembly is wired for Windows, macOS Apple
 Silicon, and Linux. The setup command verifies the pinned SHA-256 of the

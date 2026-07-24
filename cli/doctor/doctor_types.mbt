@@ -242,6 +242,7 @@ priv struct DoctorAppWindow {
   width : Int
   height : Int
   size_hint : String
+  titlebar_style : String
 }
 
 ///|

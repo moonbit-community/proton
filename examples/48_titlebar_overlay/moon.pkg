@@ -1,0 +1,15 @@
+import {
+  "justjavac/proton",
+}
+
+supported_targets = "native"
+
+dev_build(rule: "embed", input: "index.html", output: "index.mbt")
+
+formatter(ignore: [ "index.mbt" ])
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "index.mbt": [ "native" ], "main.mbt": [ "native" ] },
+)

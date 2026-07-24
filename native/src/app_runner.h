@@ -1,0 +1,43 @@
+#ifndef PROTON_APP_RUNNER_H
+#define PROTON_APP_RUNNER_H
+
+#include "proton_internal.h"
+
+#include <stdbool.h>
+#include <stdint.h>
+
+PROTON_INTERNAL bool proton_app_runner_is_active(void);
+PROTON_INTERNAL bool proton_app_runner_engine_loop_is_running(void);
+
+#ifdef _WIN32
+typedef int32_t (*proton_app_main_int_work_t)(void *context);
+typedef uint64_t (*proton_app_main_u64_work_t)(void *context);
+typedef void (*proton_app_main_void_work_t)(void *context);
+
+PROTON_INTERNAL bool proton_app_runner_is_ui_thread(void);
+PROTON_INTERNAL int32_t proton_app_dispatch_engine_start(
+    proton_app_main_int_work_t work, void *context);
+PROTON_INTERNAL int32_t proton_app_dispatch_sync_int(
+    proton_app_main_int_work_t work, void *context);
+PROTON_INTERNAL uint64_t proton_app_dispatch_sync_u64(
+    proton_app_main_u64_work_t work, void *context);
+PROTON_INTERNAL void proton_app_dispatch_sync_void(
+    proton_app_main_void_work_t work, void *context);
+#endif
+
+#ifdef __OBJC__
+typedef int32_t (^proton_app_main_int_work_t)(void);
+typedef uint64_t (^proton_app_main_u64_work_t)(void);
+typedef void (^proton_app_main_void_work_t)(void);
+
+PROTON_INTERNAL int32_t
+proton_app_dispatch_engine_start(proton_app_main_int_work_t work);
+PROTON_INTERNAL int32_t
+proton_app_dispatch_sync_int(proton_app_main_int_work_t work);
+PROTON_INTERNAL uint64_t
+proton_app_dispatch_sync_u64(proton_app_main_u64_work_t work);
+PROTON_INTERNAL void
+proton_app_dispatch_sync_void(proton_app_main_void_work_t work);
+#endif
+
+#endif

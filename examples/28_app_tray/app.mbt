@@ -204,7 +204,7 @@ let resource : String =
   #|        eventLog.prepend(item);
   #|      }
   #|
-  #|      function readyApp() {
+  #|      function bridgeApp() {
   #|        const app = window.__MoonBit__;
   #|        if (
   #|          app &&
@@ -215,30 +215,11 @@ let resource : String =
   #|        ) {
   #|          return app;
   #|        }
-  #|        return null;
-  #|      }
-  #|
-  #|      function waitForBridge(timeoutMs = 4000) {
-  #|        return new Promise((resolve, reject) => {
-  #|          const startedAt = Date.now();
-  #|          const poll = () => {
-  #|            const app = readyApp();
-  #|            if (app) {
-  #|              resolve(app);
-  #|              return;
-  #|            }
-  #|            if (Date.now() - startedAt >= timeoutMs) {
-  #|              reject(new Error("MoonBit bridge is not available"));
-  #|              return;
-  #|            }
-  #|            window.setTimeout(poll, 50);
-  #|          };
-  #|          poll();
-  #|        });
+  #|        throw new Error("MoonBit bridge is not available");
   #|      }
   #|
   #|      async function withTray(action) {
-  #|        const app = await waitForBridge();
+  #|        const app = bridgeApp();
   #|        return action(app.tray, app);
   #|      }
   #|
@@ -278,7 +259,7 @@ let resource : String =
   #|      }
   #|
   #|      async function attachTrayListeners() {
-  #|        const app = await waitForBridge();
+  #|        const app = bridgeApp();
   #|
   #|        app.events.on("tray.activity", (event) => {
   #|          statusLine.textContent = "Tray activity received.";

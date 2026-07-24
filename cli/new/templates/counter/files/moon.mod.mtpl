@@ -3,7 +3,6 @@ name = {{module_mbt}}
 version = "0.1.0"
 
 import {
-  "moonbitlang/async@{{async_version}}",
   "justjavac/proton@{{proton_version}}",
 }
 

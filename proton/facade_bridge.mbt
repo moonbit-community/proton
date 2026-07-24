@@ -167,12 +167,12 @@ fn command_extension_dependency_error(
 }
 
 ///|
-fn build_command_proxy_script(
+fn build_bridge_frontend_config(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-) -> Result[String?, String] {
-  let specs : Array[Json] = []
-  let scripts : Array[String] = []
+) -> Result[BridgeFrontendConfig, String] {
+  let extensions : Array[@native.BridgeExtensionConfig] = []
+  let initialization_units : Array[@native.BridgeInitializationUnit] = []
   let ordered_ids = match
     enabled_command_extension_order(manifest, command_extensions) {
     Err(error) => return Err(error)
@@ -187,7 +187,7 @@ fn build_command_proxy_script(
         js_namespace,
       )
     }
-    let apis : Array[Json] = []
+    let apis : Array[String] = []
     for api in spec.apis() {
       let api_name = api.api_name()
       if command_proxy_name_is_invalid(api_name) {
@@ -198,28 +198,21 @@ fn build_command_proxy_script(
           api_name,
         )
       }
-      apis.push(Json::string(api_name))
+      apis.push(api_name)
     }
-    specs.push(
-      Json::object({
-        "namespace": Json::string(js_namespace),
-        "apis": Json::array(apis),
-      }),
-    )
-    for script in spec.scripts() {
-      scripts.push(script)
-    }
-  }
-  if specs.length() == 0 {
-    Ok(None)
-  } else {
-    let script = command_proxy_bootstrap_script(Json::array(specs).stringify())
-    if scripts.length() == 0 {
-      Ok(Some(script))
-    } else {
-      Ok(Some(script + "\n" + scripts.join("\n")))
+    extensions.push(@native.BridgeExtensionConfig::new(js_namespace, apis~))
+    let scripts = spec.scripts()
+    for index, script in scripts {
+      initialization_units.push(
+        @native.BridgeInitializationUnit::new(
+          id,
+          "script-" + index.to_string(),
+          script,
+        ),
+      )
     }
   }
+  Ok(BridgeFrontendConfig::{ extensions, initialization_units })
 }
 
 ///|
@@ -231,152 +224,80 @@ fn command_proxy_name_is_invalid(name : String) -> Bool {
 }
 
 ///|
-fn command_proxy_bootstrap_script(specs_json : String) -> String {
-  "(function(){\n" +
-  "  var specs = " +
-  specs_json +
-  ";\n" +
-  "  var existing = window.__MoonBit__;\n" +
-  "  var root = existing && typeof existing === 'object' ? existing : {};\n" +
-  "  var exactListeners = root['@@exactListeners'] && typeof root['@@exactListeners'] === 'object' ? root['@@exactListeners'] : Object.create(null);\n" +
-  "  root['@@exactListeners'] = exactListeners;\n" +
-  "  var events = root.events && typeof root.events === 'object' ? root.events : {};\n" +
-  "  function ensureExactListeners(name) {\n" +
-  "    if (!Array.isArray(exactListeners[name])) { exactListeners[name] = []; }\n" +
-  "    return exactListeners[name];\n" +
-  "  }\n" +
-  "  function emitExact(name, event) {\n" +
-  "    var listeners = ensureExactListeners(name).slice();\n" +
-  "    for (var index = 0; index < listeners.length; index += 1) {\n" +
-  "      listeners[index](event);\n" +
-  "    }\n" +
-  "    return event;\n" +
-  "  }\n" +
-  "  events.emit = function(name, event) { return emitExact(String(name), event); };\n" +
-  "  events['@@emitExtensionEvent'] = function(namespace, eventName, payload) {\n" +
-  "    var event = {\n" +
-  "      extension: String(namespace),\n" +
-  "      name: String(eventName),\n" +
-  "      payload: payload === undefined ? null : payload\n" +
-  "    };\n" +
-  "    return emitExact(event.extension + '.' + event.name, event);\n" +
-  "  };\n" +
-  "  events.on = function(name, listener) {\n" +
-  "    if (typeof listener !== 'function') {\n" +
-  "      throw new TypeError('MoonBit.events.on expects a listener function');\n" +
-  "    }\n" +
-  "    var key = String(name);\n" +
-  "    ensureExactListeners(key).push(listener);\n" +
-  "    return function() {\n" +
-  "      var listeners = ensureExactListeners(key);\n" +
-  "      exactListeners[key] = listeners.filter(function(candidate) { return candidate !== listener; });\n" +
-  "    };\n" +
-  "  };\n" +
-  "  root.events = events;\n" +
-  "  function invokeExtension(namespace, apiName, payload) {\n" +
-  "    var current = window.__MoonBit__;\n" +
-  "    var core = current && current.core;\n" +
-  "    if (!core || typeof core.invokeOp !== 'function') {\n" +
-  "      return Promise.reject(new Error('MoonBit bridge is not available'));\n" +
-  "    }\n" +
-  "    return core.invokeOp('ext:' + namespace + '/' + apiName, payload);\n" +
-  "  }\n" +
-  "  var extensions = root['@@extensions'] && typeof root['@@extensions'] === 'object' ? root['@@extensions'] : Object.create(null);\n" +
-  "  root['@@extensions'] = extensions;\n" +
-  "  root['@@ensureExtension'] = function(extensionName) {\n" +
-  "    var existingExtension = extensions[extensionName];\n" +
-  "    if (existingExtension && typeof existingExtension === 'object') {\n" +
-  "      return existingExtension;\n" +
-  "    }\n" +
-  "    var target = {};\n" +
-  "    target.invoke = function(apiName, payload) {\n" +
-  "      return invokeExtension(String(extensionName), String(apiName), payload);\n" +
-  "    };\n" +
-  "    target.on = function(eventName, listener) {\n" +
-  "      return events.on(String(extensionName) + '.' + String(eventName), listener);\n" +
-  "    };\n" +
-  "    Object.defineProperty(target, 'name', { value: String(extensionName), enumerable: true });\n" +
-  "    extensions[extensionName] = target;\n" +
-  "    root[extensionName] = target;\n" +
-  "    return target;\n" +
-  "  };\n" +
-  "  for (var i = 0; i < specs.length; i += 1) {\n" +
-  "    var namespace = String(specs[i].namespace || '');\n" +
-  "    var apis = Array.isArray(specs[i].apis) ? specs[i].apis : [];\n" +
-  "    if (!namespace) { continue; }\n" +
-  "    var target = root['@@ensureExtension'](namespace);\n" +
-  "    target.invoke = (function(ns) {\n" +
-  "      return function(apiName, payload) {\n" +
-  "        return invokeExtension(ns, String(apiName), payload);\n" +
-  "      };\n" +
-  "    })(namespace);\n" +
-  "    target.on = (function(ns) {\n" +
-  "      return function(eventName, listener) {\n" +
-  "        return events.on(ns + '.' + String(eventName), listener);\n" +
-  "      };\n" +
-  "    })(namespace);\n" +
-  "    for (var j = 0; j < apis.length; j += 1) {\n" +
-  "      var apiName = String(apis[j] || '');\n" +
-  "      if (!apiName || apiName === 'then') { continue; }\n" +
-  "      target[apiName] = (function(ns, api) {\n" +
-  "        return function(payload) { return invokeExtension(ns, api, payload); };\n" +
-  "      })(namespace, apiName);\n" +
-  "    }\n" +
-  "    root[namespace] = target;\n" +
-  "  }\n" +
-  "  window.__MoonBit__ = root;\n" +
-  "})();"
-}
-
-///|
 fn install_extension_event_sender(
   window : @native.Window,
   host : @core.AppCommandHost,
-  policy : BridgePagePolicy,
 ) -> Unit {
-  host.set_event_sender(extension_event_sender(window, None, policy))
+  host.set_event_sender(extension_event_sender(window, None))
+}
+
+///|
+fn forward_menu_command(
+  window : @native.Window,
+  command_id : String,
+  focused_window : Int64?,
+) -> Unit {
+  let fields : Map[String, Json] = { "command_id": Json::string(command_id) }
+  match focused_window {
+    Some(window) => fields["window"] = Json::string(window.to_string())
+    None => ()
+  }
+  ignore(
+    window.emit_bridge_event_json(
+      bridge_event_json(
+        "frontend",
+        "menu.command",
+        Json::object(fields),
+        None,
+        None,
+      ),
+    ),
+  )
+}
+
+///|
+fn bridge_event_json(
+  kind : String,
+  name : String,
+  payload : Json,
+  extension : String?,
+  page_instance : String?,
+) -> String {
+  let fields : Map[String, Json] = {
+    "abi_version": Json::number(1),
+    "kind": Json::string(kind),
+    "name": Json::string(name),
+    "payload": payload,
+  }
+  match extension {
+    Some(value) => fields["extension"] = Json::string(value)
+    None => ()
+  }
+  match page_instance {
+    Some(value) => fields["page_instance"] = Json::string(value)
+    None => ()
+  }
+  Json::object(fields).stringify()
 }
 
 ///|
 fn extension_event_sender(
   window : @native.Window,
   page_instance : String?,
-  policy : BridgePagePolicy,
 ) -> async (@ipc.IpcExtensionEvent) -> Unit {
-  async fn(event) {
+  fn(event) {
     ignore(
-      window.eval(extension_event_dispatch_script(event, page_instance, policy)),
+      window.emit_bridge_event_json(
+        bridge_event_json(
+          "extension",
+          event.event_name,
+          event.payload,
+          Some(event.extension_namespace),
+          page_instance,
+        ),
+      ),
     )
-    @async.sleep(0)
   }
-}
-
-///|
-fn extension_event_dispatch_script(
-  event : @ipc.IpcExtensionEvent,
-  page_instance : String?,
-  policy : BridgePagePolicy,
-) -> String {
-  let page_instance_check = match page_instance {
-    Some(value) =>
-      "  if (!root || !root.core || root.core['@@pageInstance'] !== " +
-      Json::string(value).stringify() +
-      ") { return; }\n"
-    None => ""
-  }
-  "(function(){\n" +
-  bridge_page_policy_guard_script(policy) +
-  "  var event = " +
-  ToJson::to_json(event).stringify() +
-  ";\n" +
-  "  var root = window.__MoonBit__;\n" +
-  page_instance_check +
-  "  var events = root && root.events;\n" +
-  "  var emit = events && events['@@emitExtensionEvent'];\n" +
-  "  if (typeof emit === 'function') {\n" +
-  "    emit(event.extension_namespace, event.event_name, event.payload);\n" +
-  "  }\n" +
-  "})();"
 }
 
 ///|
@@ -385,17 +306,23 @@ async fn dispatch_bridge_request(
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   policy : BridgePagePolicy,
+  wake_signal : @core.RuntimeWakeSignal,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
+  let request_context = @core.AppCommandRequestContext::new(
+    request.window(),
+    wake_signal~,
+  )
   let response = match
     @async.with_timeout_opt(policy.request_timeout_ms, () => {
-      host.dispatch_ipc_with_event_sender(
+      host.dispatch_ipc_with_context_and_event_sender(
+        request_context,
         @ipc.IpcOpRequest::new(
           request_id.to_string(),
           request.op(),
           request.payload(),
         ),
-        Some(extension_event_sender(window, request.page_instance(), policy)),
+        Some(extension_event_sender(window, request.page_instance())),
       )
     }) {
     Some(response) => response
@@ -576,18 +503,5 @@ fn bridge_page_policy_dev_origins(policy : BridgePagePolicy) -> Array[String] {
   match policy.dev_origin {
     Some(origin) => [origin]
     None => []
-  }
-}
-
-///|
-fn bridge_page_policy_guard_script(policy : BridgePagePolicy) -> String {
-  match policy.dev_origin {
-    None =>
-      "  if (!window.location || window.location.protocol !== 'proton:') { return; }\n"
-    Some(origin) =>
-      "  if (!window.location) { return; }\n" +
-      "  if (window.location.protocol !== 'proton:' && window.location.origin !== " +
-      Json::string(origin).stringify() +
-      ") { return; }\n"
   }
 }

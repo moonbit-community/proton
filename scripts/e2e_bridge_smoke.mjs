@@ -392,11 +392,23 @@ class CdpClient {
 }
 
 async function waitForBridge(client) {
-  await waitForExpression(
-    client,
-    "Boolean(window.__MoonBit__?.core?.invokeOp)",
-    "window.__MoonBit__.core.invokeOp",
+  const state = await client.evaluate(
+    `(() => {
+      const api = window.__MoonBit__;
+      return {
+        hasApi: Boolean(api),
+        hasInvokeOp: typeof api.core?.invokeOp === "function",
+        hasReadyProperty: Object.prototype.hasOwnProperty.call(api || {}, "ready"),
+      };
+    })()`,
   );
+  if (
+    state?.hasApi !== true ||
+    state?.hasInvokeOp !== true ||
+    state?.hasReadyProperty !== false
+  ) {
+    throw new Error(`synchronous bridge contract failed: ${JSON.stringify(state)}`);
+  }
 }
 
 async function waitForExpression(client, expression, description) {
@@ -473,7 +485,7 @@ async function runCdpProbe() {
     assertProbeResult(result);
     const queueFull = await runQueueFullProbe(client);
     const reload = await runReloadProbe(client);
-    const nonProton = await runNonProtonProbe(client, "ext:app/ping");
+    const nonProton = await runNonProtonProbe(client);
     return { ...result, queueFull, reload, nonProton };
   } finally {
     client.close();
@@ -614,7 +626,7 @@ async function runEventBroadcastProbe() {
     await client.send("Runtime.enable");
     await waitForExpression(
       client,
-      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && window.__MoonBit__?.events?.['@@emitExtensionEvent'])",
+      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)",
       "window.__MoonBit__ ticker event bridge",
     );
     const result = await client.evaluate(
@@ -739,7 +751,7 @@ async function runDevExtensionJsProbe() {
     await client.send("Runtime.enable");
     await waitForExpression(
       client,
-      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && window.__MoonBit__?.events?.['@@emitExtensionEvent'])",
+      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)",
       "window.__MoonBit__ dev ticker bridge",
     );
     const result = await client.evaluate(
@@ -787,7 +799,7 @@ async function runDevExtensionJsProbe() {
     );
     assertDevExtensionJsProbeResult(result);
     const reload = await runDevExtensionJsReloadProbe(client);
-    const nonDevOrigin = await runNonProtonProbe(client, "ext:ticker/start");
+    const nonDevOrigin = await runNonProtonProbe(client);
     return { ...result, reload, nonDevOrigin };
   } finally {
     client.close();
@@ -1228,7 +1240,7 @@ async function runReloadProbe(client) {
   return result;
 }
 
-async function runNonProtonProbe(client, allowedOp) {
+async function runNonProtonProbe(client) {
   await client.send("Page.enable");
   const filePath = path.join(repoRoot, "target", "non-proton-bridge-probe.html");
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -1251,17 +1263,9 @@ async function runNonProtonProbe(client, allowedOp) {
   const address = httpServer.address();
   const httpUrl = `http://127.0.0.1:${address.port}/probe.html`;
   try {
-    const about = await navigateAndReadBridgeGlobals(
-      client,
-      "about:blank",
-      allowedOp,
-    );
-    const file = await navigateAndReadBridgeGlobals(client, fileUrl, allowedOp);
-    const httpPage = await navigateAndReadBridgeGlobals(
-      client,
-      httpUrl,
-      allowedOp,
-    );
+    const about = await navigateAndReadBridgeGlobals(client, "about:blank");
+    const file = await navigateAndReadBridgeGlobals(client, fileUrl);
+    const httpPage = await navigateAndReadBridgeGlobals(client, httpUrl);
     const result = { about, file, http: httpPage };
     assertNonProtonProbeResult(result);
     return result;
@@ -1356,7 +1360,46 @@ async function runEventBroadcastWindowCloseLifecycleProbe(env, scenario) {
   }
 }
 
-async function navigateAndReadBridgeGlobals(client, url, allowedOp) {
+async function runMultiWindowCloseLifecycleProbe(env, scenario) {
+  const logPath = path.join(repoRoot, "target", "proton-native.log");
+  const initialLog = fs.existsSync(logPath)
+    ? fs.readFileSync(logPath, "utf8")
+    : "";
+  const initialClosedWindows = [
+    ...initialLog.matchAll(/window_closed browser=\d+/g),
+  ].length;
+  const child = spawnApp(env, scenario);
+  const output = collectOutput(child);
+  let client = null;
+  try {
+    await waitForCdpEndpoint();
+    const [page] = await waitForPageTargetsByTitle([
+      "Bridge Multi A",
+      "Bridge Multi B",
+    ]);
+    client = new CdpClient(page.webSocketDebuggerUrl);
+    await client.open();
+    await closeScenarioWindow(client, child.pid);
+    await waitForExit(child, output, "multi-window close lifecycle app");
+    const log = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "";
+    const closedWindows =
+      [...log.matchAll(/window_closed browser=\d+/g)].length -
+      initialClosedWindows;
+    if (closedWindows < 2) {
+      throw new Error(
+        `native log recorded ${closedWindows} closed windows; expected at least two`,
+      );
+    }
+    return { closedWindows };
+  } finally {
+    if (client) {
+      client.close();
+    }
+    await terminateTree(child);
+  }
+}
+
+async function navigateAndReadBridgeGlobals(client, url) {
   await client.send("Page.navigate", { url });
   await waitForExpression(
     client,
@@ -1364,54 +1407,14 @@ async function navigateAndReadBridgeGlobals(client, url, allowedOp) {
     `navigation to ${url}`,
   );
   return await client.evaluate(
-    `(
-      async () => {
-        let nativeProbe = null;
-        if (typeof window.__protonNativeInvokeOp === "function") {
-          nativeProbe = await new Promise((resolve) => {
-            const pendingId = 770001;
-            const timer = setTimeout(() => {
-              resolve({ resolved: false, ok: null, error: "timeout" });
-            }, 1000);
-            window.__protonBridgeResolve = function(id, ok, payloadJson, errorMessage) {
-              if (id !== pendingId) {
-                return;
-              }
-              clearTimeout(timer);
-              resolve({
-                resolved: true,
-                ok: Boolean(ok),
-                payloadJson: String(payloadJson || ""),
-                error: String(errorMessage || ""),
-              });
-            };
-            try {
-              window.__protonNativeInvokeOp(
-                pendingId,
-                ${JSON.stringify(allowedOp)},
-                "{}",
-              );
-            } catch (error) {
-              clearTimeout(timer);
-              resolve({
-                resolved: true,
-                threw: true,
-                ok: false,
-                error: String(error && error.message ? error.message : error),
-              });
-            }
-          });
-        }
+    `(() => {
         return {
           url: location.href,
           title: document.title,
           hasBridge: Boolean(window.__MoonBit__?.core?.invokeOp),
           hasNativeInvoke: typeof window.__protonNativeInvokeOp === "function",
-          nativeProbe,
         };
-      }
-    )()`,
-    true,
+      })()`,
   );
 }
 
@@ -1872,14 +1875,7 @@ function assertNonProtonProbeResult(result) {
       throw new Error(`${name} page unexpectedly has window.__MoonBit__.core.invokeOp`);
     }
     if (page.hasNativeInvoke === true) {
-      if (
-        !page.nativeProbe ||
-        page.nativeProbe.resolved !== true ||
-        page.nativeProbe.ok !== false ||
-        !String(page.nativeProbe.error || "").includes("origin")
-      ) {
-        throw new Error(`${name} page native bridge was not origin-rejected: ${JSON.stringify(page)}`);
-      }
+      throw new Error(`${name} page unexpectedly exposes the native invoke function`);
     }
   }
 }
@@ -1981,12 +1977,15 @@ async function terminateTree(child) {
       }).once("exit", resolve);
     });
   } else {
-    const signalGroup = (signal) => {
+    const signalGroup = (signal, ignorePermissionError = false) => {
       try {
         process.kill(-child.pid, signal);
         return true;
       } catch (error) {
         if (error?.code === "ESRCH") {
+          return false;
+        }
+        if (ignorePermissionError && error?.code === "EPERM") {
           return false;
         }
         throw error;
@@ -1999,9 +1998,7 @@ async function terminateTree(child) {
         sleep(5000),
       ]);
     }
-    if (signalGroup(0)) {
-      signalGroup("SIGKILL");
-    }
+    signalGroup("SIGKILL", true);
     return;
   }
   if (child.exitCode !== null || child.signalCode !== null) {
@@ -2163,6 +2160,12 @@ async function runScenario(name, hasMoonBitE2e) {
       name,
     );
     result.cdpResult.lifecycle = lifecycle;
+  }
+  if (name === "45_bridge_multi_window") {
+    result.cdpResult.lifecycle = await runMultiWindowCloseLifecycleProbe(
+      env,
+      name,
+    );
   }
   if (name === "47_dev_extension_js") {
     result.cdpResult.production = await runDevExtensionJsProductionSmoke(env);
