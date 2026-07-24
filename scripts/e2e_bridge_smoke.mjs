@@ -1977,12 +1977,15 @@ async function terminateTree(child) {
       }).once("exit", resolve);
     });
   } else {
-    const signalGroup = (signal) => {
+    const signalGroup = (signal, ignorePermissionError = false) => {
       try {
         process.kill(-child.pid, signal);
         return true;
       } catch (error) {
         if (error?.code === "ESRCH") {
+          return false;
+        }
+        if (ignorePermissionError && error?.code === "EPERM") {
           return false;
         }
         throw error;
@@ -1995,9 +1998,7 @@ async function terminateTree(child) {
         sleep(5000),
       ]);
     }
-    if (signalGroup(0)) {
-      signalGroup("SIGKILL");
-    }
+    signalGroup("SIGKILL", true);
     return;
   }
   if (child.exitCode !== null || child.signalCode !== null) {
