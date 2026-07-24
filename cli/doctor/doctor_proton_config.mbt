@@ -1,6 +1,8 @@
 ///|
 fn read_proton_project_config(path : String) -> Result[DoctorAppConfig, String] {
-  @proton_config.load_project_config_from_file(path).map(fn(loaded) {
+  @proton_config.load_project_config_from_file(path)
+  .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+  .map(fn(loaded) {
     doctor_app_config_from_project_config(loaded.config(), loaded.warnings())
   })
 }

@@ -69,9 +69,9 @@ fn App::resolved_config_manifest(
   if proton_dev_mode_enabled() {
     resolved_dev_manifest(path).map(fn(loaded) { self.merge_config(loaded) })
   } else {
-    @bootstrap.load_config_manifest_from_file(path).map(fn(loaded) {
-      self.merge_config(loaded)
-    })
+    @bootstrap.load_config_manifest_from_file(path)
+    .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+    .map(fn(loaded) { self.merge_config(loaded) })
   }
 }
 
@@ -81,16 +81,18 @@ fn resolved_dev_manifest(
 ) -> Result[@bootstrap.LoadedAppManifest, String] {
   match proton_dev_url_override() {
     Some(url) =>
-      @bootstrap.load_config_manifest_from_file(path).map(fn(loaded) {
+      @bootstrap.load_config_manifest_from_file(path)
+      .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+      .map(fn(loaded) {
         @bootstrap.LoadedAppManifest::new(
           manifest_with_entry(loaded.manifest(), @manifest.AppEntry::Url(url)),
           base_dir=loaded.base_dir(),
         )
       })
     None =>
-      @bootstrap.load_proton_project_config_from_file(path).map(fn(config) {
-        config.dev_manifest()
-      })
+      @bootstrap.load_proton_project_config_from_file(path)
+      .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+      .map(fn(config) { config.dev_manifest() })
   }
 }
 

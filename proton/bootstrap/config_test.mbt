@@ -182,7 +182,7 @@ test "load_config_manifest_from_file rejects extension settings" {
     Ok(_) => abort("expected extensions rejection")
     Err(error) =>
       assert_eq(
-        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
       )
   }
 }
@@ -199,10 +199,10 @@ test "load_config_manifest_from_file rejects unsupported top-level fields" {
     "description = \"App\"", "Unexpected key 'description' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "permissions = {}", "moon.proton field `permissions` is not supported in v1",
+    "permissions = {}", "moon.proton field `permissions` is not supported in v1.",
   )
   expect_moon_proton_extra_field_error(
-    "windows = []", "moon.proton field `windows` is not supported in v1",
+    "windows = []", "moon.proton field `windows` is not supported in v1.",
   )
   expect_moon_proton_extra_field_error(
     "debug = 1", "moon.proton debug must be a bool",

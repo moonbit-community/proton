@@ -26,10 +26,7 @@ pub fn load_project_config_from_text(
 ///|
 fn read_project_config_text(path : String) -> Result[String, String] {
   try @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    error =>
-      Err(
-        "failed to read " + path + ": " + @debug.render(@debug.to_repr(error)),
-      )
+    error => Err("failed to read: " + @debug.render(@debug.to_repr(error)))
   } noraise {
     text => Ok(text)
   }
@@ -97,12 +94,12 @@ fn validate_project_top_level_fields(
         }
       "extensions" =>
         errors.push(
-          "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+          "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
         )
       "permissions" =>
-        errors.push("moon.proton field `permissions` is not supported in v1")
+        errors.push("moon.proton field `permissions` is not supported in v1.")
       "windows" =>
-        errors.push("moon.proton field `windows` is not supported in v1")
+        errors.push("moon.proton field `windows` is not supported in v1.")
       other =>
         errors.push("Unexpected key '" + other + "' found in moon.proton.")
     }

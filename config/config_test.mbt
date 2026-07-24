@@ -256,7 +256,7 @@ test "project config aggregates unknown and duplicate top-level fields" {
     Ok(_) => abort("expected field validation errors")
     Err(message) =>
       assert_eq(
-        message, "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1\nDuplicate key 'debug' found in moon.proton.",
+        message, "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1.\nDuplicate key 'debug' found in moon.proton.",
       )
   }
 }

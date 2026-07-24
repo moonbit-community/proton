@@ -565,7 +565,10 @@ test "moon.proton reader rejects manifest extensions" {
   match read_proton_project_config(config_path) {
     Err(error) =>
       assert_eq(
-        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+        error,
+        "failed to load `" +
+        config_path +
+        "`: moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
       )
     Ok(_) => abort("expected moon.proton extensions to be rejected")
   }
