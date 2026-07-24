@@ -77,7 +77,10 @@ pub async fn run(
   let project = match
     @proton_config.load_project_config_from_file(config_path) {
     Ok(project) => project
-    Err(message) => return Err(CommandError(message))
+    Err(message) =>
+      return Err(
+        CommandError("failed to load `" + config_path + "`: " + message),
+      )
   }
   let plan = match build_package_plan(raw, config_path, project) {
     Ok(plan) => plan

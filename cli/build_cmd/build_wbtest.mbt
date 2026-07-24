@@ -190,8 +190,10 @@ test "project config validation rejects unsupported size_hint" {
   )
   match read_project_config(path) {
     Ok(_) => abort("expected unsupported size_hint to fail")
-    Err(message) =>
+    Err(message) => {
+      assert_true(message.has_prefix("failed to load `" + path + "`: "))
       assert_true(message.contains("unsupported window size_hint"))
+    }
   }
 }
 

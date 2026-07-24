@@ -358,7 +358,9 @@ fn validate_production_entry_file(
 
 ///|
 fn read_project_config(path : String) -> Result[BuildProjectConfig, String] {
-  @proton_config.load_project_config_from_file(path).map(fn(project) {
+  @proton_config.load_project_config_from_file(path)
+  .map_err(fn(message) { "failed to load `" + path + "`: " + message })
+  .map(fn(project) {
     BuildProjectConfig::{ entry: project.entry(), frontend: project.frontend() }
   })
 }
