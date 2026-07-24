@@ -1,9 +1,11 @@
 import {
   "justjavac/proton_config",
+  "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/cef",
   "moonbitlang/async",
   "moonbitlang/async/process",
   "moonbitlang/async/socket",
+  "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/string",

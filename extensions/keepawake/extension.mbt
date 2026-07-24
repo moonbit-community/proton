@@ -25,13 +25,13 @@ let active_guard_ref : Ref[@sys_keepawake.Guard?] = Ref(None)
 
 ///|
 /// Converts public JS scope labels into the package enum.
-fn parse_scope(scope : String?) -> Result[@sys_keepawake.Scope?, String] {
+fn parse_scope(scope : String?) -> @sys_keepawake.Scope? raise KeepAwakeError {
   match scope {
-    Some("system") => Ok(Some(PreventSystemSleep))
-    Some("display") => Ok(Some(PreventDisplaySleep))
-    Some("systemAndDisplay") => Ok(Some(PreventSystemAndDisplaySleep))
-    Some(value) => Err("unknown keepAwake scope: " + value)
-    None => Ok(None)
+    Some("system") => Some(PreventSystemSleep)
+    Some("display") => Some(PreventDisplaySleep)
+    Some("systemAndDisplay") => Some(PreventSystemAndDisplaySleep)
+    Some(value) => raise UnknownScope(scope=value)
+    None => None
   }
 }
 
@@ -46,22 +46,16 @@ fn scope_label(scope : @sys_keepawake.Scope) -> String {
 }
 
 ///|
-/// Converts package errors into strings that can travel over op_result.
-fn keepawake_error(error : @sys_keepawake.KeepAwakeError) -> String {
-  error.to_string()
-}
-
-///|
 /// Releases a guard and returns a JavaScript-friendly reply.
 fn release_guard(
   keep_guard : @sys_keepawake.Guard,
-) -> Result[KeepAwakeReply, String] {
+) -> KeepAwakeReply raise KeepAwakeError {
   let scope_name = scope_label(keep_guard.scope())
   try {
     keep_guard.release()
-    Ok(KeepAwakeReply::{ active: false, scope: Some(scope_name) })
+    KeepAwakeReply::{ active: false, scope: Some(scope_name) }
   } catch {
-    error => Err(keepawake_error(error))
+    error => raise ReleaseFailed(detail=error.to_string())
   }
 }
 
@@ -69,23 +63,19 @@ fn release_guard(
 /// Acquires a guard using explicit defaults for optional JavaScript fields.
 fn acquire_guard(
   payload : AcquirePayload,
-) -> Result[@sys_keepawake.Guard, String] {
-  parse_scope(payload.scope).bind(fn(scope) {
-    let reason = match payload.reason {
-      Some(reason) => reason
-      None => @sys_keepawake.default_reason
-    }
-    match scope {
-      Some(scope) =>
-        Ok(@sys_keepawake.acquire(reason~, scope~)) catch {
-          error => Err(keepawake_error(error))
-        }
-      None =>
-        Ok(@sys_keepawake.acquire(reason~)) catch {
-          error => Err(keepawake_error(error))
-        }
-    }
-  })
+) -> @sys_keepawake.Guard raise KeepAwakeError {
+  let scope = parse_scope(payload.scope)
+  let reason = payload.reason.unwrap_or(@sys_keepawake.default_reason)
+  match scope {
+    Some(scope) =>
+      @sys_keepawake.acquire(reason~, scope~) catch {
+        error => raise AcquireFailed(detail=error.to_string())
+      }
+    None =>
+      @sys_keepawake.acquire(reason~) catch {
+        error => raise AcquireFailed(detail=error.to_string())
+      }
+  }
 }
 
 ///|
@@ -93,16 +83,11 @@ fn acquire_guard(
 #proton.destroy
 fn cleanup_keepawake(
   context : @proton_command.AppCommandExtensionContext,
-) -> Unit {
+) -> Unit raise KeepAwakeError {
   ignore(context.extension_id())
   match active_guard_ref.val {
     Some(active_guard) => {
-      try {
-        active_guard.release()
-        ()
-      } catch {
-        _ => ()
-      }
+      release_guard(active_guard) |> ignore
       active_guard_ref.val = None
     }
     None => ()
@@ -116,40 +101,32 @@ async fn acquire(
   context : @proton_command.AppCommandExtensionContext,
   reason : String?,
   scope : String?,
-) -> Result[KeepAwakeReply, String] {
+) -> KeepAwakeReply raise KeepAwakeError {
   let payload = AcquirePayload::{ reason, scope }
   match active_guard_ref.val {
     Some(active_guard) =>
       if active_guard.active() {
-        Err("keepAwake guard is already active")
+        raise AlreadyActive
       } else {
-        match acquire_guard(payload) {
-          Err(error) => Err(error)
-          Ok(next_guard) => {
-            let scope_name = scope_label(next_guard.scope())
-            active_guard_ref.val = Some(next_guard)
-            emit_keep_awake_activity(context, KeepAwakeActivity::{
-              operation: "acquire",
-              scope: Some(scope_name),
-            })
-            Ok(KeepAwakeReply::{ active: true, scope: Some(scope_name) })
-          }
-        }
+        acquire_next_guard(context, payload)
       }
-    None =>
-      match acquire_guard(payload) {
-        Err(error) => Err(error)
-        Ok(next_guard) => {
-          let scope_name = scope_label(next_guard.scope())
-          active_guard_ref.val = Some(next_guard)
-          emit_keep_awake_activity(context, KeepAwakeActivity::{
-            operation: "acquire",
-            scope: Some(scope_name),
-          })
-          Ok(KeepAwakeReply::{ active: true, scope: Some(scope_name) })
-        }
-      }
+    None => acquire_next_guard(context, payload)
   }
+}
+
+///|
+async fn acquire_next_guard(
+  context : @proton_command.AppCommandExtensionContext,
+  payload : AcquirePayload,
+) -> KeepAwakeReply raise KeepAwakeError {
+  let next_guard = acquire_guard(payload)
+  let scope_name = scope_label(next_guard.scope())
+  active_guard_ref.val = Some(next_guard)
+  emit_keep_awake_activity(context, KeepAwakeActivity::{
+    operation: "acquire",
+    scope: Some(scope_name),
+  })
+  KeepAwakeReply::{ active: true, scope: Some(scope_name) }
 }
 
 ///|
@@ -158,21 +135,18 @@ async fn acquire(
 async fn release(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> Result[KeepAwakeReply, String] {
+) -> KeepAwakeReply raise KeepAwakeError {
   match active_guard_ref.val {
-    Some(active_guard) =>
-      match release_guard(active_guard) {
-        Err(error) => Err(error)
-        Ok(reply) => {
-          active_guard_ref.val = None
-          emit_keep_awake_activity(context, KeepAwakeActivity::{
-            operation: "release",
-            scope: reply.scope,
-          })
-          Ok(reply)
-        }
-      }
-    None => Ok(KeepAwakeReply::{ active: false, scope: None })
+    Some(active_guard) => {
+      let reply = release_guard(active_guard)
+      active_guard_ref.val = None
+      emit_keep_awake_activity(context, KeepAwakeActivity::{
+        operation: "release",
+        scope: reply.scope,
+      })
+      reply
+    }
+    None => KeepAwakeReply::{ active: false, scope: None }
   }
 }
 

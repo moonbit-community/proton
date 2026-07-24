@@ -6,7 +6,7 @@ test "auto launch current platform has a JavaScript label" {
 
 ///|
 test "auto launch descriptor validates payloads through package constructor" {
-  match
+  let error = try
     build_launcher(AutoLaunchPayload::{
       name: "",
       path: None,
@@ -14,14 +14,20 @@ test "auto launch descriptor validates payloads through package constructor" {
       background_arg: None,
       extra_arguments: None,
       identifier: None,
-    }) {
-    Err(error) => assert_true(error.contains("EmptyName"))
-    Ok(_) => fail("expected empty name to be rejected")
+    })
+  catch {
+    error => error
+  } noraise {
+    _ => abort("expected empty name to be rejected")
   }
+  assert_true(error.message().contains("EmptyName"))
 }
 
 ///|
 test "auto launch metadata constants match generated app command extension" {
   assert_eq(extension().id(), "justjavac/proton-auto-launch")
-  assert_eq(extension().command_spec().unwrap().js_namespace(), "autoLaunch")
+  let command_spec = extension().command_spec() catch {
+    error => abort(error.message())
+  }
+  assert_eq(command_spec.unwrap().js_namespace(), "autoLaunch")
 }

@@ -9,25 +9,25 @@ import {
 // Values
 pub fn abi_version() -> Int
 
-pub fn execute_process(config? : RuntimeConfig) -> Result[ProcessResult, NativeError]
+pub fn execute_process(config? : RuntimeConfig) -> ProcessResult raise NativeError
 
 pub fn last_error_message() -> String
 
-pub fn notification_cleanup() -> Result[Unit, NativeError]
+pub fn notification_cleanup() -> Unit raise NativeError
 
-pub fn notification_poll_click() -> Result[NativeNotificationClick?, NativeError]
+pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError
 
-pub fn notification_show(String, String, payload? : String) -> Result[Unit, NativeError]
+pub fn notification_show(String, String, payload? : String) -> Unit raise NativeError
 
-pub fn notification_supported() -> Result[Bool, NativeError]
+pub fn notification_supported() -> Bool raise NativeError
 
-pub fn probe_runtime(config? : RuntimeConfig) -> Result[Unit, NativeError]
+pub fn probe_runtime(config? : RuntimeConfig) -> Unit raise NativeError
 
-pub fn run_app(FuncRef[() -> Unit]) -> Result[Unit, NativeError]
+pub fn run_app(FuncRef[() -> Unit]) -> Unit raise NativeError
 
-pub fn runtime_info() -> Result[RuntimeInfo, NativeError]
+pub fn runtime_info() -> RuntimeInfo raise NativeError
 
-pub fn runtime_info_json() -> Result[String, NativeError]
+pub fn runtime_info_json() -> String raise NativeError
 
 pub let runtime_wait_all : Int
 
@@ -40,6 +40,13 @@ pub let runtime_wait_none : Int
 pub let runtime_wait_platform : Int
 
 // Errors
+pub(all) suberror NativeError {
+  Status(status~ : Int, message~ : String)
+  InvalidArgument(message~ : String)
+  InvalidPayload(context~ : String, message~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NativeError::message(Self) -> String
+pub fn NativeError::status(Self) -> Int
 
 // Types and methods
 pub(all) struct BridgeConfig {
@@ -137,11 +144,6 @@ pub fn MenuItem::command(String, String, key? : String) -> Self
 pub fn MenuItem::role(String, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
 
-pub(all) struct NativeError {
-  status : Int
-  message : String
-} derive(Eq, @debug.Debug)
-
 pub(all) struct NativeNotificationClick {
   payload : String?
 } derive(Eq, @debug.Debug)
@@ -152,29 +154,29 @@ pub(all) enum ProcessResult {
 } derive(Eq, @debug.Debug)
 
 type Runtime
-pub fn Runtime::activate_wakeup_source(Self) -> Result[Unit, NativeError]
-pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
-pub fn Runtime::destroy(Self) -> Result[Unit, NativeError]
-pub fn Runtime::do_message_loop_work(Self) -> Result[Unit, NativeError]
-pub fn Runtime::new(config? : RuntimeConfig) -> Result[Self, NativeError]
-pub fn Runtime::next_wakeup_delay_ms(Self) -> Result[Int?, NativeError]
-pub fn Runtime::poll_bridge_request(Self) -> Result[BridgeRequest?, NativeError]
-pub fn Runtime::poll_bridge_request_json(Self) -> Result[String?, NativeError]
-pub fn Runtime::poll_event(Self) -> Result[RuntimeEvent?, NativeError]
-pub fn Runtime::poll_event_json(Self) -> Result[String?, NativeError]
-pub fn Runtime::poll_message_dialog(Self, Int64) -> Result[Bool, NativeError]
-pub fn Runtime::prepare_wakeup_source(Self) -> Result[String, NativeError]
-pub fn Runtime::quit(Self) -> Result[Unit, NativeError]
-pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Result[Unit, NativeError]
-pub fn Runtime::run(Self) -> Result[Unit, NativeError]
-pub fn Runtime::set_menu(Self, MenuBar) -> Result[Unit, NativeError]
-pub fn Runtime::set_wakeup_fd(Self, Int) -> Result[Unit, NativeError]
-pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> Result[RuntimeWaitReady, NativeError]
+pub fn Runtime::activate_wakeup_source(Self) -> Unit raise NativeError
+pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
+pub fn Runtime::destroy(Self) -> Unit raise NativeError
+pub fn Runtime::do_message_loop_work(Self) -> Unit raise NativeError
+pub fn Runtime::new(config? : RuntimeConfig) -> Self raise NativeError
+pub fn Runtime::next_wakeup_delay_ms(Self) -> Int? raise NativeError
+pub fn Runtime::poll_bridge_request(Self) -> BridgeRequest? raise NativeError
+pub fn Runtime::poll_bridge_request_json(Self) -> String? raise NativeError
+pub fn Runtime::poll_event(Self) -> RuntimeEvent? raise NativeError
+pub fn Runtime::poll_event_json(Self) -> String? raise NativeError
+pub fn Runtime::poll_message_dialog(Self, Int64) -> Bool raise NativeError
+pub fn Runtime::prepare_wakeup_source(Self) -> String raise NativeError
+pub fn Runtime::quit(Self) -> Unit raise NativeError
+pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise NativeError
+pub fn Runtime::run(Self) -> Unit raise NativeError
+pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
+pub fn Runtime::set_wakeup_fd(Self, Int) -> Unit raise NativeError
+pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> RuntimeWaitReady raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)
 pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, remote_debugging_port? : Int) -> Self
 pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, remote_debugging_port? : Int) -> Self
-pub fn RuntimeConfig::probe(Self) -> Result[Unit, NativeError]
+pub fn RuntimeConfig::probe(Self) -> Unit raise NativeError
 pub fn RuntimeConfig::to_json_string(Self) -> String
 pub fn RuntimeConfig::unsafe_from_json(String) -> Self
 
@@ -211,20 +213,20 @@ pub(all) enum TitlebarStyle {
 
 type Window
 pub fn Window::as_ref(Self) -> WindowRef
-pub fn Window::bridge_lifecycle_state(Self) -> Result[BridgeLifecycleState, NativeError]
-pub fn Window::close(Self) -> Result[Unit, NativeError]
-pub fn Window::destroy(Self) -> Result[Unit, NativeError]
-pub fn Window::emit_bridge_event_json(Self, String) -> Result[Unit, NativeError]
-pub fn Window::eval(Self, String) -> Result[Unit, NativeError]
-pub fn Window::focus(Self) -> Result[Unit, NativeError]
-pub fn Window::hide(Self) -> Result[Unit, NativeError]
-pub fn Window::load_html(Self, String, String) -> Result[Unit, NativeError]
-pub fn Window::load_url(Self, String) -> Result[Unit, NativeError]
-pub fn Window::new(Runtime, config? : WindowConfig) -> Result[Self, NativeError]
-pub fn Window::set_size(Self, Int, Int) -> Result[Unit, NativeError]
-pub fn Window::set_title(Self, String) -> Result[Unit, NativeError]
-pub fn Window::show(Self) -> Result[Unit, NativeError]
-pub fn Window::take_bridge_failure(Self) -> Result[BridgeDiagnostic?, NativeError]
+pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise NativeError
+pub fn Window::close(Self) -> Unit raise NativeError
+pub fn Window::destroy(Self) -> Unit raise NativeError
+pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
+pub fn Window::eval(Self, String) -> Unit raise NativeError
+pub fn Window::focus(Self) -> Unit raise NativeError
+pub fn Window::hide(Self) -> Unit raise NativeError
+pub fn Window::load_html(Self, String, String) -> Unit raise NativeError
+pub fn Window::load_url(Self, String) -> Unit raise NativeError
+pub fn Window::new(Runtime, config? : WindowConfig) -> Self raise NativeError
+pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_title(Self, String) -> Unit raise NativeError
+pub fn Window::show(Self) -> Unit raise NativeError
+pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
 pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, titlebar_style? : TitlebarStyle, bridge? : BridgeConfig) -> Self
@@ -232,12 +234,12 @@ pub fn WindowConfig::to_json_string(Self) -> String
 pub fn WindowConfig::unsafe_from_json(String) -> Self
 
 type WindowRef derive(Eq, @debug.Debug)
-pub fn WindowRef::begin_choose_directory_dialog(Self, String?, String?) -> Result[Int64, NativeError]
-pub fn WindowRef::begin_confirm_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
-pub fn WindowRef::begin_message_dialog(Self, String?, String, DialogLevel) -> Result[Int64, NativeError]
-pub fn WindowRef::begin_open_file_dialog(Self, String?, String?) -> Result[Int64, NativeError]
-pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Result[Int64, NativeError]
-pub fn WindowRef::poll_dialog_result(Self, Int64) -> Result[DialogPollResult, NativeError]
+pub fn WindowRef::begin_choose_directory_dialog(Self, String?, String?) -> Int64 raise NativeError
+pub fn WindowRef::begin_confirm_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
+pub fn WindowRef::begin_message_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
+pub fn WindowRef::begin_open_file_dialog(Self, String?, String?) -> Int64 raise NativeError
+pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Int64 raise NativeError
+pub fn WindowRef::poll_dialog_result(Self, Int64) -> DialogPollResult raise NativeError
 pub fn WindowRef::unsafe_from_handle(Int64) -> Self
 
 // Type aliases

@@ -18,7 +18,7 @@ fn describe(
   background_arg : String?,
   extra_arguments : Array[String]?,
   identifier : String?,
-) -> Result[AutoLaunchReply, String] {
+) -> AutoLaunchReply raise AutoLaunchError {
   describe_auto_launch(
     auto_launch_payload(
       name, path, launch_in_background, background_arg, extra_arguments, identifier,
@@ -36,7 +36,7 @@ fn is_enabled(
   background_arg : String?,
   extra_arguments : Array[String]?,
   identifier : String?,
-) -> Result[EnabledReply, String] {
+) -> EnabledReply raise AutoLaunchError {
   is_auto_launch_enabled(
     auto_launch_payload(
       name, path, launch_in_background, background_arg, extra_arguments, identifier,
@@ -55,22 +55,17 @@ async fn enable(
   background_arg : String?,
   extra_arguments : Array[String]?,
   identifier : String?,
-) -> Result[MutationReply, String] {
-  match
-    enable_auto_launch(
-      auto_launch_payload(
-        name, path, launch_in_background, background_arg, extra_arguments, identifier,
-      ),
-    ) {
-    Err(error) => Err(error)
-    Ok(identifier) => {
-      emit_auto_launch_activity(context, AutoLaunchActivity::{
-        operation: "enable",
-        identifier: Some(identifier),
-      })
-      Ok(MutationReply::{ changed: true })
-    }
-  }
+) -> MutationReply raise AutoLaunchError {
+  let identifier = enable_auto_launch(
+    auto_launch_payload(
+      name, path, launch_in_background, background_arg, extra_arguments, identifier,
+    ),
+  )
+  emit_auto_launch_activity(context, AutoLaunchActivity::{
+    operation: "enable",
+    identifier: Some(identifier),
+  })
+  MutationReply::{ changed: true }
 }
 
 ///|
@@ -84,22 +79,17 @@ async fn disable(
   background_arg : String?,
   extra_arguments : Array[String]?,
   identifier : String?,
-) -> Result[MutationReply, String] {
-  match
-    disable_auto_launch(
-      auto_launch_payload(
-        name, path, launch_in_background, background_arg, extra_arguments, identifier,
-      ),
-    ) {
-    Err(error) => Err(error)
-    Ok(identifier) => {
-      emit_auto_launch_activity(context, AutoLaunchActivity::{
-        operation: "disable",
-        identifier: Some(identifier),
-      })
-      Ok(MutationReply::{ changed: true })
-    }
-  }
+) -> MutationReply raise AutoLaunchError {
+  let identifier = disable_auto_launch(
+    auto_launch_payload(
+      name, path, launch_in_background, background_arg, extra_arguments, identifier,
+    ),
+  )
+  emit_auto_launch_activity(context, AutoLaunchActivity::{
+    operation: "disable",
+    identifier: Some(identifier),
+  })
+  MutationReply::{ changed: true }
 }
 
 ///|

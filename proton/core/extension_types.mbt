@@ -3,9 +3,9 @@
 struct Extension {
   id : String
   js_namespace : String
-  register : (ExtensionContext) -> Unit
-  on_install : (ExtensionContext) -> Unit
-  on_destroy : (ExtensionContext) -> Unit
+  register : (ExtensionContext) -> Unit raise
+  on_install : (ExtensionContext) -> Unit raise
+  on_destroy : (ExtensionContext) -> Unit raise
   scripts : Array[String]
 }
 
@@ -24,7 +24,7 @@ struct ExtensionHost {
   extension_namespaces : Map[String, String]
   apis : Map[String, Bool]
   api_names : Map[String, Array[String]]
-  destroy_hooks : Map[String, () -> Unit]
+  destroy_hooks : Map[String, () -> Unit raise]
   op_registry : OpRegistry
 }
 
@@ -33,9 +33,9 @@ struct ExtensionHost {
 pub fn Extension::new(
   id : String,
   js_namespace : String,
-  register : (ExtensionContext) -> Unit,
-  on_install? : (ExtensionContext) -> Unit = fn(_context) {  },
-  on_destroy? : (ExtensionContext) -> Unit = fn(_context) {  },
+  register : (ExtensionContext) -> Unit raise,
+  on_install? : (ExtensionContext) -> Unit raise = fn(_context) {  },
+  on_destroy? : (ExtensionContext) -> Unit raise = fn(_context) {  },
   scripts? : Array[String] = [],
 ) -> Extension {
   Extension::{
@@ -78,7 +78,7 @@ pub fn[Payload : ToJson] ExtensionContext::emit(
   self : ExtensionContext,
   event_name : String,
   payload : Payload,
-) -> Unit {
+) -> Unit raise ExtensionHostError {
   self.host.emit(self.extension_namespace, event_name, payload)
 }
 
@@ -87,21 +87,10 @@ pub fn[Payload : ToJson] ExtensionContext::emit(
 pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op(
   self : ExtensionContext,
   api_name : String,
-  callback : (Payload) -> Reply,
-) -> Unit {
+  callback : (Payload) -> Reply raise?,
+) -> Unit raise {
   let op_name = self.register_api(api_name)
-  self.host.op_registry.handle(op_name, callback)
-}
-
-///|
-/// Registers a typed extension op that can return explicit errors.
-pub fn[Payload : @json.FromJson, Reply : ToJson] ExtensionContext::op_result(
-  self : ExtensionContext,
-  api_name : String,
-  callback : (Payload) -> Result[Reply, String],
-) -> Unit {
-  let op_name = self.register_api(api_name)
-  self.host.op_registry.handle_result(op_name, callback)
+  self.host.op_registry.handle(op_name, fn(payload) raise { callback(payload) })
 }
 
 ///|

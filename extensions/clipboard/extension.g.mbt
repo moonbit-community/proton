@@ -5,7 +5,7 @@
 pub async fn emit_clipboard_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : ClipboardActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -18,7 +18,7 @@ struct ProtonReadTextPayload {
 async fn __proton_command_read_text(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonReadTextPayload,
-) -> Result[ReadTextReply, String] {
+) -> ReadTextReply raise ClipboardError {
   read_text(context, payload._payload)
 }
 
@@ -31,7 +31,7 @@ struct ProtonWriteTextPayload {
 async fn __proton_command_write_text(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonWriteTextPayload,
-) -> Result[WriteTextReply, String] {
+) -> WriteTextReply raise ClipboardError {
   write_text(context, payload.text)
 }
 
@@ -49,14 +49,13 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("readText"),
       @proton_command.AppCommandApiDescriptor::new("writeText"),
     ],
-    fn(context) {
-      context.op_async_result("readText", async fn(payload) {
+    fn(context) raise {
+      context.op_async("readText", async fn(payload) {
         __proton_command_read_text(context, payload)
       }, emits_events=true)
-      context.op_async_result("writeText", async fn(payload) {
+      context.op_async("writeText", async fn(payload) {
         __proton_command_write_text(context, payload)
       }, emits_events=true)
-      Ok(())
     },
   )
 }

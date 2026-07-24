@@ -1,11 +1,22 @@
 ///|
+fn[T] expect_native_error(
+  action : () -> T raise NativeError,
+) -> NativeError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected native operation to fail")
+  }
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }
 
 ///|
 test "runtime info reports ABI and Proton runtime metadata" {
-  let info = runtime_info_json().unwrap()
+  let info = runtime_info_json()
   assert_true(info.contains("\"abi_version\":1"))
   let has_abi_only = info.contains("\"runtime_available\":false") &&
     info.contains("\"build_mode\":\"abi-only\"")
@@ -16,7 +27,7 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(info.contains("\"event_polling\""))
   assert_true(info.contains("\"bridge_polling\""))
   assert_true(info.contains("\"platform\":"))
-  let typed = runtime_info().unwrap()
+  let typed = runtime_info()
   inspect(typed.abi_version, content="1")
   assert_true(typed.build_mode == "abi-only" || typed.build_mode == "runtime")
   assert_true(typed.runtime_available == (typed.build_mode == "runtime"))
@@ -54,121 +65,107 @@ test "runtime wait ready mask helpers" {
 
 ///|
 test "runtime wait reports queued native events without consuming them" {
-  let runtime = Runtime::new().unwrap()
-  let empty_ready = runtime
-    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
-    .unwrap()
+  let runtime = Runtime::new()
+  let empty_ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
+
   inspect(empty_ready.is_timeout(), content="true")
-  let window = Window::new(runtime).unwrap()
-  let ready = runtime
-    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
-    .unwrap()
+  let window = Window::new(runtime)
+  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
+
   inspect(ready.has_event(), content="true")
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    Some(event) => inspect(event.event_type(), content="window_created")
     _ => fail("expected window_created event")
   }
-  let empty_after_poll = runtime
-    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
-    .unwrap()
+  let empty_after_poll = runtime.wait(
+    interest_mask=runtime_wait_event,
+    timeout_ms=0,
+  )
+
   inspect(empty_after_poll.is_timeout(), content="true")
-  match runtime.wait(interest_mask=runtime_wait_bridge, timeout_ms=0) {
-    Err(error) => {
-      inspect(error.status, content="-8")
-      assert_true(error.message.contains("native engine"))
-    }
-    Ok(_) => fail("expected bridge wait to require engine")
-  }
-  debug_inspect(window.destroy(), content="Ok(())")
+  let error = expect_native_error(() => {
+    runtime.wait(interest_mask=runtime_wait_bridge, timeout_ms=0)
+  })
+  inspect(error.status(), content="-8")
+  assert_true(error.message().contains("native engine"))
+  window.destroy()
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_closed")
+    Some(event) => inspect(event.event_type(), content="window_closed")
     _ => fail("expected window_closed event")
   }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  runtime.destroy()
 }
 
 ///|
 test "execute_process returns main process for fake native runtime" {
-  debug_inspect(execute_process(), content="Ok(MainProcess)")
+  debug_inspect(execute_process(), content="MainProcess")
 }
 
 ///|
 test "runtime create rejects second active runtime" {
-  let runtime = Runtime::new().unwrap()
-  let result = Runtime::new()
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-5")
-      assert_true(error.message.contains("already initialized"))
-    }
-    Ok(_) => fail("expected second active runtime to fail")
-  }
-  debug_inspect(runtime.destroy(), content="Ok(())")
-  let recreated = Runtime::new().unwrap()
-  debug_inspect(recreated.destroy(), content="Ok(())")
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => Runtime::new())
+  inspect(error.status(), content="-5")
+  assert_true(error.message().contains("already initialized"))
+  runtime.destroy()
+  let recreated = Runtime::new()
+  recreated.destroy()
 }
 
 ///|
 test "runtime and window lifecycle uses non-zero Int64 handles" {
-  let runtime = Runtime::new().unwrap()
+  let runtime = Runtime::new()
   assert_true(runtime.handle != 0L)
-  let window = Window::new(runtime).unwrap()
+  let window = Window::new(runtime)
   assert_true(window.handle != 0L)
   match runtime.poll_event() {
-    Ok(Some(event)) => {
+    Some(event) => {
       inspect(event.event_type(), content="window_created")
       inspect(event.has_window(), content="true")
       inspect(event.is_window_created(), content="true")
     }
     _ => fail("expected window_created event")
   }
-  debug_inspect(window.set_size(640, 480), content="Ok(())")
-  debug_inspect(window.set_title("Proton"), content="Ok(())")
-  debug_inspect(window.load_url("about:blank"), content="Ok(())")
-  debug_inspect(
-    window.load_html("<h1>ok</h1>", "proton://app/"),
-    content="Ok(())",
-  )
-  debug_inspect(window.eval("1 + 1"), content="Ok(())")
-  debug_inspect(window.destroy(), content="Ok(())")
+  window.set_size(640, 480)
+  window.set_title("Proton")
+  window.load_url("about:blank")
+  window.load_html("<h1>ok</h1>", "proton://app/")
+  window.eval("1 + 1")
+  window.destroy()
   match runtime.poll_event() {
-    Ok(Some(event)) => {
+    Some(event) => {
       inspect(event.event_type(), content="window_closed")
       inspect(event.has_window(), content="true")
       inspect(event.is_window_closed(), content="true")
     }
     _ => fail("expected window_closed event")
   }
-  debug_inspect(runtime.poll_event(), content="Ok(None)")
-  debug_inspect(window.destroy(), content="Ok(())")
-  debug_inspect(runtime.destroy(), content="Ok(())")
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  assert_true(runtime.poll_event() is None)
+  window.destroy()
+  runtime.destroy()
+  runtime.destroy()
 }
 
 ///|
 test "window close invalidates MoonBit handle" {
-  let runtime = Runtime::new().unwrap()
-  let window = Window::new(runtime).unwrap()
+  let runtime = Runtime::new()
+  let window = Window::new(runtime)
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    Some(event) => inspect(event.event_type(), content="window_created")
     _ => fail("expected window_created event")
   }
-  debug_inspect(window.close(), content="Ok(())")
+  window.close()
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_closed")
+    Some(event) => inspect(event.event_type(), content="window_closed")
     _ => fail("expected window_closed event")
   }
-  debug_inspect(window.close(), content="Ok(())")
-  debug_inspect(window.destroy(), content="Ok(())")
-  match window.show() {
-    Err(error) => {
-      inspect(error.status, content="-2")
-      assert_true(error.message.contains("invalid window handle"))
-    }
-    Ok(_) => fail("expected invalid handle after close")
-  }
-  debug_inspect(runtime.poll_event(), content="Ok(None)")
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  window.close()
+  window.destroy()
+  let error = expect_native_error(() => window.show())
+  inspect(error.status(), content="-2")
+  assert_true(error.message().contains("invalid window handle"))
+  assert_true(runtime.poll_event() is None)
+  runtime.destroy()
 }
 
 ///|
@@ -232,44 +229,34 @@ test "typed configs generate stable JSON for native ABI" {
 
 ///|
 test "runtime event decodes menu command payload" {
-  match
-    decode_runtime_event_json(
-      "{\"type\":\"menu_command\",\"command_id\":\"demo.refresh\",\"window\":\"17\"}",
-    ) {
-    Ok(event) => {
-      inspect(event.event_type(), content="menu_command")
-      assert_true(event.menu_command_id() == Some("demo.refresh"))
-      assert_true(event.window_id() == Some(17L))
-    }
-    Err(error) => fail(error.message)
-  }
+  let event = decode_runtime_event_json(
+    "{\"type\":\"menu_command\",\"command_id\":\"demo.refresh\",\"window\":\"17\"}",
+  )
+  inspect(event.event_type(), content="menu_command")
+  assert_true(event.menu_command_id() == Some("demo.refresh"))
+  assert_true(event.window_id() == Some(17L))
 }
 
 ///|
 test "bridge request keeps transport metadata outside the payload" {
-  match
-    decode_bridge_request_json(
-      "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
-      "\"op\":\"ext:add/sum\",\"payload\":{\"left\":20,\"right\":22}," +
-      "\"page_instance\":\"page-1\"}",
-    ) {
-    Ok(request) => {
-      inspect(request.request_id(), content="7")
-      inspect(request.window(), content="11")
-      inspect(request.op(), content="ext:add/sum")
-      assert_eq(
-        request.payload(),
-        Json::object({ "left": Json::number(20), "right": Json::number(22) }),
-      )
-      assert_eq(request.page_instance(), Some("page-1"))
-    }
-    Err(error) => fail(error.message)
-  }
+  let request = decode_bridge_request_json(
+    "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
+    "\"op\":\"ext:add/sum\",\"payload\":{\"left\":20,\"right\":22}," +
+    "\"page_instance\":\"page-1\"}",
+  )
+  inspect(request.request_id(), content="7")
+  inspect(request.window(), content="11")
+  inspect(request.op(), content="ext:add/sum")
+  assert_eq(
+    request.payload(),
+    Json::object({ "left": Json::number(20), "right": Json::number(22) }),
+  )
+  assert_eq(request.page_instance(), Some("page-1"))
 }
 
 ///|
 test "bridge ABI wrappers validate config and poll empty queue" {
-  let runtime = Runtime::new().unwrap()
+  let runtime = Runtime::new()
   let large_script = StringBuilder::new()
   for _ in 0..<7000 {
     large_script.write_string("window.__protonDevLarge = true;\n")
@@ -289,51 +276,45 @@ test "bridge ABI wrappers validate config and poll empty queue" {
         ],
       ),
     ),
-  ).unwrap()
+  )
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    Some(event) => inspect(event.event_type(), content="window_created")
     _ => fail("expected window_created event")
   }
-  debug_inspect(runtime.do_message_loop_work(), content="Ok(())")
-  debug_inspect(runtime.poll_bridge_request(), content="Ok(None)")
-  let invalid = Window::new(
-    runtime,
-    config=WindowConfig::unsafe_from_json(
-      "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":{\"abi_version\":1,\"namespace\":\"Other\",\"ops\":[],\"extensions\":[]}}",
-    ),
-  )
-  match invalid {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("namespace"))
-    }
-    Ok(_) => fail("expected invalid bridge config")
-  }
-  let response = runtime.respond_bridge_request(
-    BridgeResponse::Err(
-      request_id=1L,
-      code="op_failed",
-      message="no pending request",
-    ),
-  )
-  match response {
-    Err(error) => {
-      inspect(error.status, content="-8")
-      assert_true(error.message.contains("native engine"))
-    }
-    Ok(_) => fail("expected bridge response to require engine")
-  }
-  debug_inspect(window.destroy(), content="Ok(())")
+  runtime.do_message_loop_work()
+  assert_true(runtime.poll_bridge_request() is None)
+  let invalid_error = expect_native_error(() => {
+    Window::new(
+      runtime,
+      config=WindowConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":{\"abi_version\":1,\"namespace\":\"Other\",\"ops\":[],\"extensions\":[]}}",
+      ),
+    )
+  })
+  inspect(invalid_error.status(), content="-1")
+  assert_true(invalid_error.message().contains("namespace"))
+  let response_error = expect_native_error(() => {
+    runtime.respond_bridge_request(
+      BridgeResponse::Err(
+        request_id=1L,
+        code="op_failed",
+        message="no pending request",
+      ),
+    )
+  })
+  inspect(response_error.status(), content="-8")
+  assert_true(response_error.message().contains("native engine"))
+  window.destroy()
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_closed")
+    Some(event) => inspect(event.event_type(), content="window_closed")
     _ => fail("expected window_closed event")
   }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  runtime.destroy()
 }
 
 ///|
 test "bridge config rejects unsafe schema variants" {
-  let runtime = Runtime::new().unwrap()
+  let runtime = Runtime::new()
   let cases = [
     (
       "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"debug\":true}",
@@ -393,276 +374,221 @@ test "bridge config rejects unsafe schema variants" {
     let window_json = "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":" +
       raw +
       "}"
-    match
-      Window::new(runtime, config=WindowConfig::unsafe_from_json(window_json)) {
-      Err(error) => {
-        inspect(error.status, content="-1")
-        assert_true(error.message.contains(expected))
-      }
-      Ok(_) => fail("expected invalid bridge config: " + expected)
-    }
+    let error = expect_native_error(() => {
+      Window::new(runtime, config=WindowConfig::unsafe_from_json(window_json))
+    })
+    inspect(error.status(), content="-1")
+    assert_true(error.message().contains(expected))
   }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  runtime.destroy()
 }
 
 ///|
 test "runtime probe maps native config errors" {
-  let result = probe_runtime()
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("runtime_root"))
-    }
-    Ok(_) => fail("expected runtime probe config error")
-  }
+  let error = expect_native_error(() => probe_runtime())
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("runtime_root"))
 }
 
 ///|
 test "runtime probe reports missing runtime files" {
-  let result = RuntimeConfig::new(
-    runtime_root="missing-runtime-root",
-    helper_path="missing-helper",
-  ).probe()
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-7")
-      assert_true(error.message.contains("runtime engine library"))
-    }
-    Ok(_) => fail("expected runtime probe engine error")
-  }
+  let error = expect_native_error(() => {
+    RuntimeConfig::new(
+      runtime_root="missing-runtime-root",
+      helper_path="missing-helper",
+    ).probe()
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
 }
 
 ///|
 test "runtime create does not fake engine configs" {
-  let result = Runtime::new(
-    config=RuntimeConfig::new(
-      runtime_root="missing-runtime-root",
-      helper_path="missing-helper",
-    ),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-7")
-      assert_true(error.message.contains("runtime engine library"))
-    }
-    Ok(_) => fail("expected runtime create engine config error")
-  }
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::new(
+        runtime_root="missing-runtime-root",
+        helper_path="missing-helper",
+      ),
+    )
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
 }
 
 ///|
 test "execute_process does not ignore engine configs" {
-  let result = execute_process(
-    config=RuntimeConfig::new(
-      runtime_root="missing-runtime-root",
-      helper_path="missing-helper",
-    ),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-7")
-      assert_true(error.message.contains("runtime engine library"))
-    }
-    Ok(_) => fail("expected execute_process engine config error")
-  }
+  let error = expect_native_error(() => {
+    execute_process(
+      config=RuntimeConfig::new(
+        runtime_root="missing-runtime-root",
+        helper_path="missing-helper",
+      ),
+    )
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
 }
 
 ///|
 test "invalid handle returns structured native error" {
   let window = Window::{ handle: 0L }
-  match window.show() {
-    Err(error) => {
-      inspect(error.status, content="-2")
-      assert_true(error.message.contains("invalid window handle"))
-    }
-    Ok(_) => fail("expected invalid handle error")
-  }
+  let error = expect_native_error(() => window.show())
+  inspect(error.status(), content="-2")
+  assert_true(error.message().contains("invalid window handle"))
 }
 
 ///|
 test "runtime config requires abi_version 1" {
-  let result = Runtime::new(
-    config=RuntimeConfig::unsafe_from_json("{\"abi_version\":2}"),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("abi_version"))
-    }
-    Ok(_) => fail("expected invalid config error")
-  }
+  let error = expect_native_error(() => {
+    Runtime::new(config=RuntimeConfig::unsafe_from_json("{\"abi_version\":2}"))
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
 }
 
 ///|
 test "execute_process requires abi_version 1" {
-  let result = execute_process(config=RuntimeConfig::unsafe_from_json("{}"))
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("abi_version"))
-    }
-    Ok(_) => fail("expected invalid config error")
-  }
+  let error = expect_native_error(() => {
+    execute_process(config=RuntimeConfig::unsafe_from_json("{}"))
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
 }
 
 ///|
 test "runtime config rejects unknown fields" {
-  let result = Runtime::new(
-    config=RuntimeConfig::unsafe_from_json("{\"abi_version\":1,\"debug\":true}"),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("unknown field: debug"))
-    }
-    Ok(_) => fail("expected unknown runtime field to fail")
-  }
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"debug\":true}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("unknown field: debug"))
 }
 
 ///|
 test "runtime config rejects malformed JSON object" {
-  let result = Runtime::new(
-    config=RuntimeConfig::unsafe_from_json("{\"abi_version\":1,}"),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("trailing comma"))
-    }
-    Ok(_) => fail("expected trailing comma config to fail")
-  }
+  let error = expect_native_error(() => {
+    Runtime::new(config=RuntimeConfig::unsafe_from_json("{\"abi_version\":1,}"))
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("trailing comma"))
 }
 
 ///|
 test "runtime config requires top-level abi_version" {
-  let result = Runtime::new(
-    config=RuntimeConfig::unsafe_from_json(
-      "{\"cache_dir\":{\"abi_version\":1}}",
-    ),
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::unsafe_from_json(
+        "{\"cache_dir\":{\"abi_version\":1}}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  inspect(
+    error.message(),
+    content="runtime field has invalid type or range: cache_dir",
   )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      inspect(
-        error.message,
-        content="runtime field has invalid type or range: cache_dir",
-      )
-    }
-    Ok(_) => fail("expected nested abi_version to fail")
-  }
 }
 
 ///|
 test "window config requires positive width and height" {
-  let runtime = Runtime::new().unwrap()
-  let result = Window::new(
-    runtime,
-    config=WindowConfig::unsafe_from_json(
-      "{\"abi_version\":1,\"title\":\"Bad\"}",
-    ),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("width and height"))
-    }
-    Ok(_) => fail("expected invalid window config error")
-  }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => {
+    Window::new(
+      runtime,
+      config=WindowConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"title\":\"Bad\"}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("width and height"))
+  runtime.destroy()
 }
 
 ///|
 test "typed window config is validated before native FFI" {
-  let runtime = Runtime::new().unwrap()
-  let result = Window::new(
-    runtime,
-    config=WindowConfig::new(width=0, height=240),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      inspect(error.message, content="width and height must be positive")
-    }
-    Ok(_) => fail("expected typed window config validation error")
-  }
-  debug_inspect(runtime.poll_event(), content="Ok(None)")
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => {
+    Window::new(runtime, config=WindowConfig::new(width=0, height=240))
+  })
+  inspect(error.status(), content="-1")
+  inspect(error.message(), content="width and height must be positive")
+  assert_true(runtime.poll_event() is None)
+  runtime.destroy()
 }
 
 ///|
 test "window config rejects unknown fields" {
-  let runtime = Runtime::new().unwrap()
-  let result = Window::new(
-    runtime,
-    config=WindowConfig::unsafe_from_json(
-      "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"resizable\":true}",
-    ),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("unknown field: resizable"))
-    }
-    Ok(_) => fail("expected unknown window field to fail")
-  }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => {
+    Window::new(
+      runtime,
+      config=WindowConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"resizable\":true}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("unknown field: resizable"))
+  runtime.destroy()
 }
 
 ///|
 test "typed window config serializes overlay titlebar style" {
   let config = WindowConfig::new(titlebar_style=TitlebarStyle::Overlay)
   let json = config.to_json_string()
-  match runtime_info() {
-    Ok(info) if info.features.contains("titlebar_overlay") =>
-      assert_true(json.contains("\"titlebar_style\":\"overlay\""))
-    _ => assert_false(json.contains("\"titlebar_style\""))
+  let supports_overlay = runtime_info() catch { _ => return }
+  if supports_overlay.features.contains("titlebar_overlay") {
+    assert_true(json.contains("\"titlebar_style\":\"overlay\""))
+  } else {
+    assert_false(json.contains("\"titlebar_style\""))
   }
 }
 
 ///|
 test "window config accepts overlay titlebar style" {
-  let runtime = Runtime::new().unwrap()
+  let runtime = Runtime::new()
   let window = Window::new(
     runtime,
     config=WindowConfig::new(titlebar_style=TitlebarStyle::Overlay),
-  ).unwrap()
-  debug_inspect(window.destroy(), content="Ok(())")
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  )
+  window.destroy()
+  runtime.destroy()
 }
 
 ///|
 test "window config rejects unsupported titlebar style" {
-  let runtime = Runtime::new().unwrap()
-  let result = Window::new(
-    runtime,
-    config=WindowConfig::unsafe_from_json(
-      "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"titlebar_style\":\"hidden_inset\"}",
-    ),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("invalid type or range"))
-    }
-    Ok(_) => fail("expected unsupported titlebar style to fail")
-  }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => {
+    Window::new(
+      runtime,
+      config=WindowConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"titlebar_style\":\"hidden_inset\"}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("invalid type or range"))
+  runtime.destroy()
 }
 
 ///|
 test "window config requires abi_version 1" {
-  let runtime = Runtime::new().unwrap()
-  let result = Window::new(
-    runtime,
-    config=WindowConfig::unsafe_from_json(
-      "{\"title\":\"Bad\",\"width\":320,\"height\":240}",
-    ),
-  )
-  match result {
-    Err(error) => {
-      inspect(error.status, content="-1")
-      assert_true(error.message.contains("abi_version"))
-    }
-    Ok(_) => fail("expected invalid window config error")
-  }
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => {
+    Window::new(
+      runtime,
+      config=WindowConfig::unsafe_from_json(
+        "{\"title\":\"Bad\",\"width\":320,\"height\":240}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  runtime.destroy()
 }

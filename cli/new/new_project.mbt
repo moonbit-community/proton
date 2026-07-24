@@ -29,62 +29,47 @@ struct NewProjectOptions {
 } derive(Debug, Eq)
 
 ///|
-pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, String] {
+/// Creates a project from parsed `proton_cli new` command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let cwd = @path.Path(cwd).resolve().to_string()
-  let raw = parse_new_args(args) catch { err => return Err(err.to_string()) }
-  let defaults = match options_from_raw(cwd, raw) {
-    Ok(options) => options
-    Err(message) => return Err(message)
-  }
+  let raw = new_options_from_matches(matches)
+  let defaults = options_from_raw(cwd, raw)
   let interactive = !raw.yes && !@ci.is_ci(cwd~)
   let options = if interactive {
-    let prompted = match prompt_new_project_options(raw, defaults) {
-      Ok(options) => options
-      Err(message) => return Err(message)
-    }
+    let prompted = prompt_new_project_options(raw, defaults)
     if !confirm_create(prompted) {
       println("Cancelled.")
-      return Ok(())
+      return
     }
     prompted
   } else {
     defaults
   }
-  let files = match
-    plan_project_files(
-      options.title,
-      options.module_name,
-      options.identifier,
-      options.width,
-      options.height,
-    ) {
-    Ok(files) => files
-    Err(message) => return Err(message)
-  }
+  let files = plan_project_files(
+    options.title,
+    options.module_name,
+    options.identifier,
+    options.width,
+    options.height,
+  )
   if options.dry_run {
     print_dry_run(options, files)
-    return Ok(())
+    return
   }
-  match write_project(options, files) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  match maybe_init_git(options) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
+  write_project(options, files)
+  maybe_init_git(options)
   if options.run_check {
     run_moon_check(options)
   } else {
     print_success(options, checked=false)
-    Ok(())
   }
 }
 
 ///|
-fn new_arg_parser() -> @argparse.Command {
+/// Returns the declarative `proton_cli new` command specification.
+pub fn command() -> @argparse.Command {
   @argparse.Command(
-    "proton_cli new",
+    "new",
     about="Create a new Proton native desktop app",
     flags=[
       FlagArg(
@@ -133,35 +118,20 @@ fn new_arg_parser() -> @argparse.Command {
 }
 
 ///|
-fn parse_new_args(args : Array[String]) -> RawNewProjectOptions raise {
-  let matches = new_arg_parser().parse(argv=args, env=Map([]))
+fn new_options_from_matches(
+  matches : @argparse.Matches,
+) -> RawNewProjectOptions {
   {
-    path: match_value(matches, "path"),
-    title: match_value(matches, "title"),
-    module_name: match_value(matches, "module"),
-    identifier: match_value(matches, "identifier"),
-    width: match_value(matches, "width"),
-    height: match_value(matches, "height"),
-    check: match_flag(matches, "check"),
-    yes: match_flag(matches, "yes").unwrap_or(false),
-    git: match_flag(matches, "git"),
-    dry_run: match_flag(matches, "dry-run").unwrap_or(false),
-  }
-}
-
-///|
-fn match_value(matches : @argparse.Matches, name : String) -> String? {
-  match matches.values.get(name) {
-    Some([value, ..]) => Some(value)
-    _ => None
-  }
-}
-
-///|
-fn match_flag(matches : @argparse.Matches, name : String) -> Bool? {
-  match matches.flags.get(name) {
-    Some(value) => Some(value)
-    None => None
+    path: @cli_args.value(matches, "path"),
+    title: @cli_args.value(matches, "title"),
+    module_name: @cli_args.value(matches, "module"),
+    identifier: @cli_args.value(matches, "identifier"),
+    width: @cli_args.value(matches, "width"),
+    height: @cli_args.value(matches, "height"),
+    check: @cli_args.optional_flag(matches, "check"),
+    yes: @cli_args.flag(matches, "yes"),
+    git: @cli_args.optional_flag(matches, "git"),
+    dry_run: @cli_args.flag(matches, "dry-run"),
   }
 }
 
@@ -169,26 +139,18 @@ fn match_flag(matches : @argparse.Matches, name : String) -> Bool? {
 fn options_from_raw(
   cwd : String,
   raw : RawNewProjectOptions,
-) -> Result[NewProjectOptions, String] {
+) -> NewProjectOptions raise NewProjectInputError {
   let target_dir = raw.path.unwrap_or(default_project_path)
   let slug = project_slug(cwd, target_dir)
   let title = raw.title.unwrap_or(slug_to_title(slug))
   let module_name = raw.module_name.unwrap_or(slug)
   let identifier = raw.identifier.unwrap_or(default_bundle_identifier(slug))
   let width = match raw.width {
-    Some(value) =>
-      match parse_positive_int(value, "width") {
-        Ok(width) => width
-        Err(message) => return Err(message)
-      }
+    Some(value) => parse_positive_int(value, "width")
     None => default_width
   }
   let height = match raw.height {
-    Some(value) =>
-      match parse_positive_int(value, "height") {
-        Ok(height) => height
-        Err(message) => return Err(message)
-      }
+    Some(value) => parse_positive_int(value, "height")
     None => default_height
   }
   let run_check = raw.check.unwrap_or(true)
@@ -212,24 +174,12 @@ fn options_from_raw(
 ///|
 fn validate_options(
   options : NewProjectOptions,
-) -> Result[NewProjectOptions, String] {
-  match validate_target_dir(options.target_dir) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  match validate_title(options.title) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  match validate_module_name(options.module_name) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  match validate_bundle_identifier(options.identifier) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  Ok(options)
+) -> NewProjectOptions raise NewProjectInputError {
+  validate_target_dir(options.target_dir)
+  validate_title(options.title)
+  validate_module_name(options.module_name)
+  validate_bundle_identifier(options.identifier)
+  options
 }
 
 ///|
@@ -248,32 +198,20 @@ fn print_dry_run(
 fn write_project(
   options : NewProjectOptions,
   files : Array[PlannedFile],
-) -> Result[Unit, String] {
-  match validate_target_dir_for_write(options.resolved_target_dir) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
-  match ensure_dir_recursive(options.resolved_target_dir) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
+) -> Unit raise {
+  validate_target_dir_for_write(options.resolved_target_dir)
+  ensure_dir_recursive(options.resolved_target_dir)
   for file in files {
     let output_path = project_file_path(options.resolved_target_dir, file.path)
-    match ensure_file_parent(output_path) {
-      Ok(_) => ()
-      Err(message) => return Err(message)
-    }
+    ensure_file_parent(output_path)
     @mbfs.write_string_to_file(output_path, file.content, encoding="utf8") catch {
       err =>
-        return Err(
-          "failed to write " +
-          output_path +
-          ": " +
-          @debug.render(@debug.to_repr(err)),
+        raise NewProjectWriteError::WriteFile(
+          path=output_path,
+          detail=@debug.render(@debug.to_repr(err)),
         )
     }
   }
-  Ok(())
 }
 
 ///|
@@ -286,33 +224,27 @@ fn project_file_path(root : String, relative : String) -> String {
 }
 
 ///|
-fn ensure_file_parent(path : String) -> Result[Unit, String] {
+fn ensure_file_parent(path : String) -> Unit raise NewProjectWriteError {
   let parent = new_path_parent(path)
   if parent == path || parent == "" || path_exists(parent) {
-    return Ok(())
+    return
   }
   ensure_dir_recursive(parent)
 }
 
 ///|
-fn ensure_dir_recursive(path : String) -> Result[Unit, String] {
+fn ensure_dir_recursive(path : String) -> Unit raise NewProjectWriteError {
   if path == "" || path_exists(path) {
-    return Ok(())
+    return
   }
   let parent = new_path_parent(path)
   if parent != "" && parent != path {
-    match ensure_dir_recursive(parent) {
-      Ok(_) => ()
-      Err(message) => return Err(message)
-    }
+    ensure_dir_recursive(parent)
   }
   @mbfs.create_dir(path) catch {
     err =>
-      return Err(
-        "failed to create " + path + ": " + @debug.render(@debug.to_repr(err)),
-      )
+      raise CreateDirectory(path~, detail=@debug.render(@debug.to_repr(err)))
   }
-  Ok(())
 }
 
 ///|
@@ -338,27 +270,30 @@ fn new_path_parent(path : String) -> String {
 }
 
 ///|
-async fn maybe_init_git(options : NewProjectOptions) -> Result[Unit, String] {
+async fn maybe_init_git(
+  options : NewProjectOptions,
+) -> Unit raise NewProjectToolError {
   match options.git {
     Some(true) => {
       let code = @process.run("git", ["init"], cwd=options.resolved_target_dir) catch {
         err =>
-          return Err(
-            "failed to run git init: " + @debug.render(@debug.to_repr(err)),
+          raise Start(
+            tool="git init",
+            detail=@debug.render(@debug.to_repr(err)),
           )
       }
-      if code == 0 {
-        Ok(())
-      } else {
-        Err("git init failed with exit code " + code.to_string())
+      if code != 0 {
+        raise Exit(tool="git init", code~)
       }
     }
-    _ => Ok(())
+    _ => ()
   }
 }
 
 ///|
-async fn run_moon_check(options : NewProjectOptions) -> Result[Unit, String] {
+async fn run_moon_check(
+  options : NewProjectOptions,
+) -> Unit raise NewProjectToolError {
   let code = @process.run("moon", [
     "-C",
     options.resolved_target_dir,
@@ -369,21 +304,12 @@ async fn run_moon_check(options : NewProjectOptions) -> Result[Unit, String] {
     "80",
   ]) catch {
     err =>
-      return Err(
-        "failed to run moon check: " + @debug.render(@debug.to_repr(err)),
-      )
+      raise Start(tool="moon check", detail=@debug.render(@debug.to_repr(err)))
   }
   if code == 0 {
     print_success(options, checked=true)
-    Ok(())
   } else {
-    Err(
-      "project was created, but moon check failed with exit code " +
-      code.to_string() +
-      "\n\nRetry with:\n  cd " +
-      options.target_dir +
-      "\n  moon check --target native --diagnostic-limit 80",
-    )
+    raise MoonCheckFailed(code~, project=options.target_dir)
   }
 }
 
@@ -399,6 +325,6 @@ fn print_success(options : NewProjectOptions, checked~ : Bool) -> Unit {
   println("  proton_cli cef setup")
   println("  proton_cli dev")
   println("  proton_cli build")
-  println("  proton_cli package app --dry-run")
-  println("  proton_cli package app")
+  println("  proton_cli package --dry-run")
+  println("  proton_cli package")
 }

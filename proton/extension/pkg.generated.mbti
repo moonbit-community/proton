@@ -4,6 +4,7 @@ package "justjavac/proton/extension"
 import {
   "justjavac/proton/command",
   "justjavac/proton/core",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -14,10 +15,15 @@ pub fn from_command_spec(@command.AppCommandExtensionSpec) -> Extension
 pub fn from_core_spec(@core.ExtensionSpec) -> Extension
 
 // Errors
+pub(all) suberror ExtensionAdapterError {
+  DescriptorBuildFailed(extension_id~ : String, detail~ : String)
+  DescriptorInstallFailed(extension_id~ : String, detail~ : String)
+} derive(@debug.Debug)
+pub fn ExtensionAdapterError::message(Self) -> String
 
 // Types and methods
 type Extension
-pub fn Extension::command_spec(Self) -> @command.AppCommandExtensionSpec?
+pub fn Extension::command_spec(Self) -> @command.AppCommandExtensionSpec? raise ExtensionAdapterError
 pub fn Extension::core_spec(Self) -> @core.ExtensionSpec?
 pub fn Extension::id(Self) -> String
 

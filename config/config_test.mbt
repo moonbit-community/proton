@@ -1,4 +1,15 @@
 ///|
+fn[T] expect_project_config_error(
+  action : () -> T raise ProjectConfigError,
+) -> ProjectConfigError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected project config operation to fail")
+  }
+}
+
+///|
 test "parse moon.proton minimal config" {
   let source =
     #|window = {
@@ -90,11 +101,10 @@ test "project config rejects unsupported window size_hint" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(_) => abort("expected unsupported size_hint")
-    Err(message) =>
-      assert_true(message.contains("unsupported window size_hint"))
-  }
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_true(error.message().contains("unsupported window.size_hint"))
 }
 
 ///|
@@ -112,10 +122,8 @@ test "project config parses default titlebar style" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(config) => assert_true(config.window.titlebar_style == TitlebarDefault)
-    Err(message) => abort(message)
-  }
+  let config = load_project_config_from_text(source, "target/proton-config")
+  assert_true(config.window.titlebar_style == TitlebarDefault)
 }
 
 ///|
@@ -133,10 +141,8 @@ test "project config parses overlay titlebar style" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(config) => assert_true(config.window.titlebar_style == TitlebarOverlay)
-    Err(message) => abort(message)
-  }
+  let config = load_project_config_from_text(source, "target/proton-config")
+  assert_true(config.window.titlebar_style == TitlebarOverlay)
 }
 
 ///|
@@ -154,11 +160,10 @@ test "project config rejects unsupported titlebar style" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(_) => abort("expected unsupported titlebar style")
-    Err(message) =>
-      assert_true(message.contains("unsupported window titlebar_style"))
-  }
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_true(error.message().contains("unsupported window.titlebar_style"))
 }
 
 ///|
@@ -188,10 +193,7 @@ test "project config rebases file entry and frontend paths from config directory
     #|  output: "target/proton-dist",
     #|}
     #|
-  let config = match load_project_config_from_text(source, base_dir) {
-    Ok(config) => config
-    Err(error) => abort(error)
-  }
+  let config = load_project_config_from_text(source, base_dir)
   match config.entry() {
     Asset(path) =>
       assert_true(

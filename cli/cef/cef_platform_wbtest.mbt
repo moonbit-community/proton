@@ -83,18 +83,16 @@ test "CEF archive names cannot escape generated directories" {
       "../cef", "cef/../../outside", "cef\\..\\outside", "/tmp/cef", "C:\\cef", ".",
       "..", "",
     ] {
-    match validate_cef_name(name) {
-      Ok(_) => abort("expected unsafe CEF name to fail: " + name)
-      Err(_) => ()
+    try validate_cef_name(name) catch {
+      CefUsageError::InvalidArchiveName(name=actual) => assert_eq(actual, name)
+      _ => abort("expected invalid CEF archive name")
+    } noraise {
+      _ => abort("expected unsafe CEF name to fail: " + name)
     }
   }
-  match
-    validate_cef_name(
-      "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
-    ) {
-    Ok(_) => ()
-    Err(_) => abort("expected default CEF name to pass")
-  }
+  validate_cef_name(
+    "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
+  )
 }
 
 ///|
@@ -105,39 +103,46 @@ test "default CEF archives have pinned SHA-256 digests" {
       darwin_arm64_platform(),
       linux_x64_platform(),
     ] {
-    match
-      resolve_cef_archive_sha256(
-        platform,
-        platform.default_cef_name,
-        None,
-        None,
-      ) {
-      Ok(value) => assert_true(valid_sha256(value))
-      Err(_) => abort("expected default CEF checksum")
-    }
+    let value = resolve_cef_archive_sha256(
+      platform,
+      platform.default_cef_name,
+      None,
+      None,
+    )
+    assert_true(valid_sha256(value))
   }
 }
 
 ///|
 test "custom CEF archives require a valid SHA-256 digest" {
   let platform = darwin_arm64_platform()
-  match
+  try
     resolve_cef_archive_sha256(
       platform,
       "custom",
       Some("https://example.test/cef"),
       None,
-    ) {
-    Err(_) => ()
-    Ok(_) => abort("expected missing custom checksum to fail")
+    )
+  catch {
+    CefUsageError::MissingCustomChecksum => ()
+    _ => abort("expected missing custom checksum")
+  } noraise {
+    _ => abort("expected missing custom checksum to fail")
   }
-  match resolve_cef_archive_sha256(platform, "custom", None, Some("invalid")) {
-    Err(_) => ()
-    Ok(_) => abort("expected invalid custom checksum to fail")
+  try
+    resolve_cef_archive_sha256(platform, "custom", None, Some("invalid"))
+  catch {
+    CefUsageError::InvalidChecksum(value="invalid") => ()
+    _ => abort("expected invalid custom checksum")
+  } noraise {
+    _ => abort("expected invalid custom checksum to fail")
   }
   let uppercase = "C105F69C0D4DC14331BE12CEE967EEB73FA4897A6ECDE244051318491CD381C7"
-  match resolve_cef_archive_sha256(platform, "custom", None, Some(uppercase)) {
-    Ok(value) => assert_eq(value, uppercase.to_lower())
-    Err(_) => abort("expected explicit checksum to pass")
-  }
+  let value = resolve_cef_archive_sha256(
+    platform,
+    "custom",
+    None,
+    Some(uppercase),
+  )
+  assert_eq(value, uppercase.to_lower())
 }

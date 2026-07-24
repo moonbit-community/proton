@@ -6,19 +6,62 @@ import {
 }
 
 // Values
-pub fn build_extension_link_plan(ExtensionCatalog, Array[String]) -> Result[ExtensionLinkPlan, String]
+pub fn build_extension_link_plan(ExtensionCatalog, Array[String]) -> ExtensionLinkPlan raise ExtensionLinkError
 
-pub fn discover_extension_descriptor_files(Array[String]) -> Result[Array[String], String]
+pub fn discover_extension_descriptor_files(Array[String]) -> Array[String] raise ExtensionCatalogError
 
-pub fn load_extension_catalog_from_descriptor_files(Array[String]) -> Result[ExtensionCatalog, String]
+pub fn load_extension_catalog_from_descriptor_files(Array[String]) -> ExtensionCatalog raise ExtensionCatalogError
 
-pub fn load_extension_catalog_from_search_roots(Array[String]) -> Result[ExtensionCatalog, String]
+pub fn load_extension_catalog_from_search_roots(Array[String]) -> ExtensionCatalog raise ExtensionCatalogError
 
-pub fn load_extension_catalog_summary_from_search_roots(Array[String]) -> Result[Json, String]
+pub fn load_extension_catalog_summary_from_search_roots(Array[String]) -> Json raise ExtensionCatalogError
 
-pub fn load_extension_descriptor_from_file(String) -> Result[ExtensionDescriptor, String]
+pub fn load_extension_descriptor_from_file(String) -> ExtensionDescriptor raise ExtensionDescriptorError
 
 // Errors
+pub(all) suberror ExtensionCatalogError {
+  Descriptor(ExtensionDescriptorError)
+  EmptyDescriptorId(path~ : String)
+  DuplicateExtensionId(id~ : String, path~ : String)
+  UnknownExtensionId(id~ : String)
+  SearchRootMissing(path~ : String)
+  SearchRootInspectFailed(path~ : String, detail~ : String)
+  InvalidSearchRoot(path~ : String)
+  DirectoryReadFailed(path~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ExtensionCatalogError::message(Self) -> String
+
+pub(all) suberror ExtensionDescriptorError {
+  InvalidMetadataFile(path~ : String)
+  ReadFailed(path~ : String, detail~ : String)
+  Syntax(path~ : String, diagnostics~ : String)
+  InvalidRoot(path~ : String)
+  InvalidMetadata(path~ : String, error~ : ExtensionMetadataError)
+} derive(Eq, @debug.Debug)
+pub fn ExtensionDescriptorError::message(Self) -> String
+
+pub(all) suberror ExtensionLinkError {
+  EmptySelectedId
+  UnknownExtension(id~ : String)
+  MissingDependency(extension_id~ : String, dependency_id~ : String)
+  DependencyCycle(id~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ExtensionLinkError::message(Self) -> String
+
+pub(all) suberror ExtensionMetadataError {
+  DuplicateField(field~ : String)
+  UnknownField(field~ : String)
+  MissingField(field~ : String)
+  InvalidType(field~ : String, expected~ : String)
+  EmptyField(field~ : String)
+  UnsupportedPlatform(platform~ : String)
+  DuplicateValue(field~ : String, value~ : String)
+  SelfDependency(id~ : String)
+  InvalidNamespace(value~ : String, reason~ : String)
+  InvalidImportPath(value~ : String, reason~ : String)
+  InvalidPackageName(value~ : String, reason~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ExtensionMetadataError::message(Self) -> String
 
 // Types and methods
 pub struct CatalogDiagnostic {
@@ -46,10 +89,10 @@ pub struct ExtensionCatalog {
 }
 pub fn ExtensionCatalog::descriptor_ids(Self) -> Array[String]
 pub fn ExtensionCatalog::descriptors(Self) -> Array[ExtensionDescriptor]
-pub fn ExtensionCatalog::from_descriptors(Array[ExtensionDescriptor]) -> Result[Self, String]
+pub fn ExtensionCatalog::from_descriptors(Array[ExtensionDescriptor]) -> Self raise ExtensionCatalogError
 pub fn ExtensionCatalog::get(Self, String) -> ExtensionDescriptor?
 pub fn ExtensionCatalog::new() -> Self
-pub fn ExtensionCatalog::require(Self, String) -> Result[ExtensionDescriptor, String]
+pub fn ExtensionCatalog::require(Self, String) -> ExtensionDescriptor raise ExtensionCatalogError
 pub fn ExtensionCatalog::to_summary_json(Self) -> Json
 
 pub struct ExtensionDescriptor {

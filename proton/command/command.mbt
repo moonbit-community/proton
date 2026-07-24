@@ -42,8 +42,8 @@ pub struct AppCommandExtensionSpec {
   apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Result[Unit, String]
-  on_destroy : (AppCommandExtensionContext) -> Unit
+  register : (AppCommandExtensionContext) -> Unit raise
+  on_destroy : (AppCommandExtensionContext) -> Unit raise
 }
 
 ///|
@@ -129,25 +129,11 @@ pub fn AppCommandExtensionContext::host(
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(
   self : AppCommandExtensionContext,
   api_name : String,
-  callback : (Payload) -> Reply,
+  callback : (Payload) -> Reply raise?,
   emits_events? : Bool = false,
-) -> Unit {
+) -> Unit raise @core.OpRegistrationError {
   let op_name = self.op_name(api_name)
-  self.host.op(op_name, callback)
-  if emits_events {
-    self.host.scope_events_for_op(op_name)
-  }
-}
-
-///|
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_result(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : (Payload) -> Result[Reply, String],
-  emits_events? : Bool = false,
-) -> Unit {
-  let op_name = self.op_name(api_name)
-  self.host.op_result(op_name, callback)
+  self.host.op(op_name, fn(payload) raise { callback(payload) })
   if emits_events {
     self.host.scope_events_for_op(op_name)
   }
@@ -159,7 +145,7 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_
   api_name : String,
   callback : async (Payload) -> Reply,
   emits_events? : Bool = false,
-) -> Unit {
+) -> Unit raise @core.OpRegistrationError {
   let op_name = self.op_name(api_name)
   self.host.op_async(op_name, callback)
   if emits_events {
@@ -168,28 +154,14 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_
 }
 
 ///|
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result(
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_with_context(
   self : AppCommandExtensionContext,
   api_name : String,
-  callback : async (Payload) -> Result[Reply, String],
+  callback : async (AppCommandRequestContext, Payload) -> Reply,
   emits_events? : Bool = false,
-) -> Unit {
+) -> Unit raise @core.OpRegistrationError {
   let op_name = self.op_name(api_name)
-  self.host.op_async_result(op_name, callback)
-  if emits_events {
-    self.host.scope_events_for_op(op_name)
-  }
-}
-
-///|
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_result_with_context(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
-  emits_events? : Bool = false,
-) -> Unit {
-  let op_name = self.op_name(api_name)
-  self.host.op_async_result_with_context(op_name, callback)
+  self.host.op_async_with_context(op_name, callback)
   if emits_events {
     self.host.scope_events_for_op(op_name)
   }
@@ -200,7 +172,7 @@ pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(
   self : AppCommandExtensionContext,
   event_name : String,
   payload : Payload,
-) -> Unit {
+) -> Unit noraise {
   self.host.emit_extension(self.js_namespace, event_name, payload)
 }
 
@@ -245,10 +217,10 @@ pub fn AppCommandExtensionSpec::new(
   id : String,
   js_namespace : String,
   apis : Array[AppCommandApiDescriptor],
-  register : (AppCommandExtensionContext) -> Result[Unit, String],
+  register : (AppCommandExtensionContext) -> Unit raise,
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
-  on_destroy? : (AppCommandExtensionContext) -> Unit = fn(_context) {  },
+  on_destroy? : (AppCommandExtensionContext) -> Unit raise = fn(_context) {  },
 ) -> AppCommandExtensionSpec {
   AppCommandExtensionSpec::{
     id,
@@ -305,7 +277,7 @@ pub fn AppCommandExtensionSpec::to_ipc_descriptor(
 pub fn AppCommandExtensionSpec::register(
   self : AppCommandExtensionSpec,
   context : AppCommandExtensionContext,
-) -> Result[Unit, String] {
+) -> Unit raise {
   (self.register)(context)
 }
 
@@ -313,7 +285,7 @@ pub fn AppCommandExtensionSpec::register(
 pub fn AppCommandExtensionSpec::destroy(
   self : AppCommandExtensionSpec,
   context : AppCommandExtensionContext,
-) -> Unit {
+) -> Unit raise {
   (self.on_destroy)(context)
 }
 

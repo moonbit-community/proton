@@ -19,17 +19,16 @@ fn async_add_extension() -> @proton_extension.Extension {
       "examples/async-add",
       "add",
       [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-      fn(context) {
-        context.op_async_result("slowAdd", async fn(payload : SlowAddPayload) {
+      fn(context) raise {
+        context.op_async("slowAdd", async fn(payload : SlowAddPayload) {
           let delay_ms = payload.delay_ms.unwrap_or(800)
           @async.sleep(delay_ms)
-          Ok(SlowAddReply::{
+          SlowAddReply::{
             total: payload.left + payload.right,
             waited_ms: delay_ms,
             source: "async command extension",
-          })
+          }
         })
-        Ok(())
       },
     ),
   )

@@ -5,9 +5,85 @@ let default_package = "app"
 let default_config_file = "moon.proton"
 
 ///|
-pub(all) enum BuildError {
-  UsageError(String, Bool)
-  CommandError(String)
+pub(all) suberror BuildUsageError {
+  InvalidArguments(message~ : String)
+} derive(Debug, Eq)
+
+///|
+pub(all) suberror BuildConfigError {
+  NotFound(path~ : String?)
+  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  InvalidRelease(message~ : String)
+} derive(Debug, Eq)
+
+///|
+pub(all) suberror BuildPathError {
+  Missing(role~ : String, path~ : String)
+  WrongKind(role~ : String, path~ : String, expected~ : String)
+} derive(Debug, Eq)
+
+///|
+pub(all) suberror BuildProcessError {
+  Start(command~ : String, detail~ : String)
+  Exit(command~ : String, code~ : Int)
+} derive(Debug, Eq)
+
+///|
+pub fn BuildUsageError::message(self : BuildUsageError) -> String {
+  match self {
+    InvalidArguments(message~) => message
+  }
+}
+
+///|
+pub fn BuildConfigError::message(self : BuildConfigError) -> String {
+  match self {
+    NotFound(path~) =>
+      match path {
+        Some(path) => "proton build config not found: " + path
+        None => "proton build config not found: moon.proton"
+      }
+    Invalid(path~, error~) =>
+      "invalid proton build config " + path + ": " + error.message()
+    InvalidRelease(message~) => message
+  }
+}
+
+///|
+pub fn BuildPathError::message(self : BuildPathError) -> String {
+  match self {
+    Missing(role~, path~) => role + " does not exist: " + path
+    WrongKind(role~, path~, expected~) =>
+      role + " is not " + expected + ": " + path
+  }
+}
+
+///|
+pub fn BuildProcessError::message(self : BuildProcessError) -> String {
+  match self {
+    Start(command~, detail~) => "failed to run " + command + ": " + detail
+    Exit(command~, code~) => command + " exited with code " + code.to_string()
+  }
+}
+
+///|
+impl Show for BuildUsageError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for BuildConfigError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for BuildPathError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for BuildProcessError with fn output(self, logger) {
+  logger.write_string(self.message())
 }
 
 ///|
@@ -25,143 +101,97 @@ priv struct BuildProjectConfig {
 }
 
 ///|
-pub async fn run(
+/// Returns the declarative `proton_cli build` command specification.
+pub fn command() -> @argparse.Command {
+  @argparse.Command(
+    "build",
+    about="Build a Proton application for the native target",
+    flags=[
+      FlagArg(
+        "no-frontend",
+        about="Do not run the configured frontend build command",
+      ),
+    ],
+    options=[
+      OptionArg(
+        "package",
+        default_values=[default_package],
+        about="MoonBit application package",
+      ),
+      OptionArg(
+        "config",
+        allow_hyphen_values=true,
+        about="Proton project config",
+      ),
+    ],
+    positionals=[
+      PositionArg(
+        "moon-build-args",
+        num_args=ValueRange(lower=0),
+        about="Arguments passed to moon build after --",
+      ),
+    ],
+  )
+}
+
+///|
+/// Runs the build workflow from parsed command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
+  run_with_options(cwd, build_options_from_matches(matches))
+}
+
+///|
+/// Runs the release build requested by the package workflow.
+pub async fn run_release(
   cwd : String,
-  args : Array[String],
-) -> Result[Unit, BuildError] {
-  if args.contains("-h") || args.contains("--help") {
-    print_build_usage()
-    return Ok(())
-  }
-  let raw = match parse_build_args(args) {
-    Ok(raw) => raw
-    Err(error) => return Err(error)
-  }
-  let cwd = @path.Path(cwd).resolve().to_string()
-  let root = find_project_root_from(cwd)
-  let config_path = resolve_build_config_path(cwd, root, raw)
-  let config = match load_project_config(config_path) {
-    Ok(config) => config
-    Err(message) => return Err(CommandError(message))
-  }
-  match validate_release_config(config) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  if raw.run_frontend_build {
-    match run_frontend_build(root, config) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
-  }
-  match validate_release_files(root, config) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match run_moon_build(root, raw.app_package, raw.moon_args) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  Ok(())
-}
-
-///|
-fn print_build_usage() -> Unit {
-  println("Usage:")
-  println(
-    "  proton_cli [-C DIR] build [PACKAGE] [OPTIONS] [-- [MOON_BUILD_ARGS]...]",
-  )
-  println("")
-  println("Options:")
-  println(
-    "  --config <path>          Proton project config (default: package/cwd/root moon.proton)",
-  )
-  println("  --no-frontend            Do not run frontend.before_build")
-}
-
-///|
-fn parse_build_args(
-  args : Array[String],
-) -> Result[RawBuildOptions, BuildError] {
-  let moon_args : Array[String] = []
-  let mut app_package : String? = None
-  let mut config_path : String? = None
-  let mut run_frontend_build = true
-  let mut index = 0
-  while index < args.length() {
-    let arg = args[index]
-    if arg == "--" {
-      for value in args[index + 1:] {
-        moon_args.push(value)
-      }
-      index = args.length()
-    } else if arg == "--config" {
-      match read_option_value(args, index, "--config") {
-        Ok(value) => {
-          config_path = Some(value)
-          index = index + 2
-        }
-        Err(error) => return Err(error)
-      }
-    } else if arg == "--no-frontend" {
-      run_frontend_build = false
-      index = index + 1
-    } else if arg.has_prefix("-") {
-      return Err(UsageError("unknown build option: " + arg, false))
-    } else {
-      match app_package {
-        None => {
-          app_package = Some(arg)
-          index = index + 1
-        }
-        Some(_) =>
-          return Err(
-            UsageError("build accepts at most one package argument", false),
-          )
-      }
-    }
-  }
-  match validate_moon_build_args(moon_args) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  Ok(RawBuildOptions::{
-    app_package: app_package.unwrap_or(default_package),
-    config_path,
-    run_frontend_build,
+  app_package : String,
+  config_path : String,
+  moon_args : Array[String],
+) -> Unit {
+  validate_moon_build_args(moon_args)
+  run_with_options(cwd, RawBuildOptions::{
+    app_package,
+    config_path: Some(config_path),
+    run_frontend_build: true,
     moon_args,
   })
 }
 
 ///|
-fn validate_moon_build_args(args : Array[String]) -> Result[Unit, BuildError] {
-  for arg in args {
-    if arg == "--target" || arg.has_prefix("--target=") {
-      return Err(
-        UsageError(
-          "proton build always uses --target native; remove --target from MOON_BUILD_ARGS",
-          false,
-        ),
-      )
-    }
+async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
+  let cwd = @path.Path(cwd).resolve().to_string()
+  let root = find_project_root_from(cwd)
+  let config_path = resolve_build_config_path(cwd, root, raw)
+  let config = load_project_config(config_path)
+  validate_release_config(config)
+  if raw.run_frontend_build {
+    run_frontend_build(root, config)
   }
-  Ok(())
+  validate_release_files(root, config)
+  run_moon_build(root, raw.app_package, raw.moon_args)
 }
 
 ///|
-fn read_option_value(
-  args : Array[String],
-  index : Int,
-  flag : String,
-) -> Result[String, BuildError] {
-  if index + 1 >= args.length() {
-    Err(UsageError(flag + " requires a value", false))
-  } else {
-    let value = args[index + 1]
-    if value == "" {
-      Err(UsageError(flag + " requires a value", false))
-    } else {
-      Ok(value)
+fn build_options_from_matches(
+  matches : @argparse.Matches,
+) -> RawBuildOptions raise BuildUsageError {
+  let moon_args = @cli_args.values(matches, "moon-build-args")
+  validate_moon_build_args(moon_args)
+  RawBuildOptions::{
+    app_package: @cli_args.required_value(matches, "package"),
+    config_path: @cli_args.value(matches, "config"),
+    run_frontend_build: !@cli_args.flag(matches, "no-frontend"),
+    moon_args,
+  }
+}
+
+///|
+fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError {
+  for arg in args {
+    if arg == "--target" || arg.has_prefix("--target=") {
+      raise InvalidArguments(
+        message="proton build always uses --target native; remove --target from MOON_BUILD_ARGS",
+      )
     }
   }
 }
@@ -199,12 +229,12 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 ///|
 fn load_project_config(
   config_path : String?,
-) -> Result[BuildProjectConfig, String] {
+) -> BuildProjectConfig raise BuildConfigError {
   match config_path {
-    None => Err("proton build config not found: moon.proton")
+    None => raise NotFound(path=None)
     Some(path) => {
       if !path_exists(path) {
-        return Err("proton build config not found: " + path)
+        raise NotFound(path=Some(path))
       }
       read_project_config(path)
     }
@@ -212,40 +242,26 @@ fn load_project_config(
 }
 
 ///|
-async fn run_frontend_build(
-  root : String,
-  config : BuildProjectConfig,
-) -> Result[Unit, BuildError] {
+async fn run_frontend_build(root : String, config : BuildProjectConfig) -> Unit {
   match config.frontend {
-    None => Ok(())
+    None => ()
     Some(frontend) =>
       match frontend.before_build() {
-        None => Ok(())
+        None => ()
         Some(command) => {
-          let cwd = match resolve_frontend_cwd(root, frontend.cwd(), command) {
-            Ok(cwd) => cwd
-            Err(error) => return Err(error)
-          }
+          let cwd = resolve_frontend_cwd(root, frontend.cwd(), command)
           println("Building frontend: " + command)
           println("Frontend cwd: " + cwd)
           let (program, args) = shell_command(command)
           let code = @process.run(program, args, cwd~) catch {
             err =>
-              return Err(
-                CommandError(
-                  "failed to run frontend build: " +
-                  @debug.render(@debug.to_repr(err)),
-                ),
+              raise BuildProcessError::Start(
+                command="frontend build",
+                detail=@debug.render(@debug.to_repr(err)),
               )
           }
-          if code == 0 {
-            Ok(())
-          } else {
-            Err(
-              CommandError(
-                "frontend build exited with code " + code.to_string(),
-              ),
-            )
+          if code != 0 {
+            raise BuildProcessError::Exit(command="frontend build", code~)
           }
         }
       }
@@ -257,19 +273,19 @@ fn resolve_frontend_cwd(
   root : String,
   frontend_cwd : String?,
   command : String,
-) -> Result[String, BuildError] {
+) -> String raise BuildPathError {
   ignore(command)
   match frontend_cwd {
-    None => Ok(root)
+    None => root
     Some(cwd) => {
       let path = resolve_path(root, cwd)
       if !path_exists(path) {
-        return Err(CommandError("frontend cwd does not exist: " + path))
+        raise Missing(role="frontend cwd", path~)
       }
       if !path_is_dir(path) {
-        return Err(CommandError("frontend cwd is not a directory: " + path))
+        raise WrongKind(role="frontend cwd", path~, expected="a directory")
       }
-      Ok(path)
+      path
     }
   }
 }
@@ -277,16 +293,14 @@ fn resolve_frontend_cwd(
 ///|
 fn validate_release_config(
   config : BuildProjectConfig,
-) -> Result[Unit, BuildError] {
+) -> Unit raise BuildConfigError {
   match config.frontend {
     Some(frontend) =>
       match frontend.dist() {
         Some(_) => ()
         None =>
-          return Err(
-            CommandError(
-              "frontend.dist is required for release builds when frontend is configured",
-            ),
+          raise InvalidRelease(
+            message="frontend.dist is required for release builds when frontend is configured",
           )
       }
     None => ()
@@ -298,19 +312,17 @@ fn validate_release_config(
 fn validate_release_files(
   root : String,
   config : BuildProjectConfig,
-) -> Result[Unit, BuildError] {
+) -> Unit raise BuildPathError {
   match config.frontend {
     Some(frontend) =>
       match frontend.dist() {
         Some(dist) => {
           let path = resolve_path(root, dist)
           if !path_exists(path) {
-            return Err(CommandError("frontend dist does not exist: " + path))
+            raise Missing(role="frontend dist", path~)
           }
           if !path_is_dir(path) {
-            return Err(
-              CommandError("frontend dist is not a directory: " + path),
-            )
+            raise WrongKind(role="frontend dist", path~, expected="a directory")
           }
         }
         None => ()
@@ -324,43 +336,43 @@ fn validate_release_files(
 fn validate_production_entry_kind(
   entry : @proton_config.ProjectEntry,
   frontend : @proton_config.ProjectFrontendConfig?,
-) -> Result[Unit, BuildError] {
+) -> Unit raise BuildConfigError {
   match frontend {
     Some(_) =>
       match entry {
         File(_) | Asset(_) => ()
         Html(_) | Url(_) =>
-          return Err(
-            CommandError("frontend production entry must use file or asset"),
+          raise BuildConfigError::InvalidRelease(
+            message="frontend production entry must use file or asset",
           )
       }
     None => ()
   }
-  Ok(())
 }
 
 ///|
 fn validate_production_entry_file(
   entry : @proton_config.ProjectEntry,
-) -> Result[Unit, BuildError] {
+) -> Unit raise BuildPathError {
   match entry {
     File(path) | Asset(path) =>
       if !path_exists(path) {
-        Err(CommandError("production entry does not exist: " + path))
+        raise Missing(role="production entry", path~)
       } else if path_is_dir(path) {
-        Err(CommandError("production entry is not a file: " + path))
-      } else {
-        Ok(())
+        raise WrongKind(role="production entry", path~, expected="a file")
       }
-    Html(_) | Url(_) => Ok(())
+    Html(_) | Url(_) => ()
   }
 }
 
 ///|
-fn read_project_config(path : String) -> Result[BuildProjectConfig, String] {
-  @proton_config.load_project_config_from_file(path).map(fn(project) {
-    BuildProjectConfig::{ entry: project.entry(), frontend: project.frontend() }
-  })
+fn read_project_config(
+  path : String,
+) -> BuildProjectConfig raise BuildConfigError {
+  let project = @proton_config.load_project_config_from_file(path) catch {
+    error => raise Invalid(path~, error~)
+  }
+  BuildProjectConfig::{ entry: project.entry(), frontend: project.frontend() }
 }
 
 ///|
@@ -368,21 +380,18 @@ async fn run_moon_build(
   root : String,
   app_package : String,
   moon_args : Array[String],
-) -> Result[Unit, BuildError] {
+) -> Unit {
   let args = moon_build_args(app_package, moon_args)
   println("Building Proton app: moon " + args.join(" "))
   let code = @process.run("moon", args, cwd=root) catch {
     err =>
-      return Err(
-        CommandError(
-          "failed to run MoonBit build: " + @debug.render(@debug.to_repr(err)),
-        ),
+      raise BuildProcessError::Start(
+        command="MoonBit build",
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
-  if code == 0 {
-    Ok(())
-  } else {
-    Err(CommandError("MoonBit build exited with code " + code.to_string()))
+  if code != 0 {
+    raise BuildProcessError::Exit(command="MoonBit build", code~)
   }
 }
 

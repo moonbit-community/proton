@@ -4,10 +4,8 @@ fn required_string_field(
   object : Map[String, Json],
   key : String,
   label : String,
-) -> Result[String, String] {
-  required_built_field(object, key, label, fn(json) {
-    decode_string(json, label)
-  })
+) -> String raise BootstrapError {
+  decode_string(required_field(object, key, label), label)
 }
 
 ///|
@@ -16,8 +14,8 @@ fn required_int_field(
   object : Map[String, Json],
   key : String,
   label : String,
-) -> Result[Int, String] {
-  required_built_field(object, key, label, fn(json) { decode_int(json, label) })
+) -> Int raise BootstrapError {
+  decode_int(required_field(object, key, label), label)
 }
 
 ///|
@@ -26,10 +24,10 @@ fn required_field(
   object : Map[String, Json],
   key : String,
   label : String,
-) -> Result[Json, String] {
+) -> Json raise BootstrapError {
   match object.get(key) {
-    Some(value) => Ok(value)
-    None => Err("missing required field: " + label)
+    Some(value) => value
+    None => raise MissingField(path=label)
   }
 }
 
@@ -44,39 +42,46 @@ fn optional_field(object : Map[String, Json], key : String) -> Json? {
 fn decode_optional_string(
   json : Json?,
   label : String,
-) -> Result[String?, String] {
+) -> String? raise BootstrapError {
   match json {
-    None => Ok(None)
-    Some(json) => decode_string(json, label).map(fn(value) { Some(value) })
+    None => None
+    Some(json) => Some(decode_string(json, label))
   }
 }
 
 ///|
 /// Decodes an optional integer field while preserving `None`.
-fn decode_optional_int(json : Json?, label : String) -> Result[Int?, String] {
+fn decode_optional_int(
+  json : Json?,
+  label : String,
+) -> Int? raise BootstrapError {
   match json {
-    None => Ok(None)
-    Some(json) => decode_int(json, label).map(fn(value) { Some(value) })
+    None => None
+    Some(json) => Some(decode_int(json, label))
   }
 }
 
 ///|
 /// Decodes a JSON value as a string with a labeled error message.
-fn decode_string(json : Json, label : String) -> Result[String, String] {
-  try @json.from_json(json) catch {
-    error => Err("invalid string for " + label + ": " + error.to_string())
-  } noraise {
-    value => Ok(value)
+fn decode_string(json : Json, label : String) -> String raise BootstrapError {
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidJson(
+        context=label,
+        detail="expected string: " + error.to_string(),
+      )
   }
 }
 
 ///|
 /// Decodes a JSON value as an integer with a labeled error message.
-fn decode_int(json : Json, label : String) -> Result[Int, String] {
-  try @json.from_json(json) catch {
-    error => Err("invalid int for " + label + ": " + error.to_string())
-  } noraise {
-    value => Ok(value)
+fn decode_int(json : Json, label : String) -> Int raise BootstrapError {
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidJson(
+        context=label,
+        detail="expected int: " + error.to_string(),
+      )
   }
 }
 
@@ -85,9 +90,19 @@ fn decode_int(json : Json, label : String) -> Result[Int, String] {
 fn expect_object(
   json : Json,
   label : String,
-) -> Result[Map[String, Json], String] {
+) -> Map[String, Json] raise BootstrapError {
   match json {
-    Object(object) => Ok(object)
-    _ => Err("expected object for " + label)
+    Object(object) => object
+    _ => raise InvalidField(path=label, expectation="must be an object")
   }
+}
+
+///|
+fn[Value] required_built_field(
+  object : Map[String, Json],
+  key : String,
+  label : String,
+  build : (Json) -> Value raise BootstrapError,
+) -> Value raise BootstrapError {
+  build(required_field(object, key, label))
 }

@@ -8,7 +8,7 @@ struct ProtonSlowAddPayload {
 } derive(FromJson)
 
 ///|
-async fn __proton_command_slow_add(payload : ProtonSlowAddPayload) -> Result[Int, String] {
+async fn __proton_command_slow_add(payload : ProtonSlowAddPayload) -> Int {
   slow_add(payload.left, payload.right)
 }
 
@@ -23,9 +23,10 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     "examples/async-add",
     "add",
     [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-    fn(context) {
-      context.op_async_result("slowAdd", __proton_command_slow_add)
-      Ok(())
+    fn(context) raise {
+      context.op_async("slowAdd", async fn(payload) {
+        __proton_command_slow_add(payload)
+      })
     },
   )
 }

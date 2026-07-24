@@ -10,8 +10,8 @@ fn child_process_extension() -> @proton_extension.Extension {
       "examples/child-process-close-repro",
       "child",
       [@proton_command.AppCommandApiDescriptor::new("hold")],
-      fn(context) {
-        context.op_async_result("hold", async fn(_payload : Json) {
+      fn(context) raise {
+        context.op_async("hold", async fn(_payload : Json) {
           @async.with_task_group(group => {
             let process = @process.spawn(
               group,
@@ -31,10 +31,9 @@ fn child_process_extension() -> @proton_extension.Extension {
             for ;; {
               @async.sleep(1000)
             }
-            Ok(HoldResult::{ pid: process.pid })
+            HoldResult::{ pid: process.pid }
           })
         })
-        Ok(())
       },
     ),
   )

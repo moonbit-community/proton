@@ -1,34 +1,76 @@
 ///|
-test "attribute codegen renders commands events and async context" {
-  let generated = match
-    generate_app_commands_from_source(
-      (
-        #|///|
-        #|#proton.command
-        #|fn ping() -> PingReply {
-        #|  PingReply::{ message: "pong" }
-        #|}
-        #|
-        #|///|
-        #|#proton.command(name="slowAdd")
-        #|async fn slow_add(context : @proton_command.AppCommandExtensionContext, left : Int, right : Int, delay_ms : Int?) -> Result[AddReply, String] {
-        #|  emit_add_finished(context, AddFinished::{ total: left + right })
-        #|  Ok(AddReply::{ total: left + right, waited_ms: delay_ms.unwrap_or(0) })
-        #|}
-        #|
-        #|///|
-        #|#proton.event(name="addFinished")
-        #|struct AddFinished {
-        #|  total : Int
-        #|} derive(ToJson)
-        #|
-      ),
-      "examples/generated-add",
-      "add",
-    ) {
-    Ok(generated) => generated
-    Err(error) => abort(error)
+fn[T] expect_codegen_error(action : () -> T raise) -> CommandCodegenError raise {
+  try action() catch {
+    CommandCodegenError::InvalidName(..) as error => error
+    CommandCodegenError::Attribute(..) as error => error
+    CommandCodegenError::Command(..) as error => error
+    CommandCodegenError::Script(..) as error => error
+    CommandCodegenError::Destroy(..) as error => error
+    CommandCodegenError::Event(..) as error => error
+    CommandCodegenError::UnsupportedType(..) as error => error
+    CommandCodegenError::Duplicate(..) as error => error
+    CommandCodegenError::MissingCommand as error => error
+    _ => fail("expected command codegen error")
+  } noraise {
+    _ => fail("expected command codegen error")
   }
+}
+
+///|
+fn[T] expect_codegen_input_error(
+  action : () -> T raise,
+) -> CodegenInputError raise {
+  try action() catch {
+    CodegenInputError::SourceParse(..) as error => error
+    CodegenInputError::InputRead(..) as error => error
+    CodegenInputError::PackageRead(..) as error => error
+    _ => fail("expected codegen input error")
+  } noraise {
+    _ => fail("expected codegen input error")
+  }
+}
+
+///|
+fn[T] expect_codegen_metadata_file_error(
+  action : () -> T raise,
+) -> CodegenMetadataFileError raise {
+  try action() catch {
+    CodegenMetadataFileError::MissingMetadata(..) as error => error
+    CodegenMetadataFileError::Syntax(..) as error => error
+    CodegenMetadataFileError::Invalid(..) as error => error
+    _ => fail("expected codegen metadata file error")
+  } noraise {
+    _ => fail("expected codegen metadata file error")
+  }
+}
+
+///|
+test "attribute codegen renders commands events and async context" {
+  let generated = generate_app_commands_from_source(
+    (
+      #|///|
+      #|#proton.command
+      #|fn ping() -> PingReply {
+      #|  PingReply::{ message: "pong" }
+      #|}
+      #|
+      #|///|
+      #|#proton.command(name="slowAdd")
+      #|async fn slow_add(context : @proton_command.AppCommandExtensionContext, left : Int, right : Int, delay_ms : Int?) -> AddReply raise {
+      #|  emit_add_finished(context, AddFinished::{ total: left + right })
+      #|  AddReply::{ total: left + right, waited_ms: delay_ms.unwrap_or(0) }
+      #|}
+      #|
+      #|///|
+      #|#proton.event(name="addFinished")
+      #|struct AddFinished {
+      #|  total : Int
+      #|} derive(ToJson)
+      #|
+    ),
+    "examples/generated-add",
+    "add",
+  )
   @debug.assert_eq(generated.warnings, [])
   let expected_source =
     #|///|
@@ -38,7 +80,7 @@ test "attribute codegen renders commands events and async context" {
     #|pub async fn emit_add_finished(
     #|  context : @proton_command.AppCommandExtensionContext,
     #|  payload : AddFinished,
-    #|) -> Unit {
+    #|) -> Unit noraise {
     #|  context.emit("addFinished", payload)
     #|}
     #|
@@ -58,7 +100,7 @@ test "attribute codegen renders commands events and async context" {
     #|async fn __proton_command_slow_add(
     #|  context : @proton_command.AppCommandExtensionContext,
     #|  payload : ProtonSlowAddPayload,
-    #|) -> Result[AddReply, String] {
+    #|) -> AddReply raise {
     #|  slow_add(context, payload.left, payload.right, payload.delay_ms)
     #|}
     #|
@@ -76,12 +118,11 @@ test "attribute codegen renders commands events and async context" {
     #|      @proton_command.AppCommandApiDescriptor::new("ping"),
     #|      @proton_command.AppCommandApiDescriptor::new("slowAdd"),
     #|    ],
-    #|    fn(context) {
+    #|    fn(context) raise {
     #|      context.op("ping", __proton_command_ping)
-    #|      context.op_async_result("slowAdd", async fn(payload) {
+    #|      context.op_async("slowAdd", async fn(payload) {
     #|        __proton_command_slow_add(context, payload)
     #|      }, emits_events=true)
-    #|      Ok(())
     #|    },
     #|  )
     #|}
@@ -91,29 +132,25 @@ test "attribute codegen renders commands events and async context" {
 
 ///|
 test "attribute codegen warns for sync context commands with events" {
-  let generated = match
-    generate_app_commands_from_source(
-      (
-        #|///|
-        #|#proton.command
-        #|fn ping(context : @proton_command.AppCommandExtensionContext) -> PingReply {
-        #|  ignore(context.extension_id())
-        #|  PingReply::{ message: "pong" }
-        #|}
-        #|
-        #|///|
-        #|#proton.event(name="activity")
-        #|struct Activity {
-        #|  message : String
-        #|} derive(ToJson)
-        #|
-      ),
-      "examples/sync-context",
-      "syncContext",
-    ) {
-    Ok(generated) => generated
-    Err(error) => abort(error)
-  }
+  let generated = generate_app_commands_from_source(
+    (
+      #|///|
+      #|#proton.command
+      #|fn ping(context : @proton_command.AppCommandExtensionContext) -> PingReply {
+      #|  ignore(context.extension_id())
+      #|  PingReply::{ message: "pong" }
+      #|}
+      #|
+      #|///|
+      #|#proton.event(name="activity")
+      #|struct Activity {
+      #|  message : String
+      #|} derive(ToJson)
+      #|
+    ),
+    "examples/sync-context",
+    "syncContext",
+  )
   @debug.assert_eq(generated.warnings, [
     "sync command `ping` cannot emit generated events in v1; use `async fn` if it needs event emission",
   ])
@@ -121,23 +158,19 @@ test "attribute codegen warns for sync context commands with events" {
 
 ///|
 test "attribute codegen renders request context commands" {
-  let generated = match
-    generate_app_commands_from_source(
-      (
-        #|///|
-        #|#proton.command(name="pick")
-        #|async fn pick_file(request_context : @proton_command.AppCommandRequestContext, title : String?) -> Result[PickReply, String] {
-        #|  ignore(request_context.window())
-        #|  Ok(PickReply::{ path: title })
-        #|}
-        #|
-      ),
-      "examples/request-context",
-      "dialog",
-    ) {
-    Ok(generated) => generated
-    Err(error) => abort(error)
-  }
+  let generated = generate_app_commands_from_source(
+    (
+      #|///|
+      #|#proton.command(name="pick")
+      #|async fn pick_file(request_context : @proton_command.AppCommandRequestContext, title : String?) -> PickReply raise {
+      #|  ignore(request_context.window())
+      #|  PickReply::{ path: title }
+      #|}
+      #|
+    ),
+    "examples/request-context",
+    "dialog",
+  )
   let expected_source =
     #|///|
     #|/// Generated by `proton codegen`. Do not edit by hand.
@@ -151,7 +184,7 @@ test "attribute codegen renders request context commands" {
     #|async fn __proton_command_pick_file(
     #|  request_context : @proton_command.AppCommandRequestContext,
     #|  payload : ProtonPickFilePayload,
-    #|) -> Result[PickReply, String] {
+    #|) -> PickReply raise {
     #|  pick_file(request_context, payload.title)
     #|}
     #|
@@ -166,11 +199,10 @@ test "attribute codegen renders request context commands" {
     #|    "examples/request-context",
     #|    "dialog",
     #|    [@proton_command.AppCommandApiDescriptor::new("pick")],
-    #|    fn(context) {
-    #|      context.op_async_result_with_context("pick", async fn(request_context, payload) {
+    #|    fn(context) raise {
+    #|      context.op_async_with_context("pick", async fn(request_context, payload) {
     #|        __proton_command_pick_file(request_context, payload)
     #|      })
-    #|      Ok(())
     #|    },
     #|  )
     #|}
@@ -180,61 +212,56 @@ test "attribute codegen renders request context commands" {
 
 ///|
 test "attribute codegen rejects sync request context commands" {
-  let result = generate_app_commands_from_source(
-    (
-      #|///|
-      #|#proton.command
-      #|fn pick_file(request_context : @proton_command.AppCommandRequestContext) -> PickReply {
-      #|  ignore(request_context.window())
-      #|  PickReply::{ path: None }
-      #|}
-      #|
-    ),
-    "examples/request-context",
-    "dialog",
-  )
-  match result {
-    Ok(_) => abort("expected sync request_context command to fail")
-    Err(error) =>
-      inspect(
-        error,
-        content=(
-          #|request_context parameter requires async Result command in #proton.command: pick_file
-        ),
-      )
-  }
-}
-
-///|
-test "attribute codegen renders scripts and destroy hook" {
-  let generated = match
+  let error = expect_codegen_error(() => {
     generate_app_commands_from_source(
       (
         #|///|
         #|#proton.command
-        #|fn ping() -> PingReply {
-        #|  PingReply::{ message: "pong" }
-        #|}
-        #|
-        #|///|
-        #|#proton.script
-        #|fn helper_script() -> String {
-        #|  "window.__helper = true;"
-        #|}
-        #|
-        #|///|
-        #|#proton.destroy
-        #|fn cleanup(context : @proton_command.AppCommandExtensionContext) -> Unit {
-        #|  ignore(context.extension_id())
+        #|fn pick_file(request_context : @proton_command.AppCommandRequestContext) -> PickReply {
+        #|  ignore(request_context.window())
+        #|  PickReply::{ path: None }
         #|}
         #|
       ),
-      "examples/lifecycle",
-      "lifecycle",
-    ) {
-    Ok(generated) => generated
-    Err(error) => abort(error)
-  }
+      "examples/request-context",
+      "dialog",
+    )
+  })
+  assert_eq(
+    error,
+    CommandCodegenError::Command(
+      function_name="pick_file",
+      detail="request_context parameter requires an async command",
+    ),
+  )
+}
+
+///|
+test "attribute codegen renders scripts and destroy hook" {
+  let generated = generate_app_commands_from_source(
+    (
+      #|///|
+      #|#proton.command
+      #|fn ping() -> PingReply {
+      #|  PingReply::{ message: "pong" }
+      #|}
+      #|
+      #|///|
+      #|#proton.script
+      #|fn helper_script() -> String {
+      #|  "window.__helper = true;"
+      #|}
+      #|
+      #|///|
+      #|#proton.destroy
+      #|fn cleanup(context : @proton_command.AppCommandExtensionContext) -> Unit {
+      #|  ignore(context.extension_id())
+      #|}
+      #|
+    ),
+    "examples/lifecycle",
+    "lifecycle",
+  )
   let expected_source =
     #|///|
     #|/// Generated by `proton codegen`. Do not edit by hand.
@@ -255,9 +282,8 @@ test "attribute codegen renders scripts and destroy hook" {
     #|    "examples/lifecycle",
     #|    "lifecycle",
     #|    [@proton_command.AppCommandApiDescriptor::new("ping")],
-    #|    fn(context) {
+    #|    fn(context) raise {
     #|      context.op("ping", __proton_command_ping)
-    #|      Ok(())
     #|    },
     #|    scripts=[
     #|      helper_script(),
@@ -273,7 +299,7 @@ test "attribute codegen renders scripts and destroy hook" {
 
 ///|
 test "attribute codegen rejects duplicate command names" {
-  match
+  let error = expect_codegen_error(() => {
     generate_app_commands_from_source(
       (
         #|#proton.command(name="ping")
@@ -284,16 +310,17 @@ test "attribute codegen rejects duplicate command names" {
       ),
       "examples/dup",
       "dup",
-    ) {
-    Ok(_) => abort("expected duplicate command error")
-    Err(error) =>
-      inspect(error, content="duplicate command JavaScript name: ping")
-  }
+    )
+  })
+  assert_eq(
+    error,
+    CommandCodegenError::Duplicate(kind="command JavaScript name", name="ping"),
+  )
 }
 
 ///|
 test "attribute codegen rejects defaulted parameters" {
-  match
+  let error = expect_codegen_input_error(() => {
     generate_app_commands_from_source(
       (
         #|#proton.command
@@ -302,19 +329,14 @@ test "attribute codegen rejects defaulted parameters" {
       ),
       "examples/defaulted",
       "defaulted",
-    ) {
-    Ok(_) => abort("expected defaulted parameter error")
-    Err(error) =>
-      inspect(
-        error,
-        content="failed to parse MoonBit source for #proton codegen",
-      )
-  }
+    )
+  })
+  assert_eq(error, CodegenInputError::SourceParse(path="<memory>"))
 }
 
 ///|
 test "attribute codegen rejects context without events" {
-  match
+  let error = expect_codegen_error(() => {
     generate_app_commands_from_source(
       (
         #|#proton.command
@@ -323,21 +345,20 @@ test "attribute codegen rejects context without events" {
       ),
       "examples/no-events",
       "noEvents",
-    ) {
-    Ok(_) => abort("expected context without event error")
-    Err(error) =>
-      inspect(
-        error,
-        content=(
-          #|context parameter is only supported when #proton.event helpers are generated: ping
-        ),
-      )
-  }
+    )
+  })
+  assert_eq(
+    error,
+    CommandCodegenError::Command(
+      function_name="ping",
+      detail="context parameter requires a generated #proton.event helper",
+    ),
+  )
 }
 
 ///|
 test "attribute codegen rejects unsupported attribute arguments" {
-  match
+  let error = expect_codegen_error(() => {
     generate_app_commands_from_source(
       (
         #|#proton.command(js_name="ping")
@@ -346,21 +367,22 @@ test "attribute codegen rejects unsupported attribute arguments" {
       ),
       "examples/bad-attr",
       "badAttr",
-    ) {
-    Ok(_) => abort("expected invalid attribute error")
-    Err(error) =>
-      inspect(
-        error,
-        content=(
-          #|unsupported #proton.command attribute arguments: #proton.command(js_name="ping")
-        ),
-      )
-  }
+    )
+  })
+  assert_eq(
+    error,
+    CommandCodegenError::Attribute(
+      kind="command",
+      detail=(
+        #|unsupported attribute arguments: #proton.command(js_name="ping")
+      ),
+    ),
+  )
 }
 
 ///|
 test "attribute codegen rejects unsupported command parameter type" {
-  match
+  let error = expect_codegen_error(() => {
     generate_app_commands_from_source(
       (
         #|#proton.command
@@ -369,19 +391,19 @@ test "attribute codegen rejects unsupported command parameter type" {
       ),
       "examples/bad-param",
       "badParam",
-    ) {
-    Ok(_) => abort("expected unsupported parameter type error")
-    Err(error) =>
-      inspect(
-        error,
-        content="unsupported command parameter type in #proton.command: ping.callback",
-      )
-  }
+    )
+  })
+  assert_eq(
+    error,
+    CommandCodegenError::UnsupportedType(
+      context="command parameter ping.callback",
+    ),
+  )
 }
 
 ///|
 test "attribute codegen rejects event-only input" {
-  match
+  let error = expect_codegen_error(() => {
     generate_app_commands_from_source(
       (
         #|#proton.event
@@ -392,14 +414,9 @@ test "attribute codegen rejects event-only input" {
       ),
       "examples/event-only",
       "events",
-    ) {
-    Ok(_) => abort("expected missing command error")
-    Err(error) =>
-      inspect(
-        error,
-        content="#proton.command codegen requires at least one command",
-      )
-  }
+    )
+  })
+  assert_eq(error, CommandCodegenError::MissingCommand)
 }
 
 ///|
@@ -422,16 +439,10 @@ test "attribute codegen file scan reports target parse errors" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file(input, "examples/bad-target", "bad") {
-    Ok(_) => abort("expected target parse error")
-    Err(error) =>
-      inspect(
-        error,
-        content=(
-          #|failed to parse MoonBit source for #proton codegen: target/proton-codegen-bad-target/input.mbt
-        ),
-      )
-  }
+  let error = expect_codegen_input_error(() => {
+    generate_app_commands_from_file(input, "examples/bad-target", "bad")
+  })
+  assert_eq(error, CodegenInputError::SourceParse(path=input))
 }
 
 ///|
@@ -468,7 +479,7 @@ test "attribute codegen file scan targets input file and checks package context"
   }
   let generated = generate_app_commands_from_file(
     input, "examples/package", "pkg",
-  ).unwrap()
+  )
   inspect(generated.source.contains("__proton_command_ping"), content="true")
   inspect(generated.source.contains("__proton_command_other"), content="false")
   @mbfs.write_string_to_file(
@@ -482,11 +493,13 @@ test "attribute codegen file scan targets input file and checks package context"
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file(input, "examples/package", "pkg") {
-    Ok(_) => abort("expected duplicate name from package context")
-    Err(error) =>
-      inspect(error, content="duplicate command JavaScript name: ping")
-  }
+  let error = expect_codegen_error(() => {
+    generate_app_commands_from_file(input, "examples/package", "pkg")
+  })
+  assert_eq(
+    error,
+    CommandCodegenError::Duplicate(kind="command JavaScript name", name="ping"),
+  )
 }
 
 ///|
@@ -521,7 +534,7 @@ test "attribute codegen reads moon ext metadata" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let generated = generate_app_commands_from_file_with_metadata(input).unwrap()
+  let generated = generate_app_commands_from_file_with_metadata(input)
   inspect(generated.source.contains("\"company/moon-ext\""), content="true")
   inspect(generated.source.contains("\"moonExt\""), content="true")
 }
@@ -545,11 +558,17 @@ test "attribute codegen requires moon ext namespace" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file_with_metadata(input) {
-    Ok(_) => abort("expected missing namespace error")
-    Err(error) =>
-      inspect(error, content="moon.ext must contain string field `namespace`")
-  }
+  let metadata_path = "target/proton-codegen-moon-ext-missing-namespace/moon.ext"
+  let error = expect_codegen_metadata_file_error(() => {
+    generate_app_commands_from_file_with_metadata(input)
+  })
+  assert_eq(
+    error,
+    CodegenMetadataFileError::Invalid(
+      path=metadata_path,
+      error=CodegenMetadataError::MissingField(field="namespace"),
+    ),
+  )
 }
 
 ///|
@@ -573,10 +592,17 @@ test "attribute codegen rejects removed moon ext fields" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file_with_metadata(input) {
-    Ok(_) => abort("expected removed moon.ext field error")
-    Err(error) => inspect(error, content="unknown moon.ext field: spec_symbol")
-  }
+  let metadata_path = "target/proton-codegen-moon-ext-removed/moon.ext"
+  let error = expect_codegen_metadata_file_error(() => {
+    generate_app_commands_from_file_with_metadata(input)
+  })
+  assert_eq(
+    error,
+    CodegenMetadataFileError::Invalid(
+      path=metadata_path,
+      error=CodegenMetadataError::UnknownField(field="spec_symbol"),
+    ),
+  )
 }
 
 ///|
@@ -600,10 +626,17 @@ test "attribute codegen rejects duplicate moon ext fields" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file_with_metadata(input) {
-    Ok(_) => abort("expected duplicate moon.ext field error")
-    Err(error) => inspect(error, content="duplicate moon.ext field: id")
-  }
+  let metadata_path = "target/proton-codegen-moon-ext-duplicate/moon.ext"
+  let error = expect_codegen_metadata_file_error(() => {
+    generate_app_commands_from_file_with_metadata(input)
+  })
+  assert_eq(
+    error,
+    CodegenMetadataFileError::Invalid(
+      path=metadata_path,
+      error=CodegenMetadataError::DuplicateField(field="id"),
+    ),
+  )
 }
 
 ///|
@@ -627,16 +660,20 @@ test "attribute codegen validates moon ext npm package" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file_with_metadata(input) {
-    Ok(_) => abort("expected invalid moon.ext package error")
-    Err(error) =>
-      inspect(
-        error,
-        content=(
-          #|moon.ext package segment must start with lowercase letter or digit: @Vendor/proton-fs
-        ),
-      )
-  }
+  let metadata_path = "target/proton-codegen-moon-ext-package/moon.ext"
+  let error = expect_codegen_metadata_file_error(() => {
+    generate_app_commands_from_file_with_metadata(input)
+  })
+  assert_eq(
+    error,
+    CodegenMetadataFileError::Invalid(
+      path=metadata_path,
+      error=CodegenMetadataError::InvalidPackageName(
+        value="@Vendor/proton-fs",
+        reason="segments must start with a lowercase letter or digit",
+      ),
+    ),
+  )
 }
 
 ///|
@@ -659,8 +696,12 @@ test "attribute codegen requires moon ext metadata" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match generate_app_commands_from_file_with_metadata(input) {
-    Ok(_) => abort("expected missing extension metadata error")
-    Err(error) => inspect(error, content="missing moon.ext next to input file")
-  }
+  let metadata_path = "target/proton-codegen-missing-moon-ext/moon.ext"
+  let error = expect_codegen_metadata_file_error(() => {
+    generate_app_commands_from_file_with_metadata(input)
+  })
+  assert_eq(
+    error,
+    CodegenMetadataFileError::MissingMetadata(path=metadata_path),
+  )
 }

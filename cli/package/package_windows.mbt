@@ -57,9 +57,7 @@ fn windows_runtime_required_paths(runtime : String) -> Array[String] {
 }
 
 ///|
-fn require_windows_runtime_layout(
-  runtime : String,
-) -> Result[Unit, PackageError] {
+fn require_windows_runtime_layout(runtime : String) -> Unit raise {
   let missing : Array[String] = []
   for path in windows_runtime_required_paths(runtime) {
     if !path_is_file(path) {
@@ -71,14 +69,10 @@ fn require_windows_runtime_layout(
     missing.push(locales)
   }
   if missing.length() > 0 {
-    Err(
-      CommandError(
-        "active Windows Proton runtime is incomplete; missing:\n" +
+    raise WindowsPackagingError::InvalidConfiguration(
+      detail="active Windows Proton runtime is incomplete; missing:\n" +
         missing.join("\n"),
-      ),
     )
-  } else {
-    Ok(())
   }
 }
 
@@ -109,64 +103,19 @@ fn windows_archive_staging_path(plan : PackagePlan) -> String {
 }
 
 ///|
-fn package_error_text(error : PackageError) -> String {
-  match error {
-    UsageError(message, _) | CommandError(message) => message
-  }
-}
-
-///|
-fn combine_package_errors(
-  primary : PackageError,
-  secondary : PackageError,
-  label : String,
-) -> PackageError {
-  CommandError(
-    package_error_text(primary) +
-    "; " +
-    label +
-    ": " +
-    package_error_text(secondary),
-  )
-}
-
-///|
-async fn recover_windows_backup(
-  destination : String,
-  label : String,
-) -> Result[Unit, PackageError] {
+async fn recover_windows_backup(destination : String, label : String) -> Unit {
   let backup = destination + ".backup"
-  guard @mbfs.path_exists(backup) else { return Ok(()) }
+  guard @mbfs.path_exists(backup) else { return }
   if @mbfs.path_exists(destination) {
-    match remove_tree(backup) {
-      Ok(_) => Ok(())
-      Err(error) =>
-        Err(
-          CommandError(
-            "failed to remove stale " +
-            label +
-            " backup " +
-            backup +
-            ": " +
-            package_error_text(error),
-          ),
-        )
-    }
+    remove_tree(backup)
   } else {
     @async_fs.rename(backup, destination) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to restore interrupted " +
-            label +
-            " promotion from " +
-            backup +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise WindowsPackagingError::ToolFailure(
+          stage="restore interrupted " + label,
+          detail=backup + ": " + @debug.render(@debug.to_repr(error)),
         )
     }
-    Ok(())
   }
 }
 
@@ -176,8 +125,8 @@ async fn rollback_windows_promotion(
   destination : String,
   backup : String,
   label : String,
-  primary : PackageError,
-) -> Result[Unit, PackageError] {
+  primary : Error,
+) -> Unit {
   let errors : Array[String] = []
   if @mbfs.path_exists(destination) {
     @async_fs.rename(destination, staging) catch {
@@ -201,26 +150,24 @@ async fn rollback_windows_promotion(
         )
     }
   }
-  match remove_tree(staging) {
-    Err(error) =>
+  remove_tree(staging) catch {
+    error =>
       errors.push(
         "failed to clean rolled-back " +
         label +
         " staging: " +
-        package_error_text(error),
+        error.to_string(),
       )
-    Ok(_) => ()
   }
   if errors.length() > 0 {
-    Err(
-      CommandError(
-        package_error_text(primary) +
+    raise WindowsPackagingError::ToolFailure(
+      stage=label + " rollback",
+      detail=primary.to_string() +
         "; rollback/cleanup also failed: " +
         errors.join("; "),
-      ),
     )
   } else {
-    Err(primary)
+    raise primary
   }
 }
 
@@ -229,124 +176,88 @@ async fn promote_windows_artifact(
   staging : String,
   destination : String,
   label : String,
-) -> Result[Unit, PackageError] {
-  match recover_windows_backup(destination, label) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+) -> Unit {
+  recover_windows_backup(destination, label)
   let backup = destination + ".backup"
   let had_destination = @mbfs.path_exists(destination)
   if had_destination {
     @async_fs.rename(destination, backup) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to preserve existing " +
-            label +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise WindowsPackagingError::ToolFailure(
+          stage="preserve existing " + label,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
   }
   @async_fs.rename(staging, destination) catch {
     error => {
-      let primary = CommandError(
-        "failed to promote staged " +
-        label +
-        ": " +
-        @debug.render(@debug.to_repr(error)),
+      let primary : Error = WindowsPackagingError::ToolFailure(
+        stage="promote staged " + label,
+        detail=@debug.render(@debug.to_repr(error)),
       )
       if had_destination {
         @async_fs.rename(backup, destination) catch {
           rollback_error =>
-            return Err(
-              CommandError(
-                package_error_text(primary) +
+            raise WindowsPackagingError::ToolFailure(
+              stage=label + " rollback",
+              detail=primary.to_string() +
                 "; rollback also failed and the previous artifact remains at " +
                 backup +
                 ": " +
                 @debug.render(@debug.to_repr(rollback_error)),
-              ),
             )
         }
       }
-      return Err(primary)
+      raise primary
     }
   }
-  match remove_tree(backup) {
-    Ok(_) => Ok(())
-    Err(error) =>
+  remove_tree(backup) catch {
+    error =>
       rollback_windows_promotion(
         staging,
         destination,
         backup,
         label,
-        CommandError(
-          label +
-          " was promoted but its backup could not be removed: " +
-          backup +
-          ": " +
-          package_error_text(error),
+        WindowsPackagingError::ToolFailure(
+          stage=label + " backup cleanup",
+          detail=backup + ": " + error.to_string(),
         ),
       )
   }
 }
 
 ///|
-async fn prepare_windows_package_paths(
-  plan : PackagePlan,
-) -> Result[Unit, PackageError] {
-  match ensure_dir(plan.output) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match recover_windows_backup(windows_portable_output(plan), "Windows app") {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match remove_tree(windows_portable_staging(plan)) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+async fn prepare_windows_package_paths(plan : PackagePlan) -> Unit {
+  ensure_dir(plan.output)
+  recover_windows_backup(windows_portable_output(plan), "Windows app")
+  remove_tree(windows_portable_staging(plan))
   if plan.targets.contains("zip") {
-    match recover_windows_backup(windows_archive_path(plan), "Windows zip") {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-    match remove_tree(windows_archive_staging_path(plan)) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    recover_windows_backup(windows_archive_path(plan), "Windows zip")
+    remove_tree(windows_archive_staging_path(plan))
   }
-  Ok(())
+  ()
 }
 
 ///|
-async fn cleanup_failed_windows_package(
-  plan : PackagePlan,
-) -> Result[Unit, PackageError] {
+async fn cleanup_failed_windows_package(plan : PackagePlan) -> Unit {
   let errors : Array[String] = []
-  match remove_tree(windows_portable_staging(plan)) {
-    Err(error) => errors.push(package_error_text(error))
-    Ok(_) => ()
+  remove_tree(windows_portable_staging(plan)) catch {
+    error => errors.push(error.to_string())
   }
-  match recover_windows_backup(windows_portable_output(plan), "Windows app") {
-    Err(error) => errors.push(package_error_text(error))
-    Ok(_) => ()
+  recover_windows_backup(windows_portable_output(plan), "Windows app") catch {
+    error => errors.push(error.to_string())
   }
-  match remove_tree(windows_archive_staging_path(plan)) {
-    Err(error) => errors.push(package_error_text(error))
-    Ok(_) => ()
+  remove_tree(windows_archive_staging_path(plan)) catch {
+    error => errors.push(error.to_string())
   }
-  match recover_windows_backup(windows_archive_path(plan), "Windows zip") {
-    Err(error) => errors.push(package_error_text(error))
-    Ok(_) => ()
+  recover_windows_backup(windows_archive_path(plan), "Windows zip") catch {
+    error => errors.push(error.to_string())
   }
   if errors.length() > 0 {
-    Err(CommandError(errors.join("; ")))
-  } else {
-    Ok(())
+    raise WindowsPackagingError::ToolFailure(
+      stage="Windows package cleanup",
+      detail=errors.join("; "),
+    )
   }
 }
 
@@ -355,7 +266,7 @@ async fn stage_windows_portable(
   plan : PackagePlan,
   executable : String,
   runtime : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   stage_windows_portable_with_options(
     plan,
     executable,
@@ -374,26 +285,21 @@ async fn stage_windows_portable_with_options(
   sign_tool : WindowsSignTool,
   signing : WindowsSigningConfig?,
   announce : Bool,
-) -> Result[Unit, PackageError] {
-  match prepare_windows_package_paths(plan) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  let result = stage_windows_portable_impl(
+) -> Unit {
+  prepare_windows_package_paths(plan)
+  stage_windows_portable_impl(
     plan, executable, runtime, sign_tool, signing, announce,
-  )
-  match result {
-    Ok(_) => Ok(())
-    Err(error) =>
-      match cleanup_failed_windows_package(plan) {
-        Ok(_) => Err(error)
-        Err(cleanup_error) =>
-          Err(
-            combine_package_errors(
-              error, cleanup_error, "Windows package rollback/cleanup failed",
-            ),
+  ) catch {
+    error => {
+      cleanup_failed_windows_package(plan) catch {
+        cleanup_error =>
+          raise WindowsPackagingError::ToolFailure(
+            stage="Windows package rollback/cleanup",
+            detail=error.to_string() + "; " + cleanup_error.to_string(),
           )
       }
+      raise error
+    }
   }
 }
 
@@ -405,106 +311,54 @@ async fn stage_windows_portable_impl(
   sign_tool : WindowsSignTool,
   signing : WindowsSigningConfig?,
   announce : Bool,
-) -> Result[Unit, PackageError] {
-  match require_windows_runtime_layout(runtime) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+) -> Unit {
+  require_windows_runtime_layout(runtime)
   guard path_is_file(executable) else {
-    return Err(
-      CommandError("package release executable is missing: " + executable),
-    )
+    raise WindowsPackagingError::MissingTarget(path=executable)
   }
   let staging = windows_portable_staging(plan)
-  match ensure_dir(staging) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  ensure_dir(staging)
   for name in windows_runtime_binary_files() {
-    match
-      copy_file(
-        resolve_path(runtime, "bin/" + name),
-        resolve_path(staging, name),
-      ) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    copy_file(resolve_path(runtime, "bin/" + name), resolve_path(staging, name))
   }
   for name in windows_runtime_root_data_files() {
-    match
-      copy_file(
-        resolve_path(runtime, "bin/" + name),
-        resolve_path(staging, name),
-      ) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    copy_file(resolve_path(runtime, "bin/" + name), resolve_path(staging, name))
   }
-  match
-    copy_tree(
-      resolve_path(runtime, "Resources"),
-      resolve_path(staging, "Resources"),
-    ) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match
-    copy_file(
-      executable,
-      resolve_path(staging, package_executable_name(plan.product_name) + ".exe"),
-    ) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match copy_file(plan.config_path, resolve_path(staging, "moon.proton")) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match stage_project_inputs(plan, staging) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match write_package_manifest(plan, staging, "windows-portable") {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match validate_windows_portable_layout(plan, staging) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  copy_tree(
+    resolve_path(runtime, "Resources"),
+    resolve_path(staging, "Resources"),
+  )
+  copy_file(
+    executable,
+    resolve_path(staging, package_executable_name(plan.product_name) + ".exe"),
+  )
+  copy_file(plan.config_path, resolve_path(staging, "moon.proton"))
+  stage_project_inputs(plan, staging)
+  write_package_manifest(plan, staging, "windows-portable")
+  validate_windows_portable_layout(plan, staging)
   if plan.sign {
-    let result = match signing {
+    match signing {
       Some(signing) =>
         sign_windows_portable_configured(plan, staging, sign_tool, signing)
       None => sign_windows_portable_with_tool(plan, staging, sign_tool)
     }
-    match result {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
   }
   let output = windows_portable_output(plan)
-  match promote_windows_artifact(staging, output, "Windows app") {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  promote_windows_artifact(staging, output, "Windows app")
   if announce {
     println("Packaged Windows portable app: " + output)
   }
   if plan.targets.contains("zip") {
-    match create_windows_zip(plan, output, announce) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    create_windows_zip(plan, output, announce)
   }
-  Ok(())
+  ()
 }
 
 ///|
 fn validate_windows_portable_layout(
   plan : PackagePlan,
   output : String,
-) -> Result[Unit, PackageError] {
+) -> Unit raise {
   let required : Array[String] = [
     resolve_path(output, package_executable_name(plan.product_name) + ".exe"),
     resolve_path(output, "moon.proton"),
@@ -531,11 +385,9 @@ fn validate_windows_portable_layout(
     missing.push(locales)
   }
   if missing.length() > 0 {
-    return Err(
-      CommandError(
-        "staged Windows portable layout is incomplete; missing:\n" +
+    raise WindowsPackagingError::Verification(
+      detail="staged portable layout is incomplete; missing:\n" +
         missing.join("\n"),
-      ),
     )
   }
   for
@@ -544,15 +396,13 @@ fn validate_windows_portable_layout(
     ] {
     let path = resolve_path(output, forbidden)
     if @mbfs.path_exists(path) {
-      return Err(
-        CommandError(
-          "staged Windows portable layout contains a build-only or sample artifact: " +
+      raise WindowsPackagingError::Verification(
+        detail="staged portable layout contains a build-only or sample artifact: " +
           path,
-        ),
       )
     }
   }
-  Ok(())
+  ()
 }
 
 ///|
@@ -623,7 +473,7 @@ async fn run_windows_signtool(
   args : Array[String],
   action : String,
   target : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let command_args = copy_strings(tool.prefix_args)
   for arg in args {
     command_args.push(arg)
@@ -634,22 +484,15 @@ async fn run_windows_signtool(
     no_console_window=true,
   ) catch {
     _ =>
-      return Err(
-        CommandError("failed to run signtool to " + action + ": " + target),
+      raise WindowsPackagingError::ToolFailure(
+        stage="signtool " + action,
+        detail=target,
       )
   }
-  if code == 0 {
-    Ok(())
-  } else {
-    Err(
-      CommandError(
-        "signtool " +
-        action +
-        " exited with code " +
-        code.to_string() +
-        ": " +
-        target,
-      ),
+  if code != 0 {
+    raise WindowsPackagingError::ToolFailure(
+      stage="signtool " + action,
+      detail="exit code " + code.to_string() + ": " + target,
     )
   }
 }
@@ -659,9 +502,9 @@ async fn verify_windows_signature_with_tool(
   tool : WindowsSignTool,
   target : String,
   label : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   guard path_is_file(target) else {
-    return Err(CommandError("required " + label + " is missing: " + target))
+    raise WindowsPackagingError::MissingTarget(path=target)
   }
   run_windows_signtool(
     tool,
@@ -676,29 +519,23 @@ async fn sign_windows_portable_with_tool(
   plan : PackagePlan,
   output : String,
   tool : WindowsSignTool,
-) -> Result[Unit, PackageError] {
-  let signing = match windows_signing_config_from_env() {
-    Err(error) => return Err(error)
-    Ok(signing) => signing
-  }
+) -> Unit {
+  let signing = windows_signing_config_from_env()
   sign_windows_portable_configured(plan, output, tool, signing)
 }
 
 ///|
-fn windows_signing_config_from_env() -> Result[
-  WindowsSigningConfig,
-  PackageError,
-] {
+fn windows_signing_config_from_env() -> WindowsSigningConfig raise WindowsPackagingError {
   let certificate = match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
     Some(path) if path.trim().to_owned() != "" => path.trim().to_owned()
     _ =>
-      return Err(
-        CommandError("--sign requires PROTON_WINDOWS_CERTIFICATE on Windows"),
+      raise InvalidConfiguration(
+        detail="--sign requires PROTON_WINDOWS_CERTIFICATE on Windows",
       )
   }
   guard path_is_file(certificate) else {
-    return Err(
-      CommandError("Windows signing certificate is missing: " + certificate),
+    raise InvalidConfiguration(
+      detail="Windows signing certificate is missing: " + certificate,
     )
   }
   let password = @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE_PASSWORD").unwrap_or(
@@ -707,7 +544,7 @@ fn windows_signing_config_from_env() -> Result[
   let timestamp = windows_timestamp_url(
     @sys.get_env_var("PROTON_WINDOWS_TIMESTAMP_URL"),
   )
-  Ok(WindowsSigningConfig::{ certificate, password, timestamp })
+  WindowsSigningConfig::{ certificate, password, timestamp }
 }
 
 ///|
@@ -716,54 +553,38 @@ async fn sign_windows_portable_configured(
   output : String,
   tool : WindowsSignTool,
   signing : WindowsSigningConfig,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   guard path_is_file(signing.certificate) else {
-    return Err(
-      CommandError(
-        "Windows signing certificate is missing: " + signing.certificate,
-      ),
+    raise WindowsPackagingError::InvalidConfiguration(
+      detail="Windows signing certificate is missing: " + signing.certificate,
     )
   }
   let owned_targets = windows_owned_sign_targets(plan, output)
   for target in owned_targets {
     guard path_is_file(target) else {
-      return Err(
-        CommandError("required Windows signing target is missing: " + target),
-      )
+      raise WindowsPackagingError::MissingTarget(path=target)
     }
   }
   for target in owned_targets {
-    match
-      run_windows_signtool(
-        tool,
-        windows_signtool_sign_args(
-          signing.certificate,
-          signing.password,
-          signing.timestamp,
-          target,
-        ),
-        "sign",
+    run_windows_signtool(
+      tool,
+      windows_signtool_sign_args(
+        signing.certificate,
+        signing.password,
+        signing.timestamp,
         target,
-      ) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-    match
-      verify_windows_signature_with_tool(tool, target, "Proton-owned signature") {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+      ),
+      "sign",
+      target,
+    )
+    verify_windows_signature_with_tool(tool, target, "Proton-owned signature")
   }
   for target in windows_upstream_signature_targets(output) {
-    match
-      verify_windows_signature_with_tool(
-        tool, target, "upstream Microsoft signature",
-      ) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    verify_windows_signature_with_tool(
+      tool, target, "upstream Microsoft signature",
+    )
   }
-  Ok(())
+  ()
 }
 
 ///|
@@ -771,13 +592,10 @@ async fn create_windows_zip(
   plan : PackagePlan,
   source : String,
   announce : Bool,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let archive = windows_archive_path(plan)
   let staging = windows_archive_staging_path(plan)
-  match remove_tree(staging) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  remove_tree(staging)
   let compress_script =
     #|& {
     #|  $ErrorActionPreference = "Stop"
@@ -791,11 +609,16 @@ async fn create_windows_zip(
       "PROTON_PACKAGE_ZIP_DESTINATION": staging,
     },
   ) catch {
-    _ => return Err(CommandError("failed to create Windows zip: " + staging))
+    _ =>
+      raise WindowsPackagingError::ToolFailure(
+        stage="create Windows zip",
+        detail=staging,
+      )
   }
   guard code == 0 else {
-    return Err(
-      CommandError("Windows zip command exited with code " + code.to_string()),
+    raise WindowsPackagingError::ToolFailure(
+      stage="create Windows zip",
+      detail="exit code " + code.to_string(),
     )
   }
   let verify_script =
@@ -814,24 +637,22 @@ async fn create_windows_zip(
     ["-NoProfile", "-NonInteractive", "-Command", verify_script],
     extra_env={ "PROTON_PACKAGE_ZIP_VERIFY": staging },
   ) catch {
-    _ => return Err(CommandError("failed to verify Windows zip: " + staging))
+    _ =>
+      raise WindowsPackagingError::Verification(
+        detail="failed to open " + staging,
+      )
   }
   guard verify_code == 0 else {
-    return Err(
-      CommandError(
-        "Windows zip verification exited with code " +
+    raise WindowsPackagingError::Verification(
+      detail="zip verification exited with code " +
         verify_code.to_string() +
         ": " +
         staging,
-      ),
     )
   }
-  match promote_windows_artifact(staging, archive, "Windows zip") {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  promote_windows_artifact(staging, archive, "Windows zip")
   if announce {
     println("Created archive: " + archive)
   }
-  Ok(())
+  ()
 }

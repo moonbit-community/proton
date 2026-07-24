@@ -37,6 +37,18 @@ fn manifest_test_path(name : String) -> String {
 }
 
 ///|
+fn[T] expect_bootstrap_error(
+  action : () -> T raise BootstrapError,
+) -> BootstrapError {
+  try {
+    let _ = action()
+    abort("expected bootstrap error")
+  } catch {
+    error => error
+  }
+}
+
+///|
 /// Writes a minimal moon.proton with one extra top-level field and checks the error.
 fn expect_moon_proton_extra_field_error(
   extra : String,
@@ -70,41 +82,34 @@ fn expect_moon_proton_extra_field_error(
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_config_manifest_from_file(config_path) {
-    Ok(_) => abort("expected moon.proton field rejection")
-    Err(error) => if error != expected { abort("unexpected error: " + error) }
+  let error = expect_bootstrap_error(() => {
+    load_config_manifest_from_file(config_path)
+  })
+  if error.message() != expected {
+    abort("unexpected error: " + error.message())
   }
 }
 
 ///|
 test "load_proton_manifest_from_file rebases file entry and bool debug" {
-  let result = load_proton_manifest_from_file(manifest_test_path("moon.proton"))
-  match result {
-    Err(error) => abort(error)
-    Ok(loaded) => {
-      let manifest = loaded.manifest()
-      assert_eq(manifest.window.title, "Proton Runtime")
-      assert_eq(manifest.window.width, 840)
-      assert_eq(manifest.window.height, 600)
-      assert_eq(manifest.window.size_hint, @manifest.WindowSizeHint::Fixed)
-      assert_eq(manifest.debug, 1)
-      match manifest.entry {
-        File(path) =>
-          assert_true(
-            normalize_test_slashes(path).has_suffix("testdata/app.html"),
-          )
-        _ => abort("expected file entry")
-      }
-    }
+  let loaded = load_proton_manifest_from_file(manifest_test_path("moon.proton"))
+  let manifest = loaded.manifest()
+  assert_eq(manifest.window.title, "Proton Runtime")
+  assert_eq(manifest.window.width, 840)
+  assert_eq(manifest.window.height, 600)
+  assert_eq(manifest.window.size_hint, @manifest.WindowSizeHint::Fixed)
+  assert_eq(manifest.debug, 1)
+  match manifest.entry {
+    File(path) =>
+      assert_true(normalize_test_slashes(path).has_suffix("testdata/app.html"))
+    _ => abort("expected file entry")
   }
 }
 
 ///|
 test "load_config_manifest_from_file accepts explicit config filenames" {
-  match load_config_manifest_from_file(manifest_test_path("moon.proton")) {
-    Err(error) => abort(error)
-    Ok(loaded) => assert_eq(loaded.manifest().debug, 1)
-  }
+  let loaded = load_config_manifest_from_file(manifest_test_path("moon.proton"))
+  assert_eq(loaded.manifest().debug, 1)
 
   @mbfs.create_dir("target") catch {
     _ => ()
@@ -134,17 +139,13 @@ test "load_config_manifest_from_file accepts explicit config filenames" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_config_manifest_from_file(config_path) {
-    Err(error) => abort(error)
-    Ok(loaded) => {
-      let manifest = loaded.manifest()
-      assert_eq(manifest.window.title, "Alt Config")
-      assert_eq(manifest.debug, 1)
-      match manifest.entry {
-        Url(url) => assert_eq(url, "http://localhost:5173")
-        _ => abort("expected url entry")
-      }
-    }
+  let loaded = load_config_manifest_from_file(config_path)
+  let manifest = loaded.manifest()
+  assert_eq(manifest.window.title, "Alt Config")
+  assert_eq(manifest.debug, 1)
+  match manifest.entry {
+    Url(url) => assert_eq(url, "http://localhost:5173")
+    _ => abort("expected url entry")
   }
 }
 
@@ -178,34 +179,34 @@ test "load_proton_manifest_from_file rejects extension settings" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_config_manifest_from_file(config_path) {
-    Ok(_) => abort("expected extensions rejection")
-    Err(error) =>
-      assert_eq(
-        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
-      )
-  }
+  let error = expect_bootstrap_error(() => {
+    load_config_manifest_from_file(config_path)
+  })
+  assert_eq(
+    error.message(),
+    "moon.proton.extensions is not supported: declare extensions in MoonBit code with .extension(...)",
+  )
 }
 
 ///|
 test "load_proton_manifest_from_file rejects unsupported top-level fields" {
   expect_moon_proton_extra_field_error(
-    "version = \"1.0.0\"", "unknown moon.proton field: version",
+    "version = \"1.0.0\"", "unknown field: moon.proton.version",
   )
   expect_moon_proton_extra_field_error(
-    "license = \"MIT\"", "unknown moon.proton field: license",
+    "license = \"MIT\"", "unknown field: moon.proton.license",
   )
   expect_moon_proton_extra_field_error(
-    "description = \"App\"", "unknown moon.proton field: description",
+    "description = \"App\"", "unknown field: moon.proton.description",
   )
   expect_moon_proton_extra_field_error(
-    "permissions = {}", "moon.proton field `permissions` is not supported in v1",
+    "permissions = {}", "moon.proton.permissions is not supported: not available in v1",
   )
   expect_moon_proton_extra_field_error(
-    "windows = []", "moon.proton field `windows` is not supported in v1",
+    "windows = []", "moon.proton.windows is not supported: not available in v1",
   )
   expect_moon_proton_extra_field_error(
-    "debug = 1", "moon.proton debug must be a bool",
+    "debug = 1", "moon.proton.debug must be a bool",
   )
 }
 
@@ -272,10 +273,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     err => abort(@debug.render(@debug.to_repr(err)))
   }
 
-  let project = match load_proton_project_config_from_file(config_path) {
-    Ok(project) => project
-    Err(error) => abort(error)
-  }
+  let project = load_proton_project_config_from_file(config_path)
 
   assert_eq(project.manifest().manifest().debug, 1)
   let metadata = project.metadata()
@@ -400,11 +398,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     _ => abort("expected object summary")
   }
 
-  let loaded_summary = match
-    load_proton_project_summary_from_file(config_path) {
-    Ok(summary) => summary
-    Err(error) => abort(error)
-  }
+  let loaded_summary = load_proton_project_summary_from_file(config_path)
   @debug.assert_eq(loaded_summary, project.to_summary_json())
 }
 
@@ -466,10 +460,10 @@ test "load_proton_project_config_from_file validates tooling blocks" {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
 
-  match load_proton_project_config_from_file(config_path) {
-    Ok(_) => abort("expected frontend validation error")
-    Err(error) => assert_eq(error, "unknown frontend field: unknown")
-  }
+  let error = expect_bootstrap_error(() => {
+    load_proton_project_config_from_file(config_path)
+  })
+  assert_eq(error.message(), "unknown field: frontend.unknown")
 }
 
 ///|
@@ -505,10 +499,10 @@ test "load_config_manifest_from_file validates project tooling blocks" {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
 
-  match load_config_manifest_from_file(config_path) {
-    Ok(_) => abort("expected frontend validation error")
-    Err(error) => assert_eq(error, "unknown frontend field: before_buid")
-  }
+  let error = expect_bootstrap_error(() => {
+    load_config_manifest_from_file(config_path)
+  })
+  assert_eq(error.message(), "unknown field: frontend.before_buid")
 }
 
 ///|
@@ -555,13 +549,10 @@ test "load_proton_project_config_from_file preserves active bundle without relea
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_proton_project_config_from_file(missing_identifier) {
-    Ok(config) =>
-      match config.bundle() {
-        Some(bundle) => assert_true(bundle.active())
-        None => abort("expected active bundle")
-      }
-    Err(error) => abort(error)
+  let config = load_proton_project_config_from_file(missing_identifier)
+  match config.bundle() {
+    Some(bundle) => assert_true(bundle.active())
+    None => abort("expected active bundle")
   }
 }
 
@@ -597,11 +588,10 @@ test "load_proton_project_config_from_file validates bundle targets" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_proton_project_config_from_file(unsupported_target) {
-    Ok(_) => abort("expected unsupported bundle target error")
-    Err(error) =>
-      assert_eq(error, "bundle.targets contains unsupported target: dmg")
-  }
+  let error = expect_bootstrap_error(() => {
+    load_proton_project_config_from_file(unsupported_target)
+  })
+  assert_eq(error.message(), "unsupported bundle.targets: dmg")
 
   let duplicate_target = "target/proton-project-bundle-targets/duplicate.moon.proton"
   @mbfs.write_string_to_file(
@@ -627,11 +617,10 @@ test "load_proton_project_config_from_file validates bundle targets" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match load_proton_project_config_from_file(duplicate_target) {
-    Ok(_) => abort("expected duplicate bundle target error")
-    Err(error) =>
-      assert_eq(error, "bundle.targets contains duplicate target: app")
-  }
+  let error = expect_bootstrap_error(() => {
+    load_proton_project_config_from_file(duplicate_target)
+  })
+  assert_eq(error.message(), "duplicate field: bundle.targets.app")
 }
 
 ///|
@@ -666,10 +655,7 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
     },
   )
   let text = app_manifest_to_json(manifest).stringify(indent=2)
-  let loaded = match load_runtime_manifest_from_json(text) {
-    Ok(loaded) => loaded
-    Err(error) => abort(error)
-  }
+  let loaded = load_runtime_manifest_from_json(text)
   let roundtripped = loaded.manifest()
   assert_eq(roundtripped.window.title, "Roundtrip")
   assert_eq(roundtripped.window.size_hint, @manifest.WindowSizeHint::Min)

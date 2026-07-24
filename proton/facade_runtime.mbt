@@ -19,53 +19,23 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     Some(error) => raise ConfigurationError(error)
     None => ()
   }
-  match self.resolved_app_config() {
-    Err(error) => raise ConfigurationError(error)
-    Ok(resolved) =>
-      run_manifest(
-        resolved.manifest,
-        self.command_extensions,
-        resolved.base_dir,
-        self.menu,
-        self.bridge_startup_timeout_value_ms,
-      )
+  let resolved = self.resolved_app_config() catch {
+    error => raise ConfigurationError(error)
   }
+  run_manifest(
+    resolved.manifest,
+    self.command_extensions,
+    resolved.base_dir,
+    self.menu,
+    self.bridge_startup_timeout_value_ms,
+  )
 }
 
 ///|
 /// Runs the configured app and aborts with the error message on failure.
 pub async fn App::run_or_abort(self : App) -> Unit {
   self.run() catch {
-    error => abort(app_run_error_text(error))
-  }
-}
-
-///|
-fn app_run_error_text(error : AppRunError) -> String {
-  match error {
-    RunnerError(message) => "application runner is not active: " + message
-    ConfigurationError(message) =>
-      "application configuration failed: " + message
-    NativeRuntimeError(error) =>
-      "native runtime failed (" +
-      error.status.to_string() +
-      "): " +
-      error.message
-    EntryLoadError(message) => "application entry failed to load: " + message
-    BridgeStartupError(diagnostic) =>
-      "application startup failed [" +
-      diagnostic.code +
-      "]: " +
-      diagnostic.message +
-      "\n" +
-      @debug.render(@debug.to_repr(diagnostic))
-    BridgeRuntimeError(diagnostic) =>
-      "application bridge failed [" +
-      diagnostic.code +
-      "]: " +
-      diagnostic.message +
-      "\n" +
-      @debug.render(@debug.to_repr(diagnostic))
+    error => abort(error.message())
   }
 }
 
@@ -81,58 +51,64 @@ async fn run_manifest(
   let helper_path = macos_bundled_helper_path() catch {
     error => raise normalize_async_run_error(error)
   }
-  let runtime = match
-    @native.Runtime::new(
-      config=@native.RuntimeConfig::bundled(
-        helper_path?,
-        remote_debugging_port=debug_port(manifest.debug),
-      ),
-    ) {
-    Ok(runtime) => runtime
-    Err(error) => raise native_run_error("create runtime", error)
+  let runtime = @native.Runtime::new(
+    config=@native.RuntimeConfig::bundled(
+      helper_path?,
+      remote_debugging_port=debug_port(manifest.debug),
+    ),
+  ) catch {
+    error => raise native_run_error("create runtime", error)
   }
   let wakeup = RuntimeWakeup::new(runtime) catch {
     error => {
-      ignore(runtime.destroy())
+      runtime.destroy() catch {
+        _ => ()
+      }
       raise error
     }
   }
   defer wakeup.close()
   match menu {
     Some(menu) =>
-      match runtime.set_menu(menu) {
-        Err(error) => {
-          ignore(runtime.destroy())
+      runtime.set_menu(menu) catch {
+        error => {
+          runtime.destroy() catch {
+            _ => ()
+          }
           raise native_run_error("set menu", error)
         }
-        Ok(_) => ()
       }
     None => ()
   }
-  let command_host = match
-    build_command_host(manifest, command_extensions, base_dir) {
-    Err(error) => {
-      ignore(runtime.destroy())
-      raise ConfigurationError(error)
+  let command_host = build_command_host(manifest, command_extensions, base_dir) catch {
+    error => {
+      runtime.destroy() catch {
+        _ => ()
+      }
+      raise error
     }
-    Ok(host) => host
   }
-  let frontend = match
-    build_bridge_frontend_config(manifest, command_extensions) {
-    Err(error) => {
-      close_command_host(command_host)
-      ignore(runtime.destroy())
+  let frontend = build_bridge_frontend_config(manifest, command_extensions) catch {
+    error => {
+      close_command_host(command_host) catch {
+        _ => ()
+      }
+      runtime.destroy() catch {
+        _ => ()
+      }
       raise ConfigurationError(error)
     }
-    Ok(script) => script
   }
-  let bridge_policy = match bridge_page_policy_for_manifest(manifest) {
-    Err(error) => {
-      close_command_host(command_host)
-      ignore(runtime.destroy())
+  let bridge_policy = bridge_page_policy_for_manifest(manifest) catch {
+    error => {
+      close_command_host(command_host) catch {
+        _ => ()
+      }
+      runtime.destroy() catch {
+        _ => ()
+      }
       raise ConfigurationError(error)
     }
-    Ok(policy) => policy
   }
   let ops = match command_host {
     Some(host) => host.host.registered_ops()
@@ -153,25 +129,27 @@ async fn run_manifest(
   } else {
     None
   }
-  let window = match
-    @native.Window::new(
-      runtime,
-      config=@native.WindowConfig::new(
-        title=manifest.window.title,
-        width=manifest.window.width,
-        height=manifest.window.height,
-        initial_url="about:blank",
-        titlebar_style=match manifest.window.titlebar_style {
-          @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
-          @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
-        },
-        bridge?,
-      ),
-    ) {
-    Ok(window) => window
-    Err(error) => {
-      close_command_host(command_host)
-      ignore(runtime.destroy())
+  let window = @native.Window::new(
+    runtime,
+    config=@native.WindowConfig::new(
+      title=manifest.window.title,
+      width=manifest.window.width,
+      height=manifest.window.height,
+      initial_url="about:blank",
+      titlebar_style=match manifest.window.titlebar_style {
+        @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
+        @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
+      },
+      bridge?,
+    ),
+  ) catch {
+    error => {
+      close_command_host(command_host) catch {
+        _ => ()
+      }
+      runtime.destroy() catch {
+        _ => ()
+      }
       raise native_run_error("create window", error)
     }
   }
@@ -180,9 +158,8 @@ async fn run_manifest(
     None => ()
   }
   try {
-    match load_entry_after_create(window, manifest.entry) {
-      Err(error) => raise EntryLoadError(error)
-      Ok(_) => ()
+    load_entry_after_create(window, manifest.entry) catch {
+      error => raise EntryLoadError(error)
     }
     if bridge is Some(_) {
       wait_for_bridge_startup(
@@ -191,9 +168,8 @@ async fn run_manifest(
         error => raise normalize_async_run_error(error)
       }
     }
-    match window.show() {
-      Err(error) => raise native_run_error("show window", error)
-      Ok(_) => ()
+    window.show() catch {
+      error => raise native_run_error("show window", error)
     }
     match command_host {
       Some(host) =>
@@ -223,16 +199,21 @@ async fn run_manifest(
       show_app_run_failure(runtime, window, wakeup, error) catch {
         _ => ()
       }
-      close_command_host(command_host)
-      ignore(window.destroy())
-      ignore(runtime.destroy())
+      close_command_host(command_host) catch {
+        _ => ()
+      }
+      window.destroy() catch {
+        _ => ()
+      }
+      runtime.destroy() catch {
+        _ => ()
+      }
       raise error
     }
   }
   close_command_host(command_host)
-  match runtime.destroy() {
-    Err(error) => raise native_run_error("destroy runtime", error)
-    Ok(_) => ()
+  runtime.destroy() catch {
+    error => raise native_run_error("destroy runtime", error)
   }
 }
 
@@ -241,32 +222,28 @@ fn native_run_error(
   action : String,
   error : @native.NativeError,
 ) -> AppRunError {
-  NativeRuntimeError({
-    status: error.status,
-    message: action + " failed: " + error.message,
-  })
+  NativeRuntimeError(action~, error~)
 }
 
 ///|
 fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
     RunnerError(message) => RunnerError(message)
-    ConfigurationError(message) => ConfigurationError(message)
-    NativeRuntimeError(error) => NativeRuntimeError(error)
-    EntryLoadError(message) => EntryLoadError(message)
+    ConfigurationError(error) => ConfigurationError(error)
+    NativeRuntimeError(action~, error~) => NativeRuntimeError(action~, error~)
+    RuntimeWakeupError(error) => RuntimeWakeupError(error)
+    CommandExtensionLifecycleError(error) =>
+      CommandExtensionLifecycleError(error)
+    EntryLoadError(error) => EntryLoadError(error)
     BridgeStartupError(diagnostic) => BridgeStartupError(diagnostic)
     BridgeRuntimeError(diagnostic) => BridgeRuntimeError(diagnostic)
-    _ =>
-      NativeRuntimeError({
-        status: -6,
-        message: "application task failed: " +
-        @debug.render(@debug.to_repr(error)),
-      })
+    UnexpectedTaskFailure(detail~) => UnexpectedTaskFailure(detail~)
+    _ => UnexpectedTaskFailure(detail=@debug.render(@debug.to_repr(error)))
   }
 }
 
 ///|
-fn close_command_host(host : CommandHostRuntime?) -> Unit {
+fn close_command_host(host : CommandHostRuntime?) -> Unit raise AppRunError {
   match host {
     Some(value) => value.close()
     None => ()
@@ -274,7 +251,9 @@ fn close_command_host(host : CommandHostRuntime?) -> Unit {
 }
 
 ///|
-fn CommandHostRuntime::close(self : CommandHostRuntime) -> Unit {
+fn CommandHostRuntime::close(
+  self : CommandHostRuntime,
+) -> Unit raise AppRunError {
   guard !self.closed else { return }
   self.closed = true
   close_command_host_runtime(self.host, self.destroy_hooks)
@@ -308,18 +287,14 @@ fn bridge_protocol_diagnostic(
 fn bridge_failure(
   window : @native.Window,
   state : @native.BridgeLifecycleState,
-) -> Result[@native.BridgeDiagnostic, @native.NativeError] {
-  window
-  .take_bridge_failure()
-  .map(fn(failure) {
-    match failure {
-      Some(diagnostic) => diagnostic
-      None =>
-        bridge_protocol_diagnostic(
-          state, "bridge_failure_missing_diagnostic", "renderer reported bridge failure without a diagnostic",
-        )
-    }
-  })
+) -> @native.BridgeDiagnostic raise @native.NativeError {
+  match window.take_bridge_failure() {
+    Some(diagnostic) => diagnostic
+    None =>
+      bridge_protocol_diagnostic(
+        state, "bridge_failure_missing_diagnostic", "renderer reported bridge failure without a diagnostic",
+      )
+  }
 }
 
 ///|
@@ -375,12 +350,14 @@ fn pump_bridge_startup_once(
 ) -> @native.BridgeLifecycleState raise AppRunError {
   let mut polling_events = true
   while polling_events {
-    match runtime.poll_event() {
-      Err(error) => raise native_run_error("poll startup event", error)
-      Ok(None) => polling_events = false
-      Ok(Some(event)) => {
+    let next_event = runtime.poll_event() catch {
+      error => raise native_run_error("poll startup event", error)
+    }
+    match next_event {
+      None => polling_events = false
+      Some(event) => {
         if event.is_window_closed() {
-          raise EntryLoadError("window closed before startup completed")
+          raise EntryLoadError(ClosedDuringStartup)
         }
         if forward_menu_events {
           if event.menu_command_id() is Some(command_id) {
@@ -390,17 +367,16 @@ fn pump_bridge_startup_once(
       }
     }
   }
-  let state = match window.bridge_lifecycle_state() {
-    Err(error) => raise native_run_error("read bridge startup state", error)
-    Ok(state) => state
+  let state = window.bridge_lifecycle_state() catch {
+    error => raise native_run_error("read bridge startup state", error)
   }
   if state.url != "about:blank" {
     match state.outcome {
       "failed" =>
-        match bridge_failure(window, state) {
-          Err(error) =>
-            raise native_run_error("read bridge startup failure", error)
-          Ok(diagnostic) => raise BridgeStartupError(diagnostic)
+        try bridge_failure(window, state) catch {
+          error => raise native_run_error("read bridge startup failure", error)
+        } noraise {
+          diagnostic => raise BridgeStartupError(diagnostic)
         }
       "ineligible" =>
         raise BridgeStartupError(
@@ -443,9 +419,13 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
     BridgeRuntimeError(diagnostic) =>
       "The application bridge stopped working.\n\nError code: " +
       diagnostic.code
-    EntryLoadError(message) => message
-    ConfigurationError(message) => message
-    NativeRuntimeError(error) => error.message
+    EntryLoadError(error) => error.message()
+    ConfigurationError(error) => error.message()
+    NativeRuntimeError(action~, error~) =>
+      action + " failed: " + error.message()
+    RuntimeWakeupError(error) => error.message()
+    CommandExtensionLifecycleError(error) => error.message()
+    UnexpectedTaskFailure(detail~) => detail
   }
 }
 
@@ -455,20 +435,18 @@ async fn show_runtime_failure_dialog(
   wakeup : RuntimeWakeup,
   message : String,
 ) -> Unit {
-  let dialog = match
-    runtime.begin_message_dialog(
-      Some("Application Startup Failed"),
-      message,
-      @native.DialogLevel::Error,
-    ) {
-    Err(_) => return
-    Ok(dialog) => dialog
+  let dialog = runtime.begin_message_dialog(
+    Some("Application Startup Failed"),
+    message,
+    @native.DialogLevel::Error,
+  ) catch {
+    _ => return
   }
   while true {
-    match runtime.poll_message_dialog(dialog) {
-      Err(_) => return
-      Ok(true) => return
-      Ok(false) => wakeup.wait() catch { _ => return }
+    let completed = runtime.poll_message_dialog(dialog) catch { _ => return }
+    match completed {
+      true => return
+      false => wakeup.wait() catch { _ => return }
     }
   }
 }
@@ -479,21 +457,19 @@ async fn show_window_failure_dialog(
   wakeup : RuntimeWakeup,
   message : String,
 ) -> Unit {
-  let dialog = match
-    window.begin_message_dialog(
-      Some("Application Error"),
-      message,
-      @native.DialogLevel::Error,
-    ) {
-    Err(_) => return
-    Ok(dialog) => dialog
+  let dialog = window.begin_message_dialog(
+    Some("Application Error"),
+    message,
+    @native.DialogLevel::Error,
+  ) catch {
+    _ => return
   }
   while true {
     let revision = wakeup.signal.revision()
-    match window.poll_dialog_result(dialog) {
-      Err(_) => return
-      Ok(@native.DialogPollResult::Ready(_)) => return
-      Ok(@native.DialogPollResult::Pending) =>
+    let result = window.poll_dialog_result(dialog) catch { _ => return }
+    match result {
+      @native.DialogPollResult::Ready(_) => return
+      @native.DialogPollResult::Pending =>
         // The main pump is no longer running on this error path, so this
         // waiter must consume the native pipe itself.
         if wakeup.signal.revision() == revision {
@@ -534,10 +510,12 @@ async fn run_window_pump(
 
     let mut polling_events = true
     while polling_events {
-      match runtime.poll_event() {
-        Err(error) => raise native_run_error("poll event", error)
-        Ok(None) => polling_events = false
-        Ok(Some(event)) => {
+      let next_event = runtime.poll_event() catch {
+        error => raise native_run_error("poll event", error)
+      }
+      match next_event {
+        None => polling_events = false
+        Some(event) => {
           did_work = true
           if event.is_window_closed() {
             closed = true
@@ -552,10 +530,12 @@ async fn run_window_pump(
     }
 
     if monitor_bridge {
-      match take_runtime_bridge_failure(window) {
-        Err(error) => raise native_run_error("read bridge failure", error)
-        Ok(Some(diagnostic)) => raise BridgeRuntimeError(diagnostic)
-        Ok(None) => ()
+      let failure = take_runtime_bridge_failure(window) catch {
+        error => raise native_run_error("read bridge failure", error)
+      }
+      match failure {
+        Some(diagnostic) => raise BridgeRuntimeError(diagnostic)
+        None => ()
       }
     }
 
@@ -574,15 +554,12 @@ async fn run_window_pump(
 ///|
 fn take_runtime_bridge_failure(
   window : @native.Window,
-) -> Result[@native.BridgeDiagnostic?, @native.NativeError] {
-  let state = match window.bridge_lifecycle_state() {
-    Err(error) => return Err(error)
-    Ok(state) => state
-  }
+) -> @native.BridgeDiagnostic? raise @native.NativeError {
+  let state = window.bridge_lifecycle_state()
   if !state.failure_pending {
-    return Ok(None)
+    return None
   }
-  bridge_failure(window, state).map(fn(diagnostic) { Some(diagnostic) })
+  Some(bridge_failure(window, state))
 }
 
 ///|
@@ -602,10 +579,12 @@ async fn run_bridge_pump(
 
       let mut polling_events = true
       while polling_events {
-        match runtime.poll_event() {
-          Err(error) => raise native_run_error("poll event", error)
-          Ok(None) => polling_events = false
-          Ok(Some(event)) => {
+        let next_event = runtime.poll_event() catch {
+          error => raise native_run_error("poll event", error)
+        }
+        match next_event {
+          None => polling_events = false
+          Some(event) => {
             did_work = true
             if event.is_window_closed() {
               closed = true
@@ -619,18 +598,22 @@ async fn run_bridge_pump(
         }
       }
 
-      match take_runtime_bridge_failure(window) {
-        Err(error) => raise native_run_error("read bridge failure", error)
-        Ok(Some(diagnostic)) => raise BridgeRuntimeError(diagnostic)
-        Ok(None) => ()
+      let failure = take_runtime_bridge_failure(window) catch {
+        error => raise native_run_error("read bridge failure", error)
+      }
+      match failure {
+        Some(diagnostic) => raise BridgeRuntimeError(diagnostic)
+        None => ()
       }
 
       let mut polling_bridge = true
       while polling_bridge {
-        match runtime.poll_bridge_request() {
-          Err(error) => raise native_run_error("poll bridge request", error)
-          Ok(None) => polling_bridge = false
-          Ok(Some(request)) => {
+        let next_request = runtime.poll_bridge_request() catch {
+          error => raise native_run_error("poll bridge request", error)
+        }
+        match next_request {
+          None => polling_bridge = false
+          Some(request) => {
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
@@ -667,12 +650,11 @@ async fn run_bridge_pump(
         match completed {
           Some(response) => {
             did_work = true
-            match runtime.respond_bridge_request(response) {
-              Err(error) =>
+            runtime.respond_bridge_request(response) catch {
+              error =>
                 if !is_stale_bridge_response_error(error) {
                   raise native_run_error("respond bridge request", error)
                 }
-              Ok(_) => ()
             }
           }
           None => remaining.push(item)
@@ -696,9 +678,9 @@ async fn run_bridge_pump(
 
 ///|
 fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {
-  (error.status == -2 && error.message.contains("no longer pending")) ||
+  (error.status() == -2 && error.message().contains("no longer pending")) ||
   (
-    error.status == -7 &&
-    error.message.contains("failed to send bridge response to renderer")
+    error.status() == -7 &&
+    error.message().contains("failed to send bridge response to renderer")
   )
 }

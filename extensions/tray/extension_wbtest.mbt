@@ -40,37 +40,31 @@ test "tray menu payload maps v1 items" {
       checked: Some(false),
     },
   ])
-  match items {
-    Err(error) => abort(error)
-    Ok(items) => {
-      assert_eq(items.length(), 3)
-      debug_inspect(items[0].kind(), content="Normal")
-      debug_inspect(items[1].kind(), content="Separator")
-      debug_inspect(items[2].kind(), content="Checkbox")
-    }
-  }
+  assert_eq(items.length(), 3)
+  debug_inspect(items[0].kind(), content="Normal")
+  debug_inspect(items[1].kind(), content="Separator")
+  debug_inspect(items[2].kind(), content="Checkbox")
 }
 
 ///|
 test "tray optional icon payload accepts string null and missing" {
   debug_inspect(
     optional_json_text(Some(Json::string("icons/app.ico")), "icon"),
-    content="Ok(Some(\"icons/app.ico\"))",
+    content="Some(\"icons/app.ico\")",
   )
-  debug_inspect(
-    optional_json_text(Some(Json::null()), "icon"),
-    content="Ok(None)",
-  )
-  debug_inspect(optional_json_text(None, "icon"), content="Ok(None)")
-  debug_inspect(
-    optional_json_text(Some(Json::boolean(true)), "icon"),
-    content="Err(\"icon must be a string or null\")",
-  )
+  debug_inspect(optional_json_text(Some(Json::null()), "icon"), content="None")
+  debug_inspect(optional_json_text(None, "icon"), content="None")
+  let error = try optional_json_text(Some(Json::boolean(true)), "icon") catch {
+    error => error
+  } noraise {
+    _ => abort("expected invalid icon payload")
+  }
+  inspect(error.message(), content="icon must be a string or null")
 }
 
 ///|
 test "tray menu payload rejects unsupported item kind" {
-  match
+  let error = try
     menu_items_to_native([
       {
         id: Some("nested"),
@@ -79,9 +73,11 @@ test "tray menu payload rejects unsupported item kind" {
         enabled: None,
         checked: None,
       },
-    ]) {
-    Ok(_) => abort("expected unsupported menu item kind")
-    Err(error) =>
-      inspect(error, content="unsupported tray menu item kind: submenu")
+    ])
+  catch {
+    error => error
+  } noraise {
+    _ => abort("expected unsupported menu item kind")
   }
+  inspect(error.message(), content="unsupported tray menu item kind: submenu")
 }

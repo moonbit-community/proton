@@ -5,7 +5,7 @@
 pub async fn emit_fs_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : FsActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -19,7 +19,7 @@ struct ProtonReadFilePayload {
 async fn __proton_command_read_file(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonReadFilePayload,
-) -> Result[ReadFileReply, String] {
+) -> ReadFileReply raise FsError {
   read_file(context, payload.path, payload.sync_timestamp)
 }
 
@@ -37,7 +37,7 @@ struct ProtonWriteFilePayload {
 async fn __proton_command_write_file(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonWriteFilePayload,
-) -> Result[WriteFileReply, String] {
+) -> WriteFileReply raise FsError {
   write_file(context, payload.path, payload.content, payload.append, payload.create_mode, payload.permission, payload.sync)
 }
 
@@ -47,7 +47,7 @@ struct ProtonExistsPayload {
 } derive(FromJson)
 
 ///|
-async fn __proton_command_exists(payload : ProtonExistsPayload) -> Result[ExistsReply, String] {
+async fn __proton_command_exists(payload : ProtonExistsPayload) -> ExistsReply raise FsError {
   exists(payload.path)
 }
 
@@ -61,7 +61,7 @@ struct ProtonKindPayload {
 async fn __proton_command_kind(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonKindPayload,
-) -> Result[KindReply, String] {
+) -> KindReply raise FsError {
   kind(context, payload.path, payload.follow_symlink)
 }
 
@@ -74,7 +74,7 @@ struct ProtonSizePayload {
 async fn __proton_command_size(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonSizePayload,
-) -> Result[SizeReply, String] {
+) -> SizeReply raise FsError {
   size(context, payload.path)
 }
 
@@ -90,7 +90,7 @@ struct ProtonReaddirPayload {
 async fn __proton_command_readdir(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonReaddirPayload,
-) -> Result[ReaddirReply, String] {
+) -> ReaddirReply raise FsError {
   readdir(context, payload.path, payload.include_hidden, payload.include_special, payload.sort)
 }
 
@@ -105,7 +105,7 @@ struct ProtonMkdirPayload {
 async fn __proton_command_mkdir(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonMkdirPayload,
-) -> Result[MkdirReply, String] {
+) -> MkdirReply raise FsError {
   mkdir(context, payload.path, payload.permission, payload.recursive)
 }
 
@@ -118,7 +118,7 @@ struct ProtonRemovePayload {
 async fn __proton_command_remove(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonRemovePayload,
-) -> Result[RemoveFileReply, String] {
+) -> RemoveFileReply raise FsError {
   remove(context, payload.path)
 }
 
@@ -132,7 +132,7 @@ struct ProtonRmdirPayload {
 async fn __proton_command_rmdir(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonRmdirPayload,
-) -> Result[RemovePathReply, String] {
+) -> RemovePathReply raise FsError {
   rmdir(context, payload.path, payload.recursive)
 }
 
@@ -147,7 +147,7 @@ struct ProtonRenamePayload {
 async fn __proton_command_rename(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonRenamePayload,
-) -> Result[RenameReply, String] {
+) -> RenameReply raise FsError {
   rename(context, payload.old_path, payload.new_path, payload.replace)
 }
 
@@ -160,7 +160,7 @@ struct ProtonRealpathPayload {
 async fn __proton_command_realpath(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonRealpathPayload,
-) -> Result[RealpathReply, String] {
+) -> RealpathReply raise FsError {
   realpath(context, payload.path)
 }
 
@@ -187,39 +187,40 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("rename"),
       @proton_command.AppCommandApiDescriptor::new("realpath"),
     ],
-    fn(context) {
-      context.op_async_result("read_file", async fn(payload) {
+    fn(context) raise {
+      context.op_async("read_file", async fn(payload) {
         __proton_command_read_file(context, payload)
       }, emits_events=true)
-      context.op_async_result("write_file", async fn(payload) {
+      context.op_async("write_file", async fn(payload) {
         __proton_command_write_file(context, payload)
       }, emits_events=true)
-      context.op_async_result("exists", __proton_command_exists)
-      context.op_async_result("kind", async fn(payload) {
+      context.op_async("exists", async fn(payload) {
+        __proton_command_exists(payload)
+      })
+      context.op_async("kind", async fn(payload) {
         __proton_command_kind(context, payload)
       }, emits_events=true)
-      context.op_async_result("size", async fn(payload) {
+      context.op_async("size", async fn(payload) {
         __proton_command_size(context, payload)
       }, emits_events=true)
-      context.op_async_result("readdir", async fn(payload) {
+      context.op_async("readdir", async fn(payload) {
         __proton_command_readdir(context, payload)
       }, emits_events=true)
-      context.op_async_result("mkdir", async fn(payload) {
+      context.op_async("mkdir", async fn(payload) {
         __proton_command_mkdir(context, payload)
       }, emits_events=true)
-      context.op_async_result("remove", async fn(payload) {
+      context.op_async("remove", async fn(payload) {
         __proton_command_remove(context, payload)
       }, emits_events=true)
-      context.op_async_result("rmdir", async fn(payload) {
+      context.op_async("rmdir", async fn(payload) {
         __proton_command_rmdir(context, payload)
       }, emits_events=true)
-      context.op_async_result("rename", async fn(payload) {
+      context.op_async("rename", async fn(payload) {
         __proton_command_rename(context, payload)
       }, emits_events=true)
-      context.op_async_result("realpath", async fn(payload) {
+      context.op_async("realpath", async fn(payload) {
         __proton_command_realpath(context, payload)
       }, emits_events=true)
-      Ok(())
     },
   )
 }

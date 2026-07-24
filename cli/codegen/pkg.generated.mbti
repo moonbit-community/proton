@@ -6,15 +6,51 @@ import {
 }
 
 // Values
-pub fn generate_app_commands_from_file(String, String, String) -> Result[ProtonCommandCodegenOutput, String]
+pub fn generate_app_commands_from_file(String, String, String) -> ProtonCommandCodegenOutput raise
 
-pub fn generate_app_commands_from_file_with_metadata(String) -> Result[ProtonCommandCodegenOutput, String]
+pub fn generate_app_commands_from_file_with_metadata(String) -> ProtonCommandCodegenOutput raise
 
-pub fn generate_app_commands_from_source(String, String, String) -> Result[ProtonCommandCodegenOutput, String]
+pub fn generate_app_commands_from_source(String, String, String) -> ProtonCommandCodegenOutput raise
 
-pub fn read_moon_ext_identity(String) -> Result[(String, String), String]
+pub fn read_moon_ext_identity(String) -> (String, String) raise
 
 // Errors
+pub(all) suberror CodegenInputError {
+  SourceParse(path~ : String)
+  InputRead(path~ : String, detail~ : String)
+  PackageRead(path~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CodegenInputError::message(Self) -> String
+
+pub(all) suberror CodegenMetadataError {
+  InvalidRoot
+  DuplicateField(field~ : String)
+  UnknownField(field~ : String)
+  MissingField(field~ : String)
+  InvalidType(field~ : String, expected~ : String)
+  InvalidPackageName(value~ : String, reason~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CodegenMetadataError::message(Self) -> String
+
+pub(all) suberror CodegenMetadataFileError {
+  MissingMetadata(path~ : String)
+  Syntax(path~ : String, diagnostics~ : String)
+  Invalid(path~ : String, error~ : CodegenMetadataError)
+} derive(Eq, @debug.Debug)
+pub fn CodegenMetadataFileError::message(Self) -> String
+
+pub(all) suberror CommandCodegenError {
+  InvalidName(label~ : String, value~ : String, reason~ : String)
+  Attribute(kind~ : String, detail~ : String)
+  Command(function_name~ : String, detail~ : String)
+  Script(function_name~ : String, detail~ : String)
+  Destroy(function_name~ : String, detail~ : String)
+  Event(type_name~ : String, detail~ : String)
+  UnsupportedType(context~ : String)
+  Duplicate(kind~ : String, name~ : String)
+  MissingCommand
+} derive(Eq, @debug.Debug)
+pub fn CommandCodegenError::message(Self) -> String
 
 // Types and methods
 pub(all) struct ProtonCommandCodegenOutput {

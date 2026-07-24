@@ -180,37 +180,20 @@ pub fn ExtensionDescriptor::metadata_path(self : ExtensionDescriptor) -> String 
 /// can compare and render them consistently.
 pub fn load_extension_descriptor_from_file(
   path : String,
-) -> Result[ExtensionDescriptor, String] {
+) -> ExtensionDescriptor raise ExtensionDescriptorError {
   let normalized_path = normalize_path_string(path)
   guard normalized_path.has_suffix("moon.ext") else {
-    return Err(
-      CatalogDiagnostic::new(
-        InvalidMetadata,
-        normalized_path,
-        "extension metadata must be moon.ext",
-      ).to_error_string(),
-    )
+    raise InvalidMetadataFile(path=normalized_path)
   }
-  read_text_file(normalized_path).bind(fn(text) {
-    decode_moon_ext_descriptor(text, normalized_path)
-  })
+  decode_moon_ext_descriptor(read_text_file(normalized_path), normalized_path)
 }
 
 ///|
 /// Reads one metadata text file.
-fn read_text_file(path : String) -> Result[String, String] {
-  try @mbfs.read_file_to_string(path) catch {
+fn read_text_file(path : String) -> String raise ExtensionDescriptorError {
+  @mbfs.read_file_to_string(path) catch {
     error =>
-      Err(
-        CatalogDiagnostic::new(
-          MissingFile,
-          path,
-          "failed to read metadata file: " +
-          @debug.render(@debug.to_repr(error)),
-        ).to_error_string(),
-      )
-  } noraise {
-    text => Ok(text)
+      raise ReadFailed(path~, detail=@debug.render(@debug.to_repr(error)))
   }
 }
 
@@ -219,30 +202,17 @@ fn read_text_file(path : String) -> Result[String, String] {
 fn decode_moon_ext_descriptor(
   text : String,
   path : String,
-) -> Result[ExtensionDescriptor, String] {
+) -> ExtensionDescriptor raise ExtensionDescriptorError {
   let (ast, reports) = @proton_config.parse_moon_ext(name=path, text)
   if reports.length() > 0 {
-    return Err(
-      CatalogDiagnostic::new(
-        InvalidMetadata,
-        path,
-        render_config_reports(reports),
-      ).to_error_string(),
-    )
+    raise Syntax(path~, diagnostics=render_config_reports(reports))
   }
   match ast {
     Obj(fields, _) =>
-      decode_moon_ext_fields(fields, path).map_err(fn(error) {
-        CatalogDiagnostic::new(InvalidMetadata, path, error).to_error_string()
-      })
-    _ =>
-      Err(
-        CatalogDiagnostic::new(
-          InvalidMetadata,
-          path,
-          "expected field list for moon.ext",
-        ).to_error_string(),
-      )
+      decode_moon_ext_fields(fields, path) catch {
+        error => raise InvalidMetadata(path~, error~)
+      }
+    _ => raise InvalidRoot(path~)
   }
 }
 
@@ -250,140 +220,83 @@ fn decode_moon_ext_descriptor(
 fn decode_moon_ext_fields(
   fields : Array[@proton_config.ConfigField],
   path : String,
-) -> Result[ExtensionDescriptor, String] {
-  validate_moon_ext_fields(fields).bind(fn(_) {
-    zip2(
-      moon_ext_required_string(fields, "id"),
-      moon_ext_required_string(fields, "namespace"),
-    ).bind(fn(required) {
-      let (id, js_namespace) = required
-      let root_dir = path_dirname(path)
-      match validate_moon_ext_namespace(js_namespace) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      let moon_mod_metadata = read_nearest_moon_mod_metadata(root_dir)
-      let version_default = moon_mod_metadata.version.unwrap_or("0.1.0")
-      let description_default = moon_mod_metadata.description.unwrap_or("")
-      let keywords_default = moon_mod_metadata.keywords
-      let version = match
-        moon_ext_optional_string(fields, "version", version_default) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      let display_name = match
-        moon_ext_optional_string(fields, "display_name", id) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      let description = match
-        moon_ext_optional_string(fields, "description", description_default) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      let license = match
-        moon_ext_optional_string_option(
-          fields,
-          "license",
-          moon_mod_metadata.license,
-        ) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      let repository = match
-        moon_ext_optional_string_option(
-          fields,
-          "repository",
-          moon_mod_metadata.repository,
-        ) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      let readme = match
-        moon_ext_optional_string_option(
-          fields,
-          "readme",
-          moon_mod_metadata.readme,
-        ) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      let keywords = match
-        moon_ext_optional_string_array(fields, "keywords", keywords_default) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      match validate_moon_ext_keywords(keywords) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      let moonbit_import_path = infer_moonbit_import_path(path)
-      let publish_package = match
-        moon_ext_optional_string_value(fields, "package") {
-        Err(error) => return Err(error)
-        Ok(value) => value
-      }
-      match publish_package {
-        Some(package_name) =>
-          match validate_npm_package_name(package_name) {
-            Ok(_) => ()
-            Err(error) => return Err(error)
-          }
-        None => ()
-      }
-      match validate_moonbit_import_path(moonbit_import_path) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      let platforms = match
-        moon_ext_optional_string_array(fields, "platforms", []) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      match validate_moon_ext_platforms(platforms) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      let dependencies = match
-        moon_ext_optional_string_array(fields, "dependencies", []) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      match validate_moon_ext_dependencies(id, dependencies) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      Ok(
-        ExtensionDescriptor::new(
-          id,
-          version,
-          display_name,
-          description,
-          js_namespace,
-          moonbit_import_path,
-          platforms,
-          dependencies,
-          root_dir,
-          publish_package~,
-          license~,
-          repository~,
-          readme~,
-          keywords~,
-          metadata_path=Some(path),
-        ),
-      )
-    })
-  })
+) -> ExtensionDescriptor raise ExtensionMetadataError {
+  validate_moon_ext_fields(fields)
+  let id = moon_ext_required_string(fields, "id")
+  let js_namespace = moon_ext_required_string(fields, "namespace")
+  let root_dir = path_dirname(path)
+  validate_moon_ext_namespace(js_namespace)
+  let moon_mod_metadata = read_nearest_moon_mod_metadata(root_dir)
+  let version = moon_ext_optional_string(
+    fields,
+    "version",
+    moon_mod_metadata.version.unwrap_or("0.1.0"),
+  )
+  let display_name = moon_ext_optional_string(fields, "display_name", id)
+  let description = moon_ext_optional_string(
+    fields,
+    "description",
+    moon_mod_metadata.description.unwrap_or(""),
+  )
+  let license = moon_ext_optional_string_option(
+    fields,
+    "license",
+    moon_mod_metadata.license,
+  )
+  let repository = moon_ext_optional_string_option(
+    fields,
+    "repository",
+    moon_mod_metadata.repository,
+  )
+  let readme = moon_ext_optional_string_option(
+    fields,
+    "readme",
+    moon_mod_metadata.readme,
+  )
+  let keywords = moon_ext_optional_string_array(
+    fields,
+    "keywords",
+    moon_mod_metadata.keywords,
+  )
+  validate_moon_ext_keywords(keywords)
+  let moonbit_import_path = infer_moonbit_import_path(path)
+  let publish_package = moon_ext_optional_string_value(fields, "package")
+  match publish_package {
+    Some(package_name) => validate_npm_package_name(package_name)
+    None => ()
+  }
+  validate_moonbit_import_path(moonbit_import_path)
+  let platforms = moon_ext_optional_string_array(fields, "platforms", [])
+  validate_moon_ext_platforms(platforms)
+  let dependencies = moon_ext_optional_string_array(fields, "dependencies", [])
+  validate_moon_ext_dependencies(id, dependencies)
+  ExtensionDescriptor::new(
+    id,
+    version,
+    display_name,
+    description,
+    js_namespace,
+    moonbit_import_path,
+    platforms,
+    dependencies,
+    root_dir,
+    publish_package~,
+    license~,
+    repository~,
+    readme~,
+    keywords~,
+    metadata_path=Some(path),
+  )
 }
 
 ///|
 fn validate_moon_ext_fields(
   fields : Array[@proton_config.ConfigField],
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionMetadataError {
   let seen : Map[String, Unit] = Map([])
   for field in fields {
     if seen.contains(field.key) {
-      return Err("duplicate moon.ext field: " + field.key)
+      raise DuplicateField(field=field.key)
     }
     seen[field.key] = ()
     match field.key {
@@ -399,26 +312,19 @@ fn validate_moon_ext_fields(
       | "keywords"
       | "platforms"
       | "dependencies" => ()
-      other => return Err("unknown moon.ext field: " + other)
+      other => raise UnknownField(field=other)
     }
   }
-  Ok(())
 }
 
 ///|
 fn moon_ext_required_string(
   fields : Array[@proton_config.ConfigField],
   key : String,
-) -> Result[String, String] {
+) -> String raise ExtensionMetadataError {
   match moon_ext_optional_string_value(fields, key) {
-    Err(error) => Err(error)
-    Ok(Some(value)) =>
-      if value == "" {
-        Err("moon.ext field `" + key + "` must not be empty")
-      } else {
-        Ok(value)
-      }
-    Ok(None) => Err("missing required moon.ext field: " + key)
+    Some(value) => if value == "" { raise EmptyField(field=key) } else { value }
+    None => raise MissingField(field=key)
   }
 }
 
@@ -427,11 +333,10 @@ fn moon_ext_optional_string(
   fields : Array[@proton_config.ConfigField],
   key : String,
   default : String,
-) -> Result[String, String] {
+) -> String raise ExtensionMetadataError {
   match moon_ext_optional_string_value(fields, key) {
-    Err(error) => Err(error)
-    Ok(Some(value)) => Ok(value)
-    Ok(None) => Ok(default)
+    Some(value) => value
+    None => default
   }
 }
 
@@ -440,11 +345,10 @@ fn moon_ext_optional_string_option(
   fields : Array[@proton_config.ConfigField],
   key : String,
   default : String?,
-) -> Result[String?, String] {
+) -> String? raise ExtensionMetadataError {
   match moon_ext_optional_string_value(fields, key) {
-    Err(error) => Err(error)
-    Ok(Some(value)) => Ok(Some(value))
-    Ok(None) => Ok(default)
+    Some(value) => Some(value)
+    None => default
   }
 }
 
@@ -452,16 +356,16 @@ fn moon_ext_optional_string_option(
 fn moon_ext_optional_string_value(
   fields : Array[@proton_config.ConfigField],
   key : String,
-) -> Result[String?, String] {
+) -> String? raise ExtensionMetadataError {
   for field in fields {
     if field.key == key {
       match field.value {
-        Str(value, _) => return Ok(Some(value))
-        _ => return Err("moon.ext field `" + key + "` must be a string")
+        Str(value, _) => return Some(value)
+        _ => raise InvalidType(field=key, expected="a string")
       }
     }
   }
-  Ok(None)
+  None
 }
 
 ///|
@@ -469,7 +373,7 @@ fn moon_ext_optional_string_array(
   fields : Array[@proton_config.ConfigField],
   key : String,
   default : Array[String],
-) -> Result[Array[String], String] {
+) -> Array[String] raise ExtensionMetadataError {
   for field in fields {
     if field.key == key {
       match field.value {
@@ -478,19 +382,16 @@ fn moon_ext_optional_string_array(
           for item in items {
             match item {
               Str(value, _) => values.push(value)
-              _ =>
-                return Err(
-                  "moon.ext field `" + key + "` must be a string array",
-                )
+              _ => raise InvalidType(field=key, expected="a string array")
             }
           }
-          return Ok(values)
+          return values
         }
-        _ => return Err("moon.ext field `" + key + "` must be a string array")
+        _ => raise InvalidType(field=key, expected="a string array")
       }
     }
   }
-  Ok(copy_strings(default))
+  copy_strings(default)
 }
 
 ///|
@@ -508,135 +409,133 @@ fn render_config_reports(reports : Array[@basic.Report]) -> String {
 ///|
 fn validate_moon_ext_platforms(
   platforms : Array[String],
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionMetadataError {
   let seen : Map[String, Unit] = Map([])
   for platform in platforms {
     guard platform == "windows" || platform == "macos" || platform == "linux" else {
-      return Err(
-        "moon.ext platforms contains unsupported platform: " + platform,
-      )
+      raise UnsupportedPlatform(platform~)
     }
     guard !seen.contains(platform) else {
-      return Err("moon.ext platforms contains duplicate value: " + platform)
+      raise DuplicateValue(field="platforms", value=platform)
     }
     seen[platform] = ()
   }
-  Ok(())
 }
 
 ///|
 fn validate_moon_ext_dependencies(
   id : String,
   dependencies : Array[String],
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionMetadataError {
   let seen : Map[String, Unit] = Map([])
   for dependency in dependencies {
-    guard dependency != "" else {
-      return Err("moon.ext dependencies must not contain empty values")
-    }
-    guard dependency != id else {
-      return Err("moon.ext dependencies must not include itself: " + id)
-    }
+    guard dependency != "" else { raise EmptyField(field="dependencies[]") }
+    guard dependency != id else { raise SelfDependency(id~) }
     guard !seen.contains(dependency) else {
-      return Err(
-        "moon.ext dependencies contains duplicate value: " + dependency,
-      )
+      raise DuplicateValue(field="dependencies", value=dependency)
     }
     seen[dependency] = ()
   }
-  Ok(())
 }
 
 ///|
-fn validate_moon_ext_namespace(js_namespace : String) -> Result[Unit, String] {
+fn validate_moon_ext_namespace(
+  js_namespace : String,
+) -> Unit raise ExtensionMetadataError {
   guard js_namespace.trim().to_owned() != "" else {
-    return Err("moon.ext namespace must not be empty")
+    raise EmptyField(field="namespace")
   }
   guard js_namespace.find("/") is None && js_namespace.find("\\") is None else {
-    return Err(
-      "moon.ext namespace must not contain path separators: " + js_namespace,
+    raise InvalidNamespace(
+      value=js_namespace,
+      reason="must not contain path separators",
     )
   }
   guard js_namespace != "__proto__" &&
     js_namespace != "prototype" &&
     js_namespace != "constructor" else {
-    return Err(
-      "moon.ext namespace uses a reserved JavaScript property name: " +
-      js_namespace,
+    raise InvalidNamespace(
+      value=js_namespace,
+      reason="uses a reserved JavaScript property name",
     )
   }
-  Ok(())
 }
 
 ///|
-fn validate_moon_ext_keywords(keywords : Array[String]) -> Result[Unit, String] {
+fn validate_moon_ext_keywords(
+  keywords : Array[String],
+) -> Unit raise ExtensionMetadataError {
   for keyword in keywords {
-    guard keyword != "" else {
-      return Err("moon.ext keywords must not contain empty values")
-    }
+    guard keyword != "" else { raise EmptyField(field="keywords[]") }
   }
-  Ok(())
 }
 
 ///|
 /// Validates that a MoonBit import path can be emitted as one moon.pkg import.
-fn validate_moonbit_import_path(import_path : String) -> Result[Unit, String] {
+fn validate_moonbit_import_path(
+  import_path : String,
+) -> Unit raise ExtensionMetadataError {
   guard import_path != "" else {
-    return Err("moonbit import path must not be empty")
+    raise InvalidImportPath(value=import_path, reason="must not be empty")
   }
   guard !import_path.has_prefix("/") && !import_path.has_suffix("/") else {
-    return Err(
-      "moonbit import path must not start or end with /: " + import_path,
+    raise InvalidImportPath(
+      value=import_path,
+      reason="must not start or end with /",
     )
   }
   let mut previous_slash = false
   for _, ch in import_path {
     if ch == '/' {
       guard !previous_slash else {
-        return Err(
-          "moonbit import path must not contain empty path segments: " +
-          import_path,
+        raise InvalidImportPath(
+          value=import_path,
+          reason="must not contain empty path segments",
         )
       }
       previous_slash = true
     } else {
       guard is_metadata_package_char(ch) else {
-        return Err(
-          "moonbit import path contains invalid character: " + import_path,
+        raise InvalidImportPath(
+          value=import_path,
+          reason="contains an invalid character",
         )
       }
       previous_slash = false
     }
   }
-  Ok(())
 }
 
 ///|
-fn validate_npm_package_name(package_name : String) -> Result[Unit, String] {
-  guard package_name != "" else {
-    return Err("moon.ext package must not be empty")
-  }
+fn validate_npm_package_name(
+  package_name : String,
+) -> Unit raise ExtensionMetadataError {
+  guard package_name != "" else { raise EmptyField(field="package") }
   guard !package_name.contains("\\") &&
     (!package_name.contains("/") || package_name.has_prefix("@")) else {
-    return Err(
-      "moon.ext package must be an npm-style package name: " + package_name,
+    raise InvalidPackageName(
+      value=package_name,
+      reason="must be an npm-style package name",
     )
   }
   guard !package_name.contains("..") &&
     !package_name.contains("://") &&
     !package_name.contains(" ") else {
-    return Err("moon.ext package contains invalid characters: " + package_name)
+    raise InvalidPackageName(
+      value=package_name,
+      reason="contains invalid characters",
+    )
   }
   if package_name.has_prefix("@") {
     let parts = package_name.split("/").collect()
     guard parts.length() == 2 else {
-      return Err("moon.ext scoped package must be @scope/name: " + package_name)
+      raise InvalidPackageName(
+        value=package_name,
+        reason="scoped packages must use @scope/name",
+      )
     }
-    validate_npm_package_part(parts[0][1:].to_owned(), package_name).bind(fn(
-      _,
-    ) {
-      validate_npm_package_part(parts[1].to_owned(), package_name)
-    })
+    validate_npm_package_part(parts[0][1:].to_owned(), package_name)
+    validate_npm_package_part(parts[1].to_owned(), package_name)
   } else {
     validate_npm_package_part(package_name, package_name)
   }
@@ -646,16 +545,19 @@ fn validate_npm_package_name(package_name : String) -> Result[Unit, String] {
 fn validate_npm_package_part(
   part : String,
   package_name : String,
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionMetadataError {
   guard part != "" else {
-    return Err("moon.ext package contains empty name segment: " + package_name)
+    raise InvalidPackageName(
+      value=package_name,
+      reason="contains an empty name segment",
+    )
   }
   for index, ch in part {
     if index == 0 {
       guard is_lowercase_ascii(ch) || is_digit_ascii(ch) else {
-        return Err(
-          "moon.ext package segment must start with lowercase letter or digit: " +
-          package_name,
+        raise InvalidPackageName(
+          value=package_name,
+          reason="segments must start with a lowercase letter or digit",
         )
       }
     }
@@ -664,10 +566,12 @@ fn validate_npm_package_part(
       ch == '-' ||
       ch == '_' ||
       ch == '.' else {
-      return Err("moon.ext package contains invalid character: " + package_name)
+      raise InvalidPackageName(
+        value=package_name,
+        reason="contains an invalid character",
+      )
     }
   }
-  Ok(())
 }
 
 ///|

@@ -115,72 +115,84 @@ fn starts_with_ascii_alphanumeric(value : String) -> Bool {
 }
 
 ///|
-fn validate_bundle_identifier(identifier : String) -> Result[Unit, String] {
+fn validate_bundle_identifier(
+  identifier : String,
+) -> Unit raise NewProjectInputError {
   let value = identifier.trim().to_owned()
   let components : Array[StringView] = value.split(".").collect()
   guard components.length() >= 2 else {
-    return Err("identifier must be a reverse-DNS bundle identifier: " + value)
+    raise InvalidBundleIdentifier(
+      identifier=value,
+      reason="expected a reverse-DNS name",
+    )
   }
   for component in components {
     guard component.length() > 0 else {
-      return Err("identifier contains an empty component: " + value)
+      raise InvalidBundleIdentifier(
+        identifier=value,
+        reason="contains an empty component",
+      )
     }
     let mut at_start = true
     for char in component {
       if at_start {
         guard char.is_ascii_alphabetic() || char.is_ascii_digit() else {
-          return Err(
-            "identifier component must start with an ASCII letter or digit: " +
-            value,
+          raise InvalidBundleIdentifier(
+            identifier=value,
+            reason="a component must start with an ASCII letter or digit",
           )
         }
         at_start = false
       }
       guard char.is_ascii_alphabetic() || char.is_ascii_digit() || char == '-' else {
-        return Err("identifier contains an unsupported character: " + value)
+        raise InvalidBundleIdentifier(
+          identifier=value,
+          reason="contains an unsupported character",
+        )
       }
     }
   }
-  Ok(())
 }
 
 ///|
-fn parse_positive_int(value : String, label : String) -> Result[Int, String] {
+fn parse_positive_int(
+  value : String,
+  label : String,
+) -> Int raise NewProjectInputError {
   let parsed = @string.parse_int(value[:]) catch {
-    _ => return Err(label + " must be a positive integer: " + value)
+    _ => raise InvalidPositiveInteger(field=label, value~)
   }
   if parsed <= 0 {
-    Err(label + " must be a positive integer: " + value)
+    raise InvalidPositiveInteger(field=label, value~)
   } else {
-    Ok(parsed)
+    parsed
   }
 }
 
 ///|
-fn validate_module_name(module_name : String) -> Result[Unit, String] {
+fn validate_module_name(
+  module_name : String,
+) -> Unit raise NewProjectInputError {
   if module_name.trim().is_empty() {
-    return Err("module name must not be empty")
+    raise EmptyModuleName
   }
   if module_name.contains("\\") {
-    return Err("module name must use '/' instead of '\\'")
+    raise ModuleUsesBackslash
   }
   if module_name.has_prefix("/") || module_name.has_suffix("/") {
-    return Err("module name must not start or end with '/'")
+    raise ModuleHasBoundarySlash
   }
   if module_name.contains(" ") {
-    return Err("module name must not contain spaces")
+    raise ModuleContainsSpace
   }
   if module_name.contains("//") {
-    return Err("module name must not contain empty path segments")
+    raise ModuleHasEmptySegment
   }
   for ch in module_name {
     if !module_name_char_is_valid(ch) {
-      return Err(
-        "module name contains unsupported character: " + ch.to_string(),
-      )
+      raise ModuleHasUnsupportedCharacter(character=ch)
     }
   }
-  Ok(())
 }
 
 ///|
@@ -194,56 +206,46 @@ fn module_name_char_is_valid(ch : Char) -> Bool {
 }
 
 ///|
-fn validate_title(title : String) -> Result[Unit, String] {
+fn validate_title(title : String) -> Unit raise NewProjectInputError {
   if title.trim().is_empty() {
-    Err("app title must not be empty")
-  } else {
-    Ok(())
+    raise EmptyTitle
   }
 }
 
 ///|
-fn validate_target_dir(target_dir : String) -> Result[Unit, String] {
+fn validate_target_dir(target_dir : String) -> Unit raise NewProjectInputError {
   if target_dir.trim().is_empty() {
-    Err("project directory must not be empty")
-  } else {
-    Ok(())
+    raise EmptyProjectDirectory
   }
 }
 
 ///|
-fn target_dir_is_empty(target_dir : String) -> Result[Bool, String] {
+fn target_dir_is_empty(target_dir : String) -> Bool raise NewProjectTargetError {
   if !path_exists(target_dir) {
-    return Ok(true)
+    return true
   }
   if !path_is_dir(target_dir) {
-    return Err("target path is not a directory: " + target_dir)
+    raise NotDirectory(path=target_dir)
   }
   let entries = @mbfs.read_dir(target_dir) catch {
     err =>
-      return Err(
-        "failed to read target directory: " + @debug.render(@debug.to_repr(err)),
+      raise ReadDirectory(
+        path=target_dir,
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
-  Ok(entries.length() == 0)
+  entries.length() == 0
 }
 
 ///|
-fn validate_target_dir_for_write(target_dir : String) -> Result[Unit, String] {
+fn validate_target_dir_for_write(
+  target_dir : String,
+) -> Unit raise NewProjectTargetError {
   let moon_mod_path = new_path_join(target_dir, "moon.mod")
   if path_exists(moon_mod_path) {
-    return Err("target directory already contains moon.mod: " + target_dir)
+    raise ContainsMoonModule(path=target_dir)
   }
-  match target_dir_is_empty(target_dir) {
-    Err(message) => Err(message)
-    Ok(true) => Ok(())
-    Ok(false) =>
-      Err(
-        "target directory is not empty: " +
-        target_dir +
-        "\n\nChoose a different directory:\n  proton_cli new " +
-        path_basename(target_dir) +
-        "-2\n\nOr remove files manually and retry.",
-      )
+  if !target_dir_is_empty(target_dir) {
+    raise NotEmpty(path=target_dir)
   }
 }

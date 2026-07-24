@@ -318,9 +318,12 @@ test "doctor reports invalid runtime manifests" {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
   let project = discover_project(dir)
-  match resolve_native_dist(project) {
-    Err(message) => assert_true(message.contains("failed to parse"))
-    Ok(_) => abort("expected invalid runtime manifest error")
+  try resolve_native_dist(project) catch {
+    DoctorRuntimeManifestError::Syntax(path~) =>
+      assert_true(path.has_suffix(".proton/runtime.json"))
+    _ => abort("expected invalid runtime manifest error")
+  } noraise {
+    _ => abort("expected invalid runtime manifest error")
   }
 }
 
@@ -344,7 +347,7 @@ test "doctor validates runtime manifest schema" {
   }
   let project = discover_project(dir)
   match runtime_manifest_from_project(project) {
-    Ok(Some(manifest)) => {
+    Some(manifest) => {
       assert_eq(manifest.schema_version, 1)
       assert_eq(manifest.platform, "darwin-arm64")
       assert_eq(manifest.dist, "runtime")
@@ -360,8 +363,10 @@ test "doctor validates runtime manifest schema" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match runtime_manifest_from_project(project) {
-    Err(message) => assert_true(message.contains("unknown field `extra`"))
+  try runtime_manifest_from_project(project) catch {
+    DoctorRuntimeManifestError::UnknownField(field="extra", ..) => ()
+    _ => abort("expected unknown runtime manifest field error")
+  } noraise {
     _ => abort("expected unknown runtime manifest field error")
   }
 }
@@ -413,7 +418,7 @@ test "moon_config adapter reads module deps and package imports" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let module_config = read_moon_mod(moon_mod_path).unwrap()
+  let module_config = read_moon_mod(moon_mod_path)
   @debug.assert_eq(module_config.name, Some("justjavac/proton-demo"))
   @debug.assert_eq(module_config.preferred_target, Some("native"))
   @debug.assert_eq(module_config.supported_targets, Some("+native"))
@@ -421,7 +426,7 @@ test "moon_config adapter reads module deps and package imports" {
     dependency_version(Some(module_config), "justjavac/proton"),
     Some("0.1.10"),
   )
-  let package_config = read_moon_pkg(moon_pkg_path).unwrap()
+  let package_config = read_moon_pkg(moon_pkg_path)
   @debug.assert_eq(package_config.is_main, Some(true))
   assert_true(
     package_config.imports.any(fn(item) {
@@ -449,11 +454,13 @@ test "moon_config adapter reports parse failures" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match read_moon_mod(moon_mod_path) {
-    Err(ParseFailed(path, message)) => {
+  try read_moon_mod(moon_mod_path) catch {
+    MoonConfigReadError::ParseFailed(path, message) => {
       assert_eq(path, moon_mod_path)
       assert_true(message.length() > 0)
     }
+    _ => abort("expected ParseFailed")
+  } noraise {
     _ => abort("expected ParseFailed")
   }
 }
@@ -507,7 +514,7 @@ test "moon.proton reader extracts app and frontend fields" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let config = read_proton_project_config(config_path).unwrap()
+  let config = read_proton_project_config(config_path)
   assert_eq(config.window.title, "Demo")
   assert_eq(config.window.width, 960)
   assert_eq(config.entry.kind, "file")
@@ -562,12 +569,16 @@ test "moon.proton reader rejects manifest extensions" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match read_proton_project_config(config_path) {
-    Err(error) =>
+  try read_proton_project_config(config_path) catch {
+    @proton_config.ProjectConfigError::UnsupportedField(path~, reason~) => {
+      assert_eq(path, "moon.proton.extensions")
       assert_eq(
-        error, "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...)",
+        reason, "declare extensions in MoonBit code with .extension(...)",
       )
-    Ok(_) => abort("expected moon.proton extensions to be rejected")
+    }
+    _ => abort("expected moon.proton extensions to be rejected")
+  } noraise {
+    _ => abort("expected moon.proton extensions to be rejected")
   }
 }
 

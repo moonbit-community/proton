@@ -5,12 +5,6 @@ let default_package = "app"
 let default_config_file = "moon.proton"
 
 ///|
-pub(all) enum PackageError {
-  UsageError(String, Bool)
-  CommandError(String)
-} derive(Debug)
-
-///|
 struct RawPackageOptions {
   app_package : String
   config_path : String?
@@ -55,150 +49,87 @@ struct MacosCodeSignTarget {
 } derive(Debug, Eq)
 
 ///|
-pub async fn run(
-  cwd : String,
-  args : Array[String],
-) -> Result[Unit, PackageError] {
-  if args.contains("-h") || args.contains("--help") {
-    print_package_usage()
-    return Ok(())
-  }
-  let raw = match parse_package_args(args) {
-    Ok(raw) => raw
-    Err(error) => return Err(error)
-  }
+/// Returns the declarative `proton_cli package` command specification.
+pub fn command() -> @argparse.Command {
+  @argparse.Command(
+    "package",
+    about="Package a Proton application",
+    flags=[
+      FlagArg("no-build", about="Reuse an existing release build"),
+      FlagArg("dry-run", about="Print the resolved package plan"),
+      FlagArg("sign", about="Sign the packaged application"),
+      FlagArg(
+        "notarize",
+        about="Sign, notarize, and staple a macOS application",
+      ),
+    ],
+    options=[
+      OptionArg(
+        "package",
+        default_values=[default_package],
+        about="MoonBit application package",
+      ),
+      OptionArg(
+        "config",
+        allow_hyphen_values=true,
+        about="Proton project config",
+      ),
+      OptionArg(
+        "target",
+        action=Append,
+        about="Package target (app or zip); may be repeated",
+      ),
+      OptionArg("output", about="Output directory"),
+    ],
+  )
+}
+
+///|
+/// Runs the package workflow from parsed command matches.
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
+  let raw = package_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = find_project_root_from(cwd)
   let config_path = match resolve_package_config_path(cwd, root, raw) {
     Some(path) => path
-    None =>
-      return Err(CommandError("proton package config not found: moon.proton"))
+    None => raise PackageConfigError::NotFound(path="moon.proton")
   }
-  let project = match
-    @proton_config.load_project_config_from_file(config_path) {
-    Ok(project) => project
-    Err(message) => return Err(CommandError(message))
+  let project = @proton_config.load_project_config_from_file(config_path) catch {
+    error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
-  let plan = match build_package_plan(raw, config_path, project) {
-    Ok(plan) => plan
-    Err(error) => return Err(error)
-  }
+  let plan = build_package_plan(raw, config_path, project)
   print_package_plan(plan, raw.dry_run)
   if raw.dry_run {
-    return Ok(())
+    return
   }
   execute_package_plan(plan)
 }
 
 ///|
-fn print_package_usage() -> Unit {
-  println("Usage:")
-  println("  proton_cli [-C DIR] package [PACKAGE] [OPTIONS]")
-  println("")
-  println("Options:")
-  println(
-    "  --config <path>          Proton project config (default: package/cwd/root moon.proton)",
-  )
-  println("  --target <app|zip>       Override bundle.targets; may be repeated")
-  println("  --output <dir>           Override bundle.output")
-  println("  --no-build               Reuse an existing release build")
-  println("  --dry-run                Print the resolved package plan")
-  println("  --sign                   Sign the packaged application")
-  println(
-    "  --notarize               Sign, notarize, and staple a macOS application",
-  )
-}
-
-///|
-fn parse_package_args(
-  args : Array[String],
-) -> Result[RawPackageOptions, PackageError] {
-  let targets : Array[String] = []
-  let mut app_package : String? = None
-  let mut config_path : String? = None
-  let mut output : String? = None
-  let mut build = true
-  let mut dry_run = false
-  let mut sign = false
-  let mut notarize = false
-  let mut index = 0
-  while index < args.length() {
-    let arg = args[index]
-    if arg == "--config" || arg == "--target" || arg == "--output" {
-      let value = match read_option_value(args, index, arg) {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-      if arg == "--config" {
-        config_path = Some(value)
-      } else if arg == "--target" {
-        match validate_package_target(value) {
-          Ok(_) => targets.push(value)
-          Err(error) => return Err(error)
-        }
-      } else {
-        output = Some(value)
-      }
-      index = index + 2
-    } else if arg == "--no-build" {
-      build = false
-      index = index + 1
-    } else if arg == "--dry-run" {
-      dry_run = true
-      index = index + 1
-    } else if arg == "--sign" {
-      sign = true
-      index = index + 1
-    } else if arg == "--notarize" {
-      sign = true
-      notarize = true
-      index = index + 1
-    } else if arg.has_prefix("-") {
-      return Err(UsageError("unknown package option: " + arg, false))
-    } else {
-      match app_package {
-        None => {
-          app_package = Some(arg)
-          index = index + 1
-        }
-        Some(_) =>
-          return Err(
-            UsageError("package accepts at most one package argument", false),
-          )
-      }
-    }
+fn package_options_from_matches(
+  matches : @argparse.Matches,
+) -> RawPackageOptions raise PackageUsageError {
+  let targets = @cli_args.values(matches, "target")
+  for target in targets {
+    validate_package_target(target)
   }
-  Ok(RawPackageOptions::{
-    app_package: app_package.unwrap_or(default_package),
-    config_path,
+  let notarize = @cli_args.flag(matches, "notarize")
+  RawPackageOptions::{
+    app_package: @cli_args.required_value(matches, "package"),
+    config_path: @cli_args.value(matches, "config"),
     targets,
-    output,
-    build,
-    dry_run,
-    sign,
+    output: @cli_args.value(matches, "output"),
+    build: !@cli_args.flag(matches, "no-build"),
+    dry_run: @cli_args.flag(matches, "dry-run"),
+    sign: @cli_args.flag(matches, "sign") || notarize,
     notarize,
-  })
-}
-
-///|
-fn validate_package_target(target : String) -> Result[Unit, PackageError] {
-  if target == "app" || target == "zip" {
-    Ok(())
-  } else {
-    Err(UsageError("unsupported package target: " + target, false))
   }
 }
 
 ///|
-fn read_option_value(
-  args : Array[String],
-  index : Int,
-  flag : String,
-) -> Result[String, PackageError] {
-  if index + 1 >= args.length() || args[index + 1] == "" {
-    Err(UsageError(flag + " requires a value", false))
-  } else {
-    Ok(args[index + 1])
+fn validate_package_target(target : String) -> Unit raise PackageUsageError {
+  if target != "app" && target != "zip" {
+    raise UnsupportedTarget(target~)
   }
 }
 
@@ -207,44 +138,29 @@ fn build_package_plan(
   raw : RawPackageOptions,
   config_path : String,
   project : @proton_config.ProjectConfig,
-) -> Result[PackagePlan, PackageError] {
+) -> PackagePlan raise {
   let bundle = match project.bundle() {
     Some(bundle) if bundle.active() => bundle
-    Some(_) =>
-      return Err(CommandError("bundle.active must be true for proton package"))
-    None =>
-      return Err(CommandError("bundle config is required for proton package"))
+    Some(_) => raise PackageConfigError::BundleInactive
+    None => raise PackageConfigError::BundleMissing
   }
   let metadata = project.metadata()
-  let product_name = match validate_product_name(metadata.product_name) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+  let product_name = validate_product_name(metadata.product_name)
   let identifier = match metadata.identifier {
     Some(identifier) => identifier
-    None =>
-      return Err(CommandError("identifier is required for proton package"))
+    None => raise PackageConfigError::MissingField(field="identifier")
   }
   let version = match metadata.version {
     Some(version) => version
-    None =>
-      return Err(
-        CommandError("moon.mod version is required for proton package"),
-      )
+    None => raise PackageConfigError::MissingField(field="moon.mod version")
   }
-  let identifier = match validate_bundle_identifier(identifier) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
+  let identifier = validate_bundle_identifier(identifier)
   let version = version.trim().to_owned()
   guard version != "" else {
-    return Err(CommandError("moon.mod version is required for proton package"))
+    raise PackageConfigError::MissingField(field="moon.mod version")
   }
   let (macos_version, bundle_version) = if is_macos_host() {
-    match validate_macos_version(version) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
+    validate_macos_version(version)
   } else {
     (version, version)
   }
@@ -269,7 +185,7 @@ fn build_package_plan(
     Html(_) | Url(_) => None
   }
   let workspace_root = find_workspace_root_from(base_dir)
-  Ok(PackagePlan::{
+  PackagePlan::{
     root: find_project_root_from(base_dir),
     workspace_root,
     build_target_dir: package_build_target_dir(workspace_root, identifier),
@@ -291,77 +207,72 @@ fn build_package_plan(
     macos_icon: first_macos_icon(bundle.icon),
     sign: raw.sign,
     notarize: raw.notarize,
-  })
+  }
 }
 
 ///|
-fn validate_product_name(value : String) -> Result[String, PackageError] {
+fn validate_product_name(value : String) -> String raise PackagePlanError {
   let value = value.trim().to_owned()
   guard value != "" else {
-    return Err(CommandError("product_name is required for proton package"))
+    raise InvalidProductName(reason="value is required")
   }
   for char in value {
     let code = char.to_int()
     if code < 32 || code == 127 {
-      return Err(
-        CommandError("product_name contains an ASCII control character"),
-      )
+      raise InvalidProductName(reason="contains an ASCII control character")
     }
     if char == '/' || char == '\\' || char == ':' {
-      return Err(
-        CommandError(
-          "product_name contains a path-unsafe character: " + char.to_string(),
-        ),
+      raise InvalidProductName(
+        reason="contains a path-unsafe character: " + char.to_string(),
       )
     }
   }
-  Ok(value)
+  value
 }
 
 ///|
-fn validate_bundle_identifier(value : String) -> Result[String, PackageError] {
+fn validate_bundle_identifier(value : String) -> String raise PackagePlanError {
   let value = value.trim().to_owned()
   let components : Array[StringView] = value.split(".").collect()
   guard components.length() >= 2 else {
-    return Err(
-      CommandError(
-        "identifier must be a reverse-DNS bundle identifier: " + value,
-      ),
+    raise InvalidIdentifier(
+      identifier=value,
+      reason="expected a reverse-DNS bundle identifier",
     )
   }
   for component in components {
     guard component.length() > 0 else {
-      return Err(
-        CommandError("identifier contains an empty component: " + value),
+      raise InvalidIdentifier(
+        identifier=value,
+        reason="contains an empty component",
       )
     }
     let mut at_start = true
     for char in component {
       if at_start {
         guard char.is_ascii_alphabetic() || char.is_ascii_digit() else {
-          return Err(
-            CommandError(
-              "identifier component must start with an ASCII letter or digit: " +
-              value,
-            ),
+          raise InvalidIdentifier(
+            identifier=value,
+            reason="a component must start with an ASCII letter or digit",
           )
         }
         at_start = false
       }
       guard char.is_ascii_alphabetic() || char.is_ascii_digit() || char == '-' else {
-        return Err(
-          CommandError("identifier contains an unsupported character: " + value),
+        raise InvalidIdentifier(
+          identifier=value,
+          reason="contains an unsupported character",
         )
       }
     }
   }
-  Ok(value)
+  value
 }
 
 ///|
 fn validate_macos_version(
   value : String,
-) -> Result[(String, String), PackageError] {
+) -> (String, String) raise PackagePlanError {
   let value = value.trim().to_owned()
   let core = match value.split_once("-") {
     Some((core, _)) => core.to_owned()
@@ -373,24 +284,19 @@ fn validate_macos_version(
   }
   let components : Array[StringView] = core.split(".").collect()
   guard components.length() >= 1 && components.length() <= 3 else {
-    return Err(
-      CommandError(
-        "macOS version must contain one to three numeric components: " + core,
-      ),
+    raise InvalidVersion(
+      version=core,
+      reason="macOS version must contain one to three numeric components",
     )
   }
   let normalized : Array[String] = []
   for component in components {
     guard component.length() > 0 else {
-      return Err(
-        CommandError("macOS version contains an empty component: " + core),
-      )
+      raise InvalidVersion(version=core, reason="contains an empty component")
     }
     for char in component {
       guard char.is_ascii_digit() else {
-        return Err(
-          CommandError("macOS version components must be numeric: " + core),
-        )
+        raise InvalidVersion(version=core, reason="components must be numeric")
       }
     }
     normalized.push(component.to_owned())
@@ -401,40 +307,38 @@ fn validate_macos_version(
   let short_version = normalized.join(".")
   let bundle_version = match @sys.get_env_var("PROTON_MACOS_BUILD_NUMBER") {
     Some(build) if build.trim().to_owned() != "" =>
-      match validate_bundle_version(build.trim().to_owned()) {
-        Ok(build) => build
-        Err(error) => return Err(error)
-      }
+      validate_bundle_version(build.trim().to_owned())
     _ => short_version
   }
-  Ok((short_version, bundle_version))
+  (short_version, bundle_version)
 }
 
 ///|
-fn validate_bundle_version(value : String) -> Result[String, PackageError] {
+fn validate_bundle_version(value : String) -> String raise PackagePlanError {
   let components : Array[StringView] = value.split(".").collect()
   guard components.length() >= 1 && components.length() <= 3 else {
-    return Err(
-      CommandError(
-        "PROTON_MACOS_BUILD_NUMBER must contain one to three numeric components",
-      ),
+    raise InvalidVersion(
+      version=value,
+      reason="PROTON_MACOS_BUILD_NUMBER must contain one to three numeric components",
     )
   }
   for component in components {
     guard component.length() > 0 else {
-      return Err(
-        CommandError("PROTON_MACOS_BUILD_NUMBER contains an empty component"),
+      raise InvalidVersion(
+        version=value,
+        reason="PROTON_MACOS_BUILD_NUMBER contains an empty component",
       )
     }
     for char in component {
       guard char.is_ascii_digit() else {
-        return Err(
-          CommandError("PROTON_MACOS_BUILD_NUMBER components must be numeric"),
+        raise InvalidVersion(
+          version=value,
+          reason="PROTON_MACOS_BUILD_NUMBER components must be numeric",
         )
       }
     }
   }
-  Ok(value)
+  value
 }
 
 ///|
@@ -478,34 +382,22 @@ fn bool_text(value : Bool) -> String {
 }
 
 ///|
-async fn execute_package_plan(plan : PackagePlan) -> Result[Unit, PackageError] {
+async fn execute_package_plan(plan : PackagePlan) -> Unit {
   if plan.build {
-    match run_release_build(plan) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
+    run_release_build(plan)
   }
   let executable = match find_release_executable(plan) {
     Some(path) => path
     None =>
-      return Err(
-        CommandError(
-          "package release executable not found under " +
-          plan.build_target_dir +
-          "; run proton package without --no-build first",
-        ),
-      )
+      raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
   }
-  let runtime = match read_active_runtime(plan.workspace_root) {
-    Ok(runtime) => runtime
-    Err(error) => return Err(error)
-  }
+  let runtime = read_active_runtime(plan.workspace_root)
   if @path.sep == '\\' {
     stage_windows_portable(plan, executable, runtime)
   } else if is_macos_host() {
     stage_macos_app(plan, executable, runtime)
   } else {
-    Err(CommandError("proton package currently supports macOS and Windows"))
+    raise PackagePlanError::UnsupportedPlatform
   }
 }
 
@@ -515,16 +407,8 @@ fn is_macos_host() -> Bool {
 }
 
 ///|
-async fn run_release_build(plan : PackagePlan) -> Result[Unit, PackageError] {
-  let args = [
-    plan.app_package,
-    "--config",
-    plan.config_path,
-    "--",
-    "--release",
-    "--target-dir",
-    plan.build_target_dir,
-  ]
+async fn run_release_build(plan : PackagePlan) -> Unit {
+  let moon_args = ["--release", "--target-dir", plan.build_target_dir]
   let old_rpath = @sys.get_env_var("PROTON_PACKAGE_RPATH")
   if @path.sep != '\\' {
     @sys.set_env_var(
@@ -532,14 +416,7 @@ async fn run_release_build(plan : PackagePlan) -> Result[Unit, PackageError] {
     )
   }
   defer restore_package_env("PROTON_PACKAGE_RPATH", old_rpath)
-  match @build.run(plan.root, args) {
-    Ok(_) => Ok(())
-    Err(error) =>
-      match error {
-        UsageError(message, _) | CommandError(message) =>
-          Err(CommandError(message))
-      }
-  }
+  @build.run_release(plan.root, plan.app_package, plan.config_path, moon_args)
 }
 
 ///|
@@ -574,7 +451,7 @@ fn find_named_file(root : String, name : String) -> String? {
 }
 
 ///|
-async fn read_active_runtime(root : String) -> Result[String, PackageError] {
+async fn read_active_runtime(root : String) -> String {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim().to_owned() != "" =>
       return require_runtime(resolve_path(root, value.trim().to_owned()))
@@ -582,18 +459,13 @@ async fn read_active_runtime(root : String) -> Result[String, PackageError] {
   }
   let manifest_path = resolve_path(root, ".proton/runtime.json")
   let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
-    _ =>
-      return Err(
-        CommandError("active Proton runtime is missing: " + manifest_path),
-      )
+    _ => raise PackageRuntimeError::ManifestMissing(path=manifest_path)
   }
   let json = @json.parse(text) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to parse active Proton runtime manifest: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise PackageRuntimeError::ManifestInvalid(
+        path=manifest_path,
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
   match json {
@@ -601,41 +473,31 @@ async fn read_active_runtime(root : String) -> Result[String, PackageError] {
       let platform = match fields.get("platform") {
         Some(String(platform)) => platform
         _ =>
-          return Err(
-            CommandError(
-              "active Proton runtime manifest has no string platform: " +
-              manifest_path,
-            ),
+          raise PackageRuntimeError::ManifestField(
+            path=manifest_path,
+            field="platform",
           )
       }
       let expected_platform = @cef.current_platform_id()
       guard platform == expected_platform else {
-        return Err(
-          CommandError(
-            "active Proton runtime platform mismatch: expected " +
-            expected_platform +
-            ", got " +
-            platform,
-          ),
+        raise PackageRuntimeError::PlatformMismatch(
+          expected=expected_platform,
+          actual=platform,
         )
       }
       match fields.get("dist") {
         Some(String(dist)) => require_runtime(resolve_path(root, dist))
         _ =>
-          Err(
-            CommandError(
-              "active Proton runtime manifest has no string dist: " +
-              manifest_path,
-            ),
+          raise PackageRuntimeError::ManifestField(
+            path=manifest_path,
+            field="dist",
           )
       }
     }
     _ =>
-      Err(
-        CommandError(
-          "active Proton runtime manifest root must be an object: " +
-          manifest_path,
-        ),
+      raise PackageRuntimeError::ManifestInvalid(
+        path=manifest_path,
+        detail="root must be an object",
       )
   }
 }
@@ -652,11 +514,11 @@ fn package_build_target_dir(
 }
 
 ///|
-fn require_runtime(path : String) -> Result[String, PackageError] {
+fn require_runtime(path : String) -> String raise PackageRuntimeError {
   if path_is_dir(path) {
-    Ok(path)
+    path
   } else {
-    Err(CommandError("active Proton runtime directory is missing: " + path))
+    raise DirectoryMissing(path~)
   }
 }
 
@@ -665,14 +527,14 @@ async fn stage_macos_app(
   plan : PackagePlan,
   executable : String,
   runtime : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let staging = macos_staging_app_path(plan)
-  let result = stage_macos_app_impl(plan, executable, runtime)
-  match result {
-    Ok(_) => Ok(())
-    Err(error) => {
-      ignore(remove_tree(staging))
-      Err(error)
+  stage_macos_app_impl(plan, executable, runtime) catch {
+    error => {
+      remove_tree(staging) catch {
+        _ => ()
+      }
+      raise error
     }
   }
 }
@@ -682,7 +544,7 @@ async fn stage_macos_app_impl(
   plan : PackagePlan,
   executable : String,
   runtime : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let final_app = resolve_path(plan.output, plan.product_name + ".app")
   let executable_name = package_executable_name(plan.product_name)
   let app = macos_staging_app_path(plan)
@@ -692,98 +554,44 @@ async fn stage_macos_app_impl(
   let frameworks = resolve_path(contents, "Frameworks")
   let helper_app = resolve_path(frameworks, plan.product_name + " Helper.app")
   let helper_macos = resolve_path(helper_app, "Contents/MacOS")
-  match remove_tree(app) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  remove_tree(app)
   for dir in [macos, resources, frameworks, helper_macos] {
-    match ensure_dir(dir) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    ensure_dir(dir)
   }
-  match copy_file(executable, resolve_path(macos, executable_name)) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match copy_tree(runtime, resolve_path(resources, "proton")) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match copy_file(plan.config_path, resolve_path(resources, "moon.proton")) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match stage_project_inputs(plan, resources) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match stage_macos_icon(plan, resources) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  copy_file(executable, resolve_path(macos, executable_name))
+  copy_tree(runtime, resolve_path(resources, "proton"))
+  copy_file(plan.config_path, resolve_path(resources, "moon.proton"))
+  stage_project_inputs(plan, resources)
+  stage_macos_icon(plan, resources)
   let helper_source = resolve_path(runtime, "bin/cef_process")
   guard @mbfs.path_exists(helper_source) else {
-    return Err(
-      CommandError("active Proton runtime helper is missing: " + helper_source),
-    )
+    raise PackageRuntimeError::HelperMissing(path=helper_source)
   }
-  match copy_file(helper_source, resolve_path(helper_macos, "cef_process")) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match
-    write_text(
-      resolve_path(contents, "Info.plist"),
-      macos_info_plist(plan, executable_name),
-    ) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match
-    write_text(
-      resolve_path(helper_app, "Contents/Info.plist"),
-      helper_info_plist(plan),
-    ) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match write_package_manifest(plan, resources, "macos-app") {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  match
-    add_macos_rpath(
-      resolve_path(helper_macos, "cef_process"),
-      "@loader_path/../../../../Resources/proton/lib",
-    ) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  copy_file(helper_source, resolve_path(helper_macos, "cef_process"))
+  write_text(
+    resolve_path(contents, "Info.plist"),
+    macos_info_plist(plan, executable_name),
+  )
+  write_text(
+    resolve_path(helper_app, "Contents/Info.plist"),
+    helper_info_plist(plan),
+  )
+  write_package_manifest(plan, resources, "macos-app")
+  add_macos_rpath(
+    resolve_path(helper_macos, "cef_process"),
+    "@loader_path/../../../../Resources/proton/lib",
+  )
   if plan.sign {
-    match sign_macos_app(plan, app, executable_name) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    sign_macos_app(plan, app, executable_name)
   }
   if plan.notarize {
-    match notarize_macos_app(plan, app) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    notarize_macos_app(plan, app)
   }
-  match promote_staged_app(app, final_app) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  promote_staged_app(app, final_app)
   println("Packaged macOS app: " + final_app)
   if plan.targets.contains("zip") {
-    match create_zip(plan, final_app) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    create_zip(plan, final_app)
   }
-  Ok(())
 }
 
 ///|
@@ -795,27 +603,18 @@ fn macos_staging_app_path(plan : PackagePlan) -> String {
 }
 
 ///|
-async fn promote_staged_app(
-  staging : String,
-  destination : String,
-) -> Result[Unit, PackageError] {
+async fn promote_staged_app(staging : String, destination : String) -> Unit {
   let backup = destination + ".backup"
   if @mbfs.path_exists(backup) {
     if @mbfs.path_exists(destination) {
-      match remove_tree(backup) {
-        Err(error) => return Err(error)
-        Ok(_) => ()
-      }
+      remove_tree(backup)
     } else {
       @async_fs.rename(backup, destination) catch {
         error =>
-          return Err(
-            CommandError(
-              "failed to restore interrupted macOS app promotion from " +
-              backup +
-              ": " +
-              @debug.render(@debug.to_repr(error)),
-            ),
+          raise PackageFileSystemError::Copy(
+            source=backup,
+            destination~,
+            detail="restore failed: " + @debug.render(@debug.to_repr(error)),
           )
       }
     }
@@ -824,11 +623,10 @@ async fn promote_staged_app(
   if had_destination {
     @async_fs.rename(destination, backup) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to preserve existing macOS app: " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Copy(
+          source=destination,
+          destination=backup,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
   }
@@ -837,45 +635,29 @@ async fn promote_staged_app(
       if had_destination {
         @async_fs.rename(backup, destination) catch {
           rollback_error =>
-            return Err(
-              CommandError(
-                "failed to promote staged macOS app: " +
-                @debug.render(@debug.to_repr(error)) +
+            raise PackageFileSystemError::Copy(
+              source=staging,
+              destination~,
+              detail=@debug.render(@debug.to_repr(error)) +
                 "; rollback also failed and the previous app remains at " +
                 backup +
                 ": " +
                 @debug.render(@debug.to_repr(rollback_error)),
-              ),
             )
         }
       }
-      return Err(
-        CommandError(
-          "failed to promote staged macOS app: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise PackageFileSystemError::Copy(
+        source=staging,
+        destination~,
+        detail=@debug.render(@debug.to_repr(error)),
       )
     }
   }
-  match remove_tree(backup) {
-    Err(error) =>
-      Err(
-        CommandError(
-          "macOS app was promoted but its backup could not be removed: " +
-          backup +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
-      )
-    Ok(_) => Ok(())
-  }
+  remove_tree(backup)
 }
 
 ///|
-async fn stage_project_inputs(
-  plan : PackagePlan,
-  destination : String,
-) -> Result[Unit, PackageError] {
+async fn stage_project_inputs(plan : PackagePlan, destination : String) -> Unit {
   let inputs : Array[String] = []
   match plan.frontend_dist {
     Some(path) => inputs.push(path)
@@ -895,27 +677,18 @@ async fn stage_project_inputs(
     let source = match glob_tree_root(input) {
       Some(root) => root
       None if input.contains("*") =>
-        return Err(CommandError("unsupported bundle.resources glob: " + input))
+        raise PackagePlanError::UnsupportedResourceGlob(path=input)
       None => input
     }
     guard @mbfs.path_exists(source) else {
-      return Err(CommandError("package input is missing: " + input))
+      raise PackagePlanError::MissingInput(path=input)
     }
     let relative = match relative_to_base(plan.base_dir, source) {
       Some(relative) => relative
-      None =>
-        return Err(
-          CommandError(
-            "package input must be inside the config directory: " + input,
-          ),
-        )
+      None => raise PackagePlanError::InputOutsideProject(path=input)
     }
-    match copy_tree(source, resolve_path(destination, relative)) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    copy_tree(source, resolve_path(destination, relative))
   }
-  Ok(())
 }
 
 ///|
@@ -928,15 +701,12 @@ fn glob_tree_root(path : String) -> String? {
 }
 
 ///|
-async fn stage_macos_icon(
-  plan : PackagePlan,
-  resources : String,
-) -> Result[Unit, PackageError] {
+async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
   match plan.macos_icon {
-    None => Ok(())
+    None => ()
     Some(icon) => {
       guard @mbfs.path_exists(icon) else {
-        return Err(CommandError("macOS icon is missing: " + icon))
+        raise PackagePlanError::MissingIcon(path=icon)
       }
       copy_file(icon, resolve_path(resources, "AppIcon.icns"))
     }
@@ -1007,146 +777,99 @@ fn package_executable_name(product_name : String) -> String {
 }
 
 ///|
-async fn ensure_dir(path : String) -> Result[Unit, PackageError] {
-  guard !@mbfs.path_exists(path) else { return Ok(()) }
+async fn ensure_dir(path : String) -> Unit {
+  guard !@mbfs.path_exists(path) else { return }
   let parent = path_parent(path)
   if parent != path && !@mbfs.path_exists(parent) {
-    match ensure_dir(parent) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    ensure_dir(parent)
   }
   @async_fs.mkdir(path) catch {
     error => {
       if @mbfs.path_exists(path) {
-        return Ok(())
+        return
       }
-      return Err(
-        CommandError(
-          "failed to create directory " +
-          path +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise PackageFileSystemError::CreateDirectory(
+        path~,
+        detail=@debug.render(@debug.to_repr(error)),
       )
     }
   }
-  Ok(())
 }
 
 ///|
-async fn remove_tree(path : String) -> Result[Unit, PackageError] {
-  guard @mbfs.path_exists(path) else { return Ok(()) }
+async fn remove_tree(path : String) -> Unit {
+  guard @mbfs.path_exists(path) else { return }
   if path_is_file(path) {
     @async_fs.remove(path) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to remove " +
-            path +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Remove(
+          path~,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
   } else {
     @async_fs.rmdir(path, recursive=true) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to remove directory " +
-            path +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Remove(
+          path~,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
   }
-  Ok(())
 }
 
 ///|
-async fn copy_file(
-  source : String,
-  destination : String,
-) -> Result[Unit, PackageError] {
-  match ensure_dir(path_parent(destination)) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+async fn copy_file(source : String, destination : String) -> Unit {
+  ensure_dir(path_parent(destination))
   if is_macos_host() {
     let code = @process.run("ditto", [source, destination]) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to copy " +
-            source +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Copy(
+          source~,
+          destination~,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
-    return if code == 0 {
-      Ok(())
-    } else {
-      Err(CommandError("ditto exited with code " + code.to_string()))
+    if code != 0 {
+      raise PackageToolError::Exit(tool="ditto", code~, detail=source)
     }
+    return
   }
   let data = @async_fs.read_file(source) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to read " +
-          source +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise PackageFileSystemError::Read(
+        path=source,
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
   @async_fs.write_file(destination, data, create_mode=CreateOrTruncate) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to write " +
-          destination +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise PackageFileSystemError::Write(
+        path=destination,
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
-  Ok(())
 }
 
 ///|
-async fn copy_tree(
-  source : String,
-  destination : String,
-) -> Result[Unit, PackageError] {
+async fn copy_tree(source : String, destination : String) -> Unit {
   if path_is_file(source) {
     return copy_file(source, destination)
   }
   guard path_is_dir(source) else {
-    return Err(
-      CommandError("package input is not a file or directory: " + source),
-    )
+    raise PackageFileSystemError::InvalidSource(path=source)
   }
-  match ensure_dir(path_parent(destination)) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  ensure_dir(path_parent(destination))
   let code = if @path.sep == '\\' {
     let (code, _) = @process.collect_output_merged("robocopy", [
       source, destination, "/E", "/COPY:DAT", "/DCOPY:DAT", "/NFL", "/NDL", "/NJH",
       "/NJS", "/NP", "/R:2", "/W:1",
     ]) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to copy directory " +
-            source +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Copy(
+          source~,
+          destination~,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
     code
@@ -1155,13 +878,10 @@ async fn copy_tree(
       source, destination,
     ]) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to copy directory " +
-            source +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Copy(
+          source~,
+          destination~,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
     code
@@ -1170,42 +890,31 @@ async fn copy_tree(
       "-R", source, destination,
     ]) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to copy directory " +
-            source +
-            ": " +
-            @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageFileSystemError::Copy(
+          source~,
+          destination~,
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
     code
   }
-  if code == 0 || (@path.sep == '\\' && code < 8) {
-    Ok(())
-  } else {
-    Err(
-      CommandError(
-        "directory copy exited with code " + code.to_string() + ": " + source,
-      ),
+  if code != 0 && !(@path.sep == '\\' && code < 8) {
+    raise PackageFileSystemError::Copy(
+      source~,
+      destination~,
+      detail="copy tool exited with code " + code.to_string(),
     )
   }
 }
 
 ///|
-fn write_text(path : String, text : String) -> Result[Unit, PackageError] {
+fn write_text(
+  path : String,
+  text : String,
+) -> Unit raise PackageFileSystemError {
   @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    error =>
-      return Err(
-        CommandError(
-          "failed to write " +
-          path +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
-      )
+    error => raise Write(path~, detail=@debug.render(@debug.to_repr(error)))
   }
-  Ok(())
 }
 
 ///|
@@ -1280,7 +989,7 @@ fn write_package_manifest(
   plan : PackagePlan,
   destination : String,
   kind : String,
-) -> Result[Unit, PackageError] {
+) -> Unit raise PackageFileSystemError {
   let json = Json::object({
     "schema_version": Json::number(1),
     "kind": Json::string(kind),
@@ -1296,23 +1005,16 @@ fn write_package_manifest(
 }
 
 ///|
-async fn add_macos_rpath(
-  binary : String,
-  rpath : String,
-) -> Result[Unit, PackageError] {
+async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
   let code = @process.run("install_name_tool", ["-add_rpath", rpath, binary]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to run install_name_tool: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise PackageToolError::Start(
+        tool="install_name_tool",
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
-  if code == 0 {
-    Ok(())
-  } else {
-    Err(CommandError("install_name_tool exited with code " + code.to_string()))
+  if code != 0 {
+    raise PackageToolError::Exit(tool="install_name_tool", code~, detail=binary)
   }
 }
 
@@ -1321,28 +1023,24 @@ async fn sign_macos_app(
   plan : PackagePlan,
   app : String,
   executable_name : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let identity = match @sys.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
     Some(identity) if identity.trim().to_owned() != "" =>
       identity.trim().to_owned()
     _ =>
-      return Err(
-        CommandError(
-          "--sign requires PROTON_MACOS_SIGNING_IDENTITY with a Developer ID Application identity",
-        ),
+      raise MacosSigningError::InvalidConfiguration(
+        detail="--sign requires PROTON_MACOS_SIGNING_IDENTITY with a Developer ID Application identity",
       )
   }
-  let is_adhoc = match
-    validate_macos_signing_identity(identity, notarize=plan.notarize) {
-    Ok(is_adhoc) => is_adhoc
-    Err(error) => return Err(error)
-  }
+  let is_adhoc = validate_macos_signing_identity(
+    identity,
+    notarize=plan.notarize,
+  )
   let contents = resolve_path(app, "Contents")
-  let entitlements = match
-    resolve_macos_entitlements(app, allow_untrusted_libraries=is_adhoc) {
-    Ok(path) => path
-    Err(error) => return Err(error)
-  }
+  let entitlements = resolve_macos_entitlements(
+    app,
+    allow_untrusted_libraries=is_adhoc,
+  )
   let helper = resolve_path(
     contents,
     "Frameworks/" + plan.product_name + " Helper.app",
@@ -1388,32 +1086,20 @@ async fn sign_macos_app(
     MacosCodeSignTarget::{ path: main, runtime_options: true, deep: false },
     MacosCodeSignTarget::{ path: app, runtime_options: true, deep: true },
   ]
-  match require_macos_codesign_targets(targets) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
+  require_macos_codesign_targets(targets)
+  for target in targets {
+    codesign_target(
+      identity,
+      target.path,
+      runtime_options=target.runtime_options,
+      deep=target.deep,
+      entitlements=Some(entitlements),
+    )
   }
   for target in targets {
-    match
-      codesign_target(
-        identity,
-        target.path,
-        runtime_options=target.runtime_options,
-        deep=target.deep,
-        entitlements=Some(entitlements),
-      ) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
+    verify_macos_codesign_target(target.path, deep=target.deep)
   }
-  for target in targets {
-    match verify_macos_codesign_target(target.path, deep=target.deep) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-  }
-  if is_adhoc {
-    Ok(())
-  } else {
+  if !is_adhoc {
     verify_macos_developer_id(app)
   }
 }
@@ -1421,40 +1107,33 @@ async fn sign_macos_app(
 ///|
 fn require_macos_codesign_targets(
   targets : Array[MacosCodeSignTarget],
-) -> Result[Unit, PackageError] {
+) -> Unit raise MacosSigningError {
   for target in targets {
     guard @mbfs.path_exists(target.path) else {
-      return Err(
-        CommandError("required macOS signing target is missing: " + target.path),
-      )
+      raise MissingTarget(path=target.path)
     }
   }
-  Ok(())
 }
 
 ///|
 fn validate_macos_signing_identity(
   identity : String,
   notarize~ : Bool,
-) -> Result[Bool, PackageError] {
+) -> Bool raise MacosSigningError {
   if identity != "-" {
-    return Ok(false)
+    return false
   }
   if !macos_adhoc_signing_allowed() {
-    return Err(
-      CommandError(
-        "ad-hoc signing is not a release path; set PROTON_MACOS_ALLOW_ADHOC=1 only for local diagnostics",
-      ),
+    raise InvalidConfiguration(
+      detail="ad-hoc signing is not a release path; set PROTON_MACOS_ALLOW_ADHOC=1 only for local diagnostics",
     )
   }
   if notarize {
-    return Err(
-      CommandError(
-        "--notarize requires a Developer ID Application identity; ad-hoc signing is diagnostic only",
-      ),
+    raise InvalidConfiguration(
+      detail="--notarize requires a Developer ID Application identity; ad-hoc signing is diagnostic only",
     )
   }
-  Ok(true)
+  true
 }
 
 ///|
@@ -1470,37 +1149,31 @@ fn macos_adhoc_signing_allowed() -> Bool {
 }
 
 ///|
-async fn verify_macos_developer_id(app : String) -> Result[Unit, PackageError] {
+async fn verify_macos_developer_id(app : String) -> Unit {
   let (code, output) = @process.collect_output_merged("codesign", [
     "--display", "--verbose=4", app,
   ]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to inspect macOS signing authority: " +
+      raise MacosSigningError::Verification(
+        detail="failed to inspect signing authority: " +
           @debug.render(@debug.to_repr(error)),
-        ),
       )
   }
   guard code == 0 else {
-    return Err(CommandError("failed to inspect macOS signing authority"))
+    raise MacosSigningError::Verification(
+      detail="failed to inspect signing authority",
+    )
   }
   let text = output.text() catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to decode macOS signing authority: " +
+      raise MacosSigningError::Verification(
+        detail="failed to decode signing authority: " +
           @debug.render(@debug.to_repr(error)),
-        ),
       )
   }
-  if text.contains("Authority=Developer ID Application:") {
-    Ok(())
-  } else {
-    Err(
-      CommandError(
-        "macOS release signing must use a Developer ID Application identity",
-      ),
+  if !text.contains("Authority=Developer ID Application:") {
+    raise MacosSigningError::Verification(
+      detail="release signing must use a Developer ID Application identity",
     )
   }
 }
@@ -1512,7 +1185,7 @@ async fn codesign_target(
   runtime_options~ : Bool,
   deep~ : Bool,
   entitlements~ : String?,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let args = macos_codesign_args(
     identity,
     target,
@@ -1522,53 +1195,31 @@ async fn codesign_target(
   )
   let code = @process.run("codesign", args) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to sign " +
-          target +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::ToolFailure(
+        stage="codesign " + target,
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
-  if code == 0 {
-    Ok(())
-  } else {
-    Err(
-      CommandError(
-        "codesign exited with code " + code.to_string() + ": " + target,
-      ),
+  if code != 0 {
+    raise MacosSigningError::ToolFailure(
+      stage="codesign " + target,
+      detail="exit code " + code.to_string(),
     )
   }
 }
 
 ///|
-async fn verify_macos_codesign_target(
-  target : String,
-  deep~ : Bool,
-) -> Result[Unit, PackageError] {
+async fn verify_macos_codesign_target(target : String, deep~ : Bool) -> Unit {
   let args = macos_codesign_verify_args(target, deep~)
   let code = @process.run("codesign", args) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to verify macOS signature for " +
-          target +
-          ": " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::Verification(
+        detail=target + ": " + @debug.render(@debug.to_repr(error)),
       )
   }
-  if code == 0 {
-    Ok(())
-  } else {
-    Err(
-      CommandError(
-        "codesign verification exited with code " +
-        code.to_string() +
-        ": " +
-        target,
-      ),
+  if code != 0 {
+    raise MacosSigningError::Verification(
+      detail=target + ": exit code " + code.to_string(),
     )
   }
 }
@@ -1616,23 +1267,22 @@ fn macos_codesign_args(
 fn resolve_macos_entitlements(
   app : String,
   allow_untrusted_libraries~ : Bool,
-) -> Result[String, PackageError] {
+) -> String raise {
   match @sys.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
     Some(path) if path.trim().to_owned() != "" => {
       let path = @path.Path(path.trim().to_owned()).resolve().to_string()
       if path_is_file(path) {
-        Ok(path)
+        path
       } else {
-        Err(CommandError("macOS entitlements file is missing: " + path))
+        raise MacosSigningError::InvalidConfiguration(
+          detail="macOS entitlements file is missing: " + path,
+        )
       }
     }
     _ => {
       let path = resolve_path(app, "Contents/Resources/proton.entitlements")
-      match
-        write_text(path, default_macos_entitlements(allow_untrusted_libraries~)) {
-        Ok(_) => Ok(path)
-        Err(error) => Err(error)
-      }
+      write_text(path, default_macos_entitlements(allow_untrusted_libraries~))
+      path
     }
   }
 }
@@ -1657,52 +1307,29 @@ fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
 }
 
 ///|
-async fn notarize_macos_app(
-  plan : PackagePlan,
-  app : String,
-) -> Result[Unit, PackageError] {
+async fn notarize_macos_app(plan : PackagePlan, app : String) -> Unit {
   let profile = match @sys.get_env_var("PROTON_NOTARY_PROFILE") {
     Some(profile) if profile.trim().to_owned() != "" =>
       profile.trim().to_owned()
-    _ => return Err(CommandError("--notarize requires PROTON_NOTARY_PROFILE"))
+    _ =>
+      raise MacosSigningError::InvalidConfiguration(
+        detail="--notarize requires PROTON_NOTARY_PROFILE",
+      )
   }
   let archive = resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".notary.zip",
   )
-  match remove_tree(archive) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
-  let result = submit_macos_notarization(app, archive, profile)
-  let cleanup = remove_tree(archive)
-  finish_macos_notarization(result, cleanup, archive)
-}
-
-///|
-fn finish_macos_notarization(
-  result : Result[Unit, PackageError],
-  cleanup : Result[Unit, PackageError],
-  archive : String,
-) -> Result[Unit, PackageError] {
-  match result {
-    Err(error) =>
-      match cleanup {
-        Ok(_) => Err(error)
-        Err(cleanup_error) =>
-          Err(
-            CommandError(
-              "macOS notarization failed and the temporary archive could not be removed: " +
-              archive +
-              "; notarization error: " +
-              @debug.render(@debug.to_repr(error)) +
-              "; cleanup error: " +
-              @debug.render(@debug.to_repr(cleanup_error)),
-            ),
-          )
+  remove_tree(archive)
+  submit_macos_notarization(app, archive, profile) catch {
+    error => {
+      remove_tree(archive) catch {
+        _ => ()
       }
-    Ok(_) => cleanup
+      raise error
+    }
   }
+  remove_tree(archive)
 }
 
 ///|
@@ -1710,115 +1337,93 @@ async fn submit_macos_notarization(
   app : String,
   archive : String,
   profile : String,
-) -> Result[Unit, PackageError] {
+) -> Unit {
   let zip_code = @process.run("ditto", [
     "-c", "-k", "--keepParent", app, archive,
   ]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to create notarization archive: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::ToolFailure(
+        stage="create notarization archive",
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
   guard zip_code == 0 else {
-    return Err(
-      CommandError(
-        "notarization archive command exited with code " + zip_code.to_string(),
-      ),
+    raise MacosSigningError::ToolFailure(
+      stage="create notarization archive",
+      detail="exit code " + zip_code.to_string(),
     )
   }
   let submit_code = @process.run("xcrun", [
     "notarytool", "submit", archive, "--keychain-profile", profile, "--wait",
   ]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to submit notarization: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::ToolFailure(
+        stage="submit notarization",
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
   guard submit_code == 0 else {
-    return Err(
-      CommandError(
-        "notarytool submit exited with code " + submit_code.to_string(),
-      ),
+    raise MacosSigningError::ToolFailure(
+      stage="notarytool submit",
+      detail="exit code " + submit_code.to_string(),
     )
   }
   let staple_code = @process.run("xcrun", ["stapler", "staple", app]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to staple notarization ticket: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::ToolFailure(
+        stage="staple notarization ticket",
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
   guard staple_code == 0 else {
-    return Err(
-      CommandError("stapler exited with code " + staple_code.to_string()),
+    raise MacosSigningError::ToolFailure(
+      stage="stapler",
+      detail="exit code " + staple_code.to_string(),
     )
   }
   let validate_code = @process.run("xcrun", ["stapler", "validate", app]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to validate notarization ticket: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::ToolFailure(
+        stage="validate notarization ticket",
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
   guard validate_code == 0 else {
-    return Err(
-      CommandError(
-        "stapler validate exited with code " + validate_code.to_string(),
-      ),
+    raise MacosSigningError::ToolFailure(
+      stage="stapler validate",
+      detail="exit code " + validate_code.to_string(),
     )
   }
   let assess_code = @process.run("spctl", [
     "--assess", "--type", "execute", "--verbose=4", app,
   ]) catch {
     error =>
-      return Err(
-        CommandError(
-          "failed to run Gatekeeper assessment: " +
-          @debug.render(@debug.to_repr(error)),
-        ),
+      raise MacosSigningError::ToolFailure(
+        stage="Gatekeeper assessment",
+        detail=@debug.render(@debug.to_repr(error)),
       )
   }
-  if assess_code == 0 {
-    Ok(())
-  } else {
-    Err(
-      CommandError(
-        "Gatekeeper assessment exited with code " + assess_code.to_string(),
-      ),
+  if assess_code != 0 {
+    raise MacosSigningError::ToolFailure(
+      stage="Gatekeeper assessment",
+      detail="exit code " + assess_code.to_string(),
     )
   }
 }
 
 ///|
-async fn create_zip(
-  plan : PackagePlan,
-  source : String,
-) -> Result[Unit, PackageError] {
+async fn create_zip(plan : PackagePlan, source : String) -> Unit {
   let archive = resolve_path(plan.output, path_basename(source) + ".zip")
-  match remove_tree(archive) {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+  remove_tree(archive)
   let code = if @path.sep == '\\' {
     @process.run("powershell", [
       "-NoProfile", "-Command", "Compress-Archive", "-Path", source, "-DestinationPath",
       archive,
     ]) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to create zip: " + @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageToolError::Start(
+          tool="Compress-Archive",
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
   } else {
@@ -1826,19 +1431,16 @@ async fn create_zip(
       "-c", "-k", "--sequesterRsrc", "--keepParent", source, archive,
     ]) catch {
       error =>
-        return Err(
-          CommandError(
-            "failed to create zip: " + @debug.render(@debug.to_repr(error)),
-          ),
+        raise PackageToolError::Start(
+          tool="ditto",
+          detail=@debug.render(@debug.to_repr(error)),
         )
     }
   }
-  if code == 0 {
-    println("Created archive: " + archive)
-    Ok(())
-  } else {
-    Err(CommandError("zip command exited with code " + code.to_string()))
+  if code != 0 {
+    raise PackageToolError::Exit(tool="zip", code~, detail=archive)
   }
+  println("Created archive: " + archive)
 }
 
 ///|

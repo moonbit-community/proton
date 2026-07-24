@@ -10,7 +10,7 @@ handles are intentionally not part of the public surface.
 ///|
 test "native ABI is loaded" {
   inspect(abi_version(), content="1")
-  let info = runtime_info().unwrap()
+  let info = runtime_info()
   inspect(info.abi_version, content="1")
   assert_true(info.build_mode == "abi-only" || info.build_mode == "runtime")
   assert_true(info.runtime_available == (info.build_mode == "runtime"))
@@ -59,7 +59,7 @@ binding validation. Real runtime configs that include `runtime_root` or
 ```mbt check
 ///|
 test "runtime and window lifecycle" {
-  let runtime = Runtime::new().unwrap()
+  let runtime = Runtime::new()
   let window = Window::new(
     runtime,
     config=WindowConfig::new(
@@ -68,17 +68,14 @@ test "runtime and window lifecycle" {
       height=240,
       initial_url="about:blank",
     ),
-  ).unwrap()
+  )
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    Some(event) => inspect(event.event_type(), content="window_created")
     _ => fail("expected window_created")
   }
-  debug_inspect(
-    window.load_html("<p>Hello Proton</p>", "proton://app/"),
-    content="Ok(())",
-  )
-  debug_inspect(window.destroy(), content="Ok(())")
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  window.load_html("<p>Hello Proton</p>", "proton://app/")
+  window.destroy()
+  runtime.destroy()
 }
 ```
 
@@ -91,21 +88,19 @@ MoonBit application thread through `Runtime::set_wakeup_fd`.
 ```mbt check
 ///|
 test "runtime wait event readiness" {
-  let runtime = Runtime::new().unwrap()
-  let empty = runtime
-    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
-    .unwrap()
+  let runtime = Runtime::new()
+  let empty = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
+
   inspect(empty.is_timeout(), content="true")
-  let window = Window::new(runtime).unwrap()
-  let ready = runtime
-    .wait(interest_mask=runtime_wait_event, timeout_ms=0)
-    .unwrap()
+  let window = Window::new(runtime)
+  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
+
   inspect(ready.has_event(), content="true")
   match runtime.poll_event() {
-    Ok(Some(event)) => inspect(event.event_type(), content="window_created")
+    Some(event) => inspect(event.event_type(), content="window_created")
     _ => fail("expected window_created")
   }
-  debug_inspect(window.destroy(), content="Ok(())")
-  debug_inspect(runtime.destroy(), content="Ok(())")
+  window.destroy()
+  runtime.destroy()
 }
 ```

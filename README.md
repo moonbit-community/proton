@@ -151,8 +151,8 @@ bundle = {
 Inspect the resolved bundle plan before creating artifacts:
 
 ```sh
-proton_cli package app --dry-run
-proton_cli package app
+proton_cli package --dry-run
+proton_cli package
 ```
 
 The package command performs a release build unless `--no-build` is supplied.

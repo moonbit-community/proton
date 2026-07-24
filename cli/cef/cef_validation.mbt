@@ -7,7 +7,7 @@ fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool {
 fn validate_cef_root(
   root : String,
   platform : ProtonPlatform,
-) -> Result[Unit, CefError] {
+) -> Unit raise CefRuntimeError {
   let missing : Array[String] = []
   for relative in installed_cef_relative_files(platform) {
     let path = path_join(root, relative)
@@ -20,13 +20,7 @@ fn validate_cef_root(
     missing.push(version_path)
   }
   if missing.length() > 0 {
-    Err(
-      CefError::CommandError(
-        "Invalid CEF root: " + root + "\nMissing:\n" + missing.join("\n"),
-      ),
-    )
-  } else {
-    Ok(())
+    raise InvalidCefRoot(path=root, missing~)
   }
 }
 
@@ -34,7 +28,7 @@ fn validate_cef_root(
 fn validate_runtime_dist(
   root : String,
   platform : ProtonPlatform,
-) -> Result[Unit, CefError] {
+) -> Unit raise CefRuntimeError {
   let missing : Array[String] = []
   for relative in runtime_required_relative_files(platform) {
     let path = path_join(root, relative)
@@ -43,12 +37,6 @@ fn validate_runtime_dist(
     }
   }
   if missing.length() > 0 {
-    Err(
-      CefError::CommandError(
-        "Invalid Proton runtime: " + root + "\nMissing:\n" + missing.join("\n"),
-      ),
-    )
-  } else {
-    Ok(())
+    raise InvalidRuntime(path=root, missing~)
   }
 }

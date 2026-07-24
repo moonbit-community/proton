@@ -2,13 +2,55 @@
 package "justjavac/proton_cli/new"
 
 import {
+  "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn run(String, Array[String]) -> Result[Unit, String]
+pub fn command() -> @argparse.Command
+
+pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
+pub(all) suberror NewProjectInputError {
+  InvalidPositiveInteger(field~ : String, value~ : String)
+  EmptyTitle
+  EmptyModuleName
+  ModuleUsesBackslash
+  ModuleHasBoundarySlash
+  ModuleContainsSpace
+  ModuleHasEmptySegment
+  ModuleHasUnsupportedCharacter(character~ : Char)
+  InvalidBundleIdentifier(identifier~ : String, reason~ : String)
+  EmptyProjectDirectory
+} derive(Eq, @debug.Debug)
+pub fn NewProjectInputError::message(Self) -> String
+
+pub(all) suberror NewProjectTargetError {
+  NotDirectory(path~ : String)
+  ReadDirectory(path~ : String, detail~ : String)
+  ContainsMoonModule(path~ : String)
+  NotEmpty(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NewProjectTargetError::message(Self) -> String
+
+pub(all) suberror NewProjectTemplateError {
+  UnresolvedPlaceholder(template~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NewProjectTemplateError::message(Self) -> String
+
+pub(all) suberror NewProjectToolError {
+  Start(tool~ : String, detail~ : String)
+  Exit(tool~ : String, code~ : Int)
+  MoonCheckFailed(code~ : Int, project~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NewProjectToolError::message(Self) -> String
+
+pub(all) suberror NewProjectWriteError {
+  CreateDirectory(path~ : String, detail~ : String)
+  WriteFile(path~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NewProjectWriteError::message(Self) -> String
 
 // Types and methods
 type NewProjectOptions derive(Eq, @debug.Debug)

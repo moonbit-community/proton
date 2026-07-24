@@ -1,8 +1,25 @@
 ///|
-fn[T] require_build_ok(result : Result[T, BuildError]) -> T {
-  match result {
-    Ok(value) => value
-    Err(_) => abort("expected build result to be Ok")
+fn parse_build_args(args : Array[String]) -> RawBuildOptions raise {
+  build_options_from_matches(command().parse(argv=args, env=Map([])))
+}
+
+///|
+fn[T] expect_build_error_message(action : () -> T raise) -> String raise {
+  try action() catch {
+    error => error.to_string()
+  } noraise {
+    _ => fail("expected build error")
+  }
+}
+
+///|
+fn[T] expect_build_config_error(
+  action : () -> T raise BuildConfigError,
+) -> BuildConfigError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected build config error")
   }
 }
 
@@ -39,7 +56,7 @@ let valid_build_config =
 
 ///|
 test "parse build args defaults and moon args" {
-  let raw = require_build_ok(parse_build_args(["--", "--warn-list", "+a"]))
+  let raw = parse_build_args(["--", "--warn-list", "+a"])
   @debug.assert_eq(raw.app_package, "app")
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.run_frontend_build, true)
@@ -47,12 +64,22 @@ test "parse build args defaults and moon args" {
 }
 
 ///|
+test "moon build options require the separator" {
+  try parse_build_args(["--warn-list", "+a"]) catch {
+    error =>
+      assert_true(
+        error.to_string().contains("unexpected argument '--warn-list'"),
+      )
+  } noraise {
+    _ => fail("expected argparse to reject a moon option before --")
+  }
+}
+
+///|
 test "parse build args package and config" {
-  let raw = require_build_ok(
-    parse_build_args([
-      "desktop", "--config", "config/moon.proton", "--no-frontend",
-    ]),
-  )
+  let raw = parse_build_args([
+    "--package", "desktop", "--config", "config/moon.proton", "--no-frontend",
+  ])
   @debug.assert_eq(raw.app_package, "desktop")
   @debug.assert_eq(raw.config_path, Some("config/moon.proton"))
   @debug.assert_eq(raw.run_frontend_build, false)
@@ -60,25 +87,22 @@ test "parse build args package and config" {
 
 ///|
 test "parse build args accepts explicit config path starting with dash" {
-  let raw = require_build_ok(parse_build_args(["--config", "-custom.proton"]))
+  let raw = parse_build_args(["--config", "-custom.proton"])
   @debug.assert_eq(raw.config_path, Some("-custom.proton"))
 }
 
 ///|
 test "parse build args rejects moon target override" {
-  match
+  let first = expect_build_error_message(() => {
     parse_build_args([
-      "app", "--", "--diagnostic-limit", "80", "--target", "wasm-gc",
-    ]) {
-    Err(UsageError(message, _)) =>
-      assert_true(message.contains("always uses --target native"))
-    _ => abort("expected target override to fail")
-  }
-  match parse_build_args(["app", "--", "--target=wasm-gc"]) {
-    Err(UsageError(message, _)) =>
-      assert_true(message.contains("always uses --target native"))
-    _ => abort("expected target override to fail")
-  }
+      "--package", "app", "--", "--diagnostic-limit", "80", "--target", "wasm-gc",
+    ])
+  })
+  assert_true(first.contains("always uses --target native"))
+  let second = expect_build_error_message(() => {
+    parse_build_args(["--package", "app", "--", "--target=wasm-gc"])
+  })
+  assert_true(second.contains("always uses --target native"))
 }
 
 ///|
@@ -92,12 +116,10 @@ test "moon build args append native target" {
 test "frontend cwd validation reports missing directory" {
   let root = "target/proton-build-cwd"
   ensure_build_test_dir(root)
-  match resolve_frontend_cwd(root, Some("missing"), "npm run build") {
-    Ok(_) => abort("expected missing frontend cwd")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("frontend cwd does not exist"))
-    Err(_) => abort("expected command error")
-  }
+  let error = expect_build_error_message(() => {
+    resolve_frontend_cwd(root, Some("missing"), "npm run build")
+  })
+  assert_true(error.contains("frontend cwd does not exist"))
 }
 
 ///|
@@ -107,7 +129,7 @@ test "build config discovery prefers package-local moon.proton" {
   ensure_build_test_dir(join_path(root, "desktop"))
   let package_config = join_path(join_path(root, "desktop"), "moon.proton")
   write_build_test_file(package_config, "")
-  let raw = require_build_ok(parse_build_args(["desktop"]))
+  let raw = parse_build_args(["--package", "desktop"])
   let resolved = resolve_build_config_path(root, root, raw)
   @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
 }
@@ -131,10 +153,16 @@ test "project config validation rejects unknown top-level fields" {
   ensure_build_test_dir(dir)
   let path = join_path(dir, "unknown.moon.proton")
   write_build_test_file(path, valid_build_config + "\nlegacy_runtime = true\n")
-  match read_project_config(path) {
-    Ok(_) => abort("expected unknown top-level field to fail")
-    Err(message) => assert_true(message.contains("unknown moon.proton field"))
-  }
+  let error = expect_build_config_error(() => read_project_config(path))
+  assert_eq(
+    error,
+    BuildConfigError::Invalid(
+      path~,
+      error=@proton_config.ProjectConfigError::UnknownField(
+        path="moon.proton.legacy_runtime",
+      ),
+    ),
+  )
 }
 
 ///|
@@ -152,13 +180,16 @@ test "project config validation requires window" {
       #|
     ),
   )
-  match read_project_config(path) {
-    Ok(_) => abort("expected missing window to fail")
-    Err(message) =>
-      assert_true(
-        message.contains("missing required moon.proton field: window"),
-      )
-  }
+  let error = expect_build_config_error(() => read_project_config(path))
+  assert_eq(
+    error,
+    BuildConfigError::Invalid(
+      path~,
+      error=@proton_config.ProjectConfigError::MissingField(
+        path="moon.proton.window",
+      ),
+    ),
+  )
 }
 
 ///|
@@ -183,11 +214,17 @@ test "project config validation rejects unsupported size_hint" {
       #|
     ),
   )
-  match read_project_config(path) {
-    Ok(_) => abort("expected unsupported size_hint to fail")
-    Err(message) =>
-      assert_true(message.contains("unsupported window size_hint"))
-  }
+  let error = expect_build_config_error(() => read_project_config(path))
+  assert_eq(
+    error,
+    BuildConfigError::Invalid(
+      path~,
+      error=@proton_config.ProjectConfigError::UnsupportedValue(
+        path="window.size_hint",
+        value="stretch",
+      ),
+    ),
+  )
 }
 
 ///|
@@ -206,32 +243,24 @@ test "project config parsing keeps active bundle metadata out of build validatio
       #|
     ),
   )
-  match read_project_config(path) {
-    Ok(_) => ()
-    Err(message) => abort(message)
-  }
+  ignore(read_project_config(path))
 }
 
 ///|
 test "production entry validation requires file-backed entry" {
-  match
+  let error = expect_build_error_message(() => {
     validate_production_entry_file(
       @proton_config.ProjectEntry::Asset("target/proton-build-missing.html"),
-    ) {
-    Ok(_) => abort("expected missing production entry")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("production entry does not exist"))
-    Err(_) => abort("expected command error")
-  }
+    )
+  })
+  assert_true(error.contains("production entry does not exist"))
   let dir = "target/proton-build-entry"
   ensure_build_test_dir(dir)
   let file = join_path(dir, "index.html")
   @mbfs.write_string_to_file(file, "<!doctype html>", encoding="utf8") catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  require_build_ok(
-    validate_production_entry_file(@proton_config.ProjectEntry::Asset(file)),
-  )
+  validate_production_entry_file(@proton_config.ProjectEntry::Asset(file))
 }
 
 ///|
@@ -241,16 +270,13 @@ test "frontend release rejects url production entry" {
       dist=Some("target/proton-build-entry"),
     ),
   )
-  match
+  let error = expect_build_error_message(() => {
     validate_production_entry_kind(
       @proton_config.ProjectEntry::Url("http://localhost:5173"),
       frontend,
-    ) {
-    Ok(_) => abort("expected url production entry to be rejected")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("frontend production entry"))
-    Err(_) => abort("expected command error")
-  }
+    )
+  })
+  assert_true(error.contains("frontend production entry"))
 }
 
 ///|
@@ -263,12 +289,8 @@ test "frontend release config preflight rejects url entry" {
       ),
     ),
   }
-  match validate_release_config(config) {
-    Ok(_) => abort("expected url production entry to be rejected")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("frontend production entry"))
-    Err(_) => abort("expected command error")
-  }
+  let error = expect_build_error_message(() => validate_release_config(config))
+  assert_true(error.contains("frontend production entry"))
 }
 
 ///|
@@ -283,23 +305,16 @@ test "frontend release requires dist" {
       ),
     ),
   }
-  match validate_release_config(config) {
-    Ok(_) => abort("expected missing frontend dist to fail")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("frontend.dist is required"))
-    Err(_) => abort("expected command error")
-  }
+  let error = expect_build_error_message(() => validate_release_config(config))
+  assert_true(error.contains("frontend.dist is required"))
 }
 
 ///|
 test "production entry validation rejects directories" {
   let dir = "target/proton-build-entry-dir"
   ensure_build_test_dir(dir)
-  match
-    validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir)) {
-    Ok(_) => abort("expected directory production entry to be rejected")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("production entry is not a file"))
-    Err(_) => abort("expected command error")
-  }
+  let error = expect_build_error_message(() => {
+    validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir))
+  })
+  assert_true(error.contains("production entry is not a file"))
 }

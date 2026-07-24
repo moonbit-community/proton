@@ -5,7 +5,7 @@
 pub async fn emit_add_finished(
   context : @proton_command.AppCommandExtensionContext,
   payload : AddFinished,
-) -> Unit {
+) -> Unit noraise {
   context.emit("addFinished", payload)
 }
 
@@ -20,7 +20,7 @@ struct ProtonSlowAddPayload {
 async fn __proton_command_slow_add(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonSlowAddPayload,
-) -> Result[AddReply, String] {
+) -> AddReply {
   slow_add(context, payload.left, payload.right, payload.delay_ms)
 }
 
@@ -35,11 +35,10 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
     "examples/attribute-codegen",
     "add",
     [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-    fn(context) {
-      context.op_async_result("slowAdd", async fn(payload) {
+    fn(context) raise {
+      context.op_async("slowAdd", async fn(payload) {
         __proton_command_slow_add(context, payload)
       }, emits_events=true)
-      Ok(())
     },
   )
 }

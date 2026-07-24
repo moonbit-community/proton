@@ -39,6 +39,11 @@ struct ReportProbeReply {
 } derive(ToJson)
 
 ///|
+suberror AppCommandError {
+  Requested(message~ : String)
+} derive(Debug)
+
+///|
 fn app_commands_extension() -> @proton_extension.Extension {
   @proton_extension.from_command_spec(
     @proton_command.AppCommandExtensionSpec::new(
@@ -58,7 +63,7 @@ fn app_commands_extension() -> @proton_extension.Extension {
 ///|
 fn register_app_commands(
   context : @proton_command.AppCommandExtensionContext,
-) -> Result[Unit, String] {
+) -> Unit raise {
   context.op("ping", fn(payload : PingPayload) {
     let name = payload.name.unwrap_or("app")
     PingReply::{
@@ -66,19 +71,18 @@ fn register_app_commands(
       source: "commands",
     }
   })
-  context.op_async_result("slowAdd", async fn(payload : SlowAddPayload) {
+  context.op_async("slowAdd", async fn(payload : SlowAddPayload) {
     let delay_ms = payload.delay_ms.unwrap_or(500)
     @async.sleep(delay_ms)
-    Ok(SlowAddReply::{
+    SlowAddReply::{
       total: payload.left + payload.right,
       waited_ms: delay_ms,
       source: "commands",
-    })
+    }
   })
-  context.op_result("fail", fn(payload : FailPayload) {
+  context.op("fail", fn(payload : FailPayload) -> String raise AppCommandError {
     let message = payload.message.unwrap_or("Intentional command failure")
-    let result : Result[String, String] = Err(message)
-    result
+    raise Requested(message~)
   })
   context.op("reportProbe", fn(payload : ReportProbePayload) {
     println("[app-commands] " + payload.report)
@@ -90,7 +94,6 @@ fn register_app_commands(
     }
     ReportProbeReply::{ ok: true }
   })
-  Ok(())
 }
 
 ///|

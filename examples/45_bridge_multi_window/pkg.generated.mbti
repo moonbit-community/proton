@@ -2,12 +2,14 @@
 package "justjavac/proton/examples/45_bridge_multi_window"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
 // Values
 
 // Errors
+type BridgeExampleError derive(@debug.Debug)
 
 // Types and methods
 type IdentifyPayload derive(@json.FromJson)
