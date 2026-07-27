@@ -15,6 +15,7 @@
 /// carrying a `Contents/MacOS/<name> Helper` executable is present; otherwise
 /// `None`, leaving the runtime to its default subprocess discovery (correct for
 /// the unbundled dev flow and for platforms without this constraint).
+#cfg(not(platform="windows"))
 async fn macos_bundled_helper_path() -> String? {
   guard @env.args().get(0) is Some(exe_path) else { return None }
   let resolved_exe_path = @fs.realpath(exe_path) catch {
@@ -45,11 +46,19 @@ async fn macos_bundled_helper_path() -> String? {
 }
 
 ///|
+#cfg(platform="windows")
+async fn macos_bundled_helper_path() -> String? {
+  None
+}
+
+///|
+#cfg(not(platform="windows"))
 fn is_base_cef_helper_app(entry : String) -> Bool {
   entry.has_suffix(" Helper.app")
 }
 
 ///|
+#cfg(not(platform="windows"))
 async fn helper_executable_in_app(
   frameworks : @mbpath.Path,
   entry : String,
@@ -68,6 +77,7 @@ async fn helper_executable_in_app(
 /// Filesystem failures here are non-fatal — helper discovery falls back to the
 /// runtime's default — so they are swallowed, but cancellation is re-raised so
 /// the surrounding task group can still tear the runtime down.
+#cfg(not(platform="windows"))
 async fn list_dir(path : String) -> Array[String] {
   if !(@fs.exists(path) catch {
       error if @async.is_being_cancelled() => raise error
@@ -96,6 +106,7 @@ async fn list_dir(path : String) -> Array[String] {
 ///|
 /// The first non-directory entry of `dir` (the helper `.app` ships a single
 /// executable under `Contents/MacOS`), or `None` when there is none.
+#cfg(not(platform="windows"))
 async fn first_regular_file(dir : String) -> String? {
   for entry in list_dir(dir) {
     let path = (dir : @mbpath.Path).join(entry).to_string()

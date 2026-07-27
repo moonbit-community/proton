@@ -27,6 +27,13 @@ pub fn NativeError::message(self : NativeError) -> String {
 }
 
 ///|
+/// Reports whether a bridge response lost its renderer request while an
+/// asynchronous handler was still completing.
+pub fn NativeError::is_stale_bridge_response(self : NativeError) -> Bool {
+  self.status() == proton_err_stale_bridge_response
+}
+
+///|
 impl Show for NativeError with fn output(self, logger) {
   logger.write_string(self.message())
 }
@@ -104,9 +111,9 @@ pub(all) enum BridgeResponse {
 
 ///|
 pub(all) enum DialogLevel {
-  Info
-  Warning
-  Error
+  Info = 0
+  Warning = 1
+  Error = 2
 } derive(Debug, Eq)
 
 ///|
@@ -266,13 +273,30 @@ pub fn BridgeRequest::page_instance(self : BridgeRequest) -> String? {
 }
 
 ///|
+priv enum RuntimeLifecycleState {
+  RuntimeActive = 0
+  RuntimeDestroying = 1
+  RuntimeDestroyed = 2
+}
+
+///|
+priv enum WindowLifecycleState {
+  WindowLive = 0
+  WindowCloseRequested = 1
+  WindowDestroying = 2
+  WindowDestroyed = 3
+}
+
+///|
 struct Runtime {
   mut handle : Int64
+  mut lifecycle : RuntimeLifecycleState
 }
 
 ///|
 struct Window {
   mut handle : Int64
+  mut lifecycle : WindowLifecycleState
 }
 
 ///|

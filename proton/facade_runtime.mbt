@@ -66,6 +66,8 @@ async fn run_manifest(
       ),
     )
   }
+  let lifecycle = AppLifecycle::new()
+  lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
   let helper_path = macos_bundled_helper_path() catch {
     error => raise normalize_async_run_error(error)
@@ -79,123 +81,97 @@ async fn run_manifest(
   ) catch {
     error => raise native_run_error("create runtime", error)
   }
+  let mut command_host : CommandHostRuntime? = None
+  let mut window : @native.Window? = None
   let wakeup = RuntimeWakeup::new(runtime) catch {
     error => {
-      runtime.destroy() catch {
-        _ => ()
+      let failure = cleanup_run_error(
+        Some(error),
+        app_cleanup(lifecycle, runtime, None, None),
+      )
+      match failure {
+        Some(cleanup_error) => raise cleanup_error
+        None => raise error
       }
-      raise error
     }
   }
   defer wakeup.close()
-  match menu {
-    Some(menu) =>
-      runtime.set_menu(menu) catch {
-        error => {
-          runtime.destroy() catch {
-            _ => ()
-          }
-          raise native_run_error("set menu", error)
-        }
-      }
-    None => ()
-  }
-  let command_host = build_command_host(manifest, command_extensions, base_dir) catch {
-    error => {
-      runtime.destroy() catch {
-        _ => ()
-      }
-      raise error
-    }
-  }
-  let frontend = build_bridge_frontend_config(manifest, command_extensions) catch {
-    error => {
-      close_command_host(command_host) catch {
-        _ => ()
-      }
-      runtime.destroy() catch {
-        _ => ()
-      }
-      raise ConfigurationError(error)
-    }
-  }
-  let bridge_policy = bridge_page_policy_for_manifest(manifest) catch {
-    error => {
-      close_command_host(command_host) catch {
-        _ => ()
-      }
-      runtime.destroy() catch {
-        _ => ()
-      }
-      raise ConfigurationError(error)
-    }
-  }
-  let ops = match command_host {
-    Some(host) => host.host.registered_ops()
-    None => []
-  }
-  let bridge = if ops.length() > 0 ||
-    frontend.extensions.length() > 0 ||
-    frontend.initialization_units.length() > 0 ||
-    forward_menu_events {
-    Some(
-      @native.BridgeConfig::new(
-        ops~,
-        dev_origins=bridge_page_policy_dev_origins(bridge_policy),
-        extensions=frontend.extensions,
-        initialization_units=frontend.initialization_units,
-      ),
-    )
-  } else {
-    None
-  }
-  let window = @native.Window::new(
-    runtime,
-    config=@native.WindowConfig::new(
-      title=manifest.window.title,
-      width=manifest.window.width,
-      height=manifest.window.height,
-      initial_url="about:blank",
-      titlebar_style=match manifest.window.titlebar_style {
-        @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
-        @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
-      },
-      bridge?,
-    ),
-  ) catch {
-    error => {
-      close_command_host(command_host) catch {
-        _ => ()
-      }
-      runtime.destroy() catch {
-        _ => ()
-      }
-      raise native_run_error("create window", error)
-    }
-  }
-  match command_host {
-    Some(host) => install_extension_event_sender(window, host.host)
-    None => ()
-  }
   try {
-    load_entry_after_create(window, manifest.entry) catch {
+    match menu {
+      Some(menu) =>
+        runtime.set_menu(menu) catch {
+          error => raise native_run_error("set menu", error)
+        }
+      None => ()
+    }
+    command_host = build_command_host(manifest, command_extensions, base_dir)
+    let frontend = build_bridge_frontend_config(manifest, command_extensions) catch {
+      error => raise ConfigurationError(error)
+    }
+    let bridge_policy = bridge_page_policy_for_manifest(manifest) catch {
+      error => raise ConfigurationError(error)
+    }
+    let ops = match command_host {
+      Some(host) => host.host.registered_ops()
+      None => []
+    }
+    let bridge = if ops.length() > 0 ||
+      frontend.extensions.length() > 0 ||
+      frontend.initialization_units.length() > 0 ||
+      forward_menu_events {
+      Some(
+        @native.BridgeConfig::new(
+          ops~,
+          dev_origins=bridge_page_policy_dev_origins(bridge_policy),
+          extensions=frontend.extensions,
+          initialization_units=frontend.initialization_units,
+        ),
+      )
+    } else {
+      None
+    }
+    lifecycle.begin_window_create()
+    let created_window = @native.Window::new(
+      runtime,
+      config=@native.WindowConfig::new(
+        title=manifest.window.title,
+        width=manifest.window.width,
+        height=manifest.window.height,
+        initial_url="about:blank",
+        titlebar_style=match manifest.window.titlebar_style {
+          @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
+          @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
+        },
+        bridge?,
+      ),
+    ) catch {
+      error => raise native_run_error("create window", error)
+    }
+    window = Some(created_window)
+    lifecycle.finish_window_create()
+    match command_host {
+      Some(host) => install_extension_event_sender(created_window, host.host)
+      None => ()
+    }
+    load_entry_after_create(created_window, manifest.entry) catch {
       error => raise EntryLoadError(error)
     }
     if bridge is Some(_) {
       wait_for_bridge_startup(
-        runtime, window, wakeup, forward_menu_events, bridge_startup_timeout_ms,
+        runtime, created_window, wakeup, forward_menu_events, bridge_startup_timeout_ms,
       ) catch {
         error => raise normalize_async_run_error(error)
       }
     }
-    window.show() catch {
+    created_window.show() catch {
       error => raise native_run_error("show window", error)
     }
+    lifecycle.begin_running()
     match command_host {
       Some(host) =>
         run_bridge_pump(
           runtime,
-          window,
+          created_window,
           host.host,
           bridge_policy,
           wakeup,
@@ -206,7 +182,7 @@ async fn run_manifest(
       None =>
         run_window_pump(
           runtime,
-          window,
+          created_window,
           wakeup,
           forward_menu_events,
           bridge is Some(_),
@@ -214,28 +190,39 @@ async fn run_manifest(
           error => raise normalize_async_run_error(error)
         }
     }
+    lifecycle.observe_window_closed()
   } catch {
     error => {
+      let primary = normalize_async_run_error(error)
       if !headless {
-        show_app_run_failure(runtime, window, wakeup, error) catch {
-          _ => ()
+        match window {
+          Some(window) =>
+            show_app_run_failure(runtime, window, wakeup, primary) catch {
+              _ => ()
+            }
+          None =>
+            show_runtime_failure_dialog(runtime, wakeup, primary.message()) catch {
+              _ => ()
+            }
         }
       }
-      close_command_host(command_host) catch {
-        _ => ()
+      let failure = cleanup_run_error(
+        Some(primary),
+        app_cleanup(lifecycle, runtime, window, command_host),
+      )
+      match failure {
+        Some(cleanup_error) => raise cleanup_error
+        None => raise primary
       }
-      window.destroy() catch {
-        _ => ()
-      }
-      runtime.destroy() catch {
-        _ => ()
-      }
-      raise error
     }
   }
-  close_command_host(command_host)
-  runtime.destroy() catch {
-    error => raise native_run_error("destroy runtime", error)
+  match
+    cleanup_run_error(
+      None,
+      app_cleanup(lifecycle, runtime, window, command_host),
+    ) {
+    Some(error) => raise error
+    None => ()
   }
 }
 
@@ -259,26 +246,30 @@ fn normalize_async_run_error(error : Error) -> AppRunError {
     EntryLoadError(error) => EntryLoadError(error)
     BridgeStartupError(diagnostic) => BridgeStartupError(diagnostic)
     BridgeRuntimeError(diagnostic) => BridgeRuntimeError(diagnostic)
+    CleanupFailed(primary~, failures~) => CleanupFailed(primary~, failures~)
     UnexpectedTaskFailure(detail~) => UnexpectedTaskFailure(detail~)
     _ => UnexpectedTaskFailure(detail=@debug.render(Repr(error)))
   }
 }
 
 ///|
-fn close_command_host(host : CommandHostRuntime?) -> Unit raise AppRunError {
+fn close_command_host(
+  host : CommandHostRuntime?,
+) -> Array[CommandExtensionLifecycleError] {
   match host {
     Some(value) => value.close()
-    None => ()
+    None => []
   }
 }
 
 ///|
 fn CommandHostRuntime::close(
   self : CommandHostRuntime,
-) -> Unit raise AppRunError {
-  guard !self.closed else { return }
+) -> Array[CommandExtensionLifecycleError] {
+  guard !self.closed else { return [] }
+  let failures = close_command_host_runtime(self.host, self.destroy_hooks)
   self.closed = true
-  close_command_host_runtime(self.host, self.destroy_hooks)
+  failures
 }
 
 ///|
@@ -441,6 +432,8 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
     BridgeRuntimeError(diagnostic) =>
       "The application bridge stopped working.\n\nError code: " +
       diagnostic.code
+    CleanupFailed(primary~, failures~) =>
+      cleanup_failure_message(primary, failures)
     EntryLoadError(error) => error.message()
     ConfigurationError(error) => error.message()
     NativeRuntimeError(action~, error~) =>
@@ -652,7 +645,11 @@ async fn run_bridge_pump(
               no_wait=true,
               allow_failure=true,
             )
-            pending.push(BridgeDispatchTask::{ request_id, task })
+            pending.push(BridgeDispatchTask::{
+              request_id,
+              task,
+              state: Running,
+            })
           }
         }
       }
@@ -672,11 +669,17 @@ async fn run_bridge_pump(
         match completed {
           Some(response) => {
             did_work = true
+            item.state = Responding
             runtime.respond_bridge_request(response) catch {
               error =>
-                if !is_stale_bridge_response_error(error) {
+                if is_stale_bridge_response_error(error) {
+                  item.state = Stale
+                } else {
                   raise native_run_error("respond bridge request", error)
                 }
+            }
+            if item.state == Responding {
+              item.state = Completed
             }
           }
           None => remaining.push(item)
@@ -691,7 +694,10 @@ async fn run_bridge_pump(
       }
     }
     for item in pending {
-      item.task.cancel()
+      if item.state == Running {
+        item.task.cancel()
+        item.state = Cancelled
+      }
     }
   }) catch {
     error => raise normalize_async_run_error(error)
@@ -700,9 +706,5 @@ async fn run_bridge_pump(
 
 ///|
 fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {
-  (error.status() == -2 && error.message().contains("no longer pending")) ||
-  (
-    error.status() == -7 &&
-    error.message().contains("failed to send bridge response to renderer")
-  )
+  error.is_stale_bridge_response()
 }

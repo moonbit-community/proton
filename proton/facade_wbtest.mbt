@@ -33,6 +33,11 @@ fn[T] expect_app_run_error(action : () -> T raise AppRunError) -> AppRunError {
 }
 
 ///|
+priv suberror FacadeLifecycleTestError {
+  DestroyFailed(String)
+} derive(Debug)
+
+///|
 fn test_command_manifest(
   extension_id : String,
   enabled? : Bool = true,
@@ -496,13 +501,112 @@ test "command host close runs extension destroy hooks once" {
   match
     unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
     Some(host) => {
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
     }
     None => fail("expected command host")
   }
+}
+
+///|
+test "command host close drains every destroy hook after a failure" {
+  let base_id = "examples/base-destroy"
+  let feature_id = "examples/feature-destroy"
+  let manifest = test_command_manifest_ids([base_id, feature_id])
+  let destroyed : Array[String] = []
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  command_extensions[base_id] = @proton_command.AppCommandExtensionSpec::new(
+    base_id,
+    "baseDestroy",
+    [],
+    fn(_context) {  },
+    on_destroy=fn(_context) { destroyed.push(base_id) },
+  )
+  command_extensions[feature_id] = @proton_command.AppCommandExtensionSpec::new(
+    feature_id,
+    "featureDestroy",
+    [],
+    fn(_context) {  },
+    dependencies=[base_id],
+    on_destroy=fn(_context) raise {
+      destroyed.push(feature_id)
+      raise FacadeLifecycleTestError::DestroyFailed(feature_id)
+    },
+  )
+  match
+    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
+    Some(host) => {
+      let failures = close_command_host(Some(host))
+      assert_eq(destroyed, [feature_id, base_id])
+      assert_eq(failures.length(), 1)
+      match failures[0] {
+        DestroyFailed(extension_id~, ..) => assert_eq(extension_id, feature_id)
+        _ => fail("expected extension destroy failure")
+      }
+      assert_eq(close_command_host(Some(host)).length(), 0)
+      assert_eq(destroyed, [feature_id, base_id])
+    }
+    None => fail("expected command host")
+  }
+}
+
+///|
+test "command host registration preserves cleanup failures" {
+  let extension_id = "examples/registration-cleanup"
+  let manifest = test_command_manifest(extension_id)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
+    extension_id,
+    "registrationCleanup",
+    [],
+    fn(_context) raise {
+      raise FacadeLifecycleTestError::DestroyFailed("registration")
+    },
+    on_destroy=fn(_context) raise {
+      raise FacadeLifecycleTestError::DestroyFailed("cleanup")
+    },
+  )
+  let error = expect_app_run_error(() => {
+    ignore(build_command_host(manifest, command_extensions, None))
+  })
+  match error {
+    CleanupFailed(primary~, failures~) => {
+      assert_true(primary.unwrap_or("").contains("registration"))
+      assert_eq(failures.length(), 1)
+      match failures[0] {
+        CommandExtension(DestroyFailed(extension_id=failed_id, ..)) =>
+          assert_eq(failed_id, extension_id)
+        _ => fail("expected extension cleanup failure")
+      }
+    }
+    _ => fail("expected combined registration and cleanup failure")
+  }
+}
+
+///|
+test "application lifecycle advances through close and destroy" {
+  let lifecycle = AppLifecycle::new()
+  assert_true(lifecycle.state is Constructing)
+  assert_true(lifecycle.window_state is NotCreated)
+  lifecycle.begin_starting()
+  lifecycle.begin_window_create()
+  lifecycle.finish_window_create()
+  lifecycle.begin_running()
+  assert_true(lifecycle.state is Running)
+  assert_true(lifecycle.window_state is Live)
+  lifecycle.observe_window_closed()
+  assert_true(lifecycle.state is Closing)
+  assert_true(lifecycle.window_state is VisiblyClosed)
+  lifecycle.begin_draining()
+  lifecycle.begin_destroying()
+  lifecycle.finish_window_destroy()
+  lifecycle.finish()
+  assert_true(lifecycle.state is Closed)
+  assert_true(lifecycle.window_state is Destroyed)
 }
 
 ///|
@@ -536,7 +640,7 @@ test "core spec command wrapper destroys runtime core host" {
   match
     unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
     Some(host) => {
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       assert_eq(destroyed.val, 2)
     }
     _ => fail("expected command host")
@@ -563,7 +667,7 @@ test "command host registers extension dependencies before dependents" {
   match
     unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
     Some(host) => {
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       @debug.assert_eq(registered, [dependency_id, extension_id])
     }
     _ => fail("expected command host")

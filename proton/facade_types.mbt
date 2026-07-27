@@ -32,6 +32,7 @@ priv struct ResolvedAppConfig {
 priv struct BridgeDispatchTask {
   request_id : Int64
   task : @async.Task[@native.BridgeResponse]
+  mut state : BridgeRequestLifecycleState
 }
 
 ///|
@@ -57,6 +58,43 @@ priv struct BridgePagePolicy {
 priv struct BridgeFrontendConfig {
   extensions : Array[@native.BridgeExtensionConfig]
   initialization_units : Array[@native.BridgeInitializationUnit]
+}
+
+///|
+priv enum AppLifecycleState {
+  Constructing = 0
+  Starting = 1
+  Running = 2
+  Closing = 3
+  Draining = 4
+  Destroying = 5
+  Closed = 6
+}
+
+///|
+priv enum AppWindowLifecycleState {
+  NotCreated = 0
+  Creating = 1
+  Live = 2
+  CloseRequested = 3
+  VisiblyClosed = 4
+  Destroying = 5
+  Destroyed = 6
+}
+
+///|
+priv enum BridgeRequestLifecycleState {
+  Running = 0
+  Responding = 1
+  Completed = 2
+  Cancelled = 3
+  Stale = 4
+} derive(Eq)
+
+///|
+priv struct AppLifecycle {
+  mut state : AppLifecycleState
+  mut window_state : AppWindowLifecycleState
 }
 
 ///|
@@ -105,6 +143,14 @@ pub(all) suberror CommandExtensionLifecycleError {
 } derive(Debug)
 
 ///|
+/// A failure from one stage of best-effort application teardown.
+pub(all) suberror AppCleanupError {
+  CommandExtension(CommandExtensionLifecycleError)
+  WindowDestroy(@native.NativeError)
+  RuntimeDestroy(@native.NativeError)
+} derive(Debug)
+
+///|
 /// Failures produced while configuring, starting, or running an application.
 pub(all) suberror AppRunError {
   RunnerError(String)
@@ -115,5 +161,6 @@ pub(all) suberror AppRunError {
   EntryLoadError(AppEntryError)
   BridgeStartupError(@native.BridgeDiagnostic)
   BridgeRuntimeError(@native.BridgeDiagnostic)
+  CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(Debug)

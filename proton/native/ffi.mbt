@@ -5,7 +5,13 @@ let proton_process_handled = 1
 let proton_event_none = 2
 
 ///|
+let proton_err_invalid_state = -3
+
+///|
 let proton_err_buffer_too_small = -11
+
+///|
+let proton_err_stale_bridge_response = -12
 
 ///|
 pub let runtime_wait_none : Int = 0
@@ -146,7 +152,7 @@ extern "C" fn proton_runtime_begin_message_dialog_ffi(
   title_len : Int,
   message : Bytes,
   message_len : Int,
-  level : Int,
+  level : DialogLevel,
   out_dialog : Ref[Int64],
 ) -> Int = "proton_runtime_begin_message_dialog"
 
@@ -271,7 +277,7 @@ extern "C" fn proton_window_begin_message_dialog_ffi(
   title_len : Int,
   message : Bytes,
   message_len : Int,
-  level : Int,
+  level : DialogLevel,
   out_dialog : Ref[Int64],
 ) -> Int = "proton_window_begin_message_dialog"
 
@@ -283,7 +289,7 @@ extern "C" fn proton_window_begin_confirm_dialog_ffi(
   title_len : Int,
   message : Bytes,
   message_len : Int,
-  level : Int,
+  level : DialogLevel,
   out_dialog : Ref[Int64],
 ) -> Int = "proton_window_begin_confirm_dialog"
 

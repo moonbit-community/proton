@@ -90,6 +90,41 @@ impl Show for CommandExtensionLifecycleError with fn output(self, logger) {
 }
 
 ///|
+pub fn AppCleanupError::message(self : AppCleanupError) -> String {
+  match self {
+    CommandExtension(error) => error.message()
+    WindowDestroy(error) => "failed to destroy window: " + error.message()
+    RuntimeDestroy(error) => "failed to destroy runtime: " + error.message()
+  }
+}
+
+///|
+impl Show for AppCleanupError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+fn cleanup_failure_message(
+  primary : String?,
+  failures : Array[AppCleanupError],
+) -> String {
+  let builder = StringBuilder::new()
+  match primary {
+    Some(message) => {
+      builder.write_string(message)
+      builder.write_string("\n")
+    }
+    None => ()
+  }
+  builder.write_string("application teardown failed")
+  for failure in failures {
+    builder.write_string("\n- ")
+    builder.write_string(failure.message())
+  }
+  builder.to_string()
+}
+
+///|
 pub fn AppRunError::message(self : AppRunError) -> String {
   match self {
     RunnerError(message) => "application runner is not active: " + message
@@ -116,6 +151,8 @@ pub fn AppRunError::message(self : AppRunError) -> String {
       diagnostic.message +
       "\n" +
       @debug.render(Repr(diagnostic))
+    CleanupFailed(primary~, failures~) =>
+      cleanup_failure_message(primary, failures)
     UnexpectedTaskFailure(detail~) => "application task failed: " + detail
   }
 }

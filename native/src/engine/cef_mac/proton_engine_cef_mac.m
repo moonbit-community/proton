@@ -3329,7 +3329,7 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "bridge request is no longer pending");
-    return PROTON_ERR_INVALID_HANDLE;
+    return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
 
   char *payload_json = NULL;
@@ -3365,7 +3365,7 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "failed to send bridge response to renderer");
-    return PROTON_ERR_ENGINE;
+    return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
   proton_engine_debug_log("bridge_response_sent request=%lld",
                           (long long)request_id);

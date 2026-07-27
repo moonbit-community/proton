@@ -752,11 +752,6 @@ int32_t proton_window_destroy(proton_window_id_t window) {
   if (status != PROTON_OK) {
     return status;
   }
-  status = proton_window_enqueue_closed_once(runtime, slot, window);
-  if (status != PROTON_OK) {
-    return status;
-  }
-
   if (slot->engine_window != NULL) {
     char engine_error[512] = {0};
     status = proton_engine_window_destroy(slot->engine_window, engine_error,
@@ -766,7 +761,11 @@ int32_t proton_window_destroy(proton_window_id_t window) {
     }
     slot->engine_window = NULL;
   }
+  status = proton_window_enqueue_closed_once(runtime, slot, window);
   proton_window_slot_destroy(slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

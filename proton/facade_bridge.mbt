@@ -11,9 +11,7 @@ fn build_command_host(
     manifest, command_extensions,
   ) catch {
     error => {
-      close_command_host_runtime(host, destroy_hooks) catch {
-        _ => ()
-      }
+      ignore(close_command_host_runtime(host, destroy_hooks))
       raise ConfigurationError(error)
     }
   }
@@ -27,27 +25,35 @@ fn build_command_host(
       options=setting.options(),
       base_dir~,
     )
-    spec.register(context) catch {
-      error => {
-        close_command_host_runtime(host, destroy_hooks) catch {
-          _ => ()
-        }
-        raise CommandExtensionLifecycleError(
-          RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),
-        )
-      }
-    }
-    has_commands = true
     destroy_hooks.push(CommandExtensionDestroyHook::{
       extension_id: id,
       callback: fn() raise { spec.destroy(context) },
     })
+    spec.register(context) catch {
+      error => {
+        let primary = CommandExtensionLifecycleError(
+          RegistrationFailed(
+            extension_id=id,
+            detail=@debug.render(Repr(error)),
+          ),
+        )
+        let cleanup_failures : Array[AppCleanupError] = []
+        for failure in close_command_host_runtime(host, destroy_hooks) {
+          cleanup_failures.push(CommandExtension(failure))
+        }
+        match cleanup_run_error(Some(primary), cleanup_failures) {
+          Some(combined) => raise combined
+          None => raise primary
+        }
+      }
+    }
+    has_commands = true
   }
   if has_commands {
     host.seal_registrations()
     Some(CommandHostRuntime::{ host, destroy_hooks, closed: false })
   } else {
-    close_command_host_runtime(host, destroy_hooks)
+    ignore(close_command_host_runtime(host, destroy_hooks))
     None
   }
 }
@@ -56,13 +62,14 @@ fn build_command_host(
 fn close_command_host_runtime(
   host : @core.AppCommandHost,
   destroy_hooks : Array[CommandExtensionDestroyHook],
-) -> Unit raise AppRunError {
+) -> Array[CommandExtensionLifecycleError] {
+  let failures : Array[CommandExtensionLifecycleError] = []
   let hook_count = destroy_hooks.length()
   for index in 0..<hook_count {
     let hook = destroy_hooks[hook_count - index - 1]
     (hook.callback)() catch {
       error =>
-        raise CommandExtensionLifecycleError(
+        failures.push(
           DestroyFailed(
             extension_id=hook.extension_id,
             detail=@debug.render(Repr(error)),
@@ -71,6 +78,7 @@ fn close_command_host_runtime(
     }
   }
   host.close()
+  failures
 }
 
 ///|

@@ -36,6 +36,13 @@ pub fn runtime_info_json() -> String raise @native.NativeError
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 // Errors
+pub(all) suberror AppCleanupError {
+  CommandExtension(CommandExtensionLifecycleError)
+  WindowDestroy(@native.NativeError)
+  RuntimeDestroy(@native.NativeError)
+} derive(@debug.Debug)
+pub fn AppCleanupError::message(Self) -> String
+
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
   Bootstrap(@bootstrap.BootstrapError)
@@ -64,6 +71,7 @@ pub(all) suberror AppRunError {
   EntryLoadError(AppEntryError)
   BridgeStartupError(@native.BridgeDiagnostic)
   BridgeRuntimeError(@native.BridgeDiagnostic)
+  CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(@debug.Debug)
 pub fn AppRunError::message(Self) -> String
