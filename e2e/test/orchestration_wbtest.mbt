@@ -61,6 +61,24 @@ fn normalize_platform_path(path : String) -> String {
 }
 
 ///|
+fn is_absolute_path_for_separator(path : String, separator : Char) -> Bool {
+  if path == "" {
+    false
+  } else if separator == '\\' {
+    let drive = path[0]
+    path[0] == '\\' ||
+    (
+      path.length() >= 3 &&
+      ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) &&
+      path[1] == ':' &&
+      path[2] == '\\'
+    )
+  } else {
+    path[0] == '/'
+  }
+}
+
+///|
 fn active_runtime_dist(root : String) -> String raise {
   match @env.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim() != "" =>
@@ -508,8 +526,7 @@ async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
 fn resolve_path(base : String, child : String) -> String {
   let base = normalize_platform_path(base)
   let child = normalize_platform_path(child)
-  let path = @path.Path(child)
-  if path.is_absolute() {
+  if is_absolute_path_for_separator(child, @path.sep) {
     child
   } else if base == "" {
     child
