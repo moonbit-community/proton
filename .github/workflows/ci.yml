@@ -121,6 +121,7 @@ jobs:
               ctest --test-dir native/build-engine --output-on-failure
           fi
           node native/scripts/verify_link_config.mjs "$runtime"
+          echo "PROTON_NATIVE_DIST=$runtime" >> "$GITHUB_ENV"
           echo "$runtime/bin" >> "$GITHUB_PATH"
 
       - name: Build active Proton engine runtime on Windows
@@ -145,8 +146,10 @@ jobs:
           if (!(Test-Path "$runtime\bin\proton.dll")) {
             throw "missing active proton.dll"
           }
-          node native\scripts\verify_link_config.mjs $runtime
-          (Resolve-Path "$runtime\bin").Path | Out-File -FilePath $env:GITHUB_PATH -Append
+          $runtimePath = (Resolve-Path $runtime).Path
+          node native\scripts\verify_link_config.mjs $runtimePath
+          "PROTON_NATIVE_DIST=$runtimePath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          (Resolve-Path "$runtimePath\bin").Path | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
