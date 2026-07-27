@@ -154,10 +154,10 @@ jobs:
           moon check --target native --deny-warn
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a moon -C proton test native --target native --diagnostic-limit 80
-            xvfb-run -a moon -C cli test --target native --diagnostic-limit 80
+            xvfb-run -a moon -C cli test --target native --no-parallelize --diagnostic-limit 80
           else
             moon -C proton test native --target native --diagnostic-limit 80
-            moon -C cli test --target native --diagnostic-limit 80
+            moon -C cli test --target native --no-parallelize --diagnostic-limit 80
           fi
           moon -C e2e build --target native --diagnostic-limit 80
 
@@ -170,7 +170,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
           moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test --target native --diagnostic-limit 80
+          moon -C cli test --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Check extension catalog on Unix
@@ -200,7 +200,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
 
-      - name: Run examples CDP e2e on Windows
+      - name: Run MoonBit CDP e2e on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
@@ -208,14 +208,20 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          node .\scripts\e2e_bridge_smoke.mjs 41_app_commands 47_dev_extension_js
+          moon -C e2e test -p justjavac/proton/e2e/test --target native --no-parallelize --diagnostic-limit 200
 
-      - name: Run managed runner e2e on macOS
-        if: ${{ matrix.os == 'macos-latest' }}
+      - name: Run MoonBit CDP e2e on Unix
+        if: ${{ matrix.os != 'windows-latest' }}
         env:
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
         run: |
-          node ./scripts/e2e_bridge_smoke.mjs 41_app_commands 45_bridge_multi_window
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C e2e test -p justjavac/proton/e2e/test \
+              --target native --no-parallelize --diagnostic-limit 200
+          else
+            moon -C e2e test -p justjavac/proton/e2e/test \
+              --target native --no-parallelize --diagnostic-limit 200
+          fi
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
