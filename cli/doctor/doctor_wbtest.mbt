@@ -655,6 +655,39 @@ async test "doctor deep native probe succeeds against active runtime" {
 }
 
 ///|
+async test "doctor deep native probe reports invalid runtime config" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_library_path(platform_id) {
+    None => ()
+    Some(library_path) =>
+      match doctor_native_probe(library_path, "{}") {
+        Err(_) => abort("expected the active Proton library to open")
+        Ok(result) => {
+          match result.info {
+            Ok(text) =>
+              match doctor_native_runtime_info_from_text(text) {
+                Ok(_) => ()
+                Err(message) => abort(message)
+              }
+            Err(error) => abort(error.hint("runtime info ABI call failed"))
+          }
+          match result.probe {
+            Ok(_) => abort("expected an invalid runtime config error")
+            Err(error) => {
+              assert_true(error.status < 0)
+              assert_true(error.message.contains("abi_version"))
+            }
+          }
+          match result.smoke {
+            Skipped => ()
+            _ => abort("expected smoke test to be skipped")
+          }
+        }
+      }
+  }
+}
+
+///|
 async test "doctor native loader accepts UTF-8 library paths" {
   let platform_id = @cef.current_platform_id()
   match doctor_test_native_library_path(platform_id) {
