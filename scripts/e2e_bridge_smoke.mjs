@@ -973,6 +973,7 @@ async function buildDevExtensionJsFrontend(env) {
         "-C",
         repoRoot,
         "build",
+        "--package",
         "examples/47_dev_extension_js",
       ], {
         cwd: appWorkdir,
@@ -1906,6 +1907,7 @@ function spawnApp(env, scenario) {
       "-C",
       repoRoot,
       "dev",
+      "--package",
       `examples/${scenario}`,
       "--url",
       activeDevFrontendUrl,
