@@ -32,6 +32,7 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/scheme.m
     )
   elseif(UNIX)
+    set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
       src/engine/cef_linux/proton_linux_titlebar.c
@@ -407,9 +408,16 @@ if(BUILD_TESTING)
         "$<TARGET_FILE_DIR:proton>:$ENV{LD_LIBRARY_PATH}"
       )
     endif()
-    set_tests_properties(proton_smoke PROPERTIES
-      ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
-    )
+    if(PROTON_WITH_ENGINE)
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+    else()
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
+      )
+    endif()
     set_tests_properties(proton_exports_smoke PROPERTIES
       ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
     )

@@ -47,6 +47,19 @@ test "runtime info reports ABI and Proton runtime metadata" {
     assert_false(typed.features.contains("titlebar_overlay"))
     assert_false(typed.features.contains("headless_osr"))
   }
+  if typed.runtime_available {
+    match typed.platform {
+      "windows" => {
+        assert_true(typed.features.contains("managed_app_runner"))
+        assert_true(typed.features.contains("runtime_wakeup_source"))
+      }
+      "macos" | "linux" => {
+        assert_true(typed.features.contains("managed_app_runner"))
+        assert_true(typed.features.contains("runtime_wakeup_fd"))
+      }
+      _ => ()
+    }
+  }
 }
 
 ///|
