@@ -430,6 +430,7 @@ async function main() {
       "-C",
       "../examples",
       "package",
+      "--package",
       exampleName,
       "--config",
       `${exampleName}/moon.proton`,

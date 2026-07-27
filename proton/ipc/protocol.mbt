@@ -113,38 +113,29 @@ pub fn IpcFrame::stringify(self : IpcFrame) -> String {
 
 ///|
 /// Parses one JSON IPC operation request.
-pub fn parse_ipc_op_request(raw : String) -> Result[IpcOpRequest, String] {
-  parse_json(raw).bind(fn(json) {
-    try @json.from_json(json) catch {
-      err => Err(err.to_string())
-    } noraise {
-      request => validate_ipc_op_request(request)
-    }
-  })
+pub fn parse_ipc_op_request(raw : String) -> IpcOpRequest raise IpcError {
+  let request : IpcOpRequest = @json.from_json(parse_json(raw)) catch {
+    err => raise InvalidPayload(kind="request", detail=err.to_string())
+  }
+  validate_ipc_op_request(request)
 }
 
 ///|
 /// Parses one JSON IPC operation response.
-pub fn parse_ipc_op_response(raw : String) -> Result[IpcOpResponse, String] {
-  parse_json(raw).bind(fn(json) {
-    try @json.from_json(json) catch {
-      err => Err(err.to_string())
-    } noraise {
-      response => validate_ipc_op_response(response)
-    }
-  })
+pub fn parse_ipc_op_response(raw : String) -> IpcOpResponse raise IpcError {
+  let response : IpcOpResponse = @json.from_json(parse_json(raw)) catch {
+    err => raise InvalidPayload(kind="response", detail=err.to_string())
+  }
+  validate_ipc_op_response(response)
 }
 
 ///|
 /// Parses one JSON IPC transport frame.
-pub fn parse_ipc_frame(raw : String) -> Result[IpcFrame, String] {
-  parse_json(raw).bind(fn(json) {
-    try @json.from_json(json) catch {
-      err => Err(err.to_string())
-    } noraise {
-      frame => validate_ipc_frame(frame)
-    }
-  })
+pub fn parse_ipc_frame(raw : String) -> IpcFrame raise IpcError {
+  let frame : IpcFrame = @json.from_json(parse_json(raw)) catch {
+    err => raise InvalidPayload(kind="frame", detail=err.to_string())
+  }
+  validate_ipc_frame(frame)
 }
 
 ///|
@@ -218,7 +209,7 @@ pub fn IpcFrame::event(event : IpcExtensionEvent) -> IpcFrame {
 /// Validates one decoded operation request.
 pub fn IpcOpRequest::validate(
   self : IpcOpRequest,
-) -> Result[IpcOpRequest, String] {
+) -> IpcOpRequest raise IpcError {
   validate_ipc_op_request(self)
 }
 
@@ -226,7 +217,7 @@ pub fn IpcOpRequest::validate(
 /// Validates one decoded operation response.
 pub fn IpcOpResponse::validate(
   self : IpcOpResponse,
-) -> Result[IpcOpResponse, String] {
+) -> IpcOpResponse raise IpcError {
   validate_ipc_op_response(self)
 }
 
@@ -234,139 +225,135 @@ pub fn IpcOpResponse::validate(
 /// Validates one decoded extension event.
 pub fn IpcExtensionEvent::validate(
   self : IpcExtensionEvent,
-) -> Result[IpcExtensionEvent, String] {
+) -> IpcExtensionEvent raise IpcError {
   validate_ipc_extension_event(self)
 }
 
 ///|
 /// Validates one decoded transport frame envelope.
-pub fn IpcFrame::validate(self : IpcFrame) -> Result[IpcFrame, String] {
+pub fn IpcFrame::validate(self : IpcFrame) -> IpcFrame raise IpcError {
   validate_ipc_frame(self)
 }
 
 ///|
 /// Decodes this frame as an operation request.
-pub fn IpcFrame::as_request(self : IpcFrame) -> Result[IpcOpRequest, String] {
-  match self.validate() {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+pub fn IpcFrame::as_request(self : IpcFrame) -> IpcOpRequest raise IpcError {
+  let _ = self.validate()
   guard self.kind == "request" else {
-    return Err("IPC frame kind is not request: " + self.kind)
+    raise UnexpectedFrameKind(expected="request", actual=self.kind)
   }
-  try @json.from_json(self.payload) catch {
-    err => Err(err.to_string())
-  } noraise {
-    request => validate_ipc_op_request(request)
+  let request : IpcOpRequest = @json.from_json(self.payload) catch {
+    err => raise InvalidPayload(kind="request", detail=err.to_string())
   }
+  validate_ipc_op_request(request)
 }
 
 ///|
 /// Decodes this frame as an operation response.
-pub fn IpcFrame::as_response(self : IpcFrame) -> Result[IpcOpResponse, String] {
-  match self.validate() {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+pub fn IpcFrame::as_response(self : IpcFrame) -> IpcOpResponse raise IpcError {
+  let _ = self.validate()
   guard self.kind == "response" else {
-    return Err("IPC frame kind is not response: " + self.kind)
+    raise UnexpectedFrameKind(expected="response", actual=self.kind)
   }
-  try @json.from_json(self.payload) catch {
-    err => Err(err.to_string())
-  } noraise {
-    response => validate_ipc_op_response(response)
+  let response : IpcOpResponse = @json.from_json(self.payload) catch {
+    err => raise InvalidPayload(kind="response", detail=err.to_string())
   }
+  validate_ipc_op_response(response)
 }
 
 ///|
 /// Decodes this frame as an extension event.
-pub fn IpcFrame::as_event(self : IpcFrame) -> Result[IpcExtensionEvent, String] {
-  match self.validate() {
-    Err(error) => return Err(error)
-    Ok(_) => ()
-  }
+pub fn IpcFrame::as_event(self : IpcFrame) -> IpcExtensionEvent raise IpcError {
+  let _ = self.validate()
   guard self.kind == "event" else {
-    return Err("IPC frame kind is not event: " + self.kind)
+    raise UnexpectedFrameKind(expected="event", actual=self.kind)
   }
-  try @json.from_json(self.payload) catch {
-    err => Err(err.to_string())
-  } noraise {
-    event => validate_ipc_extension_event(event)
+  let event : IpcExtensionEvent = @json.from_json(self.payload) catch {
+    err => raise InvalidPayload(kind="event", detail=err.to_string())
   }
+  validate_ipc_extension_event(event)
 }
 
 ///|
-fn parse_json(raw : String) -> Result[Json, String] {
-  try @json.parse(raw) catch {
-    err => Err(err.to_string())
-  } noraise {
-    parsed => Ok(parsed)
+fn parse_json(raw : String) -> Json raise IpcError {
+  @json.parse(raw) catch {
+    err => raise MalformedJson(detail=err.to_string())
   }
 }
 
 ///|
 fn validate_ipc_op_request(
   request : IpcOpRequest,
-) -> Result[IpcOpRequest, String] {
+) -> IpcOpRequest raise IpcError {
   guard request.version == ipc_protocol_version else {
-    return Err(
-      "Unsupported IPC protocol version: " + request.version.to_string(),
+    raise UnsupportedVersion(
+      scope="protocol",
+      actual=request.version,
+      supported=ipc_protocol_version,
     )
   }
   guard request.id.trim().to_owned() != "" else {
-    return Err("IPC request id must not be empty")
+    raise EmptyField(path="IPC request id")
   }
   guard request.name.trim().to_owned() != "" else {
-    return Err("IPC request name must not be empty")
+    raise EmptyField(path="IPC request name")
   }
-  Ok(request)
+  request
 }
 
 ///|
 fn validate_ipc_op_response(
   response : IpcOpResponse,
-) -> Result[IpcOpResponse, String] {
+) -> IpcOpResponse raise IpcError {
   guard response.version == ipc_protocol_version else {
-    return Err(
-      "Unsupported IPC protocol version: " + response.version.to_string(),
+    raise UnsupportedVersion(
+      scope="protocol",
+      actual=response.version,
+      supported=ipc_protocol_version,
     )
   }
   guard response.id.trim().to_owned() != "" else {
-    return Err("IPC response id must not be empty")
+    raise EmptyField(path="IPC response id")
   }
   if response.status != 0 {
-    guard response.body is String(_) else {
-      return Err("IPC error response body must be a string")
-    }
+    guard response.body is String(_) else { raise InvalidErrorResponseBody }
   }
-  Ok(response)
+  response
 }
 
 ///|
 fn validate_ipc_extension_event(
   event : IpcExtensionEvent,
-) -> Result[IpcExtensionEvent, String] {
+) -> IpcExtensionEvent raise IpcError {
   guard event.version == ipc_protocol_version else {
-    return Err("Unsupported IPC event version: " + event.version.to_string())
+    raise UnsupportedVersion(
+      scope="event",
+      actual=event.version,
+      supported=ipc_protocol_version,
+    )
   }
   guard event.extension_namespace.trim().to_owned() != "" else {
-    return Err("IPC event extension namespace must not be empty")
+    raise EmptyField(path="IPC event extension namespace")
   }
   guard event.event_name.trim().to_owned() != "" else {
-    return Err("IPC event name must not be empty")
+    raise EmptyField(path="IPC event name")
   }
-  Ok(event)
+  event
 }
 
 ///|
-fn validate_ipc_frame(frame : IpcFrame) -> Result[IpcFrame, String] {
+fn validate_ipc_frame(frame : IpcFrame) -> IpcFrame raise IpcError {
   guard frame.version == ipc_protocol_version else {
-    return Err("Unsupported IPC frame version: " + frame.version.to_string())
+    raise UnsupportedVersion(
+      scope="frame",
+      actual=frame.version,
+      supported=ipc_protocol_version,
+    )
   }
   guard frame.kind == "request" ||
     frame.kind == "response" ||
     frame.kind == "event" else {
-    return Err("Unsupported IPC frame kind: " + frame.kind)
+    raise UnsupportedFrameKind(kind=frame.kind)
   }
-  Ok(frame)
+  frame
 }

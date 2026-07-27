@@ -26,56 +26,78 @@ struct MultiWindowIdentifyPayload {
 ///|
 async fn run_multi_window_bridge() -> Result[Unit, String] {
   let runtime = match
-    @native.Runtime::new(
-      config=@native.RuntimeConfig::bundled(
-        remote_debugging_port=multi_window_debug_port(),
-        headless=multi_window_headless_enabled(),
-      ),
-    ) {
+    multi_window_native_result("create runtime", () => {
+      @native.Runtime::new(
+        config=@native.RuntimeConfig::bundled(
+          remote_debugging_port=multi_window_debug_port(),
+          headless=multi_window_headless_enabled(),
+        ),
+      )
+    }) {
     Ok(runtime) => runtime
-    Err(error) =>
-      return Err(multi_window_native_error_message("create runtime", error))
+    Err(message) => return Err(message)
   }
   let window_a = match create_multi_window(runtime, "A") {
     Ok(window) => window
     Err(message) => {
-      ignore(runtime.destroy())
+      ignore(
+        multi_window_native_result("destroy runtime", () => runtime.destroy()),
+      )
       return Err(message)
     }
   }
   let window_b = match create_multi_window(runtime, "B") {
     Ok(window) => window
     Err(message) => {
-      ignore(window_a.destroy())
-      ignore(runtime.destroy())
+      ignore(
+        multi_window_native_result("destroy window A", () => window_a.destroy()),
+      )
+      ignore(
+        multi_window_native_result("destroy runtime", () => runtime.destroy()),
+      )
       return Err(message)
     }
   }
   match setup_multi_window(window_a, "A") {
     Err(message) => {
-      ignore(window_b.destroy())
-      ignore(window_a.destroy())
-      ignore(runtime.destroy())
+      ignore(
+        multi_window_native_result("destroy window B", () => window_b.destroy()),
+      )
+      ignore(
+        multi_window_native_result("destroy window A", () => window_a.destroy()),
+      )
+      ignore(
+        multi_window_native_result("destroy runtime", () => runtime.destroy()),
+      )
       return Err(message)
     }
     Ok(_) => ()
   }
   match setup_multi_window(window_b, "B") {
     Err(message) => {
-      ignore(window_b.destroy())
-      ignore(window_a.destroy())
-      ignore(runtime.destroy())
+      ignore(
+        multi_window_native_result("destroy window B", () => window_b.destroy()),
+      )
+      ignore(
+        multi_window_native_result("destroy window A", () => window_a.destroy()),
+      )
+      ignore(
+        multi_window_native_result("destroy runtime", () => runtime.destroy()),
+      )
       return Err(message)
     }
     Ok(_) => ()
   }
   let run_result = run_multi_window_pump(runtime)
-  ignore(window_b.destroy())
-  ignore(window_a.destroy())
-  let destroy_result = multi_window_native_unit_result(
-    "destroy runtime",
-    runtime.destroy(),
+  ignore(
+    multi_window_native_result("destroy window B", () => window_b.destroy()),
   )
+  ignore(
+    multi_window_native_result("destroy window A", () => window_a.destroy()),
+  )
+  let destroy_result = multi_window_native_result("destroy runtime", () => {
+    runtime.destroy()
+  })
   match run_result {
     Err(message) => Err(message)
     Ok(_) => destroy_result
@@ -87,7 +109,7 @@ fn create_multi_window(
   runtime : @native.Runtime,
   label : String,
 ) -> Result[@native.Window, String] {
-  match
+  multi_window_native_result("create window " + label, () => {
     @native.Window::new(
       runtime,
       config=@native.WindowConfig::new(
@@ -97,11 +119,8 @@ fn create_multi_window(
         initial_url="about:blank",
         bridge=@native.BridgeConfig::new(ops=["ext:multi/identify"]),
       ),
-    ) {
-    Ok(window) => Ok(window)
-    Err(error) =>
-      Err(multi_window_native_error_message("create window " + label, error))
-  }
+    )
+  })
 }
 
 ///|
@@ -109,11 +128,10 @@ fn setup_multi_window(
   window : @native.Window,
   label : String,
 ) -> Result[Unit, String] {
-  multi_window_native_unit_result(
-    "load html " + label,
-    window.load_html(multi_window_page_html(label), "proton://app/" + label),
-  ).bind(fn(_) {
-    multi_window_native_unit_result("show window " + label, window.show())
+  multi_window_native_result("load html " + label, () => {
+    window.load_html(multi_window_page_html(label), "proton://app/" + label)
+  }).bind(fn(_) {
+    multi_window_native_result("show window " + label, () => window.show())
   })
 }
 
@@ -154,9 +172,9 @@ async fn run_multi_window_pump(
 
       let mut polling_events = true
       while polling_events {
-        match runtime.poll_event() {
-          Err(error) =>
-            return Err(multi_window_native_error_message("poll event", error))
+        match
+          multi_window_native_result("poll event", () => runtime.poll_event()) {
+          Err(message) => return Err(message)
           Ok(None) => polling_events = false
           Ok(Some(event)) => {
             did_work = true
@@ -169,11 +187,11 @@ async fn run_multi_window_pump(
 
       let mut polling_bridge = true
       while polling_bridge {
-        match runtime.poll_bridge_request() {
-          Err(error) =>
-            return Err(
-              multi_window_native_error_message("poll bridge request", error),
-            )
+        match
+          multi_window_native_result("poll bridge request", () => {
+            runtime.poll_bridge_request()
+          }) {
+          Err(message) => return Err(message)
           Ok(None) => polling_bridge = false
           Ok(Some(request)) => {
             did_work = true
@@ -206,8 +224,8 @@ async fn run_multi_window_pump(
         match completed {
           Some(response) => {
             did_work = true
-            match runtime.respond_bridge_request(response) {
-              Err(error) =>
+            runtime.respond_bridge_request(response) catch {
+              error =>
                 if !is_multi_window_stale_response_error(error) {
                   return Err(
                     multi_window_native_error_message(
@@ -215,7 +233,6 @@ async fn run_multi_window_pump(
                     ),
                   )
                 }
-              Ok(_) => ()
             }
           }
           None => remaining.push(item)
@@ -247,13 +264,14 @@ fn MultiWindowBridgeWakeup::new(
   let (reader, writer) = @pipe.pipe() catch {
     _ => return Err("create runtime wakeup pipe failed")
   }
-  match runtime.set_wakeup_fd(writer.fd()) {
-    Err(error) => {
+  match
+    multi_window_native_result("install runtime wakeup fd", () => {
+      runtime.set_wakeup_fd(writer.fd())
+    }) {
+    Err(message) => {
       reader.close()
       writer.close()
-      return Err(
-        multi_window_native_error_message("install runtime wakeup fd", error),
-      )
+      return Err(message)
     }
     Ok(_) => ()
   }
@@ -265,27 +283,24 @@ fn MultiWindowBridgeWakeup::new(
 async fn MultiWindowBridgeWakeup::new(
   runtime : @native.Runtime,
 ) -> Result[MultiWindowBridgeWakeup, String] {
-  let source = match runtime.prepare_wakeup_source() {
-    Err(error) =>
-      return Err(
-        multi_window_native_error_message(
-          "prepare runtime wakeup source", error,
-        ),
-      )
+  let source = match
+    multi_window_native_result("prepare runtime wakeup source", () => {
+      runtime.prepare_wakeup_source()
+    }) {
+    Err(message) => return Err(message)
     Ok(source) => source
   }
   let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
     error =>
       return Err("open runtime wakeup source failed: " + error.to_string())
   }
-  match runtime.activate_wakeup_source() {
-    Err(error) => {
+  match
+    multi_window_native_result("activate runtime wakeup source", () => {
+      runtime.activate_wakeup_source()
+    }) {
+    Err(message) => {
       reader.close()
-      Err(
-        multi_window_native_error_message(
-          "activate runtime wakeup source", error,
-        ),
-      )
+      Err(message)
     }
     Ok(_) => Ok(MultiWindowBridgeWakeup::{ reader, })
   }
@@ -297,7 +312,11 @@ fn MultiWindowBridgeWakeup::close(
   self : MultiWindowBridgeWakeup,
   runtime : @native.Runtime,
 ) -> Unit {
-  ignore(runtime.set_wakeup_fd(-1))
+  ignore(
+    multi_window_native_result("remove runtime wakeup fd", () => {
+      runtime.set_wakeup_fd(-1)
+    }),
+  )
   self.reader.close()
   self.writer.close()
 }
@@ -380,10 +399,10 @@ fn decode_multi_window_payload(
 
 ///|
 fn is_multi_window_stale_response_error(error : @native.NativeError) -> Bool {
-  (error.status == -2 && error.message.contains("no longer pending")) ||
+  (error.status() == -2 && error.message().contains("no longer pending")) ||
   (
-    error.status == -7 &&
-    error.message.contains("failed to send bridge response to renderer")
+    error.status() == -7 &&
+    error.message().contains("failed to send bridge response to renderer")
   )
 }
 
@@ -415,13 +434,14 @@ fn multi_window_headless_enabled() -> Bool {
 }
 
 ///|
-fn multi_window_native_unit_result(
+fn[T] multi_window_native_result(
   action : String,
-  result : Result[Unit, @native.NativeError],
-) -> Result[Unit, String] {
-  match result {
-    Ok(_) => Ok(())
-    Err(error) => Err(multi_window_native_error_message(action, error))
+  invoke : () -> T raise @native.NativeError,
+) -> Result[T, String] {
+  try invoke() catch {
+    error => Err(multi_window_native_error_message(action, error))
+  } noraise {
+    value => Ok(value)
   }
 }
 
@@ -432,7 +452,7 @@ fn multi_window_native_error_message(
 ) -> String {
   action +
   " failed: native error " +
-  error.status.to_string() +
+  error.status().to_string() +
   ": " +
-  error.message
+  error.message()
 }

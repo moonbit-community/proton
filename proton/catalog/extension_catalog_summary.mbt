@@ -1,10 +1,8 @@
 ///|
 pub fn load_extension_catalog_summary_from_search_roots(
   search_roots : Array[String],
-) -> Result[Json, String] {
-  load_extension_catalog_from_search_roots(search_roots).map(fn(catalog) {
-    catalog.to_summary_json()
-  })
+) -> Json raise ExtensionCatalogError {
+  load_extension_catalog_from_search_roots(search_roots).to_summary_json()
 }
 
 ///|

@@ -54,13 +54,13 @@ struct MicrophoneActivity {
 /// Converts a sample format label from JavaScript into the package enum.
 fn parse_sample_format(
   sample_format : String?,
-) -> Result[@sys_microphone.SampleFormat?, String] {
+) -> @sys_microphone.SampleFormat? raise MicrophoneConfigError {
   match sample_format {
-    Some("i16") => Ok(Some(I16))
-    Some("u16") => Ok(Some(U16))
-    Some("f32") => Ok(Some(F32))
-    Some(value) => Err("unknown microphone sample format: " + value)
-    None => Ok(None)
+    Some("i16") => Some(I16)
+    Some("u16") => Some(U16)
+    Some("f32") => Some(F32)
+    Some(value) => raise UnknownSampleFormat(format=value)
+    None => None
   }
 }
 
@@ -78,36 +78,15 @@ fn sample_format_label(format : @sys_microphone.SampleFormat) -> String {
 /// Builds and normalizes one capture config from JavaScript payload data.
 fn build_capture_config(
   payload : CaptureConfigPayload,
-) -> Result[@sys_microphone.CaptureConfig, String] {
-  parse_sample_format(payload.sample_format).map(fn(sample_format) {
-    let channels = match payload.channels {
-      Some(value) => value
-      None => 1
-    }
-    let sample_rate_hz = match payload.sample_rate_hz {
-      Some(value) => value
-      None => 48_000
-    }
-    let sample_format = match sample_format {
-      Some(value) => value
-      None => F32
-    }
-    let echo_cancellation = match payload.echo_cancellation {
-      Some(value) => value
-      None => false
-    }
-    let noise_suppression = match payload.noise_suppression {
-      Some(value) => value
-      None => false
-    }
-    @sys_microphone.CaptureConfig::new(
-      channels~,
-      sample_rate_hz~,
-      sample_format~,
-      echo_cancellation~,
-      noise_suppression~,
-    ).normalized()
-  })
+) -> @sys_microphone.CaptureConfig raise MicrophoneConfigError {
+  let sample_format = parse_sample_format(payload.sample_format).unwrap_or(F32)
+  @sys_microphone.CaptureConfig::new(
+    channels=payload.channels.unwrap_or(1),
+    sample_rate_hz=payload.sample_rate_hz.unwrap_or(48_000),
+    sample_format~,
+    echo_cancellation=payload.echo_cancellation.unwrap_or(false),
+    noise_suppression=payload.noise_suppression.unwrap_or(false),
+  ).normalized()
 }
 
 ///|
@@ -183,12 +162,14 @@ fn config(
   sample_format : String?,
   echo_cancellation : Bool?,
   noise_suppression : Bool?,
-) -> Result[CaptureConfigReply, String] {
-  build_capture_config(CaptureConfigPayload::{
-    channels,
-    sample_rate_hz,
-    sample_format,
-    echo_cancellation,
-    noise_suppression,
-  }).map(capture_config_reply)
+) -> CaptureConfigReply raise MicrophoneConfigError {
+  capture_config_reply(
+    build_capture_config(CaptureConfigPayload::{
+      channels,
+      sample_rate_hz,
+      sample_format,
+      echo_cancellation,
+      noise_suppression,
+    }),
+  )
 }

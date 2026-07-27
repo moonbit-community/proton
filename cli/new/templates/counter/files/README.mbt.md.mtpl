@@ -59,8 +59,8 @@ bundle = {
 Inspect the resolved package plan, then create the application and zip archive:
 
 ```sh
-proton_cli package app --dry-run
-proton_cli package app
+proton_cli package --dry-run
+proton_cli package
 ```
 
 ## Layout

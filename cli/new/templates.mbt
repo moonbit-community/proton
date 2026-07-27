@@ -103,12 +103,9 @@ fn mbt_string(value : String) -> String {
 fn render_template(
   spec : TemplateSpec,
   context : TemplateContext,
-) -> Result[PlannedFile, String] {
+) -> PlannedFile raise NewProjectTemplateError {
   let vars = template_vars(context)
-  match validate_template_placeholders(spec, vars) {
-    Ok(_) => ()
-    Err(message) => return Err(message)
-  }
+  validate_template_placeholders(spec, vars)
   let mut output = spec.template_source
   for item in vars {
     output = @template.replace(
@@ -117,26 +114,20 @@ fn render_template(
       new=item.value,
     )
   }
-  Ok({ path: spec.output_path, content: output })
+  { path: spec.output_path, content: output }
 }
 
 ///|
 fn validate_template_placeholders(
   spec : TemplateSpec,
   vars : Array[TemplateVar],
-) -> Result[Unit, String] {
+) -> Unit raise NewProjectTemplateError {
   let mut probe = spec.template_source
   for item in vars {
     probe = @template.replace(probe, old="{{" + item.name + "}}", new="")
   }
   if probe.contains("{{") {
-    Err(
-      "template render failed for " +
-      spec.template_name +
-      ": unresolved placeholder",
-    )
-  } else {
-    Ok(())
+    raise UnresolvedPlaceholder(template=spec.template_name)
   }
 }
 
@@ -147,16 +138,13 @@ fn plan_project_files(
   identifier : String,
   width : Int,
   height : Int,
-) -> Result[Array[PlannedFile], String] {
+) -> Array[PlannedFile] raise NewProjectTemplateError {
   let context = template_context(title, module_name, identifier, width, height)
   let files : Array[PlannedFile] = []
   for spec in template_specs() {
-    match render_template(spec, context) {
-      Ok(file) => files.push(file)
-      Err(message) => return Err(message)
-    }
+    files.push(render_template(spec, context))
   }
-  Ok(files)
+  files
 }
 
 ///|

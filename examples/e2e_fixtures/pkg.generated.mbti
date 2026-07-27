@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub async fn emit_add_finished(@command.AppCommandExtensionContext, AddFinished) -> Unit
+pub async fn emit_add_finished(@command.AppCommandExtensionContext, AddFinished) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 

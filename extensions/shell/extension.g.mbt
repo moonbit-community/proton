@@ -5,7 +5,7 @@
 pub async fn emit_shell_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : ShellActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -18,7 +18,7 @@ struct ProtonOpenPayload {
 async fn __proton_command_open(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonOpenPayload,
-) -> Result[ShellReply, String] {
+) -> ShellReply raise ShellError {
   open(context, payload.target)
 }
 
@@ -31,7 +31,7 @@ struct ProtonRevealItemPayload {
 async fn __proton_command_reveal_item(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonRevealItemPayload,
-) -> Result[ShellReply, String] {
+) -> ShellReply raise ShellError {
   reveal_item(context, payload.path)
 }
 
@@ -49,14 +49,13 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("open"),
       @proton_command.AppCommandApiDescriptor::new("revealItem"),
     ],
-    fn(context) {
-      context.op_async_result("open", async fn(payload) {
+    fn(context) raise {
+      context.op_async("open", async fn(payload) {
         __proton_command_open(context, payload)
       }, emits_events=true)
-      context.op_async_result("revealItem", async fn(payload) {
+      context.op_async("revealItem", async fn(payload) {
         __proton_command_reveal_item(context, payload)
       }, emits_events=true)
-      Ok(())
     },
   )
 }

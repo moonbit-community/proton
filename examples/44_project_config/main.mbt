@@ -50,10 +50,8 @@ fn assert_strings(
 
 ///|
 fn main {
-  let config = match
-    @bootstrap.load_proton_project_config_from_file(config_path()) {
-    Ok(config) => config
-    Err(error) => abort(error)
+  let config = @bootstrap.load_proton_project_config_from_file(config_path()) catch {
+    error => abort(error.message())
   }
   let manifest = config.manifest().manifest()
   assert_string(manifest.window.title, "Proton Project Config", "window.title")

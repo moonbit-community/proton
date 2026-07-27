@@ -19,32 +19,20 @@ pub fn ExtensionCatalog::new() -> ExtensionCatalog {
 /// original discovery order.
 pub fn ExtensionCatalog::from_descriptors(
   descriptors : Array[ExtensionDescriptor],
-) -> Result[ExtensionCatalog, String] {
+) -> ExtensionCatalog raise ExtensionCatalogError {
   let catalog = ExtensionCatalog::new()
   for descriptor in descriptors {
     let id = descriptor.id()
     guard id.trim().to_owned() != "" else {
-      return Err(
-        CatalogDiagnostic::new(
-          InvalidMetadata,
-          descriptor.metadata_path(),
-          "extension id must not be empty",
-        ).to_error_string(),
-      )
+      raise EmptyDescriptorId(path=descriptor.metadata_path())
     }
     guard catalog.descriptors.get(id) is None else {
-      return Err(
-        CatalogDiagnostic::new(
-          DuplicateExtensionId,
-          descriptor.metadata_path(),
-          "duplicate extension id: " + id,
-        ).to_error_string(),
-      )
+      raise DuplicateExtensionId(id~, path=descriptor.metadata_path())
     }
     catalog.descriptors.set(id, copy_extension_descriptor(descriptor))
     catalog.discovery_order.push(id)
   }
-  Ok(catalog)
+  catalog
 }
 
 ///|
@@ -64,17 +52,10 @@ pub fn ExtensionCatalog::get(
 pub fn ExtensionCatalog::require(
   self : ExtensionCatalog,
   id : String,
-) -> Result[ExtensionDescriptor, String] {
+) -> ExtensionDescriptor raise ExtensionCatalogError {
   match self.descriptors.get(id) {
-    Some(descriptor) => Ok(copy_extension_descriptor(descriptor))
-    None =>
-      Err(
-        CatalogDiagnostic::new(
-          UnknownExtensionId,
-          id,
-          "unknown extension id: " + id,
-        ).to_error_string(),
-      )
+    Some(descriptor) => copy_extension_descriptor(descriptor)
+    None => raise UnknownExtensionId(id~)
   }
 }
 
@@ -112,13 +93,13 @@ pub fn ExtensionCatalog::descriptors(
 /// reported with its exact file path.
 pub fn load_extension_catalog_from_descriptor_files(
   paths : Array[String],
-) -> Result[ExtensionCatalog, String] {
+) -> ExtensionCatalog raise ExtensionCatalogError {
   let descriptors : Array[ExtensionDescriptor] = []
   for path in paths {
-    match load_extension_descriptor_from_file(path) {
-      Err(error) => return Err(error)
-      Ok(descriptor) => descriptors.push(descriptor)
+    let descriptor = load_extension_descriptor_from_file(path) catch {
+      error => raise Descriptor(error)
     }
+    descriptors.push(descriptor)
   }
   ExtensionCatalog::from_descriptors(descriptors)
 }
@@ -132,16 +113,13 @@ pub fn load_extension_catalog_from_descriptor_files(
 /// - one explicit `moon.ext` file path
 pub fn discover_extension_descriptor_files(
   search_roots : Array[String],
-) -> Result[Array[String], String] {
+) -> Array[String] raise ExtensionCatalogError {
   let descriptor_paths : Array[String] = []
   for root in search_roots {
-    match collect_extension_descriptor_files(root, descriptor_paths) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
+    collect_extension_descriptor_files(root, descriptor_paths)
   }
   descriptor_paths.sort()
-  Ok(deduplicate_sorted_paths(descriptor_paths))
+  deduplicate_sorted_paths(descriptor_paths)
 }
 
 ///|
@@ -150,9 +128,9 @@ pub fn discover_extension_descriptor_files(
 /// metadata files, or directories that contain many extensions.
 pub fn load_extension_catalog_from_search_roots(
   search_roots : Array[String],
-) -> Result[ExtensionCatalog, String] {
-  discover_extension_descriptor_files(search_roots).bind(
-    load_extension_catalog_from_descriptor_files,
+) -> ExtensionCatalog raise ExtensionCatalogError {
+  load_extension_catalog_from_descriptor_files(
+    discover_extension_descriptor_files(search_roots),
   )
 }
 
@@ -161,46 +139,23 @@ pub fn load_extension_catalog_from_search_roots(
 fn collect_extension_descriptor_files(
   raw_root : String,
   descriptor_paths : Array[String],
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionCatalogError {
   let root = normalize_path_string(raw_root)
-  guard @mbfs.path_exists(root) else {
-    return Err(
-      CatalogDiagnostic::new(
-        MissingFile,
-        root,
-        "extension search root does not exist: " + root,
-      ).to_error_string(),
-    )
-  }
+  guard @mbfs.path_exists(root) else { raise SearchRootMissing(path=root) }
 
-  try @mbfs.is_dir(root) catch {
+  let is_dir = @mbfs.is_dir(root) catch {
     error =>
-      Err(
-        CatalogDiagnostic::new(
-          InvalidSearchRoot,
-          root,
-          "failed to inspect extension search root: " +
-          @debug.render(@debug.to_repr(error)),
-        ).to_error_string(),
+      raise SearchRootInspectFailed(
+        path=root,
+        detail=@debug.render(@debug.to_repr(error)),
       )
-  } noraise {
-    is_dir =>
-      if is_dir {
-        collect_extension_descriptor_files_from_directory(
-          root, descriptor_paths,
-        )
-      } else if is_extension_metadata_file(root) {
-        descriptor_paths.push(root)
-        Ok(())
-      } else {
-        Err(
-          CatalogDiagnostic::new(
-            InvalidSearchRoot,
-            root,
-            "extension search root must be a directory or extension metadata file",
-          ).to_error_string(),
-        )
-      }
+  }
+  if is_dir {
+    collect_extension_descriptor_files_from_directory(root, descriptor_paths)
+  } else if is_extension_metadata_file(root) {
+    descriptor_paths.push(root)
+  } else {
+    raise InvalidSearchRoot(path=root)
   }
 }
 
@@ -209,74 +164,50 @@ fn collect_extension_descriptor_files(
 fn collect_extension_descriptor_files_from_directory(
   directory : String,
   descriptor_paths : Array[String],
-) -> Result[Unit, String] {
-  let entries = match read_extension_search_directory(directory) {
-    Ok(entries) => entries
-    Err(error) => return Err(error)
-  }
+) -> Unit raise ExtensionCatalogError {
+  let entries = read_extension_search_directory(directory)
   entries.sort()
 
   if entries.contains("moon.ext") {
     descriptor_paths.push(path_join(directory, "moon.ext"))
-    return Ok(())
+    return
   }
   for entry in entries {
     if should_skip_extension_search_entry(entry) {
       continue
     }
     let child = path_join(directory, entry)
-    match is_extension_search_directory(child) {
-      Err(error) => return Err(error)
-      Ok(true) =>
-        match
-          collect_extension_descriptor_files_from_directory(
-            child, descriptor_paths,
-          ) {
-          Ok(_) => ()
-          Err(error) => return Err(error)
-        }
-      Ok(false) => ()
+    if is_extension_search_directory(child) {
+      collect_extension_descriptor_files_from_directory(child, descriptor_paths)
     }
   }
-
-  Ok(())
 }
 
 ///|
 /// Reads one directory while preserving catalog-specific error context.
 fn read_extension_search_directory(
   directory : String,
-) -> Result[Array[String], String] {
-  try @mbfs.read_dir(directory) catch {
+) -> Array[String] raise ExtensionCatalogError {
+  @mbfs.read_dir(directory) catch {
     error =>
-      Err(
-        CatalogDiagnostic::new(
-          DirectoryReadFailed,
-          directory,
-          "failed to read extension search root: " +
-          @debug.render(@debug.to_repr(error)),
-        ).to_error_string(),
+      raise DirectoryReadFailed(
+        path=directory,
+        detail=@debug.render(@debug.to_repr(error)),
       )
-  } noraise {
-    entries => Ok(entries)
   }
 }
 
 ///|
 /// Returns whether one candidate search entry is a directory.
-fn is_extension_search_directory(path : String) -> Result[Bool, String] {
-  try @mbfs.is_dir(path) catch {
+fn is_extension_search_directory(
+  path : String,
+) -> Bool raise ExtensionCatalogError {
+  @mbfs.is_dir(path) catch {
     error =>
-      Err(
-        CatalogDiagnostic::new(
-          InvalidSearchRoot,
-          path,
-          "failed to inspect extension search entry: " +
-          @debug.render(@debug.to_repr(error)),
-        ).to_error_string(),
+      raise SearchRootInspectFailed(
+        path~,
+        detail=@debug.render(@debug.to_repr(error)),
       )
-  } noraise {
-    is_dir => Ok(is_dir)
   }
 }
 

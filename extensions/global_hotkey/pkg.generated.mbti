@@ -9,13 +9,14 @@ import {
 }
 
 // Values
-pub async fn emit_global_hotkey_activity(@command.AppCommandExtensionContext, GlobalHotkeyActivity) -> Unit
+pub async fn emit_global_hotkey_activity(@command.AppCommandExtensionContext, GlobalHotkeyActivity) -> Unit noraise
 
-pub async fn emit_global_hotkey_triggered(@command.AppCommandExtensionContext, GlobalHotkeyTriggered) -> Unit
+pub async fn emit_global_hotkey_triggered(@command.AppCommandExtensionContext, GlobalHotkeyTriggered) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type GlobalHotkeyError derive(Eq, @debug.Debug)
 
 // Types and methods
 type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)

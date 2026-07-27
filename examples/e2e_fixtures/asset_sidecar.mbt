@@ -20,15 +20,15 @@ fn asset_sidecar_extension() -> @proton_extension.Extension {
         @proton_command.AppCommandApiDescriptor::new("addLater"),
         @proton_command.AppCommandApiDescriptor::new("reportProbe"),
       ],
-      fn(context) {
+      fn(context) raise {
         context.op("add", fn(payload : AssetSidecarAddPayload) {
           payload.left + payload.right
         })
-        context.op_async_result("addLater", async fn(
+        context.op_async("addLater", async fn(
           payload : AssetSidecarAddPayload,
         ) {
           @async.sleep(800)
-          Ok(payload.left + payload.right)
+          payload.left + payload.right
         })
         context.op("reportProbe", fn(payload : AssetSidecarReportPayload) {
           println("[asset-sidecar-e2e] " + payload.report)
@@ -42,7 +42,6 @@ fn asset_sidecar_extension() -> @proton_extension.Extension {
             _ => ()
           }
         })
-        Ok(())
       },
     ),
   )

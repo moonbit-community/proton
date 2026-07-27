@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_shell_activity(@command.AppCommandExtensionContext, ShellActivity) -> Unit
+pub async fn emit_shell_activity(@command.AppCommandExtensionContext, ShellActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type ShellError derive(Eq, @debug.Debug)
 
 // Types and methods
 type ProtonOpenPayload derive(@json.FromJson)

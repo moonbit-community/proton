@@ -6,8 +6,8 @@
 /// underlying IPC implementation.
 struct AppCommandHost {
   host : MbtProcessHost
-  mut event_sender : (async (@ipc.IpcExtensionEvent) -> Unit)?
-  mut scoped_event_sender : (async (@ipc.IpcExtensionEvent) -> Unit)?
+  mut event_sender : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?
+  mut scoped_event_sender : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?
   event_scoped_ops : Set[String]
   event_scope_mutex : @async.Mutex
   mut closed : Bool
@@ -110,19 +110,9 @@ pub fn AppCommandHost::new() -> AppCommandHost {
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(
   self : AppCommandHost,
   name : String,
-  callback : (Payload) -> Reply,
-) -> Unit {
-  self.host.op(name, callback)
-}
-
-///|
-/// Registers a synchronous app command that can return a string error.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_result(
-  self : AppCommandHost,
-  name : String,
-  callback : (Payload) -> Result[Reply, String],
-) -> Unit {
-  self.host.op_result(name, callback)
+  callback : (Payload) -> Reply raise?,
+) -> Unit raise OpRegistrationError {
+  self.host.op(name, fn(payload) raise { callback(payload) })
 }
 
 ///|
@@ -131,28 +121,18 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(
   self : AppCommandHost,
   name : String,
   callback : async (Payload) -> Reply,
-) -> Unit {
+) -> Unit raise OpRegistrationError {
   self.host.op_async(name, callback)
 }
 
 ///|
-/// Registers an async app command that can return a string error.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result(
+/// Registers an async app command that receives request-scoped context.
+pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_with_context(
   self : AppCommandHost,
   name : String,
-  callback : async (Payload) -> Result[Reply, String],
-) -> Unit {
-  self.host.op_async_result(name, callback)
-}
-
-///|
-/// Registers an async app command that receives request-scoped context and can fail.
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_result_with_context(
-  self : AppCommandHost,
-  name : String,
-  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
-) -> Unit {
-  self.host.op_async_result_with_context(name, callback)
+  callback : async (AppCommandRequestContext, Payload) -> Reply,
+) -> Unit raise OpRegistrationError {
+  self.host.op_async_with_context(name, callback)
 }
 
 ///|
@@ -185,7 +165,7 @@ pub async fn AppCommandHost::dispatch_ipc_with_context(
 pub async fn AppCommandHost::dispatch_ipc_with_event_sender(
   self : AppCommandHost,
   request : @ipc.IpcOpRequest,
-  emit : (async (@ipc.IpcExtensionEvent) -> Unit)?,
+  emit : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?,
 ) -> @ipc.IpcOpResponse {
   match (emit, self.event_scoped_ops.contains(request.name)) {
     (Some(sender), true) => {
@@ -208,7 +188,7 @@ pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(
   self : AppCommandHost,
   context : AppCommandRequestContext,
   request : @ipc.IpcOpRequest,
-  emit : (async (@ipc.IpcExtensionEvent) -> Unit)?,
+  emit : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?,
 ) -> @ipc.IpcOpResponse {
   match (emit, self.event_scoped_ops.contains(request.name)) {
     (Some(sender), true) => {
@@ -242,7 +222,7 @@ pub fn AppCommandHost::scope_events_for_op(
 /// installed by `dispatch_ipc_with_event_sender`.
 pub fn AppCommandHost::set_event_sender(
   self : AppCommandHost,
-  emit : async (@ipc.IpcExtensionEvent) -> Unit,
+  emit : async (@ipc.IpcExtensionEvent) -> Unit noraise,
 ) -> Unit {
   guard !self.closed else { return }
   self.event_sender = Some(emit)
@@ -262,12 +242,8 @@ pub async fn[Payload : ToJson] AppCommandHost::emit_extension(
   extension_namespace : String,
   event_name : String,
   payload : Payload,
-) -> Unit {
+) -> Unit noraise {
   guard !self.closed else { return }
-  match validate_extension_event_target(extension_namespace, event_name) {
-    Err(error) => abort(error)
-    Ok(_) => ()
-  }
   let sender = match self.scoped_event_sender {
     Some(emit) => Some(emit)
     None => self.event_sender

@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_auto_launch_activity(@command.AppCommandExtensionContext, AutoLaunchActivity) -> Unit
+pub async fn emit_auto_launch_activity(@command.AppCommandExtensionContext, AutoLaunchActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type AutoLaunchError derive(Eq, @debug.Debug)
 
 // Types and methods
 type AutoLaunchActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)

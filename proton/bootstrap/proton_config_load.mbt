@@ -1,28 +1,25 @@
 ///|
 pub fn load_config_manifest_from_file(
   path : String,
-) -> Result[LoadedAppManifest, String] {
-  load_proton_project_config_from_file(path).map(fn(config) {
-    config.manifest()
-  })
+) -> LoadedAppManifest raise BootstrapError {
+  load_proton_project_config_from_file(path).manifest()
 }
 
 ///|
 pub fn load_proton_project_config_from_file(
   path : String,
-) -> Result[ProtonProjectConfig, String] {
-  @proton_config.load_project_config_from_file(path).map(fn(loaded) {
-    proton_project_config_from_project_config(loaded.config())
-  })
+) -> ProtonProjectConfig raise BootstrapError {
+  let loaded = @proton_config.load_project_config_from_file(path) catch {
+    error => raise ProjectConfig(error)
+  }
+  proton_project_config_from_project_config(loaded.config())
 }
 
 ///|
 pub fn load_proton_project_summary_from_file(
   path : String,
-) -> Result[Json, String] {
-  load_proton_project_config_from_file(path).map(fn(config) {
-    config.to_summary_json()
-  })
+) -> Json raise BootstrapError {
+  load_proton_project_config_from_file(path).to_summary_json()
 }
 
 ///|

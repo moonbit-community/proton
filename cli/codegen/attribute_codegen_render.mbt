@@ -43,7 +43,7 @@ fn render_event_helpers(
     builder.write_string("  payload : ")
     builder.write_string(event.type_name)
     builder.write_string(",\n")
-    builder.write_string(") -> Unit {\n")
+    builder.write_string(") -> Unit noraise {\n")
     builder.write_string("  context.emit(")
     builder.write_string(mbt_string(event.js_name))
     builder.write_string(", payload)\n")
@@ -101,6 +101,13 @@ fn render_payloads_and_wrappers(
       builder.write_string(") -> ")
     }
     builder.write_string(command.return_type)
+    match command.error_effect {
+      Some(error_effect) => {
+        builder.write_string(" ")
+        builder.write_string(error_effect)
+      }
+      None => ()
+    }
     builder.write_string(" {\n")
     builder.write_string("  ")
     builder.write_string(command.function_name)
@@ -153,22 +160,32 @@ fn render_extension_spec(
     }
     builder.write_string("    ],\n")
   }
-  builder.write_string("    fn(context) {\n")
+  builder.write_string("    fn(context) raise {\n")
   for command in commands {
     builder.write_string("      context.")
     builder.write_string(registration_method(command))
     builder.write_string("(")
     builder.write_string(mbt_string(command.js_name))
     builder.write_string(", ")
-    if command.has_context || command.has_request_context {
+    if command.is_async || command.has_context || command.has_request_context {
       if command.is_async {
         builder.write_string("async ")
       }
+      builder.write_string("fn(")
       if command.has_request_context {
-        builder.write_string("fn(request_context, payload) {\n")
-      } else {
-        builder.write_string("fn(payload) {\n")
+        builder.write_string("request_context, ")
       }
+      builder.write_string("payload)")
+      if !command.is_async {
+        match command.error_effect {
+          Some(error_effect) => {
+            builder.write_string(" ")
+            builder.write_string(error_effect)
+          }
+          None => ()
+        }
+      }
+      builder.write_string(" {\n")
       builder.write_string("        ")
       builder.write_string(wrapper_name(command))
       builder.write_string("(")
@@ -191,7 +208,6 @@ fn render_extension_spec(
     }
     builder.write_string(")\n")
   }
-  builder.write_string("      Ok(())\n")
   builder.write_string("    },\n")
   if scripts.length() > 0 {
     builder.write_string("    scripts=[\n")
@@ -204,7 +220,12 @@ fn render_extension_spec(
   }
   match destroy {
     Some(destroy) => {
-      builder.write_string("    on_destroy=fn(context) {\n")
+      builder.write_string("    on_destroy=fn(context)")
+      match destroy.error_effect {
+        Some("noraise") | None => ()
+        Some(_) => builder.write_string(" raise")
+      }
+      builder.write_string(" {\n")
       builder.write_string("      ")
       builder.write_string(destroy.function_name)
       if destroy.has_context {
@@ -247,15 +268,12 @@ fn codegen_warnings(parsed : ParsedProtonModule) -> Array[String] {
 
 ///|
 fn registration_method(command : ParsedProtonCommand) -> String {
-  let suffix = if command.has_request_context { "_with_context" } else { "" }
-  if command.is_async && command.returns_result {
-    "op_async_result" + suffix
+  if command.is_async && command.has_request_context {
+    "op_async_with_context"
   } else if command.is_async {
-    "op_async" + suffix
-  } else if command.returns_result {
-    "op_result" + suffix
+    "op_async"
   } else {
-    "op" + suffix
+    "op"
   }
 }
 

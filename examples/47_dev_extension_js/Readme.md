@@ -7,7 +7,7 @@ cd examples
 pushd 47_dev_extension_js/frontend
 npm install
 popd
-proton_cli dev 47_dev_extension_js
+proton_cli dev --package 47_dev_extension_js
 ```
 
 When running the CLI directly from this repository instead of an installed
@@ -15,7 +15,7 @@ When running the CLI directly from this repository instead of an installed
 
 ```powershell
 $repo = (Resolve-Path ..).Path
-moon -C ..\cli run . -- -C $repo dev examples/47_dev_extension_js
+moon -C ..\cli run . -- -C $repo dev --package examples/47_dev_extension_js
 ```
 
 The CLI discovers the package-local `moon.proton`, injects it into the app as
@@ -28,7 +28,7 @@ For a production build:
 
 ```powershell
 cd examples
-proton_cli build 47_dev_extension_js
+proton_cli build --package 47_dev_extension_js
 ```
 
 `proton_cli build` runs `frontend.before_build`, validates

@@ -1,8 +1,35 @@
 ///|
-pub(all) struct NativeError {
-  status : Int
-  message : String
+/// Failures at the MoonBit/native runtime boundary.
+pub(all) suberror NativeError {
+  /// A negative status returned by the public Proton C ABI.
+  Status(status~ : Int, message~ : String)
+  /// An invalid argument rejected before entering the C ABI.
+  InvalidArgument(message~ : String)
+  /// Malformed data returned by the native runtime.
+  InvalidPayload(context~ : String, message~ : String)
 } derive(Debug, Eq)
+
+///|
+pub fn NativeError::status(self : NativeError) -> Int {
+  match self {
+    Status(status~, ..) => status
+    InvalidArgument(..) | InvalidPayload(..) => -1
+  }
+}
+
+///|
+pub fn NativeError::message(self : NativeError) -> String {
+  match self {
+    Status(message~, ..) | InvalidArgument(message~) => message
+    InvalidPayload(context~, message~) =>
+      "failed to decode " + context + ": " + message
+  }
+}
+
+///|
+impl Show for NativeError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
 
 ///|
 pub(all) enum ProcessResult {
@@ -261,10 +288,8 @@ pub(all) enum TitlebarStyle {
 
 ///|
 fn titlebar_overlay_config_supported() -> Bool {
-  match runtime_info() {
-    Ok(info) => info.features.contains("titlebar_overlay")
-    Err(_) => false
-  }
+  let info = runtime_info() catch { _ => return false }
+  info.features.contains("titlebar_overlay")
 }
 
 ///|

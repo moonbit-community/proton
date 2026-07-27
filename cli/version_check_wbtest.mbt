@@ -54,28 +54,52 @@ test "latest version is read from mooncakes manifest" {
 }
 
 ///|
-test "cli version command text and aliases" {
+test "cli version command text and subcommand" {
   assert_eq(cli_version_text(), "proton_cli " + cli_current_version)
-  assert_true(is_cli_version_arg("version"))
-  assert_true(is_cli_version_arg("--version"))
-  assert_true(is_cli_version_arg("-V"))
-  assert_true(!is_cli_version_arg("doctor"))
+  let matches = cli_command().parse(argv=["version"], env=Map([]))
+  assert_true(matches.subcommand is Some(("version", _)))
 }
 
 ///|
-test "global cwd parsing only consumes leading flags" {
-  let (cwd, args) = parse_global_args([
-    "-C", "repo", "dev", "app", "--", "-C", "app-cwd",
-  ])
-  assert_eq(cwd, "repo")
-  @debug.assert_eq(args, ["dev", "app", "--", "-C", "app-cwd"])
+test "global cwd is inherited and separator protects app arguments" {
+  let matches = cli_command().parse(
+    argv=["-C", "repo", "dev", "--package", "app", "--", "-C", "app-cwd"],
+    env=Map([]),
+  )
+  @debug.assert_eq(matches.values.get("cwd"), Some(["repo"]))
+  match matches.subcommand {
+    Some(("dev", dev_matches)) => {
+      @debug.assert_eq(dev_matches.values.get("cwd"), Some(["repo"]))
+      @debug.assert_eq(
+        dev_matches.values.get("app-args"),
+        Some(["-C", "app-cwd"]),
+      )
+    }
+    _ => fail("expected dev subcommand")
+  }
 }
 
 ///|
-test "global cwd parsing preserves command arguments after subcommand" {
-  let (cwd, args) = parse_global_args(["dev", "app", "--", "--cwd", "app-cwd"])
-  assert_eq(cwd, ".")
-  @debug.assert_eq(args, ["dev", "app", "--", "--cwd", "app-cwd"])
+test "global cwd can be supplied after subcommand" {
+  let matches = cli_command().parse(
+    argv=["dev", "--cwd", "repo", "--package", "app"],
+    env=Map([]),
+  )
+  @debug.assert_eq(matches.values.get("cwd"), Some(["repo"]))
+}
+
+///|
+test "doctor output modes are declaratively exclusive" {
+  try
+    cli_command().parse(argv=["doctor", "--json", "--quiet"], env=Map([]))
+  catch {
+    error =>
+      assert_true(
+        error.to_string().contains("conflicting arguments: json and quiet"),
+      )
+  } noraise {
+    _ => fail("expected argparse to reject conflicting output modes")
+  }
 }
 
 ///|

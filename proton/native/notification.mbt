@@ -3,13 +3,13 @@ const NOTIFICATION_CLICK_BUFFER_BYTES = 65536
 
 ///|
 /// Reports whether native notifications are available in the current process.
-pub fn notification_supported() -> Result[Bool, NativeError] {
+pub fn notification_supported() -> Bool raise NativeError {
   let supported = Ref(0)
   let status = proton_notification_is_supported_ffi(supported)
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else {
-    Ok(supported.val != 0)
+    supported.val != 0
   }
 }
 
@@ -19,12 +19,12 @@ pub fn notification_show(
   title : String,
   body : String,
   payload? : String,
-) -> Result[Unit, NativeError] {
+) -> Unit raise NativeError {
   let (payload_text, has_payload) = match payload {
     Some(value) => (value, 1)
     None => ("", 0)
   }
-  status_to_result(
+  check_status(
     proton_notification_show_ffi(
       @ffi.to_cstr(title),
       @ffi.to_cstr(body),
@@ -36,10 +36,7 @@ pub fn notification_show(
 
 ///|
 /// Removes and returns the oldest pending notification activation.
-pub fn notification_poll_click() -> Result[
-  NativeNotificationClick?,
-  NativeError,
-] {
+pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError {
   let buffer = FixedArray::make(NOTIFICATION_CLICK_BUFFER_BYTES, b'\x00')
   let required = Ref(0)
   let has_payload = Ref(0)
@@ -52,21 +49,21 @@ pub fn notification_poll_click() -> Result[
     available,
   )
   if status < 0 {
-    Err(native_error(status))
+    raise native_error(status)
   } else if available.val == 0 {
-    Ok(None)
+    None
   } else {
     let payload = if has_payload.val == 0 {
       None
     } else {
       Some(@ffi.from_cstr(Bytes::from_array(buffer)))
     }
-    Ok(Some(NativeNotificationClick::{ payload, }))
+    Some(NativeNotificationClick::{ payload, })
   }
 }
 
 ///|
 /// Releases process-level notification hooks installed by Proton.
-pub fn notification_cleanup() -> Result[Unit, NativeError] {
-  status_to_result(proton_notification_cleanup_ffi())
+pub fn notification_cleanup() -> Unit raise NativeError {
+  check_status(proton_notification_cleanup_ffi())
 }

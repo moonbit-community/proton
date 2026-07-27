@@ -17,12 +17,11 @@ fn async_add_extension() -> @proton_extension.Extension {
       "examples/async-add",
       "add",
       [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-      fn(context) {
-        context.op_async_result("slowAdd", async fn(payload : AsyncAddPayload) {
+      fn(context) raise {
+        context.op_async("slowAdd", async fn(payload : AsyncAddPayload) {
           @async.sleep(1000)
-          Ok(payload.left + payload.right)
+          payload.left + payload.right
         })
-        Ok(())
       },
     ),
   )
@@ -81,7 +80,7 @@ fn sync_math_fixture_extension() -> @proton_extension.Extension {
       "examples/sync-math",
       "math",
       [@proton_command.AppCommandApiDescriptor::new("double")],
-      fn(context) {
+      fn(context) raise {
         context.op("double", fn(payload : SyncDoublePayload) {
           SyncDoubleReply::{
             value: payload.value,
@@ -89,7 +88,6 @@ fn sync_math_fixture_extension() -> @proton_extension.Extension {
             source: "sync command extension",
           }
         })
-        Ok(())
       },
     ),
   )
@@ -102,17 +100,16 @@ fn async_add_fixture_extension() -> @proton_extension.Extension {
       "examples/async-add",
       "add",
       [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-      fn(context) {
-        context.op_async_result("slowAdd", async fn(payload : AsyncSumPayload) {
+      fn(context) raise {
+        context.op_async("slowAdd", async fn(payload : AsyncSumPayload) {
           let delay_ms = payload.delay_ms.unwrap_or(10)
           @async.sleep(delay_ms)
-          Ok(AsyncSumReply::{
+          AsyncSumReply::{
             total: payload.left + payload.right,
             waited_ms: delay_ms,
             source: "async command extension",
-          })
+          }
         })
-        Ok(())
       },
     ),
   )
@@ -205,8 +202,8 @@ fn event_ticker_extension() -> @proton_extension.Extension {
       "examples/event-ticker",
       "ticker",
       [@proton_command.AppCommandApiDescriptor::new("start")],
-      fn(context) {
-        context.op_async_result(
+      fn(context) raise {
+        context.op_async(
           "start",
           async fn(payload : EventStartPayload) {
             let count = clamp_event_value(payload.count, 1, 20)
@@ -225,11 +222,10 @@ fn event_ticker_extension() -> @proton_extension.Extension {
             }
             let done = EventDone::{ run_id: payload.run_id, total: count }
             context.emit("done", done)
-            Ok(EventTickerResult::{ ticks, done })
+            EventTickerResult::{ ticks, done }
           },
           emits_events=true,
         )
-        Ok(())
       },
     ),
   )

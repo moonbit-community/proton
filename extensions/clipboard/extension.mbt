@@ -7,17 +7,13 @@ struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
 async fn read_text(
   context : @proton_command.AppCommandExtensionContext,
   _payload : EmptyPayload?,
-) -> Result[ReadTextReply, String] {
-  match read_clipboard_text() {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_clipboard_activity(context, ClipboardActivity::{
-        operation: "readText",
-        text_length: text_length(reply.text),
-      })
-      Ok(reply)
-    }
-  }
+) -> ReadTextReply raise ClipboardError {
+  let reply = read_clipboard_text()
+  emit_clipboard_activity(context, ClipboardActivity::{
+    operation: "readText",
+    text_length: text_length(reply.text),
+  })
+  reply
 }
 
 ///|
@@ -26,17 +22,13 @@ async fn read_text(
 async fn write_text(
   context : @proton_command.AppCommandExtensionContext,
   text : String,
-) -> Result[WriteTextReply, String] {
-  match write_clipboard_text(text) {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_clipboard_activity(context, ClipboardActivity::{
-        operation: "writeText",
-        text_length: Some(text.length()),
-      })
-      Ok(reply)
-    }
-  }
+) -> WriteTextReply raise ClipboardError {
+  let reply = write_clipboard_text(text)
+  emit_clipboard_activity(context, ClipboardActivity::{
+    operation: "writeText",
+    text_length: Some(text.length()),
+  })
+  reply
 }
 
 ///|

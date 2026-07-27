@@ -1,22 +1,80 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/proton_cli/cef"
 
+import {
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/debug",
+}
+
 // Values
+pub fn command() -> @argparse.Command
+
 pub async fn current_platform_id() -> String
 
 pub fn proton_prebuilt_relative_files_for_platform(String) -> Array[String]
 
-pub async fn run_setup(String, Array[String]) -> Result[Unit, CefError]
+pub async fn run(String, @argparse.Matches) -> Unit
 
 pub fn runtime_required_relative_files_for_platform(String) -> Array[String]
 
+pub async fn setup_default(String) -> Unit
+
 // Errors
+pub(all) suberror CefDownloadError {
+  CreateTemporaryDirectory(detail~ : String)
+  Start(url~ : String, detail~ : String)
+  CurlExit(url~ : String, code~ : Int)
+  OpenArchive(path~ : String, detail~ : String)
+  ChecksumMismatch(expected~ : String, actual~ : String)
+  ExtractStart(path~ : String, detail~ : String)
+  ExtractExit(path~ : String, code~ : Int)
+  ExtractedRootNotFound(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CefDownloadError::message(Self) -> String
+
+pub(all) suberror CefFileSystemError {
+  CurrentDirectoryUnavailable
+  CreateDirectory(path~ : String, detail~ : String)
+  ReadDirectory(path~ : String, detail~ : String)
+  Copy(source~ : String, destination~ : String, detail~ : String)
+  Write(path~ : String, detail~ : String)
+  Remove(path~ : String, detail~ : String)
+  MakeExecutable(path~ : String, detail~ : String)
+  InvalidSource(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CefFileSystemError::message(Self) -> String
+
+pub(all) suberror CefPlatformError {
+  Unsupported(platform~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CefPlatformError::message(Self) -> String
+
+pub(all) suberror CefRuntimeError {
+  InvalidCefRoot(path~ : String, missing~ : Array[String])
+  InvalidRuntime(path~ : String, missing~ : Array[String])
+  PrebuiltNotFound(platform~ : String)
+  ManifestRead(path~ : String, detail~ : String)
+  ManifestSyntax(path~ : String, detail~ : String)
+  ManifestShape(path~ : String, detail~ : String)
+  ManifestField(path~ : String, field~ : String)
+  PrebuiltVersionMismatch(expected~ : String, actual~ : String)
+  ActivePlatformMismatch(expected~ : String, actual~ : String)
+  ActiveVersionMismatch(expected~ : String, actual~ : String)
+  ActiveDistMismatch(expected~ : String, actual~ : String)
+  UnsafeGeneratedDirectory(path~ : String)
+  UnsafeInstallDirectory(path~ : String)
+  RuntimeConflict(path~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CefRuntimeError::message(Self) -> String
+
+pub(all) suberror CefUsageError {
+  InvalidArchiveName(name~ : String)
+  InvalidChecksum(value~ : String)
+  MissingCustomChecksum
+} derive(Eq, @debug.Debug)
+pub fn CefUsageError::message(Self) -> String
 
 // Types and methods
-pub(all) enum CefError {
-  UsageError(String, Bool)
-  CommandError(String)
-}
 
 // Type aliases
 

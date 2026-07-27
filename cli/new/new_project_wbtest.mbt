@@ -1,31 +1,28 @@
 ///|
 fn must_parse(args : Array[String]) -> RawNewProjectOptions {
-  parse_new_args(args) catch {
+  new_options_from_matches(command().parse(argv=args, env=Map([]))) catch {
     err => abort(err.to_string())
   }
 }
 
 ///|
-fn must_options(args : Array[String]) -> NewProjectOptions {
-  match options_from_raw(".", must_parse(args)) {
-    Ok(options) => options
-    Err(message) => abort(message)
-  }
+fn must_options(
+  args : Array[String],
+) -> NewProjectOptions raise NewProjectInputError {
+  options_from_raw(".", must_parse(args))
 }
 
 ///|
-fn must_plan(options : NewProjectOptions) -> Array[PlannedFile] {
-  match
-    plan_project_files(
-      options.title,
-      options.module_name,
-      options.identifier,
-      options.width,
-      options.height,
-    ) {
-    Ok(files) => files
-    Err(message) => abort(message)
-  }
+fn must_plan(
+  options : NewProjectOptions,
+) -> Array[PlannedFile] raise NewProjectTemplateError {
+  plan_project_files(
+    options.title,
+    options.module_name,
+    options.identifier,
+    options.width,
+    options.height,
+  )
 }
 
 ///|
@@ -63,11 +60,10 @@ test "path slug drives default title and module" {
 
 ///|
 test "current directory path uses cwd basename as default slug" {
-  let options = match
-    options_from_raw("C:\\Users\\dev\\sample-app", must_parse(["."])) {
-    Ok(options) => options
-    Err(message) => abort(message)
-  }
+  let options = options_from_raw(
+    "C:\\Users\\dev\\sample-app",
+    must_parse(["."]),
+  )
   assert_eq(options.target_dir, ".")
   assert_eq(options.title, "Sample App")
   assert_eq(options.module_name, "sample-app")
@@ -100,31 +96,38 @@ test "git flag is tri-state" {
 
 ///|
 test "invalid dimensions fail" {
-  match options_from_raw(".", must_parse(["demo", "--width", "0"])) {
-    Ok(_) => abort("expected width to fail")
-    Err(message) =>
-      assert_true(message.contains("width must be a positive integer"))
+  try options_from_raw(".", must_parse(["demo", "--width", "0"])) catch {
+    NewProjectInputError::InvalidPositiveInteger(field="width", value="0") => ()
+    _ => abort("expected invalid width")
+  } noraise {
+    _ => abort("expected width to fail")
   }
-  match options_from_raw(".", must_parse(["demo", "--height", "abc"])) {
-    Ok(_) => abort("expected height to fail")
-    Err(message) =>
-      assert_true(message.contains("height must be a positive integer"))
+  try options_from_raw(".", must_parse(["demo", "--height", "abc"])) catch {
+    NewProjectInputError::InvalidPositiveInteger(field="height", value="abc") =>
+      ()
+    _ => abort("expected invalid height")
+  } noraise {
+    _ => abort("expected height to fail")
   }
 }
 
 ///|
 test "invalid module fails" {
-  match options_from_raw(".", must_parse(["demo", "--module", "bad name"])) {
-    Ok(_) => abort("expected module to fail")
-    Err(message) =>
-      assert_true(message.contains("module name must not contain spaces"))
+  try
+    options_from_raw(".", must_parse(["demo", "--module", "bad name"]))
+  catch {
+    NewProjectInputError::ModuleContainsSpace => ()
+    _ => abort("expected module name with spaces to fail")
+  } noraise {
+    _ => abort("expected module to fail")
   }
-  match options_from_raw(".", must_parse(["demo", "--module", "bad\"name"])) {
-    Ok(_) => abort("expected module to fail")
-    Err(message) =>
-      assert_true(
-        message.contains("module name contains unsupported character"),
-      )
+  try
+    options_from_raw(".", must_parse(["demo", "--module", "bad\"name"]))
+  catch {
+    NewProjectInputError::ModuleHasUnsupportedCharacter(character='"') => ()
+    _ => abort("expected unsupported module character")
+  } noraise {
+    _ => abort("expected module to fail")
   }
 }
 
@@ -135,18 +138,30 @@ test "default identifier normalizes common slug separators" {
 
 ///|
 test "invalid identifier fails" {
-  match options_from_raw(".", must_parse(["demo", "--identifier", "demo"])) {
-    Ok(_) => abort("expected identifier to fail")
-    Err(message) =>
-      assert_true(message.contains("reverse-DNS bundle identifier"))
+  try
+    options_from_raw(".", must_parse(["demo", "--identifier", "demo"]))
+  catch {
+    NewProjectInputError::InvalidBundleIdentifier(
+      identifier="demo",
+      reason="expected a reverse-DNS name"
+    ) => ()
+    _ => abort("expected reverse-DNS identifier error")
+  } noraise {
+    _ => abort("expected identifier to fail")
   }
-  match
+  try
     options_from_raw(
       ".",
       must_parse(["demo", "--identifier", "com.example.bad_value"]),
-    ) {
-    Ok(_) => abort("expected identifier character to fail")
-    Err(message) => assert_true(message.contains("unsupported character"))
+    )
+  catch {
+    NewProjectInputError::InvalidBundleIdentifier(
+      identifier="com.example.bad_value",
+      reason="contains an unsupported character"
+    ) => ()
+    _ => abort("expected unsupported identifier character")
+  } noraise {
+    _ => abort("expected identifier character to fail")
   }
 }
 
@@ -210,7 +225,7 @@ test "templates receive final module title and size" {
   assert_true(readme.contains("proton_cli build"))
   assert_true(readme.contains("## Bundle"))
   assert_true(readme.contains("bundle = {"))
-  assert_true(readme.contains("proton_cli package app --dry-run"))
+  assert_true(readme.contains("proton_cli package --dry-run"))
 }
 
 ///|
@@ -227,16 +242,19 @@ test "user title can contain template braces" {
 ///|
 test "template render error names template" {
   let context = template_context("Demo", "demo", "dev.proton.demo", 960, 640)
-  let result = render_template(
-    {
-      output_path: "broken",
-      template_name: "broken.tmpl",
-      template_source: "{{missing}}",
-    },
-    context,
-  )
-  match result {
-    Ok(_) => abort("expected render error")
-    Err(message) => assert_true(message.contains("broken.tmpl"))
+  try
+    render_template(
+      {
+        output_path: "broken",
+        template_name: "broken.tmpl",
+        template_source: "{{missing}}",
+      },
+      context,
+    )
+  catch {
+    NewProjectTemplateError::UnresolvedPlaceholder(template="broken.tmpl") => ()
+    _ => abort("expected broken template name")
+  } noraise {
+    _ => abort("expected render error")
   }
 }

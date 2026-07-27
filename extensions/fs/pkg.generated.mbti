@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_fs_activity(@command.AppCommandExtensionContext, FsActivity) -> Unit
+pub async fn emit_fs_activity(@command.AppCommandExtensionContext, FsActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type FsError derive(Eq, @debug.Debug)
 
 // Types and methods
 type ExistsReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
