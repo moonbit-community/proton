@@ -3231,8 +3231,7 @@ int32_t proton_engine_prepare_app(char *error, size_t error_len) {
                               "application setup must run on the UI thread");
     return PROTON_ERR_WRONG_THREAD;
   }
-  return proton_engine_ensure_gtk(error, error_len) ? PROTON_OK
-                                                    : PROTON_ERR_PLATFORM;
+  return PROTON_OK;
 }
 
 int32_t proton_engine_run_app_loop(char *error, size_t error_len) {
@@ -3407,6 +3406,11 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
                                           proton_engine_runtime_t **out_runtime,
                                           char *error,
                                           size_t error_len) {
+  proton_engine_debug_log(
+      "runtime_create_enter runner=%d ui=%d loop=%d",
+      proton_app_runner_is_active() ? 1 : 0,
+      proton_app_runner_is_ui_thread() ? 1 : 0,
+      proton_app_runner_engine_loop_is_running() ? 1 : 0);
   if (proton_app_runner_is_active() &&
       !proton_app_runner_is_ui_thread()) {
     proton_engine_ui_call_t call = {
@@ -3439,9 +3443,6 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     return status;
   }
 
-  if (!proton_engine_ensure_gtk(error, error_len)) {
-    return PROTON_ERR_PLATFORM;
-  }
   proton_engine_init_handlers();
   proton_engine_check_cef_api_hash();
 
@@ -3491,12 +3492,14 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
   }
 
-  if (!cef_initialize(&args, &settings, &g_app.app, NULL)) {
-    cef_string_clear(&settings.browser_subprocess_path);
-    cef_string_clear(&settings.resources_dir_path);
-    cef_string_clear(&settings.locales_dir_path);
-    cef_string_clear(&settings.root_cache_path);
-    proton_engine_free_main_args(&main_args);
+  proton_engine_debug_log("cef_initialize_start");
+  int cef_initialized = cef_initialize(&args, &settings, &g_app.app, NULL);
+  cef_string_clear(&settings.browser_subprocess_path);
+  cef_string_clear(&settings.resources_dir_path);
+  cef_string_clear(&settings.locales_dir_path);
+  cef_string_clear(&settings.root_cache_path);
+  proton_engine_free_main_args(&main_args);
+  if (!cef_initialized) {
     proton_engine_close_wake_pipe(runtime);
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
@@ -3507,15 +3510,27 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
+  g_proton_cef_initialized = 1;
+  proton_engine_debug_log("cef_initialize_done");
+
+  /* CEF's Linux browser process must initialize before GTK starts its
+   * process-global state and helper threads. */
+  proton_engine_debug_log("gtk_initialize_start");
+  if (!proton_engine_ensure_gtk(error, error_len)) {
+    proton_engine_cef_shutdown();
+    proton_engine_close_wake_pipe(runtime);
+    if (runtime->bridge_lock_initialized) {
+      pthread_mutex_destroy(&runtime->bridge_lock);
+      runtime->bridge_lock_initialized = 0;
+    }
+    free(runtime);
+    g_active_runtime = NULL;
+    return PROTON_ERR_PLATFORM;
+  }
+  proton_engine_debug_log("gtk_initialize_done");
   proton_engine_debug_log("runtime_create remote_debugging_port=%d",
                           config.remote_debugging_port);
 
-  cef_string_clear(&settings.browser_subprocess_path);
-  cef_string_clear(&settings.resources_dir_path);
-  cef_string_clear(&settings.locales_dir_path);
-  cef_string_clear(&settings.root_cache_path);
-  proton_engine_free_main_args(&main_args);
-  g_proton_cef_initialized = 1;
   g_proton_cef_runtime_active = 1;
   if (!proton_engine_register_scheme_factory()) {
     proton_engine_cef_shutdown();
