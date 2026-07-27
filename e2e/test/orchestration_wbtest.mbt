@@ -140,6 +140,13 @@ fn app_process_env(
   result[app_child_scenario_env] = scenario
   result[path_key] = prepend_env_path(bin_dir, current_path)
   if @path.sep != '\\' {
+    // CEF must run from a normal system-linked executable on Unix. Moon's
+    // default TCC runner uses a .rspfile process that aborts during CEF
+    // shutdown, so nested Moon commands inherit an explicit host compiler.
+    result["MOON_CC"] = match @env.get_env_var("MOON_CC") {
+      Some(value) if value.trim() != "" => value
+      _ => "cc"
+    }
     result["LD_LIBRARY_PATH"] = prepend_env_path(
       lib_dir,
       prepend_env_path(
