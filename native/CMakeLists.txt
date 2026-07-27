@@ -344,7 +344,16 @@ if(BUILD_TESTING)
     target_link_libraries(proton_exports_smoke PRIVATE ${CMAKE_DL_LIBS})
   endif()
 
-  add_test(NAME proton_smoke COMMAND proton_smoke)
+  if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
+    add_test(
+      NAME proton_smoke
+      COMMAND "${CMAKE_COMMAND}"
+        "-DPROTON_SMOKE_EXECUTABLE=$<TARGET_FILE:proton_smoke>"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_proton_smoke.cmake"
+    )
+  else()
+    add_test(NAME proton_smoke COMMAND proton_smoke)
+  endif()
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
