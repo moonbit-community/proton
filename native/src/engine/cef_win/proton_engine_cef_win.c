@@ -1316,8 +1316,12 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
   }
   cef_string_t scheme = {0};
   proton_engine_set_string(&scheme, "proton");
+  // Give proton:// documents a real origin and allow CORS-mode same-origin
+  // resources such as ES modules to reach the custom scheme handler.
   registrar->add_custom_scheme(
-      registrar, &scheme, CEF_SCHEME_OPTION_SECURE | CEF_SCHEME_OPTION_FETCH_ENABLED);
+      registrar, &scheme,
+      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
+          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
   cef_string_clear(&scheme);
 }
 
@@ -2701,6 +2705,9 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   if (window->browser != NULL) {
     proton_engine_browser_release(window->browser);
     window->browser = NULL;
+  }
+  if (!window->closed) {
+    proton_engine_debug_log("window_closed browser=%d", window->browser_id);
   }
   window->closed = 1;
   window->browser_close_requested = 1;
