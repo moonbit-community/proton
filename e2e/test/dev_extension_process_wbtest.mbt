@@ -417,11 +417,11 @@ async fn run_dev_extension_scenario_with_retry(
       true
     } catch {
       error => {
-        if attempt == 1 || !retryable_startup_error(error) {
+        if attempt == 1 || !retryable_dev_extension_error(error) {
           raise error
         }
         println(
-          "MoonBit 47_dev_extension_js startup attempt failed; retrying once",
+          "MoonBit 47_dev_extension_js transient attempt failed; retrying once",
         )
         false
       }
@@ -432,6 +432,33 @@ async fn run_dev_extension_scenario_with_retry(
     @async.sleep(1000)
     attempt = attempt + 1
   }
+}
+
+///|
+fn retryable_dev_extension_error(error : Error) -> Bool {
+  // This scenario deliberately reloads and replaces its direct page target.
+  // On a loaded CI runner CEF can close the old page WebSocket just before the
+  // reconnect loop takes ownership.  Recreate the isolated scenario once;
+  // persistent transport closures still fail on the second attempt.
+  match error {
+    @io.ReaderClosed => true
+    _ => retryable_startup_error(error)
+  }
+}
+
+///|
+test "dev extension retry classification stays narrow" {
+  assert_true(retryable_dev_extension_error(@io.ReaderClosed))
+  assert_true(
+    retryable_dev_extension_error(
+      Failure::Failure("scenario app exited before CDP became ready"),
+    ),
+  )
+  assert_false(
+    retryable_dev_extension_error(
+      Failure::Failure("connected CDP probe failed"),
+    ),
+  )
 }
 
 ///|

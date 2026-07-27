@@ -20,6 +20,7 @@ test "E2E paths resolve backslash relative runtime directories" {
     "runtimes" +
     @path.sep.to_string() +
     "test"
+  assert_true(@path.Path(root).is_absolute())
   assert_true(resolved.has_prefix(root + @path.sep.to_string()))
   assert_true(resolved.has_suffix(suffix))
 }

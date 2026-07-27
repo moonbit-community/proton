@@ -25,8 +25,19 @@ async fn choose_cdp_port() -> Int {
 }
 
 ///|
+fn current_working_directory() -> String raise {
+  let cwd = @env.current_dir().unwrap_or("")
+  guard cwd != "" else { fail("could not determine current directory") }
+  let cwd = @path.Path(normalize_platform_path(cwd)).normalize()
+  guard cwd.is_absolute() else {
+    fail("current directory is not absolute: " + cwd.to_string())
+  }
+  cwd.to_string()
+}
+
+///|
 fn repository_root() -> String raise {
-  let mut current = @path.Path(".").resolve()
+  let mut current = @path.Path(current_working_directory())
   for ;; {
     let current_text = current.to_string()
     if @mbfs.path_exists(join_path(current_text, "moon.work")) {
@@ -37,6 +48,15 @@ fn repository_root() -> String raise {
       fail("could not find repository root from " + current_text)
     }
     current = parent
+  }
+}
+
+///|
+fn normalize_platform_path(path : String) -> String {
+  if @path.sep == '\\' {
+    path.replace_all(old="/", new="\\")
+  } else {
+    path.replace_all(old="\\", new="/")
   }
 }
 
@@ -187,6 +207,18 @@ async fn[X] spawn_scenario_app(
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
   let executable = current_test_executable()
+  if @path.sep != '\\' {
+    // Unix native tests can be launched through Moon even when the generated
+    // test executable itself was emitted without an execute bit.  The E2E
+    // child reuses that exact binary, so make its generated mode explicit.
+    @fs.chmod(executable, 0o755) catch {
+      error =>
+        fail(
+          "failed to make E2E test executable runnable: " +
+          @debug.render(@debug.to_repr(error)),
+        )
+    }
+  }
   let output_path = join_path(
     root,
     "target/proton-e2e-child-" + cdp_port.to_string() + ".log",
@@ -217,7 +249,13 @@ async fn[X] spawn_scenario_app(
 fn current_test_executable() -> String raise {
   let args = @sys.get_cli_args()
   guard args.length() > 0 else { fail("test executable path is unavailable") }
-  @path.Path(args[0]).resolve().to_string()
+  let executable = normalize_platform_path(args[0])
+  let path = @path.Path(executable)
+  if path.is_absolute() {
+    path.normalize().to_string()
+  } else {
+    resolve_path(current_working_directory(), executable)
+  }
 }
 
 ///|
@@ -289,7 +327,7 @@ async fn wait_for_spawned_app_cdp(
         fail(
           "scenario app exited before CDP became ready: code=" +
           code.to_string() +
-          app_output_suffix(app.output_path),
+          app_diagnostic_suffix(app),
         )
       None => ()
     }
@@ -326,14 +364,14 @@ async fn wait_for_spawned_app_cdp(
       "CDP page target did not become ready within " +
       timeout.to_string() +
       "ms" +
-      app_output_suffix(app.output_path),
+      app_diagnostic_suffix(app),
     )
   }
   fail(
     "CDP endpoint did not start within " +
     timeout.to_string() +
     "ms" +
-    app_output_suffix(app.output_path),
+    app_diagnostic_suffix(app),
   )
 }
 
@@ -346,13 +384,24 @@ fn app_exit_code(process : @process.Process) -> Int? {
 
 ///|
 fn app_output_suffix(path : String) -> String {
+  file_output_suffix(path, "Scenario output")
+}
+
+///|
+fn app_diagnostic_suffix(app : SpawnedScenarioApp) -> String {
+  app_output_suffix(app.output_path) +
+  file_output_suffix(app.native_log_path, "Native log")
+}
+
+///|
+fn file_output_suffix(path : String, label : String) -> String {
   let output = @mbfs.read_file_to_string(path, encoding="utf8") catch {
     _ => return ""
   }
   if output == "" {
     ""
   } else {
-    "\nScenario output:\n" + output
+    "\n" + label + ":\n" + output
   }
 }
 
@@ -431,19 +480,11 @@ async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
 
 ///|
 fn resolve_path(base : String, child : String) -> String {
-  let base = if @path.sep == '\\' {
-    base.replace_all(old="/", new="\\")
-  } else {
-    base.replace_all(old="\\", new="/")
-  }
-  let child = if @path.sep == '\\' {
-    child.replace_all(old="/", new="\\")
-  } else {
-    child.replace_all(old="\\", new="/")
-  }
+  let base = normalize_platform_path(base)
+  let child = normalize_platform_path(child)
   let path = @path.Path(child)
   if path.is_absolute() {
-    path.normalize().resolve().to_string()
+    path.normalize().to_string()
   } else {
     let combined = if base == "" {
       child
@@ -452,7 +493,7 @@ fn resolve_path(base : String, child : String) -> String {
     } else {
       base + @path.sep.to_string() + child
     }
-    @path.Path(combined).normalize().resolve().to_string()
+    @path.Path(combined).normalize().to_string()
   }
 }
 
