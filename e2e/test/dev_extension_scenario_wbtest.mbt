@@ -85,7 +85,10 @@ async fn run_dev_extension_production_page_probe(
   let page = connect_spawned_page(app, target, timeout)
   defer page.close()
   ignore(page.send_schema_command("Runtime.enable"))
-  wait_for_ready(page, dev_extension_ready_expression(), timeout)
+  wait_for_ready(page, dev_extension_ready_expression(), timeout) catch {
+    error =>
+      fail(error.to_string() + dev_extension_ready_diagnostic_suffix(page, app))
+  }
   let value = evaluate_json(
     page,
     dev_extension_production_probe_expression(),
@@ -102,6 +105,56 @@ async fn run_dev_extension_production_page_probe(
 ///|
 fn dev_extension_ready_expression() -> String {
   "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && document.querySelector('#bridge-status')?.dataset.ready === 'true')"
+}
+
+///|
+async fn dev_extension_ready_diagnostic_suffix(
+  page : @client.CdpClient,
+  app : SpawnedScenarioApp,
+) -> String {
+  let page_diagnostic = evaluate_json(
+    page,
+    dev_extension_ready_diagnostic_expression(),
+    false,
+  ) catch {
+    error =>
+      Json::string("failed to collect page diagnostics: " + error.to_string())
+  }
+  "\nProduction page diagnostics:\n" +
+  page_diagnostic.stringify() +
+  app_diagnostic_suffix(app)
+}
+
+///|
+fn dev_extension_ready_diagnostic_expression() -> String {
+  (
+    #|(() => {
+    #|  try {
+    #|    const moonbit = window.__MoonBit__;
+    #|    const bridgeStatus = document.querySelector("#bridge-status");
+    #|    const keys = (value) => value && typeof value === "object"
+    #|      ? Object.keys(value).sort()
+    #|      : [];
+    #|    return {
+    #|      url: location.href,
+    #|      title: document.title,
+    #|      ready_state: document.readyState,
+    #|      bridge_status_text: bridgeStatus?.textContent || "",
+    #|      bridge_status_dataset: bridgeStatus ? { ...bridgeStatus.dataset } : {},
+    #|      moonbit_keys: keys(moonbit),
+    #|      core_keys: keys(moonbit?.core),
+    #|      ticker_keys: keys(moonbit?.ticker),
+    #|      has_bridge: typeof moonbit?.core?.invokeOp === "function",
+    #|      has_proxy: typeof moonbit?.ticker?.start === "function",
+    #|      has_event_proxy: typeof moonbit?.ticker?.on === "function",
+    #|      script_sources: Array.from(document.scripts, (script) => script.src || "[inline]"),
+    #|      body_text: (document.body?.innerText || document.body?.textContent || "").slice(0, 4000),
+    #|    };
+    #|  } catch (error) {
+    #|    return { diagnostic_error: String(error?.stack || error) };
+    #|  }
+    #|})()
+  )
 }
 
 ///|
