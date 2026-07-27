@@ -282,6 +282,7 @@ async fn wait_for_spawned_app_cdp(
   timeout : Int,
 ) -> Unit {
   let mut elapsed = 0
+  let mut browser_ready = false
   while elapsed <= timeout {
     match app_exit_code(app.process) {
       Some(code) =>
@@ -292,7 +293,7 @@ async fn wait_for_spawned_app_cdp(
         )
       None => ()
     }
-    let ready = try {
+    let endpoint_ready = try {
       ignore(
         @client.wait_for_browser_endpoint(
           endpoint,
@@ -303,10 +304,30 @@ async fn wait_for_spawned_app_cdp(
     } catch {
       _ => false
     }
-    if ready {
-      return
+    if endpoint_ready {
+      browser_ready = true
+      let page_ready = try {
+        let targets = @client.discover_targets(cdp_target_from(endpoint))
+        targets.any(info => info.target_type == "page")
+      } catch {
+        _ => false
+      }
+      if page_ready {
+        return
+      }
+      @async.sleep(100)
+      elapsed = elapsed + 100
+    } else {
+      elapsed = elapsed + cdp_start_poll_timeout_ms
     }
-    elapsed = elapsed + cdp_start_poll_timeout_ms
+  }
+  if browser_ready {
+    fail(
+      "CDP page target did not become ready within " +
+      timeout.to_string() +
+      "ms" +
+      app_output_suffix(app.output_path),
+    )
   }
   fail(
     "CDP endpoint did not start within " +
