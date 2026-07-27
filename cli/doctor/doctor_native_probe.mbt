@@ -128,9 +128,6 @@ fn doctor_native_checked_buffer_length(required : Int) -> Int? {
 ///|
 fn doctor_native_buffer_text(buffer : FixedArray[Byte]) -> String? {
   let bytes = Bytes::from_array(buffer)
-  if bytes.length() == 0 {
-    return None
-  }
   let end = match bytes.find(b"\x00") {
     Some(index) => index
     None => return None

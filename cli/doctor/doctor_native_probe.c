@@ -26,61 +26,31 @@ static void doctor_windows_error(char *buffer, int32_t buffer_len,
     return;
   }
 
-  LPWSTR wide_message = NULL;
+  wchar_t wide_message[512] = {0};
   DWORD wide_length = FormatMessageW(
-      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-          FORMAT_MESSAGE_IGNORE_INSERTS,
-      NULL, error_code, 0, (LPWSTR)&wide_message, 0, NULL);
-  if (wide_length == 0 || wide_message == NULL) {
-    if (wide_message != NULL) {
-      LocalFree(wide_message);
-    }
-    snprintf(buffer, (size_t)buffer_len, "Windows error %lu",
-             (unsigned long)error_code);
-    return;
-  }
+      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+      error_code, 0, wide_message,
+      (DWORD)(sizeof(wide_message) / sizeof(wide_message[0])), NULL);
   while (wide_length > 0 &&
          (wide_message[wide_length - 1] == L'\r' ||
           wide_message[wide_length - 1] == L'\n' ||
           wide_message[wide_length - 1] == L' ')) {
     wide_length--;
   }
-  if (wide_length == 0) {
-    LocalFree(wide_message);
-    snprintf(buffer, (size_t)buffer_len, "Windows error %lu",
-             (unsigned long)error_code);
-    return;
+  if (wide_length > 0) {
+    char utf8_message[1024] = {0};
+    int converted = WideCharToMultiByte(
+        CP_UTF8, 0, wide_message, (int)wide_length, utf8_message,
+        (int)sizeof(utf8_message) - 1, NULL, NULL);
+    if (converted > 0) {
+      utf8_message[converted] = '\0';
+      snprintf(buffer, (size_t)buffer_len, "Windows error %lu: %s",
+               (unsigned long)error_code, utf8_message);
+      return;
+    }
   }
-
-  int utf8_required = WideCharToMultiByte(
-      CP_UTF8, 0, wide_message, (int)wide_length, NULL, 0, NULL, NULL);
-  if (utf8_required <= 0) {
-    LocalFree(wide_message);
-    snprintf(buffer, (size_t)buffer_len, "Windows error %lu",
-             (unsigned long)error_code);
-    return;
-  }
-  char *utf8_message = (char *)malloc((size_t)utf8_required + 1);
-  if (utf8_message == NULL) {
-    LocalFree(wide_message);
-    doctor_copy_text(buffer, buffer_len,
-                     "out of memory while formatting Windows error");
-    return;
-  }
-  int converted = WideCharToMultiByte(CP_UTF8, 0, wide_message,
-                                      (int)wide_length, utf8_message,
-                                      utf8_required, NULL, NULL);
-  LocalFree(wide_message);
-  if (converted <= 0) {
-    free(utf8_message);
-    snprintf(buffer, (size_t)buffer_len, "Windows error %lu",
-             (unsigned long)error_code);
-    return;
-  }
-  utf8_message[converted] = '\0';
-  snprintf(buffer, (size_t)buffer_len, "Windows error %lu: %s",
-           (unsigned long)error_code, utf8_message);
-  free(utf8_message);
+  snprintf(buffer, (size_t)buffer_len, "Windows error %lu",
+           (unsigned long)error_code);
 }
 
 static doctor_library_t doctor_open(const char *path, char *error_buffer,
@@ -140,8 +110,6 @@ enum {
   DOCTOR_NATIVE_ABI_MISMATCH = -6,
 };
 
-#define DOCTOR_NATIVE_MAGIC UINT32_C(0x50524f42)
-
 typedef int32_t (*doctor_abi_fn)(void);
 typedef int32_t (*doctor_info_fn)(char *, int32_t, int32_t *);
 typedef int32_t (*doctor_probe_fn)(const char *);
@@ -155,8 +123,6 @@ typedef int32_t (*doctor_destroy_fn)(int64_t);
  * the finalizer or by an explicit close.
  */
 typedef struct doctor_native_library {
-  uint32_t magic;
-  int32_t closed;
   doctor_library_t library;
   doctor_info_fn info;
   doctor_probe_fn probe;
@@ -165,32 +131,19 @@ typedef struct doctor_native_library {
   doctor_destroy_fn destroy;
 } doctor_native_library_t;
 
-static int doctor_context_is_valid(const doctor_native_library_t *context) {
-  return context != NULL && context->magic == DOCTOR_NATIVE_MAGIC;
-}
-
 static int doctor_context_is_open(const doctor_native_library_t *context) {
-  return doctor_context_is_valid(context) && !context->closed &&
-         context->library != NULL;
+  return context != NULL && context->library != NULL;
 }
 
 static void doctor_mark_context_closed(doctor_native_library_t *context) {
-  context->library = NULL;
-  context->info = NULL;
-  context->probe = NULL;
-  context->last_error = NULL;
-  context->create = NULL;
-  context->destroy = NULL;
-  context->closed = 1;
+  memset(context, 0, sizeof(*context));
 }
 
 static void doctor_release_context(doctor_native_library_t *context) {
-  if (!doctor_context_is_valid(context) || context->closed) {
+  if (!doctor_context_is_open(context)) {
     return;
   }
-  if (context->library != NULL) {
-    doctor_close(context->library);
-  }
+  doctor_close(context->library);
   doctor_mark_context_closed(context);
 }
 
@@ -201,7 +154,7 @@ static void doctor_release_context(doctor_native_library_t *context) {
  * execute. The operating system reclaims the module when the process exits.
  */
 static void doctor_abandon_context(doctor_native_library_t *context) {
-  if (!doctor_context_is_valid(context) || context->closed) {
+  if (!doctor_context_is_open(context)) {
     return;
   }
   doctor_mark_context_closed(context);
@@ -209,12 +162,7 @@ static void doctor_abandon_context(doctor_native_library_t *context) {
 
 static void doctor_native_library_finalize(void *payload) {
   doctor_native_library_t *context = (doctor_native_library_t *)payload;
-  if (!doctor_context_is_valid(context)) {
-    return;
-  }
   doctor_release_context(context);
-  /* The external-object container itself is owned and reclaimed by MoonBit. */
-  context->magic = 0;
 }
 
 static doctor_native_library_t *doctor_make_context(void) {
@@ -223,8 +171,6 @@ static doctor_native_library_t *doctor_make_context(void) {
           doctor_native_library_finalize,
           (uint32_t)sizeof(doctor_native_library_t));
   memset(context, 0, sizeof(*context));
-  context->magic = DOCTOR_NATIVE_MAGIC;
-  context->closed = 1;
   return context;
 }
 
@@ -243,7 +189,7 @@ static int32_t doctor_copy_text(char *buffer, int32_t buffer_len,
     memcpy(buffer, text, copy_len);
     buffer[copy_len] = '\0';
   }
-  return (int32_t)required;
+  return required > INT32_MAX ? INT32_MAX : (int32_t)required;
 }
 
 static int32_t doctor_invalid_handle(char *buffer, int32_t buffer_len) {
@@ -331,7 +277,6 @@ MOONBIT_FFI_EXPORT doctor_native_library_t *proton_doctor_native_open(
     doctor_copy_text(error_buffer, error_buffer_len, missing_symbol);
     return context;
   }
-  context->closed = 0;
   context->library = library;
   context->info = info;
   context->probe = probe;
