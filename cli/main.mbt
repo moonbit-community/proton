@@ -4,8 +4,8 @@ fn print_usage() -> Unit {
     #|Usage:
     #|  proton_cli version
     #|  proton_cli [-C DIR] new [PATH] [--title <title>] [--module <module>] [--identifier <id>] [--width <px>] [--height <px>] [--no-check] [-y|--yes]
-    #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
-    #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
+    #|  proton_cli [-C DIR] dev [PACKAGE] [--config <path>] [--moon-target-dir <dir>] [--url <url>] [--command <command>] [--frontend-cwd <dir>] [-- [APP_ARGS]...]
+    #|  proton_cli [-C DIR] build [PACKAGE] [--config <path>] [--moon-target-dir <dir>] [--no-frontend] [-- [MOON_BUILD_ARGS]...]
     #|  proton_cli [-C DIR] package [PACKAGE] [--config <path>] [--target <app|zip>] [--output <dir>] [--no-build] [--dry-run] [--sign] [--notarize]
     #|  proton_cli [-C DIR] doctor [--dry-run] [--verbose] [--deep] [--frontend] [--release] [--run] [--fix] [--json|--json-lines] [--quiet] [--section <name>]... [--output <path>]
     #|  proton_cli codegen <input.mbt> -o <output.g.mbt>

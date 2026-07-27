@@ -23,6 +23,7 @@ pub(all) enum DevError {
 struct RawDevOptions {
   app_package : String
   config_path : String?
+  moon_target_dir : String?
   url : String?
   command : String?
   frontend_cwd : String?
@@ -74,6 +75,7 @@ pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, DevError] {
         None => None
       }
   }
+  let moon_target_dir = raw.moon_target_dir.map(path => resolve_path(root, path))
   match validate_frontend_dev_url(frontend_url, raw.ready_path) {
     Ok(_) => ()
     Err(error) => return Err(error)
@@ -134,7 +136,8 @@ pub async fn run(cwd : String, args : Array[String]) -> Result[Unit, DevError] {
         Err(error) => return Err(error)
       }
     }
-    let code = match run_app(root, raw.app_package, raw.app_args, env) {
+    let code = match
+      run_app(root, raw.app_package, raw.app_args, env, moon_target_dir) {
       Ok(code) => code
       Err(error) => return Err(error)
     }
@@ -154,6 +157,7 @@ fn print_dev_usage() -> Unit {
     #|
     #|Options:
     #|  --config <path>          Proton project config (default: package/cwd/root moon.proton)
+    #|  --moon-target-dir <dir>  Target directory for the app's internal Moon invocation
     #|  --url <url>              Override frontend.dev_url
     #|  --command <command>      Override frontend.before_dev
     #|  --frontend-cwd <dir>     Override frontend.cwd
@@ -172,6 +176,7 @@ fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
   let app_args : Array[String] = []
   let mut app_package : String? = None
   let mut config_path : String? = None
+  let mut moon_target_dir : String? = None
   let mut url : String? = None
   let mut command : String? = None
   let mut frontend_cwd : String? = None
@@ -192,6 +197,14 @@ fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
       match read_option_value(args, index, "--config") {
         Ok(value) => {
           config_path = Some(value)
+          index = index + 2
+        }
+        Err(error) => return Err(error)
+      }
+    } else if arg == "--moon-target-dir" {
+      match read_option_value(args, index, "--moon-target-dir") {
+        Ok(value) => {
+          moon_target_dir = Some(value)
           index = index + 2
         }
         Err(error) => return Err(error)
@@ -268,6 +281,7 @@ fn parse_dev_args(args : Array[String]) -> Result[RawDevOptions, DevError] {
   Ok(RawDevOptions::{
     app_package: app_package.unwrap_or(default_package),
     config_path,
+    moon_target_dir,
     url,
     command,
     frontend_cwd,
@@ -1012,8 +1026,20 @@ async fn run_app(
   app_package : String,
   app_args : Array[String],
   env : Map[String, String],
+  moon_target_dir : String?,
 ) -> Result[Int, DevError] {
-  let moon_args : Array[String] = ["run", app_package, "--target", "native"]
+  let moon_args : Array[String] = []
+  match moon_target_dir {
+    Some(target_dir) => {
+      moon_args.push("--target-dir")
+      moon_args.push(target_dir)
+    }
+    None => ()
+  }
+  moon_args.push("run")
+  moon_args.push(app_package)
+  moon_args.push("--target")
+  moon_args.push("native")
   if app_args.length() > 0 {
     moon_args.push("--")
     for arg in app_args {

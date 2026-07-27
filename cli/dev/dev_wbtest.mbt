@@ -79,6 +79,14 @@ test "parse dev args package and frontend overrides" {
 }
 
 ///|
+test "parse dev args accepts an isolated Moon target directory" {
+  let raw = require_dev_ok(
+    parse_dev_args(["desktop", "--moon-target-dir", "target/dev-app"]),
+  )
+  @debug.assert_eq(raw.moon_target_dir, Some("target/dev-app"))
+}
+
+///|
 test "read dev frontend config extracts cwd" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
