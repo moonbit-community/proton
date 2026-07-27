@@ -42,6 +42,21 @@ fn find_up(start : String, file_name : String) -> String? {
 }
 
 ///|
+fn find_project_root_marker(start : String) -> (String, String?)? {
+  let moon_mod_path = path_join(start, "moon.mod")
+  if @mbfs.path_exists(moon_mod_path) {
+    return Some((start, Some(moon_mod_path)))
+  }
+  if @mbfs.path_exists(path_join(start, "moon.work")) {
+    return Some((start, None))
+  }
+  match path_parent(start) {
+    Some(parent) => find_project_root_marker(parent)
+    None => None
+  }
+}
+
+///|
 fn path_text_equal(
   left : String,
   right : String,
@@ -107,33 +122,28 @@ fn discover_project(cwd : String) -> ProjectDoctorInfo {
   let cwd = @path.Path(cwd).resolve().to_string()
   let discovered_moon_proton_path = find_up(cwd, "moon.proton")
   let discovered_app_json_path = find_up(cwd, "app.json")
-  let discovered_moon_mod_path = find_up(cwd, "moon.mod")
-  let root = match
-    (
-      discovered_moon_proton_path, discovered_app_json_path, discovered_moon_mod_path,
-    ) {
-    (Some(path), _, _) =>
+  let fallback_root = match
+    (discovered_moon_proton_path, discovered_app_json_path) {
+    (Some(path), _) =>
       match path_parent(path) {
         Some(parent) => parent
         None => cwd
       }
-    (_, Some(path), _) =>
-      match path_parent(path) {
-        Some(parent) => parent
-        None => cwd
-      }
-    (_, _, Some(path)) =>
+    (_, Some(path)) =>
       match path_parent(path) {
         Some(parent) => parent
         None => cwd
       }
     _ => cwd
   }
+  let (root, moon_mod_path) = match find_project_root_marker(cwd) {
+    Some(marker) => marker
+    None => (fallback_root, None)
+  }
   let moon_proton_path = path_option_within_root(
     root, discovered_moon_proton_path,
   )
   let app_json_path = path_option_within_root(root, discovered_app_json_path)
-  let moon_mod_path = path_option_within_root(root, discovered_moon_mod_path)
   let discovered_moon_pkg_path = path_option_within_root(
     root,
     find_up(cwd, "moon.pkg"),

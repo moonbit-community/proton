@@ -19,6 +19,13 @@ fn ensure_test_project_root(path : String) -> String {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
+  @mbfs.write_string_to_file(
+    path_join(root, "moon.mod"),
+    "name = \"doctor-test-project\"\n",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
   root
 }
 
@@ -68,10 +75,11 @@ test "doctor resolves a relative native dist override" {
 }
 
 ///|
-test "doctor project boundary rejects parent paths" {
+test "doctor project boundary rejects outside paths" {
   let root = ensure_test_project_root("target/proton-doctor-boundary")
   let project = discover_project(root)
-  assert_true(project.moon_mod_path is None)
+  assert_eq(project.root, root)
+  assert_eq(project.moon_mod_path, Some(path_join(root, "moon.mod")))
   assert_true(project.moon_pkg_path is None)
   assert_true(path_is_within_project(project, path_join(root, "app.html")))
   assert_false(
@@ -80,6 +88,36 @@ test "doctor project boundary rejects parent paths" {
       @path.Path("target/outside.html").resolve().to_string(),
     ),
   )
+}
+
+///|
+test "doctor keeps package-local config in module context" {
+  let root = ensure_test_project_root("target/proton-doctor-package-config")
+  let package_dir = path_join(root, "desktop")
+  ensure_test_dir(package_dir)
+  @mbfs.write_string_to_file(
+    path_join(package_dir, "moon.proton"),
+    "",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(package_dir, "moon.pkg"),
+    "",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let project = discover_project(package_dir)
+  assert_eq(project.root, root)
+  assert_eq(project.moon_mod_path, Some(path_join(root, "moon.mod")))
+  assert_eq(
+    project.moon_proton_path,
+    Some(path_join(package_dir, "moon.proton")),
+  )
+  assert_eq(project.moon_pkg_path, Some(path_join(package_dir, "moon.pkg")))
+  assert_true(path_is_within_project(project, path_join(root, "frontend")))
 }
 
 ///|
