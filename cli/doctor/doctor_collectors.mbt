@@ -411,8 +411,12 @@ fn doctor_native_runtime_info_from_text(
       ", got " +
       info.abi_version.to_string(),
     )
-  } else if info.build_mode == "" || info.platform == "" {
-    Err("runtime info build_mode and platform must not be empty")
+  } else if info.build_mode != "runtime" && info.build_mode != "abi-only" {
+    Err("runtime info build_mode must be `runtime` or `abi-only`")
+  } else if info.runtime_available != (info.build_mode == "runtime") {
+    Err("runtime info runtime_available is inconsistent with build_mode")
+  } else if info.platform == "" {
+    Err("runtime info platform must not be empty")
   } else if info.features.any(fn(feature) { feature == "" }) {
     Err("runtime info features must not contain empty strings")
   } else {

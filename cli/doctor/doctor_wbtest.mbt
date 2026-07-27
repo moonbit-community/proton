@@ -530,6 +530,33 @@ test "doctor renders typed deep runtime probe results" {
     }),
   )
 
+  let inconsistent_info : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(inconsistent_info, {
+    info: Ok(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"abi-only\",\"platform\":\"darwin\",\"features\":[]}",
+    ),
+    probe: Ok(()),
+    smoke: Succeeded,
+  })
+  assert_true(
+    inconsistent_info.any(fn(line) {
+      line.code == "runtime.deep.info_invalid" &&
+      line.hint ==
+      Some("runtime info runtime_available is inconsistent with build_mode")
+    }),
+  )
+
+  match
+    doctor_native_runtime_info_from_text(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"unknown\",\"platform\":\"darwin\",\"features\":[]}",
+    ) {
+    Err(message) =>
+      assert_eq(
+        message, "runtime info build_mode must be `runtime` or `abi-only`",
+      )
+    Ok(_) => abort("expected an unsupported runtime build mode error")
+  }
+
   let failed : Array[DoctorLine] = []
   push_deep_runtime_probe_result(failed, {
     info: Err({ status: -7, message: "runtime info unavailable" }),
