@@ -11,6 +11,8 @@
 typedef struct _cef_browser_t cef_browser_t;
 
 uint64_t proton_engine_window_native_id(proton_engine_window_t *window);
+int proton_engine_runtime_is_headless(proton_engine_runtime_t *runtime);
+int proton_engine_window_is_headless(proton_engine_window_t *window);
 NSWindow *proton_engine_window_get_native_window(proton_engine_window_t *window);
 NSWindow *proton_engine_window_retain_native_window(
     proton_engine_window_t *window);

@@ -545,6 +545,7 @@ static int expect_runtime_info(void) {
                     strstr(buffer, "\"build_mode\":\"runtime\"") != NULL;
   int has_titlebar_overlay =
       strstr(buffer, "\"titlebar_overlay\"") != NULL;
+  int has_headless_osr = strstr(buffer, "\"headless_osr\"") != NULL;
 #ifdef _WIN32
   int has_managed_app_runner =
       strstr(buffer, "\"managed_app_runner\"") != NULL;
@@ -565,9 +566,17 @@ static int expect_runtime_info(void) {
     fprintf(stderr, "unexpected titlebar overlay capability: %s\n", buffer);
     return 1;
   }
+  if (has_headless_osr != has_runtime) {
+    fprintf(stderr, "unexpected headless OSR capability: %s\n", buffer);
+    return 1;
+  }
 #else
   if (has_titlebar_overlay) {
     fprintf(stderr, "unsupported titlebar overlay capability: %s\n", buffer);
+    return 1;
+  }
+  if (has_headless_osr) {
+    fprintf(stderr, "unsupported headless OSR capability: %s\n", buffer);
     return 1;
   }
 #endif
@@ -1329,6 +1338,33 @@ int main(void) {
   }
   if (expect_status("runtime_destroy after recreate",
                     proton_runtime_destroy(runtime), PROTON_OK)) {
+    return 1;
+  }
+
+  runtime = PROTON_INVALID_HANDLE;
+  if (expect_status(
+          "runtime_create accepts boolean headless",
+          proton_runtime_create_json(
+              "{\"abi_version\":1,\"headless\":true}", &runtime),
+          PROTON_OK)) {
+    return 1;
+  }
+  if (expect_status("runtime_destroy after headless config",
+                    proton_runtime_destroy(runtime), PROTON_OK)) {
+    return 1;
+  }
+
+  runtime = PROTON_INVALID_HANDLE;
+  status = proton_runtime_create_json(
+      "{\"abi_version\":1,\"headless\":\"true\"}", &runtime);
+  if (expect_status("runtime_create rejects non-boolean headless", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (runtime != PROTON_INVALID_HANDLE) {
+    return fail("invalid headless config should leave out handle invalid");
+  }
+  if (expect_last_error_contains("headless")) {
     return 1;
   }
 

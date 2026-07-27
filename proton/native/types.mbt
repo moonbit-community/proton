@@ -271,6 +271,7 @@ fn titlebar_overlay_config_supported() -> Bool {
 struct RuntimeConfig {
   raw_json : String?
   use_bundled : Bool
+  headless : Bool
   runtime_root : String?
   helper_path : String?
   resources_dir : String?
@@ -291,6 +292,10 @@ struct WindowConfig {
 } derive(Debug, Eq)
 
 ///|
+/// Builds an explicit native runtime configuration.
+///
+/// Set `headless` to enable CEF off-screen rendering for every window created
+/// by this runtime. Remote debugging remains independently configurable.
 pub fn RuntimeConfig::new(
   runtime_root? : String,
   helper_path? : String,
@@ -298,10 +303,12 @@ pub fn RuntimeConfig::new(
   locales_dir? : String,
   cache_dir? : String,
   remote_debugging_port? : Int = 0,
+  headless? : Bool = false,
 ) -> RuntimeConfig {
   {
     raw_json: None,
     use_bundled: false,
+    headless,
     runtime_root,
     helper_path,
     resources_dir,
@@ -316,6 +323,7 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
   {
     raw_json: Some(raw_json),
     use_bundled: false,
+    headless: false,
     runtime_root: None,
     helper_path: None,
     resources_dir: None,
@@ -331,15 +339,18 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
 /// Chromium's outer-bundle walk yields the same base bundle id as the browser;
 /// otherwise the MachPort rendezvous service names mismatch and every child
 /// process terminates. Framework and resource discovery still run relative to
-/// the loaded `libproton`, so only the helper needs an explicit path.
+/// the loaded `libproton`, so only the helper needs an explicit path. Set
+/// `headless` to enable CEF off-screen rendering for every window.
 pub fn RuntimeConfig::bundled(
   helper_path? : String,
   cache_dir? : String,
   remote_debugging_port? : Int = 0,
+  headless? : Bool = false,
 ) -> RuntimeConfig {
   {
     raw_json: None,
     use_bundled: true,
+    headless,
     runtime_root: None,
     helper_path,
     resources_dir: None,
@@ -518,6 +529,9 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
       }
       if self.use_bundled {
         fields.set("use_bundled", Json::boolean(true))
+      }
+      if self.headless {
+        fields.set("headless", Json::boolean(true))
       }
       set_optional_string_field(fields, "runtime_root", self.runtime_root)
       set_optional_string_field(fields, "helper_path", self.helper_path)

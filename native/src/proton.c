@@ -38,8 +38,10 @@
 #if PROTON_WITH_ENGINE && \
     (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
+#define PROTON_HEADLESS_OSR_FEATURE ",\"headless_osr\""
 #else
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ""
+#define PROTON_HEADLESS_OSR_FEATURE ""
 #endif
 
 #if PROTON_WITH_ENGINE && defined(__APPLE__)
@@ -196,6 +198,7 @@ int32_t proton_runtime_info_json(char *buffer,
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
+          PROTON_HEADLESS_OSR_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
           PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
