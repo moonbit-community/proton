@@ -447,6 +447,14 @@ fn dev_process_env(
       runtime.lib_dir,
       prepend_env_path(runtime.bin_dir, current_env_value("DYLD_LIBRARY_PATH")),
     )
+    if path_exists(join_path(runtime.bin_dir, "libcef.so")) {
+      // Keep the preload entry free of path separators so Linux runtime roots
+      // containing spaces remain valid. LD_LIBRARY_PATH resolves this name.
+      env["LD_PRELOAD"] = prepend_env_path(
+        "libcef.so",
+        current_env_value("LD_PRELOAD"),
+      )
+    }
   }
   env
 }

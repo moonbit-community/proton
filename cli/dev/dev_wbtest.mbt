@@ -253,6 +253,32 @@ test "dev runtime layout validates helper" {
 }
 
 ///|
+test "dev process preloads an indirect Linux CEF runtime" {
+  let root = "target/proton-dev-runtime-preload"
+  let runtime_path = create_fake_dev_runtime(root)
+  let runtime = dev_runtime_from_root(
+    resolve_path(".", runtime_path),
+    "test runtime",
+  )
+  write_dev_test_file(join_path(runtime.bin_dir, "libcef.so"), "")
+  let previous = @sys.get_env_var("LD_PRELOAD")
+  defer (match previous {
+    Some(value) => @sys.set_env_var("LD_PRELOAD", value)
+    None => @sys.unset_env_var("LD_PRELOAD")
+  })
+  @sys.set_env_var("LD_PRELOAD", "existing-preload.so")
+  let env = dev_process_env(runtime, None, None)
+  if @path.sep == '\\' {
+    @debug.assert_eq(env.get("LD_PRELOAD"), None)
+  } else {
+    @debug.assert_eq(
+      env.get("LD_PRELOAD"),
+      Some("libcef.so" + path_list_separator() + "existing-preload.so"),
+    )
+  }
+}
+
+///|
 async test "read dev runtime honors PROTON_NATIVE_DIST override" {
   let root = "target/proton-dev-runtime-env"
   let runtime = create_fake_dev_runtime(root)

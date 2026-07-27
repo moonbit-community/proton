@@ -21,7 +21,10 @@ moon -C e2e test -p justjavac/proton/e2e/test \
 
 Keep the package filter and `--no-parallelize`: E2E tests own native processes,
 CDP ports, frontend servers, and runtime logs. `PROTON_NATIVE_DIST` may point
-at a setup-managed runtime or a local engine install. The suite covers:
+at a setup-managed runtime or a local engine install. On Linux, the self-hosted
+runner also supplies the required `libcef.so`
+preload to each application child; callers do not need to set `LD_PRELOAD`
+manually. The suite covers:
 
 - `38_async_extension_add`, `39_sync_async_extensions`, and
   `42_attribute_codegen_commands` command-extension proxies;

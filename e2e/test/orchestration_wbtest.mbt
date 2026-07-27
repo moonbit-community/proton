@@ -179,6 +179,14 @@ fn app_process_env(
         @env.get_env_var("DYLD_LIBRARY_PATH").unwrap_or(""),
       ),
     )
+    if @mbfs.path_exists(join_path(bin_dir, "libcef.so")) {
+      // Linux CEF wraps close(2) and must precede libc in the dynamic map.
+      // Resolve the basename through LD_LIBRARY_PATH so paths with spaces work.
+      result["LD_PRELOAD"] = prepend_env_path(
+        "libcef.so",
+        @env.get_env_var("LD_PRELOAD").unwrap_or(""),
+      )
+    }
   }
   result
 }

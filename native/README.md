@@ -145,6 +145,15 @@ On Linux, the engine build expects `Release/libcef.so` under the runtime root,
 plus `Resources/icudtl.dat` and `Resources/locales/`. This switches the build
 to `src/engine/cef_linux/proton_engine_cef_linux.c`.
 
+Linux CEF exports a `close(2)` wrapper that resolves libc with
+`dlsym(RTLD_NEXT, "close")`. Because applications link only `libproton.so`,
+`libcef.so` is otherwise an indirect dependency loaded after libc and CEF
+aborts with `close symbol missing`. Linux launchers must put the runtime `bin`
+directory on `LD_LIBRARY_PATH` and prepend the basename `libcef.so` to
+`LD_PRELOAD`. `proton_cli dev`, the self-hosted E2E runner, and native CTest do
+this automatically. Using the basename keeps runtime paths containing spaces
+valid.
+
 Linux `titlebar_style: "overlay"` uses GTK client chrome on the existing X11
 engine path. The CEF child fills the complete client area, while GTK-native
 minimize, maximize/restore, and close buttons are raised above the browser in
@@ -313,7 +322,10 @@ moon -C proton info --target native
 ```bash
 ctest --test-dir native/build-engine --output-on-failure
 node native/scripts/verify_link_config.mjs native/dist
-PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton test native --target native --diagnostic-limit 80
+LD_LIBRARY_PATH="$PWD/native/dist/bin:$PWD/native/dist/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
+PROTON_NATIVE_DIST=$PWD/native/dist \
+  moon -C proton test native --target native --diagnostic-limit 80
 PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton check --target native --diagnostic-limit 80
 PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton info --target native
 ```

@@ -156,7 +156,10 @@ jobs:
         run: |
           moon check --target native --deny-warn
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a moon -C proton test native --target native --diagnostic-limit 80
+            xvfb-run -a env \
+              LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+              LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
+              moon -C proton test native --target native --diagnostic-limit 80
             xvfb-run -a moon -C cli test -p justjavac/proton_cli \
               justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
               justjavac/proton_cli/cef justjavac/proton_cli/codegen \

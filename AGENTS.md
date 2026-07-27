@@ -78,6 +78,17 @@ developer must perform them.
 - `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`
 
+On Linux, an engine-linked process that is launched directly must also put the
+active runtime `bin` and `lib` directories on `LD_LIBRARY_PATH` and preload the
+basename `libcef.so`. Native CTest, `proton_cli dev`, and the self-hosted E2E
+runner apply this automatically. For direct MoonBit native tests, use:
+
+```sh
+LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
+  moon -C proton test native --target native --diagnostic-limit 80
+```
+
 Use the smallest relevant validation set while iterating, then run broader
 native checks before handing off larger refactors.
 
