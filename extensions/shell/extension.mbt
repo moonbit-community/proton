@@ -33,32 +33,21 @@ extern "C" fn reveal_item_ffi(path : Bytes) -> Bool = "extensions_shell_reveal_i
 
 ///|
 /// Verifies that the shell extension is available on the current platform.
-fn ensure_supported() -> Result[Unit, String] {
+fn ensure_supported() -> Unit raise ShellError {
   if is_windows_ffi() {
-    Ok(())
+    ()
   } else {
-    Err("shell extension currently supports Windows native builds only")
-  }
-}
-
-///|
-/// Runs a shell operation only when native support is available.
-fn[Reply] with_supported(
-  callback : () -> Result[Reply, String],
-) -> Result[Reply, String] {
-  match ensure_supported() {
-    Err(error) => Err(error)
-    Ok(_) => callback()
+    raise UnsupportedPlatform
   }
 }
 
 ///|
 /// Rejects empty shell targets before calling native launchers.
-fn validate_target(value : String, label : String) -> Result[String, String] {
+fn validate_target(value : String, label : String) -> String raise ShellError {
   if value.is_empty() {
-    Err(label + " must not be empty")
+    raise EmptyTarget(field=label)
   } else {
-    Ok(value)
+    value
   }
 }
 
@@ -69,16 +58,12 @@ fn run_shell_action(
   target : String,
   label : String,
   launcher : (Bytes) -> Bool,
-) -> Result[ShellReply, String] {
-  match validate_target(target, label) {
-    Err(error) => Err(error)
-    Ok(target) => {
-      guard launcher(@ffi.to_wstr(target)) else {
-        return Err("shell.\{operation} failed")
-      }
-      Ok(ShellReply::{ launched: true })
-    }
+) -> ShellReply raise ShellError {
+  let target = validate_target(target, label)
+  guard launcher(@ffi.to_wstr(target)) else {
+    raise LaunchFailed(operation~, target~)
   }
+  ShellReply::{ launched: true }
 }
 
 ///|
@@ -87,17 +72,13 @@ fn run_shell_action(
 async fn open(
   context : @proton_command.AppCommandExtensionContext,
   target : String,
-) -> Result[ShellReply, String] {
-  match
-    with_supported(fn() {
-      run_shell_action("open", target, "shell.open target", open_shell_ffi)
-    }) {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_shell_activity(context, ShellActivity::{ operation: "open", target })
-      Ok(reply)
-    }
-  }
+) -> ShellReply raise ShellError {
+  ensure_supported()
+  let reply = run_shell_action(
+    "open", target, "shell.open target", open_shell_ffi,
+  )
+  emit_shell_activity(context, ShellActivity::{ operation: "open", target })
+  reply
 }
 
 ///|
@@ -106,20 +87,14 @@ async fn open(
 async fn reveal_item(
   context : @proton_command.AppCommandExtensionContext,
   path : String,
-) -> Result[ShellReply, String] {
-  match
-    with_supported(fn() {
-      run_shell_action(
-        "revealItem", path, "shell.revealItem path", reveal_item_ffi,
-      )
-    }) {
-    Err(error) => Err(error)
-    Ok(reply) => {
-      emit_shell_activity(context, ShellActivity::{
-        operation: "revealItem",
-        target: path,
-      })
-      Ok(reply)
-    }
-  }
+) -> ShellReply raise ShellError {
+  ensure_supported()
+  let reply = run_shell_action(
+    "revealItem", path, "shell.revealItem path", reveal_item_ffi,
+  )
+  emit_shell_activity(context, ShellActivity::{
+    operation: "revealItem",
+    target: path,
+  })
+  reply
 }

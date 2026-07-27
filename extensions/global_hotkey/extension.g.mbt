@@ -5,7 +5,7 @@
 pub async fn emit_global_hotkey_activity(
   context : @proton_command.AppCommandExtensionContext,
   payload : GlobalHotkeyActivity,
-) -> Unit {
+) -> Unit noraise {
   context.emit("activity", payload)
 }
 
@@ -13,7 +13,7 @@ pub async fn emit_global_hotkey_activity(
 pub async fn emit_global_hotkey_triggered(
   context : @proton_command.AppCommandExtensionContext,
   payload : GlobalHotkeyTriggered,
-) -> Unit {
+) -> Unit noraise {
   context.emit("triggered", payload)
 }
 
@@ -26,7 +26,7 @@ struct ProtonRegisterPayload {
 async fn __proton_command_register(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonRegisterPayload,
-) -> Result[GlobalHotkeyReply, String] {
+) -> GlobalHotkeyReply raise GlobalHotkeyError {
   register(context, payload.accelerator)
 }
 
@@ -39,7 +39,7 @@ struct ProtonUnregisterPayload {
 async fn __proton_command_unregister(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonUnregisterPayload,
-) -> Result[GlobalHotkeyReply, String] {
+) -> GlobalHotkeyReply raise GlobalHotkeyError {
   unregister(context, payload.accelerator)
 }
 
@@ -49,7 +49,7 @@ struct ProtonListPayload {
 } derive(FromJson)
 
 ///|
-fn __proton_command_list(payload : ProtonListPayload) -> GlobalHotkeyListReply {
+fn __proton_command_list(payload : ProtonListPayload) -> GlobalHotkeyListReply raise GlobalHotkeyError {
   list(payload._payload)
 }
 
@@ -62,7 +62,7 @@ struct ProtonDrainTriggeredPayload {
 async fn __proton_command_drain_triggered(
   context : @proton_command.AppCommandExtensionContext,
   payload : ProtonDrainTriggeredPayload,
-) -> GlobalHotkeyListReply {
+) -> GlobalHotkeyListReply raise GlobalHotkeyError {
   drain_triggered(context, payload._payload)
 }
 
@@ -82,18 +82,17 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("list"),
       @proton_command.AppCommandApiDescriptor::new("drainTriggered"),
     ],
-    fn(context) {
-      context.op_async_result("register", async fn(payload) {
+    fn(context) raise {
+      context.op_async("register", async fn(payload) {
         __proton_command_register(context, payload)
       }, emits_events=true)
-      context.op_async_result("unregister", async fn(payload) {
+      context.op_async("unregister", async fn(payload) {
         __proton_command_unregister(context, payload)
       }, emits_events=true)
       context.op("list", __proton_command_list)
       context.op_async("drainTriggered", async fn(payload) {
         __proton_command_drain_triggered(context, payload)
       }, emits_events=true)
-      Ok(())
     },
     scripts=[
       trigger_poller_script(),

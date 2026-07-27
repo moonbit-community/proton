@@ -9,11 +9,12 @@ import {
 }
 
 // Values
-pub async fn emit_clipboard_activity(@command.AppCommandExtensionContext, ClipboardActivity) -> Unit
+pub async fn emit_clipboard_activity(@command.AppCommandExtensionContext, ClipboardActivity) -> Unit noraise
 
 pub fn extension() -> @extension.Extension
 
 // Errors
+type ClipboardError derive(Eq, @debug.Debug)
 
 // Types and methods
 type ClipboardActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)

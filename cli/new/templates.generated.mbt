@@ -343,7 +343,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|fn register_counter_commands(
           #|  context : @proton_command.AppCommandExtensionContext,
-          #|) -> Result[Unit, String] {
+          #|) -> Unit raise {
           #|  context.op("get", fn(_payload : Json) {
           #|    CounterReply::{ value: counter_value.val }
           #|  })
@@ -355,7 +355,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|    counter_value.val = 0
           #|    CounterReply::{ value: counter_value.val }
           #|  })
-          #|  Ok(())
           #|}
           #|
       ),
@@ -391,8 +390,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- Check with `moon check --target native --diagnostic-limit 80`.
           #|- Run with `proton_cli dev` from the project root.
           #|- Build with `proton_cli build`.
-          #|- Inspect packaging with `proton_cli package app --dry-run`.
-          #|- Package with `proton_cli package app`.
+          #|- Inspect packaging with `proton_cli package --dry-run`.
+          #|- Package with `proton_cli package`.
           #|- If the Proton runtime is not configured, run `proton_cli cef setup`.
           #|
           #|## Project Notes
@@ -469,8 +468,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|Inspect the resolved package plan, then create the application and zip archive:
           #|
           #|```sh
-          #|proton_cli package app --dry-run
-          #|proton_cli package app
+          #|proton_cli package --dry-run
+          #|proton_cli package
           #|```
           #|
           #|## Layout

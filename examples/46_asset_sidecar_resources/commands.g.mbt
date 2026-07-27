@@ -19,7 +19,7 @@ struct ProtonAddLaterPayload {
 } derive(FromJson)
 
 ///|
-async fn __proton_command_add_later(payload : ProtonAddLaterPayload) -> Result[Int, String] {
+async fn __proton_command_add_later(payload : ProtonAddLaterPayload) -> Int {
   add_later(payload.left, payload.right)
 }
 
@@ -48,11 +48,12 @@ fn __proton_command_extension_spec() -> @proton_command.AppCommandExtensionSpec 
       @proton_command.AppCommandApiDescriptor::new("addLater"),
       @proton_command.AppCommandApiDescriptor::new("reportProbe"),
     ],
-    fn(context) {
+    fn(context) raise {
       context.op("add", __proton_command_add)
-      context.op_async_result("addLater", __proton_command_add_later)
+      context.op_async("addLater", async fn(payload) {
+        __proton_command_add_later(payload)
+      })
       context.op("reportProbe", __proton_command_report_probe)
-      Ok(())
     },
   )
 }

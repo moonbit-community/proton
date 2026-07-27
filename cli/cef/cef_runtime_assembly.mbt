@@ -2,7 +2,7 @@
 fn assert_safe_generated_dir(
   generated_dir : String,
   root : String,
-) -> Result[Unit, CefError] {
+) -> Unit raise CefRuntimeError {
   let normalized_generated = generated_dir.replace(old="/", new="\\")
   let normalized_root = root.replace(old="/", new="\\")
   let parent = path_parent(normalized_root)
@@ -10,13 +10,7 @@ fn assert_safe_generated_dir(
     normalized_generated.has_suffix(":\\") ||
     normalized_generated == normalized_root ||
     normalized_generated == parent {
-    Err(
-      CefError::CommandError(
-        "Refusing to replace unsafe generated directory: " + generated_dir,
-      ),
-    )
-  } else {
-    Ok(())
+    raise UnsafeGeneratedDirectory(path=generated_dir)
   }
 }
 
@@ -25,41 +19,23 @@ async fn copy_prebuilt_runtime(
   platform : ProtonPlatform,
   prebuilt_root : String,
   runtime_dir : String,
-) -> Result[Unit, CefError] {
+) -> Unit {
   let bin_dir = path_join(runtime_dir, "bin")
   let lib_dir = path_join(runtime_dir, "lib")
   let include_dir = path_join(runtime_dir, "include")
-  match ensure_dir(bin_dir) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match ensure_dir(lib_dir) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match ensure_dir(include_dir) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  ensure_dir(bin_dir)
+  ensure_dir(lib_dir)
+  ensure_dir(include_dir)
   for relative in proton_prebuilt_relative_files(platform) {
-    match
-      copy_file(
-        path_join(prebuilt_root, relative),
-        path_join(runtime_dir, relative),
-      ) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
+    copy_file(
+      path_join(prebuilt_root, relative),
+      path_join(runtime_dir, relative),
+    )
   }
-  match
-    copy_file_if_exists(
-      path_join(path_join(prebuilt_root, "include"), "proton_native.h"),
-      path_join(include_dir, "proton_native.h"),
-    ) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  Ok(())
+  copy_file_if_exists(
+    path_join(path_join(prebuilt_root, "include"), "proton_native.h"),
+    path_join(include_dir, "proton_native.h"),
+  )
 }
 
 ///|
@@ -67,7 +43,7 @@ async fn copy_cef_runtime(
   platform : ProtonPlatform,
   cef_root : String,
   runtime_dir : String,
-) -> Result[Unit, CefError] {
+) -> Unit {
   if platform.id == "darwin-arm64" {
     let framework = "Chromium Embedded Framework.framework"
     let framework_src = path_join(path_join(cef_root, "Release"), framework)
@@ -76,36 +52,19 @@ async fn copy_cef_runtime(
       framework,
     )
     let bin_dir = path_join(runtime_dir, "bin")
-    match ensure_dir(path_join(runtime_dir, "Frameworks")) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
-    match copy_tree(framework_src, framework_dst) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
-    match
-      copy_tree(
-        path_join(framework_src, "Resources"),
-        path_join(runtime_dir, "Resources"),
-      ) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
+    ensure_dir(path_join(runtime_dir, "Frameworks"))
+    copy_tree(framework_src, framework_dst)
+    copy_tree(
+      path_join(framework_src, "Resources"),
+      path_join(runtime_dir, "Resources"),
+    )
     let libraries = path_join(framework_src, "Libraries")
     for name in ["libEGL.dylib", "libGLESv2.dylib", "libvk_swiftshader.dylib"] {
-      match copy_file(path_join(libraries, name), path_join(bin_dir, name)) {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
+      copy_file(path_join(libraries, name), path_join(bin_dir, name))
     }
-    return Ok(())
+    return
   }
-  match
-    copy_tree(path_join(cef_root, "Release"), path_join(runtime_dir, "bin")) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  copy_tree(path_join(cef_root, "Release"), path_join(runtime_dir, "bin"))
   copy_tree(
     path_join(cef_root, "Resources"),
     path_join(runtime_dir, "Resources"),
@@ -122,51 +81,28 @@ async fn assemble_runtime(
   prebuilt_root : String,
   runtime_dir : String,
   relative_dist : String,
-) -> Result[Unit, CefError] {
-  match assert_safe_generated_dir(runtime_dir, root) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match remove_tree(runtime_dir) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+) -> Unit {
+  assert_safe_generated_dir(runtime_dir, root)
+  remove_tree(runtime_dir)
   println("[INFO] Assembling Proton runtime: " + runtime_dir)
-  match copy_prebuilt_runtime(platform, prebuilt_root, runtime_dir) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
+  copy_prebuilt_runtime(platform, prebuilt_root, runtime_dir)
   if platform.id != "win32-x64" {
-    match
-      make_executable(path_join(path_join(runtime_dir, "bin"), "cef_process")) {
-      Ok(_) => ()
-      Err(error) => return Err(error)
-    }
+    make_executable(path_join(path_join(runtime_dir, "bin"), "cef_process"))
   }
-  match copy_cef_runtime(platform, cef_root, runtime_dir) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match
-    write_runtime_metadata(
-      root,
-      runtime_dir,
-      proton_version,
-      platform.id,
-      cef_name,
-      relative_dist,
-    ) {
-    Ok(_) => ()
-    Err(error) => return Err(error)
-  }
-  match validate_runtime_dist(runtime_dir, platform) {
-    Ok(_) =>
-      validate_active_runtime_manifest(
-        root,
-        platform.id,
-        proton_version,
-        relative_dist,
-      )
-    Err(error) => Err(error)
-  }
+  copy_cef_runtime(platform, cef_root, runtime_dir)
+  write_runtime_metadata(
+    root,
+    runtime_dir,
+    proton_version,
+    platform.id,
+    cef_name,
+    relative_dist,
+  )
+  validate_runtime_dist(runtime_dir, platform)
+  validate_active_runtime_manifest(
+    root,
+    platform.id,
+    proton_version,
+    relative_dist,
+  )
 }

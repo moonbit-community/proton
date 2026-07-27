@@ -24,85 +24,71 @@ struct IdentifyPayload {
 } derive(FromJson)
 
 ///|
+suberror BridgeExampleError {
+  Native(action~ : String, error~ : @native.NativeError)
+  WakeupSetup(detail~ : String)
+  WakeupClosed
+  InvalidPayload(detail~ : String)
+} derive(Debug)
+
+///|
+fn BridgeExampleError::message(self : BridgeExampleError) -> String {
+  match self {
+    Native(action~, error~) =>
+      action +
+      " failed: native error " +
+      error.status().to_string() +
+      ": " +
+      error.message()
+    WakeupSetup(detail~) => "failed to configure runtime wakeup: " + detail
+    WakeupClosed => "runtime wakeup pipe closed unexpectedly"
+    InvalidPayload(detail~) => "invalid identify payload: " + detail
+  }
+}
+
+///|
 fn main {
   @proton.run(() => {
-    match run_multi_window_bridge() {
-      Ok(_) => ()
-      Err(message) => abort(message)
+    run_multi_window_bridge() catch {
+      error => abort(error.to_string())
     }
   })
 }
 
 ///|
-async fn run_multi_window_bridge() -> Result[Unit, String] {
-  let runtime = match
-    @native.Runtime::new(
-      config=@native.RuntimeConfig::bundled(remote_debugging_port=debug_port()),
-    ) {
-    Ok(runtime) => runtime
-    Err(error) => return Err(native_error_message("create runtime", error))
+async fn run_multi_window_bridge() -> Unit {
+  let runtime = @native.Runtime::new(
+    config=@native.RuntimeConfig::bundled(remote_debugging_port=debug_port()),
+  ) catch {
+    error => raise BridgeExampleError::Native(action="create runtime", error~)
   }
-  let window_a = match create_window(runtime, "A") {
-    Ok(window) => window
-    Err(message) => {
-      ignore(runtime.destroy())
-      return Err(message)
-    }
-  }
-  let window_b = match create_window(runtime, "B") {
-    Ok(window) => window
-    Err(message) => {
-      ignore(window_a.destroy())
-      ignore(runtime.destroy())
-      return Err(message)
-    }
-  }
-  match setup_window(window_a, "A") {
-    Err(message) => {
-      ignore(window_b.destroy())
-      ignore(window_a.destroy())
-      ignore(runtime.destroy())
-      return Err(message)
-    }
-    Ok(_) => ()
-  }
-  match setup_window(window_b, "B") {
-    Err(message) => {
-      ignore(window_b.destroy())
-      ignore(window_a.destroy())
-      ignore(runtime.destroy())
-      return Err(message)
-    }
-    Ok(_) => ()
-  }
-  let run_result = run_bridge_pump(runtime)
-  ignore(window_b.destroy())
-  ignore(window_a.destroy())
-  let destroy_result = native_unit_result("destroy runtime", runtime.destroy())
-  match run_result {
-    Err(message) => Err(message)
-    Ok(_) => destroy_result
-  }
+  defer (runtime.destroy() catch { _ => () })
+  let window_a = create_window(runtime, "A")
+  defer (window_a.destroy() catch { _ => () })
+  let window_b = create_window(runtime, "B")
+  defer (window_b.destroy() catch { _ => () })
+  setup_window(window_a, "A")
+  setup_window(window_b, "B")
+  run_bridge_pump(runtime)
 }
 
 ///|
 fn create_window(
   runtime : @native.Runtime,
   label : String,
-) -> Result[@native.Window, String] {
-  match
-    @native.Window::new(
-      runtime,
-      config=@native.WindowConfig::new(
-        title="Bridge Multi " + label,
-        width=520,
-        height=420,
-        initial_url="about:blank",
-        bridge=@native.BridgeConfig::new(ops=["ext:multi/identify"]),
-      ),
-    ) {
-    Ok(window) => Ok(window)
-    Err(error) => Err(native_error_message("create window " + label, error))
+) -> @native.Window raise BridgeExampleError {
+  @native.Window::new(
+    runtime,
+    config=@native.WindowConfig::new(
+      title="Bridge Multi " + label,
+      width=520,
+      height=420,
+      initial_url="about:blank",
+      bridge=@native.BridgeConfig::new(ops=["ext:multi/identify"]),
+    ),
+  ) catch {
+    error =>
+      raise BridgeExampleError::Native(action="create window " + label, error~)
   }
 }
 
@@ -110,11 +96,15 @@ fn create_window(
 fn setup_window(
   window : @native.Window,
   label : String,
-) -> Result[Unit, String] {
-  native_unit_result(
-    "load html " + label,
-    window.load_html(page_html(label), "proton://app/" + label),
-  ).bind(fn(_) { native_unit_result("show window " + label, window.show()) })
+) -> Unit raise BridgeExampleError {
+  window.load_html(page_html(label), "proton://app/" + label) catch {
+    error =>
+      raise BridgeExampleError::Native(action="load html " + label, error~)
+  }
+  window.show() catch {
+    error =>
+      raise BridgeExampleError::Native(action="show window " + label, error~)
+  }
 }
 
 ///|
@@ -137,11 +127,8 @@ fn page_html(label : String) -> String {
 }
 
 ///|
-async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
-  let wakeup = match BridgeWakeup::new(runtime) {
-    Err(message) => return Err(message)
-    Ok(wakeup) => wakeup
-  }
+async fn run_bridge_pump(runtime : @native.Runtime) -> Unit {
+  let wakeup = BridgeWakeup::new(runtime)
   defer wakeup.close(runtime)
   let wake_signal = @core.RuntimeWakeSignal::new()
   @async.with_task_group(group => {
@@ -152,10 +139,12 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
 
       let mut polling_events = true
       while polling_events {
-        match runtime.poll_event() {
-          Err(error) => return Err(native_error_message("poll event", error))
-          Ok(None) => polling_events = false
-          Ok(Some(event)) => {
+        let next_event = runtime.poll_event() catch {
+          error => raise BridgeExampleError::Native(action="poll event", error~)
+        }
+        match next_event {
+          None => polling_events = false
+          Some(event) => {
             did_work = true
             if event.is_window_closed() {
               closed += 1
@@ -166,11 +155,16 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
 
       let mut polling_bridge = true
       while polling_bridge {
-        match runtime.poll_bridge_request() {
-          Err(error) =>
-            return Err(native_error_message("poll bridge request", error))
-          Ok(None) => polling_bridge = false
-          Ok(Some(request)) => {
+        let next_request = runtime.poll_bridge_request() catch {
+          error =>
+            raise BridgeExampleError::Native(
+              action="poll bridge request",
+              error~,
+            )
+        }
+        match next_request {
+          None => polling_bridge = false
+          Some(request) => {
             did_work = true
             let request_id = request.request_id()
             let task = group.spawn(
@@ -201,14 +195,14 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
         match completed {
           Some(response) => {
             did_work = true
-            match runtime.respond_bridge_request(response) {
-              Err(error) =>
+            runtime.respond_bridge_request(response) catch {
+              error =>
                 if !is_stale_bridge_response_error(error) {
-                  return Err(
-                    native_error_message("respond bridge request", error),
+                  raise BridgeExampleError::Native(
+                    action="respond bridge request",
+                    error~,
                   )
                 }
-              Ok(_) => ()
             }
           }
           None => remaining.push(item)
@@ -219,63 +213,73 @@ async fn run_bridge_pump(runtime : @native.Runtime) -> Result[Unit, String] {
       if did_work {
         @async.sleep(0)
       } else {
-        match wakeup.wait(wake_signal) {
-          Err(message) => return Err(message)
-          Ok(_) => ()
-        }
+        wakeup.wait(wake_signal)
       }
     }
     for item in pending {
       item.task.cancel()
     }
-    Ok(())
   })
 }
 
 ///|
 #cfg(not(platform="windows"))
-fn BridgeWakeup::new(runtime : @native.Runtime) -> Result[BridgeWakeup, String] {
+fn BridgeWakeup::new(
+  runtime : @native.Runtime,
+) -> BridgeWakeup raise BridgeExampleError {
   let (reader, writer) = @pipe.pipe() catch {
-    _ => return Err("create runtime wakeup pipe failed")
+    error =>
+      raise BridgeExampleError::WakeupSetup(
+        detail="create pipe: " + error.to_string(),
+      )
   }
-  match runtime.set_wakeup_fd(writer.fd()) {
-    Err(error) => {
+  runtime.set_wakeup_fd(writer.fd()) catch {
+    error => {
       reader.close()
       writer.close()
-      return Err(native_error_message("install runtime wakeup fd", error))
+      raise BridgeExampleError::Native(
+        action="install runtime wakeup fd",
+        error~,
+      )
     }
-    Ok(_) => ()
   }
-  Ok(BridgeWakeup::{ reader, writer })
+  BridgeWakeup::{ reader, writer }
 }
 
 ///|
 #cfg(platform="windows")
-async fn BridgeWakeup::new(
-  runtime : @native.Runtime,
-) -> Result[BridgeWakeup, String] {
-  let source = match runtime.prepare_wakeup_source() {
-    Err(error) =>
-      return Err(native_error_message("prepare runtime wakeup source", error))
-    Ok(source) => source
+async fn BridgeWakeup::new(runtime : @native.Runtime) -> BridgeWakeup {
+  let source = runtime.prepare_wakeup_source() catch {
+    error =>
+      raise BridgeExampleError::Native(
+        action="prepare runtime wakeup source",
+        error~,
+      )
   }
   let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
     error =>
-      return Err("open runtime wakeup source failed: " + error.to_string())
+      raise BridgeExampleError::WakeupSetup(
+        detail="open wakeup source: " + error.to_string(),
+      )
   }
-  match runtime.activate_wakeup_source() {
-    Err(error) => {
+  runtime.activate_wakeup_source() catch {
+    error => {
       reader.close()
-      Err(native_error_message("activate runtime wakeup source", error))
+      raise BridgeExampleError::Native(
+        action="activate runtime wakeup source",
+        error~,
+      )
     }
-    Ok(_) => Ok(BridgeWakeup::{ reader, })
   }
+  BridgeWakeup::{ reader, }
 }
 
 ///|
 #cfg(not(platform="windows"))
 fn BridgeWakeup::close(self : BridgeWakeup, runtime : @native.Runtime) -> Unit {
-  ignore(runtime.set_wakeup_fd(-1))
+  runtime.set_wakeup_fd(-1) catch {
+    _ => ()
+  }
   self.reader.close()
   self.writer.close()
 }
@@ -290,7 +294,7 @@ fn BridgeWakeup::close(self : BridgeWakeup, _runtime : @native.Runtime) -> Unit 
 async fn BridgeWakeup::wait(
   self : BridgeWakeup,
   wake_signal : @core.RuntimeWakeSignal,
-) -> Result[Unit, String] {
+) -> Unit {
   let revision = wake_signal.revision()
   let ready = @async.any([
     () => {
@@ -303,14 +307,8 @@ async fn BridgeWakeup::wait(
       wake_signal.wait_for_change(revision)
       true
     },
-  ]) catch {
-    error => return Err("wait for bridge work failed: " + error.to_string())
-  }
-  if ready {
-    Ok(())
-  } else {
-    Err("runtime wakeup pipe closed unexpectedly")
-  }
+  ])
+  guard ready else { raise BridgeExampleError::WakeupClosed }
 }
 
 ///|
@@ -325,38 +323,38 @@ async fn dispatch_bridge_request(
       message="unknown multi-window op",
     )
   }
-  match decode_payload(request.payload()) {
-    Err(message) =>
-      @native.BridgeResponse::Err(request_id~, code="invalid_payload", message~)
-    Ok(payload) => {
-      @async.sleep(payload.delay_ms.unwrap_or(0))
-      @native.BridgeResponse::Ok(
+  let payload = decode_payload(request.payload()) catch {
+    error =>
+      return @native.BridgeResponse::Err(
         request_id~,
-        payload=Json::object({
-          "label": Json::string(payload.label),
-          "request_id": Json::string(request_id.to_string()),
-          "window": Json::string(request.window().to_string()),
-        }),
+        code="invalid_payload",
+        message=error.message(),
       )
-    }
   }
+  @async.sleep(payload.delay_ms.unwrap_or(0))
+  @native.BridgeResponse::Ok(
+    request_id~,
+    payload=Json::object({
+      "label": Json::string(payload.label),
+      "request_id": Json::string(request_id.to_string()),
+      "window": Json::string(request.window().to_string()),
+    }),
+  )
 }
 
 ///|
-fn decode_payload(json : Json) -> Result[IdentifyPayload, String] {
-  try @json.from_json(json) catch {
-    error => Err(error.to_string())
-  } noraise {
-    payload => Ok(payload)
+fn decode_payload(json : Json) -> IdentifyPayload raise BridgeExampleError {
+  @json.from_json(json) catch {
+    error => raise InvalidPayload(detail=error.to_string())
   }
 }
 
 ///|
 fn is_stale_bridge_response_error(error : @native.NativeError) -> Bool {
-  (error.status == -2 && error.message.contains("no longer pending")) ||
+  (error.status() == -2 && error.message().contains("no longer pending")) ||
   (
-    error.status == -7 &&
-    error.message.contains("failed to send bridge response to renderer")
+    error.status() == -7 &&
+    error.message().contains("failed to send bridge response to renderer")
   )
 }
 
@@ -373,24 +371,4 @@ fn debug_port() -> Int {
     }
     None => 9222
   }
-}
-
-///|
-fn native_unit_result(
-  action : String,
-  result : Result[Unit, @native.NativeError],
-) -> Result[Unit, String] {
-  match result {
-    Ok(_) => Ok(())
-    Err(error) => Err(native_error_message(action, error))
-  }
-}
-
-///|
-fn native_error_message(action : String, error : @native.NativeError) -> String {
-  action +
-  " failed: native error " +
-  error.status.to_string() +
-  ": " +
-  error.message
 }

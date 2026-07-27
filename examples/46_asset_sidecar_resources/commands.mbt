@@ -6,9 +6,9 @@ fn add(left : Int, right : Int) -> Int {
 
 ///|
 #proton.command(name="addLater")
-async fn add_later(left : Int, right : Int) -> Result[Int, String] {
+async fn add_later(left : Int, right : Int) -> Int {
   @async.sleep(800)
-  Ok(left + right)
+  left + right
 }
 
 ///|

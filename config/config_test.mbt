@@ -1,4 +1,15 @@
 ///|
+fn[T] expect_project_config_error(
+  action : () -> T raise ProjectConfigError,
+) -> ProjectConfigError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected project config operation to fail")
+  }
+}
+
+///|
 test "parse moon.proton minimal config" {
   let source =
     #|window = {
@@ -90,11 +101,10 @@ test "project config rejects unsupported window size_hint" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(_) => abort("expected unsupported size_hint")
-    Err(message) =>
-      assert_true(message.contains("unsupported window size_hint"))
-  }
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_true(error.message().contains("unsupported window.size_hint"))
 }
 
 ///|
@@ -112,11 +122,8 @@ test "project config parses default titlebar style" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(loaded) =>
-      assert_true(loaded.config().window.titlebar_style == TitlebarDefault)
-    Err(message) => abort(message)
-  }
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  assert_true(config.window.titlebar_style == TitlebarDefault)
 }
 
 ///|
@@ -134,11 +141,8 @@ test "project config parses overlay titlebar style" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(loaded) =>
-      assert_true(loaded.config().window.titlebar_style == TitlebarOverlay)
-    Err(message) => abort(message)
-  }
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  assert_true(config.window.titlebar_style == TitlebarOverlay)
 }
 
 ///|
@@ -156,11 +160,10 @@ test "project config rejects unsupported titlebar style" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(_) => abort("expected unsupported titlebar style")
-    Err(message) =>
-      assert_true(message.contains("unsupported window titlebar_style"))
-  }
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_true(error.message().contains("unsupported window.titlebar_style"))
 }
 
 ///|
@@ -190,10 +193,7 @@ test "project config rebases file entry and frontend paths from config directory
     #|  output: "target/proton-dist",
     #|}
     #|
-  let config = match load_project_config_from_text(source, base_dir) {
-    Ok(loaded) => loaded.config()
-    Err(error) => abort(error)
-  }
+  let config = load_project_config_from_text(source, base_dir).config()
   match config.entry() {
     Asset(path) =>
       assert_true(
@@ -252,13 +252,13 @@ test "project config aggregates unknown and duplicate top-level fields" {
     #|debug = true
     #|debug = false
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(_) => abort("expected field validation errors")
-    Err(message) =>
-      assert_eq(
-        message, "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1.\nDuplicate key 'debug' found in moon.proton.",
-      )
-  }
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_eq(
+    error.message(),
+    "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1.\nDuplicate key 'debug' found in moon.proton.",
+  )
 }
 
 ///|
@@ -277,13 +277,13 @@ test "project config aggregates unknown and duplicate object fields" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(_) => abort("expected field validation errors")
-    Err(message) =>
-      assert_eq(
-        message, "Duplicate key 'title' found in moon.proton field `window`.\nUnexpected key 'extra' found in moon.proton field `window`.",
-      )
-  }
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_eq(
+    error.message(),
+    "Duplicate key 'title' found in moon.proton field `window`.\nUnexpected key 'extra' found in moon.proton field `window`.",
+  )
 }
 
 ///|
@@ -300,10 +300,8 @@ test "project config load reports no warnings by default" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(loaded) => assert_eq(loaded.warnings(), [])
-    Err(message) => abort(message)
-  }
+  let loaded = load_project_config_from_text(source, "target/proton-config")
+  assert_eq(loaded.warnings(), [])
 }
 
 ///|
@@ -320,18 +318,14 @@ test "loaded project config carries warnings" {
     #|  value: "http://localhost:5173",
     #|}
     #|
-  match load_project_config_from_text(source, "target/proton-config") {
-    Ok(loaded) => {
-      let with_warnings = LoadedProjectConfig::new(loaded.config(), warnings=[
-        "moon.proton field `legacy` is deprecated",
-      ])
-      assert_eq(with_warnings.warnings(), [
-        "moon.proton field `legacy` is deprecated",
-      ])
-      assert_eq(with_warnings.config(), loaded.config())
-    }
-    Err(message) => abort(message)
-  }
+  let loaded = load_project_config_from_text(source, "target/proton-config")
+  let with_warnings = LoadedProjectConfig::new(loaded.config(), warnings=[
+    "moon.proton field `legacy` is deprecated",
+  ])
+  assert_eq(with_warnings.warnings(), [
+    "moon.proton field `legacy` is deprecated",
+  ])
+  assert_eq(with_warnings.config(), loaded.config())
 }
 
 ///|

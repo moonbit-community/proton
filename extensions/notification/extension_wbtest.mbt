@@ -1,5 +1,10 @@
 ///|
 test "notification requires a body" {
-  @debug.assert_eq(ensure_body(""), Err("notification body must not be empty"))
-  @debug.assert_eq(ensure_body("ready"), Ok("ready"))
+  let error = try ensure_body("") catch {
+    error => error
+  } noraise {
+    _ => abort("expected empty notification body error")
+  }
+  inspect(error.message(), content="notification body must not be empty")
+  assert_eq(ensure_body("ready"), "ready")
 }

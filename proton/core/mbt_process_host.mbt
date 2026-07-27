@@ -27,22 +27,10 @@ pub fn MbtProcessHost::new() -> MbtProcessHost {
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(
   self : MbtProcessHost,
   name : String,
-  callback : (Payload) -> Reply,
-) -> Unit {
+  callback : (Payload) -> Reply raise?,
+) -> Unit raise OpRegistrationError {
   self.ensure_open_for_register()
-  self.registry.handle(name, callback)
-  self.op_names.push(name)
-}
-
-///|
-/// Registers a synchronous MBT-side op that can return a string error.
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_result(
-  self : MbtProcessHost,
-  name : String,
-  callback : (Payload) -> Result[Reply, String],
-) -> Unit {
-  self.ensure_open_for_register()
-  self.registry.handle_result(name, callback)
+  self.registry.handle(name, fn(payload) raise { callback(payload) })
   self.op_names.push(name)
 }
 
@@ -52,33 +40,21 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(
   self : MbtProcessHost,
   name : String,
   callback : async (Payload) -> Reply,
-) -> Unit {
+) -> Unit raise OpRegistrationError {
   self.ensure_open_for_register()
   self.registry.handle_async(name, callback)
   self.op_names.push(name)
 }
 
 ///|
-/// Registers an async MBT-side op that can return a string error.
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result(
+/// Registers an async MBT-side op that receives request-scoped context.
+pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_with_context(
   self : MbtProcessHost,
   name : String,
-  callback : async (Payload) -> Result[Reply, String],
-) -> Unit {
+  callback : async (AppCommandRequestContext, Payload) -> Reply,
+) -> Unit raise OpRegistrationError {
   self.ensure_open_for_register()
-  self.registry.handle_async_result(name, callback)
-  self.op_names.push(name)
-}
-
-///|
-/// Registers an async MBT-side op that receives request-scoped context and can fail.
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_result_with_context(
-  self : MbtProcessHost,
-  name : String,
-  callback : async (AppCommandRequestContext, Payload) -> Result[Reply, String],
-) -> Unit {
-  self.ensure_open_for_register()
-  self.registry.handle_async_result_with_context(name, callback)
+  self.registry.handle_async_with_context(name, callback)
   self.op_names.push(name)
 }
 
@@ -99,31 +75,32 @@ pub fn MbtProcessHost::dispatch(
   complete : (@ipc.IpcOpResponse) -> Unit,
 ) -> Unit {
   let fallback_id = ipc_request_fallback_response_id(request)
-  let request = match request.validate() {
-    Ok(request) => request
-    Err(message) => {
-      complete(@ipc.IpcOpResponse::err(fallback_id, message))
+  let request = request.validate() catch {
+    error => {
+      complete(@ipc.IpcOpResponse::err(fallback_id, error.message()))
       return
     }
   }
   guard !self.closed else {
-    complete(@ipc.IpcOpResponse::err(request.id, "MBT process host is closed"))
+    complete(
+      @ipc.IpcOpResponse::err(request.id, OpDispatchError::HostClosed.message()),
+    )
     return
   }
   if self.registry.has_async(request.name) {
     complete(
       @ipc.IpcOpResponse::err(
         request.id,
-        "Async MBT process ops require dispatch_async()",
+        OpDispatchError::AsyncHandlerRequiresAsync(name=request.name).message(),
       ),
     )
   } else {
-    complete(
-      make_ipc_response(
-        request.id,
-        self.registry.call(request.name, request.payload),
-      ),
-    )
+    let response = try self.registry.call(request.name, request.payload) catch {
+      error => @ipc.IpcOpResponse::err(request.id, error.message())
+    } noraise {
+      body => @ipc.IpcOpResponse::ok(request.id, body)
+    }
+    complete(response)
   }
 }
 
@@ -137,24 +114,29 @@ pub async fn MbtProcessHost::dispatch_async(
   request : @ipc.IpcOpRequest,
 ) -> @ipc.IpcOpResponse {
   let fallback_id = ipc_request_fallback_response_id(request)
-  let request = match request.validate() {
-    Ok(request) => request
-    Err(message) => return @ipc.IpcOpResponse::err(fallback_id, message)
+  let request = request.validate() catch {
+    error => return @ipc.IpcOpResponse::err(fallback_id, error.message())
   }
   guard !self.closed else {
-    return @ipc.IpcOpResponse::err(request.id, "MBT process host is closed")
-  }
-  if self.registry.has_async(request.name) {
-    make_ipc_response(
+    return @ipc.IpcOpResponse::err(
       request.id,
-      self.registry.call_async_direct(request.name, request.payload),
+      OpDispatchError::HostClosed.message(),
     )
+  }
+  let body = if self.registry.has_async(request.name) {
+    self.registry.call_async_direct(request.name, request.payload) catch {
+      error =>
+        return @ipc.IpcOpResponse::err(
+          request.id,
+          @debug.render(@debug.to_repr(error)),
+        )
+    }
   } else {
-    make_ipc_response(
-      request.id,
-      self.registry.call(request.name, request.payload),
-    )
+    self.registry.call(request.name, request.payload) catch {
+      error => return @ipc.IpcOpResponse::err(request.id, error.message())
+    }
   }
+  @ipc.IpcOpResponse::ok(request.id, body)
 }
 
 ///|
@@ -165,21 +147,27 @@ pub async fn MbtProcessHost::dispatch_async_with_context(
   request : @ipc.IpcOpRequest,
 ) -> @ipc.IpcOpResponse {
   let fallback_id = ipc_request_fallback_response_id(request)
-  let request = match request.validate() {
-    Ok(request) => request
-    Err(message) => return @ipc.IpcOpResponse::err(fallback_id, message)
+  let request = request.validate() catch {
+    error => return @ipc.IpcOpResponse::err(fallback_id, error.message())
   }
   guard !self.closed else {
-    return @ipc.IpcOpResponse::err(request.id, "MBT process host is closed")
+    return @ipc.IpcOpResponse::err(
+      request.id,
+      OpDispatchError::HostClosed.message(),
+    )
   }
-  make_ipc_response(
-    request.id,
-    self.registry.call_async_direct_with_context(
-      context,
-      request.name,
-      request.payload,
-    ),
-  )
+  let body = self.registry.call_async_direct_with_context(
+    context,
+    request.name,
+    request.payload,
+  ) catch {
+    error =>
+      return @ipc.IpcOpResponse::err(
+        request.id,
+        @debug.render(@debug.to_repr(error)),
+      )
+  }
+  @ipc.IpcOpResponse::ok(request.id, body)
 }
 
 ///|
@@ -189,10 +177,13 @@ pub fn MbtProcessHost::dispatch_json(
   raw : String,
   complete : (@ipc.IpcOpResponse) -> Unit,
 ) -> Unit {
-  match @ipc.parse_ipc_op_request(raw) {
-    Ok(request) => self.dispatch(request, complete)
-    Err(message) => complete(@ipc.IpcOpResponse::err("invalid", message))
+  let request = @ipc.parse_ipc_op_request(raw) catch {
+    error => {
+      complete(@ipc.IpcOpResponse::err("invalid", error.message()))
+      return
+    }
   }
+  self.dispatch(request, complete)
 }
 
 ///|
@@ -201,10 +192,10 @@ pub async fn MbtProcessHost::dispatch_json_async(
   self : MbtProcessHost,
   raw : String,
 ) -> @ipc.IpcOpResponse {
-  match @ipc.parse_ipc_op_request(raw) {
-    Ok(request) => self.dispatch_async(request)
-    Err(message) => @ipc.IpcOpResponse::err("invalid", message)
+  let request = @ipc.parse_ipc_op_request(raw) catch {
+    error => return @ipc.IpcOpResponse::err("invalid", error.message())
   }
+  self.dispatch_async(request)
 }
 
 ///|
@@ -222,24 +213,11 @@ pub fn MbtProcessHost::close(self : MbtProcessHost) -> Unit {
 }
 
 ///|
-fn MbtProcessHost::ensure_open_for_register(self : MbtProcessHost) -> Unit {
-  guard !self.closed else {
-    abort("MbtProcessHost: cannot register op after close")
-  }
-  guard !self.registration_sealed else {
-    abort("MbtProcessHost: cannot register op after registration is sealed")
-  }
-}
-
-///|
-fn make_ipc_response(
-  id : String,
-  reply : Result[Json, String],
-) -> @ipc.IpcOpResponse {
-  match reply {
-    Ok(body) => @ipc.IpcOpResponse::ok(id, body)
-    Err(message) => @ipc.IpcOpResponse::err(id, message)
-  }
+fn MbtProcessHost::ensure_open_for_register(
+  self : MbtProcessHost,
+) -> Unit raise OpRegistrationError {
+  guard !self.closed else { raise OpRegistrationError::HostClosed }
+  guard !self.registration_sealed else { raise RegistrationSealed }
 }
 
 ///|

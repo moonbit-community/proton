@@ -16,29 +16,19 @@ pub fn ExtensionHost::new() -> ExtensionHost {
 pub fn ExtensionHost::install(
   self : ExtensionHost,
   extension : Extension,
-) -> Unit {
-  guard extension.id.trim().to_owned() != "" else {
-    abort("ExtensionHost::install: extension id must not be empty")
-  }
+) -> Unit raise {
+  guard extension.id.trim().to_owned() != "" else { raise EmptyExtensionId }
   guard extension.js_namespace.trim().to_owned() != "" else {
-    abort("ExtensionHost::install: extension namespace must not be empty")
+    raise EmptyNamespace
   }
   guard !extension_namespace_is_reserved(extension.js_namespace) else {
-    abort(
-      "ExtensionHost::install: reserved extension namespace: " +
-      extension.js_namespace,
-    )
+    raise ReservedNamespace(extension_namespace=extension.js_namespace)
   }
   guard self.extension_ids.get(extension.id) is None else {
-    abort(
-      "ExtensionHost::install: extension already installed: " + extension.id,
-    )
+    raise DuplicateExtensionId(id=extension.id)
   }
   guard self.extension_namespaces.get(extension.js_namespace) is None else {
-    abort(
-      "ExtensionHost::install: extension namespace already installed: " +
-      extension.js_namespace,
-    )
+    raise DuplicateNamespace(extension_namespace=extension.js_namespace)
   }
   let context = ExtensionContext::{
     host: self,
@@ -47,7 +37,9 @@ pub fn ExtensionHost::install(
   }
   self.extension_ids.set(extension.id, extension.js_namespace)
   self.extension_namespaces.set(extension.js_namespace, extension.id)
-  self.destroy_hooks.set(extension.id, fn() { (extension.on_destroy)(context) })
+  self.destroy_hooks.set(extension.id, fn() raise {
+    (extension.on_destroy)(context)
+  })
   (extension.register)(context)
   (extension.on_install)(context)
 }
@@ -59,23 +51,17 @@ pub fn[Payload : ToJson] ExtensionHost::emit(
   extension_namespace : String,
   event_name : String,
   payload : Payload,
-) -> Unit {
-  match validate_extension_event_target(extension_namespace, event_name) {
-    Err(error) => abort(error)
-    Ok(_) => ()
-  }
+) -> Unit raise ExtensionHostError {
+  validate_extension_event_target(extension_namespace, event_name)
   guard self.extension_namespaces.get(extension_namespace) is Some(_) else {
-    abort(
-      "ExtensionHost::emit: extension namespace is not installed: " +
-      extension_namespace,
-    )
+    raise NamespaceNotInstalled(extension_namespace~)
   }
   ignore(ToJson::to_json(payload))
 }
 
 ///|
 /// Drops all registered extension metadata.
-pub fn ExtensionHost::destroy(self : ExtensionHost) -> Unit {
+pub fn ExtensionHost::destroy(self : ExtensionHost) -> Unit raise {
   for _, hook in self.destroy_hooks {
     hook()
   }
@@ -92,22 +78,14 @@ pub fn ExtensionHost::destroy(self : ExtensionHost) -> Unit {
 fn ExtensionContext::register_api(
   self : ExtensionContext,
   api_name : String,
-) -> String {
-  match validate_extension_api_name(self.extension_namespace, api_name) {
-    Err(error) => abort(error)
-    Ok(_) => ()
-  }
+) -> String raise ExtensionHostError {
+  validate_extension_api_name(self.extension_namespace, api_name)
   let registry_key = extension_api_registry_key(
     self.extension_namespace,
     api_name,
   )
   guard self.host.apis.get(registry_key) is None else {
-    abort(
-      "ExtensionContext::register_api: API already registered: " +
-      self.extension_namespace +
-      "." +
-      api_name,
-    )
+    raise DuplicateApi(extension_namespace=self.extension_namespace, api_name~)
   }
   self.host.apis.set(registry_key, true)
   match self.host.api_names.get(self.extension_namespace) {
@@ -135,7 +113,7 @@ pub fn ExtensionHost::dispatch_op(
   self : ExtensionHost,
   name : String,
   payload : Json,
-) -> Result[Json, String] {
+) -> Json raise OpDispatchError {
   self.op_registry.call(name, payload)
 }
 
@@ -158,36 +136,26 @@ fn extension_op_name(extension_namespace : String, api_name : String) -> String 
 fn validate_extension_api_name(
   extension_namespace : String,
   api_name : String,
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionHostError {
   guard api_name.trim().to_owned() != "" else {
-    return Err(
-      "ExtensionContext::register_api: API name must not be empty: " +
-      extension_namespace,
-    )
+    raise EmptyApiName(extension_namespace~)
   }
   guard !extension_is_reserved_api_name(api_name) else {
-    return Err(
-      "ExtensionContext::register_api: reserved API name: " +
-      extension_namespace +
-      "." +
-      api_name,
-    )
+    raise ReservedApiName(extension_namespace~, api_name~)
   }
-  Ok(())
 }
 
 ///|
 fn validate_extension_event_target(
   extension_namespace : String,
   event_name : String,
-) -> Result[Unit, String] {
+) -> Unit raise ExtensionHostError {
   guard extension_namespace.trim().to_owned() != "" else {
-    return Err("extension event namespace must not be empty")
+    raise EmptyEventNamespace
   }
   guard event_name.trim().to_owned() != "" else {
-    return Err("extension event name must not be empty: " + extension_namespace)
+    raise EmptyEventName(extension_namespace~)
   }
-  Ok(())
 }
 
 ///|

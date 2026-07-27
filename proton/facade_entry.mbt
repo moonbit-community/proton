@@ -2,12 +2,16 @@
 fn load_entry_after_create(
   window : @native.Window,
   entry : @manifest.AppEntry,
-) -> Result[Unit, String] {
+) -> Unit raise AppEntryError {
   match entry {
     @manifest.AppEntry::Html(html) =>
-      native_unit_result("load html", window.load_html(html, "proton://app/"))
+      window.load_html(html, "proton://app/") catch {
+        error => raise NativeLoad(action="load html", error~)
+      }
     @manifest.AppEntry::Url(url) =>
-      native_unit_result("load url", window.load_url(url))
+      window.load_url(url) catch {
+        error => raise NativeLoad(action="load url", error~)
+      }
     @manifest.AppEntry::File(path) =>
       load_file_entry_after_create(window, "load file", path)
     @manifest.AppEntry::Asset(path) =>
@@ -20,34 +24,21 @@ fn load_file_entry_after_create(
   window : @native.Window,
   action : String,
   path : String,
-) -> Result[Unit, String] {
-  match read_file_entry_html(path, action) {
-    Err(error) => Err(error)
-    Ok(html) =>
-      native_unit_result(
-        action,
-        window.load_html(
-          inject_html_bootstrap(html, base_tag(asset_base_url(path))),
-          asset_document_url(path),
-        ),
-      )
+) -> Unit raise AppEntryError {
+  let html = read_file_entry_html(path)
+  window.load_html(
+    inject_html_bootstrap(html, base_tag(asset_base_url(path))),
+    asset_document_url(path),
+  ) catch {
+    error => raise NativeLoad(action~, error~)
   }
 }
 
 ///|
-fn read_file_entry_html(
-  path : String,
-  action : String,
-) -> Result[String, String] {
-  try @mbfs.read_file_to_string(path) catch {
+fn read_file_entry_html(path : String) -> String raise AppEntryError {
+  @mbfs.read_file_to_string(path) catch {
     error =>
-      Err(
-        action +
-        " failed: failed to read HTML entry: " +
-        @debug.render(@debug.to_repr(error)),
-      )
-  } noraise {
-    text => Ok(text)
+      raise ReadFailed(path~, detail=@debug.render(@debug.to_repr(error)))
   }
 }
 
@@ -74,26 +65,6 @@ fn html_attribute_escape(value : String) -> String {
   .replace_all(old="\"", new="&quot;")
   .replace_all(old="<", new="&lt;")
   .replace_all(old=">", new="&gt;")
-}
-
-///|
-fn native_unit_result(
-  action : String,
-  result : Result[Unit, @native.NativeError],
-) -> Result[Unit, String] {
-  match result {
-    Ok(_) => Ok(())
-    Err(error) => Err(native_error_message(action, error))
-  }
-}
-
-///|
-fn native_error_message(action : String, error : @native.NativeError) -> String {
-  action +
-  " failed: native error " +
-  error.status.to_string() +
-  ": " +
-  error.message
 }
 
 ///|

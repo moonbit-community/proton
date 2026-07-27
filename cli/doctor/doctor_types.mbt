@@ -230,13 +230,6 @@ priv struct MoonPackageConfig {
 }
 
 ///|
-priv enum MoonConfigReadError {
-  MissingFile(String)
-  ReadFailed(String, String)
-  ParseFailed(String, String)
-}
-
-///|
 priv struct DoctorAppWindow {
   title : String
   width : Int

@@ -43,8 +43,8 @@ fn ticker_extension() -> @proton_extension.Extension {
       "examples/event-ticker",
       "ticker",
       [@proton_command.AppCommandApiDescriptor::new("start")],
-      fn(context) {
-        context.op_async_result(
+      fn(context) raise {
+        context.op_async(
           "start",
           async fn(payload : StartPayload) {
             let count = clamp(payload.count, 1, 20)
@@ -63,11 +63,10 @@ fn ticker_extension() -> @proton_extension.Extension {
             }
             let done = DoneEvent::{ run_id: payload.run_id, total: count }
             context.emit("done", done)
-            Ok(TickerResult::{ ticks, done })
+            TickerResult::{ ticks, done }
           },
           emits_events=true,
         )
-        Ok(())
       },
     ),
   )

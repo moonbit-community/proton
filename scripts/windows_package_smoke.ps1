@@ -295,7 +295,7 @@ try {
 
     Invoke-External $Moon @(
         "-C", "cli", "run", ".", "--", "-C", "../examples",
-        "package", $ExampleName,
+        "package", "--package", $ExampleName,
         "--config", "$ExampleName/moon.proton",
         "--sign", "--target", "app", "--target", "zip"
     )

@@ -17,7 +17,7 @@ priv struct ParsedProtonCommand {
   is_async : Bool
   has_context : Bool
   has_request_context : Bool
-  returns_result : Bool
+  error_effect : String?
 }
 
 ///|
@@ -44,6 +44,7 @@ priv struct ParsedProtonScript {
 priv struct ParsedProtonDestroy {
   function_name : String
   has_context : Bool
+  error_effect : String?
 }
 
 ///|

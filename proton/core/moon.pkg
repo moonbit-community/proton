@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "justjavac/proton/ipc",
 }

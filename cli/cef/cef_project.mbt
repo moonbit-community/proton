@@ -15,12 +15,12 @@ fn find_project_root_from(start : String) -> String {
 }
 
 ///|
-fn project_root(cwd : String) -> Result[String, CefError] {
+fn project_root(cwd : String) -> String raise CefFileSystemError {
   if cwd != "" && cwd != "." {
-    return Ok(find_project_root_from(cwd))
+    return find_project_root_from(cwd)
   }
   match @env.current_dir() {
-    Some(cwd) => Ok(find_project_root_from(cwd))
-    None => Err(CefError::CommandError("Failed to read current directory"))
+    Some(cwd) => find_project_root_from(cwd)
+    None => raise CurrentDirectoryUnavailable
   }
 }

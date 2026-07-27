@@ -1,17 +1,6 @@
 ///|
-fn[T] require_dev_ok(result : Result[T, DevError]) -> T {
-  match result {
-    Ok(value) => value
-    Err(_) => abort("expected dev result to be Ok")
-  }
-}
-
-///|
-fn[T] require_string_ok(result : Result[T, String]) -> T {
-  match result {
-    Ok(value) => value
-    Err(error) => abort(error)
-  }
+fn parse_dev_args(args : Array[String]) -> RawDevOptions raise {
+  dev_options_from_matches(command().parse(argv=args, env=Map([])))
 }
 
 ///|
@@ -51,7 +40,7 @@ fn create_fake_dev_runtime(root : String) -> String {
 
 ///|
 test "parse dev args defaults and app args" {
-  let raw = require_dev_ok(parse_dev_args(["--", "--profile", "smoke"]))
+  let raw = parse_dev_args(["--", "--profile", "smoke"])
   @debug.assert_eq(raw.app_package, "app")
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.wait_for_dev_server, true)
@@ -60,14 +49,22 @@ test "parse dev args defaults and app args" {
 }
 
 ///|
+test "dev app options require the separator" {
+  try parse_dev_args(["--profile", "smoke"]) catch {
+    error =>
+      assert_true(error.to_string().contains("unexpected argument '--profile'"))
+  } noraise {
+    _ => fail("expected argparse to reject an app option before --")
+  }
+}
+
+///|
 test "parse dev args package and frontend overrides" {
-  let raw = require_dev_ok(
-    parse_dev_args([
-      "desktop", "--config", "config/proton.dev", "--url", "http://localhost:3000",
-      "--command", "npm run dev", "--frontend-cwd", "frontend", "--timeout-ms", "1200",
-      "--ready-path", "/ready", "--no-frontend",
-    ]),
-  )
+  let raw = parse_dev_args([
+    "--package", "desktop", "--config", "config/proton.dev", "--url", "http://localhost:3000",
+    "--command", "npm run dev", "--frontend-cwd", "frontend", "--timeout-ms", "1200",
+    "--ready-path", "/ready", "--no-frontend",
+  ])
   @debug.assert_eq(raw.app_package, "desktop")
   @debug.assert_eq(raw.config_path, Some("config/proton.dev"))
   @debug.assert_eq(raw.url, Some("http://localhost:3000"))
@@ -108,7 +105,7 @@ test "read dev frontend config extracts cwd" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let config = require_string_ok(read_dev_frontend_config(path))
+  let config = read_dev_frontend_config(path)
   match config {
     Some(config) => {
       @debug.assert_eq(config.dev_url(), Some("http://localhost:5173"))
@@ -148,10 +145,17 @@ test "read dev frontend config validates full project config" {
   ) catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  match read_dev_frontend_config(path) {
-    Ok(_) => abort("expected invalid project config")
-    Err(message) =>
-      assert_true(message.contains("unsupported window size_hint"))
+  try read_dev_frontend_config(path) catch {
+    DevConfigError::Invalid(
+      path=actual_path,
+      error=@proton_config.ProjectConfigError::UnsupportedValue(
+        path="window.size_hint",
+        value="stretch"
+      )
+    ) => @debug.assert_eq(actual_path, path)
+    _ => abort("expected unsupported window size_hint")
+  } noraise {
+    _ => abort("expected invalid project config")
   }
 }
 
@@ -160,30 +164,33 @@ test "frontend cwd is validated only when frontend starts" {
   let root = "target/proton-dev-cwd"
   ensure_dev_test_dir(root)
   ensure_dev_test_dir(join_path(root, "frontend"))
-  let resolved = require_dev_ok(
-    resolve_frontend_cwd(root, Some("frontend"), Some("npm run dev"), true),
+  let resolved = resolve_frontend_cwd(
+    root,
+    Some("frontend"),
+    Some("npm run dev"),
+    true,
   )
   assert_true(resolved.has_suffix("frontend"))
-  let skipped = require_dev_ok(
-    resolve_frontend_cwd(
-      root,
-      Some("missing-frontend"),
-      Some("npm run dev"),
-      false,
-    ),
+  let skipped = resolve_frontend_cwd(
+    root,
+    Some("missing-frontend"),
+    Some("npm run dev"),
+    false,
   )
   @debug.assert_eq(skipped, root)
-  match
+  try
     resolve_frontend_cwd(
       root,
       Some("missing-frontend"),
       Some("npm run dev"),
       true,
-    ) {
-    Ok(_) => abort("expected missing frontend cwd to fail")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("frontend cwd does not exist"))
-    Err(_) => abort("expected command error")
+    )
+  catch {
+    DevConfigError::FrontendDirectoryMissing(path~) =>
+      assert_true(path.has_suffix("missing-frontend"))
+    _ => abort("expected missing frontend directory")
+  } noraise {
+    _ => abort("expected missing frontend cwd to fail")
   }
 }
 
@@ -196,7 +203,7 @@ test "dev config discovery prefers package-local moon.proton" {
   @mbfs.write_string_to_file(package_config, "", encoding="utf8") catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
-  let raw = require_dev_ok(parse_dev_args(["desktop"]))
+  let raw = parse_dev_args(["--package", "desktop"])
   let resolved = resolve_dev_config_path(root, root, raw)
   @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
 }
@@ -205,9 +212,7 @@ test "dev config discovery prefers package-local moon.proton" {
 test "dev runtime layout validates helper" {
   let root = "target/proton-dev-runtime-layout"
   let runtime = create_fake_dev_runtime(root)
-  let loaded = require_string_ok(
-    dev_runtime_from_root(resolve_path(".", runtime), "test runtime"),
-  )
+  let loaded = dev_runtime_from_root(resolve_path(".", runtime), "test runtime")
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.root),
     normalize_dev_test_slashes(resolve_path(".", runtime)),
@@ -222,14 +227,19 @@ test "dev runtime layout validates helper" {
       join_path(loaded.bin_dir, helper_executable_name()),
     ),
   )
-  match
+  try
     dev_runtime_from_root(
       resolve_path(".", join_path(root, "missing")),
       "test runtime",
-    ) {
-    Ok(_) => abort("expected missing runtime to fail")
-    Err(message) =>
-      assert_true(message.contains("test runtime directory is missing"))
+    )
+  catch {
+    DevRuntimeError::DirectoryMissing(label~, path~) => {
+      @debug.assert_eq(label, "test runtime")
+      assert_true(path.has_suffix("missing"))
+    }
+    _ => abort("expected missing runtime directory")
+  } noraise {
+    _ => abort("expected missing runtime to fail")
   }
 }
 
@@ -243,7 +253,7 @@ async test "read dev runtime honors PROTON_NATIVE_DIST override" {
     None => @sys.unset_env_var("PROTON_NATIVE_DIST")
   })
   @sys.set_env_var("PROTON_NATIVE_DIST", "runtime")
-  let loaded = require_string_ok(read_dev_runtime(resolve_path(".", root)))
+  let loaded = read_dev_runtime(resolve_path(".", root))
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.root),
     normalize_dev_test_slashes(resolve_path(".", runtime)),
@@ -257,14 +267,14 @@ async test "read dev runtime honors PROTON_NATIVE_DIST override" {
   let bad_root = "target/proton-dev-runtime-bad-env"
   ensure_dev_test_dir(bad_root)
   @sys.set_env_var("PROTON_NATIVE_DIST", "missing-runtime")
-  match ensure_dev_runtime(resolve_path(".", bad_root), true) {
-    Ok(_) => abort("expected invalid PROTON_NATIVE_DIST to fail")
-    Err(CommandError(message)) => {
-      assert_true(message.contains("PROTON_NATIVE_DIST directory is missing"))
-      assert_true(message.contains("PROTON_NATIVE_DIST is set"))
-      assert_false(message.contains("proton_cli dev --setup"))
+  try ensure_dev_runtime(resolve_path(".", bad_root), true) catch {
+    DevRuntimeError::NativeDistOverride(detail~) => {
+      assert_true(detail.contains("PROTON_NATIVE_DIST directory is missing"))
+      assert_false(detail.contains("proton_cli dev --setup"))
     }
-    Err(_) => abort("expected command error")
+    _ => abort("expected invalid PROTON_NATIVE_DIST override")
+  } noraise {
+    _ => abort("expected invalid PROTON_NATIVE_DIST to fail")
   }
 }
 
@@ -283,9 +293,7 @@ test "resolve path accepts Windows backslash relative input" {
 
 ///|
 test "parse dev url endpoint keeps next 404-compatible tcp readiness" {
-  let endpoint = require_string_ok(
-    parse_dev_url_endpoint("http://localhost:3000/app", None),
-  )
+  let endpoint = parse_dev_url_endpoint("http://localhost:3000/app", None)
   @debug.assert_eq(endpoint.url, "http://localhost:3000/app")
   @debug.assert_eq(endpoint.host, "localhost")
   @debug.assert_eq(endpoint.port, 3000)
@@ -293,11 +301,9 @@ test "parse dev url endpoint keeps next 404-compatible tcp readiness" {
 
 ///|
 test "parse dev url endpoint applies ready path for display" {
-  let endpoint = require_string_ok(
-    parse_dev_url_endpoint(
-      "https://example.test:444/app?debug=1",
-      Some("healthz"),
-    ),
+  let endpoint = parse_dev_url_endpoint(
+    "https://example.test:444/app?debug=1",
+    Some("healthz"),
   )
   @debug.assert_eq(endpoint.url, "https://example.test:444/healthz")
   @debug.assert_eq(endpoint.host, "example.test")
@@ -306,8 +312,9 @@ test "parse dev url endpoint applies ready path for display" {
 
 ///|
 test "parse dev url endpoint accepts query without ready path" {
-  let endpoint = require_string_ok(
-    parse_dev_url_endpoint("http://localhost:5173/app?debug=1#view", None),
+  let endpoint = parse_dev_url_endpoint(
+    "http://localhost:5173/app?debug=1#view",
+    None,
   )
   @debug.assert_eq(endpoint.url, "http://localhost:5173/app?debug=1#view")
   @debug.assert_eq(endpoint.host, "localhost")
@@ -316,46 +323,55 @@ test "parse dev url endpoint accepts query without ready path" {
 
 ///|
 test "parse dev url endpoint rejects empty host" {
-  match parse_dev_url_endpoint("http://:5173", None) {
-    Ok(_) => abort("expected empty host to fail")
-    Err(message) => assert_true(message.contains("host must not be empty"))
+  try parse_dev_url_endpoint("http://:5173", None) catch {
+    DevServerError::EmptyHost => ()
+    _ => abort("expected empty host error")
+  } noraise {
+    _ => abort("expected empty host to fail")
   }
-  match parse_dev_url_endpoint("http://[]:5173", None) {
-    Ok(_) => abort("expected empty ipv6 host to fail")
-    Err(message) => assert_true(message.contains("host must not be empty"))
+  try parse_dev_url_endpoint("http://[]:5173", None) catch {
+    DevServerError::EmptyHost => ()
+    _ => abort("expected empty ipv6 host error")
+  } noraise {
+    _ => abort("expected empty ipv6 host to fail")
   }
 }
 
 ///|
 test "parse dev url endpoint rejects origins facade would reject" {
-  match parse_dev_url_endpoint("http://user@localhost:5173", None) {
-    Ok(_) => abort("expected user info to fail")
-    Err(message) => assert_true(message.contains("invalid origin"))
+  try parse_dev_url_endpoint("http://user@localhost:5173", None) catch {
+    DevServerError::InvalidOrigin(url~) =>
+      @debug.assert_eq(url, "http://user@localhost:5173")
+    _ => abort("expected invalid origin")
+  } noraise {
+    _ => abort("expected user info to fail")
   }
-  match parse_dev_url_endpoint("http://local host:5173", None) {
-    Ok(_) => abort("expected whitespace host to fail")
-    Err(message) => assert_true(message.contains("invalid origin"))
+  try parse_dev_url_endpoint("http://local host:5173", None) catch {
+    DevServerError::InvalidOrigin(url~) =>
+      @debug.assert_eq(url, "http://local host:5173")
+    _ => abort("expected invalid origin")
+  } noraise {
+    _ => abort("expected whitespace host to fail")
   }
 }
 
 ///|
 test "frontend dev url validation runs without server wait" {
-  match validate_frontend_dev_url(Some("localhost:5173"), None) {
-    Ok(_) => abort("expected missing URL scheme to fail")
-    Err(CommandError(message)) =>
-      assert_true(message.contains("must include http:// or https://"))
-    Err(_) => abort("expected command error")
+  try validate_frontend_dev_url(Some("localhost:5173"), None) catch {
+    DevServerError::MissingScheme(url~) =>
+      @debug.assert_eq(url, "localhost:5173")
+    _ => abort("expected missing URL scheme")
+  } noraise {
+    _ => abort("expected missing URL scheme to fail")
   }
 }
 
 ///|
 async test "ready path validates curl probe availability" {
-  require_dev_ok(validate_ready_probe(None))
-  match validate_ready_probe(Some("/ready")) {
-    Ok(_) => ()
-    Err(CommandError(message)) =>
-      assert_true(message.contains("--ready-path requires curl"))
-    Err(_) => abort("expected command error")
+  validate_ready_probe(None)
+  validate_ready_probe(Some("/ready")) catch {
+    DevServerError::ReadyProbeUnavailable => ()
+    _ => abort("expected unavailable ready probe")
   }
 }
 
@@ -377,8 +393,8 @@ async test "frontend cancellation terminates child processes" {
         true,
         Map([]),
       ) {
-      Ok(Some(process)) => process
-      _ => abort("expected frontend process")
+      Some(process) => process
+      None => abort("expected frontend process")
     }
     let mut attempts = 0
     while !@mbfs.path_exists(pid_path) && attempts < 50 {

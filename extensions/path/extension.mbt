@@ -58,7 +58,7 @@ fn register_path_reply_op(
   extension : @core.ExtensionContext,
   name : String,
   callback : (String) -> String,
-) -> Unit {
+) -> Unit raise {
   extension.op(name, fn(payload : PathPayload) {
     PathReply::{ path: callback(payload.path) }
   })
@@ -70,7 +70,7 @@ fn register_paths_reply_op(
   extension : @core.ExtensionContext,
   name : String,
   callback : (Array[String]) -> String,
-) -> Unit {
+) -> Unit raise {
   extension.op(name, fn(payload : PathsPayload) {
     PathReply::{ path: callback(payload.paths) }
   })
@@ -88,7 +88,7 @@ pub fn extension() -> @proton_extension.Extension {
 /// Future bridge work can install it on an `@core.ExtensionHost` to expose
 /// common path operations such as `resolve`, `join`, `dirname`, and `basename`.
 pub fn core_extension() -> @core.Extension {
-  @core.Extension::new(extension_id, extension_namespace, fn(extension) {
+  @core.Extension::new(extension_id, extension_namespace, fn(extension) raise {
     extension.op("basename", fn(payload : BasenamePayload) {
       BasenameReply::{
         name: basename_path(payload.path, suffix=payload.suffix),
@@ -120,6 +120,6 @@ pub fn core_extension() -> @core.Extension {
 /// through app composition.
 pub fn core_spec() -> @core.ExtensionSpec {
   @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    Ok(core_extension())
+    core_extension()
   })
 }
