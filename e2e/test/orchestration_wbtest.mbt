@@ -558,10 +558,10 @@ async fn run_scenario_probe_with_retry(
       true
     } catch {
       error => {
-        if attempt == 1 || !retryable_startup_error(error) {
+        if attempt == 1 || !retryable_scenario_error(error) {
           raise error
         }
-        println("MoonBit " + name + " startup attempt failed; retrying once")
+        println("MoonBit " + name + " transient attempt failed; retrying once")
         false
       }
     }
@@ -574,11 +574,19 @@ async fn run_scenario_probe_with_retry(
 }
 
 ///|
+fn retryable_scenario_error(error : Error) -> Bool {
+  match error {
+    @io.ReaderClosed => true
+    _ => retryable_startup_error(error)
+  }
+}
+
+///|
 fn retryable_startup_error(error : Error) -> Bool {
   let text = @debug.render(@debug.to_repr(error)).to_lower()
   // Retry only failures emitted by the explicit startup waiters.  Transport
-  // errors from a connected probe or Browser.close must remain failures; a
-  // broad match on "connection reset" would hide those regressions.
+  // retry classification is handled by retryable_scenario_error using typed
+  // errors; broad text matches such as "connection reset" would hide bugs.
   text.contains("scenario app exited before cdp became ready") ||
   text.contains("cdp endpoint did not start within") ||
   text.contains("cdp page target did not become ready within")

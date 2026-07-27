@@ -553,7 +553,10 @@ async fn wait_for_cdp_expression(
 ) -> Unit {
   let mut elapsed = 0
   while elapsed <= timeout {
-    let ready = evaluate_bool(page, expression, false) catch { _ => false }
+    // This waiter owns one fixed page connection.  A transport failure can
+    // leave the WebSocket between start_message and end_message, so propagate
+    // it and let the scenario-level retry create a fresh connection.
+    let ready = evaluate_bool(page, expression, false)
     if ready {
       return
     }

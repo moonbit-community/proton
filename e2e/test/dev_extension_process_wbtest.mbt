@@ -445,10 +445,7 @@ fn retryable_dev_extension_error(error : Error) -> Bool {
   // On a loaded CI runner CEF can close the old page WebSocket just before the
   // reconnect loop takes ownership.  Recreate the isolated scenario once;
   // persistent transport closures still fail on the second attempt.
-  match error {
-    @io.ReaderClosed => true
-    _ => retryable_startup_error(error)
-  }
+  retryable_scenario_error(error)
 }
 
 ///|

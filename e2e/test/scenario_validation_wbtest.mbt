@@ -25,3 +25,16 @@ test "E2E paths resolve backslash relative runtime directories" {
   assert_true(resolved.has_suffix(suffix))
   assert_eq(resolve_path(root, root), root)
 }
+
+///|
+test "scenario retries only startup and closed CDP transports" {
+  assert_true(retryable_scenario_error(@io.ReaderClosed))
+  assert_true(
+    retryable_scenario_error(
+      Failure::Failure("scenario app exited before CDP became ready"),
+    ),
+  )
+  assert_false(
+    retryable_scenario_error(Failure::Failure("connected CDP probe failed")),
+  )
+}
