@@ -359,11 +359,10 @@ fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
 }
 
 ///|
-async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Int {
+async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
   match matches.subcommand {
     Some(("version", _)) => println(cli_version_text())
-    Some(("doctor", doctor_matches)) =>
-      return if run_doctor(cwd, doctor_matches) { 0 } else { 1 }
+    Some(("doctor", doctor_matches)) => return run_doctor(cwd, doctor_matches)
     Some(("new", new_matches)) => @new_project.run(cwd, new_matches)
     Some(("dev", dev_matches)) => @dev.run(cwd, dev_matches)
     Some(("build", build_matches)) => @build.run(cwd, build_matches)
@@ -372,7 +371,7 @@ async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Int {
     Some(("cef", cef_matches)) => @cef.run(cwd, cef_matches)
     _ => abort("argparse invariant violated: missing subcommand")
   }
-  0
+  true
 }
 
 ///|
@@ -393,7 +392,7 @@ async fn run(args : ArrayView[String]) -> Int {
       1
     }
   } noraise {
-    code => code
+    success => if success { 0 } else { 1 }
   }
 }
 
