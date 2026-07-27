@@ -252,7 +252,7 @@ fn current_test_executable() -> String raise {
   let executable = normalize_platform_path(args[0])
   let path = @path.Path(executable)
   if path.is_absolute() {
-    path.normalize().to_string()
+    executable
   } else {
     resolve_path(current_working_directory(), executable)
   }
@@ -484,16 +484,9 @@ fn resolve_path(base : String, child : String) -> String {
   let child = normalize_platform_path(child)
   let path = @path.Path(child)
   if path.is_absolute() {
-    path.normalize().to_string()
+    child
   } else {
-    let combined = if base == "" {
-      child
-    } else if base.has_suffix(@path.sep.to_string()) {
-      base + child
-    } else {
-      base + @path.sep.to_string() + child
-    }
-    @path.Path(combined).normalize().to_string()
+    @path.Path(base).join(path.normalize()).to_string()
   }
 }
 

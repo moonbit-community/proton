@@ -36,7 +36,7 @@ async fn ensure_dev_extension_frontend(root : String, timeout : Int) -> Unit {
       args,
       frontend_dir,
       Map([]),
-      timeout,
+      dev_extension_command_timeout(timeout),
     )
   }
   guard @mbfs.path_exists(vite) else {
@@ -60,6 +60,15 @@ fn dev_extension_npm_command(args : Array[String]) -> (String, Array[String]) {
     ("cmd", command_args)
   } else {
     ("npm", args)
+  }
+}
+
+///|
+fn dev_extension_command_timeout(timeout : Int) -> Int {
+  if @path.sep == '\\' && timeout < 180000 {
+    180000
+  } else {
+    timeout
   }
 }
 
@@ -270,11 +279,7 @@ async fn spawn_dev_extension_production_app(
 
 ///|
 async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
-  let timeout = if @path.sep == '\\' && timeout < 180000 {
-    180000
-  } else {
-    timeout
-  }
+  let timeout = dev_extension_command_timeout(timeout)
   let port = choose_cdp_port()
   let env = dev_extension_runtime_env(root, port)
   let cli_target_dir = dev_extension_cli_target_dir(root, "build", port)
@@ -459,6 +464,16 @@ test "dev extension retry classification stays narrow" {
       Failure::Failure("connected CDP probe failed"),
     ),
   )
+}
+
+///|
+test "dev extension command timeout covers slow Windows installs" {
+  let timeout = dev_extension_command_timeout(60000)
+  if @path.sep == '\\' {
+    assert_eq(timeout, 180000)
+  } else {
+    assert_eq(timeout, 60000)
+  }
 }
 
 ///|
