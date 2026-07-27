@@ -154,10 +154,12 @@ jobs:
           moon check --target native --deny-warn
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a moon -C proton test native --target native --diagnostic-limit 80
-            xvfb-run -a moon -C cli test --target native --no-parallelize --diagnostic-limit 80
+            xvfb-run -a moon -C cli test . arguments build_cmd cef codegen dev doctor new package \
+              --target native --no-parallelize --diagnostic-limit 80
           else
             moon -C proton test native --target native --diagnostic-limit 80
-            moon -C cli test --target native --no-parallelize --diagnostic-limit 80
+            moon -C cli test . arguments build_cmd cef codegen dev doctor new package \
+              --target native --no-parallelize --diagnostic-limit 80
           fi
           moon -C e2e build --target native --diagnostic-limit 80
 
@@ -170,7 +172,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
           moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test --target native --no-parallelize --diagnostic-limit 80
+          moon -C cli test . arguments build_cmd cef codegen dev doctor new package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Check extension catalog on Unix

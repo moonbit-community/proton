@@ -69,7 +69,7 @@ developer must perform them.
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C cli test --target native --no-parallelize --diagnostic-limit 80`
+  `moon -C cli test . arguments build_cmd cef codegen dev doctor new package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
 - `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
@@ -106,7 +106,8 @@ native checks before handing off larger refactors.
   ```sh
   moon fmt --check
   node scripts/verify_generated.mjs
-  moon -C cli test --target native --no-parallelize --diagnostic-limit 80
+  moon -C cli test . arguments build_cmd cef codegen dev doctor new package \
+    --target native --no-parallelize --diagnostic-limit 80
   moon -C proton check --target native --diagnostic-limit 80
   ```
 
