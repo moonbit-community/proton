@@ -1,4 +1,18 @@
 ///|
+#cfg(not(platform="windows"))
+async fn bundled_runtime_helper_path() -> String? raise AppRunError {
+  macos_bundled_helper_path() catch {
+    error => raise normalize_async_run_error(error)
+  }
+}
+
+///|
+#cfg(platform="windows")
+fn bundled_runtime_helper_path() -> String? {
+  None
+}
+
+///|
 /// Locate the CEF helper executable inside a macOS `.app` bundle.
 ///
 /// Chromium derives the MachPort rendezvous service name from the main bundle's
@@ -42,12 +56,6 @@ async fn macos_bundled_helper_path() -> String? {
       }
     }
   }
-  None
-}
-
-///|
-#cfg(platform="windows")
-fn macos_bundled_helper_path() -> String? {
   None
 }
 

@@ -69,9 +69,7 @@ async fn run_manifest(
   let lifecycle = AppLifecycle::new()
   lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
-  let helper_path = macos_bundled_helper_path() catch {
-    error => raise normalize_async_run_error(error)
-  }
+  let helper_path = bundled_runtime_helper_path()
   let runtime = @native.Runtime::new(
     config=@native.RuntimeConfig::bundled(
       helper_path?,
