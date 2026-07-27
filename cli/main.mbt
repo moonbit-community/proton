@@ -399,8 +399,7 @@ async fn run(args : ArrayView[String]) -> Int {
 ///|
 async fn main {
   let code = run(@env.args()[1:])
-  // A completed native child process can leave an async process watcher alive
-  // on Linux. Once the command future returns, all command cleanup is done;
-  // exit explicitly so successful CLI commands cannot keep the event loop up.
-  @sys.exit(code)
+  if code != 0 {
+    @sys.exit(code)
+  }
 }
