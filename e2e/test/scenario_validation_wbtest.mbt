@@ -10,3 +10,16 @@ test "CDP E2E scenario names are explicitly supported" {
   }
   assert_true(!is_supported_scenario("unknown"))
 }
+
+///|
+test "E2E paths resolve backslash relative runtime directories" {
+  let root = repository_root()
+  let resolved = resolve_path(root, ".proton\\runtimes\\test")
+  let suffix = ".proton" +
+    @path.sep.to_string() +
+    "runtimes" +
+    @path.sep.to_string() +
+    "test"
+  assert_true(resolved.has_prefix(root + @path.sep.to_string()))
+  assert_true(resolved.has_suffix(suffix))
+}

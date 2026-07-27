@@ -431,11 +431,28 @@ async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
 
 ///|
 fn resolve_path(base : String, child : String) -> String {
+  let base = if @path.sep == '\\' {
+    base.replace_all(old="/", new="\\")
+  } else {
+    base.replace_all(old="\\", new="/")
+  }
+  let child = if @path.sep == '\\' {
+    child.replace_all(old="/", new="\\")
+  } else {
+    child.replace_all(old="\\", new="/")
+  }
   let path = @path.Path(child)
   if path.is_absolute() {
     path.normalize().resolve().to_string()
   } else {
-    @path.Path(base).join(path).normalize().resolve().to_string()
+    let combined = if base == "" {
+      child
+    } else if base.has_suffix(@path.sep.to_string()) {
+      base + child
+    } else {
+      base + @path.sep.to_string() + child
+    }
+    @path.Path(combined).normalize().resolve().to_string()
   }
 }
 
