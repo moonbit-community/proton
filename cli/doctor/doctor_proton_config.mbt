@@ -1,8 +1,20 @@
 ///|
-fn read_proton_project_config(
+async fn read_proton_project_config(
   path : String,
 ) -> DoctorAppConfig raise @proton_config.ProjectConfigError {
-  let loaded = @proton_config.load_project_config_from_file(path)
+  let source = @async_fs.read_file(path).text() catch {
+    error =>
+      raise @proton_config.ProjectConfigError::FileRead(
+        path~,
+        detail=@debug.render(@debug.to_repr(error)),
+      )
+  }
+  let base_dir = path_parent(path).unwrap_or(".")
+  let loaded = @proton_config.load_project_config_from_text(
+    source,
+    base_dir,
+    name=path,
+  )
   doctor_app_config_from_project_config(loaded.config(), loaded.warnings())
 }
 

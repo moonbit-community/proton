@@ -42,7 +42,7 @@ test "sign does not require notarization" {
 }
 
 ///|
-test "package plan requires active bundle" {
+async test "package plan requires active bundle" {
   let project = @proton_config.ProjectConfig::new(
     ".",
     @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
@@ -63,7 +63,7 @@ test "package plan requires active bundle" {
 }
 
 ///|
-test "package plan defaults to app and zip" {
+async test "package plan defaults to app and zip" {
   let project = @proton_config.ProjectConfig::new(
     ".",
     @proton_config.ProjectWindowConfig::new("Demo", 800, 600),

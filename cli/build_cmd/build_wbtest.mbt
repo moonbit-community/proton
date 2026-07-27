@@ -6,16 +6,16 @@ fn parse_build_args(args : Array[String]) -> RawBuildOptions raise {
 ///|
 fn[T] expect_build_error_message(action : () -> T raise) -> String raise {
   try action() catch {
-    error => error.to_string()
+    error => Show::to_string(error)
   } noraise {
     _ => fail("expected build error")
   }
 }
 
 ///|
-fn[T] expect_build_config_error(
-  action : () -> T raise BuildConfigError,
-) -> BuildConfigError raise {
+async fn[T] expect_build_config_error(
+  action : async () -> T raise BuildConfigError,
+) -> BuildConfigError {
   try action() catch {
     error => error
   } noraise {
@@ -137,17 +137,21 @@ test "moon build args prepend an isolated target directory" {
 }
 
 ///|
-test "frontend cwd validation reports missing directory" {
+async test "frontend cwd validation reports missing directory" {
   let root = "target/proton-build-cwd"
   ensure_build_test_dir(root)
-  let error = expect_build_error_message(() => {
+  let error = try
     resolve_frontend_cwd(root, Some("missing"), "npm run build")
-  })
+  catch {
+    error => error.message()
+  } noraise {
+    _ => fail("expected build error")
+  }
   assert_true(error.contains("frontend cwd does not exist"))
 }
 
 ///|
-test "build config discovery prefers package-local moon.proton" {
+async test "build config discovery prefers package-local moon.proton" {
   let root = "target/proton-build-package-config"
   ensure_build_test_dir(root)
   ensure_build_test_dir(join_path(root, "desktop"))
@@ -159,7 +163,7 @@ test "build config discovery prefers package-local moon.proton" {
 }
 
 ///|
-test "resolve path accepts Windows backslash relative input" {
+async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
     let dir = "target/proton-build-path"
     ensure_build_test_dir(dir)
@@ -172,7 +176,7 @@ test "resolve path accepts Windows backslash relative input" {
 }
 
 ///|
-test "project config validation rejects unknown top-level fields" {
+async test "project config validation rejects unknown top-level fields" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "unknown.moon.proton")
@@ -190,7 +194,7 @@ test "project config validation rejects unknown top-level fields" {
 }
 
 ///|
-test "project config validation requires window" {
+async test "project config validation requires window" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "missing-window.moon.proton")
@@ -217,7 +221,7 @@ test "project config validation requires window" {
 }
 
 ///|
-test "project config validation rejects unsupported size_hint" {
+async test "project config validation rejects unsupported size_hint" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "bad-size-hint.moon.proton")
@@ -252,7 +256,7 @@ test "project config validation rejects unsupported size_hint" {
 }
 
 ///|
-test "project config parsing keeps active bundle metadata out of build validation" {
+async test "project config parsing keeps active bundle metadata out of build validation" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "active-bundle.moon.proton")
@@ -271,12 +275,16 @@ test "project config parsing keeps active bundle metadata out of build validatio
 }
 
 ///|
-test "production entry validation requires file-backed entry" {
-  let error = expect_build_error_message(() => {
+async test "production entry validation requires file-backed entry" {
+  let error = try
     validate_production_entry_file(
       @proton_config.ProjectEntry::Asset("target/proton-build-missing.html"),
     )
-  })
+  catch {
+    error => error.message()
+  } noraise {
+    _ => fail("expected build error")
+  }
   assert_true(error.contains("production entry does not exist"))
   let dir = "target/proton-build-entry"
   ensure_build_test_dir(dir)
@@ -334,11 +342,15 @@ test "frontend release requires dist" {
 }
 
 ///|
-test "production entry validation rejects directories" {
+async test "production entry validation rejects directories" {
   let dir = "target/proton-build-entry-dir"
   ensure_build_test_dir(dir)
-  let error = expect_build_error_message(() => {
+  let error = try
     validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir))
-  })
+  catch {
+    error => error.message()
+  } noraise {
+    _ => fail("expected build error")
+  }
   assert_true(error.contains("production entry is not a file"))
 }

@@ -1,5 +1,5 @@
 ///|
-fn find_prebuilt_root(
+async fn find_prebuilt_root(
   root : String,
   platform : ProtonPlatform,
 ) -> String raise CefRuntimeError {
@@ -25,7 +25,7 @@ fn find_prebuilt_root(
 }
 
 ///|
-fn prebuilt_manifest_version(
+async fn prebuilt_manifest_version(
   prebuilt_root : String,
 ) -> String raise CefRuntimeError {
   let manifest_path = path_join(prebuilt_root, "manifest.json")

@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",
@@ -8,7 +9,6 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
-  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
   "justjavac/proton_cli/arguments" @cli_args,
@@ -23,6 +23,7 @@ import {
 
 import {
   "moonbitlang/moon_config",
+  "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 
 supported_targets = "native"

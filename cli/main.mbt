@@ -338,7 +338,7 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
 }
 
 ///|
-fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
+async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
   let input = @cli_args.required_value(matches, "input_file")
   let output = @cli_args.required_value(matches, "output-file")
   let resolved_input = resolve_cli_path(cwd, input)
@@ -346,7 +346,11 @@ fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
   let result = @codegen.generate_app_commands_from_file_with_metadata(
     resolved_input,
   )
-  @mbfs.write_string_to_file(resolved_output, result.source, encoding="utf8") catch {
+  @async_fs.write_file(
+    resolved_output,
+    result.source,
+    create_mode=CreateOrTruncate,
+  ) catch {
     error =>
       raise CliCodegenOutputError::WriteFailed(
         path=resolved_output,

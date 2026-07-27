@@ -6,13 +6,13 @@ import {
 }
 
 // Values
-pub fn generate_app_commands_from_file(String, String, String) -> ProtonCommandCodegenOutput raise
+pub async fn generate_app_commands_from_file(String, String, String) -> ProtonCommandCodegenOutput
 
-pub fn generate_app_commands_from_file_with_metadata(String) -> ProtonCommandCodegenOutput raise
+pub async fn generate_app_commands_from_file_with_metadata(String) -> ProtonCommandCodegenOutput
 
 pub fn generate_app_commands_from_source(String, String, String) -> ProtonCommandCodegenOutput raise
 
-pub fn read_moon_ext_identity(String) -> (String, String) raise
+pub async fn read_moon_ext_identity(String) -> (String, String)
 
 // Errors
 pub(all) suberror CodegenInputError {

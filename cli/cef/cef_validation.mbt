@@ -1,10 +1,13 @@
 ///|
-fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool {
+async fn has_source_cef_files(
+  root : String,
+  platform : ProtonPlatform,
+) -> Bool noraise {
   all_exist(root, source_cef_relative_files(platform))
 }
 
 ///|
-fn validate_cef_root(
+async fn validate_cef_root(
   root : String,
   platform : ProtonPlatform,
 ) -> Unit raise CefRuntimeError {
@@ -25,7 +28,7 @@ fn validate_cef_root(
 }
 
 ///|
-fn validate_runtime_dist(
+async fn validate_runtime_dist(
   root : String,
   platform : ProtonPlatform,
 ) -> Unit raise CefRuntimeError {

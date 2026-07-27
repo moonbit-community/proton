@@ -37,7 +37,7 @@ async fn install_cef_root(
   copy_tree(extracted_root, install_dir)
   normalize_cef_runtime_layout(install_dir)
   let version_path = path_join(install_dir, "version.txt")
-  @mbfs.write_string_to_file(version_path, name + "\n", encoding="utf8") catch {
+  @async_fs.write_file(version_path, name + "\n", create_mode=CreateOrTruncate) catch {
     err =>
       raise CefFileSystemError::Write(
         path=version_path,
@@ -45,7 +45,11 @@ async fn install_cef_root(
       )
   }
   let checksum_path = path_join(install_dir, "sha256.txt")
-  @mbfs.write_string_to_file(checksum_path, sha256 + "\n", encoding="utf8") catch {
+  @async_fs.write_file(
+    checksum_path,
+    sha256 + "\n",
+    create_mode=CreateOrTruncate,
+  ) catch {
     err =>
       raise CefFileSystemError::Write(
         path=checksum_path,
@@ -106,10 +110,10 @@ async fn setup_downloaded_cef(
 }
 
 ///|
-fn installed_version(install_dir : String) -> String {
+async fn installed_version(install_dir : String) -> String noraise {
   let version_path = path_join(install_dir, "version.txt")
   if path_is_file(version_path) {
-    @mbfs.read_file_to_string(version_path, encoding="utf8").trim().to_owned() catch {
+    @async_fs.read_file(version_path).text().trim().to_owned() catch {
       _ => ""
     }
   } else {
@@ -118,10 +122,10 @@ fn installed_version(install_dir : String) -> String {
 }
 
 ///|
-fn installed_checksum(install_dir : String) -> String {
+async fn installed_checksum(install_dir : String) -> String noraise {
   let checksum_path = path_join(install_dir, "sha256.txt")
   if path_is_file(checksum_path) {
-    @mbfs.read_file_to_string(checksum_path, encoding="utf8").trim().to_owned() catch {
+    @async_fs.read_file(checksum_path).text().trim().to_owned() catch {
       _ => ""
     }
   } else {

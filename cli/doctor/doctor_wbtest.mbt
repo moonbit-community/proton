@@ -44,14 +44,14 @@ test "doctor paths use the host separator" {
 }
 
 ///|
-test "doctor resolves a relative project cwd" {
+async test "doctor resolves a relative project cwd" {
   let project = discover_project(".")
   assert_true(path_is_absolute_like(project.root))
   assert_true(path_is_absolute_like(development_native_dist(project)))
 }
 
 ///|
-test "doctor resolves a relative native dist override" {
+async test "doctor resolves a relative native dist override" {
   let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
   defer (match previous {
     Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
@@ -75,7 +75,7 @@ test "doctor resolves a relative native dist override" {
 }
 
 ///|
-test "doctor project boundary rejects outside paths" {
+async test "doctor project boundary rejects outside paths" {
   let root = ensure_test_project_root("target/proton-doctor-boundary")
   let project = discover_project(root)
   assert_eq(project.root, root)
@@ -91,7 +91,7 @@ test "doctor project boundary rejects outside paths" {
 }
 
 ///|
-test "doctor keeps package-local config in module context" {
+async test "doctor keeps package-local config in module context" {
   let root = ensure_test_project_root("target/proton-doctor-package-config")
   let package_dir = path_join(root, "desktop")
   ensure_test_dir(package_dir)
@@ -146,7 +146,7 @@ test "doctor Windows path boundary ignores ASCII case" {
 }
 
 ///|
-test "doctor discovers generated app package and derives dependencies" {
+async test "doctor discovers generated app package and derives dependencies" {
   let root = "target/proton-doctor-generated-app"
   let app_dir = path_join(root, "app")
   ensure_test_dir(root)
@@ -285,7 +285,7 @@ async test "frontend run captures build command output" {
 }
 
 ///|
-test "doctor fix regenerates extensions and honors dry run" {
+async test "doctor fix regenerates extensions and honors dry run" {
   let root = ensure_test_project_root("target/proton-doctor-fix")
   let extension_dir = path_join(root, "sample")
   @mbfs.create_dir(extension_dir) catch {
@@ -407,7 +407,7 @@ test "doctor options filter sections" {
 }
 
 ///|
-test "doctor reports invalid runtime manifests" {
+async test "doctor reports invalid runtime manifests" {
   let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
   defer (match previous {
     Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
@@ -433,7 +433,7 @@ test "doctor reports invalid runtime manifests" {
 }
 
 ///|
-test "doctor validates runtime manifest schema" {
+async test "doctor validates runtime manifest schema" {
   let dir = ensure_test_project_root("target/proton-doctor-runtime-schema")
   let proton_dir = path_join(dir, ".proton")
   @mbfs.create_dir(proton_dir) catch {
@@ -650,7 +650,7 @@ test "doctor renders native open ABI errors" {
 }
 
 ///|
-fn doctor_test_workspace_root() -> String {
+async fn doctor_test_workspace_root() -> String {
   let cwd = @path.Path(".").resolve().to_string()
   match find_up(cwd, "moon.work") {
     Some(path) => path_parent(path).unwrap_or(cwd)
@@ -659,7 +659,7 @@ fn doctor_test_workspace_root() -> String {
 }
 
 ///|
-fn doctor_test_native_dist(platform_id : String) -> String? {
+async fn doctor_test_native_dist(platform_id : String) -> String? {
   match runtime_library_relative_path(platform_id) {
     Some(relative) => {
       let project = discover_project(doctor_test_workspace_root())
@@ -691,7 +691,7 @@ fn doctor_test_native_dist(platform_id : String) -> String? {
 }
 
 ///|
-fn doctor_test_native_library_path(platform_id : String) -> String? {
+async fn doctor_test_native_library_path(platform_id : String) -> String? {
   match doctor_test_native_dist(platform_id) {
     Some(native_dist) =>
       match runtime_library_relative_path(platform_id) {
@@ -894,7 +894,7 @@ async test "doctor native loader reports a missing ABI symbol" {
 }
 
 ///|
-test "moon_config adapter reads module deps and package imports" {
+async test "moon_config adapter reads module deps and package imports" {
   let dir = "target/proton-doctor-config"
   ensure_test_dir(dir)
   let moon_mod_path = path_join(dir, "moon.mod")
@@ -962,7 +962,7 @@ test "moon_config adapter reads module deps and package imports" {
 }
 
 ///|
-test "moon_config adapter reports parse failures" {
+async test "moon_config adapter reports parse failures" {
   let dir = "target/proton-doctor-bad-config"
   ensure_test_dir(dir)
   let moon_mod_path = path_join(dir, "moon.mod")
@@ -1001,7 +1001,7 @@ test "doctor collector extracts first non-empty version line" {
 }
 
 ///|
-test "moon.proton reader extracts app and frontend fields" {
+async test "moon.proton reader extracts app and frontend fields" {
   let dir = "target/proton-doctor-app-config"
   ensure_test_dir(dir)
   let config_path = path_join(dir, "moon.proton")
@@ -1066,7 +1066,7 @@ test "moon.proton reader extracts app and frontend fields" {
 }
 
 ///|
-test "moon.proton reader rejects manifest extensions" {
+async test "moon.proton reader rejects manifest extensions" {
   let dir = "target/proton-doctor-app-config-reject"
   ensure_test_dir(dir)
   let config_path = path_join(dir, "moon.proton")

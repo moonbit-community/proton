@@ -94,7 +94,21 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     Some(path) => path
     None => raise PackageConfigError::NotFound(path="moon.proton")
   }
-  let loaded = @proton_config.load_project_config_from_file(config_path) catch {
+  let config_text = @async_fs.read_file(config_path).text() catch {
+    error =>
+      raise PackageConfigError::Invalid(
+        path=config_path,
+        error=@proton_config.ProjectConfigError::FileRead(
+          path=config_path,
+          detail=@debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  let loaded = @proton_config.load_project_config_from_text(
+    config_text,
+    path_parent(config_path),
+    name=config_path,
+  ) catch {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
   let project = loaded.config()
@@ -135,11 +149,11 @@ fn validate_package_target(target : String) -> Unit raise PackageUsageError {
 }
 
 ///|
-fn build_package_plan(
+async fn build_package_plan(
   raw : RawPackageOptions,
   config_path : String,
   project : @proton_config.ProjectConfig,
-) -> PackagePlan raise {
+) -> PackagePlan {
   let bundle = match project.bundle() {
     Some(bundle) if bundle.active() => bundle
     Some(_) => raise PackageConfigError::BundleInactive
@@ -403,8 +417,8 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
 }
 
 ///|
-fn is_macos_host() -> Bool {
-  @mbfs.path_exists("/System/Library/CoreServices/SystemVersion.plist")
+async fn is_macos_host() -> Bool noraise {
+  path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
 ///|
@@ -429,19 +443,25 @@ fn restore_package_env(name : String, value : String?) -> Unit {
 }
 
 ///|
-fn find_release_executable(plan : PackagePlan) -> String? {
+async fn find_release_executable(plan : PackagePlan) -> String? noraise {
   let root = resolve_path(plan.build_target_dir, "native/release/build")
   let package_name = path_basename(plan.app_package)
   find_named_file(root, package_name + ".exe")
 }
 
 ///|
-fn find_named_file(root : String, name : String) -> String? {
-  guard @mbfs.path_exists(root) else { return None }
+async fn find_named_file(root : String, name : String) -> String? noraise {
+  guard path_exists(root) else { return None }
   if path_is_file(root) {
     return if path_basename(root) == name { Some(root) } else { None }
   }
-  let entries = @mbfs.read_dir(root) catch { _ => return None }
+  let entries = @async_fs.readdir(
+    root,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
+    _ => return None
+  }
   for entry in entries {
     match find_named_file(resolve_path(root, entry), name) {
       Some(path) => return Some(path)
@@ -459,7 +479,7 @@ async fn read_active_runtime(root : String) -> String {
     _ => ()
   }
   let manifest_path = resolve_path(root, ".proton/runtime.json")
-  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+  let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise PackageRuntimeError::ManifestMissing(path=manifest_path)
   }
   let json = @json.parse(text) catch {
@@ -515,7 +535,7 @@ fn package_build_target_dir(
 }
 
 ///|
-fn require_runtime(path : String) -> String raise PackageRuntimeError {
+async fn require_runtime(path : String) -> String raise PackageRuntimeError {
   if path_is_dir(path) {
     path
   } else {
@@ -565,7 +585,7 @@ async fn stage_macos_app_impl(
   stage_project_inputs(plan, resources)
   stage_macos_icon(plan, resources)
   let helper_source = resolve_path(runtime, "bin/cef_process")
-  guard @mbfs.path_exists(helper_source) else {
+  guard path_exists(helper_source) else {
     raise PackageRuntimeError::HelperMissing(path=helper_source)
   }
   copy_file(helper_source, resolve_path(helper_macos, "cef_process"))
@@ -606,8 +626,8 @@ fn macos_staging_app_path(plan : PackagePlan) -> String {
 ///|
 async fn promote_staged_app(staging : String, destination : String) -> Unit {
   let backup = destination + ".backup"
-  if @mbfs.path_exists(backup) {
-    if @mbfs.path_exists(destination) {
+  if path_exists(backup) {
+    if path_exists(destination) {
       remove_tree(backup)
     } else {
       @async_fs.rename(backup, destination) catch {
@@ -620,7 +640,7 @@ async fn promote_staged_app(staging : String, destination : String) -> Unit {
       }
     }
   }
-  let had_destination = @mbfs.path_exists(destination)
+  let had_destination = path_exists(destination)
   if had_destination {
     @async_fs.rename(destination, backup) catch {
       error =>
@@ -681,7 +701,7 @@ async fn stage_project_inputs(plan : PackagePlan, destination : String) -> Unit 
         raise PackagePlanError::UnsupportedResourceGlob(path=input)
       None => input
     }
-    guard @mbfs.path_exists(source) else {
+    guard path_exists(source) else {
       raise PackagePlanError::MissingInput(path=input)
     }
     let relative = match relative_to_base(plan.base_dir, source) {
@@ -706,7 +726,7 @@ async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
   match plan.macos_icon {
     None => ()
     Some(icon) => {
-      guard @mbfs.path_exists(icon) else {
+      guard path_exists(icon) else {
         raise PackagePlanError::MissingIcon(path=icon)
       }
       copy_file(icon, resolve_path(resources, "AppIcon.icns"))
@@ -779,14 +799,14 @@ fn package_executable_name(product_name : String) -> String {
 
 ///|
 async fn ensure_dir(path : String) -> Unit {
-  guard !@mbfs.path_exists(path) else { return }
+  guard !path_exists(path) else { return }
   let parent = path_parent(path)
-  if parent != path && !@mbfs.path_exists(parent) {
+  if parent != path && !path_exists(parent) {
     ensure_dir(parent)
   }
   @async_fs.mkdir(path) catch {
     error => {
-      if @mbfs.path_exists(path) {
+      if path_exists(path) {
         return
       }
       raise PackageFileSystemError::CreateDirectory(
@@ -799,7 +819,7 @@ async fn ensure_dir(path : String) -> Unit {
 
 ///|
 async fn remove_tree(path : String) -> Unit {
-  guard @mbfs.path_exists(path) else { return }
+  guard path_exists(path) else { return }
   if path_is_file(path) {
     @async_fs.remove(path) catch {
       error =>
@@ -909,11 +929,11 @@ async fn copy_tree(source : String, destination : String) -> Unit {
 }
 
 ///|
-fn write_text(
+async fn write_text(
   path : String,
   text : String,
 ) -> Unit raise PackageFileSystemError {
-  @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
+  @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
     error => raise Write(path~, detail=@debug.render(Repr(error)))
   }
 }
@@ -986,7 +1006,7 @@ fn helper_info_plist(plan : PackagePlan) -> String {
 }
 
 ///|
-fn write_package_manifest(
+async fn write_package_manifest(
   plan : PackagePlan,
   destination : String,
   kind : String,
@@ -1106,11 +1126,11 @@ async fn sign_macos_app(
 }
 
 ///|
-fn require_macos_codesign_targets(
+async fn require_macos_codesign_targets(
   targets : Array[MacosCodeSignTarget],
 ) -> Unit raise MacosSigningError {
   for target in targets {
-    guard @mbfs.path_exists(target.path) else {
+    guard path_exists(target.path) else {
       raise MissingTarget(path=target.path)
     }
   }
@@ -1265,10 +1285,10 @@ fn macos_codesign_args(
 }
 
 ///|
-fn resolve_macos_entitlements(
+async fn resolve_macos_entitlements(
   app : String,
   allow_untrusted_libraries~ : Bool,
-) -> String raise {
+) -> String {
   match @sys.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
     Some(path) if path.trim().to_owned() != "" => {
       let path = @path.Path(path.trim().to_owned()).resolve().to_string()
@@ -1445,7 +1465,7 @@ async fn create_zip(plan : PackagePlan, source : String) -> Unit {
 }
 
 ///|
-fn resolve_package_config_path(
+async fn resolve_package_config_path(
   cwd : String,
   root : String,
   raw : RawPackageOptions,
@@ -1459,11 +1479,11 @@ fn resolve_package_config_path(
       )
       let cwd_config = resolve_path(cwd, default_config_file)
       let root_config = resolve_path(root, default_config_file)
-      if @mbfs.path_exists(package_config) {
+      if path_exists(package_config) {
         Some(package_config)
-      } else if @mbfs.path_exists(cwd_config) {
+      } else if path_exists(cwd_config) {
         Some(cwd_config)
-      } else if @mbfs.path_exists(root_config) {
+      } else if path_exists(root_config) {
         Some(root_config)
       } else {
         None
@@ -1473,10 +1493,10 @@ fn resolve_package_config_path(
 }
 
 ///|
-fn find_project_root_from(start : String) -> String {
+async fn find_project_root_from(start : String) -> String noraise {
   for dir = start; dir != ""; {
-    if @mbfs.path_exists(resolve_path(dir, "moon.work")) ||
-      @mbfs.path_exists(resolve_path(dir, "moon.mod")) {
+    if path_exists(resolve_path(dir, "moon.work")) ||
+      path_exists(resolve_path(dir, "moon.mod")) {
       return dir
     }
     let parent = path_parent(dir)
@@ -1489,13 +1509,13 @@ fn find_project_root_from(start : String) -> String {
 }
 
 ///|
-fn find_workspace_root_from(start : String) -> String {
+async fn find_workspace_root_from(start : String) -> String noraise {
   let mut module_root : String? = None
   for dir = start; dir != ""; {
-    if @mbfs.path_exists(resolve_path(dir, "moon.work")) {
+    if path_exists(resolve_path(dir, "moon.work")) {
       return dir
     }
-    if module_root is None && @mbfs.path_exists(resolve_path(dir, "moon.mod")) {
+    if module_root is None && path_exists(resolve_path(dir, "moon.mod")) {
       module_root = Some(dir)
     }
     let parent = path_parent(dir)
@@ -1530,15 +1550,22 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn path_is_file(path : String) -> Bool {
-  @mbfs.is_file(path) catch {
+async fn path_exists(path : String) -> Bool noraise {
+  @async_fs.exists(path) catch {
     _ => false
   }
 }
 
 ///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
+async fn path_is_file(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Regular) catch {
+    _ => false
+  }
+}
+
+///|
+async fn path_is_dir(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Directory) catch {
     _ => false
   }
 }

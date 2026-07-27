@@ -11,20 +11,22 @@ priv struct ProtonPlatform {
 }
 
 ///|
-fn path_exists(path : String) -> Bool {
-  @mbfs.path_exists(path)
-}
-
-///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
+async fn path_exists(path : String) -> Bool noraise {
+  @async_fs.exists(path) catch {
     _ => false
   }
 }
 
 ///|
-fn path_is_file(path : String) -> Bool {
-  @mbfs.is_file(path) catch {
+async fn path_is_dir(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Directory) catch {
+    _ => false
+  }
+}
+
+///|
+async fn path_is_file(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Regular) catch {
     _ => false
   }
 }
@@ -156,7 +158,7 @@ async fn detect_host_arch() -> String? {
 }
 
 ///|
-fn is_macos_host() -> Bool {
+async fn is_macos_host() -> Bool noraise {
   path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
@@ -352,7 +354,7 @@ pub fn runtime_required_relative_files_for_platform(
 }
 
 ///|
-fn all_exist(root : String, files : Array[String]) -> Bool {
+async fn all_exist(root : String, files : Array[String]) -> Bool noraise {
   guard files.length() > 0 else { return false }
   for file in files {
     guard path_exists(path_join(root, file)) else { return false }

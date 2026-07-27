@@ -205,7 +205,7 @@ fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError 
 }
 
 ///|
-fn resolve_build_config_path(
+async fn resolve_build_config_path(
   cwd : String,
   root : String,
   raw : RawBuildOptions,
@@ -235,7 +235,7 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 }
 
 ///|
-fn load_project_config(
+async fn load_project_config(
   config_path : String?,
 ) -> BuildProjectConfig raise BuildConfigError {
   match config_path {
@@ -277,7 +277,7 @@ async fn run_frontend_build(root : String, config : BuildProjectConfig) -> Unit 
 }
 
 ///|
-fn resolve_frontend_cwd(
+async fn resolve_frontend_cwd(
   root : String,
   frontend_cwd : String?,
   command : String,
@@ -317,7 +317,7 @@ fn validate_release_config(
 }
 
 ///|
-fn validate_release_files(
+async fn validate_release_files(
   root : String,
   config : BuildProjectConfig,
 ) -> Unit raise BuildPathError {
@@ -359,7 +359,7 @@ fn validate_production_entry_kind(
 }
 
 ///|
-fn validate_production_entry_file(
+async fn validate_production_entry_file(
   entry : @proton_config.ProjectEntry,
 ) -> Unit raise BuildPathError {
   match entry {
@@ -374,10 +374,24 @@ fn validate_production_entry_file(
 }
 
 ///|
-fn read_project_config(
+async fn read_project_config(
   path : String,
 ) -> BuildProjectConfig raise BuildConfigError {
-  let loaded = @proton_config.load_project_config_from_file(path) catch {
+  let source = @async_fs.read_file(path).text() catch {
+    error =>
+      raise Invalid(
+        path~,
+        error=@proton_config.ProjectConfigError::FileRead(
+          path~,
+          detail=@debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  let loaded = @proton_config.load_project_config_from_text(
+    source,
+    path_parent(path),
+    name=path,
+  ) catch {
     error => raise Invalid(path~, error~)
   }
   let project = loaded.config()
@@ -451,7 +465,7 @@ fn shell_command(command : String) -> (String, Array[String]) {
 }
 
 ///|
-fn find_project_root_from(start : String) -> String {
+async fn find_project_root_from(start : String) -> String noraise {
   for dir = start; dir != ""; {
     if path_exists(join_path(dir, "moon.work")) ||
       path_exists(join_path(dir, "moon.mod")) {
@@ -535,13 +549,15 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn path_exists(path : String) -> Bool {
-  @mbfs.path_exists(path)
+async fn path_exists(path : String) -> Bool noraise {
+  @async_fs.exists(path) catch {
+    _ => false
+  }
 }
 
 ///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
+async fn path_is_dir(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Directory) catch {
     _ => false
   }
 }

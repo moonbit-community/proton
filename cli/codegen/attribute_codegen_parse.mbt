@@ -32,11 +32,11 @@ pub fn generate_app_commands_from_source(
 ///
 /// The input file's package directory is scanned for ordinary `.mbt` files so
 /// duplicate command and event names can be checked against sibling sources.
-pub fn generate_app_commands_from_file(
+pub async fn generate_app_commands_from_file(
   input_file : String,
   extension_id : String,
   js_namespace : String,
-) -> ProtonCommandCodegenOutput raise {
+) -> ProtonCommandCodegenOutput {
   validate_extension_id(extension_id)
   validate_js_part("extension namespace", js_namespace)
   let parsed = collect_package_proton_module(input_file)
@@ -49,21 +49,21 @@ pub fn generate_app_commands_from_file(
 ///
 /// The codegen input's package directory must contain `moon.ext` with string
 /// `id` and `namespace` fields.
-pub fn generate_app_commands_from_file_with_metadata(
+pub async fn generate_app_commands_from_file_with_metadata(
   input_file : String,
-) -> ProtonCommandCodegenOutput raise {
+) -> ProtonCommandCodegenOutput {
   let (extension_id, js_namespace) = read_package_extension_config(input_file)
   generate_app_commands_from_file(input_file, extension_id, js_namespace)
 }
 
 ///|
-fn read_package_extension_config(input_file : String) -> (String, String) raise {
+async fn read_package_extension_config(input_file : String) -> (String, String) {
   let package_dir = path_dirname(input_file)
   let moon_ext_path = path_join(package_dir, "moon.ext")
-  guard @mbfs.path_exists(moon_ext_path) else {
+  guard (@async_fs.exists(moon_ext_path) catch { _ => false }) else {
     raise CodegenMetadataFileError::MissingMetadata(path=moon_ext_path)
   }
-  let has_moon_ext = @mbfs.is_file(moon_ext_path) catch {
+  let has_moon_ext = (@async_fs.kind(moon_ext_path) is Regular) catch {
     error =>
       raise CodegenInputError::InputRead(
         path=moon_ext_path,
@@ -80,8 +80,8 @@ fn read_package_extension_config(input_file : String) -> (String, String) raise 
 }
 
 ///|
-fn read_moon_ext_codegen_config_file(path : String) -> (String, String) raise {
-  let text = @mbfs.read_file_to_string(path) catch {
+async fn read_moon_ext_codegen_config_file(path : String) -> (String, String) {
+  let text = @async_fs.read_file(path).text() catch {
     error =>
       raise CodegenInputError::InputRead(
         path~,
@@ -93,7 +93,7 @@ fn read_moon_ext_codegen_config_file(path : String) -> (String, String) raise {
 
 ///|
 /// Validates a `moon.ext` file and returns its extension id and JavaScript namespace.
-pub fn read_moon_ext_identity(path : String) -> (String, String) raise {
+pub async fn read_moon_ext_identity(path : String) -> (String, String) {
   read_moon_ext_codegen_config_file(path)
 }
 
@@ -197,9 +197,9 @@ fn render_moon_ext_config_reports(reports : Array[@basic.Report]) -> String {
 }
 
 ///|
-fn collect_package_proton_module(
+async fn collect_package_proton_module(
   input_file : String,
-) -> ParsedProtonModule raise {
+) -> ParsedProtonModule {
   let input_path = normalize_path(input_file)
   let dir = path_dirname(input_file)
   let target = ParsedProtonModule::{
@@ -218,7 +218,11 @@ fn collect_package_proton_module(
     package_commands: [],
     package_events: [],
   }
-  let entries = @mbfs.read_dir(dir) catch {
+  let entries = @async_fs.readdir(
+    dir,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
     error =>
       raise CodegenInputError::PackageRead(
         path=dir,
@@ -228,7 +232,7 @@ fn collect_package_proton_module(
   for entry in entries {
     guard is_codegen_source_file(entry) else { continue }
     let path = path_join(dir, entry)
-    let is_file = @mbfs.is_file(path) catch {
+    let is_file = (@async_fs.kind(path) is Regular) catch {
       error =>
         raise CodegenInputError::PackageRead(
           path~,
@@ -238,7 +242,7 @@ fn collect_package_proton_module(
     guard is_file else { continue }
     let is_target = normalize_path(path) == input_path ||
       entry == path_basename(input_file)
-    let source = @mbfs.read_file_to_string(path) catch {
+    let source = @async_fs.read_file(path).text() catch {
       error =>
         raise CodegenInputError::InputRead(
           path~,

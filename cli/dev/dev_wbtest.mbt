@@ -85,7 +85,7 @@ test "parse dev args accepts an isolated Moon target directory" {
 }
 
 ///|
-test "read dev frontend config extracts cwd" {
+async test "read dev frontend config extracts cwd" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
   let path = join_path(dir, "moon.proton")
@@ -126,7 +126,7 @@ test "read dev frontend config extracts cwd" {
 }
 
 ///|
-test "read dev frontend config validates full project config" {
+async test "read dev frontend config validates full project config" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
   let path = join_path(dir, "bad-size-hint.moon.proton")
@@ -169,7 +169,7 @@ test "read dev frontend config validates full project config" {
 }
 
 ///|
-test "frontend cwd is validated only when frontend starts" {
+async test "frontend cwd is validated only when frontend starts" {
   let root = "target/proton-dev-cwd"
   ensure_dev_test_dir(root)
   ensure_dev_test_dir(join_path(root, "frontend"))
@@ -204,7 +204,7 @@ test "frontend cwd is validated only when frontend starts" {
 }
 
 ///|
-test "dev config discovery prefers package-local moon.proton" {
+async test "dev config discovery prefers package-local moon.proton" {
   let root = "target/proton-dev-package-config"
   ensure_dev_test_dir(root)
   ensure_dev_test_dir(join_path(root, "desktop"))
@@ -218,7 +218,7 @@ test "dev config discovery prefers package-local moon.proton" {
 }
 
 ///|
-test "dev runtime layout validates helper" {
+async test "dev runtime layout validates helper" {
   let root = "target/proton-dev-runtime-layout"
   let runtime = create_fake_dev_runtime(root)
   let loaded = dev_runtime_from_root(resolve_path(".", runtime), "test runtime")
@@ -334,7 +334,7 @@ async test "read dev runtime honors PROTON_NATIVE_DIST override" {
 }
 
 ///|
-test "resolve path accepts Windows backslash relative input" {
+async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
     let dir = "target/proton-dev-path"
     ensure_dev_test_dir(dir)

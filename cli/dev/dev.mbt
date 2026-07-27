@@ -213,7 +213,7 @@ fn parse_non_negative_int(
 }
 
 ///|
-fn resolve_frontend_cwd(
+async fn resolve_frontend_cwd(
   root : String,
   frontend_cwd : String?,
   frontend_command : String?,
@@ -238,7 +238,7 @@ fn resolve_frontend_cwd(
 }
 
 ///|
-fn resolve_dev_config_path(
+async fn resolve_dev_config_path(
   cwd : String,
   root : String,
   raw : RawDevOptions,
@@ -268,7 +268,7 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 }
 
 ///|
-fn load_dev_frontend_config(
+async fn load_dev_frontend_config(
   config_path : String?,
 ) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
   match config_path {
@@ -283,10 +283,24 @@ fn load_dev_frontend_config(
 }
 
 ///|
-fn read_dev_frontend_config(
+async fn read_dev_frontend_config(
   path : String,
 ) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
-  let loaded = @proton_config.load_project_config_from_file(path) catch {
+  let source = @async_fs.read_file(path).text() catch {
+    error =>
+      raise Invalid(
+        path~,
+        error=@proton_config.ProjectConfigError::FileRead(
+          path~,
+          detail=@debug.render(@debug.to_repr(error)),
+        ),
+      )
+  }
+  let loaded = @proton_config.load_project_config_from_text(
+    source,
+    path_parent(path),
+    name=path,
+  ) catch {
     error => raise Invalid(path~, error~)
   }
   loaded.config().frontend()
@@ -320,7 +334,7 @@ async fn read_dev_runtime(root : String) -> DevRuntime raise DevRuntimeError {
     None => ()
   }
   let manifest_path = runtime_manifest_path(root)
-  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+  let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise ManifestMissing(path=manifest_path)
   }
   let json = @json.parse(text) catch {
@@ -358,7 +372,7 @@ fn dev_native_dist_override(root : String) -> String? {
 }
 
 ///|
-fn dev_runtime_from_root(
+async fn dev_runtime_from_root(
   runtime_root : String,
   label : String,
 ) -> DevRuntime raise DevRuntimeError {
@@ -908,7 +922,7 @@ fn cancel_frontend(process : @process.Process?) -> Unit {
 }
 
 ///|
-fn find_project_root_from(start : String) -> String {
+async fn find_project_root_from(start : String) -> String noraise {
   for dir = start; dir != ""; {
     if path_exists(join_path(dir, "moon.work")) ||
       path_exists(join_path(dir, "moon.mod")) {
@@ -992,13 +1006,15 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn path_exists(path : String) -> Bool {
-  @mbfs.path_exists(path)
+async fn path_exists(path : String) -> Bool noraise {
+  @async_fs.exists(path) catch {
+    _ => false
+  }
 }
 
 ///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
+async fn path_is_dir(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Directory) catch {
     _ => false
   }
 }

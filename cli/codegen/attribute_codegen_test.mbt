@@ -31,9 +31,43 @@ fn[T] expect_codegen_input_error(
 }
 
 ///|
-fn[T] expect_codegen_metadata_file_error(
-  action : () -> T raise,
-) -> CodegenMetadataFileError raise {
+async fn[T] expect_async_codegen_error(
+  action : async () -> T,
+) -> CommandCodegenError {
+  try action() catch {
+    CommandCodegenError::InvalidName(..) as error => error
+    CommandCodegenError::Attribute(..) as error => error
+    CommandCodegenError::Command(..) as error => error
+    CommandCodegenError::Script(..) as error => error
+    CommandCodegenError::Destroy(..) as error => error
+    CommandCodegenError::Event(..) as error => error
+    CommandCodegenError::UnsupportedType(..) as error => error
+    CommandCodegenError::Duplicate(..) as error => error
+    CommandCodegenError::MissingCommand as error => error
+    _ => fail("expected command codegen error")
+  } noraise {
+    _ => fail("expected command codegen error")
+  }
+}
+
+///|
+async fn[T] expect_async_codegen_input_error(
+  action : async () -> T,
+) -> CodegenInputError {
+  try action() catch {
+    CodegenInputError::SourceParse(..) as error => error
+    CodegenInputError::InputRead(..) as error => error
+    CodegenInputError::PackageRead(..) as error => error
+    _ => fail("expected codegen input error")
+  } noraise {
+    _ => fail("expected codegen input error")
+  }
+}
+
+///|
+async fn[T] expect_async_codegen_metadata_file_error(
+  action : async () -> T,
+) -> CodegenMetadataFileError {
   try action() catch {
     CodegenMetadataFileError::MissingMetadata(..) as error => error
     CodegenMetadataFileError::Syntax(..) as error => error
@@ -420,7 +454,7 @@ test "attribute codegen rejects event-only input" {
 }
 
 ///|
-test "attribute codegen file scan reports target parse errors" {
+async test "attribute codegen file scan reports target parse errors" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -439,14 +473,14 @@ test "attribute codegen file scan reports target parse errors" {
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let error = expect_codegen_input_error(() => {
+  let error = expect_async_codegen_input_error(() => {
     generate_app_commands_from_file(input, "examples/bad-target", "bad")
   })
   assert_eq(error, CodegenInputError::SourceParse(path=input))
 }
 
 ///|
-test "attribute codegen file scan targets input file and checks package context" {
+async test "attribute codegen file scan targets input file and checks package context" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -493,7 +527,7 @@ test "attribute codegen file scan targets input file and checks package context"
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let error = expect_codegen_error(() => {
+  let error = expect_async_codegen_error(() => {
     generate_app_commands_from_file(input, "examples/package", "pkg")
   })
   assert_eq(
@@ -503,7 +537,7 @@ test "attribute codegen file scan targets input file and checks package context"
 }
 
 ///|
-test "attribute codegen reads moon ext metadata" {
+async test "attribute codegen reads moon ext metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -540,7 +574,7 @@ test "attribute codegen reads moon ext metadata" {
 }
 
 ///|
-test "attribute codegen requires moon ext namespace" {
+async test "attribute codegen requires moon ext namespace" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -559,7 +593,7 @@ test "attribute codegen requires moon ext namespace" {
     err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-missing-namespace/moon.ext"
-  let error = expect_codegen_metadata_file_error(() => {
+  let error = expect_async_codegen_metadata_file_error(() => {
     generate_app_commands_from_file_with_metadata(input)
   })
   assert_eq(
@@ -572,7 +606,7 @@ test "attribute codegen requires moon ext namespace" {
 }
 
 ///|
-test "attribute codegen rejects removed moon ext fields" {
+async test "attribute codegen rejects removed moon ext fields" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -593,7 +627,7 @@ test "attribute codegen rejects removed moon ext fields" {
     err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-removed/moon.ext"
-  let error = expect_codegen_metadata_file_error(() => {
+  let error = expect_async_codegen_metadata_file_error(() => {
     generate_app_commands_from_file_with_metadata(input)
   })
   assert_eq(
@@ -606,7 +640,7 @@ test "attribute codegen rejects removed moon ext fields" {
 }
 
 ///|
-test "attribute codegen rejects duplicate moon ext fields" {
+async test "attribute codegen rejects duplicate moon ext fields" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -627,7 +661,7 @@ test "attribute codegen rejects duplicate moon ext fields" {
     err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-duplicate/moon.ext"
-  let error = expect_codegen_metadata_file_error(() => {
+  let error = expect_async_codegen_metadata_file_error(() => {
     generate_app_commands_from_file_with_metadata(input)
   })
   assert_eq(
@@ -640,7 +674,7 @@ test "attribute codegen rejects duplicate moon ext fields" {
 }
 
 ///|
-test "attribute codegen validates moon ext npm package" {
+async test "attribute codegen validates moon ext npm package" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -661,7 +695,7 @@ test "attribute codegen validates moon ext npm package" {
     err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-package/moon.ext"
-  let error = expect_codegen_metadata_file_error(() => {
+  let error = expect_async_codegen_metadata_file_error(() => {
     generate_app_commands_from_file_with_metadata(input)
   })
   assert_eq(
@@ -677,7 +711,7 @@ test "attribute codegen validates moon ext npm package" {
 }
 
 ///|
-test "attribute codegen requires moon ext metadata" {
+async test "attribute codegen requires moon ext metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -697,7 +731,7 @@ test "attribute codegen requires moon ext metadata" {
     err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-missing-moon-ext/moon.ext"
-  let error = expect_codegen_metadata_file_error(() => {
+  let error = expect_async_codegen_metadata_file_error(() => {
     generate_app_commands_from_file_with_metadata(input)
   })
   assert_eq(

@@ -195,16 +195,20 @@ fn print_dry_run(
 }
 
 ///|
-fn write_project(
+async fn write_project(
   options : NewProjectOptions,
   files : Array[PlannedFile],
-) -> Unit raise {
+) -> Unit {
   validate_target_dir_for_write(options.resolved_target_dir)
   ensure_dir_recursive(options.resolved_target_dir)
   for file in files {
     let output_path = project_file_path(options.resolved_target_dir, file.path)
     ensure_file_parent(output_path)
-    @mbfs.write_string_to_file(output_path, file.content, encoding="utf8") catch {
+    @async_fs.write_file(
+      output_path,
+      file.content,
+      create_mode=CreateOrTruncate,
+    ) catch {
       err =>
         raise NewProjectWriteError::WriteFile(
           path=output_path,
@@ -224,7 +228,7 @@ fn project_file_path(root : String, relative : String) -> String {
 }
 
 ///|
-fn ensure_file_parent(path : String) -> Unit raise NewProjectWriteError {
+async fn ensure_file_parent(path : String) -> Unit raise NewProjectWriteError {
   let parent = new_path_parent(path)
   if parent == path || parent == "" || path_exists(parent) {
     return
@@ -233,7 +237,7 @@ fn ensure_file_parent(path : String) -> Unit raise NewProjectWriteError {
 }
 
 ///|
-fn ensure_dir_recursive(path : String) -> Unit raise NewProjectWriteError {
+async fn ensure_dir_recursive(path : String) -> Unit raise NewProjectWriteError {
   if path == "" || path_exists(path) {
     return
   }
@@ -241,7 +245,7 @@ fn ensure_dir_recursive(path : String) -> Unit raise NewProjectWriteError {
   if parent != "" && parent != path {
     ensure_dir_recursive(parent)
   }
-  @mbfs.create_dir(path) catch {
+  @async_fs.mkdir(path) catch {
     err => raise CreateDirectory(path~, detail=@debug.render(Repr(err)))
   }
 }

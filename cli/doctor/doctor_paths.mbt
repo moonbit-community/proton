@@ -1,4 +1,25 @@
 ///|
+async fn doctor_path_exists(path : String) -> Bool noraise {
+  @async_fs.exists(path) catch {
+    _ => false
+  }
+}
+
+///|
+async fn doctor_path_is_file(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Regular) catch {
+    _ => false
+  }
+}
+
+///|
+async fn doctor_path_is_dir(path : String) -> Bool noraise {
+  (@async_fs.kind(path) is Directory) catch {
+    _ => false
+  }
+}
+
+///|
 fn path_join(base : String, name : String) -> String {
   if base == "" || base == "." {
     name
@@ -29,9 +50,9 @@ fn path_parent(path : String) -> String? {
 }
 
 ///|
-fn find_up(start : String, file_name : String) -> String? {
+async fn find_up(start : String, file_name : String) -> String? noraise {
   let candidate = path_join(start, file_name)
-  if @mbfs.path_exists(candidate) {
+  if doctor_path_exists(candidate) {
     Some(candidate)
   } else {
     match path_parent(start) {
@@ -42,12 +63,12 @@ fn find_up(start : String, file_name : String) -> String? {
 }
 
 ///|
-fn find_project_root_marker(start : String) -> (String, String?)? {
+async fn find_project_root_marker(start : String) -> (String, String?)? noraise {
   let moon_mod_path = path_join(start, "moon.mod")
-  if @mbfs.path_exists(moon_mod_path) {
+  if doctor_path_exists(moon_mod_path) {
     return Some((start, Some(moon_mod_path)))
   }
-  if @mbfs.path_exists(path_join(start, "moon.work")) {
+  if doctor_path_exists(path_join(start, "moon.work")) {
     return Some((start, None))
   }
   match path_parent(start) {
@@ -118,7 +139,7 @@ fn project_mode(
 }
 
 ///|
-fn discover_project(cwd : String) -> ProjectDoctorInfo {
+async fn discover_project(cwd : String) -> ProjectDoctorInfo noraise {
   let cwd = @path.Path(cwd).resolve().to_string()
   let discovered_moon_proton_path = find_up(cwd, "moon.proton")
   let discovered_app_json_path = find_up(cwd, "app.json")
@@ -153,7 +174,7 @@ fn discover_project(cwd : String) -> ProjectDoctorInfo {
     Some(path) => Some(path)
     None if mode == AppProject => {
       let app_package = path_join(path_join(root, "app"), "moon.pkg")
-      if @mbfs.path_exists(app_package) {
+      if doctor_path_exists(app_package) {
         Some(app_package)
       } else {
         None
