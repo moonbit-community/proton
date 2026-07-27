@@ -158,8 +158,26 @@ fn development_native_dist(project : ProjectDoctorInfo) -> String {
 fn resolve_native_dist(
   project : ProjectDoctorInfo,
 ) -> (String, DoctorRuntimeManifest?) raise DoctorRuntimeManifestError {
-  match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => (root, None)
+  let native_dist_override = match @sys.get_env_var("PROTON_NATIVE_DIST") {
+    Some(root) => {
+      let root = root.trim().to_owned()
+      if root == "" {
+        None
+      } else {
+        Some(root)
+      }
+    }
+    None => None
+  }
+  match native_dist_override {
+    Some(root) => {
+      let path = if path_is_absolute_like(root) {
+        root
+      } else {
+        path_join(project.root, root)
+      }
+      (@path.Path(path).resolve().to_string(), None)
+    }
     None =>
       match runtime_manifest_from_project(project) {
         Some(manifest) => {
@@ -168,7 +186,7 @@ fn resolve_native_dist(
           } else {
             path_join(project.root, manifest.dist)
           }
-          (path, Some(manifest))
+          (@path.Path(path).resolve().to_string(), Some(manifest))
         }
         None => (development_native_dist(project), None)
       }
@@ -368,32 +386,213 @@ fn runtime_helper_relative_path(platform_id : String) -> String {
 }
 
 ///|
-fn json_object_int(object : Map[String, Json], field : String) -> Int? {
-  match object.get(field) {
-    Some(value) =>
-      try @json.from_json(value) catch {
-        _ => None
-      } noraise {
-        value => Some(value)
+priv struct DoctorNativeRuntimeInfo {
+  abi_version : Int
+  runtime_available : Bool
+  build_mode : String
+  platform : String
+  features : Array[String]
+} derive(FromJson)
+
+///|
+fn doctor_native_runtime_info_from_text(
+  text : String,
+) -> Result[DoctorNativeRuntimeInfo, String] {
+  let json = @json.parse(text) catch {
+    error => return Err("invalid runtime info JSON: " + error.to_string())
+  }
+  let info : DoctorNativeRuntimeInfo = @json.from_json(json) catch {
+    error => return Err("invalid runtime info schema: " + error.to_string())
+  }
+  if info.abi_version != doctor_native_expected_abi_version {
+    Err(
+      "runtime info ABI version mismatch: expected " +
+      doctor_native_expected_abi_version.to_string() +
+      ", got " +
+      info.abi_version.to_string(),
+    )
+  } else if info.build_mode != "runtime" && info.build_mode != "abi-only" {
+    Err("runtime info build_mode must be `runtime` or `abi-only`")
+  } else if info.runtime_available != (info.build_mode == "runtime") {
+    Err("runtime info runtime_available is inconsistent with build_mode")
+  } else if info.platform == "" {
+    Err("runtime info platform must not be empty")
+  } else if info.features.any(fn(feature) { feature == "" }) {
+    Err("runtime info features must not contain empty strings")
+  } else {
+    Ok(info)
+  }
+}
+
+///|
+fn push_deep_runtime_probe_result(
+  lines : Array[DoctorLine],
+  result : DoctorNativeProbeResult,
+) -> Unit {
+  lines.push(
+    DoctorLine::coded(
+      "runtime.deep.abi",
+      Ok,
+      "Proton ABI version: " + doctor_native_expected_abi_version.to_string(),
+    ),
+  )
+  match result.info {
+    Ok(text) => {
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.info",
+          Ok,
+          "runtime info ABI call succeeded",
+        ),
+      )
+      match doctor_native_runtime_info_from_text(text) {
+        Ok(info) =>
+          if info.runtime_available {
+            lines.push(
+              DoctorLine::coded(
+                "runtime.deep.engine",
+                Ok,
+                "native engine available: build_mode=" +
+                info.build_mode +
+                ", platform=" +
+                info.platform,
+              ),
+            )
+          } else {
+            lines.push(
+              DoctorLine::coded(
+                "runtime.deep.engine_unavailable",
+                Error,
+                "Proton library does not include the native engine",
+              ),
+            )
+          }
+        Err(message) =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.deep.info_invalid",
+              Error,
+              "runtime info ABI returned an invalid payload",
+              hint=message,
+            ),
+          )
       }
-    None => None
+    }
+    Err(error) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.info_failed",
+          Error,
+          "runtime info ABI call failed",
+          hint=error.hint("runtime info ABI call failed"),
+        ),
+      )
+  }
+  match result.probe {
+    Ok(_) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.probe",
+          Ok,
+          "runtime layout probe succeeded",
+        ),
+      )
+    Err(error) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.probe_failed",
+          Error,
+          "runtime layout probe failed",
+          hint=error.hint("native probe failed"),
+        ),
+      )
+  }
+  match result.smoke {
+    Succeeded =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.smoke",
+          Ok,
+          "runtime create/destroy smoke test succeeded",
+        ),
+      )
+    Skipped =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.smoke_skipped",
+          Neutral,
+          "runtime create/destroy smoke test skipped because the layout probe failed",
+        ),
+      )
+    CreateFailed(error) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.smoke_failed",
+          Error,
+          "runtime creation smoke test failed",
+          hint=error.hint("runtime creation smoke test failed"),
+        ),
+      )
+    DestroyFailed(error) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.smoke_failed",
+          Error,
+          "runtime destruction smoke test failed",
+          hint=error.hint("runtime destruction smoke test failed"),
+        ),
+      )
   }
 }
 
 ///|
-fn json_object_string(object : Map[String, Json], field : String) -> String? {
-  match object.get(field) {
-    Some(String(value)) => Some(value)
-    _ => None
-  }
-}
-
-///|
-fn json_object_bool(object : Map[String, Json], field : String) -> Bool? {
-  match object.get(field) {
-    Some(True) => Some(true)
-    Some(False) => Some(false)
-    _ => None
+fn push_deep_runtime_probe_error(
+  lines : Array[DoctorLine],
+  error : DoctorNativeProbeError,
+) -> Unit {
+  match error {
+    LoadFailed(message) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.load_failed",
+          Error,
+          "failed to load Proton dynamic library",
+          hint=message,
+        ),
+      )
+    SymbolsMissing(message) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.symbol_missing",
+          Error,
+          "Proton dynamic library is missing required ABI symbols",
+          hint=message,
+        ),
+      )
+    AbiMismatch(version) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.abi_mismatch",
+          Error,
+          "Proton ABI version mismatch: expected " +
+          doctor_native_expected_abi_version.to_string() +
+          ", got " +
+          version.to_string(),
+        ),
+      )
+    OpenFailed(status, message) =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.invalid_result",
+          Error,
+          "native deep probe could not open the Proton library",
+          hint=if message == "" {
+            "native probe bridge failed with status " + status.to_string()
+          } else {
+            message
+          },
+        ),
+      )
   }
 }
 
@@ -418,172 +617,18 @@ fn push_deep_runtime_probe(
   }
   let library_path = path_join(native_dist, library_relative)
   let config = Json::object({
-    "abi_version": Json::number(1.0, repr="1"),
+    "abi_version": Json::number(
+      doctor_native_expected_abi_version.to_double(),
+      repr=doctor_native_expected_abi_version.to_string(),
+    ),
     "runtime_root": Json::string(native_dist),
     "helper_path": Json::string(
       path_join(native_dist, runtime_helper_relative_path(platform_id)),
     ),
   }).stringify()
   match doctor_native_probe(library_path, config) {
-    Object(object) => {
-      match json_object_string(object, "load_error") {
-        Some(message) => {
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.load_failed",
-              Error,
-              "failed to load Proton dynamic library",
-              hint=message,
-            ),
-          )
-          return
-        }
-        None => ()
-      }
-      match json_object_string(object, "symbol_error") {
-        Some(message) => {
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.symbol_missing",
-              Error,
-              "Proton dynamic library is missing required ABI symbols",
-              hint=message,
-            ),
-          )
-          return
-        }
-        None => ()
-      }
-      match json_object_int(object, "abi_version") {
-        Some(1) =>
-          lines.push(
-            DoctorLine::coded("runtime.deep.abi", Ok, "Proton ABI version: 1"),
-          )
-        Some(version) =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.abi_mismatch",
-              Error,
-              "Proton ABI version mismatch: expected 1, got \{version}",
-            ),
-          )
-        None =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.abi_missing",
-              Error,
-              "Proton ABI version probe returned no value",
-            ),
-          )
-      }
-      match json_object_int(object, "info_status") {
-        Some(status) if status >= 0 => {
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.info",
-              Ok,
-              "runtime info ABI call succeeded",
-            ),
-          )
-          match object.get("info") {
-            Some(Object(info)) => {
-              let build_mode = json_object_string(info, "build_mode").unwrap_or(
-                "unknown",
-              )
-              let platform = json_object_string(info, "platform").unwrap_or(
-                "unknown",
-              )
-              if json_object_bool(info, "runtime_available") == Some(true) {
-                lines.push(
-                  DoctorLine::coded(
-                    "runtime.deep.engine",
-                    Ok,
-                    "native engine available: build_mode=" +
-                    build_mode +
-                    ", platform=" +
-                    platform,
-                  ),
-                )
-              } else {
-                lines.push(
-                  DoctorLine::coded(
-                    "runtime.deep.engine_unavailable",
-                    Error,
-                    "Proton library does not include the native engine",
-                  ),
-                )
-              }
-            }
-            _ =>
-              lines.push(
-                DoctorLine::coded(
-                  "runtime.deep.info_invalid",
-                  Error,
-                  "runtime info ABI returned invalid JSON",
-                ),
-              )
-          }
-        }
-        _ =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.info_failed",
-              Error,
-              "runtime info ABI call failed",
-            ),
-          )
-      }
-      match json_object_int(object, "probe_status") {
-        Some(status) if status >= 0 =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.probe",
-              Ok,
-              "runtime layout probe succeeded",
-            ),
-          )
-        _ =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.probe_failed",
-              Error,
-              "runtime layout probe failed",
-              hint=json_object_string(object, "probe_error").unwrap_or(
-                "native probe failed",
-              ),
-            ),
-          )
-      }
-      match json_object_int(object, "smoke_status") {
-        Some(status) if status >= 0 =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.smoke",
-              Ok,
-              "runtime create/destroy smoke test succeeded",
-            ),
-          )
-        _ =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.smoke_failed",
-              Error,
-              "runtime create/destroy smoke test failed",
-              hint=json_object_string(object, "probe_error").unwrap_or(
-                "native smoke test failed",
-              ),
-            ),
-          )
-      }
-    }
-    _ =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.invalid_result",
-          Error,
-          "native deep probe returned an invalid result",
-        ),
-      )
+    Ok(result) => push_deep_runtime_probe_result(lines, result)
+    Err(error) => push_deep_runtime_probe_error(lines, error)
   }
 }
 
@@ -2265,9 +2310,7 @@ fn project_relative_path(project : ProjectDoctorInfo, path : String) -> String {
 
 ///|
 fn path_is_within_project(project : ProjectDoctorInfo, path : String) -> Bool {
-  let root = @path.Path(project.root).resolve().to_string()
-  let resolved = @path.Path(path).resolve().to_string()
-  resolved == root || resolved.has_prefix(root + @path.sep.to_string())
+  path_is_within_root(project.root, path)
 }
 
 ///|

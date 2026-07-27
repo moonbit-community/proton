@@ -9,6 +9,27 @@ fn ensure_test_dir(path : String) -> Unit {
 }
 
 ///|
+fn ensure_test_project_root(path : String) -> String {
+  let root = @path.Path(path).resolve().to_string()
+  ensure_test_dir(root)
+  @mbfs.write_string_to_file(
+    path_join(root, "moon.proton"),
+    "",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(root, "moon.mod"),
+    "name = \"doctor-test-project\"\n",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  root
+}
+
+///|
 fn assert_test_path_suffix(value : String, suffix : String) -> Unit {
   let normalized = value.replace_all(old="\\", new="/")
   guard normalized.has_suffix(suffix) else {
@@ -23,15 +44,105 @@ test "doctor paths use the host separator" {
 }
 
 ///|
-test "doctor project boundary rejects parent paths" {
-  let project = discover_project("target/proton-doctor-boundary")
-  assert_true(
+test "doctor resolves a relative project cwd" {
+  let project = discover_project(".")
+  assert_true(path_is_absolute_like(project.root))
+  assert_true(path_is_absolute_like(development_native_dist(project)))
+}
+
+///|
+test "doctor resolves a relative native dist override" {
+  let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
+  defer (match previous {
+    Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
+    None => @sys.unset_env_var("PROTON_NATIVE_DIST")
+  })
+  let root = ensure_test_project_root("target/proton-doctor-native-root")
+  let relative = "runtime"
+  @sys.set_env_var("PROTON_NATIVE_DIST", relative)
+  let project = discover_project(root)
+  let (native_dist, manifest) = resolve_native_dist(project)
+  assert_eq(
+    native_dist,
+    @path.Path(path_join(root, relative)).resolve().to_string(),
+  )
+  assert_true(manifest is None)
+
+  @sys.set_env_var("PROTON_NATIVE_DIST", "  ")
+  let (fallback_dist, empty_override_manifest) = resolve_native_dist(project)
+  assert_eq(fallback_dist, development_native_dist(project))
+  assert_true(empty_override_manifest is None)
+}
+
+///|
+test "doctor project boundary rejects outside paths" {
+  let root = ensure_test_project_root("target/proton-doctor-boundary")
+  let project = discover_project(root)
+  assert_eq(project.root, root)
+  assert_eq(project.moon_mod_path, Some(path_join(root, "moon.mod")))
+  assert_true(project.moon_pkg_path is None)
+  assert_true(path_is_within_project(project, path_join(root, "app.html")))
+  assert_false(
     path_is_within_project(
       project,
-      path_join("target/proton-doctor-boundary", "app.html"),
+      @path.Path("target/outside.html").resolve().to_string(),
     ),
   )
-  assert_false(path_is_within_project(project, "target/outside.html"))
+}
+
+///|
+test "doctor keeps package-local config in module context" {
+  let root = ensure_test_project_root("target/proton-doctor-package-config")
+  let package_dir = path_join(root, "desktop")
+  ensure_test_dir(package_dir)
+  @mbfs.write_string_to_file(
+    path_join(package_dir, "moon.proton"),
+    "",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  @mbfs.write_string_to_file(
+    path_join(package_dir, "moon.pkg"),
+    "",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let project = discover_project(package_dir)
+  assert_eq(project.root, root)
+  assert_eq(project.moon_mod_path, Some(path_join(root, "moon.mod")))
+  assert_eq(
+    project.moon_proton_path,
+    Some(path_join(package_dir, "moon.proton")),
+  )
+  assert_eq(project.moon_pkg_path, Some(path_join(package_dir, "moon.pkg")))
+  assert_true(path_is_within_project(project, path_join(root, "frontend")))
+}
+
+///|
+test "doctor Windows path boundary ignores ASCII case" {
+  assert_true(
+    path_text_has_prefix(
+      "c:\\workspace\\proton\\app",
+      "C:\\Workspace\\Proton\\",
+      case_sensitive=false,
+    ),
+  )
+  assert_true(
+    path_text_equal(
+      "c:\\workspace\\proton",
+      "C:\\Workspace\\Proton",
+      case_sensitive=false,
+    ),
+  )
+  assert_false(
+    path_text_has_prefix(
+      "c:\\workspace\\other",
+      "C:\\Workspace\\Proton\\",
+      case_sensitive=false,
+    ),
+  )
 }
 
 ///|
@@ -175,9 +286,8 @@ async test "frontend run captures build command output" {
 
 ///|
 test "doctor fix regenerates extensions and honors dry run" {
-  let root = "target/proton-doctor-fix"
+  let root = ensure_test_project_root("target/proton-doctor-fix")
   let extension_dir = path_join(root, "sample")
-  ensure_test_dir(root)
   @mbfs.create_dir(extension_dir) catch {
     _ => ()
   }
@@ -304,9 +414,8 @@ test "doctor reports invalid runtime manifests" {
     None => @sys.unset_env_var("PROTON_NATIVE_DIST")
   })
   @sys.unset_env_var("PROTON_NATIVE_DIST")
-  let dir = "target/proton-doctor-invalid-runtime"
+  let dir = ensure_test_project_root("target/proton-doctor-invalid-runtime")
   let proton_dir = path_join(dir, ".proton")
-  ensure_test_dir(dir)
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
@@ -325,9 +434,8 @@ test "doctor reports invalid runtime manifests" {
 
 ///|
 test "doctor validates runtime manifest schema" {
-  let dir = "target/proton-doctor-runtime-schema"
+  let dir = ensure_test_project_root("target/proton-doctor-runtime-schema")
   let proton_dir = path_join(dir, ".proton")
-  ensure_test_dir(dir)
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
@@ -364,6 +472,424 @@ test "doctor validates runtime manifest schema" {
     _ => abort("expected unknown runtime manifest field error")
   } noraise {
     _ => abort("expected unknown runtime manifest field error")
+  }
+}
+
+///|
+test "doctor renders typed deep runtime probe results" {
+  let lines : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(lines, {
+    info: Ok(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"runtime\",\"platform\":\"darwin\",\"features\":[]}",
+    ),
+    probe: Ok(()),
+    smoke: Succeeded,
+  })
+  assert_eq(lines.length(), 5)
+  assert_true(lines.any(fn(line) { line.code == "runtime.deep.engine" }))
+  assert_true(lines.any(fn(line) { line.code == "runtime.deep.probe" }))
+  assert_true(lines.any(fn(line) { line.code == "runtime.deep.smoke" }))
+
+  let invalid_info : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(invalid_info, {
+    info: Ok("{"),
+    probe: Ok(()),
+    smoke: Succeeded,
+  })
+  assert_true(
+    invalid_info.any(fn(line) { line.code == "runtime.deep.info_invalid" }),
+  )
+
+  let missing_fields : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(missing_fields, {
+    info: Ok("{}"),
+    probe: Ok(()),
+    smoke: Succeeded,
+  })
+  assert_true(
+    missing_fields.any(fn(line) { line.code == "runtime.deep.info_invalid" }),
+  )
+  assert_false(
+    missing_fields.any(fn(line) {
+      line.code == "runtime.deep.engine_unavailable"
+    }),
+  )
+
+  let mismatched_info : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(mismatched_info, {
+    info: Ok(
+      "{\"abi_version\":7,\"runtime_available\":true,\"build_mode\":\"runtime\",\"platform\":\"darwin\",\"features\":[]}",
+    ),
+    probe: Ok(()),
+    smoke: Succeeded,
+  })
+  assert_true(
+    mismatched_info.any(fn(line) {
+      line.code == "runtime.deep.info_invalid" &&
+      line.hint == Some("runtime info ABI version mismatch: expected 1, got 7")
+    }),
+  )
+
+  let inconsistent_info : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(inconsistent_info, {
+    info: Ok(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"abi-only\",\"platform\":\"darwin\",\"features\":[]}",
+    ),
+    probe: Ok(()),
+    smoke: Succeeded,
+  })
+  assert_true(
+    inconsistent_info.any(fn(line) {
+      line.code == "runtime.deep.info_invalid" &&
+      line.hint ==
+      Some("runtime info runtime_available is inconsistent with build_mode")
+    }),
+  )
+
+  match
+    doctor_native_runtime_info_from_text(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"unknown\",\"platform\":\"darwin\",\"features\":[]}",
+    ) {
+    Err(message) =>
+      assert_eq(
+        message, "runtime info build_mode must be `runtime` or `abi-only`",
+      )
+    Ok(_) => abort("expected an unsupported runtime build mode error")
+  }
+
+  let failed : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(failed, {
+    info: Err({ status: -7, message: "runtime info unavailable" }),
+    probe: Err({ status: -1, message: "invalid runtime config" }),
+    smoke: Skipped,
+  })
+  assert_true(
+    failed.any(fn(line) {
+      line.code == "runtime.deep.info_failed" &&
+      line.hint == Some("runtime info unavailable")
+    }),
+  )
+  assert_true(
+    failed.any(fn(line) {
+      line.code == "runtime.deep.probe_failed" &&
+      line.hint == Some("invalid runtime config")
+    }),
+  )
+  assert_true(
+    failed.any(fn(line) {
+      line.code == "runtime.deep.smoke_skipped" && line.status == Neutral
+    }),
+  )
+  assert_false(
+    failed.any(fn(line) { line.code == "runtime.deep.smoke_failed" }),
+  )
+
+  let failed_smoke : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(failed_smoke, {
+    info: Ok(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"runtime\",\"platform\":\"darwin\",\"features\":[]}",
+    ),
+    probe: Ok(()),
+    smoke: CreateFailed({ status: -7, message: "runtime create failed" }),
+  })
+  assert_true(
+    failed_smoke.any(fn(line) {
+      line.code == "runtime.deep.smoke_failed" &&
+      line.hint == Some("runtime create failed")
+    }),
+  )
+
+  let failed_destroy : Array[DoctorLine] = []
+  push_deep_runtime_probe_result(failed_destroy, {
+    info: Ok(
+      "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"runtime\",\"platform\":\"darwin\",\"features\":[]}",
+    ),
+    probe: Ok(()),
+    smoke: DestroyFailed({ status: -7, message: "" }),
+  })
+  assert_true(
+    failed_destroy.any(fn(line) {
+      line.code == "runtime.deep.smoke_failed" &&
+      line.text == "runtime destruction smoke test failed" &&
+      line.hint == Some("runtime destruction smoke test failed with status -7")
+    }),
+  )
+}
+
+///|
+test "doctor bounds native text buffers and requires termination" {
+  assert_eq(doctor_native_checked_buffer_length(-1), None)
+  assert_eq(
+    doctor_native_checked_buffer_length(doctor_native_max_text_length),
+    Some(doctor_native_max_text_length + 1),
+  )
+  assert_eq(
+    doctor_native_checked_buffer_length(doctor_native_max_text_length + 1),
+    None,
+  )
+  let empty = FixedArray::make(0, b'\x00')
+  assert_eq(doctor_native_buffer_text(empty), None)
+  let terminated : FixedArray[Byte] = [b'o', b'k', b'\x00']
+  assert_eq(doctor_native_buffer_text(terminated), Some("ok"))
+  assert_eq(doctor_native_buffer_text_at_length(terminated, 2), Some("ok"))
+  assert_eq(doctor_native_buffer_text_at_length(terminated, 1), None)
+  assert_eq(doctor_native_buffer_text_at_length(terminated, 3), None)
+  let unterminated : FixedArray[Byte] = [b'n', b'o']
+  assert_eq(doctor_native_buffer_text(unterminated), None)
+  assert_eq(doctor_native_buffer_text_at_length(unterminated, 2), None)
+}
+
+///|
+test "doctor renders native open ABI errors" {
+  let lines : Array[DoctorLine] = []
+  push_deep_runtime_probe_error(lines, AbiMismatch(7))
+  assert_eq(lines.length(), 1)
+  assert_eq(lines[0].code, "runtime.deep.abi_mismatch")
+  assert_eq(lines[0].text, "Proton ABI version mismatch: expected 1, got 7")
+  assert_true(lines[0].status == Error)
+}
+
+///|
+fn doctor_test_workspace_root() -> String {
+  let cwd = @path.Path(".").resolve().to_string()
+  match find_up(cwd, "moon.work") {
+    Some(path) => path_parent(path).unwrap_or(cwd)
+    None => abort("expected doctor tests to run inside the Proton workspace")
+  }
+}
+
+///|
+fn doctor_test_native_dist(platform_id : String) -> String? {
+  match runtime_library_relative_path(platform_id) {
+    Some(relative) => {
+      let project = discover_project(doctor_test_workspace_root())
+      let (native_dist, manifest) = resolve_native_dist(project) catch {
+        error => abort(error.message())
+      }
+      match manifest {
+        Some(manifest) if manifest.platform != platform_id =>
+          abort(
+            "active Proton runtime platform mismatch: expected " +
+            platform_id +
+            ", got " +
+            manifest.platform,
+          )
+        _ => ()
+      }
+      let candidate = path_join(native_dist, relative)
+      guard @mbfs.path_exists(candidate) else {
+        abort(
+          "expected an active Proton runtime library at " +
+          candidate +
+          "; run `proton_cli cef setup` and build/install the native runtime",
+        )
+      }
+      Some(native_dist)
+    }
+    None => None
+  }
+}
+
+///|
+fn doctor_test_native_library_path(platform_id : String) -> String? {
+  match doctor_test_native_dist(platform_id) {
+    Some(native_dist) =>
+      match runtime_library_relative_path(platform_id) {
+        Some(relative) => Some(path_join(native_dist, relative))
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+async test "doctor deep native probe succeeds against active runtime" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_dist(platform_id) {
+    None => ()
+    Some(native_dist) => {
+      let lines : Array[DoctorLine] = []
+      push_deep_runtime_probe(lines, native_dist, platform_id)
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.info" }))
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.engine" }))
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.probe" }))
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.smoke" }))
+      assert_true(lines.all(fn(line) { line.status == Ok }))
+    }
+  }
+}
+
+///|
+async test "doctor deep native probe reports invalid runtime config" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_library_path(platform_id) {
+    None => ()
+    Some(library_path) =>
+      match doctor_native_probe(library_path, "{}") {
+        Err(_) => abort("expected the active Proton library to open")
+        Ok(result) => {
+          match result.info {
+            Ok(text) =>
+              match doctor_native_runtime_info_from_text(text) {
+                Ok(_) => ()
+                Err(message) => abort(message)
+              }
+            Err(error) => abort(error.hint("runtime info ABI call failed"))
+          }
+          match result.probe {
+            Ok(_) => abort("expected an invalid runtime config error")
+            Err(error) => {
+              assert_true(error.status < 0)
+              assert_true(error.message.contains("abi_version"))
+            }
+          }
+          match result.smoke {
+            Skipped => ()
+            _ => abort("expected smoke test to be skipped")
+          }
+        }
+      }
+  }
+}
+
+///|
+async test "doctor native loader accepts UTF-8 library paths" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_library_path(platform_id) {
+    None => ()
+    Some(source_path) => {
+      let unicode_dir = "target/proton-doctor-中文路径"
+      ensure_test_dir(unicode_dir)
+      let relative_source = @path.Path(source_path)
+        .relative(base=@path.Path(".").resolve())
+        .to_string()
+      let library_path = path_join(
+        path_join(path_join(unicode_dir, ".."), ".."),
+        relative_source,
+      )
+      match doctor_native_open(library_path) {
+        Err(_) => abort("expected a Proton library at a UTF-8 path to open")
+        Ok(handle) =>
+          assert_eq(proton_doctor_native_close_ffi(handle), doctor_native_ok)
+      }
+    }
+  }
+}
+
+///|
+async test "doctor native loader closes an external handle safely" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_library_path(platform_id) {
+    None => ()
+    Some(library_path) => {
+      let opened = doctor_native_open(library_path)
+      match opened {
+        Err(_) => abort("expected the repository Proton library to open")
+        Ok(handle) => {
+          assert_eq(proton_doctor_native_close_ffi(handle), doctor_native_ok)
+          assert_eq(
+            proton_doctor_native_close_ffi(handle),
+            doctor_native_invalid_handle,
+          )
+          let required = Ref(0)
+          let scratch = FixedArray::make(1, b'\x00')
+          assert_eq(
+            proton_doctor_native_runtime_info_json_ffi(
+              handle, scratch, 0, required,
+            ),
+            doctor_native_invalid_handle,
+          )
+        }
+      }
+    }
+  }
+}
+
+///|
+async test "doctor native loader can abandon a handle safely" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_library_path(platform_id) {
+    None => ()
+    Some(library_path) =>
+      match doctor_native_open(library_path) {
+        Err(_) => abort("expected the active Proton library to open")
+        Ok(handle) => {
+          assert_eq(proton_doctor_native_abandon_ffi(handle), doctor_native_ok)
+          assert_eq(
+            proton_doctor_native_close_ffi(handle),
+            doctor_native_invalid_handle,
+          )
+          let required = Ref(0)
+          let scratch = FixedArray::make(1, b'\x00')
+          assert_eq(
+            proton_doctor_native_runtime_info_json_ffi(
+              handle, scratch, 0, required,
+            ),
+            doctor_native_invalid_handle,
+          )
+        }
+      }
+  }
+}
+
+///|
+async test "doctor native loader reports ABI mismatch before symbol use" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_library_path(platform_id) {
+    None => ()
+    Some(library_path) =>
+      match doctor_native_open_with_expected_abi(library_path, 999) {
+        Err(AbiMismatch(version)) =>
+          assert_eq(version, doctor_native_expected_abi_version)
+        Err(_) =>
+          abort(
+            "expected the repository Proton library to report an ABI mismatch",
+          )
+        Ok(handle) => {
+          let _ = proton_doctor_native_close_ffi(handle)
+          abort("expected ABI mismatch")
+        }
+      }
+  }
+}
+
+///|
+test "doctor native loader reports a missing library" {
+  match doctor_native_open("target/proton-doctor-library-does-not-exist") {
+    Err(LoadFailed(message)) => assert_true(message != "")
+    Err(_) => abort("expected a native library load error")
+    Ok(handle) => {
+      let _ = proton_doctor_native_close_ffi(handle)
+      abort("expected a native library load error")
+    }
+  }
+}
+
+///|
+fn doctor_test_system_library(platform_id : String) -> String? {
+  match platform_id {
+    "win32-x64" => Some("kernel32.dll")
+    "darwin-arm64" | "darwin-x64" => Some("/usr/lib/libSystem.B.dylib")
+    "linux-x64" => Some("libc.so.6")
+    _ => None
+  }
+}
+
+///|
+async test "doctor native loader reports a missing ABI symbol" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_system_library(platform_id) {
+    None => ()
+    Some(library_path) =>
+      match doctor_native_open(library_path) {
+        Err(SymbolsMissing(message)) =>
+          assert_true(message.contains("proton_abi_version"))
+        Err(_) => abort("expected a missing proton_abi_version symbol")
+        Ok(handle) => {
+          let _ = proton_doctor_native_close_ffi(handle)
+          abort("expected a missing proton_abi_version symbol")
+        }
+      }
   }
 }
 
