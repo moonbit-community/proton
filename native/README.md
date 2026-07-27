@@ -154,6 +154,14 @@ directory on `LD_LIBRARY_PATH` and prepend the basename `libcef.so` to
 this automatically. Using the basename keeps runtime paths containing spaces
 valid.
 
+The managed Linux application runner creates the MoonBit application worker
+before the worker requests runtime initialization on the UI thread. Proton
+therefore adds `--no-zygote` only to that browser process; Chromium otherwise
+forks its zygote after a thread already exists. The existing `no_sandbox`
+setting is retained, as Chromium requires `--no-zygote` and `--no-sandbox`
+together. External message-pump hosts and CEF helper processes keep their
+normal command lines.
+
 Linux `titlebar_style: "overlay"` uses GTK client chrome on the existing X11
 engine path. The CEF child fills the complete client area, while GTK-native
 minimize, maximize/restore, and close buttons are raised above the browser in

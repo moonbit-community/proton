@@ -1289,12 +1289,23 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
   cef_string_clear(&scheme);
 }
 
-static void proton_engine_on_before_command_line_processing(
+static int proton_engine_process_type_is_browser(
+    const cef_string_t *process_type) {
+  return process_type == NULL || process_type->length == 0;
+}
+
+static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
     cef_app_t *self,
     const cef_string_t *process_type,
-  cef_command_line_t *command_line) {
+    cef_command_line_t *command_line) {
   (void)self;
-  (void)process_type;
+  if (proton_app_runner_is_active() &&
+      proton_engine_process_type_is_browser(process_type)) {
+    /* The managed runner creates its MoonBit worker before CefInitialize.
+     * Skip Chromium's zygote fork; settings.no_sandbox is already enabled. */
+    proton_engine_append_switch(command_line, "no-zygote");
+    proton_engine_debug_log("managed_browser_no_zygote");
+  }
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
   proton_engine_append_switch(command_line, "disable-background-networking");
