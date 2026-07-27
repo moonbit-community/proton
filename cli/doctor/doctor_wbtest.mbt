@@ -310,17 +310,13 @@ test "doctor reports invalid runtime manifests" {
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
-  @mbfs.write_string_to_file(
-    path_join(proton_dir, "runtime.json"),
-    "{ invalid",
-    encoding="utf8",
-  ) catch {
+  let manifest_path = path_join(proton_dir, "runtime.json")
+  @mbfs.write_string_to_file(manifest_path, "{ invalid", encoding="utf8") catch {
     err => abort(@debug.render(@debug.to_repr(err)))
   }
   let project = discover_project(dir)
   try resolve_native_dist(project) catch {
-    DoctorRuntimeManifestError::Syntax(path~) =>
-      assert_true(path.has_suffix(".proton/runtime.json"))
+    DoctorRuntimeManifestError::Syntax(path~) => assert_eq(path, manifest_path)
     _ => abort("expected invalid runtime manifest error")
   } noraise {
     _ => abort("expected invalid runtime manifest error")
