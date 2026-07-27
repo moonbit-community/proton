@@ -8,6 +8,9 @@ let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
 let app_child_test_selector = "scenario_app_wbtest.mbt:0-1"
 
 ///|
+let scenario_run_mutex : @async.Mutex = @async.Mutex::Mutex()
+
+///|
 struct SpawnedScenarioApp {
   process : @process.Process
   output_path : String
@@ -222,7 +225,7 @@ fn app_cancel_handler() -> @process.CancellationHandler {
   if @path.sep == '\\' {
     @process.CancellationHandler(async fn(pid) {
       ignore(
-        @process.run(
+        @process.collect_output_merged(
           "taskkill",
           ["/pid", pid.to_string(), "/t", "/f"],
           no_console_window=true,
@@ -339,7 +342,45 @@ async fn close_browser(target : String, timeout : Int) -> Unit {
     timeout_ms=timeout,
   )
   defer browser.close()
-  ignore(browser.send_cdp_command("Browser.close"))
+  close_connected_browser(browser)
+}
+
+///|
+async fn close_connected_browser(browser : @client.CdpClient) -> Unit {
+  let close_response = browser.send_command("Browser.close")
+  match close_response.error {
+    Some(error) =>
+      fail(
+        "Browser.close failed: " + error.code.to_string() + " " + error.message,
+      )
+    None => ()
+  }
+  // CEF's Alloy runtime acknowledges Browser.close but does not route the
+  // Chrome-specific close request to CefBrowserHost::CloseBrowser.  Keep the
+  // protocol request in the probe, then close every live page target through
+  // the browser connection so that the native lifecycle is exercised and all
+  // windows are covered.
+  @async.sleep(cdp_start_poll_timeout_ms)
+  let targets = browser.get_targets() catch { _ => return }
+  for info in targets {
+    if info.target_type == "page" {
+      let response = browser.send_command(
+        "Target.closeTarget",
+        params=Json::object({ "targetId": Json::string(info.target_id) }),
+      )
+      match response.error {
+        None => ()
+        Some(error) if error.message.to_lower().contains("no target") => ()
+        Some(error) =>
+          fail(
+            "Target.closeTarget failed: " +
+            error.code.to_string() +
+            " " +
+            error.message,
+          )
+      }
+    }
+  }
 }
 
 ///|
@@ -473,6 +514,8 @@ fn retryable_startup_error(error : Error) -> Bool {
 
 ///|
 async test "headless 41_app_commands runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "41_app_commands", timeout)
@@ -481,6 +524,8 @@ async test "headless 41_app_commands runs as a self-hosted e2e" {
 
 ///|
 async test "headless 38_async_extension_add runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   run_scenario_probe_with_retry(
     repository_root(),
     "38_async_extension_add",
@@ -490,6 +535,8 @@ async test "headless 38_async_extension_add runs as a self-hosted e2e" {
 
 ///|
 async test "headless 39_sync_async_extensions runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   run_scenario_probe_with_retry(
     repository_root(),
     "39_sync_async_extensions",
@@ -499,6 +546,8 @@ async test "headless 39_sync_async_extensions runs as a self-hosted e2e" {
 
 ///|
 async test "headless 40_event_broadcast runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "40_event_broadcast", timeout)
@@ -507,6 +556,8 @@ async test "headless 40_event_broadcast runs as a self-hosted e2e" {
 
 ///|
 async test "headless 45_bridge_multi_window runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "45_bridge_multi_window", timeout)
@@ -515,6 +566,8 @@ async test "headless 45_bridge_multi_window runs as a self-hosted e2e" {
 
 ///|
 async test "headless 46_asset_sidecar_resources runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   run_scenario_probe_with_retry(
     repository_root(),
     "46_asset_sidecar_resources",
@@ -524,11 +577,15 @@ async test "headless 46_asset_sidecar_resources runs as a self-hosted e2e" {
 
 ///|
 async test "headless 47_dev_extension_js runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   run_dev_extension_scenario_with_retry(repository_root(), timeout_ms())
 }
 
 ///|
 async test "headless 42_attribute_codegen_commands runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
   run_scenario_probe_with_retry(
     repository_root(),
     "42_attribute_codegen_commands",

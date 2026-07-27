@@ -1,10 +1,15 @@
 ///|
-let process_shutdown_timeout_ms = 10000
+let process_shutdown_timeout_ms : Int = if @path.sep == '\\' {
+  20000
+} else {
+  10000
+}
 
 ///|
 struct ProcessRow {
   pid : Int
   parent_pid : Int
+  created_at : Int
   command : String
 } derive(Eq, Debug)
 
@@ -12,6 +17,7 @@ struct ProcessRow {
 struct ProcessRowJson {
   pid : Int
   parent_pid : Int
+  created_at : Int
   command : String
 } derive(FromJson, Eq, Debug)
 
@@ -20,6 +26,7 @@ struct ProcessSnapshot {
   pids : Array[Int]
   helper_pids : Array[Int]
   commands : Map[Int, String]
+  created_at : Map[Int, Int]
 }
 
 ///|
@@ -32,11 +39,42 @@ async fn finish_scenario_app(
   app : SpawnedScenarioApp,
   target : String,
 ) -> ShutdownProbeResult {
+  finish_scenario_app_with_exit_timeout(
+    app, target, process_shutdown_timeout_ms,
+  )
+}
+
+///|
+async fn finish_scenario_app_with_exit_timeout(
+  app : SpawnedScenarioApp,
+  target : String,
+  exit_timeout : Int,
+) -> ShutdownProbeResult {
   let snapshot = snapshot_process_tree(app.process.pid)
   guard snapshot.helper_pids.length() > 0 else {
     fail("headless process tree did not contain a cef_process helper")
   }
   close_browser(target, process_shutdown_timeout_ms)
+  wait_for_app_exit(app, exit_timeout)
+  wait_for_process_tree_stop(snapshot, exit_timeout)
+  wait_for_cdp_endpoint_stop(
+    cdp_http_endpoint_from(target),
+    process_shutdown_timeout_ms,
+  )
+  ShutdownProbeResult::{ helper_processes: snapshot.helper_pids.length() }
+}
+
+///|
+async fn finish_scenario_app_with_connected_browser(
+  app : SpawnedScenarioApp,
+  target : String,
+  browser : @client.CdpClient,
+) -> ShutdownProbeResult {
+  let snapshot = snapshot_process_tree(app.process.pid)
+  guard snapshot.helper_pids.length() > 0 else {
+    fail("headless process tree did not contain a cef_process helper")
+  }
+  close_connected_browser(browser)
   wait_for_app_exit(app, process_shutdown_timeout_ms)
   wait_for_process_tree_stop(snapshot, process_shutdown_timeout_ms)
   wait_for_cdp_endpoint_stop(
@@ -50,19 +88,29 @@ async fn finish_scenario_app(
 async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
   let rows = list_processes()
   let commands : Map[Int, String] = Map([])
+  let created_at : Map[Int, Int] = Map([])
+  let mut root_row : ProcessRow? = None
   for row in rows {
     commands[row.pid] = row.command
+    created_at[row.pid] = row.created_at
+    if row.pid == root_pid {
+      root_row = Some(row)
+    }
+  }
+  guard root_row is Some(root_row) else {
+    fail("headless root process was not present in the process snapshot")
   }
   let descendants : Array[ProcessRow] = []
-  let pending = [root_pid]
+  let pending = [root_row]
   while pending.length() > 0 {
     let parent = pending.pop().unwrap()
     for row in rows {
-      if row.parent_pid == parent &&
+      if row.parent_pid == parent.pid &&
+        process_row_can_descend_from(row, parent) &&
         row.pid != root_pid &&
         !descendants.any(existing => existing.pid == row.pid) {
         descendants.push(row)
-        pending.push(row.pid)
+        pending.push(row)
       }
     }
   }
@@ -74,7 +122,19 @@ async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
       helper_pids.push(row.pid)
     }
   }
-  ProcessSnapshot::{ pids, helper_pids, commands }
+  ProcessSnapshot::{ pids, helper_pids, commands, created_at }
+}
+
+///|
+fn process_row_can_descend_from(
+  child : ProcessRow,
+  parent : ProcessRow,
+) -> Bool {
+  if @path.sep == '\\' && child.created_at > 0 && parent.created_at > 0 {
+    child.created_at >= parent.created_at
+  } else {
+    true
+  }
 }
 
 ///|
@@ -123,17 +183,27 @@ fn parse_unix_process_row(raw_line : StringView) -> ProcessRow? {
     Some(parent_pid) => parent_pid
     None => return None
   }
-  Some(ProcessRow::{ pid, parent_pid, command: parts[2:].join(" ") })
+  Some(ProcessRow::{
+    pid,
+    parent_pid,
+    created_at: 0,
+    command: parts[2:].join(" "),
+  })
 }
 
 ///|
 async fn list_windows_processes() -> Array[ProcessRow] {
   let script =
+    #|[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    #|$OutputEncoding = [System.Text.Encoding]::UTF8
     #|Get-CimInstance Win32_Process |
     #|ForEach-Object {
     #|  [pscustomobject]@{
     #|    pid = [int]$_.ProcessId
     #|    parent_pid = [int]$_.ParentProcessId
+    #|    created_at = if ($null -ne $_.CreationDate) {
+    #|      [int64]([DateTimeOffset]$_.CreationDate).ToUnixTimeSeconds()
+    #|    } else { 0 }
     #|    command = (("{0} {1}" -f $_.Name, $_.CommandLine).Trim())
     #|  }
     #|} | ConvertTo-Json -Compress
@@ -167,7 +237,12 @@ async fn list_windows_processes() -> Array[ProcessRow] {
 ///|
 fn process_row_from_json(json : Json) -> ProcessRow raise {
   let row : ProcessRowJson = decode_probe(json, "Windows process row")
-  ProcessRow::{ pid: row.pid, parent_pid: row.parent_pid, command: row.command }
+  ProcessRow::{
+    pid: row.pid,
+    parent_pid: row.parent_pid,
+    created_at: row.created_at,
+    command: row.command,
+  }
 }
 
 ///|
@@ -185,14 +260,22 @@ async fn wait_for_process_tree_stop(
   let mut remaining : Array[Int] = []
   while elapsed <= timeout {
     let rows = list_processes()
-    let alive : Map[Int, Bool] = Map([])
+    let alive : Map[Int, Int] = Map([])
     for row in rows {
-      alive[row.pid] = true
+      alive[row.pid] = row.created_at
     }
     remaining = []
     for pid in snapshot.pids {
-      if alive.contains(pid) {
-        remaining.push(pid)
+      match alive.get(pid) {
+        Some(current_created_at) => {
+          let expected_created_at = snapshot.created_at.get(pid).unwrap_or(0)
+          if current_created_at == 0 ||
+            expected_created_at == 0 ||
+            current_created_at == expected_created_at {
+            remaining.push(pid)
+          }
+        }
+        None => ()
       }
     }
     if remaining.length() == 0 {
@@ -244,7 +327,13 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
     defer (if !stopped { app.process.cancel() })
     wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
     let page = connect_spawned_page(app, target, timeout)
-    defer page.close()
+    let mut page_open = true
+    defer (if page_open { page.close() })
+    let browser = @client.connect_cdp_browser_target_with_timeout(
+      cdp_target_from(target),
+      timeout_ms=timeout,
+    )
+    defer browser.close()
     ignore(page.send_schema_command("Runtime.enable"))
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_slow_adds = count_native_log_entries(
@@ -264,7 +353,7 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
           #|  window.__protonLifecyclePending = invoke("ext:app/slowAdd", {
           #|    left: 7,
           #|    right: 8,
-          #|    delay_ms: 3500,
+          #|    delay_ms: 8000,
           #|  }).catch(() => {});
           #|  return true;
           #|})()
@@ -279,7 +368,11 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
       initial_slow_adds + 1,
       timeout,
     )
-    let shutdown = finish_scenario_app(app, target)
+    page.close()
+    page_open = false
+    let shutdown = finish_scenario_app_with_connected_browser(
+      app, target, browser,
+    )
     assert_pending_lifecycle_log(app.native_log_path)
     println(
       "MoonBit pending lifecycle passed: helpers=" +
@@ -324,7 +417,13 @@ async fn run_event_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
     defer (if !stopped { app.process.cancel() })
     wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
     let page = connect_spawned_page(app, target, timeout)
-    defer page.close()
+    let mut page_open = true
+    defer (if page_open { page.close() })
+    let browser = @client.connect_cdp_browser_target_with_timeout(
+      cdp_target_from(target),
+      timeout_ms=timeout,
+    )
+    defer browser.close()
     ignore(page.send_schema_command("Runtime.enable"))
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_starts = count_native_log_entries(
@@ -339,8 +438,8 @@ async fn run_event_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
           #|(() => {
           #|  window.__protonEventLifecyclePending = window.__MoonBit__.ticker.start({
           #|    run_id: 9102,
-          #|    count: 8,
-          #|    interval_ms: 100,
+          #|    count: 5,
+          #|    interval_ms: 1000,
           #|  }).catch(() => {});
           #|  return true;
           #|})()
@@ -356,7 +455,11 @@ async fn run_event_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
       timeout,
     )
     @async.sleep(250)
-    let shutdown = finish_scenario_app(app, target)
+    page.close()
+    page_open = false
+    let shutdown = finish_scenario_app_with_connected_browser(
+      app, target, browser,
+    )
     assert_pending_lifecycle_log(app.native_log_path)
     assert_event_lifecycle_log(app.native_log_path)
     println(

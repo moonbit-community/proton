@@ -81,7 +81,10 @@ async fn run_multi_window_page_clients(
   }
   assert_multi_window_probe(result, target_a, target_b)
   match native_log_path {
-    Some(path) => assert_multi_window_native_log(path)
+    Some(path) => {
+      wait_for_multi_window_osr_paints(path, timeout)
+      assert_multi_window_native_log(path)
+    }
     None => ()
   }
   println("MoonBit 45_bridge_multi_window routing probe passed")
@@ -192,6 +195,27 @@ fn assert_multi_window_native_log(path : String) -> Unit raise {
 
 ///|
 fn assert_multi_window_osr_paints(log : String) -> Unit raise {
+  guard count_multi_window_osr_paints(log) >= 2 else {
+    fail("native log did not prove valid OSR paint for both windows")
+  }
+}
+
+///|
+async fn wait_for_multi_window_osr_paints(path : String, timeout : Int) -> Unit {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let log = @mbfs.read_file_to_string(path, encoding="utf8") catch { _ => "" }
+    if count_multi_window_osr_paints(log) >= 2 {
+      return
+    }
+    @async.sleep(100)
+    elapsed = elapsed + 100
+  }
+  fail("native log did not record valid OSR paint for both windows")
+}
+
+///|
+fn count_multi_window_osr_paints(log : String) -> Int {
   let browser_ids : Map[String, Bool] = Map([])
   for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
     let line = raw_line.to_owned()
@@ -211,9 +235,7 @@ fn assert_multi_window_osr_paints(log : String) -> Unit raise {
       }
     }
   }
-  guard browser_ids.length() >= 2 else {
-    fail("native log did not prove valid OSR paint for both windows")
-  }
+  browser_ids.length()
 }
 
 ///|

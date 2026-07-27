@@ -155,6 +155,8 @@ fn dev_extension_runtime_env(
   cdp_port : Int,
 ) -> Map[String, String] raise {
   let env = app_process_env(root, "47_dev_extension_js", cdp_port)
+  env["NO_COLOR"] = "1"
+  env["FORCE_COLOR"] = "0"
   env["PROTON_NO_UPDATE_CHECK"] = "1"
   env["PROTON_CONFIG_PATH"] = join_path(
     root, "examples/47_dev_extension_js/moon.proton",
@@ -267,6 +269,11 @@ async fn spawn_dev_extension_production_app(
 
 ///|
 async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
+  let timeout = if @path.sep == '\\' && timeout < 180000 {
+    180000
+  } else {
+    timeout
+  }
   let port = choose_cdp_port()
   let env = dev_extension_runtime_env(root, port)
   let cli_target_dir = dev_extension_cli_target_dir(root, "build", port)
@@ -332,7 +339,7 @@ async fn run_dev_extension_dev_probe_once(
         )
       None => ()
     }
-    let shutdown = finish_scenario_app(app, target)
+    let shutdown = finish_scenario_app_with_exit_timeout(app, target, 30000)
     println(
       "MoonBit 47_dev_extension_js dev shutdown passed: helpers=" +
       shutdown.helper_processes.to_string(),

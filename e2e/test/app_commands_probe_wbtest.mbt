@@ -84,15 +84,17 @@ async fn run_app_commands_full_probe(
     cdp_target_from(target),
     timeout_ms=timeout,
   )
-  defer page.close()
+  let mut page_open = true
+  defer (if page_open { page.close() })
   ignore(page.send_schema_command("Runtime.enable"))
   wait_for_ready(page, scenario_ready_expression("41_app_commands"), timeout)
   assert_bridge_contract(page)
   let screenshot = capture_headless_screenshot(page)
   assert_app_commands_probe(page)
   let queue = run_queue_full_probe(page)
-  run_reload_probe(page, timeout)
-  run_non_proton_probe(page, root, timeout)
+  run_reload_probe(page, target, timeout)
+  page_open = false
+  run_non_proton_probe(target, root, timeout)
   assert_native_bridge_guards(native_log_path)
   println(
     "MoonBit 41_app_commands full probe passed: screenshot=" +
@@ -313,7 +315,11 @@ async fn run_queue_full_probe(page : @client.CdpClient) -> QueueFullProbeResult 
 }
 
 ///|
-async fn run_reload_probe(page : @client.CdpClient, timeout : Int) -> Unit {
+async fn run_reload_probe(
+  page : @client.CdpClient,
+  target : String,
+  timeout : Int,
+) -> Unit {
   ignore(page.send_schema_command("Page.enable"))
   ignore(
     evaluate_json(
@@ -328,15 +334,18 @@ async fn run_reload_probe(page : @client.CdpClient, timeout : Int) -> Unit {
         #|      delay_ms: 1000,
         #|    }).catch(() => {});
         #|  }
-        #|  location.reload();
         #|  return true;
         #|})()
       ),
       false,
     ),
   )
-  wait_for_cdp_expression(
-    page,
+  ignore(page.send_cdp_command("Page.reload"))
+  page.close()
+  let reloaded_page = connect_page_matching_expression(
+    target,
+    "proton://app/",
+    false,
     (
       #|Boolean(
       #|  window.__MoonBit__?.core?.invokeOp &&
@@ -346,8 +355,9 @@ async fn run_reload_probe(page : @client.CdpClient, timeout : Int) -> Unit {
     "bridge after reload",
     timeout,
   )
+  defer reloaded_page.close()
   let value = evaluate_json(
-    page,
+    reloaded_page,
     (
       #|;(async () => {
       #|  const invoke = window.__MoonBit__?.core?.invokeOp;
@@ -375,11 +385,10 @@ async fn run_reload_probe(page : @client.CdpClient, timeout : Int) -> Unit {
 
 ///|
 async fn run_non_proton_probe(
-  page : @client.CdpClient,
+  target : String,
   root : String,
   timeout : Int,
 ) -> Unit {
-  ignore(page.send_schema_command("Page.enable"))
   let file_path = join_path(root, "target/non-proton-moonbit-probe.html")
   @mbfs.write_string_to_file(
     file_path, "<!doctype html><title>Non Proton File Probe</title><h1>file probe</h1>",
@@ -387,61 +396,59 @@ async fn run_non_proton_probe(
     _ => fail("failed to write non-Proton file probe: " + file_path)
   }
   defer (@mbfs.remove_file(file_path) catch { _ => () })
-  let about = navigate_and_read_origin(page, "about:blank", timeout)
-  let file = navigate_and_read_origin(page, file_url(file_path), timeout)
-  let http_page = run_http_origin_probe(page, timeout)
+  let about = navigate_and_read_origin(target, "about:blank", timeout)
+  let file = navigate_and_read_origin(target, file_url(file_path), timeout)
+  let http_page = run_http_origin_probe(target, timeout)
   assert_non_proton_origin("about", about)
   assert_non_proton_origin("file", file)
   assert_non_proton_origin("http", http_page)
-  ignore(
-    page.send_schema_command("Page.navigate", params={ "url": "proton://app/" }),
+  let proton_page = navigate_page_and_connect(target, "proton://app/", timeout)
+  defer proton_page.close()
+  wait_for_ready(
+    proton_page,
+    scenario_ready_expression("41_app_commands"),
+    timeout,
   )
-  wait_for_ready(page, scenario_ready_expression("41_app_commands"), timeout)
 }
 
 ///|
 async fn run_http_origin_probe(
-  page : @client.CdpClient,
+  target : String,
   timeout : Int,
 ) -> OriginProbeResult {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"), headers={
       "Content-Type": "text/html; charset=utf-8",
     })
-    let server_task = group.spawn(no_wait=true, allow_failure=true, () => {
-      server.run_forever((_request, _body, connection) => {
-        connection.send_response(200, "OK")
-        connection.write_string(
-          "<!doctype html><title>Non Proton HTTP Probe</title><h1>http probe</h1>",
-        )
-        connection.end_response()
-      })
+    defer server.close()
+    let server_task = group.spawn(no_wait=true, () => {
+      let (connection, _) = server.accept()
+      defer connection.close()
+      ignore(connection.read_request())
+      connection.send_response(200, "OK")
+      connection.write_string(
+        "<!doctype html><title>Non Proton HTTP Probe</title><h1>http probe</h1>",
+      )
+      connection.end_response()
     })
-    defer {
-      server.close()
-      server_task.cancel()
-    }
-    navigate_and_read_origin(
-      page,
+    let result = navigate_and_read_origin(
+      target,
       "http://127.0.0.1:" + server.addr.port().to_string() + "/probe.html",
       timeout,
     )
+    server_task.wait()
+    result
   })
 }
 
 ///|
 async fn navigate_and_read_origin(
-  page : @client.CdpClient,
+  target : String,
   url : String,
   timeout : Int,
 ) -> OriginProbeResult {
-  ignore(page.send_schema_command("Page.navigate", params={ "url": url }))
-  wait_for_cdp_expression(
-    page,
-    "document.readyState !== 'loading'",
-    "navigation to " + url,
-    timeout,
-  )
+  let page = navigate_page_and_connect(target, url, timeout)
+  defer page.close()
   let value = evaluate_json(
     page,
     (
@@ -455,6 +462,105 @@ async fn navigate_and_read_origin(
     false,
   )
   decode_probe(value, "origin " + url)
+}
+
+///|
+async fn navigate_page_and_connect(
+  target : String,
+  url : String,
+  timeout : Int,
+) -> @client.CdpClient {
+  let current = @client.connect_cdp_page_target_with_timeout(
+    cdp_target_from(target),
+    timeout_ms=timeout,
+  )
+  ignore(current.send_cdp_command("Page.navigate", params={ "url": url }))
+  current.close()
+  connect_page_matching_expression(
+    target,
+    url,
+    false,
+    "document.readyState !== 'loading'",
+    "navigation to " + url,
+    timeout,
+  )
+}
+
+///|
+async fn connect_page_matching_expression(
+  target : String,
+  url : String,
+  allow_prefix : Bool,
+  expression : String,
+  description : String,
+  timeout : Int,
+) -> @client.CdpClient {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let targets = @client.discover_targets(cdp_target_from(target)) catch {
+      _ => []
+    }
+    for info in targets {
+      if info.target_type == "page" &&
+        (
+          page_url_matches(info.url, url) ||
+          (allow_prefix && info.url.has_prefix(url))
+        ) {
+        let page = Some(
+          @client.connect_cdp_page_target_with_timeout(
+            cdp_target_from(target),
+            target_id=info.target_id,
+            timeout_ms=cdp_start_poll_timeout_ms,
+          ),
+        ) catch {
+          _ => None
+        }
+        match page {
+          Some(page) => {
+            let ready = evaluate_bool(page, expression, false) catch {
+              _ => false
+            }
+            if ready {
+              return page
+            }
+            page.close()
+          }
+          None => ()
+        }
+      }
+    }
+    @async.sleep(100)
+    elapsed = elapsed + 100
+  }
+  fail("timed out waiting for " + description)
+}
+
+///|
+fn page_url_matches(actual : String, expected : String) -> Bool {
+  if @path.sep == '\\' && expected.to_lower().has_prefix("file:") {
+    actual.to_lower() == expected.to_lower()
+  } else {
+    actual == expected
+  }
+}
+
+///|
+async fn wait_for_cdp_expression(
+  page : @client.CdpClient,
+  expression : String,
+  description : String,
+  timeout : Int,
+) -> Unit {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let ready = evaluate_bool(page, expression, false) catch { _ => false }
+    if ready {
+      return
+    }
+    @async.sleep(100)
+    elapsed = elapsed + 100
+  }
+  fail("timed out waiting for " + description)
 }
 
 ///|
@@ -484,25 +590,6 @@ fn file_url(path : String) -> String {
   } else {
     "file://" + escaped
   }
-}
-
-///|
-async fn wait_for_cdp_expression(
-  page : @client.CdpClient,
-  expression : String,
-  description : String,
-  timeout : Int,
-) -> Unit {
-  let mut elapsed = 0
-  while elapsed <= timeout {
-    let ready = evaluate_bool(page, expression, false) catch { _ => false }
-    if ready {
-      return
-    }
-    @async.sleep(100)
-    elapsed = elapsed + 100
-  }
-  fail("timed out waiting for " + description)
 }
 
 ///|

@@ -62,14 +62,16 @@ async fn run_dev_extension_page_probe(
   timeout : Int,
 ) -> Unit {
   let page = connect_spawned_page(app, target, timeout)
-  defer page.close()
+  let mut page_open = true
+  defer (if page_open { page.close() })
   ignore(page.send_schema_command("Runtime.enable"))
   wait_for_ready(page, dev_extension_ready_expression(), timeout)
   let value = evaluate_json(page, dev_extension_probe_expression(), true)
   let result : DevExtensionProbe = decode_probe(value, "dev extension")
   assert_dev_extension_probe(result, frontend_url, value)
-  run_dev_extension_reload_probe(page, frontend_url, timeout)
-  run_dev_extension_non_proton_probe(page, root, timeout)
+  run_dev_extension_reload_probe(page, target, frontend_url, timeout)
+  page_open = false
+  run_dev_extension_non_proton_probe(target, root, timeout)
   assert_dev_extension_native_log(app.native_log_path)
   println("MoonBit 47_dev_extension_js dev probe passed")
 }
@@ -189,6 +191,7 @@ fn dev_extension_production_probe_expression() -> String {
 ///|
 async fn run_dev_extension_reload_probe(
   page : @client.CdpClient,
+  target : String,
   frontend_url : String,
   timeout : Int,
 ) -> Unit {
@@ -202,15 +205,18 @@ async fn run_dev_extension_reload_probe(
         #|  if (typeof start === "function") {
         #|    void start({ run_id: 9300, count: 5, interval_ms: 50 }).catch(() => {});
         #|  }
-        #|  location.reload();
         #|  return true;
         #|})()
       ),
       false,
     ),
   )
-  wait_for_cdp_expression(
-    page,
+  ignore(page.send_cdp_command("Page.reload"))
+  page.close()
+  let reloaded_page = connect_page_matching_expression(
+    target,
+    frontend_url,
+    true,
     (
       #|Boolean(
       #|  window.__MoonBit__?.ticker?.start &&
@@ -221,7 +227,12 @@ async fn run_dev_extension_reload_probe(
     "dev extension bridge after reload",
     timeout,
   )
-  let value = evaluate_json(page, dev_extension_reload_probe_expression(), true)
+  defer reloaded_page.close()
+  let value = evaluate_json(
+    reloaded_page,
+    dev_extension_reload_probe_expression(),
+    true,
+  )
   let result : DevExtensionReloadProbe = decode_probe(
     value, "dev extension reload",
   )
@@ -273,11 +284,10 @@ fn dev_extension_reload_probe_expression() -> String {
 
 ///|
 async fn run_dev_extension_non_proton_probe(
-  page : @client.CdpClient,
+  target : String,
   root : String,
   timeout : Int,
 ) -> Unit {
-  ignore(page.send_schema_command("Page.enable"))
   let file_path = join_path(root, "target/non-proton-dev-extension-probe.html")
   @mbfs.write_string_to_file(
     file_path, "<!doctype html><title>Non Proton File Probe</title><h1>file probe</h1>",
@@ -285,9 +295,9 @@ async fn run_dev_extension_non_proton_probe(
     _ => fail("failed to write non-Proton dev probe: " + file_path)
   }
   defer (@mbfs.remove_file(file_path) catch { _ => () })
-  let about = navigate_and_read_origin(page, "about:blank", timeout)
-  let file = navigate_and_read_origin(page, file_url(file_path), timeout)
-  let http_page = run_http_origin_probe(page, timeout)
+  let about = navigate_and_read_origin(target, "about:blank", timeout)
+  let file = navigate_and_read_origin(target, file_url(file_path), timeout)
+  let http_page = run_http_origin_probe(target, timeout)
   assert_non_proton_origin("about", about)
   assert_non_proton_origin("file", file)
   assert_non_proton_origin("http", http_page)
