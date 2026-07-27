@@ -47,7 +47,7 @@ async fn macos_bundled_helper_path() -> String? {
 
 ///|
 #cfg(platform="windows")
-async fn macos_bundled_helper_path() -> String? {
+fn macos_bundled_helper_path() -> String? {
   None
 }
 
