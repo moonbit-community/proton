@@ -279,6 +279,26 @@ test "dev process preloads an indirect Linux CEF runtime" {
 }
 
 ///|
+test "dev frontend does not inherit the injected CEF preload" {
+  let app_env = {
+    "LD_PRELOAD": "libcef.so" + path_list_separator() + "existing-preload.so",
+    "PROTON_MODE": "dev",
+  }
+  let frontend_env = dev_frontend_process_env(
+    app_env,
+    Some("existing-preload.so"),
+  )
+  @debug.assert_eq(frontend_env.get("LD_PRELOAD"), Some("existing-preload.so"))
+  @debug.assert_eq(frontend_env.get("PROTON_MODE"), Some("dev"))
+  let clean_frontend_env = dev_frontend_process_env(app_env, None)
+  @debug.assert_eq(clean_frontend_env.get("LD_PRELOAD"), None)
+  @debug.assert_eq(
+    app_env.get("LD_PRELOAD"),
+    Some("libcef.so" + path_list_separator() + "existing-preload.so"),
+  )
+}
+
+///|
 async test "read dev runtime honors PROTON_NATIVE_DIST override" {
   let root = "target/proton-dev-runtime-env"
   let runtime = create_fake_dev_runtime(root)

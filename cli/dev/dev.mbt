@@ -141,14 +141,18 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     raw.start_frontend,
   )
   let runtime = ensure_dev_runtime(root, raw.setup_runtime)
-  let env = dev_process_env(runtime, frontend_url, config_path)
+  let app_env = dev_process_env(runtime, frontend_url, config_path)
+  let frontend_env = dev_frontend_process_env(
+    app_env,
+    @sys.get_env_var("LD_PRELOAD"),
+  )
   @async.with_task_group(group => {
     let frontend_process = maybe_start_frontend(
       group,
       frontend_working_dir,
       frontend_command,
       raw.start_frontend,
-      env,
+      frontend_env,
     )
     defer cancel_frontend(frontend_process)
     if raw.wait_for_dev_server {
@@ -163,7 +167,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       root,
       raw.app_package,
       raw.app_args,
-      env,
+      app_env,
       moon_target_dir,
     )
     if code != 0 {
@@ -455,6 +459,21 @@ fn dev_process_env(
         current_env_value("LD_PRELOAD"),
       )
     }
+  }
+  env
+}
+
+///|
+fn dev_frontend_process_env(
+  app_env : Map[String, String],
+  parent_preload : String?,
+) -> Map[String, String] {
+  let env = app_env.copy()
+  // Linux CEF preloading belongs to the Proton app only. Frontend commands
+  // such as Node/Vite must retain the CLI process's original preload state.
+  match parent_preload {
+    Some(value) => env["LD_PRELOAD"] = value
+    None => env.remove("LD_PRELOAD")
   }
   env
 }

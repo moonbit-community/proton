@@ -174,6 +174,30 @@ fn dev_extension_runtime_env(
 }
 
 ///|
+fn restore_dev_extension_parent_preload(
+  env : Map[String, String],
+  parent_preload : String?,
+) -> Unit {
+  match parent_preload {
+    Some(value) => env["LD_PRELOAD"] = value
+    None => env.remove("LD_PRELOAD")
+  }
+}
+
+///|
+fn dev_extension_host_env(
+  root : String,
+  cdp_port : Int,
+) -> Map[String, String] raise {
+  let env = dev_extension_runtime_env(root, cdp_port)
+  // app_process_env injects libcef.so for Linux application children. The
+  // CLI/build hosts launch Moon or Node rather than CEF, so restore the
+  // caller's preload instead of leaking the injected CEF wrapper into them.
+  restore_dev_extension_parent_preload(env, @env.get_env_var("LD_PRELOAD"))
+  env
+}
+
+///|
 async fn spawn_dev_extension_cli_app(
   group : @async.TaskGroup[Unit],
   root : String,
@@ -221,7 +245,7 @@ async fn spawn_dev_extension_cli_app(
     "moon",
     args,
     cwd=root,
-    extra_env=dev_extension_runtime_env(root, cdp_port),
+    extra_env=dev_extension_host_env(root, cdp_port),
     stdout=output,
     stderr=output,
     cancel_handler=app_cancel_handler(),
@@ -281,7 +305,7 @@ async fn spawn_dev_extension_production_app(
 async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
   let timeout = dev_extension_command_timeout(timeout)
   let port = choose_cdp_port()
-  let env = dev_extension_runtime_env(root, port)
+  let env = dev_extension_host_env(root, port)
   let cli_target_dir = dev_extension_cli_target_dir(root, "build", port)
   let app_target_dir = dev_extension_app_target_dir(root, "build", port)
   defer {
@@ -471,6 +495,19 @@ test "dev extension command timeout covers slow Windows installs" {
   } else {
     assert_eq(timeout, 60000)
   }
+}
+
+///|
+test "dev extension host restores the parent preload" {
+  let env = {
+    "LD_PRELOAD": "libcef.so:existing-preload.so",
+    "PROTON_HEADLESS": "1",
+  }
+  restore_dev_extension_parent_preload(env, Some("existing-preload.so"))
+  assert_eq(env.get("LD_PRELOAD"), Some("existing-preload.so"))
+  assert_eq(env.get("PROTON_HEADLESS"), Some("1"))
+  restore_dev_extension_parent_preload(env, None)
+  assert_eq(env.get("LD_PRELOAD"), None)
 }
 
 ///|
