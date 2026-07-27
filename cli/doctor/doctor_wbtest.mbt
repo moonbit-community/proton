@@ -562,6 +562,8 @@ test "doctor bounds native text buffers and requires termination" {
     doctor_native_checked_buffer_length(doctor_native_max_text_length + 1),
     None,
   )
+  let empty = FixedArray::make(0, b'\x00')
+  assert_eq(doctor_native_buffer_text(empty), None)
   let terminated : FixedArray[Byte] = [b'o', b'k', b'\x00']
   assert_eq(doctor_native_buffer_text(terminated), Some("ok"))
   assert_eq(doctor_native_buffer_text_at_length(terminated, 2), Some("ok"))
@@ -592,7 +594,7 @@ fn doctor_test_workspace_root() -> String {
 }
 
 ///|
-fn doctor_test_native_library_path(platform_id : String) -> String? {
+fn doctor_test_native_dist(platform_id : String) -> String? {
   match runtime_library_relative_path(platform_id) {
     Some(relative) => {
       let project = discover_project(doctor_test_workspace_root())
@@ -617,9 +619,38 @@ fn doctor_test_native_library_path(platform_id : String) -> String? {
           "; run `proton_cli cef setup` and build/install the native runtime",
         )
       }
-      Some(candidate)
+      Some(native_dist)
     }
     None => None
+  }
+}
+
+///|
+fn doctor_test_native_library_path(platform_id : String) -> String? {
+  match doctor_test_native_dist(platform_id) {
+    Some(native_dist) =>
+      match runtime_library_relative_path(platform_id) {
+        Some(relative) => Some(path_join(native_dist, relative))
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+async test "doctor deep native probe succeeds against active runtime" {
+  let platform_id = @cef.current_platform_id()
+  match doctor_test_native_dist(platform_id) {
+    None => ()
+    Some(native_dist) => {
+      let lines : Array[DoctorLine] = []
+      push_deep_runtime_probe(lines, native_dist, platform_id)
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.info" }))
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.engine" }))
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.probe" }))
+      assert_true(lines.any(fn(line) { line.code == "runtime.deep.smoke" }))
+      assert_true(lines.all(fn(line) { line.status == Ok }))
+    }
   }
 }
 
