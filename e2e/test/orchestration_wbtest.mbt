@@ -504,8 +504,12 @@ fn resolve_path(base : String, child : String) -> String {
   let path = @path.Path(child)
   if path.is_absolute() {
     child
+  } else if base == "" {
+    child
+  } else if base.has_suffix(@path.sep.to_string()) {
+    base + child
   } else {
-    @path.Path(base).join(path.normalize()).to_string()
+    base + @path.sep.to_string() + child
   }
 }
 
