@@ -112,6 +112,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     ),
     entry: @manifest.AppEntry::Html(""),
     debug_level_value: 0,
+    headless_value: false,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,
@@ -136,6 +137,16 @@ pub fn App::debug(self : App, enabled? : Bool = true) -> App {
 pub fn App::debug_level(self : App, debug : Int) -> App {
   self.debug_overridden = true
   self.debug_level_value = debug
+  self
+}
+
+///|
+/// Enables or disables off-screen headless rendering for the application.
+///
+/// Headless mode does not create a native top-level window. Set
+/// `PROTON_HEADLESS=1` to force this mode for automated test runs.
+pub fn App::headless(self : App, enabled? : Bool = true) -> App {
+  self.headless_value = enabled
   self
 }
 

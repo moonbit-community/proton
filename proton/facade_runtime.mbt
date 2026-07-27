@@ -28,6 +28,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
         resolved.base_dir,
         self.menu,
         self.bridge_startup_timeout_value_ms,
+        self.resolved_headless(),
       )
   }
 }
@@ -76,7 +77,17 @@ async fn run_manifest(
   base_dir : String?,
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
+  headless : Bool,
 ) -> Unit raise AppRunError {
+  if headless &&
+    manifest.window.titlebar_style == @manifest.TitlebarStyle::Overlay {
+    raise ConfigurationError(
+      "titlebar overlay is not supported in headless mode",
+    )
+  }
+  if headless && menu is Some(_) {
+    raise ConfigurationError("native menus are not supported in headless mode")
+  }
   let forward_menu_events = menu is Some(_)
   let helper_path = macos_bundled_helper_path() catch {
     error => raise normalize_async_run_error(error)
@@ -86,6 +97,7 @@ async fn run_manifest(
       config=@native.RuntimeConfig::bundled(
         helper_path?,
         remote_debugging_port=debug_port(manifest.debug),
+        headless~,
       ),
     ) {
     Ok(runtime) => runtime
@@ -220,8 +232,10 @@ async fn run_manifest(
     }
   } catch {
     error => {
-      show_app_run_failure(runtime, window, wakeup, error) catch {
-        _ => ()
+      if !headless {
+        show_app_run_failure(runtime, window, wakeup, error) catch {
+          _ => ()
+        }
       }
       close_command_host(command_host)
       ignore(window.destroy())
