@@ -694,6 +694,7 @@ fn frontend_cancel_handler() -> @process.CancellationHandler {
           "taskkill",
           ["/pid", pid.to_string(), "/t", "/f"],
           no_console_window=true,
+          cancel_handler=@process.hard_cancel(),
         ),
       )
     })
