@@ -69,11 +69,11 @@ developer must perform them.
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C cli test . arguments build_cmd cef codegen dev doctor new package --target native --no-parallelize --diagnostic-limit 80`
+  `moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/new justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
 - `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
-- `moon -C extensions test --target native`
+- `moon -C extensions test -p justjavac/proton_ext justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard justjavac/proton_ext/dialog justjavac/proton_ext/fs justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone justjavac/proton_ext/notification justjavac/proton_ext/path justjavac/proton_ext/shell justjavac/proton_ext/tray --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`
@@ -106,7 +106,11 @@ native checks before handing off larger refactors.
   ```sh
   moon fmt --check
   node scripts/verify_generated.mjs
-  moon -C cli test . arguments build_cmd cef codegen dev doctor new package \
+  moon -C cli test -p justjavac/proton_cli \
+    justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
+    justjavac/proton_cli/cef justjavac/proton_cli/codegen \
+    justjavac/proton_cli/dev justjavac/proton_cli/doctor \
+    justjavac/proton_cli/new justjavac/proton_cli/package \
     --target native --no-parallelize --diagnostic-limit 80
   moon -C proton check --target native --diagnostic-limit 80
   ```
