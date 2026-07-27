@@ -73,6 +73,31 @@ fn dev_extension_command_timeout(timeout : Int) -> Int {
 }
 
 ///|
+fn dev_extension_build_timeout(timeout : Int, has_linux_cef : Bool) -> Int {
+  let timeout = dev_extension_command_timeout(timeout)
+  if has_linux_cef && timeout < 180000 {
+    180000
+  } else {
+    timeout
+  }
+}
+
+///|
+fn process_snapshot_suffix(snapshot : ProcessSnapshot) -> String {
+  let details : Array[String] = []
+  for pid in snapshot.pids {
+    details.push(
+      pid.to_string() + ":" + snapshot.commands.get(pid).unwrap_or("unknown"),
+    )
+  }
+  if details.length() == 0 {
+    ""
+  } else {
+    "\nProcess tree:\n" + details.join("\n")
+  }
+}
+
+///|
 fn dev_extension_cli_target_dir(
   root : String,
   phase : String,
@@ -148,12 +173,14 @@ async fn run_dev_extension_command(
         }
       }
     }
+    let snapshot = snapshot_process_tree(process.pid)
     fail(
       name +
       " did not finish within " +
       timeout.to_string() +
       "ms" +
-      app_output_suffix(output_path),
+      app_output_suffix(output_path) +
+      process_snapshot_suffix(snapshot),
     )
   })
 }
@@ -303,7 +330,11 @@ async fn spawn_dev_extension_production_app(
 
 ///|
 async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
-  let timeout = dev_extension_command_timeout(timeout)
+  let runtime_dist = active_runtime_dist(root)
+  let has_linux_cef = @mbfs.path_exists(
+    join_path(runtime_dist, "bin/libcef.so"),
+  )
+  let timeout = dev_extension_build_timeout(timeout, has_linux_cef)
   let port = choose_cdp_port()
   let env = dev_extension_host_env(root, port)
   let cli_target_dir = dev_extension_cli_target_dir(root, "build", port)
@@ -488,13 +519,17 @@ test "dev extension retry classification stays narrow" {
 }
 
 ///|
-test "dev extension command timeout covers slow Windows installs" {
-  let timeout = dev_extension_command_timeout(60000)
+test "dev extension command timeouts cover slow platform work" {
+  let command_timeout = dev_extension_command_timeout(60000)
   if @path.sep == '\\' {
-    assert_eq(timeout, 180000)
+    assert_eq(command_timeout, 180000)
+    assert_eq(dev_extension_build_timeout(60000, false), 180000)
   } else {
-    assert_eq(timeout, 60000)
+    assert_eq(command_timeout, 60000)
+    assert_eq(dev_extension_build_timeout(60000, false), 60000)
   }
+  assert_eq(dev_extension_build_timeout(60000, true), 180000)
+  assert_eq(dev_extension_build_timeout(240000, true), 240000)
 }
 
 ///|
