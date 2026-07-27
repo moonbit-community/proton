@@ -149,9 +149,9 @@ static void doctor_release_context(doctor_native_library_t *context) {
 
 /*
  * Logically close the MoonBit handle without decrementing the platform loader
- * reference. This is used only when a runtime could not be destroyed: keeping
- * the module mapped is safer than unloading code that its threads may still
- * execute. The operating system reclaims the module when the process exits.
+ * reference. Once a runtime has been created, keeping the module mapped is
+ * safer than unloading code that delayed platform cleanup may still execute.
+ * The operating system reclaims the module when the process exits.
  */
 static void doctor_abandon_context(doctor_native_library_t *context) {
   if (!doctor_context_is_open(context)) {

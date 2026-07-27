@@ -323,6 +323,7 @@ fn doctor_native_smoke(
     let _ = proton_doctor_native_abandon_ffi(handle)
     DestroyFailed(error)
   } else {
+    let _ = proton_doctor_native_abandon_ffi(handle)
     Succeeded
   }
 }
