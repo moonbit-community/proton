@@ -258,9 +258,12 @@ pub fn run_multi_window() -> Unit {
 ///|
 pub fn run_asset_sidecar() -> Unit {
   @proton.run(() => {
+    let entry = @env.get_env_var("PROTON_E2E_ASSET_SIDECAR_ENTRY").unwrap_or(
+      "examples/46_asset_sidecar_resources/app/app.html",
+    )
     let app = @proton.asset(
       "Asset Sidecar Resources",
-      "examples/46_asset_sidecar_resources/app/app.html",
+      entry,
       width=760,
       height=500,
       debug=true,

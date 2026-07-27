@@ -38,3 +38,18 @@ test "scenario retries only startup and closed CDP transports" {
     retryable_scenario_error(Failure::Failure("connected CDP probe failed")),
   )
 }
+
+///|
+test "scenario child command is platform-safe" {
+  let root = repository_root()
+  let (program, args) = scenario_app_command(root)
+  if @path.sep == '\\' {
+    assert_eq(args, [app_child_test_selector])
+    assert_true(@path.Path(program).is_absolute())
+  } else {
+    assert_eq(program, "moon")
+    assert_true(args.contains("e2e/test/scenario_app_wbtest.mbt"))
+    assert_true(args.contains(root))
+    assert_true(args.contains(join_path(root, "target/proton-e2e-app-child")))
+  }
+}

@@ -133,6 +133,9 @@ fn app_process_env(
     "PROTON_NATIVE_LOG": scenario_native_log_path(root, cdp_port),
     "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
     "PROTON_HEADLESS": "1",
+    "PROTON_E2E_ASSET_SIDECAR_ENTRY": join_path(
+      root, "examples/46_asset_sidecar_resources/app/app.html",
+    ),
   }
   result[app_child_scenario_env] = scenario
   result[path_key] = prepend_env_path(bin_dir, current_path)
@@ -206,19 +209,7 @@ async fn[X] spawn_scenario_app(
   scenario : String,
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
-  let executable = current_test_executable()
-  if @path.sep != '\\' {
-    // Unix native tests can be launched through Moon even when the generated
-    // test executable itself was emitted without an execute bit.  The E2E
-    // child reuses that exact binary, so make its generated mode explicit.
-    @fs.chmod(executable, 0o755) catch {
-      error =>
-        fail(
-          "failed to make E2E test executable runnable: " +
-          @debug.render(@debug.to_repr(error)),
-        )
-    }
-  }
+  let (program, args) = scenario_app_command(root)
   let output_path = join_path(
     root,
     "target/proton-e2e-child-" + cdp_port.to_string() + ".log",
@@ -229,8 +220,8 @@ async fn[X] spawn_scenario_app(
   )
   let process = @process.spawn(
     group,
-    executable,
-    [app_child_test_selector],
+    program,
+    args,
     cwd=root,
     extra_env=app_process_env(root, scenario, cdp_port),
     stdout=output,
@@ -242,6 +233,34 @@ async fn[X] spawn_scenario_app(
     process,
     output_path,
     native_log_path: scenario_native_log_path(root, cdp_port),
+  }
+}
+
+///|
+fn scenario_app_command(root : String) -> (String, Array[String]) raise {
+  if @path.sep == '\\' {
+    (current_test_executable(), [app_child_test_selector])
+  } else {
+    // The Linux native test runner may execute a TCC-owned artifact that is
+    // valid for the current process but not a standalone execve target.  Ask
+    // Moon to run exactly the child test in an isolated, serially reused build
+    // directory on Unix instead of attempting to re-exec the parent binary.
+    (
+      "moon",
+      [
+        "--target-dir",
+        join_path(root, "target/proton-e2e-app-child"),
+        "-C",
+        root,
+        "test",
+        "e2e/test/scenario_app_wbtest.mbt",
+        "--target",
+        "native",
+        "--no-parallelize",
+        "--diagnostic-limit",
+        "80",
+      ],
+    )
   }
 }
 
