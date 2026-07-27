@@ -24,8 +24,10 @@
 #define PATH_SEP "/"
 #define EXPECTED_PLATFORM "\"platform\":\"macos\""
 #else
+#include <fcntl.h>
 #include <pthread.h>
 #include <poll.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #define mkdir_one(path) mkdir(path, 0777)
@@ -40,6 +42,63 @@ static int fail(const char *message) {
 
 static int g_runtime_available = 0;
 static int expect_status(const char *label, int32_t actual, int32_t expected);
+
+#ifdef __linux__
+static char g_native_signal_log_path[512];
+
+static void write_signal_log_bytes(const char *buffer, size_t length) {
+  while (length > 0) {
+    ssize_t written = write(STDERR_FILENO, buffer, length);
+    if (written <= 0) {
+      return;
+    }
+    buffer += written;
+    length -= (size_t)written;
+  }
+}
+
+static void dump_native_log_on_sigtrap(int signal_number) {
+  static const char header[] = "\n--- Proton native log before SIGTRAP ---\n";
+  static const char footer[] = "--- End Proton native log ---\n";
+  write_signal_log_bytes(header, sizeof(header) - 1);
+  if (g_native_signal_log_path[0] != '\0') {
+    int log_fd = open(g_native_signal_log_path, O_RDONLY);
+    if (log_fd >= 0) {
+      char buffer[4096];
+      for (;;) {
+        ssize_t read_count = read(log_fd, buffer, sizeof(buffer));
+        if (read_count <= 0) {
+          break;
+        }
+        write_signal_log_bytes(buffer, (size_t)read_count);
+      }
+      close(log_fd);
+    }
+  }
+  write_signal_log_bytes(footer, sizeof(footer) - 1);
+  raise(signal_number);
+}
+
+static void install_sigtrap_log_dump(void) {
+  const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
+  if (native_log_path == NULL || native_log_path[0] == '\0') {
+    return;
+  }
+  int written = snprintf(g_native_signal_log_path,
+                         sizeof(g_native_signal_log_path), "%s",
+                         native_log_path);
+  if (written < 0 || (size_t)written >= sizeof(g_native_signal_log_path)) {
+    g_native_signal_log_path[0] = '\0';
+    return;
+  }
+  struct sigaction action;
+  memset(&action, 0, sizeof(action));
+  action.sa_handler = dump_native_log_on_sigtrap;
+  action.sa_flags = SA_RESETHAND;
+  sigemptyset(&action.sa_mask);
+  (void)sigaction(SIGTRAP, &action, NULL);
+}
+#endif
 
 #if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
 static int g_app_entry_called = 0;
@@ -910,6 +969,9 @@ static int expect_wrong_thread_window_rejected(proton_window_id_t window) {
 }
 
 int main(void) {
+#ifdef __linux__
+  install_sigtrap_log_dump();
+#endif
   char probe_config[256];
   char installed_probe_config[256];
   char missing_helper_config[256];
