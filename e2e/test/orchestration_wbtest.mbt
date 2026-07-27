@@ -522,7 +522,10 @@ fn resolve_path(base : String, child : String) -> String {
 
 ///|
 fn join_path(base : String, child : String) -> String {
-  @path.Path(base).join(@path.Path(child)).normalize().to_string()
+  // The path facade can drop a Windows drive prefix while joining an
+  // absolute base. E2E paths are simple relative children, so keep the
+  // platform prefix with the controlled resolver above.
+  resolve_path(base, child)
 }
 
 ///|
