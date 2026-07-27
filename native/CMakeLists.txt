@@ -349,6 +349,7 @@ if(BUILD_TESTING)
       NAME proton_smoke
       COMMAND "${CMAKE_COMMAND}"
         "-DPROTON_SMOKE_EXECUTABLE=$<TARGET_FILE:proton_smoke>"
+        "-DPROTON_CEF_LOG_FILE=${CMAKE_BINARY_DIR}/debug.log"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_proton_smoke.cmake"
     )
   else()
@@ -420,7 +421,7 @@ if(BUILD_TESTING)
     if(PROTON_WITH_ENGINE)
       set_tests_properties(proton_smoke PROPERTIES
         ENVIRONMENT
-          "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+          "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_CEF_LOG=default"
       )
     else()
       set_tests_properties(proton_smoke PROPERTIES
