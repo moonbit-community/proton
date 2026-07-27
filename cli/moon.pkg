@@ -5,6 +5,7 @@ import {
   "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,

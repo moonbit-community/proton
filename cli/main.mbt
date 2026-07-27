@@ -359,10 +359,11 @@ fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
 }
 
 ///|
-async fn run_cli(cwd : String, matches : @argparse.Matches) -> Bool {
+async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Int {
   match matches.subcommand {
     Some(("version", _)) => println(cli_version_text())
-    Some(("doctor", doctor_matches)) => return run_doctor(cwd, doctor_matches)
+    Some(("doctor", doctor_matches)) =>
+      return if run_doctor(cwd, doctor_matches) { 0 } else { 1 }
     Some(("new", new_matches)) => @new_project.run(cwd, new_matches)
     Some(("dev", dev_matches)) => @dev.run(cwd, dev_matches)
     Some(("build", build_matches)) => @build.run(cwd, build_matches)
@@ -371,38 +372,35 @@ async fn run_cli(cwd : String, matches : @argparse.Matches) -> Bool {
     Some(("cef", cef_matches)) => @cef.run(cwd, cef_matches)
     _ => abort("argparse invariant violated: missing subcommand")
   }
-  true
+  0
 }
 
 ///|
-fn exit_with_error(message : String) -> Bool {
-  print_error_message(message)
-  @sys.exit(1)
-  false
+async fn run(args : ArrayView[String]) -> Int {
+  let matches = @argparse.parse(cli_command(), argv=args, env=Map([])) catch {
+    error => {
+      print_error_message(error.to_string())
+      return 2
+    }
+  }
+  let cwd = @cli_args.required_value(matches, "cwd")
+  if !(matches.subcommand is Some(("version", _))) {
+    check_cli_update()
+  }
+  try dispatch_cli(cwd, matches) catch {
+    error => {
+      print_error_message(error.to_string())
+      1
+    }
+  } noraise {
+    code => code
+  }
 }
 
 ///|
 async fn main {
-  let argv = @sys.get_cli_args()
-  let raw_args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
-  let matches = cli_command().parse(argv=raw_args, env=Map([])) catch {
-    error => {
-      let _ = exit_with_error(error.to_string())
-      return
-    }
-  }
-  let cwd = @cli_args.required_value(matches, "cwd")
-  if matches.subcommand is Some(("version", _)) {
-    println(cli_version_text())
-    return
-  }
-  check_cli_update()
-  let success = try run_cli(cwd, matches) catch {
-    error => exit_with_error(error.to_string())
-  } noraise {
-    success => success
-  }
-  if !success {
-    @sys.exit(1)
+  let code = run(@env.args()[1:])
+  if code != 0 {
+    @sys.exit(code)
   }
 }
