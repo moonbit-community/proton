@@ -1,0 +1,537 @@
+///|
+let cdp_start_poll_timeout_ms = 250
+
+///|
+let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
+
+///|
+let app_child_test_selector = "scenario_app_wbtest.mbt:0-1"
+
+///|
+struct SpawnedScenarioApp {
+  process : @process.Process
+  output_path : String
+  native_log_path : String
+}
+
+///|
+async fn choose_cdp_port() -> Int {
+  let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
+  defer server.close()
+  server.addr.port()
+}
+
+///|
+fn repository_root() -> String raise {
+  let mut current = @path.Path(".").resolve()
+  for ;; {
+    let current_text = current.to_string()
+    if @mbfs.path_exists(join_path(current_text, "moon.work")) {
+      return current_text
+    }
+    let parent = current.dirname()
+    if parent == current {
+      fail("could not find repository root from " + current_text)
+    }
+    current = parent
+  }
+}
+
+///|
+fn active_runtime_dist(root : String) -> String raise {
+  match @env.get_env_var("PROTON_NATIVE_DIST") {
+    Some(value) if value.trim() != "" =>
+      resolve_path(root, value.trim().to_owned())
+    _ => {
+      let manifest_path = join_path(root, ".proton/runtime.json")
+      if @mbfs.path_exists(manifest_path) {
+        match read_runtime_dist(manifest_path) {
+          Ok(dist) => resolve_path(root, dist)
+          Err(message) => fail(message)
+        }
+      } else {
+        join_path(root, "native/dist")
+      }
+    }
+  }
+}
+
+///|
+fn read_runtime_dist(manifest_path : String) -> Result[String, String] {
+  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+    _ => return Err("failed to read runtime manifest: " + manifest_path)
+  }
+  let json = @json.parse(text) catch {
+    _ => return Err("invalid runtime manifest JSON: " + manifest_path)
+  }
+  match json {
+    Object(object) =>
+      match object.get("dist") {
+        Some(String(dist)) if dist != "" => Ok(dist)
+        _ =>
+          Err(
+            "runtime manifest is missing a non-empty string dist field: " +
+            manifest_path,
+          )
+      }
+    _ => Err("runtime manifest must be a JSON object: " + manifest_path)
+  }
+}
+
+///|
+fn app_process_env(
+  root : String,
+  scenario : String,
+  cdp_port : Int,
+) -> Map[String, String] raise {
+  let runtime_dist = active_runtime_dist(root)
+  let bin_dir = join_path(runtime_dist, "bin")
+  let lib_dir = join_path(runtime_dist, "lib")
+  let helper_path = join_path(bin_dir, helper_executable_name())
+  guard @mbfs.path_exists(bin_dir) else {
+    fail(
+      "native runtime bin directory does not exist: " +
+      bin_dir +
+      "\nRun proton_cli cef setup or set PROTON_NATIVE_DIST.",
+    )
+  }
+  guard @mbfs.path_exists(helper_path) else {
+    fail("native runtime helper does not exist: " + helper_path)
+  }
+  @mbfs.create_dir(join_path(root, "target")) catch {
+    _ => ()
+  }
+  let path_key = path_env_key()
+  let current_path = @env.get_env_var(path_key).unwrap_or("")
+  let result : Map[String, String] = {
+    "PROTON_NATIVE_DIST": runtime_dist,
+    "PROTON_RUNTIME_ROOT": runtime_dist,
+    "PROTON_HELPER_PATH": helper_path,
+    "PROTON_NATIVE_LOG": scenario_native_log_path(root, cdp_port),
+    "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
+    "PROTON_HEADLESS": "1",
+  }
+  result[app_child_scenario_env] = scenario
+  result[path_key] = prepend_env_path(bin_dir, current_path)
+  if @path.sep != '\\' {
+    result["LD_LIBRARY_PATH"] = prepend_env_path(
+      lib_dir,
+      prepend_env_path(
+        bin_dir,
+        @env.get_env_var("LD_LIBRARY_PATH").unwrap_or(""),
+      ),
+    )
+    result["DYLD_LIBRARY_PATH"] = prepend_env_path(
+      lib_dir,
+      prepend_env_path(
+        bin_dir,
+        @env.get_env_var("DYLD_LIBRARY_PATH").unwrap_or(""),
+      ),
+    )
+  }
+  result
+}
+
+///|
+fn helper_executable_name() -> String {
+  if @path.sep == '\\' {
+    "cef_process.exe"
+  } else {
+    "cef_process"
+  }
+}
+
+///|
+fn scenario_native_log_path(root : String, cdp_port : Int) -> String {
+  join_path(root, "target/proton-e2e-" + cdp_port.to_string() + ".log")
+}
+
+///|
+fn path_env_key() -> String {
+  if @path.sep == '\\' {
+    match @env.get_env_var("Path") {
+      Some(_) => "Path"
+      None => "PATH"
+    }
+  } else {
+    "PATH"
+  }
+}
+
+///|
+fn prepend_env_path(path : String, current : String) -> String {
+  if current == "" {
+    path
+  } else {
+    path + path_list_separator() + current
+  }
+}
+
+///|
+fn path_list_separator() -> String {
+  if @path.sep == '\\' {
+    ";"
+  } else {
+    ":"
+  }
+}
+
+///|
+async fn[X] spawn_scenario_app(
+  group : @async.TaskGroup[X],
+  root : String,
+  scenario : String,
+  cdp_port : Int,
+) -> SpawnedScenarioApp {
+  let executable = current_test_executable()
+  let output_path = join_path(
+    root,
+    "target/proton-e2e-child-" + cdp_port.to_string() + ".log",
+  )
+  let output = @process.redirect_to_file(
+    output_path,
+    create_mode=@fs.CreateOrTruncate,
+  )
+  let process = @process.spawn(
+    group,
+    executable,
+    [app_child_test_selector],
+    cwd=root,
+    extra_env=app_process_env(root, scenario, cdp_port),
+    stdout=output,
+    stderr=output,
+    cancel_handler=app_cancel_handler(),
+    no_wait=true,
+  )
+  SpawnedScenarioApp::{
+    process,
+    output_path,
+    native_log_path: scenario_native_log_path(root, cdp_port),
+  }
+}
+
+///|
+fn current_test_executable() -> String raise {
+  let args = @sys.get_cli_args()
+  guard args.length() > 0 else { fail("test executable path is unavailable") }
+  @path.Path(args[0]).resolve().to_string()
+}
+
+///|
+fn app_cancel_handler() -> @process.CancellationHandler {
+  if @path.sep == '\\' {
+    @process.CancellationHandler(async fn(pid) {
+      ignore(
+        @process.run(
+          "taskkill",
+          ["/pid", pid.to_string(), "/t", "/f"],
+          no_console_window=true,
+        ),
+      )
+    })
+  } else {
+    @process.CancellationHandler(async fn(pid) {
+      terminate_unix_app_tree(pid, "TERM")
+      @async.sleep(1000)
+      terminate_unix_app_tree(pid, "KILL")
+    })
+  }
+}
+
+///|
+async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
+  ignore(
+    @process.run(
+      "sh",
+      [
+        "-c",
+        unix_app_tree_kill_script(),
+        "proton-e2e-cancel",
+        pid.to_string(),
+        signal,
+      ],
+      no_console_window=true,
+    ),
+  )
+}
+
+///|
+fn unix_app_tree_kill_script() -> String {
+  (
+    #|kill_tree() {
+    #|  parent="$1"
+    #|  signal="$2"
+    #|  if command -v pgrep >/dev/null 2>&1; then
+    #|    for child in $(pgrep -P "$parent" 2>/dev/null); do
+    #|      kill_tree "$child" "$signal"
+    #|    done
+    #|  fi
+    #|  kill "-$signal" "$parent" 2>/dev/null || true
+    #|}
+    #|kill_tree "$1" "$2"
+  )
+}
+
+///|
+async fn wait_for_spawned_app_cdp(
+  app : SpawnedScenarioApp,
+  endpoint : String,
+  timeout : Int,
+) -> Unit {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    match app_exit_code(app.process) {
+      Some(code) =>
+        fail(
+          "scenario app exited before CDP became ready: code=" +
+          code.to_string() +
+          app_output_suffix(app.output_path),
+        )
+      None => ()
+    }
+    let ready = try {
+      ignore(
+        @client.wait_for_browser_endpoint(
+          endpoint,
+          timeout_ms=cdp_start_poll_timeout_ms,
+        ),
+      )
+      true
+    } catch {
+      _ => false
+    }
+    if ready {
+      return
+    }
+    elapsed = elapsed + cdp_start_poll_timeout_ms
+  }
+  fail(
+    "CDP endpoint did not start within " +
+    timeout.to_string() +
+    "ms" +
+    app_output_suffix(app.output_path),
+  )
+}
+
+///|
+fn app_exit_code(process : @process.Process) -> Int? {
+  process.try_wait() catch {
+    _ => Some(-1)
+  }
+}
+
+///|
+fn app_output_suffix(path : String) -> String {
+  let output = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    _ => return ""
+  }
+  if output == "" {
+    ""
+  } else {
+    "\nScenario output:\n" + output
+  }
+}
+
+///|
+async fn close_browser(target : String, timeout : Int) -> Unit {
+  let browser = @client.connect_cdp_browser_target_with_timeout(
+    cdp_target_from(target),
+    timeout_ms=timeout,
+  )
+  defer browser.close()
+  ignore(browser.send_cdp_command("Browser.close"))
+}
+
+///|
+async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    match app_exit_code(app.process) {
+      Some(0) => return
+      Some(code) =>
+        fail(
+          "scenario app exited with code=" +
+          code.to_string() +
+          app_output_suffix(app.output_path),
+        )
+      None => ()
+    }
+    @async.sleep(100)
+    elapsed = elapsed + 100
+  }
+  fail(
+    "scenario app did not exit within " +
+    timeout.to_string() +
+    "ms" +
+    app_output_suffix(app.output_path),
+  )
+}
+
+///|
+fn resolve_path(base : String, child : String) -> String {
+  let path = @path.Path(child)
+  if path.is_absolute() {
+    path.normalize().resolve().to_string()
+  } else {
+    @path.Path(base).join(path).normalize().resolve().to_string()
+  }
+}
+
+///|
+fn join_path(base : String, child : String) -> String {
+  @path.Path(base).join(@path.Path(child)).normalize().to_string()
+}
+
+///|
+async fn run_scenario_probe_once(
+  root : String,
+  name : String,
+  timeout : Int,
+) -> Unit {
+  let port = choose_cdp_port()
+  let target = port.to_string()
+  @async.with_task_group(group => {
+    let app = spawn_scenario_app(group, root, name, port)
+    let mut stopped = false
+    defer (if !stopped { app.process.cancel() })
+    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    if name == "41_app_commands" {
+      run_app_commands_full_probe(root, target, timeout, app.native_log_path)
+    } else if name == "40_event_broadcast" {
+      run_event_scenario_page_probe(app, target, timeout)
+    } else if name == "45_bridge_multi_window" {
+      run_multi_window_scenario_page_probe(app, target, timeout)
+    } else if name == "46_asset_sidecar_resources" {
+      run_asset_sidecar_scenario_page_probe(app, target, timeout)
+    } else {
+      run_extension_scenario_page_probe(
+        app,
+        target,
+        name,
+        timeout,
+        app.native_log_path,
+      )
+    }
+    match app_exit_code(app.process) {
+      Some(code) =>
+        fail(
+          "scenario app exited before the probe completed: code=" +
+          code.to_string() +
+          app_output_suffix(app.output_path),
+        )
+      None => ()
+    }
+    let shutdown = finish_scenario_app(app, target)
+    println(
+      "MoonBit " +
+      name +
+      " headless shutdown passed: helpers=" +
+      shutdown.helper_processes.to_string(),
+    )
+    stopped = true
+  })
+}
+
+///|
+async fn run_scenario_probe_with_retry(
+  root : String,
+  name : String,
+  timeout : Int,
+) -> Unit {
+  let mut attempt = 0
+  while attempt < 2 {
+    let succeeded = try {
+      run_scenario_probe_once(root, name, timeout)
+      true
+    } catch {
+      error => {
+        if attempt == 1 || !retryable_startup_error(error) {
+          raise error
+        }
+        println("MoonBit " + name + " startup attempt failed; retrying once")
+        false
+      }
+    }
+    if succeeded {
+      return
+    }
+    @async.sleep(1000)
+    attempt = attempt + 1
+  }
+}
+
+///|
+fn retryable_startup_error(error : Error) -> Bool {
+  let text = @debug.render(@debug.to_repr(error)).to_lower()
+  // Retry only failures emitted by the explicit startup waiters.  Transport
+  // errors from a connected probe or Browser.close must remain failures; a
+  // broad match on "connection reset" would hide those regressions.
+  text.contains("scenario app exited before cdp became ready") ||
+  text.contains("cdp endpoint did not start within") ||
+  text.contains("cdp page target did not become ready within")
+}
+
+///|
+async test "headless 41_app_commands runs as a self-hosted e2e" {
+  let root = repository_root()
+  let timeout = timeout_ms()
+  run_scenario_probe_with_retry(root, "41_app_commands", timeout)
+  run_pending_lifecycle_probe(root, timeout)
+}
+
+///|
+async test "headless 38_async_extension_add runs as a self-hosted e2e" {
+  run_scenario_probe_with_retry(
+    repository_root(),
+    "38_async_extension_add",
+    timeout_ms(),
+  )
+}
+
+///|
+async test "headless 39_sync_async_extensions runs as a self-hosted e2e" {
+  run_scenario_probe_with_retry(
+    repository_root(),
+    "39_sync_async_extensions",
+    timeout_ms(),
+  )
+}
+
+///|
+async test "headless 40_event_broadcast runs as a self-hosted e2e" {
+  let root = repository_root()
+  let timeout = timeout_ms()
+  run_scenario_probe_with_retry(root, "40_event_broadcast", timeout)
+  run_event_lifecycle_probe(root, timeout)
+}
+
+///|
+async test "headless 45_bridge_multi_window runs as a self-hosted e2e" {
+  let root = repository_root()
+  let timeout = timeout_ms()
+  run_scenario_probe_with_retry(root, "45_bridge_multi_window", timeout)
+  run_multi_window_lifecycle_probe(root, timeout)
+}
+
+///|
+async test "headless 46_asset_sidecar_resources runs as a self-hosted e2e" {
+  run_scenario_probe_with_retry(
+    repository_root(),
+    "46_asset_sidecar_resources",
+    timeout_ms(),
+  )
+}
+
+///|
+async test "headless 47_dev_extension_js runs as a self-hosted e2e" {
+  run_dev_extension_scenario_with_retry(repository_root(), timeout_ms())
+}
+
+///|
+async test "headless 42_attribute_codegen_commands runs as a self-hosted e2e" {
+  run_scenario_probe_with_retry(
+    repository_root(),
+    "42_attribute_codegen_commands",
+    timeout_ms(),
+  )
+}

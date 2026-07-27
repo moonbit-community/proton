@@ -7,13 +7,17 @@ fn env_or(name : String, default : String) -> String {
 }
 
 ///|
-fn cdp_target() -> @client.CdpTarget raise {
-  @client.parse_cdp_target(env_or("MBT_CDP_TARGET", "9222"))
+fn cdp_target_text() -> String {
+  env_or("MBT_CDP_TARGET", "9222")
 }
 
 ///|
-fn cdp_http_endpoint() -> String {
-  let target = env_or("MBT_CDP_TARGET", "9222")
+fn cdp_target_from(target : String) -> @client.CdpTarget raise {
+  @client.parse_cdp_target(target)
+}
+
+///|
+fn cdp_http_endpoint_from(target : String) -> String {
   if target.has_prefix("http://") || target.has_prefix("https://") {
     target
   } else if target.has_prefix("ws://") || target.has_prefix("wss://") {
@@ -31,14 +35,40 @@ fn scenario_name() -> String {
 }
 
 ///|
+fn is_supported_scenario(name : String) -> Bool {
+  match name {
+    "38_async_extension_add"
+    | "39_sync_async_extensions"
+    | "40_event_broadcast"
+    | "41_app_commands"
+    | "42_attribute_codegen_commands"
+    | "45_bridge_multi_window"
+    | "46_asset_sidecar_resources"
+    | "47_dev_extension_js" => true
+    _ => false
+  }
+}
+
+///|
+fn ensure_supported_scenario(name : String) -> Unit raise {
+  guard is_supported_scenario(name) else {
+    fail("unsupported E2E scenario: " + name)
+  }
+}
+
+///|
 fn timeout_ms() -> Int {
-  match @env.get_env_var("MBT_PROTON_E2E_TIMEOUT_MS") {
+  let value = match @env.get_env_var("MBT_PROTON_E2E_TIMEOUT_MS") {
+    Some(value) => Some(value)
+    None => @env.get_env_var("PROTON_BRIDGE_E2E_TIMEOUT_MS")
+  }
+  match value {
     Some(value) =>
       try @string.parse_int(value) catch {
-        _ => 30000
+        _ => 60000
       } noraise {
-        parsed => parsed
+        parsed => if parsed > 0 { parsed } else { 60000 }
       }
-    None => 30000
+    None => 60000
   }
 }

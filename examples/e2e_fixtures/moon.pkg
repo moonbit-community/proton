@@ -1,0 +1,26 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/pipe",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs" @mbfs,
+  "justjavac/proton/command" @proton_command,
+  "justjavac/proton/core",
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton/native",
+  "justjavac/proton",
+}
+
+supported_targets = "native"
+
+warnings = "-unused_package"
+
+dev_build(
+  rule: "proton_codegen",
+  input: "commands.mbt",
+  output: "commands.g.mbt",
+)
+
+formatter(ignore: [ "commands.g.mbt" ])
