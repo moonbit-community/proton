@@ -42,6 +42,54 @@ fn find_up(start : String, file_name : String) -> String? {
 }
 
 ///|
+fn path_text_equal(
+  left : String,
+  right : String,
+  case_sensitive~ : Bool,
+) -> Bool {
+  if case_sensitive {
+    left == right
+  } else {
+    left.equal_ignore_ascii_case(right)
+  }
+}
+
+///|
+fn path_text_has_prefix(
+  value : String,
+  prefix : String,
+  case_sensitive~ : Bool,
+) -> Bool {
+  if value.length() < prefix.length() {
+    return false
+  }
+  path_text_equal(
+    value.unsafe_substring(start=0, end=prefix.length()),
+    prefix,
+    case_sensitive~,
+  )
+}
+
+///|
+fn path_is_within_root(root : String, path : String) -> Bool {
+  let root = @path.Path(root).resolve().to_string()
+  let resolved = @path.Path(path).resolve().to_string()
+  let separator = @path.sep.to_string()
+  let prefix = if root.has_suffix(separator) { root } else { root + separator }
+  let case_sensitive = @path.sep != '\\'
+  path_text_equal(resolved, root, case_sensitive~) ||
+  path_text_has_prefix(resolved, prefix, case_sensitive~)
+}
+
+///|
+fn path_option_within_root(root : String, path : String?) -> String? {
+  match path {
+    Some(path) if path_is_within_root(root, path) => Some(path)
+    _ => None
+  }
+}
+
+///|
 fn project_mode(
   moon_proton_path : String?,
   app_json_path : String?,
@@ -56,11 +104,14 @@ fn project_mode(
 
 ///|
 fn discover_project(cwd : String) -> ProjectDoctorInfo {
-  let moon_proton_path = find_up(cwd, "moon.proton")
-  let app_json_path = find_up(cwd, "app.json")
-  let moon_mod_path = find_up(cwd, "moon.mod")
-  let discovered_moon_pkg_path = find_up(cwd, "moon.pkg")
-  let root = match (moon_proton_path, app_json_path, moon_mod_path) {
+  let cwd = @path.Path(cwd).resolve().to_string()
+  let discovered_moon_proton_path = find_up(cwd, "moon.proton")
+  let discovered_app_json_path = find_up(cwd, "app.json")
+  let discovered_moon_mod_path = find_up(cwd, "moon.mod")
+  let root = match
+    (
+      discovered_moon_proton_path, discovered_app_json_path, discovered_moon_mod_path,
+    ) {
     (Some(path), _, _) =>
       match path_parent(path) {
         Some(parent) => parent
@@ -78,6 +129,15 @@ fn discover_project(cwd : String) -> ProjectDoctorInfo {
       }
     _ => cwd
   }
+  let moon_proton_path = path_option_within_root(
+    root, discovered_moon_proton_path,
+  )
+  let app_json_path = path_option_within_root(root, discovered_app_json_path)
+  let moon_mod_path = path_option_within_root(root, discovered_moon_mod_path)
+  let discovered_moon_pkg_path = path_option_within_root(
+    root,
+    find_up(cwd, "moon.pkg"),
+  )
   let mode = project_mode(moon_proton_path, app_json_path, moon_mod_path)
   let moon_pkg_path = match discovered_moon_pkg_path {
     Some(path) => Some(path)

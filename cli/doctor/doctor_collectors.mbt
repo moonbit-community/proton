@@ -158,8 +158,26 @@ fn development_native_dist(project : ProjectDoctorInfo) -> String {
 fn resolve_native_dist(
   project : ProjectDoctorInfo,
 ) -> (String, DoctorRuntimeManifest?) raise DoctorRuntimeManifestError {
-  match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => (root, None)
+  let native_dist_override = match @sys.get_env_var("PROTON_NATIVE_DIST") {
+    Some(root) => {
+      let root = root.trim().to_owned()
+      if root == "" {
+        None
+      } else {
+        Some(root)
+      }
+    }
+    None => None
+  }
+  match native_dist_override {
+    Some(root) => {
+      let path = if path_is_absolute_like(root) {
+        root
+      } else {
+        path_join(project.root, root)
+      }
+      (@path.Path(path).resolve().to_string(), None)
+    }
     None =>
       match runtime_manifest_from_project(project) {
         Some(manifest) => {
@@ -168,7 +186,7 @@ fn resolve_native_dist(
           } else {
             path_join(project.root, manifest.dist)
           }
-          (path, Some(manifest))
+          (@path.Path(path).resolve().to_string(), Some(manifest))
         }
         None => (development_native_dist(project), None)
       }
@@ -2265,9 +2283,7 @@ fn project_relative_path(project : ProjectDoctorInfo, path : String) -> String {
 
 ///|
 fn path_is_within_project(project : ProjectDoctorInfo, path : String) -> Bool {
-  let root = @path.Path(project.root).resolve().to_string()
-  let resolved = @path.Path(path).resolve().to_string()
-  resolved == root || resolved.has_prefix(root + @path.sep.to_string())
+  path_is_within_root(project.root, path)
 }
 
 ///|

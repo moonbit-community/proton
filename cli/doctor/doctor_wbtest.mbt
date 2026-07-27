@@ -9,6 +9,20 @@ fn ensure_test_dir(path : String) -> Unit {
 }
 
 ///|
+fn ensure_test_project_root(path : String) -> String {
+  let root = @path.Path(path).resolve().to_string()
+  ensure_test_dir(root)
+  @mbfs.write_string_to_file(
+    path_join(root, "moon.proton"),
+    "",
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  root
+}
+
+///|
 fn assert_test_path_suffix(value : String, suffix : String) -> Unit {
   let normalized = value.replace_all(old="\\", new="/")
   guard normalized.has_suffix(suffix) else {
@@ -23,15 +37,74 @@ test "doctor paths use the host separator" {
 }
 
 ///|
+test "doctor resolves a relative project cwd" {
+  let project = discover_project(".")
+  assert_true(path_is_absolute_like(project.root))
+  assert_true(path_is_absolute_like(development_native_dist(project)))
+}
+
+///|
+test "doctor resolves a relative native dist override" {
+  let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
+  defer (match previous {
+    Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
+    None => @sys.unset_env_var("PROTON_NATIVE_DIST")
+  })
+  let root = ensure_test_project_root("target/proton-doctor-native-root")
+  let relative = "runtime"
+  @sys.set_env_var("PROTON_NATIVE_DIST", relative)
+  let project = discover_project(root)
+  let (native_dist, manifest) = resolve_native_dist(project)
+  assert_eq(
+    native_dist,
+    @path.Path(path_join(root, relative)).resolve().to_string(),
+  )
+  assert_true(manifest is None)
+
+  @sys.set_env_var("PROTON_NATIVE_DIST", "  ")
+  let (fallback_dist, empty_override_manifest) = resolve_native_dist(project)
+  assert_eq(fallback_dist, development_native_dist(project))
+  assert_true(empty_override_manifest is None)
+}
+
+///|
 test "doctor project boundary rejects parent paths" {
-  let project = discover_project("target/proton-doctor-boundary")
-  assert_true(
+  let root = ensure_test_project_root("target/proton-doctor-boundary")
+  let project = discover_project(root)
+  assert_true(project.moon_mod_path is None)
+  assert_true(project.moon_pkg_path is None)
+  assert_true(path_is_within_project(project, path_join(root, "app.html")))
+  assert_false(
     path_is_within_project(
       project,
-      path_join("target/proton-doctor-boundary", "app.html"),
+      @path.Path("target/outside.html").resolve().to_string(),
     ),
   )
-  assert_false(path_is_within_project(project, "target/outside.html"))
+}
+
+///|
+test "doctor Windows path boundary ignores ASCII case" {
+  assert_true(
+    path_text_has_prefix(
+      "c:\\workspace\\proton\\app",
+      "C:\\Workspace\\Proton\\",
+      case_sensitive=false,
+    ),
+  )
+  assert_true(
+    path_text_equal(
+      "c:\\workspace\\proton",
+      "C:\\Workspace\\Proton",
+      case_sensitive=false,
+    ),
+  )
+  assert_false(
+    path_text_has_prefix(
+      "c:\\workspace\\other",
+      "C:\\Workspace\\Proton\\",
+      case_sensitive=false,
+    ),
+  )
 }
 
 ///|
@@ -175,9 +248,8 @@ async test "frontend run captures build command output" {
 
 ///|
 test "doctor fix regenerates extensions and honors dry run" {
-  let root = "target/proton-doctor-fix"
+  let root = ensure_test_project_root("target/proton-doctor-fix")
   let extension_dir = path_join(root, "sample")
-  ensure_test_dir(root)
   @mbfs.create_dir(extension_dir) catch {
     _ => ()
   }
@@ -304,9 +376,8 @@ test "doctor reports invalid runtime manifests" {
     None => @sys.unset_env_var("PROTON_NATIVE_DIST")
   })
   @sys.unset_env_var("PROTON_NATIVE_DIST")
-  let dir = "target/proton-doctor-invalid-runtime"
+  let dir = ensure_test_project_root("target/proton-doctor-invalid-runtime")
   let proton_dir = path_join(dir, ".proton")
-  ensure_test_dir(dir)
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
@@ -325,9 +396,8 @@ test "doctor reports invalid runtime manifests" {
 
 ///|
 test "doctor validates runtime manifest schema" {
-  let dir = "target/proton-doctor-runtime-schema"
+  let dir = ensure_test_project_root("target/proton-doctor-runtime-schema")
   let proton_dir = path_join(dir, ".proton")
-  ensure_test_dir(dir)
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
