@@ -16,5 +16,6 @@ moon -C examples build 39_sync_async_extensions --target native
 E2E smoke:
 
 ```sh
-node scripts/e2e_bridge_smoke.mjs 39_sync_async_extensions
+moon -C e2e test -p justjavac/proton/e2e/test --target native \
+  --no-parallelize --filter '*39_sync_async_extensions*'
 ```

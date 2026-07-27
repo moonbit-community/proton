@@ -253,7 +253,8 @@ native checks before handing off larger refactors.
   `darwin-arm64`, `darwin-x64`, and future Linux ids.
 - Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
   native tests for the FFI binding. Engine or bridge changes should also run the
-  relevant examples and `scripts/e2e_bridge_smoke.mjs` scenarios.
+  relevant examples and the MoonBit `e2e/` self-hosted scenarios (`moon -C e2e
+  test -p justjavac/proton/e2e/test --target native --no-parallelize`).
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

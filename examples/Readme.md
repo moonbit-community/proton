@@ -55,13 +55,15 @@ moon -C examples run 01_run --target native
   native DLL bridge.
 - `40_event_broadcast`: command-extension event broadcast over the native DLL
   bridge.
-- `41_app_commands`: current `core.invokeOp` bridge smoke for the native DLL
+- `41_app_commands`: current `core.invokeOp` bridge example and E2E fixture for the native DLL
   route.
+- `app_commands_fixture`: non-runnable shared implementation used by
+  `41_app_commands` and the MoonBit E2E suite.
 - `42_attribute_codegen_commands`: generated command metadata plus generated
   event helper over the native DLL bridge.
 - `43_native_bind_smoke`: low-level native binding smoke.
 - `44_project_config`: `moon.proton` project config decoding
-- `45_bridge_multi_window`: multi-window bridge smoke.
+- `45_bridge_multi_window`: multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Vite dev-server injection smoke for extension
   JavaScript helpers and events.

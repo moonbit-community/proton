@@ -105,6 +105,23 @@ Code-only apps can select the same style through the facade:
 .titlebar_style(@proton.TitlebarStyle::Overlay)
 ```
 
+## Headless automation
+
+Code-driven applications can run with CEF off-screen rendering and no native
+top-level window:
+
+```moonbit
+@proton.config("moon.proton")
+.headless()
+.run_or_abort()
+```
+
+Set `PROTON_HEADLESS=1` to force the same mode in automated runs without
+changing application code. Headless mode is independent of remote debugging,
+so CDP can be enabled separately for end-to-end tests. Native menus, dialogs,
+and titlebar overlay are unavailable in this mode. Linux still requires an
+X11 display; use Xvfb in display-less CI jobs.
+
 ## Frontend projects
 
 Vite, Next, and similar tools can be configured in `moon.proton`:
@@ -134,6 +151,26 @@ proton_cli build -- --release
 
 Arguments after `--` are passed to `moon build`; Proton always selects the
 native target.
+
+## E2E tests
+
+The native bridge E2E suite is implemented in MoonBit and owns its application
+processes, CDP connections, frontend servers, and cleanup:
+
+```sh
+PROTON_NATIVE_DIST="$PWD/native/dist" \
+PATH="$PWD/native/dist/bin:$PATH" \
+moon -C e2e test -p justjavac/proton/e2e/test \
+  --target native --no-parallelize --diagnostic-limit 200
+```
+
+For an application that is already running with CDP enabled, use the typed
+driver instead:
+
+```sh
+MBT_PROTON_E2E_SCENARIO=41_app_commands \
+MBT_CDP_TARGET=9222 moon -C e2e run test --target native
+```
 
 ## Bundle and package
 

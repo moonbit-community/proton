@@ -16,6 +16,15 @@ Engine builds on macOS, Windows, and Linux report the `titlebar_overlay`
 feature. ABI-only builds do not report it, allowing typed window configs to
 omit the optional field when the loaded DLL cannot implement the behavior.
 
+Engine builds also report `headless_osr`. Runtime config JSON may set
+`"headless": true` to create all browsers in that runtime through CEF
+windowless rendering (OSR) with Alloy runtime style. This mode creates no
+native top-level window and is independent of `remote_debugging_port`; CDP may
+be enabled separately for automation. Window visibility, focus, and resize map
+to the corresponding CEF browser-host calls. Native titles, titlebar overlay,
+menus, and dialogs are unsupported in headless mode. The current Linux engine
+still initializes GTK/X11, so display-less Linux jobs should run under Xvfb.
+
 `proton_runtime_wait` is a low-level primitive for hosts that own CEF's external
 message pump. It blocks until selected runtime work is ready, after which the
 caller still drains `proton_runtime_poll_*` until the queues are empty. Engine
