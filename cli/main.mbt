@@ -184,7 +184,7 @@ fn print_error_message(message : String) -> Unit {
 fn codegen_command() -> @argparse.Command {
   @argparse.Command(
     "codegen",
-    about="Generate Proton command extension code from #proton attributes",
+    about="Generate typed Proton command registrars from #proton attributes",
     options=[
       OptionArg(
         "output-file",
@@ -195,9 +195,9 @@ fn codegen_command() -> @argparse.Command {
     ],
     positionals=[
       PositionArg(
-        "input_file",
-        about="Input MoonBit source file",
-        num_args=@argparse.ValueRange::single(),
+        "input_files",
+        about="Input MoonBit source files",
+        num_args=@argparse.ValueRange(lower=1),
       ),
     ],
   )
@@ -339,13 +339,11 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
 
 ///|
 async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
-  let input = @cli_args.required_value(matches, "input_file")
+  let inputs = @cli_args.values(matches, "input_files")
   let output = @cli_args.required_value(matches, "output-file")
-  let resolved_input = resolve_cli_path(cwd, input)
+  let resolved_inputs = inputs.map(input => resolve_cli_path(cwd, input))
   let resolved_output = resolve_cli_path(cwd, output)
-  let result = @codegen.generate_app_commands_from_file_with_metadata(
-    resolved_input,
-  )
+  let result = @codegen.generate_commands_from_files(resolved_inputs)
   @async_fs.write_file(
     resolved_output,
     result.source,
