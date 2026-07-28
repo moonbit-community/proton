@@ -33,10 +33,12 @@ pub(all) suberror NewProjectTemplateError {
 pub(all) suberror NewProjectWriteError {
   CreateDirectory(path~ : String, detail~ : String)
   WriteFile(path~ : String, detail~ : String)
+  Commit(target~ : String, detail~ : String)
+  Rollback(primary~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
-/// Failures from optional external tools run after project creation.
+/// Failures from optional external tools run before project publication.
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int)
@@ -95,6 +97,13 @@ pub fn NewProjectWriteError::message(self : NewProjectWriteError) -> String {
     CreateDirectory(path~, detail~) =>
       "failed to create " + path + ": " + detail
     WriteFile(path~, detail~) => "failed to write " + path + ": " + detail
+    Commit(target~, detail~) =>
+      "failed to commit generated project at " + target + ": " + detail
+    Rollback(primary~, detail~) =>
+      "project generation failed: " +
+      primary +
+      "\ntransaction rollback also failed: " +
+      detail
   }
 }
 
@@ -104,11 +113,11 @@ pub fn NewProjectToolError::message(self : NewProjectToolError) -> String {
     Start(tool~, detail~) => "failed to run " + tool + ": " + detail
     Exit(tool~, code~) => tool + " failed with exit code " + code.to_string()
     MoonCheckFailed(code~, project~) =>
-      "project was created, but moon check failed with exit code " +
+      "moon check failed with exit code " +
       code.to_string() +
-      "\n\nRetry with:\n  cd " +
+      " while validating " +
       project +
-      "\n  moon check --target native --diagnostic-limit 80"
+      "\nNo generated files were committed."
   }
 }
 

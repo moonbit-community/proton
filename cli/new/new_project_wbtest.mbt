@@ -36,6 +36,25 @@ fn find_planned_file(files : Array[PlannedFile], path : String) -> String? {
 }
 
 ///|
+async fn remove_new_test_tree(path : String) -> Unit {
+  if !path_exists(path) {
+    return
+  }
+  if path_is_dir(path) {
+    @async_fs.rmdir(path, recursive=true)
+  } else {
+    @async_fs.remove(path)
+  }
+}
+
+///|
+fn transaction_test_options(
+  path : String,
+) -> NewProjectOptions raise NewProjectInputError {
+  must_options([path, "--no-check", "--no-git"])
+}
+
+///|
 test "default new options" {
   let options = must_options([])
   assert_eq(options.target_dir, "counter")
@@ -257,4 +276,113 @@ test "template render error names template" {
   } noraise {
     _ => abort("expected render error")
   }
+}
+
+///|
+async test "project generation commits a complete staged tree" {
+  let options = transaction_test_options(
+    "target/proton-new-transaction-success",
+  )
+  remove_new_test_tree(options.resolved_target_dir)
+  let files = must_plan(options)
+  create_project(options, files)
+  assert_true(
+    path_exists(new_path_join(options.resolved_target_dir, "moon.mod")),
+  )
+  assert_true(
+    path_exists(new_path_join(options.resolved_target_dir, "app/main.mbt")),
+  )
+  let staging = new_path_join(
+    new_path_parent(options.resolved_target_dir),
+    staging_directory_name(options.resolved_target_dir, 0),
+  )
+  assert_false(path_exists(staging))
+  remove_new_test_tree(options.resolved_target_dir)
+}
+
+///|
+async test "failed project writes leave no target or staging tree" {
+  let options = transaction_test_options("target/proton-new-transaction-failed")
+  remove_new_test_tree(options.resolved_target_dir)
+  let files = [
+    PlannedFile::{ path: "blocked", content: "file" },
+    PlannedFile::{ path: "blocked/child", content: "child" },
+  ]
+  try create_project(options, files) catch {
+    NewProjectWriteError::WriteFile(..) => ()
+    error => abort("expected write failure, got " + error.to_string())
+  } noraise {
+    _ => abort("expected project generation to fail")
+  }
+  assert_false(path_exists(options.resolved_target_dir))
+  let staging = new_path_join(
+    new_path_parent(options.resolved_target_dir),
+    staging_directory_name(options.resolved_target_dir, 0),
+  )
+  assert_false(path_exists(staging))
+}
+
+///|
+async test "failed project writes restore an existing empty target" {
+  let options = transaction_test_options(
+    "target/proton-new-transaction-empty-target",
+  )
+  remove_new_test_tree(options.resolved_target_dir)
+  ensure_dir_recursive(options.resolved_target_dir)
+  let files = [
+    PlannedFile::{ path: "blocked", content: "file" },
+    PlannedFile::{ path: "blocked/child", content: "child" },
+  ]
+  try create_project(options, files) catch {
+    NewProjectWriteError::WriteFile(..) => ()
+    error => abort("expected write failure, got " + error.to_string())
+  } noraise {
+    _ => abort("expected project generation to fail")
+  }
+  assert_true(path_is_dir(options.resolved_target_dir))
+  assert_true(target_dir_is_empty(options.resolved_target_dir))
+  remove_new_test_tree(options.resolved_target_dir)
+}
+
+///|
+async test "cancelled project generation removes its staging tree" {
+  let options = transaction_test_options(
+    "target/proton-new-transaction-cancelled",
+  )
+  remove_new_test_tree(options.resolved_target_dir)
+  let outcome = @async.with_timeout_opt(0, () => {
+    create_project(options, must_plan(options))
+  })
+  assert_true(outcome is None)
+  assert_false(path_exists(options.resolved_target_dir))
+  let staging = new_path_join(
+    new_path_parent(options.resolved_target_dir),
+    staging_directory_name(options.resolved_target_dir, 0),
+  )
+  assert_false(path_exists(staging))
+}
+
+///|
+async test "moon check failure is rolled back before publication" {
+  let raw = must_parse([
+    "target/proton-new-transaction-check-failed", "--check", "--no-git",
+  ])
+  let options = options_from_raw(".", raw)
+  remove_new_test_tree(options.resolved_target_dir)
+  try
+    create_project(options, [
+      PlannedFile::{ path: "moon.mod", content: "name =" },
+    ])
+  catch {
+    NewProjectToolError::MoonCheckFailed(..) => ()
+    error => abort("expected moon check failure, got " + error.to_string())
+  } noraise {
+    _ => abort("expected project validation to fail")
+  }
+  assert_false(path_exists(options.resolved_target_dir))
+  let staging = new_path_join(
+    new_path_parent(options.resolved_target_dir),
+    staging_directory_name(options.resolved_target_dir, 0),
+  )
+  assert_false(path_exists(staging))
 }

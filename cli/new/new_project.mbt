@@ -56,13 +56,8 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     print_dry_run(options, files)
     return
   }
-  write_project(options, files)
-  maybe_init_git(options)
-  if options.run_check {
-    run_moon_check(options)
-  } else {
-    print_success(options, checked=false)
-  }
+  create_project(options, files)
+  print_success(options, checked=options.run_check)
 }
 
 ///|
@@ -195,14 +190,77 @@ fn print_dry_run(
 }
 
 ///|
-async fn write_project(
+async fn create_project(
   options : NewProjectOptions,
   files : Array[PlannedFile],
 ) -> Unit {
   validate_target_dir_for_write(options.resolved_target_dir)
-  ensure_dir_recursive(options.resolved_target_dir)
+  let target_existed = path_exists(options.resolved_target_dir)
+  let target_parent = new_path_parent(options.resolved_target_dir)
+  let existing_ancestor = nearest_existing_ancestor(target_parent)
+  let mut staging_dir = ""
+  @async.protect_from_cancel(() => {
+    staging_dir = reserve_staging_directory(
+      existing_ancestor,
+      options.resolved_target_dir,
+    )
+  }) catch {
+    error => {
+      let rollback_failures : Array[String] = []
+      @async.protect_from_cancel(resume_on_cancel=true, () => {
+        remove_transaction_tree(staging_dir, rollback_failures)
+      })
+      if rollback_failures.length() > 0 {
+        raise NewProjectWriteError::Rollback(
+          primary=@debug.render(@debug.to_repr(error)),
+          detail=rollback_failures.join("; "),
+        )
+      }
+      raise error
+    }
+  }
+  try {
+    write_project_files(staging_dir, files)
+    maybe_init_git(options, staging_dir)
+    if options.run_check {
+      run_moon_check(options, staging_dir)
+    }
+    commit_project(
+      staging_dir,
+      options.resolved_target_dir,
+      target_parent,
+      target_existed,
+    )
+  } catch {
+    error => {
+      let rollback_failures : Array[String] = []
+      @async.protect_from_cancel(resume_on_cancel=true, () => {
+        remove_transaction_tree(staging_dir, rollback_failures)
+        if target_existed && !path_exists(options.resolved_target_dir) {
+          restore_empty_target(options.resolved_target_dir, rollback_failures)
+        }
+        remove_created_parent_directories(
+          target_parent, existing_ancestor, rollback_failures,
+        )
+      })
+      if rollback_failures.length() > 0 {
+        raise NewProjectWriteError::Rollback(
+          primary=@debug.render(@debug.to_repr(error)),
+          detail=rollback_failures.join("; "),
+        )
+      }
+      raise error
+    }
+  }
+}
+
+///|
+async fn write_project_files(
+  staging_dir : String,
+  files : Array[PlannedFile],
+) -> Unit {
   for file in files {
-    let output_path = project_file_path(options.resolved_target_dir, file.path)
+    let output_path = project_file_path(staging_dir, file.path)
     ensure_file_parent(output_path)
     @async_fs.write_file(
       output_path,
@@ -215,6 +273,176 @@ async fn write_project(
           detail=@debug.render(Repr(err)),
         )
     }
+  }
+}
+
+///|
+async fn nearest_existing_ancestor(path : String) -> String {
+  let mut current = path
+  while current != "" && !path_exists(current) {
+    let parent = new_path_parent(current)
+    if parent == current {
+      break
+    }
+    current = parent
+  }
+  if current == "" {
+    raise NewProjectWriteError::CreateDirectory(
+      path~,
+      detail="no existing ancestor directory",
+    )
+  }
+  current
+}
+
+///|
+fn staging_directory_name(target_dir : String, attempt : Int) -> String {
+  "." +
+  path_basename(target_dir) +
+  ".proton-new-" +
+  attempt.to_string() +
+  ".tmp"
+}
+
+///|
+async fn reserve_staging_directory(
+  existing_ancestor : String,
+  target_dir : String,
+) -> String {
+  for attempt in 0..<1024 {
+    let staging_dir = new_path_join(
+      existing_ancestor,
+      staging_directory_name(target_dir, attempt),
+    )
+    if path_exists(staging_dir) {
+      continue
+    }
+    let created = try {
+      @async_fs.mkdir(staging_dir)
+      true
+    } catch {
+      error =>
+        if path_exists(staging_dir) {
+          false
+        } else {
+          raise NewProjectWriteError::CreateDirectory(
+            path=staging_dir,
+            detail=@debug.render(@debug.to_repr(error)),
+          )
+        }
+    }
+    if created {
+      return staging_dir
+    }
+  }
+  raise NewProjectWriteError::CreateDirectory(
+    path=existing_ancestor,
+    detail="could not reserve a staging directory after 1024 attempts",
+  )
+}
+
+///|
+async fn commit_project(
+  staging_dir : String,
+  target_dir : String,
+  target_parent : String,
+  target_existed : Bool,
+) -> Unit {
+  ensure_dir_recursive(target_parent)
+  if target_existed {
+    validate_target_dir_for_write(target_dir)
+    @async_fs.rmdir(target_dir, recursive=false) catch {
+      error =>
+        raise NewProjectWriteError::Commit(
+          target=target_dir,
+          detail="failed to remove the existing empty target: " +
+            @debug.render(@debug.to_repr(error)),
+        )
+    }
+  }
+  @async_fs.rename(staging_dir, target_dir, replace=false) catch {
+    error =>
+      raise NewProjectWriteError::Commit(
+        target=target_dir,
+        detail=@debug.render(@debug.to_repr(error)),
+      )
+  }
+}
+
+///|
+async fn remove_transaction_tree(
+  path : String,
+  failures : Array[String],
+) -> Unit {
+  if path == "" || !path_exists(path) {
+    return
+  }
+  @async_fs.rmdir(path, recursive=true) catch {
+    error =>
+      failures.push(
+        "remove " + path + ": " + @debug.render(@debug.to_repr(error)),
+      )
+  }
+}
+
+///|
+async fn restore_empty_target(
+  target_dir : String,
+  failures : Array[String],
+) -> Unit {
+  @async_fs.mkdir(target_dir) catch {
+    error =>
+      failures.push(
+        "restore empty target " +
+        target_dir +
+        ": " +
+        @debug.render(@debug.to_repr(error)),
+      )
+  }
+}
+
+///|
+async fn remove_created_parent_directories(
+  start : String,
+  existing_ancestor : String,
+  failures : Array[String],
+) -> Unit {
+  let mut current = start
+  while current != "" && current != existing_ancestor {
+    if !path_exists(current) {
+      current = new_path_parent(current)
+      continue
+    }
+    if !path_is_dir(current) {
+      return
+    }
+    let entries = @async_fs.readdir(
+      current,
+      include_hidden=true,
+      include_special=false,
+    ) catch {
+      error => {
+        failures.push(
+          "inspect " + current + ": " + @debug.render(@debug.to_repr(error)),
+        )
+        return
+      }
+    }
+    if entries.length() > 0 {
+      return
+    }
+    @async_fs.rmdir(current, recursive=false) catch {
+      error => {
+        failures.push(
+          "remove empty directory " +
+          current +
+          ": " +
+          @debug.render(@debug.to_repr(error)),
+        )
+        return
+      }
+    }
+    current = new_path_parent(current)
   }
 }
 
@@ -275,11 +503,16 @@ fn new_path_parent(path : String) -> String {
 ///|
 async fn maybe_init_git(
   options : NewProjectOptions,
+  project_dir : String,
 ) -> Unit raise NewProjectToolError {
   match options.git {
     Some(true) => {
-      let code = @process.run("git", ["init"], cwd=options.resolved_target_dir) catch {
-        err => raise Start(tool="git init", detail=@debug.render(Repr(err)))
+      let code = @process.run("git", ["init"], cwd=project_dir) catch {
+        err =>
+          raise Start(
+            tool="git init",
+            detail=@debug.render(@debug.to_repr(err)),
+          )
       }
       if code != 0 {
         raise Exit(tool="git init", code~)
@@ -292,21 +525,14 @@ async fn maybe_init_git(
 ///|
 async fn run_moon_check(
   options : NewProjectOptions,
+  project_dir : String,
 ) -> Unit raise NewProjectToolError {
   let code = @process.run("moon", [
-    "-C",
-    options.resolved_target_dir,
-    "check",
-    "--target",
-    "native",
-    "--diagnostic-limit",
-    "80",
+    "-C", project_dir, "check", "--target", "native", "--diagnostic-limit", "80",
   ]) catch {
     err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
   }
-  if code == 0 {
-    print_success(options, checked=true)
-  } else {
+  if code != 0 {
     raise MoonCheckFailed(code~, project=options.target_dir)
   }
 }
