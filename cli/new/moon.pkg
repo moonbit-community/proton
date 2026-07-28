@@ -3,6 +3,7 @@ import {
   "justjavac/ci",
   "justjavac/template",
   "justjavac/proton_cli/arguments" @cli_args,
+  "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",

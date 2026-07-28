@@ -6,7 +6,10 @@ async fn read_project_moon_mod(
     Some(path) =>
       Some(
         try read_moon_mod(path) catch {
-          error => Err(error)
+          MoonConfigReadError::MissingFile(_) as error => Err(error)
+          MoonConfigReadError::ReadFailed(_, _) as error => Err(error)
+          MoonConfigReadError::ParseFailed(_, _) as error => Err(error)
+          error => raise error
         } noraise {
           config => Ok(config)
         },
@@ -23,7 +26,10 @@ async fn read_project_moon_pkg(
     Some(path) =>
       Some(
         try read_moon_pkg(path) catch {
-          error => Err(error)
+          MoonConfigReadError::MissingFile(_) as error => Err(error)
+          MoonConfigReadError::ReadFailed(_, _) as error => Err(error)
+          MoonConfigReadError::ParseFailed(_, _) as error => Err(error)
+          error => raise error
         } noraise {
           config => Ok(config)
         },

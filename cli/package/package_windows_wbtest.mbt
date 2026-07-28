@@ -319,7 +319,8 @@ async test "Windows signing rejects a missing target before invoking signtool" {
   catch {
     WindowsPackagingError::MissingTarget(path~) =>
       assert_true(path.contains("cef_process.exe"))
-    _ => abort("expected missing Windows signing target")
+    error =>
+      abort("expected missing Windows signing target, got " + error.to_string())
   } noraise {
     _ => abort("expected missing signing target failure")
   }

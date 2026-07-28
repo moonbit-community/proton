@@ -3,6 +3,7 @@ import {
   "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/build_cmd" @build,
   "justjavac/proton_cli/cef",
+  "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
@@ -13,7 +14,6 @@ import {
 }
 
 import {
-  "moonbitlang/async",
   "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 

@@ -143,7 +143,8 @@ async test "frontend cwd validation reports missing directory" {
   let error = try
     resolve_frontend_cwd(root, Some("missing"), "npm run build")
   catch {
-    error => error.message()
+    BuildPathError::Missing(..) as error => error.message()
+    error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
   } noraise {
     _ => fail("expected build error")
   }
@@ -281,7 +282,8 @@ async test "production entry validation requires file-backed entry" {
       @proton_config.ProjectEntry::Asset("target/proton-build-missing.html"),
     )
   catch {
-    error => error.message()
+    BuildPathError::Missing(..) as error => error.message()
+    error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
   } noraise {
     _ => fail("expected build error")
   }
@@ -348,7 +350,8 @@ async test "production entry validation rejects directories" {
   let error = try
     validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir))
   catch {
-    error => error.message()
+    BuildPathError::WrongKind(..) as error => error.message()
+    error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
   } noraise {
     _ => fail("expected build error")
   }

@@ -1,22 +1,22 @@
 ///|
-async fn doctor_path_exists(path : String) -> Bool noraise {
-  @async_fs.exists(path) catch {
-    _ => false
-  }
+async fn doctor_path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-async fn doctor_path_is_file(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Regular) catch {
-    _ => false
+async fn doctor_path_is_file(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Regular
 }
 
 ///|
-async fn doctor_path_is_dir(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Directory) catch {
-    _ => false
+async fn doctor_path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }
 
 ///|
@@ -50,7 +50,7 @@ fn path_parent(path : String) -> String? {
 }
 
 ///|
-async fn find_up(start : String, file_name : String) -> String? noraise {
+async fn find_up(start : String, file_name : String) -> String? {
   let candidate = path_join(start, file_name)
   if doctor_path_exists(candidate) {
     Some(candidate)
@@ -63,7 +63,7 @@ async fn find_up(start : String, file_name : String) -> String? noraise {
 }
 
 ///|
-async fn find_project_root_marker(start : String) -> (String, String?)? noraise {
+async fn find_project_root_marker(start : String) -> (String, String?)? {
   let moon_mod_path = path_join(start, "moon.mod")
   if doctor_path_exists(moon_mod_path) {
     return Some((start, Some(moon_mod_path)))
@@ -139,7 +139,7 @@ fn project_mode(
 }
 
 ///|
-async fn discover_project(cwd : String) -> ProjectDoctorInfo noraise {
+async fn discover_project(cwd : String) -> ProjectDoctorInfo {
   let cwd = @path.Path(cwd).resolve().to_string()
   let discovered_moon_proton_path = find_up(cwd, "moon.proton")
   let discovered_app_json_path = find_up(cwd, "app.json")

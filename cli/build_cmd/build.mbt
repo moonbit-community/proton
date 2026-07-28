@@ -235,9 +235,7 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 }
 
 ///|
-async fn load_project_config(
-  config_path : String?,
-) -> BuildProjectConfig raise BuildConfigError {
+async fn load_project_config(config_path : String?) -> BuildProjectConfig {
   match config_path {
     None => raise NotFound(path=None)
     Some(path) => {
@@ -281,7 +279,7 @@ async fn resolve_frontend_cwd(
   root : String,
   frontend_cwd : String?,
   command : String,
-) -> String raise BuildPathError {
+) -> String {
   ignore(command)
   match frontend_cwd {
     None => root
@@ -320,7 +318,7 @@ fn validate_release_config(
 async fn validate_release_files(
   root : String,
   config : BuildProjectConfig,
-) -> Unit raise BuildPathError {
+) -> Unit {
   match config.frontend {
     Some(frontend) =>
       match frontend.dist() {
@@ -361,7 +359,7 @@ fn validate_production_entry_kind(
 ///|
 async fn validate_production_entry_file(
   entry : @proton_config.ProjectEntry,
-) -> Unit raise BuildPathError {
+) -> Unit {
   match entry {
     File(path) | Asset(path) =>
       if !path_exists(path) {
@@ -465,7 +463,7 @@ fn shell_command(command : String) -> (String, Array[String]) {
 }
 
 ///|
-async fn find_project_root_from(start : String) -> String noraise {
+async fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(join_path(dir, "moon.work")) ||
       path_exists(join_path(dir, "moon.mod")) {
@@ -549,15 +547,14 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-async fn path_exists(path : String) -> Bool noraise {
-  @async_fs.exists(path) catch {
-    _ => false
-  }
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-async fn path_is_dir(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Directory) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }

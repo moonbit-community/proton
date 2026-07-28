@@ -36,17 +36,16 @@ fn resolve_new_path(cwd : String, target : String) -> String {
 }
 
 ///|
-async fn path_exists(path : String) -> Bool noraise {
-  @async_fs.exists(path) catch {
-    _ => false
-  }
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-async fn path_is_dir(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Directory) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }
 
 ///|
@@ -222,9 +221,7 @@ fn validate_target_dir(target_dir : String) -> Unit raise NewProjectInputError {
 }
 
 ///|
-async fn target_dir_is_empty(
-  target_dir : String,
-) -> Bool raise NewProjectTargetError {
+async fn target_dir_is_empty(target_dir : String) -> Bool {
   if !path_exists(target_dir) {
     return true
   }
@@ -236,15 +233,18 @@ async fn target_dir_is_empty(
     include_hidden=true,
     include_special=false,
   ) catch {
-    err => raise ReadDirectory(path=target_dir, detail=@debug.render(Repr(err)))
+    err if @async.is_being_cancelled() => raise err
+    err =>
+      raise ReadDirectory(
+        path=target_dir,
+        detail=@debug.render(@debug.to_repr(err)),
+      )
   }
   entries.length() == 0
 }
 
 ///|
-async fn validate_target_dir_for_write(
-  target_dir : String,
-) -> Unit raise NewProjectTargetError {
+async fn validate_target_dir_for_write(target_dir : String) -> Unit {
   let moon_mod_path = new_path_join(target_dir, "moon.mod")
   if path_exists(moon_mod_path) {
     raise ContainsMoonModule(path=target_dir)

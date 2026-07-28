@@ -1337,6 +1337,46 @@ int main(void) {
     return 1;
   }
 
+  proton_window_id_t queued_windows[32];
+  for (int i = 0; i < 32; i++) {
+    queued_windows[i] = PROTON_INVALID_HANDLE;
+    if (expect_status(
+            "window_create while filling event queue",
+            proton_window_create_json(
+                runtime, "{\"abi_version\":1,\"title\":\"Queued\","
+                         "\"width\":320,\"height\":240}",
+                &queued_windows[i]),
+            PROTON_OK)) {
+      return 1;
+    }
+  }
+  if (expect_status("window_destroy with full event queue",
+                    proton_window_destroy(queued_windows[0]),
+                    PROTON_ERR_QUEUE_FAILED) ||
+      expect_status("window remains live after destroy backpressure",
+                    proton_window_show(queued_windows[0]), PROTON_OK) ||
+      expect_event(runtime, "window_created") ||
+      expect_status("window_destroy after draining queue",
+                    proton_window_destroy(queued_windows[0]), PROTON_OK)) {
+    return 1;
+  }
+  for (int i = 1; i < 32; i++) {
+    if (expect_event(runtime, "window_created")) {
+      return 1;
+    }
+  }
+  if (expect_event(runtime, "window_closed") ||
+      expect_status("window_destroy after queue retry is idempotent",
+                    proton_window_destroy(queued_windows[0]), PROTON_OK)) {
+    return 1;
+  }
+  for (int i = 1; i < 32; i++) {
+    if (expect_status("queued window_destroy",
+                      proton_window_destroy(queued_windows[i]), PROTON_OK)) {
+      return 1;
+    }
+  }
+
   if (expect_status("runtime_destroy", proton_runtime_destroy(runtime),
                     PROTON_OK)) {
     return 1;

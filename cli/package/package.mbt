@@ -42,6 +42,12 @@ struct PackagePlan {
 } derive(Debug, Eq)
 
 ///|
+priv struct StagedArtifact {
+  staging : String
+  destination : String
+}
+
+///|
 struct MacosCodeSignTarget {
   path : String
   runtime_options : Bool
@@ -424,7 +430,7 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
 }
 
 ///|
-async fn is_macos_host() -> Bool noraise {
+async fn is_macos_host() -> Bool {
   path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
@@ -450,14 +456,14 @@ fn restore_package_env(name : String, value : String?) -> Unit {
 }
 
 ///|
-async fn find_release_executable(plan : PackagePlan) -> String? noraise {
+async fn find_release_executable(plan : PackagePlan) -> String? {
   let root = resolve_path(plan.build_target_dir, "native/release/build")
   let package_name = path_basename(plan.app_package)
   find_named_file(root, package_name + ".exe")
 }
 
 ///|
-async fn find_named_file(root : String, name : String) -> String? noraise {
+async fn find_named_file(root : String, name : String) -> String? {
   guard path_exists(root) else { return None }
   if path_is_file(root) {
     return if path_basename(root) == name { Some(root) } else { None }
@@ -467,6 +473,7 @@ async fn find_named_file(root : String, name : String) -> String? noraise {
     include_hidden=true,
     include_special=false,
   ) catch {
+    error if @async.is_being_cancelled() => raise error
     _ => return None
   }
   for entry in entries {
@@ -542,7 +549,7 @@ fn package_build_target_dir(
 }
 
 ///|
-async fn require_runtime(path : String) -> String raise PackageRuntimeError {
+async fn require_runtime(path : String) -> String {
   if path_is_dir(path) {
     path
   } else {
@@ -563,6 +570,7 @@ async fn stage_macos_app(
           macos_staging_app_path(plan),
           macos_dmg_staging_path(plan),
           macos_dmg_root_path(plan),
+          macos_zip_staging_path(plan),
         ] {
         remove_tree(path) catch {
           _ => ()
@@ -629,18 +637,41 @@ async fn stage_macos_app_impl(
       None => notarize_macos_app(plan, app)
     }
   }
-  promote_staged_artifact(app, final_app)
+  let zip = if plan.targets.contains("zip") {
+    let staging = macos_zip_staging_path(plan)
+    create_zip(app, staging)
+    Some(staging)
+  } else {
+    None
+  }
+  let artifacts = [StagedArtifact::{ staging: app, destination: final_app }]
+  match dmg {
+    Some(dmg) =>
+      artifacts.push(StagedArtifact::{
+        staging: dmg,
+        destination: macos_dmg_path(plan),
+      })
+    None => ()
+  }
+  match zip {
+    Some(zip) =>
+      artifacts.push(StagedArtifact::{
+        staging: zip,
+        destination: macos_zip_path(plan),
+      })
+    None => ()
+  }
+  promote_staged_artifacts(artifacts)
   println("Packaged macOS app: " + final_app)
   match dmg {
-    Some(dmg) => {
+    Some(_) => {
       let final_dmg = macos_dmg_path(plan)
-      promote_staged_artifact(dmg, final_dmg)
       println("Created disk image: " + final_dmg)
     }
     None => ()
   }
-  if plan.targets.contains("zip") {
-    create_zip(plan, final_app)
+  if zip is Some(_) {
+    println("Created archive: " + macos_zip_path(plan))
   }
 }
 
@@ -653,10 +684,20 @@ fn macos_staging_app_path(plan : PackagePlan) -> String {
 }
 
 ///|
-async fn promote_staged_artifact(
-  staging : String,
-  destination : String,
-) -> Unit {
+fn macos_zip_path(plan : PackagePlan) -> String {
+  resolve_path(plan.output, plan.product_name + ".app.zip")
+}
+
+///|
+fn macos_zip_staging_path(plan : PackagePlan) -> String {
+  resolve_path(
+    plan.output,
+    "." + package_executable_name(plan.product_name) + ".staging.app.zip",
+  )
+}
+
+///|
+async fn recover_staged_artifact_backup(destination : String) -> Unit {
   let backup = destination + ".backup"
   if path_exists(backup) {
     if path_exists(destination) {
@@ -672,41 +713,95 @@ async fn promote_staged_artifact(
       }
     }
   }
-  let had_destination = path_exists(destination)
-  if had_destination {
-    @async_fs.rename(destination, backup) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source=destination,
-          destination=backup,
-          detail=@debug.render(Repr(error)),
-        )
-    }
+}
+
+///|
+async fn rename_staged_artifact(source : String, destination : String) -> Unit {
+  @async_fs.rename(source, destination) catch {
+    error if @async.is_being_cancelled() => raise error
+    error =>
+      raise PackageFileSystemError::Copy(
+        source~,
+        destination~,
+        detail=@debug.render(@debug.to_repr(error)),
+      )
   }
-  @async_fs.rename(staging, destination) catch {
+}
+
+///|
+async fn promote_staged_artifacts(artifacts : Array[StagedArtifact]) -> Unit {
+  guard artifacts.length() > 0 else { return }
+  for artifact in artifacts {
+    recover_staged_artifact_backup(artifact.destination)
+  }
+
+  let backed_up : Array[String] = []
+  let promoted : Array[String] = []
+  try {
+    for artifact in artifacts {
+      if path_exists(artifact.destination) {
+        rename_staged_artifact(
+          artifact.destination,
+          artifact.destination + ".backup",
+        )
+        backed_up.push(artifact.destination)
+      }
+    }
+    for artifact in artifacts {
+      rename_staged_artifact(artifact.staging, artifact.destination)
+      promoted.push(artifact.destination)
+    }
+  } catch {
     error => {
-      if had_destination {
-        @async_fs.rename(backup, destination) catch {
+      let rollback_failures : Array[String] = []
+      let promoted_count = promoted.length()
+      for offset in 0..<promoted_count {
+        let destination = promoted[promoted_count - offset - 1]
+        remove_tree(destination) catch {
           rollback_error =>
-            raise PackageFileSystemError::Copy(
-              source=staging,
-              destination~,
-              detail=@debug.render(Repr(error)) +
-                "; rollback also failed and the previous app remains at " +
-                backup +
-                ": " +
-                @debug.render(Repr(rollback_error)),
+            rollback_failures.push(
+              "remove " +
+              destination +
+              ": " +
+              @debug.render(@debug.to_repr(rollback_error)),
             )
         }
       }
-      raise PackageFileSystemError::Copy(
-        source=staging,
-        destination~,
-        detail=@debug.render(Repr(error)),
-      )
+      let backup_count = backed_up.length()
+      for offset in 0..<backup_count {
+        let destination = backed_up[backup_count - offset - 1]
+        let backup = destination + ".backup"
+        @async_fs.rename(backup, destination) catch {
+          rollback_error =>
+            rollback_failures.push(
+              "restore " +
+              destination +
+              ": " +
+              @debug.render(@debug.to_repr(rollback_error)),
+            )
+        }
+      }
+      if @async.is_being_cancelled() {
+        raise error
+      }
+      if rollback_failures.length() > 0 {
+        raise PackageFileSystemError::Copy(
+          source="staged package artifacts",
+          destination=artifacts[0].destination,
+          detail=@debug.render(@debug.to_repr(error)) +
+            "; rollback failed: " +
+            rollback_failures.join("; "),
+        )
+      }
+      raise error
     }
   }
-  remove_tree(backup)
+
+  for destination in backed_up {
+    remove_tree(destination + ".backup") catch {
+      _ => ()
+    }
+  }
 }
 
 ///|
@@ -1165,10 +1260,10 @@ async fn sign_macos_app(
 ///|
 async fn require_macos_codesign_targets(
   targets : Array[MacosCodeSignTarget],
-) -> Unit raise MacosSigningError {
+) -> Unit {
   for target in targets {
     guard path_exists(target.path) else {
-      raise MissingTarget(path=target.path)
+      raise MacosSigningError::MissingTarget(path=target.path)
     }
   }
 }
@@ -1498,8 +1593,7 @@ async fn assess_macos_app(app : String) -> Unit {
 }
 
 ///|
-async fn create_zip(plan : PackagePlan, source : String) -> Unit {
-  let archive = resolve_path(plan.output, path_basename(source) + ".zip")
+async fn create_zip(source : String, archive : String) -> Unit {
   remove_tree(archive)
   let code = if @path.sep == '\\' {
     @process.run("powershell", [
@@ -1526,7 +1620,6 @@ async fn create_zip(plan : PackagePlan, source : String) -> Unit {
   if code != 0 {
     raise PackageToolError::Exit(tool="zip", code~, detail=archive)
   }
-  println("Created archive: " + archive)
 }
 
 ///|
@@ -1558,7 +1651,7 @@ async fn resolve_package_config_path(
 }
 
 ///|
-async fn find_project_root_from(start : String) -> String noraise {
+async fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(resolve_path(dir, "moon.work")) ||
       path_exists(resolve_path(dir, "moon.mod")) {
@@ -1574,7 +1667,7 @@ async fn find_project_root_from(start : String) -> String noraise {
 }
 
 ///|
-async fn find_workspace_root_from(start : String) -> String noraise {
+async fn find_workspace_root_from(start : String) -> String {
   let mut module_root : String? = None
   for dir = start; dir != ""; {
     if path_exists(resolve_path(dir, "moon.work")) {
@@ -1615,24 +1708,24 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-async fn path_exists(path : String) -> Bool noraise {
-  @async_fs.exists(path) catch {
-    _ => false
-  }
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-async fn path_is_file(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Regular) catch {
-    _ => false
+async fn path_is_file(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Regular
 }
 
 ///|
-async fn path_is_dir(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Directory) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }
 
 ///|

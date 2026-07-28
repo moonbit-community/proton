@@ -1,5 +1,5 @@
 ///|
-async fn find_project_root_from(start : String) -> String noraise {
+async fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(path_join(dir, "moon.work")) ||
       path_exists(path_join(dir, "moon.mod")) {
@@ -15,7 +15,7 @@ async fn find_project_root_from(start : String) -> String noraise {
 }
 
 ///|
-async fn project_root(cwd : String) -> String raise CefFileSystemError {
+async fn project_root(cwd : String) -> String {
   if cwd != "" && cwd != "." {
     return find_project_root_from(cwd)
   }

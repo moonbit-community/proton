@@ -570,6 +570,33 @@ test "load_proton_project_config_from_file validates bundle targets" {
   @mbfs.create_dir("target/proton-project-bundle-targets") catch {
     _ => ()
   }
+  let supported_target = "target/proton-project-bundle-targets/supported.moon.proton"
+  @mbfs.write_string_to_file(
+    supported_target,
+    (
+      #|window = {
+      #|  title: "Bundle App",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|bundle = {
+      #|  targets: ["app", "zip", "dmg"],
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(@debug.to_repr(err)))
+  }
+  let supported = load_proton_project_config_from_file(supported_target)
+  assert_eq(supported.bundle().unwrap().targets(), ["app", "zip", "dmg"])
+
   let unsupported_target = "target/proton-project-bundle-targets/unsupported.moon.proton"
   @mbfs.write_string_to_file(
     unsupported_target,
@@ -586,7 +613,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
       #|}
       #|
       #|bundle = {
-      #|  targets: ["dmg"],
+      #|  targets: ["msi"],
       #|}
       #|
     ),
@@ -597,7 +624,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
   let error = expect_bootstrap_error(() => {
     load_proton_project_config_from_file(unsupported_target)
   })
-  assert_eq(error.message(), "unsupported bundle.targets: dmg")
+  assert_eq(error.message(), "unsupported bundle.targets: msi")
 
   let duplicate_target = "target/proton-project-bundle-targets/duplicate.moon.proton"
   @mbfs.write_string_to_file(

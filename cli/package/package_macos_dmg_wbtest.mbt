@@ -41,7 +41,9 @@ async test "macOS dmg uses drag-to-install layout and a verified UDZO image" {
   let staging = create_macos_dmg(plan, app)
   assert_eq(staging, macos_dmg_staging_path(plan))
   assert_true(@mbfs.path_exists(staging))
-  promote_staged_artifact(staging, macos_dmg_path(plan))
+  promote_staged_artifacts([
+    StagedArtifact::{ staging, destination: macos_dmg_path(plan) },
+  ])
   assert_true(@mbfs.path_exists(macos_dmg_path(plan)))
   assert_false(@mbfs.path_exists(macos_dmg_root_path(plan)))
   remove_tree(root)

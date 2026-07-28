@@ -443,7 +443,12 @@ async test "macOS staged app promotion rolls back when staging is missing" {
   ensure_dir(path_parent(marker))
   write_text(marker, "old")
   try
-    promote_staged_artifact(resolve_path(root, "missing.app"), destination)
+    promote_staged_artifacts([
+      StagedArtifact::{
+        staging: resolve_path(root, "missing.app"),
+        destination,
+      },
+    ])
   catch {
     _ => ()
   } noraise {
@@ -463,7 +468,12 @@ async test "macOS staged app promotion recovers an interrupted backup" {
   ensure_dir(path_parent(marker))
   write_text(marker, "old")
   try
-    promote_staged_artifact(resolve_path(root, "missing.app"), destination)
+    promote_staged_artifacts([
+      StagedArtifact::{
+        staging: resolve_path(root, "missing.app"),
+        destination,
+      },
+    ])
   catch {
     _ => ()
   } noraise {
@@ -471,6 +481,48 @@ async test "macOS staged app promotion recovers an interrupted backup" {
   }
   assert_true(@mbfs.path_exists(resolve_path(destination, "Contents/old.txt")))
   assert_false(@mbfs.path_exists(backup))
+}
+
+///|
+async test "macOS artifact promotion rolls back the complete output set" {
+  let root = "target/proton-package-macos-transaction"
+  remove_tree(root)
+  let app = resolve_path(root, "Demo.app")
+  let app_backup = app + ".backup"
+  let staged_app = resolve_path(root, ".demo.staging.app")
+  let dmg = resolve_path(root, "Demo.dmg")
+  let staged_dmg = resolve_path(root, ".demo.staging.dmg")
+  let staged_zip = resolve_path(root, ".demo.staging.app.zip")
+  let invalid_zip = resolve_path(root, "missing/Demo.app.zip")
+  let old_marker = resolve_path(app, "Contents/old.txt")
+  let new_marker = resolve_path(staged_app, "Contents/new.txt")
+  ensure_dir(path_parent(old_marker))
+  ensure_dir(path_parent(new_marker))
+  write_text(old_marker, "old")
+  write_text(new_marker, "new")
+  write_text(dmg, "old-dmg")
+  write_text(staged_dmg, "new-dmg")
+  write_text(staged_zip, "zip")
+  try
+    promote_staged_artifacts([
+      StagedArtifact::{ staging: staged_app, destination: app },
+      StagedArtifact::{ staging: staged_dmg, destination: dmg },
+      StagedArtifact::{ staging: staged_zip, destination: invalid_zip },
+    ])
+  catch {
+    _ => ()
+  } noraise {
+    _ => abort("expected multi-artifact promotion failure")
+  }
+  assert_true(@mbfs.path_exists(old_marker))
+  assert_false(@mbfs.path_exists(resolve_path(app, "Contents/new.txt")))
+  assert_false(@mbfs.path_exists(app_backup))
+  let restored_dmg = @mbfs.read_file_to_string(dmg, encoding="utf8") catch {
+    error => abort(@debug.render(@debug.to_repr(error)))
+  }
+  assert_eq(restored_dmg, "old-dmg")
+  assert_false(@mbfs.path_exists(dmg + ".backup"))
+  assert_true(@mbfs.path_exists(staged_zip))
 }
 
 ///|

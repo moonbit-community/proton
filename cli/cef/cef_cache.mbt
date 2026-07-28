@@ -110,10 +110,11 @@ async fn setup_downloaded_cef(
 }
 
 ///|
-async fn installed_version(install_dir : String) -> String noraise {
+async fn installed_version(install_dir : String) -> String {
   let version_path = path_join(install_dir, "version.txt")
   if path_is_file(version_path) {
     @async_fs.read_file(version_path).text().trim().to_owned() catch {
+      error if @async.is_being_cancelled() => raise error
       _ => ""
     }
   } else {
@@ -122,10 +123,11 @@ async fn installed_version(install_dir : String) -> String noraise {
 }
 
 ///|
-async fn installed_checksum(install_dir : String) -> String noraise {
+async fn installed_checksum(install_dir : String) -> String {
   let checksum_path = path_join(install_dir, "sha256.txt")
   if path_is_file(checksum_path) {
     @async_fs.read_file(checksum_path).text().trim().to_owned() catch {
+      error if @async.is_being_cancelled() => raise error
       _ => ""
     }
   } else {

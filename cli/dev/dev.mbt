@@ -218,7 +218,7 @@ async fn resolve_frontend_cwd(
   frontend_cwd : String?,
   frontend_command : String?,
   start_frontend : Bool,
-) -> String raise DevConfigError {
+) -> String {
   if !start_frontend || frontend_command is None {
     return root
   }
@@ -270,7 +270,7 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 ///|
 async fn load_dev_frontend_config(
   config_path : String?,
-) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
+) -> @proton_config.ProjectFrontendConfig? {
   match config_path {
     None => None
     Some(path) => {
@@ -307,28 +307,27 @@ async fn read_dev_frontend_config(
 }
 
 ///|
-async fn ensure_dev_runtime(
-  root : String,
-  setup_runtime : Bool,
-) -> DevRuntime raise DevRuntimeError {
+async fn ensure_dev_runtime(root : String, setup_runtime : Bool) -> DevRuntime {
   let native_dist_override = dev_native_dist_override(root)
   read_dev_runtime(root) catch {
+    error if @async.is_being_cancelled() => raise error
     error =>
       match native_dist_override {
-        Some(_) => raise NativeDistOverride(detail=error.message())
+        Some(_) => raise NativeDistOverride(detail=error.to_string())
         None if setup_runtime => {
           @cef.setup_default(root) catch {
+            error if @async.is_being_cancelled() => raise error
             error => raise Setup(detail=error.to_string())
           }
           read_dev_runtime(root)
         }
-        None => raise SetupRequired(detail=error.message())
+        None => raise SetupRequired(detail=error.to_string())
       }
   }
 }
 
 ///|
-async fn read_dev_runtime(root : String) -> DevRuntime raise DevRuntimeError {
+async fn read_dev_runtime(root : String) -> DevRuntime {
   match dev_native_dist_override(root) {
     Some(path) => return dev_runtime_from_root(path, "PROTON_NATIVE_DIST")
     None => ()
@@ -375,7 +374,7 @@ fn dev_native_dist_override(root : String) -> String? {
 async fn dev_runtime_from_root(
   runtime_root : String,
   label : String,
-) -> DevRuntime raise DevRuntimeError {
+) -> DevRuntime {
   let bin_dir = join_path(runtime_root, "bin")
   let lib_dir = join_path(runtime_root, "lib")
   let helper_path = join_path(bin_dir, helper_executable_name())
@@ -922,7 +921,7 @@ fn cancel_frontend(process : @process.Process?) -> Unit {
 }
 
 ///|
-async fn find_project_root_from(start : String) -> String noraise {
+async fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(join_path(dir, "moon.work")) ||
       path_exists(join_path(dir, "moon.mod")) {
@@ -1006,15 +1005,14 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-async fn path_exists(path : String) -> Bool noraise {
-  @async_fs.exists(path) catch {
-    _ => false
-  }
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-async fn path_is_dir(path : String) -> Bool noraise {
-  (@async_fs.kind(path) is Directory) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }

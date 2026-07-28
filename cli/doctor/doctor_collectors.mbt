@@ -95,9 +95,22 @@ fn runtime_manifest_string_field(
 }
 
 ///|
+fn doctor_runtime_error_message(error : Error) -> String {
+  match error {
+    DoctorRuntimeManifestError::Read(..) as error => error.message()
+    DoctorRuntimeManifestError::Syntax(..) as error => error.message()
+    DoctorRuntimeManifestError::UnknownField(..) as error => error.message()
+    DoctorRuntimeManifestError::MissingField(..) as error => error.message()
+    DoctorRuntimeManifestError::InvalidSchema(..) as error => error.message()
+    DoctorRuntimeManifestError::InvalidRoot(..) as error => error.message()
+    error => @debug.render(@debug.to_repr(error))
+  }
+}
+
+///|
 async fn runtime_manifest_from_project(
   project : ProjectDoctorInfo,
-) -> DoctorRuntimeManifest? raise DoctorRuntimeManifestError {
+) -> DoctorRuntimeManifest? {
   let manifest_path = path_join(
     path_join(project.root, ".proton"),
     "runtime.json",
@@ -142,7 +155,7 @@ async fn runtime_manifest_from_project(
 }
 
 ///|
-async fn development_native_dist(project : ProjectDoctorInfo) -> String noraise {
+async fn development_native_dist(project : ProjectDoctorInfo) -> String {
   let project_dist = path_join(path_join(project.root, "native"), "dist")
   if doctor_path_exists(project_dist) {
     project_dist
@@ -157,7 +170,7 @@ async fn development_native_dist(project : ProjectDoctorInfo) -> String noraise 
 ///|
 async fn resolve_native_dist(
   project : ProjectDoctorInfo,
-) -> (String, DoctorRuntimeManifest?) raise DoctorRuntimeManifestError {
+) -> (String, DoctorRuntimeManifest?) {
   let native_dist_override = match @sys.get_env_var("PROTON_NATIVE_DIST") {
     Some(root) => {
       let root = root.trim().to_owned()
@@ -712,7 +725,7 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
           "platform.runtime_manifest",
           Error,
           "platform runtime unavailable",
-          hint=error.message(),
+          hint=doctor_runtime_error_message(error),
         ),
       )
   } noraise {
@@ -854,7 +867,7 @@ async fn collect_runtime(
           "runtime.manifest.invalid",
           Error,
           "Proton runtime manifest is invalid",
-          hint=error.message(),
+          hint=doctor_runtime_error_message(error),
         ),
       )
       return DoctorSection::new(
@@ -2196,9 +2209,7 @@ async fn collect_extensions(
 }
 
 ///|
-async fn extension_root_for_project(
-  project : ProjectDoctorInfo,
-) -> String noraise {
+async fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
   let nested_extension_root = path_join(project.root, "extensions")
   if doctor_path_exists(nested_extension_root) {
     nested_extension_root
@@ -2208,8 +2219,9 @@ async fn extension_root_for_project(
 }
 
 ///|
-async fn write_doctor_fix(path : String, text : String) -> Bool noraise {
+async fn write_doctor_fix(path : String, text : String) -> Bool {
   try @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
+    error if @async.is_being_cancelled() => raise error
     _ => return false
   } noraise {
     _ => true

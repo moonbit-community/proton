@@ -525,16 +525,16 @@ async fn sign_windows_portable_with_tool(
 }
 
 ///|
-async fn windows_signing_config_from_env() -> WindowsSigningConfig raise WindowsPackagingError {
+async fn windows_signing_config_from_env() -> WindowsSigningConfig {
   let certificate = match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
     Some(path) if path.trim().to_owned() != "" => path.trim().to_owned()
     _ =>
-      raise InvalidConfiguration(
+      raise WindowsPackagingError::InvalidConfiguration(
         detail="--sign requires PROTON_WINDOWS_CERTIFICATE on Windows",
       )
   }
   guard path_is_file(certificate) else {
-    raise InvalidConfiguration(
+    raise WindowsPackagingError::InvalidConfiguration(
       detail="Windows signing certificate is missing: " + certificate,
     )
   }

@@ -228,7 +228,7 @@ fn project_file_path(root : String, relative : String) -> String {
 }
 
 ///|
-async fn ensure_file_parent(path : String) -> Unit raise NewProjectWriteError {
+async fn ensure_file_parent(path : String) -> Unit {
   let parent = new_path_parent(path)
   if parent == path || parent == "" || path_exists(parent) {
     return
@@ -237,7 +237,7 @@ async fn ensure_file_parent(path : String) -> Unit raise NewProjectWriteError {
 }
 
 ///|
-async fn ensure_dir_recursive(path : String) -> Unit raise NewProjectWriteError {
+async fn ensure_dir_recursive(path : String) -> Unit {
   if path == "" || path_exists(path) {
     return
   }
