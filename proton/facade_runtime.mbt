@@ -25,6 +25,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   run_manifest(
     resolved.manifest,
     self.command_extensions,
+    self.command_registrars,
     resolved.base_dir,
     self.menu,
     self.bridge_startup_timeout_value_ms,
@@ -44,6 +45,7 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 async fn run_manifest(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise],
   base_dir : String?,
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
@@ -102,7 +104,12 @@ async fn run_manifest(
         }
       None => ()
     }
-    command_host = build_command_host(manifest, command_extensions, base_dir)
+    command_host = build_command_host(
+      manifest,
+      command_extensions,
+      base_dir,
+      command_registrars~,
+    )
     let frontend = build_bridge_frontend_config(manifest, command_extensions) catch {
       error => raise ConfigurationError(error)
     }

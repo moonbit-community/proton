@@ -19,6 +19,10 @@ import {
   "justjavac/proton/native",
 }
 
+import {
+  "justjavac/proton_contract",
+} for "wbtest"
+
 supported_targets = "native"
 
 options(

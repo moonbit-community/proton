@@ -122,6 +122,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
+    command_registrars: [],
     validation_errors: [],
   }
 }
@@ -231,6 +232,19 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 /// Sets the app-level native menu bar.
 pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
   self.menu = Some(menu)
+  self
+}
+
+///|
+/// Adds one package registrar for typed application commands.
+///
+/// Registration runs before any window is created and is sealed before the
+/// renderer bridge starts accepting requests.
+pub fn App::commands(
+  self : App,
+  register : (@proton_command.CommandRegistrar) -> Unit raise,
+) -> App {
+  self.command_registrars.push(register)
   self
 }
 

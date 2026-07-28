@@ -3,10 +3,25 @@ fn build_command_host(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   base_dir : String?,
+  command_registrars? : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [],
 ) -> CommandHostRuntime? raise AppRunError {
   let host = @core.AppCommandHost::new()
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let mut has_commands = false
+  let registrar = @proton_command.CommandRegistrar::new(host)
+  for register in command_registrars {
+    register(registrar) catch {
+      error => {
+        ignore(close_command_host_runtime(host, destroy_hooks))
+        raise CommandExtensionLifecycleError(
+          ApplicationRegistrationFailed(
+            detail=@debug.render(@debug.to_repr(error)),
+          ),
+        )
+      }
+    }
+    has_commands = true
+  }
   let ordered_ids = enabled_command_extension_order(
     manifest, command_extensions,
   ) catch {

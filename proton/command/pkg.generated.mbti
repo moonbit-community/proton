@@ -4,6 +4,7 @@ package "justjavac/proton/command"
 import {
   "justjavac/proton/core",
   "justjavac/proton/ipc",
+  "justjavac/proton_contract",
   "moonbitlang/core/json",
 }
 
@@ -92,8 +93,15 @@ pub fn AppCommandsConfig::from_ipc_descriptors(Array[String], Array[@ipc.IpcExte
 pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
 pub fn AppCommandsConfig::op_names(Self) -> Array[String]
 
+pub struct CommandRegistrar {
+  host : @core.AppCommandHost
+}
+pub fn[Request : @json.FromJson, Response : ToJson] CommandRegistrar::bind(Self, @proton_contract.Command[Request, Response], async (@core.AppCommandRequestContext, Request) -> Response) -> Unit raise
+
 // Type aliases
 pub using @core {type AppCommandRequestContext}
+
+pub using @core {type AppCommandRequestContext as CommandContext}
 
 // Traits
 

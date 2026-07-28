@@ -16,6 +16,7 @@ struct App {
   mut menu : @native.MenuBar?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
+  command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
   validation_errors : Array[AppConfigurationError]
 }
 
@@ -138,6 +139,7 @@ pub(all) suberror RuntimeWakeupError {
 ///|
 /// Failures while starting or stopping command extensions.
 pub(all) suberror CommandExtensionLifecycleError {
+  ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(Debug)

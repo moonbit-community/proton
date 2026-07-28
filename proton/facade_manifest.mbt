@@ -26,6 +26,7 @@ fn App::new(
     menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
+    command_registrars: [],
     validation_errors: [],
   }
 }

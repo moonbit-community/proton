@@ -511,6 +511,34 @@ test "command host close runs extension destroy hooks once" {
 }
 
 ///|
+test "command host installs typed application registrars before sealing" {
+  let manifest = test_command_manifest_ids([])
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  let ping : @proton_contract.Command[Unit, String] = @proton_contract.command(
+    "ping",
+  )
+  let registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [
+    registrar => registrar.bind(ping, (_context, _request) => "pong"),
+  ]
+  match
+    unwrap_app_run(() => {
+      build_command_host(
+        manifest,
+        command_extensions,
+        None,
+        command_registrars=registrars,
+      )
+    }) {
+    Some(host) => {
+      assert_eq(host.host.registered_ops(), ["app:ping"])
+      ignore(close_command_host(Some(host)))
+    }
+    None => fail("expected application command host")
+  }
+}
+
+///|
 test "command host close drains every destroy hook after a failure" {
   let base_id = "examples/base-destroy"
   let feature_id = "examples/feature-destroy"

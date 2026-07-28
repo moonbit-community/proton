@@ -21,3 +21,6 @@ pub using @native {
   type Window,
   type WindowConfig,
 }
+
+///|
+pub using @proton_command {type CommandContext, type CommandRegistrar}

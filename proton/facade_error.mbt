@@ -77,6 +77,8 @@ pub fn CommandExtensionLifecycleError::message(
   self : CommandExtensionLifecycleError,
 ) -> String {
   match self {
+    ApplicationRegistrationFailed(detail~) =>
+      "failed to register application commands: " + detail
     RegistrationFailed(extension_id~, detail~) =>
       "failed to register command extension " + extension_id + ": " + detail
     DestroyFailed(extension_id~, detail~) =>
