@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub async fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request) -> Response
+pub async fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
 
 pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> Unit, (ClientFailure) -> Unit) -> Subscription raise ClientFailure
 

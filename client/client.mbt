@@ -3,7 +3,7 @@
 pub async fn[Request : ToJson, Response : @json.FromJson] invoke(
   command : @proton_contract.Command[Request, Response],
   request : Request,
-) -> Response {
+) -> Response raise ClientFailure {
   command.validate() catch {
     error => raise InvalidContract(message=error.message())
   }
