@@ -1,4 +1,5 @@
 members = [
+  "./contract",
   "./proton",
   "./cli",
   "./config",
