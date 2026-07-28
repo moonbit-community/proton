@@ -13,7 +13,7 @@ test "microphone sample format labels parse from JavaScript values" {
 
 ///|
 test "microphone config replies expose normalized settings" {
-  let config = build_capture_config(CaptureConfigPayload::{
+  let config = build_capture_config(@microphone_contract.CaptureConfigRequest::{
     channels: Some(0),
     sample_rate_hz: Some(4_000),
     sample_format: Some("i16"),

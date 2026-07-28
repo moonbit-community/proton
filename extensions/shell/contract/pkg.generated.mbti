@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/shell/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[ShellActivity]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let open : @proton_contract.Command[OpenRequest, ShellReply]
+
+pub let reveal_item : @proton_contract.Command[RevealItemRequest, ShellReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct OpenRequest {
+  target : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RevealItemRequest {
+  path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ShellActivity {
+  operation : String
+  target : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ShellReply {
+  launched : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

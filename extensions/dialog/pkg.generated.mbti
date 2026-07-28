@@ -4,38 +4,23 @@ package "justjavac/proton_ext/dialog"
 import {
   "justjavac/proton/command",
   "justjavac/proton/extension",
+  "justjavac/proton_contract",
   "moonbitlang/core/debug",
-  "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_dialog_activity(@command.AppCommandExtensionContext, DialogActivity) -> Unit noraise
-
 pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub let generated_extension_contract : @proton_contract.ExtensionContract
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type DialogError derive(Eq, @debug.Debug)
 
 // Types and methods
-type ConfirmReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type DialogActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type FileDialogPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type FileDialogReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type MessagePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type MessageReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ProtonConfirmPayload derive(@json.FromJson)
-
-type ProtonMessagePayload derive(@json.FromJson)
-
-type ProtonOpenFilePayload derive(@json.FromJson)
-
-type ProtonSaveFilePayload derive(@json.FromJson)
 
 // Type aliases
 

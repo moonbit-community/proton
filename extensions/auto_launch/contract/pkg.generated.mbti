@@ -1,0 +1,66 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/auto_launch/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[AutoLaunchActivity]
+
+pub let describe : @proton_contract.Command[AutoLaunchRequest, AutoLaunchReply]
+
+pub let disable : @proton_contract.Command[AutoLaunchRequest, MutationReply]
+
+pub let enable : @proton_contract.Command[AutoLaunchRequest, MutationReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let is_enabled : @proton_contract.Command[AutoLaunchRequest, EnabledReply]
+
+pub let support : @proton_contract.Command[SupportRequest, SupportReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct AutoLaunchActivity {
+  operation : String
+  identifier : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct AutoLaunchReply {
+  name : String
+  path : String
+  identifier : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct AutoLaunchRequest {
+  name : String
+  path : String?
+  launch_in_background : Bool?
+  background_arg : String?
+  extra_arguments : Array[String]?
+  identifier : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EnabledReply {
+  enabled : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MutationReply {
+  changed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SupportReply {
+  supported : Bool
+  platform : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SupportRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

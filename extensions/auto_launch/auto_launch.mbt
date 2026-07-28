@@ -1,37 +1,4 @@
 ///|
-struct AutoLaunchPayload {
-  name : String
-  path : String?
-  launch_in_background : Bool?
-  background_arg : String?
-  extra_arguments : Array[String]?
-  identifier : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct SupportReply {
-  supported : Bool
-  platform : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct AutoLaunchReply {
-  name : String
-  path : String
-  identifier : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct EnabledReply {
-  enabled : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct MutationReply {
-  changed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 /// Converts the auto-launch package platform enum into a stable JS label.
 fn platform_label(platform : @sys_auto_launch.Platform) -> String {
   match platform {
@@ -45,7 +12,7 @@ fn platform_label(platform : @sys_auto_launch.Platform) -> String {
 ///|
 /// Builds one launcher from JavaScript payload data.
 fn build_launcher(
-  payload : AutoLaunchPayload,
+  payload : @auto_launch_contract.AutoLaunchRequest,
 ) -> @sys_auto_launch.AutoLaunch raise AutoLaunchError {
   let launch_in_background = match payload.launch_in_background {
     Some(value) => value
@@ -100,28 +67,11 @@ fn build_launcher(
 }
 
 ///|
-fn auto_launch_payload(
-  name : String,
-  path : String?,
-  launch_in_background : Bool?,
-  background_arg : String?,
-  extra_arguments : Array[String]?,
-  identifier : String?,
-) -> AutoLaunchPayload {
-  AutoLaunchPayload::{
-    name,
-    path,
-    launch_in_background,
-    background_arg,
-    extra_arguments,
-    identifier,
-  }
-}
-
-///|
 /// Converts a launcher into the serializable descriptor used by JS.
-fn launcher_reply(launcher : @sys_auto_launch.AutoLaunch) -> AutoLaunchReply {
-  AutoLaunchReply::{
+fn launcher_reply(
+  launcher : @sys_auto_launch.AutoLaunch,
+) -> @auto_launch_contract.AutoLaunchReply {
+  @auto_launch_contract.AutoLaunchReply::{
     name: launcher.name(),
     path: launcher.path(),
     identifier: launcher.identifier(),
@@ -129,8 +79,8 @@ fn launcher_reply(launcher : @sys_auto_launch.AutoLaunch) -> AutoLaunchReply {
 }
 
 ///|
-fn auto_launch_support() -> SupportReply {
-  SupportReply::{
+fn auto_launch_support() -> @auto_launch_contract.SupportReply {
+  @auto_launch_contract.SupportReply::{
     supported: @sys_auto_launch.is_supported(),
     platform: platform_label(@sys_auto_launch.current_platform()),
   }
@@ -138,18 +88,18 @@ fn auto_launch_support() -> SupportReply {
 
 ///|
 fn describe_auto_launch(
-  payload : AutoLaunchPayload,
-) -> AutoLaunchReply raise AutoLaunchError {
+  payload : @auto_launch_contract.AutoLaunchRequest,
+) -> @auto_launch_contract.AutoLaunchReply raise AutoLaunchError {
   launcher_reply(build_launcher(payload))
 }
 
 ///|
 fn is_auto_launch_enabled(
-  payload : AutoLaunchPayload,
-) -> EnabledReply raise AutoLaunchError {
+  payload : @auto_launch_contract.AutoLaunchRequest,
+) -> @auto_launch_contract.EnabledReply raise AutoLaunchError {
   let launcher = build_launcher(payload)
   match launcher.is_enabled() {
-    Ok(enabled) => EnabledReply::{ enabled, }
+    Ok(enabled) => @auto_launch_contract.EnabledReply::{ enabled, }
     Err(error) =>
       raise QueryFailed(
         identifier=launcher.identifier(),
@@ -160,7 +110,7 @@ fn is_auto_launch_enabled(
 
 ///|
 fn enable_auto_launch(
-  payload : AutoLaunchPayload,
+  payload : @auto_launch_contract.AutoLaunchRequest,
 ) -> String raise AutoLaunchError {
   let launcher = build_launcher(payload)
   match launcher.enable() {
@@ -175,7 +125,7 @@ fn enable_auto_launch(
 
 ///|
 fn disable_auto_launch(
-  payload : AutoLaunchPayload,
+  payload : @auto_launch_contract.AutoLaunchRequest,
 ) -> String raise AutoLaunchError {
   let launcher = build_launcher(payload)
   match launcher.disable() {

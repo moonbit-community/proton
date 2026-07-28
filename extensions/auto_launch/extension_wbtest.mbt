@@ -7,7 +7,7 @@ test "auto launch current platform has a JavaScript label" {
 ///|
 test "auto launch descriptor validates payloads through package constructor" {
   let error = try
-    build_launcher(AutoLaunchPayload::{
+    build_launcher(@auto_launch_contract.AutoLaunchRequest::{
       name: "",
       path: None,
       launch_in_background: None,
