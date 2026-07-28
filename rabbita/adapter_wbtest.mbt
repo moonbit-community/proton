@@ -51,7 +51,11 @@ extern "js" fn install_fake_bridge(response_json : String) -> Unit =
   #|   globalThis.__MoonBit__ = {
   #|     core: {
   #|       invokeJson() {
-  #|         return Promise.resolve(globalThis.__protonRabbitaTest.responseJson);
+  #|         return {
+  #|           then(success) {
+  #|             success(globalThis.__protonRabbitaTest.responseJson);
+  #|           },
+  #|         };
   #|       },
   #|     },
   #|     events: {
@@ -89,28 +93,45 @@ extern "js" fn fake_has_listener() -> Bool =
   #| () => globalThis.__protonRabbitaTest.listener !== null
 
 ///|
-test "invoke maps success and failure to separate commands" {
+test "invoke schedules bridge callbacks without entering async from an effect" {
+  install_fake_bridge("{\"value\":\"pong\"}")
+  let scheduler = TestScheduler::new()
+  let echo : @proton_contract.Command[Unit, EchoResponse] = @proton_contract.command(
+    "echo",
+  )
   let response = Ref("")
   let failure_code = Ref("")
-  let success : (EchoResponse) -> @cmd.Cmd = value => {
-    response.val = value.value
-    @cmd.none
-  }
-  let failure : (@proton_client.ClientFailure) -> @cmd.Cmd = error => {
-    failure_code.val = match error {
-      @proton_client.BridgeUnavailable => "bridge_unavailable"
-      _ => "unexpected"
-    }
-    @cmd.none
-  }
-  ignore(
-    map_invoke_result(Ok(EchoResponse::{ value: "pong" }), success, failure),
+  @cmd.Scheduler::add(
+    scheduler,
+    invoke(
+      echo,
+      (),
+      value => {
+        response.val = value.value
+        @cmd.none
+      },
+      error => {
+        failure_code.val = match error {
+          @proton_client.BridgeUnavailable => "bridge_unavailable"
+          _ => "unexpected"
+        }
+        @cmd.none
+      },
+    ),
   )
   assert_eq(response.val, "pong")
   assert_eq(failure_code.val, "")
 
-  ignore(
-    map_invoke_result(Err(@proton_client.BridgeUnavailable), success, failure),
+  remove_fake_bridge()
+  @cmd.Scheduler::add(
+    scheduler,
+    invoke(echo, (), _ => @cmd.none, error => {
+      failure_code.val = match error {
+        @proton_client.BridgeUnavailable => "bridge_unavailable"
+        _ => "unexpected"
+      }
+      @cmd.none
+    }),
   )
   assert_eq(failure_code.val, "bridge_unavailable")
 }

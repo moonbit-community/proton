@@ -23,21 +23,14 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke(
   success : (Response) -> @cmd.Cmd,
   failure : (@proton_client.ClientFailure) -> @cmd.Cmd,
 ) -> @cmd.Cmd {
-  @cmd.attempt(result => map_invoke_result(result, success, failure), () => {
-    @proton_client.invoke(command, request)
+  @cmd.custom_cmd(scheduler => {
+    @proton_client.invoke_with_callbacks(
+      command,
+      request,
+      response => @cmd.Scheduler::add(scheduler, success(response)),
+      error => @cmd.Scheduler::add(scheduler, failure(error)),
+    )
   })
-}
-
-///|
-fn[Response] map_invoke_result(
-  result : Result[Response, @proton_client.ClientFailure],
-  success : (Response) -> @cmd.Cmd,
-  failure : (@proton_client.ClientFailure) -> @cmd.Cmd,
-) -> @cmd.Cmd {
-  match result {
-    Ok(response) => success(response)
-    Err(error) => failure(error)
-  }
 }
 
 ///|

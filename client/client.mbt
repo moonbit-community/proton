@@ -20,6 +20,41 @@ pub async fn[Request : ToJson, Response : @json.FromJson] invoke(
 }
 
 ///|
+/// Invokes a typed command without entering the MoonBit async scheduler.
+///
+/// Framework adapters use this callback boundary when their effect runtime
+/// owns scheduling. Application code should use `invoke`.
+#doc(hidden)
+pub fn[Request : ToJson, Response : @json.FromJson] invoke_with_callbacks(
+  command : @proton_contract.Command[Request, Response],
+  request : Request,
+  success : (Response) -> Unit,
+  failure : (ClientFailure) -> Unit,
+) -> Unit {
+  command.validate() catch {
+    error => {
+      failure(InvalidContract(message=error.message()))
+      return
+    }
+  }
+  let request_json = ToJson::to_json(request).stringify()
+  invoke_json_with_callbacks(
+    command.contract_route().operation_name(),
+    request_json,
+    response_json => {
+      let response : Response = @json.from_json(@json.parse(response_json)) catch {
+        error => {
+          failure(ResponseDecode(message=error.to_string()))
+          return
+        }
+      }
+      success(response)
+    },
+    raw => failure(decode_bridge_failure(raw)),
+  )
+}
+
+///|
 /// A live event subscription installed on the active renderer page.
 pub struct Subscription {
   mut closed : Bool
