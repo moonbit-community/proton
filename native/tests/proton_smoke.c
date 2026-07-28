@@ -314,6 +314,31 @@ static int expect_valid_json(const char *label, const char *json) {
   return 0;
 }
 
+static int expect_root_json_values(void) {
+  static const char *values[] = {
+      "null",
+      "true",
+      "false",
+      "42",
+      "-1.5e+2",
+      "\"text\"",
+  };
+  for (size_t index = 0; index < sizeof(values) / sizeof(values[0]); index++) {
+    proton_json_doc_t doc;
+    if (!proton_json_parse(&doc, values[index])) {
+      fprintf(stderr, "root JSON value rejected: %s\n", values[index]);
+      return 1;
+    }
+    if (!proton_json_is_single_value(&doc)) {
+      fprintf(stderr, "root JSON value is not singular: %s\n", values[index]);
+      proton_json_dispose(&doc);
+      return 1;
+    }
+    proton_json_dispose(&doc);
+  }
+  return 0;
+}
+
 static int expect_bridge_lifecycle_state(void) {
   static const char first_failure[] =
       "{\"abi_version\":1,\"stage\":\"bootstrap\","
@@ -916,6 +941,9 @@ int main(void) {
   int32_t status = PROTON_OK;
 
   if (expect_bridge_lifecycle_state()) {
+    return 1;
+  }
+  if (expect_root_json_values()) {
     return 1;
   }
 

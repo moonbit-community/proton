@@ -165,6 +165,9 @@ static int jsmn_parse_primitive(jsmn_parser *parser, const char *js,
   }
 #ifdef JSMN_STRICT
   /* In strict mode primitive must be followed by a comma/object/array */
+  if (parser->toksuper == -1) {
+    goto found;
+  }
   parser->pos = start;
   return JSMN_ERROR_PART;
 #endif
