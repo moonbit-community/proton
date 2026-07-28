@@ -5,19 +5,28 @@ test "typed codegen renders free and receiver registrars" {
       "commands.mbt",
       (
         #|///|
-        #|#proton.command(contract=@shared.ping)
+        #|let ping_contract = @shared.ping
+        #|
+        #|///|
+        #|#proton.command(contract=ping_contract)
         #|fn ping() -> String {
         #|  "pong"
         #|}
         #|
         #|///|
-        #|#proton.command(contract=@shared.current_window)
+        #|let current_window_contract = @shared.current_window
+        #|
+        #|///|
+        #|#proton.command(contract=current_window_contract)
         #|fn current_window(context : @proton.CommandContext) -> Int64 {
         #|  context.window_handle()
         #|}
         #|
         #|///|
-        #|#proton.command(contract=@shared.create_todo)
+        #|let create_todo_contract = @shared.create_todo
+        #|
+        #|///|
+        #|#proton.command(contract=create_todo_contract)
         #|async fn Backend::create_todo(
         #|  self : Backend,
         #|  context : @proton.CommandContext,
@@ -38,11 +47,11 @@ test "typed codegen renders free and receiver registrars" {
     #|  registrar : @proton.CommandRegistrar,
     #|) -> Unit raise {
     #|  registrar.bind(
-    #|    @shared.ping,
+    #|    ping_contract,
     #|    (_context, _request) => ping(),
     #|  )
     #|  registrar.bind(
-    #|    @shared.current_window,
+    #|    current_window_contract,
     #|    (context, _request) => current_window(context),
     #|  )
     #|}
@@ -53,7 +62,7 @@ test "typed codegen renders free and receiver registrars" {
     #|  registrar : @proton.CommandRegistrar,
     #|) -> Unit raise {
     #|  registrar.bind(
-    #|    @shared.create_todo,
+    #|    create_todo_contract,
     #|    (context, request) => self.create_todo(context, request),
     #|  )
     #|}
@@ -69,7 +78,9 @@ test "typed codegen combines explicit source inputs" {
     (
       "read.mbt",
       (
-        #|#proton.command(contract=@shared.read)
+        #|let read_contract = @shared.read
+        #|
+        #|#proton.command(contract=read_contract)
         #|fn read(request : String) -> String {
         #|  request
         #|}
@@ -79,7 +90,9 @@ test "typed codegen combines explicit source inputs" {
     (
       "write.mbt",
       (
-        #|#proton.command(contract=@shared.write)
+        #|let write_contract = @shared.write
+        #|
+        #|#proton.command(contract=write_contract)
         #|fn write(request : String) -> Unit {
         #|  ignore(request)
         #|}
@@ -87,8 +100,8 @@ test "typed codegen combines explicit source inputs" {
       ),
     ),
   ])
-  assert_true(generated.source.contains("@shared.read"))
-  assert_true(generated.source.contains("@shared.write"))
+  assert_true(generated.source.contains("read_contract"))
+  assert_true(generated.source.contains("write_contract"))
 }
 
 ///|
@@ -147,5 +160,30 @@ test "typed codegen rejects removed event annotations" {
   } catch {
     CommandCodegenError::Attribute(kind="event", ..) => ()
     _ => fail("expected removed event annotation error")
+  }
+}
+
+///|
+test "typed codegen requires a compiler-checked local contract alias" {
+  try {
+    ignore(
+      generate_typed_commands_from_sources([
+        (
+          "commands.mbt",
+          (
+            #|#proton.command(contract=@shared.ping)
+            #|fn ping() -> Unit {}
+            #|
+          ),
+        ),
+      ]),
+    )
+    fail("expected local contract alias error")
+  } catch {
+    CommandCodegenError::Attribute(
+      kind="command",
+      detail="contract must be a local typed alias because MoonBit attributes cannot contain package-qualified values"
+    ) => ()
+    _ => fail("expected local contract alias error")
   }
 }

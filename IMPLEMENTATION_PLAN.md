@@ -110,7 +110,9 @@ No directory scanning or handler filename convention is allowed.
 Annotations bind handlers to shared descriptors:
 
 ```moonbit
-#proton.command(contract=@shared.create_todo)
+let create_todo_contract = @shared.create_todo
+
+#proton.command(contract=create_todo_contract)
 async fn Backend::create_todo(
   self : Backend,
   context : @proton.CommandContext,

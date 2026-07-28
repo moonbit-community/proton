@@ -98,13 +98,6 @@ fn render_typed_handler(
   builder : StringBuilder,
   command : ParsedTypedCommand,
 ) -> Unit {
-  let needs_adapter = command.receiver_type is Some(_) ||
-    !command.accepts_context ||
-    !command.has_request
-  if !needs_adapter {
-    builder.write_string(command.function_name)
-    return
-  }
   builder.write_string("(")
   builder.write_string(
     if command.accepts_context {

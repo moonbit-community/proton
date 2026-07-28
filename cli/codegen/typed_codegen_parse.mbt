@@ -222,10 +222,14 @@ fn validate_contract_expression(expression : String) -> Unit raise {
       detail="contract expression must not be empty",
     )
   }
-  for index, ch in expression {
-    let valid = is_identifier_continue_char(ch) ||
-      ch == '.' ||
-      (index == 0 && ch == '@')
+  guard !expression.has_prefix("@") else {
+    raise CommandCodegenError::Attribute(
+      kind="command",
+      detail="contract must be a local typed alias because MoonBit attributes cannot contain package-qualified values",
+    )
+  }
+  for _, ch in expression {
+    let valid = is_identifier_continue_char(ch) || ch == '.'
     guard valid else {
       raise CommandCodegenError::Attribute(
         kind="command",
