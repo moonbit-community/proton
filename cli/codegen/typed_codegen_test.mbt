@@ -115,6 +115,12 @@ test "typed codegen emits extension identity from moon ext metadata" {
   )
   assert_true(generated.source.contains("id=\"justjavac/proton-clipboard\""))
   assert_true(generated.source.contains("js_namespace=\"clipboard\""))
+  assert_true(
+    generated.source.contains(
+      "pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]",
+    ),
+  )
+  assert_true(generated.source.contains("read_text.contract_route()"))
 }
 
 ///|

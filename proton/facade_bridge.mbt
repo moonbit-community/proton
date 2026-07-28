@@ -44,7 +44,7 @@ fn build_command_host(
       extension_id: id,
       callback: fn() raise { spec.destroy(context) },
     })
-    spec.register(context) catch {
+    spec.register(context, registrar) catch {
       error => {
         let primary = CommandExtensionLifecycleError(
           RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),

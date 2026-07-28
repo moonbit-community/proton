@@ -58,3 +58,75 @@ test "typed registrar rejects invalid and duplicate descriptors" {
     _ => fail("expected duplicate registration")
   }
 }
+
+///|
+async test "typed extension specs derive APIs from contract routes" {
+  let contract = @proton_contract.extension(
+    id="example/typed",
+    js_namespace="typed",
+  )
+  let add : @proton_contract.Command[AddRequest, AddResponse] = contract.command(
+    "add",
+  )
+  let spec = AppCommandExtensionSpec::typed(contract, [add.contract_route()], fn(
+    _context,
+    registrar,
+  ) raise {
+    registrar.bind(add, (_context, request) => AddResponse::{
+      total: request.left + request.right,
+    })
+  })
+  assert_eq(spec.op_names(), ["ext:typed/add"])
+  assert_eq(spec.apis().map(api => api.api_name()), ["add"])
+  let host = @core.AppCommandHost::new()
+  let context = AppCommandExtensionContext::new(
+    host,
+    spec.id(),
+    spec.js_namespace(),
+  )
+  spec.register(context, CommandRegistrar::new(host))
+  host.seal_registrations()
+  @async.with_task_group(group => {
+    let response = host.dispatch_ipc_with_context(
+      @core.AppCommandRequestContext::new(42L, group),
+      @ipc.IpcOpRequest::new("request-1", "ext:typed/add", {
+        "left": 20,
+        "right": 22,
+      }),
+    )
+    assert_true(response.is_ok())
+    inspect(response.body.stringify(), content="{\"total\":42}")
+  })
+}
+
+///|
+test "typed extension specs reject foreign command routes" {
+  let contract = @proton_contract.extension(
+    id="example/typed",
+    js_namespace="typed",
+  )
+  let foreign_contract = @proton_contract.extension(
+    id="example/foreign",
+    js_namespace="foreign",
+  )
+  let foreign : @proton_contract.Command[Unit, Unit] = foreign_contract.command(
+    "ping",
+  )
+  try {
+    ignore(
+      AppCommandExtensionSpec::typed(contract, [foreign.contract_route()], fn(
+        _context,
+        _registrar,
+      ) {
+
+      }),
+    )
+    fail("expected foreign command route")
+  } catch {
+    ExtensionSpecError::ForeignCommandRoute(
+      extension_id="example/typed",
+      operation_name="ext:foreign/ping"
+    ) => ()
+    _ => fail("expected foreign command route")
+  }
+}

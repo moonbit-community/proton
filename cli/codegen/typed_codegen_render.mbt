@@ -21,6 +21,18 @@ fn render_typed_command_registrar(
       builder.write_string(mbt_string(js_namespace))
       builder.write_string(",\n")
       builder.write_string("  )\n\n")
+      builder.write_string("///|\n")
+      builder.write_string(
+        "pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute] {\n",
+      )
+      builder.write_string("  [\n")
+      for command in parsed.commands {
+        builder.write_string("    ")
+        builder.write_string(command.contract_expression)
+        builder.write_string(".contract_route(),\n")
+      }
+      builder.write_string("  ]\n")
+      builder.write_string("}\n\n")
     }
     None => ()
   }

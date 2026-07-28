@@ -42,7 +42,7 @@ pub struct AppCommandExtensionSpec {
   apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Unit raise
+  register : (AppCommandExtensionContext, CommandRegistrar) -> Unit raise
   on_destroy : (AppCommandExtensionContext) -> Unit raise
 }
 
@@ -228,6 +228,44 @@ pub fn AppCommandExtensionSpec::new(
     apis: copy_command_api_descriptors(apis),
     scripts: copy_strings(scripts),
     dependencies: copy_strings(dependencies),
+    register: fn(context, _registrar) raise { register(context) },
+    on_destroy,
+  }
+}
+
+///|
+/// Creates an extension spec whose JavaScript APIs and native operation names
+/// are derived from typed extension command descriptors.
+pub fn AppCommandExtensionSpec::typed(
+  contract : @proton_contract.ExtensionContract,
+  command_routes : Array[@proton_contract.ContractRoute],
+  register : (AppCommandExtensionContext, CommandRegistrar) -> Unit raise,
+  scripts? : Array[String] = [],
+  dependencies? : Array[String] = [],
+  on_destroy? : (AppCommandExtensionContext) -> Unit raise = fn(_context) {  },
+) -> AppCommandExtensionSpec raise ExtensionSpecError {
+  contract.validate() catch {
+    error => raise InvalidContract(detail=error.message())
+  }
+  let id = contract.id()
+  let js_namespace = contract.js_namespace()
+  let apis : Array[AppCommandApiDescriptor] = []
+  for route in command_routes {
+    guard route.extension_id() == Some(id) &&
+      route.extension_namespace() == Some(js_namespace) else {
+      raise ForeignCommandRoute(
+        extension_id=id,
+        operation_name=route.operation_name(),
+      )
+    }
+    apis.push(AppCommandApiDescriptor::new(route.member_name()))
+  }
+  AppCommandExtensionSpec::{
+    id,
+    js_namespace,
+    apis,
+    scripts: copy_strings(scripts),
+    dependencies: copy_strings(dependencies),
     register,
     on_destroy,
   }
@@ -277,8 +315,9 @@ pub fn AppCommandExtensionSpec::to_ipc_descriptor(
 pub fn AppCommandExtensionSpec::register(
   self : AppCommandExtensionSpec,
   context : AppCommandExtensionContext,
+  registrar : CommandRegistrar,
 ) -> Unit raise {
-  (self.register)(context)
+  (self.register)(context, registrar)
 }
 
 ///|
@@ -428,15 +467,15 @@ pub fn app_command_extension_op_name(
 fn copy_app_command_extension_spec(
   spec : AppCommandExtensionSpec,
 ) -> AppCommandExtensionSpec {
-  AppCommandExtensionSpec::new(
-    spec.id,
-    spec.js_namespace,
-    spec.apis,
-    spec.register,
-    scripts=spec.scripts,
-    dependencies=spec.dependencies,
-    on_destroy=spec.on_destroy,
-  )
+  AppCommandExtensionSpec::{
+    id: spec.id,
+    js_namespace: spec.js_namespace,
+    apis: copy_command_api_descriptors(spec.apis),
+    scripts: copy_strings(spec.scripts),
+    dependencies: copy_strings(spec.dependencies),
+    register: spec.register,
+    on_destroy: spec.on_destroy,
+  }
 }
 
 ///|

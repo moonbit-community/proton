@@ -14,6 +14,11 @@ pub fn app_command_extension_op_name(String, String) -> String
 pub fn app_command_js_property_is_reserved(String) -> Bool
 
 // Errors
+pub(all) suberror ExtensionSpecError {
+  InvalidContract(detail~ : String)
+  ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
+} derive(Eq)
+pub fn ExtensionSpecError::message(Self) -> String
 
 // Types and methods
 pub struct AppCommandApiDescriptor {
@@ -68,7 +73,7 @@ pub struct AppCommandExtensionSpec {
   apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Unit raise
+  register : (AppCommandExtensionContext, CommandRegistrar) -> Unit raise
   on_destroy : (AppCommandExtensionContext) -> Unit raise
 }
 pub fn AppCommandExtensionSpec::apis(Self) -> Array[AppCommandApiDescriptor]
@@ -78,9 +83,10 @@ pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
 pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit raise) -> Self
 pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Unit raise
+pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext, CommandRegistrar) -> Unit raise
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
+pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (AppCommandExtensionContext, CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit raise) -> Self raise ExtensionSpecError
 
 pub struct AppCommandsConfig {
   op_names : Array[String]

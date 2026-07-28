@@ -171,6 +171,13 @@ pub fn ContractRoute::operation_name(self : ContractRoute) -> String {
 }
 
 ///|
+/// Returns the stable member name carried by this route.
+#doc(hidden)
+pub fn ContractRoute::member_name(self : ContractRoute) -> String {
+  self.name
+}
+
+///|
 /// Returns whether this route belongs to the application contract.
 #doc(hidden)
 pub fn ContractRoute::is_application(self : ContractRoute) -> Bool {
