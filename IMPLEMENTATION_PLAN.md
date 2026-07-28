@@ -465,6 +465,11 @@ Acceptance:
 
 ### 9. `test(e2e): validate the typed isomorphic scaffold`
 
+- Fix the macOS initial-navigation race exposed by packaged release builds:
+  mark navigation pending before `CreateBrowser`, then post it to CEF's UI task
+  runner after the browser has been registered.
+- Stage the complete CEF macOS helper family (base, Alerts, GPU, Plugin, and
+  Renderer) with bundle-matching executable names.
 - Generate a project outside the repository.
 - Run checks for all three modules.
 - Run Warren release build.
@@ -473,7 +478,8 @@ Acceptance:
 - Run the app through the managed runtime.
 - Exercise all Todo commands and the live event path.
 - Verify ordinary-browser startup reports `BridgeUnavailable`.
-- Package the app and verify staged frontend assets.
+- Ad-hoc sign the diagnostic macOS package, verify staged frontend assets, and
+  run that self-contained bundle without development runtime overrides.
 
 Acceptance:
 
