@@ -64,6 +64,26 @@ Bridge E2E coverage lives in the `e2e/` MoonBit module. Run the complete
 self-hosted suite with `moon -C e2e test`; no JavaScript bridge-smoke wrapper is
 required.
 
+## `e2e_scaffold_smoke.mjs`
+
+Generates the default three-module Todo project outside the repository and
+checks its committed code generation, local-source compilation, Warren
+frontend build, native backend build, ad-hoc signed macOS app package, typed
+commands, live events, ordinary-browser `BridgeUnavailable` state, and clean
+process shutdown.
+
+Build and install the native runtime first, and install Warren:
+
+```sh
+moon install moonbit-community/warren
+PROTON_NATIVE_DIST="$PWD/native/dist" node ./scripts/e2e_scaffold_smoke.mjs
+```
+
+The generated project first verifies the declared published package and binary
+dependencies. The source smoke then replaces those dependencies only inside
+the temporary project with this repository's local modules, because unreleased
+versions cannot be resolved from Mooncakes.
+
 ## `macos_package_smoke.mjs`
 
 Runs the development-mode macOS packaging regression with an explicit ad-hoc
