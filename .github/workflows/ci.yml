@@ -43,6 +43,20 @@ jobs:
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
+      # moonc v0.10.5 bundles mimalloc in libmoonbitrun.o and interposes the
+      # malloc family in every native executable, but on Linux the interposed
+      # set misses the glibc extension malloc_usable_size. Libraries dlopen'd
+      # by such an executable (libcef.so's bundled sqlite in the doctor deep
+      # probe tests) then pair mimalloc's malloc() with glibc's
+      # malloc_usable_size() and segfault. libmoonbitrun.o contains only the
+      # allocator override, so an empty object restores plain glibc malloc.
+      # Drop this once the toolchain interposition is fixed upstream.
+      - name: Disable bundled mimalloc (moonc v0.10.5 Linux interposition bug)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          test -f "$HOME/.moon/lib/libmoonbitrun.o"
+          cc -c -x c /dev/null -o "$HOME/.moon/lib/libmoonbitrun.o"
+
       - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
