@@ -1,31 +1,42 @@
 ///|
 struct DoublePayload {
   value : Int
-} derive(FromJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct DoubleReply {
   value : Int
   doubled : Int
   source : String
-} derive(ToJson)
+} derive(ToJson, FromJson)
+
+///|
+let sync_math_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
+  id="examples/sync-math",
+  js_namespace="math",
+)
+
+///|
+let double_command : @proton_contract.Command[DoublePayload, DoubleReply] = sync_math_contract.command(
+  "double",
+)
+
+///|
+fn double(payload : DoublePayload) -> DoubleReply {
+  DoubleReply::{
+    value: payload.value,
+    doubled: payload.value * 2,
+    source: "sync command extension",
+  }
+}
 
 ///|
 fn sync_math_extension() -> @proton_extension.Extension {
-  @proton_extension.from_command_spec(
-    @proton_command.AppCommandExtensionSpec::new(
-      "examples/sync-math",
-      "math",
-      [@proton_command.AppCommandApiDescriptor::new("double")],
-      fn(context) raise {
-        context.op("double", fn(payload : DoublePayload) {
-          DoubleReply::{
-            value: payload.value,
-            doubled: payload.value * 2,
-            source: "sync command extension",
-          }
-        })
-      },
-    ),
+  @proton_extension.typed(
+    sync_math_contract,
+    [double_command.contract_route()],
+    fn(_context, registrar) raise {
+      registrar.bind(double_command, (_context, payload) => double(payload))
+    },
   )
 }
