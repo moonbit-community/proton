@@ -247,6 +247,57 @@ test "project config rebases file entry and frontend paths from config directory
 }
 
 ///|
+test "project config reads module metadata from configured backend" {
+  let project_dir = "target/project-config-backend-metadata"
+  let backend_dir = project_dir + "/backend"
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir(project_dir) catch {
+    _ => ()
+  }
+  @mbfs.create_dir(backend_dir) catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(
+    backend_dir + "/moon.mod",
+    (
+      #|name = "example/backend"
+      #|version = "1.2.3"
+      #|description = "Backend module metadata"
+      #|license = "Apache-2.0"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    error => abort(@debug.render(@debug.to_repr(error)))
+  }
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "frontend/dist/index.html",
+    #|}
+    #|
+    #|backend = {
+    #|  path: "backend",
+    #|  package: "app",
+    #|}
+    #|
+  let metadata = load_project_config_from_text(source, project_dir)
+    .config()
+    .metadata()
+  assert_eq(metadata.version, Some("1.2.3"))
+  assert_eq(metadata.description, Some("Backend module metadata"))
+  assert_eq(metadata.license, Some("Apache-2.0"))
+}
+
+///|
 test "project config rejects legacy frontend cwd" {
   let source =
     #|window = {

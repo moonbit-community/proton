@@ -41,8 +41,12 @@ fn decode_project_config(
       let window = required_project_window(fields)
       let entry = required_project_entry(fields, base_dir)
       let debug = optional_project_debug(fields)
-      let metadata = decode_project_metadata(fields, base_dir)
       let backend = optional_project_backend(fields, base_dir)
+      let metadata_base_dir = match backend {
+        Some(backend) => backend.path()
+        None => base_dir
+      }
+      let metadata = decode_project_metadata(fields, metadata_base_dir)
       let frontend = optional_project_frontend(fields, base_dir)
       let bundle = optional_project_bundle(fields, base_dir)
       ProjectConfig::new(
