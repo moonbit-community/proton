@@ -57,7 +57,10 @@ fn render_typed_command_registrar(
       parsed.commands.filter(command => command.receiver_type == Some(receiver)),
     )
   }
-  ProtonCommandCodegenOutput::{ source: builder.to_string(), warnings: [] }
+  ProtonCommandCodegenOutput::{
+    source: builder.to_string().trim().to_owned() + "\n",
+    warnings: [],
+  }
 }
 
 ///|

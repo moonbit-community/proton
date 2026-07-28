@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/clipboard/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[ClipboardActivity]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let read_text : @proton_contract.Command[ReadTextRequest, ReadTextReply]
+
+pub let write_text : @proton_contract.Command[WriteTextRequest, WriteTextReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct ClipboardActivity {
+  operation : String
+  text_length : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReadTextReply {
+  text : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ReadTextRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WriteTextReply {
+  written : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WriteTextRequest {
+  text : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

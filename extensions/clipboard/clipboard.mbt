@@ -1,14 +1,4 @@
 ///|
-struct ReadTextReply {
-  text : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct WriteTextReply {
-  written : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 /// Verifies that the underlying clipboard package is available on this platform.
 fn ensure_supported() -> Unit raise ClipboardError {
   match @sys_clipboard.ensure_supported() {
@@ -27,19 +17,21 @@ fn text_length(text : String?) -> Int? {
 }
 
 ///|
-fn read_clipboard_text() -> ReadTextReply raise ClipboardError {
+fn read_clipboard_text() -> @clipboard_contract.ReadTextReply raise ClipboardError {
   ensure_supported()
   match @sys_clipboard.read_text() {
-    Ok(text) => ReadTextReply::{ text, }
+    Ok(text) => @clipboard_contract.ReadTextReply::{ text, }
     Err(error) => raise ReadFailed(detail=error)
   }
 }
 
 ///|
-fn write_clipboard_text(text : String) -> WriteTextReply raise ClipboardError {
+fn write_clipboard_text(
+  text : String,
+) -> @clipboard_contract.WriteTextReply raise ClipboardError {
   ensure_supported()
   match @sys_clipboard.write_text(text) {
-    Ok(_) => WriteTextReply::{ written: true }
+    Ok(_) => @clipboard_contract.WriteTextReply::{ written: true }
     Err(error) => raise WriteFailed(detail=error)
   }
 }

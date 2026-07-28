@@ -1,15 +1,18 @@
 ///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
+let read_text_command = @clipboard_contract.read_text
+
+///|
+let write_text_command = @clipboard_contract.write_text
 
 ///|
 /// Reads plain text from the native clipboard.
-#proton.command(name="readText")
+#proton.command(contract=read_text_command)
 async fn read_text(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> ReadTextReply raise ClipboardError {
+  context : @proton.CommandContext,
+  _request : @clipboard_contract.ReadTextRequest,
+) -> @clipboard_contract.ReadTextReply {
   let reply = read_clipboard_text()
-  emit_clipboard_activity(context, ClipboardActivity::{
+  context.emit(@clipboard_contract.activity, @clipboard_contract.ClipboardActivity::{
     operation: "readText",
     text_length: text_length(reply.text),
   })
@@ -18,22 +21,25 @@ async fn read_text(
 
 ///|
 /// Writes plain text to the native clipboard.
-#proton.command(name="writeText")
+#proton.command(contract=write_text_command)
 async fn write_text(
-  context : @proton_command.AppCommandExtensionContext,
-  text : String,
-) -> WriteTextReply raise ClipboardError {
-  let reply = write_clipboard_text(text)
-  emit_clipboard_activity(context, ClipboardActivity::{
+  context : @proton.CommandContext,
+  request : @clipboard_contract.WriteTextRequest,
+) -> @clipboard_contract.WriteTextReply {
+  let reply = write_clipboard_text(request.text)
+  context.emit(@clipboard_contract.activity, @clipboard_contract.ClipboardActivity::{
     operation: "writeText",
-    text_length: Some(text.length()),
+    text_length: Some(request.text.length()),
   })
   reply
 }
 
 ///|
-#proton.event(name="activity")
-struct ClipboardActivity {
-  operation : String
-  text_length : Int?
-} derive(ToJson, FromJson, Debug, Eq)
+/// Builds the typed clipboard extension.
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    generated_extension_contract,
+    generated_extension_command_routes(),
+    fn(_context, registrar) raise { register_commands(registrar) },
+  )
+}

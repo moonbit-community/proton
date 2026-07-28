@@ -67,7 +67,6 @@ test "typed codegen renders free and receiver registrars" {
     #|  )
     #|}
     #|
-    #|
   inspect(generated.source, content=expected)
   assert_eq(generated.warnings, [])
 }
