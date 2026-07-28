@@ -32,12 +32,6 @@ pub(all) struct NotificationClick {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-notification",
-  js_namespace="notification",
-)
-
-///|
 pub let show : @proton_contract.Command[NotificationRequest, NotificationReply] = extension.command(
   "show",
 )

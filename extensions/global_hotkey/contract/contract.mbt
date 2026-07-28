@@ -28,12 +28,6 @@ pub(all) struct GlobalHotkeyTriggered {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-global-hotkey",
-  js_namespace="globalHotkey",
-)
-
-///|
 pub let register : @proton_contract.Command[
   GlobalHotkeyRequest,
   GlobalHotkeyReply,

@@ -104,7 +104,7 @@ test "typed codegen combines explicit source inputs" {
 }
 
 ///|
-test "typed codegen emits extension identity from moon ext metadata" {
+test "typed codegen emits extension routes without duplicating identity" {
   let generated = generate_typed_commands_from_sources(
     [
       (
@@ -118,21 +118,32 @@ test "typed codegen emits extension identity from moon ext metadata" {
         ),
       ),
     ],
-    extension_identity=Some(("justjavac/proton-clipboard", "clipboard")),
+    extension_package=true,
   )
-  assert_true(
-    generated.source.contains(
-      "pub let generated_extension_contract : @proton_contract.ExtensionContract",
-    ),
-  )
-  assert_true(generated.source.contains("id=\"justjavac/proton-clipboard\""))
-  assert_true(generated.source.contains("js_namespace=\"clipboard\""))
+  assert_false(generated.source.contains("id="))
+  assert_false(generated.source.contains("js_namespace="))
   assert_true(
     generated.source.contains(
       "pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]",
     ),
   )
   assert_true(generated.source.contains("read_text.contract_route()"))
+}
+
+///|
+test "extension identity generation renders moon ext identity" {
+  let generated = generate_extension_identity(
+    "justjavac/proton-clipboard",
+    "clipboard",
+    binding_name="extension",
+  )
+  assert_true(
+    generated.source.contains(
+      "pub let extension : @proton_contract.ExtensionContract",
+    ),
+  )
+  assert_true(generated.source.contains("id=\"justjavac/proton-clipboard\""))
+  assert_true(generated.source.contains("js_namespace=\"clipboard\""))
 }
 
 ///|

@@ -185,12 +185,22 @@ fn codegen_command() -> @argparse.Command {
   @argparse.Command(
     "codegen",
     about="Generate typed Proton command registrars from #proton attributes",
+    flags=[
+      FlagArg(
+        "extension-identity",
+        about="Generate a contract identity from one moon.ext input",
+      ),
+    ],
     options=[
       OptionArg(
         "output-file",
         short='o',
         about="Output .g.mbt file",
         required=true,
+      ),
+      OptionArg(
+        "identity-name",
+        about="Generated binding name for --extension-identity",
       ),
     ],
     positionals=[
@@ -343,7 +353,26 @@ async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
   let output = @cli_args.required_value(matches, "output-file")
   let resolved_inputs = inputs.map(input => resolve_cli_path(cwd, input))
   let resolved_output = resolve_cli_path(cwd, output)
-  let result = @codegen.generate_commands_from_files(resolved_inputs)
+  let extension_identity = @cli_args.flag(matches, "extension-identity")
+  let identity_name = @cli_args.value(matches, "identity-name")
+  if !extension_identity && identity_name is Some(_) {
+    raise CliUsageError::Invalid(
+      message="codegen --identity-name requires --extension-identity",
+    )
+  }
+  let result = if extension_identity {
+    guard resolved_inputs is [metadata_path] else {
+      raise CliUsageError::Invalid(
+        message="codegen --extension-identity requires exactly one moon.ext input",
+      )
+    }
+    @codegen.generate_extension_identity_from_file(
+      metadata_path,
+      binding_name=identity_name.unwrap_or("generated_extension_contract"),
+    )
+  } else {
+    @codegen.generate_commands_from_files(resolved_inputs)
+  }
   @async_fs.write_file(
     resolved_output,
     result.source,

@@ -126,12 +126,6 @@ pub(all) struct FsActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-fs",
-  js_namespace="fs",
-)
-
-///|
 pub let read_file : @proton_contract.Command[ReadFileRequest, ReadFileReply] = extension.command(
   "read_file",
 )

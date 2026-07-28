@@ -20,12 +20,6 @@ pub(all) struct KeepAwakeActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-keepawake",
-  js_namespace="keepAwake",
-)
-
-///|
 pub let acquire : @proton_contract.Command[AcquireRequest, KeepAwakeReply] = extension.command(
   "acquire",
 )

@@ -41,12 +41,6 @@ pub(all) struct AutoLaunchActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-auto-launch",
-  js_namespace="autoLaunch",
-)
-
-///|
 pub let support : @proton_contract.Command[SupportRequest, SupportReply] = extension.command(
   "support",
 )

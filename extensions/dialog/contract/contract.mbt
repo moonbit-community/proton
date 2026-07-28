@@ -34,12 +34,6 @@ pub(all) struct DialogActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-dialog",
-  js_namespace="dialog",
-)
-
-///|
 pub let message : @proton_contract.Command[MessageRequest, MessageReply] = extension.command(
   "message",
 )

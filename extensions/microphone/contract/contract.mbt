@@ -50,12 +50,6 @@ pub(all) struct MicrophoneActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-microphone",
-  js_namespace="microphone",
-)
-
-///|
 pub let list_devices : @proton_contract.Command[
   EmptyRequest,
   MicrophoneDevicesReply,

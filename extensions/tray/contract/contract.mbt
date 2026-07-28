@@ -84,12 +84,6 @@ pub(all) struct TrayMenuItemClick {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-tray",
-  js_namespace="tray",
-)
-
-///|
 pub let support : @proton_contract.Command[EmptyRequest, TraySupportReply] = extension.command(
   "support",
 )

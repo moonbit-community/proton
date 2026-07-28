@@ -22,7 +22,16 @@ moonfmt -w <output.g.mbt>
 ```
 
 All input files must belong to one MoonBit package. When that package contains
-`moon.ext`, the generated file also exposes its extension identity. Commands
-and events remain ordinary values in target-neutral MoonBit contract packages;
-extension scripts and destroy hooks are configured explicitly when constructing
-the extension.
+`moon.ext`, the generated registrar also exposes its command routes.
+
+Generate the target-neutral contract identity separately from the same metadata:
+
+```sh
+proton_cli codegen --extension-identity moon.ext \
+  --identity-name extension \
+  -o contract/extension_identity.g.mbt
+```
+
+Commands and events remain ordinary values in target-neutral MoonBit contract
+packages. Extension scripts and destroy hooks are configured explicitly when
+constructing the extension.

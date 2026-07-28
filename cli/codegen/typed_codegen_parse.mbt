@@ -2,7 +2,7 @@
 /// Generates one typed package registrar from explicit MoonBit source inputs.
 pub fn generate_typed_commands_from_sources(
   sources : Array[(String, String)],
-  extension_identity? : (String, String)? = None,
+  extension_package? : Bool = false,
 ) -> ProtonCommandCodegenOutput raise {
   guard sources.length() > 0 else {
     raise CodegenInputError::PackageRead(
@@ -23,7 +23,7 @@ pub fn generate_typed_commands_from_sources(
   validate_typed_contract_duplicates(commands)
   render_typed_command_registrar(ParsedTypedModule::{
     commands,
-    extension_identity,
+    extension_package,
   })
 }
 
@@ -31,8 +31,8 @@ pub fn generate_typed_commands_from_sources(
 /// Generates one typed package registrar from explicit source files.
 ///
 /// Every input must belong to the same package directory. If that directory
-/// contains `moon.ext`, its identity is emitted as ordinary MoonBit contract
-/// source beside the registrar.
+/// contains `moon.ext`, the generated registrar includes extension command
+/// routes. The contract identity is generated separately from that metadata.
 pub async fn generate_typed_commands_from_files(
   input_files : Array[String],
 ) -> ProtonCommandCodegenOutput {
@@ -61,14 +61,8 @@ pub async fn generate_typed_commands_from_files(
     sources.push((input_file, source))
   }
   let metadata_path = path_join(package_dir, "moon.ext")
-  let extension_identity = if (@async_fs.exists(metadata_path) catch {
-      _ => false
-    }) {
-    Some(read_moon_ext_identity(metadata_path))
-  } else {
-    None
-  }
-  generate_typed_commands_from_sources(sources, extension_identity~)
+  let extension_package = @async_fs.exists(metadata_path) catch { _ => false }
+  generate_typed_commands_from_sources(sources, extension_package~)
 }
 
 ///|
@@ -76,6 +70,16 @@ pub async fn generate_commands_from_files(
   input_files : Array[String],
 ) -> ProtonCommandCodegenOutput {
   generate_typed_commands_from_files(input_files)
+}
+
+///|
+/// Generates one target-neutral extension identity from `moon.ext`.
+pub async fn generate_extension_identity_from_file(
+  metadata_path : String,
+  binding_name? : String = "generated_extension_contract",
+) -> ProtonCommandCodegenOutput {
+  let (id, js_namespace) = read_moon_ext_identity(metadata_path)
+  generate_extension_identity(id, js_namespace, binding_name~)
 }
 
 ///|

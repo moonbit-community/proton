@@ -94,7 +94,7 @@ async fn drain_clicks(
 ///|
 pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
-    generated_extension_contract,
+    @notification_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
     scripts=[notification_click_poller_script()],

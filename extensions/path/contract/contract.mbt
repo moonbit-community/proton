@@ -47,12 +47,6 @@ pub(all) struct IsAbsoluteReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-path",
-  js_namespace="path",
-)
-
-///|
 pub let basename : @proton_contract.Command[BasenameRequest, BasenameReply] = extension.command(
   "basename",
 )

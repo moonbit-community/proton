@@ -28,13 +28,6 @@ pub(all) struct ClipboardActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-/// Stable identity shared by every clipboard command and event.
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-clipboard",
-  js_namespace="clipboard",
-)
-
-///|
 pub let read_text : @proton_contract.Command[ReadTextRequest, ReadTextReply] = extension.command(
   "readText",
 )

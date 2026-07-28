@@ -28,6 +28,11 @@ rule(
   command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen $input -o $output",
 )
 
+rule(
+  name: "proton_extension_identity_codegen",
+  command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen --extension-identity $input -o $output",
+)
+
 source = ""
 
 options(

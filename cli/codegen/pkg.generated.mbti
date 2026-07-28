@@ -8,9 +8,13 @@ import {
 // Values
 pub async fn generate_commands_from_files(Array[String]) -> ProtonCommandCodegenOutput
 
+pub fn generate_extension_identity(String, String, binding_name? : String) -> ProtonCommandCodegenOutput raise
+
+pub async fn generate_extension_identity_from_file(String, binding_name? : String) -> ProtonCommandCodegenOutput
+
 pub async fn generate_typed_commands_from_files(Array[String]) -> ProtonCommandCodegenOutput
 
-pub fn generate_typed_commands_from_sources(Array[(String, String)], extension_identity? : (String, String)?) -> ProtonCommandCodegenOutput raise
+pub fn generate_typed_commands_from_sources(Array[(String, String)], extension_package? : Bool) -> ProtonCommandCodegenOutput raise
 
 pub async fn read_moon_ext_identity(String) -> (String, String)
 

@@ -17,5 +17,5 @@ priv struct ParsedTypedCommand {
 ///|
 priv struct ParsedTypedModule {
   commands : Array[ParsedTypedCommand]
-  extension_identity : (String, String)?
+  extension_package : Bool
 }

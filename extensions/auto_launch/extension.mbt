@@ -73,7 +73,7 @@ async fn disable(
 ///|
 pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
-    generated_extension_contract,
+    @auto_launch_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
   )

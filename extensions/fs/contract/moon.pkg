@@ -5,3 +5,5 @@ import {
 }
 
 supported_targets = "js+native"
+
+formatter(ignore: [ "extension_identity.g.mbt" ])

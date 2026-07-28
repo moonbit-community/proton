@@ -20,12 +20,6 @@ pub(all) struct ShellActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let extension : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="justjavac/proton-shell",
-  js_namespace="shell",
-)
-
-///|
 pub let open : @proton_contract.Command[OpenRequest, ShellReply] = extension.command(
   "open",
 )

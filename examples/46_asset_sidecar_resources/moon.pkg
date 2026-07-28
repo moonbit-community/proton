@@ -15,7 +15,13 @@ dev_build(
   output: "commands.g.mbt",
 )
 
-formatter(ignore: [ "commands.g.mbt" ])
+dev_build(
+  rule: "proton_extension_identity_codegen",
+  input: "moon.ext",
+  output: "extension_identity.g.mbt",
+)
+
+formatter(ignore: [ "commands.g.mbt", "extension_identity.g.mbt" ])
 
 pkgtype(kind: "executable")
 
@@ -23,6 +29,7 @@ options(
   targets: {
     "commands.g.mbt": [ "native" ],
     "commands.mbt": [ "native" ],
+    "extension_identity.g.mbt": [ "native" ],
     "main.mbt": [ "native" ],
   },
 )
