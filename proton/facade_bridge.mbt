@@ -33,10 +33,7 @@ fn build_command_host(
           _ => ()
         }
         raise CommandExtensionLifecycleError(
-          RegistrationFailed(
-            extension_id=id,
-            detail=@debug.render(@debug.to_repr(error)),
-          ),
+          RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),
         )
       }
     }
@@ -68,7 +65,7 @@ fn close_command_host_runtime(
         raise CommandExtensionLifecycleError(
           DestroyFailed(
             extension_id=hook.extension_id,
-            detail=@debug.render(@debug.to_repr(error)),
+            detail=@debug.render(Repr(error)),
           ),
         )
     }

@@ -437,7 +437,7 @@ test "attribute codegen file scan reports target parse errors" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let error = expect_codegen_input_error(() => {
     generate_app_commands_from_file(input, "examples/bad-target", "bad")
@@ -464,7 +464,7 @@ test "attribute codegen file scan targets input file and checks package context"
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     sibling,
@@ -475,7 +475,7 @@ test "attribute codegen file scan targets input file and checks package context"
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let generated = generate_app_commands_from_file(
     input, "examples/package", "pkg",
@@ -491,7 +491,7 @@ test "attribute codegen file scan targets input file and checks package context"
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let error = expect_codegen_error(() => {
     generate_app_commands_from_file(input, "examples/package", "pkg")
@@ -521,7 +521,7 @@ test "attribute codegen reads moon ext metadata" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     input,
@@ -532,7 +532,7 @@ test "attribute codegen reads moon ext metadata" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let generated = generate_app_commands_from_file_with_metadata(input)
   inspect(generated.source.contains("\"company/moon-ext\""), content="true")
@@ -556,7 +556,7 @@ test "attribute codegen requires moon ext namespace" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-missing-namespace/moon.ext"
   let error = expect_codegen_metadata_file_error(() => {
@@ -590,7 +590,7 @@ test "attribute codegen rejects removed moon ext fields" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-removed/moon.ext"
   let error = expect_codegen_metadata_file_error(() => {
@@ -624,7 +624,7 @@ test "attribute codegen rejects duplicate moon ext fields" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-duplicate/moon.ext"
   let error = expect_codegen_metadata_file_error(() => {
@@ -658,7 +658,7 @@ test "attribute codegen validates moon ext npm package" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-moon-ext-package/moon.ext"
   let error = expect_codegen_metadata_file_error(() => {
@@ -694,7 +694,7 @@ test "attribute codegen requires moon ext metadata" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let metadata_path = "target/proton-codegen-missing-moon-ext/moon.ext"
   let error = expect_codegen_metadata_file_error(() => {

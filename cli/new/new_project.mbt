@@ -208,7 +208,7 @@ fn write_project(
       err =>
         raise NewProjectWriteError::WriteFile(
           path=output_path,
-          detail=@debug.render(@debug.to_repr(err)),
+          detail=@debug.render(Repr(err)),
         )
     }
   }
@@ -242,8 +242,7 @@ fn ensure_dir_recursive(path : String) -> Unit raise NewProjectWriteError {
     ensure_dir_recursive(parent)
   }
   @mbfs.create_dir(path) catch {
-    err =>
-      raise CreateDirectory(path~, detail=@debug.render(@debug.to_repr(err)))
+    err => raise CreateDirectory(path~, detail=@debug.render(Repr(err)))
   }
 }
 
@@ -276,11 +275,7 @@ async fn maybe_init_git(
   match options.git {
     Some(true) => {
       let code = @process.run("git", ["init"], cwd=options.resolved_target_dir) catch {
-        err =>
-          raise Start(
-            tool="git init",
-            detail=@debug.render(@debug.to_repr(err)),
-          )
+        err => raise Start(tool="git init", detail=@debug.render(Repr(err)))
       }
       if code != 0 {
         raise Exit(tool="git init", code~)
@@ -303,8 +298,7 @@ async fn run_moon_check(
     "--diagnostic-limit",
     "80",
   ]) catch {
-    err =>
-      raise Start(tool="moon check", detail=@debug.render(@debug.to_repr(err)))
+    err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
   }
   if code == 0 {
     print_success(options, checked=true)

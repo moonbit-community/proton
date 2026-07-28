@@ -3,7 +3,7 @@ async fn make_temp_dir() -> String {
   let temp_dir = @async_fs.tmpdir(prefix="proton-cef-") catch {
     err =>
       raise CefDownloadError::CreateTemporaryDirectory(
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   if temp_dir == "" {
@@ -21,11 +21,7 @@ async fn download_file(
 ) -> Unit {
   println("[INFO] Downloading CEF: " + url)
   let code = @process.run("curl", ["-L", "--fail", "--output", destination, url]) catch {
-    err =>
-      raise CefDownloadError::Start(
-        url~,
-        detail=@debug.render(@debug.to_repr(err)),
-      )
+    err => raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
   }
   guard code == 0 else { raise CefDownloadError::CurlExit(url~, code~) }
   verify_file_sha256(destination, expected_sha256)
@@ -37,7 +33,7 @@ async fn verify_file_sha256(path : String, expected : String) -> Unit {
     err =>
       raise CefDownloadError::OpenArchive(
         path~,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   defer file.close()
@@ -93,7 +89,7 @@ async fn extract_tar_bz2(archive_path : String, destination : String) -> Unit {
     err =>
       raise CefDownloadError::ExtractStart(
         path=archive_path,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   guard code == 0 else {
@@ -116,7 +112,7 @@ fn find_extracted_root(
     err =>
       raise CefFileSystemError::ReadDirectory(
         path=extract_dir,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   for entry in entries {

@@ -126,10 +126,7 @@ pub async fn MbtProcessHost::dispatch_async(
   let body = if self.registry.has_async(request.name) {
     self.registry.call_async_direct(request.name, request.payload) catch {
       error =>
-        return @ipc.IpcOpResponse::err(
-          request.id,
-          @debug.render(@debug.to_repr(error)),
-        )
+        return @ipc.IpcOpResponse::err(request.id, @debug.render(Repr(error)))
     }
   } else {
     self.registry.call(request.name, request.payload) catch {
@@ -162,10 +159,7 @@ pub async fn MbtProcessHost::dispatch_async_with_context(
     request.payload,
   ) catch {
     error =>
-      return @ipc.IpcOpResponse::err(
-        request.id,
-        @debug.render(@debug.to_repr(error)),
-      )
+      return @ipc.IpcOpResponse::err(request.id, @debug.render(Repr(error)))
   }
   @ipc.IpcOpResponse::ok(request.id, body)
 }

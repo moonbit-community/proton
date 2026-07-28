@@ -308,10 +308,7 @@ async fn read_dev_runtime(root : String) -> DevRuntime raise DevRuntimeError {
   }
   let json = @json.parse(text) catch {
     err =>
-      raise ManifestInvalid(
-        path=manifest_path,
-        detail=@debug.render(@debug.to_repr(err)),
-      )
+      raise ManifestInvalid(path=manifest_path, detail=@debug.render(Repr(err)))
   }
   let platform = json_string_field(json, "platform", manifest_path)
   let expected_platform = @cef.current_platform_id() catch {
@@ -502,10 +499,7 @@ async fn[X] maybe_start_frontend(
         no_wait=true,
       ) catch {
         err =>
-          raise Start(
-            role="frontend command",
-            detail=@debug.render(@debug.to_repr(err)),
-          )
+          raise Start(role="frontend command", detail=@debug.render(Repr(err)))
       }
       Some(process)
     }
@@ -847,8 +841,7 @@ async fn run_app(
   }
   println("Starting Proton app: moon " + moon_args.join(" "))
   let code = @process.run("moon", moon_args, cwd=root, extra_env=env) catch {
-    err =>
-      raise Start(role="MoonBit app", detail=@debug.render(@debug.to_repr(err)))
+    err => raise Start(role="MoonBit app", detail=@debug.render(Repr(err)))
   }
   code
 }
