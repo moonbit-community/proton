@@ -300,7 +300,14 @@ async test "doctor fix regenerates extensions and honors dry run" {
   }
   @mbfs.write_string_to_file(
     path_join(extension_dir, "extension.mbt"),
-    "#proton.command\nfn ping() -> Unit {}\n",
+    (
+      #|let ping_command : @proton_contract.Command[Unit, Unit] =
+      #|  generated_extension_contract.command("ping")
+      #|
+      #|#proton.command(contract=ping_command)
+      #|fn ping() -> Unit {}
+      #|
+    ),
     encoding="utf8",
   ) catch {
     err => abort(@debug.render(Repr(err)))
@@ -323,7 +330,7 @@ async test "doctor fix regenerates extensions and honors dry run" {
   let generated = @mbfs.read_file_to_string(generated_path, encoding="utf8") catch {
     _ => abort("failed to read generated file")
   }
-  assert_true(generated.contains("__proton_command_ping"))
+  assert_true(generated.contains("registrar.bind"))
 }
 
 ///|

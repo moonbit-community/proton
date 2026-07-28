@@ -1,4 +1,11 @@
 ///|
+/// Generated MoonBit registrar source and diagnostics.
+pub(all) struct ProtonCommandCodegenOutput {
+  source : String
+  warnings : Array[String]
+} derive(Eq, Debug, ToJson)
+
+///|
 priv struct ParsedTypedCommand {
   function_name : String
   receiver_type : String?

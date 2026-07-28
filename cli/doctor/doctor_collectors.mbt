@@ -2111,11 +2111,9 @@ async fn collect_extensions(
         } else {
           let source = @async_fs.read_file(source_path).text() catch { _ => "" }
           let generated_path = path_join(extension_dir, "extension.g.mbt")
-          if source.contains("#proton.") {
+          if source.contains("#proton.command") {
             let generated_result = try
-              @codegen.generate_app_commands_from_file_with_metadata(
-                source_path,
-              )
+              @codegen.generate_typed_commands_from_files([source_path])
             catch {
               error => Err(error.to_string())
             } noraise {
@@ -2251,12 +2249,12 @@ async fn apply_doctor_fixes(
       continue
     }
     let source = @async_fs.read_file(source_path).text() catch { _ => "" }
-    if !source.contains("#proton.") {
+    if !source.contains("#proton.command") {
       continue
     }
     let generated_path = path_join(extension_dir, "extension.g.mbt")
     let generated_result = try
-      @codegen.generate_app_commands_from_file_with_metadata(source_path)
+      @codegen.generate_typed_commands_from_files([source_path])
     catch {
       error => Err(error.to_string())
     } noraise {

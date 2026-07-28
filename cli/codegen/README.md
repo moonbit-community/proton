@@ -1,22 +1,28 @@
 # proton_cli/codegen
 
-`justjavac/proton_cli/codegen` generates Proton command extensions from
-MoonBit attributes.
+`justjavac/proton_cli/codegen` generates a typed command registrar from explicit
+MoonBit source inputs.
 
-It handles:
+Each handler binds to a local typed descriptor:
 
-- `#proton.command`
-- `#proton.event`
-- `#proton.script`
-- `#proton.destroy`
+```moonbit
+let create_todo_command = @shared.create_todo
+
+#proton.command(contract=create_todo_command)
+async fn create_todo(request : @shared.CreateTodoRequest) -> @shared.Todo {
+  // ...
+}
+```
 
 Run codegen with:
 
 ```sh
-proton_cli codegen <input.mbt> -o <output.g.mbt>
+proton_cli codegen <input.mbt>... -o <output.g.mbt>
 moonfmt -w <output.g.mbt>
 ```
 
-The input package must contain `moon.ext` with `id` and `namespace`. The
-generator emits an `extension()` function and uses sibling `.mbt` files only for
-package-level validation.
+All input files must belong to one MoonBit package. When that package contains
+`moon.ext`, the generated file also exposes its extension identity. Commands
+and events remain ordinary values in target-neutral MoonBit contract packages;
+extension scripts and destroy hooks are configured explicitly when constructing
+the extension.

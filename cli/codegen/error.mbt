@@ -45,14 +45,11 @@ pub(all) suberror CodegenMetadataFileError {
 } derive(Debug, Eq)
 
 ///|
-/// Invalid command, script, destroy hook, and event declarations.
+/// Invalid typed command declarations.
 pub(all) suberror CommandCodegenError {
   InvalidName(label~ : String, value~ : String, reason~ : String)
   Attribute(kind~ : String, detail~ : String)
   Command(function_name~ : String, detail~ : String)
-  Script(function_name~ : String, detail~ : String)
-  Destroy(function_name~ : String, detail~ : String)
-  Event(type_name~ : String, detail~ : String)
   UnsupportedType(context~ : String)
   Duplicate(kind~ : String, name~ : String)
   MissingCommand
@@ -87,11 +84,6 @@ pub fn CommandCodegenError::message(self : CommandCodegenError) -> String {
     Attribute(kind~, detail~) => "#proton." + kind + ": " + detail
     Command(function_name~, detail~) =>
       "#proton.command " + function_name + ": " + detail
-    Script(function_name~, detail~) =>
-      "#proton.script " + function_name + ": " + detail
-    Destroy(function_name~, detail~) =>
-      "#proton.destroy " + function_name + ": " + detail
-    Event(type_name~, detail~) => "#proton.event " + type_name + ": " + detail
     UnsupportedType(context~) => "unsupported type: " + context
     Duplicate(kind~, name~) => "duplicate " + kind + ": " + name
     MissingCommand => "#proton.command codegen requires at least one command"

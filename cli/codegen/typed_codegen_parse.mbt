@@ -72,43 +72,10 @@ pub async fn generate_typed_commands_from_files(
 }
 
 ///|
-/// Selects typed registrar generation when a contract-bound command appears.
-///
-/// The legacy branch is temporary while built-in extensions are migrated in
-/// this pull request; it is removed with the old annotation model.
 pub async fn generate_commands_from_files(
   input_files : Array[String],
 ) -> ProtonCommandCodegenOutput {
-  guard input_files.length() > 0 else {
-    raise CodegenInputError::PackageRead(
-      path="<inputs>",
-      detail="at least one MoonBit source file is required",
-    )
-  }
-  let mut typed = false
-  for input_file in input_files {
-    let source = @async_fs.read_file(input_file).text() catch {
-      error =>
-        raise CodegenInputError::InputRead(
-          path=input_file,
-          detail=@debug.render(@debug.to_repr(error)),
-        )
-    }
-    if source.contains("#proton.command(contract") {
-      typed = true
-    }
-  }
-  if typed {
-    generate_typed_commands_from_files(input_files)
-  } else {
-    guard input_files.length() == 1 else {
-      raise CodegenInputError::PackageRead(
-        path="<inputs>",
-        detail="legacy command generation accepts exactly one input file",
-      )
-    }
-    generate_app_commands_from_file_with_metadata(input_files[0])
-  }
+  generate_typed_commands_from_files(input_files)
 }
 
 ///|
