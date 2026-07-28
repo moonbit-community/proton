@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_rabbita"
+
+import {
+  "justjavac/proton_client",
+  "justjavac/proton_contract",
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita/sub",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request, (Response) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd) -> @cmd.Cmd
+
+pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd) -> @sub.Sub
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

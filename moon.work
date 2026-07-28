@@ -1,6 +1,7 @@
 members = [
   "./client",
   "./contract",
+  "./rabbita",
   "./proton",
   "./cli",
   "./config",
