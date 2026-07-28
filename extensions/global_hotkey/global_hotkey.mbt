@@ -1,22 +1,4 @@
 ///|
-struct GlobalHotkeyPayload {
-  accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct GlobalHotkeyReply {
-  registered : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct GlobalHotkeyListReply {
-  accelerators : Array[String]
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 let app_command_manager : Ref[@sys_global_hotkey.GlobalHotkeyManager?] = Ref(
   None,
 )
@@ -57,17 +39,19 @@ fn app_command_manager_handle() -> @sys_global_hotkey.GlobalHotkeyManager raise 
 fn list_or_empty(
   manager : @sys_global_hotkey.GlobalHotkeyManager,
   selector : (@sys_global_hotkey.GlobalHotkeyManager) -> Array[String],
-) -> GlobalHotkeyListReply {
-  { accelerators: selector(manager) }
+) -> @global_hotkey_contract.GlobalHotkeyListReply {
+  @global_hotkey_contract.GlobalHotkeyListReply::{
+    accelerators: selector(manager),
+  }
 }
 
 ///|
 fn register_hotkey(
   manager : @sys_global_hotkey.GlobalHotkeyManager,
   accelerator : String,
-) -> GlobalHotkeyReply raise GlobalHotkeyError {
+) -> @global_hotkey_contract.GlobalHotkeyReply raise GlobalHotkeyError {
   match manager.register(accelerator) {
-    Ok(registered) => { registered, }
+    Ok(registered) => @global_hotkey_contract.GlobalHotkeyReply::{ registered, }
     Err(error) => raise RegistrationFailed(accelerator~, detail=error)
   }
 }
@@ -76,9 +60,9 @@ fn register_hotkey(
 fn unregister_hotkey(
   manager : @sys_global_hotkey.GlobalHotkeyManager,
   accelerator : String,
-) -> GlobalHotkeyReply raise GlobalHotkeyError {
+) -> @global_hotkey_contract.GlobalHotkeyReply raise GlobalHotkeyError {
   match manager.unregister(accelerator) {
-    Ok(registered) => { registered, }
+    Ok(registered) => @global_hotkey_contract.GlobalHotkeyReply::{ registered, }
     Err(error) => raise UnregistrationFailed(accelerator~, detail=error)
   }
 }
@@ -86,13 +70,13 @@ fn unregister_hotkey(
 ///|
 fn list_hotkeys(
   manager : @sys_global_hotkey.GlobalHotkeyManager,
-) -> GlobalHotkeyListReply {
+) -> @global_hotkey_contract.GlobalHotkeyListReply {
   list_or_empty(manager, fn(handle) { handle.list() })
 }
 
 ///|
 fn drain_triggered_hotkeys(
   manager : @sys_global_hotkey.GlobalHotkeyManager,
-) -> GlobalHotkeyListReply {
+) -> @global_hotkey_contract.GlobalHotkeyListReply {
   list_or_empty(manager, fn(handle) { handle.drain_triggered() })
 }

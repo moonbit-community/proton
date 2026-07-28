@@ -1,37 +1,8 @@
 ///|
-struct NotificationPayload {
-  title : String?
-  body : String
-  level : String?
-  payload : String?
-} derive(ToJson, FromJson, Debug, Eq)
+let show_command = @notification_contract.show
 
 ///|
-struct NotificationReply {
-  shown : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-#proton.event(name="activity")
-struct NotificationActivity {
-  operation : String
-  title : String?
-  level : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct NotificationDrainReply {
-  count : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-#proton.event(name="click")
-struct NotificationClick {
-  payload : String?
-} derive(ToJson, FromJson, Debug, Eq)
+let drain_clicks_command = @notification_contract.drain_clicks
 
 ///|
 /// Rejects empty notification bodies before calling the native package.
@@ -46,8 +17,8 @@ fn ensure_body(body : String) -> String raise NotificationError {
 ///|
 /// Shows one native notification and converts the result into the extension reply shape.
 fn show_notification(
-  payload : NotificationPayload,
-) -> NotificationReply raise NotificationError {
+  payload : @notification_contract.NotificationRequest,
+) -> @notification_contract.NotificationReply raise NotificationError {
   let body = ensure_body(payload.body)
   notification_native_ensure_supported()
   notification_native_show(
@@ -55,11 +26,10 @@ fn show_notification(
     body,
     payload.payload,
   )
-  NotificationReply::{ shown: true }
+  @notification_contract.NotificationReply::{ shown: true }
 }
 
 ///|
-#proton.script
 fn notification_click_poller_script() -> String {
   (
     #|(() => {
@@ -79,7 +49,6 @@ fn notification_click_poller_script() -> String {
 }
 
 ///|
-#proton.destroy
 fn cleanup_notification(
   context : @proton_command.AppCommandExtensionContext,
 ) -> Unit raise NotificationError {
@@ -89,42 +58,49 @@ fn cleanup_notification(
 
 ///|
 /// Shows one native notification from a generated app-command extension.
-#proton.command(name="show")
+#proton.command(contract=show_command)
 async fn show(
-  context : @proton_command.AppCommandExtensionContext,
-  title : String?,
-  body : String,
-  level : String?,
-  payload : String?,
-) -> NotificationReply raise NotificationError {
-  let request = NotificationPayload::{ title, body, level, payload }
+  context : @proton.CommandContext,
+  request : @notification_contract.NotificationRequest,
+) -> @notification_contract.NotificationReply {
   let reply = show_notification(request)
-  emit_notification_activity(context, NotificationActivity::{
+  context.emit(@notification_contract.activity, @notification_contract.NotificationActivity::{
     operation: "show",
-    title,
-    level,
+    title: request.title,
+    level: request.level,
   })
   reply
 }
 
 ///|
 /// Drains native notification clicks into extension events.
-#proton.command(name="drainClicks")
+#proton.command(contract=drain_clicks_command)
 async fn drain_clicks(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> NotificationDrainReply raise NotificationError {
+  context : @proton.CommandContext,
+  _request : @notification_contract.EmptyRequest,
+) -> @notification_contract.NotificationDrainReply {
   let mut count = 0
   while true {
     match notification_native_take_click() {
       None => break
       Some(click) => {
-        emit_notification_click(context, NotificationClick::{
+        context.emit(@notification_contract.click, @notification_contract.NotificationClick::{
           payload: click.payload,
         })
         count += 1
       }
     }
   }
-  NotificationDrainReply::{ count, }
+  @notification_contract.NotificationDrainReply::{ count, }
+}
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    generated_extension_contract,
+    generated_extension_command_routes(),
+    fn(_context, registrar) raise { register_commands(registrar) },
+    scripts=[notification_click_poller_script()],
+    on_destroy=fn(context) raise { cleanup_notification(context) },
+  )
 }

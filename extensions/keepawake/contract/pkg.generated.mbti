@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/keepawake/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let acquire : @proton_contract.Command[AcquireRequest, KeepAwakeReply]
+
+pub let activity : @proton_contract.Event[KeepAwakeActivity]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let release : @proton_contract.Command[EmptyRequest, KeepAwakeReply]
+
+pub let status : @proton_contract.Command[EmptyRequest, KeepAwakeReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct AcquireRequest {
+  reason : String?
+  scope : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmptyRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct KeepAwakeActivity {
+  operation : String
+  scope : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct KeepAwakeReply {
+  active : Bool
+  scope : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

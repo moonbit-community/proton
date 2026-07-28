@@ -1,70 +1,32 @@
 ///|
-struct TrayMenuItemPayload {
-  id : String?
-  label : String?
-  kind : String?
-  enabled : Bool?
-  checked : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
+type TrayMenuItemPayload = @tray_contract.TrayMenuItem
 
 ///|
-struct TrayMenuPayload {
-  items : Array[TrayMenuItemPayload]
-} derive(ToJson, FromJson, Debug, Eq)
+type TrayMenuPayload = @tray_contract.TrayMenu
 
 ///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
+let support_command = @tray_contract.support
 
 ///|
-struct TrayReply {
-  visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+let show_command = @tray_contract.show
 
 ///|
-struct TraySupportReply {
-  supported : Bool
-  platform : String
-  reason : String?
-} derive(ToJson, FromJson, Debug, Eq)
+let hide_command = @tray_contract.hide
 
 ///|
-struct TrayEventReply {
-  count : Int
-} derive(ToJson, FromJson, Debug, Eq)
+let set_icon_command = @tray_contract.set_icon
 
 ///|
-#proton.event(name="activity")
-struct TrayActivity {
-  operation : String
-  visible : Bool
-  tooltip : String?
-  icon : String?
-} derive(ToJson, FromJson, Debug, Eq)
+let set_tooltip_command = @tray_contract.set_tooltip
 
 ///|
-#proton.event(name="click")
-struct TrayClickEvent {
-  visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+let set_menu_command = @tray_contract.set_menu
 
 ///|
-#proton.event(name="rightClick")
-struct TrayRightClickEvent {
-  visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+let drain_events_command = @tray_contract.drain_events
 
 ///|
-#proton.event(name="doubleClick")
-struct TrayDoubleClickEvent {
-  visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-#proton.event(name="menuItemClick")
-struct TrayMenuItemClickEvent {
-  item_id : String
-  visible : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+let destroy_command = @tray_contract.destroy
 
 ///|
 let app_command_tray_handle : Ref[@sys_tray.Tray?] = Ref(None)
@@ -83,12 +45,21 @@ fn platform_label(platform : @sys_tray.Platform) -> String {
 }
 
 ///|
-fn tray_support() -> TraySupportReply {
+fn tray_support() -> @tray_contract.TraySupportReply {
   let platform = platform_label(@sys_tray.current_platform())
   match @sys_tray.ensure_supported() {
-    Ok(_) => TraySupportReply::{ supported: true, platform, reason: None }
+    Ok(_) =>
+      @tray_contract.TraySupportReply::{
+        supported: true,
+        platform,
+        reason: None,
+      }
     Err(error) =>
-      TraySupportReply::{ supported: false, platform, reason: Some(error) }
+      @tray_contract.TraySupportReply::{
+        supported: false,
+        platform,
+        reason: Some(error),
+      }
   }
 }
 
@@ -198,12 +169,12 @@ fn set_tray_menu(
 
 ///|
 async fn emit_command_activity(
-  context : @proton_command.AppCommandExtensionContext,
+  context : @proton.CommandContext,
   operation : String,
   tooltip : String?,
   icon : String?,
-) -> Unit noraise {
-  emit_tray_activity(context, TrayActivity::{
+) -> Unit {
+  context.emit(@tray_contract.activity, @tray_contract.TrayActivity::{
     operation,
     visible: app_command_tray_visible.val,
     tooltip,
@@ -213,24 +184,24 @@ async fn emit_command_activity(
 
 ///|
 async fn emit_native_tray_event(
-  context : @proton_command.AppCommandExtensionContext,
+  context : @proton.CommandContext,
   event : @sys_tray.TrayEvent,
-) -> Unit noraise {
+) -> Unit {
   match event {
     Click =>
-      emit_tray_click_event(context, TrayClickEvent::{
+      context.emit(@tray_contract.click, @tray_contract.TrayClick::{
         visible: app_command_tray_visible.val,
       })
     RightClick =>
-      emit_tray_right_click_event(context, TrayRightClickEvent::{
+      context.emit(@tray_contract.right_click, @tray_contract.TrayRightClick::{
         visible: app_command_tray_visible.val,
       })
     DoubleClick =>
-      emit_tray_double_click_event(context, TrayDoubleClickEvent::{
+      context.emit(@tray_contract.double_click, @tray_contract.TrayDoubleClick::{
         visible: app_command_tray_visible.val,
       })
     MenuItemClick(item_id) =>
-      emit_tray_menu_item_click_event(context, TrayMenuItemClickEvent::{
+      context.emit(@tray_contract.menu_item_click, @tray_contract.TrayMenuItemClick::{
         item_id,
         visible: app_command_tray_visible.val,
       })
@@ -248,7 +219,6 @@ fn destroy_tray(tray_handle : @sys_tray.Tray?) -> Unit {
 }
 
 ///|
-#proton.script
 fn tray_event_poller_script() -> String {
   (
     #|(() => {
@@ -268,7 +238,6 @@ fn tray_event_poller_script() -> String {
 }
 
 ///|
-#proton.destroy
 fn cleanup_tray(context : @proton_command.AppCommandExtensionContext) -> Unit {
   ignore(context.extension_id())
   destroy_tray(app_command_tray_handle.val)
@@ -276,28 +245,28 @@ fn cleanup_tray(context : @proton_command.AppCommandExtensionContext) -> Unit {
 
 ///|
 /// Returns platform support details for JavaScript callers.
-#proton.command(name="support")
-fn support(_payload : EmptyPayload?) -> TraySupportReply {
+#proton.command(contract=support_command)
+fn support(
+  _request : @tray_contract.EmptyRequest,
+) -> @tray_contract.TraySupportReply {
   tray_support()
 }
 
 ///|
 /// Shows the native tray icon.
-#proton.command(name="show")
+#proton.command(contract=show_command)
 async fn show(
-  context : @proton_command.AppCommandExtensionContext,
-  icon : Json?,
-  tooltip : String?,
-  menu : TrayMenuPayload?,
-) -> TrayReply raise TrayError {
-  let icon = optional_json_text(icon, "icon")
+  context : @proton.CommandContext,
+  request : @tray_contract.ShowRequest,
+) -> @tray_contract.TrayReply {
+  let icon = optional_json_text(request.icon, "icon")
   let handle = tray_handle()
   match icon {
     Some(path) =>
       app_command_tray_visible.val = set_tray_icon(handle, Some(path))
     None => ()
   }
-  match menu {
+  match request.menu {
     Some(value) =>
       app_command_tray_visible.val = set_tray_menu(
         handle,
@@ -305,11 +274,11 @@ async fn show(
       )
     None => ()
   }
-  match handle.show(tooltip~) {
+  match handle.show(tooltip=request.tooltip) {
     Ok(visible) => {
       app_command_tray_visible.val = visible
-      emit_command_activity(context, "show", tooltip, icon)
-      TrayReply::{ visible, }
+      emit_command_activity(context, "show", request.tooltip, icon)
+      @tray_contract.TrayReply::{ visible, }
     }
     Err(error) => raise ShowFailed(detail=error)
   }
@@ -317,23 +286,23 @@ async fn show(
 
 ///|
 /// Hides the native tray icon.
-#proton.command(name="hide")
+#proton.command(contract=hide_command)
 async fn hide(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> TrayReply raise TrayError {
+  context : @proton.CommandContext,
+  _request : @tray_contract.EmptyRequest,
+) -> @tray_contract.TrayReply {
   match app_command_tray_handle.val {
     None => {
       app_command_tray_visible.val = false
       emit_command_activity(context, "hide", None, None)
-      TrayReply::{ visible: false }
+      @tray_contract.TrayReply::{ visible: false }
     }
     Some(handle) =>
       match handle.hide() {
         Ok(visible) => {
           app_command_tray_visible.val = visible
           emit_command_activity(context, "hide", None, None)
-          TrayReply::{ visible, }
+          @tray_contract.TrayReply::{ visible, }
         }
         Err(error) => raise HideFailed(detail=error)
       }
@@ -342,30 +311,30 @@ async fn hide(
 
 ///|
 /// Updates the native tray icon.
-#proton.command(name="setIcon")
+#proton.command(contract=set_icon_command)
 async fn set_icon(
-  context : @proton_command.AppCommandExtensionContext,
-  icon : Json?,
-) -> TrayReply raise TrayError {
-  let icon = optional_json_text(icon, "icon")
+  context : @proton.CommandContext,
+  request : @tray_contract.SetIconRequest,
+) -> @tray_contract.TrayReply {
+  let icon = optional_json_text(request.icon, "icon")
   let visible = set_tray_icon(tray_handle(), icon)
   app_command_tray_visible.val = visible
   emit_command_activity(context, "setIcon", None, icon)
-  TrayReply::{ visible, }
+  @tray_contract.TrayReply::{ visible, }
 }
 
 ///|
 /// Updates the native tray tooltip.
-#proton.command(name="setTooltip")
+#proton.command(contract=set_tooltip_command)
 async fn set_tooltip(
-  context : @proton_command.AppCommandExtensionContext,
-  tooltip : String,
-) -> TrayReply raise TrayError {
-  match tray_handle().set_tooltip(tooltip) {
+  context : @proton.CommandContext,
+  request : @tray_contract.SetTooltipRequest,
+) -> @tray_contract.TrayReply {
+  match tray_handle().set_tooltip(request.tooltip) {
     Ok(visible) => {
       app_command_tray_visible.val = visible
-      emit_command_activity(context, "setTooltip", Some(tooltip), None)
-      TrayReply::{ visible, }
+      emit_command_activity(context, "setTooltip", Some(request.tooltip), None)
+      @tray_contract.TrayReply::{ visible, }
     }
     Err(error) => raise SetTooltipFailed(detail=error)
   }
@@ -373,26 +342,29 @@ async fn set_tooltip(
 
 ///|
 /// Replaces the native tray context menu.
-#proton.command(name="setMenu")
+#proton.command(contract=set_menu_command)
 async fn set_menu(
-  context : @proton_command.AppCommandExtensionContext,
-  items : Array[TrayMenuItemPayload],
-) -> TrayReply raise TrayError {
-  let visible = set_tray_menu(tray_handle(), menu_items_to_native(items))
+  context : @proton.CommandContext,
+  request : @tray_contract.SetMenuRequest,
+) -> @tray_contract.TrayReply {
+  let visible = set_tray_menu(
+    tray_handle(),
+    menu_items_to_native(request.items),
+  )
   app_command_tray_visible.val = visible
   emit_command_activity(context, "setMenu", None, None)
-  TrayReply::{ visible, }
+  @tray_contract.TrayReply::{ visible, }
 }
 
 ///|
 /// Drains native tray events into JavaScript extension events.
-#proton.command(name="drainEvents")
+#proton.command(contract=drain_events_command)
 async fn drain_events(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> TrayEventReply raise TrayError {
+  context : @proton.CommandContext,
+  _request : @tray_contract.EmptyRequest,
+) -> @tray_contract.TrayEventReply {
   match app_command_tray_handle.val {
-    None => TrayEventReply::{ count: 0 }
+    None => @tray_contract.TrayEventReply::{ count: 0 }
     Some(handle) => {
       match handle.pump(blocking=false) {
         Ok(_) => ()
@@ -402,19 +374,30 @@ async fn drain_events(
       for event in events {
         emit_native_tray_event(context, event)
       }
-      TrayEventReply::{ count: events.length() }
+      @tray_contract.TrayEventReply::{ count: events.length() }
     }
   }
 }
 
 ///|
 /// Destroys the native tray icon.
-#proton.command(name="destroy")
+#proton.command(contract=destroy_command)
 async fn destroy(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> TrayReply {
+  context : @proton.CommandContext,
+  _request : @tray_contract.EmptyRequest,
+) -> @tray_contract.TrayReply {
   destroy_tray(app_command_tray_handle.val)
   emit_command_activity(context, "destroy", None, None)
-  TrayReply::{ visible: false }
+  @tray_contract.TrayReply::{ visible: false }
+}
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    generated_extension_contract,
+    generated_extension_command_routes(),
+    fn(_context, registrar) raise { register_commands(registrar) },
+    scripts=[tray_event_poller_script()],
+    on_destroy=fn(context) { cleanup_tray(context) },
+  )
 }

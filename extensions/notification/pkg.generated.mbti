@@ -4,36 +4,23 @@ package "justjavac/proton_ext/notification"
 import {
   "justjavac/proton/command",
   "justjavac/proton/extension",
+  "justjavac/proton_contract",
   "moonbitlang/core/debug",
-  "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_notification_activity(@command.AppCommandExtensionContext, NotificationActivity) -> Unit noraise
-
-pub async fn emit_notification_click(@command.AppCommandExtensionContext, NotificationClick) -> Unit noraise
-
 pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub let generated_extension_contract : @proton_contract.ExtensionContract
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type NotificationError derive(Eq, @debug.Debug)
 
 // Types and methods
-type EmptyPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type NotificationActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type NotificationClick derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type NotificationDrainReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type NotificationPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type NotificationReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ProtonDrainClicksPayload derive(@json.FromJson)
-
-type ProtonShowPayload derive(@json.FromJson)
 
 // Type aliases
 
