@@ -17,14 +17,14 @@ fn ensure_test_project_root(path : String) -> String {
     "",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     path_join(root, "moon.mod"),
     "name = \"doctor-test-project\"\n",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   root
 }
@@ -100,14 +100,14 @@ test "doctor keeps package-local config in module context" {
     "",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     path_join(package_dir, "moon.pkg"),
     "",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let project = discover_project(package_dir)
   assert_eq(project.root, root)
@@ -162,7 +162,7 @@ test "doctor discovers generated app package and derives dependencies" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     path_join(root, "moon.mod"),
@@ -185,7 +185,7 @@ test "doctor discovers generated app package and derives dependencies" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     path_join(app_dir, "moon.pkg"),
@@ -201,7 +201,7 @@ test "doctor discovers generated app package and derives dependencies" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let project = discover_project(root)
   match project.moon_pkg_path {
@@ -269,14 +269,14 @@ async test "frontend run captures build command output" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     path_join(dir, "package.json"),
     "{\"scripts\":{}}",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let section = collect_frontend(discover_project(dir), run=true)
   assert_true(
@@ -296,18 +296,18 @@ test "doctor fix regenerates extensions and honors dry run" {
     "id = \"company/sample\"\nnamespace = \"sample\"\n",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     path_join(extension_dir, "extension.mbt"),
     "#proton.command\nfn ping() -> Unit {}\n",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let generated_path = path_join(extension_dir, "extension.g.mbt")
   @mbfs.write_string_to_file(generated_path, "stale", encoding="utf8") catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let project = discover_project(root)
   let plan = apply_doctor_fixes(project, dry_run=true)
@@ -421,7 +421,7 @@ test "doctor reports invalid runtime manifests" {
   }
   let manifest_path = path_join(proton_dir, "runtime.json")
   @mbfs.write_string_to_file(manifest_path, "{ invalid", encoding="utf8") catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let project = discover_project(dir)
   try resolve_native_dist(project) catch {
@@ -447,7 +447,7 @@ test "doctor validates runtime manifest schema" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let project = discover_project(dir)
   match runtime_manifest_from_project(project) {
@@ -465,7 +465,7 @@ test "doctor validates runtime manifest schema" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   try runtime_manifest_from_project(project) catch {
     DoctorRuntimeManifestError::UnknownField(field="extra", ..) => ()
@@ -923,7 +923,7 @@ test "moon_config adapter reads module deps and package imports" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
     moon_pkg_path,
@@ -938,7 +938,7 @@ test "moon_config adapter reads module deps and package imports" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let module_config = read_moon_mod(moon_mod_path)
   @debug.assert_eq(module_config.name, Some("justjavac/proton-demo"))
@@ -974,7 +974,7 @@ test "moon_config adapter reports parse failures" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   try read_moon_mod(moon_mod_path) catch {
     MoonConfigReadError::ParseFailed(path, message) => {
@@ -1034,7 +1034,7 @@ test "moon.proton reader extracts app and frontend fields" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let config = read_proton_project_config(config_path)
   assert_eq(config.window.title, "Demo")
@@ -1089,7 +1089,7 @@ test "moon.proton reader rejects manifest extensions" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   try read_proton_project_config(config_path) catch {
     @proton_config.ProjectConfigError::UnsupportedField(path~, reason~) => {

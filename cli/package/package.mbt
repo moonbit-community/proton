@@ -466,7 +466,7 @@ async fn read_active_runtime(root : String) -> String {
     error =>
       raise PackageRuntimeError::ManifestInvalid(
         path=manifest_path,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   match json {
@@ -615,7 +615,7 @@ async fn promote_staged_app(staging : String, destination : String) -> Unit {
           raise PackageFileSystemError::Copy(
             source=backup,
             destination~,
-            detail="restore failed: " + @debug.render(@debug.to_repr(error)),
+            detail="restore failed: " + @debug.render(Repr(error)),
           )
       }
     }
@@ -627,7 +627,7 @@ async fn promote_staged_app(staging : String, destination : String) -> Unit {
         raise PackageFileSystemError::Copy(
           source=destination,
           destination=backup,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
   }
@@ -639,18 +639,18 @@ async fn promote_staged_app(staging : String, destination : String) -> Unit {
             raise PackageFileSystemError::Copy(
               source=staging,
               destination~,
-              detail=@debug.render(@debug.to_repr(error)) +
+              detail=@debug.render(Repr(error)) +
                 "; rollback also failed and the previous app remains at " +
                 backup +
                 ": " +
-                @debug.render(@debug.to_repr(rollback_error)),
+                @debug.render(Repr(rollback_error)),
             )
         }
       }
       raise PackageFileSystemError::Copy(
         source=staging,
         destination~,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
     }
   }
@@ -791,7 +791,7 @@ async fn ensure_dir(path : String) -> Unit {
       }
       raise PackageFileSystemError::CreateDirectory(
         path~,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
     }
   }
@@ -805,7 +805,7 @@ async fn remove_tree(path : String) -> Unit {
       error =>
         raise PackageFileSystemError::Remove(
           path~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
   } else {
@@ -813,7 +813,7 @@ async fn remove_tree(path : String) -> Unit {
       error =>
         raise PackageFileSystemError::Remove(
           path~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
   }
@@ -828,7 +828,7 @@ async fn copy_file(source : String, destination : String) -> Unit {
         raise PackageFileSystemError::Copy(
           source~,
           destination~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     if code != 0 {
@@ -840,14 +840,14 @@ async fn copy_file(source : String, destination : String) -> Unit {
     error =>
       raise PackageFileSystemError::Read(
         path=source,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   @async_fs.write_file(destination, data, create_mode=CreateOrTruncate) catch {
     error =>
       raise PackageFileSystemError::Write(
         path=destination,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
 }
@@ -870,7 +870,7 @@ async fn copy_tree(source : String, destination : String) -> Unit {
         raise PackageFileSystemError::Copy(
           source~,
           destination~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     code
@@ -882,7 +882,7 @@ async fn copy_tree(source : String, destination : String) -> Unit {
         raise PackageFileSystemError::Copy(
           source~,
           destination~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     code
@@ -894,7 +894,7 @@ async fn copy_tree(source : String, destination : String) -> Unit {
         raise PackageFileSystemError::Copy(
           source~,
           destination~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     code
@@ -914,7 +914,7 @@ fn write_text(
   text : String,
 ) -> Unit raise PackageFileSystemError {
   @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    error => raise Write(path~, detail=@debug.render(@debug.to_repr(error)))
+    error => raise Write(path~, detail=@debug.render(Repr(error)))
   }
 }
 
@@ -1011,7 +1011,7 @@ async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
     error =>
       raise PackageToolError::Start(
         tool="install_name_tool",
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   if code != 0 {
@@ -1157,7 +1157,7 @@ async fn verify_macos_developer_id(app : String) -> Unit {
     error =>
       raise MacosSigningError::Verification(
         detail="failed to inspect signing authority: " +
-          @debug.render(@debug.to_repr(error)),
+          @debug.render(Repr(error)),
       )
   }
   guard code == 0 else {
@@ -1169,7 +1169,7 @@ async fn verify_macos_developer_id(app : String) -> Unit {
     error =>
       raise MacosSigningError::Verification(
         detail="failed to decode signing authority: " +
-          @debug.render(@debug.to_repr(error)),
+          @debug.render(Repr(error)),
       )
   }
   if !text.contains("Authority=Developer ID Application:") {
@@ -1198,7 +1198,7 @@ async fn codesign_target(
     error =>
       raise MacosSigningError::ToolFailure(
         stage="codesign " + target,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   if code != 0 {
@@ -1215,7 +1215,7 @@ async fn verify_macos_codesign_target(target : String, deep~ : Bool) -> Unit {
   let code = @process.run("codesign", args) catch {
     error =>
       raise MacosSigningError::Verification(
-        detail=target + ": " + @debug.render(@debug.to_repr(error)),
+        detail=target + ": " + @debug.render(Repr(error)),
       )
   }
   if code != 0 {
@@ -1345,7 +1345,7 @@ async fn submit_macos_notarization(
     error =>
       raise MacosSigningError::ToolFailure(
         stage="create notarization archive",
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   guard zip_code == 0 else {
@@ -1360,7 +1360,7 @@ async fn submit_macos_notarization(
     error =>
       raise MacosSigningError::ToolFailure(
         stage="submit notarization",
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   guard submit_code == 0 else {
@@ -1373,7 +1373,7 @@ async fn submit_macos_notarization(
     error =>
       raise MacosSigningError::ToolFailure(
         stage="staple notarization ticket",
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   guard staple_code == 0 else {
@@ -1386,7 +1386,7 @@ async fn submit_macos_notarization(
     error =>
       raise MacosSigningError::ToolFailure(
         stage="validate notarization ticket",
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   guard validate_code == 0 else {
@@ -1401,7 +1401,7 @@ async fn submit_macos_notarization(
     error =>
       raise MacosSigningError::ToolFailure(
         stage="Gatekeeper assessment",
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   if assess_code != 0 {
@@ -1424,7 +1424,7 @@ async fn create_zip(plan : PackagePlan, source : String) -> Unit {
       error =>
         raise PackageToolError::Start(
           tool="Compress-Archive",
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
   } else {
@@ -1434,7 +1434,7 @@ async fn create_zip(plan : PackagePlan, source : String) -> Unit {
       error =>
         raise PackageToolError::Start(
           tool="ditto",
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
   }

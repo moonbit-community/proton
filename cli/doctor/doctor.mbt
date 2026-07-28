@@ -132,8 +132,7 @@ pub async fn run(
   match options.output {
     Some(path) =>
       @mbfs.write_string_to_file(path, rendered, encoding="utf8") catch {
-        error =>
-          raise OutputWrite(path~, detail=@debug.render(@debug.to_repr(error)))
+        error => raise OutputWrite(path~, detail=@debug.render(Repr(error)))
       }
     None => println(rendered)
   }
