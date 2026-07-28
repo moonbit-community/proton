@@ -53,7 +53,7 @@ fn read_moon_file(path : String) -> String raise MoonConfigReadError {
     raise MissingFile(path)
   } else {
     @mbfs.read_file_to_string(path, encoding="utf8") catch {
-      err => raise ReadFailed(path, @debug.render(@debug.to_repr(err)))
+      err => raise ReadFailed(path, @debug.render(Repr(err)))
     }
   }
 }

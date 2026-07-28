@@ -265,7 +265,7 @@ async fn run_frontend_build(root : String, config : BuildProjectConfig) -> Unit 
             err =>
               raise BuildProcessError::Start(
                 command="frontend build",
-                detail=@debug.render(@debug.to_repr(err)),
+                detail=@debug.render(Repr(err)),
               )
           }
           if code != 0 {
@@ -399,7 +399,7 @@ async fn run_moon_build(
     err =>
       raise BuildProcessError::Start(
         command="MoonBit build",
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   if code != 0 {

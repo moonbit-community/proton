@@ -21,7 +21,7 @@ fn normalize_dev_test_slashes(path : String) -> String {
 ///|
 fn write_dev_test_file(path : String, text : String) -> Unit {
   @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
 }
 
@@ -112,7 +112,7 @@ test "read dev frontend config extracts cwd" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let config = read_dev_frontend_config(path)
   match config {
@@ -152,7 +152,7 @@ test "read dev frontend config validates full project config" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   try read_dev_frontend_config(path) catch {
     DevConfigError::Invalid(
@@ -210,7 +210,7 @@ test "dev config discovery prefers package-local moon.proton" {
   ensure_dev_test_dir(join_path(root, "desktop"))
   let package_config = join_path(join_path(root, "desktop"), "moon.proton")
   @mbfs.write_string_to_file(package_config, "", encoding="utf8") catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   let raw = parse_dev_args(["--package", "desktop"])
   let resolved = resolve_dev_config_path(root, root, raw)

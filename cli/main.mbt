@@ -350,7 +350,7 @@ fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
     error =>
       raise CliCodegenOutputError::WriteFailed(
         path=resolved_output,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   for warning in result.warnings {

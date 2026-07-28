@@ -228,11 +228,7 @@ fn target_dir_is_empty(target_dir : String) -> Bool raise NewProjectTargetError 
     raise NotDirectory(path=target_dir)
   }
   let entries = @mbfs.read_dir(target_dir) catch {
-    err =>
-      raise ReadDirectory(
-        path=target_dir,
-        detail=@debug.render(@debug.to_repr(err)),
-      )
+    err => raise ReadDirectory(path=target_dir, detail=@debug.render(Repr(err)))
   }
   entries.length() == 0
 }

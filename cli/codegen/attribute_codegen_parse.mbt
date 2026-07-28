@@ -67,7 +67,7 @@ fn read_package_extension_config(input_file : String) -> (String, String) raise 
     error =>
       raise CodegenInputError::InputRead(
         path=moon_ext_path,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   guard has_moon_ext else {
@@ -85,7 +85,7 @@ fn read_moon_ext_codegen_config_file(path : String) -> (String, String) raise {
     error =>
       raise CodegenInputError::InputRead(
         path~,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   read_moon_ext_codegen_config(path, text)
@@ -222,7 +222,7 @@ fn collect_package_proton_module(
     error =>
       raise CodegenInputError::PackageRead(
         path=dir,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   for entry in entries {
@@ -232,7 +232,7 @@ fn collect_package_proton_module(
       error =>
         raise CodegenInputError::PackageRead(
           path~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     guard is_file else { continue }
@@ -242,7 +242,7 @@ fn collect_package_proton_module(
       error =>
         raise CodegenInputError::InputRead(
           path~,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     let (ast, reports) = @parser.parse_string(source)

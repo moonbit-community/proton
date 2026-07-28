@@ -104,7 +104,7 @@ fn core_command_descriptor(
     error =>
       raise DescriptorBuildFailed(
         extension_id=spec.id(),
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   let scripts = extension.scripts()
@@ -115,7 +115,7 @@ fn core_command_descriptor(
       }
       raise DescriptorInstallFailed(
         extension_id=spec.id(),
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
     }
   }
@@ -126,7 +126,7 @@ fn core_command_descriptor(
     error =>
       raise DescriptorInstallFailed(
         extension_id=spec.id(),
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   CoreCommandDescriptor::{ apis, scripts }

@@ -147,7 +147,7 @@ fn collect_extension_descriptor_files(
     error =>
       raise SearchRootInspectFailed(
         path=root,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   if is_dir {
@@ -192,7 +192,7 @@ fn read_extension_search_directory(
     error =>
       raise DirectoryReadFailed(
         path=directory,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
 }
@@ -204,10 +204,7 @@ fn is_extension_search_directory(
 ) -> Bool raise ExtensionCatalogError {
   @mbfs.is_dir(path) catch {
     error =>
-      raise SearchRootInspectFailed(
-        path~,
-        detail=@debug.render(@debug.to_repr(error)),
-      )
+      raise SearchRootInspectFailed(path~, detail=@debug.render(Repr(error)))
   }
 }
 
