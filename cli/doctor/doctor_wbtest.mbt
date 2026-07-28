@@ -264,7 +264,7 @@ async test "frontend run captures build command output" {
     (
       #|window = { title: "Demo", width: 800, height: 600 }
       #|entry = { kind: "html", value: "<h1>Demo</h1>" }
-      #|frontend = { before_build: "npm --version", cwd: "." }
+      #|frontend = { before_build: "npm --version", path: "." }
       #|
     ),
     encoding="utf8",
@@ -1030,12 +1030,17 @@ async test "moon.proton reader extracts app and frontend fields" {
       #|
       #|debug = true
       #|
+      #|backend = {
+      #|  path: "backend",
+      #|  package: "app",
+      #|}
+      #|
       #|frontend = {
       #|  before_dev: "npm run dev",
       #|  before_build: "npm run build",
       #|  dist: "dist",
       #|  dev_url: "http://localhost:5173/",
-      #|  cwd: "frontend",
+      #|  path: "frontend",
       #|}
       #|
     ),
@@ -1052,20 +1057,29 @@ async test "moon.proton reader extracts app and frontend fields" {
     "proton-doctor-app-config/app.html",
   )
   assert_true(config.debug)
+  match config.backend {
+    Some(backend) => {
+      assert_test_path_suffix(backend.path, "proton-doctor-app-config/backend")
+      assert_eq(backend.app_package, "app")
+    }
+    None => abort("expected backend")
+  }
   match config.frontend {
     Some(frontend) => {
       @debug.assert_eq(frontend.before_dev, Some("npm run dev"))
       @debug.assert_eq(frontend.before_build, Some("npm run build"))
       match frontend.dist {
         Some(dist) =>
-          assert_test_path_suffix(dist, "proton-doctor-app-config/dist")
+          assert_test_path_suffix(
+            dist, "proton-doctor-app-config/frontend/dist",
+          )
         None => abort("expected frontend.dist")
       }
       @debug.assert_eq(frontend.dev_url, Some("http://localhost:5173/"))
-      match frontend.cwd {
-        Some(cwd) =>
-          assert_test_path_suffix(cwd, "proton-doctor-app-config/frontend")
-        None => abort("expected frontend.cwd")
+      match frontend.path {
+        Some(path) =>
+          assert_test_path_suffix(path, "proton-doctor-app-config/frontend")
+        None => abort("expected frontend.path")
       }
     }
     None => abort("expected frontend")

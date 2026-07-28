@@ -1035,7 +1035,7 @@ async fn push_frontend_dist_diagnostics(
   project : ProjectDoctorInfo,
   dist : String?,
 ) -> Unit {
-  push_frontend_path_check(
+  push_app_path_check(
     lines,
     project,
     "frontend.dist",
@@ -1139,13 +1139,13 @@ async fn collect_frontend(
       )
     }
   }
-  let frontend_root = frontend.cwd.unwrap_or(project.root)
+  let frontend_root = frontend.path.unwrap_or(config.base_dir)
   if !path_is_within_project(project, frontend_root) {
     lines.push(
       DoctorLine::coded(
-        "frontend.cwd.outside_project",
+        "frontend.path.outside_project",
         Error,
-        "frontend cwd is outside the project root: " + frontend_root,
+        "frontend path is outside the project root: " + frontend_root,
       ),
     )
     return DoctorSection::new(
@@ -1158,9 +1158,9 @@ async fn collect_frontend(
   if !doctor_path_is_dir(frontend_root) {
     lines.push(
       DoctorLine::coded(
-        "frontend.cwd.missing",
+        "frontend.path.missing",
         Error,
-        "frontend cwd is missing: " + frontend_root,
+        "frontend path is missing: " + frontend_root,
       ),
     )
     return DoctorSection::new(
@@ -1171,7 +1171,7 @@ async fn collect_frontend(
     )
   }
   lines.push(
-    DoctorLine::coded("frontend.cwd", Ok, "frontend cwd: " + frontend_root),
+    DoctorLine::coded("frontend.path", Ok, "frontend path: " + frontend_root),
   )
   let package_path = path_join(frontend_root, "package.json")
   let package_json = if doctor_path_exists(package_path) {
@@ -2434,7 +2434,7 @@ fn push_optional_app_line(
 }
 
 ///|
-async fn push_frontend_path_check(
+async fn push_app_path_check(
   lines : Array[DoctorLine],
   project : ProjectDoctorInfo,
   code : String,
@@ -2523,6 +2523,25 @@ async fn push_loaded_app(
   )
   push_entry_existence(lines, project, config.entry)
   lines.push(DoctorLine::coded("app.debug", Neutral, "debug: \{config.debug}"))
+  match config.backend {
+    Some(backend) => {
+      push_optional_app_line(lines, "backend_path", Some(backend.path))
+      push_optional_app_line(
+        lines,
+        "backend_package",
+        Some(backend.app_package),
+      )
+      push_app_path_check(
+        lines,
+        project,
+        "app.backend.path",
+        "backend path",
+        Some(backend.path),
+        required=true,
+      )
+    }
+    None => ()
+  }
   match config.frontend {
     Some(frontend) => {
       push_optional_app_line(lines, "before_dev_command", frontend.before_dev)
@@ -2533,16 +2552,16 @@ async fn push_loaded_app(
       )
       push_optional_app_line(lines, "frontend_dist", frontend.dist)
       push_optional_app_line(lines, "dev_url", frontend.dev_url)
-      push_optional_app_line(lines, "frontend_cwd", frontend.cwd)
-      push_frontend_path_check(
+      push_optional_app_line(lines, "frontend_path", frontend.path)
+      push_app_path_check(
         lines,
         project,
-        "app.frontend.cwd",
-        "frontend cwd",
-        frontend.cwd,
+        "app.frontend.path",
+        "frontend path",
+        frontend.path,
         required=true,
       )
-      push_frontend_path_check(
+      push_app_path_check(
         lines,
         project,
         "app.frontend.dist",

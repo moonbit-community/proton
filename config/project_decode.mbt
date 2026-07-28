@@ -42,6 +42,7 @@ fn decode_project_config(
       let entry = required_project_entry(fields, base_dir)
       let debug = optional_project_debug(fields)
       let metadata = decode_project_metadata(fields, base_dir)
+      let backend = optional_project_backend(fields, base_dir)
       let frontend = optional_project_frontend(fields, base_dir)
       let bundle = optional_project_bundle(fields, base_dir)
       ProjectConfig::new(
@@ -49,6 +50,7 @@ fn decode_project_config(
         window,
         entry,
         metadata,
+        backend~,
         frontend~,
         bundle~,
         debug~,
@@ -76,7 +78,7 @@ fn validate_project_top_level_fields(
         validate_optional_non_empty_string(field.value, field.key) catch {
           error => errors.push(error)
         }
-      "frontend" | "bundle" =>
+      "backend" | "frontend" | "bundle" =>
         validate_optional_object(field.value, field.key) catch {
           error => errors.push(error)
         }
@@ -263,6 +265,35 @@ fn decode_project_metadata(
 }
 
 ///|
+fn optional_project_backend(
+  fields : Array[ConfigField],
+  base_dir : String,
+) -> ProjectBackendConfig? raise ProjectConfigError {
+  match find_config_field(fields, "backend") {
+    None => None
+    Some(Obj(backend_fields, _)) => {
+      validate_object_fields(backend_fields, "backend", ["path", "package"])
+      Some(
+        ProjectBackendConfig::new(
+          rebase_project_path(
+            required_string_config_field(backend_fields, "path", "backend.path"),
+            base_dir,
+          ),
+          required_string_config_field(
+            backend_fields, "package", "backend.package",
+          ),
+        ),
+      )
+    }
+    Some(_) =>
+      raise InvalidField(
+        path="moon.proton.backend",
+        expectation="must be an object",
+      )
+  }
+}
+
+///|
 fn optional_project_frontend(
   fields : Array[ConfigField],
   base_dir : String,
@@ -271,15 +302,19 @@ fn optional_project_frontend(
     None => None
     Some(Obj(frontend_fields, _)) => {
       validate_object_fields(frontend_fields, "frontend", [
-        "dev_url", "dist", "before_dev", "before_build", "cwd",
+        "dev_url", "dist", "before_dev", "before_build", "path",
       ])
+      let path = optional_rebased_string_config_field(
+        frontend_fields, "path", "frontend.path", base_dir,
+      )
+      let frontend_base = path.unwrap_or(base_dir)
       Some(
         ProjectFrontendConfig::new(
           dev_url=optional_string_config_field(
             frontend_fields, "dev_url", "frontend.dev_url",
           ),
           dist=optional_rebased_string_config_field(
-            frontend_fields, "dist", "frontend.dist", base_dir,
+            frontend_fields, "dist", "frontend.dist", frontend_base,
           ),
           before_dev=optional_string_config_field(
             frontend_fields, "before_dev", "frontend.before_dev",
@@ -287,9 +322,7 @@ fn optional_project_frontend(
           before_build=optional_string_config_field(
             frontend_fields, "before_build", "frontend.before_build",
           ),
-          cwd=optional_rebased_string_config_field(
-            frontend_fields, "cwd", "frontend.cwd", base_dir,
-          ),
+          path~,
         ),
       )
     }

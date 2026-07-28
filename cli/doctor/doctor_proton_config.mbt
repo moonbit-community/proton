@@ -24,9 +24,11 @@ fn doctor_app_config_from_project_config(
   warnings : Array[String],
 ) -> DoctorAppConfig {
   DoctorAppConfig::{
+    base_dir: project.base_dir(),
     window: doctor_window_from_project_window(project.window()),
     entry: doctor_entry_from_project_entry(project.entry()),
     debug: project.debug() != 0,
+    backend: project.backend().map(doctor_backend_from_project_backend),
     frontend: project.frontend().map(doctor_frontend_from_project_frontend),
     warnings,
   }
@@ -82,6 +84,16 @@ fn doctor_entry_from_project_entry(
 }
 
 ///|
+fn doctor_backend_from_project_backend(
+  backend : @proton_config.ProjectBackendConfig,
+) -> DoctorBackendConfig {
+  DoctorBackendConfig::{
+    path: backend.path(),
+    app_package: backend.app_package(),
+  }
+}
+
+///|
 fn doctor_frontend_from_project_frontend(
   frontend : @proton_config.ProjectFrontendConfig,
 ) -> DoctorFrontendConfig {
@@ -90,6 +102,6 @@ fn doctor_frontend_from_project_frontend(
     before_build: frontend.before_build(),
     dist: frontend.dist(),
     dev_url: frontend.dev_url(),
-    cwd: frontend.cwd(),
+    path: frontend.path(),
   }
 }

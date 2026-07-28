@@ -9,7 +9,7 @@ test "parse package args accepts repeated targets and overrides" {
     "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
     "--output", "dist", "--no-build", "--dry-run",
   ])
-  assert_eq(raw.app_package, "desktop")
+  @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.targets, ["app", "zip", "dmg"])
   @debug.assert_eq(raw.output, Some("dist"))
   assert_false(raw.build)
@@ -117,6 +117,39 @@ async test "package plan defaults to app and zip" {
       "/target/proton-package-build/dev-proton-demo",
     ),
   )
+}
+
+///|
+async test "package plan uses configured backend module and package" {
+  let base_dir = resolve_path("target", "proton package module paths")
+  let backend_path = resolve_path(base_dir, "modules/backend app")
+  let project = @proton_config.ProjectConfig::new(
+    base_dir,
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Html("<main>demo</main>"),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.module-paths"),
+      version=Some("1.0.0"),
+    ),
+    backend=Some(
+      @proton_config.ProjectBackendConfig::new(backend_path, "desktop"),
+    ),
+    bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
+  )
+  let configured = build_package_plan(
+    parse_package_args([]),
+    resolve_path(base_dir, "moon.proton"),
+    project,
+  )
+  assert_eq(configured.root, backend_path)
+  assert_eq(configured.app_package, "desktop")
+  let overridden = build_package_plan(
+    parse_package_args(["--package", "custom"]),
+    resolve_path(base_dir, "moon.proton"),
+    project,
+  )
+  assert_eq(overridden.app_package, "custom")
 }
 
 ///|

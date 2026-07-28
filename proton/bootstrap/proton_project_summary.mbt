@@ -12,6 +12,7 @@ pub fn ProtonProjectConfig::to_summary_json(self : ProtonProjectConfig) -> Json 
       "debug": Json::boolean(manifest.debug != 0),
     }),
     "metadata": metadata_summary_json(self.metadata()),
+    "backend": backend_summary_json(self.backend()),
     "frontend": frontend_summary_json(self.frontend()),
     "bundle": bundle_summary_json(self.bundle()),
   })
@@ -29,6 +30,18 @@ fn metadata_summary_json(metadata : ProtonAppMetadata) -> Json {
 }
 
 ///|
+fn backend_summary_json(backend : ProtonBackendConfig?) -> Json {
+  match backend {
+    None => Json::null()
+    Some(backend) =>
+      Json::object({
+        "path": Json::string(backend.path()),
+        "package": Json::string(backend.app_package()),
+      })
+  }
+}
+
+///|
 fn frontend_summary_json(frontend : ProtonFrontendConfig?) -> Json {
   match frontend {
     None => Json::null()
@@ -38,7 +51,7 @@ fn frontend_summary_json(frontend : ProtonFrontendConfig?) -> Json {
         "dist": optional_string_json(frontend.dist()),
         "before_dev": optional_string_json(frontend.before_dev()),
         "before_build": optional_string_json(frontend.before_build()),
-        "cwd": optional_string_json(frontend.cwd()),
+        "path": optional_string_json(frontend.path()),
       })
   }
 }

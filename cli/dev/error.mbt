@@ -11,6 +11,8 @@ pub(all) suberror DevConfigError {
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
   FrontendDirectoryMissing(path~ : String)
   FrontendDirectoryNotDirectory(path~ : String)
+  BackendDirectoryMissing(path~ : String)
+  BackendDirectoryNotDirectory(path~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -63,9 +65,12 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
     NotFound(path~) => "proton dev config not found: " + path
     Invalid(path~, error~) =>
       "invalid proton dev config " + path + ": " + error.message()
-    FrontendDirectoryMissing(path~) => "frontend cwd does not exist: " + path
+    FrontendDirectoryMissing(path~) => "frontend path does not exist: " + path
     FrontendDirectoryNotDirectory(path~) =>
-      "frontend cwd is not a directory: " + path
+      "frontend path is not a directory: " + path
+    BackendDirectoryMissing(path~) => "backend path does not exist: " + path
+    BackendDirectoryNotDirectory(path~) =>
+      "backend path is not a directory: " + path
   }
 }
 

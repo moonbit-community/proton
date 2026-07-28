@@ -61,12 +61,36 @@ pub fn ProjectMetadata::new(
 }
 
 ///|
+pub(all) struct ProjectBackendConfig {
+  path : String
+  app_package : String
+} derive(Eq, Debug)
+
+///|
+pub fn ProjectBackendConfig::new(
+  path : String,
+  app_package : String,
+) -> ProjectBackendConfig {
+  ProjectBackendConfig::{ path, app_package }
+}
+
+///|
+pub fn ProjectBackendConfig::path(self : ProjectBackendConfig) -> String {
+  self.path
+}
+
+///|
+pub fn ProjectBackendConfig::app_package(self : ProjectBackendConfig) -> String {
+  self.app_package
+}
+
+///|
 pub(all) struct ProjectFrontendConfig {
   dev_url : String?
   dist : String?
   before_dev : String?
   before_build : String?
-  cwd : String?
+  path : String?
 } derive(Eq, Debug)
 
 ///|
@@ -75,9 +99,9 @@ pub fn ProjectFrontendConfig::new(
   dist? : String? = None,
   before_dev? : String? = None,
   before_build? : String? = None,
-  cwd? : String? = None,
+  path? : String? = None,
 ) -> ProjectFrontendConfig {
-  ProjectFrontendConfig::{ dev_url, dist, before_dev, before_build, cwd }
+  ProjectFrontendConfig::{ dev_url, dist, before_dev, before_build, path }
 }
 
 ///|
@@ -105,8 +129,8 @@ pub fn ProjectFrontendConfig::before_build(
 }
 
 ///|
-pub fn ProjectFrontendConfig::cwd(self : ProjectFrontendConfig) -> String? {
-  self.cwd
+pub fn ProjectFrontendConfig::path(self : ProjectFrontendConfig) -> String? {
+  self.path
 }
 
 ///|
@@ -151,6 +175,7 @@ pub(all) struct ProjectConfig {
   window : ProjectWindowConfig
   entry : ProjectEntry
   metadata : ProjectMetadata
+  backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
   debug : Int
@@ -162,11 +187,21 @@ pub fn ProjectConfig::new(
   window : ProjectWindowConfig,
   entry : ProjectEntry,
   metadata : ProjectMetadata,
+  backend? : ProjectBackendConfig? = None,
   frontend? : ProjectFrontendConfig? = None,
   bundle? : ProjectBundleConfig? = None,
   debug? : Int = 0,
 ) -> ProjectConfig {
-  ProjectConfig::{ base_dir, window, entry, metadata, frontend, bundle, debug }
+  ProjectConfig::{
+    base_dir,
+    window,
+    entry,
+    metadata,
+    backend,
+    frontend,
+    bundle,
+    debug,
+  }
 }
 
 ///|
@@ -187,6 +222,11 @@ pub fn ProjectConfig::entry(self : ProjectConfig) -> ProjectEntry {
 ///|
 pub fn ProjectConfig::metadata(self : ProjectConfig) -> ProjectMetadata {
   self.metadata
+}
+
+///|
+pub fn ProjectConfig::backend(self : ProjectConfig) -> ProjectBackendConfig? {
+  self.backend
 }
 
 ///|

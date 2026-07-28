@@ -41,7 +41,7 @@ fn create_fake_dev_runtime(root : String) -> String {
 ///|
 test "parse dev args defaults and app args" {
   let raw = parse_dev_args(["--", "--profile", "smoke"])
-  @debug.assert_eq(raw.app_package, "app")
+  @debug.assert_eq(raw.app_package, None)
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.moon_target_dir, None)
   @debug.assert_eq(raw.wait_for_dev_server, true)
@@ -63,14 +63,14 @@ test "dev app options require the separator" {
 test "parse dev args package and frontend overrides" {
   let raw = parse_dev_args([
     "--package", "desktop", "--config", "config/proton.dev", "--url", "http://localhost:3000",
-    "--command", "npm run dev", "--frontend-cwd", "frontend", "--timeout-ms", "1200",
+    "--command", "npm run dev", "--frontend-path", "frontend", "--timeout-ms", "1200",
     "--ready-path", "/ready", "--no-frontend",
   ])
-  @debug.assert_eq(raw.app_package, "desktop")
+  @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.config_path, Some("config/proton.dev"))
   @debug.assert_eq(raw.url, Some("http://localhost:3000"))
   @debug.assert_eq(raw.command, Some("npm run dev"))
-  @debug.assert_eq(raw.frontend_cwd, Some("frontend"))
+  @debug.assert_eq(raw.frontend_path, Some("frontend"))
   @debug.assert_eq(raw.timeout_ms, 1200)
   @debug.assert_eq(raw.ready_path, Some("/ready"))
   @debug.assert_eq(raw.start_frontend, false)
@@ -85,7 +85,7 @@ test "parse dev args accepts an isolated Moon target directory" {
 }
 
 ///|
-async test "read dev frontend config extracts cwd" {
+async test "read dev project config extracts module paths" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
   let path = join_path(dir, "moon.proton")
@@ -103,10 +103,15 @@ async test "read dev frontend config extracts cwd" {
       #|  value: "http://localhost:5173",
       #|}
       #|
+      #|backend = {
+      #|  path: "backend",
+      #|  package: "desktop",
+      #|}
+      #|
       #|frontend = {
       #|  dev_url: "http://localhost:5173",
       #|  before_dev: "npm run dev",
-      #|  cwd: "frontend",
+      #|  path: "frontend",
       #|}
       #|
     ),
@@ -114,15 +119,14 @@ async test "read dev frontend config extracts cwd" {
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let config = read_dev_frontend_config(path)
-  match config {
-    Some(config) => {
-      @debug.assert_eq(config.dev_url(), Some("http://localhost:5173"))
-      @debug.assert_eq(config.before_dev(), Some("npm run dev"))
-      assert_true(config.cwd().unwrap().has_suffix("frontend"))
-    }
-    None => abort("expected frontend config")
-  }
+  let config = read_dev_project_config(path)
+  let frontend = config.frontend().unwrap()
+  @debug.assert_eq(frontend.dev_url(), Some("http://localhost:5173"))
+  @debug.assert_eq(frontend.before_dev(), Some("npm run dev"))
+  assert_true(frontend.path().unwrap().has_suffix("frontend"))
+  let backend = config.backend().unwrap()
+  assert_true(backend.path().has_suffix("backend"))
+  assert_eq(backend.app_package(), "desktop")
 }
 
 ///|
@@ -154,7 +158,7 @@ async test "read dev frontend config validates full project config" {
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  try read_dev_frontend_config(path) catch {
+  try read_dev_project_config(path) catch {
     DevConfigError::Invalid(
       path=actual_path,
       error=@proton_config.ProjectConfigError::UnsupportedValue(
@@ -169,18 +173,18 @@ async test "read dev frontend config validates full project config" {
 }
 
 ///|
-async test "frontend cwd is validated only when frontend starts" {
+async test "frontend path is validated only when frontend starts" {
   let root = "target/proton-dev-cwd"
   ensure_dev_test_dir(root)
   ensure_dev_test_dir(join_path(root, "frontend"))
-  let resolved = resolve_frontend_cwd(
+  let resolved = resolve_frontend_path(
     root,
     Some("frontend"),
     Some("npm run dev"),
     true,
   )
   assert_true(resolved.has_suffix("frontend"))
-  let skipped = resolve_frontend_cwd(
+  let skipped = resolve_frontend_path(
     root,
     Some("missing-frontend"),
     Some("npm run dev"),
@@ -188,7 +192,7 @@ async test "frontend cwd is validated only when frontend starts" {
   )
   @debug.assert_eq(skipped, root)
   try
-    resolve_frontend_cwd(
+    resolve_frontend_path(
       root,
       Some("missing-frontend"),
       Some("npm run dev"),
@@ -199,7 +203,7 @@ async test "frontend cwd is validated only when frontend starts" {
       assert_true(path.has_suffix("missing-frontend"))
     _ => abort("expected missing frontend directory")
   } noraise {
-    _ => abort("expected missing frontend cwd to fail")
+    _ => abort("expected missing frontend path to fail")
   }
 }
 
@@ -215,6 +219,17 @@ async test "dev config discovery prefers package-local moon.proton" {
   let raw = parse_dev_args(["--package", "desktop"])
   let resolved = resolve_dev_config_path(root, root, raw)
   @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
+}
+
+///|
+async test "backend path supports nested directories with spaces" {
+  let root = "target/proton dev backend"
+  let backend = join_path(root, "modules/backend app")
+  ensure_dev_test_dir(root)
+  ensure_dev_test_dir(join_path(root, "modules"))
+  ensure_dev_test_dir(backend)
+  let resolved = resolve_backend_path(root, Some("modules/backend app"))
+  @debug.assert_eq(resolved, resolve_path(root, "modules/backend app"))
 }
 
 ///|

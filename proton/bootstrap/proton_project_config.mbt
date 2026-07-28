@@ -45,13 +45,38 @@ pub fn ProtonAppMetadata::license(self : ProtonAppMetadata) -> String? {
 }
 
 ///|
+/// Backend module settings from `moon.proton`.
+struct ProtonBackendConfig {
+  path : String
+  app_package : String
+}
+
+///|
+pub fn ProtonBackendConfig::new(
+  path : String,
+  app_package : String,
+) -> ProtonBackendConfig {
+  ProtonBackendConfig::{ path, app_package }
+}
+
+///|
+pub fn ProtonBackendConfig::path(self : ProtonBackendConfig) -> String {
+  self.path
+}
+
+///|
+pub fn ProtonBackendConfig::app_package(self : ProtonBackendConfig) -> String {
+  self.app_package
+}
+
+///|
 /// Frontend dev/build settings from `moon.proton`.
 struct ProtonFrontendConfig {
   dev_url : String?
   dist : String?
   before_dev : String?
   before_build : String?
-  cwd : String?
+  path : String?
 }
 
 ///|
@@ -60,9 +85,9 @@ pub fn ProtonFrontendConfig::new(
   dist? : String? = None,
   before_dev? : String? = None,
   before_build? : String? = None,
-  cwd? : String? = None,
+  path? : String? = None,
 ) -> ProtonFrontendConfig {
-  ProtonFrontendConfig::{ dev_url, dist, before_dev, before_build, cwd }
+  ProtonFrontendConfig::{ dev_url, dist, before_dev, before_build, path }
 }
 
 ///|
@@ -88,8 +113,8 @@ pub fn ProtonFrontendConfig::before_build(
 }
 
 ///|
-pub fn ProtonFrontendConfig::cwd(self : ProtonFrontendConfig) -> String? {
-  self.cwd
+pub fn ProtonFrontendConfig::path(self : ProtonFrontendConfig) -> String? {
+  self.path
 }
 
 ///|
@@ -151,6 +176,7 @@ pub fn ProtonBundleConfig::output(self : ProtonBundleConfig) -> String {
 struct ProtonProjectConfig {
   manifest : LoadedAppManifest
   metadata : ProtonAppMetadata
+  backend : ProtonBackendConfig?
   frontend : ProtonFrontendConfig?
   bundle : ProtonBundleConfig?
 }
@@ -159,10 +185,11 @@ struct ProtonProjectConfig {
 pub fn ProtonProjectConfig::new(
   manifest : LoadedAppManifest,
   metadata : ProtonAppMetadata,
+  backend? : ProtonBackendConfig? = None,
   frontend? : ProtonFrontendConfig? = None,
   bundle? : ProtonBundleConfig? = None,
 ) -> ProtonProjectConfig {
-  ProtonProjectConfig::{ manifest, metadata, frontend, bundle }
+  ProtonProjectConfig::{ manifest, metadata, backend, frontend, bundle }
 }
 
 ///|
@@ -177,6 +204,13 @@ pub fn ProtonProjectConfig::metadata(
   self : ProtonProjectConfig,
 ) -> ProtonAppMetadata {
   self.metadata
+}
+
+///|
+pub fn ProtonProjectConfig::backend(
+  self : ProtonProjectConfig,
+) -> ProtonBackendConfig? {
+  self.backend
 }
 
 ///|

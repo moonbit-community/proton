@@ -57,7 +57,7 @@ let valid_build_config =
 ///|
 test "parse build args defaults and moon args" {
   let raw = parse_build_args(["--", "--warn-list", "+a"])
-  @debug.assert_eq(raw.app_package, "app")
+  @debug.assert_eq(raw.app_package, None)
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.moon_target_dir, None)
   @debug.assert_eq(raw.run_frontend_build, true)
@@ -81,7 +81,7 @@ test "parse build args package and config" {
   let raw = parse_build_args([
     "--package", "desktop", "--config", "config/moon.proton", "--no-frontend",
   ])
-  @debug.assert_eq(raw.app_package, "desktop")
+  @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.config_path, Some("config/moon.proton"))
   @debug.assert_eq(raw.run_frontend_build, false)
 }
@@ -137,18 +137,28 @@ test "moon build args prepend an isolated target directory" {
 }
 
 ///|
-async test "frontend cwd validation reports missing directory" {
+async test "frontend path validation reports missing directory" {
   let root = "target/proton-build-cwd"
   ensure_build_test_dir(root)
   let error = try
-    resolve_frontend_cwd(root, Some("missing"), "npm run build")
+    resolve_frontend_path(root, Some("missing"), "npm run build")
   catch {
     BuildPathError::Missing(..) as error => error.message()
     error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
   } noraise {
     _ => fail("expected build error")
   }
-  assert_true(error.contains("frontend cwd does not exist"))
+  assert_true(error.contains("frontend path does not exist"))
+}
+
+///|
+async test "backend path supports nested directories with spaces" {
+  let root = "target/proton build backend"
+  ensure_build_test_dir(root)
+  ensure_build_test_dir(join_path(root, "nested"))
+  ensure_build_test_dir(join_path(root, "nested/backend app"))
+  let path = resolve_backend_path(root, Some("nested/backend app"))
+  @debug.assert_eq(path, resolve_path(root, "nested/backend app"))
 }
 
 ///|
@@ -316,7 +326,9 @@ test "frontend release rejects url production entry" {
 ///|
 test "frontend release config preflight rejects url entry" {
   let config = BuildProjectConfig::{
+    base_dir: ".",
     entry: @proton_config.ProjectEntry::Url("http://localhost:5173"),
+    backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
         dist=Some("target/proton-build-entry"),
@@ -330,9 +342,11 @@ test "frontend release config preflight rejects url entry" {
 ///|
 test "frontend release requires dist" {
   let config = BuildProjectConfig::{
+    base_dir: ".",
     entry: @proton_config.ProjectEntry::Asset(
       "target/proton-build-entry/index.html",
     ),
+    backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
         before_build=Some("npm run build"),

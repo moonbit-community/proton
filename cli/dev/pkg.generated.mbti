@@ -18,6 +18,8 @@ pub(all) suberror DevConfigError {
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
   FrontendDirectoryMissing(path~ : String)
   FrontendDirectoryNotDirectory(path~ : String)
+  BackendDirectoryMissing(path~ : String)
+  BackendDirectoryNotDirectory(path~ : String)
 } derive(Eq, @debug.Debug)
 pub fn DevConfigError::message(Self) -> String
 
@@ -69,4 +71,3 @@ type RawDevOptions derive(Eq, @debug.Debug)
 // Type aliases
 
 // Traits
-

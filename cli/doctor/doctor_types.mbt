@@ -250,14 +250,22 @@ priv struct DoctorFrontendConfig {
   before_build : String?
   dist : String?
   dev_url : String?
-  cwd : String?
+  path : String?
+}
+
+///|
+priv struct DoctorBackendConfig {
+  path : String
+  app_package : String
 }
 
 ///|
 priv struct DoctorAppConfig {
+  base_dir : String
   window : DoctorAppWindow
   entry : DoctorAppEntry
   debug : Bool
+  backend : DoctorBackendConfig?
   frontend : DoctorFrontendConfig?
   warnings : Array[String]
 }

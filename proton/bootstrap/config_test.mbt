@@ -251,10 +251,15 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|
       #|debug = true
       #|
+      #|backend = {
+      #|  path: "backend",
+      #|  package: "app",
+      #|}
+      #|
       #|frontend = {
       #|  dev_url: "http://localhost:5173",
-      #|  dist: "frontend/dist",
-      #|  cwd: "frontend",
+      #|  dist: "dist",
+      #|  path: "frontend",
       #|  before_dev: "npm run dev",
       #|  before_build: "npm run build",
       #|}
@@ -283,6 +288,18 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
   @debug.assert_eq(metadata.description(), Some("Desktop app"))
   @debug.assert_eq(metadata.license(), Some("MIT"))
 
+  match project.backend() {
+    None => abort("expected backend config")
+    Some(backend) => {
+      assert_true(
+        normalize_test_slashes(backend.path()).has_suffix(
+          "target/proton-project-config/backend",
+        ),
+      )
+      assert_eq(backend.app_package(), "app")
+    }
+  }
+
   match project.frontend() {
     None => abort("expected frontend config")
     Some(frontend) => {
@@ -293,7 +310,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
         ),
       )
       assert_true(
-        normalize_test_slashes(frontend.cwd().unwrap()).has_suffix(
+        normalize_test_slashes(frontend.path().unwrap()).has_suffix(
           "target/proton-project-config/frontend",
         ),
       )

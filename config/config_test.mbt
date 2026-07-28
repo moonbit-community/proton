@@ -181,10 +181,15 @@ test "project config rebases file entry and frontend paths from config directory
     #|  value: "frontend/dist/index.html",
     #|}
     #|
+    #|backend = {
+    #|  path: "backend module",
+    #|  package: "app",
+    #|}
+    #|
     #|frontend = {
     #|  dev_url: "http://localhost:5173",
-    #|  dist: "frontend/dist",
-    #|  cwd: "frontend",
+    #|  dist: "dist",
+    #|  path: "frontend module",
     #|}
     #|
     #|bundle = {
@@ -204,15 +209,22 @@ test "project config rebases file entry and frontend paths from config directory
       )
     _ => abort("expected asset entry")
   }
+  let backend = config.backend().unwrap()
+  assert_eq(backend.app_package(), "app")
+  assert_true(
+    normalize_test_path(backend.path()).has_suffix(
+      "target/proton-config/subdir/backend module",
+    ),
+  )
   let frontend = config.frontend().unwrap()
   assert_true(
     normalize_test_path(frontend.dist().unwrap()).has_suffix(
-      "target/proton-config/subdir/frontend/dist",
+      "target/proton-config/subdir/frontend module/dist",
     ),
   )
   assert_true(
-    normalize_test_path(frontend.cwd().unwrap()).has_suffix(
-      "target/proton-config/subdir/frontend",
+    normalize_test_path(frontend.path().unwrap()).has_suffix(
+      "target/proton-config/subdir/frontend module",
     ),
   )
   let bundle = config.bundle().unwrap()
@@ -231,6 +243,33 @@ test "project config rebases file entry and frontend paths from config directory
     normalize_test_path(bundle.output()).has_suffix(
       "target/proton-config/subdir/target/proton-dist",
     ),
+  )
+}
+
+///|
+test "project config rejects legacy frontend cwd" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "html",
+    #|  value: "<main>App</main>",
+    #|}
+    #|
+    #|frontend = {
+    #|  cwd: "frontend",
+    #|}
+    #|
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_eq(
+    error.message(),
+    "Unexpected key 'cwd' found in moon.proton field `frontend`.",
   )
 }
 

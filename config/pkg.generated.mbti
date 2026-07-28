@@ -57,6 +57,14 @@ pub fn LoadedProjectConfig::config(Self) -> ProjectConfig
 pub fn LoadedProjectConfig::new(ProjectConfig, warnings? : Array[String]) -> Self
 pub fn LoadedProjectConfig::warnings(Self) -> Array[String]
 
+pub(all) struct ProjectBackendConfig {
+  path : String
+  app_package : String
+} derive(Eq, @debug.Debug)
+pub fn ProjectBackendConfig::app_package(Self) -> String
+pub fn ProjectBackendConfig::new(String, String) -> Self
+pub fn ProjectBackendConfig::path(Self) -> String
+
 pub(all) struct ProjectBundleConfig {
   active : Bool
   targets : Array[String]
@@ -73,17 +81,19 @@ pub(all) struct ProjectConfig {
   window : ProjectWindowConfig
   entry : ProjectEntry
   metadata : ProjectMetadata
+  backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
   debug : Int
 } derive(Eq, @debug.Debug)
+pub fn ProjectConfig::backend(Self) -> ProjectBackendConfig?
 pub fn ProjectConfig::base_dir(Self) -> String
 pub fn ProjectConfig::bundle(Self) -> ProjectBundleConfig?
 pub fn ProjectConfig::debug(Self) -> Int
 pub fn ProjectConfig::entry(Self) -> ProjectEntry
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
 pub fn ProjectConfig::metadata(Self) -> ProjectMetadata
-pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, debug? : Int) -> Self
+pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, debug? : Int) -> Self
 pub fn ProjectConfig::window(Self) -> ProjectWindowConfig
 
 pub(all) enum ProjectEntry {
@@ -98,14 +108,14 @@ pub(all) struct ProjectFrontendConfig {
   dist : String?
   before_dev : String?
   before_build : String?
-  cwd : String?
+  path : String?
 } derive(Eq, @debug.Debug)
 pub fn ProjectFrontendConfig::before_build(Self) -> String?
 pub fn ProjectFrontendConfig::before_dev(Self) -> String?
-pub fn ProjectFrontendConfig::cwd(Self) -> String?
 pub fn ProjectFrontendConfig::dev_url(Self) -> String?
 pub fn ProjectFrontendConfig::dist(Self) -> String?
-pub fn ProjectFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, cwd? : String?) -> Self
+pub fn ProjectFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, path? : String?) -> Self
+pub fn ProjectFrontendConfig::path(Self) -> String?
 
 pub(all) struct ProjectMetadata {
   product_name : String

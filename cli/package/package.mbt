@@ -6,7 +6,7 @@ let default_config_file = "moon.proton"
 
 ///|
 struct RawPackageOptions {
-  app_package : String
+  app_package : String?
   config_path : String?
   targets : Array[String]
   output : String?
@@ -70,11 +70,7 @@ pub fn command() -> @argparse.Command {
       ),
     ],
     options=[
-      OptionArg(
-        "package",
-        default_values=[default_package],
-        about="MoonBit application package",
-      ),
+      OptionArg("package", about="MoonBit application package"),
       OptionArg(
         "config",
         allow_hyphen_values=true,
@@ -136,7 +132,7 @@ fn package_options_from_matches(
   }
   let notarize = @cli_args.flag(matches, "notarize")
   RawPackageOptions::{
-    app_package: @cli_args.required_value(matches, "package"),
+    app_package: @cli_args.value(matches, "package"),
     config_path: @cli_args.value(matches, "config"),
     targets,
     output: @cli_args.value(matches, "output"),
@@ -200,6 +196,19 @@ async fn build_package_plan(
     )
   }
   let base_dir = resolve_path(project.base_dir(), ".")
+  let backend = project.backend()
+  let backend_root = match backend {
+    Some(backend) => resolve_path(base_dir, backend.path())
+    None => find_project_root_from(base_dir)
+  }
+  let app_package = match raw.app_package {
+    Some(app_package) => app_package
+    None =>
+      match backend {
+        Some(backend) => backend.app_package()
+        None => default_package
+      }
+  }
   let output = match raw.output {
     Some(output) => resolve_path(base_dir, output)
     None => resolve_path(base_dir, bundle.output())
@@ -214,10 +223,10 @@ async fn build_package_plan(
   }
   let workspace_root = find_workspace_root_from(base_dir)
   PackagePlan::{
-    root: find_project_root_from(base_dir),
+    root: backend_root,
     workspace_root,
     build_target_dir: package_build_target_dir(workspace_root, identifier),
-    app_package: raw.app_package,
+    app_package,
     config_path,
     product_name,
     identifier,
@@ -1633,7 +1642,7 @@ async fn resolve_package_config_path(
     None => {
       let package_config = resolve_path(
         cwd,
-        raw.app_package + "/" + default_config_file,
+        raw.app_package.unwrap_or(default_package) + "/" + default_config_file,
       )
       let cwd_config = resolve_path(cwd, default_config_file)
       let root_config = resolve_path(root, default_config_file)
