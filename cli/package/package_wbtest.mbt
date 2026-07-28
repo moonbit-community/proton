@@ -468,6 +468,62 @@ test "macOS plist contains bundle identity and executable" {
 }
 
 ///|
+test "macOS package defines the complete CEF helper family" {
+  let helpers = macos_helper_specs("Demo & App", "dev.proton.demo")
+  @debug.assert_eq(helpers.map(fn(helper) { helper.bundle_name }), [
+    "Demo & App Helper", "Demo & App Helper (Alerts)", "Demo & App Helper (GPU)",
+    "Demo & App Helper (Plugin)", "Demo & App Helper (Renderer)",
+  ])
+  @debug.assert_eq(helpers.map(fn(helper) { helper.bundle_identifier }), [
+    "dev.proton.demo.helper", "dev.proton.demo.helper.alerts", "dev.proton.demo.helper.gpu",
+    "dev.proton.demo.helper.plugin", "dev.proton.demo.helper.renderer",
+  ])
+  for helper in helpers {
+    assert_eq(helper.executable_name, helper.bundle_name)
+  }
+}
+
+///|
+test "macOS helper plist matches its bundle identity" {
+  let plan = PackagePlan::{
+    root: ".",
+    workspace_root: ".",
+    build_target_dir: "target/proton-package-build/dev-proton-demo",
+    app_package: "app",
+    config_path: "moon.proton",
+    product_name: "Demo & App",
+    identifier: "dev.proton.demo",
+    version: "1.2.3",
+    macos_version: "1.2.3",
+    bundle_version: "42",
+    targets: ["app"],
+    output: "target",
+    build: false,
+    base_dir: ".",
+    frontend_dist: None,
+    entry_path: None,
+    resources: [],
+    icons: [],
+    macos_icon: None,
+    sign: false,
+    notarize: false,
+  }
+  let helper = macos_helper_specs(plan.product_name, plan.identifier)[4]
+  let plist = helper_info_plist(plan, helper)
+  assert_true(
+    plist.contains(
+      "<key>CFBundleExecutable</key><string>Demo &amp; App Helper (Renderer)</string>",
+    ),
+  )
+  assert_true(
+    plist.contains(
+      "<key>CFBundleIdentifier</key><string>dev.proton.demo.helper.renderer</string>",
+    ),
+  )
+  assert_true(plist.contains("<key>CFBundleVersion</key><string>42</string>"))
+}
+
+///|
 async test "macOS staged app promotion rolls back when staging is missing" {
   let root = "target/proton-package-macos-promotion"
   remove_tree(root)

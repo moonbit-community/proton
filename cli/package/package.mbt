@@ -55,6 +55,13 @@ struct MacosCodeSignTarget {
 } derive(Debug, Eq)
 
 ///|
+priv struct MacosHelperSpec {
+  bundle_name : String
+  executable_name : String
+  bundle_identifier : String
+}
+
+///|
 /// Returns the declarative `proton_cli package` command specification.
 pub fn command() -> @argparse.Command {
   @argparse.Command(
@@ -603,10 +610,8 @@ async fn stage_macos_app_impl(
   let macos = resolve_path(contents, "MacOS")
   let resources = resolve_path(contents, "Resources")
   let frameworks = resolve_path(contents, "Frameworks")
-  let helper_app = resolve_path(frameworks, plan.product_name + " Helper.app")
-  let helper_macos = resolve_path(helper_app, "Contents/MacOS")
   remove_tree(app)
-  for dir in [macos, resources, frameworks, helper_macos] {
+  for dir in [macos, resources, frameworks] {
     ensure_dir(dir)
   }
   copy_file(executable, resolve_path(macos, executable_name))
@@ -618,20 +623,25 @@ async fn stage_macos_app_impl(
   guard path_exists(helper_source) else {
     raise PackageRuntimeError::HelperMissing(path=helper_source)
   }
-  copy_file(helper_source, resolve_path(helper_macos, "cef_process"))
+  for helper in macos_helper_specs(plan.product_name, plan.identifier) {
+    let helper_app = resolve_path(frameworks, helper.bundle_name + ".app")
+    let helper_macos = resolve_path(helper_app, "Contents/MacOS")
+    let helper_executable = resolve_path(helper_macos, helper.executable_name)
+    ensure_dir(helper_macos)
+    copy_file(helper_source, helper_executable)
+    write_text(
+      resolve_path(helper_app, "Contents/Info.plist"),
+      helper_info_plist(plan, helper),
+    )
+    add_macos_rpath(
+      helper_executable, "@loader_path/../../../../Resources/proton/lib",
+    )
+  }
   write_text(
     resolve_path(contents, "Info.plist"),
     macos_info_plist(plan, executable_name),
   )
-  write_text(
-    resolve_path(helper_app, "Contents/Info.plist"),
-    helper_info_plist(plan),
-  )
   write_package_manifest(plan, resources, "macos-app")
-  add_macos_rpath(
-    resolve_path(helper_macos, "cef_process"),
-    "@loader_path/../../../../Resources/proton/lib",
-  )
   if plan.sign {
     sign_macos_app(plan, app, executable_name)
   }
@@ -1120,23 +1130,59 @@ fn macos_icon_plist_entry(icon : String?) -> String {
 }
 
 ///|
-fn helper_info_plist(plan : PackagePlan) -> String {
+fn macos_helper_specs(
+  product_name : String,
+  identifier : String,
+) -> Array[MacosHelperSpec] {
+  let base_name = product_name + " Helper"
+  let base_identifier = identifier + ".helper"
+  [
+    MacosHelperSpec::{
+      bundle_name: base_name,
+      executable_name: base_name,
+      bundle_identifier: base_identifier,
+    },
+    MacosHelperSpec::{
+      bundle_name: base_name + " (Alerts)",
+      executable_name: base_name + " (Alerts)",
+      bundle_identifier: base_identifier + ".alerts",
+    },
+    MacosHelperSpec::{
+      bundle_name: base_name + " (GPU)",
+      executable_name: base_name + " (GPU)",
+      bundle_identifier: base_identifier + ".gpu",
+    },
+    MacosHelperSpec::{
+      bundle_name: base_name + " (Plugin)",
+      executable_name: base_name + " (Plugin)",
+      bundle_identifier: base_identifier + ".plugin",
+    },
+    MacosHelperSpec::{
+      bundle_name: base_name + " (Renderer)",
+      executable_name: base_name + " (Renderer)",
+      bundle_identifier: base_identifier + ".renderer",
+    },
+  ]
+}
+
+///|
+fn helper_info_plist(plan : PackagePlan, helper : MacosHelperSpec) -> String {
   let template =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
     #|<plist version="1.0"><dict>
-    #|<key>CFBundleExecutable</key><string>cef_process</string>
-    #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}.helper</string>
-    #|<key>CFBundleName</key><string>{{PRODUCT}} Helper</string>
+    #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
+    #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
+    #|<key>CFBundleName</key><string>{{NAME}}</string>
     #|<key>CFBundlePackageType</key><string>APPL</string>
     #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
     #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
     #|</dict></plist>
     #|
   template
-  .replace_all(old="{{PRODUCT}}", new=xml_escape(plan.product_name))
-  .replace_all(old="{{IDENTIFIER}}", new=xml_escape(plan.identifier))
-  .replace_all(old="{{VERSION}}", new=xml_escape(plan.version))
+  .replace_all(old="{{EXECUTABLE}}", new=xml_escape(helper.executable_name))
+  .replace_all(old="{{IDENTIFIER}}", new=xml_escape(helper.bundle_identifier))
+  .replace_all(old="{{NAME}}", new=xml_escape(helper.bundle_name))
   .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
   .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
 }
@@ -1203,10 +1249,6 @@ async fn sign_macos_app(
     app,
     allow_untrusted_libraries=is_adhoc,
   )
-  let helper = resolve_path(
-    contents,
-    "Frameworks/" + plan.product_name + " Helper.app",
-  )
   let main = resolve_path(contents, "MacOS/" + executable_name)
   let cef_framework = resolve_path(
     contents, "Resources/proton/Frameworks/Chromium Embedded Framework.framework",
@@ -1244,10 +1286,24 @@ async fn sign_macos_app(
       runtime_options: false,
       deep: false,
     },
-    MacosCodeSignTarget::{ path: helper, runtime_options: true, deep: false },
-    MacosCodeSignTarget::{ path: main, runtime_options: true, deep: false },
-    MacosCodeSignTarget::{ path: app, runtime_options: true, deep: true },
   ]
+  for helper in macos_helper_specs(plan.product_name, plan.identifier) {
+    targets.push(MacosCodeSignTarget::{
+      path: resolve_path(contents, "Frameworks/" + helper.bundle_name + ".app"),
+      runtime_options: true,
+      deep: false,
+    })
+  }
+  targets.push(MacosCodeSignTarget::{
+    path: main,
+    runtime_options: true,
+    deep: false,
+  })
+  targets.push(MacosCodeSignTarget::{
+    path: app,
+    runtime_options: true,
+    deep: true,
+  })
   require_macos_codesign_targets(targets)
   for target in targets {
     codesign_target(

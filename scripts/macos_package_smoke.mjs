@@ -15,6 +15,13 @@ const exampleDir = path.join(repoRoot, "examples", exampleName);
 const distDir = path.join(exampleDir, "target", "proton-dist");
 const appPath = path.join(distDir, `${productName}.app`);
 const archivePath = `${appPath}.zip`;
+const helperNames = [
+  `${productName} Helper`,
+  `${productName} Helper (Alerts)`,
+  `${productName} Helper (GPU)`,
+  `${productName} Helper (Plugin)`,
+  `${productName} Helper (Renderer)`,
+];
 const timeoutMs = Number(
   process.env.PROTON_MACOS_PACKAGE_SMOKE_TIMEOUT_MS ?? "30000",
 );
@@ -248,10 +255,8 @@ async function waitForHelpersToExit(helpers) {
 
 function verifyBundle() {
   const contents = path.join(appPath, "Contents");
-  const helper = path.join(
-    contents,
-    "Frameworks",
-    `${productName} Helper.app`,
+  const helpers = helperNames.map((name) =>
+    path.join(contents, "Frameworks", `${name}.app`)
   );
   const targets = [
     path.join(
@@ -265,7 +270,7 @@ function verifyBundle() {
       (name) => path.join(contents, "Resources", "proton", "bin", name),
     ),
     path.join(contents, "Resources", "proton", "lib", "libproton.dylib"),
-    helper,
+    ...helpers,
     path.join(contents, "MacOS", executableName),
     appPath,
   ];
@@ -283,9 +288,27 @@ function verifyBundle() {
   run("plutil", [
     "-lint",
     path.join(contents, "Info.plist"),
-    path.join(helper, "Contents", "Info.plist"),
+    ...helpers.map((helper) => path.join(helper, "Contents", "Info.plist")),
     path.join(contents, "Resources", "proton.entitlements"),
   ]);
+  for (const [index, helper] of helpers.entries()) {
+    const executable = path.join(
+      helper,
+      "Contents",
+      "MacOS",
+      helperNames[index],
+    );
+    requirePath(executable, "a CEF helper bundle is missing its executable");
+    const plist = path.join(helper, "Contents", "Info.plist");
+    const declaredExecutable = run(
+      "plutil",
+      ["-extract", "CFBundleExecutable", "raw", "-o", "-", plist],
+      { capture: true },
+    ).trim();
+    if (declaredExecutable !== helperNames[index]) {
+      fail(`unexpected helper executable: ${declaredExecutable}`);
+    }
+  }
   const infoPlist = path.join(contents, "Info.plist");
   const plistExpectations = new Map([
     ["CFBundleIdentifier", "com.justjavac.proton.dev-extension-js"],
@@ -310,7 +333,7 @@ function verifyBundle() {
   if (icon.status === 0) {
     fail("CFBundleIconFile was declared without a configured .icns icon");
   }
-  for (const target of [appPath, helper]) {
+  for (const target of [appPath, ...helpers]) {
     const entitlements = run("codesign", ["-d", "--entitlements", "-", target], {
       capture: true,
     });
@@ -387,12 +410,28 @@ async function launchBundle() {
     fail(`packaged page URL is outside the bundle: ${page.url}`);
   }
   const helpers = childProcessCommands(appProcess.pid);
-  if (helpers.length !== 3) {
-    fail(`expected 3 CEF helper processes, found ${helpers.length}`);
+  if (helpers.length === 0) {
+    fail("CEF did not start any helper processes");
   }
-  const helperExecutable = `${productName} Helper.app/Contents/MacOS/cef_process`;
-  if (helpers.some(({ command }) => !command.includes(helperExecutable))) {
-    fail("a CEF helper process is not using the nested Helper.app executable");
+  const expectedHelpers = helperNames.map(
+    (name) => `${name}.app/Contents/MacOS/${name}`,
+  );
+  if (
+    helpers.some(
+      ({ command }) =>
+        !expectedHelpers.some((helper) => command.includes(helper)),
+    )
+  ) {
+    fail("a CEF child process is not using its matching helper bundle");
+  }
+  if (
+    !helpers.some(({ command }) =>
+      command.includes(
+        `${productName} Helper (Renderer).app/Contents/MacOS/${productName} Helper (Renderer)`,
+      )
+    )
+  ) {
+    fail("the CEF renderer helper did not start");
   }
   console.log(`CDP page: ${page.url}`);
   console.log(`CEF helpers: ${helpers.length}`);
