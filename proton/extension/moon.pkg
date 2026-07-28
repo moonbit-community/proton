@@ -3,6 +3,7 @@ import {
   "moonbitlang/core/json",
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/core",
+  "justjavac/proton_contract",
 }
 
 supported_targets = "native"

@@ -3,6 +3,7 @@
 pub(all) suberror ExtensionAdapterError {
   DescriptorBuildFailed(extension_id~ : String, detail~ : String)
   DescriptorInstallFailed(extension_id~ : String, detail~ : String)
+  TypedSpecInvalid(extension_id~ : String, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -15,6 +16,8 @@ pub fn ExtensionAdapterError::message(self : ExtensionAdapterError) -> String {
       extension_id +
       ": " +
       detail
+    TypedSpecInvalid(extension_id~, detail~) =>
+      "invalid typed extension " + extension_id + ": " + detail
   }
 }
 

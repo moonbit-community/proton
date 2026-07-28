@@ -2,6 +2,7 @@
 priv enum ExtensionKind {
   Framework(@core.ExtensionSpec)
   Command(@proton_command.AppCommandExtensionSpec)
+  Typed(TypedExtensionSpec)
 }
 
 ///|
@@ -12,6 +13,19 @@ struct Extension {
 ///|
 struct Extensions {
   items : Array[Extension]
+}
+
+///|
+priv struct TypedExtensionSpec {
+  contract : @proton_contract.ExtensionContract
+  command_routes : Array[@proton_contract.ContractRoute]
+  register : (
+    @proton_command.AppCommandExtensionContext,
+    @proton_command.CommandRegistrar,
+  ) -> Unit raise
+  scripts : Array[String]
+  dependencies : Array[String]
+  on_destroy : (@proton_command.AppCommandExtensionContext) -> Unit raise
 }
 
 ///|
@@ -33,6 +47,38 @@ pub fn from_command_spec(
 }
 
 ///|
+/// Builds an installable extension from typed command descriptors.
+///
+/// Validation is deferred until application configuration so invalid static
+/// extension metadata follows the facade's ordinary adaptation error path.
+pub fn typed(
+  contract : @proton_contract.ExtensionContract,
+  command_routes : Array[@proton_contract.ContractRoute],
+  register : (
+    @proton_command.AppCommandExtensionContext,
+    @proton_command.CommandRegistrar,
+  ) -> Unit raise,
+  scripts? : Array[String] = [],
+  dependencies? : Array[String] = [],
+  on_destroy? : (@proton_command.AppCommandExtensionContext) -> Unit raise = fn(
+    _context,
+  ) {
+
+  },
+) -> Extension {
+  Extension::{
+    kind: Typed(TypedExtensionSpec::{
+      contract,
+      command_routes: command_routes.map(route => route),
+      register,
+      scripts: scripts.map(script => script),
+      dependencies: dependencies.map(dependency => dependency),
+      on_destroy,
+    }),
+  }
+}
+
+///|
 pub fn Extensions::new(items : Array[Extension]) -> Extensions {
   Extensions::{ items: copy_extensions(items) }
 }
@@ -47,6 +93,7 @@ pub fn Extension::id(self : Extension) -> String {
   match self.kind {
     Framework(spec) => spec.id()
     Command(spec) => spec.id()
+    Typed(spec) => spec.contract.id()
   }
 }
 
@@ -54,7 +101,7 @@ pub fn Extension::id(self : Extension) -> String {
 pub fn Extension::core_spec(self : Extension) -> @core.ExtensionSpec? {
   match self.kind {
     Framework(spec) => Some(spec)
-    Command(_) => None
+    Command(_) | Typed(_) => None
   }
 }
 
@@ -65,6 +112,23 @@ pub fn Extension::command_spec(
   match self.kind {
     Framework(spec) => Some(core_command_spec(spec))
     Command(spec) => Some(spec)
+    Typed(spec) =>
+      Some(
+        @proton_command.AppCommandExtensionSpec::typed(
+          spec.contract,
+          spec.command_routes,
+          spec.register,
+          scripts=spec.scripts,
+          dependencies=spec.dependencies,
+          on_destroy=spec.on_destroy,
+        ) catch {
+          error =>
+            raise TypedSpecInvalid(
+              extension_id=spec.contract.id(),
+              detail=error.message(),
+            )
+        },
+      )
   }
 }
 
