@@ -22,12 +22,14 @@ async test "typed registrar binds descriptor identity and codecs" {
   })
   host.seal_registrations()
   assert_eq(host.registered_ops(), ["app:add"])
-  let response = host.dispatch_ipc_with_context(
-    @core.AppCommandRequestContext::new(42L),
-    @ipc.IpcOpRequest::new("request-1", "app:add", { "left": 20, "right": 22 }),
-  )
-  assert_true(response.is_ok())
-  inspect(response.body.stringify(), content="{\"total\":42}")
+  @async.with_task_group(group => {
+    let response = host.dispatch_ipc_with_context(
+      @core.AppCommandRequestContext::new(42L, group),
+      @ipc.IpcOpRequest::new("request-1", "app:add", { "left": 20, "right": 22 }),
+    )
+    assert_true(response.is_ok())
+    inspect(response.body.stringify(), content="{\"total\":42}")
+  })
 }
 
 ///|

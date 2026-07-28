@@ -52,15 +52,26 @@ pub async fn RuntimeWakeSignal::wait_for_change(
 /// Request-scoped context for one bridged app command dispatch.
 pub struct AppCommandRequestContext {
   window : Int64
+  tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
+  emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
 }
 
 ///|
+#doc(hidden)
 pub fn AppCommandRequestContext::new(
   window : Int64,
+  tasks : @async.TaskGroup[Unit],
   wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
+  emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
+    _route,
+    _name,
+    _payload,
+  ) {
+
+  },
 ) -> AppCommandRequestContext {
-  AppCommandRequestContext::{ window, wake_signal }
+  AppCommandRequestContext::{ window, tasks, wake_signal, emit_event }
 }
 
 ///|
@@ -90,6 +101,31 @@ pub fn AppCommandRequestContext::window(
   self : AppCommandRequestContext,
 ) -> Int64 {
   self.window
+}
+
+///|
+/// Returns the task group owned by this command lifecycle.
+///
+/// Child tasks are cancelled and joined when the issuing window closes.
+pub fn AppCommandRequestContext::task_group(
+  self : AppCommandRequestContext,
+) -> @async.TaskGroup[Unit] {
+  self.tasks
+}
+
+///|
+/// Emits a typed event to the renderer page that issued this command.
+pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
+  self : AppCommandRequestContext,
+  event : @proton_contract.Event[Payload],
+  payload : Payload,
+) -> Unit {
+  event.validate()
+  (self.emit_event)(
+    event.contract_route(),
+    event.name(),
+    ToJson::to_json(payload),
+  )
 }
 
 ///|

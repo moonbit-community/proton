@@ -3,6 +3,8 @@ package "justjavac/proton/core"
 
 import {
   "justjavac/proton/ipc",
+  "justjavac/proton_contract",
+  "moonbitlang/async",
   "moonbitlang/async/cond_var",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
@@ -69,9 +71,12 @@ pub fn AppCommandHost::set_event_sender(Self, async (@ipc.IpcExtensionEvent) -> 
 
 pub struct AppCommandRequestContext {
   window : Int64
+  tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
+  emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
 }
-pub fn AppCommandRequestContext::new(Int64, wake_signal? : RuntimeWakeSignal) -> Self
+pub async fn[Payload : ToJson] AppCommandRequestContext::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub async fn AppCommandRequestContext::wait_for_wake(Self, Int64) -> Unit
 pub fn AppCommandRequestContext::wake_revision(Self) -> Int64
 pub fn AppCommandRequestContext::wake_signal(Self) -> RuntimeWakeSignal

@@ -109,9 +109,10 @@ fn app_cleanup(
   runtime : @native.Runtime,
   window : @native.Window?,
   command_host : CommandHostRuntime?,
+  lifecycle_failures? : Array[AppCleanupError] = [],
 ) -> Array[AppCleanupError] {
   lifecycle.begin_draining()
-  let failures : Array[AppCleanupError] = []
+  let failures = lifecycle_failures.copy()
   for error in close_command_host(command_host) {
     failures.push(CommandExtension(error))
   }

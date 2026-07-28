@@ -7,6 +7,8 @@ import {
   "justjavac/proton/core",
   "justjavac/proton/extension",
   "justjavac/proton/native",
+  "justjavac/proton_contract",
+  "moonbitlang/async",
   "moonbitlang/core/debug",
 }
 
@@ -40,6 +42,7 @@ pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable
 // Errors
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
+  LifecycleHook(LifecycleHookError)
   WindowDestroy(@native.NativeError)
   RuntimeDestroy(@native.NativeError)
 } derive(@debug.Debug)
@@ -70,6 +73,7 @@ pub(all) suberror AppRunError {
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
   RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
+  LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
   BridgeStartupError(@native.BridgeDiagnostic)
   BridgeRuntimeError(@native.BridgeDiagnostic)
@@ -85,6 +89,14 @@ pub(all) suberror CommandExtensionLifecycleError {
 } derive(@debug.Debug)
 pub fn CommandExtensionLifecycleError::message(Self) -> String
 
+pub(all) suberror LifecycleHookError {
+  ApplicationStart(index~ : Int, detail~ : String)
+  ApplicationShutdown(index~ : Int, detail~ : String)
+  WindowReady(index~ : Int, detail~ : String)
+  WindowClose(index~ : Int, detail~ : String)
+} derive(@debug.Debug)
+pub fn LifecycleHookError::message(Self) -> String
+
 pub(all) suberror RuntimeWakeupError {
   UnsupportedFeature(feature~ : String)
   PipeCreateFailed(detail~ : String)
@@ -96,6 +108,7 @@ pub fn RuntimeWakeupError::message(Self) -> String
 
 // Types and methods
 type App
+pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
 pub fn App::debug(Self, enabled? : Bool) -> Self
@@ -113,6 +126,26 @@ pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
+pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
+
+pub struct ApplicationContext {
+  tasks : @async.TaskGroup[Unit]
+}
+pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
+
+pub struct WindowContext {
+  window : @native.WindowRef
+  tasks : @async.TaskGroup[Unit]
+  events : WindowEventEmitter
+}
+pub fn WindowContext::events(Self) -> WindowEventEmitter
+pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
+pub fn WindowContext::window(Self) -> @native.WindowRef
+
+pub struct WindowEventEmitter {
+  emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
+}
+pub async fn[Payload : ToJson] WindowEventEmitter::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
 
 // Type aliases
 pub using @native {type BridgeDiagnostic}

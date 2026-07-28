@@ -92,9 +92,29 @@ impl Show for CommandExtensionLifecycleError with fn output(self, logger) {
 }
 
 ///|
+pub fn LifecycleHookError::message(self : LifecycleHookError) -> String {
+  match self {
+    ApplicationStart(index~, detail~) =>
+      "application startup hook " + index.to_string() + " failed: " + detail
+    ApplicationShutdown(index~, detail~) =>
+      "application shutdown hook " + index.to_string() + " failed: " + detail
+    WindowReady(index~, detail~) =>
+      "window ready hook " + index.to_string() + " failed: " + detail
+    WindowClose(index~, detail~) =>
+      "window close hook " + index.to_string() + " failed: " + detail
+  }
+}
+
+///|
+impl Show for LifecycleHookError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
 pub fn AppCleanupError::message(self : AppCleanupError) -> String {
   match self {
     CommandExtension(error) => error.message()
+    LifecycleHook(error) => error.message()
     WindowDestroy(error) => "failed to destroy window: " + error.message()
     RuntimeDestroy(error) => "failed to destroy runtime: " + error.message()
   }
@@ -137,6 +157,8 @@ pub fn AppRunError::message(self : AppRunError) -> String {
     RuntimeWakeupError(error) => "runtime wakeup failed: " + error.message()
     CommandExtensionLifecycleError(error) =>
       "command extension lifecycle failed: " + error.message()
+    LifecycleHookError(error) =>
+      "application lifecycle failed: " + error.message()
     EntryLoadError(error) =>
       "application entry failed to load: " + error.message()
     BridgeStartupError(diagnostic) =>

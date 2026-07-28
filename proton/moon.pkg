@@ -17,6 +17,7 @@ import {
   "justjavac/proton/ipc",
   "justjavac/proton/manifest",
   "justjavac/proton/native",
+  "justjavac/proton_contract",
 }
 
 import {
@@ -31,6 +32,7 @@ options(
     "exports.mbt": [ "native" ],
     "facade_bridge.mbt": [ "native" ],
     "facade_builders.mbt": [ "native" ],
+    "facade_context.mbt": [ "native" ],
     "facade_entry.mbt": [ "native" ],
     "facade_lifecycle.mbt": [ "native" ],
     "facade_macos_layout.mbt": [ "native" ],

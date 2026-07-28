@@ -17,6 +17,8 @@ struct App {
   extension_settings : Map[String, @manifest.ExtensionSetting]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
+  application_lifecycle_hooks : Array[ApplicationLifecycleHook]
+  window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
 }
 
@@ -145,9 +147,19 @@ pub(all) suberror CommandExtensionLifecycleError {
 } derive(Debug)
 
 ///|
+/// Failures produced by application or window lifecycle hooks.
+pub(all) suberror LifecycleHookError {
+  ApplicationStart(index~ : Int, detail~ : String)
+  ApplicationShutdown(index~ : Int, detail~ : String)
+  WindowReady(index~ : Int, detail~ : String)
+  WindowClose(index~ : Int, detail~ : String)
+} derive(Debug)
+
+///|
 /// A failure from one stage of best-effort application teardown.
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
+  LifecycleHook(LifecycleHookError)
   WindowDestroy(@native.NativeError)
   RuntimeDestroy(@native.NativeError)
 } derive(Debug)
@@ -160,6 +172,7 @@ pub(all) suberror AppRunError {
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
   RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
+  LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
   BridgeStartupError(@native.BridgeDiagnostic)
   BridgeRuntimeError(@native.BridgeDiagnostic)

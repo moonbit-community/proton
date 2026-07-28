@@ -308,6 +308,33 @@ fn extension_event_sender(
 }
 
 ///|
+fn typed_event_sender(
+  window : @native.Window,
+  page_instance : String?,
+) -> async (@proton_contract.ContractRoute, String, Json) -> Unit noraise {
+  fn(route, name, payload) {
+    let event_json = if route.is_application() {
+      bridge_event_json("application", name, payload, None, page_instance)
+    } else {
+      match route.extension_namespace() {
+        Some(extension_namespace) =>
+          bridge_event_json(
+            "extension",
+            name,
+            payload,
+            Some(extension_namespace),
+            page_instance,
+          )
+        None => return
+      }
+    }
+    window.emit_bridge_event_json(event_json) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
 async fn dispatch_bridge_request(
   window : @native.Window,
   host : @core.AppCommandHost,
@@ -315,10 +342,33 @@ async fn dispatch_bridge_request(
   policy : BridgePagePolicy,
   wake_signal : @core.RuntimeWakeSignal,
 ) -> @native.BridgeResponse {
+  let result : Ref[@native.BridgeResponse?] = Ref(None)
+  @async.with_task_group(command_tasks => {
+    result.val = Some(
+      dispatch_bridge_request_in_command_scope(
+        window, host, request, policy, wake_signal, command_tasks,
+      ),
+    )
+    command_tasks.return_immediately(())
+  })
+  result.val.unwrap()
+}
+
+///|
+async fn dispatch_bridge_request_in_command_scope(
+  window : @native.Window,
+  host : @core.AppCommandHost,
+  request : @native.BridgeRequest,
+  policy : BridgePagePolicy,
+  wake_signal : @core.RuntimeWakeSignal,
+  command_tasks : @async.TaskGroup[Unit],
+) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(
     request.window(),
+    command_tasks,
     wake_signal~,
+    emit_event=typed_event_sender(window, request.page_instance()),
   )
   let response = match
     @async.with_timeout_opt(policy.request_timeout_ms, () => {

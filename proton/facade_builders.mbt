@@ -123,6 +123,8 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     extension_settings: Map([]),
     command_extensions: Map([]),
     command_registrars: [],
+    application_lifecycle_hooks: [],
+    window_lifecycle_hooks: [],
     validation_errors: [],
   }
 }
@@ -245,6 +247,46 @@ pub fn App::commands(
   register : (@proton_command.CommandRegistrar) -> Unit raise,
 ) -> App {
   self.command_registrars.push(register)
+  self
+}
+
+///|
+/// Adds a paired application lifecycle hook.
+///
+/// The startup state is passed to shutdown. Completed hooks shut down in
+/// reverse order, including when a later startup hook fails.
+pub fn[State] App::app_lifecycle(
+  self : App,
+  on_start~ : async (ApplicationContext) -> State,
+  on_shutdown~ : async (State) -> Unit,
+) -> App {
+  self.application_lifecycle_hooks.push(ApplicationLifecycleHook::{
+    start: async fn(context) {
+      let state = on_start(context)
+      ApplicationLifecycleActivation::{
+        shutdown: async fn() { on_shutdown(state) },
+      }
+    },
+  })
+  self
+}
+
+///|
+/// Adds a paired primary-window lifecycle hook.
+///
+/// The ready state is passed to close. Completed hooks close in reverse order,
+/// including when a later ready hook fails.
+pub fn[State] App::window_lifecycle(
+  self : App,
+  on_ready~ : async (WindowContext) -> State,
+  on_close~ : async (State) -> Unit,
+) -> App {
+  self.window_lifecycle_hooks.push(WindowLifecycleHook::{
+    start: async fn(context) {
+      let state = on_ready(context)
+      WindowLifecycleActivation::{ close: async fn() { on_close(state) } }
+    },
+  })
   self
 }
 

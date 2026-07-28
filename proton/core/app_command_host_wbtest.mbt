@@ -50,10 +50,37 @@ async test "runtime wake signal preserves notifications across wait races" {
 ///|
 async test "request context observes its shared runtime wake signal" {
   let signal = RuntimeWakeSignal::new()
-  let context = AppCommandRequestContext::new(7L, wake_signal=signal)
-  let revision = context.wake_revision()
-  signal.notify()
-  context.wait_for_wake(revision)
-  inspect(context.window(), content="7")
-  inspect(context.wake_revision(), content="1")
+  @async.with_task_group(group => {
+    let context = AppCommandRequestContext::new(7L, group, wake_signal=signal)
+    let revision = context.wake_revision()
+    signal.notify()
+    context.wait_for_wake(revision)
+    inspect(context.window(), content="7")
+    inspect(context.wake_revision(), content="1")
+  })
+}
+
+///|
+async test "request context emits through its page-scoped destination" {
+  let emitted_route = Ref("")
+  let emitted_name = Ref("")
+  let emitted_payload = Ref(Json::null())
+  let changed : @proton_contract.Event[String] = @proton_contract.event(
+    "changed",
+  )
+  @async.with_task_group(group => {
+    let context = AppCommandRequestContext::new(7L, group, emit_event=fn(
+      route,
+      name,
+      payload,
+    ) {
+      emitted_route.val = route.operation_name()
+      emitted_name.val = name
+      emitted_payload.val = payload
+    })
+    context.emit(changed, "ready")
+  })
+  inspect(emitted_route.val, content="app:changed")
+  inspect(emitted_name.val, content="changed")
+  inspect(emitted_payload.val.stringify(), content="\"ready\"")
 }

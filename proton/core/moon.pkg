@@ -3,6 +3,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "justjavac/proton/ipc",
+  "justjavac/proton_contract",
 }
 
 import {

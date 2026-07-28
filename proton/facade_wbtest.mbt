@@ -35,6 +35,7 @@ fn[T] expect_app_run_error(action : () -> T raise AppRunError) -> AppRunError {
 ///|
 priv suberror FacadeLifecycleTestError {
   DestroyFailed(String)
+  StartFailed(String)
 } derive(Debug)
 
 ///|
@@ -635,6 +636,118 @@ test "application lifecycle advances through close and destroy" {
   lifecycle.finish()
   assert_true(lifecycle.state is Closed)
   assert_true(lifecycle.window_state is Destroyed)
+}
+
+///|
+async test "application lifecycle hooks shut down in reverse order" {
+  let calls : Array[String] = []
+  let configured = html("Lifecycle", "<html></html>")
+    .app_lifecycle(
+      on_start=fn(_context) {
+        calls.push("start:first")
+        "first"
+      },
+      on_shutdown=fn(state) { calls.push("stop:" + state) },
+    )
+    .app_lifecycle(
+      on_start=fn(_context) {
+        calls.push("start:second")
+        "second"
+      },
+      on_shutdown=fn(state) { calls.push("stop:" + state) },
+    )
+  @async.with_task_group(group => {
+    start_application_lifecycle_hooks(
+      configured.application_lifecycle_hooks,
+      ApplicationContext::new(group),
+      group,
+      [],
+    )
+    group.return_immediately(())
+  })
+  assert_eq(calls, ["start:first", "start:second", "stop:second", "stop:first"])
+}
+
+///|
+async test "application lifecycle startup rolls back completed hooks" {
+  let calls : Array[String] = []
+  let cleanup_failures : Array[AppCleanupError] = []
+  let configured = html("Lifecycle", "<html></html>")
+    .app_lifecycle(
+      on_start=fn(_context) {
+        calls.push("start:first")
+        "first"
+      },
+      on_shutdown=fn(state) raise {
+        calls.push("stop:" + state)
+        raise FacadeLifecycleTestError::DestroyFailed(state)
+      },
+    )
+    .app_lifecycle(
+      on_start=fn(_context) raise {
+        calls.push("start:second")
+        raise FacadeLifecycleTestError::StartFailed("second")
+      },
+      on_shutdown=fn(_state : Unit) { calls.push("unexpected") },
+    )
+  try {
+    @async.with_task_group(group => {
+      start_application_lifecycle_hooks(
+        configured.application_lifecycle_hooks,
+        ApplicationContext::new(group),
+        group,
+        cleanup_failures,
+      )
+    })
+    fail("expected lifecycle startup failure")
+  } catch {
+    LifecycleHookError(ApplicationStart(index=1, detail~)) =>
+      assert_true(detail.contains("second"))
+    _ => fail("expected lifecycle startup failure")
+  }
+  assert_eq(calls, ["start:first", "start:second", "stop:first"])
+  match cleanup_failures {
+    [LifecycleHook(ApplicationShutdown(index=0, detail~))] =>
+      assert_true(detail.contains("first"))
+    _ => fail("expected rollback cleanup failure")
+  }
+}
+
+///|
+async test "window close joins owned tasks before close hooks" {
+  let child_stopped = Ref(false)
+  let close_saw_stopped = Ref(false)
+  let configured = html("Lifecycle", "<html></html>").window_lifecycle(
+    on_ready=fn(context) {
+      context
+      .task_group()
+      .spawn_bg(
+        () => {
+          defer {
+            child_stopped.val = true
+          }
+          @async.sleep(10000)
+        },
+        no_wait=true,
+      )
+    },
+    on_close=fn(_state) { close_saw_stopped.val = child_stopped.val },
+  )
+  @async.with_task_group(group => {
+    start_window_lifecycle_hooks(
+      configured.window_lifecycle_hooks,
+      WindowContext::new(
+        @native.WindowRef::unsafe_from_handle(17L),
+        group,
+        WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+      ),
+      group,
+      [],
+    )
+    group.return_immediately(())
+  })
+  assert_true(child_stopped.val)
+  assert_true(close_saw_stopped.val)
 }
 
 ///|

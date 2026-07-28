@@ -27,6 +27,8 @@ fn App::new(
     extension_settings: Map([]),
     command_extensions: Map([]),
     command_registrars: [],
+    application_lifecycle_hooks: [],
+    window_lifecycle_hooks: [],
     validation_errors: [],
   }
 }
