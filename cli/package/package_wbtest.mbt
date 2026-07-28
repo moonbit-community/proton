@@ -6,11 +6,11 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 ///|
 test "parse package args accepts repeated targets and overrides" {
   let raw = parse_package_args([
-    "--package", "desktop", "--target", "app", "--target", "zip", "--output", "dist",
-    "--no-build", "--dry-run",
+    "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
+    "--output", "dist", "--no-build", "--dry-run",
   ])
   assert_eq(raw.app_package, "desktop")
-  @debug.assert_eq(raw.targets, ["app", "zip"])
+  @debug.assert_eq(raw.targets, ["app", "zip", "dmg"])
   @debug.assert_eq(raw.output, Some("dist"))
   assert_false(raw.build)
   assert_true(raw.dry_run)
@@ -18,11 +18,43 @@ test "parse package args accepts repeated targets and overrides" {
 
 ///|
 test "parse package args rejects unsupported target" {
-  try parse_package_args(["--target", "dmg"]) catch {
-    PackageUsageError::UnsupportedTarget(target="dmg") => ()
+  try parse_package_args(["--target", "msi"]) catch {
+    PackageUsageError::UnsupportedTarget(target="msi") => ()
     _ => abort("expected unsupported target")
   } noraise {
     _ => abort("expected unsupported target")
+  }
+}
+
+///|
+async test "package plan accepts dmg only on macOS" {
+  let project = @proton_config.ProjectConfig::new(
+    ".",
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Html("<main>demo</main>"),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.demo"),
+      version=Some("1.0.0"),
+    ),
+    bundle=Some(
+      @proton_config.ProjectBundleConfig::new(active=true, targets=[
+        "app", "dmg",
+      ]),
+    ),
+  )
+  let raw = parse_package_args([])
+  if is_macos_host() {
+    let plan = build_package_plan(raw, "moon.proton", project)
+    @debug.assert_eq(plan.targets, ["app", "dmg"])
+  } else {
+    try build_package_plan(raw, "moon.proton", project) catch {
+      PackagePlanError::UnsupportedTargetForPlatform(target="dmg", platform~) =>
+        assert_true(platform != "")
+      _ => abort("expected platform-specific target error")
+    } noraise {
+      _ => abort("expected dmg to be rejected outside macOS")
+    }
   }
 }
 
@@ -410,7 +442,9 @@ async test "macOS staged app promotion rolls back when staging is missing" {
   let marker = resolve_path(destination, "Contents/old.txt")
   ensure_dir(path_parent(marker))
   write_text(marker, "old")
-  try promote_staged_app(resolve_path(root, "missing.app"), destination) catch {
+  try
+    promote_staged_artifact(resolve_path(root, "missing.app"), destination)
+  catch {
     _ => ()
   } noraise {
     _ => abort("expected staging promotion failure")
@@ -428,7 +462,9 @@ async test "macOS staged app promotion recovers an interrupted backup" {
   let marker = resolve_path(backup, "Contents/old.txt")
   ensure_dir(path_parent(marker))
   write_text(marker, "old")
-  try promote_staged_app(resolve_path(root, "missing.app"), destination) catch {
+  try
+    promote_staged_artifact(resolve_path(root, "missing.app"), destination)
+  catch {
     _ => ()
   } noraise {
     _ => abort("expected staging promotion failure")

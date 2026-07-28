@@ -197,6 +197,18 @@ Package output is written to `target/proton-dist` by default. Icons, resources,
 output targets, signing, and notarization are configured through `moon.proton`
 and package command options.
 
+The `dmg` target is available on macOS. It creates a compressed disk image
+containing the app and an `/Applications` shortcut for drag-to-install:
+
+```sh
+proton_cli package --target app --target dmg
+```
+
+With `--notarize`, Proton submits the DMG when that target is enabled, then
+staples and validates both the DMG and the app before creating any requested
+ZIP archive. Without a `dmg` target, the existing app notarization flow is
+used. Windows supports the `app` and `zip` targets.
+
 ## Diagnose a project
 
 ```sh

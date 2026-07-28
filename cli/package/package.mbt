@@ -77,7 +77,7 @@ pub fn command() -> @argparse.Command {
       OptionArg(
         "target",
         action=Append,
-        about="Package target (app or zip); may be repeated",
+        about="Package target (app, zip, or macOS dmg); may be repeated",
       ),
       OptionArg("output", about="Output directory"),
     ],
@@ -143,7 +143,7 @@ fn package_options_from_matches(
 
 ///|
 fn validate_package_target(target : String) -> Unit raise PackageUsageError {
-  if target != "app" && target != "zip" {
+  if target != "app" && target != "zip" && target != "dmg" {
     raise UnsupportedTarget(target~)
   }
 }
@@ -174,7 +174,8 @@ async fn build_package_plan(
   guard version != "" else {
     raise PackageConfigError::MissingField(field="moon.mod version")
   }
-  let (macos_version, bundle_version) = if is_macos_host() {
+  let macos_host = is_macos_host()
+  let (macos_version, bundle_version) = if macos_host {
     validate_macos_version(version)
   } else {
     (version, version)
@@ -185,6 +186,12 @@ async fn build_package_plan(
     copy_strings(bundle.targets)
   } else {
     ["app", "zip"]
+  }
+  if targets.contains("dmg") && !macos_host {
+    raise PackagePlanError::UnsupportedTargetForPlatform(
+      target="dmg",
+      platform=@cef.current_platform_id(),
+    )
   }
   let base_dir = resolve_path(project.base_dir(), ".")
   let output = match raw.output {
@@ -549,11 +556,17 @@ async fn stage_macos_app(
   executable : String,
   runtime : String,
 ) -> Unit {
-  let staging = macos_staging_app_path(plan)
   stage_macos_app_impl(plan, executable, runtime) catch {
     error => {
-      remove_tree(staging) catch {
-        _ => ()
+      for
+        path in [
+          macos_staging_app_path(plan),
+          macos_dmg_staging_path(plan),
+          macos_dmg_root_path(plan),
+        ] {
+        remove_tree(path) catch {
+          _ => ()
+        }
       }
       raise error
     }
@@ -605,11 +618,27 @@ async fn stage_macos_app_impl(
   if plan.sign {
     sign_macos_app(plan, app, executable_name)
   }
-  if plan.notarize {
-    notarize_macos_app(plan, app)
+  let dmg = if plan.targets.contains("dmg") {
+    Some(create_macos_dmg(plan, app))
+  } else {
+    None
   }
-  promote_staged_app(app, final_app)
+  if plan.notarize {
+    match dmg {
+      Some(dmg) => notarize_macos_dmg(app, dmg)
+      None => notarize_macos_app(plan, app)
+    }
+  }
+  promote_staged_artifact(app, final_app)
   println("Packaged macOS app: " + final_app)
+  match dmg {
+    Some(dmg) => {
+      let final_dmg = macos_dmg_path(plan)
+      promote_staged_artifact(dmg, final_dmg)
+      println("Created disk image: " + final_dmg)
+    }
+    None => ()
+  }
   if plan.targets.contains("zip") {
     create_zip(plan, final_app)
   }
@@ -624,7 +653,10 @@ fn macos_staging_app_path(plan : PackagePlan) -> String {
 }
 
 ///|
-async fn promote_staged_app(staging : String, destination : String) -> Unit {
+async fn promote_staged_artifact(
+  staging : String,
+  destination : String,
+) -> Unit {
   let backup = destination + ".backup"
   if path_exists(backup) {
     if path_exists(destination) {
@@ -1040,12 +1072,8 @@ async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
 }
 
 ///|
-async fn sign_macos_app(
-  plan : PackagePlan,
-  app : String,
-  executable_name : String,
-) -> Unit {
-  let identity = match @sys.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
+fn required_macos_signing_identity() -> String raise MacosSigningError {
+  match @sys.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
     Some(identity) if identity.trim().to_owned() != "" =>
       identity.trim().to_owned()
     _ =>
@@ -1053,6 +1081,15 @@ async fn sign_macos_app(
         detail="--sign requires PROTON_MACOS_SIGNING_IDENTITY with a Developer ID Application identity",
       )
   }
+}
+
+///|
+async fn sign_macos_app(
+  plan : PackagePlan,
+  app : String,
+  executable_name : String,
+) -> Unit {
+  let identity = required_macos_signing_identity()
   let is_adhoc = validate_macos_signing_identity(
     identity,
     notarize=plan.notarize,
@@ -1329,14 +1366,7 @@ fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
 
 ///|
 async fn notarize_macos_app(plan : PackagePlan, app : String) -> Unit {
-  let profile = match @sys.get_env_var("PROTON_NOTARY_PROFILE") {
-    Some(profile) if profile.trim().to_owned() != "" =>
-      profile.trim().to_owned()
-    _ =>
-      raise MacosSigningError::InvalidConfiguration(
-        detail="--notarize requires PROTON_NOTARY_PROFILE",
-      )
-  }
+  let profile = required_macos_notary_profile()
   let archive = resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".notary.zip",
@@ -1374,8 +1404,31 @@ async fn submit_macos_notarization(
       detail="exit code " + zip_code.to_string(),
     )
   }
-  let submit_code = @process.run("xcrun", [
-    "notarytool", "submit", archive, "--keychain-profile", profile, "--wait",
+  submit_macos_notarization_artifact(archive, profile)
+  staple_macos_artifact(app)
+  validate_macos_staple(app)
+  assess_macos_app(app)
+}
+
+///|
+fn required_macos_notary_profile() -> String raise MacosSigningError {
+  match @sys.get_env_var("PROTON_NOTARY_PROFILE") {
+    Some(profile) if profile.trim().to_owned() != "" =>
+      profile.trim().to_owned()
+    _ =>
+      raise MacosSigningError::InvalidConfiguration(
+        detail="--notarize requires PROTON_NOTARY_PROFILE",
+      )
+  }
+}
+
+///|
+async fn submit_macos_notarization_artifact(
+  artifact : String,
+  profile : String,
+) -> Unit {
+  let code = @process.run("xcrun", [
+    "notarytool", "submit", artifact, "--keychain-profile", profile, "--wait",
   ]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
@@ -1383,39 +1436,51 @@ async fn submit_macos_notarization(
         detail=@debug.render(Repr(error)),
       )
   }
-  guard submit_code == 0 else {
+  guard code == 0 else {
     raise MacosSigningError::ToolFailure(
       stage="notarytool submit",
-      detail="exit code " + submit_code.to_string(),
+      detail="exit code " + code.to_string(),
     )
   }
-  let staple_code = @process.run("xcrun", ["stapler", "staple", app]) catch {
+}
+
+///|
+async fn staple_macos_artifact(artifact : String) -> Unit {
+  let code = @process.run("xcrun", ["stapler", "staple", artifact]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage="staple notarization ticket",
         detail=@debug.render(Repr(error)),
       )
   }
-  guard staple_code == 0 else {
+  guard code == 0 else {
     raise MacosSigningError::ToolFailure(
       stage="stapler",
-      detail="exit code " + staple_code.to_string(),
+      detail="exit code " + code.to_string(),
     )
   }
-  let validate_code = @process.run("xcrun", ["stapler", "validate", app]) catch {
+}
+
+///|
+async fn validate_macos_staple(artifact : String) -> Unit {
+  let code = @process.run("xcrun", ["stapler", "validate", artifact]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage="validate notarization ticket",
         detail=@debug.render(Repr(error)),
       )
   }
-  guard validate_code == 0 else {
+  guard code == 0 else {
     raise MacosSigningError::ToolFailure(
       stage="stapler validate",
-      detail="exit code " + validate_code.to_string(),
+      detail="exit code " + code.to_string(),
     )
   }
-  let assess_code = @process.run("spctl", [
+}
+
+///|
+async fn assess_macos_app(app : String) -> Unit {
+  let code = @process.run("spctl", [
     "--assess", "--type", "execute", "--verbose=4", app,
   ]) catch {
     error =>
@@ -1424,10 +1489,10 @@ async fn submit_macos_notarization(
         detail=@debug.render(Repr(error)),
       )
   }
-  if assess_code != 0 {
+  if code != 0 {
     raise MacosSigningError::ToolFailure(
       stage="Gatekeeper assessment",
-      detail="exit code " + assess_code.to_string(),
+      detail="exit code " + code.to_string(),
     )
   }
 }

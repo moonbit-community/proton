@@ -17,6 +17,7 @@ pub(all) suberror PackagePlanError {
   InvalidProductName(reason~ : String)
   InvalidIdentifier(identifier~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
+  UnsupportedTargetForPlatform(target~ : String, platform~ : String)
   UnsupportedPlatform
   UnsupportedResourceGlob(path~ : String)
   MissingInput(path~ : String)
@@ -94,6 +95,8 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "invalid identifier " + identifier + ": " + reason
     InvalidVersion(version~, reason~) =>
       "invalid bundle version " + version + ": " + reason
+    UnsupportedTargetForPlatform(target~, platform~) =>
+      "package target " + target + " is not supported on " + platform
     UnsupportedPlatform => "proton package currently supports macOS and Windows"
     UnsupportedResourceGlob(path~) =>
       "unsupported bundle.resources glob: " + path

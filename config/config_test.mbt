@@ -188,6 +188,7 @@ test "project config rebases file entry and frontend paths from config directory
     #|}
     #|
     #|bundle = {
+    #|  targets: ["app", "zip", "dmg"],
     #|  icon: ["icons/icon.ico"],
     #|  resources: ["resources/**"],
     #|  output: "target/proton-dist",
@@ -215,6 +216,7 @@ test "project config rebases file entry and frontend paths from config directory
     ),
   )
   let bundle = config.bundle().unwrap()
+  assert_eq(bundle.targets, ["app", "zip", "dmg"])
   assert_true(
     normalize_test_path(bundle.icon[0]).has_suffix(
       "target/proton-config/subdir/icons/icon.ico",

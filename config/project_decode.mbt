@@ -349,7 +349,7 @@ fn validate_project_bundle_targets(
 ) -> Unit raise ProjectConfigError {
   let seen : Map[String, Unit] = Map([])
   for target in targets {
-    guard target == "app" || target == "zip" else {
+    guard target == "app" || target == "zip" || target == "dmg" else {
       raise UnsupportedValue(path="bundle.targets", value=target)
     }
     guard !seen.contains(target) else {
