@@ -4,33 +4,14 @@
 fn generated_template_specs() -> Array[TemplateSpec] {
   [
     {
-      output_path: "moon.mod",
-      template_name: "moon.mod.mtpl",
+      output_path: "moon.work",
+      template_name: "moon.work.mtpl",
       template_source: (
-          #|name = {{module_mbt}}
-          #|
-          #|version = "0.1.0"
-          #|
-          #|import {
-          #|  "justjavac/proton@{{proton_version}}",
-          #|  "justjavac/proton_contract@0.1.0",
-          #|}
-          #|
-          #|readme = "README.mbt.md"
-          #|
-          #|repository = ""
-          #|
-          #|license = "Apache-2.0"
-          #|
-          #|keywords = [ "proton", "gui", "web", "desktop-app" ]
-          #|
-          #|description = "A Proton desktop app."
-          #|
-          #|options(
-          #|  warn_list: "",
-          #|  preferred_target: "native",
-          #|  supported_targets: "+native",
-          #|)
+          #|members = [
+          #|  "./shared",
+          #|  "./frontend",
+          #|  "./backend",
+          #|]
           #|
       ),
     },
@@ -48,9 +29,22 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  size_hint: "none",
           #|}
           #|
+          #|backend = {
+          #|  path: "backend",
+          #|  package: "app",
+          #|}
+          #|
+          #|frontend = {
+          #|  path: "frontend",
+          #|  dev_url: "http://127.0.0.1:4300",
+          #|  before_dev: "warren dev --port 4300",
+          #|  before_build: "warren build",
+          #|  dist: "dist",
+          #|}
+          #|
           #|entry = {
           #|  kind: "asset",
-          #|  value: "app/app.html",
+          #|  value: "frontend/dist/index.html",
           #|}
           #|
           #|debug = true
@@ -64,42 +58,332 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       ),
     },
     {
-      output_path: "app/moon.pkg",
-      template_name: "app/moon.pkg.mtpl",
+      output_path: "shared/moon.mod",
+      template_name: "shared/moon.mod.mtpl",
       template_source: (
+          #|name = "{{shared_module}}"
+          #|
+          #|version = "0.1.0"
+          #|
           #|import {
-          #|  "justjavac/proton",
-          #|  {{module_counter_import_mbt}} @counter,
+          #|  "justjavac/proton_contract@0.1.0",
           #|}
           #|
-          #|supported_targets = "native"
+          #|license = "Apache-2.0"
           #|
-          #|pkgtype(kind: "executable")
+          #|description = "Shared typed contracts for {{title}}."
           #|
           #|options(
-          #|  targets: { "main.mbt": [ "native" ] },
+          #|  warn_list: "",
+          #|  supported_targets: "js+native",
           #|)
           #|
       ),
     },
     {
-      output_path: "app/main.mbt",
-      template_name: "app/main.mbt.mtpl",
+      output_path: "shared/moon.pkg",
+      template_name: "shared/moon.pkg.mtpl",
+      template_source: (
+          #|import {
+          #|  "moonbitlang/core/json",
+          #|  "justjavac/proton_contract",
+          #|}
+          #|
+          #|supported_targets = "js+native"
+          #|
+      ),
+    },
+    {
+      output_path: "shared/todo_contract.mbt",
+      template_name: "shared/todo_contract.mbt.mtpl",
       template_source: (
           #|///|
+          #|pub(all) struct TodoItem {
+          #|  id : Int
+          #|  title : String
+          #|  completed : Bool
+          #|} derive(ToJson, FromJson, Eq, Debug)
+          #|
+          #|///|
+          #|pub(all) struct TodoSnapshot {
+          #|  version : Int
+          #|  todos : Array[TodoItem]
+          #|} derive(ToJson, FromJson, Eq, Debug)
+          #|
+          #|///|
+          #|pub(all) struct CreateTodoRequest {
+          #|  title : String
+          #|} derive(ToJson, FromJson, Eq, Debug)
+          #|
+          #|///|
+          #|pub(all) struct SetTodoCompletedRequest {
+          #|  id : Int
+          #|  completed : Bool
+          #|} derive(ToJson, FromJson, Eq, Debug)
+          #|
+          #|///|
+          #|pub(all) struct DeleteTodoRequest {
+          #|  id : Int
+          #|} derive(ToJson, FromJson, Eq, Debug)
+          #|
+          #|///|
+          #|pub let list_todos : @proton_contract.Command[Unit, TodoSnapshot] = @proton_contract.command(
+          #|  "list_todos",
+          #|)
+          #|
+          #|///|
+          #|pub let create_todo : @proton_contract.Command[CreateTodoRequest, TodoSnapshot] = @proton_contract.command(
+          #|  "create_todo",
+          #|)
+          #|
+          #|///|
+          #|pub let set_todo_completed : @proton_contract.Command[
+          #|  SetTodoCompletedRequest,
+          #|  TodoSnapshot,
+          #|] = @proton_contract.command("set_todo_completed")
+          #|
+          #|///|
+          #|pub let delete_todo : @proton_contract.Command[DeleteTodoRequest, TodoSnapshot] = @proton_contract.command(
+          #|  "delete_todo",
+          #|)
+          #|
+          #|///|
+          #|pub let todos_changed : @proton_contract.Event[TodoSnapshot] = @proton_contract.event(
+          #|  "todos_changed",
+          #|)
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/moon.mod",
+      template_name: "frontend/moon.mod.mtpl",
+      template_source: (
+          #|name = "{{frontend_module}}"
+          #|
+          #|version = "0.1.0"
+          #|
+          #|import {
+          #|  "{{shared_module}}@0.1.0",
+          #|  "justjavac/proton_client@0.1.0",
+          #|  "justjavac/proton_rabbita@{{proton_rabbita_version}}",
+          #|  "moonbit-community/rabbita@{{rabbita_version}}",
+          #|}
+          #|
+          #|license = "Apache-2.0"
+          #|
+          #|description = "Rabbita frontend for {{title}}."
+          #|
+          #|options(
+          #|  warn_list: "",
+          #|  preferred_target: "js",
+          #|  supported_targets: "js",
+          #|)
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/main/moon.pkg",
+      template_name: "frontend/main/moon.pkg.mtpl",
+      template_source: (
+          #|import {
+          #|  "{{shared_module}}" @shared,
+          #|  "justjavac/proton_client",
+          #|  "justjavac/proton_rabbita",
+          #|  "moonbit-community/rabbita",
+          #|  "moonbit-community/rabbita/html",
+          #|  "moonbit-community/rabbita/sub",
+          #|}
+          #|
+          #|supported_targets = "js"
+          #|
+          #|pkgtype(kind: "executable")
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/main/main.mbt",
+      template_name: "frontend/main/main.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|using @rabbita {type Cmd, type Emit, type Html}
+          #|
+          #|///|
+          #|using @html {button, div, form, h1, input, li, p, span, ul}
+          #|
+          #|///|
+          #|struct Model {
+          #|  draft : String
+          #|  snapshot : @shared.TodoSnapshot
+          #|  loading : Bool
+          #|  error : String?
+          #|} derive(Eq)
+          #|
+          #|///|
+          #|enum Msg {
+          #|  Load
+          #|  DraftChanged(String)
+          #|  Create
+          #|  SetCompleted(Int, Bool)
+          #|  Delete(Int)
+          #|  SnapshotReceived(@shared.TodoSnapshot)
+          #|  CommandFailed(@proton_client.ClientFailure)
+          #|}
+          #|
+          #|///|
+          #|fn initial_model() -> Model {
+          #|  { draft: "", snapshot: { version: 0, todos: [] }, loading: true, error: None }
+          #|}
+          #|
+          #|///|
+          #|fn failure_message(error : @proton_client.ClientFailure) -> String {
+          #|  match error {
+          #|    @proton_client.BridgeUnavailable =>
+          #|      "The Proton bridge is unavailable. Start this page with `proton_cli dev`."
+          #|    _ => error.message()
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|fn update(emit : Emit[Msg], msg : Msg, model : Model) -> (Cmd, Model) {
+          #|  match msg {
+          #|    Load =>
+          #|      (
+          #|        @proton_rabbita.invoke(
+          #|          @shared.list_todos,
+          #|          (),
+          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          error => emit(CommandFailed(error)),
+          #|        ),
+          #|        { ..model, loading: true, error: None },
+          #|      )
+          #|    DraftChanged(draft) => (@rabbita.none, { ..model, draft, })
+          #|    Create if model.draft.trim().is_empty() => (@rabbita.none, model)
+          #|    Create =>
+          #|      (
+          #|        @proton_rabbita.invoke(
+          #|          @shared.create_todo,
+          #|          { title: model.draft },
+          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          error => emit(CommandFailed(error)),
+          #|        ),
+          #|        { ..model, draft: "", error: None },
+          #|      )
+          #|    SetCompleted(id, completed) =>
+          #|      (
+          #|        @proton_rabbita.invoke(
+          #|          @shared.set_todo_completed,
+          #|          { id, completed },
+          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          error => emit(CommandFailed(error)),
+          #|        ),
+          #|        { ..model, error: None },
+          #|      )
+          #|    Delete(id) =>
+          #|      (
+          #|        @proton_rabbita.invoke(
+          #|          @shared.delete_todo,
+          #|          { id, },
+          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          error => emit(CommandFailed(error)),
+          #|        ),
+          #|        { ..model, error: None },
+          #|      )
+          #|    SnapshotReceived(snapshot) =>
+          #|      (@rabbita.none, { ..model, snapshot, loading: false, error: None })
+          #|    CommandFailed(error) =>
+          #|      (
+          #|        @rabbita.none,
+          #|        { ..model, loading: false, error: Some(failure_message(error)) },
+          #|      )
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|fn subscriptions(emit : Emit[Msg], _model : Model) -> @sub.Sub {
+          #|  @proton_rabbita.subscribe(
+          #|    @shared.todos_changed,
+          #|    snapshot => emit(SnapshotReceived(snapshot)),
+          #|    error => emit(CommandFailed(error)),
+          #|  )
+          #|}
+          #|
+          #|///|
+          #|fn todo_row(emit : Emit[Msg], todo : @shared.TodoItem) -> Html {
+          #|  li(class=if todo.completed { "todo-row is-complete" } else { "todo-row" }, [
+          #|    button(
+          #|      type_="button",
+          #|      class="toggle-button",
+          #|      on_click=emit(SetCompleted(todo.id, !todo.completed)),
+          #|      if todo.completed {
+          #|        "Reopen"
+          #|      } else {
+          #|        "Complete"
+          #|      },
+          #|    ),
+          #|    span(class="todo-title", todo.title),
+          #|    button(
+          #|      type_="button",
+          #|      class="delete-button",
+          #|      on_click=emit(Delete(todo.id)),
+          #|      "Delete",
+          #|    ),
+          #|  ])
+          #|}
+          #|
+          #|///|
+          #|fn view(emit : Emit[Msg], model : Model) -> Html {
+          #|  let rows : Array[Html] = []
+          #|  for todo in model.snapshot.todos {
+          #|    rows.push(todo_row(emit, todo))
+          #|  }
+          #|  let content = if model.loading {
+          #|    p(class="status", "Loading todos...")
+          #|  } else if rows.is_empty() {
+          #|    p(class="status", "No todos yet.")
+          #|  } else {
+          #|    ul(class="todo-list", rows)
+          #|  }
+          #|  let error = match model.error {
+          #|    Some(message) => p(class="error", message)
+          #|    None => @html.nothing
+          #|  }
+          #|  div(class="app-shell", [
+          #|    div(class="app-header", [
+          #|      div([span(class="eyebrow", "PROTON + RABBITA"), h1({{title_mbt}})]),
+          #|      span(class="version", "Revision " + model.snapshot.version.to_string()),
+          #|    ]),
+          #|    form(on_submit=emit(Create), [
+          #|      input(
+          #|        value=model.draft,
+          #|        placeholder="What needs doing?",
+          #|        on_input=emit.map(value => DraftChanged(value)),
+          #|      ),
+          #|      input(input_type=Submit, value="Add todo"),
+          #|    ]),
+          #|    error,
+          #|    content,
+          #|  ])
+          #|}
+          #|
+          #|///|
+          #|#warnings("-alert_unstable")
           #|fn main {
-          #|  @proton.run(() => {
-          #|    @proton.config("moon.proton")
-          #|    .extension(@counter.extension())
-          #|    .run_or_abort()
-          #|  })
+          #|  let (emit, cell) = @rabbita.cell_with_emit(
+          #|    model=initial_model(),
+          #|    update~,
+          #|    view~,
+          #|    subscriptions~,
+          #|  )
+          #|  let app = @rabbita.new(cell)
+          #|  app.with_init(emit(Load))
+          #|  app.mount("app")
           #|}
           #|
       ),
     },
     {
-      output_path: "app/app.html",
-      template_name: "app/app.html.mtpl",
+      output_path: "frontend/public/index.html",
+      template_name: "frontend/public/index.html.mtpl",
       template_source: (
           #|<!doctype html>
           #|<html lang="en">
@@ -107,289 +391,406 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|    <meta charset="UTF-8" />
           #|    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           #|    <title>{{title_html}}</title>
-          #|    <style>
-          #|      :root {
-          #|        color-scheme: light dark;
-          #|        --bg: #f7f8f5;
-          #|        --ink: #182026;
-          #|        --muted: #5e6b74;
-          #|        --panel: #ffffff;
-          #|        --line: #d9e1dd;
-          #|        --accent: #0f766e;
-          #|        --accent-2: #9a3412;
-          #|        --ok: #13795b;
-          #|        --err: #b42318;
-          #|      }
-          #|
-          #|      @media (prefers-color-scheme: dark) {
-          #|        :root {
-          #|          --bg: #111817;
-          #|          --ink: #eef5f2;
-          #|          --muted: #a4b4ae;
-          #|          --panel: #17211f;
-          #|          --line: #2a3a36;
-          #|          --accent: #2dd4bf;
-          #|          --accent-2: #fb923c;
-          #|          --ok: #5ee0a8;
-          #|          --err: #ff8a80;
-          #|        }
-          #|      }
-          #|
-          #|      * {
-          #|        box-sizing: border-box;
-          #|      }
-          #|
-          #|      body {
-          #|        margin: 0;
-          #|        min-height: 100vh;
-          #|        background: var(--bg);
-          #|        color: var(--ink);
-          #|        font-family: "Segoe UI", system-ui, sans-serif;
-          #|      }
-          #|
-          #|      main {
-          #|        width: min(760px, 100%);
-          #|        margin: 0 auto;
-          #|        padding: 32px;
-          #|      }
-          #|
-          #|      h1 {
-          #|        margin: 0 0 8px;
-          #|        font-size: 30px;
-          #|        line-height: 1.15;
-          #|      }
-          #|
-          #|      p {
-          #|        margin: 0;
-          #|        color: var(--muted);
-          #|        line-height: 1.6;
-          #|      }
-          #|
-          #|      .counter {
-          #|        display: grid;
-          #|        gap: 18px;
-          #|        margin: 28px 0 20px;
-          #|        padding: 22px;
-          #|        border: 1px solid var(--line);
-          #|        border-radius: 8px;
-          #|        background: var(--panel);
-          #|      }
-          #|
-          #|      .value {
-          #|        font-size: 64px;
-          #|        font-weight: 700;
-          #|        line-height: 1;
-          #|      }
-          #|
-          #|      .toolbar {
-          #|        display: flex;
-          #|        gap: 10px;
-          #|        flex-wrap: wrap;
-          #|      }
-          #|
-          #|      button {
-          #|        min-width: 112px;
-          #|        border: 1px solid var(--accent);
-          #|        background: var(--accent);
-          #|        color: white;
-          #|        border-radius: 6px;
-          #|        padding: 10px 14px;
-          #|        font: inherit;
-          #|        cursor: pointer;
-          #|      }
-          #|
-          #|      button.secondary {
-          #|        border-color: var(--line);
-          #|        background: var(--panel);
-          #|        color: var(--ink);
-          #|      }
-          #|
-          #|      button:disabled {
-          #|        cursor: not-allowed;
-          #|        opacity: 0.55;
-          #|      }
-          #|
-          #|      .status {
-          #|        margin-top: 12px;
-          #|        color: var(--muted);
-          #|      }
-          #|
-          #|      .ok {
-          #|        color: var(--ok);
-          #|      }
-          #|
-          #|      .err {
-          #|        color: var(--err);
-          #|      }
-          #|    </style>
+          #|    <link rel="stylesheet" href="/styles.css" />
           #|  </head>
           #|  <body>
-          #|    <main>
-          #|      <h1>{{title_html}}</h1>
-          #|      <p>Counter state is owned by a MoonBit extension command bridge.</p>
-          #|
-          #|      <section class="counter" aria-label="Counter">
-          #|        <div id="value" class="value">0</div>
-          #|        <div class="toolbar">
-          #|          <button id="increment" disabled>Increment</button>
-          #|          <button id="reset" class="secondary" disabled>Reset</button>
-          #|        </div>
-          #|      </section>
-          #|
-          #|      <p id="status" class="status">Waiting for bridge...</p>
-          #|    </main>
-          #|
-          #|    <script>
-          #|      const valueEl = document.querySelector("#value");
-          #|      const statusEl = document.querySelector("#status");
-          #|      const incrementButton = document.querySelector("#increment");
-          #|      const resetButton = document.querySelector("#reset");
-          #|
-          #|      function setStatus(text, kind = "") {
-          #|        statusEl.textContent = text;
-          #|        statusEl.className = kind ? `status ${kind}` : "status";
-          #|      }
-          #|
-          #|      function setEnabled(enabled) {
-          #|        incrementButton.disabled = !enabled;
-          #|        resetButton.disabled = !enabled;
-          #|      }
-          #|
-          #|      async function invoke(name, payload = {}) {
-          #|        return window.__MoonBit__.core.invokeOp(`ext:counter/${name}`, payload);
-          #|      }
-          #|
-          #|      async function refresh() {
-          #|        const reply = await invoke("get");
-          #|        valueEl.textContent = String(reply.value);
-          #|      }
-          #|
-          #|      async function run(name) {
-          #|        setEnabled(false);
-          #|        try {
-          #|          const reply = await invoke(name);
-          #|          valueEl.textContent = String(reply.value);
-          #|          setStatus("Bridge ready", "ok");
-          #|        } catch (error) {
-          #|          setStatus(String(error), "err");
-          #|        } finally {
-          #|          setEnabled(true);
-          #|        }
-          #|      }
-          #|
-          #|      async function initialize() {
-          #|        try {
-          #|          setEnabled(true);
-          #|          setStatus("Bridge ready", "ok");
-          #|          await refresh();
-          #|        } catch (error) {
-          #|          setStatus(String(error), "err");
-          #|        }
-          #|      }
-          #|
-          #|      incrementButton.addEventListener("click", () => void run("increment"));
-          #|      resetButton.addEventListener("click", () => void run("reset"));
-          #|      window.addEventListener("load", () => void initialize());
-          #|    </script>
+          #|    <main id="app"></main>
           #|  </body>
           #|</html>
           #|
       ),
     },
     {
-      output_path: "extensions/counter/moon.pkg",
-      template_name: "extensions/counter/moon.pkg.mtpl",
+      output_path: "frontend/public/styles.css",
+      template_name: "frontend/public/styles.css.mtpl",
+      template_source: (
+          #|:root {
+          #|  color: #18211c;
+          #|  background: #e8ece8;
+          #|  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+          #|}
+          #|
+          #|* {
+          #|  box-sizing: border-box;
+          #|}
+          #|
+          #|body {
+          #|  margin: 0;
+          #|}
+          #|
+          #|#app {
+          #|  min-height: 100vh;
+          #|  padding: 48px 20px;
+          #|}
+          #|
+          #|.app-shell {
+          #|  width: min(760px, 100%);
+          #|  margin: 0 auto;
+          #|  border: 1px solid #bbc5bd;
+          #|  border-radius: 8px;
+          #|  background: #ffffff;
+          #|  box-shadow: 0 20px 55px rgba(23, 33, 27, 0.12);
+          #|  overflow: hidden;
+          #|}
+          #|
+          #|.app-header {
+          #|  display: flex;
+          #|  align-items: flex-end;
+          #|  justify-content: space-between;
+          #|  gap: 24px;
+          #|  padding: 28px 30px 22px;
+          #|  border-bottom: 1px solid #dce2dd;
+          #|  background: #f7f8f5;
+          #|}
+          #|
+          #|h1 {
+          #|  margin: 4px 0 0;
+          #|  font-family: Georgia, "Times New Roman", serif;
+          #|  font-size: 36px;
+          #|  letter-spacing: 0;
+          #|}
+          #|
+          #|.eyebrow,
+          #|.version {
+          #|  color: #59675e;
+          #|  font-size: 12px;
+          #|  font-weight: 750;
+          #|}
+          #|
+          #|form {
+          #|  display: grid;
+          #|  grid-template-columns: minmax(0, 1fr) auto;
+          #|  gap: 10px;
+          #|  padding: 22px 30px;
+          #|}
+          #|
+          #|input,
+          #|button {
+          #|  min-height: 42px;
+          #|  border: 1px solid #aeb9b1;
+          #|  border-radius: 6px;
+          #|  background: #ffffff;
+          #|  padding: 9px 12px;
+          #|  color: inherit;
+          #|  font: inherit;
+          #|}
+          #|
+          #|input[type="submit"],
+          #|button {
+          #|  cursor: pointer;
+          #|  font-weight: 700;
+          #|}
+          #|
+          #|input[type="submit"] {
+          #|  border-color: #193f2b;
+          #|  background: #193f2b;
+          #|  color: #ffffff;
+          #|}
+          #|
+          #|.todo-list {
+          #|  margin: 0;
+          #|  padding: 0;
+          #|  list-style: none;
+          #|  border-top: 1px solid #dce2dd;
+          #|}
+          #|
+          #|.todo-row {
+          #|  display: grid;
+          #|  grid-template-columns: auto minmax(0, 1fr) auto;
+          #|  align-items: center;
+          #|  gap: 14px;
+          #|  min-height: 64px;
+          #|  padding: 10px 30px;
+          #|  border-bottom: 1px solid #e5e9e6;
+          #|}
+          #|
+          #|.todo-row.is-complete {
+          #|  background: #f4f6f3;
+          #|}
+          #|
+          #|.todo-row.is-complete .todo-title {
+          #|  color: #748078;
+          #|  text-decoration: line-through;
+          #|}
+          #|
+          #|.toggle-button {
+          #|  border-color: #c5a65b;
+          #|  background: #f2dfab;
+          #|}
+          #|
+          #|.delete-button {
+          #|  border-color: transparent;
+          #|  color: #9d3d31;
+          #|}
+          #|
+          #|.status,
+          #|.error {
+          #|  margin: 0;
+          #|  padding: 24px 30px;
+          #|  border-top: 1px solid #dce2dd;
+          #|}
+          #|
+          #|.error {
+          #|  color: #8d2f26;
+          #|  background: #fff0ed;
+          #|}
+          #|
+          #|@media (max-width: 560px) {
+          #|  #app {
+          #|    padding: 16px;
+          #|  }
+          #|
+          #|  .app-header,
+          #|  .todo-row {
+          #|    padding-left: 18px;
+          #|    padding-right: 18px;
+          #|  }
+          #|
+          #|  form {
+          #|    grid-template-columns: 1fr;
+          #|    padding: 18px;
+          #|  }
+          #|}
+          #|
+      ),
+    },
+    {
+      output_path: "backend/moon.mod",
+      template_name: "backend/moon.mod.mtpl",
+      template_source: (
+          #|name = "{{backend_module}}"
+          #|
+          #|version = "0.1.0"
+          #|
+          #|import {
+          #|  "{{shared_module}}@0.1.0",
+          #|  "justjavac/proton@{{proton_version}}",
+          #|  "justjavac/proton_contract@0.1.0",
+          #|}
+          #|
+          #|license = "Apache-2.0"
+          #|
+          #|description = "Proton backend for {{title}}."
+          #|
+          #|options(
+          #|  "bin-deps": { "justjavac/proton_cli": "{{proton_cli_version}}" },
+          #|  warn_list: "",
+          #|  preferred_target: "native",
+          #|  supported_targets: "+native",
+          #|)
+          #|
+      ),
+    },
+    {
+      output_path: "backend/app/moon.pkg",
+      template_name: "backend/app/moon.pkg.mtpl",
       template_source: (
           #|import {
-          #|  "moonbitlang/core/json",
-          #|  "justjavac/proton/command" @proton_command,
-          #|  "justjavac/proton/extension" @proton_extension,
-          #|  "justjavac/proton_contract",
+          #|  "justjavac/proton",
+          #|  "{{backend_module}}/todo",
           #|}
           #|
           #|supported_targets = "native"
           #|
+          #|pkgtype(kind: "executable")
+          #|
       ),
     },
     {
-      output_path: "extensions/counter/counter.mbt",
-      template_name: "extensions/counter/counter.mbt.mtpl",
+      output_path: "backend/app/main.mbt",
+      template_name: "backend/app/main.mbt.mtpl",
       template_source: (
           #|///|
-          #|struct CounterReply {
-          #|  value : Int
-          #|} derive(ToJson, FromJson)
+          #|fn main {
+          #|  @proton.run(() => {
+          #|    let backend = @todo.Backend::new()
+          #|    @proton.config("moon.proton")
+          #|    .commands(fn(registrar) raise { backend.register_commands(registrar) })
+          #|    .run_or_abort()
+          #|  })
+          #|}
           #|
-          #|///|
-          #|let counter_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
-          #|  id={{counter_extension_id_mbt}},
-          #|  js_namespace="counter",
+      ),
+    },
+    {
+      output_path: "backend/todo/moon.pkg",
+      template_name: "backend/todo/moon.pkg.mtpl",
+      template_source: (
+          #|import {
+          #|  "moonbitlang/core/json",
+          #|  "justjavac/proton",
+          #|  "{{shared_module}}" @shared,
+          #|}
+          #|
+          #|supported_targets = "native"
+          #|
+          #|rule(
+          #|  name: "proton_codegen",
+          #|  command: "$mooncake_bin/proton_cli codegen $input -o $output",
           #|)
           #|
-          #|///|
-          #|let get_command : @proton_contract.Command[Unit, CounterReply] = counter_contract.command(
-          #|  "get",
+          #|dev_build(
+          #|  rule: "proton_codegen",
+          #|  input: "commands.mbt",
+          #|  output: "commands.g.mbt",
           #|)
           #|
+          #|formatter(ignore: [ "commands.g.mbt" ])
+          #|
+      ),
+    },
+    {
+      output_path: "backend/todo/backend.mbt",
+      template_name: "backend/todo/backend.mbt.mtpl",
+      template_source: (
           #|///|
-          #|let increment_command : @proton_contract.Command[Unit, CounterReply] = counter_contract.command(
-          #|  "increment",
-          #|)
+          #|pub struct Backend {
+          #|  mut next_id : Int
+          #|  mut version : Int
+          #|  todos : Array[@shared.TodoItem]
+          #|}
           #|
           #|///|
-          #|let reset_command : @proton_contract.Command[Unit, CounterReply] = counter_contract.command(
-          #|  "reset",
-          #|)
+          #|pub fn Backend::new() -> Backend {
+          #|  Backend::{ next_id: 1, version: 0, todos: [] }
+          #|}
           #|
           #|///|
-          #|let counter_value : Ref[Int] = Ref(0)
+          #|fn Backend::snapshot(self : Backend) -> @shared.TodoSnapshot {
+          #|  { version: self.version, todos: self.todos.copy() }
+          #|}
           #|
           #|///|
-          #|pub fn extension() -> @proton_extension.Extension {
-          #|  @proton_extension.typed(
-          #|    counter_contract,
-          #|    [
-          #|      get_command.contract_route(),
-          #|      increment_command.contract_route(),
-          #|      reset_command.contract_route(),
-          #|    ],
-          #|    register_counter_commands,
+          #|fn Backend::create(self : Backend, title : String) -> @shared.TodoSnapshot {
+          #|  let title = title.trim().to_owned()
+          #|  if !title.is_empty() {
+          #|    self.todos.push({ id: self.next_id, title, completed: false })
+          #|    self.next_id += 1
+          #|    self.version += 1
+          #|  }
+          #|  self.snapshot()
+          #|}
+          #|
+          #|///|
+          #|fn Backend::set_completed(
+          #|  self : Backend,
+          #|  id : Int,
+          #|  completed : Bool,
+          #|) -> @shared.TodoSnapshot {
+          #|  for index = 0; index < self.todos.length(); index = index + 1 {
+          #|    let todo = self.todos[index]
+          #|    if todo.id == id && todo.completed != completed {
+          #|      self.todos[index] = { ..todo, completed, }
+          #|      self.version += 1
+          #|      break
+          #|    }
+          #|  }
+          #|  self.snapshot()
+          #|}
+          #|
+          #|///|
+          #|fn Backend::delete(self : Backend, id : Int) -> @shared.TodoSnapshot {
+          #|  for index = 0; index < self.todos.length(); index = index + 1 {
+          #|    if self.todos[index].id == id {
+          #|      ignore(self.todos.remove(index))
+          #|      self.version += 1
+          #|      break
+          #|    }
+          #|  }
+          #|  self.snapshot()
+          #|}
+          #|
+      ),
+    },
+    {
+      output_path: "backend/todo/commands.mbt",
+      template_name: "backend/todo/commands.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|let list_todos_contract = @shared.list_todos
+          #|
+          #|///|
+          #|#proton.command(contract=list_todos_contract)
+          #|fn Backend::list_todos(self : Backend) -> @shared.TodoSnapshot {
+          #|  self.snapshot()
+          #|}
+          #|
+          #|///|
+          #|let create_todo_contract = @shared.create_todo
+          #|
+          #|///|
+          #|#proton.command(contract=create_todo_contract)
+          #|async fn Backend::create_todo(
+          #|  self : Backend,
+          #|  context : @proton.CommandContext,
+          #|  request : @shared.CreateTodoRequest,
+          #|) -> @shared.TodoSnapshot {
+          #|  let snapshot = self.create(request.title)
+          #|  context.emit(@shared.todos_changed, snapshot)
+          #|  snapshot
+          #|}
+          #|
+          #|///|
+          #|let set_todo_completed_contract = @shared.set_todo_completed
+          #|
+          #|///|
+          #|#proton.command(contract=set_todo_completed_contract)
+          #|async fn Backend::set_todo_completed(
+          #|  self : Backend,
+          #|  context : @proton.CommandContext,
+          #|  request : @shared.SetTodoCompletedRequest,
+          #|) -> @shared.TodoSnapshot {
+          #|  let snapshot = self.set_completed(request.id, request.completed)
+          #|  context.emit(@shared.todos_changed, snapshot)
+          #|  snapshot
+          #|}
+          #|
+          #|///|
+          #|let delete_todo_contract = @shared.delete_todo
+          #|
+          #|///|
+          #|#proton.command(contract=delete_todo_contract)
+          #|async fn Backend::delete_todo(
+          #|  self : Backend,
+          #|  context : @proton.CommandContext,
+          #|  request : @shared.DeleteTodoRequest,
+          #|) -> @shared.TodoSnapshot {
+          #|  let snapshot = self.delete(request.id)
+          #|  context.emit(@shared.todos_changed, snapshot)
+          #|  snapshot
+          #|}
+          #|
+      ),
+    },
+    {
+      output_path: "backend/todo/commands.g.mbt",
+      template_name: "backend/todo/commands.g.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|/// Generated by `proton codegen`. Do not edit by hand.
+          #|
+          #|///|
+          #|pub fn Backend::register_commands(
+          #|  self : Backend,
+          #|  registrar : @proton.CommandRegistrar,
+          #|) -> Unit raise {
+          #|  registrar.bind(
+          #|    list_todos_contract,
+          #|    (_context, _request) => self.list_todos(),
+          #|  )
+          #|  registrar.bind(
+          #|    create_todo_contract,
+          #|    (context, request) => self.create_todo(context, request),
+          #|  )
+          #|  registrar.bind(
+          #|    set_todo_completed_contract,
+          #|    (context, request) => self.set_todo_completed(context, request),
+          #|  )
+          #|  registrar.bind(
+          #|    delete_todo_contract,
+          #|    (context, request) => self.delete_todo(context, request),
           #|  )
           #|}
-          #|
-          #|///|
-          #|fn register_counter_commands(
-          #|  registrar : @proton_command.CommandRegistrar,
-          #|) -> Unit raise {
-          #|  registrar.bind(get_command, (_context, _request) => CounterReply::{
-          #|    value: counter_value.val,
-          #|  })
-          #|  registrar.bind(increment_command, (_context, _request) => {
-          #|    counter_value.val = counter_value.val + 1
-          #|    CounterReply::{ value: counter_value.val }
-          #|  })
-          #|  registrar.bind(reset_command, (_context, _request) => {
-          #|    counter_value.val = 0
-          #|    CounterReply::{ value: counter_value.val }
-          #|  })
-          #|}
-          #|
-      ),
-    },
-    {
-      output_path: "extensions/counter/README.mbt.md",
-      template_name: "extensions/counter/README.mbt.md.mtpl",
-      template_source: (
-          #|# Counter Extension
-          #|
-          #|This package exposes the `counter` command bridge extension used by the app.
-          #|
-          #|It is an extension package, not a runnable app. Run the application from the
-          #|project root with:
-          #|
-          #|```sh
-          #|proton_cli dev
-          #|```
           #|
       ),
     },
@@ -404,7 +805,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|## Commands
           #|
           #|- Format with `moon fmt`.
-          #|- Check with `moon check --target native --diagnostic-limit 80`.
+          #|- Check with `moon check --diagnostic-limit 80`.
           #|- Run with `proton_cli dev` from the project root.
           #|- Build with `proton_cli build`.
           #|- Inspect packaging with `proton_cli package --dry-run`.
@@ -413,37 +814,39 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|## Project Notes
           #|
-          #|- `app/` is the runnable app package.
-          #|- `extensions/` contains extension packages only; they are not runnable apps.
-          #|- `extensions/counter/` is used by `app/` through the native extension command bridge.
+          #|- `shared/` contains the target-neutral typed application contract.
+          #|- `frontend/` is a JavaScript Rabbita module owned by Warren.
+          #|- `backend/` is a native Proton module.
+          #|- Keep command and event names in `shared/todo_contract.mbt`.
+          #|- Regenerate `backend/todo/commands.g.mbt` after changing command handlers.
           #|- Do not reintroduce the old WebSocket app runtime route.
           #|
       ),
     },
     {
-      output_path: "README.mbt.md",
-      template_name: "README.mbt.md.mtpl",
+      output_path: "README.md",
+      template_name: "README.md.mtpl",
       template_source: (
           #|# {{title}}
           #|
-          #|A Proton native desktop app generated by `proton_cli new`.
+          #|An isomorphic MoonBit Todo app generated by `proton_cli new`.
           #|
-          #|The app entry in `app/main.mbt` loads the project settings from
-          #|`moon.proton` with `@proton.config("moon.proton")`.
-          #|The default config name honors `proton_cli dev --config` and resolves the
-          #|packaged config location when the application is bundled.
+          #|- `shared/` defines the typed commands, events, and payloads used on both sides.
+          #|- `frontend/` is a Rabbita application built and served by Warren.
+          #|- `backend/` owns the in-memory Todo state and runs the Proton desktop runtime.
           #|
           #|## Setup
           #|
           #|```sh
           #|moon update
+          #|moon install moonbit-community/warren
           #|proton_cli cef setup
           #|```
           #|
           #|## Check
           #|
           #|```sh
-          #|moon check --target native --diagnostic-limit 80
+          #|moon check --diagnostic-limit 80
           #|```
           #|
           #|## Dev
@@ -452,9 +855,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli dev
           #|```
           #|
-          #|`dev` reads `moon.proton` and launches the `app/` package. When a `frontend`
-          #|block is configured, it runs `frontend.before_dev`, waits for
-          #|`frontend.dev_url`, and opens that URL instead of the release asset entry.
+          #|`dev` starts Warren in `frontend/`, waits for the development URL, then runs
+          #|`backend/app`.
           #|
           #|## Build
           #|
@@ -462,9 +864,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli build
           #|```
           #|
-          #|`build` reads the same config, runs `frontend.before_build` when configured,
-          #|validates the release entry, and builds the app for the native target. Pass
-          #|additional Moon build arguments after `--`, for example:
+          #|`build` runs `warren build` in `frontend/`, validates `frontend/dist`, and
+          #|builds `backend/app` for the native target.
           #|
           #|```sh
           #|proton_cli build -- --release
@@ -491,9 +892,11 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|## Layout
           #|
-          #|- `app/` is the runnable application.
-          #|- `extensions/counter/` is the counter extension used by the app.
-          #|- `extensions/counter/` cannot be run directly.
+          #|- `shared/todo_contract.mbt` is the cross-target contract source of truth.
+          #|- `frontend/main/main.mbt` handles Rabbita state, commands, and live events.
+          #|- `backend/todo/` owns state and typed command handlers.
+          #|- `backend/todo/commands.g.mbt` is generated and committed.
+          #|- `backend/app/main.mbt` assembles and runs the application.
           #|- `target/proton-dist/` contains packaged application artifacts.
           #|
       ),
@@ -504,205 +907,11 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|.DS_Store
           #|_build/
-          #|target/
           #|target
           #|.mooncakes/
           #|.moonagent/
           #|.proton/
-          #|
-      ),
-    },
-    {
-      output_path: "LICENSE",
-      template_name: "LICENSE.mtpl",
-      template_source: (
-          #|Apache License
-          #|Version 2.0, January 2004
-          #|http://www.apache.org/licenses/
-          #|
-          #|TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-          #|
-          #|1. Definitions.
-          #|
-          #|"License" shall mean the terms and conditions for use, reproduction, and
-          #|distribution as defined by Sections 1 through 9 of this document.
-          #|
-          #|"Licensor" shall mean the copyright owner or entity authorized by the
-          #|copyright owner that is granting the License.
-          #|
-          #|"Legal Entity" shall mean the union of the acting entity and all other
-          #|entities that control, are controlled by, or are under common control with
-          #|that entity. For the purposes of this definition, "control" means (i) the
-          #|power, direct or indirect, to cause the direction or management of such
-          #|entity, whether by contract or otherwise, or (ii) ownership of fifty percent
-          #|(50%) or more of the outstanding shares, or (iii) beneficial ownership of
-          #|such entity.
-          #|
-          #|"You" (or "Your") shall mean an individual or Legal Entity exercising
-          #|permissions granted by this License.
-          #|
-          #|"Source" form shall mean the preferred form for making modifications,
-          #|including but not limited to software source code, documentation source, and
-          #|configuration files.
-          #|
-          #|"Object" form shall mean any form resulting from mechanical transformation
-          #|or translation of a Source form, including but not limited to compiled object
-          #|code, generated documentation, and conversions to other media types.
-          #|
-          #|"Work" shall mean the work of authorship, whether in Source or Object form,
-          #|made available under the License, as indicated by a copyright notice that is
-          #|included in or attached to the work (an example is provided in the Appendix
-          #|below).
-          #|
-          #|"Derivative Works" shall mean any work, whether in Source or Object form,
-          #|that is based on (or derived from) the Work and for which the editorial
-          #|revisions, annotations, elaborations, or other modifications represent, as a
-          #|whole, an original work of authorship. For the purposes of this License,
-          #|Derivative Works shall not include works that remain separable from, or merely
-          #|link (or bind by name) to the interfaces of, the Work and Derivative Works
-          #|thereof.
-          #|
-          #|"Contribution" shall mean any work of authorship, including the original
-          #|version of the Work and any modifications or additions to that Work or
-          #|Derivative Works thereof, that is intentionally submitted to Licensor for
-          #|inclusion in the Work by the copyright owner or by an individual or Legal
-          #|Entity authorized to submit on behalf of the copyright owner. For the purposes
-          #|of this definition, "submitted" means any form of electronic, verbal, or
-          #|written communication sent to the Licensor or its representatives, including
-          #|but not limited to communication on electronic mailing lists, source code
-          #|control systems, and issue tracking systems that are managed by, or on behalf
-          #|of, the Licensor for the purpose of discussing and improving the Work, but
-          #|excluding communication that is conspicuously marked or otherwise designated
-          #|in writing by the copyright owner as "Not a Contribution."
-          #|
-          #|"Contributor" shall mean Licensor and any individual or Legal Entity on behalf
-          #|of whom a Contribution has been received by Licensor and subsequently
-          #|incorporated within the Work.
-          #|
-          #|2. Grant of Copyright License. Subject to the terms and conditions of this
-          #|License, each Contributor hereby grants to You a perpetual, worldwide,
-          #|non-exclusive, no-charge, royalty-free, irrevocable copyright license to
-          #|reproduce, prepare Derivative Works of, publicly display, publicly perform,
-          #|sublicense, and distribute the Work and such Derivative Works in Source or
-          #|Object form.
-          #|
-          #|3. Grant of Patent License. Subject to the terms and conditions of this
-          #|License, each Contributor hereby grants to You a perpetual, worldwide,
-          #|non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this
-          #|section) patent license to make, have made, use, offer to sell, sell, import,
-          #|and otherwise transfer the Work, where such license applies only to those
-          #|patent claims licensable by such Contributor that are necessarily infringed by
-          #|their Contribution(s) alone or by combination of their Contribution(s) with
-          #|the Work to which such Contribution(s) was submitted. If You institute patent
-          #|litigation against any entity (including a cross-claim or counterclaim in a
-          #|lawsuit) alleging that the Work or a Contribution incorporated within the Work
-          #|constitutes direct or contributory patent infringement, then any patent
-          #|licenses granted to You under this License for that Work shall terminate as of
-          #|the date such litigation is filed.
-          #|
-          #|4. Redistribution. You may reproduce and distribute copies of the Work or
-          #|Derivative Works thereof in any medium, with or without modifications, and in
-          #|Source or Object form, provided that You meet the following conditions:
-          #|
-          #|   (a) You must give any other recipients of the Work or Derivative Works a
-          #|       copy of this License; and
-          #|
-          #|   (b) You must cause any modified files to carry prominent notices stating
-          #|       that You changed the files; and
-          #|
-          #|   (c) You must retain, in the Source form of any Derivative Works that You
-          #|       distribute, all copyright, patent, trademark, and attribution notices
-          #|       from the Source form of the Work, excluding those notices that do not
-          #|       pertain to any part of the Derivative Works; and
-          #|
-          #|   (d) If the Work includes a "NOTICE" text file as part of its distribution,
-          #|       then any Derivative Works that You distribute must include a readable
-          #|       copy of the attribution notices contained within such NOTICE file,
-          #|       excluding those notices that do not pertain to any part of the
-          #|       Derivative Works, in at least one of the following places: within a
-          #|       NOTICE text file distributed as part of the Derivative Works; within
-          #|       the Source form or documentation, if provided along with the Derivative
-          #|       Works; or, within a display generated by the Derivative Works, if and
-          #|       wherever such third-party notices normally appear. The contents of the
-          #|       NOTICE file are for informational purposes only and do not modify the
-          #|       License. You may add Your own attribution notices within Derivative
-          #|       Works that You distribute, alongside or as an addendum to the NOTICE
-          #|       text from the Work, provided that such additional attribution notices
-          #|       cannot be construed as modifying the License.
-          #|
-          #|You may add Your own copyright statement to Your modifications and may provide
-          #|additional or different license terms and conditions for use, reproduction, or
-          #|distribution of Your modifications, or for any such Derivative Works as a
-          #|whole, provided Your use, reproduction, and distribution of the Work otherwise
-          #|complies with the conditions stated in this License.
-          #|
-          #|5. Submission of Contributions. Unless You explicitly state otherwise, any
-          #|Contribution intentionally submitted for inclusion in the Work by You to the
-          #|Licensor shall be under the terms and conditions of this License, without any
-          #|additional terms or conditions. Notwithstanding the above, nothing herein
-          #|shall supersede or modify the terms of any separate license agreement you may
-          #|have executed with Licensor regarding such Contributions.
-          #|
-          #|6. Trademarks. This License does not grant permission to use the trade names,
-          #|trademarks, service marks, or product names of the Licensor, except as required
-          #|for reasonable and customary use in describing the origin of the Work and
-          #|reproducing the content of the NOTICE file.
-          #|
-          #|7. Disclaimer of Warranty. Unless required by applicable law or agreed to in
-          #|writing, Licensor provides the Work (and each Contributor provides its
-          #|Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-          #|KIND, either express or implied, including, without limitation, any warranties
-          #|or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-          #|PARTICULAR PURPOSE. You are solely responsible for determining the
-          #|appropriateness of using or redistributing the Work and assume any risks
-          #|associated with Your exercise of permissions under this License.
-          #|
-          #|8. Limitation of Liability. In no event and under no legal theory, whether in
-          #|tort (including negligence), contract, or otherwise, unless required by
-          #|applicable law (such as deliberate and grossly negligent acts) or agreed to in
-          #|writing, shall any Contributor be liable to You for damages, including any
-          #|direct, indirect, special, incidental, or consequential damages of any
-          #|character arising as a result of this License or out of the use or inability to
-          #|use the Work (including but not limited to damages for loss of goodwill, work
-          #|stoppage, computer failure or malfunction, or any and all other commercial
-          #|damages or losses), even if such Contributor has been advised of the
-          #|possibility of such damages.
-          #|
-          #|9. Accepting Warranty or Additional Liability. While redistributing the Work
-          #|or Derivative Works thereof, You may choose to offer, and charge a fee for,
-          #|acceptance of support, warranty, indemnity, or other liability obligations
-          #|and/or rights consistent with this License. However, in accepting such
-          #|obligations, You may act only on Your own behalf and on Your sole
-          #|responsibility, not on behalf of any other Contributor, and only if You agree
-          #|to indemnify, defend, and hold each Contributor harmless for any liability
-          #|incurred by, or claims asserted against, such Contributor by reason of your
-          #|accepting any such warranty or additional liability.
-          #|
-          #|END OF TERMS AND CONDITIONS
-          #|
-          #|APPENDIX: How to apply the Apache License to your work.
-          #|
-          #|To apply the Apache License to your work, attach the following boilerplate
-          #|notice, with the fields enclosed by brackets "[]" replaced with your own
-          #|identifying information. (Don't include the brackets!) The text should be
-          #|enclosed in the appropriate comment syntax for the file format. We also
-          #|recommend that a file or class name and description of purpose be included on
-          #|the same "printed page" as the copyright notice for easier identification
-          #|within third-party archives.
-          #|
-          #|Copyright 2026
-          #|
-          #|Licensed under the Apache License, Version 2.0 (the "License");
-          #|you may not use this file except in compliance with the License.
-          #|You may obtain a copy of the License at
-          #|
-          #|    http://www.apache.org/licenses/LICENSE-2.0
-          #|
-          #|Unless required by applicable law or agreed to in writing, software
-          #|distributed under the License is distributed on an "AS IS" BASIS,
-          #|WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-          #|See the License for the specific language governing permissions and
-          #|limitations under the License.
+          #|frontend/dist/
           #|
       ),
     },

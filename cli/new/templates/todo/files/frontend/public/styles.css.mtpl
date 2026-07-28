@@ -1,0 +1,147 @@
+:root {
+  color: #18211c;
+  background: #e8ece8;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  min-height: 100vh;
+  padding: 48px 20px;
+}
+
+.app-shell {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  border: 1px solid #bbc5bd;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 20px 55px rgba(23, 33, 27, 0.12);
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 30px 22px;
+  border-bottom: 1px solid #dce2dd;
+  background: #f7f8f5;
+}
+
+h1 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 36px;
+  letter-spacing: 0;
+}
+
+.eyebrow,
+.version {
+  color: #59675e;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 22px 30px;
+}
+
+input,
+button {
+  min-height: 42px;
+  border: 1px solid #aeb9b1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 9px 12px;
+  color: inherit;
+  font: inherit;
+}
+
+input[type="submit"],
+button {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+input[type="submit"] {
+  border-color: #193f2b;
+  background: #193f2b;
+  color: #ffffff;
+}
+
+.todo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid #dce2dd;
+}
+
+.todo-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 30px;
+  border-bottom: 1px solid #e5e9e6;
+}
+
+.todo-row.is-complete {
+  background: #f4f6f3;
+}
+
+.todo-row.is-complete .todo-title {
+  color: #748078;
+  text-decoration: line-through;
+}
+
+.toggle-button {
+  border-color: #c5a65b;
+  background: #f2dfab;
+}
+
+.delete-button {
+  border-color: transparent;
+  color: #9d3d31;
+}
+
+.status,
+.error {
+  margin: 0;
+  padding: 24px 30px;
+  border-top: 1px solid #dce2dd;
+}
+
+.error {
+  color: #8d2f26;
+  background: #fff0ed;
+}
+
+@media (max-width: 560px) {
+  #app {
+    padding: 16px;
+  }
+
+  .app-header,
+  .todo-row {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  form {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+}

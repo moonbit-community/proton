@@ -1,5 +1,8 @@
 ///|
-let default_project_path = "counter"
+let default_project_path = "todo"
+
+///|
+let default_author = "username"
 
 ///|
 let default_width = 960
@@ -192,6 +195,22 @@ fn validate_module_name(
   for ch in module_name {
     if !module_name_char_is_valid(ch) {
       raise ModuleHasUnsupportedCharacter(character=ch)
+    }
+  }
+}
+
+///|
+fn validate_author(author : String) -> Unit raise NewProjectInputError {
+  let author = author.trim().to_owned()
+  guard !author.is_empty() else {
+    raise InvalidAuthor(author~, reason="must not be empty")
+  }
+  guard !author.contains("/") && !author.contains("\\") else {
+    raise InvalidAuthor(author~, reason="must be one module path component")
+  }
+  for ch in author {
+    guard module_name_char_is_valid(ch) else {
+      raise InvalidAuthor(author~, reason="contains unsupported characters")
     }
   }
 }

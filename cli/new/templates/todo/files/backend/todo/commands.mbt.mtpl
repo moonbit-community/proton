@@ -1,0 +1,53 @@
+///|
+let list_todos_contract = @shared.list_todos
+
+///|
+#proton.command(contract=list_todos_contract)
+fn Backend::list_todos(self : Backend) -> @shared.TodoSnapshot {
+  self.snapshot()
+}
+
+///|
+let create_todo_contract = @shared.create_todo
+
+///|
+#proton.command(contract=create_todo_contract)
+async fn Backend::create_todo(
+  self : Backend,
+  context : @proton.CommandContext,
+  request : @shared.CreateTodoRequest,
+) -> @shared.TodoSnapshot {
+  let snapshot = self.create(request.title)
+  context.emit(@shared.todos_changed, snapshot)
+  snapshot
+}
+
+///|
+let set_todo_completed_contract = @shared.set_todo_completed
+
+///|
+#proton.command(contract=set_todo_completed_contract)
+async fn Backend::set_todo_completed(
+  self : Backend,
+  context : @proton.CommandContext,
+  request : @shared.SetTodoCompletedRequest,
+) -> @shared.TodoSnapshot {
+  let snapshot = self.set_completed(request.id, request.completed)
+  context.emit(@shared.todos_changed, snapshot)
+  snapshot
+}
+
+///|
+let delete_todo_contract = @shared.delete_todo
+
+///|
+#proton.command(contract=delete_todo_contract)
+async fn Backend::delete_todo(
+  self : Backend,
+  context : @proton.CommandContext,
+  request : @shared.DeleteTodoRequest,
+) -> @shared.TodoSnapshot {
+  let snapshot = self.delete(request.id)
+  context.emit(@shared.todos_changed, snapshot)
+  snapshot
+}

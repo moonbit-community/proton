@@ -3,6 +3,7 @@
 pub(all) suberror NewProjectInputError {
   InvalidPositiveInteger(field~ : String, value~ : String)
   EmptyTitle
+  InvalidAuthor(author~ : String, reason~ : String)
   EmptyModuleName
   ModuleUsesBackslash
   ModuleHasBoundarySlash
@@ -51,6 +52,8 @@ pub fn NewProjectInputError::message(self : NewProjectInputError) -> String {
     InvalidPositiveInteger(field~, value~) =>
       field + " must be a positive integer: " + value
     EmptyTitle => "app title must not be empty"
+    InvalidAuthor(author~, reason~) =>
+      "invalid module author " + author + ": " + reason
     EmptyModuleName => "module name must not be empty"
     ModuleUsesBackslash => "module name must use '/' instead of '\\'"
     ModuleHasBoundarySlash => "module name must not start or end with '/'"

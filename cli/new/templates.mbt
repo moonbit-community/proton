@@ -2,18 +2,31 @@
 let default_proton_version = "0.1.12"
 
 ///|
+let default_proton_cli_version = "0.1.9"
+
+///|
+let default_proton_rabbita_version = "0.1.0"
+
+///|
+let default_rabbita_version = "0.12.4"
+
+///|
 priv struct TemplateContext {
   title : String
   title_html : String
   title_mbt : String
-  module_name : String
-  module_mbt : String
+  author : String
+  project_name : String
+  shared_module : String
+  frontend_module : String
+  backend_module : String
   identifier_mbt : String
-  module_counter_import_mbt : String
-  counter_extension_id_mbt : String
   width : Int
   height : Int
   proton_version : String
+  proton_cli_version : String
+  proton_rabbita_version : String
+  rabbita_version : String
 }
 
 ///|
@@ -38,23 +51,29 @@ struct PlannedFile {
 ///|
 fn template_context(
   title : String,
-  module_name : String,
+  author : String,
+  project_name : String,
   identifier : String,
   width : Int,
   height : Int,
 ) -> TemplateContext {
+  let module_prefix = author + "/" + project_name
   {
     title,
     title_html: @template.escape_html(title),
     title_mbt: mbt_string(title),
-    module_name,
-    module_mbt: mbt_string(module_name),
+    author,
+    project_name,
+    shared_module: module_prefix + "_shared",
+    frontend_module: module_prefix + "_frontend",
+    backend_module: module_prefix + "_backend",
     identifier_mbt: mbt_string(identifier),
-    module_counter_import_mbt: mbt_string(module_name + "/extensions/counter"),
-    counter_extension_id_mbt: mbt_string(module_name + "/counter"),
     width,
     height,
     proton_version: default_proton_version,
+    proton_cli_version: default_proton_cli_version,
+    proton_rabbita_version: default_proton_rabbita_version,
+    rabbita_version: default_rabbita_version,
   }
 }
 
@@ -64,20 +83,18 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "title", value: context.title },
     { name: "title_html", value: context.title_html },
     { name: "title_mbt", value: context.title_mbt },
-    { name: "module_name", value: context.module_name },
-    { name: "module_mbt", value: context.module_mbt },
+    { name: "author", value: context.author },
+    { name: "project_name", value: context.project_name },
+    { name: "shared_module", value: context.shared_module },
+    { name: "frontend_module", value: context.frontend_module },
+    { name: "backend_module", value: context.backend_module },
     { name: "identifier_mbt", value: context.identifier_mbt },
-    {
-      name: "module_counter_import_mbt",
-      value: context.module_counter_import_mbt,
-    },
-    {
-      name: "counter_extension_id_mbt",
-      value: context.counter_extension_id_mbt,
-    },
     { name: "width", value: @template.render_value(context.width) },
     { name: "height", value: @template.render_value(context.height) },
     { name: "proton_version", value: context.proton_version },
+    { name: "proton_cli_version", value: context.proton_cli_version },
+    { name: "proton_rabbita_version", value: context.proton_rabbita_version },
+    { name: "rabbita_version", value: context.rabbita_version },
   ]
 }
 
@@ -134,12 +151,15 @@ fn validate_template_placeholders(
 ///|
 fn plan_project_files(
   title : String,
-  module_name : String,
+  author : String,
+  project_name : String,
   identifier : String,
   width : Int,
   height : Int,
 ) -> Array[PlannedFile] raise NewProjectTemplateError {
-  let context = template_context(title, module_name, identifier, width, height)
+  let context = template_context(
+    title, author, project_name, identifier, width, height,
+  )
   let files : Array[PlannedFile] = []
   for spec in template_specs() {
     files.push(render_template(spec, context))

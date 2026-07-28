@@ -1,0 +1,174 @@
+///|
+using @rabbita {type Cmd, type Emit, type Html}
+
+///|
+using @html {button, div, form, h1, input, li, p, span, ul}
+
+///|
+struct Model {
+  draft : String
+  snapshot : @shared.TodoSnapshot
+  loading : Bool
+  error : String?
+} derive(Eq)
+
+///|
+enum Msg {
+  Load
+  DraftChanged(String)
+  Create
+  SetCompleted(Int, Bool)
+  Delete(Int)
+  SnapshotReceived(@shared.TodoSnapshot)
+  CommandFailed(@proton_client.ClientFailure)
+}
+
+///|
+fn initial_model() -> Model {
+  { draft: "", snapshot: { version: 0, todos: [] }, loading: true, error: None }
+}
+
+///|
+fn failure_message(error : @proton_client.ClientFailure) -> String {
+  match error {
+    @proton_client.BridgeUnavailable =>
+      "The Proton bridge is unavailable. Start this page with `proton_cli dev`."
+    _ => error.message()
+  }
+}
+
+///|
+fn update(emit : Emit[Msg], msg : Msg, model : Model) -> (Cmd, Model) {
+  match msg {
+    Load =>
+      (
+        @proton_rabbita.invoke(
+          @shared.list_todos,
+          (),
+          snapshot => emit(SnapshotReceived(snapshot)),
+          error => emit(CommandFailed(error)),
+        ),
+        { ..model, loading: true, error: None },
+      )
+    DraftChanged(draft) => (@rabbita.none, { ..model, draft, })
+    Create if model.draft.trim().is_empty() => (@rabbita.none, model)
+    Create =>
+      (
+        @proton_rabbita.invoke(
+          @shared.create_todo,
+          { title: model.draft },
+          snapshot => emit(SnapshotReceived(snapshot)),
+          error => emit(CommandFailed(error)),
+        ),
+        { ..model, draft: "", error: None },
+      )
+    SetCompleted(id, completed) =>
+      (
+        @proton_rabbita.invoke(
+          @shared.set_todo_completed,
+          { id, completed },
+          snapshot => emit(SnapshotReceived(snapshot)),
+          error => emit(CommandFailed(error)),
+        ),
+        { ..model, error: None },
+      )
+    Delete(id) =>
+      (
+        @proton_rabbita.invoke(
+          @shared.delete_todo,
+          { id, },
+          snapshot => emit(SnapshotReceived(snapshot)),
+          error => emit(CommandFailed(error)),
+        ),
+        { ..model, error: None },
+      )
+    SnapshotReceived(snapshot) =>
+      (@rabbita.none, { ..model, snapshot, loading: false, error: None })
+    CommandFailed(error) =>
+      (
+        @rabbita.none,
+        { ..model, loading: false, error: Some(failure_message(error)) },
+      )
+  }
+}
+
+///|
+fn subscriptions(emit : Emit[Msg], _model : Model) -> @sub.Sub {
+  @proton_rabbita.subscribe(
+    @shared.todos_changed,
+    snapshot => emit(SnapshotReceived(snapshot)),
+    error => emit(CommandFailed(error)),
+  )
+}
+
+///|
+fn todo_row(emit : Emit[Msg], todo : @shared.TodoItem) -> Html {
+  li(class=if todo.completed { "todo-row is-complete" } else { "todo-row" }, [
+    button(
+      type_="button",
+      class="toggle-button",
+      on_click=emit(SetCompleted(todo.id, !todo.completed)),
+      if todo.completed {
+        "Reopen"
+      } else {
+        "Complete"
+      },
+    ),
+    span(class="todo-title", todo.title),
+    button(
+      type_="button",
+      class="delete-button",
+      on_click=emit(Delete(todo.id)),
+      "Delete",
+    ),
+  ])
+}
+
+///|
+fn view(emit : Emit[Msg], model : Model) -> Html {
+  let rows : Array[Html] = []
+  for todo in model.snapshot.todos {
+    rows.push(todo_row(emit, todo))
+  }
+  let content = if model.loading {
+    p(class="status", "Loading todos...")
+  } else if rows.is_empty() {
+    p(class="status", "No todos yet.")
+  } else {
+    ul(class="todo-list", rows)
+  }
+  let error = match model.error {
+    Some(message) => p(class="error", message)
+    None => @html.nothing
+  }
+  div(class="app-shell", [
+    div(class="app-header", [
+      div([span(class="eyebrow", "PROTON + RABBITA"), h1({{title_mbt}})]),
+      span(class="version", "Revision " + model.snapshot.version.to_string()),
+    ]),
+    form(on_submit=emit(Create), [
+      input(
+        value=model.draft,
+        placeholder="What needs doing?",
+        on_input=emit.map(value => DraftChanged(value)),
+      ),
+      input(input_type=Submit, value="Add todo"),
+    ]),
+    error,
+    content,
+  ])
+}
+
+///|
+#warnings("-alert_unstable")
+fn main {
+  let (emit, cell) = @rabbita.cell_with_emit(
+    model=initial_model(),
+    update~,
+    view~,
+    subscriptions~,
+  )
+  let app = @rabbita.new(cell)
+  app.with_init(emit(Load))
+  app.mount("app")
+}

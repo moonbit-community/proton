@@ -2,7 +2,7 @@
 struct RawNewProjectOptions {
   path : String?
   title : String?
-  module_name : String?
+  author : String?
   identifier : String?
   width : String?
   height : String?
@@ -18,7 +18,8 @@ struct NewProjectOptions {
   target_dir : String
   resolved_target_dir : String
   title : String
-  module_name : String
+  author : String
+  project_name : String
   identifier : String
   width : Int
   height : Int
@@ -47,7 +48,8 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   }
   let files = plan_project_files(
     options.title,
-    options.module_name,
+    options.author,
+    options.project_name,
     options.identifier,
     options.width,
     options.height,
@@ -93,7 +95,7 @@ pub fn command() -> @argparse.Command {
     ],
     options=[
       OptionArg("title", long="title", about="Application and window title"),
-      OptionArg("module", long="module", about="moon.mod module name"),
+      OptionArg("author", long="author", about="MoonBit module author"),
       OptionArg(
         "identifier",
         long="identifier",
@@ -119,7 +121,7 @@ fn new_options_from_matches(
   {
     path: @cli_args.value(matches, "path"),
     title: @cli_args.value(matches, "title"),
-    module_name: @cli_args.value(matches, "module"),
+    author: @cli_args.value(matches, "author"),
     identifier: @cli_args.value(matches, "identifier"),
     width: @cli_args.value(matches, "width"),
     height: @cli_args.value(matches, "height"),
@@ -138,7 +140,7 @@ fn options_from_raw(
   let target_dir = raw.path.unwrap_or(default_project_path)
   let slug = project_slug(cwd, target_dir)
   let title = raw.title.unwrap_or(slug_to_title(slug))
-  let module_name = raw.module_name.unwrap_or(slug)
+  let author = raw.author.unwrap_or(default_author)
   let identifier = raw.identifier.unwrap_or(default_bundle_identifier(slug))
   let width = match raw.width {
     Some(value) => parse_positive_int(value, "width")
@@ -154,7 +156,8 @@ fn options_from_raw(
     target_dir,
     resolved_target_dir: resolve_new_path(cwd, target_dir),
     title,
-    module_name,
+    author,
+    project_name: slug,
     identifier,
     width,
     height,
@@ -172,7 +175,12 @@ fn validate_options(
 ) -> NewProjectOptions raise NewProjectInputError {
   validate_target_dir(options.target_dir)
   validate_title(options.title)
-  validate_module_name(options.module_name)
+  validate_author(options.author)
+  validate_module_name(options.author + "/" + options.project_name + "_shared")
+  validate_module_name(
+    options.author + "/" + options.project_name + "_frontend",
+  )
+  validate_module_name(options.author + "/" + options.project_name + "_backend")
   validate_bundle_identifier(options.identifier)
   options
 }
@@ -528,7 +536,7 @@ async fn run_moon_check(
   project_dir : String,
 ) -> Unit raise NewProjectToolError {
   let code = @process.run("moon", [
-    "-C", project_dir, "check", "--target", "native", "--diagnostic-limit", "80",
+    "-C", project_dir, "check", "--diagnostic-limit", "80",
   ]) catch {
     err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
   }

@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/core/json",
+  "justjavac/proton",
+  "{{shared_module}}" @shared,
+}
+
+supported_targets = "native"
+
+rule(
+  name: "proton_codegen",
+  command: "$mooncake_bin/proton_cli codegen $input -o $output",
+)
+
+dev_build(
+  rule: "proton_codegen",
+  input: "commands.mbt",
+  output: "commands.g.mbt",
+)
+
+formatter(ignore: [ "commands.g.mbt" ])

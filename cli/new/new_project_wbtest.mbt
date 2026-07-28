@@ -18,7 +18,8 @@ fn must_plan(
 ) -> Array[PlannedFile] raise NewProjectTemplateError {
   plan_project_files(
     options.title,
-    options.module_name,
+    options.author,
+    options.project_name,
     options.identifier,
     options.width,
     options.height,
@@ -57,10 +58,11 @@ fn transaction_test_options(
 ///|
 test "default new options" {
   let options = must_options([])
-  assert_eq(options.target_dir, "counter")
-  assert_eq(options.title, "Counter")
-  assert_eq(options.module_name, "counter")
-  assert_eq(options.identifier, "dev.proton.counter")
+  assert_eq(options.target_dir, "todo")
+  assert_eq(options.title, "Todo")
+  assert_eq(options.author, "username")
+  assert_eq(options.project_name, "todo")
+  assert_eq(options.identifier, "dev.proton.todo")
   assert_eq(options.width, 960)
   assert_eq(options.height, 640)
   assert_true(options.run_check)
@@ -69,11 +71,12 @@ test "default new options" {
 }
 
 ///|
-test "path slug drives default title and module" {
+test "path slug drives default title and module names" {
   let options = must_options(["tools/my-counter"])
   assert_eq(options.target_dir, "tools/my-counter")
   assert_eq(options.title, "My Counter")
-  assert_eq(options.module_name, "my-counter")
+  assert_eq(options.author, "username")
+  assert_eq(options.project_name, "my-counter")
   assert_eq(options.identifier, "dev.proton.my-counter")
 }
 
@@ -85,19 +88,20 @@ test "current directory path uses cwd basename as default slug" {
   )
   assert_eq(options.target_dir, ".")
   assert_eq(options.title, "Sample App")
-  assert_eq(options.module_name, "sample-app")
+  assert_eq(options.author, "username")
+  assert_eq(options.project_name, "sample-app")
   assert_eq(options.identifier, "dev.proton.sample-app")
 }
 
 ///|
-test "explicit title module size and flags override defaults" {
+test "explicit title author size and flags override defaults" {
   let options = must_options([
-    "demo", "--title", "Demo App", "--module", "justjavac/demo", "--identifier",
-    "com.justjavac.demo", "--width", "1024", "--height", "720", "--no-check", "--dry-run",
-    "-y",
+    "demo", "--title", "Demo App", "--author", "justjavac", "--identifier", "com.justjavac.demo",
+    "--width", "1024", "--height", "720", "--no-check", "--dry-run", "-y",
   ])
   assert_eq(options.title, "Demo App")
-  assert_eq(options.module_name, "justjavac/demo")
+  assert_eq(options.author, "justjavac")
+  assert_eq(options.project_name, "demo")
   assert_eq(options.identifier, "com.justjavac.demo")
   assert_eq(options.width, 1024)
   assert_eq(options.height, 720)
@@ -131,22 +135,39 @@ test "invalid dimensions fail" {
 }
 
 ///|
-test "invalid module fails" {
+test "invalid derived module names fail" {
   try
-    options_from_raw(".", must_parse(["demo", "--module", "bad name"]))
+    options_from_raw(".", must_parse(["demo", "--author", "bad name"]))
   catch {
-    NewProjectInputError::ModuleContainsSpace => ()
-    _ => abort("expected module name with spaces to fail")
+    NewProjectInputError::InvalidAuthor(
+      author="bad name",
+      reason="contains unsupported characters"
+    ) => ()
+    _ => abort("expected author with spaces to fail")
   } noraise {
     _ => abort("expected module to fail")
   }
   try
-    options_from_raw(".", must_parse(["demo", "--module", "bad\"name"]))
+    options_from_raw(".", must_parse(["demo", "--author", "bad\"name"]))
   catch {
-    NewProjectInputError::ModuleHasUnsupportedCharacter(character='"') => ()
-    _ => abort("expected unsupported module character")
+    NewProjectInputError::InvalidAuthor(
+      author="bad\"name",
+      reason="contains unsupported characters"
+    ) => ()
+    _ => abort("expected unsupported author character")
   } noraise {
     _ => abort("expected module to fail")
+  }
+  try
+    options_from_raw(".", must_parse(["demo", "--author", "nested/author"]))
+  catch {
+    NewProjectInputError::InvalidAuthor(
+      author="nested/author",
+      reason="must be one module path component"
+    ) => ()
+    _ => abort("expected nested author to fail")
+  } noraise {
+    _ => abort("expected author to fail")
   }
 }
 
@@ -185,13 +206,16 @@ test "invalid identifier fails" {
 }
 
 ///|
-test "file plan contains expected scaffold paths" {
+test "file plan contains the exact isomorphic scaffold" {
   let files = must_plan(must_options(["my-counter"]))
+  assert_eq(files.length(), 20)
   for
     path in [
-      "AGENTS.md", "LICENSE", "README.mbt.md", ".gitignore", "moon.mod", "moon.proton",
-      "app/moon.pkg", "app/main.mbt", "app/app.html", "extensions/counter/moon.pkg",
-      "extensions/counter/counter.mbt", "extensions/counter/README.mbt.md",
+      "AGENTS.md", "README.md", ".gitignore", "moon.work", "moon.proton", "shared/moon.mod",
+      "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod", "frontend/main/moon.pkg",
+      "frontend/main/main.mbt", "frontend/public/index.html", "frontend/public/styles.css",
+      "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt", "backend/todo/moon.pkg",
+      "backend/todo/backend.mbt", "backend/todo/commands.mbt", "backend/todo/commands.g.mbt",
     ] {
     guard find_planned_file(files, path) is Some(_) else {
       abort("missing planned file: " + path)
@@ -200,23 +224,32 @@ test "file plan contains expected scaffold paths" {
 }
 
 ///|
-test "templates receive final module title and size" {
+test "templates receive final author title and size" {
   let files = must_plan(
     must_options([
-      "demo", "--title", "Demo App", "--module", "justjavac/demo", "--identifier",
-      "com.justjavac.demo", "--width", "1000", "--height", "700",
+      "demo", "--title", "Demo App", "--author", "justjavac", "--identifier", "com.justjavac.demo",
+      "--width", "1000", "--height", "700",
     ]),
   )
-  guard find_planned_file(files, "app/moon.pkg") is Some(app_pkg) else {
-    abort("missing app/moon.pkg")
+  guard find_planned_file(files, "shared/moon.mod") is Some(shared_mod) else {
+    abort("missing shared/moon.mod")
   }
-  assert_true(
-    app_pkg.contains("\"justjavac/demo/extensions/counter\" @counter"),
-  )
-  guard find_planned_file(files, "app/main.mbt") is Some(main_mbt) else {
-    abort("missing app/main.mbt")
+  assert_true(shared_mod.contains("name = \"justjavac/demo_shared\""))
+  guard find_planned_file(files, "frontend/moon.mod") is Some(frontend_mod) else {
+    abort("missing frontend/moon.mod")
+  }
+  assert_true(frontend_mod.contains("name = \"justjavac/demo_frontend\""))
+  assert_true(frontend_mod.contains("\"justjavac/demo_shared@0.1.0\""))
+  guard find_planned_file(files, "backend/moon.mod") is Some(backend_mod) else {
+    abort("missing backend/moon.mod")
+  }
+  assert_true(backend_mod.contains("name = \"justjavac/demo_backend\""))
+  assert_true(backend_mod.contains("\"bin-deps\""))
+  guard find_planned_file(files, "backend/app/main.mbt") is Some(main_mbt) else {
+    abort("missing backend/app/main.mbt")
   }
   assert_true(main_mbt.contains("@proton.config(\"moon.proton\")"))
+  assert_true(main_mbt.contains("backend.register_commands(registrar)"))
   guard find_planned_file(files, "moon.proton") is Some(config) else {
     abort("missing moon.proton")
   }
@@ -225,32 +258,35 @@ test "templates receive final module title and size" {
   assert_true(config.contains("title: \"Demo App\""))
   assert_true(config.contains("width: 1000"))
   assert_true(config.contains("height: 700"))
+  assert_true(config.contains("path: \"backend\""))
+  assert_true(config.contains("package: \"app\""))
+  assert_true(config.contains("path: \"frontend\""))
+  assert_true(config.contains("before_dev: \"warren dev --port 4300\""))
+  assert_true(config.contains("value: \"frontend/dist/index.html\""))
   assert_true(config.contains("bundle = {"))
   assert_true(config.contains("active: true"))
   assert_true(config.contains("targets: [\"app\", \"zip\"]"))
   assert_true(config.contains("output: \"target/proton-dist\""))
-  guard find_planned_file(files, "README.mbt.md") is Some(readme) else {
-    abort("missing README.mbt.md")
+  guard find_planned_file(files, "README.md") is Some(readme) else {
+    abort("missing README.md")
   }
-  guard find_planned_file(files, "app/app.html") is Some(app_html) else {
-    abort("missing app/app.html")
+  guard find_planned_file(files, "frontend/public/index.html") is Some(app_html) else {
+    abort("missing frontend/public/index.html")
   }
-  assert_false(app_html.contains("window.__MoonBit__.ready"))
-  assert_true(app_html.contains("window.__MoonBit__.core.invokeOp"))
-  assert_false(app_html.contains("waitForBridge"))
+  assert_true(app_html.contains("<title>Demo App</title>"))
   assert_true(readme.contains("## Dev"))
   assert_true(readme.contains("proton_cli dev"))
   assert_true(readme.contains("## Build"))
   assert_true(readme.contains("proton_cli build"))
   assert_true(readme.contains("## Bundle"))
-  assert_true(readme.contains("bundle = {"))
+  assert_true(readme.contains("shared/"))
   assert_true(readme.contains("proton_cli package --dry-run"))
 }
 
 ///|
 test "user title can contain template braces" {
   let files = must_plan(
-    must_options(["demo", "--title", "A {{ Demo }}", "--module", "braces_demo"]),
+    must_options(["demo", "--title", "A {{ Demo }}", "--author", "braces"]),
   )
   guard find_planned_file(files, "moon.proton") is Some(config) else {
     abort("missing moon.proton")
@@ -260,7 +296,9 @@ test "user title can contain template braces" {
 
 ///|
 test "template render error names template" {
-  let context = template_context("Demo", "demo", "dev.proton.demo", 960, 640)
+  let context = template_context(
+    "Demo", "username", "demo", "dev.proton.demo", 960, 640,
+  )
   try
     render_template(
       {
@@ -287,10 +325,12 @@ async test "project generation commits a complete staged tree" {
   let files = must_plan(options)
   create_project(options, files)
   assert_true(
-    path_exists(new_path_join(options.resolved_target_dir, "moon.mod")),
+    path_exists(new_path_join(options.resolved_target_dir, "moon.work")),
   )
   assert_true(
-    path_exists(new_path_join(options.resolved_target_dir, "app/main.mbt")),
+    path_exists(
+      new_path_join(options.resolved_target_dir, "backend/app/main.mbt"),
+    ),
   )
   let staging = new_path_join(
     new_path_parent(options.resolved_target_dir),
