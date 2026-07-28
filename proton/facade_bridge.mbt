@@ -277,7 +277,7 @@ fn typed_event_sender(
 ) -> async (@proton_contract.ContractRoute, String, Json) -> Unit noraise {
   fn(route, name, payload) {
     let event_json = if route.is_application() {
-      bridge_event_json("application", name, payload, None, page_instance)
+      bridge_event_json("frontend", name, payload, None, page_instance)
     } else {
       match route.extension_namespace() {
         Some(extension_namespace) =>
