@@ -10,13 +10,13 @@ import {
 // Errors
 
 // Types and methods
-type DoneEvent derive(ToJson)
+type DoneEvent derive(ToJson, @json.FromJson)
 
-type StartPayload derive(@json.FromJson)
+type StartPayload derive(ToJson, @json.FromJson)
 
-type TickEvent derive(ToJson)
+type TickEvent derive(ToJson, @json.FromJson)
 
-type TickerResult derive(ToJson)
+type TickerResult derive(ToJson, @json.FromJson)
 
 // Type aliases
 

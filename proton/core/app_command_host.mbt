@@ -6,10 +6,6 @@
 /// underlying IPC implementation.
 struct AppCommandHost {
   host : MbtProcessHost
-  mut event_sender : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?
-  mut scoped_event_sender : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?
-  event_scoped_ops : Set[String]
-  event_scope_mutex : @async.Mutex
   mut closed : Bool
 }
 
@@ -131,14 +127,7 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
 ///|
 /// Creates an empty app command host.
 pub fn AppCommandHost::new() -> AppCommandHost {
-  AppCommandHost::{
-    host: MbtProcessHost::new(),
-    event_sender: None,
-    scoped_event_sender: None,
-    event_scoped_ops: Set([]),
-    event_scope_mutex: @async.Mutex::Mutex(),
-    closed: false,
-  }
+  AppCommandHost::{ host: MbtProcessHost::new(), closed: false }
 }
 
 ///|
@@ -197,74 +186,6 @@ pub async fn AppCommandHost::dispatch_ipc_with_context(
 }
 
 ///|
-/// Dispatches one IPC request with an event sender scoped to the current async task.
-pub async fn AppCommandHost::dispatch_ipc_with_event_sender(
-  self : AppCommandHost,
-  request : @ipc.IpcOpRequest,
-  emit : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?,
-) -> @ipc.IpcOpResponse {
-  match (emit, self.event_scoped_ops.contains(request.name)) {
-    (Some(sender), true) => {
-      self.event_scope_mutex.acquire()
-      self.scoped_event_sender = Some(sender)
-      defer {
-        self.scoped_event_sender = None
-        self.event_scope_mutex.release()
-      }
-      self.host.dispatch_async(request)
-    }
-    (None, _) => self.host.dispatch_async(request)
-    (_, false) => self.host.dispatch_async(request)
-  }
-}
-
-///|
-/// Dispatches one IPC request with request-scoped context and a scoped event sender.
-pub async fn AppCommandHost::dispatch_ipc_with_context_and_event_sender(
-  self : AppCommandHost,
-  context : AppCommandRequestContext,
-  request : @ipc.IpcOpRequest,
-  emit : (async (@ipc.IpcExtensionEvent) -> Unit noraise)?,
-) -> @ipc.IpcOpResponse {
-  match (emit, self.event_scoped_ops.contains(request.name)) {
-    (Some(sender), true) => {
-      self.event_scope_mutex.acquire()
-      self.scoped_event_sender = Some(sender)
-      defer {
-        self.scoped_event_sender = None
-        self.event_scope_mutex.release()
-      }
-      self.host.dispatch_async_with_context(context, request)
-    }
-    (None, _) => self.host.dispatch_async_with_context(context, request)
-    (_, false) => self.host.dispatch_async_with_context(context, request)
-  }
-}
-
-///|
-/// Marks an op as emitting extension events during request handling.
-pub fn AppCommandHost::scope_events_for_op(
-  self : AppCommandHost,
-  name : String,
-) -> Unit {
-  guard !self.closed else { return }
-  self.event_scoped_ops.add(name)
-}
-
-///|
-/// Installs the process-level event sender used by command extensions.
-///
-/// Events emitted while handling a bridged request use the request-scoped sender
-/// installed by `dispatch_ipc_with_event_sender`.
-pub fn AppCommandHost::set_event_sender(
-  self : AppCommandHost,
-  emit : async (@ipc.IpcExtensionEvent) -> Unit noraise,
-) -> Unit {
-  guard !self.closed else { return }
-  self.event_sender = Some(emit)
-}
-
-///|
 /// Prevents later command registration while keeping existing commands usable.
 pub fn AppCommandHost::seal_registrations(self : AppCommandHost) -> Unit {
   guard !self.closed else { return }
@@ -272,36 +193,9 @@ pub fn AppCommandHost::seal_registrations(self : AppCommandHost) -> Unit {
 }
 
 ///|
-/// Emits one extension event through the installed IPC event sender.
-pub async fn[Payload : ToJson] AppCommandHost::emit_extension(
-  self : AppCommandHost,
-  extension_namespace : String,
-  event_name : String,
-  payload : Payload,
-) -> Unit noraise {
-  guard !self.closed else { return }
-  let sender = match self.scoped_event_sender {
-    Some(emit) => Some(emit)
-    None => self.event_sender
-  }
-  match sender {
-    Some(emit) =>
-      emit(
-        @ipc.IpcExtensionEvent::new(
-          extension_namespace,
-          event_name,
-          ToJson::to_json(payload),
-        ),
-      )
-    None => ()
-  }
-}
-
-///|
 /// Closes this command host and rejects future dispatches.
 pub fn AppCommandHost::close(self : AppCommandHost) -> Unit {
   guard !self.closed else { return }
   self.closed = true
-  self.event_sender = None
   self.host.close()
 }

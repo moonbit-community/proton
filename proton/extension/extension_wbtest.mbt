@@ -5,14 +5,11 @@ test "typed extensions defer validated command spec construction" {
     js_namespace="typed",
   )
   let ping : @proton_contract.Command[Unit, Unit] = contract.command("ping")
-  let extension = typed(contract, [ping.contract_route()], fn(
-    _context,
-    registrar,
-  ) raise {
+  let extension = typed(contract, [ping.contract_route()], fn(registrar) raise {
     registrar.bind(ping, (_context, _request) => ())
   })
   assert_eq(extension.id(), "example/typed")
-  let spec = extension.command_spec().unwrap()
+  let spec = extension.command_spec()
   assert_eq(spec.js_namespace(), "typed")
   assert_eq(spec.op_names(), ["ext:typed/ping"])
 }
@@ -30,12 +27,7 @@ test "typed extension adaptation reports foreign routes" {
   let ping : @proton_contract.Command[Unit, Unit] = foreign_contract.command(
     "ping",
   )
-  let extension = typed(contract, [ping.contract_route()], fn(
-    _context,
-    _registrar,
-  ) {
-
-  })
+  let extension = typed(contract, [ping.contract_route()], fn(_registrar) {  })
   try {
     ignore(extension.command_spec())
     fail("expected typed extension adaptation failure")

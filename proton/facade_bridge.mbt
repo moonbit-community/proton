@@ -2,7 +2,6 @@
 fn build_command_host(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-  base_dir : String?,
   command_registrars? : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [],
 ) -> CommandHostRuntime? raise AppRunError {
   let host = @core.AppCommandHost::new()
@@ -32,19 +31,11 @@ fn build_command_host(
   }
   for id in ordered_ids {
     let spec = command_extensions[id]
-    let setting = manifest.extension_setting(id).unwrap()
-    let context = @proton_command.AppCommandExtensionContext::new(
-      host,
-      id,
-      spec.js_namespace(),
-      options=setting.options(),
-      base_dir~,
-    )
     destroy_hooks.push(CommandExtensionDestroyHook::{
       extension_id: id,
-      callback: fn() raise { spec.destroy(context) },
+      callback: fn() raise { spec.destroy() },
     })
-    spec.register(context, registrar) catch {
+    spec.register(registrar) catch {
       error => {
         let primary = CommandExtensionLifecycleError(
           RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),
@@ -231,14 +222,6 @@ fn command_proxy_name_is_invalid(name : String) -> Bool {
 }
 
 ///|
-fn install_extension_event_sender(
-  window : @native.Window,
-  host : @core.AppCommandHost,
-) -> Unit {
-  host.set_event_sender(extension_event_sender(window, None))
-}
-
-///|
 fn forward_menu_command(
   window : @native.Window,
   command_id : String,
@@ -285,26 +268,6 @@ fn bridge_event_json(
     None => ()
   }
   Json::object(fields).stringify()
-}
-
-///|
-fn extension_event_sender(
-  window : @native.Window,
-  page_instance : String?,
-) -> async (@ipc.IpcExtensionEvent) -> Unit noraise {
-  fn(event) {
-    window.emit_bridge_event_json(
-      bridge_event_json(
-        "extension",
-        event.event_name,
-        event.payload,
-        Some(event.extension_namespace),
-        page_instance,
-      ),
-    ) catch {
-      _ => ()
-    }
-  }
 }
 
 ///|
@@ -372,14 +335,13 @@ async fn dispatch_bridge_request_in_command_scope(
   )
   let response = match
     @async.with_timeout_opt(policy.request_timeout_ms, () => {
-      host.dispatch_ipc_with_context_and_event_sender(
+      host.dispatch_ipc_with_context(
         request_context,
         @ipc.IpcOpRequest::new(
           request_id.to_string(),
           request.op(),
           request.payload(),
         ),
-        Some(extension_event_sender(window, request.page_instance())),
       )
     }) {
     Some(response) => response

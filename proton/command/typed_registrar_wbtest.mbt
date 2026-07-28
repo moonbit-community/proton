@@ -69,7 +69,6 @@ async test "typed extension specs derive APIs from contract routes" {
     "add",
   )
   let spec = AppCommandExtensionSpec::typed(contract, [add.contract_route()], fn(
-    _context,
     registrar,
   ) raise {
     registrar.bind(add, (_context, request) => AddResponse::{
@@ -79,12 +78,7 @@ async test "typed extension specs derive APIs from contract routes" {
   assert_eq(spec.op_names(), ["ext:typed/add"])
   assert_eq(spec.apis().map(api => api.api_name()), ["add"])
   let host = @core.AppCommandHost::new()
-  let context = AppCommandExtensionContext::new(
-    host,
-    spec.id(),
-    spec.js_namespace(),
-  )
-  spec.register(context, CommandRegistrar::new(host))
+  spec.register(CommandRegistrar::new(host))
   host.seal_registrations()
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
@@ -115,7 +109,6 @@ test "typed extension specs reject foreign command routes" {
   try {
     ignore(
       AppCommandExtensionSpec::typed(contract, [foreign.contract_route()], fn(
-        _context,
         _registrar,
       ) {
 

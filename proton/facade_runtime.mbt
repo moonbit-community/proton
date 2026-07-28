@@ -28,7 +28,6 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.command_registrars,
     self.application_lifecycle_hooks,
     self.window_lifecycle_hooks,
-    resolved.base_dir,
     self.menu,
     self.bridge_startup_timeout_value_ms,
     self.resolved_headless(),
@@ -50,7 +49,6 @@ async fn run_manifest(
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise],
   application_lifecycle_hooks : Array[ApplicationLifecycleHook],
   window_lifecycle_hooks : Array[WindowLifecycleHook],
-  base_dir : String?,
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
   headless : Bool,
@@ -112,7 +110,6 @@ async fn run_manifest(
     command_host = build_command_host(
       manifest,
       command_extensions,
-      base_dir,
       command_registrars~,
     )
     @async.with_task_group(application_tasks => {
@@ -166,11 +163,6 @@ async fn run_manifest(
         }
         window = Some(created_window)
         lifecycle.finish_window_create()
-        match command_host {
-          Some(host) =>
-            install_extension_event_sender(created_window, host.host)
-          None => ()
-        }
         load_entry_after_create(created_window, manifest.entry) catch {
           error => raise EntryLoadError(error)
         }

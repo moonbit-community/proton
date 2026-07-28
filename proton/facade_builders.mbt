@@ -308,7 +308,7 @@ pub fn App::extension(
     )
   } else {
     self.extension_settings[id] = @manifest.ExtensionSetting::enabled(options~)
-    let command_spec = extension.command_spec() catch {
+    let command_spec = Some(extension.command_spec()) catch {
       error => {
         self.validation_errors.push(
           ExtensionAdaptationFailed(extension_id=id, error~),

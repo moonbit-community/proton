@@ -1,23 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/proton/examples/17_extension"
 
-import {
-  "justjavac/proton/core",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/json",
-}
-
 // Values
-pub fn extension() -> @core.Extension
 
 // Errors
 
 // Types and methods
-type ComputedNotice derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type SumPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type SumReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

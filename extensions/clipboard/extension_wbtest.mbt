@@ -11,7 +11,7 @@ test "clipboard text length handles empty clipboard reply" {
 ///|
 test "clipboard metadata constants match generated app command extension" {
   assert_eq(extension().id(), "justjavac/proton-clipboard")
-  let spec = extension().command_spec().unwrap()
+  let spec = extension().command_spec()
   assert_eq(spec.js_namespace(), "clipboard")
   assert_eq(spec.op_names(), [
     "ext:clipboard/readText", "ext:clipboard/writeText",

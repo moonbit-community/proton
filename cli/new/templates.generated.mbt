@@ -13,6 +13,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "justjavac/proton@{{proton_version}}",
+          #|  "justjavac/proton_contract@0.1.0",
           #|}
           #|
           #|readme = "README.mbt.md"
@@ -303,6 +304,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  "moonbitlang/core/json",
           #|  "justjavac/proton/command" @proton_command,
           #|  "justjavac/proton/extension" @proton_extension,
+          #|  "justjavac/proton_contract",
           #|}
           #|
           #|supported_targets = "native"
@@ -316,25 +318,40 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|struct CounterReply {
           #|  value : Int
-          #|} derive(ToJson)
+          #|} derive(ToJson, FromJson)
+          #|
+          #|///|
+          #|let counter_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
+          #|  id={{counter_extension_id_mbt}},
+          #|  js_namespace="counter",
+          #|)
+          #|
+          #|///|
+          #|let get_command : @proton_contract.Command[Unit, CounterReply] = counter_contract.command(
+          #|  "get",
+          #|)
+          #|
+          #|///|
+          #|let increment_command : @proton_contract.Command[Unit, CounterReply] = counter_contract.command(
+          #|  "increment",
+          #|)
+          #|
+          #|///|
+          #|let reset_command : @proton_contract.Command[Unit, CounterReply] = counter_contract.command(
+          #|  "reset",
+          #|)
           #|
           #|///|
           #|let counter_value : Ref[Int] = Ref(0)
           #|
           #|///|
           #|pub fn extension() -> @proton_extension.Extension {
-          #|  @proton_extension.from_command_spec(counter_spec())
-          #|}
-          #|
-          #|///|
-          #|fn counter_spec() -> @proton_command.AppCommandExtensionSpec {
-          #|  @proton_command.AppCommandExtensionSpec::new(
-          #|    {{counter_extension_id_mbt}},
-          #|    "counter",
+          #|  @proton_extension.typed(
+          #|    counter_contract,
           #|    [
-          #|      @proton_command.AppCommandApiDescriptor::new("get"),
-          #|      @proton_command.AppCommandApiDescriptor::new("increment"),
-          #|      @proton_command.AppCommandApiDescriptor::new("reset"),
+          #|      get_command.contract_route(),
+          #|      increment_command.contract_route(),
+          #|      reset_command.contract_route(),
           #|    ],
           #|    register_counter_commands,
           #|  )
@@ -342,16 +359,16 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|fn register_counter_commands(
-          #|  context : @proton_command.AppCommandExtensionContext,
+          #|  registrar : @proton_command.CommandRegistrar,
           #|) -> Unit raise {
-          #|  context.op("get", fn(_payload : Json) {
-          #|    CounterReply::{ value: counter_value.val }
+          #|  registrar.bind(get_command, (_context, _request) => CounterReply::{
+          #|    value: counter_value.val,
           #|  })
-          #|  context.op("increment", fn(_payload : Json) {
+          #|  registrar.bind(increment_command, (_context, _request) => {
           #|    counter_value.val = counter_value.val + 1
           #|    CounterReply::{ value: counter_value.val }
           #|  })
-          #|  context.op("reset", fn(_payload : Json) {
+          #|  registrar.bind(reset_command, (_context, _request) => {
           #|    counter_value.val = 0
           #|    CounterReply::{ value: counter_value.val }
           #|  })

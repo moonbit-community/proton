@@ -39,7 +39,7 @@ fn async_add_extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     async_add_contract,
     [slow_add_command.contract_route()],
-    fn(_context, registrar) raise {
+    fn(registrar) raise {
       registrar.bind(slow_add_command, (_context, payload) => slow_add(payload))
     },
   )

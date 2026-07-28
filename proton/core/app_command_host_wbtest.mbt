@@ -16,18 +16,6 @@ test "panic command host rejects registration after close" {
 }
 
 ///|
-test "command host close clears extension event sender" {
-  let host = AppCommandHost::new()
-  host.set_event_sender(fn(_event) { () })
-  assert_true(host.event_sender is Some(_))
-
-  host.close()
-  assert_false(host.event_sender is Some(_))
-  host.set_event_sender(fn(_event) { () })
-  assert_false(host.event_sender is Some(_))
-}
-
-///|
 test "panic command host rejects registration after sealing" {
   let host = AppCommandHost::new()
   host.op("app:ping", fn(_payload : Unit) { "pong" })

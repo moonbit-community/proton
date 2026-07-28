@@ -234,7 +234,7 @@ fn App::resolved_headless(self : App) -> Bool {
 
 ///|
 fn App::inline_app_config(self : App) -> ResolvedAppConfig {
-  ResolvedAppConfig::{ manifest: self.inline_manifest(), base_dir: None }
+  ResolvedAppConfig::{ manifest: self.inline_manifest() }
 }
 
 ///|
@@ -273,7 +273,6 @@ fn App::merge_config(
       windows=manifest.windows,
       extensions~,
     ),
-    base_dir: loaded.base_dir(),
   }
 }
 

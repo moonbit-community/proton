@@ -10,13 +10,13 @@ import {
 // Errors
 
 // Types and methods
-type DoublePayload derive(@json.FromJson)
+type DoublePayload derive(ToJson, @json.FromJson)
 
-type DoubleReply derive(ToJson)
+type DoubleReply derive(ToJson, @json.FromJson)
 
-type SlowAddPayload derive(@json.FromJson)
+type SlowAddPayload derive(ToJson, @json.FromJson)
 
-type SlowAddReply derive(ToJson)
+type SlowAddReply derive(ToJson, @json.FromJson)
 
 // Type aliases
 

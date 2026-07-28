@@ -49,10 +49,7 @@ fn notification_click_poller_script() -> String {
 }
 
 ///|
-fn cleanup_notification(
-  context : @proton_command.AppCommandExtensionContext,
-) -> Unit raise NotificationError {
-  ignore(context.extension_id())
+fn cleanup_notification() -> Unit raise NotificationError {
   notification_native_cleanup()
 }
 
@@ -99,8 +96,8 @@ pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     generated_extension_contract,
     generated_extension_command_routes(),
-    fn(_context, registrar) raise { register_commands(registrar) },
+    fn(registrar) raise { register_commands(registrar) },
     scripts=[notification_click_poller_script()],
-    on_destroy=fn(context) raise { cleanup_notification(context) },
+    on_destroy=fn() raise { cleanup_notification() },
   )
 }

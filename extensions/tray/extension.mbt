@@ -238,8 +238,7 @@ fn tray_event_poller_script() -> String {
 }
 
 ///|
-fn cleanup_tray(context : @proton_command.AppCommandExtensionContext) -> Unit {
-  ignore(context.extension_id())
+fn cleanup_tray() -> Unit {
   destroy_tray(app_command_tray_handle.val)
 }
 
@@ -396,8 +395,8 @@ pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     generated_extension_contract,
     generated_extension_command_routes(),
-    fn(_context, registrar) raise { register_commands(registrar) },
+    fn(registrar) raise { register_commands(registrar) },
     scripts=[tray_event_poller_script()],
-    on_destroy=fn(context) { cleanup_tray(context) },
+    on_destroy=fn() { cleanup_tray() },
   )
 }

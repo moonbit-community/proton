@@ -20,7 +20,6 @@ let hold_command : @proton_contract.Command[HoldRequest, HoldResult] = child_con
 ///|
 fn child_process_extension() -> @proton_extension.Extension {
   @proton_extension.typed(child_contract, [hold_command.contract_route()], fn(
-    _context,
     registrar,
   ) raise {
     registrar.bind(hold_command, hold_child_process)

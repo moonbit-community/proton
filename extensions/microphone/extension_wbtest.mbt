@@ -48,5 +48,5 @@ test "microphone metadata constants match generated app command extension" {
   let command_spec = extension().command_spec() catch {
     error => abort(error.message())
   }
-  assert_eq(command_spec.unwrap().js_namespace(), "microphone")
+  assert_eq(command_spec.js_namespace(), "microphone")
 }

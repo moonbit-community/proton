@@ -128,7 +128,7 @@ fn app_commands_extension() -> @proton_extension.Extension {
       fail_command.contract_route(),
       report_probe_command.contract_route(),
     ],
-    fn(_context, registrar) raise { register_app_commands(registrar) },
+    fn(registrar) raise { register_app_commands(registrar) },
   )
 }
 

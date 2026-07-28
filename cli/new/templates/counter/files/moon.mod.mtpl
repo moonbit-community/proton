@@ -4,6 +4,7 @@ version = "0.1.0"
 
 import {
   "justjavac/proton@{{proton_version}}",
+  "justjavac/proton_contract@0.1.0",
 }
 
 readme = "README.mbt.md"

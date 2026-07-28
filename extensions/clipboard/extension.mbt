@@ -40,6 +40,6 @@ pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     generated_extension_contract,
     generated_extension_command_routes(),
-    fn(_context, registrar) raise { register_commands(registrar) },
+    fn(registrar) raise { register_commands(registrar) },
   )
 }

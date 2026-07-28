@@ -70,10 +70,7 @@ fn acquire_guard(
 
 ///|
 /// Releases the active app-command guard if one exists.
-fn cleanup_keepawake(
-  context : @proton_command.AppCommandExtensionContext,
-) -> Unit raise KeepAwakeError {
-  ignore(context.extension_id())
+fn cleanup_keepawake() -> Unit raise KeepAwakeError {
   match active_guard_ref.val {
     Some(active_guard) => {
       release_guard(active_guard) |> ignore
@@ -162,7 +159,7 @@ pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     generated_extension_contract,
     generated_extension_command_routes(),
-    fn(_context, registrar) raise { register_commands(registrar) },
-    on_destroy=fn(context) raise { cleanup_keepawake(context) },
+    fn(registrar) raise { register_commands(registrar) },
+    on_destroy=fn() raise { cleanup_keepawake() },
   )
 }
