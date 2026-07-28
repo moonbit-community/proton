@@ -1,0 +1,77 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/path/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let basename : @proton_contract.Command[BasenameRequest, BasenameReply]
+
+pub let dirname : @proton_contract.Command[PathRequest, PathReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let extname : @proton_contract.Command[PathRequest, ExtnameReply]
+
+pub let is_absolute : @proton_contract.Command[PathRequest, IsAbsoluteReply]
+
+pub let join : @proton_contract.Command[JoinRequest, PathReply]
+
+pub let join_all : @proton_contract.Command[PathsRequest, PathReply]
+
+pub let normalize : @proton_contract.Command[PathRequest, PathReply]
+
+pub let relative : @proton_contract.Command[RelativeRequest, PathReply]
+
+pub let resolve : @proton_contract.Command[PathRequest, PathReply]
+
+pub let resolve_all : @proton_contract.Command[PathsRequest, PathReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct BasenameReply {
+  name : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct BasenameRequest {
+  path : String
+  suffix : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ExtnameReply {
+  ext : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct IsAbsoluteReply {
+  is_absolute : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct JoinRequest {
+  left : String
+  right : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PathReply {
+  path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PathRequest {
+  path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PathsRequest {
+  paths : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct RelativeRequest {
+  path : String
+  base : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

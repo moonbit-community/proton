@@ -81,6 +81,7 @@ try {
     "keepawake",
     "microphone",
     "notification",
+    "path",
     "shell",
     "tray",
   ];

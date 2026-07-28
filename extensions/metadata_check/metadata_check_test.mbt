@@ -37,24 +37,6 @@ fn load_descriptor(name : String) -> @catalog.ExtensionDescriptor raise {
 }
 
 ///|
-/// Asserts that metadata fields stay aligned with the exported extension spec.
-fn assert_metadata_matches_spec(
-  descriptor : @catalog.ExtensionDescriptor,
-  spec : @core.ExtensionSpec,
-  package_path : String,
-  expected_id : String,
-  expected_namespace : String,
-) -> Unit raise {
-  assert_eq(descriptor.id(), spec.id())
-  assert_eq(descriptor.id(), expected_id)
-  @debug.assert_eq(descriptor.dependencies(), spec.dependencies())
-  assert_eq(descriptor.moonbit_import_path(), package_path)
-  assert_eq(spec.js_namespace(), expected_namespace)
-  assert_eq(descriptor.js_namespace(), expected_namespace)
-  assert_true(descriptor.platforms().length() > 0)
-}
-
-///|
 /// Asserts that metadata fields stay aligned with the exported app-command extension spec.
 fn assert_metadata_matches_app_command_spec(
   descriptor : @catalog.ExtensionDescriptor,
@@ -115,9 +97,9 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "justjavac/proton-notification",
     "notification",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("path"),
-    @path.core_spec(),
+    @path.extension().command_spec().unwrap(),
     "justjavac/proton_ext/path",
     "justjavac/proton-path",
     "path",

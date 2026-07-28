@@ -3,7 +3,6 @@ import {
   "moonbitlang/x/fs" @mbfs,
   "justjavac/proton/command" @proton_command,
   "justjavac/proton/catalog",
-  "justjavac/proton/core",
   "justjavac/proton_ext/dialog",
   "justjavac/proton_ext/fs",
   "justjavac/proton_ext/global_hotkey",

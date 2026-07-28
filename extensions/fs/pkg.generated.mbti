@@ -4,46 +4,23 @@ package "justjavac/proton_ext/fs"
 import {
   "justjavac/proton/command",
   "justjavac/proton/extension",
+  "justjavac/proton_contract",
   "moonbitlang/core/debug",
-  "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_fs_activity(@command.AppCommandExtensionContext, FsActivity) -> Unit noraise
-
 pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub let generated_extension_contract : @proton_contract.ExtensionContract
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type FsError derive(Eq, @debug.Debug)
 
 // Types and methods
-type ExistsReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type FsActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ProtonExistsPayload derive(@json.FromJson)
-
-type ProtonKindPayload derive(@json.FromJson)
-
-type ProtonMkdirPayload derive(@json.FromJson)
-
-type ProtonReadFilePayload derive(@json.FromJson)
-
-type ProtonReaddirPayload derive(@json.FromJson)
-
-type ProtonRealpathPayload derive(@json.FromJson)
-
-type ProtonRemovePayload derive(@json.FromJson)
-
-type ProtonRenamePayload derive(@json.FromJson)
-
-type ProtonRmdirPayload derive(@json.FromJson)
-
-type ProtonSizePayload derive(@json.FromJson)
-
-type ProtonWriteFilePayload derive(@json.FromJson)
-
-type RemoveFileReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

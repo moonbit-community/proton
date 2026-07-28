@@ -1,29 +1,57 @@
 ///|
-#proton.event(name="activity")
-struct FsActivity {
-  operation : String
-  path : String?
-  bytes : Int?
-} derive(ToJson, FromJson, Debug, Eq)
+let read_file_command = @fs_contract.read_file
+
+///|
+let write_file_command = @fs_contract.write_file
+
+///|
+let exists_command = @fs_contract.exists
+
+///|
+let kind_command = @fs_contract.kind
+
+///|
+let size_command = @fs_contract.size
+
+///|
+let readdir_command = @fs_contract.readdir
+
+///|
+let mkdir_command = @fs_contract.mkdir
+
+///|
+let remove_command = @fs_contract.remove
+
+///|
+let rmdir_command = @fs_contract.rmdir
+
+///|
+let rename_command = @fs_contract.rename
+
+///|
+let realpath_command = @fs_contract.realpath
 
 ///|
 async fn emit_activity(
-  context : @proton_command.AppCommandExtensionContext,
+  context : @proton.CommandContext,
   operation : String,
   path? : String? = None,
   bytes? : Int? = None,
-) -> Unit noraise {
-  emit_fs_activity(context, FsActivity::{ operation, path, bytes })
+) -> Unit {
+  context.emit(@fs_contract.activity, @fs_contract.FsActivity::{
+    operation,
+    path,
+    bytes,
+  })
 }
 
 ///|
-#proton.command(name="read_file")
+#proton.command(contract=read_file_command)
 async fn read_file(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-  sync_timestamp : Bool?,
-) -> ReadFileReply raise FsError {
-  let reply = read_text_file({ path, sync_timestamp })
+  context : @proton.CommandContext,
+  request : @fs_contract.ReadFileRequest,
+) -> @fs_contract.ReadFileReply {
+  let reply = read_text_file(request)
   emit_activity(
     context,
     "read_file",
@@ -34,24 +62,12 @@ async fn read_file(
 }
 
 ///|
-#proton.command(name="write_file")
+#proton.command(contract=write_file_command)
 async fn write_file(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-  content : String,
-  append : Bool?,
-  create_mode : String?,
-  permission : Int?,
-  sync : String?,
-) -> WriteFileReply raise FsError {
-  let reply = write_text_file({
-    path,
-    content,
-    append,
-    create_mode,
-    permission,
-    sync,
-  })
+  context : @proton.CommandContext,
+  request : @fs_contract.WriteFileRequest,
+) -> @fs_contract.WriteFileReply {
+  let reply = write_text_file(request)
   emit_activity(
     context,
     "write_file",
@@ -62,104 +78,108 @@ async fn write_file(
 }
 
 ///|
-#proton.command(name="exists")
-async fn exists(path : String) -> ExistsReply raise FsError {
-  ExistsReply::{ exists: exists_path(path) }
+#proton.command(contract=exists_command)
+async fn exists(request : @fs_contract.PathRequest) -> @fs_contract.ExistsReply {
+  @fs_contract.ExistsReply::{ exists: exists_path(request.path) }
 }
 
 ///|
-#proton.command(name="kind")
+#proton.command(contract=kind_command)
 async fn kind(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-  follow_symlink : Bool?,
-) -> KindReply raise FsError {
-  let kind = path_kind(path, option_bool(follow_symlink, true))
-  emit_activity(context, "kind", path=Some(path))
-  KindReply::{ path, kind }
+  context : @proton.CommandContext,
+  request : @fs_contract.KindRequest,
+) -> @fs_contract.KindReply {
+  let kind = path_kind(request.path, option_bool(request.follow_symlink, true))
+  emit_activity(context, "kind", path=Some(request.path))
+  @fs_contract.KindReply::{ path: request.path, kind }
 }
 
 ///|
-#proton.command(name="size")
+#proton.command(contract=size_command)
 async fn size(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-) -> SizeReply raise FsError {
-  let size = path_size(path)
-  emit_activity(context, "size", path=Some(path))
-  SizeReply::{ path, size }
+  context : @proton.CommandContext,
+  request : @fs_contract.PathRequest,
+) -> @fs_contract.SizeReply {
+  let size = path_size(request.path)
+  emit_activity(context, "size", path=Some(request.path))
+  @fs_contract.SizeReply::{ path: request.path, size }
 }
 
 ///|
-#proton.command(name="readdir")
+#proton.command(contract=readdir_command)
 async fn readdir(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-  include_hidden : Bool?,
-  include_special : Bool?,
-  sort : Bool?,
-) -> ReaddirReply raise FsError {
-  let entries = readdir_entries({ path, include_hidden, include_special, sort })
-  emit_activity(context, "readdir", path=Some(path))
-  ReaddirReply::{ path, entries }
+  context : @proton.CommandContext,
+  request : @fs_contract.ReaddirRequest,
+) -> @fs_contract.ReaddirReply {
+  let entries = readdir_entries(request)
+  emit_activity(context, "readdir", path=Some(request.path))
+  @fs_contract.ReaddirReply::{ path: request.path, entries }
 }
 
 ///|
-#proton.command(name="mkdir")
+#proton.command(contract=mkdir_command)
 async fn mkdir(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-  permission : Int?,
-  recursive : Bool?,
-) -> MkdirReply raise FsError {
-  let created = mkdir_path({ path, permission, recursive })
-  emit_activity(context, "mkdir", path=Some(path))
-  MkdirReply::{ path, created }
+  context : @proton.CommandContext,
+  request : @fs_contract.MkdirRequest,
+) -> @fs_contract.MkdirReply {
+  let created = mkdir_path(request)
+  emit_activity(context, "mkdir", path=Some(request.path))
+  @fs_contract.MkdirReply::{ path: request.path, created }
 }
 
 ///|
-#proton.command(name="remove")
+#proton.command(contract=remove_command)
 async fn remove(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-) -> RemoveFileReply raise FsError {
-  let removed = remove_file(path)
-  emit_activity(context, "remove", path=Some(path))
-  RemoveFileReply::{ removed, }
+  context : @proton.CommandContext,
+  request : @fs_contract.PathRequest,
+) -> @fs_contract.RemoveFileReply {
+  let removed = remove_file(request.path)
+  emit_activity(context, "remove", path=Some(request.path))
+  @fs_contract.RemoveFileReply::{ removed, }
 }
 
 ///|
-#proton.command(name="rmdir")
+#proton.command(contract=rmdir_command)
 async fn rmdir(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-  recursive : Bool?,
-) -> RemovePathReply raise FsError {
-  let removed = remove_dir({ path, recursive })
-  emit_activity(context, "rmdir", path=Some(path))
-  RemovePathReply::{ path, removed }
+  context : @proton.CommandContext,
+  request : @fs_contract.RemovePathRequest,
+) -> @fs_contract.RemovePathReply {
+  let removed = remove_dir(request)
+  emit_activity(context, "rmdir", path=Some(request.path))
+  @fs_contract.RemovePathReply::{ path: request.path, removed }
 }
 
 ///|
-#proton.command(name="rename")
+#proton.command(contract=rename_command)
 async fn rename(
-  context : @proton_command.AppCommandExtensionContext,
-  old_path : String,
-  new_path : String,
-  replace : Bool?,
-) -> RenameReply raise FsError {
-  rename_path({ old_path, new_path, replace })
-  emit_activity(context, "rename", path=Some(new_path))
-  RenameReply::{ old_path, new_path, renamed: true }
+  context : @proton.CommandContext,
+  request : @fs_contract.RenameRequest,
+) -> @fs_contract.RenameReply {
+  rename_path(request)
+  emit_activity(context, "rename", path=Some(request.new_path))
+  @fs_contract.RenameReply::{
+    old_path: request.old_path,
+    new_path: request.new_path,
+    renamed: true,
+  }
 }
 
 ///|
-#proton.command(name="realpath")
+#proton.command(contract=realpath_command)
 async fn realpath(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-) -> RealpathReply raise FsError {
-  let real_path = realpath_path(path)
+  context : @proton.CommandContext,
+  request : @fs_contract.PathRequest,
+) -> @fs_contract.RealpathReply {
+  let real_path = realpath_path(request.path)
   emit_activity(context, "realpath", path=Some(real_path))
-  RealpathReply::{ path: real_path }
+  @fs_contract.RealpathReply::{ path: real_path }
+}
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    generated_extension_contract,
+    generated_extension_command_routes(),
+    fn(_context, registrar) raise { register_commands(registrar) },
+  )
 }
