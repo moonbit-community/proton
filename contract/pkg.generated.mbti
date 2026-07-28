@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_contract"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn[Request, Response] command(String) -> Command[Request, Response]
+
+pub fn[Payload] event(String) -> Event[Payload]
+
+pub fn extension(id~ : String, js_namespace~ : String) -> ExtensionContract
+
+// Errors
+pub(all) suberror ContractDefinitionError {
+  EmptyApplicationName
+  EmptyExtensionId
+  EmptyExtensionNamespace
+  EmptyExtensionMember(extension_namespace~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ContractDefinitionError::message(Self) -> String
+
+// Types and methods
+pub struct Command[Request, Response] {
+  route : ContractRoute
+  type_marker : ((Request) -> Response)?
+}
+pub fn[Request, Response] Command::name(Self[Request, Response]) -> String
+pub fn[Request, Response] Command::validate(Self[Request, Response]) -> Unit raise ContractDefinitionError
+
+pub struct ContractRoute {
+  scope : ContractScope
+  name : String
+}
+
+pub struct Event[Payload] {
+  route : ContractRoute
+  type_marker : ((Payload) -> Unit)?
+}
+pub fn[Payload] Event::name(Self[Payload]) -> String
+pub fn[Payload] Event::validate(Self[Payload]) -> Unit raise ContractDefinitionError
+
+pub struct ExtensionContract {
+  id : String
+  js_namespace : String
+}
+pub fn[Request, Response] ExtensionContract::command(Self, String) -> Command[Request, Response]
+pub fn[Payload] ExtensionContract::event(Self, String) -> Event[Payload]
+pub fn ExtensionContract::id(Self) -> String
+pub fn ExtensionContract::js_namespace(Self) -> String
+pub fn ExtensionContract::validate(Self) -> Unit raise ContractDefinitionError
+
+// Type aliases
+
+// Traits
+

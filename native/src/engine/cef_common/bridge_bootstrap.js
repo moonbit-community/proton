@@ -20,82 +20,188 @@
     : 30000;
   const pending = new Map();
   const listeners = new Map();
+  const jsonListeners = new Map();
   let nextRequestId = 1;
   let disposed = false;
 
-  function listenersFor(name) {
+  class ProtonBridgeError extends Error {
+    constructor(code, message, detail) {
+      super(message);
+      this.name = "ProtonBridgeError";
+      this.code = String(code || "bridge_failed");
+      if (detail !== undefined) {
+        this.detail = detail;
+      }
+    }
+  }
+
+  function listenersFor(table, name) {
     const key = String(name);
-    let entries = listeners.get(key);
+    let entries = table.get(key);
     if (!entries) {
       entries = [];
-      listeners.set(key, entries);
+      table.set(key, entries);
     }
     return entries;
   }
 
   function emit(name, event) {
-    for (const listener of listenersFor(name).slice()) {
+    for (const listener of listenersFor(listeners, name).slice()) {
       listener(event);
     }
     return event;
   }
 
+  function emitJson(route, payloadJson) {
+    for (const listener of listenersFor(jsonListeners, route).slice()) {
+      listener(payloadJson);
+    }
+  }
+
+  function addListener(table, name, listener, label) {
+    if (typeof listener !== "function") {
+      throw new TypeError(`${label} expects a listener function`);
+    }
+    const key = String(name);
+    listenersFor(table, key).push(listener);
+    return function unsubscribe() {
+      const current = listenersFor(table, key);
+      table.set(key, current.filter((candidate) => candidate !== listener));
+    };
+  }
+
   const events = {
     on(name, listener) {
-      if (typeof listener !== "function") {
-        throw new TypeError("MoonBit.events.on expects a listener function");
-      }
-      const key = String(name);
-      listenersFor(key).push(listener);
-      return function unsubscribe() {
-        const current = listenersFor(key);
-        listeners.set(key, current.filter((candidate) => candidate !== listener));
-      };
+      return addListener(listeners, name, listener, "MoonBit.events.on");
+    },
+    onJson(route, listener) {
+      return addListener(
+        jsonListeners,
+        route,
+        listener,
+        "MoonBit.events.onJson",
+      );
     },
     emit(name, event) {
       return emit(String(name), event);
     },
   };
 
-  function invokeOp(name, payload) {
+  function bridgeError(error, fallbackCode, fallbackMessage) {
+    if (error instanceof ProtonBridgeError) {
+      return error;
+    }
+    const message = error && error.message
+      ? String(error.message)
+      : String(error || fallbackMessage);
+    return new ProtonBridgeError(
+      error && error.code ? error.code : fallbackCode,
+      message || fallbackMessage,
+      error && error.detail,
+    );
+  }
+
+  function invokeJson(route, requestJson, options) {
     if (disposed) {
-      return Promise.reject(new Error("Proton bridge context has been disposed"));
+      return Promise.reject(new ProtonBridgeError(
+        "bridge_disposed",
+        "Proton bridge context has been disposed",
+      ));
+    }
+    if (typeof requestJson !== "string") {
+      return Promise.reject(new ProtonBridgeError(
+        "invalid_request_json",
+        "Proton bridge request must be JSON text",
+      ));
     }
     return new Promise((resolve, reject) => {
       const id = nextRequestId++;
       if (nextRequestId > 2147483640) {
         nextRequestId = 1;
       }
+      const signal = options && options.signal;
+      let abortListener;
+      const finish = () => {
+        if (abortListener && signal) {
+          signal.removeEventListener("abort", abortListener);
+        }
+      };
       const timer = setTimeout(() => {
-        if (!pending.delete(id)) {
+        const entry = pending.get(id);
+        if (!entry) {
           return;
         }
-        reject(new Error("bridge request timed out"));
-      }, requestTimeoutMs);
-      pending.set(id, { resolve, reject, timer });
-
-      let payloadJson;
-      try {
-        payloadJson = JSON.stringify(payload === undefined ? null : payload);
-      } catch (error) {
-        clearTimeout(timer);
         pending.delete(id);
-        reject(error);
-        return;
+        finish();
+        reject(new ProtonBridgeError(
+          "request_timeout",
+          "Proton bridge request timed out",
+        ));
+      }, requestTimeoutMs);
+      pending.set(id, { resolve, reject, timer, finish });
+
+      if (signal) {
+        abortListener = () => {
+          const entry = pending.get(id);
+          if (!entry) {
+            return;
+          }
+          pending.delete(id);
+          clearTimeout(timer);
+          finish();
+          reject(new ProtonBridgeError(
+            "request_cancelled",
+            "Proton bridge request was cancelled",
+          ));
+        };
+        if (signal.aborted) {
+          abortListener();
+          return;
+        }
+        signal.addEventListener("abort", abortListener, { once: true });
       }
 
       try {
-        nativeInvoke(id, String(name), payloadJson, pageInstance);
+        nativeInvoke(id, String(route), requestJson, pageInstance);
       } catch (error) {
         clearTimeout(timer);
         pending.delete(id);
-        reject(error);
+        finish();
+        reject(bridgeError(
+          error,
+          "native_invoke_failed",
+          "Proton native invocation failed",
+        ));
+      }
+    });
+  }
+
+  function invokeOp(name, payload) {
+    let payloadJson;
+    try {
+      payloadJson = JSON.stringify(payload === undefined ? null : payload);
+    } catch (error) {
+      return Promise.reject(bridgeError(
+        error,
+        "request_encode_failed",
+        "Proton bridge request could not be encoded",
+      ));
+    }
+    return invokeJson(name, payloadJson).then((responseJson) => {
+      try {
+        return JSON.parse(responseJson);
+      } catch (error) {
+        throw bridgeError(
+          error,
+          "response_decode_failed",
+          "Proton bridge response was not valid JSON",
+        );
       }
     });
   }
 
   const root = {
-    core: { invokeOp },
+    core: { invokeJson, invokeOp },
     events,
   };
   const extensions = Array.isArray(config.extensions) ? config.extensions : [];
@@ -142,14 +248,27 @@
       }
       pending.delete(id);
       clearTimeout(entry.timer);
+      entry.finish();
       if (ok) {
-        try {
-          entry.resolve(JSON.parse(payloadJson));
-        } catch (error) {
-          entry.reject(error);
-        }
+        entry.resolve(payloadJson);
       } else {
-        entry.reject(new Error(errorMessage || "bridge request failed"));
+        let error = null;
+        try {
+          const parsed = JSON.parse(errorMessage || "");
+          if (parsed && typeof parsed === "object") {
+            error = new ProtonBridgeError(
+              parsed.code || "remote_failure",
+              parsed.message || "Proton bridge request failed",
+              parsed.detail,
+            );
+          }
+        } catch (_) {
+          // The native ABI historically returned plain error text.
+        }
+        entry.reject(error || new ProtonBridgeError(
+          "remote_failure",
+          errorMessage || "Proton bridge request failed",
+        ));
       }
       return true;
     },
@@ -173,6 +292,10 @@
           name,
           payload: event.payload === undefined ? null : event.payload,
         });
+        emitJson(
+          `ext:${extension}/${name}`,
+          JSON.stringify(event.payload === undefined ? null : event.payload),
+        );
         return true;
       }
       const name = String(event.name || "");
@@ -183,6 +306,10 @@
         name,
         payload: event.payload === undefined ? null : event.payload,
       });
+      emitJson(
+        `app:${name}`,
+        JSON.stringify(event.payload === undefined ? null : event.payload),
+      );
       return true;
     },
     dispose(reason) {
@@ -193,10 +320,12 @@
       const error = new Error(reason || "Proton bridge context was released");
       for (const entry of pending.values()) {
         clearTimeout(entry.timer);
-        entry.reject(error);
+        entry.finish();
+        entry.reject(new ProtonBridgeError("bridge_disposed", error.message));
       }
       pending.clear();
       listeners.clear();
+      jsonListeners.clear();
     },
   };
 })
