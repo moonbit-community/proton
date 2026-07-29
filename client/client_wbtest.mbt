@@ -14,8 +14,11 @@ struct CountChanged {
 } derive(FromJson, Eq, Debug)
 
 ///|
-extern "js" fn install_fake_bridge(response_json : String) -> Unit =
-  #| (responseJson) => {
+extern "js" fn install_fake_bridge(
+  response_json : String,
+  failure_json? : String = "",
+) -> Unit =
+  #| (responseJson, failureJson) => {
   #|   globalThis.__protonClientTest = {
   #|     route: "",
   #|     requestJson: "",
@@ -26,6 +29,9 @@ extern "js" fn install_fake_bridge(response_json : String) -> Unit =
   #|       invokeJson(route, requestJson) {
   #|         globalThis.__protonClientTest.route = route;
   #|         globalThis.__protonClientTest.requestJson = requestJson;
+  #|         if (failureJson !== "") {
+  #|           return Promise.reject(JSON.parse(failureJson));
+  #|         }
   #|         return Promise.resolve(responseJson);
   #|       },
   #|     },
@@ -118,4 +124,99 @@ test "client preserves stable remote error codes" {
       detail=Some("validation"),
     ),
   )
+}
+
+///|
+async test "client maps bridge timeout rejection through invoke" {
+  install_fake_bridge(
+    "",
+    failure_json="{\"code\":\"request_timeout\",\"message\":\"bridge request timed out\"}",
+  )
+  defer remove_fake_bridge()
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "echo",
+  )
+  try {
+    ignore(invoke(echo, { value: "ping" }))
+    fail("expected RequestTimedOut")
+  } catch {
+    ClientFailure::RequestTimedOut => ()
+    error => fail("expected RequestTimedOut, got " + error.to_string())
+  }
+}
+
+///|
+async test "client preserves remote error detail through invoke" {
+  install_fake_bridge(
+    "",
+    failure_json="{\"code\":\"backend_failed\",\"message\":\"command failed\",\"detail\":\"validation\"}",
+  )
+  defer remove_fake_bridge()
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "echo",
+  )
+  try {
+    ignore(invoke(echo, { value: "ping" }))
+    fail("expected RemoteFailure")
+  } catch {
+    ClientFailure::RemoteFailure(code~, message~, detail~) => {
+      assert_eq(code, "backend_failed")
+      assert_eq(message, "command failed")
+      assert_eq(detail, Some("validation"))
+    }
+    error => fail("expected RemoteFailure, got " + error.to_string())
+  }
+}
+
+///|
+async test "client maps cancellation rejection through invoke" {
+  install_fake_bridge(
+    "",
+    failure_json="{\"code\":\"request_cancelled\",\"message\":\"request cancelled\"}",
+  )
+  defer remove_fake_bridge()
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "echo",
+  )
+  try {
+    ignore(invoke(echo, { value: "ping" }))
+    fail("expected RequestCancelled")
+  } catch {
+    ClientFailure::RequestCancelled => ()
+    error => fail("expected RequestCancelled, got " + error.to_string())
+  }
+}
+
+///|
+async test "client maps unclassified bridge rejection to transport failure" {
+  install_fake_bridge("", failure_json="{\"message\":\"connection reset\"}")
+  defer remove_fake_bridge()
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "echo",
+  )
+  try {
+    ignore(invoke(echo, { value: "ping" }))
+    fail("expected TransportFailure")
+  } catch {
+    ClientFailure::TransportFailure(message~) =>
+      assert_eq(message, "connection reset")
+    error => fail("expected TransportFailure, got " + error.to_string())
+  }
+}
+
+///|
+async test "client reports response decoding failures through invoke" {
+  install_fake_bridge("{\"unexpected\":true}")
+  defer remove_fake_bridge()
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "echo",
+  )
+  try {
+    ignore(invoke(echo, { value: "ping" }))
+    fail("expected ResponseDecode")
+  } catch {
+    ClientFailure::ResponseDecode(message~) =>
+      assert_true(message.contains("value"))
+    error => fail("expected ResponseDecode, got " + error.to_string())
+  }
 }

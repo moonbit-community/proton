@@ -60,6 +60,7 @@ fn decode_bridge_failure(raw : String) -> ClientFailure {
     "bridge_unavailable" => BridgeUnavailable
     "request_cancelled" => RequestCancelled
     "request_timeout" => RequestTimedOut
+    "transport_failure" => TransportFailure(message=wire.message)
     code => RemoteFailure(code~, message=wire.message, detail=wire.detail)
   }
 }

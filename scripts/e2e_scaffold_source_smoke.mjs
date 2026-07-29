@@ -450,6 +450,7 @@ async function probeTodoBridge(client) {
           await invoke("app:create_todo", null);
         } catch (error) {
           remoteFailure = {
+            name: error && error.name,
             code: error && error.code,
             message: error && error.message,
           };
@@ -486,7 +487,8 @@ async function probeTodoBridge(client) {
     `unexpected initial snapshot: ${JSON.stringify(result.initial)}`,
   );
   assert(
-    result.remoteFailure?.code === "op_failed" &&
+    result.remoteFailure?.name === "ProtonBridgeError" &&
+      result.remoteFailure?.code === "op_failed" &&
       result.remoteFailure?.message ===
         "invalid payload for op app:create_todo",
     `remote failure code was not preserved: ${JSON.stringify(result.remoteFailure)}`,
