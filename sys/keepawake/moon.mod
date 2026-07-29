@@ -3,7 +3,7 @@ name = "justjavac/keepawake"
 version = "0.1.0"
 
 import {
-  "justjavac/ffi@0.2.1",
+  "justjavac/ffi@0.2.3",
 }
 
 readme = "README.mbt.md"

@@ -12,7 +12,7 @@ import {
   "moonbitlang/async@0.20.1",
   "justjavac/ci@0.1.1",
   "justjavac/template@0.1.1",
-  "justjavac/ffi@0.2.1",
+  "justjavac/ffi@0.2.3",
 }
 
 readme = "codegen/README.md"
