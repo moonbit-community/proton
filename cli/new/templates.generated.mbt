@@ -66,7 +66,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|version = "0.1.0"
           #|
           #|import {
-          #|  "justjavac/proton_contract@0.1.0",
+          #|  "justjavac/proton_contract@{{proton_contract_version}}",
           #|}
           #|
           #|license = "Apache-2.0"
@@ -164,7 +164,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "{{shared_module}}@0.1.0",
-          #|  "justjavac/proton_client@0.1.0",
+          #|  "justjavac/proton_client@{{proton_client_version}}",
           #|  "justjavac/proton_rabbita@{{proton_rabbita_version}}",
           #|  "moonbit-community/rabbita@{{rabbita_version}}",
           #|}
@@ -565,7 +565,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|import {
           #|  "{{shared_module}}@0.1.0",
           #|  "justjavac/proton@{{proton_version}}",
-          #|  "justjavac/proton_contract@0.1.0",
+          #|  "justjavac/proton_contract@{{proton_contract_version}}",
           #|}
           #|
           #|license = "Apache-2.0"

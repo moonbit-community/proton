@@ -1,8 +1,14 @@
 ///|
-let default_proton_version = "0.1.12"
+let default_proton_version = "0.1.13"
 
 ///|
-let default_proton_cli_version = "0.1.9"
+let default_proton_cli_version = "0.1.10"
+
+///|
+let default_proton_contract_version = "0.1.0"
+
+///|
+let default_proton_client_version = "0.1.0"
 
 ///|
 let default_proton_rabbita_version = "0.1.0"
@@ -25,6 +31,8 @@ priv struct TemplateContext {
   height : Int
   proton_version : String
   proton_cli_version : String
+  proton_contract_version : String
+  proton_client_version : String
   proton_rabbita_version : String
   rabbita_version : String
 }
@@ -72,6 +80,8 @@ fn template_context(
     height,
     proton_version: default_proton_version,
     proton_cli_version: default_proton_cli_version,
+    proton_contract_version: default_proton_contract_version,
+    proton_client_version: default_proton_client_version,
     proton_rabbita_version: default_proton_rabbita_version,
     rabbita_version: default_rabbita_version,
   }
@@ -93,6 +103,8 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "height", value: @template.render_value(context.height) },
     { name: "proton_version", value: context.proton_version },
     { name: "proton_cli_version", value: context.proton_cli_version },
+    { name: "proton_contract_version", value: context.proton_contract_version },
+    { name: "proton_client_version", value: context.proton_client_version },
     { name: "proton_rabbita_version", value: context.proton_rabbita_version },
     { name: "rabbita_version", value: context.rabbita_version },
   ]

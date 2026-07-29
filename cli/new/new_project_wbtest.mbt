@@ -235,16 +235,45 @@ test "templates receive final author title and size" {
     abort("missing shared/moon.mod")
   }
   assert_true(shared_mod.contains("name = \"justjavac/demo_shared\""))
+  assert_true(
+    shared_mod.contains(
+      "\"justjavac/proton_contract@" + default_proton_contract_version + "\"",
+    ),
+  )
   guard find_planned_file(files, "frontend/moon.mod") is Some(frontend_mod) else {
     abort("missing frontend/moon.mod")
   }
   assert_true(frontend_mod.contains("name = \"justjavac/demo_frontend\""))
   assert_true(frontend_mod.contains("\"justjavac/demo_shared@0.1.0\""))
+  assert_true(
+    frontend_mod.contains(
+      "\"justjavac/proton_client@" + default_proton_client_version + "\"",
+    ),
+  )
+  assert_true(
+    frontend_mod.contains(
+      "\"justjavac/proton_rabbita@" + default_proton_rabbita_version + "\"",
+    ),
+  )
   guard find_planned_file(files, "backend/moon.mod") is Some(backend_mod) else {
     abort("missing backend/moon.mod")
   }
   assert_true(backend_mod.contains("name = \"justjavac/demo_backend\""))
-  assert_true(backend_mod.contains("\"bin-deps\""))
+  assert_true(
+    backend_mod.contains("\"justjavac/proton@" + default_proton_version + "\""),
+  )
+  assert_true(
+    backend_mod.contains(
+      "\"justjavac/proton_contract@" + default_proton_contract_version + "\"",
+    ),
+  )
+  assert_true(
+    backend_mod.contains(
+      "\"bin-deps\": { \"justjavac/proton_cli\": \"" +
+      default_proton_cli_version +
+      "\" }",
+    ),
+  )
   guard find_planned_file(files, "backend/app/main.mbt") is Some(main_mbt) else {
     abort("missing backend/app/main.mbt")
   }

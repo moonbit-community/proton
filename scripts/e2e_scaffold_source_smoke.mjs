@@ -141,7 +141,7 @@ function verifyGeneratedTree() {
     "utf8",
   );
   assert(
-    backendMod.includes('"bin-deps": { "justjavac/proton_cli": "0.1.9" }'),
+    backendMod.includes('"bin-deps": { "justjavac/proton_cli": "0.1.10" }'),
     "generated backend does not declare the Proton CLI binary dependency",
   );
   assert(
@@ -194,7 +194,7 @@ function connectLocalSourceModules() {
   const backendModPath = path.join(projectDir, "backend", "moon.mod");
   const backendMod = fs.readFileSync(backendModPath, "utf8");
   const withoutUnpublishedCli = backendMod.replace(
-    '  "bin-deps": { "justjavac/proton_cli": "0.1.9" },\n',
+    '  "bin-deps": { "justjavac/proton_cli": "0.1.10" },\n',
     "",
   );
   assert(

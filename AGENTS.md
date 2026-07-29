@@ -111,10 +111,13 @@ native checks before handing off larger refactors.
 
 ### Release Checklist
 
-- Publish the dependency chain in this order: `justjavac/proton_config`, then
-  `justjavac/proton`, then `justjavac/proton_cli`. For the currently prepared
-  release, the chain is `proton_config 0.1.5` -> `proton 0.1.10` ->
-  `proton_cli 0.1.7`.
+- Publish the dependency chain in this order: `justjavac/proton_config`,
+  `justjavac/proton_contract`, `justjavac/proton_client`,
+  `justjavac/proton_rabbita`, `justjavac/proton`, then
+  `justjavac/proton_cli`. For the currently prepared release, the chain is
+  `proton_config 0.1.7` -> `proton_contract 0.1.0` ->
+  `proton_client 0.1.0` -> `proton_rabbita 0.1.0` -> `proton 0.1.13` ->
+  `proton_cli 0.1.10`.
 - The six binding modules under `sys/` keep their upstream module names and
   are republished from this repository when their sources change. Since the
   pinned versions already exist on Mooncakes, there is no hard publish-order
@@ -124,8 +127,10 @@ native checks before handing off larger refactors.
   - `config/moon.mod` version;
   - the `justjavac/proton_config@...` requirements in `proton/moon.mod` and
     `cli/moon.mod`;
-  - `proton/moon.mod`, `proton/prebuilt/*/manifest.json`, and
-    `cli/new/templates.mbt`'s `default_proton_version`;
+  - `contract/moon.mod`, `client/moon.mod`, and `rabbita/moon.mod`, including
+    their dependency versions;
+  - `proton/moon.mod`, `proton/prebuilt/*/manifest.json`, and every Proton
+    dependency version embedded in `cli/new/templates.mbt`;
   - `cli/moon.mod` and `cli/main.mbt`'s `cli_current_version`.
 - Run the release checks before the first publish:
 
@@ -148,6 +153,15 @@ native checks before handing off larger refactors.
   moon -C config publish --dry-run
   moon -C config publish
 
+  moon -C contract publish --dry-run
+  moon -C contract publish
+
+  moon -C client publish --dry-run
+  moon -C client publish
+
+  moon -C rabbita publish --dry-run
+  moon -C rabbita publish
+
   moon -C proton publish --dry-run
   moon -C proton publish
 
@@ -168,11 +182,10 @@ native checks before handing off larger refactors.
 
   ```sh
   moon install justjavac/proton_cli
+  node ./scripts/e2e_scaffold_registry_smoke.mjs
   tmp_dir="$(mktemp -d)"
-  proton_cli -C "$tmp_dir" new release-smoke \
-    --title "Release Smoke" \
-    --identifier "com.example.proton-release-smoke" \
-    -y --no-git
+  proton_cli -C "$tmp_dir" new release-smoke --title "Release Smoke" \
+    --identifier "com.example.proton-release-smoke" -y --no-git
   proton_cli -C "$tmp_dir/release-smoke" cef setup
   proton_cli -C "$tmp_dir/release-smoke" build
   proton_cli -C "$tmp_dir/release-smoke" package app --dry-run

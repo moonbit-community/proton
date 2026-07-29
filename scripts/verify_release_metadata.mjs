@@ -69,25 +69,41 @@ function checkPrebuiltManifests(expectedVersion) {
   }
 }
 
-function checkTemplateDefaults(expectedVersion) {
-  const text = readText("cli/new/templates.mbt");
-  const match = text.match(/^let default_proton_version\s*=\s*"([^"]+)"/m);
-  if (!match) {
-    failures.push("cli/new/templates.mbt: missing default_proton_version");
-    return;
-  }
-  checkEqual(
-    "cli/new/templates.mbt default_proton_version",
-    match[1],
-    expectedVersion,
+function templateDefault(text, name) {
+  const match = text.match(
+    new RegExp(`^let ${name}\\s*=\\s*"([^"]+)"`, "m"),
   );
+  if (!match) {
+    failures.push(`cli/new/templates.mbt: missing ${name}`);
+    return null;
+  }
+  return match[1];
+}
+
+function checkTemplateDefaults(expected) {
+  const text = readText("cli/new/templates.mbt");
+  for (const [name, version] of Object.entries(expected)) {
+    const actual = templateDefault(text, name);
+    if (actual !== null) {
+      checkEqual(`cli/new/templates.mbt ${name}`, actual, version);
+    }
+  }
 }
 
 const protonVersion = moduleVersion("proton/moon.mod");
 const configVersion = moduleVersion("config/moon.mod");
+const contractVersion = moduleVersion("contract/moon.mod");
+const clientVersion = moduleVersion("client/moon.mod");
+const rabbitaVersion = moduleVersion("rabbita/moon.mod");
 const cliVersion = moduleVersion("cli/moon.mod");
 checkPrebuiltManifests(protonVersion);
-checkTemplateDefaults(protonVersion);
+checkTemplateDefaults({
+  default_proton_version: protonVersion,
+  default_proton_cli_version: cliVersion,
+  default_proton_contract_version: contractVersion,
+  default_proton_client_version: clientVersion,
+  default_proton_rabbita_version: rabbitaVersion,
+});
 checkEqual(
   "proton/moon.mod proton_config dependency",
   moduleImportVersion("proton/moon.mod", "justjavac/proton_config"),
@@ -97,6 +113,26 @@ checkEqual(
   "cli/moon.mod proton_config dependency",
   moduleImportVersion("cli/moon.mod", "justjavac/proton_config"),
   configVersion,
+);
+checkEqual(
+  "proton/moon.mod proton_contract dependency",
+  moduleImportVersion("proton/moon.mod", "justjavac/proton_contract"),
+  contractVersion,
+);
+checkEqual(
+  "client/moon.mod proton_contract dependency",
+  moduleImportVersion("client/moon.mod", "justjavac/proton_contract"),
+  contractVersion,
+);
+checkEqual(
+  "rabbita/moon.mod proton_contract dependency",
+  moduleImportVersion("rabbita/moon.mod", "justjavac/proton_contract"),
+  contractVersion,
+);
+checkEqual(
+  "rabbita/moon.mod proton_client dependency",
+  moduleImportVersion("rabbita/moon.mod", "justjavac/proton_client"),
+  clientVersion,
 );
 checkEqual("cli/main.mbt cli_current_version", cliEmbeddedVersion(), cliVersion);
 
@@ -108,6 +144,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    `[OK] Release metadata matches config ${configVersion}, proton ${protonVersion}, and CLI ${cliVersion}.`,
+    `[OK] Release metadata matches config ${configVersion}, contract ${contractVersion}, client ${clientVersion}, Rabbita ${rabbitaVersion}, proton ${protonVersion}, and CLI ${cliVersion}.`,
   );
 }
