@@ -9,7 +9,19 @@ pub enum Platform {
   Macos
   Linux
   Unsupported
-} derive(Debug, Eq, Show)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for Platform with fn output(self : Platform, logger) {
+  logger.write_string(
+    match self {
+      Windows => "Windows"
+      Macos => "Macos"
+      Linux => "Linux"
+      Unsupported => "Unsupported"
+    },
+  )
+}
 
 ///|
 /// Internal backend categories for supported startup mechanisms.
@@ -18,7 +30,7 @@ enum BackendKind {
   MacLaunchAgent
   LinuxDesktopEntry
   UnsupportedBackend
-} derive(Debug, Eq, Show)
+} derive(Debug, Eq)
 
 ///|
 /// Decodes the numeric platform code returned by the native layer.

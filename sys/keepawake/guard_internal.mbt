@@ -1,7 +1,7 @@
 ///|
 /// Normalizes caller-supplied reasons before they cross the FFI boundary.
 fn normalize_reason(reason : String) -> String {
-  let trimmed = reason.trim().to_string()
+  let trimmed = reason.trim().to_owned()
   if trimmed is "" {
     default_reason
   } else {
@@ -65,7 +65,9 @@ fn[T] run_with_cleanup(
 ) -> T raise {
   try action() catch {
     err => {
-      let _ : Result[Unit, Error] = try? cleanup()
+      cleanup() catch {
+        _ => ()
+      }
       raise err
     }
   } noraise {

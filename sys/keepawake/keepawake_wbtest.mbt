@@ -23,11 +23,15 @@ test "normalized reasons convert to null-terminated c strings" {
 
 ///|
 test "raise_native_error decodes backend-unavailable details" {
-  let result : Result[Unit, Error] = try? raise_native_error(
-    status=native_status_backend_unavailable,
-    operation="acquire",
-    detail=@utf8.encode("systemd-inhibit was not found"),
-  )
+  let result : Result[Unit, Error] = Ok(
+    raise_native_error(
+      status=native_status_backend_unavailable,
+      operation="acquire",
+      detail=@utf8.encode("systemd-inhibit was not found"),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   guard result
     is Err(BackendUnavailable(detail="systemd-inhibit was not found")) else {
     fail("expected a decoded backend-unavailable error")
@@ -36,11 +40,11 @@ test "raise_native_error decodes backend-unavailable details" {
 
 ///|
 test "raise_native_error uses fallback detail for empty payloads" {
-  let result : Result[Unit, Error] = try? raise_native_error(
-    status=999,
-    operation="release",
-    detail=b"",
-  )
+  let result : Result[Unit, Error] = Ok(
+    raise_native_error(status=999, operation="release", detail=b""),
+  ) catch {
+    e => Err(e)
+  }
   guard result
     is Err(
       OperationFailed(
@@ -60,7 +64,9 @@ test "finish_acquire raises synthetic backend failures" {
     @ffi.to_cstr("synthetic acquire failure"),
     Scope::PreventSystemSleep.native_code(),
   )
-  let result : Result[Guard, Error] = try? finish_acquire(handle)
+  let result : Result[Guard, Error] = Ok(finish_acquire(handle)) catch {
+    e => Err(e)
+  }
   guard result is Err(BackendUnavailable(detail="synthetic acquire failure")) else {
     fail("expected the synthetic acquire failure to surface")
   }
@@ -68,10 +74,14 @@ test "finish_acquire raises synthetic backend failures" {
 
 ///|
 test "finish_release raises release failures" {
-  let result : Result[Unit, Error] = try? finish_release(
-    native_status_operation_failed,
-    @utf8.encode("synthetic release failure"),
-  )
+  let result : Result[Unit, Error] = Ok(
+    finish_release(
+      native_status_operation_failed,
+      @utf8.encode("synthetic release failure"),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   guard result
     is Err(
       OperationFailed(operation="release", detail="synthetic release failure")
@@ -83,10 +93,11 @@ test "finish_release raises release failures" {
 ///|
 test "run_with_cleanup returns action result after cleanup" {
   let mut cleanup_calls = 0
-  let result : Result[String, Error] = try? run_with_cleanup(
-    () => "kept awake",
-    () => cleanup_calls += 1,
-  )
+  let result : Result[String, Error] = Ok(
+    run_with_cleanup(() => "kept awake", () => cleanup_calls += 1),
+  ) catch {
+    e => Err(e)
+  }
   assert_eq(cleanup_calls, 1)
   guard result is Ok("kept awake") else {
     fail("expected the action result to be returned")
@@ -96,13 +107,17 @@ test "run_with_cleanup returns action result after cleanup" {
 ///|
 test "run_with_cleanup preserves action error and suppresses cleanup error" {
   let mut cleanup_calls = 0
-  let result : Result[Int, Error] = try? run_with_cleanup(
-    fn() -> Int raise { raise BackendUnavailable(detail="action failed") },
-    fn() -> Unit raise {
-      cleanup_calls += 1
-      raise OperationFailed(operation="release", detail="cleanup failed")
-    },
-  )
+  let result : Result[Int, Error] = Ok(
+    run_with_cleanup(
+      fn() -> Int raise { raise BackendUnavailable(detail="action failed") },
+      fn() -> Unit raise {
+        cleanup_calls += 1
+        raise OperationFailed(operation="release", detail="cleanup failed")
+      },
+    ),
+  ) catch {
+    e => Err(e)
+  }
   assert_eq(cleanup_calls, 1)
   guard result is Err(BackendUnavailable(detail="action failed")) else {
     fail("expected the original action error")

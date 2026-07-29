@@ -36,18 +36,20 @@ pub enum AutoLaunchError {
   RelativeExecutablePath(String)
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
-} derive(Eq, Show, @debug.Debug)
+} derive(Eq, @debug.Debug)
+pub impl Show for AutoLaunchError
 
-type BackendKind derive(Eq, Show, @debug.Debug)
+type BackendKind derive(Eq, @debug.Debug)
 
-type FileEntry derive(Eq, Show)
+type FileEntry derive(Eq, @debug.Debug)
 
 pub enum Platform {
   Windows
   Macos
   Linux
   Unsupported
-} derive(Eq, Show, @debug.Debug)
+} derive(Eq, @debug.Debug)
+pub impl Show for Platform
 
 // Type aliases
 
