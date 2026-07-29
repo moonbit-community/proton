@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/keepawake"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn acquire(reason? : String, scope? : Scope) -> Guard raise KeepAwakeError
+
+pub let default_reason : String
+
+pub fn[T] with_keepawake(() -> T raise?, reason? : String, scope? : Scope) -> T raise
+
+// Errors
+pub(all) suberror KeepAwakeError {
+  BackendUnavailable(detail~ : String)
+  OperationFailed(operation~ : String, detail~ : String)
+} derive(Eq)
+pub impl Show for KeepAwakeError
+
+// Types and methods
+pub type Guard
+pub fn Guard::active(Self) -> Bool
+pub fn Guard::release(Self) -> Unit raise KeepAwakeError
+pub fn Guard::scope(Self) -> Scope
+
+pub(all) enum Scope {
+  PreventSystemSleep
+  PreventDisplaySleep
+  PreventSystemAndDisplaySleep
+} derive(Eq, @debug.Debug)
+pub impl Show for Scope
+
+// Type aliases
+
+// Traits
+

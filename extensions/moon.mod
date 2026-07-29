@@ -3,7 +3,7 @@ name = "justjavac/proton_ext"
 version = "0.1.7"
 
 import {
-  "justjavac/ffi@0.2.1",
+  "justjavac/ffi@0.2.3",
   "moonbitlang/x@0.4.43",
   "moonbitlang/async@0.20.0",
   "justjavac/clipboard@0.1.5",

@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/clipboard"
+
+// Values
+pub fn ensure_supported() -> Result[Unit, String]
+
+pub fn is_supported() -> Bool
+
+pub fn read_text() -> Result[String?, String]
+
+pub fn write_text(String) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

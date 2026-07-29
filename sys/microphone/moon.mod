@@ -1,0 +1,21 @@
+name = "justjavac/microphone"
+
+version = "0.1.3"
+
+import {
+  "justjavac/ffi@0.2.3",
+}
+
+readme = "README.mbt.md"
+
+repository = "https://github.com/moonbit-community/proton/tree/main/sys/microphone"
+
+license = "MIT"
+
+keywords = [ "moonbit", "native", "microphone", "audio" ]
+
+description = "Microphone capture device and session helpers."
+
+preferred_target = "native"
+
+source = "."

@@ -38,6 +38,15 @@ developer must perform them.
   design decision.
 - `cli/`: `justjavac/proton_cli`; independent native developer CLI module plus
   `cli/codegen/` and `cli/doctor/` helpers.
+- `extensions/`: `justjavac/proton_ext`; command extensions for examples and
+  applications. Platform capability extensions are backed by the bindings
+  under `sys/`.
+- `sys/<pkg>/`: independently maintained native system capability binding
+  modules (`justjavac/auto_launch`, `justjavac/clipboard`,
+  `justjavac/global_hotkey`, `justjavac/keepawake`, `justjavac/microphone`,
+  `justjavac/tray`). Each keeps its upstream module name, version lineage,
+  and MIT license, and is published from this repository. `justjavac/ffi`
+  remains an external dependency maintained upstream.
 - `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
   aligned with the actual examples.
 - `proton/prebuilt/<platform>/`: shipped Proton-only native artifacts. Do not
@@ -74,6 +83,7 @@ developer must perform them.
 - `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
 - `moon -C extensions test -p justjavac/proton_ext justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard justjavac/proton_ext/dialog justjavac/proton_ext/fs justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone justjavac/proton_ext/notification justjavac/proton_ext/path justjavac/proton_ext/shell justjavac/proton_ext/tray --target native`
+- `moon test -p justjavac/auto_launch justjavac/clipboard justjavac/global_hotkey justjavac/keepawake justjavac/microphone justjavac/tray --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`
@@ -105,6 +115,11 @@ native checks before handing off larger refactors.
   `justjavac/proton`, then `justjavac/proton_cli`. For the currently prepared
   release, the chain is `proton_config 0.1.5` -> `proton 0.1.10` ->
   `proton_cli 0.1.7`.
+- The six binding modules under `sys/` keep their upstream module names and
+  are republished from this repository when their sources change. Since the
+  pinned versions already exist on Mooncakes, there is no hard publish-order
+  requirement for them; publish a bumped `sys/<pkg>` module before any
+  `justjavac/proton_ext` release that raises its requirement.
 - Before publishing, keep these values aligned:
   - `config/moon.mod` version;
   - the `justjavac/proton_config@...` requirements in `proton/moon.mod` and
