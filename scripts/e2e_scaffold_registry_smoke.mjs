@@ -4,7 +4,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const cli = process.env.PROTON_REGISTRY_CLI ?? "proton_cli";
 const tempRoot = fs.mkdtempSync(
   path.join(os.tmpdir(), "proton-scaffold-registry-"),
@@ -12,13 +14,22 @@ const tempRoot = fs.mkdtempSync(
 const projectDir = path.join(tempRoot, "todo");
 let succeeded = false;
 
+function moduleVersion(relativePath) {
+  const source = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+  const match = source.match(/^version\s*=\s*"([^"]+)"/m);
+  if (!match) {
+    throw new Error(`${relativePath} is missing its module version`);
+  }
+  return match[1];
+}
+
 function run(command, args, options = {}) {
   console.log(`+ ${command} ${args.join(" ")}`);
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? tempRoot,
-    env: process.env,
+    env: { ...process.env, PROTON_NO_UPDATE_CHECK: "1" },
     encoding: "utf8",
-    stdio: "inherit",
+    stdio: options.capture ? "pipe" : "inherit",
     timeout: options.timeout ?? 300000,
   });
   if (result.error) {
@@ -27,9 +38,72 @@ function run(command, args, options = {}) {
   if (result.status !== 0) {
     throw new Error(`${command} exited with status ${result.status}`);
   }
+  return `${result.stdout ?? ""}${result.stderr ?? ""}`;
+}
+
+function verifyInstalledCliVersion() {
+  const expected = moduleVersion("cli/moon.mod");
+  const output = run(cli, ["--version"], { capture: true }).trim();
+  const match = output.match(/^proton_cli\s+(\S+)$/);
+  if (!match) {
+    throw new Error(`could not parse installed CLI version: ${output}`);
+  }
+  if (match[1] !== expected) {
+    throw new Error(
+      `registry smoke requires proton_cli ${expected}, installed ${match[1]}`,
+    );
+  }
+}
+
+function expectDependency(relativePath, moduleName, version) {
+  const source = fs.readFileSync(path.join(projectDir, relativePath), "utf8");
+  const declaration = `"${moduleName}@${version}"`;
+  if (!source.includes(declaration)) {
+    throw new Error(`${relativePath} is missing ${declaration}`);
+  }
+}
+
+function verifyGeneratedDependencies() {
+  expectDependency(
+    "shared/moon.mod",
+    "justjavac/proton_contract",
+    moduleVersion("contract/moon.mod"),
+  );
+  expectDependency(
+    "frontend/moon.mod",
+    "justjavac/proton_client",
+    moduleVersion("client/moon.mod"),
+  );
+  expectDependency(
+    "frontend/moon.mod",
+    "justjavac/proton_rabbita",
+    moduleVersion("rabbita/moon.mod"),
+  );
+  expectDependency(
+    "backend/moon.mod",
+    "justjavac/proton",
+    moduleVersion("proton/moon.mod"),
+  );
+  expectDependency(
+    "backend/moon.mod",
+    "justjavac/proton_contract",
+    moduleVersion("contract/moon.mod"),
+  );
+  const backend = fs.readFileSync(
+    path.join(projectDir, "backend/moon.mod"),
+    "utf8",
+  );
+  const cliDependency =
+    `"bin-deps": { "justjavac/proton_cli": "` +
+    moduleVersion("cli/moon.mod") +
+    `" }`;
+  if (!backend.includes(cliDependency)) {
+    throw new Error(`backend/moon.mod is missing ${cliDependency}`);
+  }
 }
 
 try {
+  verifyInstalledCliVersion();
   run(cli, [
     "-C",
     tempRoot,
@@ -44,6 +118,7 @@ try {
     "--no-git",
     "-y",
   ]);
+  verifyGeneratedDependencies();
   run("moon", ["check", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
