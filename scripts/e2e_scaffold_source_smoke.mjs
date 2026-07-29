@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+
+// Validates the generated scaffold against this checkout's source modules.
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
