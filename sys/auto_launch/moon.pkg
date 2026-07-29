@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "auto_launch_native.c" ],
+  targets: { "auto_launch.mbt": [ "native" ] },
+)

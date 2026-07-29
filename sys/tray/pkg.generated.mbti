@@ -1,0 +1,80 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/tray"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn create(identifier? : String, icon? : String?, tooltip? : String) -> Result[Tray, String]
+
+pub fn current_platform() -> Platform
+
+pub fn default_identifier() -> String
+
+pub fn ensure_supported() -> Result[Unit, String]
+
+pub fn is_supported() -> Bool
+
+// Errors
+
+// Types and methods
+pub enum Platform {
+  Windows
+  Linux
+  MacOS
+  Unknown
+} derive(Eq, ToJson, @debug.Debug)
+pub impl Show for Platform
+
+pub struct Tray {
+  // private fields
+}
+pub fn Tray::destroy(Self) -> Unit
+pub fn Tray::drain_events(Self) -> Array[TrayEvent]
+pub fn Tray::hide(Self) -> Result[Bool, String]
+pub fn Tray::icon(Self) -> String?
+pub fn Tray::identifier(Self) -> String
+pub fn Tray::is_visible(Self) -> Bool
+pub fn Tray::menu_items(Self) -> Array[TrayMenuItem]
+pub fn Tray::platform(Self) -> Platform
+pub fn Tray::pump(Self, blocking? : Bool) -> Result[Bool, String]
+pub fn Tray::set_icon(Self, String?) -> Result[Bool, String]
+pub fn Tray::set_menu(Self, Array[TrayMenuItem]) -> Result[Bool, String]
+pub fn Tray::set_tooltip(Self, String) -> Result[Bool, String]
+pub fn Tray::show(Self, tooltip? : String?) -> Result[Bool, String]
+pub fn Tray::tooltip(Self) -> String
+pub fn Tray::visible(Self) -> Bool
+
+pub(all) enum TrayEvent {
+  Click
+  RightClick
+  DoubleClick
+  MenuItemClick(String)
+} derive(Eq, @debug.Debug)
+pub fn TrayEvent::event_name(Self) -> String
+pub fn TrayEvent::item_id(Self) -> String?
+
+pub(all) enum TrayMenuItem {
+  Normal(id~ : String, label~ : String, enabled~ : Bool)
+  Separator
+  Checkbox(id~ : String, label~ : String, checked~ : Bool, enabled~ : Bool)
+  Submenu(label~ : String, items~ : Array[TrayMenuItem], enabled~ : Bool)
+} derive(Eq, @debug.Debug)
+pub fn TrayMenuItem::checkbox(id~ : String, label~ : String, checked? : Bool, enabled? : Bool) -> Self
+pub fn TrayMenuItem::kind(Self) -> TrayMenuItemKind
+pub fn TrayMenuItem::normal(id~ : String, label~ : String, enabled? : Bool) -> Self
+pub fn TrayMenuItem::separator() -> Self
+pub fn TrayMenuItem::submenu(label~ : String, items~ : Array[Self], enabled? : Bool) -> Self
+
+pub(all) enum TrayMenuItemKind {
+  Normal
+  Separator
+  Checkbox
+  Submenu
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
