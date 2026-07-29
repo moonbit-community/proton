@@ -35,6 +35,7 @@
 
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
+#include "../cef_common/bridge_response.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -1248,7 +1249,7 @@ static int proton_engine_send_bridge_response_to_frame(
     int renderer_pending_id,
     int ok,
     const char *payload_json,
-    const char *error_message) {
+    const char *error_text) {
   if (frame == NULL) {
     return 0;
   }
@@ -1270,7 +1271,7 @@ static int proton_engine_send_bridge_response_to_frame(
   cef_string_t payload = {0};
   cef_string_t error = {0};
   proton_engine_set_string(&payload, payload_json != NULL ? payload_json : "null");
-  proton_engine_set_string(&error, error_message != NULL ? error_message : "");
+  proton_engine_set_string(&error, error_text != NULL ? error_text : "");
   args->set_string(args, 2, &payload);
   args->set_string(args, 3, &error);
   cef_string_clear(&payload);
@@ -3848,18 +3849,24 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_set_message(error, error_len, "response_json is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  int64_t request_id = 0;
-  int ok = 0;
-  if (!proton_engine_json_read_int64_field(response_json, "request_id",
-                                          &request_id) ||
-      !proton_engine_json_read_bool_field(response_json, "ok", &ok)) {
+  proton_engine_bridge_response_t response;
+  int parse_status =
+      proton_engine_bridge_response_parse(response_json, &response);
+  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_INVALID) {
     proton_engine_set_message(error, error_len,
-                              "bridge response is missing request_id or ok");
+                              "bridge response payload is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_NO_MEMORY) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate bridge response payload");
+    return PROTON_ERR_ENGINE;
+  }
+  int64_t request_id = response.request_id;
   proton_engine_bridge_pending_t *pending =
       proton_engine_bridge_pending_take(request_id);
   if (pending == NULL) {
+    proton_engine_bridge_response_dispose(&response);
     proton_engine_debug_log("bridge_response_no_pending request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
@@ -3867,32 +3874,10 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
 
-  char *payload_json = NULL;
-  char *error_message = NULL;
-  if (ok) {
-    payload_json = proton_engine_json_copy_raw_field(response_json, "payload");
-    if (payload_json == NULL) {
-      payload_json = proton_engine_strdup("null");
-    }
-  } else {
-    char *error_json = proton_engine_json_copy_raw_field(response_json, "error");
-    if (error_json != NULL) {
-      error_message = proton_engine_json_copy_string_field(error_json, "message");
-      free(error_json);
-    }
-    if (error_message == NULL) {
-      error_message = proton_engine_json_copy_string_field(response_json, "message");
-    }
-    if (error_message == NULL) {
-      error_message = proton_engine_strdup("bridge request failed");
-    }
-  }
-
   int sent = proton_engine_send_bridge_response_to_frame(
-      pending->frame, pending->renderer_pending_id, ok, payload_json,
-      error_message);
-  free(payload_json);
-  free(error_message);
+      pending->frame, pending->renderer_pending_id, response.ok,
+      response.payload_json, response.error_json);
+  proton_engine_bridge_response_dispose(&response);
   proton_engine_bridge_pending_free(pending);
   if (!sent) {
     proton_engine_debug_log("bridge_response_send_failed request=%lld",

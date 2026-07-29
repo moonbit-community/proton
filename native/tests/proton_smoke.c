@@ -1,5 +1,6 @@
 #include "proton_native.h"
 #include "../src/engine/cef_common/bridge_lifecycle.h"
+#include "../src/engine/cef_common/bridge_response.h"
 #include "../src/proton_json.h"
 
 #include <stdio.h>
@@ -335,6 +336,49 @@ static int expect_root_json_values(void) {
       return 1;
     }
     proton_json_dispose(&doc);
+  }
+  return 0;
+}
+
+static int expect_bridge_response_payloads(void) {
+  proton_engine_bridge_response_t response;
+  int status = proton_engine_bridge_response_parse(
+      "{\"abi_version\":1,\"request_id\":\"42\",\"ok\":true,"
+      "\"payload\":{\"value\":\"pong\"}}",
+      &response);
+  if (status != PROTON_ENGINE_BRIDGE_RESPONSE_OK ||
+      response.request_id != 42 || !response.ok ||
+      response.payload_json == NULL ||
+      strcmp(response.payload_json, "{\"value\":\"pong\"}") != 0 ||
+      response.error_json != NULL) {
+    proton_engine_bridge_response_dispose(&response);
+    return fail("successful bridge response payload was not preserved");
+  }
+  proton_engine_bridge_response_dispose(&response);
+
+  status = proton_engine_bridge_response_parse(
+      "{\"abi_version\":1,\"request_id\":43,\"ok\":false,"
+      "\"error\":{\"code\":\"request_timeout\","
+      "\"message\":\"bridge request timed out\","
+      "\"detail\":\"backend deadline\"}}",
+      &response);
+  if (status != PROTON_ENGINE_BRIDGE_RESPONSE_OK ||
+      response.request_id != 43 || response.ok ||
+      response.payload_json != NULL || response.error_json == NULL ||
+      strcmp(response.error_json,
+             "{\"code\":\"request_timeout\","
+             "\"message\":\"bridge request timed out\","
+             "\"detail\":\"backend deadline\"}") != 0) {
+    proton_engine_bridge_response_dispose(&response);
+    return fail("failed bridge response error JSON was not preserved");
+  }
+  proton_engine_bridge_response_dispose(&response);
+
+  status = proton_engine_bridge_response_parse(
+      "{\"abi_version\":1,\"request_id\":44,\"ok\":false}", &response);
+  if (status != PROTON_ENGINE_BRIDGE_RESPONSE_INVALID) {
+    proton_engine_bridge_response_dispose(&response);
+    return fail("failed bridge response without error should be invalid");
   }
   return 0;
 }
@@ -944,6 +988,9 @@ int main(void) {
     return 1;
   }
   if (expect_root_json_values()) {
+    return 1;
+  }
+  if (expect_bridge_response_payloads()) {
     return 1;
   }
 

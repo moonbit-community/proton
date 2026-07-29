@@ -99,3 +99,23 @@ async test "client uses typed JSON commands and live events" {
     _ => fail("expected BridgeUnavailable")
   }
 }
+
+///|
+test "client preserves stable remote error codes" {
+  assert_eq(
+    decode_bridge_failure(
+      "{\"code\":\"request_timeout\",\"message\":\"bridge request timed out\"}",
+    ),
+    ClientFailure::RequestTimedOut,
+  )
+  assert_eq(
+    decode_bridge_failure(
+      "{\"code\":\"backend_failed\",\"message\":\"command failed\",\"detail\":\"validation\"}",
+    ),
+    ClientFailure::RemoteFailure(
+      code="backend_failed",
+      message="command failed",
+      detail=Some("validation"),
+    ),
+  )
+}

@@ -445,6 +445,15 @@ async function probeTodoBridge(client) {
           (payload) => events.push(JSON.parse(payload)),
         );
         const initial = await invoke("app:list_todos", null);
+        let remoteFailure;
+        try {
+          await invoke("app:create_todo", null);
+        } catch (error) {
+          remoteFailure = {
+            code: error && error.code,
+            message: error && error.message,
+          };
+        }
         const created = await invoke("app:create_todo", {
           title: "Verify typed bridge",
         });
@@ -466,6 +475,7 @@ async function probeTodoBridge(client) {
           deleted,
           events,
           createdBody,
+          remoteFailure,
         };
       }
     )()`,
@@ -474,6 +484,12 @@ async function probeTodoBridge(client) {
   assert(
     result.initial.version === 0 && result.initial.todos.length === 0,
     `unexpected initial snapshot: ${JSON.stringify(result.initial)}`,
+  );
+  assert(
+    result.remoteFailure?.code === "op_failed" &&
+      typeof result.remoteFailure?.message === "string" &&
+      result.remoteFailure.message.length > 0,
+    `remote failure code was not preserved: ${JSON.stringify(result.remoteFailure)}`,
   );
   assert(
     result.created.version === 1 &&

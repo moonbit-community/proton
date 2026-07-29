@@ -60,6 +60,7 @@ add_library(proton SHARED
   ${PROTON_APP_RUNNER_SOURCE}
   ${PROTON_NOTIFICATION_SOURCE}
   src/engine/cef_common/bridge_lifecycle.c
+  src/engine/cef_common/bridge_response.c
   ${PROTON_ENGINE_SOURCES}
 )
 
@@ -333,6 +334,7 @@ if(BUILD_TESTING)
   add_executable(proton_smoke
     tests/proton_smoke.c
     src/engine/cef_common/bridge_lifecycle.c
+    src/engine/cef_common/bridge_response.c
     src/proton_json.c
   )
   add_executable(proton_exports_smoke

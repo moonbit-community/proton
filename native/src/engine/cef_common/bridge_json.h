@@ -67,26 +67,6 @@ static int proton_engine_json_read_int64_field(const char *json,
   return ok ? 1 : 0;
 }
 
-static int proton_engine_json_read_bool_field(const char *json,
-                                              const char *field_name,
-                                              int *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  bool bool_value = false;
-  if (out_value == NULL || !proton_json_parse(&doc, json)) {
-    return 0;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_bool(&doc, value, &bool_value);
-  if (ok) {
-    *out_value = bool_value ? 1 : 0;
-  }
-  proton_json_dispose(&doc);
-  return ok ? 1 : 0;
-}
-
 static char *proton_engine_json_copy_raw_field(const char *json,
                                                const char *field_name) {
   proton_json_doc_t doc;
@@ -99,23 +79,6 @@ static char *proton_engine_json_copy_raw_field(const char *json,
   if (proton_json_root_object(&doc, &root) &&
       proton_json_object_get(&doc, root, field_name, &value)) {
     copy = proton_json_copy_raw(&doc, value);
-  }
-  proton_json_dispose(&doc);
-  return copy;
-}
-
-static char *proton_engine_json_copy_string_field(const char *json,
-                                                  const char *field_name) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, json)) {
-    return NULL;
-  }
-  char *copy = NULL;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, field_name, &value)) {
-    copy = proton_json_copy_string(&doc, value);
   }
   proton_json_dispose(&doc);
   return copy;
