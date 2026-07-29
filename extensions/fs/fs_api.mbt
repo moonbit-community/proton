@@ -37,7 +37,7 @@ fn bytes_written_for_text(content : String) -> Int {
 
 ///|
 fn fs_error_detail(error : Error) -> String {
-  @debug.render(Repr(error))
+  @debug.render(@debug.to_repr(error))
 }
 
 ///|

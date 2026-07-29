@@ -11,7 +11,7 @@ pub impl Show for ExtensionSetting with fn output(self, logger) {
     Disabled => logger.write_string("Disabled")
     Enabled(options) => {
       logger.write_string("Enabled(")
-      logger.write_string(@debug.render(Repr(options)))
+      logger.write_string(@debug.render(@debug.to_repr(options)))
       logger.write_string(")")
     }
   }

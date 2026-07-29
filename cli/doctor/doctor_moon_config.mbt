@@ -53,7 +53,7 @@ async fn read_moon_file(path : String) -> String {
     raise MissingFile(path)
   } else {
     @async_fs.read_file(path).text() catch {
-      err => raise ReadFailed(path, @debug.render(Repr(err)))
+      err => raise ReadFailed(path, @debug.render(@debug.to_repr(err)))
     }
   }
 }

@@ -36,7 +36,7 @@ fn ensure_build_test_dir(path : String) -> Unit {
 ///|
 fn write_build_test_file(path : String, text : String) -> Unit {
   @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 }
 
@@ -302,7 +302,7 @@ async test "production entry validation requires file-backed entry" {
   ensure_build_test_dir(dir)
   let file = join_path(dir, "index.html")
   @mbfs.write_string_to_file(file, "<!doctype html>", encoding="utf8") catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   validate_production_entry_file(@proton_config.ProjectEntry::Asset(file))
 }

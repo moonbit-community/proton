@@ -125,7 +125,8 @@ fn moon_mod_version_from_source(path : String, source : String) -> String? {
 test "embedded cli version matches moon.mod" {
   let path = "moon.mod"
   let source = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    err => fail("failed to read " + path + ": " + @debug.render(Repr(err)))
+    err =>
+      fail("failed to read " + path + ": " + @debug.render(@debug.to_repr(err)))
   }
   match moon_mod_version_from_source(path, source) {
     Some(version) => assert_eq(cli_current_version, version)

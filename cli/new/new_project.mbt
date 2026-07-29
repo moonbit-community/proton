@@ -278,7 +278,7 @@ async fn write_project_files(
       err =>
         raise NewProjectWriteError::WriteFile(
           path=output_path,
-          detail=@debug.render(Repr(err)),
+          detail=@debug.render(@debug.to_repr(err)),
         )
     }
   }
@@ -482,7 +482,8 @@ async fn ensure_dir_recursive(path : String) -> Unit {
     ensure_dir_recursive(parent)
   }
   @async_fs.mkdir(path) catch {
-    err => raise CreateDirectory(path~, detail=@debug.render(Repr(err)))
+    err =>
+      raise CreateDirectory(path~, detail=@debug.render(@debug.to_repr(err)))
   }
 }
 
@@ -538,7 +539,8 @@ async fn run_moon_check(
   let (code, data) = @process.collect_output_merged("moon", [
     "-C", project_dir, "check", "--diagnostic-limit", "80",
   ]) catch {
-    err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
+    err =>
+      raise Start(tool="moon check", detail=@debug.render(@debug.to_repr(err)))
   }
   let output = data.text() catch {
     err =>

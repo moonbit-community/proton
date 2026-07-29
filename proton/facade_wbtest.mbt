@@ -204,7 +204,8 @@ async test "app run requires the Proton application runner" {
       assert_true(message.contains("synchronous main"))
       assert_true(message.contains("async fn main"))
     }
-    error => fail("expected runner error, got " + @debug.render(Repr(error)))
+    error =>
+      fail("expected runner error, got " + @debug.render(@debug.to_repr(error)))
   }
   assert_true(rejected)
 }
@@ -261,13 +262,16 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
   let mut rejected = false
-  run_manifest(manifest, command_extensions, None, None, 30000, true) catch {
+  run_manifest(manifest, command_extensions, [], [], [], None, 30000, true) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
     }
     error =>
-      fail("expected configuration error, got " + @debug.render(Repr(error)))
+      fail(
+        "expected configuration error, got " +
+        @debug.render(@debug.to_repr(error)),
+      )
   }
   assert_true(rejected)
 }
@@ -283,13 +287,25 @@ async test "headless mode rejects native menus before runtime startup" {
     ]),
   ])
   let mut rejected = false
-  run_manifest(manifest, command_extensions, None, Some(menu), 30000, true) catch {
+  run_manifest(
+    manifest,
+    command_extensions,
+    [],
+    [],
+    [],
+    Some(menu),
+    30000,
+    true,
+  ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "native menus are not supported in headless mode")
     }
     error =>
-      fail("expected configuration error, got " + @debug.render(Repr(error)))
+      fail(
+        "expected configuration error, got " +
+        @debug.render(@debug.to_repr(error)),
+      )
   }
   assert_true(rejected)
 }
@@ -856,7 +872,7 @@ fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
     #|debug = true
     #|
   @mbfs.write_string_to_file(path, base + frontend, encoding="utf8") catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 }
 

@@ -285,7 +285,7 @@ fn normalize_async_run_error(error : Error) -> AppRunError {
     BridgeRuntimeError(diagnostic) => BridgeRuntimeError(diagnostic)
     CleanupFailed(primary~, failures~) => CleanupFailed(primary~, failures~)
     UnexpectedTaskFailure(detail~) => UnexpectedTaskFailure(detail~)
-    _ => UnexpectedTaskFailure(detail=@debug.render(Repr(error)))
+    _ => UnexpectedTaskFailure(detail=@debug.render(@debug.to_repr(error)))
   }
 }
 

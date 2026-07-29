@@ -80,7 +80,7 @@ fn expect_moon_proton_extra_field_error(
     "\n",
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_bootstrap_error(() => {
     load_config_manifest_from_file(config_path)
@@ -137,7 +137,7 @@ test "load_config_manifest_from_file accepts explicit config filenames" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let loaded = load_config_manifest_from_file(config_path)
   let manifest = loaded.manifest()
@@ -177,7 +177,7 @@ test "load_config_manifest_from_file rejects extension settings" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_bootstrap_error(() => {
     load_config_manifest_from_file(config_path)
@@ -229,7 +229,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let config_path = "target/proton-project-config/moon.proton"
   @mbfs.write_string_to_file(
@@ -275,7 +275,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 
   let project = load_proton_project_config_from_file(config_path)
@@ -474,7 +474,7 @@ test "load_proton_project_config_from_file validates tooling blocks" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 
   let error = expect_bootstrap_error(() => {
@@ -516,7 +516,7 @@ test "load_config_manifest_from_file validates project tooling blocks" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 
   let error = expect_bootstrap_error(() => {
@@ -545,7 +545,7 @@ test "load_proton_project_config_from_file preserves active bundle without relea
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 
   let missing_identifier = "target/proton-project-bundle-metadata/missing-identifier.moon.proton"
@@ -570,7 +570,7 @@ test "load_proton_project_config_from_file preserves active bundle without relea
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let config = load_proton_project_config_from_file(missing_identifier)
   match config.bundle() {
@@ -636,7 +636,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_bootstrap_error(() => {
     load_proton_project_config_from_file(unsupported_target)
@@ -665,7 +665,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_bootstrap_error(() => {
     load_proton_project_config_from_file(duplicate_target)

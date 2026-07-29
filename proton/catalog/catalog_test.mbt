@@ -181,7 +181,7 @@ test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let metadata_path = "target/moon-ext-module/fs/moon.ext"
   @mbfs.write_string_to_file(
@@ -195,7 +195,7 @@ test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let descriptor = load_extension_descriptor_from_file(metadata_path)
   assert_eq(descriptor.id(), "vendor/fs")
@@ -239,7 +239,7 @@ test "decode moon.ext rejects invalid metadata" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file(unsupported_platform)
@@ -263,7 +263,7 @@ test "decode moon.ext rejects invalid metadata" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file(self_dependency)
@@ -287,7 +287,7 @@ test "decode moon.ext rejects invalid metadata" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file(removed_field)

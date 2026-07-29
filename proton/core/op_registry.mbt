@@ -24,7 +24,8 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle(
       err => raise InvalidPayload(name~, detail=err.to_string())
     }
     try callback(payload) catch {
-      err => raise HandlerFailed(name~, detail=@debug.render(Repr(err)))
+      err =>
+        raise HandlerFailed(name~, detail=@debug.render(@debug.to_repr(err)))
     } noraise {
       reply => ToJson::to_json(reply)
     }
@@ -45,7 +46,8 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async(
       err => raise InvalidPayload(name~, detail=err.to_string())
     }
     try callback(payload) catch {
-      err => raise HandlerFailed(name~, detail=@debug.render(Repr(err)))
+      err =>
+        raise HandlerFailed(name~, detail=@debug.render(@debug.to_repr(err)))
     } noraise {
       reply => ToJson::to_json(reply)
     }
@@ -66,7 +68,8 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_with_conte
       err => raise InvalidPayload(name~, detail=err.to_string())
     }
     try callback(context, payload) catch {
-      err => raise HandlerFailed(name~, detail=@debug.render(Repr(err)))
+      err =>
+        raise HandlerFailed(name~, detail=@debug.render(@debug.to_repr(err)))
     } noraise {
       reply => ToJson::to_json(reply)
     }

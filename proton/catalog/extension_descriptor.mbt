@@ -192,7 +192,8 @@ pub fn load_extension_descriptor_from_file(
 /// Reads one metadata text file.
 fn read_text_file(path : String) -> String raise ExtensionDescriptorError {
   @mbfs.read_file_to_string(path) catch {
-    error => raise ReadFailed(path~, detail=@debug.render(Repr(error)))
+    error =>
+      raise ReadFailed(path~, detail=@debug.render(@debug.to_repr(error)))
   }
 }
 

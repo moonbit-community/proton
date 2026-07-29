@@ -37,7 +37,8 @@ fn load_file_entry_after_create(
 ///|
 fn read_file_entry_html(path : String) -> String raise AppEntryError {
   @mbfs.read_file_to_string(path) catch {
-    error => raise ReadFailed(path~, detail=@debug.render(Repr(error)))
+    error =>
+      raise ReadFailed(path~, detail=@debug.render(@debug.to_repr(error)))
   }
 }
 

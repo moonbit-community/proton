@@ -21,7 +21,7 @@ fn normalize_dev_test_slashes(path : String) -> String {
 ///|
 fn write_dev_test_file(path : String, text : String) -> Unit {
   @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
 }
 
@@ -117,7 +117,7 @@ async test "read dev project config extracts module paths" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let config = read_dev_project_config(path)
   let frontend = config.frontend().unwrap()
@@ -156,7 +156,7 @@ async test "read dev frontend config validates full project config" {
     ),
     encoding="utf8",
   ) catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   try read_dev_project_config(path) catch {
     DevConfigError::Invalid(
@@ -214,7 +214,7 @@ async test "dev config discovery prefers package-local moon.proton" {
   ensure_dev_test_dir(join_path(root, "desktop"))
   let package_config = join_path(join_path(root, "desktop"), "moon.proton")
   @mbfs.write_string_to_file(package_config, "", encoding="utf8") catch {
-    err => abort(@debug.render(Repr(err)))
+    err => abort(@debug.render(@debug.to_repr(err)))
   }
   let raw = parse_dev_args(["--package", "desktop"])
   let resolved = resolve_dev_config_path(root, root, raw)
@@ -268,7 +268,7 @@ async test "dev runtime layout validates helper" {
 }
 
 ///|
-test "dev process preloads an indirect Linux CEF runtime" {
+async test "dev process preloads an indirect Linux CEF runtime" {
   let root = "target/proton-dev-runtime-preload"
   let runtime_path = create_fake_dev_runtime(root)
   let runtime = dev_runtime_from_root(

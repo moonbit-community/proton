@@ -26,7 +26,7 @@ pub fn load_project_config_from_text(
 ///|
 fn read_project_config_text(path : String) -> String raise ProjectConfigError {
   @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    error => raise FileRead(path~, detail=@debug.render(Repr(error)))
+    error => raise FileRead(path~, detail=@debug.render(@debug.to_repr(error)))
   }
 }
 

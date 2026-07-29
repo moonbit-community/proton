@@ -6,9 +6,9 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,
-  "justjavac/proton/command" @proton_command,
   "justjavac/proton/core",
   "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton_contract",
   "justjavac/proton/native",
   "justjavac/proton",
 }

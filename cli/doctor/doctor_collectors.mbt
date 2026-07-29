@@ -171,26 +171,12 @@ async fn development_native_dist(project : ProjectDoctorInfo) -> String {
 async fn resolve_native_dist(
   project : ProjectDoctorInfo,
 ) -> (String, DoctorRuntimeManifest?) {
-  let native_dist_override = match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => {
-      let root = root.trim().to_owned()
-      if root == "" {
-        None
-      } else {
-        Some(root)
-      }
-    }
-    None => None
-  }
+  let native_dist_override = resolve_native_dist_override(
+    project,
+    @sys.get_env_var("PROTON_NATIVE_DIST"),
+  )
   match native_dist_override {
-    Some(root) => {
-      let path = if path_is_absolute_like(root) {
-        root
-      } else {
-        path_join(project.root, root)
-      }
-      (@path.Path(path).resolve().to_string(), None)
-    }
+    Some(path) => (path, None)
     None =>
       match runtime_manifest_from_project(project) {
         Some(manifest) => {
@@ -203,6 +189,29 @@ async fn resolve_native_dist(
         }
         None => (development_native_dist(project), None)
       }
+  }
+}
+
+///|
+fn resolve_native_dist_override(
+  project : ProjectDoctorInfo,
+  configured_dist : String?,
+) -> String? {
+  match configured_dist {
+    Some(root) => {
+      let root = root.trim().to_owned()
+      if root == "" {
+        None
+      } else {
+        let path = if path_is_absolute_like(root) {
+          root
+        } else {
+          path_join(project.root, root)
+        }
+        Some(@path.Path(path).resolve().to_string())
+      }
+    }
+    None => None
   }
 }
 
@@ -2041,6 +2050,9 @@ async fn collect_extensions(
     let mut count = 0
     for entry in entries {
       let extension_dir = path_join(extension_root, entry)
+      if !doctor_path_is_dir(extension_dir) {
+        continue
+      }
       let ext_path = path_join(extension_dir, "moon.ext")
       if doctor_path_is_file(ext_path) {
         count += 1
@@ -2243,6 +2255,9 @@ async fn apply_doctor_fixes(
   let mut changed = 0
   for entry in entries {
     let extension_dir = path_join(extension_root, entry)
+    if !doctor_path_is_dir(extension_dir) {
+      continue
+    }
     let source_path = path_join(extension_dir, "extension.mbt")
     let metadata_path = path_join(extension_dir, "moon.ext")
     if !doctor_path_is_file(source_path) || !doctor_path_is_file(metadata_path) {

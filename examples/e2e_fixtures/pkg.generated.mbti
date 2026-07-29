@@ -3,14 +3,14 @@ package "justjavac/proton/examples/e2e_fixtures"
 
 import {
   "justjavac/proton/command",
-  "justjavac/proton/extension",
+  "justjavac/proton_contract",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_add_finished(@command.AppCommandExtensionContext, AddFinished) -> Unit noraise
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
 
-pub fn extension() -> @extension.Extension
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 pub fn run_asset_sidecar() -> Unit
 
@@ -27,35 +27,35 @@ pub fn run_sync_async_extensions() -> Unit
 // Errors
 
 // Types and methods
-type AddFinished derive(ToJson)
+type AddFinished derive(ToJson, @json.FromJson)
 
-type AddReply derive(ToJson)
+type AddReply derive(ToJson, @json.FromJson)
 
-type AssetSidecarAddPayload derive(@json.FromJson)
+type AddRequest derive(ToJson, @json.FromJson)
 
-type AssetSidecarReportPayload derive(@json.FromJson)
+type AssetSidecarAddPayload derive(ToJson, @json.FromJson)
 
-type AsyncAddPayload derive(@json.FromJson)
+type AssetSidecarReportPayload derive(ToJson, @json.FromJson)
 
-type AsyncSumPayload derive(@json.FromJson)
+type AsyncAddPayload derive(ToJson, @json.FromJson)
 
-type AsyncSumReply derive(ToJson)
+type AsyncSumPayload derive(ToJson, @json.FromJson)
 
-type EventDone derive(ToJson)
+type AsyncSumReply derive(ToJson, @json.FromJson)
 
-type EventStartPayload derive(@json.FromJson)
+type EventDone derive(ToJson, @json.FromJson)
 
-type EventTick derive(ToJson)
+type EventStartPayload derive(ToJson, @json.FromJson)
 
-type EventTickerResult derive(ToJson)
+type EventTick derive(ToJson, @json.FromJson)
+
+type EventTickerResult derive(ToJson, @json.FromJson)
 
 type MultiWindowIdentifyPayload derive(@json.FromJson)
 
-type ProtonSlowAddPayload derive(@json.FromJson)
+type SyncDoublePayload derive(ToJson, @json.FromJson)
 
-type SyncDoublePayload derive(@json.FromJson)
-
-type SyncDoubleReply derive(ToJson)
+type SyncDoubleReply derive(ToJson, @json.FromJson)
 
 // Type aliases
 

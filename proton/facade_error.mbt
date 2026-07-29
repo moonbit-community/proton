@@ -167,14 +167,14 @@ pub fn AppRunError::message(self : AppRunError) -> String {
       "]: " +
       diagnostic.message +
       "\n" +
-      @debug.render(Repr(diagnostic))
+      @debug.render(@debug.to_repr(diagnostic))
     BridgeRuntimeError(diagnostic) =>
       "application bridge failed [" +
       diagnostic.code +
       "]: " +
       diagnostic.message +
       "\n" +
-      @debug.render(Repr(diagnostic))
+      @debug.render(@debug.to_repr(diagnostic))
     CleanupFailed(primary~, failures~) =>
       cleanup_failure_message(primary, failures)
     UnexpectedTaskFailure(detail~) => "application task failed: " + detail

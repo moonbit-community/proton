@@ -40,7 +40,10 @@ fn build_command_host(
     spec.register(registrar) catch {
       error => {
         let primary = CommandExtensionLifecycleError(
-          RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),
+          RegistrationFailed(
+            extension_id=id,
+            detail=@debug.render(@debug.to_repr(error)),
+          ),
         )
         let cleanup_failures : Array[AppCleanupError] = []
         for failure in close_command_host_runtime(host, destroy_hooks) {
@@ -77,7 +80,7 @@ fn close_command_host_runtime(
         failures.push(
           DestroyFailed(
             extension_id=hook.extension_id,
-            detail=@debug.render(Repr(error)),
+            detail=@debug.render(@debug.to_repr(error)),
           ),
         )
     }

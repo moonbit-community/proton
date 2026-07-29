@@ -36,7 +36,7 @@ async fn write_runtime_metadata(
       raise CefFileSystemError::Copy(
         source="<generated runtime manifest>",
         destination=runtime_manifest_path,
-        detail=@debug.render(Repr(err)),
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
   let active_manifest_path = path_join(
@@ -52,7 +52,7 @@ async fn write_runtime_metadata(
       raise CefFileSystemError::Copy(
         source="<generated active runtime manifest>",
         destination=active_manifest_path,
-        detail=@debug.render(Repr(err)),
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
   let version_path = path_join(runtime_dir, "version.txt")
@@ -65,7 +65,7 @@ async fn write_runtime_metadata(
       raise CefFileSystemError::Copy(
         source="<generated runtime version>",
         destination=version_path,
-        detail=@debug.render(Repr(err)),
+        detail=@debug.render(@debug.to_repr(err)),
       )
   }
 }

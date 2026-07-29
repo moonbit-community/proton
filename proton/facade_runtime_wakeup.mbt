@@ -34,7 +34,7 @@ fn RuntimeWakeup::new(
   let (reader, writer) = @pipe.pipe() catch {
     error =>
       raise RuntimeWakeupError(
-        PipeCreateFailed(detail=@debug.render(Repr(error))),
+        PipeCreateFailed(detail=@debug.render(@debug.to_repr(error))),
       )
   }
   runtime.set_wakeup_fd(writer.fd()) catch {
@@ -67,7 +67,7 @@ async fn RuntimeWakeup::new(
   let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
     error =>
       raise RuntimeWakeupError(
-        SourceOpenFailed(source~, detail=@debug.render(Repr(error))),
+        SourceOpenFailed(source~, detail=@debug.render(@debug.to_repr(error))),
       )
   }
   runtime.activate_wakeup_source() catch {

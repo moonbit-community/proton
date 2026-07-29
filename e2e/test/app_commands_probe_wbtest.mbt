@@ -258,7 +258,7 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
     fail("unknown op did not reject correctly: " + value.stringify())
   }
   guard result.fail_rejected &&
-    result.fail_message.contains("Failure crossed command boundary") else {
+    result.fail_message.contains("op ext:app/fail failed") else {
     fail("failing command did not reject correctly: " + value.stringify())
   }
   guard result.large_payload_rejected &&
