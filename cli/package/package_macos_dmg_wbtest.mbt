@@ -1,4 +1,5 @@
 ///|
+#cfg(not(platform="windows"))
 fn macos_dmg_test_plan(root : String) -> PackagePlan {
   PackagePlan::{
     root,
