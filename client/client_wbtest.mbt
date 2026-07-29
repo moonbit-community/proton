@@ -14,6 +14,14 @@ struct CountChanged {
 } derive(FromJson, Eq, Debug)
 
 ///|
+struct CallbackOutcome {
+  response : EchoResponse?
+  failure : ClientFailure?
+  route : String
+  request_json : String
+}
+
+///|
 extern "js" fn install_fake_bridge(
   response_json : String,
   failure_json? : String = "",
@@ -45,6 +53,36 @@ extern "js" fn install_fake_bridge(
   #| }
 
 ///|
+extern "js" fn install_fake_callback_bridge(
+  response_json : String,
+  failure_json? : String = "",
+) -> Unit =
+  #| (responseJson, failureJson) => {
+  #|   globalThis.__protonClientTest = {
+  #|     route: "",
+  #|     requestJson: "",
+  #|     listeners: new Map(),
+  #|   };
+  #|   globalThis.__MoonBit__ = {
+  #|     core: {
+  #|       invokeJson(route, requestJson) {
+  #|         globalThis.__protonClientTest.route = route;
+  #|         globalThis.__protonClientTest.requestJson = requestJson;
+  #|         return {
+  #|           then(success, failure) {
+  #|             if (failureJson !== "") {
+  #|               failure(JSON.parse(failureJson));
+  #|             } else {
+  #|               success(responseJson);
+  #|             }
+  #|           },
+  #|         };
+  #|       },
+  #|     },
+  #|   };
+  #| }
+
+///|
 extern "js" fn remove_fake_bridge() -> Unit =
   #| () => {
   #|   delete globalThis.__MoonBit__;
@@ -69,6 +107,32 @@ extern "js" fn emit_fake_event(route : String, payload_json : String) -> Unit =
 ///|
 extern "js" fn fake_has_listener(route : String) -> Bool =
   #| (route) => globalThis.__protonClientTest.listeners.has(route)
+
+///|
+fn invoke_callback_outcome(
+  response_json : String,
+  failure_json? : String = "",
+) -> CallbackOutcome {
+  install_fake_callback_bridge(response_json, failure_json~)
+  defer remove_fake_bridge()
+  let response : Ref[EchoResponse?] = Ref(None)
+  let failure : Ref[ClientFailure?] = Ref(None)
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "callback_echo",
+  )
+  invoke_with_callbacks(
+    echo,
+    { value: "ping" },
+    value => response.val = Some(value),
+    error => failure.val = Some(error),
+  )
+  {
+    response: response.val,
+    failure: failure.val,
+    route: fake_route(),
+    request_json: fake_request_json(),
+  }
+}
 
 ///|
 async test "client uses typed JSON commands and live events" {
@@ -218,5 +282,103 @@ async test "client reports response decoding failures through invoke" {
     ClientFailure::ResponseDecode(message~) =>
       assert_true(message.contains("value"))
     error => fail("expected ResponseDecode, got " + error.to_string())
+  }
+}
+
+///|
+test "callback invocation serializes requests and decodes responses" {
+  let outcome = invoke_callback_outcome("{\"value\":\"pong\"}")
+  assert_eq(outcome.response, Some(EchoResponse::{ value: "pong" }))
+  assert_eq(outcome.failure, None)
+  assert_eq(outcome.route, "app:callback_echo")
+  assert_eq(outcome.request_json, "{\"value\":\"ping\"}")
+}
+
+///|
+test "callback invocation reports synchronous preflight failures" {
+  let response_called = Ref(false)
+  let failure : Ref[ClientFailure?] = Ref(None)
+  let invalid : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "",
+  )
+  invoke_with_callbacks(
+    invalid,
+    { value: "ping" },
+    _value => response_called.val = true,
+    error => failure.val = Some(error),
+  )
+  assert_false(response_called.val)
+  match failure.val {
+    Some(ClientFailure::InvalidContract(message~)) =>
+      assert_true(message.contains("must not be empty"))
+    _ => fail("expected InvalidContract")
+  }
+
+  remove_fake_bridge()
+  failure.val = None
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "callback_bridge_unavailable",
+  )
+  invoke_with_callbacks(
+    echo,
+    { value: "ping" },
+    _value => response_called.val = true,
+    error => failure.val = Some(error),
+  )
+  assert_false(response_called.val)
+  assert_eq(failure.val, Some(ClientFailure::BridgeUnavailable))
+}
+
+///|
+test "callback invocation preserves structured bridge failures" {
+  let remote = invoke_callback_outcome(
+    "",
+    failure_json="{\"code\":\"backend_failed\",\"message\":\"command failed\",\"detail\":\"validation\"}",
+  )
+  assert_eq(remote.response, None)
+  assert_eq(
+    remote.failure,
+    Some(
+      ClientFailure::RemoteFailure(
+        code="backend_failed",
+        message="command failed",
+        detail=Some("validation"),
+      ),
+    ),
+  )
+
+  let timeout = invoke_callback_outcome(
+    "",
+    failure_json="{\"code\":\"request_timeout\",\"message\":\"bridge request timed out\"}",
+  )
+  assert_eq(timeout.response, None)
+  assert_eq(timeout.failure, Some(ClientFailure::RequestTimedOut))
+
+  let cancelled = invoke_callback_outcome(
+    "",
+    failure_json="{\"code\":\"request_cancelled\",\"message\":\"request cancelled\"}",
+  )
+  assert_eq(cancelled.response, None)
+  assert_eq(cancelled.failure, Some(ClientFailure::RequestCancelled))
+
+  let transport = invoke_callback_outcome(
+    "",
+    failure_json="{\"message\":\"connection reset\"}",
+  )
+  assert_eq(transport.response, None)
+  assert_eq(
+    transport.failure,
+    Some(ClientFailure::TransportFailure(message="connection reset")),
+  )
+}
+
+///|
+test "callback invocation reports response decoding failures" {
+  let outcome = invoke_callback_outcome("{\"unexpected\":true}")
+  assert_eq(outcome.response, None)
+  match outcome.failure {
+    Some(ClientFailure::ResponseDecode(message~)) =>
+      assert_true(message.contains("value"))
+    _ => fail("expected ResponseDecode")
   }
 }
