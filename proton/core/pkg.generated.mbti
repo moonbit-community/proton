@@ -42,7 +42,7 @@ type AppCommandHost
 pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub fn AppCommandHost::new() -> Self
+pub fn AppCommandHost::new(expose_error_details? : Bool) -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
@@ -69,7 +69,7 @@ pub async fn MbtProcessHost::dispatch_async(Self, @ipc.IpcOpRequest) -> @ipc.Ipc
 pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub fn MbtProcessHost::dispatch_json(Self, String, (@ipc.IpcOpResponse) -> Unit) -> Unit
 pub async fn MbtProcessHost::dispatch_json_async(Self, String) -> @ipc.IpcOpResponse
-pub fn MbtProcessHost::new() -> Self
+pub fn MbtProcessHost::new(expose_error_details? : Bool) -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError

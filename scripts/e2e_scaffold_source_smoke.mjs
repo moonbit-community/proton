@@ -487,8 +487,8 @@ async function probeTodoBridge(client) {
   );
   assert(
     result.remoteFailure?.code === "op_failed" &&
-      typeof result.remoteFailure?.message === "string" &&
-      result.remoteFailure.message.length > 0,
+      result.remoteFailure?.message ===
+        "invalid payload for op app:create_todo",
     `remote failure code was not preserved: ${JSON.stringify(result.remoteFailure)}`,
   );
   assert(
@@ -663,6 +663,8 @@ async function runPackagedAppSmoke(executable) {
   delete packagedEnv.PROTON_HELPER_PATH;
   delete packagedEnv.PROTON_NATIVE_DIST;
   delete packagedEnv.PROTON_RUNTIME_ROOT;
+  delete packagedEnv.PROTON_DEV;
+  delete packagedEnv.PROTON_MODE;
   appProcess = spawn(executable, [], {
     cwd: projectDir,
     env: packagedEnv,

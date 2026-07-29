@@ -4,7 +4,9 @@ fn build_command_host(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   command_registrars? : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [],
 ) -> CommandHostRuntime? raise AppRunError {
-  let host = @core.AppCommandHost::new()
+  let host = @core.AppCommandHost::new(
+    expose_error_details=proton_dev_mode_enabled(),
+  )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let mut has_commands = false
   let registrar = @proton_command.CommandRegistrar::new(host)

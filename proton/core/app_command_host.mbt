@@ -126,8 +126,16 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
 
 ///|
 /// Creates an empty app command host.
-pub fn AppCommandHost::new() -> AppCommandHost {
-  AppCommandHost::{ host: MbtProcessHost::new(), closed: false }
+///
+/// Handler diagnostics remain in backend logs by default. Set
+/// `expose_error_details` only for a trusted development frontend.
+pub fn AppCommandHost::new(
+  expose_error_details? : Bool = false,
+) -> AppCommandHost {
+  AppCommandHost::{
+    host: MbtProcessHost::new(expose_error_details~),
+    closed: false,
+  }
 }
 
 ///|

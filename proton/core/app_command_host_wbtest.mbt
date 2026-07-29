@@ -1,9 +1,67 @@
 ///|
+suberror CommandHostTestError {
+  PrivateFailure(String)
+} derive(Debug)
+
+///|
+fn response_error_message(response : @ipc.IpcOpResponse) -> String raise {
+  match response.body {
+    String(message) => message
+    _ => fail("expected string error response")
+  }
+}
+
+///|
 test "app command host starts open and empty" {
   let host = AppCommandHost::new()
   @debug.assert_eq(host.registered_ops(), [])
   host.op("app:ping", fn(_payload : Unit) { "pong" })
   @debug.assert_eq(host.registered_ops(), ["app:ping"])
+  host.close()
+}
+
+///|
+async test "production command errors hide backend diagnostics" {
+  let host = AppCommandHost::new()
+  host.op("app:fail", fn(_payload : Unit) -> String raise {
+    raise CommandHostTestError::PrivateFailure(
+      "/Users/example/private.mbt:42\nstack: internal_handler",
+    )
+  })
+  @async.with_task_group(group => {
+    let response = host.dispatch_ipc_with_context(
+      AppCommandRequestContext::new(7L, group),
+      @ipc.IpcOpRequest::new("request-1", "app:fail", Json::null()),
+    )
+    assert_false(response.is_ok())
+    assert_eq(response_error_message(response), "op app:fail failed")
+  })
+  let invalid_response = host.dispatch_ipc(@ipc.IpcOpRequest::{
+    version: @ipc.protocol_version() + 1,
+    id: "request-invalid",
+    name: "app:fail",
+    payload: Json::null(),
+  })
+  assert_false(invalid_response.is_ok())
+  assert_eq(response_error_message(invalid_response), "invalid command request")
+  host.close()
+}
+
+///|
+async test "development command errors retain backend diagnostics" {
+  let host = AppCommandHost::new(expose_error_details=true)
+  host.op("app:fail", fn(_payload : Unit) -> String raise {
+    raise CommandHostTestError::PrivateFailure(
+      "/Users/example/private.mbt:42\nstack: internal_handler",
+    )
+  })
+  let response = host.dispatch_ipc(
+    @ipc.IpcOpRequest::new("request-2", "app:fail", Json::null()),
+  )
+  let message = response_error_message(response)
+  assert_false(response.is_ok())
+  assert_true(message.contains("/Users/example/private.mbt"))
+  assert_true(message.contains("stack: internal_handler"))
   host.close()
 }
 
