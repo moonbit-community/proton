@@ -38,62 +38,62 @@ fn failure_message(error : @proton_client.ClientFailure) -> String {
 }
 
 ///|
-fn update(emit : Emit[Msg], msg : Msg, model : Model) -> (Cmd, Model) {
+fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
   match msg {
     Load =>
       (
+        { ..model, loading: true, error: None },
         @proton_rabbita.invoke(
           @shared.list_todos,
           (),
           snapshot => emit(SnapshotReceived(snapshot)),
           error => emit(CommandFailed(error)),
         ),
-        { ..model, loading: true, error: None },
       )
-    DraftChanged(draft) => (@rabbita.none, { ..model, draft, })
-    Create if model.draft.trim().is_empty() => (@rabbita.none, model)
+    DraftChanged(draft) => ({ ..model, draft, }, @rabbita.none)
+    Create if model.draft.trim().is_empty() => (model, @rabbita.none)
     Create =>
       (
+        { ..model, draft: "", error: None },
         @proton_rabbita.invoke(
           @shared.create_todo,
           { title: model.draft },
           snapshot => emit(SnapshotReceived(snapshot)),
           error => emit(CommandFailed(error)),
         ),
-        { ..model, draft: "", error: None },
       )
     SetCompleted(id, completed) =>
       (
+        { ..model, error: None },
         @proton_rabbita.invoke(
           @shared.set_todo_completed,
           { id, completed },
           snapshot => emit(SnapshotReceived(snapshot)),
           error => emit(CommandFailed(error)),
         ),
-        { ..model, error: None },
       )
     Delete(id) =>
       (
+        { ..model, error: None },
         @proton_rabbita.invoke(
           @shared.delete_todo,
           { id, },
           snapshot => emit(SnapshotReceived(snapshot)),
           error => emit(CommandFailed(error)),
         ),
-        { ..model, error: None },
       )
     SnapshotReceived(snapshot) =>
-      (@rabbita.none, { ..model, snapshot, loading: false, error: None })
+      ({ ..model, snapshot, loading: false, error: None }, @rabbita.none)
     CommandFailed(error) =>
       (
-        @rabbita.none,
         { ..model, loading: false, error: Some(failure_message(error)) },
+        @rabbita.none,
       )
   }
 }
 
 ///|
-fn subscriptions(emit : Emit[Msg], _model : Model) -> @sub.Sub {
+fn subscriptions(_model : Model, emit : Emit[Msg]) -> @sub.Sub {
   @proton_rabbita.subscribe(
     @shared.todos_changed,
     snapshot => emit(SnapshotReceived(snapshot)),
@@ -160,15 +160,17 @@ fn view(emit : Emit[Msg], model : Model) -> Html {
 }
 
 ///|
-#warnings("-alert_unstable")
-fn main {
-  let (emit, cell) = @rabbita.cell_with_emit(
-    model=initial_model(),
+fn todo_app() -> @rabbita.Val[Html] {
+  let (model, emit) = @rabbita.create_state_with_init(
+    init=emit => (initial_model(), emit(Load)),
     update~,
-    view~,
     subscriptions~,
   )
-  let app = @rabbita.new(cell)
-  app.with_init(emit(Load))
-  app.mount("app")
+  model.view(model => view(emit, model))
+}
+
+///|
+#warnings("-alert_unstable")
+fn main {
+  @rabbita.new(todo_app).mount("app")
 }

@@ -14,7 +14,7 @@ let default_proton_client_version = "0.1.0"
 let default_proton_rabbita_version = "0.1.0"
 
 ///|
-let default_rabbita_version = "0.12.4"
+let default_rabbita_version = "0.14.0"
 
 ///|
 fn scaffold_release_chain() -> String {

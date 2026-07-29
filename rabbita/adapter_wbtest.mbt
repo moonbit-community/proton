@@ -26,8 +26,12 @@ impl @cmd.Scheduler for TestScheduler with fn run_effect(self, _kind, execute) {
 }
 
 ///|
-impl @cmd.Scheduler for TestScheduler with fn queue_message(_self, _id, send) {
-  send()
+impl @cmd.Scheduler for TestScheduler with fn queue_message(
+  _self,
+  _id,
+  _message,
+) {
+
 }
 
 ///|
