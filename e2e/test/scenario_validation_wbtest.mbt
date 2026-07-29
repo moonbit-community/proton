@@ -51,6 +51,13 @@ test "scenario retries only startup and closed CDP transports" {
       Failure::Failure("scenario app exited before CDP became ready"),
     ),
   )
+  assert_true(
+    retryable_scenario_error(
+      Failure::Failure(
+        "timed out waiting for navigation to http://127.0.0.1:8080/probe.html",
+      ),
+    ),
+  )
   assert_false(
     retryable_scenario_error(Failure::Failure("connected CDP probe failed")),
   )
