@@ -43,6 +43,7 @@ pub fn NewProjectTemplateError::message(Self) -> String
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int)
+  RegistryDependenciesUnavailable(code~ : Int, project~ : String)
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NewProjectToolError::message(Self) -> String
