@@ -145,6 +145,26 @@ test "Windows signtool args use SHA-256 and RFC3161 timestamp" {
 }
 
 ///|
+async test "Windows icon selection accepts ico and rejects a missing source" {
+  let root = "target/proton-package-windows-icon"
+  remove_tree(root)
+  let selected = resolve_path(root, "Demo.ICO")
+  assert_eq(
+    first_windows_icon(["icons/icon.png", selected, "icons/fallback.ico"]),
+    Some(selected),
+  )
+  assert_eq(first_windows_icon(["icons/icon.png", "icons/icon.icns"]), None)
+  let plan = windows_test_plan(root, ["app"], false)
+  plan.icons.push(selected)
+  try stage_windows_icon(plan, resolve_path(root, "demo.exe")) catch {
+    PackagePlanError::MissingIcon(path~) => assert_eq(path, selected)
+    _ => abort("expected missing Windows icon")
+  } noraise {
+    _ => abort("expected missing Windows icon failure")
+  }
+}
+
+///|
 test "Windows path resolution keeps dotted relative children under the base" {
   let path = normalize_slashes(
     resolve_path("target/proton-path-base", ".proton/runtime.json"),

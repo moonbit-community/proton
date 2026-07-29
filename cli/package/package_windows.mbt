@@ -332,7 +332,15 @@ async fn stage_windows_portable_impl(
     executable,
     resolve_path(staging, package_executable_name(plan.product_name) + ".exe"),
   )
-  copy_file(plan.config_path, resolve_path(staging, "moon.proton"))
+  let staged_executable = resolve_path(
+    staging,
+    package_executable_name(plan.product_name) + ".exe",
+  )
+  stage_windows_icon(plan, staged_executable)
+  stage_release_project_config(
+    plan.config_path,
+    resolve_path(staging, "moon.proton"),
+  )
   stage_project_inputs(plan, staging)
   write_package_manifest(plan, staging, "windows-portable")
   validate_windows_portable_layout(plan, staging)

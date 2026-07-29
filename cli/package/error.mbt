@@ -107,7 +107,7 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "; run proton package without --no-build first"
     InputOutsideProject(path~) =>
       "package input must stay inside the project: " + path
-    MissingIcon(path~) => "macOS icon is missing: " + path
+    MissingIcon(path~) => "package icon is missing: " + path
   }
 }
 

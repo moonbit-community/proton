@@ -382,6 +382,48 @@ test "macOS icon plist entry is conditional" {
 }
 
 ///|
+test "release project config disables only the top-level debug field" {
+  let source =
+    #|product_name = "MoonBit 桌面应用"
+    #|window = { title: "debug = true", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<p>debug = true</p>" }
+    #|debug = true
+    #|bundle = { active: true }
+    #|
+  let release = release_project_config_text(source)
+  assert_true(release.contains("title: \"debug = true\""))
+  assert_true(release.contains("value: \"<p>debug = true</p>\""))
+  assert_true(release.contains("debug = false"))
+  assert_false(release.contains("\ndebug = true\n"))
+  let (ast, reports) = @proton_config.parse_moon_proton(release)
+  assert_eq(reports.length(), 0)
+  match ast {
+    Obj(fields, _) => {
+      let debug_values = fields.filter_map(fn(field) {
+        if field.key == "debug" {
+          Some(field.value)
+        } else {
+          None
+        }
+      })
+      match debug_values {
+        [Bool(false, _)] => ()
+        _ => abort("expected one disabled top-level debug field")
+      }
+    }
+    _ => abort("expected release config object")
+  }
+}
+
+///|
+test "release project config preserves an already disabled or absent debug field" {
+  let disabled = "window = { title: \"Demo\" }\ndebug = false\n"
+  assert_eq(release_project_config_text(disabled), disabled)
+  let absent = "window = { title: \"Demo\" }\n"
+  assert_eq(release_project_config_text(absent), absent)
+}
+
+///|
 async test "macOS icon selection stages icns and rejects a missing source" {
   let root = resolve_path("target", "proton-package-macos-icon")
   remove_tree(root)

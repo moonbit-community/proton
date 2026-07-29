@@ -396,6 +396,56 @@ fn first_macos_icon(icons : Array[String]) -> String? {
 }
 
 ///|
+fn release_project_config_text(source : String) -> String {
+  let (ast, reports) = @proton_config.parse_moon_proton(source)
+  guard reports.length() == 0 else { return source }
+  match ast {
+    Obj(fields, _) =>
+      for field in fields {
+        if field.key == "debug" {
+          match field.value {
+            Bool(false, _) => return source
+            Bool(true, loc) =>
+              return replace_string_range(
+                source,
+                loc.start.cnum,
+                loc.end.cnum,
+                "false",
+              )
+            _ => return source
+          }
+        }
+      }
+    _ => ()
+  }
+  source
+}
+
+///|
+fn replace_string_range(
+  source : String,
+  start : Int,
+  end : Int,
+  replacement : String,
+) -> String {
+  let output = StringBuilder::new(
+    size_hint=source.length() - (end - start) + replacement.length(),
+  )
+  for index, char in source {
+    if index == start {
+      output.write_string(replacement)
+    }
+    if index < start || index >= end {
+      output.write_char(char)
+    }
+  }
+  if start == source.length() {
+    output.write_string(replacement)
+  }
+  output.to_string()
+}
+
+///|
 fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   if dry_run {
     println("Proton package plan (dry run):")
@@ -616,7 +666,10 @@ async fn stage_macos_app_impl(
   }
   copy_file(executable, resolve_path(macos, executable_name))
   copy_tree(runtime, resolve_path(resources, "proton"))
-  copy_file(plan.config_path, resolve_path(resources, "moon.proton"))
+  stage_release_project_config(
+    plan.config_path,
+    resolve_path(resources, "moon.proton"),
+  )
   stage_project_inputs(plan, resources)
   stage_macos_icon(plan, resources)
   let helper_source = resolve_path(runtime, "bin/cef_process")
@@ -644,6 +697,8 @@ async fn stage_macos_app_impl(
   write_package_manifest(plan, resources, "macos-app")
   if plan.sign {
     sign_macos_app(plan, app, executable_name)
+  } else {
+    sign_macos_app_adhoc(plan, app, executable_name)
   }
   let dmg = if plan.targets.contains("dmg") {
     Some(create_macos_dmg(plan, app))
@@ -1085,6 +1140,21 @@ async fn write_text(
 }
 
 ///|
+async fn stage_release_project_config(
+  source : String,
+  destination : String,
+) -> Unit {
+  let text = @async_fs.read_file(source).text() catch {
+    error =>
+      raise PackageFileSystemError::Read(
+        path=source,
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  write_text(destination, release_project_config_text(text))
+}
+
+///|
 fn xml_escape(text : String) -> String {
   text
   .replace_all(old="&", new="&amp;")
@@ -1244,11 +1314,43 @@ async fn sign_macos_app(
     identity,
     notarize=plan.notarize,
   )
-  let contents = resolve_path(app, "Contents")
-  let entitlements = resolve_macos_entitlements(
+  sign_macos_app_with_identity(
+    plan,
     app,
+    executable_name,
+    identity,
     allow_untrusted_libraries=is_adhoc,
+    verify_developer_id=!is_adhoc,
   )
+}
+
+///|
+async fn sign_macos_app_adhoc(
+  plan : PackagePlan,
+  app : String,
+  executable_name : String,
+) -> Unit {
+  sign_macos_app_with_identity(
+    plan,
+    app,
+    executable_name,
+    "-",
+    allow_untrusted_libraries=true,
+    verify_developer_id=false,
+  )
+}
+
+///|
+async fn sign_macos_app_with_identity(
+  plan : PackagePlan,
+  app : String,
+  executable_name : String,
+  identity : String,
+  allow_untrusted_libraries~ : Bool,
+  verify_developer_id~ : Bool,
+) -> Unit {
+  let contents = resolve_path(app, "Contents")
+  let entitlements = resolve_macos_entitlements(app, allow_untrusted_libraries~)
   let main = resolve_path(contents, "MacOS/" + executable_name)
   let cef_framework = resolve_path(
     contents, "Resources/proton/Frameworks/Chromium Embedded Framework.framework",
@@ -1317,7 +1419,7 @@ async fn sign_macos_app(
   for target in targets {
     verify_macos_codesign_target(target.path, deep=target.deep)
   }
-  if !is_adhoc {
+  if verify_developer_id {
     verify_macos_developer_id(app)
   }
 }

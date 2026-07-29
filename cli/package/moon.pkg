@@ -8,6 +8,7 @@ import {
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
@@ -18,3 +19,7 @@ import {
 } for "wbtest"
 
 supported_targets = "native"
+
+options(
+  "native-stub": [ "package_windows_icon.c" ],
+)
