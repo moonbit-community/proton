@@ -29,7 +29,6 @@ const preferredOrder = [
   "backend/todo/moon.pkg.mtpl",
   "backend/todo/backend.mbt.mtpl",
   "backend/todo/commands.mbt.mtpl",
-  "backend/todo/commands.g.mbt.mtpl",
   "AGENTS.md.mtpl",
   "README.md.mtpl",
   ".gitignore.mtpl",

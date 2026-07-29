@@ -208,14 +208,14 @@ test "invalid identifier fails" {
 ///|
 test "file plan contains the exact isomorphic scaffold" {
   let files = must_plan(must_options(["my-counter"]))
-  assert_eq(files.length(), 20)
+  assert_eq(files.length(), 19)
   for
     path in [
       "AGENTS.md", "README.md", ".gitignore", "moon.work", "moon.proton", "shared/moon.mod",
       "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod", "frontend/main/moon.pkg",
       "frontend/main/main.mbt", "frontend/public/index.html", "frontend/public/styles.css",
       "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt", "backend/todo/moon.pkg",
-      "backend/todo/backend.mbt", "backend/todo/commands.mbt", "backend/todo/commands.g.mbt",
+      "backend/todo/backend.mbt", "backend/todo/commands.mbt",
     ] {
     guard find_planned_file(files, path) is Some(_) else {
       abort("missing planned file: " + path)
