@@ -196,7 +196,7 @@ fn validate_contract_expression(expression : String) -> Unit raise {
   guard !expression.has_prefix("@") else {
     raise CommandCodegenError::Attribute(
       kind="command",
-      detail="contract must be a local typed alias because MoonBit attributes cannot contain package-qualified values",
+      detail="MoonBit attributes cannot contain package-qualified values; import the contract with `using` and pass its unqualified name",
     )
   }
   for _, ch in expression {

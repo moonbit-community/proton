@@ -23,10 +23,10 @@ test "typed codegen renders free and receiver registrars" {
         #|}
         #|
         #|///|
-        #|let create_todo_contract = @shared.create_todo
+        #|using @shared {create_todo}
         #|
         #|///|
-        #|#proton.command(contract=create_todo_contract)
+        #|#proton.command(contract=create_todo)
         #|async fn Backend::create_todo(
         #|  self : Backend,
         #|  context : @proton.CommandContext,
@@ -62,7 +62,7 @@ test "typed codegen renders free and receiver registrars" {
     #|  registrar : @proton.CommandRegistrar,
     #|) -> Unit raise {
     #|  registrar.bind(
-    #|    create_todo_contract,
+    #|    create_todo,
     #|    (context, request) => self.create_todo(context, request),
     #|  )
     #|}
@@ -174,7 +174,7 @@ test "typed codegen rejects removed event annotations" {
 }
 
 ///|
-test "typed codegen requires a compiler-checked local contract alias" {
+test "typed codegen requires an unqualified contract reference" {
   try {
     ignore(
       generate_typed_commands_from_sources([
@@ -188,12 +188,12 @@ test "typed codegen requires a compiler-checked local contract alias" {
         ),
       ]),
     )
-    fail("expected local contract alias error")
+    fail("expected unqualified contract reference error")
   } catch {
     CommandCodegenError::Attribute(
       kind="command",
-      detail="contract must be a local typed alias because MoonBit attributes cannot contain package-qualified values"
+      detail="MoonBit attributes cannot contain package-qualified values; import the contract with `using` and pass its unqualified name"
     ) => ()
-    _ => fail("expected local contract alias error")
+    _ => fail("expected unqualified contract reference error")
   }
 }

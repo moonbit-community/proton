@@ -707,19 +707,21 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/todo/commands.mbt.mtpl",
       template_source: (
           #|///|
-          #|let list_todos_contract = @shared.list_todos
+          #|using @shared {
+          #|  create_todo,
+          #|  delete_todo,
+          #|  list_todos,
+          #|  set_todo_completed,
+          #|}
           #|
           #|///|
-          #|#proton.command(contract=list_todos_contract)
+          #|#proton.command(contract=list_todos)
           #|fn Backend::list_todos(self : Backend) -> @shared.TodoSnapshot {
           #|  self.snapshot()
           #|}
           #|
           #|///|
-          #|let create_todo_contract = @shared.create_todo
-          #|
-          #|///|
-          #|#proton.command(contract=create_todo_contract)
+          #|#proton.command(contract=create_todo)
           #|async fn Backend::create_todo(
           #|  self : Backend,
           #|  context : @proton.CommandContext,
@@ -731,10 +733,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|let set_todo_completed_contract = @shared.set_todo_completed
-          #|
-          #|///|
-          #|#proton.command(contract=set_todo_completed_contract)
+          #|#proton.command(contract=set_todo_completed)
           #|async fn Backend::set_todo_completed(
           #|  self : Backend,
           #|  context : @proton.CommandContext,
@@ -746,10 +745,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|let delete_todo_contract = @shared.delete_todo
-          #|
-          #|///|
-          #|#proton.command(contract=delete_todo_contract)
+          #|#proton.command(contract=delete_todo)
           #|async fn Backend::delete_todo(
           #|  self : Backend,
           #|  context : @proton.CommandContext,
