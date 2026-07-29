@@ -30,11 +30,18 @@ pub struct Command[Request, Response] {
 /// A target-neutral live-event descriptor.
 ///
 /// Events are not replayed by the descriptor. Runtime integrations decide how
-/// an event is emitted and subscribed.
+/// an event is emitted and subscribed. A route may be declared as an event only
+/// once within its scope. Export and reuse that descriptor everywhere instead
+/// of constructing another event with the same route, even with the same
+/// payload type.
 pub struct Event[Payload] {
   route : ContractRoute
   type_marker : ((Payload) -> Unit)?
+  duplicate_route : Bool
 }
+
+///|
+let declared_event_routes : Map[String, Unit] = Map([])
 
 ///|
 /// The identity and route scope shared by one Proton extension contract.
@@ -50,6 +57,7 @@ pub(all) suberror ContractDefinitionError {
   EmptyExtensionId
   EmptyExtensionNamespace
   EmptyExtensionMember(extension_namespace~ : String)
+  DuplicateEventRoute(route~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -59,9 +67,13 @@ pub fn[Request, Response] command(name : String) -> Command[Request, Response] {
 }
 
 ///|
-/// Creates an application event descriptor.
+/// Creates a unique application event descriptor.
+///
+/// Calling this function more than once with the same name is an invalid
+/// contract declaration. Runtime values belong in the event payload, not in a
+/// dynamically constructed event name.
 pub fn[Payload] event(name : String) -> Event[Payload] {
-  Event::{ route: application_route(name), type_marker: None }
+  new_event(application_route(name))
 }
 
 ///|
@@ -83,12 +95,16 @@ pub fn[Request, Response] ExtensionContract::command(
 }
 
 ///|
-/// Creates a typed live-event descriptor scoped to this extension.
+/// Creates a unique typed live-event descriptor scoped to this extension.
+///
+/// Calling this method more than once with the same member name on the same
+/// extension contract is an invalid contract declaration. Runtime values
+/// belong in the event payload, not in a dynamically constructed member name.
 pub fn[Payload] ExtensionContract::event(
   self : ExtensionContract,
   name : String,
 ) -> Event[Payload] {
-  Event::{ route: self.route(name), type_marker: None }
+  new_event(self.route(name))
 }
 
 ///|
@@ -131,6 +147,9 @@ pub fn[Payload] Event::validate(
   self : Event[Payload],
 ) -> Unit raise ContractDefinitionError {
   self.route.validate()
+  guard !self.duplicate_route else {
+    raise DuplicateEventRoute(route=self.route.operation_name())
+  }
 }
 
 ///|
@@ -210,6 +229,16 @@ fn application_route(name : String) -> ContractRoute {
 }
 
 ///|
+fn[Payload] new_event(route : ContractRoute) -> Event[Payload] {
+  let operation_name = route.operation_name()
+  let duplicate_route = declared_event_routes.contains(operation_name)
+  if !duplicate_route {
+    declared_event_routes[operation_name] = ()
+  }
+  Event::{ route, type_marker: None, duplicate_route }
+}
+
+///|
 fn ExtensionContract::route(
   self : ExtensionContract,
   name : String,
@@ -252,6 +281,8 @@ pub fn ContractDefinitionError::message(
     EmptyExtensionNamespace => "extension contract namespace must not be empty"
     EmptyExtensionMember(extension_namespace~) =>
       "extension contract member must not be empty: " + extension_namespace
+    DuplicateEventRoute(route~) =>
+      "event route is declared more than once: " + route
   }
 }
 

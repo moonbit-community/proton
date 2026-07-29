@@ -17,6 +17,13 @@ pub let todo_changed : @proton_contract.Event[TodoChanged] = @proton_contract.ev
 )
 ```
 
+Each event route is declared exactly once within its scope. Put event
+descriptors in a shared contract package and import those values from both the
+frontend and backend. Constructing another event descriptor with the same route
+is rejected, even when it repeats the same payload type. Runtime identifiers and
+other varying data belong in event payloads, not in dynamically constructed
+route names.
+
 The descriptors do not own serialization. Frontend and backend integrations
 apply the appropriate `ToJson` and `FromJson` constraints when a descriptor is
 used.

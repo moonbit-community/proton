@@ -46,6 +46,20 @@ test "descriptor validation reports empty extension members" {
 }
 
 ///|
+test "event validation rejects duplicate route declarations" {
+  let first : Event[Int] = event("duplicate_event_route")
+  let duplicate : Event[String] = event("duplicate_event_route")
+  first.validate()
+  first.validate()
+  duplicate.validate() catch {
+    ContractDefinitionError::DuplicateEventRoute(
+      route="app:duplicate_event_route"
+    ) => ()
+    _ => abort("expected DuplicateEventRoute")
+  }
+}
+
+///|
 test "extension identity validation rejects empty fields" {
   let invalid_id = extension(id="", js_namespace="example")
   invalid_id.validate() catch {

@@ -187,3 +187,42 @@ test "subscription updates taggers without reinstalling its listener" {
   assert_false(fake_has_listener())
   remove_fake_bridge()
 }
+
+///|
+test "duplicate event routes do not overwrite erased tagger slots" {
+  let first : @proton_contract.Event[CountChanged] = @proton_contract.event(
+    "duplicate_rabbita_event",
+  )
+  let duplicate : @proton_contract.Event[String] = @proton_contract.event(
+    "duplicate_rabbita_event",
+  )
+  let first_count = Ref(0)
+  let duplicate_value = Ref("")
+  ignore(
+    subscribe(
+      first,
+      value => {
+        first_count.val = value.count
+        @cmd.none
+      },
+      _error => @cmd.none,
+    ),
+  )
+  ignore(
+    subscribe(
+      duplicate,
+      value => {
+        duplicate_value.val = value
+        @cmd.none
+      },
+      _error => @cmd.none,
+    ),
+  )
+  let erased_slot = event_tagger_slots
+    .get("app:duplicate_rabbita_event")
+    .unwrap()
+  let slot : Ref[EventTaggers[CountChanged]] = erased_slot.cast()
+  ignore((slot.val.received)(CountChanged::{ count: 7 }))
+  assert_eq(first_count.val, 7)
+  assert_eq(duplicate_value.val, "")
+}

@@ -10,6 +10,10 @@ let event_tagger_slots : Map[String, @rabbita_js.Value] = Map([])
 ///|
 priv suberror ProtonEventSubscription {
   ProtonEventSubscription(route~ : String, tagger_slot~ : @rabbita_js.Value)
+  InvalidProtonEventSubscription(
+    message~ : String,
+    notify~ : (@proton_client.ClientFailure) -> @cmd.Cmd
+  )
 }
 
 ///|
@@ -45,6 +49,9 @@ pub fn[Payload : @json.FromJson] subscribe(
   failure : (@proton_client.ClientFailure) -> @cmd.Cmd,
 ) -> @sub.Sub {
   let route = event.contract_route().operation_name()
+  event.validate() catch {
+    error => return invalid_event_subscription(route, error.message(), failure)
+  }
   let tagger_slot = update_event_tagger_slot(route, EventTaggers::{
     received,
     failure,
@@ -65,6 +72,30 @@ pub fn[Payload : @json.FromJson] subscribe(
       }
       let slot : Ref[EventTaggers[Payload]] = erased_slot.cast()
       load_event_subscription(event, route, slot, scheduler)
+    }),
+  )
+}
+
+///|
+fn invalid_event_subscription(
+  route : String,
+  message : String,
+  notify : (@proton_client.ClientFailure) -> @cmd.Cmd,
+) -> @sub.Sub {
+  let payload = InvalidProtonEventSubscription(message~, notify~)
+  @sub.custom_sub(
+    subscription_key(route) + ":invalid",
+    @sub.Local,
+    payload,
+    @sub.SubLoader((payload, scheduler) => {
+      guard payload is InvalidProtonEventSubscription(message~, notify~) else {
+        return None
+      }
+      @cmd.Scheduler::add(
+        scheduler,
+        notify(@proton_client.InvalidContract(message~)),
+      )
+      Some({ unload: _scheduler => (), update_tagger: _payload => () })
     }),
   )
 }
