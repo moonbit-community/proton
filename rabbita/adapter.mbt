@@ -5,6 +5,12 @@ priv struct EventTaggers[Payload] {
 }
 
 ///|
+priv enum EventListenerInstallation {
+  Installed(@proton_client.Subscription)
+  TerminalFailure
+}
+
+///|
 let event_tagger_slots : Map[String, @rabbita_js.Value] = Map([])
 
 ///|
@@ -43,6 +49,11 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke(
 /// Recomputing the subscription updates its taggers without reinstalling the
 /// renderer listener. A malformed event reports one failure and leaves the
 /// subscription active.
+///
+/// An initial installation failure is reported once and retained as a terminal
+/// subscription for that key. This prevents the failure message from causing an
+/// immediate retry loop. Remove the subscription for one update and add it
+/// again to retry explicitly.
 pub fn[Payload : @json.FromJson] subscribe(
   event : @proton_contract.Event[Payload],
   received : (Payload) -> @cmd.Cmd,
@@ -131,7 +142,7 @@ fn[Payload : @json.FromJson] load_event_subscription(
   tagger_slot : Ref[EventTaggers[Payload]],
   scheduler : &@cmd.Scheduler,
 ) -> @sub.RunningSub? {
-  let live_subscription = try
+  let installation = try
     @proton_client.subscribe(
       event,
       value => @cmd.Scheduler::add(scheduler, (tagger_slot.val.received)(value)),
@@ -140,16 +151,16 @@ fn[Payload : @json.FromJson] load_event_subscription(
   catch {
     error => {
       @cmd.Scheduler::add(scheduler, (tagger_slot.val.failure)(error))
-      None
+      TerminalFailure
     }
   } noraise {
-    subscription => Some(subscription)
+    subscription => Installed(subscription)
   }
   Some({
     unload: _scheduler => {
-      match live_subscription {
-        Some(subscription) => subscription.close()
-        None => ()
+      match installation {
+        Installed(subscription) => subscription.close()
+        TerminalFailure => ()
       }
     },
     update_tagger: new_payload => {

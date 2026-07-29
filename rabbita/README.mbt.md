@@ -33,3 +33,10 @@ test {
   ignore(command)
 }
 ```
+
+An event subscription installation failure is reported through its failure
+callback once. Rabbita retains a terminal subscription for that key instead of
+retrying after every model update, which prevents a failure-message feedback
+loop. To retry explicitly, omit the subscription for one update and then add it
+again. The Proton bridge is expected to be available before application
+frontend code starts.

@@ -189,6 +189,42 @@ test "subscription updates taggers without reinstalling its listener" {
 }
 
 ///|
+test "failed subscription remains terminal until it is reloaded" {
+  remove_fake_bridge()
+  let scheduler = TestScheduler::new()
+  let changed : @proton_contract.Event[CountChanged] = @proton_contract.event(
+    "terminal_subscription_failure",
+  )
+  let route = changed.contract_route().operation_name()
+  let failures = Ref(0)
+  let tagger_slot = update_event_tagger_slot(route, {
+    received: _value => @cmd.none,
+    failure: _error => {
+      failures.val += 1
+      @cmd.none
+    },
+  })
+  let failed = load_event_subscription(changed, route, tagger_slot, scheduler).unwrap()
+  assert_eq(failures.val, 1)
+
+  install_fake_bridge("{}")
+  assert_eq(fake_listener_installs(), 0)
+  (failed.update_tagger)(
+    ProtonEventSubscription(
+      route~,
+      tagger_slot=@rabbita_js.Value::cast_from(tagger_slot),
+    ),
+  )
+  assert_eq(fake_listener_installs(), 0)
+
+  (failed.unload)(scheduler)
+  let retried = load_event_subscription(changed, route, tagger_slot, scheduler).unwrap()
+  assert_eq(fake_listener_installs(), 1)
+  (retried.unload)(scheduler)
+  remove_fake_bridge()
+}
+
+///|
 test "duplicate event routes do not overwrite erased tagger slots" {
   let first : @proton_contract.Event[CountChanged] = @proton_contract.event(
     "duplicate_rabbita_event",
