@@ -421,7 +421,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     resolve_path(resources, "AppIcon.icns"),
     encoding="utf8",
   ) catch {
-    error => abort(@debug.render(@debug.to_repr(error)))
+    error => abort(@debug.render(Repr(error)))
   }
   assert_eq(staged, "test-icns")
   assert_true(macos_info_plist(plan, "demo").contains("CFBundleIconFile"))
@@ -607,7 +607,7 @@ async test "macOS artifact promotion rolls back the complete output set" {
   assert_false(@mbfs.path_exists(resolve_path(app, "Contents/new.txt")))
   assert_false(@mbfs.path_exists(app_backup))
   let restored_dmg = @mbfs.read_file_to_string(dmg, encoding="utf8") catch {
-    error => abort(@debug.render(@debug.to_repr(error)))
+    error => abort(@debug.render(Repr(error)))
   }
   assert_eq(restored_dmg, "old-dmg")
   assert_false(@mbfs.path_exists(dmg + ".backup"))
@@ -631,7 +631,7 @@ async test "macOS notarization validates success and cleans failed upload" {
   for path in [xcrun, spctl] {
     write_text(path, script)
     @async_fs.chmod(path, 0o755) catch {
-      error => abort(@debug.render(@debug.to_repr(error)))
+      error => abort(@debug.render(Repr(error)))
     }
   }
   let old_path = @sys.get_env_var("PATH")
@@ -665,7 +665,7 @@ async test "macOS notarization validates success and cleans failed upload" {
   }
   notarize_macos_app(plan, app)
   let commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
-    error => abort(@debug.render(@debug.to_repr(error)))
+    error => abort(@debug.render(Repr(error)))
   }
   let archive = resolve_path(root, ".demo.notary.zip")
   assert_eq(
@@ -699,7 +699,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     _ => abort("expected notarization submission failure")
   }
   let failed_commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
-    error => abort(@debug.render(@debug.to_repr(error)))
+    error => abort(@debug.render(Repr(error)))
   }
   assert_eq(
     failed_commands,

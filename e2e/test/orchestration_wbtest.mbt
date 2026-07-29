@@ -641,7 +641,7 @@ fn retryable_scenario_error(error : Error) -> Bool {
 
 ///|
 fn retryable_startup_error(error : Error) -> Bool {
-  let text = @debug.render(@debug.to_repr(error)).to_lower()
+  let text = @debug.render(Repr(error)).to_lower()
   // Retry only failures emitted by the explicit startup waiters.  Transport
   // retry classification is handled by retryable_scenario_error using typed
   // errors; broad text matches such as "connection reset" would hide bugs.

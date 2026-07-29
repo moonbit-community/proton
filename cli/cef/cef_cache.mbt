@@ -41,7 +41,7 @@ async fn install_cef_root(
     err =>
       raise CefFileSystemError::Write(
         path=version_path,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   let checksum_path = path_join(install_dir, "sha256.txt")
@@ -53,7 +53,7 @@ async fn install_cef_root(
     err =>
       raise CefFileSystemError::Write(
         path=checksum_path,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   validate_cef_root(install_dir, platform)

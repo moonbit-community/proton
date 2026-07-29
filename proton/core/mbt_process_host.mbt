@@ -14,7 +14,7 @@ fn CommandErrorPolicy::response_message(
   error : Error,
   safe_message : String,
 ) -> String {
-  let diagnostic = @debug.render(@debug.to_repr(error))
+  let diagnostic = @debug.render(Repr(error))
   if self.expose_details {
     diagnostic
   } else {

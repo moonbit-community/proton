@@ -113,7 +113,7 @@ async fn recover_windows_backup(destination : String, label : String) -> Unit {
       error =>
         raise WindowsPackagingError::ToolFailure(
           stage="restore interrupted " + label,
-          detail=backup + ": " + @debug.render(@debug.to_repr(error)),
+          detail=backup + ": " + @debug.render(Repr(error)),
         )
     }
   }
@@ -135,7 +135,7 @@ async fn rollback_windows_promotion(
           "failed to move the promoted " +
           label +
           " aside: " +
-          @debug.render(@debug.to_repr(error)),
+          @debug.render(Repr(error)),
         )
     }
   }
@@ -146,7 +146,7 @@ async fn rollback_windows_promotion(
           "failed to restore the previous " +
           label +
           ": " +
-          @debug.render(@debug.to_repr(error)),
+          @debug.render(Repr(error)),
         )
     }
   }
@@ -185,7 +185,7 @@ async fn promote_windows_artifact(
       error =>
         raise WindowsPackagingError::ToolFailure(
           stage="preserve existing " + label,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
   }
@@ -193,7 +193,7 @@ async fn promote_windows_artifact(
     error => {
       let primary : Error = WindowsPackagingError::ToolFailure(
         stage="promote staged " + label,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
       if had_destination {
         @async_fs.rename(backup, destination) catch {
@@ -204,7 +204,7 @@ async fn promote_windows_artifact(
                 "; rollback also failed and the previous artifact remains at " +
                 backup +
                 ": " +
-                @debug.render(@debug.to_repr(rollback_error)),
+                @debug.render(Repr(rollback_error)),
             )
         }
       }

@@ -55,7 +55,7 @@ pub async fn generate_typed_commands_from_files(
       error =>
         raise CodegenInputError::InputRead(
           path=input_file,
-          detail=@debug.render(@debug.to_repr(error)),
+          detail=@debug.render(Repr(error)),
         )
     }
     sources.push((input_file, source))

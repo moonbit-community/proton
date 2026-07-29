@@ -6,7 +6,7 @@ async fn copy_file(src : String, dest : String) -> Unit {
         raise CefFileSystemError::Copy(
           source=src,
           destination=dest,
-          detail=@debug.render(@debug.to_repr(err)),
+          detail=@debug.render(Repr(err)),
         )
     }
     guard code == 0 else {
@@ -23,7 +23,7 @@ async fn copy_file(src : String, dest : String) -> Unit {
       raise CefFileSystemError::Copy(
         source=src,
         destination=dest,
-        detail="read failed: " + @debug.render(@debug.to_repr(err)),
+        detail="read failed: " + @debug.render(Repr(err)),
       )
   }
   @async_fs.write_file(dest, data, create_mode=CreateOrTruncate) catch {
@@ -31,7 +31,7 @@ async fn copy_file(src : String, dest : String) -> Unit {
       raise CefFileSystemError::Copy(
         source=src,
         destination=dest,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
 }
@@ -43,7 +43,7 @@ async fn make_executable(path : String) -> Unit {
     err =>
       raise CefFileSystemError::MakeExecutable(
         path~,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
 }
@@ -74,7 +74,7 @@ async fn copy_tree(src : String, dest : String) -> Unit {
       err =>
         raise CefFileSystemError::CreateDirectory(
           path=dest,
-          detail=@debug.render(@debug.to_repr(err)),
+          detail=@debug.render(Repr(err)),
         )
     }
   }
@@ -86,7 +86,7 @@ async fn copy_tree(src : String, dest : String) -> Unit {
     err =>
       raise CefFileSystemError::ReadDirectory(
         path=src,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
   for entry in entries {
@@ -101,7 +101,7 @@ async fn ensure_dir(path : String) -> Unit {
     err =>
       raise CefFileSystemError::CreateDirectory(
         path~,
-        detail=@debug.render(@debug.to_repr(err)),
+        detail=@debug.render(Repr(err)),
       )
   }
 }
@@ -114,7 +114,7 @@ async fn normalize_cef_runtime_layout(root : String) -> Unit {
       err =>
         raise CefFileSystemError::CreateDirectory(
           path=release_dir,
-          detail=@debug.render(@debug.to_repr(err)),
+          detail=@debug.render(Repr(err)),
         )
     }
   }
@@ -135,18 +135,12 @@ async fn remove_tree(path : String) -> Unit {
   if path_is_file(path) {
     @async_fs.remove(path) catch {
       err =>
-        raise CefFileSystemError::Remove(
-          path~,
-          detail=@debug.render(@debug.to_repr(err)),
-        )
+        raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))
     }
   } else if path_is_dir(path) {
     @async_fs.rmdir(path, recursive=true) catch {
       err =>
-        raise CefFileSystemError::Remove(
-          path~,
-          detail=@debug.render(@debug.to_repr(err)),
-        )
+        raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))
     }
   } else {
     raise CefFileSystemError::Remove(

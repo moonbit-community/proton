@@ -270,7 +270,7 @@ test "project config reads module metadata from configured backend" {
     ),
     encoding="utf8",
   ) catch {
-    error => abort(@debug.render(@debug.to_repr(error)))
+    error => abort(@debug.render(Repr(error)))
   }
   let source =
     #|window = {

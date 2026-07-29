@@ -6,7 +6,7 @@ async fn read_proton_project_config(
     error =>
       raise @proton_config.ProjectConfigError::FileRead(
         path~,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   let base_dir = path_parent(path).unwrap_or(".")

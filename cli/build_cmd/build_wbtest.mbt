@@ -36,7 +36,7 @@ fn ensure_build_test_dir(path : String) -> Unit {
 ///|
 fn write_build_test_file(path : String, text : String) -> Unit {
   @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
 }
 
@@ -144,7 +144,7 @@ async test "frontend path validation reports missing directory" {
     resolve_frontend_path(root, Some("missing"), "npm run build")
   catch {
     BuildPathError::Missing(..) as error => error.message()
-    error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
   } noraise {
     _ => fail("expected build error")
   }
@@ -293,7 +293,7 @@ async test "production entry validation requires file-backed entry" {
     )
   catch {
     BuildPathError::Missing(..) as error => error.message()
-    error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
   } noraise {
     _ => fail("expected build error")
   }
@@ -302,7 +302,7 @@ async test "production entry validation requires file-backed entry" {
   ensure_build_test_dir(dir)
   let file = join_path(dir, "index.html")
   @mbfs.write_string_to_file(file, "<!doctype html>", encoding="utf8") catch {
-    err => abort(@debug.render(@debug.to_repr(err)))
+    err => abort(@debug.render(Repr(err)))
   }
   validate_production_entry_file(@proton_config.ProjectEntry::Asset(file))
 }
@@ -365,7 +365,7 @@ async test "production entry validation rejects directories" {
     validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir))
   catch {
     BuildPathError::WrongKind(..) as error => error.message()
-    error => fail("unexpected error: " + @debug.render(@debug.to_repr(error)))
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
   } noraise {
     _ => fail("expected build error")
   }

@@ -138,8 +138,7 @@ pub async fn run(
   match options.output {
     Some(path) =>
       @async_fs.write_file(path, rendered, create_mode=CreateOrTruncate) catch {
-        error =>
-          raise OutputWrite(path~, detail=@debug.render(@debug.to_repr(error)))
+        error => raise OutputWrite(path~, detail=@debug.render(Repr(error)))
       }
     None => println(rendered)
   }

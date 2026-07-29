@@ -220,7 +220,7 @@ async fn create_project(
       })
       if rollback_failures.length() > 0 {
         raise NewProjectWriteError::Rollback(
-          primary=@debug.render(@debug.to_repr(error)),
+          primary=@debug.render(Repr(error)),
           detail=rollback_failures.join("; "),
         )
       }
@@ -253,7 +253,7 @@ async fn create_project(
       })
       if rollback_failures.length() > 0 {
         raise NewProjectWriteError::Rollback(
-          primary=@debug.render(@debug.to_repr(error)),
+          primary=@debug.render(Repr(error)),
           detail=rollback_failures.join("; "),
         )
       }
@@ -278,7 +278,7 @@ async fn write_project_files(
       err =>
         raise NewProjectWriteError::WriteFile(
           path=output_path,
-          detail=@debug.render(@debug.to_repr(err)),
+          detail=@debug.render(Repr(err)),
         )
     }
   }
@@ -335,7 +335,7 @@ async fn reserve_staging_directory(
         } else {
           raise NewProjectWriteError::CreateDirectory(
             path=staging_dir,
-            detail=@debug.render(@debug.to_repr(error)),
+            detail=@debug.render(Repr(error)),
           )
         }
     }
@@ -364,7 +364,7 @@ async fn commit_project(
         raise NewProjectWriteError::Commit(
           target=target_dir,
           detail="failed to remove the existing empty target: " +
-            @debug.render(@debug.to_repr(error)),
+            @debug.render(Repr(error)),
         )
     }
   }
@@ -372,7 +372,7 @@ async fn commit_project(
     error =>
       raise NewProjectWriteError::Commit(
         target=target_dir,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
 }
@@ -386,10 +386,7 @@ async fn remove_transaction_tree(
     return
   }
   @async_fs.rmdir(path, recursive=true) catch {
-    error =>
-      failures.push(
-        "remove " + path + ": " + @debug.render(@debug.to_repr(error)),
-      )
+    error => failures.push("remove " + path + ": " + @debug.render(Repr(error)))
   }
 }
 
@@ -401,10 +398,7 @@ async fn restore_empty_target(
   @async_fs.mkdir(target_dir) catch {
     error =>
       failures.push(
-        "restore empty target " +
-        target_dir +
-        ": " +
-        @debug.render(@debug.to_repr(error)),
+        "restore empty target " + target_dir + ": " + @debug.render(Repr(error)),
       )
   }
 }
@@ -430,9 +424,7 @@ async fn remove_created_parent_directories(
       include_special=false,
     ) catch {
       error => {
-        failures.push(
-          "inspect " + current + ": " + @debug.render(@debug.to_repr(error)),
-        )
+        failures.push("inspect " + current + ": " + @debug.render(Repr(error)))
         return
       }
     }
@@ -445,7 +437,7 @@ async fn remove_created_parent_directories(
           "remove empty directory " +
           current +
           ": " +
-          @debug.render(@debug.to_repr(error)),
+          @debug.render(Repr(error)),
         )
         return
       }
@@ -482,8 +474,7 @@ async fn ensure_dir_recursive(path : String) -> Unit {
     ensure_dir_recursive(parent)
   }
   @async_fs.mkdir(path) catch {
-    err =>
-      raise CreateDirectory(path~, detail=@debug.render(@debug.to_repr(err)))
+    err => raise CreateDirectory(path~, detail=@debug.render(Repr(err)))
   }
 }
 
@@ -517,11 +508,7 @@ async fn maybe_init_git(
   match options.git {
     Some(true) => {
       let code = @process.run("git", ["init"], cwd=project_dir) catch {
-        err =>
-          raise Start(
-            tool="git init",
-            detail=@debug.render(@debug.to_repr(err)),
-          )
+        err => raise Start(tool="git init", detail=@debug.render(Repr(err)))
       }
       if code != 0 {
         raise Exit(tool="git init", code~)
@@ -539,15 +526,11 @@ async fn run_moon_check(
   let (code, data) = @process.collect_output_merged("moon", [
     "-C", project_dir, "check", "--diagnostic-limit", "80",
   ]) catch {
-    err =>
-      raise Start(tool="moon check", detail=@debug.render(@debug.to_repr(err)))
+    err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
   }
   let output = data.text() catch {
     err =>
-      raise Start(
-        tool="moon check output",
-        detail=@debug.render(@debug.to_repr(err)),
-      )
+      raise Start(tool="moon check output", detail=@debug.render(Repr(err)))
   }
   if output != "" {
     @stdio.stderr.write(output) catch {

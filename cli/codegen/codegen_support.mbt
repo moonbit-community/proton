@@ -4,7 +4,7 @@ async fn read_moon_ext_codegen_config_file(path : String) -> (String, String) {
     error =>
       raise CodegenInputError::InputRead(
         path~,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   read_moon_ext_codegen_config(path, text)

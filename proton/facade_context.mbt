@@ -115,7 +115,7 @@ async fn start_application_lifecycle_hooks(
     let activation = (hook.start)(context) catch {
       error =>
         raise LifecycleHookError(
-          ApplicationStart(index~, detail=@debug.render(@debug.to_repr(error))),
+          ApplicationStart(index~, detail=@debug.render(Repr(error))),
         )
     }
     group.add_defer(async fn() {
@@ -123,10 +123,7 @@ async fn start_application_lifecycle_hooks(
         error =>
           cleanup_failures.push(
             LifecycleHook(
-              ApplicationShutdown(
-                index~,
-                detail=@debug.render(@debug.to_repr(error)),
-              ),
+              ApplicationShutdown(index~, detail=@debug.render(Repr(error))),
             ),
           )
       }
@@ -145,7 +142,7 @@ async fn start_window_lifecycle_hooks(
     let activation = (hook.start)(context) catch {
       error =>
         raise LifecycleHookError(
-          WindowReady(index~, detail=@debug.render(@debug.to_repr(error))),
+          WindowReady(index~, detail=@debug.render(Repr(error))),
         )
     }
     group.add_defer(async fn() {
@@ -153,7 +150,7 @@ async fn start_window_lifecycle_hooks(
         error =>
           cleanup_failures.push(
             LifecycleHook(
-              WindowClose(index~, detail=@debug.render(@debug.to_repr(error))),
+              WindowClose(index~, detail=@debug.render(Repr(error))),
             ),
           )
       }

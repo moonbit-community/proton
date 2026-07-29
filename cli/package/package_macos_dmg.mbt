@@ -58,7 +58,7 @@ async fn create_macos_dmg_impl(
     error =>
       raise PackageFileSystemError::Write(
         path=applications,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   run_hdiutil(
@@ -114,7 +114,7 @@ async fn run_hdiutil(args : Array[String], stage~ : String) -> Unit {
     error =>
       raise MacosSigningError::ToolFailure(
         stage~,
-        detail=@debug.render(@debug.to_repr(error)),
+        detail=@debug.render(Repr(error)),
       )
   }
   guard code == 0 else {

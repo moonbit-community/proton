@@ -103,7 +103,7 @@ fn doctor_runtime_error_message(error : Error) -> String {
     DoctorRuntimeManifestError::MissingField(..) as error => error.message()
     DoctorRuntimeManifestError::InvalidSchema(..) as error => error.message()
     DoctorRuntimeManifestError::InvalidRoot(..) as error => error.message()
-    error => @debug.render(@debug.to_repr(error))
+    error => @debug.render(Repr(error))
   }
 }
 

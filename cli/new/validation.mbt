@@ -253,11 +253,7 @@ async fn target_dir_is_empty(target_dir : String) -> Bool {
     include_special=false,
   ) catch {
     err if @async.is_being_cancelled() => raise err
-    err =>
-      raise ReadDirectory(
-        path=target_dir,
-        detail=@debug.render(@debug.to_repr(err)),
-      )
+    err => raise ReadDirectory(path=target_dir, detail=@debug.render(Repr(err)))
   }
   entries.length() == 0
 }
