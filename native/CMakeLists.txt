@@ -32,6 +32,7 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/scheme.m
     )
   elseif(UNIX)
+    set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
       src/engine/cef_linux/proton_linux_titlebar.c
@@ -343,7 +344,16 @@ if(BUILD_TESTING)
     target_link_libraries(proton_exports_smoke PRIVATE ${CMAKE_DL_LIBS})
   endif()
 
-  add_test(NAME proton_smoke COMMAND proton_smoke)
+  if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
+    add_test(
+      NAME proton_smoke
+      COMMAND "${CMAKE_COMMAND}"
+        "-DPROTON_SMOKE_EXECUTABLE=$<TARGET_FILE:proton_smoke>"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_proton_smoke.cmake"
+    )
+  else()
+    add_test(NAME proton_smoke COMMAND proton_smoke)
+  endif()
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
@@ -407,9 +417,20 @@ if(BUILD_TESTING)
         "$<TARGET_FILE_DIR:proton>:$ENV{LD_LIBRARY_PATH}"
       )
     endif()
-    set_tests_properties(proton_smoke PROPERTIES
-      ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
-    )
+    if(PROTON_WITH_ENGINE)
+      set(PROTON_TEST_LD_PRELOAD "libcef.so")
+      if(DEFINED ENV{LD_PRELOAD} AND NOT "$ENV{LD_PRELOAD}" STREQUAL "")
+        string(APPEND PROTON_TEST_LD_PRELOAD ":$ENV{LD_PRELOAD}")
+      endif()
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT
+          "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};LD_PRELOAD=${PROTON_TEST_LD_PRELOAD};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+    else()
+      set_tests_properties(proton_smoke PROPERTIES
+        ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
+      )
+    endif()
     set_tests_properties(proton_exports_smoke PROPERTIES
       ENVIRONMENT "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH}"
     )

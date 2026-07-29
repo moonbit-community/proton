@@ -211,6 +211,75 @@ test "bridge startup timeout is finite and configurable" {
 }
 
 ///|
+test "headless mode defaults off and is configurable" {
+  let default_app = html("Test", "<html></html>")
+  assert_false(default_app.headless_value)
+  assert_true(default_app.headless().headless_value)
+  assert_false(default_app.headless(enabled=false).headless_value)
+}
+
+///|
+test "PROTON_HEADLESS forces facade headless mode" {
+  let old_headless = @env.get_env_var("PROTON_HEADLESS")
+  defer restore_env_var("PROTON_HEADLESS", old_headless)
+  let app = html("Test", "<html></html>")
+  @env.unset_env_var("PROTON_HEADLESS")
+  assert_false(app.resolved_headless())
+  @env.set_env_var("PROTON_HEADLESS", "1")
+  assert_true(app.resolved_headless())
+  @env.set_env_var("PROTON_HEADLESS", "off")
+  assert_false(app.resolved_headless())
+  assert_true(app.headless().resolved_headless())
+}
+
+///|
+async test "headless mode rejects titlebar overlay before runtime startup" {
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new(
+      "Test",
+      320,
+      240,
+      titlebar_style=@manifest.TitlebarStyle::Overlay,
+    ),
+    @manifest.AppEntry::Html("<html></html>"),
+  )
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  let mut rejected = false
+  run_manifest(manifest, command_extensions, None, None, 30000, true) catch {
+    ConfigurationError(InvalidSetting(name="headless", message~)) => {
+      rejected = true
+      assert_eq(message, "titlebar overlay is not supported in headless mode")
+    }
+    error =>
+      fail("expected configuration error, got " + @debug.render(Repr(error)))
+  }
+  assert_true(rejected)
+}
+
+///|
+async test "headless mode rejects native menus before runtime startup" {
+  let manifest = test_command_manifest("test/disabled", enabled=false)
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  let menu = @native.MenuBar::new(menus=[
+    @native.Menu::new("App", items=[
+      @native.MenuItem::role("close", label="Close"),
+    ]),
+  ])
+  let mut rejected = false
+  run_manifest(manifest, command_extensions, None, Some(menu), 30000, true) catch {
+    ConfigurationError(InvalidSetting(name="headless", message~)) => {
+      rejected = true
+      assert_eq(message, "native menus are not supported in headless mode")
+    }
+    error =>
+      fail("expected configuration error, got " + @debug.render(Repr(error)))
+  }
+  assert_true(rejected)
+}
+
+///|
 test "bridge startup timeout retains the last lifecycle state" {
   let state = @native.BridgeLifecycleState::{
     abi_version: 1,

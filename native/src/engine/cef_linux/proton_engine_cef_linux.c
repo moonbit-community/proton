@@ -2,6 +2,7 @@
 #define _GNU_SOURCE 1
 #endif
 
+#include "../../app_runner.h"
 #include "../../proton_engine.h"
 #include "../../proton_json.h"
 #include "proton_linux_titlebar.h"
@@ -24,6 +25,7 @@
 #include "include/capi/cef_life_span_handler_capi.h"
 #include "include/capi/cef_load_handler_capi.h"
 #include "include/capi/cef_process_message_capi.h"
+#include "include/capi/cef_render_handler_capi.h"
 #include "include/capi/cef_render_process_handler_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
 #include "include/capi/cef_request_capi.h"
@@ -47,6 +49,7 @@
 #include <limits.h>
 #include <poll.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -55,6 +58,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #define PROTON_ENGINE_PATH_SEPARATOR '/'
@@ -82,6 +86,7 @@ typedef struct proton_engine_client proton_engine_client_t;
 
 struct proton_engine_runtime {
   int owns_cef_runtime;
+  int headless;
   int64_t next_bridge_request_id;
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
@@ -114,6 +119,13 @@ struct proton_engine_window {
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   int width;
   int height;
+  int headless;
+  int headless_hidden;
+  int osr_paint_seen;
+  int osr_paint_width;
+  int osr_paint_height;
+  int osr_popup_visible;
+  cef_rect_t osr_popup_rect;
   int titlebar_overlay;
   proton_linux_titlebar_region_t *draggable_regions;
   size_t draggable_region_count;
@@ -179,6 +191,11 @@ typedef struct {
 } proton_engine_request_handler_t;
 
 typedef struct {
+  cef_render_handler_t handler;
+  proton_engine_ref_counted_t refs;
+} proton_engine_render_handler_t;
+
+typedef struct {
   cef_scheme_handler_factory_t factory;
   proton_engine_ref_counted_t refs;
 } proton_engine_scheme_factory_t;
@@ -208,6 +225,7 @@ typedef struct {
   char locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   int32_t remote_debugging_port;
+  int headless;
 } proton_engine_runtime_config_t;
 
 typedef struct {
@@ -229,6 +247,7 @@ static proton_engine_life_span_handler_t g_life_span_handler;
 static proton_engine_load_handler_t g_load_handler;
 static proton_engine_drag_handler_t g_drag_handler;
 static proton_engine_request_handler_t g_request_handler;
+static proton_engine_render_handler_t g_render_handler;
 static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
@@ -237,10 +256,17 @@ static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static proton_engine_runtime_t *g_active_runtime = NULL;
 static proton_engine_window_t *g_closed_windows = NULL;
+static proton_engine_runtime_t *g_managed_shutdown_runtime = NULL;
+static pthread_mutex_t g_managed_shutdown_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t g_managed_shutdown_condition = PTHREAD_COND_INITIALIZER;
+static int g_managed_shutdown_complete = 0;
+static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
+static int g_wakeup_write_fd = -1;
 
 static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
                                                        GdkEvent *event,
                                                        gpointer user_data);
+static void proton_engine_complete_managed_shutdown_if_ready(void);
 
 static void proton_engine_set_message(char *error,
                                       size_t error_len,
@@ -248,6 +274,114 @@ static void proton_engine_set_message(char *error,
   if (error != NULL && error_len > 0) {
     snprintf(error, error_len, "%s", message != NULL ? message : "");
   }
+}
+
+typedef enum {
+  PROTON_ENGINE_UI_RUNTIME_CREATE = 0,
+  PROTON_ENGINE_UI_RUNTIME_RESPOND_BRIDGE,
+  PROTON_ENGINE_UI_RUNTIME_SET_WAKEUP_FD,
+  PROTON_ENGINE_UI_WINDOW_CREATE,
+  PROTON_ENGINE_UI_WINDOW_DESTROY,
+  PROTON_ENGINE_UI_WINDOW_SHOW,
+  PROTON_ENGINE_UI_WINDOW_HIDE,
+  PROTON_ENGINE_UI_WINDOW_CLOSE,
+  PROTON_ENGINE_UI_WINDOW_IS_CLOSED,
+  PROTON_ENGINE_UI_WINDOW_FOCUS,
+  PROTON_ENGINE_UI_WINDOW_SET_TITLE,
+  PROTON_ENGINE_UI_WINDOW_SET_SIZE,
+  PROTON_ENGINE_UI_WINDOW_LOAD_URL,
+  PROTON_ENGINE_UI_WINDOW_LOAD_HTML,
+  PROTON_ENGINE_UI_WINDOW_EVAL,
+  PROTON_ENGINE_UI_WINDOW_EMIT_BRIDGE_EVENT,
+  PROTON_ENGINE_UI_WINDOW_BRIDGE_STATE,
+  PROTON_ENGINE_UI_WINDOW_TAKE_BRIDGE_FAILURE,
+} proton_engine_ui_operation_t;
+
+typedef struct {
+  proton_engine_ui_operation_t operation;
+  proton_engine_runtime_t *runtime;
+  proton_engine_window_t *window;
+  const char *text;
+  const char *second_text;
+  void *output;
+  int32_t first_int;
+  int32_t second_int;
+  int32_t *out_int;
+  char *error;
+  size_t error_len;
+} proton_engine_ui_call_t;
+
+static int32_t proton_engine_execute_ui_call(void *raw_call) {
+  proton_engine_ui_call_t *call = (proton_engine_ui_call_t *)raw_call;
+  switch (call->operation) {
+  case PROTON_ENGINE_UI_RUNTIME_CREATE:
+    return proton_engine_runtime_create_json(
+        call->text, (proton_engine_runtime_t **)call->output, call->error,
+        call->error_len);
+  case PROTON_ENGINE_UI_RUNTIME_RESPOND_BRIDGE:
+    return proton_engine_runtime_respond_bridge_request_json(
+        call->runtime, call->text, call->error, call->error_len);
+  case PROTON_ENGINE_UI_RUNTIME_SET_WAKEUP_FD:
+    return proton_engine_runtime_set_wakeup_fd(
+        call->runtime, call->first_int, call->error, call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_CREATE:
+    return proton_engine_window_create_json(
+        call->runtime, call->text, (proton_engine_window_t **)call->output,
+        call->error, call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_DESTROY:
+    return proton_engine_window_destroy(call->window, call->error,
+                                        call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_SHOW:
+    return proton_engine_window_show(call->window, call->error,
+                                     call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_HIDE:
+    return proton_engine_window_hide(call->window, call->error,
+                                     call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_CLOSE:
+    return proton_engine_window_close(call->window, call->error,
+                                      call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_IS_CLOSED:
+    return proton_engine_window_is_closed(call->window);
+  case PROTON_ENGINE_UI_WINDOW_FOCUS:
+    return proton_engine_window_focus(call->window, call->error,
+                                      call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_SET_TITLE:
+    return proton_engine_window_set_title(call->window, call->text,
+                                          call->error, call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_SET_SIZE:
+    return proton_engine_window_set_size(
+        call->window, call->first_int, call->second_int, call->error,
+        call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_LOAD_URL:
+    return proton_engine_window_load_url(call->window, call->text, call->error,
+                                         call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_LOAD_HTML:
+    return proton_engine_window_load_html(
+        call->window, call->text, call->second_text, call->error,
+        call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_EVAL:
+    return proton_engine_window_eval(call->window, call->text, call->error,
+                                     call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_EMIT_BRIDGE_EVENT:
+    return proton_engine_window_emit_bridge_event_json(
+        call->window, call->text, call->error, call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_BRIDGE_STATE:
+    return proton_engine_window_bridge_state_json(
+        call->window, (char *)call->output, call->first_int, call->out_int,
+        call->error, call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_TAKE_BRIDGE_FAILURE:
+    return proton_engine_window_take_bridge_failure_json(
+        call->window, (char *)call->output, call->first_int, call->out_int,
+        call->error, call->error_len);
+  }
+  proton_engine_set_message(call->error, call->error_len,
+                            "unknown Linux UI dispatch operation");
+  return PROTON_ERR_PLATFORM;
+}
+
+static int32_t proton_engine_dispatch_ui_call(
+    proton_engine_ui_call_t *call) {
+  return proton_app_dispatch_sync_int(proton_engine_execute_ui_call, call);
 }
 
 static void proton_engine_log_to_env(const char *env_name,
@@ -271,6 +405,64 @@ static void proton_engine_debug_log(const char *format, ...) {
   va_start(args, format);
   proton_engine_log_to_env("PROTON_NATIVE_LOG", format, args);
   va_end(args);
+}
+
+static ssize_t proton_engine_write_no_sigpipe(int fd,
+                                              const void *buffer,
+                                              size_t length) {
+  sigset_t sigpipe_mask;
+  sigset_t previous_mask;
+  sigset_t pending_mask;
+  sigemptyset(&sigpipe_mask);
+  sigaddset(&sigpipe_mask, SIGPIPE);
+  int mask_status =
+      pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &previous_mask);
+  if (mask_status != 0) {
+    errno = mask_status;
+    return -1;
+  }
+  if (sigpending(&pending_mask) != 0) {
+    int pending_error = errno;
+    (void)pthread_sigmask(SIG_SETMASK, &previous_mask, NULL);
+    errno = pending_error;
+    return -1;
+  }
+  int sigpipe_was_pending = sigismember(&pending_mask, SIGPIPE) == 1;
+
+  ssize_t written;
+  do {
+    written = write(fd, buffer, length);
+  } while (written < 0 && errno == EINTR);
+  int write_error = written < 0 ? errno : 0;
+  if (written < 0 && write_error == EPIPE && !sigpipe_was_pending) {
+    struct timespec timeout = {.tv_sec = 0, .tv_nsec = 0};
+    while (sigtimedwait(&sigpipe_mask, NULL, &timeout) < 0 && errno == EINTR) {
+    }
+  }
+  (void)pthread_sigmask(SIG_SETMASK, &previous_mask, NULL);
+  if (written < 0) {
+    errno = write_error;
+  }
+  return written;
+}
+
+static void proton_engine_signal_wakeup_fd(unsigned char wakeup_byte) {
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  if (g_wakeup_write_fd >= 0) {
+    (void)proton_engine_write_no_sigpipe(
+        g_wakeup_write_fd, &wakeup_byte, sizeof(wakeup_byte));
+  }
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+}
+
+static void proton_engine_clear_wakeup_fd(void) {
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  int previous_fd = g_wakeup_write_fd;
+  g_wakeup_write_fd = -1;
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+  if (previous_fd >= 0) {
+    close(previous_fd);
+  }
 }
 
 static int proton_engine_set_nonblocking(int fd) {
@@ -351,9 +543,9 @@ static void proton_engine_signal_wait_source(uint32_t ready_mask) {
   proton_engine_runtime_t *runtime = g_active_runtime;
   if (runtime != NULL && runtime->wake_write_fd >= 0) {
     char byte = 1;
-    ssize_t ignored = write(runtime->wake_write_fd, &byte, 1);
-    (void)ignored;
+    (void)proton_engine_write_no_sigpipe(runtime->wake_write_fd, &byte, 1);
   }
+  proton_engine_signal_wakeup_fd((unsigned char)ready_mask);
 }
 
 static int64_t proton_engine_get_scheduled_pump_delay_ms(void) {
@@ -645,6 +837,26 @@ static proton_engine_window_t *proton_engine_window_from_browser(
     }
   }
   return NULL;
+}
+
+static proton_engine_window_t *proton_engine_window_from_browser_client(
+    cef_browser_t *browser) {
+  if (browser == NULL) {
+    return NULL;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    return NULL;
+  }
+  cef_client_t *cef_client = host->get_client(host);
+  proton_engine_window_t *window = NULL;
+  if (cef_client != NULL) {
+    proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
+    window = client->window;
+    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+  return window;
 }
 
 static void proton_engine_runtime_bridge_lock(proton_engine_runtime_t *runtime) {
@@ -1071,18 +1283,32 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
   }
   cef_string_t scheme = {0};
   proton_engine_set_string(&scheme, "proton");
+  // Give proton:// documents a real origin and allow CORS-mode same-origin
+  // resources such as ES modules to reach the custom scheme handler.
   registrar->add_custom_scheme(
       registrar, &scheme,
-      CEF_SCHEME_OPTION_SECURE | CEF_SCHEME_OPTION_FETCH_ENABLED);
+      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
+          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
   cef_string_clear(&scheme);
 }
 
-static void proton_engine_on_before_command_line_processing(
+static int proton_engine_process_type_is_browser(
+    const cef_string_t *process_type) {
+  return process_type == NULL || process_type->length == 0;
+}
+
+static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
     cef_app_t *self,
     const cef_string_t *process_type,
-  cef_command_line_t *command_line) {
+    cef_command_line_t *command_line) {
   (void)self;
-  (void)process_type;
+  if (proton_app_runner_is_active() &&
+      proton_engine_process_type_is_browser(process_type)) {
+    /* The managed runner creates its MoonBit worker before CefInitialize.
+     * Skip Chromium's zygote fork; settings.no_sandbox is already enabled. */
+    proton_engine_append_switch(command_line, "no-zygote");
+    proton_engine_debug_log("managed_browser_no_zygote");
+  }
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
   proton_engine_append_switch(command_line, "disable-background-networking");
@@ -1105,6 +1331,92 @@ static cef_browser_process_handler_t *CEF_CALLBACK
 proton_engine_get_browser_process_handler(cef_app_t *self) {
   (void)self;
   return &g_browser_process_handler.handler;
+}
+
+static void CEF_CALLBACK proton_engine_osr_get_view_rect(
+    cef_render_handler_t *self,
+    cef_browser_t *browser,
+    cef_rect_t *rect) {
+  (void)self;
+  if (rect == NULL) {
+    return;
+  }
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
+  rect->x = 0;
+  rect->y = 0;
+  rect->width = window != NULL && window->width > 0 ? window->width : 1;
+  rect->height = window != NULL && window->height > 0 ? window->height : 1;
+}
+
+static int CEF_CALLBACK proton_engine_osr_get_screen_info(
+    cef_render_handler_t *self,
+    cef_browser_t *browser,
+    cef_screen_info_t *screen_info) {
+  if (screen_info == NULL) {
+    return 0;
+  }
+  cef_rect_t rect = {0};
+  proton_engine_osr_get_view_rect(self, browser, &rect);
+  screen_info->device_scale_factor = 1.0f;
+  screen_info->depth = 32;
+  screen_info->depth_per_component = 8;
+  screen_info->is_monochrome = 0;
+  screen_info->rect = rect;
+  screen_info->available_rect = rect;
+  return 1;
+}
+
+static void CEF_CALLBACK proton_engine_osr_on_popup_show(
+    cef_render_handler_t *self,
+    cef_browser_t *browser,
+    int show) {
+  (void)self;
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
+  if (window != NULL) {
+    window->osr_popup_visible = show ? 1 : 0;
+  }
+}
+
+static void CEF_CALLBACK proton_engine_osr_on_popup_size(
+    cef_render_handler_t *self,
+    cef_browser_t *browser,
+    const cef_rect_t *rect) {
+  (void)self;
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
+  if (window != NULL && rect != NULL) {
+    window->osr_popup_rect = *rect;
+  }
+}
+
+static void CEF_CALLBACK proton_engine_osr_on_paint(
+    cef_render_handler_t *self,
+    cef_browser_t *browser,
+    cef_paint_element_type_t type,
+    size_t dirty_rects_count,
+    const cef_rect_t *dirty_rects,
+    const void *buffer,
+    int width,
+    int height) {
+  (void)self;
+  (void)dirty_rects_count;
+  (void)dirty_rects;
+  (void)buffer;
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
+  if (window == NULL || !window->headless || type != PET_VIEW || width <= 0 ||
+      height <= 0) {
+    return;
+  }
+  window->osr_paint_width = width;
+  window->osr_paint_height = height;
+  if (!window->osr_paint_seen) {
+    window->osr_paint_seen = 1;
+    proton_engine_debug_log("osr_paint browser=%d size=%dx%d",
+                            proton_engine_browser_id(browser), width, height);
+  }
 }
 
 static void proton_engine_window_mark_closed(proton_engine_window_t *window);
@@ -1157,6 +1469,7 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     }
     if (window->destroy_requested) {
       proton_engine_window_defer_free(window);
+      proton_engine_complete_managed_shutdown_if_ready();
     }
   }
 }
@@ -1231,6 +1544,17 @@ static cef_request_handler_t *CEF_CALLBACK
 proton_engine_client_get_request_handler(cef_client_t *self) {
   (void)self;
   return &g_request_handler.handler;
+}
+
+static cef_render_handler_t *CEF_CALLBACK
+proton_engine_client_get_render_handler(cef_client_t *self) {
+  proton_engine_client_t *client = (proton_engine_client_t *)self;
+  if (client == NULL || client->window == NULL || !client->window->headless) {
+    return NULL;
+  }
+  g_render_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_render_handler.handler);
+  return &g_render_handler.handler;
 }
 
 static cef_render_process_handler_t *CEF_CALLBACK
@@ -1339,6 +1663,15 @@ static void proton_engine_init_handlers(void) {
       sizeof(g_request_handler.handler), &g_request_handler.refs);
   g_request_handler.handler.on_render_process_terminated =
       proton_engine_on_render_process_terminated;
+
+  proton_engine_init_ref_counted(
+      (cef_base_ref_counted_t *)&g_render_handler.handler.base,
+      sizeof(g_render_handler.handler), &g_render_handler.refs);
+  g_render_handler.handler.get_view_rect = proton_engine_osr_get_view_rect;
+  g_render_handler.handler.get_screen_info = proton_engine_osr_get_screen_info;
+  g_render_handler.handler.on_popup_show = proton_engine_osr_on_popup_show;
+  g_render_handler.handler.on_popup_size = proton_engine_osr_on_popup_size;
+  g_render_handler.handler.on_paint = proton_engine_osr_on_paint;
 
   proton_engine_init_ref_counted(
       (cef_base_ref_counted_t *)&g_drag_handler.handler.base,
@@ -1876,6 +2209,7 @@ static proton_engine_client_t *proton_engine_client_create(
   client->client.get_drag_handler = proton_engine_client_get_drag_handler;
   client->client.get_request_handler =
       proton_engine_client_get_request_handler;
+  client->client.get_render_handler = proton_engine_client_get_render_handler;
   client->client.on_process_message_received =
       proton_engine_client_on_process_message_received;
   return client;
@@ -1892,8 +2226,11 @@ static int32_t proton_engine_parse_runtime_config(
   }
   memset(config, 0, sizeof(*config));
   bool use_bundled = false;
+  bool headless = false;
   proton_engine_parse_json_bool_field(config_json, "use_bundled",
                                       &use_bundled);
+  proton_engine_parse_json_bool_field(config_json, "headless", &headless);
+  config->headless = headless ? 1 : 0;
   if (!proton_engine_parse_json_string_field(config_json, "runtime_root",
                                              config->runtime_root,
                                              sizeof(config->runtime_root)) &&
@@ -2726,8 +3063,20 @@ static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
 }
 
 static void proton_engine_sync_browser_bounds(proton_engine_window_t *window) {
-  if (window == NULL || window->browser == NULL ||
-      window->browser_host == NULL) {
+  if (window == NULL || window->browser == NULL) {
+    return;
+  }
+  if (window->headless) {
+    cef_browser_host_t *host = window->browser->get_host(window->browser);
+    if (host != NULL) {
+      if (host->was_resized != NULL) {
+        host->was_resized(host);
+      }
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    return;
+  }
+  if (window->browser_host == NULL) {
     return;
   }
   GdkWindow *parent_gdk_window = gtk_widget_get_window(window->browser_host);
@@ -2890,6 +3239,56 @@ const char *proton_engine_name(void) {
   return "cef";
 }
 
+int32_t proton_engine_prepare_app(char *error, size_t error_len) {
+  if (!proton_app_runner_is_ui_thread()) {
+    proton_engine_set_message(error, error_len,
+                              "application setup must run on the UI thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_run_app_loop(char *error, size_t error_len) {
+  if (!proton_app_runner_is_ui_thread()) {
+    proton_engine_set_message(error, error_len,
+                              "application loop must run on the UI thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (!g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  cef_run_message_loop();
+  return PROTON_OK;
+}
+
+void proton_engine_quit_app_loop(void) {
+  if (!proton_app_runner_is_ui_thread() || !g_proton_cef_initialized) {
+    return;
+  }
+  cef_quit_message_loop();
+}
+
+int32_t proton_engine_finish_app(char *error, size_t error_len) {
+  if (!proton_app_runner_is_ui_thread()) {
+    proton_engine_set_message(error, error_len,
+                              "application cleanup must run on the UI thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (g_windows != NULL || g_managed_shutdown_runtime != NULL) {
+    proton_engine_set_message(
+        error, error_len,
+        "application cleanup requires every browser to finish closing");
+    return PROTON_ERR_ENGINE;
+  }
+  proton_engine_cef_shutdown();
+  proton_engine_free_closed_windows();
+  proton_engine_clear_wakeup_fd();
+  proton_engine_reset_scheduled_pump();
+  g_proton_cef_runtime_active = 0;
+  return PROTON_OK;
+}
+
 typedef struct {
   int argc;
   char **argv;
@@ -3021,6 +3420,26 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
                                           proton_engine_runtime_t **out_runtime,
                                           char *error,
                                           size_t error_len) {
+  proton_engine_debug_log(
+      "runtime_create_enter runner=%d ui=%d loop=%d",
+      proton_app_runner_is_active() ? 1 : 0,
+      proton_app_runner_is_ui_thread() ? 1 : 0,
+      proton_app_runner_engine_loop_is_running() ? 1 : 0);
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_RUNTIME_CREATE,
+        .text = config_json,
+        .output = out_runtime,
+        .error = error,
+        .error_len = error_len,
+    };
+    if (!proton_app_runner_engine_loop_is_running()) {
+      return proton_app_dispatch_engine_start(proton_engine_execute_ui_call,
+                                              &call);
+    }
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (out_runtime == NULL) {
     proton_engine_set_message(error, error_len, "out_runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -3038,9 +3457,6 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     return status;
   }
 
-  if (!proton_engine_ensure_gtk(error, error_len)) {
-    return PROTON_ERR_PLATFORM;
-  }
   proton_engine_init_handlers();
   proton_engine_check_cef_api_hash();
 
@@ -3054,6 +3470,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   runtime->wake_read_fd = -1;
   runtime->wake_write_fd = -1;
   runtime->owns_cef_runtime = 1;
+  runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
   if (pthread_mutex_init(&runtime->bridge_lock, NULL) == 0) {
     runtime->bridge_lock_initialized = 1;
@@ -3075,7 +3492,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.size = sizeof(settings);
   settings.no_sandbox = 1;
   settings.multi_threaded_message_loop = 0;
-  settings.external_message_pump = 1;
+  settings.external_message_pump = proton_app_runner_is_active() ? 0 : 1;
+  settings.windowless_rendering_enabled = config.headless;
   settings.log_severity = proton_engine_cef_log_severity_from_env();
   settings.remote_debugging_port = config.remote_debugging_port;
   proton_engine_set_string(&settings.browser_subprocess_path,
@@ -3088,12 +3506,14 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
   }
 
-  if (!cef_initialize(&args, &settings, &g_app.app, NULL)) {
-    cef_string_clear(&settings.browser_subprocess_path);
-    cef_string_clear(&settings.resources_dir_path);
-    cef_string_clear(&settings.locales_dir_path);
-    cef_string_clear(&settings.root_cache_path);
-    proton_engine_free_main_args(&main_args);
+  proton_engine_debug_log("cef_initialize_start");
+  int cef_initialized = cef_initialize(&args, &settings, &g_app.app, NULL);
+  cef_string_clear(&settings.browser_subprocess_path);
+  cef_string_clear(&settings.resources_dir_path);
+  cef_string_clear(&settings.locales_dir_path);
+  cef_string_clear(&settings.root_cache_path);
+  proton_engine_free_main_args(&main_args);
+  if (!cef_initialized) {
     proton_engine_close_wake_pipe(runtime);
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
@@ -3104,15 +3524,27 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
+  g_proton_cef_initialized = 1;
+  proton_engine_debug_log("cef_initialize_done");
+
+  /* CEF's Linux browser process must initialize before GTK starts its
+   * process-global state and helper threads. */
+  proton_engine_debug_log("gtk_initialize_start");
+  if (!proton_engine_ensure_gtk(error, error_len)) {
+    proton_engine_cef_shutdown();
+    proton_engine_close_wake_pipe(runtime);
+    if (runtime->bridge_lock_initialized) {
+      pthread_mutex_destroy(&runtime->bridge_lock);
+      runtime->bridge_lock_initialized = 0;
+    }
+    free(runtime);
+    g_active_runtime = NULL;
+    return PROTON_ERR_PLATFORM;
+  }
+  proton_engine_debug_log("gtk_initialize_done");
   proton_engine_debug_log("runtime_create remote_debugging_port=%d",
                           config.remote_debugging_port);
 
-  cef_string_clear(&settings.browser_subprocess_path);
-  cef_string_clear(&settings.resources_dir_path);
-  cef_string_clear(&settings.locales_dir_path);
-  cef_string_clear(&settings.root_cache_path);
-  proton_engine_free_main_args(&main_args);
-  g_proton_cef_initialized = 1;
   g_proton_cef_runtime_active = 1;
   if (!proton_engine_register_scheme_factory()) {
     proton_engine_cef_shutdown();
@@ -3179,12 +3611,147 @@ static int proton_engine_runtime_close_windows(
   return !proton_engine_runtime_has_windows(runtime);
 }
 
+static void proton_engine_complete_managed_shutdown_if_ready(void) {
+  if (g_managed_shutdown_runtime == NULL || g_windows != NULL) {
+    return;
+  }
+  int completed = 0;
+  pthread_mutex_lock(&g_managed_shutdown_lock);
+  if (!g_managed_shutdown_complete) {
+    g_managed_shutdown_complete = 1;
+    pthread_cond_signal(&g_managed_shutdown_condition);
+    completed = 1;
+  }
+  pthread_mutex_unlock(&g_managed_shutdown_lock);
+  if (completed) {
+    proton_engine_debug_log("managed_browser_close_complete");
+    proton_engine_quit_app_loop();
+  }
+}
+
+static int32_t proton_engine_begin_managed_runtime_destroy(
+    proton_engine_runtime_t *runtime,
+    char *error,
+    size_t error_len) {
+  if (!proton_app_runner_is_ui_thread()) {
+    proton_engine_set_message(error, error_len,
+                              "managed runtime destroy must begin on the UI "
+                              "thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (g_managed_shutdown_runtime != NULL) {
+    proton_engine_set_message(error, error_len,
+                              "managed runtime destroy is already active");
+    return PROTON_ERR_ALREADY_INITIALIZED;
+  }
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    if (!window->destroy_requested) {
+      proton_engine_set_message(
+          error, error_len,
+          "runtime destroy requires all windows to begin closing first");
+      return PROTON_ERR_ENGINE;
+    }
+  }
+  proton_engine_runtime_clear_bridge_queue(runtime);
+  proton_engine_bridge_pending_clear_all();
+  pthread_mutex_lock(&g_managed_shutdown_lock);
+  g_managed_shutdown_complete = 0;
+  pthread_mutex_unlock(&g_managed_shutdown_lock);
+  g_managed_shutdown_runtime = runtime;
+  proton_engine_debug_log("managed_runtime_destroy_begin");
+  proton_engine_complete_managed_shutdown_if_ready();
+  return PROTON_OK;
+}
+
+static int32_t proton_engine_finish_managed_runtime_destroy(
+    proton_engine_runtime_t *runtime,
+    char *error,
+    size_t error_len) {
+  if (!proton_app_runner_is_ui_thread()) {
+    proton_engine_set_message(error, error_len,
+                              "managed runtime destroy must finish on the UI "
+                              "thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (g_managed_shutdown_runtime != runtime || g_windows != NULL ||
+      !g_managed_shutdown_complete) {
+    proton_engine_set_message(
+        error, error_len,
+        "managed runtime destroy finished before browser close completed");
+    return PROTON_ERR_ENGINE;
+  }
+  g_managed_shutdown_runtime = NULL;
+  runtime->owns_cef_runtime = 0;
+  proton_engine_close_wake_pipe(runtime);
+  if (runtime->bridge_lock_initialized) {
+    pthread_mutex_destroy(&runtime->bridge_lock);
+    runtime->bridge_lock_initialized = 0;
+  }
+  proton_engine_clear_wakeup_fd();
+  if (g_active_runtime == runtime) {
+    g_active_runtime = NULL;
+  }
+  g_proton_cef_runtime_active = 0;
+  proton_engine_debug_log("managed_runtime_destroy_complete");
+  free(runtime);
+  return PROTON_OK;
+}
+
+typedef struct {
+  proton_engine_runtime_t *runtime;
+  char *error;
+  size_t error_len;
+} proton_engine_runtime_destroy_call_t;
+
+static int32_t proton_engine_begin_managed_runtime_destroy_on_ui(
+    void *raw_call) {
+  proton_engine_runtime_destroy_call_t *call =
+      (proton_engine_runtime_destroy_call_t *)raw_call;
+  return proton_engine_begin_managed_runtime_destroy(
+      call->runtime, call->error, call->error_len);
+}
+
+static int32_t proton_engine_finish_managed_runtime_destroy_on_ui(
+    void *raw_call) {
+  proton_engine_runtime_destroy_call_t *call =
+      (proton_engine_runtime_destroy_call_t *)raw_call;
+  return proton_engine_finish_managed_runtime_destroy(
+      call->runtime, call->error, call->error_len);
+}
+
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       char *error,
                                       size_t error_len) {
   if (runtime == NULL) {
     proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (proton_app_runner_is_active()) {
+    if (proton_app_runner_is_ui_thread()) {
+      proton_engine_set_message(
+          error, error_len,
+          "managed runtime destroy cannot wait on the UI thread");
+      return PROTON_ERR_WRONG_THREAD;
+    }
+    proton_engine_runtime_destroy_call_t call = {
+        .runtime = runtime,
+        .error = error,
+        .error_len = error_len,
+    };
+    int32_t status = proton_app_dispatch_sync_int(
+        proton_engine_begin_managed_runtime_destroy_on_ui, &call);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    pthread_mutex_lock(&g_managed_shutdown_lock);
+    while (!g_managed_shutdown_complete) {
+      pthread_cond_wait(&g_managed_shutdown_condition,
+                        &g_managed_shutdown_lock);
+    }
+    pthread_mutex_unlock(&g_managed_shutdown_lock);
+    return proton_app_dispatch_sync_int(
+        proton_engine_finish_managed_runtime_destroy_on_ui, &call);
   }
   proton_engine_debug_log("runtime_destroy_start owns_cef=%d",
                           runtime->owns_cef_runtime);
@@ -3200,6 +3767,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();
     proton_engine_close_wake_pipe(runtime);
+    proton_engine_clear_wakeup_fd();
     runtime->owns_cef_runtime = 0;
   }
   if (runtime->bridge_lock_initialized) {
@@ -3218,6 +3786,12 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
 int32_t proton_engine_runtime_run(proton_engine_runtime_t *runtime,
                                   char *error,
                                   size_t error_len) {
+  if (proton_app_runner_is_active()) {
+    proton_engine_set_message(
+        error, error_len,
+        "runtime message loop is owned by the application runner");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   if (runtime == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -3229,6 +3803,12 @@ int32_t proton_engine_runtime_run(proton_engine_runtime_t *runtime,
 int32_t proton_engine_runtime_quit(proton_engine_runtime_t *runtime,
                                    char *error,
                                    size_t error_len) {
+  if (proton_app_runner_is_active()) {
+    proton_engine_set_message(
+        error, error_len,
+        "runtime message loop is owned by the application runner");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   if (runtime == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -3241,6 +3821,12 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
     size_t error_len) {
+  if (proton_app_runner_is_active()) {
+    proton_engine_set_message(
+        error, error_len,
+        "runtime message loop is owned by the application runner");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   if (runtime == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -3280,6 +3866,12 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    size_t error_len) {
   if (out_ready_mask != NULL) {
     *out_ready_mask = PROTON_WAIT_NONE;
+  }
+  if (proton_app_runner_is_active()) {
+    proton_engine_set_message(
+        error, error_len,
+        "runtime_wait is unavailable under the application runner");
+    return PROTON_ERR_UNSUPPORTED;
   }
   if (runtime == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
@@ -3347,20 +3939,59 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
-// TODO: Route the existing Linux engine wake pipe through the public async
-// event-source contract.
 int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
                                             int32_t wakeup_fd,
                                             char *error,
                                             size_t error_len) {
-  (void)runtime;
-  (void)wakeup_fd;
-  proton_engine_set_message(error, error_len,
-                            "runtime wakeup fd is not supported on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_RUNTIME_SET_WAKEUP_FD,
+        .runtime = runtime,
+        .first_int = wakeup_fd,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (runtime == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+
+  int owned_fd = -1;
+  if (wakeup_fd >= 0) {
+    owned_fd = dup(wakeup_fd);
+    if (owned_fd < 0) {
+      proton_engine_set_message(error, error_len,
+                                "failed to duplicate runtime wakeup fd");
+      return PROTON_ERR_PLATFORM;
+    }
+    int status_flags = fcntl(owned_fd, F_GETFL, 0);
+    int descriptor_flags = fcntl(owned_fd, F_GETFD, 0);
+    if (status_flags < 0 || descriptor_flags < 0 ||
+        fcntl(owned_fd, F_SETFL, status_flags | O_NONBLOCK) < 0 ||
+        fcntl(owned_fd, F_SETFD, descriptor_flags | FD_CLOEXEC) < 0) {
+      close(owned_fd);
+      proton_engine_set_message(error, error_len,
+                                "failed to configure runtime wakeup fd");
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  int previous_fd = g_wakeup_write_fd;
+  g_wakeup_write_fd = owned_fd;
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+  if (previous_fd >= 0) {
+    close(previous_fd);
+  }
+  if (owned_fd >= 0) {
+    proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
+  }
+  return PROTON_OK;
 }
 
-// TODO: Provide a Linux platform-owned application runner and wakeup source.
 int32_t proton_engine_runtime_prepare_wakeup_source(
     proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
@@ -3370,21 +4001,22 @@ int32_t proton_engine_runtime_prepare_wakeup_source(
   if (out_required_len != NULL) {
     *out_required_len = 0;
   }
-  proton_engine_set_message(error, error_len,
-                            "runtime wakeup sources are not supported on Linux");
+  proton_engine_set_message(
+      error, error_len,
+      "Linux uses proton_runtime_set_wakeup_fd for its wakeup source");
   return PROTON_ERR_UNSUPPORTED;
 }
 
-// TODO: Activate the Linux wakeup source once its managed runner exists.
 int32_t proton_engine_runtime_activate_wakeup_source(
     proton_engine_runtime_t *runtime, char *error, size_t error_len) {
   (void)runtime;
-  proton_engine_set_message(error, error_len,
-                            "runtime wakeup sources are not supported on Linux");
+  proton_engine_set_message(
+      error, error_len,
+      "Linux uses proton_runtime_set_wakeup_fd for its wakeup source");
   return PROTON_ERR_UNSUPPORTED;
 }
 
-// TODO: Expose scheduled pump deadlines with the Linux async event source.
+// TODO: Expose scheduled pump deadlines for external-message-pump hosts.
 int32_t proton_engine_runtime_next_wakeup_delay_ms(
     proton_engine_runtime_t *runtime,
     int64_t *out_delay_ms,
@@ -3393,6 +4025,12 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
   (void)runtime;
   if (out_delay_ms != NULL) {
     *out_delay_ms = -1;
+  }
+  if (proton_app_runner_is_active()) {
+    proton_engine_set_message(
+        error, error_len,
+        "runtime message loop is owned by the application runner");
+    return PROTON_ERR_UNSUPPORTED;
   }
   proton_engine_set_message(error, error_len,
                             "runtime wakeup delay is not supported on Linux");
@@ -3460,6 +4098,17 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     const char *response_json,
     char *error,
     size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_RUNTIME_RESPOND_BRIDGE,
+        .runtime = runtime,
+        .text = response_json,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   (void)runtime;
   if (response_json == NULL) {
     proton_engine_set_message(error, error_len, "response_json is required");
@@ -3538,29 +4187,40 @@ static int32_t proton_engine_window_create_browser(
   memset(&browser_settings, 0, sizeof(browser_settings));
   window_info.size = sizeof(window_info);
   browser_settings.size = sizeof(browser_settings);
-  if (window == NULL || window->browser_host == NULL ||
-      gtk_widget_get_window(window->browser_host) == NULL) {
+  if (window == NULL || window->client == NULL ||
+      (!window->headless &&
+       (window->browser_host == NULL ||
+        gtk_widget_get_window(window->browser_host) == NULL))) {
     proton_engine_set_message(error, error_len,
                               "window is not ready for browser creation");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  GdkWindow *top_gdk_window = gtk_widget_get_window(window->browser_host);
-  window_info.parent_window =
-      (cef_window_handle_t)GDK_WINDOW_XID(top_gdk_window);
-  XWindowAttributes parent_attributes;
-  memset(&parent_attributes, 0, sizeof(parent_attributes));
-  Display *display = GDK_WINDOW_XDISPLAY(top_gdk_window);
-  if (display != NULL) {
-    (void)XGetWindowAttributes(
-        display, GDK_WINDOW_XID(gtk_widget_get_window(window->browser_host)),
-        &parent_attributes);
+  int browser_width = window->width;
+  int browser_height = window->height;
+  if (window->headless) {
+    window_info.windowless_rendering_enabled = 1;
+    window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+  } else {
+    GdkWindow *top_gdk_window = gtk_widget_get_window(window->browser_host);
+    window_info.parent_window =
+        (cef_window_handle_t)GDK_WINDOW_XID(top_gdk_window);
+    XWindowAttributes parent_attributes;
+    memset(&parent_attributes, 0, sizeof(parent_attributes));
+    Display *display = GDK_WINDOW_XDISPLAY(top_gdk_window);
+    if (display != NULL) {
+      (void)XGetWindowAttributes(
+          display, GDK_WINDOW_XID(gtk_widget_get_window(window->browser_host)),
+          &parent_attributes);
+    }
+    browser_width =
+        parent_attributes.width > 0 ? parent_attributes.width : window->width;
+    browser_height = parent_attributes.height > 0 ? parent_attributes.height
+                                                  : window->height;
   }
   window_info.bounds.x = 0;
   window_info.bounds.y = 0;
-  window_info.bounds.width =
-      parent_attributes.width > 0 ? parent_attributes.width : window->width;
-  window_info.bounds.height =
-      parent_attributes.height > 0 ? parent_attributes.height : window->height;
+  window_info.bounds.width = browser_width;
+  window_info.bounds.height = browser_height;
   proton_engine_set_string(&window_info.window_name, "Proton");
   proton_engine_set_string(&url,
                            initial_url != NULL && initial_url[0] != '\0'
@@ -3602,6 +4262,18 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                          proton_engine_window_t **out_window,
                                          char *error,
                                          size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_CREATE,
+        .runtime = runtime,
+        .text = config_json,
+        .output = out_window,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (out_window == NULL) {
     proton_engine_set_message(error, error_len, "out_window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -3617,6 +4289,12 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   if (status != PROTON_OK) {
     return status;
   }
+  if (runtime->headless && config.titlebar_overlay) {
+    proton_engine_set_message(
+        error, error_len,
+        "titlebar overlay is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
 
   proton_engine_window_t *window =
       (proton_engine_window_t *)calloc(1, sizeof(*window));
@@ -3628,6 +4306,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   window->runtime = runtime;
   window->width = config.width;
   window->height = config.height;
+  window->headless = runtime->headless;
   window->titlebar_overlay = config.titlebar_overlay;
   window->bridge_config_json =
       proton_engine_json_copy_raw_field(config_json, "bridge");
@@ -3644,88 +4323,92 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
     return PROTON_ERR_ENGINE;
   }
 
-  window->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  if (window->window == NULL) {
-    free(window->client);
-    free(window->bridge_config_json);
-    free(window);
-    proton_engine_set_message(error, error_len, "window creation failed");
-    return PROTON_ERR_PLATFORM;
-  }
-  proton_engine_use_default_x11_visual(window->window);
-  gtk_window_set_title(GTK_WINDOW(window->window),
-                       config.title[0] != '\0' ? config.title : "Proton");
-  gtk_window_set_default_size(GTK_WINDOW(window->window), config.width,
-                              config.height);
-  if (window->titlebar_overlay) {
-    gtk_window_set_decorated(GTK_WINDOW(window->window), FALSE);
-    gtk_window_set_resizable(GTK_WINDOW(window->window), TRUE);
-    window->overlay = gtk_overlay_new();
-    if (window->overlay == NULL) {
-      gtk_widget_destroy(window->window);
+  if (!window->headless) {
+    window->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    if (window->window == NULL) {
       free(window->client);
+      free(window->bridge_config_json);
       free(window);
-      proton_engine_set_message(error, error_len,
-                                "overlay container creation failed");
+      proton_engine_set_message(error, error_len, "window creation failed");
       return PROTON_ERR_PLATFORM;
     }
-  }
-  window->browser_host = gtk_drawing_area_new();
-  if (window->browser_host == NULL) {
-    gtk_widget_destroy(window->window);
-    free(window->client);
-    free(window->bridge_config_json);
-    free(window);
-    proton_engine_set_message(error, error_len,
-                              "browser host widget creation failed");
-    return PROTON_ERR_PLATFORM;
-  }
-  proton_engine_use_default_x11_visual(window->browser_host);
-  if (window->titlebar_overlay) {
-    gtk_container_add(GTK_CONTAINER(window->overlay), window->browser_host);
-    if (!proton_engine_overlay_create_controls(window)) {
+    proton_engine_use_default_x11_visual(window->window);
+    gtk_window_set_title(GTK_WINDOW(window->window),
+                         config.title[0] != '\0' ? config.title : "Proton");
+    gtk_window_set_default_size(GTK_WINDOW(window->window), config.width,
+                                config.height);
+    if (window->titlebar_overlay) {
+      gtk_window_set_decorated(GTK_WINDOW(window->window), FALSE);
+      gtk_window_set_resizable(GTK_WINDOW(window->window), TRUE);
+      window->overlay = gtk_overlay_new();
+      if (window->overlay == NULL) {
+        gtk_widget_destroy(window->window);
+        free(window->client);
+        free(window->bridge_config_json);
+        free(window);
+        proton_engine_set_message(error, error_len,
+                                  "overlay container creation failed");
+        return PROTON_ERR_PLATFORM;
+      }
+    }
+    window->browser_host = gtk_drawing_area_new();
+    if (window->browser_host == NULL) {
       gtk_widget_destroy(window->window);
       free(window->client);
+      free(window->bridge_config_json);
       free(window);
       proton_engine_set_message(error, error_len,
-                                "overlay window controls creation failed");
+                                "browser host widget creation failed");
       return PROTON_ERR_PLATFORM;
     }
-    gtk_container_add(GTK_CONTAINER(window->window), window->overlay);
-  } else {
-    gtk_container_add(GTK_CONTAINER(window->window), window->browser_host);
-  }
-  g_signal_connect(window->window, "delete-event",
-                   G_CALLBACK(proton_engine_on_window_delete), window);
-  g_signal_connect(window->window, "destroy",
-                   G_CALLBACK(proton_engine_on_window_destroy), window);
-  g_signal_connect(window->window, "configure-event",
-                   G_CALLBACK(proton_engine_window_configure), window);
-  g_signal_connect(window->browser_host, "size-allocate",
-                   G_CALLBACK(proton_engine_browser_host_size_allocate),
-                   window);
-  if (window->titlebar_overlay) {
-    g_signal_connect(window->window, "window-state-event",
-                     G_CALLBACK(proton_engine_overlay_window_state), window);
-  }
-  gtk_widget_realize(window->window);
-  gtk_widget_realize(window->browser_host);
-  gtk_widget_show_all(window->window);
-  if (window->titlebar_overlay) {
-    proton_engine_overlay_update_maximize_button(window);
-    proton_engine_overlay_update_input_shape(window);
-    const int resize_handle = proton_engine_overlay_resize_handle(window);
-    proton_engine_debug_log(
-        "overlay_ready controls=%dx%d resize_handle=%d content=%dx%d",
-        window->overlay_controls != NULL
-            ? gtk_widget_get_allocated_width(window->overlay_controls)
-            : 0,
-        window->overlay_controls != NULL
-            ? gtk_widget_get_allocated_height(window->overlay_controls)
-            : 0,
-        resize_handle,
-        gtk_widget_get_allocated_width(window->browser_host),
-        gtk_widget_get_allocated_height(window->browser_host));
+    proton_engine_use_default_x11_visual(window->browser_host);
+    if (window->titlebar_overlay) {
+      gtk_container_add(GTK_CONTAINER(window->overlay), window->browser_host);
+      if (!proton_engine_overlay_create_controls(window)) {
+        gtk_widget_destroy(window->window);
+        free(window->client);
+        free(window->bridge_config_json);
+        free(window);
+        proton_engine_set_message(error, error_len,
+                                  "overlay window controls creation failed");
+        return PROTON_ERR_PLATFORM;
+      }
+      gtk_container_add(GTK_CONTAINER(window->window), window->overlay);
+    } else {
+      gtk_container_add(GTK_CONTAINER(window->window), window->browser_host);
+    }
+    g_signal_connect(window->window, "delete-event",
+                     G_CALLBACK(proton_engine_on_window_delete), window);
+    g_signal_connect(window->window, "destroy",
+                     G_CALLBACK(proton_engine_on_window_destroy), window);
+    g_signal_connect(window->window, "configure-event",
+                     G_CALLBACK(proton_engine_window_configure), window);
+    g_signal_connect(window->browser_host, "size-allocate",
+                     G_CALLBACK(proton_engine_browser_host_size_allocate),
+                     window);
+    if (window->titlebar_overlay) {
+      g_signal_connect(window->window, "window-state-event",
+                       G_CALLBACK(proton_engine_overlay_window_state), window);
+    }
+    gtk_widget_realize(window->window);
+    gtk_widget_realize(window->browser_host);
+    gtk_widget_show_all(window->window);
+    if (window->titlebar_overlay) {
+      proton_engine_overlay_update_maximize_button(window);
+      proton_engine_overlay_update_input_shape(window);
+      const int resize_handle = proton_engine_overlay_resize_handle(window);
+      proton_engine_debug_log(
+          "overlay_ready controls=%dx%d resize_handle=%d content=%dx%d",
+          window->overlay_controls != NULL
+              ? gtk_widget_get_allocated_width(window->overlay_controls)
+              : 0,
+          window->overlay_controls != NULL
+              ? gtk_widget_get_allocated_height(window->overlay_controls)
+              : 0,
+          resize_handle,
+          gtk_widget_get_allocated_width(window->browser_host),
+          gtk_widget_get_allocated_height(window->browser_host));
+    }
   }
   proton_engine_debug_log("window_create title=%s size=%dx%d initial_url=%s",
                           config.title, config.width, config.height,
@@ -3734,7 +4417,9 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   status = proton_engine_window_create_browser(window, config.initial_url, error,
                                                error_len);
   if (status != PROTON_OK) {
-    gtk_widget_destroy(window->window);
+    if (window->window != NULL) {
+      gtk_widget_destroy(window->window);
+    }
     free(window->client);
     free(window->bridge_config_json);
     free(window);
@@ -3747,8 +4432,16 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
                                      char *error,
                                      size_t error_len) {
-  (void)error;
-  (void)error_len;
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_DESTROY,
+        .window = window,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -3766,15 +4459,18 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     return PROTON_OK;
   }
   if (window->browser != NULL) {
+    cef_browser_host_t *host = window->browser->get_host(window->browser);
+    if (host == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser host is not available for close");
+      return PROTON_ERR_ENGINE;
+    }
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
     window->destroy_requested = 1;
     window->closing = 1;
-    cef_browser_host_t *host = window->browser->get_host(window->browser);
-    if (host != NULL) {
-      host->close_browser(host, 1);
-      host->base.release((cef_base_ref_counted_t *)host);
-    }
+    host->close_browser(host, 1);
+    host->base.release((cef_base_ref_counted_t *)host);
     return PROTON_OK;
   }
   proton_engine_window_list_remove(window);
@@ -3792,58 +4488,137 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
 int32_t proton_engine_window_show(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {
-  if (window == NULL || window->window == NULL) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_SHOW,
+        .window = window,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  gtk_widget_show_all(window->window);
-  gtk_window_present(GTK_WINDOW(window->window));
+  if (window->headless) {
+    window->headless_hidden = 0;
+    if (window->browser != NULL) {
+      cef_browser_host_t *host = window->browser->get_host(window->browser);
+      if (host != NULL) {
+        host->was_hidden(host, 0);
+        host->base.release((cef_base_ref_counted_t *)host);
+      }
+    }
+  } else {
+    gtk_widget_show_all(window->window);
+    gtk_window_present(GTK_WINDOW(window->window));
+  }
   return PROTON_OK;
 }
 
 int32_t proton_engine_window_hide(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {
-  if (window == NULL || window->window == NULL) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_HIDE,
+        .window = window,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  gtk_widget_hide(window->window);
+  if (window->headless) {
+    window->headless_hidden = 1;
+    if (window->browser != NULL) {
+      cef_browser_host_t *host = window->browser->get_host(window->browser);
+      if (host != NULL) {
+        host->was_hidden(host, 1);
+        host->base.release((cef_base_ref_counted_t *)host);
+      }
+    }
+  } else {
+    gtk_widget_hide(window->window);
+  }
   return PROTON_OK;
 }
 
 int32_t proton_engine_window_close(proton_engine_window_t *window,
                                    char *error,
                                    size_t error_len) {
-  if (window == NULL || window->window == NULL) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_CLOSE,
+        .window = window,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (window->browser != NULL) {
     cef_browser_host_t *host = window->browser->get_host(window->browser);
-    if (host != NULL) {
-      host->close_browser(host, 0);
-      host->base.release((cef_base_ref_counted_t *)host);
+    if (host == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser host is not available for close");
+      return PROTON_ERR_ENGINE;
     }
+    host->close_browser(host, 0);
+    host->base.release((cef_base_ref_counted_t *)host);
   } else {
-    gtk_widget_destroy(window->window);
-    window->window = NULL;
+    if (window->headless) {
+      proton_engine_window_mark_closed(window);
+    } else {
+      gtk_widget_destroy(window->window);
+      window->window = NULL;
+    }
   }
   return PROTON_OK;
 }
 
 int32_t proton_engine_window_is_closed(proton_engine_window_t *window) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_IS_CLOSED,
+        .window = window,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   return window == NULL || window->closed;
 }
 
 int32_t proton_engine_window_focus(proton_engine_window_t *window,
                                    char *error,
                                    size_t error_len) {
-  if (window == NULL || window->window == NULL) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_FOCUS,
+        .window = window,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  gtk_window_present(GTK_WINDOW(window->window));
+  if (!window->headless) {
+    gtk_window_present(GTK_WINDOW(window->window));
+  }
   if (window->browser != NULL) {
     cef_browser_host_t *host = window->browser->get_host(window->browser);
     if (host != NULL) {
@@ -3858,9 +4633,25 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
                                        const char *title,
                                        char *error,
                                        size_t error_len) {
-  if (window == NULL || window->window == NULL) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_SET_TITLE,
+        .window = window,
+        .text = title,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window title is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
   }
   gtk_window_set_title(GTK_WINDOW(window->window), title != NULL ? title : "");
   return PROTON_OK;
@@ -3871,7 +4662,19 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t height,
                                       char *error,
                                       size_t error_len) {
-  if (window == NULL || window->window == NULL) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_SET_SIZE,
+        .window = window,
+        .first_int = width,
+        .second_int = height,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
@@ -3880,15 +4683,12 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                               "width and height must be positive");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  gtk_window_resize(GTK_WINDOW(window->window), width, height);
   window->width = width;
   window->height = height;
-  if (window->browser != NULL) {
-    cef_browser_host_t *host = window->browser->get_host(window->browser);
-    if (host != NULL) {
-      host->was_resized(host);
-      host->base.release((cef_base_ref_counted_t *)host);
-    }
+  if (window->headless) {
+    proton_engine_sync_browser_bounds(window);
+  } else {
+    gtk_window_resize(GTK_WINDOW(window->window), width, height);
   }
   return PROTON_OK;
 }
@@ -3897,6 +4697,17 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
                                       const char *url,
                                       char *error,
                                       size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_LOAD_URL,
+        .window = window,
+        .text = url,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL || window->browser == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -3919,6 +4730,18 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                        const char *base_url,
                                        char *error,
                                        size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_LOAD_HTML,
+        .window = window,
+        .text = html,
+        .second_text = base_url,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -3955,6 +4778,17 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_EVAL,
+        .window = window,
+        .text = script,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL || window->browser == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -3980,6 +4814,17 @@ int32_t proton_engine_window_emit_bridge_event_json(
     const char *event_json,
     char *error,
     size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_EMIT_BRIDGE_EVENT,
+        .window = window,
+        .text = event_json,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL || window->browser == NULL ||
       window->bridge_config_json == NULL) {
     proton_engine_set_message(error, error_len, "bridge is not initialized");
@@ -3993,14 +4838,45 @@ int32_t proton_engine_window_emit_bridge_event_json(
   return PROTON_OK;
 }
 
+typedef struct {
+  proton_engine_window_t *window;
+  proton_window_id_t public_window;
+} proton_engine_bind_public_id_call_t;
+
+static void proton_engine_window_bind_public_id_on_ui(void *raw_call) {
+  proton_engine_bind_public_id_call_t *call =
+      (proton_engine_bind_public_id_call_t *)raw_call;
+  proton_engine_window_bind_public_id(call->window, call->public_window);
+}
+
 void proton_engine_window_bind_public_id(proton_engine_window_t *window,
                                          proton_window_id_t public_window) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_bind_public_id_call_t call = {
+        .window = window,
+        .public_window = public_window,
+    };
+    proton_app_dispatch_sync_void(proton_engine_window_bind_public_id_on_ui,
+                                  &call);
+    return;
+  }
   if (window != NULL) {
     window->public_window_id = public_window;
   }
 }
 
+static uint64_t proton_engine_window_bridge_revision_on_ui(void *raw_window) {
+  return proton_engine_window_bridge_revision(
+      (proton_engine_window_t *)raw_window);
+}
+
 uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    return proton_app_dispatch_sync_u64(
+        proton_engine_window_bridge_revision_on_ui, window);
+  }
   return window != NULL
              ? proton_engine_bridge_lifecycle_revision(&window->bridge_lifecycle)
              : 0;
@@ -4009,6 +4885,19 @@ uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
 int32_t proton_engine_window_bridge_state_json(
     proton_engine_window_t *window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_BRIDGE_STATE,
+        .window = window,
+        .output = buffer,
+        .first_int = buffer_len,
+        .out_int = out_required_len,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_HANDLE;
@@ -4020,6 +4909,19 @@ int32_t proton_engine_window_bridge_state_json(
 int32_t proton_engine_window_take_bridge_failure_json(
     proton_engine_window_t *window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_TAKE_BRIDGE_FAILURE,
+        .window = window,
+        .output = buffer,
+        .first_int = buffer_len,
+        .out_int = out_required_len,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_HANDLE;

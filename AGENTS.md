@@ -69,14 +69,25 @@ developer must perform them.
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C cli test --target native --diagnostic-limit 80`
+  `moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/new justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
 - `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
-- `moon -C extensions test --target native`
+- `moon -C extensions test -p justjavac/proton_ext justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard justjavac/proton_ext/dialog justjavac/proton_ext/fs justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone justjavac/proton_ext/notification justjavac/proton_ext/path justjavac/proton_ext/shell justjavac/proton_ext/tray --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`
+
+On Linux, an engine-linked process that is launched directly must also put the
+active runtime `bin` and `lib` directories on `LD_LIBRARY_PATH` and preload the
+basename `libcef.so`. Native CTest, `proton_cli dev`, and the self-hosted E2E
+runner apply this automatically. For direct MoonBit native tests, use:
+
+```sh
+LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
+  moon -C proton test native --target native --diagnostic-limit 80
+```
 
 Use the smallest relevant validation set while iterating, then run broader
 native checks before handing off larger refactors.
@@ -106,7 +117,12 @@ native checks before handing off larger refactors.
   ```sh
   moon fmt --check
   node scripts/verify_generated.mjs
-  moon -C cli test --target native --diagnostic-limit 80
+  moon -C cli test -p justjavac/proton_cli \
+    justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
+    justjavac/proton_cli/cef justjavac/proton_cli/codegen \
+    justjavac/proton_cli/dev justjavac/proton_cli/doctor \
+    justjavac/proton_cli/new justjavac/proton_cli/package \
+    --target native --no-parallelize --diagnostic-limit 80
   moon -C proton check --target native --diagnostic-limit 80
   ```
 
@@ -253,7 +269,8 @@ native checks before handing off larger refactors.
   `darwin-arm64`, `darwin-x64`, and future Linux ids.
 - Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
   native tests for the FFI binding. Engine or bridge changes should also run the
-  relevant examples and `scripts/e2e_bridge_smoke.mjs` scenarios.
+  relevant examples and the MoonBit `e2e/` self-hosted scenarios (`moon -C e2e
+  test -p justjavac/proton/e2e/test --target native --no-parallelize`).
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

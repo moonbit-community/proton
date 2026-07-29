@@ -16,29 +16,35 @@ Engine builds on macOS, Windows, and Linux report the `titlebar_overlay`
 feature. ABI-only builds do not report it, allowing typed window configs to
 omit the optional field when the loaded DLL cannot implement the behavior.
 
+Engine builds also report `headless_osr`. Runtime config JSON may set
+`"headless": true` to create all browsers in that runtime through CEF
+windowless rendering (OSR) with Alloy runtime style. This mode creates no
+native top-level window and is independent of `remote_debugging_port`; CDP may
+be enabled separately for automation. Window visibility, focus, and resize map
+to the corresponding CEF browser-host calls. Native titles, titlebar overlay,
+menus, and dialogs are unsupported in headless mode. The current Linux engine
+still initializes GTK/X11, so display-less Linux jobs should run under Xvfb.
+
 `proton_runtime_wait` is a low-level primitive for hosts that own CEF's external
 message pump. It blocks until selected runtime work is ready, after which the
 caller still drains `proton_runtime_poll_*` until the queues are empty. Engine
 builds on Windows, macOS, and Linux expose the `runtime_wait` feature. ABI-only
 builds return `PROTON_ERR_UNSUPPORTED`.
 
-On macOS and Windows, `proton_app_run` owns the calling UI thread and runs the
-platform UI loop plus CEF's native message loop there. It creates one
+On macOS, Windows, and Linux, `proton_app_run` owns the calling UI thread and
+runs the platform UI loop plus CEF's native message loop there. It creates one
 application thread for the MoonBit async scheduler and joins that thread only
 after the application entry has returned. Public runtime and window handles
 are created and owned by the application thread; native engine operations
 marshal to the UI thread. Native callbacks never enter MoonBit. They enqueue
 work and signal the facade's wakeup source so the MoonBit scheduler can resume
-the waiting task. macOS uses a non-blocking pipe descriptor supplied by
-MoonBit. Windows exposes a platform-owned named pipe that MoonBit opens before
-activating it. Under this managed runner, `proton_runtime_run`,
+the waiting task. macOS and Linux use a non-blocking pipe descriptor supplied
+by MoonBit. Windows exposes a platform-owned named pipe that MoonBit opens
+before activating it. Linux dispatches UI work through the GLib main context
+owned by the runner. Under this managed runner, `proton_runtime_run`,
 `proton_runtime_quit`, `proton_runtime_do_message_loop_work`,
 `proton_runtime_wait`, and `proton_runtime_next_wakeup_delay_ms` return
 `PROTON_ERR_UNSUPPORTED`.
-
-Linux currently executes the `proton_app_run` callback inline, preserving its
-existing single-thread architecture until it receives a platform-owned UI
-runner.
 
 It also exposes `proton_runtime_probe_json`, which validates the configured
 runtime layout before initialization. The probe checks `runtime_root`,
@@ -138,6 +144,23 @@ switches the build to `src/engine/cef_mac/proton_engine_cef_mac.m`.
 On Linux, the engine build expects `Release/libcef.so` under the runtime root,
 plus `Resources/icudtl.dat` and `Resources/locales/`. This switches the build
 to `src/engine/cef_linux/proton_engine_cef_linux.c`.
+
+Linux CEF exports a `close(2)` wrapper that resolves libc with
+`dlsym(RTLD_NEXT, "close")`. Because applications link only `libproton.so`,
+`libcef.so` is otherwise an indirect dependency loaded after libc and CEF
+aborts with `close symbol missing`. Linux launchers must put the runtime `bin`
+directory on `LD_LIBRARY_PATH` and prepend the basename `libcef.so` to
+`LD_PRELOAD`. `proton_cli dev`, the self-hosted E2E runner, and native CTest do
+this automatically. Using the basename keeps runtime paths containing spaces
+valid.
+
+The managed Linux application runner creates the MoonBit application worker
+before the worker requests runtime initialization on the UI thread. Proton
+therefore adds `--no-zygote` only to that browser process; Chromium otherwise
+forks its zygote after a thread already exists. The existing `no_sandbox`
+setting is retained, as Chromium requires `--no-zygote` and `--no-sandbox`
+together. External message-pump hosts and CEF helper processes keep their
+normal command lines.
 
 Linux `titlebar_style: "overlay"` uses GTK client chrome on the existing X11
 engine path. The CEF child fills the complete client area, while GTK-native
@@ -307,7 +330,10 @@ moon -C proton info --target native
 ```bash
 ctest --test-dir native/build-engine --output-on-failure
 node native/scripts/verify_link_config.mjs native/dist
-PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton test native --target native --diagnostic-limit 80
+LD_LIBRARY_PATH="$PWD/native/dist/bin:$PWD/native/dist/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
+PROTON_NATIVE_DIST=$PWD/native/dist \
+  moon -C proton test native --target native --diagnostic-limit 80
 PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton check --target native --diagnostic-limit 80
 PROTON_NATIVE_DIST=$PWD/native/dist moon -C proton info --target native
 ```

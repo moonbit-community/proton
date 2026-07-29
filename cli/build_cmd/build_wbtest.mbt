@@ -59,6 +59,7 @@ test "parse build args defaults and moon args" {
   let raw = parse_build_args(["--", "--warn-list", "+a"])
   @debug.assert_eq(raw.app_package, "app")
   @debug.assert_eq(raw.config_path, None)
+  @debug.assert_eq(raw.moon_target_dir, None)
   @debug.assert_eq(raw.run_frontend_build, true)
   @debug.assert_eq(raw.moon_args, ["--warn-list", "+a"])
 }
@@ -86,6 +87,14 @@ test "parse build args package and config" {
 }
 
 ///|
+test "parse build args accepts an isolated Moon target directory" {
+  let raw = parse_build_args([
+    "--package", "app", "--moon-target-dir", "target/build-app",
+  ])
+  @debug.assert_eq(raw.moon_target_dir, Some("target/build-app"))
+}
+
+///|
 test "parse build args accepts explicit config path starting with dash" {
   let raw = parse_build_args(["--config", "-custom.proton"])
   @debug.assert_eq(raw.config_path, Some("-custom.proton"))
@@ -110,6 +119,21 @@ test "moon build args append native target" {
   @debug.assert_eq(moon_build_args("app", ["--diagnostic-limit", "80"]), [
     "build", "app", "--diagnostic-limit", "80", "--target", "native",
   ])
+}
+
+///|
+test "moon build args prepend an isolated target directory" {
+  @debug.assert_eq(
+    moon_build_args_with_target_dir(
+      "app",
+      ["--diagnostic-limit", "80"],
+      Some("target/build-app"),
+    ),
+    [
+      "--target-dir", "target/build-app", "build", "app", "--diagnostic-limit", "80",
+      "--target", "native",
+    ],
+  )
 }
 
 ///|

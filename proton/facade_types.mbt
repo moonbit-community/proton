@@ -6,6 +6,7 @@ struct App {
   mut window : @manifest.WindowManifest
   mut entry : @manifest.AppEntry
   mut debug_level_value : Int
+  mut headless_value : Bool
   mut title_overridden : Bool
   mut size_overridden : Bool
   mut titlebar_style_overridden : Bool

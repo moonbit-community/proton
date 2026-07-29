@@ -42,8 +42,23 @@ test "runtime info reports ABI and Proton runtime metadata" {
     ) &&
     typed.runtime_available {
     assert_true(typed.features.contains("titlebar_overlay"))
+    assert_true(typed.features.contains("headless_osr"))
   } else {
     assert_false(typed.features.contains("titlebar_overlay"))
+    assert_false(typed.features.contains("headless_osr"))
+  }
+  if typed.runtime_available {
+    match typed.platform {
+      "windows" => {
+        assert_true(typed.features.contains("managed_app_runner"))
+        assert_true(typed.features.contains("runtime_wakeup_source"))
+      }
+      "macos" | "linux" => {
+        assert_true(typed.features.contains("managed_app_runner"))
+        assert_true(typed.features.contains("runtime_wakeup_fd"))
+      }
+      _ => ()
+    }
   }
 }
 
@@ -173,15 +188,20 @@ test "typed configs generate stable JSON for native ABI" {
   let runtime_config = RuntimeConfig::new(
     helper_path="cef_process.exe",
     cache_dir="cache",
+    headless=true,
   )
   let runtime_json = runtime_config.to_json_string()
   assert_true(runtime_json.contains("\"abi_version\":1"))
   assert_true(runtime_json.contains("\"helper_path\":\"cef_process.exe\""))
   assert_true(runtime_json.contains("\"cache_dir\":\"cache\""))
+  assert_true(runtime_json.contains("\"headless\":true"))
   let bundled_json = RuntimeConfig::bundled(cache_dir="cache").to_json_string()
   assert_true(bundled_json.contains("\"use_bundled\":true"))
   assert_true(!bundled_json.contains("\"runtime_root\""))
   assert_true(!bundled_json.contains("\"helper_path\""))
+  assert_true(!bundled_json.contains("\"headless\""))
+  let headless_bundled_json = RuntimeConfig::bundled(headless=true).to_json_string()
+  assert_true(headless_bundled_json.contains("\"headless\":true"))
   let window_config = WindowConfig::new(
     title="Typed",
     width=320,
@@ -467,6 +487,19 @@ test "runtime config rejects unknown fields" {
   })
   inspect(error.status(), content="-1")
   assert_true(error.message().contains("unknown field: debug"))
+}
+
+///|
+test "runtime config rejects non-boolean headless" {
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"headless\":\"true\"}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("headless"))
 }
 
 ///|

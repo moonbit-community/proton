@@ -17,6 +17,7 @@ let ready_probe_timeout_ms = 1000
 struct RawDevOptions {
   app_package : String
   config_path : String?
+  moon_target_dir : String?
   url : String?
   command : String?
   frontend_cwd : String?
@@ -75,6 +76,10 @@ pub fn command() -> @argparse.Command {
         allow_hyphen_values=true,
         about="Proton project config",
       ),
+      OptionArg(
+        "moon-target-dir",
+        about="Target directory for the app's internal Moon invocation",
+      ),
       OptionArg("url", about="Override frontend.dev_url"),
       OptionArg("command", about="Override frontend.before_dev"),
       OptionArg("frontend-cwd", about="Override frontend.cwd"),
@@ -111,6 +116,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => None
       }
   }
+  let moon_target_dir = raw.moon_target_dir.map(path => resolve_path(root, path))
   validate_frontend_dev_url(frontend_url, raw.ready_path)
   let frontend_command : String? = match raw.command {
     Some(command) => Some(command)
@@ -135,14 +141,18 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     raw.start_frontend,
   )
   let runtime = ensure_dev_runtime(root, raw.setup_runtime)
-  let env = dev_process_env(runtime, frontend_url, config_path)
+  let app_env = dev_process_env(runtime, frontend_url, config_path)
+  let frontend_env = dev_frontend_process_env(
+    app_env,
+    @sys.get_env_var("LD_PRELOAD"),
+  )
   @async.with_task_group(group => {
     let frontend_process = maybe_start_frontend(
       group,
       frontend_working_dir,
       frontend_command,
       raw.start_frontend,
-      env,
+      frontend_env,
     )
     defer cancel_frontend(frontend_process)
     if raw.wait_for_dev_server {
@@ -153,7 +163,13 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         frontend_process,
       )
     }
-    let code = run_app(root, raw.app_package, raw.app_args, env)
+    let code = run_app(
+      root,
+      raw.app_package,
+      raw.app_args,
+      app_env,
+      moon_target_dir,
+    )
     if code != 0 {
       raise DevProcessError::Exit(role="app", code~)
     }
@@ -168,6 +184,7 @@ fn dev_options_from_matches(
   RawDevOptions::{
     app_package: @cli_args.required_value(matches, "package"),
     config_path: @cli_args.value(matches, "config"),
+    moon_target_dir: @cli_args.value(matches, "moon-target-dir"),
     url: @cli_args.value(matches, "url"),
     command: @cli_args.value(matches, "command"),
     frontend_cwd: @cli_args.value(matches, "frontend-cwd"),
@@ -431,6 +448,29 @@ fn dev_process_env(
       runtime.lib_dir,
       prepend_env_path(runtime.bin_dir, current_env_value("DYLD_LIBRARY_PATH")),
     )
+    if path_exists(join_path(runtime.bin_dir, "libcef.so")) {
+      // Keep the preload entry free of path separators so Linux runtime roots
+      // containing spaces remain valid. LD_LIBRARY_PATH resolves this name.
+      env["LD_PRELOAD"] = prepend_env_path(
+        "libcef.so",
+        current_env_value("LD_PRELOAD"),
+      )
+    }
+  }
+  env
+}
+
+///|
+fn dev_frontend_process_env(
+  app_env : Map[String, String],
+  parent_preload : String?,
+) -> Map[String, String] {
+  let env = app_env.copy()
+  // Linux CEF preloading belongs to the Proton app only. Frontend commands
+  // such as Node/Vite must retain the CLI process's original preload state.
+  match parent_preload {
+    Some(value) => env["LD_PRELOAD"] = value
+    None => env.remove("LD_PRELOAD")
   }
   env
 }
@@ -524,6 +564,7 @@ fn frontend_cancel_handler() -> @process.CancellationHandler {
           "taskkill",
           ["/pid", pid.to_string(), "/t", "/f"],
           no_console_window=true,
+          cancel_handler=@process.hard_cancel(),
         ),
       )
     })
@@ -831,8 +872,20 @@ async fn run_app(
   app_package : String,
   app_args : Array[String],
   env : Map[String, String],
+  moon_target_dir : String?,
 ) -> Int raise DevProcessError {
-  let moon_args : Array[String] = ["run", app_package, "--target", "native"]
+  let moon_args : Array[String] = []
+  match moon_target_dir {
+    Some(target_dir) => {
+      moon_args.push("--target-dir")
+      moon_args.push(target_dir)
+    }
+    None => ()
+  }
+  moon_args.push("run")
+  moon_args.push(app_package)
+  moon_args.push("--target")
+  moon_args.push("native")
   if app_args.length() > 0 {
     moon_args.push("--")
     for arg in app_args {

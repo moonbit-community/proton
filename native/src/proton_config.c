@@ -72,7 +72,8 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
     return true;
   }
   if (strcmp(config_name, "runtime") == 0) {
-    if (strcmp(key, "use_bundled") == 0) {
+    if (strcmp(key, "use_bundled") == 0 ||
+        strcmp(key, "headless") == 0) {
       valid = proton_json_read_bool(doc, value, &boolean);
     } else if (strcmp(key, "remote_debugging_port") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer >= 0 &&
@@ -282,6 +283,7 @@ static const char *const proton_runtime_config_keys[] = {
     "locales_dir",
     "cache_dir",
     "remote_debugging_port",
+    "headless",
 };
 
 static const char *const proton_window_config_keys[] = {

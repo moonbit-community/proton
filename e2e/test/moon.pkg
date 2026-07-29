@@ -5,6 +5,22 @@ import {
   "justjavac/cdp/client",
 }
 
+import {
+  "justjavac/proton/examples/app_commands_fixture",
+  "justjavac/proton/examples/e2e_fixtures",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/http",
+  "moonbitlang/async/io",
+  "moonbitlang/async/process",
+  "moonbitlang/async/socket",
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/x/path",
+  "moonbitlang/x/sys",
+} for "wbtest"
+
 supported_targets = "native"
 
 pkgtype(kind: "executable")
@@ -14,7 +30,19 @@ options(
     "cdp_eval.mbt": [ "native" ],
     "env.mbt": [ "native" ],
     "main.mbt": [ "native" ],
+    "app_commands_probe_wbtest.mbt": [ "native" ],
+    "asset_sidecar_scenario_wbtest.mbt": [ "native" ],
+    "dev_extension_scenario_wbtest.mbt": [ "native" ],
+    "dev_extension_process_wbtest.mbt": [ "native" ],
+    "extension_scenarios_wbtest.mbt": [ "native" ],
+    "event_scenario_wbtest.mbt": [ "native" ],
+    "multi_window_scenario_wbtest.mbt": [ "native" ],
+    "multi_window_driver.mbt": [ "native" ],
+    "orchestration_wbtest.mbt": [ "native" ],
+    "process_lifecycle_wbtest.mbt": [ "native" ],
     "probes.mbt": [ "native" ],
     "ready.mbt": [ "native" ],
+    "scenario_app_wbtest.mbt": [ "native" ],
+    "scenario_validation_wbtest.mbt": [ "native" ],
   },
 )

@@ -630,7 +630,16 @@ fn window_bridge_json(
   if second_status < 0 {
     raise native_error(second_status)
   } else {
-    Some(@ffi.from_cstr(Bytes::from_array(buffer)))
+    // The lifecycle state can change between the size query and the copy.
+    // Decode exactly the length returned by the copy, rather than the
+    // originally allocated capacity; otherwise a shorter second result leaves
+    // zero-fill inside the byte string and the JSON parser rejects it.
+    let result_length = required.val + 1
+    if result_length <= 0 || result_length > buffer.length() {
+      raise invalid_argument("native bridge JSON length is invalid")
+    } else {
+      Some(@ffi.from_cstr(Bytes::from_array(buffer[0:result_length])))
+    }
   }
 }
 

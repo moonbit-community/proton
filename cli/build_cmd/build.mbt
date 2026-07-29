@@ -90,6 +90,7 @@ impl Show for BuildProcessError with fn output(self, logger) {
 struct RawBuildOptions {
   app_package : String
   config_path : String?
+  moon_target_dir : String?
   run_frontend_build : Bool
   moon_args : Array[String]
 } derive(Debug, Eq)
@@ -123,6 +124,10 @@ pub fn command() -> @argparse.Command {
         allow_hyphen_values=true,
         about="Proton project config",
       ),
+      OptionArg(
+        "moon-target-dir",
+        about="Target directory for the internal Moon build",
+      ),
     ],
     positionals=[
       PositionArg(
@@ -152,6 +157,7 @@ pub async fn run_release(
   run_with_options(cwd, RawBuildOptions::{
     app_package,
     config_path: Some(config_path),
+    moon_target_dir: None,
     run_frontend_build: true,
     moon_args,
   })
@@ -168,7 +174,8 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     run_frontend_build(root, config)
   }
   validate_release_files(root, config)
-  run_moon_build(root, raw.app_package, raw.moon_args)
+  let moon_target_dir = raw.moon_target_dir.map(path => resolve_path(root, path))
+  run_moon_build(root, raw.app_package, raw.moon_args, moon_target_dir)
 }
 
 ///|
@@ -180,6 +187,7 @@ fn build_options_from_matches(
   RawBuildOptions::{
     app_package: @cli_args.required_value(matches, "package"),
     config_path: @cli_args.value(matches, "config"),
+    moon_target_dir: @cli_args.value(matches, "moon-target-dir"),
     run_frontend_build: !@cli_args.flag(matches, "no-frontend"),
     moon_args,
   }
@@ -381,8 +389,11 @@ async fn run_moon_build(
   root : String,
   app_package : String,
   moon_args : Array[String],
+  moon_target_dir : String?,
 ) -> Unit {
-  let args = moon_build_args(app_package, moon_args)
+  let args = moon_build_args_with_target_dir(
+    app_package, moon_args, moon_target_dir,
+  )
   println("Building Proton app: moon " + args.join(" "))
   let code = @process.run("moon", args, cwd=root) catch {
     err =>
@@ -407,6 +418,26 @@ fn moon_build_args(
   }
   args.push("--target")
   args.push("native")
+  args
+}
+
+///|
+fn moon_build_args_with_target_dir(
+  app_package : String,
+  moon_args : Array[String],
+  moon_target_dir : String?,
+) -> Array[String] {
+  let args : Array[String] = []
+  match moon_target_dir {
+    Some(target_dir) => {
+      args.push("--target-dir")
+      args.push(target_dir)
+    }
+    None => ()
+  }
+  for arg in moon_build_args(app_package, moon_args) {
+    args.push(arg)
+  }
   args
 }
 

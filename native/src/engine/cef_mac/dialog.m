@@ -206,6 +206,12 @@ static int32_t proton_engine_dialog_request_create(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
+  if (proton_engine_window_is_headless(window)) {
+    proton_engine_set_message(
+        error, error_len,
+        "native dialogs are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   if (window == NULL || proton_engine_window_get_native_window(window) == nil) {
     proton_engine_set_message(error, error_len, "window is not initialized");
     return PROTON_ERR_INVALID_HANDLE;
@@ -496,6 +502,15 @@ int32_t proton_engine_runtime_begin_message_dialog(
   PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_runtime_begin_message_dialog(
       runtime, title_utf8, title_len, message_utf8, message_len, level,
       out_dialog, error, error_len));
+  if (proton_engine_runtime_is_headless(runtime)) {
+    if (out_dialog != NULL) {
+      *out_dialog = PROTON_INVALID_HANDLE;
+    }
+    proton_engine_set_message(
+        error, error_len,
+        "native dialogs are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create_for_owner(
       PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, &request,

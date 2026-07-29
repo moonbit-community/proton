@@ -16,6 +16,7 @@ fn App::new(
     window: @manifest.WindowManifest::new(title, width, height, size_hint~),
     entry,
     debug_level_value: debug,
+    headless_value: false,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,
@@ -213,6 +214,19 @@ fn env_flag_is_enabled(value : String) -> Bool {
     "" | "0" | "false" | "no" | "off" => false
     _ => true
   }
+}
+
+///|
+fn proton_headless_mode_enabled() -> Bool {
+  match @env.get_env_var("PROTON_HEADLESS") {
+    Some(value) => env_flag_is_enabled(value)
+    None => false
+  }
+}
+
+///|
+fn App::resolved_headless(self : App) -> Bool {
+  self.headless_value || proton_headless_mode_enabled()
 }
 
 ///|

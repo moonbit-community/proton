@@ -43,6 +43,7 @@ test "parse dev args defaults and app args" {
   let raw = parse_dev_args(["--", "--profile", "smoke"])
   @debug.assert_eq(raw.app_package, "app")
   @debug.assert_eq(raw.config_path, None)
+  @debug.assert_eq(raw.moon_target_dir, None)
   @debug.assert_eq(raw.wait_for_dev_server, true)
   @debug.assert_eq(raw.start_frontend, true)
   @debug.assert_eq(raw.app_args, ["--profile", "smoke"])
@@ -73,6 +74,14 @@ test "parse dev args package and frontend overrides" {
   @debug.assert_eq(raw.timeout_ms, 1200)
   @debug.assert_eq(raw.ready_path, Some("/ready"))
   @debug.assert_eq(raw.start_frontend, false)
+}
+
+///|
+test "parse dev args accepts an isolated Moon target directory" {
+  let raw = parse_dev_args([
+    "--package", "desktop", "--moon-target-dir", "target/dev-app",
+  ])
+  @debug.assert_eq(raw.moon_target_dir, Some("target/dev-app"))
 }
 
 ///|
@@ -241,6 +250,52 @@ test "dev runtime layout validates helper" {
   } noraise {
     _ => abort("expected missing runtime to fail")
   }
+}
+
+///|
+test "dev process preloads an indirect Linux CEF runtime" {
+  let root = "target/proton-dev-runtime-preload"
+  let runtime_path = create_fake_dev_runtime(root)
+  let runtime = dev_runtime_from_root(
+    resolve_path(".", runtime_path),
+    "test runtime",
+  )
+  write_dev_test_file(join_path(runtime.bin_dir, "libcef.so"), "")
+  let previous = @sys.get_env_var("LD_PRELOAD")
+  defer (match previous {
+    Some(value) => @sys.set_env_var("LD_PRELOAD", value)
+    None => @sys.unset_env_var("LD_PRELOAD")
+  })
+  @sys.set_env_var("LD_PRELOAD", "existing-preload.so")
+  let env = dev_process_env(runtime, None, None)
+  if @path.sep == '\\' {
+    @debug.assert_eq(env.get("LD_PRELOAD"), None)
+  } else {
+    @debug.assert_eq(
+      env.get("LD_PRELOAD"),
+      Some("libcef.so" + path_list_separator() + "existing-preload.so"),
+    )
+  }
+}
+
+///|
+test "dev frontend does not inherit the injected CEF preload" {
+  let app_env = {
+    "LD_PRELOAD": "libcef.so" + path_list_separator() + "existing-preload.so",
+    "PROTON_MODE": "dev",
+  }
+  let frontend_env = dev_frontend_process_env(
+    app_env,
+    Some("existing-preload.so"),
+  )
+  @debug.assert_eq(frontend_env.get("LD_PRELOAD"), Some("existing-preload.so"))
+  @debug.assert_eq(frontend_env.get("PROTON_MODE"), Some("dev"))
+  let clean_frontend_env = dev_frontend_process_env(app_env, None)
+  @debug.assert_eq(clean_frontend_env.get("LD_PRELOAD"), None)
+  @debug.assert_eq(
+    app_env.get("LD_PRELOAD"),
+    Some("libcef.so" + path_list_separator() + "existing-preload.so"),
+  )
 }
 
 ///|

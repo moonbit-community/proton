@@ -16,5 +16,6 @@ moon -C examples build 42_attribute_codegen_commands --target native
 E2E:
 
 ```sh
-node scripts/e2e_bridge_smoke.mjs 42_attribute_codegen_commands
+moon -C e2e test -p justjavac/proton/e2e/test --target native \
+  --no-parallelize --filter '*42_attribute_codegen_commands*'
 ```

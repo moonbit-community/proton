@@ -14,8 +14,8 @@ When running the CLI directly from this repository instead of an installed
 `proton_cli`, keep the Proton CLI cwd at the repository root:
 
 ```powershell
-$repo = (Resolve-Path .).Path
-moon -C cli run . -- -C $repo dev --package examples/47_dev_extension_js
+$repo = (Resolve-Path ..).Path
+moon -C ..\cli run . -- -C $repo dev --package examples/47_dev_extension_js
 ```
 
 The CLI discovers the package-local `moon.proton`, injects it into the app as
@@ -35,13 +35,16 @@ proton_cli build --package 47_dev_extension_js
 `frontend/dist/index.html`, then builds the native MoonBit app. In production
 the app loads that Vite output through Proton's `proton://` asset route.
 
-The repository smoke test runs the same route through the local CLI:
+The repository E2E suite runs the same route through the local CLI:
 
 ```powershell
-node scripts/e2e_bridge_smoke.mjs 47_dev_extension_js
+cd ..
+moon -C e2e test -p justjavac/proton/e2e/test --target native `
+  --no-parallelize --filter '*47_dev_extension_js*'
 ```
 
-The smoke test overrides the dev command to use a temporary Vite port, then
-uses the local `proton_cli build` route for the production check. If
-`node_modules` is missing, the smoke test installs the locked frontend
-dependencies and removes them after the run.
+The test overrides the dev command to use a temporary Vite port, passes an
+isolated Moon target directory through the local CLI, and then exercises the
+production `proton_cli build` route. If `node_modules` is missing, the test
+installs the locked frontend dependencies and removes test-owned dependencies
+and build output after the run.
