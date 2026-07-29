@@ -73,6 +73,21 @@ jobs:
         run: |
           moon version --all
 
+      # Restore the compiled dependency graph and registry downloads so the
+      # CLI install, framework checks, examples, and e2e steps start warm.
+      # Bump the epoch (v1) when a MoonBit toolchain upgrade misbehaves with
+      # a stale _build.
+      - name: Cache MoonBit build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            _build
+            .mooncakes
+          key: moon-${{ matrix.os }}-v1-${{ hashFiles('moon.work', '**/moon.mod', '**/moon.pkg') }}
+          restore-keys: |
+            moon-${{ matrix.os }}-v1-
+            moon-${{ matrix.os }}-
+
       - name: moon update
         run: |
           moon update
