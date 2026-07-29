@@ -346,6 +346,34 @@ test "template render error names template" {
 }
 
 ///|
+test "registry dependency failures are classified separately" {
+  assert_true(
+    moon_check_has_registry_resolution_failure(
+      "Failed to resolve registry dependency `justjavac/proton_contract`",
+    ),
+  )
+  assert_true(
+    moon_check_has_registry_resolution_failure(
+      "failed to resolve registry dependency `justjavac/proton_client`",
+    ),
+  )
+  assert_false(
+    moon_check_has_registry_resolution_failure("Parsing error: UnexpectedToken"),
+  )
+  let error = NewProjectToolError::RegistryDependenciesUnavailable(
+    code=255,
+    project="todo",
+  )
+  let message = error.message()
+  assert_true(message.contains("justjavac/proton_contract@0.1.0"))
+  assert_true(message.contains("justjavac/proton_client@0.1.0"))
+  assert_true(message.contains("justjavac/proton_rabbita@0.1.0"))
+  assert_true(message.contains("justjavac/proton@0.1.13"))
+  assert_true(message.contains("justjavac/proton_cli@0.1.10"))
+  assert_true(message.contains("project was rolled back"))
+}
+
+///|
 async test "project generation commits a complete staged tree" {
   let options = transaction_test_options(
     "target/proton-new-transaction-success",

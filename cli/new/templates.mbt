@@ -17,6 +17,20 @@ let default_proton_rabbita_version = "0.1.0"
 let default_rabbita_version = "0.12.4"
 
 ///|
+fn scaffold_release_chain() -> String {
+  "justjavac/proton_contract@" +
+  default_proton_contract_version +
+  "\n  justjavac/proton_client@" +
+  default_proton_client_version +
+  "\n  justjavac/proton_rabbita@" +
+  default_proton_rabbita_version +
+  "\n  justjavac/proton@" +
+  default_proton_version +
+  "\n  justjavac/proton_cli@" +
+  default_proton_cli_version
+}
+
+///|
 priv struct TemplateContext {
   title : String
   title_html : String

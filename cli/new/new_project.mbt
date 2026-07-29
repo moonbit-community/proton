@@ -535,14 +535,35 @@ async fn run_moon_check(
   options : NewProjectOptions,
   project_dir : String,
 ) -> Unit raise NewProjectToolError {
-  let code = @process.run("moon", [
+  let (code, data) = @process.collect_output_merged("moon", [
     "-C", project_dir, "check", "--diagnostic-limit", "80",
   ]) catch {
     err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
   }
+  let output = data.text() catch {
+    err =>
+      raise Start(
+        tool="moon check output",
+        detail=@debug.render(@debug.to_repr(err)),
+      )
+  }
+  if output != "" {
+    @stdio.stderr.write(output) catch {
+      _ => ()
+    }
+  }
   if code != 0 {
+    if moon_check_has_registry_resolution_failure(output) {
+      raise RegistryDependenciesUnavailable(code~, project=options.target_dir)
+    }
     raise MoonCheckFailed(code~, project=options.target_dir)
   }
+}
+
+///|
+fn moon_check_has_registry_resolution_failure(output : String) -> Bool {
+  output.contains("Failed to resolve registry dependency") ||
+  output.contains("failed to resolve registry dependency")
 }
 
 ///|

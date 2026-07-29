@@ -43,6 +43,7 @@ pub(all) suberror NewProjectWriteError {
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int)
+  RegistryDependenciesUnavailable(code~ : Int, project~ : String)
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Debug, Eq)
 
@@ -115,6 +116,15 @@ pub fn NewProjectToolError::message(self : NewProjectToolError) -> String {
   match self {
     Start(tool~, detail~) => "failed to run " + tool + ": " + detail
     Exit(tool~, code~) => tool + " failed with exit code " + code.to_string()
+    RegistryDependenciesUnavailable(code~, project~) =>
+      "moon check could not resolve the registry dependencies required by " +
+      project +
+      " (exit code " +
+      code.to_string() +
+      ").\n\nRequired Proton release chain:\n  " +
+      scaffold_release_chain() +
+      "\n\nThe project was rolled back. Install a Proton CLI release whose " +
+      "template dependencies are available in the registry, then retry."
     MoonCheckFailed(code~, project~) =>
       "moon check failed with exit code " +
       code.to_string() +
