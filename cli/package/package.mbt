@@ -640,7 +640,7 @@ async fn stage_macos_app(
     error => {
       for
         path in [
-          macos_staging_app_path(plan),
+          macos_staging_root_path(plan),
           macos_dmg_staging_path(plan),
           macos_dmg_root_path(plan),
           macos_zip_staging_path(plan),
@@ -667,7 +667,7 @@ async fn stage_macos_app_impl(
   let macos = resolve_path(contents, "MacOS")
   let resources = resolve_path(contents, "Resources")
   let frameworks = resolve_path(contents, "Frameworks")
-  remove_tree(app)
+  remove_tree(macos_staging_root_path(plan))
   for dir in [macos, resources, frameworks] {
     ensure_dir(dir)
   }
@@ -743,6 +743,9 @@ async fn stage_macos_app_impl(
     None => ()
   }
   promote_staged_artifacts(artifacts)
+  remove_tree(macos_staging_root_path(plan)) catch {
+    _ => ()
+  }
   println("Packaged macOS app: " + final_app)
   match dmg {
     Some(_) => {
@@ -757,11 +760,16 @@ async fn stage_macos_app_impl(
 }
 
 ///|
-fn macos_staging_app_path(plan : PackagePlan) -> String {
+fn macos_staging_root_path(plan : PackagePlan) -> String {
   resolve_path(
     plan.output,
-    "." + package_executable_name(plan.product_name) + ".staging.app",
+    "." + package_executable_name(plan.product_name) + ".staging",
   )
+}
+
+///|
+fn macos_staging_app_path(plan : PackagePlan) -> String {
+  resolve_path(macos_staging_root_path(plan), plan.product_name + ".app")
 }
 
 ///|
@@ -1845,7 +1853,7 @@ async fn create_zip(source : String, archive : String) -> Unit {
     }
   } else {
     @process.run("ditto", [
-      "-c", "-k", "--sequesterRsrc", "--keepParent", source, archive,
+      "-c", "-k", "--norsrc", "--keepParent", source, archive,
     ]) catch {
       error =>
         raise PackageToolError::Start(

@@ -11,7 +11,7 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-function createBridge(url = "proton://app/") {
+function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
   const calls = [];
   const context = vm.createContext({
     URL,
@@ -22,14 +22,14 @@ function createBridge(url = "proton://app/") {
   });
   const install = vm.runInContext(source, context);
   const dispatcher = install(
-    (id, name, payloadJson, pageInstance) =>
-      calls.push({ id, name, payloadJson, pageInstance }),
+    (action, id, name, payloadJson, pageInstance) =>
+      calls.push({ action, id, name, payloadJson, pageInstance }),
     {
       origin_policy: {
         mode: "app_and_dev_origins",
         dev_origins: ["http://localhost:5173"],
       },
-      request_timeout_ms: 1000,
+      request_timeout_ms: requestTimeoutMs,
       extensions: [{ namespace: "add", apis: ["sum"] }],
     },
     "renderer-page-1",
@@ -52,6 +52,7 @@ test("settles one request through the private dispatcher", async () => {
   const { calls, context, dispatcher } = createBridge();
   const resultPromise = context.__MoonBit__.add.sum({ left: 20, right: 22 });
   assert.equal(calls.length, 1);
+  assert.equal(calls[0].action, "request");
   assert.equal(calls[0].name, "ext:add/sum");
   assert.deepEqual(JSON.parse(calls[0].payloadJson), {
     left: 20,
@@ -107,6 +108,14 @@ test("cancels renderer pending state without settling late replies", async () =>
   await assert.rejects(resultPromise, (error) => {
     assert.equal(error.code, "request_cancelled");
     return true;
+  });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1], {
+    action: "cancel",
+    id: calls[0].id,
+    name: "",
+    payloadJson: "",
+    pageInstance: dispatcher.pageInstance,
   });
   assert.equal(
     dispatcher.dispatchResponse(calls[0].id, true, '{"late":true}', ""),
@@ -171,14 +180,40 @@ test("drops events targeted at a different page instance", async () => {
 });
 
 test("rejects pending requests when the context is disposed", async () => {
-  const { context, dispatcher } = createBridge();
+  const { calls, context, dispatcher } = createBridge();
   const resultPromise = context.__MoonBit__.add.sum({});
   dispatcher.dispose("navigation replaced the context");
   await assert.rejects(resultPromise, /navigation replaced the context/);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].action, "cancel");
+  assert.equal(calls[1].id, calls[0].id);
   await assert.rejects(
     context.__MoonBit__.add.sum({}),
     /context has been disposed/,
   );
+});
+
+test("notifies native when a bridge request times out", async () => {
+  const { calls, context, dispatcher } = createBridge(
+    "proton://app/",
+    1,
+  );
+  const resultPromise = context.__MoonBit__.core.invokeJson(
+    "app:timeout",
+    "{}",
+  );
+  await assert.rejects(resultPromise, (error) => {
+    assert.equal(error.code, "request_timeout");
+    return true;
+  });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1], {
+    action: "cancel",
+    id: calls[0].id,
+    name: "",
+    payloadJson: "",
+    pageInstance: dispatcher.pageInstance,
+  });
 });
 
 test("uses the page instance assigned by native", () => {

@@ -346,6 +346,7 @@ async test "startup dispatch retains an earlier window close" {
       window: first,
       policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
       lifetime: WindowLifetime::new(),
+      bridge_ready: true,
       closed: false,
     },
     RunningWindow::{
@@ -353,20 +354,108 @@ async test "startup dispatch retains an earlier window close" {
       window: second,
       policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
       lifetime: WindowLifetime::new(),
+      bridge_ready: false,
       closed: false,
     },
   ]
   first.close()
   @async.with_task_group(group => {
-    drain_bridge_startup_events(runtime, windows[1], windows, false, [], group) catch {
-      error => abort(error.message())
-    }
+    ignore(
+      pump_runtime_once(
+        runtime,
+        windows,
+        None,
+        [],
+        @core.RuntimeWakeSignal::new(),
+        false,
+        false,
+        [],
+        group,
+      ) catch {
+        error => abort(error.message())
+      },
+    )
+    let task = group.spawn(
+      () => {
+        @async.sleep(10000)
+        @native.BridgeResponse::Ok(request_id=42L, payload=Json::null())
+      },
+      no_wait=true,
+      allow_failure=true,
+    )
+    let pending = [
+      BridgeDispatchTask::{
+        request_id: 42L,
+        window: second.id(),
+        task,
+        state: Running,
+      },
+    ]
+    ignore(
+      pump_runtime_once(
+        runtime,
+        windows,
+        None,
+        pending,
+        @core.RuntimeWakeSignal::new(),
+        false,
+        false,
+        [],
+        group,
+      ) catch {
+        error => abort(error.message())
+      },
+    )
+    assert_eq(pending.length(), 1)
+    assert_true(pending[0].state is Running)
+    cancel_all_bridge_tasks(pending)
     group.return_immediately(())
   })
   assert_true(windows[0].closed)
   assert_true(windows[0].lifetime.closed)
   assert_false(windows[1].closed)
   assert_false(windows[1].lifetime.closed)
+}
+
+///|
+async test "bridge cancellation targets only the matching handler task" {
+  @async.with_task_group(group => {
+    let first_task = group.spawn(
+      () => {
+        @async.sleep(10000)
+        @native.BridgeResponse::Ok(request_id=41L, payload=Json::null())
+      },
+      no_wait=true,
+      allow_failure=true,
+    )
+    let second_task = group.spawn(
+      () => {
+        @async.sleep(10000)
+        @native.BridgeResponse::Ok(request_id=42L, payload=Json::null())
+      },
+      no_wait=true,
+      allow_failure=true,
+    )
+    let pending = [
+      BridgeDispatchTask::{
+        request_id: 41L,
+        window: 1L,
+        task: first_task,
+        state: Running,
+      },
+      BridgeDispatchTask::{
+        request_id: 42L,
+        window: 1L,
+        task: second_task,
+        state: Running,
+      },
+    ]
+    cancel_bridge_request_task(pending, Some(42L))
+    assert_true(pending[0].state is Running)
+    assert_true(pending[1].state is Cancelled)
+    first_task.cancel()
+    group.return_immediately(())
+  })
 }
 
 ///|
@@ -513,6 +602,26 @@ test "dev bridge page policy parses exact http origins" {
       error => fail(error.message())
     }
   }
+}
+
+///|
+test "native bridge config isolates each window development origin" {
+  let frontend = BridgeFrontendConfig::{
+    extensions: [],
+    initialization_units: [],
+  }
+  let first = native_bridge_config(["app:ping"], frontend, BridgePagePolicy::{
+    dev_origin: Some("http://localhost:3000"),
+    request_timeout_ms: 30000,
+  }).to_json_string()
+  let second = native_bridge_config(["app:ping"], frontend, BridgePagePolicy::{
+    dev_origin: Some("http://localhost:4000"),
+    request_timeout_ms: 30000,
+  }).to_json_string()
+  assert_true(first.contains("http://localhost:3000"))
+  assert_false(first.contains("http://localhost:4000"))
+  assert_true(second.contains("http://localhost:4000"))
+  assert_false(second.contains("http://localhost:3000"))
 }
 
 ///|

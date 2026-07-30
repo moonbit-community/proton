@@ -92,6 +92,9 @@ struct proton_engine_runtime {
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
   size_t bridge_count;
+  int64_t bridge_cancellations[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
+  size_t bridge_cancellation_head;
+  size_t bridge_cancellation_count;
   pthread_mutex_t bridge_lock;
   int bridge_lock_initialized;
   int wake_read_fd;
@@ -893,7 +896,8 @@ static int proton_engine_runtime_has_bridge_request(
     return 0;
   }
   proton_engine_runtime_bridge_lock(runtime);
-  int has_request = runtime->bridge_count > 0;
+  int has_request =
+      runtime->bridge_count > 0 || runtime->bridge_cancellation_count > 0;
   proton_engine_runtime_bridge_unlock(runtime);
   return has_request;
 }
@@ -921,6 +925,31 @@ static int proton_engine_runtime_enqueue_bridge_request(
   return ok;
 }
 
+static int proton_engine_runtime_enqueue_bridge_cancellation(
+    proton_engine_runtime_t *runtime,
+    int64_t request_id) {
+  if (runtime == NULL || request_id <= 0) {
+    return 0;
+  }
+  int ok = 0;
+  proton_engine_runtime_bridge_lock(runtime);
+  if (runtime->bridge_cancellation_count <
+      PROTON_ENGINE_MAX_BRIDGE_REQUESTS) {
+    size_t index =
+        (runtime->bridge_cancellation_head +
+         runtime->bridge_cancellation_count) %
+        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
+    runtime->bridge_cancellations[index] = request_id;
+    runtime->bridge_cancellation_count++;
+    ok = 1;
+  }
+  proton_engine_runtime_bridge_unlock(runtime);
+  if (ok) {
+    proton_engine_signal_wait_source(PROTON_WAIT_BRIDGE);
+  }
+  return ok;
+}
+
 static size_t proton_engine_runtime_clear_bridge_queue(
     proton_engine_runtime_t *runtime) {
   if (runtime == NULL) {
@@ -937,6 +966,8 @@ static size_t proton_engine_runtime_clear_bridge_queue(
   }
   runtime->bridge_head = 0;
   runtime->bridge_count = 0;
+  runtime->bridge_cancellation_head = 0;
+  runtime->bridge_cancellation_count = 0;
   proton_engine_runtime_bridge_unlock(runtime);
   proton_engine_debug_log("bridge_queue_clear removed=%llu",
                           (unsigned long long)removed);
@@ -1037,6 +1068,39 @@ static int proton_engine_bridge_pending_add(int64_t request_id,
   return 1;
 }
 
+static int proton_engine_bridge_pending_cancel(
+    proton_engine_runtime_t *runtime,
+    int browser_id,
+    int renderer_pending_id,
+    const char *page_instance) {
+  if (page_instance == NULL || page_instance[0] == '\0') {
+    return 0;
+  }
+  proton_engine_bridge_pending_t **cursor = &g_bridge_pending;
+  while (*cursor != NULL) {
+    proton_engine_bridge_pending_t *pending = *cursor;
+    if (pending->browser_id == browser_id &&
+        pending->renderer_pending_id == renderer_pending_id &&
+        strcmp(pending->page_instance, page_instance) == 0) {
+      int64_t request_id = pending->request_id;
+      *cursor = pending->next;
+      int removed =
+          proton_engine_runtime_remove_bridge_request(runtime, request_id);
+      if (removed == 0 &&
+          !proton_engine_runtime_enqueue_bridge_cancellation(runtime,
+                                                              request_id)) {
+        proton_engine_debug_log(
+            "bridge_cancel_queue_full request=%lld browser=%d pending=%d",
+            (long long)request_id, browser_id, renderer_pending_id);
+      }
+      proton_engine_bridge_pending_free(pending);
+      return 1;
+    }
+    cursor = &pending->next;
+  }
+  return 0;
+}
+
 static void proton_engine_bridge_pending_remove_context(
     proton_engine_runtime_t *runtime,
     int browser_id,
@@ -1052,7 +1116,16 @@ static void proton_engine_bridge_pending_remove_context(
         strcmp(pending->page_instance, page_instance) == 0) {
       int64_t request_id = pending->request_id;
       *cursor = pending->next;
-      (void)proton_engine_runtime_remove_bridge_request(runtime, request_id);
+      int removed =
+          proton_engine_runtime_remove_bridge_request(runtime, request_id);
+      if (removed == 0 &&
+          !proton_engine_runtime_enqueue_bridge_cancellation(runtime,
+                                                              request_id)) {
+        proton_engine_debug_log(
+            "bridge_cancel_queue_full request=%lld browser=%d pending=%d",
+            (long long)request_id, browser_id,
+            pending->renderer_pending_id);
+      }
       proton_engine_bridge_pending_free(pending);
       continue;
     }
@@ -1787,11 +1860,12 @@ static char *proton_engine_v8_value_to_utf8(cef_v8_value_t *value) {
 
 static int proton_engine_send_bridge_request_to_browser(
     cef_frame_t *frame,
+    const char *action,
     int pending_id,
     const char *op,
     const char *payload_json,
     const char *page_instance) {
-  if (frame == NULL || op == NULL || payload_json == NULL ||
+  if (frame == NULL || action == NULL || op == NULL || payload_json == NULL ||
       page_instance == NULL) {
     return 0;
   }
@@ -1807,17 +1881,21 @@ static int proton_engine_send_bridge_request_to_browser(
     message->base.release((cef_base_ref_counted_t *)message);
     return 0;
   }
-  args->set_size(args, 4);
-  args->set_int(args, 0, pending_id);
+  args->set_size(args, 5);
+  cef_string_t action_value = {0};
   cef_string_t op_value = {0};
   cef_string_t payload_value = {0};
   cef_string_t page_instance_value = {0};
+  proton_engine_set_string(&action_value, action);
   proton_engine_set_string(&op_value, op);
   proton_engine_set_string(&payload_value, payload_json);
   proton_engine_set_string(&page_instance_value, page_instance);
-  args->set_string(args, 1, &op_value);
-  args->set_string(args, 2, &payload_value);
-  args->set_string(args, 3, &page_instance_value);
+  args->set_string(args, 0, &action_value);
+  args->set_int(args, 1, pending_id);
+  args->set_string(args, 2, &op_value);
+  args->set_string(args, 3, &payload_value);
+  args->set_string(args, 4, &page_instance_value);
+  cef_string_clear(&action_value);
   cef_string_clear(&op_value);
   cef_string_clear(&payload_value);
   cef_string_clear(&page_instance_value);
@@ -1846,24 +1924,31 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   if (retval != NULL) {
     *retval = NULL;
   }
-  if (argumentsCount < 4 || arguments[0] == NULL ||
-      !arguments[0]->is_int(arguments[0])) {
+  if (argumentsCount < 5 || arguments[0] == NULL ||
+      !arguments[0]->is_string(arguments[0]) || arguments[1] == NULL ||
+      !arguments[1]->is_int(arguments[1])) {
     proton_engine_set_string(exception,
-                             "invokeOp requires pending id, name, payload and page instance");
+                             "invokeOp requires action, pending id, name, payload and page instance");
     return 1;
   }
-  int pending_id = arguments[0]->get_int_value(arguments[0]);
-  char *op = proton_engine_v8_value_to_utf8(arguments[1]);
-  char *payload_json = proton_engine_v8_value_to_utf8(arguments[2]);
-  char *page_instance = proton_engine_v8_value_to_utf8(arguments[3]);
-  if (!proton_engine_bridge_op_is_valid(op) ||
-      !proton_engine_bridge_payload_is_valid(
-          payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES) ||
+  char *action = proton_engine_v8_value_to_utf8(arguments[0]);
+  int pending_id = arguments[1]->get_int_value(arguments[1]);
+  char *op = proton_engine_v8_value_to_utf8(arguments[2]);
+  char *payload_json = proton_engine_v8_value_to_utf8(arguments[3]);
+  char *page_instance = proton_engine_v8_value_to_utf8(arguments[4]);
+  int is_request = action != NULL && strcmp(action, "request") == 0;
+  int is_cancel = action != NULL && strcmp(action, "cancel") == 0;
+  if ((!is_request && !is_cancel) ||
+      (is_request &&
+       (!proton_engine_bridge_op_is_valid(op) ||
+        !proton_engine_bridge_payload_is_valid(
+            payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES))) ||
       !proton_engine_bridge_page_instance_is_valid(page_instance)) {
     proton_engine_debug_log(
         "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
         pending_id, op != NULL ? op : "",
         (unsigned long long)(payload_json != NULL ? strlen(payload_json) : 0));
+    free(action);
     free(op);
     free(payload_json);
     free(page_instance);
@@ -1872,6 +1957,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   }
   cef_v8_context_t *context = cef_v8_context_get_current_context();
   if (context == NULL) {
+    free(action);
     free(op);
     free(payload_json);
     free(page_instance);
@@ -1888,6 +1974,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
       frame->base.release((cef_base_ref_counted_t *)frame);
     }
     context->base.release((cef_base_ref_counted_t *)context);
+    free(action);
     free(op);
     free(payload_json);
     free(page_instance);
@@ -1899,6 +1986,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
     browser->base.release((cef_base_ref_counted_t *)browser);
     frame->base.release((cef_base_ref_counted_t *)frame);
     context->base.release((cef_base_ref_counted_t *)context);
+    free(action);
     free(op);
     free(payload_json);
     free(page_instance);
@@ -1909,12 +1997,13 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   }
   free(frame_url);
   if (!proton_engine_send_bridge_request_to_browser(
-          frame, pending_id, op, payload_json, page_instance)) {
+          frame, action, pending_id, op, payload_json, page_instance)) {
     proton_engine_set_string(exception, "failed to send bridge request");
   }
   browser->base.release((cef_base_ref_counted_t *)browser);
   frame->base.release((cef_base_ref_counted_t *)frame);
   context->base.release((cef_base_ref_counted_t *)context);
+  free(action);
   free(op);
   free(payload_json);
   free(page_instance);
@@ -2035,18 +2124,40 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 0;
   }
   cef_list_value_t *args = message->get_argument_list(message);
-  if (args == NULL || args->get_size(args) < 4) {
+  if (args == NULL || args->get_size(args) < 5) {
     if (args != NULL) {
       args->base.release((cef_base_ref_counted_t *)args);
     }
     return 1;
   }
-  int renderer_pending_id = args->get_int(args, 0);
-  char *op = proton_engine_userfree_to_utf8(args->get_string(args, 1));
-  char *payload_json = proton_engine_userfree_to_utf8(args->get_string(args, 2));
+  char *action = proton_engine_userfree_to_utf8(args->get_string(args, 0));
+  int renderer_pending_id = args->get_int(args, 1);
+  char *op = proton_engine_userfree_to_utf8(args->get_string(args, 2));
+  char *payload_json = proton_engine_userfree_to_utf8(args->get_string(args, 3));
   char *page_instance =
-      proton_engine_userfree_to_utf8(args->get_string(args, 3));
+      proton_engine_userfree_to_utf8(args->get_string(args, 4));
   args->base.release((cef_base_ref_counted_t *)args);
+  if (action != NULL && strcmp(action, "cancel") == 0) {
+    int cancelled = proton_engine_bridge_pending_cancel(
+        window != NULL ? window->runtime : NULL, browser_id,
+        renderer_pending_id, page_instance);
+    proton_engine_debug_log(
+        "browser_bridge_cancel browser=%d pending=%d cancelled=%d",
+        browser_id, renderer_pending_id, cancelled);
+    free(action);
+    free(op);
+    free(payload_json);
+    free(page_instance);
+    return 1;
+  }
+  if (action == NULL || strcmp(action, "request") != 0) {
+    free(action);
+    free(op);
+    free(payload_json);
+    free(page_instance);
+    return 1;
+  }
+  free(action);
   proton_engine_debug_log("browser_bridge_request browser=%d pending=%d op=%s",
                           browser_id, renderer_pending_id,
                           op != NULL ? op : "");
@@ -4151,6 +4262,38 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
   runtime->bridge_count--;
   proton_engine_runtime_bridge_unlock(runtime);
   free(request_json);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_poll_bridge_cancellation(
+    proton_engine_runtime_t *runtime,
+    int64_t *out_request_id,
+    int32_t *out_present,
+    char *error,
+    size_t error_len) {
+  if (out_request_id != NULL) {
+    *out_request_id = 0;
+  }
+  if (out_present != NULL) {
+    *out_present = 0;
+  }
+  if (runtime == NULL || out_request_id == NULL || out_present == NULL) {
+    proton_engine_set_message(
+        error, error_len,
+        "runtime, out_request_id and out_present are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_runtime_bridge_lock(runtime);
+  if (runtime->bridge_cancellation_count > 0) {
+    *out_request_id =
+        runtime->bridge_cancellations[runtime->bridge_cancellation_head];
+    runtime->bridge_cancellation_head =
+        (runtime->bridge_cancellation_head + 1) %
+        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
+    runtime->bridge_cancellation_count--;
+    *out_present = 1;
+  }
+  proton_engine_runtime_bridge_unlock(runtime);
   return PROTON_OK;
 }
 

@@ -101,6 +101,14 @@
     );
   }
 
+  function cancelNativeRequest(id) {
+    try {
+      nativeInvoke("cancel", id, "", "", pageInstance);
+    } catch (_) {
+      // The renderer context may already be detached.
+    }
+  }
+
   function invokeJson(route, requestJson, options) {
     if (disposed) {
       return Promise.reject(new ProtonBridgeError(
@@ -131,6 +139,7 @@
         if (!entry) {
           return;
         }
+        cancelNativeRequest(id);
         pending.delete(id);
         finish();
         reject(new ProtonBridgeError(
@@ -146,6 +155,7 @@
           if (!entry) {
             return;
           }
+          cancelNativeRequest(id);
           pending.delete(id);
           clearTimeout(timer);
           finish();
@@ -162,7 +172,13 @@
       }
 
       try {
-        nativeInvoke(id, String(route), requestJson, pageInstance);
+        nativeInvoke(
+          "request",
+          id,
+          String(route),
+          requestJson,
+          pageInstance,
+        );
       } catch (error) {
         clearTimeout(timer);
         pending.delete(id);
@@ -318,7 +334,8 @@
       }
       disposed = true;
       const error = new Error(reason || "Proton bridge context was released");
-      for (const entry of pending.values()) {
+      for (const [id, entry] of pending.entries()) {
+        cancelNativeRequest(id);
         clearTimeout(entry.timer);
         entry.finish();
         entry.reject(new ProtonBridgeError("bridge_disposed", error.message));

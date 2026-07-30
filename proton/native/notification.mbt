@@ -1,7 +1,4 @@
 ///|
-const NOTIFICATION_CLICK_BUFFER_BYTES = 65536
-
-///|
 /// Reports whether native notifications are available in the current process.
 pub fn notification_supported() -> Bool raise NativeError {
   let supported = Ref(0)
@@ -37,30 +34,28 @@ pub fn notification_show(
 ///|
 /// Removes and returns the oldest pending notification activation.
 pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError {
-  let buffer = FixedArray::make(NOTIFICATION_CLICK_BUFFER_BYTES, b'\x00')
-  let required = Ref(0)
   let has_payload = Ref(0)
   let available = Ref(0)
-  let status = proton_notification_poll_click_ffi(
-    buffer,
-    buffer.length(),
-    required,
-    has_payload,
-    available,
-  )
-  if status < 0 {
-    raise native_error(status)
-  } else if available.val == 0 {
-    None
-  } else {
-    let payload = if has_payload.val == 0 {
-      None
-    } else {
-      // On success `required` is the payload plus its terminator, and the
-      // rest of the fixed buffer is zero fill. Decode exactly that span.
-      Some(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val])))
+  match
+    read_native_text("notification click", BufferBytesIncludingTerminator, (
+      buffer,
+      buffer_len,
+      required,
+    ) => {
+      let status = proton_notification_poll_click_ffi(
+        buffer, buffer_len, required, has_payload, available,
+      )
+      if status == 0 && available.val == 0 {
+        proton_event_none
+      } else {
+        status
+      }
+    }) {
+    None => None
+    Some(text) => {
+      let payload = if has_payload.val == 0 { None } else { Some(text) }
+      Some(NativeNotificationClick::{ payload, })
     }
-    Some(NativeNotificationClick::{ payload, })
   }
 }
 

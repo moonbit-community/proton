@@ -139,25 +139,24 @@ async fn run_manifest(
         Some(host) => host.host.registered_ops()
         None => []
       }
-      let bridge = if ops.length() > 0 ||
+      let bridge_enabled = ops.length() > 0 ||
         frontend.extensions.length() > 0 ||
         frontend.initialization_units.length() > 0 ||
         forward_menu_events ||
-        window_lifecycle_hooks.length() > 0 {
-        Some(
-          @native.BridgeConfig::new(
-            ops~,
-            dev_origins=bridge_page_policy_dev_origins(policies),
-            extensions=frontend.extensions,
-            initialization_units=frontend.initialization_units,
-          ),
-        )
-      } else {
-        None
-      }
+        window_lifecycle_hooks.length() > 0
       @async.with_task_group(window_tasks => {
+        let host = match command_host {
+          Some(host) => Some(host.host)
+          None => None
+        }
+        let pending : Array[BridgeDispatchTask] = []
         lifecycle.begin_window_create()
         for index, plan in plans {
+          let bridge = if bridge_enabled {
+            Some(native_bridge_config(ops, frontend, policies[index]))
+          } else {
+            None
+          }
           let created_window = @native.Window::new(
             runtime,
             config=native_window_config(plan.window, bridge),
@@ -169,19 +168,20 @@ async fn run_manifest(
             window: created_window,
             policy: policies[index],
             lifetime: WindowLifetime::new(),
+            bridge_ready: false,
             closed: false,
           }
           windows.push(running)
           load_entry_after_create(created_window, plan.entry) catch {
             error => raise EntryLoadError(error)
           }
-          if bridge is Some(_) {
-            wait_for_bridge_startup(
-              runtime, running, windows, wakeup, forward_menu_events, bridge_startup_timeout_ms,
-              launch_input_handlers, window_tasks,
-            ) catch {
-              error => raise normalize_async_run_error(error)
-            }
+        }
+        if bridge_enabled {
+          wait_for_bridge_startup(
+            runtime, windows, host, pending, wakeup, forward_menu_events, bridge_startup_timeout_ms,
+            launch_input_handlers, window_tasks,
+          ) catch {
+            error => raise normalize_async_run_error(error)
           }
         }
         lifecycle.finish_window_create()
@@ -212,31 +212,11 @@ async fn run_manifest(
           }
         }
         lifecycle.begin_running()
-        match command_host {
-          Some(host) =>
-            run_bridge_pump(
-              runtime,
-              windows,
-              host.host,
-              wakeup,
-              forward_menu_events,
-              launch_input_handlers,
-              window_tasks,
-            ) catch {
-              error => raise normalize_async_run_error(error)
-            }
-          None =>
-            run_window_pump(
-              runtime,
-              windows,
-              wakeup,
-              forward_menu_events,
-              bridge is Some(_),
-              launch_input_handlers,
-              window_tasks,
-            ) catch {
-              error => raise normalize_async_run_error(error)
-            }
+        run_runtime_pump(
+          runtime, windows, host, pending, wakeup, forward_menu_events, bridge_enabled,
+          launch_input_handlers, window_tasks,
+        ) catch {
+          error => raise normalize_async_run_error(error)
         }
         lifecycle.observe_window_closed()
         window_tasks.return_immediately(())
@@ -346,6 +326,25 @@ fn native_window_config(
 }
 
 ///|
+fn native_bridge_config(
+  ops : Array[String],
+  frontend : BridgeFrontendConfig,
+  policy : BridgePagePolicy,
+) -> @native.BridgeConfig {
+  let dev_origins = match policy.dev_origin {
+    Some(origin) => [origin]
+    None => []
+  }
+  @native.BridgeConfig::new(
+    ops~,
+    request_timeout_ms=policy.request_timeout_ms,
+    dev_origins~,
+    extensions=frontend.extensions,
+    initialization_units=frontend.initialization_units,
+  )
+}
+
+///|
 fn native_run_error(
   action : String,
   error : @native.NativeError,
@@ -433,8 +432,9 @@ fn bridge_failure(
 ///|
 async fn wait_for_bridge_startup(
   runtime : @native.Runtime,
-  running : RunningWindow,
   windows : Array[RunningWindow],
+  host : @core.AppCommandHost?,
+  pending : Array[BridgeDispatchTask],
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   timeout_ms : Int,
@@ -442,70 +442,87 @@ async fn wait_for_bridge_startup(
   group : @async.TaskGroup[Unit],
 ) -> Unit raise AppRunError {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
-    wait_for_bridge_startup_until_terminal(
-      runtime, running, windows, wakeup, forward_menu_events, launch_input_handlers,
-      group,
-    )
+    while true {
+      let did_work = pump_runtime_once(
+        runtime,
+        windows,
+        host,
+        pending,
+        wakeup.signal,
+        forward_menu_events,
+        false,
+        launch_input_handlers,
+        group,
+      )
+      match refresh_bridge_startup_states(windows) {
+        None => return
+        Some(_) => if did_work { @async.sleep(0) } else { wakeup.wait() }
+      }
+    }
   }) catch {
     error => raise normalize_async_run_error(error)
   }
   match completed {
     Some(_) => ()
     None => {
-      let state = pump_bridge_startup_once(
-        runtime, running, windows, forward_menu_events, launch_input_handlers, group,
+      ignore(
+        pump_runtime_once(
+          runtime,
+          windows,
+          host,
+          pending,
+          wakeup.signal,
+          forward_menu_events,
+          false,
+          launch_input_handlers,
+          group,
+        ),
       )
-      if bridge_startup_is_ready(state) {
-        return
+      match refresh_bridge_startup_states(windows) {
+        None => return
+        Some(state) =>
+          raise BridgeStartupError(
+            bridge_startup_timeout_diagnostic(state, timeout_ms),
+          )
       }
-      raise BridgeStartupError(
-        bridge_startup_timeout_diagnostic(state, timeout_ms),
-      )
     }
   }
 }
 
 ///|
-async fn wait_for_bridge_startup_until_terminal(
-  runtime : @native.Runtime,
-  running : RunningWindow,
+fn refresh_bridge_startup_states(
   windows : Array[RunningWindow],
-  wakeup : RuntimeWakeup,
-  forward_menu_events : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Unit {
-  while true {
-    let state = pump_bridge_startup_once(
-      runtime, running, windows, forward_menu_events, launch_input_handlers, group,
-    )
-    if bridge_startup_is_ready(state) {
-      return
+) -> @native.BridgeLifecycleState? raise AppRunError {
+  let mut pending : @native.BridgeLifecycleState? = None
+  for running in windows {
+    if running.bridge_ready {
+      continue
     }
-    wakeup.wait()
-  }
-}
-
-///|
-fn pump_bridge_startup_once(
-  runtime : @native.Runtime,
-  running : RunningWindow,
-  windows : Array[RunningWindow],
-  forward_menu_events : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> @native.BridgeLifecycleState raise AppRunError {
-  drain_bridge_startup_events(
-    runtime, running, windows, forward_menu_events, launch_input_handlers, group,
-  )
-  let state = running.window.bridge_lifecycle_state() catch {
-    error => raise native_run_error("read bridge startup state", error)
-  }
-  if state.url != "about:blank" {
+    if running.closed {
+      raise EntryLoadError(ClosedDuringStartup)
+    }
+    let state = running.window.bridge_lifecycle_state() catch {
+      error =>
+        raise native_run_error(
+          "read bridge startup state for " + running.id,
+          error,
+        )
+    }
+    if state.url == "about:blank" {
+      if pending is None {
+        pending = Some(state)
+      }
+      continue
+    }
     match state.outcome {
+      "ready" => running.bridge_ready = true
       "failed" =>
         try bridge_failure(running.window, state) catch {
-          error => raise native_run_error("read bridge startup failure", error)
+          error =>
+            raise native_run_error(
+              "read bridge startup failure for " + running.id,
+              error,
+            )
         } noraise {
           diagnostic => raise BridgeStartupError(diagnostic)
         }
@@ -515,44 +532,10 @@ fn pump_bridge_startup_once(
             state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
           ),
         )
-      _ => ()
+      _ => if pending is None { pending = Some(state) }
     }
   }
-  state
-}
-
-///|
-fn drain_bridge_startup_events(
-  runtime : @native.Runtime,
-  running : RunningWindow,
-  windows : Array[RunningWindow],
-  forward_menu_events : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Unit raise AppRunError {
-  let mut polling_events = true
-  while polling_events {
-    let next_event = runtime.poll_event() catch {
-      error => raise native_run_error("poll startup event", error)
-    }
-    match next_event {
-      None => polling_events = false
-      Some(event) => {
-        dispatch_runtime_event(
-          event, windows, forward_menu_events, launch_input_handlers, group,
-        )
-        if event.is_window_closed() &&
-          event.window_id() == Some(running.window.id()) {
-          raise EntryLoadError(ClosedDuringStartup)
-        }
-      }
-    }
-  }
-}
-
-///|
-fn bridge_startup_is_ready(state : @native.BridgeLifecycleState) -> Bool {
-  state.url != "about:blank" && state.outcome == "ready"
+  pending
 }
 
 ///|
@@ -660,9 +643,11 @@ async fn show_app_run_failure(
 }
 
 ///|
-async fn run_window_pump(
+async fn run_runtime_pump(
   runtime : @native.Runtime,
   windows : Array[RunningWindow],
+  host : @core.AppCommandHost?,
+  pending : Array[BridgeDispatchTask],
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
@@ -670,42 +655,17 @@ async fn run_window_pump(
   group : @async.TaskGroup[Unit],
 ) -> Unit raise AppRunError {
   while !all_windows_closed(windows) {
-    let mut did_work = false
-
-    let mut polling_events = true
-    while polling_events {
-      let next_event = runtime.poll_event() catch {
-        error => raise native_run_error("poll event", error)
-      }
-      match next_event {
-        None => polling_events = false
-        Some(event) => {
-          did_work = true
-          dispatch_runtime_event(
-            event, windows, forward_menu_events, launch_input_handlers, group,
-          )
-        }
-      }
-    }
-
-    if monitor_bridge {
-      for running in windows {
-        if !running.closed {
-          let failure = take_runtime_bridge_failure(running.window) catch {
-            error =>
-              raise native_run_error(
-                "read bridge failure for " + running.id,
-                error,
-              )
-          }
-          match failure {
-            Some(diagnostic) => raise BridgeRuntimeError(diagnostic)
-            None => ()
-          }
-        }
-      }
-    }
-
+    let did_work = pump_runtime_once(
+      runtime,
+      windows,
+      host,
+      pending,
+      wakeup.signal,
+      forward_menu_events,
+      monitor_bridge,
+      launch_input_handlers,
+      group,
+    )
     if did_work {
       @async.sleep(0) catch {
         error => raise normalize_async_run_error(error)
@@ -716,6 +676,7 @@ async fn run_window_pump(
       }
     }
   }
+  cancel_all_bridge_tasks(pending)
 }
 
 ///|
@@ -730,39 +691,40 @@ fn take_runtime_bridge_failure(
 }
 
 ///|
-async fn run_bridge_pump(
+fn pump_runtime_once(
   runtime : @native.Runtime,
   windows : Array[RunningWindow],
-  host : @core.AppCommandHost,
-  wakeup : RuntimeWakeup,
+  host : @core.AppCommandHost?,
+  pending : Array[BridgeDispatchTask],
+  wake_signal : @core.RuntimeWakeSignal,
   forward_menu_events : Bool,
+  monitor_bridge : Bool,
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
   group : @async.TaskGroup[Unit],
-) -> Unit raise AppRunError {
-  let mut pending : Array[BridgeDispatchTask] = []
-  while !all_windows_closed(windows) {
-    let mut did_work = false
+) -> Bool raise AppRunError {
+  let mut did_work = false
 
-    let mut polling_events = true
-    while polling_events {
-      let next_event = runtime.poll_event() catch {
-        error => raise native_run_error("poll event", error)
-      }
-      match next_event {
-        None => polling_events = false
-        Some(event) => {
-          did_work = true
-          dispatch_runtime_event(
-            event, windows, forward_menu_events, launch_input_handlers, group,
-          )
-          if event.is_window_closed() {
-            let closed_window = event.window_id()
-            cancel_window_bridge_tasks(pending, closed_window)
-          }
+  let mut polling_events = true
+  while polling_events {
+    let next_event = runtime.poll_event() catch {
+      error => raise native_run_error("poll event", error)
+    }
+    match next_event {
+      None => polling_events = false
+      Some(event) => {
+        did_work = true
+        dispatch_runtime_event(
+          event, windows, forward_menu_events, launch_input_handlers, group,
+        )
+        cancel_bridge_request_task(pending, event.bridge_request_cancellation())
+        if event.is_window_closed() {
+          cancel_window_bridge_tasks(pending, event.window_id())
         }
       }
     }
+  }
 
+  if monitor_bridge {
     for running in windows {
       if !running.closed {
         let failure = take_runtime_bridge_failure(running.window) catch {
@@ -778,109 +740,127 @@ async fn run_bridge_pump(
         }
       }
     }
+  }
 
-    let mut polling_bridge = true
-    while polling_bridge {
-      let next_request = runtime.poll_bridge_request() catch {
-        error => raise native_run_error("poll bridge request", error)
-      }
-      match next_request {
-        None => polling_bridge = false
-        Some(request) => {
-          did_work = true
-          let request_id = request.request_id()
-          let target = match find_running_window(windows, request.window()) {
-            Some(window) if !window.closed => window
-            _ => {
-              runtime.respond_bridge_request(
-                @native.BridgeResponse::Err(
-                  request_id~,
-                  code="window_closed",
-                  message="the issuing window is no longer available",
-                ),
-              ) catch {
-                error =>
-                  if !is_stale_bridge_response_error(error) {
-                    raise native_run_error("reject bridge request", error)
-                  }
-              }
-              continue
+  let mut polling_bridge = true
+  while polling_bridge {
+    let next_request = runtime.poll_bridge_request() catch {
+      error => raise native_run_error("poll bridge request", error)
+    }
+    match next_request {
+      None => polling_bridge = false
+      Some(request) => {
+        did_work = true
+        let request_id = request.request_id()
+        let target = match find_running_window(windows, request.window()) {
+          Some(window) if !window.closed => window
+          _ => {
+            runtime.respond_bridge_request(
+              @native.BridgeResponse::Err(
+                request_id~,
+                code="window_closed",
+                message="the issuing window is no longer available",
+              ),
+            ) catch {
+              error =>
+                if !is_stale_bridge_response_error(error) {
+                  raise native_run_error("reject bridge request", error)
+                }
             }
-          }
-          let task = group.spawn(
-            () => {
-              defer wakeup.signal.notify()
-              dispatch_bridge_request(
-                target.window,
-                host,
-                request,
-                target.policy,
-                wakeup.signal,
-              )
-            },
-            no_wait=true,
-            allow_failure=true,
-          )
-          pending.push(BridgeDispatchTask::{
-            request_id,
-            window: target.window.id(),
-            task,
-            state: Running,
-          })
-        }
-      }
-    }
-
-    let remaining : Array[BridgeDispatchTask] = []
-    for item in pending {
-      if item.state == Cancelled {
-        continue
-      }
-      let completed = item.task.try_wait() catch {
-        _ =>
-          Some(
-            @native.BridgeResponse::Err(
-              request_id=item.request_id,
-              code="handler_failed",
-              message="bridge handler task failed",
-            ),
-          )
-      }
-      match completed {
-        Some(response) => {
-          did_work = true
-          item.state = Responding
-          runtime.respond_bridge_request(response) catch {
-            error =>
-              if is_stale_bridge_response_error(error) {
-                item.state = Stale
-              } else {
-                raise native_run_error("respond bridge request", error)
-              }
-          }
-          if item.state == Responding {
-            item.state = Completed
+            continue
           }
         }
-        None => remaining.push(item)
+        match host {
+          None =>
+            runtime.respond_bridge_request(
+              @native.BridgeResponse::Err(
+                request_id~,
+                code="command_host_unavailable",
+                message="the application command host is not available",
+              ),
+            ) catch {
+              error =>
+                if !is_stale_bridge_response_error(error) {
+                  raise native_run_error("reject bridge request", error)
+                }
+            }
+          Some(host) => {
+            let task = group.spawn(
+              () => {
+                defer wake_signal.notify()
+                dispatch_bridge_request(
+                  target.window,
+                  host,
+                  request,
+                  target.policy,
+                  wake_signal,
+                )
+              },
+              no_wait=true,
+              allow_failure=true,
+            )
+            pending.push(BridgeDispatchTask::{
+              request_id,
+              window: target.window.id(),
+              task,
+              state: Running,
+            })
+          }
+        }
       }
-    }
-    pending = remaining
-
-    if did_work {
-      @async.sleep(0) catch {
-        error => raise normalize_async_run_error(error)
-      }
-    } else {
-      wakeup.wait()
     }
   }
+
+  let remaining : Array[BridgeDispatchTask] = []
+  for item in pending {
+    if item.state == Cancelled {
+      continue
+    }
+    let completed = item.task.try_wait() catch {
+      _ =>
+        Some(
+          @native.BridgeResponse::Err(
+            request_id=item.request_id,
+            code="handler_failed",
+            message="bridge handler task failed",
+          ),
+        )
+    }
+    match completed {
+      Some(response) => {
+        did_work = true
+        item.state = Responding
+        runtime.respond_bridge_request(response) catch {
+          error =>
+            if is_stale_bridge_response_error(error) {
+              item.state = Stale
+            } else {
+              raise native_run_error("respond bridge request", error)
+            }
+        }
+        if item.state == Responding {
+          item.state = Completed
+        }
+      }
+      None => remaining.push(item)
+    }
+  }
+  pending.clear()
+  for item in remaining {
+    pending.push(item)
+  }
+  did_work
+}
+
+///|
+fn cancel_all_bridge_tasks(pending : Array[BridgeDispatchTask]) -> Unit {
   for item in pending {
     if item.state == Running {
       item.task.cancel()
       item.state = Cancelled
     }
   }
+  pending.clear()
 }
 
 ///|
@@ -1053,6 +1033,23 @@ fn cancel_window_bridge_tasks(
     Some(window_id) =>
       for item in pending {
         if item.window == window_id && item.state == Running {
+          item.task.cancel()
+          item.state = Cancelled
+        }
+      }
+    None => ()
+  }
+}
+
+///|
+fn cancel_bridge_request_task(
+  pending : Array[BridgeDispatchTask],
+  request_id : Int64?,
+) -> Unit {
+  match request_id {
+    Some(request_id) =>
+      for item in pending {
+        if item.request_id == request_id && item.state == Running {
           item.task.cancel()
           item.state = Cancelled
         }

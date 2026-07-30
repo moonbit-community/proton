@@ -10,6 +10,136 @@ fn[T] expect_native_error(
 }
 
 ///|
+fn native_text_test_copy(
+  text : String,
+  length : NativeTextLength,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  required : Ref[Int],
+) -> Int {
+  let text_bytes = @ffi.to_cstr(text)
+  let payload_len = text_bytes.length() - 1
+  required.val = match length {
+    PayloadBytesExcludingTerminator => payload_len
+    BufferBytesIncludingTerminator => payload_len + 1
+  }
+  if buffer_len < payload_len + 1 {
+    return proton_err_buffer_too_small
+  }
+  buffer.blit_from_bytes(0, text_bytes, 0, payload_len + 1)
+  0
+}
+
+///|
+test "native text reader retries when the payload grows" {
+  let calls = Ref(0)
+  let final_text = "{\"url\":\"proton://app/a/much/longer/path\"}"
+  let result = read_native_text(
+    "growing payload",
+    PayloadBytesExcludingTerminator,
+    (buffer, buffer_len, required) => {
+      calls.val = calls.val + 1
+      match calls.val {
+        1 => {
+          required.val = 2
+          proton_err_buffer_too_small
+        }
+        2 => {
+          required.val = final_text.length()
+          proton_err_buffer_too_small
+        }
+        _ =>
+          native_text_test_copy(
+            final_text,
+            PayloadBytesExcludingTerminator,
+            buffer,
+            buffer_len,
+            required,
+          )
+      }
+    },
+  )
+  @debug.assert_eq(
+    result,
+    Some("{\"url\":\"proton://app/a/much/longer/path\"}"),
+  )
+  assert_eq(calls.val, 3)
+}
+
+///|
+test "native text reader decodes the successful shorter snapshot" {
+  let calls = Ref(0)
+  let result = read_native_text(
+    "shrinking payload",
+    PayloadBytesExcludingTerminator,
+    (buffer, buffer_len, required) => {
+      calls.val = calls.val + 1
+      if calls.val == 1 {
+        required.val = 128
+        proton_err_buffer_too_small
+      } else {
+        native_text_test_copy(
+          "ready",
+          PayloadBytesExcludingTerminator,
+          buffer,
+          buffer_len,
+          required,
+        )
+      }
+    },
+  )
+  @debug.assert_eq(result, Some("ready"))
+  assert_eq(calls.val, 2)
+}
+
+///|
+test "native text reader handles no event after resizing" {
+  let calls = Ref(0)
+  let result = read_native_text(
+    "optional payload",
+    PayloadBytesExcludingTerminator,
+    (_buffer, _buffer_len, required) => {
+      calls.val = calls.val + 1
+      if calls.val == 1 {
+        required.val = 16
+        proton_err_buffer_too_small
+      } else {
+        proton_event_none
+      }
+    },
+  )
+  @debug.assert_eq(result, None)
+  assert_eq(calls.val, 2)
+}
+
+///|
+test "native text reader accepts lengths that include the terminator" {
+  let result = read_native_text(
+    "buffer length payload",
+    BufferBytesIncludingTerminator,
+    (buffer, buffer_len, required) => {
+      native_text_test_copy(
+        "selected",
+        BufferBytesIncludingTerminator,
+        buffer,
+        buffer_len,
+        required,
+      )
+    },
+  )
+  @debug.assert_eq(result, Some("selected"))
+}
+
+///|
+test "runtime events preserve bridge cancellation request ids" {
+  let event = decode_runtime_event_json(
+    "{\"type\":\"bridge_request_cancelled\",\"request_id\":\"42\"}",
+  )
+  assert_eq(event.event_type(), "bridge_request_cancelled")
+  assert_true(event.bridge_request_cancellation() == Some(42L))
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }

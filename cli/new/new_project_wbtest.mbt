@@ -240,6 +240,11 @@ test "templates receive final author title and size" {
       "\"justjavac/proton_contract@" + default_proton_contract_version + "\"",
     ),
   )
+  assert_false(shared_mod.contains("supported_targets"))
+  guard find_planned_file(files, "shared/moon.pkg") is Some(shared_pkg) else {
+    abort("missing shared/moon.pkg")
+  }
+  assert_false(shared_pkg.contains("supported_targets"))
   guard find_planned_file(files, "frontend/moon.mod") is Some(frontend_mod) else {
     abort("missing frontend/moon.mod")
   }

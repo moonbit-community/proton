@@ -546,17 +546,3 @@ fn canonical_dev_origin_port_suffix(
     ":" + value.to_string()
   }
 }
-
-///|
-fn bridge_page_policy_dev_origins(
-  policies : Array[BridgePagePolicy],
-) -> Array[String] {
-  let origins : Array[String] = []
-  for policy in policies {
-    match policy.dev_origin {
-      Some(origin) if !origins.contains(origin) => origins.push(origin)
-      _ => ()
-    }
-  }
-  origins
-}
