@@ -265,9 +265,12 @@ static void proton_engine_signal_wakeup_source(
     DWORD written = 0;
     if (!WriteFile(runtime->wakeup_write, &wakeup_byte, 1, &written, NULL)) {
       DWORD error = GetLastError();
-      if (error == ERROR_BROKEN_PIPE || error == ERROR_NO_DATA) {
+      if (error == ERROR_BROKEN_PIPE) {
         runtime->wakeup_active = 0;
       }
+      // Any other failure is transient: ERROR_NO_DATA means the NOWAIT pipe
+      // is full, and the buffered bytes already guarantee a wakeup. Keep the
+      // pipe active instead of disabling wakeups permanently.
     }
   }
   LeaveCriticalSection(&runtime->wakeup_lock);
@@ -1458,8 +1461,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   if (!proton_engine_bridge_op_is_valid(op) ||
       !proton_engine_bridge_payload_is_valid(
           payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES) ||
-      page_instance == NULL || page_instance[0] == '\0' ||
-      strlen(page_instance) >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+      !proton_engine_bridge_page_instance_is_valid(page_instance)) {
     proton_engine_debug_log(
         "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
         pending_id, op != NULL ? op : "",
@@ -1697,14 +1699,23 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 1;
   }
   if (!proton_engine_bridge_payload_is_valid(
-          payload_json, window->max_bridge_payload_bytes) ||
-      page_instance == NULL || page_instance[0] == '\0' ||
-      strlen(page_instance) >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+          payload_json, window->max_bridge_payload_bytes)) {
     proton_engine_debug_log("bridge_reject_payload_too_large browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge payload is too large");
+    free(op);
+    free(payload_json);
+    free(page_instance);
+    return 1;
+  }
+  if (!proton_engine_bridge_page_instance_is_valid(page_instance)) {
+    proton_engine_debug_log("bridge_reject_invalid_page_instance browser=%d pending=%d op=%s",
+                            browser_id, renderer_pending_id,
+                            op != NULL ? op : "");
+    proton_engine_reject_renderer_request(frame, renderer_pending_id,
+                                          "bridge page instance is invalid");
     free(op);
     free(payload_json);
     free(page_instance);
