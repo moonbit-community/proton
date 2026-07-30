@@ -524,7 +524,7 @@ async fn run_moon_check(
   project_dir : String,
 ) -> Unit raise NewProjectToolError {
   let (code, data) = @process.collect_output_merged("moon", [
-    "-C", project_dir, "check", "--diagnostic-limit", "80",
+    "-C", project_dir, "check", "--target", "js,native", "--diagnostic-limit", "80",
   ]) catch {
     err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
   }

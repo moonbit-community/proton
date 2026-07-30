@@ -188,13 +188,14 @@ native checks before handing off larger refactors.
     --identifier "com.example.proton-release-smoke" -y --no-git
   proton_cli -C "$tmp_dir/release-smoke" cef setup
   proton_cli -C "$tmp_dir/release-smoke" build
-  proton_cli -C "$tmp_dir/release-smoke" package app --dry-run
-  proton_cli -C "$tmp_dir/release-smoke" package app
+  proton_cli -C "$tmp_dir/release-smoke" package --target app --dry-run
+  proton_cli -C "$tmp_dir/release-smoke" package --target app
   ```
 
-- The release is not complete until the independent scaffold passes its default
-  `moon check`, native build, package-plan validation, and real package creation
-  using registry dependencies and the setup-managed runtime.
+- The release is not complete until the independent scaffold passes
+  `moon check --target js,native`, native build, package-plan validation, and
+  real package creation using registry dependencies and the setup-managed
+  runtime.
 
 ## Coding Conventions
 - Use MoonBit with 2-space indentation and `///|` top-level separators.
