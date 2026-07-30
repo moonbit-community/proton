@@ -673,6 +673,63 @@ test "macOS helper plist matches its bundle identity" {
 }
 
 ///|
+async test "macOS ZIP uses the final app name without metadata entries" {
+  guard is_macos_host() else { return }
+  let root = resolve_path("target", "proton-package-macos-zip-layout")
+  remove_tree(root)
+  let plan = PackagePlan::{
+    root,
+    workspace_root: root,
+    build_target_dir: resolve_path(root, "build"),
+    app_package: "app",
+    config_path: resolve_path(root, "moon.proton"),
+    product_name: "Demo App",
+    identifier: "dev.proton.demo",
+    version: "1.0.0",
+    macos_version: "1.0.0",
+    bundle_version: "1.0.0",
+    targets: ["app", "zip"],
+    output: root,
+    build: false,
+    base_dir: root,
+    frontend_dist: None,
+    entry_paths: [],
+    resources: [],
+    icons: [],
+    url_schemes: [],
+    document_types: [],
+    macos_icon: None,
+    sign: false,
+    notarize: false,
+  }
+  let app = macos_staging_app_path(plan)
+  let payload = resolve_path(app, "Contents/Resources/payload.txt")
+  ensure_dir(path_parent(payload))
+  write_text(payload, "payload")
+  let xattr_code = @process.run("xattr", [
+    "-w", "com.proton.package-test", "value", payload,
+  ]) catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_eq(xattr_code, 0)
+  let archive = macos_zip_staging_path(plan)
+  create_zip(app, archive)
+  let (zipinfo_code, listing) = @process.collect_output_merged("zipinfo", [
+    "-1", archive,
+  ]) catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_eq(zipinfo_code, 0)
+  let listing = listing.text() catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_true(listing.contains("Demo App.app/"))
+  assert_false(listing.contains(".staging"))
+  assert_false(listing.contains("__MACOSX"))
+  assert_false(listing.contains("._"))
+}
+
+///|
 async test "macOS staged app promotion rolls back when staging is missing" {
   let root = "target/proton-package-macos-promotion"
   remove_tree(root)
