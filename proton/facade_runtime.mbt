@@ -177,7 +177,7 @@ async fn run_manifest(
           }
           if bridge is Some(_) {
             wait_for_bridge_startup(
-              runtime, created_window, wakeup, forward_menu_events, bridge_startup_timeout_ms,
+              runtime, running, windows, wakeup, forward_menu_events, bridge_startup_timeout_ms,
               launch_input_handlers, window_tasks,
             ) catch {
               error => raise normalize_async_run_error(error)
@@ -186,6 +186,9 @@ async fn run_manifest(
         }
         lifecycle.finish_window_create()
         for running in windows {
+          if running.closed {
+            continue
+          }
           let window_events = WindowEventEmitter::new(
             typed_event_sender(running.window, None),
           )
@@ -201,6 +204,9 @@ async fn run_manifest(
             ),
           )
           running.lifetime.wait_until_ready()
+          if running.closed {
+            continue
+          }
           running.window.show() catch {
             error => raise native_run_error("show window " + running.id, error)
           }
@@ -427,7 +433,8 @@ fn bridge_failure(
 ///|
 async fn wait_for_bridge_startup(
   runtime : @native.Runtime,
-  window : @native.Window,
+  running : RunningWindow,
+  windows : Array[RunningWindow],
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   timeout_ms : Int,
@@ -436,7 +443,8 @@ async fn wait_for_bridge_startup(
 ) -> Unit raise AppRunError {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
     wait_for_bridge_startup_until_terminal(
-      runtime, window, wakeup, forward_menu_events, launch_input_handlers, group,
+      runtime, running, windows, wakeup, forward_menu_events, launch_input_handlers,
+      group,
     )
   }) catch {
     error => raise normalize_async_run_error(error)
@@ -445,7 +453,7 @@ async fn wait_for_bridge_startup(
     Some(_) => ()
     None => {
       let state = pump_bridge_startup_once(
-        runtime, window, forward_menu_events, launch_input_handlers, group,
+        runtime, running, windows, forward_menu_events, launch_input_handlers, group,
       )
       if bridge_startup_is_ready(state) {
         return
@@ -460,7 +468,8 @@ async fn wait_for_bridge_startup(
 ///|
 async fn wait_for_bridge_startup_until_terminal(
   runtime : @native.Runtime,
-  window : @native.Window,
+  running : RunningWindow,
+  windows : Array[RunningWindow],
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
@@ -468,7 +477,7 @@ async fn wait_for_bridge_startup_until_terminal(
 ) -> Unit {
   while true {
     let state = pump_bridge_startup_once(
-      runtime, window, forward_menu_events, launch_input_handlers, group,
+      runtime, running, windows, forward_menu_events, launch_input_handlers, group,
     )
     if bridge_startup_is_ready(state) {
       return
@@ -480,39 +489,22 @@ async fn wait_for_bridge_startup_until_terminal(
 ///|
 fn pump_bridge_startup_once(
   runtime : @native.Runtime,
-  window : @native.Window,
+  running : RunningWindow,
+  windows : Array[RunningWindow],
   forward_menu_events : Bool,
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
   group : @async.TaskGroup[Unit],
 ) -> @native.BridgeLifecycleState raise AppRunError {
-  let mut polling_events = true
-  while polling_events {
-    let next_event = runtime.poll_event() catch {
-      error => raise native_run_error("poll startup event", error)
-    }
-    match next_event {
-      None => polling_events = false
-      Some(event) => {
-        dispatch_internal_runtime_event(event)
-        dispatch_launch_input(event, launch_input_handlers, group)
-        if event.is_window_closed() && event.window_id() == Some(window.id()) {
-          raise EntryLoadError(ClosedDuringStartup)
-        }
-        if forward_menu_events {
-          if event.menu_command_id() is Some(command_id) {
-            forward_menu_command(window, command_id, event.window_id())
-          }
-        }
-      }
-    }
-  }
-  let state = window.bridge_lifecycle_state() catch {
+  drain_bridge_startup_events(
+    runtime, running, windows, forward_menu_events, launch_input_handlers, group,
+  )
+  let state = running.window.bridge_lifecycle_state() catch {
     error => raise native_run_error("read bridge startup state", error)
   }
   if state.url != "about:blank" {
     match state.outcome {
       "failed" =>
-        try bridge_failure(window, state) catch {
+        try bridge_failure(running.window, state) catch {
           error => raise native_run_error("read bridge startup failure", error)
         } noraise {
           diagnostic => raise BridgeStartupError(diagnostic)
@@ -527,6 +519,35 @@ fn pump_bridge_startup_once(
     }
   }
   state
+}
+
+///|
+fn drain_bridge_startup_events(
+  runtime : @native.Runtime,
+  running : RunningWindow,
+  windows : Array[RunningWindow],
+  forward_menu_events : Bool,
+  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
+  group : @async.TaskGroup[Unit],
+) -> Unit raise AppRunError {
+  let mut polling_events = true
+  while polling_events {
+    let next_event = runtime.poll_event() catch {
+      error => raise native_run_error("poll startup event", error)
+    }
+    match next_event {
+      None => polling_events = false
+      Some(event) => {
+        dispatch_runtime_event(
+          event, windows, forward_menu_events, launch_input_handlers, group,
+        )
+        if event.is_window_closed() &&
+          event.window_id() == Some(running.window.id()) {
+          raise EntryLoadError(ClosedDuringStartup)
+        }
+      }
+    }
+  }
 }
 
 ///|
@@ -660,20 +681,9 @@ async fn run_window_pump(
         None => polling_events = false
         Some(event) => {
           did_work = true
-          dispatch_internal_runtime_event(event)
-          if event.is_window_closed() {
-            mark_window_closed(windows, event.window_id())
-          }
-          dispatch_launch_input(event, launch_input_handlers, group)
-          if forward_menu_events {
-            if event.menu_command_id() is Some(command_id) {
-              forward_menu_command_to_window(
-                windows,
-                command_id,
-                event.window_id(),
-              )
-            }
-          }
+          dispatch_runtime_event(
+            event, windows, forward_menu_events, launch_input_handlers, group,
+          )
         }
       }
     }
@@ -742,21 +752,12 @@ async fn run_bridge_pump(
         None => polling_events = false
         Some(event) => {
           did_work = true
-          dispatch_internal_runtime_event(event)
+          dispatch_runtime_event(
+            event, windows, forward_menu_events, launch_input_handlers, group,
+          )
           if event.is_window_closed() {
             let closed_window = event.window_id()
-            mark_window_closed(windows, closed_window)
             cancel_window_bridge_tasks(pending, closed_window)
-          }
-          dispatch_launch_input(event, launch_input_handlers, group)
-          if forward_menu_events {
-            if event.menu_command_id() is Some(command_id) {
-              forward_menu_command_to_window(
-                windows,
-                command_id,
-                event.window_id(),
-              )
-            }
           }
         }
       }
@@ -878,6 +879,26 @@ async fn run_bridge_pump(
     if item.state == Running {
       item.task.cancel()
       item.state = Cancelled
+    }
+  }
+}
+
+///|
+fn dispatch_runtime_event(
+  event : @native.RuntimeEvent,
+  windows : Array[RunningWindow],
+  forward_menu_events : Bool,
+  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
+  group : @async.TaskGroup[Unit],
+) -> Unit raise AppRunError {
+  dispatch_internal_runtime_event(event)
+  if event.is_window_closed() {
+    mark_window_closed(windows, event.window_id())
+  }
+  dispatch_launch_input(event, launch_input_handlers, group)
+  if forward_menu_events {
+    if event.menu_command_id() is Some(command_id) {
+      forward_menu_command_to_window(windows, command_id, event.window_id())
     }
   }
 }

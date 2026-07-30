@@ -322,6 +322,54 @@ test "bridge startup timeout retains the last lifecycle state" {
 }
 
 ///|
+async test "startup dispatch retains an earlier window close" {
+  let runtime = @native.Runtime::new()
+  let first = @native.Window::new(runtime)
+  let second = @native.Window::new(runtime)
+  defer {
+    first.destroy() catch {
+      _ => ()
+    }
+    second.destroy() catch {
+      _ => ()
+    }
+    runtime.destroy() catch {
+      _ => ()
+    }
+  }
+  while runtime.poll_event() is Some(_) {
+
+  }
+  let windows = [
+    RunningWindow::{
+      id: "main",
+      window: first,
+      policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
+      lifetime: WindowLifetime::new(),
+      closed: false,
+    },
+    RunningWindow::{
+      id: "secondary",
+      window: second,
+      policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
+      lifetime: WindowLifetime::new(),
+      closed: false,
+    },
+  ]
+  first.close()
+  @async.with_task_group(group => {
+    drain_bridge_startup_events(runtime, windows[1], windows, false, [], group) catch {
+      error => abort(error.message())
+    }
+    group.return_immediately(())
+  })
+  assert_true(windows[0].closed)
+  assert_true(windows[0].lifetime.closed)
+  assert_false(windows[1].closed)
+  assert_false(windows[1].lifetime.closed)
+}
+
+///|
 test "extension events use structured bridge transport JSON" {
   let event = @ipc.IpcExtensionEvent::new(
     "ticker",
