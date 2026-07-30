@@ -557,6 +557,26 @@ test "dev bridge page policy parses exact http origins" {
 }
 
 ///|
+test "native bridge config isolates each window development origin" {
+  let frontend = BridgeFrontendConfig::{
+    extensions: [],
+    initialization_units: [],
+  }
+  let first = native_bridge_config(["app:ping"], frontend, BridgePagePolicy::{
+    dev_origin: Some("http://localhost:3000"),
+    request_timeout_ms: 30000,
+  }).to_json_string()
+  let second = native_bridge_config(["app:ping"], frontend, BridgePagePolicy::{
+    dev_origin: Some("http://localhost:4000"),
+    request_timeout_ms: 30000,
+  }).to_json_string()
+  assert_true(first.contains("http://localhost:3000"))
+  assert_false(first.contains("http://localhost:4000"))
+  assert_true(second.contains("http://localhost:4000"))
+  assert_false(second.contains("http://localhost:3000"))
+}
+
+///|
 test "bridge frontend config ignores disabled command extensions" {
   let extension_id = "examples/async-add"
   let manifest = test_command_manifest(extension_id, enabled=false)

@@ -139,25 +139,19 @@ async fn run_manifest(
         Some(host) => host.host.registered_ops()
         None => []
       }
-      let bridge = if ops.length() > 0 ||
+      let bridge_enabled = ops.length() > 0 ||
         frontend.extensions.length() > 0 ||
         frontend.initialization_units.length() > 0 ||
         forward_menu_events ||
-        window_lifecycle_hooks.length() > 0 {
-        Some(
-          @native.BridgeConfig::new(
-            ops~,
-            dev_origins=bridge_page_policy_dev_origins(policies),
-            extensions=frontend.extensions,
-            initialization_units=frontend.initialization_units,
-          ),
-        )
-      } else {
-        None
-      }
+        window_lifecycle_hooks.length() > 0
       @async.with_task_group(window_tasks => {
         lifecycle.begin_window_create()
         for index, plan in plans {
+          let bridge = if bridge_enabled {
+            Some(native_bridge_config(ops, frontend, policies[index]))
+          } else {
+            None
+          }
           let created_window = @native.Window::new(
             runtime,
             config=native_window_config(plan.window, bridge),
@@ -175,7 +169,7 @@ async fn run_manifest(
           load_entry_after_create(created_window, plan.entry) catch {
             error => raise EntryLoadError(error)
           }
-          if bridge is Some(_) {
+          if bridge_enabled {
             wait_for_bridge_startup(
               runtime, running, windows, wakeup, forward_menu_events, bridge_startup_timeout_ms,
               launch_input_handlers, window_tasks,
@@ -227,12 +221,7 @@ async fn run_manifest(
             }
           None =>
             run_window_pump(
-              runtime,
-              windows,
-              wakeup,
-              forward_menu_events,
-              bridge is Some(_),
-              launch_input_handlers,
+              runtime, windows, wakeup, forward_menu_events, bridge_enabled, launch_input_handlers,
               window_tasks,
             ) catch {
               error => raise normalize_async_run_error(error)
@@ -342,6 +331,25 @@ fn native_window_config(
       @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
     },
     bridge?,
+  )
+}
+
+///|
+fn native_bridge_config(
+  ops : Array[String],
+  frontend : BridgeFrontendConfig,
+  policy : BridgePagePolicy,
+) -> @native.BridgeConfig {
+  let dev_origins = match policy.dev_origin {
+    Some(origin) => [origin]
+    None => []
+  }
+  @native.BridgeConfig::new(
+    ops~,
+    request_timeout_ms=policy.request_timeout_ms,
+    dev_origins~,
+    extensions=frontend.extensions,
+    initialization_units=frontend.initialization_units,
   )
 }
 
