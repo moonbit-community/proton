@@ -383,7 +383,79 @@ static int expect_bridge_response_payloads(void) {
   return 0;
 }
 
+static int expect_bridge_lifecycle_resize_retry(void) {
+  proton_engine_bridge_lifecycle_t lifecycle;
+  proton_engine_bridge_lifecycle_init(&lifecycle);
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-short", "", NULL)) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle rejected the short resize state");
+  }
+
+  int32_t required = 0;
+  if (expect_status("bridge lifecycle short length probe",
+                    proton_engine_bridge_lifecycle_state_json(
+                        &lifecycle, NULL, 0, &required),
+                    PROTON_ERR_BUFFER_TOO_SMALL) ||
+      required <= 0) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return 1;
+  }
+  int32_t short_required = required;
+  char *state = (char *)calloc((size_t)short_required + 1, 1);
+  if (state == NULL) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("failed to allocate short bridge lifecycle buffer");
+  }
+
+  char long_url[2048];
+  static const char url_prefix[] = "proton://app/";
+  memcpy(long_url, url_prefix, sizeof(url_prefix) - 1);
+  memset(long_url + sizeof(url_prefix) - 1, 'x',
+         sizeof(long_url) - sizeof(url_prefix));
+  long_url[sizeof(long_url) - 1] = '\0';
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-long", long_url, NULL)) {
+    free(state);
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle rejected the long resize state");
+  }
+  if (expect_status("bridge lifecycle grown copy",
+                    proton_engine_bridge_lifecycle_state_json(
+                        &lifecycle, state, short_required + 1, &required),
+                    PROTON_ERR_BUFFER_TOO_SMALL) ||
+      required <= short_required) {
+    free(state);
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle did not report its grown payload");
+  }
+
+  char *grown_state = (char *)realloc(state, (size_t)required + 1);
+  if (grown_state == NULL) {
+    free(state);
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("failed to grow bridge lifecycle buffer");
+  }
+  state = grown_state;
+  if (expect_status("bridge lifecycle grown retry",
+                    proton_engine_bridge_lifecycle_state_json(
+                        &lifecycle, state, required + 1, &required),
+                    PROTON_OK) ||
+      strstr(state, "\"page_instance\":\"page-long\"") == NULL ||
+      strstr(state, long_url) == NULL) {
+    free(state);
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("bridge lifecycle retry did not return the grown state");
+  }
+  free(state);
+  proton_engine_bridge_lifecycle_dispose(&lifecycle);
+  return 0;
+}
+
 static int expect_bridge_lifecycle_state(void) {
+  if (expect_bridge_lifecycle_resize_retry()) {
+    return 1;
+  }
   static const char first_failure[] =
       "{\"abi_version\":1,\"stage\":\"bootstrap\","
       "\"code\":\"first_failure\",\"message\":\"first\","

@@ -5,23 +5,11 @@ pub fn abi_version() -> Int {
 
 ///|
 pub fn runtime_info_json() -> String raise NativeError {
-  let required = Ref(0)
-  let scratch = FixedArray::make(1, b'\x00')
-  let status = proton_runtime_info_json_ffi(scratch, 0, required)
-  if status != proton_err_buffer_too_small && status < 0 {
-    raise native_error(status)
-  }
-  let buffer = FixedArray::make(required.val + 1, b'\x00')
-  let second_status = proton_runtime_info_json_ffi(
+  require_native_text("runtime info JSON", PayloadBytesExcludingTerminator, (
     buffer,
-    buffer.length(),
+    buffer_len,
     required,
-  )
-  if second_status < 0 {
-    raise native_error(second_status)
-  } else {
-    @ffi.from_cstr(Bytes::from_array(buffer))
-  }
+  ) => proton_runtime_info_json_ffi(buffer, buffer_len, required))
 }
 
 ///|
@@ -371,26 +359,15 @@ pub fn Runtime::prepare_wakeup_source(
   self : Runtime,
 ) -> String raise NativeError {
   let handle = self.active_handle()
-  let required = Ref(0)
-  let scratch = FixedArray::make(1, b'\x00')
-  let status = proton_runtime_prepare_wakeup_source_ffi(
-    handle, scratch, 0, required,
+  require_native_text(
+    "runtime wakeup source",
+    PayloadBytesExcludingTerminator,
+    (buffer, buffer_len, required) => {
+      proton_runtime_prepare_wakeup_source_ffi(
+        handle, buffer, buffer_len, required,
+      )
+    },
   )
-  if status != proton_err_buffer_too_small && status < 0 {
-    raise native_error(status)
-  }
-  let buffer = FixedArray::make(required.val + 1, b'\x00')
-  let second_status = proton_runtime_prepare_wakeup_source_ffi(
-    handle,
-    buffer,
-    buffer.length(),
-    required,
-  )
-  if second_status < 0 {
-    raise native_error(second_status)
-  } else {
-    @ffi.from_cstr(Bytes::from_array(buffer))
-  }
 }
 
 ///|
@@ -450,27 +427,11 @@ pub fn Runtime::quit(self : Runtime) -> Unit raise NativeError {
 ///|
 pub fn Runtime::poll_event_json(self : Runtime) -> String? raise NativeError {
   let handle = self.active_handle()
-  let required = Ref(0)
-  let scratch = FixedArray::make(1, b'\x00')
-  let status = proton_runtime_poll_event_json_ffi(handle, scratch, 0, required)
-  if status == proton_event_none {
-    return None
-  }
-  if status != proton_err_buffer_too_small && status < 0 {
-    raise native_error(status)
-  }
-  let buffer = FixedArray::make(required.val + 1, b'\x00')
-  let second_status = proton_runtime_poll_event_json_ffi(
-    handle,
+  read_native_text("runtime event JSON", PayloadBytesExcludingTerminator, (
     buffer,
-    buffer.length(),
+    buffer_len,
     required,
-  )
-  if second_status < 0 {
-    raise native_error(second_status)
-  } else {
-    Some(@ffi.from_cstr(Bytes::from_array(buffer)))
-  }
+  ) => proton_runtime_poll_event_json_ffi(handle, buffer, buffer_len, required))
 }
 
 ///|
@@ -486,29 +447,15 @@ pub fn Runtime::poll_bridge_request_json(
   self : Runtime,
 ) -> String? raise NativeError {
   let handle = self.active_handle()
-  let required = Ref(0)
-  let scratch = FixedArray::make(1, b'\x00')
-  let status = proton_runtime_poll_bridge_request_json_ffi(
-    handle, scratch, 0, required,
-  )
-  if status == proton_event_none {
-    return None
-  }
-  if status != proton_err_buffer_too_small && status < 0 {
-    raise native_error(status)
-  }
-  let buffer = FixedArray::make(required.val + 1, b'\x00')
-  let second_status = proton_runtime_poll_bridge_request_json_ffi(
-    handle,
+  read_native_text("bridge request JSON", PayloadBytesExcludingTerminator, (
     buffer,
-    buffer.length(),
+    buffer_len,
     required,
-  )
-  if second_status < 0 {
-    raise native_error(second_status)
-  } else {
-    Some(@ffi.from_cstr(Bytes::from_array(buffer)))
-  }
+  ) => {
+    proton_runtime_poll_bridge_request_json_ffi(
+      handle, buffer, buffer_len, required,
+    )
+  })
 }
 
 ///|
@@ -696,35 +643,15 @@ pub fn Window::emit_bridge_event_json(
 ///|
 fn window_bridge_json(
   window : Window,
+  context : String,
   query : (Int64, FixedArray[Byte], Int, Ref[Int]) -> Int,
-  optional : Bool,
 ) -> String? raise NativeError {
-  let required = Ref(0)
-  let scratch = FixedArray::make(1, b'\x00')
   let handle = window.live_handle()
-  let status = query(handle, scratch, 0, required)
-  if optional && status == proton_event_none {
-    return None
-  }
-  if status != proton_err_buffer_too_small && status < 0 {
-    raise native_error(status)
-  }
-  let buffer = FixedArray::make(required.val + 1, b'\x00')
-  let second_status = query(handle, buffer, buffer.length(), required)
-  if second_status < 0 {
-    raise native_error(second_status)
-  } else {
-    // The lifecycle state can change between the size query and the copy.
-    // Decode exactly the length returned by the copy, rather than the
-    // originally allocated capacity; otherwise a shorter second result leaves
-    // zero-fill inside the byte string and the JSON parser rejects it.
-    let result_length = required.val + 1
-    if result_length <= 0 || result_length > buffer.length() {
-      raise invalid_argument("native bridge JSON length is invalid")
-    } else {
-      Some(@ffi.from_cstr(Bytes::from_array(buffer[0:result_length])))
-    }
-  }
+  read_native_text(context, PayloadBytesExcludingTerminator, (
+    buffer,
+    buffer_len,
+    required,
+  ) => query(handle, buffer, buffer_len, required))
 }
 
 ///|
@@ -732,7 +659,9 @@ pub fn Window::bridge_lifecycle_state(
   self : Window,
 ) -> BridgeLifecycleState raise NativeError {
   let text = match
-    window_bridge_json(self, proton_window_bridge_state_json_ffi, false) {
+    window_bridge_json(
+      self, "bridge lifecycle state", proton_window_bridge_state_json_ffi,
+    ) {
     Some(text) => text
     None =>
       raise InvalidPayload(
@@ -755,7 +684,9 @@ pub fn Window::take_bridge_failure(
   self : Window,
 ) -> BridgeDiagnostic? raise NativeError {
   match
-    window_bridge_json(self, proton_window_take_bridge_failure_json_ffi, true) {
+    window_bridge_json(
+      self, "bridge diagnostic", proton_window_take_bridge_failure_json_ffi,
+    ) {
     None => None
     Some(text) => {
       let json = decode_native_json(text, "bridge diagnostic")
@@ -788,9 +719,6 @@ fn dialog_text_payload_len(buffer : Bytes) -> Int {
     len
   }
 }
-
-///|
-let dialog_file_result_buffer_bytes = 65536
 
 ///|
 pub fn WindowRef::begin_message_dialog(
@@ -849,21 +777,19 @@ pub fn Runtime::poll_message_dialog(
   self : Runtime,
   dialog : Int64,
 ) -> Bool raise NativeError {
-  let required = Ref(0)
-  let buffer = FixedArray::make(1, b'\x00')
-  let status = proton_runtime_poll_dialog_result_ffi(
-    self.active_handle(),
-    dialog,
-    buffer,
-    buffer.length(),
-    required,
-  )
-  if status == proton_event_none {
-    false
-  } else if status < 0 {
-    raise native_error(status)
-  } else {
-    true
+  let handle = self.active_handle()
+  match
+    read_native_text("message dialog result", BufferBytesIncludingTerminator, (
+      buffer,
+      buffer_len,
+      required,
+    ) => {
+      proton_runtime_poll_dialog_result_ffi(
+        handle, dialog, buffer, buffer_len, required,
+      )
+    }) {
+    None => false
+    Some(_) => true
   }
 }
 
@@ -952,22 +878,18 @@ pub fn WindowRef::poll_dialog_result(
   self : WindowRef,
   dialog : Int64,
 ) -> DialogPollResult raise NativeError {
-  let required = Ref(0)
-  let buffer = FixedArray::make(dialog_file_result_buffer_bytes, b'\x00')
-  let status = proton_window_poll_dialog_result_ffi(
-    self.handle,
-    dialog,
-    buffer,
-    buffer.length(),
-    required,
-  )
-  if status == proton_event_none {
-    Pending
-  } else if status < 0 {
-    raise native_error(status)
-  } else {
-    // On success `required` is the payload plus its terminator, and the
-    // rest of the fixed buffer is zero fill. Decode exactly that span.
-    Ready(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val])))
+  let handle = self.handle
+  match
+    read_native_text("window dialog result", BufferBytesIncludingTerminator, (
+      buffer,
+      buffer_len,
+      required,
+    ) => {
+      proton_window_poll_dialog_result_ffi(
+        handle, dialog, buffer, buffer_len, required,
+      )
+    }) {
+    None => Pending
+    Some(result) => Ready(result)
   }
 }
