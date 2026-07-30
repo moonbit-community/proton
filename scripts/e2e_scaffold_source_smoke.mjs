@@ -731,7 +731,7 @@ async function main() {
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   connectLocalSourceModules();
 
-  run("moon", ["check", "--diagnostic-limit", "80"], { cwd: projectDir });
+  run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run("warren", ["build"], { cwd: frontendDir });
   run(

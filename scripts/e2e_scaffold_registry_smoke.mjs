@@ -119,7 +119,7 @@ try {
     "-y",
   ]);
   verifyGeneratedDependencies();
-  run("moon", ["check", "--diagnostic-limit", "80"], {
+  run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
   succeeded = true;
