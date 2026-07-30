@@ -303,6 +303,8 @@ test "templates receive final author title and size" {
     abort("missing frontend/public/index.html")
   }
   assert_true(app_html.contains("<title>Demo App</title>"))
+  assert_true(app_html.contains("href=\"./styles.css\""))
+  assert_false(app_html.contains("href=\"/styles.css\""))
   assert_true(readme.contains("## Dev"))
   assert_true(readme.contains("proton_cli dev"))
   assert_true(readme.contains("## Build"))

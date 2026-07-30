@@ -393,7 +393,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|    <meta charset="UTF-8" />
           #|    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           #|    <title>{{title_html}}</title>
-          #|    <link rel="stylesheet" href="/styles.css" />
+          #|    <link rel="stylesheet" href="./styles.css" />
           #|  </head>
           #|  <body>
           #|    <main id="app"></main>
