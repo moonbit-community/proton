@@ -209,7 +209,7 @@ int32_t proton_runtime_info_json(char *buffer,
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_required_len is required");
   }
-  char info[256];
+  char info[512];
   int required = snprintf(
       info, sizeof(info),
       "{\"abi_version\":%d,\"runtime_available\":%s,"

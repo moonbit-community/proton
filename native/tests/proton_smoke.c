@@ -612,7 +612,7 @@ static int expect_runtime_info(void) {
   if (required <= 0) {
     return fail("runtime_info did not report required length");
   }
-  char buffer[256];
+  char buffer[512];
   status = proton_runtime_info_json(buffer, (int32_t)sizeof(buffer), &required);
   if (expect_status("runtime_info", status, PROTON_OK)) {
     return 1;
