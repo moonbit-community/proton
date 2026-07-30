@@ -263,6 +263,12 @@ static proton_engine_runtime_t *g_managed_shutdown_runtime = NULL;
 static pthread_mutex_t g_managed_shutdown_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t g_managed_shutdown_condition = PTHREAD_COND_INITIALIZER;
 static int g_managed_shutdown_complete = 0;
+
+/* Guards g_windows list membership and the per-window html/html_url/html_len
+   fields. Writers run on the main thread; the scheme handler factory reads
+   them on CEF's IO thread, so both sides must take this lock. Keep critical
+   sections leaf-only: never call back into engine or CEF code while held. */
+static pthread_mutex_t g_window_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_wakeup_write_fd = -1;
 
@@ -766,20 +772,24 @@ static void proton_engine_window_list_add(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
   }
+  pthread_mutex_lock(&g_window_lock);
   window->next = g_windows;
   g_windows = window;
+  pthread_mutex_unlock(&g_window_lock);
 }
 
 static void proton_engine_window_list_remove(proton_engine_window_t *window) {
+  pthread_mutex_lock(&g_window_lock);
   proton_engine_window_t **cursor = &g_windows;
   while (*cursor != NULL) {
     if (*cursor == window) {
       *cursor = window->next;
       window->next = NULL;
-      return;
+      break;
     }
     cursor = &(*cursor)->next;
   }
+  pthread_mutex_unlock(&g_window_lock);
 }
 
 static void proton_engine_window_defer_free(proton_engine_window_t *window) {
@@ -806,6 +816,7 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
   }
+  pthread_mutex_lock(&g_window_lock);
   free(window->client);
   free(window->html_url);
   free(window->html);
@@ -814,6 +825,7 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
   proton_engine_overlay_release_input_windows(window);
   proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
+  pthread_mutex_unlock(&g_window_lock);
 }
 
 static void proton_engine_free_closed_windows(void) {
@@ -1243,21 +1255,41 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   (void)self;
   (void)frame;
   (void)scheme_name;
+  /* Runs on CEF's IO thread while the main thread may replace or free the
+     window's html state. Snapshot everything needed under the window lock,
+     then do the (possibly disk-bound) work unlocked. */
+  pthread_mutex_lock(&g_window_lock);
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  char *html_url = NULL;
+  char *html_copy = NULL;
+  size_t html_len = 0;
+  if (window != NULL) {
+    if (window->html_url != NULL) {
+      html_url = proton_engine_strdup(window->html_url);
+    }
+    if (window->html != NULL) {
+      html_copy = (char *)malloc(window->html_len + 1);
+      if (html_copy != NULL) {
+        memcpy(html_copy, window->html, window->html_len);
+        html_copy[window->html_len] = '\0';
+        html_len = window->html_len;
+      }
+    }
+  }
+  pthread_mutex_unlock(&g_window_lock);
   if (window == NULL) {
     return NULL;
   }
   char *url = proton_engine_request_url(request);
   cef_resource_handler_t *handler = NULL;
-  if (url != NULL && window->html_url != NULL &&
-      strcmp(window->html_url, url) == 0 && window->html != NULL) {
-    handler = proton_engine_resource_handler_create(window->html,
-                                                    window->html_len,
+  if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
+      html_copy != NULL) {
+    handler = proton_engine_resource_handler_create(html_copy, html_len,
                                                     "text/html");
   } else {
     char *asset_path = proton_engine_url_to_asset_path(url);
     if (asset_path != NULL) {
-      char *html_path = proton_engine_url_to_asset_path(window->html_url);
+      char *html_path = proton_engine_url_to_asset_path(html_url);
       char *asset_root = proton_engine_asset_path_dirname(html_path);
       if (proton_engine_asset_path_is_under_root(asset_path, asset_root)) {
         char *data = NULL;
@@ -1274,6 +1306,8 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     }
   }
   free(url);
+  free(html_url);
+  free(html_copy);
   return handler;
 }
 
@@ -1825,8 +1859,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   if (!proton_engine_bridge_op_is_valid(op) ||
       !proton_engine_bridge_payload_is_valid(
           payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES) ||
-      page_instance == NULL || page_instance[0] == '\0' ||
-      strlen(page_instance) >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+      !proton_engine_bridge_page_instance_is_valid(page_instance)) {
     proton_engine_debug_log(
         "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
         pending_id, op != NULL ? op : "",
@@ -2049,14 +2082,23 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 1;
   }
   if (!proton_engine_bridge_payload_is_valid(
-          payload_json, window->max_bridge_payload_bytes) ||
-      page_instance == NULL || page_instance[0] == '\0' ||
-      strlen(page_instance) >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+          payload_json, window->max_bridge_payload_bytes)) {
     proton_engine_debug_log("bridge_reject_payload_too_large browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge payload is too large");
+    free(op);
+    free(payload_json);
+    free(page_instance);
+    return 1;
+  }
+  if (!proton_engine_bridge_page_instance_is_valid(page_instance)) {
+    proton_engine_debug_log("bridge_reject_invalid_page_instance browser=%d pending=%d op=%s",
+                            browser_id, renderer_pending_id,
+                            op != NULL ? op : "");
+    proton_engine_reject_renderer_request(frame, renderer_pending_id,
+                                          "bridge page instance is invalid");
     free(op);
     free(payload_json);
     free(page_instance);
@@ -4780,11 +4822,13 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "failed to copy html");
     return PROTON_ERR_ENGINE;
   }
+  pthread_mutex_lock(&g_window_lock);
   free(window->html_url);
   free(window->html);
   window->html_url = url_copy;
   window->html = copy;
   window->html_len = strlen(copy);
+  pthread_mutex_unlock(&g_window_lock);
   int32_t status = proton_engine_window_load_url(
       window, base_url != NULL && base_url[0] != '\0' ? base_url
                                                       : "proton://app/",

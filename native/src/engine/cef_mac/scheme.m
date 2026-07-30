@@ -179,20 +179,41 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   (void)self;
   (void)frame;
   (void)scheme_name;
+  /* Runs on CEF's IO thread while the main thread may replace or free the
+     window's html state. Snapshot everything needed under the window lock,
+     then do the (possibly disk-bound) work unlocked. */
+  proton_engine_window_lock();
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
+  char *html_url = NULL;
+  char *html_copy = NULL;
+  size_t html_len = 0;
+  if (window != NULL) {
+    const char *url_value = proton_engine_window_html_url(window);
+    if (url_value != NULL) {
+      html_url = proton_engine_strdup(url_value);
+    }
+    size_t len = 0;
+    const char *html = proton_engine_window_html(window, &len);
+    if (html != NULL) {
+      html_copy = (char *)malloc(len + 1);
+      if (html_copy != NULL) {
+        memcpy(html_copy, html, len);
+        html_copy[len] = '\0';
+        html_len = len;
+      }
+    }
+  }
+  proton_engine_window_unlock();
   if (window == NULL) {
     return NULL;
   }
 
   char *url = proton_engine_request_url(request);
-  const char *html_url = proton_engine_window_html_url(window);
-  size_t html_len = 0;
-  const char *html = proton_engine_window_html(window, &html_len);
   cef_resource_handler_t *handler = NULL;
   if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
-      html != NULL) {
-    handler = proton_engine_resource_handler_create(html, html_len,
+      html_copy != NULL) {
+    handler = proton_engine_resource_handler_create(html_copy, html_len,
                                                     "text/html");
   } else {
     char *asset_path = proton_engine_url_to_asset_path(url);
@@ -214,5 +235,7 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     }
   }
   free(url);
+  free(html_url);
+  free(html_copy);
   return handler;
 }

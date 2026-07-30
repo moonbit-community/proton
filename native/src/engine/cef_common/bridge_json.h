@@ -20,6 +20,27 @@ static int proton_engine_bridge_op_is_valid(const char *op) {
   return 1;
 }
 
+/* Page instances are renderer-supplied but interpolated into bridge-request
+   JSON by the browser process, so they must stay within the charset the
+   renderer generator emits ("<pid>-<sequence>", i.e. digits and '-'). */
+static int proton_engine_bridge_page_instance_is_valid(
+    const char *page_instance) {
+  if (page_instance == NULL || page_instance[0] == '\0') {
+    return 0;
+  }
+  size_t len = strlen(page_instance);
+  if (len >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+    return 0;
+  }
+  for (size_t i = 0; i < len; i++) {
+    unsigned char ch = (unsigned char)page_instance[i];
+    if ((ch < '0' || ch > '9') && ch != '-') {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 static int proton_engine_bridge_payload_is_valid(const char *payload_json,
                                                   size_t max_bytes) {
   if (payload_json == NULL || strlen(payload_json) > max_bytes) {
