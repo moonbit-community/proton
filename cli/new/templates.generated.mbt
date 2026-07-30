@@ -771,7 +771,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|## Commands
           #|
           #|- Format with `moon fmt`.
-          #|- Check with `moon check --diagnostic-limit 80`.
+          #|- Check with `moon check --target js,native --diagnostic-limit 80`.
           #|- Run with `proton_cli dev` from the project root.
           #|- Build with `proton_cli build`.
           #|- Inspect packaging with `proton_cli package --dry-run`.
@@ -812,7 +812,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|## Check
           #|
           #|```sh
-          #|moon check --diagnostic-limit 80
+          #|moon check --target js,native --diagnostic-limit 80
           #|```
           #|
           #|## Dev

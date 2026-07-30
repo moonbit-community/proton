@@ -17,7 +17,7 @@ proton_cli cef setup
 ## Check
 
 ```sh
-moon check --diagnostic-limit 80
+moon check --target js,native --diagnostic-limit 80
 ```
 
 ## Dev
