@@ -13,7 +13,6 @@ license = "Apache-2.0"
 description = "Proton backend for {{title}}."
 
 options(
-  "bin-deps": { "justjavac/proton_cli": "{{proton_cli_version}}" },
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",

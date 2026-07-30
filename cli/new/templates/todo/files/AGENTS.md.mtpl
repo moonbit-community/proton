@@ -18,5 +18,6 @@ This is a MoonBit Proton native desktop app.
 - `frontend/` is a JavaScript Rabbita module owned by Warren.
 - `backend/` is a native Proton module.
 - Keep command and event names in `shared/todo_contract.mbt`.
-- `moon check` and `moon build` regenerate `backend/todo/commands.g.mbt`.
+- After editing `backend/todo/commands.mbt`, regenerate the typed bridge with
+  `proton_cli codegen backend/todo/commands.mbt -o backend/todo/commands.g.mbt`.
 - Do not reintroduce the old WebSocket app runtime route.

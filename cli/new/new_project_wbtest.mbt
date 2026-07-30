@@ -208,14 +208,14 @@ test "invalid identifier fails" {
 ///|
 test "file plan contains the exact isomorphic scaffold" {
   let files = must_plan(must_options(["my-counter"]))
-  assert_eq(files.length(), 19)
+  assert_eq(files.length(), 20)
   for
     path in [
       "AGENTS.md", "README.md", ".gitignore", "moon.work", "moon.proton", "shared/moon.mod",
       "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod", "frontend/main/moon.pkg",
       "frontend/main/main.mbt", "frontend/public/index.html", "frontend/public/styles.css",
       "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt", "backend/todo/moon.pkg",
-      "backend/todo/backend.mbt", "backend/todo/commands.mbt",
+      "backend/todo/backend.mbt", "backend/todo/commands.mbt", "backend/todo/commands.g.mbt",
     ] {
     guard find_planned_file(files, path) is Some(_) else {
       abort("missing planned file: " + path)
@@ -267,13 +267,12 @@ test "templates receive final author title and size" {
       "\"justjavac/proton_contract@" + default_proton_contract_version + "\"",
     ),
   )
-  assert_true(
-    backend_mod.contains(
-      "\"bin-deps\": { \"justjavac/proton_cli\": \"" +
-      default_proton_cli_version +
-      "\" }",
-    ),
-  )
+  assert_false(backend_mod.contains("bin-deps"))
+  guard find_planned_file(files, "backend/todo/commands.g.mbt")
+    is Some(commands_g) else {
+    abort("missing backend/todo/commands.g.mbt")
+  }
+  assert_true(commands_g.contains("register_commands"))
   guard find_planned_file(files, "backend/app/main.mbt") is Some(main_mbt) else {
     abort("missing backend/app/main.mbt")
   }
