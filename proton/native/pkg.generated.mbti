@@ -149,6 +149,11 @@ pub(all) struct NativeNotificationClick {
   payload : String?
 } derive(Eq, @debug.Debug)
 
+pub(all) enum NativeNotificationResult {
+  Delivered
+  Failed(String)
+} derive(Eq, @debug.Debug)
+
 pub(all) enum ProcessResult {
   MainProcess
   SubprocessHandled(Int)
@@ -187,7 +192,9 @@ pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
+pub fn RuntimeEvent::launch_input(Self) -> RuntimeLaunchInput?
 pub fn RuntimeEvent::menu_command_id(Self) -> String?
+pub fn RuntimeEvent::notification_result(Self) -> NativeNotificationResult?
 pub fn RuntimeEvent::window_id(Self) -> Int64?
 
 pub(all) struct RuntimeInfo {
@@ -197,6 +204,12 @@ pub(all) struct RuntimeInfo {
   platform : String
   features : Array[String]
 } derive(Eq, @debug.Debug, @json.FromJson)
+
+pub(all) enum RuntimeLaunchInput {
+  OpenUrls(Array[String])
+  OpenFiles(Array[String])
+  Reopen
+} derive(Eq, @debug.Debug)
 
 pub(all) struct RuntimeWaitReady {
   mask : Int
@@ -221,6 +234,7 @@ pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
 pub fn Window::eval(Self, String) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
+pub fn Window::id(Self) -> Int64
 pub fn Window::load_html(Self, String, String) -> Unit raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::new(Runtime, config? : WindowConfig) -> Self raise NativeError
@@ -230,7 +244,7 @@ pub fn Window::show(Self) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, titlebar_style? : TitlebarStyle, bridge? : BridgeConfig) -> Self
+pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, bridge? : BridgeConfig) -> Self
 pub fn WindowConfig::to_json_string(Self) -> String
 pub fn WindowConfig::unsafe_from_json(String) -> Self
 
@@ -243,7 +257,13 @@ pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Int64 raise 
 pub fn WindowRef::poll_dialog_result(Self, Int64) -> DialogPollResult raise NativeError
 pub fn WindowRef::unsafe_from_handle(Int64) -> Self
 
+pub(all) enum WindowSizeHint {
+  Unconstrained
+  Fixed
+  Min
+  Max
+} derive(Eq, @debug.Debug)
+
 // Type aliases
 
 // Traits
-

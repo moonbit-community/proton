@@ -4,7 +4,8 @@ suberror NotificationError {
   EmptyBody
   NativeCapability(error~ : @proton_native.NativeError)
   UnsupportedPlatform
-  NativeShow(error~ : @proton_native.NativeError)
+  NativeShow(error~ : @proton.NotificationDeliveryError)
+  DeliveryFailed(message~ : String)
   NativePoll(error~ : @proton_native.NativeError)
   NativeCleanup(error~ : @proton_native.NativeError)
 } derive(Debug, Eq)
@@ -19,6 +20,8 @@ fn NotificationError::message(self : NotificationError) -> String {
       "native notifications are not implemented on this platform"
     NativeShow(error~) =>
       "failed to show native notification: " + error.message()
+    DeliveryFailed(message~) =>
+      "native notification was not delivered: " + message
     NativePoll(error~) =>
       "failed to poll native notification clicks: " + error.message()
     NativeCleanup(error~) =>

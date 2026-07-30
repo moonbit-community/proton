@@ -203,9 +203,6 @@ test "load_config_manifest_from_file rejects unsupported top-level fields" {
     "permissions = {}", "moon.proton field `permissions` is not supported in v1.",
   )
   expect_moon_proton_extra_field_error(
-    "windows = []", "moon.proton field `windows` is not supported in v1.",
-  )
-  expect_moon_proton_extra_field_error(
     "debug = 1", "moon.proton.debug must be a bool",
   )
 }
@@ -249,6 +246,19 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|  value: "frontend/dist/index.html",
       #|}
       #|
+      #|windows = [{
+      #|  id: "settings",
+      #|  window: {
+      #|    title: "Settings",
+      #|    width: 480,
+      #|    height: 360,
+      #|  },
+      #|  entry: {
+      #|    kind: "html",
+      #|    value: "<main>Settings</main>",
+      #|  },
+      #|}]
+      #|
       #|debug = true
       #|
       #|backend = {
@@ -269,6 +279,12 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|  targets: ["app", "zip"],
       #|  icon: ["icons/icon.ico"],
       #|  resources: ["resources/**"],
+      #|  url_schemes: ["desktop-app"],
+      #|  document_types: [{
+      #|    name: "Desktop document",
+      #|    extensions: ["desktop"],
+      #|    role: "Editor",
+      #|  }],
       #|  output: "target/proton-dist",
       #|}
       #|
@@ -383,6 +399,11 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
             }
             _ => abort("expected runtime.dev_entry summary")
           }
+          match runtime.get("windows") {
+            Some(Array([Object(window)])) =>
+              @debug.assert_eq(window.get("id"), Some(Json::string("settings")))
+            _ => abort("expected runtime.windows summary")
+          }
         }
         _ => abort("expected runtime summary")
       }
@@ -399,6 +420,23 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       match summary.get("bundle") {
         Some(Object(bundle)) => {
           @debug.assert_eq(bundle.get("active"), Some(Json::boolean(true)))
+          @debug.assert_eq(
+            bundle.get("url_schemes"),
+            Some(Json::array([Json::string("desktop-app")])),
+          )
+          match bundle.get("document_types") {
+            Some(Array([Object(document_type)])) => {
+              @debug.assert_eq(
+                document_type.get("name"),
+                Some(Json::string("Desktop document")),
+              )
+              @debug.assert_eq(
+                document_type.get("role"),
+                Some(Json::string("Editor")),
+              )
+            }
+            _ => abort("expected bundle document types summary")
+          }
           match bundle.get("output") {
             Some(String(output)) =>
               assert_true(

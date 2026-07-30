@@ -7,6 +7,7 @@ pub struct ApplicationContext {
 ///|
 /// Window-lifetime capabilities supplied to window startup hooks.
 pub struct WindowContext {
+  id : String
   window : @native.WindowRef
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
@@ -47,11 +48,19 @@ fn ApplicationContext::new(
 
 ///|
 fn WindowContext::new(
+  id : String,
   window : @native.WindowRef,
   tasks : @async.TaskGroup[Unit],
   events : WindowEventEmitter,
 ) -> WindowContext {
-  WindowContext::{ window, tasks, events }
+  WindowContext::{ id, window, tasks, events }
+}
+
+///|
+/// Returns the declarative id of this window. The primary window uses
+/// `"main"`.
+pub fn WindowContext::id(self : WindowContext) -> String {
+  self.id
 }
 
 ///|

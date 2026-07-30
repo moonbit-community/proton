@@ -39,9 +39,11 @@
     (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
 #define PROTON_HEADLESS_OSR_FEATURE ",\"headless_osr\""
+#define PROTON_WINDOW_SIZE_HINTS_FEATURE ",\"window_size_hints\""
 #else
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ""
 #define PROTON_HEADLESS_OSR_FEATURE ""
+#define PROTON_WINDOW_SIZE_HINTS_FEATURE ""
 #endif
 
 #if PROTON_WITH_ENGINE && (defined(__APPLE__) || defined(__linux__))
@@ -181,6 +183,22 @@ static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
   }
 }
 
+// Drain platform-originated events into the ordered runtime event queue.
+static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) {
+  for (;;) {
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int32_t present = 0;
+    if (proton_engine_take_platform_event(
+            runtime->engine_runtime, event_json, sizeof(event_json),
+            &present) != PROTON_OK ||
+        present == 0) {
+      return;
+    }
+    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      return;
+    }
+  }
+}
 
 int32_t proton_abi_version(void) { return PROTON_ABI_VERSION; }
 
@@ -199,6 +217,7 @@ int32_t proton_runtime_info_json(char *buffer,
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
           PROTON_HEADLESS_OSR_FEATURE
+          PROTON_WINDOW_SIZE_HINTS_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
           PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
@@ -618,6 +637,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
   }
   proton_runtime_sync_engine_bridge_lifecycle(runtime, slot);
   proton_runtime_sync_menu_commands(slot);
+  proton_runtime_sync_platform_events(slot);
   status = proton_runtime_poll_event(slot, buffer, buffer_len,
                                      out_required_len);
   if (status < 0) {

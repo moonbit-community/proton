@@ -369,13 +369,13 @@ fn default_bridge_page_policy() -> BridgePagePolicy {
 }
 
 ///|
-fn bridge_page_policy_for_manifest(
-  manifest : @manifest.AppManifest,
+fn bridge_page_policy_for_entry(
+  entry : @manifest.AppEntry,
 ) -> BridgePagePolicy raise AppConfigurationError {
   if !proton_dev_mode_enabled() {
     return default_bridge_page_policy()
   }
-  match manifest.entry {
+  match entry {
     @manifest.AppEntry::Url(url) =>
       BridgePagePolicy::{
         dev_origin: Some(url_origin(url)),
@@ -548,9 +548,15 @@ fn canonical_dev_origin_port_suffix(
 }
 
 ///|
-fn bridge_page_policy_dev_origins(policy : BridgePagePolicy) -> Array[String] {
-  match policy.dev_origin {
-    Some(origin) => [origin]
-    None => []
+fn bridge_page_policy_dev_origins(
+  policies : Array[BridgePagePolicy],
+) -> Array[String] {
+  let origins : Array[String] = []
+  for policy in policies {
+    match policy.dev_origin {
+      Some(origin) if !origins.contains(origin) => origins.push(origin)
+      _ => ()
+    }
   }
+  origins
 }

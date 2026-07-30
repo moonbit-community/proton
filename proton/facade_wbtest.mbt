@@ -760,6 +760,7 @@ async test "window close joins owned tasks before close hooks" {
     start_window_lifecycle_hooks(
       configured.window_lifecycle_hooks,
       WindowContext::new(
+        "main",
         @native.WindowRef::unsafe_from_handle(17L),
         group,
         WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
@@ -983,5 +984,102 @@ test "dev manifest uses env override or frontend dev_url" {
     @manifest.AppEntry::Url(url) =>
       inspect(url, content="http://localhost:5173")
     _ => fail("expected dev URL entry")
+  }
+}
+
+///|
+test "typed facade appends validated secondary windows" {
+  let configured = html("Main", "<main>Main</main>").add_window(
+    "settings",
+    "Settings",
+    AppEntry::Html("<main>Settings</main>"),
+    width=480,
+    height=360,
+    size_hint=WindowSizeHint::Fixed,
+  )
+  let manifest = configured.inline_manifest()
+  assert_eq(manifest.windows.length(), 1)
+  assert_eq(manifest.windows[0].id, "settings")
+  assert_eq(
+    manifest.windows[0].window.size_hint,
+    @manifest.WindowSizeHint::Fixed,
+  )
+  let plans = planned_windows(manifest)
+  assert_eq(plans.map(fn(plan) { plan.id }), ["main", "settings"])
+}
+
+///|
+test "typed facade rejects duplicate secondary window ids" {
+  let configured = html("Main", "<main>Main</main>")
+    .add_window("settings", "One", AppEntry::Html("one"))
+    .add_window("settings", "Two", AppEntry::Html("two"))
+  assert_true(configured.validation_error() is Some(_))
+}
+
+///|
+test "typed facade reserves the primary window id" {
+  let configured = html("Main", "<main>Main</main>").add_window(
+    "main",
+    "Other",
+    AppEntry::Html("other"),
+  )
+  assert_true(configured.validation_error() is Some(_))
+}
+
+///|
+async test "notification completion is delivered only to an active waiter" {
+  while notification_result_broker.results.length() > 0 {
+    ignore(notification_result_broker.results.remove(0))
+  }
+  notification_result_broker.busy = false
+  publish_notification_result(@native.NativeNotificationResult::Delivered)
+  assert_eq(notification_result_broker.results.length(), 0)
+  acquire_notification_result_slot()
+  publish_notification_result(
+    @native.NativeNotificationResult::Failed("permission denied"),
+  )
+  let result = take_notification_result()
+  release_notification_result_slot()
+  @debug.assert_eq(
+    result,
+    @native.NativeNotificationResult::Failed("permission denied"),
+  )
+}
+
+///|
+test "app data directory follows platform conventions" {
+  assert_eq(
+    app_data_dir_for_platform(
+      "macos",
+      "com.example.devtoys",
+      Some("/Users/test"),
+      None,
+      None,
+    ),
+    "/Users/test/Library/Application Support/com.example.devtoys",
+  )
+  assert_eq(
+    app_data_dir_for_platform(
+      "linux",
+      "com.example.devtoys",
+      Some("/home/test"),
+      None,
+      Some("/data"),
+    ),
+    "/data/com.example.devtoys",
+  )
+  try
+    app_data_dir_for_platform(
+      "macos",
+      "../escape",
+      Some("/Users/test"),
+      None,
+      None,
+    )
+  catch {
+    InvalidIdentifier(_) => ()
+    _ => fail("expected invalid identifier")
+  } noraise {
+    _ => fail("expected invalid identifier")
   }
 }

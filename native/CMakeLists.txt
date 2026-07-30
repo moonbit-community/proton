@@ -13,6 +13,7 @@ set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
 set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
 set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
 set(PROTON_NOTIFICATION_SOURCE src/engine/notification_stub.c)
+set(PROTON_PLATFORM_EVENT_SOURCES src/engine/platform_events_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
@@ -25,6 +26,10 @@ if(PROTON_WITH_ENGINE)
     enable_language(OBJC CXX OBJCXX)
     set(PROTON_APP_RUNNER_SOURCE src/app_runner.m)
     set(PROTON_NOTIFICATION_SOURCE src/engine/cef_mac/notification.m)
+    set(PROTON_PLATFORM_EVENT_SOURCES
+      src/engine/cef_mac/launch_input.m
+      src/engine/cef_mac/platform_events.m
+    )
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_mac/proton_engine_cef_mac.m
       src/engine/cef_mac/dialog.m
@@ -59,6 +64,7 @@ add_library(proton SHARED
   src/proton.c
   ${PROTON_APP_RUNNER_SOURCE}
   ${PROTON_NOTIFICATION_SOURCE}
+  ${PROTON_PLATFORM_EVENT_SOURCES}
   src/engine/cef_common/bridge_lifecycle.c
   src/engine/cef_common/bridge_response.c
   ${PROTON_ENGINE_SOURCES}

@@ -107,7 +107,7 @@ fn AppLifecycle::finish(self : AppLifecycle) -> Unit {
 fn app_cleanup(
   lifecycle : AppLifecycle,
   runtime : @native.Runtime,
-  window : @native.Window?,
+  windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
   lifecycle_failures? : Array[AppCleanupError] = [],
 ) -> Array[AppCleanupError] {
@@ -117,17 +117,14 @@ fn app_cleanup(
     failures.push(CommandExtension(error))
   }
   lifecycle.begin_destroying()
-  match window {
-    Some(window) => {
-      let failure_count = failures.length()
-      window.destroy() catch {
-        error => failures.push(WindowDestroy(error))
-      }
-      if failures.length() == failure_count {
-        lifecycle.finish_window_destroy()
-      }
+  let failure_count = failures.length()
+  for running in windows {
+    running.window.destroy() catch {
+      error => failures.push(WindowDestroy(error))
     }
-    None => lifecycle.finish_window_destroy()
+  }
+  if failures.length() == failure_count {
+    lifecycle.finish_window_destroy()
   }
   let failure_count = failures.length()
   runtime.destroy() catch {

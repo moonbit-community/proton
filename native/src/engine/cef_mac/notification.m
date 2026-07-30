@@ -1,5 +1,6 @@
 #include "../../app_runner.h"
 #include "../../proton_engine.h"
+#include "platform_events.h"
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
@@ -25,6 +26,33 @@ static uint32_t g_notification_click_head = 0;
 static uint32_t g_notification_click_count = 0;
 static pthread_mutex_t g_notification_click_lock = PTHREAD_MUTEX_INITIALIZER;
 static NSString *const ProtonNotificationPayloadKey = @"proton_payload";
+
+static void proton_notification_complete(BOOL delivered, NSError *error) {
+  NSString *message =
+      error != nil ? [error localizedDescription]
+                   : (delivered ? @"" : @"notification permission denied");
+  NSDictionary *event = @{
+    @"type" : @"notification_result",
+    @"ok" : @(delivered),
+    @"message" : message != nil ? message : @"notification delivery failed"
+  };
+  NSData *data = [NSJSONSerialization dataWithJSONObject:event
+                                                 options:0
+                                                   error:nil];
+  if (data == nil) {
+    return;
+  }
+  const char *json = (const char *)[data bytes];
+  size_t length = [data length];
+  char *terminated = (char *)malloc(length + 1);
+  if (terminated == NULL) {
+    return;
+  }
+  memcpy(terminated, json, length);
+  terminated[length] = '\0';
+  proton_engine_platform_event_enqueue_json(terminated);
+  free(terminated);
+}
 
 static void proton_notification_set_message(char *error,
                                             size_t error_len,
@@ -180,8 +208,12 @@ int32_t proton_engine_notification_show(const char *title_utf8,
                                              UNAuthorizationOptionSound)
                           completionHandler:^(BOOL granted,
                                               NSError *authorization_error) {
-      (void)authorization_error;
+      if (authorization_error != nil) {
+        proton_notification_complete(NO, authorization_error);
+        return;
+      }
       if (!granted) {
+        proton_notification_complete(NO, nil);
         return;
       }
       @autoreleasepool {
@@ -199,7 +231,12 @@ int32_t proton_engine_notification_show(const char *title_utf8,
             requestWithIdentifier:[[NSUUID UUID] UUIDString]
                           content:content
                           trigger:nil];
-        [center addNotificationRequest:request withCompletionHandler:nil];
+        [center
+            addNotificationRequest:request
+             withCompletionHandler:^(NSError *delivery_error) {
+               proton_notification_complete(delivery_error == nil,
+                                            delivery_error);
+             }];
       }
     }];
   }

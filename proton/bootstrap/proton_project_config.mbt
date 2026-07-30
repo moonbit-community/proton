@@ -124,6 +124,8 @@ struct ProtonBundleConfig {
   targets : Array[String]
   icon : Array[String]
   resources : Array[String]
+  url_schemes : Array[String]
+  document_types : Array[@proton_config.ProjectDocumentType]
   output : String
 }
 
@@ -133,6 +135,8 @@ pub fn ProtonBundleConfig::new(
   targets? : Array[String] = [],
   icon? : Array[String] = [],
   resources? : Array[String] = [],
+  url_schemes? : Array[String] = [],
+  document_types? : Array[@proton_config.ProjectDocumentType] = [],
   output? : String = "target/proton-dist",
 ) -> ProtonBundleConfig {
   ProtonBundleConfig::{
@@ -140,6 +144,8 @@ pub fn ProtonBundleConfig::new(
     targets: copy_strings(targets),
     icon: copy_strings(icon),
     resources: copy_strings(resources),
+    url_schemes: copy_strings(url_schemes),
+    document_types: document_types.copy(),
     output,
   }
 }
@@ -164,6 +170,20 @@ pub fn ProtonBundleConfig::resources(
   self : ProtonBundleConfig,
 ) -> Array[String] {
   copy_strings(self.resources)
+}
+
+///|
+pub fn ProtonBundleConfig::url_schemes(
+  self : ProtonBundleConfig,
+) -> Array[String] {
+  copy_strings(self.url_schemes)
+}
+
+///|
+pub fn ProtonBundleConfig::document_types(
+  self : ProtonBundleConfig,
+) -> Array[@proton_config.ProjectDocumentType] {
+  self.document_types.copy()
 }
 
 ///|

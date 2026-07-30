@@ -421,6 +421,90 @@ test "loaded project config carries warnings" {
 }
 
 ///|
+test "project config decodes secondary windows and macOS launch metadata" {
+  let source =
+    #|window = {
+    #|  title: "Main",
+    #|  width: 900,
+    #|  height: 700,
+    #|  size_hint: "fixed",
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "html",
+    #|  value: "<main>Main</main>",
+    #|}
+    #|
+    #|windows = [{
+    #|  id: "settings",
+    #|  window: {
+    #|    title: "Settings",
+    #|    width: 480,
+    #|    height: 360,
+    #|  },
+    #|  entry: {
+    #|    kind: "file",
+    #|    value: "settings.html",
+    #|  },
+    #|}]
+    #|
+    #|bundle = {
+    #|  active: true,
+    #|  url_schemes: ["devtoys"],
+    #|  document_types: [{
+    #|    name: "Text",
+    #|    extensions: ["txt", "md"],
+    #|    role: "Editor",
+    #|  }],
+    #|}
+    #|
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  assert_eq(config.windows().length(), 1)
+  assert_eq(config.windows()[0].id, "settings")
+  let bundle = config.bundle().unwrap()
+  assert_eq(bundle.url_schemes, ["devtoys"])
+  assert_eq(bundle.document_types.length(), 1)
+  assert_eq(bundle.document_types[0].extensions, ["txt", "md"])
+}
+
+///|
+test "project config rejects reserved window ids and invalid document extensions" {
+  let reserved =
+    #|window = { title: "Main", width: 900, height: 700 }
+    #|entry = { kind: "html", value: "<main>Main</main>" }
+    #|windows = [{
+    #|  id: "main",
+    #|  window: { title: "Other", width: 480, height: 360 },
+    #|  entry: { kind: "html", value: "other" },
+    #|}]
+    #|
+  let reserved_error = expect_project_config_error(() => {
+    load_project_config_from_text(reserved, ".")
+  })
+  assert_true(
+    reserved_error.message().contains("unsupported windows[0].id: main"),
+  )
+  let invalid_extension =
+    #|window = { title: "Main", width: 900, height: 700 }
+    #|entry = { kind: "html", value: "<main>Main</main>" }
+    #|bundle = {
+    #|  document_types: [{
+    #|    name: "Text",
+    #|    extensions: [".txt"],
+    #|  }],
+    #|}
+    #|
+  let extension_error = expect_project_config_error(() => {
+    load_project_config_from_text(invalid_extension, ".")
+  })
+  assert_true(
+    extension_error
+    .message()
+    .contains("unsupported bundle.document_types[0].extensions: .txt"),
+  )
+}
+
+///|
 fn normalize_test_path(path : String) -> String {
   path.replace(old="\\", new="/")
 }

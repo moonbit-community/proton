@@ -20,6 +20,8 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
     entry_path: None,
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: false,
     notarize: false,

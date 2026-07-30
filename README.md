@@ -98,12 +98,51 @@ the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
 the field and retain their default titlebar behavior.
 See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
 
+`size_hint` accepts `"none"`, `"fixed"`, `"min"`, and `"max"`. A fixed window
+cannot be resized; minimum and maximum hints constrain resizing relative to the
+configured width and height.
+
 Code-only apps can select the same style through the facade:
 
 ```moonbit
 @proton.html("My App", html)
 .titlebar_style(@proton.TitlebarStyle::Overlay)
 ```
+
+The typed facade can own additional windows without replacing Proton's bridge
+pump:
+
+```moonbit
+@proton.html("Main", main_html)
+.add_window(
+  "details",
+  "Details",
+  @proton.AppEntry::Html(details_html),
+  width=640,
+  height=480,
+)
+```
+
+Each window has a stable id. The process remains active until every window has
+closed. See `examples/45_bridge_multi_window`.
+
+On macOS, packaged URL and file activations are delivered through a typed app
+handler:
+
+```moonbit
+@proton.config("moon.proton")
+.on_launch_input(async fn(input) noraise {
+  match input {
+    OpenUrls(urls) => ...
+    OpenFiles(paths) => ...
+    Reopen => ...
+  }
+})
+```
+
+Use `@proton.app_data_dir("com.example.my-app")` to resolve the stable native
+data directory for an application identifier. The function does not create the
+directory.
 
 ## Headless automation
 
@@ -181,6 +220,14 @@ default targets and output directory:
 bundle = {
   active: true,
   targets: ["app", "zip"],
+  url_schemes: ["my-app"],
+  document_types: [
+    {
+      name: "Text document",
+      extensions: ["txt", "md"],
+      role: "Editor",
+    },
+  ],
   output: "target/proton-dist",
 }
 ```
@@ -194,8 +241,8 @@ proton_cli package
 
 The package command performs a release build unless `--no-build` is supplied.
 Package output is written to `target/proton-dist` by default. Icons, resources,
-output targets, signing, and notarization are configured through `moon.proton`
-and package command options.
+output targets, signing, notarization, custom URL schemes, and macOS document
+types are configured through `moon.proton` and package command options.
 
 The `dmg` target is available on macOS. It creates a compressed disk image
 containing the app and an `/Applications` shortcut for drag-to-install:

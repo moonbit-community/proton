@@ -57,6 +57,13 @@ pub fn LoadedProjectConfig::config(Self) -> ProjectConfig
 pub fn LoadedProjectConfig::new(ProjectConfig, warnings? : Array[String]) -> Self
 pub fn LoadedProjectConfig::warnings(Self) -> Array[String]
 
+pub(all) struct ProjectAppWindowConfig {
+  id : String
+  window : ProjectWindowConfig
+  entry : ProjectEntry
+} derive(Eq, @debug.Debug)
+pub fn ProjectAppWindowConfig::new(String, ProjectWindowConfig, ProjectEntry) -> Self
+
 pub(all) struct ProjectBackendConfig {
   path : String
   app_package : String
@@ -70,16 +77,19 @@ pub(all) struct ProjectBundleConfig {
   targets : Array[String]
   icon : Array[String]
   resources : Array[String]
+  url_schemes : Array[String]
+  document_types : Array[ProjectDocumentType]
   output : String
 } derive(Eq, @debug.Debug)
 pub fn ProjectBundleConfig::active(Self) -> Bool
-pub fn ProjectBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], output? : String) -> Self
+pub fn ProjectBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
 pub fn ProjectBundleConfig::output(Self) -> String
 
 pub(all) struct ProjectConfig {
   base_dir : String
   window : ProjectWindowConfig
   entry : ProjectEntry
+  windows : Array[ProjectAppWindowConfig]
   metadata : ProjectMetadata
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
@@ -93,8 +103,16 @@ pub fn ProjectConfig::debug(Self) -> Int
 pub fn ProjectConfig::entry(Self) -> ProjectEntry
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
 pub fn ProjectConfig::metadata(Self) -> ProjectMetadata
-pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, debug? : Int) -> Self
+pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, windows? : Array[ProjectAppWindowConfig], backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, debug? : Int) -> Self
 pub fn ProjectConfig::window(Self) -> ProjectWindowConfig
+pub fn ProjectConfig::windows(Self) -> Array[ProjectAppWindowConfig]
+
+pub(all) struct ProjectDocumentType {
+  name : String
+  extensions : Array[String]
+  role : String
+} derive(Eq, @debug.Debug)
+pub fn ProjectDocumentType::new(String, Array[String], role? : String) -> Self
 
 pub(all) enum ProjectEntry {
   Html(String)

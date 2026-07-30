@@ -64,6 +64,23 @@ struct RuntimeEvent {
   window : Int64?
   menu_command_id : String?
   revision : Int64?
+  items : Array[String]
+  ok : Bool?
+  message : String?
+} derive(Debug, Eq)
+
+///|
+/// A macOS application activation delivered by Launch Services or the Dock.
+pub(all) enum RuntimeLaunchInput {
+  OpenUrls(Array[String])
+  OpenFiles(Array[String])
+  Reopen
+} derive(Debug, Eq)
+
+///|
+pub(all) enum NativeNotificationResult {
+  Delivered
+  Failed(String)
 } derive(Debug, Eq)
 
 ///|
@@ -223,6 +240,34 @@ pub fn RuntimeEvent::menu_command_id(self : RuntimeEvent) -> String? {
 }
 
 ///|
+/// Returns the typed application launch input carried by this event.
+pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
+  match self.event_type {
+    "open_urls" => Some(RuntimeLaunchInput::OpenUrls(self.items.copy()))
+    "open_files" => Some(RuntimeLaunchInput::OpenFiles(self.items.copy()))
+    "reopen" => Some(RuntimeLaunchInput::Reopen)
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::notification_result(
+  self : RuntimeEvent,
+) -> NativeNotificationResult? {
+  guard self.event_type == "notification_result" else { return None }
+  match self.ok {
+    Some(true) => Some(NativeNotificationResult::Delivered)
+    Some(false) =>
+      Some(
+        NativeNotificationResult::Failed(
+          self.message.unwrap_or("notification delivery failed"),
+        ),
+      )
+    None => None
+  }
+}
+
+///|
 pub fn RuntimeWaitReady::mask(self : RuntimeWaitReady) -> Int {
   self.mask
 }
@@ -317,6 +362,21 @@ fn titlebar_overlay_config_supported() -> Bool {
 }
 
 ///|
+/// Controls how the configured width and height constrain native resizing.
+pub(all) enum WindowSizeHint {
+  Unconstrained
+  Fixed
+  Min
+  Max
+} derive(Debug, Eq)
+
+///|
+fn window_size_hint_config_supported() -> Bool {
+  let info = runtime_info() catch { _ => return false }
+  info.features.contains("window_size_hints")
+}
+
+///|
 struct RuntimeConfig {
   raw_json : String?
   use_bundled : Bool
@@ -336,6 +396,7 @@ struct WindowConfig {
   width : Int
   height : Int
   initial_url : String
+  size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
   bridge : BridgeConfig?
 } derive(Debug, Eq)
@@ -415,10 +476,20 @@ pub fn WindowConfig::new(
   width? : Int = 800,
   height? : Int = 600,
   initial_url? : String = "about:blank",
+  size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
   bridge? : BridgeConfig,
 ) -> WindowConfig {
-  { raw_json: None, title, width, height, initial_url, titlebar_style, bridge }
+  {
+    raw_json: None,
+    title,
+    width,
+    height,
+    initial_url,
+    size_hint,
+    titlebar_style,
+    bridge,
+  }
 }
 
 ///|
@@ -429,6 +500,7 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     width: 800,
     height: 600,
     initial_url: "about:blank",
+    size_hint: WindowSizeHint::Unconstrained,
     titlebar_style: TitlebarStyle::Default,
     bridge: None,
   }
@@ -616,6 +688,14 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
           if titlebar_overlay_config_supported() {
             fields["titlebar_style"] = Json::string("overlay")
           }
+      }
+      if window_size_hint_config_supported() {
+        match self.size_hint {
+          WindowSizeHint::Unconstrained => ()
+          WindowSizeHint::Fixed => fields["size_hint"] = Json::string("fixed")
+          WindowSizeHint::Min => fields["size_hint"] = Json::string("min")
+          WindowSizeHint::Max => fields["size_hint"] = Json::string("max")
+        }
       }
       match self.bridge {
         Some(bridge) => fields.set("bridge", bridge.to_json())

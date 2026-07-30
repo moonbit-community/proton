@@ -51,11 +51,13 @@ pub fn ProtonBackendConfig::path(Self) -> String
 
 type ProtonBundleConfig
 pub fn ProtonBundleConfig::active(Self) -> Bool
+pub fn ProtonBundleConfig::document_types(Self) -> Array[@proton_config.ProjectDocumentType]
 pub fn ProtonBundleConfig::icon(Self) -> Array[String]
-pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], output? : String) -> Self
+pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], url_schemes? : Array[String], document_types? : Array[@proton_config.ProjectDocumentType], output? : String) -> Self
 pub fn ProtonBundleConfig::output(Self) -> String
 pub fn ProtonBundleConfig::resources(Self) -> Array[String]
 pub fn ProtonBundleConfig::targets(Self) -> Array[String]
+pub fn ProtonBundleConfig::url_schemes(Self) -> Array[String]
 
 type ProtonFrontendConfig
 pub fn ProtonFrontendConfig::before_build(Self) -> String?

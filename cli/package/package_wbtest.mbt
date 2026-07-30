@@ -454,6 +454,8 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     entry_path: None,
     resources: [],
     icons: ["icon.png", icon],
+    url_schemes: [],
+    document_types: [],
     macos_icon: Some(icon),
     sign: false,
     notarize: false,
@@ -497,6 +499,14 @@ test "macOS plist contains bundle identity and executable" {
     entry_path: None,
     resources: [],
     icons: [],
+    url_schemes: ["devtoys"],
+    document_types: [
+      @proton_config.ProjectDocumentType::new(
+        "Text",
+        ["txt", "md"],
+        role="Editor",
+      ),
+    ],
     macos_icon: None,
     sign: false,
     notarize: false,
@@ -506,7 +516,59 @@ test "macOS plist contains bundle identity and executable" {
   assert_true(plist.contains("<string>dev.proton.demo</string>"))
   assert_true(plist.contains("<string>demo-app</string>"))
   assert_true(plist.contains("<string>1.2.3</string>"))
+  assert_true(plist.contains("CFBundleURLTypes"))
+  assert_true(plist.contains("<string>devtoys</string>"))
+  assert_true(plist.contains("CFBundleDocumentTypes"))
+  assert_true(plist.contains("<string>Editor</string>"))
+  assert_true(plist.contains("<string>md</string>"))
   assert_false(plist.contains("CFBundleIconFile"))
+}
+
+///|
+async test "package manifest records launch metadata" {
+  let root = "target/proton-package-launch-metadata"
+  ensure_dir(root)
+  let plan = PackagePlan::{
+    root: ".",
+    workspace_root: ".",
+    build_target_dir: "target/proton-package-build/dev-proton-demo",
+    app_package: "app",
+    config_path: "moon.proton",
+    product_name: "Demo",
+    identifier: "dev.proton.demo",
+    version: "1.2.3",
+    macos_version: "1.2.3",
+    bundle_version: "1.2.3",
+    targets: ["app"],
+    output: "target",
+    build: false,
+    base_dir: ".",
+    frontend_dist: None,
+    entry_path: None,
+    resources: [],
+    icons: [],
+    url_schemes: ["devtoys"],
+    document_types: [
+      @proton_config.ProjectDocumentType::new(
+        "Text",
+        ["txt", "md"],
+        role="Editor",
+      ),
+    ],
+    macos_icon: None,
+    sign: false,
+    notarize: false,
+  }
+  write_package_manifest(plan, root, "macos-app")
+  let manifest = @mbfs.read_file_to_string(
+    resolve_path(root, "proton-package.json"),
+    encoding="utf8",
+  ) catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_true(manifest.contains("\"url_schemes\":[\"devtoys\"]"))
+  assert_true(manifest.contains("\"extensions\":[\"txt\",\"md\"]"))
+  assert_true(manifest.contains("\"role\":\"Editor\""))
 }
 
 ///|
@@ -546,6 +608,8 @@ test "macOS helper plist matches its bundle identity" {
     entry_path: None,
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: false,
     notarize: false,
@@ -701,6 +765,8 @@ async test "macOS notarization validates success and cleans failed upload" {
     entry_path: None,
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: true,
     notarize: true,
@@ -779,6 +845,8 @@ async test "release executable lookup stays inside package target dir" {
     entry_path: None,
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: false,
     notarize: false,
@@ -856,6 +924,8 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     entry_path: None,
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: false,
     notarize: false,

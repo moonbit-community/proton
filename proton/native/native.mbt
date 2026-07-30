@@ -127,7 +127,44 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event revision"))
   }
-  RuntimeEvent::{ event_type, window, menu_command_id, revision }
+  let items = match object.get("items") {
+    None => []
+    Some(Array(values)) => {
+      let items : Array[String] = []
+      for value in values {
+        items.push(decode_string_json(value, "runtime event item"))
+      }
+      items
+    }
+    Some(_) =>
+      raise InvalidPayload(
+        context="runtime event items",
+        message="expected string array",
+      )
+  }
+  let ok = match object.get("ok") {
+    None => None
+    Some(True) => Some(true)
+    Some(False) => Some(false)
+    Some(_) =>
+      raise InvalidPayload(
+        context="runtime event ok",
+        message="expected boolean",
+      )
+  }
+  let message = match object.get("message") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event message"))
+  }
+  RuntimeEvent::{
+    event_type,
+    window,
+    menu_command_id,
+    revision,
+    items,
+    ok,
+    message,
+  }
 }
 
 ///|
@@ -559,6 +596,15 @@ pub fn Window::as_ref(self : Window) -> WindowRef {
         proton_invalid_handle
     },
   )
+}
+
+///|
+/// Returns the stable native handle used to correlate runtime events.
+pub fn Window::id(self : Window) -> Int64 {
+  match self.lifecycle {
+    WindowLive | WindowCloseRequested => self.handle
+    WindowDestroying | WindowDestroyed => proton_invalid_handle
+  }
 }
 
 ///|

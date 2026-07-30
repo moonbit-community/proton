@@ -111,6 +111,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
       size_hint=@manifest.WindowSizeHint::None,
     ),
     entry: @manifest.AppEntry::Html(""),
+    windows: [],
     debug_level_value: 0,
     headless_value: false,
     title_overridden: false,
@@ -124,6 +125,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     command_extensions: Map([]),
     command_registrars: [],
     application_lifecycle_hooks: [],
+    launch_input_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],
   }
@@ -235,6 +237,85 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
   self.menu = Some(menu)
   self
+}
+
+///|
+/// Registers an application-level handler for URL, file, and reopen inputs.
+pub fn App::on_launch_input(
+  self : App,
+  handler : async (RuntimeLaunchInput) -> Unit noraise,
+) -> App {
+  self.launch_input_handlers.push(handler)
+  self
+}
+
+///|
+/// Adds a secondary window owned by the standard application lifecycle.
+pub fn App::add_window(
+  self : App,
+  id : String,
+  title : String,
+  entry : AppEntry,
+  width? : Int = 900,
+  height? : Int = 700,
+  size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
+  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+) -> App {
+  let normalized_id = id.trim().to_owned()
+  if normalized_id == "" || normalized_id == "main" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="window.id",
+        message=if normalized_id == "main" {
+          "\"main\" is reserved for the primary window"
+        } else {
+          "must not be empty"
+        },
+      ),
+    )
+    return self
+  }
+  if self.windows.any(fn(window) { window.id == normalized_id }) {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="window.id",
+        message="duplicate secondary window id: " + normalized_id,
+      ),
+    )
+    return self
+  }
+  self.windows.push(
+    @manifest.AppWindowManifest::new(
+      normalized_id,
+      @manifest.WindowManifest::new(
+        title,
+        width,
+        height,
+        size_hint=manifest_window_size_hint(size_hint),
+        titlebar_style=manifest_titlebar_style(titlebar_style),
+      ),
+      entry,
+    ),
+  )
+  self
+}
+
+///|
+fn manifest_window_size_hint(hint : WindowSizeHint) -> @manifest.WindowSizeHint {
+  match hint {
+    WindowSizeHint::Unconstrained => @manifest.WindowSizeHint::None
+    WindowSizeHint::Fixed => @manifest.WindowSizeHint::Fixed
+    WindowSizeHint::Min => @manifest.WindowSizeHint::Min
+    WindowSizeHint::Max => @manifest.WindowSizeHint::Max
+  }
+}
+
+///|
+fn manifest_titlebar_style(style : TitlebarStyle) -> @manifest.TitlebarStyle {
+  match style {
+    TitlebarStyle::Default => @manifest.TitlebarStyle::Default
+    TitlebarStyle::Overlay => @manifest.TitlebarStyle::Overlay
+  }
 }
 
 ///|

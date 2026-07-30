@@ -127,6 +127,7 @@ struct proton_engine_window {
   int osr_paint_height;
   int osr_popup_visible;
   cef_rect_t osr_popup_rect;
+  int size_hint;
   int titlebar_overlay;
   proton_linux_titlebar_region_t *draggable_regions;
   size_t draggable_region_count;
@@ -234,6 +235,7 @@ typedef struct {
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
   int32_t width;
   int32_t height;
+  int size_hint;
   int titlebar_overlay;
 } proton_engine_window_config_t;
 
@@ -2327,6 +2329,22 @@ static int32_t proton_engine_parse_window_config(
   proton_engine_parse_json_string_field(config_json, "initial_url",
                                         config->initial_url,
                                         sizeof(config->initial_url));
+  char size_hint[32] = {0};
+  if (proton_engine_parse_json_string_field(
+          config_json, "size_hint", size_hint, sizeof(size_hint))) {
+    if (strcmp(size_hint, "fixed") == 0) {
+      config->size_hint = 1;
+    } else if (strcmp(size_hint, "min") == 0) {
+      config->size_hint = 2;
+    } else if (strcmp(size_hint, "max") == 0) {
+      config->size_hint = 3;
+    } else if (strcmp(size_hint, "none") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window size_hint must be none, fixed, min, or max");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+  }
   char titlebar_style[32] = {0};
   if (proton_engine_parse_json_string_field(config_json, "titlebar_style",
                                             titlebar_style,
@@ -4291,6 +4309,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   window->width = config.width;
   window->height = config.height;
   window->headless = runtime->headless;
+  window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
   window->bridge_config_json =
       proton_engine_json_copy_raw_field(config_json, "bridge");
@@ -4321,9 +4340,24 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                          config.title[0] != '\0' ? config.title : "Proton");
     gtk_window_set_default_size(GTK_WINDOW(window->window), config.width,
                                 config.height);
+    if (config.size_hint == 1) {
+      gtk_window_set_resizable(GTK_WINDOW(window->window), FALSE);
+    } else if (config.size_hint == 2 || config.size_hint == 3) {
+      GdkGeometry geometry = {0};
+      GdkWindowHints hints = config.size_hint == 2 ? GDK_HINT_MIN_SIZE
+                                                   : GDK_HINT_MAX_SIZE;
+      if (config.size_hint == 2) {
+        geometry.min_width = config.width;
+        geometry.min_height = config.height;
+      } else {
+        geometry.max_width = config.width;
+        geometry.max_height = config.height;
+      }
+      gtk_window_set_geometry_hints(GTK_WINDOW(window->window), NULL,
+                                    &geometry, hints);
+    }
     if (window->titlebar_overlay) {
       gtk_window_set_decorated(GTK_WINDOW(window->window), FALSE);
-      gtk_window_set_resizable(GTK_WINDOW(window->window), TRUE);
       window->overlay = gtk_overlay_new();
       if (window->overlay == NULL) {
         gtk_widget_destroy(window->window);

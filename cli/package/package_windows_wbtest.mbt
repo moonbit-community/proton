@@ -23,6 +23,8 @@ fn windows_test_plan(
     entry_path: Some(resolve_path(root, "frontend/dist/index.html")),
     resources: [resolve_path(root, "bundle resources/**")],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign,
     notarize: false,

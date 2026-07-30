@@ -36,6 +36,8 @@ struct PackagePlan {
   entry_path : String?
   resources : Array[String]
   icons : Array[String]
+  url_schemes : Array[String]
+  document_types : Array[@proton_config.ProjectDocumentType]
   macos_icon : String?
   sign : Bool
   notarize : Bool
@@ -248,6 +250,8 @@ async fn build_package_plan(
     entry_path,
     resources: copy_strings(bundle.resources),
     icons: copy_strings(bundle.icon),
+    url_schemes: copy_strings(bundle.url_schemes),
+    document_types: bundle.document_types.copy(),
     macos_icon: first_macos_icon(bundle.icon),
     sign: raw.sign,
     notarize: raw.notarize,
@@ -1173,6 +1177,8 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
     #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
     #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
     #|{{ICON}}
+    #|{{URL_TYPES}}
+    #|{{DOCUMENT_TYPES}}
     #|<key>CFBundleName</key><string>{{PRODUCT}}</string>
     #|<key>CFBundlePackageType</key><string>APPL</string>
     #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
@@ -1189,6 +1195,11 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
   .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
   .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
   .replace_all(old="{{ICON}}", new=macos_icon_plist_entry(plan.macos_icon))
+  .replace_all(old="{{URL_TYPES}}", new=macos_url_types_plist_entry(plan))
+  .replace_all(
+    old="{{DOCUMENT_TYPES}}",
+    new=macos_document_types_plist_entry(plan.document_types),
+  )
 }
 
 ///|
@@ -1197,6 +1208,47 @@ fn macos_icon_plist_entry(icon : String?) -> String {
     Some(_) => "<key>CFBundleIconFile</key><string>AppIcon</string>"
     None => ""
   }
+}
+
+///|
+fn macos_url_types_plist_entry(plan : PackagePlan) -> String {
+  guard plan.url_schemes.length() > 0 else { return "" }
+  let schemes = StringBuilder::new()
+  for scheme in plan.url_schemes {
+    schemes.write_string("<string>")
+    schemes.write_string(xml_escape(scheme))
+    schemes.write_string("</string>")
+  }
+  "<key>CFBundleURLTypes</key><array><dict>" +
+  "<key>CFBundleURLName</key><string>" +
+  xml_escape(plan.identifier) +
+  "</string><key>CFBundleURLSchemes</key><array>" +
+  schemes.to_string() +
+  "</array></dict></array>"
+}
+
+///|
+fn macos_document_types_plist_entry(
+  document_types : Array[@proton_config.ProjectDocumentType],
+) -> String {
+  guard document_types.length() > 0 else { return "" }
+  let entries = StringBuilder::new()
+  for document_type in document_types {
+    entries.write_string("<dict><key>CFBundleTypeName</key><string>")
+    entries.write_string(xml_escape(document_type.name))
+    entries.write_string("</string><key>CFBundleTypeRole</key><string>")
+    entries.write_string(xml_escape(document_type.role))
+    entries.write_string("</string><key>CFBundleTypeExtensions</key><array>")
+    for extension in document_type.extensions {
+      entries.write_string("<string>")
+      entries.write_string(xml_escape(extension))
+      entries.write_string("</string>")
+    }
+    entries.write_string(
+      "</array><key>LSHandlerRank</key><string>Owner</string></dict>",
+    )
+  }
+  "<key>CFBundleDocumentTypes</key><array>" + entries.to_string() + "</array>"
 }
 
 ///|
@@ -1272,6 +1324,22 @@ async fn write_package_manifest(
     "bundle_version": Json::string(plan.bundle_version),
     "targets": Json::array(
       plan.targets.map(fn(target) { Json::string(target) }),
+    ),
+    "url_schemes": Json::array(
+      plan.url_schemes.map(fn(scheme) { Json::string(scheme) }),
+    ),
+    "document_types": Json::array(
+      plan.document_types.map(fn(document_type) {
+        Json::object({
+          "name": Json::string(document_type.name),
+          "extensions": Json::array(
+            document_type.extensions.map(fn(extension) {
+              Json::string(extension)
+            }),
+          ),
+          "role": Json::string(document_type.role),
+        })
+      }),
     ),
   }).stringify()
   write_text(resolve_path(destination, "proton-package.json"), json + "\n")

@@ -5,6 +5,7 @@ struct App {
   auto_config : Bool
   mut window : @manifest.WindowManifest
   mut entry : @manifest.AppEntry
+  windows : Array[@manifest.AppWindowManifest]
   mut debug_level_value : Int
   mut headless_value : Bool
   mut title_overridden : Bool
@@ -18,6 +19,7 @@ struct App {
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
+  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
 }
@@ -33,8 +35,34 @@ priv struct ResolvedAppConfig {
 ///|
 priv struct BridgeDispatchTask {
   request_id : Int64
+  window : Int64
   task : @async.Task[@native.BridgeResponse]
   mut state : BridgeRequestLifecycleState
+}
+
+///|
+priv struct RunningWindow {
+  id : String
+  window : @native.Window
+  policy : BridgePagePolicy
+  lifetime : WindowLifetime
+  mut closed : Bool
+}
+
+///|
+priv struct WindowLifetime {
+  mut ready : Bool
+  mut closed : Bool
+  mut startup_error : AppRunError?
+  ready_signal : @async.CondVar
+  close_signal : @async.CondVar
+}
+
+///|
+priv struct PlannedWindow {
+  id : String
+  window : @manifest.WindowManifest
+  entry : @manifest.AppEntry
 }
 
 ///|

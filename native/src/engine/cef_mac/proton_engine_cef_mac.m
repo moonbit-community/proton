@@ -3,6 +3,8 @@
 #include "../../proton_json.h"
 
 #include "dialog.h"
+#include "launch_input.h"
+#include "platform_events.h"
 #include "menu.h"
 #include "scheme.h"
 #include "window.h"
@@ -223,6 +225,7 @@ typedef struct {
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
   int32_t width;
   int32_t height;
+  int size_hint;
   int titlebar_overlay;
 } proton_engine_window_config_t;
 
@@ -1635,6 +1638,8 @@ static void proton_engine_init_handlers(void) {
   g_scheme_factory.factory.create = proton_engine_scheme_create;
   proton_engine_menu_set_signal_callback(proton_engine_signal_wait_source);
   proton_engine_dialog_set_signal_callback(proton_engine_signal_wait_source);
+  proton_engine_platform_event_set_signal_callback(
+      proton_engine_signal_wait_source);
   initialized = 1;
 }
 
@@ -2309,6 +2314,22 @@ static int32_t proton_engine_parse_window_config(
   proton_engine_parse_json_string_field(config_json, "initial_url",
                                         config->initial_url,
                                         sizeof(config->initial_url));
+  char size_hint[32] = {0};
+  if (proton_engine_parse_json_string_field(
+          config_json, "size_hint", size_hint, sizeof(size_hint))) {
+    if (strcmp(size_hint, "fixed") == 0) {
+      config->size_hint = 1;
+    } else if (strcmp(size_hint, "min") == 0) {
+      config->size_hint = 2;
+    } else if (strcmp(size_hint, "max") == 0) {
+      config->size_hint = 3;
+    } else if (strcmp(size_hint, "none") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window size_hint must be none, fixed, min, or max");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+  }
   char titlebar_style[32] = {0};
   if (proton_engine_parse_json_string_field(
           config_json, "titlebar_style", titlebar_style,
@@ -2505,6 +2526,7 @@ static int proton_engine_request_all_windows_close(void) {
 static void proton_engine_ensure_appkit(void) {
   [ProtonApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  proton_engine_launch_input_install();
   [NSApp finishLaunching];
   proton_engine_menu_install_default();
 }
@@ -3529,8 +3551,10 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   if (!window->headless) {
     NSRect rect = NSMakeRect(0, 0, config.width, config.height);
     NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
-                       NSWindowStyleMaskMiniaturizable |
-                       NSWindowStyleMaskResizable;
+                       NSWindowStyleMaskMiniaturizable;
+    if (config.size_hint != 1) {
+      style |= NSWindowStyleMaskResizable;
+    }
     if (config.titlebar_overlay) {
       style |= NSWindowStyleMaskFullSizeContentView;
     }
@@ -3548,6 +3572,12 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
     }
     [window->window setReleasedWhenClosed:YES];
     [window->window setTitle:title != nil ? title : @"Proton"];
+    NSSize configured_size = NSMakeSize(config.width, config.height);
+    if (config.size_hint == 2) {
+      [window->window setContentMinSize:configured_size];
+    } else if (config.size_hint == 3) {
+      [window->window setContentMaxSize:configured_size];
+    }
     if (config.titlebar_overlay) {
       [window->window setTitleVisibility:NSWindowTitleHidden];
       [window->window setTitlebarAppearsTransparent:YES];

@@ -12,20 +12,25 @@ fn notification_native_ensure_supported() -> Unit raise NotificationError {
 }
 
 ///|
-fn notification_native_show(
+async fn notification_native_show(
   title : String,
   body : String,
   payload : String?,
 ) -> Unit raise NotificationError {
-  match payload {
+  let result = match payload {
     Some(payload) =>
-      @proton_native.notification_show(title, body, payload~) catch {
+      @proton.notification_show_and_wait(title, body, payload~) catch {
         error => raise NativeShow(error~)
       }
     None =>
-      @proton_native.notification_show(title, body) catch {
+      @proton.notification_show_and_wait(title, body) catch {
         error => raise NativeShow(error~)
       }
+  }
+  match result {
+    @proton_native.NativeNotificationResult::Delivered => ()
+    @proton_native.NativeNotificationResult::Failed(message) =>
+      raise DeliveryFailed(message~)
   }
 }
 

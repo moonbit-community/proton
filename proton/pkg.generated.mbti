@@ -6,6 +6,7 @@ import {
   "justjavac/proton/command",
   "justjavac/proton/core",
   "justjavac/proton/extension",
+  "justjavac/proton/manifest",
   "justjavac/proton/native",
   "justjavac/proton_contract",
   "moonbitlang/async",
@@ -16,6 +17,8 @@ import {
 pub fn abi_version() -> Int
 
 pub fn app() -> App
+
+pub fn app_data_dir(String) -> String raise AppPathError
 
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
@@ -67,6 +70,13 @@ pub(all) suberror AppEntryError {
 } derive(@debug.Debug)
 pub fn AppEntryError::message(Self) -> String
 
+pub(all) suberror AppPathError {
+  InvalidIdentifier(identifier~ : String)
+  MissingHomeDirectory(platform~ : String)
+  PlatformProbe(@native.NativeError)
+} derive(Eq, @debug.Debug)
+pub fn AppPathError::message(Self) -> String
+
 pub(all) suberror AppRunError {
   RunnerError(String)
   ConfigurationError(AppConfigurationError)
@@ -97,6 +107,12 @@ pub(all) suberror LifecycleHookError {
 } derive(@debug.Debug)
 pub fn LifecycleHookError::message(Self) -> String
 
+pub(all) suberror NotificationDeliveryError {
+  Native(@native.NativeError)
+  WaitInterrupted(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NotificationDeliveryError::message(Self) -> String
+
 pub(all) suberror RuntimeWakeupError {
   UnsupportedFeature(feature~ : String)
   PipeCreateFailed(detail~ : String)
@@ -108,6 +124,7 @@ pub fn RuntimeWakeupError::message(Self) -> String
 
 // Types and methods
 type App
+pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @native.WindowSizeHint, titlebar_style? : @native.TitlebarStyle) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
@@ -121,6 +138,7 @@ pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
+pub fn App::on_launch_input(Self, async (@native.RuntimeLaunchInput) -> Unit noraise) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
@@ -134,11 +152,13 @@ pub struct ApplicationContext {
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 
 pub struct WindowContext {
+  id : String
   window : @native.WindowRef
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
 }
 pub fn WindowContext::events(Self) -> WindowEventEmitter
+pub fn WindowContext::id(Self) -> String
 pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn WindowContext::window(Self) -> @native.WindowRef
 
@@ -148,6 +168,8 @@ pub struct WindowEventEmitter {
 pub async fn[Payload : ToJson] WindowEventEmitter::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
 
 // Type aliases
+pub using @manifest {type AppEntry}
+
 pub using @native {type BridgeDiagnostic}
 
 pub using @native {type BridgeLifecycleState}
@@ -174,11 +196,14 @@ pub using @native {type RuntimeEvent}
 
 pub using @native {type RuntimeInfo}
 
+pub using @native {type RuntimeLaunchInput}
+
 pub using @native {type TitlebarStyle}
 
 pub using @native {type Window}
 
 pub using @native {type WindowConfig}
 
-// Traits
+pub using @native {type WindowSizeHint}
 
+// Traits

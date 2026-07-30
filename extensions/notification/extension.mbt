@@ -16,7 +16,7 @@ fn ensure_body(body : String) -> String raise NotificationError {
 
 ///|
 /// Shows one native notification and converts the result into the extension reply shape.
-fn show_notification(
+async fn show_notification(
   payload : @notification_contract.NotificationRequest,
 ) -> @notification_contract.NotificationReply raise NotificationError {
   let body = ensure_body(payload.body)

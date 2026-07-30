@@ -8,6 +8,15 @@ pub fn ProtonProjectConfig::to_summary_json(self : ProtonProjectConfig) -> Json 
       "base_dir": optional_string_json(loaded.base_dir()),
       "window": window_summary_json(manifest.window),
       "entry": entry_summary_json(manifest.entry),
+      "windows": Json::array(
+        manifest.windows.map(fn(window) {
+          Json::object({
+            "id": Json::string(window.id),
+            "window": window_summary_json(window.window),
+            "entry": entry_summary_json(window.entry),
+          })
+        }),
+      ),
       "dev_entry": entry_summary_json(self.dev_manifest().manifest().entry),
       "debug": Json::boolean(manifest.debug != 0),
     }),
@@ -66,6 +75,18 @@ fn bundle_summary_json(bundle : ProtonBundleConfig?) -> Json {
         "targets": string_array_json(bundle.targets()),
         "icon": string_array_json(bundle.icon()),
         "resources": string_array_json(bundle.resources()),
+        "url_schemes": string_array_json(bundle.url_schemes()),
+        "document_types": Json::array(
+          bundle
+          .document_types()
+          .map(fn(document_type) {
+            Json::object({
+              "name": Json::string(document_type.name),
+              "extensions": string_array_json(document_type.extensions),
+              "role": Json::string(document_type.role),
+            })
+          }),
+        ),
         "output": Json::string(bundle.output()),
       })
   }

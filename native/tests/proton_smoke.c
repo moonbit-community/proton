@@ -624,6 +624,8 @@ static int expect_runtime_info(void) {
   int has_titlebar_overlay =
       strstr(buffer, "\"titlebar_overlay\"") != NULL;
   int has_headless_osr = strstr(buffer, "\"headless_osr\"") != NULL;
+  int has_window_size_hints =
+      strstr(buffer, "\"window_size_hints\"") != NULL;
   int has_managed_app_runner =
       strstr(buffer, "\"managed_app_runner\"") != NULL;
   int has_wakeup_source =
@@ -645,6 +647,10 @@ static int expect_runtime_info(void) {
   }
   if (has_headless_osr != has_runtime) {
     fprintf(stderr, "unexpected headless OSR capability: %s\n", buffer);
+    return 1;
+  }
+  if (has_window_size_hints != has_runtime) {
+    fprintf(stderr, "unexpected window size hint capability: %s\n", buffer);
     return 1;
   }
 #else

@@ -16,7 +16,7 @@ typedef DWORD proton_thread_id_t;
 typedef pthread_t proton_thread_id_t;
 #endif
 
-#define PROTON_MAX_EVENT_BYTES 512
+#define PROTON_MAX_EVENT_BYTES 65536
 #define PROTON_MAX_EVENTS 32
 
 typedef struct {
@@ -29,7 +29,7 @@ typedef struct {
   proton_engine_runtime_t *engine_runtime;
   bool owner_thread_set;
   proton_thread_id_t owner_thread;
-  char events[PROTON_MAX_EVENTS][PROTON_MAX_EVENT_BYTES];
+  char *events[PROTON_MAX_EVENTS];
   uint32_t event_head;
   uint32_t event_count;
   int64_t next_bridge_request_id;

@@ -1,20 +1,12 @@
 import {
   "moonbitlang/async",
-  "moonbitlang/async/fs",
-  "moonbitlang/async/pipe",
-  "moonbitlang/core/env",
   "moonbitlang/core/json",
-  "moonbitlang/core/string",
   "justjavac/proton",
-  "justjavac/proton/core",
-  "justjavac/proton/native",
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton_contract",
 }
 
 supported_targets = "native"
-
-// async/fs is used only by the Windows #cfg branch.
-
-warnings = "-unused_package"
 
 pkgtype(kind: "executable")
 

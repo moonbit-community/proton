@@ -17,10 +17,15 @@ pub using @native {
   type RuntimeConfig,
   type RuntimeEvent,
   type RuntimeInfo,
+  type RuntimeLaunchInput,
   type TitlebarStyle,
   type Window,
   type WindowConfig,
+  type WindowSizeHint,
 }
 
 ///|
 pub using @proton_command {type CommandContext, type CommandRegistrar}
+
+///|
+pub type AppEntry = @manifest.AppEntry
