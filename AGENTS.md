@@ -117,7 +117,7 @@ native checks before handing off larger refactors.
   `justjavac/proton_cli`. For the currently prepared release, the chain is
   `proton_config 0.1.7` -> `proton_contract 0.1.0` ->
   `proton_client 0.1.0` -> `proton_rabbita 0.1.0` -> `proton 0.1.13` ->
-  `proton_cli 0.1.10`.
+  `proton_cli 0.1.11`.
 - The six binding modules under `sys/` keep their upstream module names and
   are republished from this repository when their sources change. Since the
   pinned versions already exist on Mooncakes, there is no hard publish-order

@@ -2,7 +2,7 @@
 let default_proton_version = "0.1.13"
 
 ///|
-let default_proton_cli_version = "0.1.10"
+let default_proton_cli_version = "0.1.11"
 
 ///|
 let default_proton_contract_version = "0.1.0"

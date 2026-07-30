@@ -371,7 +371,9 @@ test "registry dependency failures are classified separately" {
   assert_true(message.contains("justjavac/proton_client@0.1.0"))
   assert_true(message.contains("justjavac/proton_rabbita@0.1.0"))
   assert_true(message.contains("justjavac/proton@0.1.13"))
-  assert_true(message.contains("justjavac/proton_cli@0.1.10"))
+  assert_true(
+    message.contains("justjavac/proton_cli@" + default_proton_cli_version),
+  )
   assert_true(message.contains("project was rolled back"))
 }
 
