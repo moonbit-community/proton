@@ -346,6 +346,7 @@ async test "startup dispatch retains an earlier window close" {
       window: first,
       policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
       lifetime: WindowLifetime::new(),
+      bridge_ready: true,
       closed: false,
     },
     RunningWindow::{
@@ -353,14 +354,61 @@ async test "startup dispatch retains an earlier window close" {
       window: second,
       policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
       lifetime: WindowLifetime::new(),
+      bridge_ready: false,
       closed: false,
     },
   ]
   first.close()
   @async.with_task_group(group => {
-    drain_bridge_startup_events(runtime, windows[1], windows, false, [], group) catch {
-      error => abort(error.message())
-    }
+    ignore(
+      pump_runtime_once(
+        runtime,
+        windows,
+        None,
+        [],
+        @core.RuntimeWakeSignal::new(),
+        false,
+        false,
+        [],
+        group,
+      ) catch {
+        error => abort(error.message())
+      },
+    )
+    let task = group.spawn(
+      () => {
+        @async.sleep(10000)
+        @native.BridgeResponse::Ok(request_id=42L, payload=Json::null())
+      },
+      no_wait=true,
+      allow_failure=true,
+    )
+    let pending = [
+      BridgeDispatchTask::{
+        request_id: 42L,
+        window: second.id(),
+        task,
+        state: Running,
+      },
+    ]
+    ignore(
+      pump_runtime_once(
+        runtime,
+        windows,
+        None,
+        pending,
+        @core.RuntimeWakeSignal::new(),
+        false,
+        false,
+        [],
+        group,
+      ) catch {
+        error => abort(error.message())
+      },
+    )
+    assert_eq(pending.length(), 1)
+    assert_true(pending[0].state is Running)
+    cancel_all_bridge_tasks(pending)
     group.return_immediately(())
   })
   assert_true(windows[0].closed)

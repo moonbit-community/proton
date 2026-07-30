@@ -46,6 +46,7 @@ priv struct RunningWindow {
   window : @native.Window
   policy : BridgePagePolicy
   lifetime : WindowLifetime
+  mut bridge_ready : Bool
   mut closed : Bool
 }
 
