@@ -461,6 +461,18 @@ test "project config decodes secondary windows and macOS launch metadata" {
   let config = load_project_config_from_text(source, "target/proton-config").config()
   assert_eq(config.windows().length(), 1)
   assert_eq(config.windows()[0].id, "settings")
+  let entries = config.entries()
+  assert_eq(entries.length(), 2)
+  assert_eq(entries[0], ProjectEntry::Html("<main>Main</main>"))
+  match entries[1] {
+    ProjectEntry::File(path) =>
+      assert_true(
+        normalize_test_path(path).has_suffix(
+          "target/proton-config/settings.html",
+        ),
+      )
+    _ => abort("expected secondary file entry")
+  }
   let bundle = config.bundle().unwrap()
   assert_eq(bundle.url_schemes, ["devtoys"])
   assert_eq(bundle.document_types.length(), 1)

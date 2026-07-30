@@ -20,7 +20,7 @@ fn windows_test_plan(
     build: false,
     base_dir: root,
     frontend_dist: Some(resolve_path(root, "frontend/dist")),
-    entry_path: Some(resolve_path(root, "frontend/dist/index.html")),
+    entry_paths: [resolve_path(root, "frontend/dist/index.html")],
     resources: [resolve_path(root, "bundle resources/**")],
     icons: [],
     url_schemes: [],

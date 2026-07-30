@@ -308,6 +308,33 @@ async test "production entry validation requires file-backed entry" {
 }
 
 ///|
+async test "release validation checks secondary window entry files" {
+  let dir = "target/proton-build-secondary-entry"
+  ensure_build_test_dir(dir)
+  let main = join_path(dir, "main.html")
+  let missing = join_path(dir, "secondary/missing.html")
+  write_build_test_file(main, "<!doctype html>")
+  let config = BuildProjectConfig::{
+    base_dir: dir,
+    entries: [
+      @proton_config.ProjectEntry::Asset(main),
+      @proton_config.ProjectEntry::File(missing),
+    ],
+    backend: None,
+    frontend: None,
+  }
+  try validate_release_files(dir, config) catch {
+    BuildPathError::Missing(role~, path~) => {
+      assert_eq(role, "production entry")
+      assert_eq(path, missing)
+    }
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
+  } noraise {
+    _ => fail("expected missing secondary entry")
+  }
+}
+
+///|
 test "frontend release rejects url production entry" {
   let frontend = Some(
     @proton_config.ProjectFrontendConfig::new(
@@ -327,7 +354,7 @@ test "frontend release rejects url production entry" {
 test "frontend release config preflight rejects url entry" {
   let config = BuildProjectConfig::{
     base_dir: ".",
-    entry: @proton_config.ProjectEntry::Url("http://localhost:5173"),
+    entries: [@proton_config.ProjectEntry::Url("http://localhost:5173")],
     backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
@@ -343,9 +370,9 @@ test "frontend release config preflight rejects url entry" {
 test "frontend release requires dist" {
   let config = BuildProjectConfig::{
     base_dir: ".",
-    entry: @proton_config.ProjectEntry::Asset(
-      "target/proton-build-entry/index.html",
-    ),
+    entries: [
+      @proton_config.ProjectEntry::Asset("target/proton-build-entry/index.html"),
+    ],
     backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(

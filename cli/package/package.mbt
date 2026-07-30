@@ -33,7 +33,7 @@ struct PackagePlan {
   build : Bool
   base_dir : String
   frontend_dist : String?
-  entry_path : String?
+  entry_paths : Array[String]
   resources : Array[String]
   icons : Array[String]
   url_schemes : Array[String]
@@ -226,9 +226,12 @@ async fn build_package_plan(
     Some(frontend) => frontend.dist()
     None => None
   }
-  let entry_path = match project.entry() {
-    File(path) | Asset(path) => Some(path)
-    Html(_) | Url(_) => None
+  let entry_paths : Array[String] = []
+  for entry in project.entries() {
+    match entry {
+      File(path) | Asset(path) => entry_paths.push(path)
+      Html(_) | Url(_) => ()
+    }
   }
   let workspace_root = find_workspace_root_from(base_dir)
   PackagePlan::{
@@ -247,7 +250,7 @@ async fn build_package_plan(
     build: raw.build,
     base_dir,
     frontend_dist,
-    entry_path,
+    entry_paths,
     resources: copy_strings(bundle.resources),
     icons: copy_strings(bundle.icon),
     url_schemes: copy_strings(bundle.url_schemes),
@@ -889,9 +892,8 @@ async fn stage_project_inputs(plan : PackagePlan, destination : String) -> Unit 
     Some(path) => inputs.push(path)
     None => ()
   }
-  match plan.entry_path {
-    Some(path) => inputs.push(path)
-    None => ()
+  for path in plan.entry_paths {
+    inputs.push(path)
   }
   for path in plan.resources {
     inputs.push(path)

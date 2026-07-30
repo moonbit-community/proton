@@ -120,6 +120,49 @@ async test "package plan defaults to app and zip" {
 }
 
 ///|
+async test "package plan stages every window file entry" {
+  let root = resolve_path("target", "proton-package-window-entries")
+  remove_tree(root)
+  let main = resolve_path(root, "pages/main.html")
+  let secondary = resolve_path(root, "standalone/settings.html")
+  ensure_dir(path_parent(main))
+  ensure_dir(path_parent(secondary))
+  write_text(main, "<main>Main</main>")
+  write_text(secondary, "<main>Settings</main>")
+  let project = @proton_config.ProjectConfig::new(
+    root,
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Asset(main),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.window-entries"),
+      version=Some("1.0.0"),
+    ),
+    windows=[
+      @proton_config.ProjectAppWindowConfig::new(
+        "settings",
+        @proton_config.ProjectWindowConfig::new("Settings", 480, 360),
+        @proton_config.ProjectEntry::File(secondary),
+      ),
+    ],
+    bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
+  )
+  let plan = build_package_plan(
+    parse_package_args([]),
+    resolve_path(root, "moon.proton"),
+    project,
+  )
+  assert_eq(plan.entry_paths, [main, secondary])
+  let destination = resolve_path(root, "staged")
+  ensure_dir(destination)
+  stage_project_inputs(plan, destination)
+  assert_true(@mbfs.path_exists(resolve_path(destination, "pages/main.html")))
+  assert_true(
+    @mbfs.path_exists(resolve_path(destination, "standalone/settings.html")),
+  )
+}
+
+///|
 async test "package plan uses configured backend module and package" {
   let base_dir = resolve_path("target", "proton package module paths")
   let backend_path = resolve_path(base_dir, "modules/backend app")
@@ -451,7 +494,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: ["icon.png", icon],
     url_schemes: [],
@@ -496,7 +539,7 @@ test "macOS plist contains bundle identity and executable" {
     build: false,
     base_dir: ".",
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: ["devtoys"],
@@ -544,7 +587,7 @@ async test "package manifest records launch metadata" {
     build: false,
     base_dir: ".",
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: ["devtoys"],
@@ -605,7 +648,7 @@ test "macOS helper plist matches its bundle identity" {
     build: false,
     base_dir: ".",
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: [],
@@ -762,7 +805,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: [],
@@ -842,7 +885,7 @@ async test "release executable lookup stays inside package target dir" {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: [],
@@ -921,7 +964,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: [],

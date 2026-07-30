@@ -98,7 +98,7 @@ struct RawBuildOptions {
 ///|
 priv struct BuildProjectConfig {
   base_dir : String
-  entry : @proton_config.ProjectEntry
+  entries : Array[@proton_config.ProjectEntry]
   backend : @proton_config.ProjectBackendConfig?
   frontend : @proton_config.ProjectFrontendConfig?
 }
@@ -341,7 +341,9 @@ fn validate_release_config(
       }
     None => ()
   }
-  validate_production_entry_kind(config.entry, config.frontend)
+  for entry in config.entries {
+    validate_production_entry_kind(entry, config.frontend)
+  }
 }
 
 ///|
@@ -365,7 +367,9 @@ async fn validate_release_files(
       }
     None => ()
   }
-  validate_production_entry_file(config.entry)
+  for entry in config.entries {
+    validate_production_entry_file(entry)
+  }
 }
 
 ///|
@@ -425,7 +429,7 @@ async fn read_project_config(
   let project = loaded.config()
   BuildProjectConfig::{
     base_dir: project.base_dir(),
-    entry: project.entry(),
+    entries: project.entries(),
     backend: project.backend(),
     frontend: project.frontend(),
   }

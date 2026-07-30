@@ -261,6 +261,17 @@ pub fn ProjectConfig::entry(self : ProjectConfig) -> ProjectEntry {
 }
 
 ///|
+/// Returns the primary entry followed by each secondary window entry in
+/// declaration order.
+pub fn ProjectConfig::entries(self : ProjectConfig) -> Array[ProjectEntry] {
+  let entries = [self.entry]
+  for window in self.windows {
+    entries.push(window.entry)
+  }
+  entries
+}
+
+///|
 pub fn ProjectConfig::windows(
   self : ProjectConfig,
 ) -> Array[ProjectAppWindowConfig] {

@@ -100,6 +100,7 @@ pub fn ProjectConfig::backend(Self) -> ProjectBackendConfig?
 pub fn ProjectConfig::base_dir(Self) -> String
 pub fn ProjectConfig::bundle(Self) -> ProjectBundleConfig?
 pub fn ProjectConfig::debug(Self) -> Int
+pub fn ProjectConfig::entries(Self) -> Array[ProjectEntry]
 pub fn ProjectConfig::entry(Self) -> ProjectEntry
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
 pub fn ProjectConfig::metadata(Self) -> ProjectMetadata

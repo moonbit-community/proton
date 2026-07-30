@@ -17,7 +17,7 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
     url_schemes: [],
