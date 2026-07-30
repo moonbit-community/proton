@@ -70,6 +70,50 @@ test "parser preserves duplicate fields for decoder" {
 }
 
 ///|
+test "parser decodes config string escapes" {
+  let source =
+    #|unicode = "caf\u{e9}"
+    #|hex_octal = "A\x42\o101"
+    #|controls = "\b\f\r\n\t"
+    #|simple = "q:\" b:\\ a:\' t:\` f:\/ s:\ end"
+    #|pair = "\uD83D\uDE00"
+    #|lone_high = "\uD83D"
+    #|lone_low = "\uDC00"
+    #|too_big = "\u{110000}"
+    #|pair_esc = "\u{1F600}"
+    #|nul = "a\x00b"
+    #|max_octal = "\o377"
+    #|upper_hex = "\xAB"
+    #|
+  let (ast, reports) = parse_moon_proton(source)
+  inspect(reports.length(), content="0")
+  match ast {
+    Obj(fields, _) => {
+      let values : Array[String] = []
+      for field in fields {
+        match field.value {
+          Str(text, _) => values.push(text)
+          _ => fail("expected string value")
+        }
+      }
+      assert_eq(values[0], "café")
+      assert_eq(values[1], "ABA")
+      assert_eq(values[2], "\b\f\r\n\t")
+      assert_eq(values[3], "q:\" b:\\ a:' t:` f:/ s: end")
+      assert_eq(values[4], "😀")
+      assert_eq(values[5], "�")
+      assert_eq(values[6], "�")
+      assert_eq(values[7], "�")
+      assert_eq(values[8], "😀")
+      assert_eq(values[9], "a\u{0}b")
+      assert_eq(values[10], "ÿ")
+      assert_eq(values[11], "«")
+    }
+    _ => fail("expected object")
+  }
+}
+
+///|
 test "parser requires separators inside arrays and objects" {
   let source =
     #|window = {
