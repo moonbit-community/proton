@@ -1,8 +1,20 @@
 ///|
-fn read_proton_project_config(
+async fn read_proton_project_config(
   path : String,
 ) -> DoctorAppConfig raise @proton_config.ProjectConfigError {
-  let loaded = @proton_config.load_project_config_from_file(path)
+  let source = @async_fs.read_file(path).text() catch {
+    error =>
+      raise @proton_config.ProjectConfigError::FileRead(
+        path~,
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  let base_dir = path_parent(path).unwrap_or(".")
+  let loaded = @proton_config.load_project_config_from_text(
+    source,
+    base_dir,
+    name=path,
+  )
   doctor_app_config_from_project_config(loaded.config(), loaded.warnings())
 }
 
@@ -12,9 +24,11 @@ fn doctor_app_config_from_project_config(
   warnings : Array[String],
 ) -> DoctorAppConfig {
   DoctorAppConfig::{
+    base_dir: project.base_dir(),
     window: doctor_window_from_project_window(project.window()),
     entry: doctor_entry_from_project_entry(project.entry()),
     debug: project.debug() != 0,
+    backend: project.backend().map(doctor_backend_from_project_backend),
     frontend: project.frontend().map(doctor_frontend_from_project_frontend),
     warnings,
   }
@@ -70,6 +84,16 @@ fn doctor_entry_from_project_entry(
 }
 
 ///|
+fn doctor_backend_from_project_backend(
+  backend : @proton_config.ProjectBackendConfig,
+) -> DoctorBackendConfig {
+  DoctorBackendConfig::{
+    path: backend.path(),
+    app_package: backend.app_package(),
+  }
+}
+
+///|
 fn doctor_frontend_from_project_frontend(
   frontend : @proton_config.ProjectFrontendConfig,
 ) -> DoctorFrontendConfig {
@@ -78,6 +102,6 @@ fn doctor_frontend_from_project_frontend(
     before_build: frontend.before_build(),
     dist: frontend.dist(),
     dev_url: frontend.dev_url(),
-    cwd: frontend.cwd(),
+    path: frontend.path(),
   }
 }

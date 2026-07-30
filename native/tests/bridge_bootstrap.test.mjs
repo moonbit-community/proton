@@ -40,7 +40,9 @@ function createBridge(url = "proton://app/") {
 test("installs the public bridge synchronously", () => {
   const { context, dispatcher } = createBridge();
   assert.ok(dispatcher);
+  assert.equal(typeof context.__MoonBit__.core.invokeJson, "function");
   assert.equal(typeof context.__MoonBit__.core.invokeOp, "function");
+  assert.equal(typeof context.__MoonBit__.events.onJson, "function");
   assert.equal(typeof context.__MoonBit__.add.sum, "function");
   assert.equal("ready" in context.__MoonBit__, false);
   assert.equal(context.__protonNativeInvokeOp, undefined);
@@ -63,6 +65,55 @@ test("settles one request through the private dispatcher", async () => {
   assert.equal((await resultPromise).total, 42);
 });
 
+test("preserves JSON text across the typed bridge primitive", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const resultPromise = context.__MoonBit__.core.invokeJson(
+    "app:echo",
+    '{"value":"ping"}',
+  );
+  assert.equal(calls[0].name, "app:echo");
+  assert.equal(calls[0].payloadJson, '{"value":"ping"}');
+  dispatcher.dispatchResponse(calls[0].id, true, '{"value":"pong"}', "");
+  assert.equal(await resultPromise, '{"value":"pong"}');
+});
+
+test("rejects JSON requests with structured bridge errors", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const resultPromise = context.__MoonBit__.core.invokeJson("app:fail", "{}");
+  dispatcher.dispatchResponse(
+    calls[0].id,
+    false,
+    "",
+    '{"code":"backend_failed","message":"command failed","detail":"test"}',
+  );
+  await assert.rejects(resultPromise, (error) => {
+    assert.equal(error.name, "ProtonBridgeError");
+    assert.equal(error.code, "backend_failed");
+    assert.equal(error.message, "command failed");
+    assert.equal(error.detail, "test");
+    return true;
+  });
+});
+
+test("cancels renderer pending state without settling late replies", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const controller = new AbortController();
+  const resultPromise = context.__MoonBit__.core.invokeJson(
+    "app:cancel",
+    "{}",
+    { signal: controller.signal },
+  );
+  controller.abort();
+  await assert.rejects(resultPromise, (error) => {
+    assert.equal(error.code, "request_cancelled");
+    return true;
+  });
+  assert.equal(
+    dispatcher.dispatchResponse(calls[0].id, true, '{"late":true}', ""),
+    false,
+  );
+});
+
 test("delivers extension events and supports unsubscribe", () => {
   const { context, dispatcher } = createBridge();
   const received = [];
@@ -80,6 +131,20 @@ test("delivers extension events and supports unsubscribe", () => {
     '{"kind":"extension","extension":"add","name":"finished","payload":{"total":43}}',
   );
   assert.deepEqual(received, [42]);
+});
+
+test("delivers raw JSON event payloads on typed routes", () => {
+  const { context, dispatcher } = createBridge();
+  const received = [];
+  const unsubscribe = context.__MoonBit__.events.onJson(
+    "ext:add/finished",
+    (payloadJson) => received.push(payloadJson),
+  );
+  dispatcher.dispatchEvent(
+    '{"kind":"extension","extension":"add","name":"finished","payload":{"total":42}}',
+  );
+  unsubscribe();
+  assert.deepEqual(received, ['{"total":42}']);
 });
 
 test("drops events targeted at a different page instance", async () => {

@@ -22,7 +22,7 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|    await invoke("ext:app/fail", { message: "Failure crossed command boundary" });
         #|    return false;
         #|  } catch (error) {
-        #|    if (!String(error && error.message ? error.message : error).includes("Failure crossed command boundary")) return false;
+        #|    if (!String(error && error.message ? error.message : error).includes("op ext:app/fail failed")) return false;
         #|  }
         #|  try {
         #|    await invoke("ext:app/ping", { oversized: "x".repeat(1048577) });

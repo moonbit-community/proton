@@ -64,6 +64,38 @@ Bridge E2E coverage lives in the `e2e/` MoonBit module. Run the complete
 self-hosted suite with `moon -C e2e test`; no JavaScript bridge-smoke wrapper is
 required.
 
+## `e2e_scaffold_source_smoke.mjs`
+
+Generates the default three-module Todo project outside the repository and
+checks its committed code generation, local-source compilation, Warren
+frontend build, native backend build, ad-hoc signed macOS app package, typed
+commands, live events, ordinary-browser `BridgeUnavailable` state, and clean
+process shutdown. This is a source-integration test: it replaces unpublished
+registry dependencies in the temporary project with modules from this checkout.
+It does not prove that the generated registry dependencies are published.
+
+Build and install the native runtime first, and install Warren:
+
+```sh
+moon install moonbit-community/warren
+PROTON_NATIVE_DIST="$PWD/native/dist" node ./scripts/e2e_scaffold_source_smoke.mjs
+```
+
+## `e2e_scaffold_registry_smoke.mjs`
+
+Runs an installed `proton_cli` in a temporary directory and checks the generated
+project without editing its `moon.work`, module manifests, or build rules. This
+is the release gate for registry dependency resolution:
+
+```sh
+moon install justjavac/proton_cli
+node ./scripts/e2e_scaffold_registry_smoke.mjs
+```
+
+Set `PROTON_REGISTRY_CLI` only when the registry-installed executable has a
+different path. This smoke is expected to fail before every module version
+referenced by the template has been published.
+
 ## `macos_package_smoke.mjs`
 
 Runs the development-mode macOS packaging regression with an explicit ad-hoc

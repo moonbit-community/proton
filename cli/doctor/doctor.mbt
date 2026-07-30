@@ -1,12 +1,15 @@
 ///|
-fn read_project_moon_mod(
+async fn read_project_moon_mod(
   project : ProjectDoctorInfo,
 ) -> Result[MoonModuleConfig, MoonConfigReadError]? {
   match project.moon_mod_path {
     Some(path) =>
       Some(
         try read_moon_mod(path) catch {
-          error => Err(error)
+          MoonConfigReadError::MissingFile(_) as error => Err(error)
+          MoonConfigReadError::ReadFailed(_, _) as error => Err(error)
+          MoonConfigReadError::ParseFailed(_, _) as error => Err(error)
+          error => raise error
         } noraise {
           config => Ok(config)
         },
@@ -16,14 +19,17 @@ fn read_project_moon_mod(
 }
 
 ///|
-fn read_project_moon_pkg(
+async fn read_project_moon_pkg(
   project : ProjectDoctorInfo,
 ) -> Result[MoonPackageConfig, MoonConfigReadError]? {
   match project.moon_pkg_path {
     Some(path) =>
       Some(
         try read_moon_pkg(path) catch {
-          error => Err(error)
+          MoonConfigReadError::MissingFile(_) as error => Err(error)
+          MoonConfigReadError::ReadFailed(_, _) as error => Err(error)
+          MoonConfigReadError::ParseFailed(_, _) as error => Err(error)
+          error => raise error
         } noraise {
           config => Ok(config)
         },
@@ -99,10 +105,10 @@ pub async fn run(
   sections~ : Array[String],
   output~ : String?,
 ) -> Bool {
-  if !@mbfs.path_exists(cwd) {
+  if !doctor_path_exists(cwd) {
     raise WorkingDirectoryMissing(path=cwd)
   }
-  let cwd_is_dir = @mbfs.is_dir(cwd) catch { _ => false }
+  let cwd_is_dir = doctor_path_is_dir(cwd)
   if !cwd_is_dir {
     raise WorkingDirectoryNotDirectory(path=cwd)
   }
@@ -131,7 +137,7 @@ pub async fn run(
   }
   match options.output {
     Some(path) =>
-      @mbfs.write_string_to_file(path, rendered, encoding="utf8") catch {
+      @async_fs.write_file(path, rendered, create_mode=CreateOrTruncate) catch {
         error => raise OutputWrite(path~, detail=@debug.render(Repr(error)))
       }
     None => println(rendered)

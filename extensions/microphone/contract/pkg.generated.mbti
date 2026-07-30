@@ -1,0 +1,71 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/microphone/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[MicrophoneActivity]
+
+pub let config : @proton_contract.Command[CaptureConfigRequest, CaptureConfigReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let list_devices : @proton_contract.Command[EmptyRequest, MicrophoneDevicesReply]
+
+pub let parse_listing : @proton_contract.Command[ParseListingRequest, MicrophoneDevicesReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct CaptureConfigReply {
+  channels : Int
+  sample_rate_hz : Int
+  sample_format : String
+  echo_cancellation : Bool
+  noise_suppression : Bool
+  bytes_per_sample : Int
+  recommended_chunk_frames : Int
+  uses_voice_processing : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct CaptureConfigRequest {
+  channels : Int?
+  sample_rate_hz : Int?
+  sample_format : String?
+  echo_cancellation : Bool?
+  noise_suppression : Bool?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct EmptyRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MicrophoneActivity {
+  operation : String
+  count : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MicrophoneDeviceReply {
+  id : String
+  name : String
+  state : String
+  default_config : CaptureConfigReply
+  monitor_supported : Bool
+  live : Bool
+  session_label : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct MicrophoneDevicesReply {
+  devices : Array[MicrophoneDeviceReply]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ParseListingRequest {
+  listing : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

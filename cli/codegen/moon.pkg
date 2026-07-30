@@ -3,8 +3,8 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/list",
   "moonbitlang/core/string",
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/lexer/basic",
-  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/syntax",
@@ -17,10 +17,11 @@ supported_targets = "native"
 
 options(
   targets: {
-    "attribute_codegen_names.mbt": [ "native" ],
-    "attribute_codegen_parse.mbt": [ "native" ],
-    "attribute_codegen_render.mbt": [ "native" ],
-    "attribute_codegen_test.mbt": [ "native" ],
-    "attribute_codegen_types.mbt": [ "native" ],
+    "codegen_names.mbt": [ "native" ],
+    "codegen_support.mbt": [ "native" ],
+    "typed_codegen_parse.mbt": [ "native" ],
+    "typed_codegen_render.mbt": [ "native" ],
+    "typed_codegen_test.mbt": [ "native" ],
+    "typed_codegen_types.mbt": [ "native" ],
   },
 )

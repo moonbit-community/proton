@@ -13,19 +13,19 @@ pub fn run() -> Unit
 type AppCommandError derive(@debug.Debug)
 
 // Types and methods
-type FailPayload derive(@json.FromJson)
+type FailPayload derive(ToJson, @json.FromJson)
 
-type PingPayload derive(@json.FromJson)
+type PingPayload derive(ToJson, @json.FromJson)
 
-type PingReply derive(ToJson)
+type PingReply derive(ToJson, @json.FromJson)
 
-type ReportProbePayload derive(@json.FromJson)
+type ReportProbePayload derive(ToJson, @json.FromJson)
 
-type ReportProbeReply derive(ToJson)
+type ReportProbeReply derive(ToJson, @json.FromJson)
 
-type SlowAddPayload derive(@json.FromJson)
+type SlowAddPayload derive(ToJson, @json.FromJson)
 
-type SlowAddReply derive(ToJson)
+type SlowAddReply derive(ToJson, @json.FromJson)
 
 // Type aliases
 

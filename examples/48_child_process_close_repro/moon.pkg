@@ -2,8 +2,8 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/process",
   "moonbitlang/core/json",
-  "justjavac/proton/command" @proton_command,
   "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton_contract",
   "justjavac/proton",
 }
 

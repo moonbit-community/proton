@@ -77,6 +77,8 @@ pub fn CommandExtensionLifecycleError::message(
   self : CommandExtensionLifecycleError,
 ) -> String {
   match self {
+    ApplicationRegistrationFailed(detail~) =>
+      "failed to register application commands: " + detail
     RegistrationFailed(extension_id~, detail~) =>
       "failed to register command extension " + extension_id + ": " + detail
     DestroyFailed(extension_id~, detail~) =>
@@ -90,6 +92,61 @@ impl Show for CommandExtensionLifecycleError with fn output(self, logger) {
 }
 
 ///|
+pub fn LifecycleHookError::message(self : LifecycleHookError) -> String {
+  match self {
+    ApplicationStart(index~, detail~) =>
+      "application startup hook " + index.to_string() + " failed: " + detail
+    ApplicationShutdown(index~, detail~) =>
+      "application shutdown hook " + index.to_string() + " failed: " + detail
+    WindowReady(index~, detail~) =>
+      "window ready hook " + index.to_string() + " failed: " + detail
+    WindowClose(index~, detail~) =>
+      "window close hook " + index.to_string() + " failed: " + detail
+  }
+}
+
+///|
+impl Show for LifecycleHookError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+pub fn AppCleanupError::message(self : AppCleanupError) -> String {
+  match self {
+    CommandExtension(error) => error.message()
+    LifecycleHook(error) => error.message()
+    WindowDestroy(error) => "failed to destroy window: " + error.message()
+    RuntimeDestroy(error) => "failed to destroy runtime: " + error.message()
+  }
+}
+
+///|
+impl Show for AppCleanupError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+fn cleanup_failure_message(
+  primary : String?,
+  failures : Array[AppCleanupError],
+) -> String {
+  let builder = StringBuilder::new()
+  match primary {
+    Some(message) => {
+      builder.write_string(message)
+      builder.write_string("\n")
+    }
+    None => ()
+  }
+  builder.write_string("application teardown failed")
+  for failure in failures {
+    builder.write_string("\n- ")
+    builder.write_string(failure.message())
+  }
+  builder.to_string()
+}
+
+///|
 pub fn AppRunError::message(self : AppRunError) -> String {
   match self {
     RunnerError(message) => "application runner is not active: " + message
@@ -100,6 +157,8 @@ pub fn AppRunError::message(self : AppRunError) -> String {
     RuntimeWakeupError(error) => "runtime wakeup failed: " + error.message()
     CommandExtensionLifecycleError(error) =>
       "command extension lifecycle failed: " + error.message()
+    LifecycleHookError(error) =>
+      "application lifecycle failed: " + error.message()
     EntryLoadError(error) =>
       "application entry failed to load: " + error.message()
     BridgeStartupError(diagnostic) =>
@@ -116,6 +175,8 @@ pub fn AppRunError::message(self : AppRunError) -> String {
       diagnostic.message +
       "\n" +
       @debug.render(Repr(diagnostic))
+    CleanupFailed(primary~, failures~) =>
+      cleanup_failure_message(primary, failures)
     UnexpectedTaskFailure(detail~) => "application task failed: " + detail
   }
 }

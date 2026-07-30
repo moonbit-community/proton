@@ -37,24 +37,6 @@ fn load_descriptor(name : String) -> @catalog.ExtensionDescriptor raise {
 }
 
 ///|
-/// Asserts that metadata fields stay aligned with the exported extension spec.
-fn assert_metadata_matches_spec(
-  descriptor : @catalog.ExtensionDescriptor,
-  spec : @core.ExtensionSpec,
-  package_path : String,
-  expected_id : String,
-  expected_namespace : String,
-) -> Unit raise {
-  assert_eq(descriptor.id(), spec.id())
-  assert_eq(descriptor.id(), expected_id)
-  @debug.assert_eq(descriptor.dependencies(), spec.dependencies())
-  assert_eq(descriptor.moonbit_import_path(), package_path)
-  assert_eq(spec.js_namespace(), expected_namespace)
-  assert_eq(descriptor.js_namespace(), expected_namespace)
-  assert_true(descriptor.platforms().length() > 0)
-}
-
-///|
 /// Asserts that metadata fields stay aligned with the exported app-command extension spec.
 fn assert_metadata_matches_app_command_spec(
   descriptor : @catalog.ExtensionDescriptor,
@@ -75,63 +57,63 @@ fn assert_metadata_matches_app_command_spec(
 test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
-    @dialog.extension().command_spec().unwrap(),
+    @dialog.extension().command_spec(),
     "justjavac/proton_ext/dialog",
     "justjavac/proton-dialog",
     "dialog",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("fs"),
-    @fs.extension().command_spec().unwrap(),
+    @fs.extension().command_spec(),
     "justjavac/proton_ext/fs",
     "justjavac/proton-fs",
     "fs",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("global_hotkey"),
-    @global_hotkey.extension().command_spec().unwrap(),
+    @global_hotkey.extension().command_spec(),
     "justjavac/proton_ext/global_hotkey",
     "justjavac/proton-global-hotkey",
     "globalHotkey",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("keepawake"),
-    @keepawake.extension().command_spec().unwrap(),
+    @keepawake.extension().command_spec(),
     "justjavac/proton_ext/keepawake",
     "justjavac/proton-keepawake",
     "keepAwake",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("microphone"),
-    @microphone.extension().command_spec().unwrap(),
+    @microphone.extension().command_spec(),
     "justjavac/proton_ext/microphone",
     "justjavac/proton-microphone",
     "microphone",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("notification"),
-    @notification.extension().command_spec().unwrap(),
+    @notification.extension().command_spec(),
     "justjavac/proton_ext/notification",
     "justjavac/proton-notification",
     "notification",
   )
-  assert_metadata_matches_spec(
+  assert_metadata_matches_app_command_spec(
     load_descriptor("path"),
-    @path.core_spec(),
+    @path.extension().command_spec(),
     "justjavac/proton_ext/path",
     "justjavac/proton-path",
     "path",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("shell"),
-    @shell.extension().command_spec().unwrap(),
+    @shell.extension().command_spec(),
     "justjavac/proton_ext/shell",
     "justjavac/proton-shell",
     "shell",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("tray"),
-    @tray.extension().command_spec().unwrap(),
+    @tray.extension().command_spec(),
     "justjavac/proton_ext/tray",
     "justjavac/proton-tray",
     "tray",

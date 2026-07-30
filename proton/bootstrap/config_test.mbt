@@ -203,9 +203,6 @@ test "load_config_manifest_from_file rejects unsupported top-level fields" {
     "permissions = {}", "moon.proton field `permissions` is not supported in v1.",
   )
   expect_moon_proton_extra_field_error(
-    "windows = []", "moon.proton field `windows` is not supported in v1.",
-  )
-  expect_moon_proton_extra_field_error(
     "debug = 1", "moon.proton.debug must be a bool",
   )
 }
@@ -249,12 +246,30 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|  value: "frontend/dist/index.html",
       #|}
       #|
+      #|windows = [{
+      #|  id: "settings",
+      #|  window: {
+      #|    title: "Settings",
+      #|    width: 480,
+      #|    height: 360,
+      #|  },
+      #|  entry: {
+      #|    kind: "html",
+      #|    value: "<main>Settings</main>",
+      #|  },
+      #|}]
+      #|
       #|debug = true
+      #|
+      #|backend = {
+      #|  path: "backend",
+      #|  package: "app",
+      #|}
       #|
       #|frontend = {
       #|  dev_url: "http://localhost:5173",
-      #|  dist: "frontend/dist",
-      #|  cwd: "frontend",
+      #|  dist: "dist",
+      #|  path: "frontend",
       #|  before_dev: "npm run dev",
       #|  before_build: "npm run build",
       #|}
@@ -264,6 +279,12 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|  targets: ["app", "zip"],
       #|  icon: ["icons/icon.ico"],
       #|  resources: ["resources/**"],
+      #|  url_schemes: ["desktop-app"],
+      #|  document_types: [{
+      #|    name: "Desktop document",
+      #|    extensions: ["desktop"],
+      #|    role: "Editor",
+      #|  }],
       #|  output: "target/proton-dist",
       #|}
       #|
@@ -283,6 +304,18 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
   @debug.assert_eq(metadata.description(), Some("Desktop app"))
   @debug.assert_eq(metadata.license(), Some("MIT"))
 
+  match project.backend() {
+    None => abort("expected backend config")
+    Some(backend) => {
+      assert_true(
+        normalize_test_slashes(backend.path()).has_suffix(
+          "target/proton-project-config/backend",
+        ),
+      )
+      assert_eq(backend.app_package(), "app")
+    }
+  }
+
   match project.frontend() {
     None => abort("expected frontend config")
     Some(frontend) => {
@@ -293,7 +326,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
         ),
       )
       assert_true(
-        normalize_test_slashes(frontend.cwd().unwrap()).has_suffix(
+        normalize_test_slashes(frontend.path().unwrap()).has_suffix(
           "target/proton-project-config/frontend",
         ),
       )
@@ -366,6 +399,11 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
             }
             _ => abort("expected runtime.dev_entry summary")
           }
+          match runtime.get("windows") {
+            Some(Array([Object(window)])) =>
+              @debug.assert_eq(window.get("id"), Some(Json::string("settings")))
+            _ => abort("expected runtime.windows summary")
+          }
         }
         _ => abort("expected runtime summary")
       }
@@ -382,6 +420,23 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       match summary.get("bundle") {
         Some(Object(bundle)) => {
           @debug.assert_eq(bundle.get("active"), Some(Json::boolean(true)))
+          @debug.assert_eq(
+            bundle.get("url_schemes"),
+            Some(Json::array([Json::string("desktop-app")])),
+          )
+          match bundle.get("document_types") {
+            Some(Array([Object(document_type)])) => {
+              @debug.assert_eq(
+                document_type.get("name"),
+                Some(Json::string("Desktop document")),
+              )
+              @debug.assert_eq(
+                document_type.get("role"),
+                Some(Json::string("Editor")),
+              )
+            }
+            _ => abort("expected bundle document types summary")
+          }
           match bundle.get("output") {
             Some(String(output)) =>
               assert_true(
@@ -570,6 +625,33 @@ test "load_proton_project_config_from_file validates bundle targets" {
   @mbfs.create_dir("target/proton-project-bundle-targets") catch {
     _ => ()
   }
+  let supported_target = "target/proton-project-bundle-targets/supported.moon.proton"
+  @mbfs.write_string_to_file(
+    supported_target,
+    (
+      #|window = {
+      #|  title: "Bundle App",
+      #|  width: 900,
+      #|  height: 700,
+      #|}
+      #|
+      #|entry = {
+      #|  kind: "html",
+      #|  value: "<html></html>",
+      #|}
+      #|
+      #|bundle = {
+      #|  targets: ["app", "zip", "dmg"],
+      #|}
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(Repr(err)))
+  }
+  let supported = load_proton_project_config_from_file(supported_target)
+  assert_eq(supported.bundle().unwrap().targets(), ["app", "zip", "dmg"])
+
   let unsupported_target = "target/proton-project-bundle-targets/unsupported.moon.proton"
   @mbfs.write_string_to_file(
     unsupported_target,
@@ -586,7 +668,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
       #|}
       #|
       #|bundle = {
-      #|  targets: ["dmg"],
+      #|  targets: ["msi"],
       #|}
       #|
     ),
@@ -597,7 +679,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
   let error = expect_bootstrap_error(() => {
     load_proton_project_config_from_file(unsupported_target)
   })
-  assert_eq(error.message(), "unsupported bundle.targets: dmg")
+  assert_eq(error.message(), "unsupported bundle.targets: msi")
 
   let duplicate_target = "target/proton-project-bundle-targets/duplicate.moon.proton"
   @mbfs.write_string_to_file(

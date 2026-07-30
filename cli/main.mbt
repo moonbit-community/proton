@@ -1,5 +1,5 @@
 ///|
-let cli_current_version : String = "0.1.9"
+let cli_current_version : String = "0.1.10"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"
@@ -184,7 +184,13 @@ fn print_error_message(message : String) -> Unit {
 fn codegen_command() -> @argparse.Command {
   @argparse.Command(
     "codegen",
-    about="Generate Proton command extension code from #proton attributes",
+    about="Generate typed Proton command registrars from #proton attributes",
+    flags=[
+      FlagArg(
+        "extension-identity",
+        about="Generate a contract identity from one moon.ext input",
+      ),
+    ],
     options=[
       OptionArg(
         "output-file",
@@ -192,12 +198,16 @@ fn codegen_command() -> @argparse.Command {
         about="Output .g.mbt file",
         required=true,
       ),
+      OptionArg(
+        "identity-name",
+        about="Generated binding name for --extension-identity",
+      ),
     ],
     positionals=[
       PositionArg(
-        "input_file",
-        about="Input MoonBit source file",
-        num_args=@argparse.ValueRange::single(),
+        "input_files",
+        about="Input MoonBit source files",
+        num_args=@argparse.ValueRange(lower=1),
       ),
     ],
   )
@@ -338,15 +348,36 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
 }
 
 ///|
-fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit raise {
-  let input = @cli_args.required_value(matches, "input_file")
+async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
+  let inputs = @cli_args.values(matches, "input_files")
   let output = @cli_args.required_value(matches, "output-file")
-  let resolved_input = resolve_cli_path(cwd, input)
+  let resolved_inputs = inputs.map(input => resolve_cli_path(cwd, input))
   let resolved_output = resolve_cli_path(cwd, output)
-  let result = @codegen.generate_app_commands_from_file_with_metadata(
-    resolved_input,
-  )
-  @mbfs.write_string_to_file(resolved_output, result.source, encoding="utf8") catch {
+  let extension_identity = @cli_args.flag(matches, "extension-identity")
+  let identity_name = @cli_args.value(matches, "identity-name")
+  if !extension_identity && identity_name is Some(_) {
+    raise CliUsageError::Invalid(
+      message="codegen --identity-name requires --extension-identity",
+    )
+  }
+  let result = if extension_identity {
+    guard resolved_inputs is [metadata_path] else {
+      raise CliUsageError::Invalid(
+        message="codegen --extension-identity requires exactly one moon.ext input",
+      )
+    }
+    @codegen.generate_extension_identity_from_file(
+      metadata_path,
+      binding_name=identity_name.unwrap_or("generated_extension_contract"),
+    )
+  } else {
+    @codegen.generate_commands_from_files(resolved_inputs)
+  }
+  @async_fs.write_file(
+    resolved_output,
+    result.source,
+    create_mode=CreateOrTruncate,
+  ) catch {
     error =>
       raise CliCodegenOutputError::WriteFailed(
         path=resolved_output,

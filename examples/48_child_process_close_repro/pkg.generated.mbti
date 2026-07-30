@@ -1,12 +1,18 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/proton/examples/48_child_process_close_repro"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
-type HoldResult derive(ToJson)
+type HoldRequest derive(ToJson, @json.FromJson)
+
+type HoldResult derive(ToJson, @json.FromJson)
 
 // Type aliases
 

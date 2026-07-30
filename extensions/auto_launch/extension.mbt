@@ -1,100 +1,80 @@
 ///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
+let support_command = @auto_launch_contract.support
+
+///|
+let describe_command = @auto_launch_contract.describe
+
+///|
+let is_enabled_command = @auto_launch_contract.is_enabled
+
+///|
+let enable_command = @auto_launch_contract.enable
+
+///|
+let disable_command = @auto_launch_contract.disable
 
 ///|
 /// Returns platform support details for JavaScript callers.
-#proton.command(name="support")
-fn support(_payload : EmptyPayload?) -> SupportReply {
+#proton.command(contract=support_command)
+fn support(
+  _request : @auto_launch_contract.SupportRequest,
+) -> @auto_launch_contract.SupportReply {
   auto_launch_support()
 }
 
 ///|
 /// Describes the resolved native startup entry.
-#proton.command(name="describe")
+#proton.command(contract=describe_command)
 fn describe(
-  name : String,
-  path : String?,
-  launch_in_background : Bool?,
-  background_arg : String?,
-  extra_arguments : Array[String]?,
-  identifier : String?,
-) -> AutoLaunchReply raise AutoLaunchError {
-  describe_auto_launch(
-    auto_launch_payload(
-      name, path, launch_in_background, background_arg, extra_arguments, identifier,
-    ),
-  )
+  request : @auto_launch_contract.AutoLaunchRequest,
+) -> @auto_launch_contract.AutoLaunchReply raise AutoLaunchError {
+  describe_auto_launch(request)
 }
 
 ///|
 /// Returns whether the resolved native startup entry is enabled.
-#proton.command(name="isEnabled")
+#proton.command(contract=is_enabled_command)
 fn is_enabled(
-  name : String,
-  path : String?,
-  launch_in_background : Bool?,
-  background_arg : String?,
-  extra_arguments : Array[String]?,
-  identifier : String?,
-) -> EnabledReply raise AutoLaunchError {
-  is_auto_launch_enabled(
-    auto_launch_payload(
-      name, path, launch_in_background, background_arg, extra_arguments, identifier,
-    ),
-  )
+  request : @auto_launch_contract.AutoLaunchRequest,
+) -> @auto_launch_contract.EnabledReply raise AutoLaunchError {
+  is_auto_launch_enabled(request)
 }
 
 ///|
 /// Enables the resolved native startup entry.
-#proton.command(name="enable")
+#proton.command(contract=enable_command)
 async fn enable(
-  context : @proton_command.AppCommandExtensionContext,
-  name : String,
-  path : String?,
-  launch_in_background : Bool?,
-  background_arg : String?,
-  extra_arguments : Array[String]?,
-  identifier : String?,
-) -> MutationReply raise AutoLaunchError {
-  let identifier = enable_auto_launch(
-    auto_launch_payload(
-      name, path, launch_in_background, background_arg, extra_arguments, identifier,
-    ),
-  )
-  emit_auto_launch_activity(context, AutoLaunchActivity::{
+  context : @proton.CommandContext,
+  request : @auto_launch_contract.AutoLaunchRequest,
+) -> @auto_launch_contract.MutationReply {
+  let identifier = enable_auto_launch(request)
+  context.emit(@auto_launch_contract.activity, @auto_launch_contract.AutoLaunchActivity::{
     operation: "enable",
     identifier: Some(identifier),
   })
-  MutationReply::{ changed: true }
+  @auto_launch_contract.MutationReply::{ changed: true }
 }
 
 ///|
 /// Disables the resolved native startup entry.
-#proton.command(name="disable")
+#proton.command(contract=disable_command)
 async fn disable(
-  context : @proton_command.AppCommandExtensionContext,
-  name : String,
-  path : String?,
-  launch_in_background : Bool?,
-  background_arg : String?,
-  extra_arguments : Array[String]?,
-  identifier : String?,
-) -> MutationReply raise AutoLaunchError {
-  let identifier = disable_auto_launch(
-    auto_launch_payload(
-      name, path, launch_in_background, background_arg, extra_arguments, identifier,
-    ),
-  )
-  emit_auto_launch_activity(context, AutoLaunchActivity::{
+  context : @proton.CommandContext,
+  request : @auto_launch_contract.AutoLaunchRequest,
+) -> @auto_launch_contract.MutationReply {
+  let identifier = disable_auto_launch(request)
+  context.emit(@auto_launch_contract.activity, @auto_launch_contract.AutoLaunchActivity::{
     operation: "disable",
     identifier: Some(identifier),
   })
-  MutationReply::{ changed: true }
+  @auto_launch_contract.MutationReply::{ changed: true }
 }
 
 ///|
-#proton.event(name="activity")
-struct AutoLaunchActivity {
-  operation : String
-  identifier : String?
-} derive(ToJson, FromJson, Debug, Eq)
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    @auto_launch_contract.extension,
+    generated_extension_command_routes(),
+    fn(registrar) raise { register_commands(registrar) },
+  )
+}

@@ -1,24 +1,8 @@
 ///|
-struct ShellPayload {
-  target : String
-} derive(ToJson, FromJson, Debug, Eq)
+let open_command = @shell_contract.open
 
 ///|
-struct RevealItemPayload {
-  path : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct ShellReply {
-  launched : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-#proton.event(name="activity")
-struct ShellActivity {
-  operation : String
-  target : String
-} derive(ToJson, FromJson, Debug, Eq)
+let reveal_item_command = @shell_contract.reveal_item
 
 ///|
 extern "C" fn is_windows_ffi() -> Bool = "extensions_shell_is_windows"
@@ -58,43 +42,61 @@ fn run_shell_action(
   target : String,
   label : String,
   launcher : (Bytes) -> Bool,
-) -> ShellReply raise ShellError {
+) -> @shell_contract.ShellReply raise ShellError {
   let target = validate_target(target, label)
   guard launcher(@ffi.to_wstr(target)) else {
     raise LaunchFailed(operation~, target~)
   }
-  ShellReply::{ launched: true }
+  @shell_contract.ShellReply::{ launched: true }
 }
 
 ///|
 /// Opens one target through the native shell from a generated app-command extension.
-#proton.command(name="open")
+#proton.command(contract=open_command)
 async fn open(
-  context : @proton_command.AppCommandExtensionContext,
-  target : String,
-) -> ShellReply raise ShellError {
+  context : @proton.CommandContext,
+  request : @shell_contract.OpenRequest,
+) -> @shell_contract.ShellReply {
   ensure_supported()
   let reply = run_shell_action(
-    "open", target, "shell.open target", open_shell_ffi,
+    "open",
+    request.target,
+    "shell.open target",
+    open_shell_ffi,
   )
-  emit_shell_activity(context, ShellActivity::{ operation: "open", target })
+  context.emit(@shell_contract.activity, @shell_contract.ShellActivity::{
+    operation: "open",
+    target: request.target,
+  })
   reply
 }
 
 ///|
 /// Reveals one filesystem item through the native shell from a generated app-command extension.
-#proton.command(name="revealItem")
+#proton.command(contract=reveal_item_command)
 async fn reveal_item(
-  context : @proton_command.AppCommandExtensionContext,
-  path : String,
-) -> ShellReply raise ShellError {
+  context : @proton.CommandContext,
+  request : @shell_contract.RevealItemRequest,
+) -> @shell_contract.ShellReply {
   ensure_supported()
   let reply = run_shell_action(
-    "revealItem", path, "shell.revealItem path", reveal_item_ffi,
+    "revealItem",
+    request.path,
+    "shell.revealItem path",
+    reveal_item_ffi,
   )
-  emit_shell_activity(context, ShellActivity::{
+  context.emit(@shell_contract.activity, @shell_contract.ShellActivity::{
     operation: "revealItem",
-    target: path,
+    target: request.path,
   })
   reply
+}
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    @shell_contract.extension,
+    generated_extension_command_routes(),
+    fn(registrar) raise { register_commands(registrar) },
+  )
 }

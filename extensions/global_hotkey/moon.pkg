@@ -1,8 +1,10 @@
 import {
   "moonbitlang/core/json",
   "justjavac/global_hotkey" @sys_global_hotkey,
-  "justjavac/proton/command" @proton_command,
+  "justjavac/proton",
   "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton_contract",
+  "justjavac/proton_ext/global_hotkey/contract" @global_hotkey_contract,
 }
 
 supported_targets = "native"

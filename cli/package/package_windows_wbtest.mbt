@@ -20,9 +20,11 @@ fn windows_test_plan(
     build: false,
     base_dir: root,
     frontend_dist: Some(resolve_path(root, "frontend/dist")),
-    entry_path: Some(resolve_path(root, "frontend/dist/index.html")),
+    entry_paths: [resolve_path(root, "frontend/dist/index.html")],
     resources: [resolve_path(root, "bundle resources/**")],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign,
     notarize: false,
@@ -142,6 +144,26 @@ test "Windows signtool args use SHA-256 and RFC3161 timestamp" {
   )
   @debug.assert_eq(windows_timestamp_url(Some("none")), None)
   @debug.assert_eq(windows_timestamp_url(Some("  ")), None)
+}
+
+///|
+async test "Windows icon selection accepts ico and rejects a missing source" {
+  let root = "target/proton-package-windows-icon"
+  remove_tree(root)
+  let selected = resolve_path(root, "Demo.ICO")
+  assert_eq(
+    first_windows_icon(["icons/icon.png", selected, "icons/fallback.ico"]),
+    Some(selected),
+  )
+  assert_eq(first_windows_icon(["icons/icon.png", "icons/icon.icns"]), None)
+  let plan = windows_test_plan(root, ["app"], false)
+  plan.icons.push(selected)
+  try stage_windows_icon(plan, resolve_path(root, "demo.exe")) catch {
+    PackagePlanError::MissingIcon(path~) => assert_eq(path, selected)
+    _ => abort("expected missing Windows icon")
+  } noraise {
+    _ => abort("expected missing Windows icon failure")
+  }
 }
 
 ///|
@@ -319,7 +341,8 @@ async test "Windows signing rejects a missing target before invoking signtool" {
   catch {
     WindowsPackagingError::MissingTarget(path~) =>
       assert_true(path.contains("cef_process.exe"))
-    _ => abort("expected missing Windows signing target")
+    error =>
+      abort("expected missing Windows signing target, got " + error.to_string())
   } noraise {
     _ => abort("expected missing signing target failure")
   }

@@ -88,7 +88,7 @@ impl Show for BuildProcessError with fn output(self, logger) {
 
 ///|
 struct RawBuildOptions {
-  app_package : String
+  app_package : String?
   config_path : String?
   moon_target_dir : String?
   run_frontend_build : Bool
@@ -97,7 +97,9 @@ struct RawBuildOptions {
 
 ///|
 priv struct BuildProjectConfig {
-  entry : @proton_config.ProjectEntry
+  base_dir : String
+  entries : Array[@proton_config.ProjectEntry]
+  backend : @proton_config.ProjectBackendConfig?
   frontend : @proton_config.ProjectFrontendConfig?
 }
 
@@ -114,11 +116,7 @@ pub fn command() -> @argparse.Command {
       ),
     ],
     options=[
-      OptionArg(
-        "package",
-        default_values=[default_package],
-        about="MoonBit application package",
-      ),
+      OptionArg("package", about="MoonBit application package"),
       OptionArg(
         "config",
         allow_hyphen_values=true,
@@ -155,7 +153,7 @@ pub async fn run_release(
 ) -> Unit {
   validate_moon_build_args(moon_args)
   run_with_options(cwd, RawBuildOptions::{
-    app_package,
+    app_package: Some(app_package),
     config_path: Some(config_path),
     moon_target_dir: None,
     run_frontend_build: true,
@@ -171,11 +169,23 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
   let config = load_project_config(config_path)
   validate_release_config(config)
   if raw.run_frontend_build {
-    run_frontend_build(root, config)
+    run_frontend_build(config.base_dir, config)
   }
-  validate_release_files(root, config)
+  validate_release_files(config.base_dir, config)
+  let backend_path = resolve_backend_path(
+    config.base_dir,
+    config.backend.map(fn(backend) { backend.path() }),
+  )
+  let app_package = match raw.app_package {
+    Some(app_package) => app_package
+    None =>
+      match config.backend {
+        Some(backend) => backend.app_package()
+        None => default_package
+      }
+  }
   let moon_target_dir = raw.moon_target_dir.map(path => resolve_path(root, path))
-  run_moon_build(root, raw.app_package, raw.moon_args, moon_target_dir)
+  run_moon_build(backend_path, app_package, raw.moon_args, moon_target_dir)
 }
 
 ///|
@@ -185,7 +195,7 @@ fn build_options_from_matches(
   let moon_args = @cli_args.values(matches, "moon-build-args")
   validate_moon_build_args(moon_args)
   RawBuildOptions::{
-    app_package: @cli_args.required_value(matches, "package"),
+    app_package: @cli_args.value(matches, "package"),
     config_path: @cli_args.value(matches, "config"),
     moon_target_dir: @cli_args.value(matches, "moon-target-dir"),
     run_frontend_build: !@cli_args.flag(matches, "no-frontend"),
@@ -205,7 +215,7 @@ fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError 
 }
 
 ///|
-fn resolve_build_config_path(
+async fn resolve_build_config_path(
   cwd : String,
   root : String,
   raw : RawBuildOptions,
@@ -213,7 +223,10 @@ fn resolve_build_config_path(
   match raw.config_path {
     Some(path) => Some(resolve_path(cwd, path))
     None => {
-      let package_config = package_config_path(cwd, raw.app_package)
+      let package_config = package_config_path(
+        cwd,
+        raw.app_package.unwrap_or(default_package),
+      )
       let cwd_config = join_path(cwd, default_config_file)
       let root_config = join_path(root, default_config_file)
       if path_exists(package_config) {
@@ -235,9 +248,7 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 }
 
 ///|
-fn load_project_config(
-  config_path : String?,
-) -> BuildProjectConfig raise BuildConfigError {
+async fn load_project_config(config_path : String?) -> BuildProjectConfig {
   match config_path {
     None => raise NotFound(path=None)
     Some(path) => {
@@ -257,7 +268,7 @@ async fn run_frontend_build(root : String, config : BuildProjectConfig) -> Unit 
       match frontend.before_build() {
         None => ()
         Some(command) => {
-          let cwd = resolve_frontend_cwd(root, frontend.cwd(), command)
+          let cwd = resolve_frontend_path(root, frontend.path(), command)
           println("Building frontend: " + command)
           println("Frontend cwd: " + cwd)
           let (program, args) = shell_command(command)
@@ -277,21 +288,38 @@ async fn run_frontend_build(root : String, config : BuildProjectConfig) -> Unit 
 }
 
 ///|
-fn resolve_frontend_cwd(
+async fn resolve_frontend_path(
   root : String,
-  frontend_cwd : String?,
+  frontend_path : String?,
   command : String,
-) -> String raise BuildPathError {
+) -> String {
   ignore(command)
-  match frontend_cwd {
+  match frontend_path {
     None => root
-    Some(cwd) => {
-      let path = resolve_path(root, cwd)
+    Some(configured_path) => {
+      let path = resolve_path(root, configured_path)
       if !path_exists(path) {
-        raise Missing(role="frontend cwd", path~)
+        raise Missing(role="frontend path", path~)
       }
       if !path_is_dir(path) {
-        raise WrongKind(role="frontend cwd", path~, expected="a directory")
+        raise WrongKind(role="frontend path", path~, expected="a directory")
+      }
+      path
+    }
+  }
+}
+
+///|
+async fn resolve_backend_path(root : String, backend_path : String?) -> String {
+  match backend_path {
+    None => root
+    Some(configured_path) => {
+      let path = resolve_path(root, configured_path)
+      if !path_exists(path) {
+        raise Missing(role="backend path", path~)
+      }
+      if !path_is_dir(path) {
+        raise WrongKind(role="backend path", path~, expected="a directory")
       }
       path
     }
@@ -313,14 +341,16 @@ fn validate_release_config(
       }
     None => ()
   }
-  validate_production_entry_kind(config.entry, config.frontend)
+  for entry in config.entries {
+    validate_production_entry_kind(entry, config.frontend)
+  }
 }
 
 ///|
-fn validate_release_files(
+async fn validate_release_files(
   root : String,
   config : BuildProjectConfig,
-) -> Unit raise BuildPathError {
+) -> Unit {
   match config.frontend {
     Some(frontend) =>
       match frontend.dist() {
@@ -337,7 +367,9 @@ fn validate_release_files(
       }
     None => ()
   }
-  validate_production_entry_file(config.entry)
+  for entry in config.entries {
+    validate_production_entry_file(entry)
+  }
 }
 
 ///|
@@ -359,9 +391,9 @@ fn validate_production_entry_kind(
 }
 
 ///|
-fn validate_production_entry_file(
+async fn validate_production_entry_file(
   entry : @proton_config.ProjectEntry,
-) -> Unit raise BuildPathError {
+) -> Unit {
   match entry {
     File(path) | Asset(path) =>
       if !path_exists(path) {
@@ -374,14 +406,33 @@ fn validate_production_entry_file(
 }
 
 ///|
-fn read_project_config(
+async fn read_project_config(
   path : String,
 ) -> BuildProjectConfig raise BuildConfigError {
-  let loaded = @proton_config.load_project_config_from_file(path) catch {
+  let source = @async_fs.read_file(path).text() catch {
+    error =>
+      raise Invalid(
+        path~,
+        error=@proton_config.ProjectConfigError::FileRead(
+          path~,
+          detail=@debug.render(Repr(error)),
+        ),
+      )
+  }
+  let loaded = @proton_config.load_project_config_from_text(
+    source,
+    path_parent(path),
+    name=path,
+  ) catch {
     error => raise Invalid(path~, error~)
   }
   let project = loaded.config()
-  BuildProjectConfig::{ entry: project.entry(), frontend: project.frontend() }
+  BuildProjectConfig::{
+    base_dir: project.base_dir(),
+    entries: project.entries(),
+    backend: project.backend(),
+    frontend: project.frontend(),
+  }
 }
 
 ///|
@@ -451,7 +502,7 @@ fn shell_command(command : String) -> (String, Array[String]) {
 }
 
 ///|
-fn find_project_root_from(start : String) -> String {
+async fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(join_path(dir, "moon.work")) ||
       path_exists(join_path(dir, "moon.mod")) {
@@ -535,13 +586,14 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn path_exists(path : String) -> Bool {
-  @mbfs.path_exists(path)
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }

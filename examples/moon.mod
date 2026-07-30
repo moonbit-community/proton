@@ -6,6 +6,7 @@ import {
   "moonbitlang/x@0.4.43",
   "moonbitlang/async@0.19.0",
   "justjavac/proton_ext@0.1.3",
+  "justjavac/proton_contract@0.1.0",
   "justjavac/proton@0.1.2",
   "justjavac/cdp@0.1.7",
 }
@@ -25,6 +26,11 @@ rule(name: "embed", command: ":embed -i $input -o $output")
 rule(
   name: "proton_codegen",
   command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen $input -o $output",
+)
+
+rule(
+  name: "proton_extension_identity_codegen",
+  command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen --extension-identity $input -o $output",
 )
 
 source = ""

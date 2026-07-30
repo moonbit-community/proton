@@ -1,0 +1,13 @@
+import {
+  "moonbitlang/async/js_async",
+  "moonbitlang/core/json",
+  "justjavac/proton_contract",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
+options(
+  "is-main": false,
+)

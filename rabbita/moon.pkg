@@ -1,0 +1,14 @@
+import {
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita/js" @rabbita_js,
+  "moonbit-community/rabbita/sub",
+  "justjavac/proton_client",
+  "justjavac/proton_contract",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "js"
+
+options(
+  "is-main": false,
+)

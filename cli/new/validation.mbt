@@ -1,5 +1,8 @@
 ///|
-let default_project_path = "counter"
+let default_project_path = "todo"
+
+///|
+let default_author = "username"
 
 ///|
 let default_width = 960
@@ -36,15 +39,16 @@ fn resolve_new_path(cwd : String, target : String) -> String {
 }
 
 ///|
-fn path_exists(path : String) -> Bool {
-  @mbfs.path_exists(path)
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }
 
 ///|
@@ -196,6 +200,22 @@ fn validate_module_name(
 }
 
 ///|
+fn validate_author(author : String) -> Unit raise NewProjectInputError {
+  let author = author.trim().to_owned()
+  guard !author.is_empty() else {
+    raise InvalidAuthor(author~, reason="must not be empty")
+  }
+  guard !author.contains("/") && !author.contains("\\") else {
+    raise InvalidAuthor(author~, reason="must be one module path component")
+  }
+  for ch in author {
+    guard module_name_char_is_valid(ch) else {
+      raise InvalidAuthor(author~, reason="contains unsupported characters")
+    }
+  }
+}
+
+///|
 fn module_name_char_is_valid(ch : Char) -> Bool {
   ch.is_ascii_alphabetic() ||
   ch.is_ascii_digit() ||
@@ -220,23 +240,26 @@ fn validate_target_dir(target_dir : String) -> Unit raise NewProjectInputError {
 }
 
 ///|
-fn target_dir_is_empty(target_dir : String) -> Bool raise NewProjectTargetError {
+async fn target_dir_is_empty(target_dir : String) -> Bool {
   if !path_exists(target_dir) {
     return true
   }
   if !path_is_dir(target_dir) {
     raise NotDirectory(path=target_dir)
   }
-  let entries = @mbfs.read_dir(target_dir) catch {
+  let entries = @async_fs.readdir(
+    target_dir,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
+    err if @async.is_being_cancelled() => raise err
     err => raise ReadDirectory(path=target_dir, detail=@debug.render(Repr(err)))
   }
   entries.length() == 0
 }
 
 ///|
-fn validate_target_dir_for_write(
-  target_dir : String,
-) -> Unit raise NewProjectTargetError {
+async fn validate_target_dir_for_write(target_dir : String) -> Unit {
   let moon_mod_path = new_path_join(target_dir, "moon.mod")
   if path_exists(moon_mod_path) {
     raise ContainsMoonModule(path=target_dir)

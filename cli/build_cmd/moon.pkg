@@ -1,12 +1,17 @@
 import {
   "justjavac/proton_config",
   "justjavac/proton_cli/arguments" @cli_args,
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/string",
-  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",
 }
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/x/fs" @mbfs,
+} for "wbtest"
 
 supported_targets = "native"

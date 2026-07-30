@@ -80,11 +80,17 @@ async fn OpRegistry::call_async_direct(
   name : String,
   payload : Json,
 ) -> Json {
-  self.call_async_direct_with_context(
-    AppCommandRequestContext::new(0L),
-    name,
-    payload,
-  )
+  let result : Ref[Json?] = Ref(None)
+  @async.with_task_group(group => {
+    result.val = Some(
+      self.call_async_direct_with_context(
+        AppCommandRequestContext::new(0L, group),
+        name,
+        payload,
+      ),
+    )
+  })
+  result.val.unwrap()
 }
 
 ///|

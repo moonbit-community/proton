@@ -73,6 +73,15 @@ static uint32_t proton_next_generation(uint32_t generation) {
   return generation;
 }
 
+static void proton_runtime_clear_events(proton_runtime_slot_t *slot) {
+  for (uint32_t i = 0; i < PROTON_MAX_EVENTS; i++) {
+    free(slot->events[i]);
+    slot->events[i] = NULL;
+  }
+  slot->event_head = 0;
+  slot->event_count = 0;
+}
+
 int32_t proton_require_runtime_owner_thread(
     const proton_runtime_slot_t *runtime) {
   if (runtime != NULL && runtime->owner_thread_set &&
@@ -105,8 +114,7 @@ int32_t proton_runtime_slot_create(bool engine_backed,
     slot->engine_runtime = engine_runtime;
     slot->owner_thread_set = true;
     slot->owner_thread = proton_current_thread_id();
-    slot->event_head = 0;
-    slot->event_count = 0;
+    proton_runtime_clear_events(slot);
     slot->next_bridge_request_id = 1;
     *out_runtime = proton_make_runtime_handle(slot->generation, i);
     if (out_slot != NULL) {
@@ -118,6 +126,7 @@ int32_t proton_runtime_slot_create(bool engine_backed,
 }
 
 void proton_runtime_slot_destroy(proton_runtime_slot_t *slot) {
+  proton_runtime_clear_events(slot);
   slot->destroyed = true;
   slot->engine_backed = false;
   slot->running = false;
@@ -178,9 +187,14 @@ bool proton_runtime_enqueue_event(proton_runtime_slot_t *runtime,
     return false;
   }
 
+  char *owned_event = (char *)malloc(event_len + 1);
+  if (owned_event == NULL) {
+    return false;
+  }
+  memcpy(owned_event, event_json, event_len + 1);
   uint32_t index = (runtime->event_head + runtime->event_count) %
                    PROTON_MAX_EVENTS;
-  memcpy(runtime->events[index], event_json, event_len + 1);
+  runtime->events[index] = owned_event;
   runtime->event_count++;
   return true;
 }
@@ -211,7 +225,7 @@ int32_t proton_runtime_poll_event(proton_runtime_slot_t *runtime,
     return PROTON_EVENT_NONE;
   }
 
-  const char *event_json = runtime->events[runtime->event_head];
+  char *event_json = runtime->events[runtime->event_head];
   int32_t required = (int32_t)strlen(event_json);
   *out_required_len = required;
   if (buffer == NULL || buffer_len <= required) {
@@ -220,6 +234,8 @@ int32_t proton_runtime_poll_event(proton_runtime_slot_t *runtime,
   }
 
   memcpy(buffer, event_json, (size_t)required + 1);
+  free(event_json);
+  runtime->events[runtime->event_head] = NULL;
   runtime->event_head = (runtime->event_head + 1) % PROTON_MAX_EVENTS;
   runtime->event_count--;
   return PROTON_OK;

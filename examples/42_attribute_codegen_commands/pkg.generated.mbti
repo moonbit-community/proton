@@ -3,23 +3,25 @@ package "justjavac/proton/examples/42_attribute_codegen_commands"
 
 import {
   "justjavac/proton/command",
-  "justjavac/proton/extension",
+  "justjavac/proton_contract",
   "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_add_finished(@command.AppCommandExtensionContext, AddFinished) -> Unit noraise
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
 
-pub fn extension() -> @extension.Extension
+pub let generated_extension_contract : @proton_contract.ExtensionContract
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 
 // Types and methods
-type AddFinished derive(ToJson)
+type AddFinished derive(ToJson, @json.FromJson)
 
-type AddReply derive(ToJson)
+type AddReply derive(ToJson, @json.FromJson)
 
-type ProtonSlowAddPayload derive(@json.FromJson)
+type AddRequest derive(ToJson, @json.FromJson)
 
 // Type aliases
 

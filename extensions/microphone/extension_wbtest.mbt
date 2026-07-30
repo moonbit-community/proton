@@ -13,7 +13,7 @@ test "microphone sample format labels parse from JavaScript values" {
 
 ///|
 test "microphone config replies expose normalized settings" {
-  let config = build_capture_config(CaptureConfigPayload::{
+  let config = build_capture_config(@microphone_contract.CaptureConfigRequest::{
     channels: Some(0),
     sample_rate_hz: Some(4_000),
     sample_format: Some("i16"),
@@ -48,5 +48,5 @@ test "microphone metadata constants match generated app command extension" {
   let command_spec = extension().command_spec() catch {
     error => abort(error.message())
   }
-  assert_eq(command_spec.unwrap().js_namespace(), "microphone")
+  assert_eq(command_spec.js_namespace(), "microphone")
 }

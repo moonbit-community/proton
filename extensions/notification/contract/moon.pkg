@@ -1,0 +1,9 @@
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "js+native"
+
+formatter(ignore: [ "extension_identity.g.mbt" ])

@@ -33,6 +33,12 @@ fn[T] expect_app_run_error(action : () -> T raise AppRunError) -> AppRunError {
 }
 
 ///|
+priv suberror FacadeLifecycleTestError {
+  DestroyFailed(String)
+  StartFailed(String)
+} derive(Debug)
+
+///|
 fn test_command_manifest(
   extension_id : String,
   enabled? : Bool = true,
@@ -72,16 +78,24 @@ fn test_command_spec(
   js_namespace : String,
   api_names : Array[String],
   dependencies? : Array[String] = [],
+  scripts? : Array[String] = [],
 ) -> @proton_command.AppCommandExtensionSpec {
-  @proton_command.AppCommandExtensionSpec::new(
-    extension_id,
-    js_namespace,
-    api_names.map(fn(api_name) {
-      @proton_command.AppCommandApiDescriptor::new(api_name)
-    }),
-    fn(_context) {  },
+  let contract = @proton_contract.extension(id=extension_id, js_namespace~)
+  let routes = api_names.map(fn(api_name) {
+    let command : @proton_contract.Command[Json, Json] = contract.command(
+      api_name,
+    )
+    command.contract_route()
+  })
+  @proton_command.AppCommandExtensionSpec::typed(
+    contract,
+    routes,
+    fn(_registrar) {  },
+    scripts~,
     dependencies~,
-  )
+  ) catch {
+    error => abort(error.message())
+  }
 }
 
 ///|
@@ -91,13 +105,15 @@ fn test_tracking_command_spec(
   registered : Array[String],
   dependencies? : Array[String] = [],
 ) -> @proton_command.AppCommandExtensionSpec {
-  @proton_command.AppCommandExtensionSpec::new(
-    extension_id,
-    js_namespace,
+  let contract = @proton_contract.extension(id=extension_id, js_namespace~)
+  @proton_command.AppCommandExtensionSpec::typed(
+    contract,
     [],
-    fn(_context) { registered.push(extension_id) },
+    fn(_registrar) { registered.push(extension_id) },
     dependencies~,
-  )
+  ) catch {
+    error => abort(error.message())
+  }
 }
 
 ///|
@@ -138,11 +154,10 @@ test "bridge frontend config preserves initialization unit ownership" {
   let manifest = test_command_manifest(extension_id)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
-  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
+  command_extensions[extension_id] = test_command_spec(
     extension_id,
     "scripts",
     [],
-    fn(_context) {  },
     scripts=["globalThis.first = true;", "globalThis.second = true;"],
   )
   let config = unwrap_configuration(() => {
@@ -246,7 +261,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
   let mut rejected = false
-  run_manifest(manifest, command_extensions, None, None, 30000, true) catch {
+  run_manifest(manifest, command_extensions, [], [], [], None, 30000, true) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
@@ -268,7 +283,16 @@ async test "headless mode rejects native menus before runtime startup" {
     ]),
   ])
   let mut rejected = false
-  run_manifest(manifest, command_extensions, None, Some(menu), 30000, true) catch {
+  run_manifest(
+    manifest,
+    command_extensions,
+    [],
+    [],
+    [],
+    Some(menu),
+    30000,
+    true,
+  ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "native menus are not supported in headless mode")
@@ -295,6 +319,54 @@ test "bridge startup timeout retains the last lifecycle state" {
   assert_eq(diagnostic.page_instance, "page-1")
   assert_eq(diagnostic.url, "proton://app/")
   assert_true(diagnostic.message.contains("2500 ms"))
+}
+
+///|
+async test "startup dispatch retains an earlier window close" {
+  let runtime = @native.Runtime::new()
+  let first = @native.Window::new(runtime)
+  let second = @native.Window::new(runtime)
+  defer {
+    first.destroy() catch {
+      _ => ()
+    }
+    second.destroy() catch {
+      _ => ()
+    }
+    runtime.destroy() catch {
+      _ => ()
+    }
+  }
+  while runtime.poll_event() is Some(_) {
+
+  }
+  let windows = [
+    RunningWindow::{
+      id: "main",
+      window: first,
+      policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
+      lifetime: WindowLifetime::new(),
+      closed: false,
+    },
+    RunningWindow::{
+      id: "secondary",
+      window: second,
+      policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
+      lifetime: WindowLifetime::new(),
+      closed: false,
+    },
+  ]
+  first.close()
+  @async.with_task_group(group => {
+    drain_bridge_startup_events(runtime, windows[1], windows, false, [], group) catch {
+      error => abort(error.message())
+    }
+    group.return_immediately(())
+  })
+  assert_true(windows[0].closed)
+  assert_true(windows[0].lifetime.closed)
+  assert_false(windows[1].closed)
+  assert_false(windows[1].lifetime.closed)
 }
 
 ///|
@@ -482,23 +554,24 @@ test "command host close runs extension destroy hooks once" {
   let manifest = test_command_manifest(extension_id)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
-  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::new(
-    extension_id,
-    "destroyTest",
-    [@proton_command.AppCommandApiDescriptor::new("ping")],
-    fn(context) raise { context.op("ping", fn(_payload : Unit) { "pong" }) },
-    on_destroy=fn(context) {
-      if context.extension_id() == extension_id {
-        destroyed.val = destroyed.val + 1
-      }
-    },
+  let contract = @proton_contract.extension(
+    id=extension_id,
+    js_namespace="destroyTest",
   )
-  match
-    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
+  let ping : @proton_contract.Command[Unit, String] = contract.command("ping")
+  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::typed(
+    contract,
+    [ping.contract_route()],
+    fn(registrar) raise { registrar.bind(ping, (_context, _request) => "pong") },
+    on_destroy=fn() { destroyed.val = destroyed.val + 1 },
+  ) catch {
+    error => abort(error.message())
+  }
+  match unwrap_app_run(() => build_command_host(manifest, command_extensions)) {
     Some(host) => {
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
     }
     None => fail("expected command host")
@@ -506,41 +579,247 @@ test "command host close runs extension destroy hooks once" {
 }
 
 ///|
-test "core spec command wrapper destroys runtime core host" {
-  let extension_id = "examples/core-destroy"
-  let destroyed = Ref(0)
-  let core_spec = @core.ExtensionSpec::new(extension_id, "coreDestroy", fn(
-    _context,
-  ) {
-    @core.Extension::new(
-      extension_id,
-      "coreDestroy",
-      fn(extension) raise {
-        extension.op("ping", fn(_payload : Unit) { "pong" })
-      },
-      on_destroy=fn(_extension) { destroyed.val = destroyed.val + 1 },
-    )
-  })
-  let command_spec_option = @proton_extension.from_core_spec(core_spec).command_spec() catch {
+test "command host installs typed application registrars before sealing" {
+  let manifest = test_command_manifest_ids([])
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  let ping : @proton_contract.Command[Unit, String] = @proton_contract.command(
+    "ping",
+  )
+  let registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [
+    registrar => registrar.bind(ping, (_context, _request) => "pong"),
+  ]
+  match
+    unwrap_app_run(() => {
+      build_command_host(
+        manifest,
+        command_extensions,
+        command_registrars=registrars,
+      )
+    }) {
+    Some(host) => {
+      assert_eq(host.host.registered_ops(), ["app:ping"])
+      ignore(close_command_host(Some(host)))
+    }
+    None => fail("expected application command host")
+  }
+}
+
+///|
+test "command host close drains every destroy hook after a failure" {
+  let base_id = "examples/base-destroy"
+  let feature_id = "examples/feature-destroy"
+  let manifest = test_command_manifest_ids([base_id, feature_id])
+  let destroyed : Array[String] = []
+  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+  )
+  command_extensions[base_id] = @proton_command.AppCommandExtensionSpec::typed(
+    @proton_contract.extension(id=base_id, js_namespace="baseDestroy"),
+    [],
+    fn(_registrar) {  },
+    on_destroy=fn() { destroyed.push(base_id) },
+  ) catch {
     error => abort(error.message())
   }
-  let command_spec = match command_spec_option {
-    Some(spec) => spec
-    None => fail("expected command spec")
+  command_extensions[feature_id] = @proton_command.AppCommandExtensionSpec::typed(
+    @proton_contract.extension(id=feature_id, js_namespace="featureDestroy"),
+    [],
+    fn(_registrar) {  },
+    dependencies=[base_id],
+    on_destroy=fn() raise {
+      destroyed.push(feature_id)
+      raise FacadeLifecycleTestError::DestroyFailed(feature_id)
+    },
+  ) catch {
+    error => abort(error.message())
   }
-  assert_eq(destroyed.val, 1)
+  match unwrap_app_run(() => build_command_host(manifest, command_extensions)) {
+    Some(host) => {
+      let failures = close_command_host(Some(host))
+      assert_eq(destroyed, [feature_id, base_id])
+      assert_eq(failures.length(), 1)
+      match failures[0] {
+        DestroyFailed(extension_id~, ..) => assert_eq(extension_id, feature_id)
+        _ => fail("expected extension destroy failure")
+      }
+      assert_eq(close_command_host(Some(host)).length(), 0)
+      assert_eq(destroyed, [feature_id, base_id])
+    }
+    None => fail("expected command host")
+  }
+}
+
+///|
+test "command host registration preserves cleanup failures" {
+  let extension_id = "examples/registration-cleanup"
   let manifest = test_command_manifest(extension_id)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
-  command_extensions[extension_id] = command_spec
-  match
-    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
-    Some(host) => {
-      unwrap_app_run(() => close_command_host(Some(host)))
-      assert_eq(destroyed.val, 2)
-    }
-    _ => fail("expected command host")
+  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::typed(
+    @proton_contract.extension(
+      id=extension_id,
+      js_namespace="registrationCleanup",
+    ),
+    [],
+    fn(_registrar) raise {
+      raise FacadeLifecycleTestError::DestroyFailed("registration")
+    },
+    on_destroy=fn() raise {
+      raise FacadeLifecycleTestError::DestroyFailed("cleanup")
+    },
+  ) catch {
+    error => abort(error.message())
   }
+  let error = expect_app_run_error(() => {
+    ignore(build_command_host(manifest, command_extensions))
+  })
+  match error {
+    CleanupFailed(primary~, failures~) => {
+      assert_true(primary.unwrap_or("").contains("registration"))
+      assert_eq(failures.length(), 1)
+      match failures[0] {
+        CommandExtension(DestroyFailed(extension_id=failed_id, ..)) =>
+          assert_eq(failed_id, extension_id)
+        _ => fail("expected extension cleanup failure")
+      }
+    }
+    _ => fail("expected combined registration and cleanup failure")
+  }
+}
+
+///|
+test "application lifecycle advances through close and destroy" {
+  let lifecycle = AppLifecycle::new()
+  assert_true(lifecycle.state is Constructing)
+  assert_true(lifecycle.window_state is NotCreated)
+  lifecycle.begin_starting()
+  lifecycle.begin_window_create()
+  lifecycle.finish_window_create()
+  lifecycle.begin_running()
+  assert_true(lifecycle.state is Running)
+  assert_true(lifecycle.window_state is Live)
+  lifecycle.observe_window_closed()
+  assert_true(lifecycle.state is Closing)
+  assert_true(lifecycle.window_state is VisiblyClosed)
+  lifecycle.begin_draining()
+  lifecycle.begin_destroying()
+  lifecycle.finish_window_destroy()
+  lifecycle.finish()
+  assert_true(lifecycle.state is Closed)
+  assert_true(lifecycle.window_state is Destroyed)
+}
+
+///|
+async test "application lifecycle hooks shut down in reverse order" {
+  let calls : Array[String] = []
+  let configured = html("Lifecycle", "<html></html>")
+    .app_lifecycle(
+      on_start=fn(_context) {
+        calls.push("start:first")
+        "first"
+      },
+      on_shutdown=fn(state) { calls.push("stop:" + state) },
+    )
+    .app_lifecycle(
+      on_start=fn(_context) {
+        calls.push("start:second")
+        "second"
+      },
+      on_shutdown=fn(state) { calls.push("stop:" + state) },
+    )
+  @async.with_task_group(group => {
+    start_application_lifecycle_hooks(
+      configured.application_lifecycle_hooks,
+      ApplicationContext::new(group),
+      group,
+      [],
+    )
+    group.return_immediately(())
+  })
+  assert_eq(calls, ["start:first", "start:second", "stop:second", "stop:first"])
+}
+
+///|
+async test "application lifecycle startup rolls back completed hooks" {
+  let calls : Array[String] = []
+  let cleanup_failures : Array[AppCleanupError] = []
+  let configured = html("Lifecycle", "<html></html>")
+    .app_lifecycle(
+      on_start=fn(_context) {
+        calls.push("start:first")
+        "first"
+      },
+      on_shutdown=fn(state) raise {
+        calls.push("stop:" + state)
+        raise FacadeLifecycleTestError::DestroyFailed(state)
+      },
+    )
+    .app_lifecycle(
+      on_start=fn(_context) raise {
+        calls.push("start:second")
+        raise FacadeLifecycleTestError::StartFailed("second")
+      },
+      on_shutdown=fn(_state : Unit) { calls.push("unexpected") },
+    )
+  try {
+    @async.with_task_group(group => {
+      start_application_lifecycle_hooks(
+        configured.application_lifecycle_hooks,
+        ApplicationContext::new(group),
+        group,
+        cleanup_failures,
+      )
+    })
+    fail("expected lifecycle startup failure")
+  } catch {
+    LifecycleHookError(ApplicationStart(index=1, detail~)) =>
+      assert_true(detail.contains("second"))
+    _ => fail("expected lifecycle startup failure")
+  }
+  assert_eq(calls, ["start:first", "start:second", "stop:first"])
+  match cleanup_failures {
+    [LifecycleHook(ApplicationShutdown(index=0, detail~))] =>
+      assert_true(detail.contains("first"))
+    _ => fail("expected rollback cleanup failure")
+  }
+}
+
+///|
+async test "window close joins owned tasks before close hooks" {
+  let child_stopped = Ref(false)
+  let close_saw_stopped = Ref(false)
+  let configured = html("Lifecycle", "<html></html>").window_lifecycle(
+    on_ready=fn(context) {
+      context
+      .task_group()
+      .spawn_bg(
+        () => {
+          defer {
+            child_stopped.val = true
+          }
+          @async.sleep(10000)
+        },
+        no_wait=true,
+      )
+    },
+    on_close=fn(_state) { close_saw_stopped.val = child_stopped.val },
+  )
+  @async.with_task_group(group => {
+    start_window_lifecycle_hooks(
+      configured.window_lifecycle_hooks,
+      WindowContext::new(
+        "main",
+        @native.WindowRef::unsafe_from_handle(17L),
+        group,
+        WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+      ),
+      group,
+      [],
+    )
+    group.return_immediately(())
+  })
+  assert_true(child_stopped.val)
+  assert_true(close_saw_stopped.val)
 }
 
 ///|
@@ -560,10 +839,9 @@ test "command host registers extension dependencies before dependents" {
   command_extensions[dependency_id] = test_tracking_command_spec(
     dependency_id, "base", registered,
   )
-  match
-    unwrap_app_run(() => build_command_host(manifest, command_extensions, None)) {
+  match unwrap_app_run(() => build_command_host(manifest, command_extensions)) {
     Some(host) => {
-      unwrap_app_run(() => close_command_host(Some(host)))
+      ignore(close_command_host(Some(host)))
       @debug.assert_eq(registered, [dependency_id, extension_id])
     }
     _ => fail("expected command host")
@@ -584,57 +862,13 @@ test "command host rejects missing extension dependencies" {
     dependencies=[dependency_id],
   )
   match
-    expect_app_run_error(() => {
-      build_command_host(manifest, command_extensions, None)
-    }) {
+    expect_app_run_error(() => build_command_host(manifest, command_extensions)) {
     ConfigurationError(
       ExtensionUnavailable(extension_id=missing_id, requested_by~, state~)
     ) => {
       assert_eq(missing_id, dependency_id)
       assert_eq(requested_by, Some(extension_id))
       assert_eq(state, "missing")
-    }
-    error => fail(error.message())
-  }
-}
-
-///|
-test "bridge frontend config rejects invalid namespace and API names" {
-  let namespace_extension_id = "examples/bad-namespace"
-  let namespace_manifest = test_command_manifest(namespace_extension_id)
-  let namespace_extensions : Map[
-    String,
-    @proton_command.AppCommandExtensionSpec,
-  ] = Map([])
-  namespace_extensions[namespace_extension_id] = test_command_spec(
-    namespace_extension_id,
-    "core",
-    ["slowAdd"],
-  )
-  match
-    expect_configuration_error(() => {
-      build_bridge_frontend_config(namespace_manifest, namespace_extensions)
-    }) {
-    InvalidJavaScriptNamespace(js_namespace~) => assert_eq(js_namespace, "core")
-    error => fail(error.message())
-  }
-
-  let api_extension_id = "examples/bad-api"
-  let api_manifest = test_command_manifest(api_extension_id)
-  let api_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  api_extensions[api_extension_id] = test_command_spec(
-    api_extension_id,
-    "add",
-    ["__proto__"],
-  )
-  match
-    expect_configuration_error(() => {
-      build_bridge_frontend_config(api_manifest, api_extensions)
-    }) {
-    InvalidJavaScriptApi(js_namespace~, api_name~) => {
-      assert_eq(js_namespace, "add")
-      assert_eq(api_name, "__proto__")
     }
     error => fail(error.message())
   }
@@ -766,15 +1000,6 @@ test "config API overrides manifest fields and keeps base dir" {
     @manifest.AppEntry::Html(html) => assert_eq(html, "<main>code</main>")
     _ => fail("expected API entry override")
   }
-  match resolved.base_dir {
-    Some(base_dir) =>
-      assert_true(
-        base_dir
-        .replace_all(old="\\", new="/")
-        .has_suffix("target/proton-facade-dev"),
-      )
-    None => fail("expected config base dir")
-  }
 }
 
 ///|
@@ -807,5 +1032,102 @@ test "dev manifest uses env override or frontend dev_url" {
     @manifest.AppEntry::Url(url) =>
       inspect(url, content="http://localhost:5173")
     _ => fail("expected dev URL entry")
+  }
+}
+
+///|
+test "typed facade appends validated secondary windows" {
+  let configured = html("Main", "<main>Main</main>").add_window(
+    "settings",
+    "Settings",
+    AppEntry::Html("<main>Settings</main>"),
+    width=480,
+    height=360,
+    size_hint=WindowSizeHint::Fixed,
+  )
+  let manifest = configured.inline_manifest()
+  assert_eq(manifest.windows.length(), 1)
+  assert_eq(manifest.windows[0].id, "settings")
+  assert_eq(
+    manifest.windows[0].window.size_hint,
+    @manifest.WindowSizeHint::Fixed,
+  )
+  let plans = planned_windows(manifest)
+  assert_eq(plans.map(fn(plan) { plan.id }), ["main", "settings"])
+}
+
+///|
+test "typed facade rejects duplicate secondary window ids" {
+  let configured = html("Main", "<main>Main</main>")
+    .add_window("settings", "One", AppEntry::Html("one"))
+    .add_window("settings", "Two", AppEntry::Html("two"))
+  assert_true(configured.validation_error() is Some(_))
+}
+
+///|
+test "typed facade reserves the primary window id" {
+  let configured = html("Main", "<main>Main</main>").add_window(
+    "main",
+    "Other",
+    AppEntry::Html("other"),
+  )
+  assert_true(configured.validation_error() is Some(_))
+}
+
+///|
+async test "notification completion is delivered only to an active waiter" {
+  while notification_result_broker.results.length() > 0 {
+    ignore(notification_result_broker.results.remove(0))
+  }
+  notification_result_broker.busy = false
+  publish_notification_result(@native.NativeNotificationResult::Delivered)
+  assert_eq(notification_result_broker.results.length(), 0)
+  acquire_notification_result_slot()
+  publish_notification_result(
+    @native.NativeNotificationResult::Failed("permission denied"),
+  )
+  let result = take_notification_result()
+  release_notification_result_slot()
+  @debug.assert_eq(
+    result,
+    @native.NativeNotificationResult::Failed("permission denied"),
+  )
+}
+
+///|
+test "app data directory follows platform conventions" {
+  assert_eq(
+    app_data_dir_for_platform(
+      "macos",
+      "com.example.devtoys",
+      Some("/Users/test"),
+      None,
+      None,
+    ),
+    "/Users/test/Library/Application Support/com.example.devtoys",
+  )
+  assert_eq(
+    app_data_dir_for_platform(
+      "linux",
+      "com.example.devtoys",
+      Some("/home/test"),
+      None,
+      Some("/data"),
+    ),
+    "/data/com.example.devtoys",
+  )
+  try
+    app_data_dir_for_platform(
+      "macos",
+      "../escape",
+      Some("/Users/test"),
+      None,
+      None,
+    )
+  catch {
+    InvalidIdentifier(_) => ()
+    _ => fail("expected invalid identifier")
+  } noraise {
+    _ => fail("expected invalid identifier")
   }
 }

@@ -1,0 +1,54 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/notification/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[NotificationActivity]
+
+pub let click : @proton_contract.Event[NotificationClick]
+
+pub let drain_clicks : @proton_contract.Command[EmptyRequest, NotificationDrainReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let show : @proton_contract.Command[NotificationRequest, NotificationReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct EmptyRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NotificationActivity {
+  operation : String
+  title : String?
+  level : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NotificationClick {
+  payload : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NotificationDrainReply {
+  count : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NotificationReply {
+  shown : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct NotificationRequest {
+  title : String?
+  body : String
+  level : String?
+  payload : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

@@ -44,29 +44,37 @@ pub fn ProtonAppMetadata::new(String, identifier? : String?, version? : String?,
 pub fn ProtonAppMetadata::product_name(Self) -> String
 pub fn ProtonAppMetadata::version(Self) -> String?
 
+type ProtonBackendConfig
+pub fn ProtonBackendConfig::app_package(Self) -> String
+pub fn ProtonBackendConfig::new(String, String) -> Self
+pub fn ProtonBackendConfig::path(Self) -> String
+
 type ProtonBundleConfig
 pub fn ProtonBundleConfig::active(Self) -> Bool
+pub fn ProtonBundleConfig::document_types(Self) -> Array[@proton_config.ProjectDocumentType]
 pub fn ProtonBundleConfig::icon(Self) -> Array[String]
-pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], output? : String) -> Self
+pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], url_schemes? : Array[String], document_types? : Array[@proton_config.ProjectDocumentType], output? : String) -> Self
 pub fn ProtonBundleConfig::output(Self) -> String
 pub fn ProtonBundleConfig::resources(Self) -> Array[String]
 pub fn ProtonBundleConfig::targets(Self) -> Array[String]
+pub fn ProtonBundleConfig::url_schemes(Self) -> Array[String]
 
 type ProtonFrontendConfig
 pub fn ProtonFrontendConfig::before_build(Self) -> String?
 pub fn ProtonFrontendConfig::before_dev(Self) -> String?
-pub fn ProtonFrontendConfig::cwd(Self) -> String?
 pub fn ProtonFrontendConfig::dev_url(Self) -> String?
 pub fn ProtonFrontendConfig::dist(Self) -> String?
-pub fn ProtonFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, cwd? : String?) -> Self
+pub fn ProtonFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, path? : String?) -> Self
+pub fn ProtonFrontendConfig::path(Self) -> String?
 
 type ProtonProjectConfig
+pub fn ProtonProjectConfig::backend(Self) -> ProtonBackendConfig?
 pub fn ProtonProjectConfig::bundle(Self) -> ProtonBundleConfig?
 pub fn ProtonProjectConfig::dev_manifest(Self) -> LoadedAppManifest
 pub fn ProtonProjectConfig::frontend(Self) -> ProtonFrontendConfig?
 pub fn ProtonProjectConfig::manifest(Self) -> LoadedAppManifest
 pub fn ProtonProjectConfig::metadata(Self) -> ProtonAppMetadata
-pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?) -> Self
+pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, backend? : ProtonBackendConfig?, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?) -> Self
 pub fn ProtonProjectConfig::to_summary_json(Self) -> Json
 
 // Type aliases

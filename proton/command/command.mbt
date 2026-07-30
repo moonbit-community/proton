@@ -25,16 +25,6 @@ pub struct AppCommandsConfig {
 pub type AppCommandRequestContext = @core.AppCommandRequestContext
 
 ///|
-/// Runtime context passed to one user-process command extension during registration.
-pub struct AppCommandExtensionContext {
-  host : @core.AppCommandHost
-  extension_id : String
-  js_namespace : String
-  options : Json?
-  base_dir : String?
-}
-
-///|
 /// Declarative user-process command extension spec.
 pub struct AppCommandExtensionSpec {
   id : String
@@ -42,8 +32,8 @@ pub struct AppCommandExtensionSpec {
   apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Unit raise
-  on_destroy : (AppCommandExtensionContext) -> Unit raise
+  register : (CommandRegistrar) -> Unit raise
+  on_destroy : () -> Unit raise
 }
 
 ///|
@@ -102,130 +92,36 @@ pub fn AppCommandsConfig::from_ipc_descriptors(
 }
 
 ///|
-pub fn AppCommandExtensionContext::new(
-  host : @core.AppCommandHost,
-  extension_id : String,
-  js_namespace : String,
-  options? : Json? = None,
-  base_dir? : String? = None,
-) -> AppCommandExtensionContext {
-  AppCommandExtensionContext::{
-    host,
-    extension_id,
-    js_namespace,
-    options: clone_json_option(options),
-    base_dir,
-  }
-}
-
-///|
-pub fn AppCommandExtensionContext::host(
-  self : AppCommandExtensionContext,
-) -> @core.AppCommandHost {
-  self.host
-}
-
-///|
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : (Payload) -> Reply raise?,
-  emits_events? : Bool = false,
-) -> Unit raise @core.OpRegistrationError {
-  let op_name = self.op_name(api_name)
-  self.host.op(op_name, fn(payload) raise { callback(payload) })
-  if emits_events {
-    self.host.scope_events_for_op(op_name)
-  }
-}
-
-///|
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : async (Payload) -> Reply,
-  emits_events? : Bool = false,
-) -> Unit raise @core.OpRegistrationError {
-  let op_name = self.op_name(api_name)
-  self.host.op_async(op_name, callback)
-  if emits_events {
-    self.host.scope_events_for_op(op_name)
-  }
-}
-
-///|
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_with_context(
-  self : AppCommandExtensionContext,
-  api_name : String,
-  callback : async (AppCommandRequestContext, Payload) -> Reply,
-  emits_events? : Bool = false,
-) -> Unit raise @core.OpRegistrationError {
-  let op_name = self.op_name(api_name)
-  self.host.op_async_with_context(op_name, callback)
-  if emits_events {
-    self.host.scope_events_for_op(op_name)
-  }
-}
-
-///|
-pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(
-  self : AppCommandExtensionContext,
-  event_name : String,
-  payload : Payload,
-) -> Unit noraise {
-  self.host.emit_extension(self.js_namespace, event_name, payload)
-}
-
-///|
-pub fn AppCommandExtensionContext::extension_id(
-  self : AppCommandExtensionContext,
-) -> String {
-  self.extension_id
-}
-
-///|
-pub fn AppCommandExtensionContext::js_namespace(
-  self : AppCommandExtensionContext,
-) -> String {
-  self.js_namespace
-}
-
-///|
-pub fn AppCommandExtensionContext::options(
-  self : AppCommandExtensionContext,
-) -> Json? {
-  clone_json_option(self.options)
-}
-
-///|
-pub fn AppCommandExtensionContext::base_dir(
-  self : AppCommandExtensionContext,
-) -> String? {
-  self.base_dir
-}
-
-///|
-pub fn AppCommandExtensionContext::op_name(
-  self : AppCommandExtensionContext,
-  api_name : String,
-) -> String {
-  app_command_extension_op_name(self.js_namespace, api_name)
-}
-
-///|
-pub fn AppCommandExtensionSpec::new(
-  id : String,
-  js_namespace : String,
-  apis : Array[AppCommandApiDescriptor],
-  register : (AppCommandExtensionContext) -> Unit raise,
+/// Creates an extension spec whose JavaScript APIs and native operation names
+/// are derived from typed extension command descriptors.
+pub fn AppCommandExtensionSpec::typed(
+  contract : @proton_contract.ExtensionContract,
+  command_routes : Array[@proton_contract.ContractRoute],
+  register : (CommandRegistrar) -> Unit raise,
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
-  on_destroy? : (AppCommandExtensionContext) -> Unit raise = fn(_context) {  },
-) -> AppCommandExtensionSpec {
+  on_destroy? : () -> Unit raise = fn() {  },
+) -> AppCommandExtensionSpec raise ExtensionSpecError {
+  contract.validate() catch {
+    error => raise InvalidContract(detail=error.message())
+  }
+  let id = contract.id()
+  let js_namespace = contract.js_namespace()
+  let apis : Array[AppCommandApiDescriptor] = []
+  for route in command_routes {
+    guard route.extension_id() == Some(id) &&
+      route.extension_namespace() == Some(js_namespace) else {
+      raise ForeignCommandRoute(
+        extension_id=id,
+        operation_name=route.operation_name(),
+      )
+    }
+    apis.push(AppCommandApiDescriptor::new(route.member_name()))
+  }
   AppCommandExtensionSpec::{
     id,
     js_namespace,
-    apis: copy_command_api_descriptors(apis),
+    apis,
     scripts: copy_strings(scripts),
     dependencies: copy_strings(dependencies),
     register,
@@ -276,17 +172,16 @@ pub fn AppCommandExtensionSpec::to_ipc_descriptor(
 ///|
 pub fn AppCommandExtensionSpec::register(
   self : AppCommandExtensionSpec,
-  context : AppCommandExtensionContext,
+  registrar : CommandRegistrar,
 ) -> Unit raise {
-  (self.register)(context)
+  (self.register)(registrar)
 }
 
 ///|
 pub fn AppCommandExtensionSpec::destroy(
   self : AppCommandExtensionSpec,
-  context : AppCommandExtensionContext,
 ) -> Unit raise {
-  (self.on_destroy)(context)
+  (self.on_destroy)()
 }
 
 ///|
@@ -428,15 +323,15 @@ pub fn app_command_extension_op_name(
 fn copy_app_command_extension_spec(
   spec : AppCommandExtensionSpec,
 ) -> AppCommandExtensionSpec {
-  AppCommandExtensionSpec::new(
-    spec.id,
-    spec.js_namespace,
-    spec.apis,
-    spec.register,
-    scripts=spec.scripts,
-    dependencies=spec.dependencies,
-    on_destroy=spec.on_destroy,
-  )
+  AppCommandExtensionSpec::{
+    id: spec.id,
+    js_namespace: spec.js_namespace,
+    apis: copy_command_api_descriptors(spec.apis),
+    scripts: copy_strings(spec.scripts),
+    dependencies: copy_strings(spec.dependencies),
+    register: spec.register,
+    on_destroy: spec.on_destroy,
+  }
 }
 
 ///|
@@ -463,30 +358,4 @@ fn copy_ipc_extension_descriptors(
 ///|
 fn copy_strings(values : Array[String]) -> Array[String] {
   values.map(fn(value) { value })
-}
-
-///|
-fn clone_json(json : Json) -> Json {
-  match json {
-    Array(items) => Json::array(items.map(item => clone_json(item)))
-    Object(object) => Json::object(clone_json_object(object))
-    _ => json
-  }
-}
-
-///|
-fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
-  let cloned : Map[String, Json] = Map([])
-  for key, value in object {
-    cloned.set(key, clone_json(value))
-  }
-  cloned
-}
-
-///|
-fn clone_json_option(value : Json?) -> Json? {
-  match value {
-    Some(json) => Some(clone_json(json))
-    None => None
-  }
 }

@@ -35,5 +35,5 @@ test "keep awake metadata constants match generated app command extension" {
   let command_spec = extension().command_spec() catch {
     error => abort(error.message())
   }
-  assert_eq(command_spec.unwrap().js_namespace(), "keepAwake")
+  assert_eq(command_spec.js_namespace(), "keepAwake")
 }

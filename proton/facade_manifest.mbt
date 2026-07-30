@@ -15,6 +15,7 @@ fn App::new(
     auto_config: false,
     window: @manifest.WindowManifest::new(title, width, height, size_hint~),
     entry,
+    windows: [],
     debug_level_value: debug,
     headless_value: false,
     title_overridden: false,
@@ -26,6 +27,10 @@ fn App::new(
     menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
+    command_registrars: [],
+    application_lifecycle_hooks: [],
+    launch_input_handlers: [],
+    window_lifecycle_hooks: [],
     validation_errors: [],
   }
 }
@@ -231,7 +236,7 @@ fn App::resolved_headless(self : App) -> Bool {
 
 ///|
 fn App::inline_app_config(self : App) -> ResolvedAppConfig {
-  ResolvedAppConfig::{ manifest: self.inline_manifest(), base_dir: None }
+  ResolvedAppConfig::{ manifest: self.inline_manifest() }
 }
 
 ///|
@@ -240,6 +245,7 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
     self.window,
     self.entry,
     debug=self.debug_level_value,
+    windows=self.windows,
     extensions=self.extension_settings,
   )
 }
@@ -262,15 +268,18 @@ fn App::merge_config(
     manifest.extensions,
     self.extension_settings,
   )
+  let windows = manifest.windows.copy()
+  for window in self.windows {
+    windows.push(window)
+  }
   ResolvedAppConfig::{
     manifest: @manifest.AppManifest::new(
       window,
       entry,
       debug~,
-      windows=manifest.windows,
+      windows~,
       extensions~,
     ),
-    base_dir: loaded.base_dir(),
   }
 }
 

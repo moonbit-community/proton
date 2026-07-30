@@ -7,24 +7,31 @@ import { fileURLToPath } from "node:url";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 
-const templateRoot = path.join(repoRoot, "cli", "new", "templates", "counter", "files");
+const templateRoot = path.join(repoRoot, "cli", "new", "templates", "todo", "files");
 const outputPath = process.argv[2]
   ? path.resolve(process.argv[2])
   : path.join(repoRoot, "cli", "new", "templates.generated.mbt");
 
 const preferredOrder = [
-  "moon.mod.mtpl",
+  "moon.work.mtpl",
   "moon.proton.mtpl",
-  "app/moon.pkg.mtpl",
-  "app/main.mbt.mtpl",
-  "app/app.html.mtpl",
-  "extensions/counter/moon.pkg.mtpl",
-  "extensions/counter/counter.mbt.mtpl",
-  "extensions/counter/README.mbt.md.mtpl",
+  "shared/moon.mod.mtpl",
+  "shared/moon.pkg.mtpl",
+  "shared/todo_contract.mbt.mtpl",
+  "frontend/moon.mod.mtpl",
+  "frontend/main/moon.pkg.mtpl",
+  "frontend/main/main.mbt.mtpl",
+  "frontend/public/index.html.mtpl",
+  "frontend/public/styles.css.mtpl",
+  "backend/moon.mod.mtpl",
+  "backend/app/moon.pkg.mtpl",
+  "backend/app/main.mbt.mtpl",
+  "backend/todo/moon.pkg.mtpl",
+  "backend/todo/backend.mbt.mtpl",
+  "backend/todo/commands.mbt.mtpl",
   "AGENTS.md.mtpl",
-  "README.mbt.md.mtpl",
+  "README.md.mtpl",
   ".gitignore.mtpl",
-  "LICENSE.mtpl",
 ];
 
 function toPosixPath(filePath) {

@@ -81,6 +81,7 @@ try {
     "keepawake",
     "microphone",
     "notification",
+    "path",
     "shell",
     "tray",
   ];
@@ -102,6 +103,85 @@ try {
       outputPath,
     ]);
     compareGeneratedFile(path.join("extensions", extension, "extension.g.mbt"), outputPath);
+
+    const identityOutputPath = tempOutputPath(
+      `${extension}.extension_identity.g.mbt`,
+    );
+    run("moon", [
+      "-C",
+      path.join(repoRoot, "cli"),
+      "run",
+      "--target",
+      "native",
+      ".",
+      "--",
+      "codegen",
+      "--extension-identity",
+      path.join(repoRoot, "extensions", extension, "moon.ext"),
+      "--identity-name",
+      "extension",
+      "-o",
+      identityOutputPath,
+    ]);
+    compareGeneratedFile(
+      path.join(
+        "extensions",
+        extension,
+        "contract",
+        "extension_identity.g.mbt",
+      ),
+      identityOutputPath,
+    );
+  }
+
+  const codegenExamples = [
+    "38_async_extension_add",
+    "42_attribute_codegen_commands",
+    "46_asset_sidecar_resources",
+  ];
+
+  for (const example of codegenExamples) {
+    const exampleDir = path.join(repoRoot, "examples", example);
+    const registrarOutputPath = tempOutputPath(`${example}.commands.g.mbt`);
+    run("moon", [
+      "-C",
+      path.join(repoRoot, "cli"),
+      "run",
+      "--target",
+      "native",
+      ".",
+      "--",
+      "codegen",
+      path.join(exampleDir, "commands.mbt"),
+      "-o",
+      registrarOutputPath,
+    ]);
+    compareGeneratedFile(
+      path.join("examples", example, "commands.g.mbt"),
+      registrarOutputPath,
+    );
+
+    const identityOutputPath = tempOutputPath(
+      `${example}.extension_identity.g.mbt`,
+    );
+    run("moon", [
+      "-C",
+      path.join(repoRoot, "cli"),
+      "run",
+      "--target",
+      "native",
+      ".",
+      "--",
+      "codegen",
+      "--extension-identity",
+      path.join(exampleDir, "moon.ext"),
+      "-o",
+      identityOutputPath,
+    ]);
+    compareGeneratedFile(
+      path.join("examples", example, "extension_identity.g.mbt"),
+      identityOutputPath,
+    );
   }
 
   const newTemplatesOutput = tempOutputPath("templates.generated.mbt");

@@ -1,0 +1,20 @@
+name = "{{backend_module}}"
+
+version = "0.1.0"
+
+import {
+  "{{shared_module}}@0.1.0",
+  "justjavac/proton@{{proton_version}}",
+  "justjavac/proton_contract@{{proton_contract_version}}",
+}
+
+license = "Apache-2.0"
+
+description = "Proton backend for {{title}}."
+
+options(
+  "bin-deps": { "justjavac/proton_cli": "{{proton_cli_version}}" },
+  warn_list: "",
+  preferred_target: "native",
+  supported_targets: "+native",
+)

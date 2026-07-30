@@ -110,7 +110,7 @@ async fn ensure_dir(path : String) -> Unit {
 async fn normalize_cef_runtime_layout(root : String) -> Unit {
   let release_dir = path_join(root, "Release")
   if !path_exists(release_dir) {
-    @mbfs.create_dir(release_dir) catch {
+    @async_fs.mkdir(release_dir, recursive=true) catch {
       err =>
         raise CefFileSystemError::CreateDirectory(
           path=release_dir,

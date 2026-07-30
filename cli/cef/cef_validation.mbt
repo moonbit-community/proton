@@ -1,13 +1,10 @@
 ///|
-fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool {
+async fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool {
   all_exist(root, source_cef_relative_files(platform))
 }
 
 ///|
-fn validate_cef_root(
-  root : String,
-  platform : ProtonPlatform,
-) -> Unit raise CefRuntimeError {
+async fn validate_cef_root(root : String, platform : ProtonPlatform) -> Unit {
   let missing : Array[String] = []
   for relative in installed_cef_relative_files(platform) {
     let path = path_join(root, relative)
@@ -25,10 +22,10 @@ fn validate_cef_root(
 }
 
 ///|
-fn validate_runtime_dist(
+async fn validate_runtime_dist(
   root : String,
   platform : ProtonPlatform,
-) -> Unit raise CefRuntimeError {
+) -> Unit {
   let missing : Array[String] = []
   for relative in runtime_required_relative_files(platform) {
     let path = path_join(root, relative)

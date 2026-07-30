@@ -1,54 +1,11 @@
 ///|
-struct EmptyPayload {} derive(ToJson, FromJson, Debug, Eq)
+let list_devices_command = @microphone_contract.list_devices
 
 ///|
-struct ParseListingPayload {
-  listing : String
-} derive(ToJson, FromJson, Debug, Eq)
+let parse_listing_command = @microphone_contract.parse_listing
 
 ///|
-struct CaptureConfigPayload {
-  channels : Int?
-  sample_rate_hz : Int?
-  sample_format : String?
-  echo_cancellation : Bool?
-  noise_suppression : Bool?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct CaptureConfigReply {
-  channels : Int
-  sample_rate_hz : Int
-  sample_format : String
-  echo_cancellation : Bool
-  noise_suppression : Bool
-  bytes_per_sample : Int
-  recommended_chunk_frames : Int
-  uses_voice_processing : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct MicrophoneDeviceReply {
-  id : String
-  name : String
-  state : String
-  default_config : CaptureConfigReply
-  monitor_supported : Bool
-  live : Bool
-  session_label : String
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-struct MicrophoneDevicesReply {
-  devices : Array[MicrophoneDeviceReply]
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-#proton.event(name="activity")
-struct MicrophoneActivity {
-  operation : String
-  count : Int?
-} derive(ToJson, FromJson, Debug, Eq)
+let config_command = @microphone_contract.config
 
 ///|
 /// Converts a sample format label from JavaScript into the package enum.
@@ -77,7 +34,7 @@ fn sample_format_label(format : @sys_microphone.SampleFormat) -> String {
 ///|
 /// Builds and normalizes one capture config from JavaScript payload data.
 fn build_capture_config(
-  payload : CaptureConfigPayload,
+  payload : @microphone_contract.CaptureConfigRequest,
 ) -> @sys_microphone.CaptureConfig raise MicrophoneConfigError {
   let sample_format = parse_sample_format(payload.sample_format).unwrap_or(F32)
   @sys_microphone.CaptureConfig::new(
@@ -93,8 +50,8 @@ fn build_capture_config(
 /// Converts a capture config into the serializable descriptor used by JS.
 fn capture_config_reply(
   config : @sys_microphone.CaptureConfig,
-) -> CaptureConfigReply {
-  CaptureConfigReply::{
+) -> @microphone_contract.CaptureConfigReply {
+  @microphone_contract.CaptureConfigReply::{
     channels: config.channels,
     sample_rate_hz: config.sample_rate_hz,
     sample_format: sample_format_label(config.sample_format),
@@ -110,8 +67,8 @@ fn capture_config_reply(
 /// Converts one microphone device descriptor into a JavaScript-friendly shape.
 fn microphone_device_reply(
   device : @sys_microphone.MicrophoneDevice,
-) -> MicrophoneDeviceReply {
-  MicrophoneDeviceReply::{
+) -> @microphone_contract.MicrophoneDeviceReply {
+  @microphone_contract.MicrophoneDeviceReply::{
     id: device.id,
     name: device.name,
     state: device.state.label(),
@@ -126,19 +83,21 @@ fn microphone_device_reply(
 /// Converts many microphone devices into a JavaScript-friendly reply.
 fn microphone_devices_reply(
   devices : Array[@sys_microphone.MicrophoneDevice],
-) -> MicrophoneDevicesReply {
-  MicrophoneDevicesReply::{ devices: devices.map(microphone_device_reply) }
+) -> @microphone_contract.MicrophoneDevicesReply {
+  @microphone_contract.MicrophoneDevicesReply::{
+    devices: devices.map(microphone_device_reply),
+  }
 }
 
 ///|
 /// Lists native microphone devices from a generated app-command extension.
-#proton.command(name="listDevices")
+#proton.command(contract=list_devices_command)
 async fn list_devices(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> MicrophoneDevicesReply {
+  context : @proton.CommandContext,
+  _request : @microphone_contract.EmptyRequest,
+) -> @microphone_contract.MicrophoneDevicesReply {
   let devices = @sys_microphone.MicrophoneDevice::list()
-  emit_microphone_activity(context, MicrophoneActivity::{
+  context.emit(@microphone_contract.activity, @microphone_contract.MicrophoneActivity::{
     operation: "listDevices",
     count: Some(devices.length()),
   })
@@ -147,29 +106,28 @@ async fn list_devices(
 
 ///|
 /// Parses a platform microphone listing from a generated app-command extension.
-#proton.command(name="parseListing")
-fn parse_listing(listing : String) -> MicrophoneDevicesReply {
-  let devices = @sys_microphone.MicrophoneDevice::parse_listing(listing)
+#proton.command(contract=parse_listing_command)
+fn parse_listing(
+  request : @microphone_contract.ParseListingRequest,
+) -> @microphone_contract.MicrophoneDevicesReply {
+  let devices = @sys_microphone.MicrophoneDevice::parse_listing(request.listing)
   microphone_devices_reply(devices)
 }
 
 ///|
 /// Builds a normalized capture config from a generated app-command extension.
-#proton.command(name="config")
+#proton.command(contract=config_command)
 fn config(
-  channels : Int?,
-  sample_rate_hz : Int?,
-  sample_format : String?,
-  echo_cancellation : Bool?,
-  noise_suppression : Bool?,
-) -> CaptureConfigReply raise MicrophoneConfigError {
-  capture_config_reply(
-    build_capture_config(CaptureConfigPayload::{
-      channels,
-      sample_rate_hz,
-      sample_format,
-      echo_cancellation,
-      noise_suppression,
-    }),
+  request : @microphone_contract.CaptureConfigRequest,
+) -> @microphone_contract.CaptureConfigReply raise MicrophoneConfigError {
+  capture_config_reply(build_capture_config(request))
+}
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    @microphone_contract.extension,
+    generated_extension_command_routes(),
+    fn(registrar) raise { register_commands(registrar) },
   )
 }

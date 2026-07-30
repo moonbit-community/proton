@@ -98,17 +98,21 @@ async fn extract_tar_bz2(archive_path : String, destination : String) -> Unit {
 }
 
 ///|
-fn find_extracted_root(
+async fn find_extracted_root(
   extract_dir : String,
   name : String,
   platform : ProtonPlatform,
-) -> String raise {
+) -> String {
   let named = path_join(extract_dir, name)
   if has_source_cef_files(named, platform) {
     return named
   }
   let candidates : Array[String] = []
-  let entries = @mbfs.read_dir(extract_dir) catch {
+  let entries = @async_fs.readdir(
+    extract_dir,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
     err =>
       raise CefFileSystemError::ReadDirectory(
         path=extract_dir,

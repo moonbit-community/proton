@@ -1,38 +1,39 @@
 ///|
-#proton.event(name="activity")
-struct GlobalHotkeyActivity {
-  operation : String
-  accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
+let register_command = @global_hotkey_contract.register
 
 ///|
-#proton.event(name="triggered")
-struct GlobalHotkeyTriggered {
-  accelerator : String
-} derive(ToJson, FromJson, Debug, Eq)
+let unregister_command = @global_hotkey_contract.unregister
+
+///|
+let list_command = @global_hotkey_contract.list
+
+///|
+let drain_triggered_command = @global_hotkey_contract.drain_triggered
 
 ///|
 async fn emit_command_activity(
-  context : @proton_command.AppCommandExtensionContext,
+  context : @proton.CommandContext,
   operation : String,
   accelerator : String,
-) -> Unit noraise {
-  emit_global_hotkey_activity(context, { operation, accelerator })
+) -> Unit {
+  context.emit(@global_hotkey_contract.activity, @global_hotkey_contract.GlobalHotkeyActivity::{
+    operation,
+    accelerator,
+  })
 }
 
 ///|
 async fn[Reply] emit_command_result(
-  context : @proton_command.AppCommandExtensionContext,
+  context : @proton.CommandContext,
   reply : Reply,
   operation : String,
   accelerator : String,
-) -> Reply noraise {
+) -> Reply {
   emit_command_activity(context, operation, accelerator)
   reply
 }
 
 ///|
-#proton.script
 fn trigger_poller_script() -> String {
   (
     #|(() => {
@@ -53,53 +54,65 @@ fn trigger_poller_script() -> String {
 
 ///|
 /// Registers one global hotkey from a generated app-command extension.
-#proton.command(name="register")
+#proton.command(contract=register_command)
 async fn register(
-  context : @proton_command.AppCommandExtensionContext,
-  accelerator : String,
-) -> GlobalHotkeyReply raise GlobalHotkeyError {
+  context : @proton.CommandContext,
+  request : @global_hotkey_contract.GlobalHotkeyRequest,
+) -> @global_hotkey_contract.GlobalHotkeyReply {
   emit_command_result(
     context,
-    register_hotkey(app_command_manager_handle(), accelerator),
+    register_hotkey(app_command_manager_handle(), request.accelerator),
     "register",
-    accelerator,
+    request.accelerator,
   )
 }
 
 ///|
 /// Unregisters one global hotkey from a generated app-command extension.
-#proton.command(name="unregister")
+#proton.command(contract=unregister_command)
 async fn unregister(
-  context : @proton_command.AppCommandExtensionContext,
-  accelerator : String,
-) -> GlobalHotkeyReply raise GlobalHotkeyError {
+  context : @proton.CommandContext,
+  request : @global_hotkey_contract.GlobalHotkeyRequest,
+) -> @global_hotkey_contract.GlobalHotkeyReply {
   emit_command_result(
     context,
-    unregister_hotkey(app_command_manager_handle(), accelerator),
+    unregister_hotkey(app_command_manager_handle(), request.accelerator),
     "unregister",
-    accelerator,
+    request.accelerator,
   )
 }
 
 ///|
 /// Lists registered global hotkeys from a generated app-command extension.
-#proton.command(name="list")
+#proton.command(contract=list_command)
 fn list(
-  _payload : EmptyPayload?,
-) -> GlobalHotkeyListReply raise GlobalHotkeyError {
+  _request : @global_hotkey_contract.EmptyRequest,
+) -> @global_hotkey_contract.GlobalHotkeyListReply raise GlobalHotkeyError {
   list_hotkeys(app_command_manager_handle())
 }
 
 ///|
 /// Drains triggered global hotkeys from a generated app-command extension.
-#proton.command(name="drainTriggered")
+#proton.command(contract=drain_triggered_command)
 async fn drain_triggered(
-  context : @proton_command.AppCommandExtensionContext,
-  _payload : EmptyPayload?,
-) -> GlobalHotkeyListReply raise GlobalHotkeyError {
+  context : @proton.CommandContext,
+  _request : @global_hotkey_contract.EmptyRequest,
+) -> @global_hotkey_contract.GlobalHotkeyListReply {
   let reply = drain_triggered_hotkeys(app_command_manager_handle())
   for accelerator in reply.accelerators {
-    emit_global_hotkey_triggered(context, { accelerator, })
+    context.emit(@global_hotkey_contract.triggered, @global_hotkey_contract.GlobalHotkeyTriggered::{
+      accelerator,
+    })
   }
   reply
+}
+
+///|
+pub fn extension() -> @proton_extension.Extension {
+  @proton_extension.typed(
+    @global_hotkey_contract.extension,
+    generated_extension_command_routes(),
+    fn(registrar) raise { register_commands(registrar) },
+    scripts=[trigger_poller_script()],
+  )
 }

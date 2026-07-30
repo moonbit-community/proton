@@ -63,7 +63,7 @@ moon -C examples run 01_run --target native
   event helper over the native DLL bridge.
 - `43_native_bind_smoke`: low-level native binding smoke.
 - `44_project_config`: `moon.proton` project config decoding
-- `45_bridge_multi_window`: multi-window bridge E2E example.
+- `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Vite dev-server injection smoke for extension
   JavaScript helpers and events.

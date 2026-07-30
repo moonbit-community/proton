@@ -17,8 +17,8 @@ debug = true
 
 frontend = {
   dev_url: "http://127.0.0.1:5173",
-  dist: "frontend/dist",
-  cwd: "frontend",
+  path: "frontend",
+  dist: "dist",
   before_dev: "npm run dev -- --host 127.0.0.1 --strictPort",
   before_build: "npm run build",
 }

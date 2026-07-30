@@ -8,22 +8,30 @@ let async_extension_add_resource : String =
 struct AsyncAddPayload {
   left : Int
   right : Int
-} derive(FromJson)
+} derive(ToJson, FromJson)
+
+///|
+let async_add_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
+  id="examples/async-add",
+  js_namespace="add",
+)
+
+///|
+let async_add_command : @proton_contract.Command[AsyncAddPayload, Int] = async_add_contract.command(
+  "slowAdd",
+)
 
 ///|
 fn async_add_extension() -> @proton_extension.Extension {
-  @proton_extension.from_command_spec(
-    @proton_command.AppCommandExtensionSpec::new(
-      "examples/async-add",
-      "add",
-      [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-      fn(context) raise {
-        context.op_async("slowAdd", async fn(payload : AsyncAddPayload) {
-          @async.sleep(1000)
-          payload.left + payload.right
-        })
-      },
-    ),
+  @proton_extension.typed(
+    async_add_contract,
+    [async_add_command.contract_route()],
+    fn(registrar) raise {
+      registrar.bind(async_add_command, (_context, payload) => {
+        @async.sleep(1000)
+        payload.left + payload.right
+      })
+    },
   )
 }
 
@@ -50,68 +58,83 @@ let sync_async_extensions_resource : String =
 ///|
 struct SyncDoublePayload {
   value : Int
-} derive(FromJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct SyncDoubleReply {
   value : Int
   doubled : Int
   source : String
-} derive(ToJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct AsyncSumPayload {
   left : Int
   right : Int
   delay_ms : Int?
-} derive(FromJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct AsyncSumReply {
   total : Int
   waited_ms : Int
   source : String
-} derive(ToJson)
+} derive(ToJson, FromJson)
+
+///|
+let sync_math_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
+  id="examples/sync-math",
+  js_namespace="math",
+)
+
+///|
+let sync_double_command : @proton_contract.Command[
+  SyncDoublePayload,
+  SyncDoubleReply,
+] = sync_math_contract.command("double")
+
+///|
+let async_sum_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
+  id="examples/async-add",
+  js_namespace="add",
+)
+
+///|
+let async_sum_command : @proton_contract.Command[AsyncSumPayload, AsyncSumReply] = async_sum_contract.command(
+  "slowAdd",
+)
 
 ///|
 fn sync_math_fixture_extension() -> @proton_extension.Extension {
-  @proton_extension.from_command_spec(
-    @proton_command.AppCommandExtensionSpec::new(
-      "examples/sync-math",
-      "math",
-      [@proton_command.AppCommandApiDescriptor::new("double")],
-      fn(context) raise {
-        context.op("double", fn(payload : SyncDoublePayload) {
-          SyncDoubleReply::{
-            value: payload.value,
-            doubled: payload.value * 2,
-            source: "sync command extension",
-          }
-        })
-      },
-    ),
+  @proton_extension.typed(
+    sync_math_contract,
+    [sync_double_command.contract_route()],
+    fn(registrar) raise {
+      registrar.bind(sync_double_command, (_context, payload) => SyncDoubleReply::{
+        value: payload.value,
+        doubled: payload.value * 2,
+        source: "sync command extension",
+      })
+    },
   )
 }
 
 ///|
 fn async_add_fixture_extension() -> @proton_extension.Extension {
-  @proton_extension.from_command_spec(
-    @proton_command.AppCommandExtensionSpec::new(
-      "examples/async-add",
-      "add",
-      [@proton_command.AppCommandApiDescriptor::new("slowAdd")],
-      fn(context) raise {
-        context.op_async("slowAdd", async fn(payload : AsyncSumPayload) {
-          let delay_ms = payload.delay_ms.unwrap_or(10)
-          @async.sleep(delay_ms)
-          AsyncSumReply::{
-            total: payload.left + payload.right,
-            waited_ms: delay_ms,
-            source: "async command extension",
-          }
-        })
-      },
-    ),
+  @proton_extension.typed(
+    async_sum_contract,
+    [async_sum_command.contract_route()],
+    fn(registrar) raise {
+      registrar.bind(async_sum_command, (_context, payload) => {
+        let delay_ms = payload.delay_ms.unwrap_or(10)
+        @async.sleep(delay_ms)
+        AsyncSumReply::{
+          total: payload.left + payload.right,
+          waited_ms: delay_ms,
+          source: "async command extension",
+        }
+      })
+    },
   )
 }
 
@@ -162,7 +185,7 @@ struct EventStartPayload {
   run_id : Int
   count : Int
   interval_ms : Int
-} derive(FromJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct EventTick {
@@ -170,19 +193,41 @@ struct EventTick {
   index : Int
   total : Int
   remaining : Int
-} derive(ToJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct EventDone {
   run_id : Int
   total : Int
-} derive(ToJson)
+} derive(ToJson, FromJson)
 
 ///|
 struct EventTickerResult {
   ticks : Array[EventTick]
   done : EventDone
-} derive(ToJson)
+} derive(ToJson, FromJson)
+
+///|
+let event_ticker_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
+  id="examples/event-ticker",
+  js_namespace="ticker",
+)
+
+///|
+let event_start_command : @proton_contract.Command[
+  EventStartPayload,
+  EventTickerResult,
+] = event_ticker_contract.command("start")
+
+///|
+let event_tick_event : @proton_contract.Event[EventTick] = event_ticker_contract.event(
+  "tick",
+)
+
+///|
+let event_done_event : @proton_contract.Event[EventDone] = event_ticker_contract.event(
+  "done",
+)
 
 ///|
 fn clamp_event_value(value : Int, min : Int, max : Int) -> Int {
@@ -197,38 +242,37 @@ fn clamp_event_value(value : Int, min : Int, max : Int) -> Int {
 
 ///|
 fn event_ticker_extension() -> @proton_extension.Extension {
-  @proton_extension.from_command_spec(
-    @proton_command.AppCommandExtensionSpec::new(
-      "examples/event-ticker",
-      "ticker",
-      [@proton_command.AppCommandApiDescriptor::new("start")],
-      fn(context) raise {
-        context.op_async(
-          "start",
-          async fn(payload : EventStartPayload) {
-            let count = clamp_event_value(payload.count, 1, 20)
-            let interval_ms = clamp_event_value(payload.interval_ms, 100, 2000)
-            let ticks : Array[EventTick] = []
-            for index in 1..<=count {
-              @async.sleep(interval_ms)
-              let tick = EventTick::{
-                run_id: payload.run_id,
-                index,
-                total: count,
-                remaining: count - index,
-              }
-              ticks.push(tick)
-              context.emit("tick", tick)
-            }
-            let done = EventDone::{ run_id: payload.run_id, total: count }
-            context.emit("done", done)
-            EventTickerResult::{ ticks, done }
-          },
-          emits_events=true,
-        )
-      },
-    ),
+  @proton_extension.typed(
+    event_ticker_contract,
+    [event_start_command.contract_route()],
+    fn(registrar) raise {
+      registrar.bind(event_start_command, run_event_ticker)
+    },
   )
+}
+
+///|
+async fn run_event_ticker(
+  context : @proton.CommandContext,
+  payload : EventStartPayload,
+) -> EventTickerResult {
+  let count = clamp_event_value(payload.count, 1, 20)
+  let interval_ms = clamp_event_value(payload.interval_ms, 100, 2000)
+  let ticks : Array[EventTick] = []
+  for index in 1..<=count {
+    @async.sleep(interval_ms)
+    let tick = EventTick::{
+      run_id: payload.run_id,
+      index,
+      total: count,
+      remaining: count - index,
+    }
+    ticks.push(tick)
+    context.emit(event_tick_event, tick)
+  }
+  let done = EventDone::{ run_id: payload.run_id, total: count }
+  context.emit(event_done_event, done)
+  EventTickerResult::{ ticks, done }
 }
 
 ///|

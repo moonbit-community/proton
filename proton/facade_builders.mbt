@@ -111,6 +111,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
       size_hint=@manifest.WindowSizeHint::None,
     ),
     entry: @manifest.AppEntry::Html(""),
+    windows: [],
     debug_level_value: 0,
     headless_value: false,
     title_overridden: false,
@@ -122,6 +123,10 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     menu: None,
     extension_settings: Map([]),
     command_extensions: Map([]),
+    command_registrars: [],
+    application_lifecycle_hooks: [],
+    launch_input_handlers: [],
+    window_lifecycle_hooks: [],
     validation_errors: [],
   }
 }
@@ -235,6 +240,138 @@ pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
 }
 
 ///|
+/// Registers an application-level handler for URL, file, and reopen inputs.
+pub fn App::on_launch_input(
+  self : App,
+  handler : async (RuntimeLaunchInput) -> Unit noraise,
+) -> App {
+  self.launch_input_handlers.push(handler)
+  self
+}
+
+///|
+/// Adds a secondary window owned by the standard application lifecycle.
+pub fn App::add_window(
+  self : App,
+  id : String,
+  title : String,
+  entry : AppEntry,
+  width? : Int = 900,
+  height? : Int = 700,
+  size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
+  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+) -> App {
+  let normalized_id = id.trim().to_owned()
+  if normalized_id == "" || normalized_id == "main" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="window.id",
+        message=if normalized_id == "main" {
+          "\"main\" is reserved for the primary window"
+        } else {
+          "must not be empty"
+        },
+      ),
+    )
+    return self
+  }
+  if self.windows.any(fn(window) { window.id == normalized_id }) {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="window.id",
+        message="duplicate secondary window id: " + normalized_id,
+      ),
+    )
+    return self
+  }
+  self.windows.push(
+    @manifest.AppWindowManifest::new(
+      normalized_id,
+      @manifest.WindowManifest::new(
+        title,
+        width,
+        height,
+        size_hint=manifest_window_size_hint(size_hint),
+        titlebar_style=manifest_titlebar_style(titlebar_style),
+      ),
+      entry,
+    ),
+  )
+  self
+}
+
+///|
+fn manifest_window_size_hint(hint : WindowSizeHint) -> @manifest.WindowSizeHint {
+  match hint {
+    WindowSizeHint::Unconstrained => @manifest.WindowSizeHint::None
+    WindowSizeHint::Fixed => @manifest.WindowSizeHint::Fixed
+    WindowSizeHint::Min => @manifest.WindowSizeHint::Min
+    WindowSizeHint::Max => @manifest.WindowSizeHint::Max
+  }
+}
+
+///|
+fn manifest_titlebar_style(style : TitlebarStyle) -> @manifest.TitlebarStyle {
+  match style {
+    TitlebarStyle::Default => @manifest.TitlebarStyle::Default
+    TitlebarStyle::Overlay => @manifest.TitlebarStyle::Overlay
+  }
+}
+
+///|
+/// Adds one package registrar for typed application commands.
+///
+/// Registration runs before any window is created and is sealed before the
+/// renderer bridge starts accepting requests.
+pub fn App::commands(
+  self : App,
+  register : (@proton_command.CommandRegistrar) -> Unit raise,
+) -> App {
+  self.command_registrars.push(register)
+  self
+}
+
+///|
+/// Adds a paired application lifecycle hook.
+///
+/// The startup state is passed to shutdown. Completed hooks shut down in
+/// reverse order, including when a later startup hook fails.
+pub fn[State] App::app_lifecycle(
+  self : App,
+  on_start~ : async (ApplicationContext) -> State,
+  on_shutdown~ : async (State) -> Unit,
+) -> App {
+  self.application_lifecycle_hooks.push(ApplicationLifecycleHook::{
+    start: async fn(context) {
+      let state = on_start(context)
+      ApplicationLifecycleActivation::{
+        shutdown: async fn() { on_shutdown(state) },
+      }
+    },
+  })
+  self
+}
+
+///|
+/// Adds a paired primary-window lifecycle hook.
+///
+/// The ready state is passed to close. Completed hooks close in reverse order,
+/// including when a later ready hook fails.
+pub fn[State] App::window_lifecycle(
+  self : App,
+  on_ready~ : async (WindowContext) -> State,
+  on_close~ : async (State) -> Unit,
+) -> App {
+  self.window_lifecycle_hooks.push(WindowLifecycleHook::{
+    start: async fn(context) {
+      let state = on_ready(context)
+      WindowLifecycleActivation::{ close: async fn() { on_close(state) } }
+    },
+  })
+  self
+}
+
+///|
 /// Registers one extension setting with the app facade.
 ///
 /// The native DLL route exposes command extensions through
@@ -252,7 +389,7 @@ pub fn App::extension(
     )
   } else {
     self.extension_settings[id] = @manifest.ExtensionSetting::enabled(options~)
-    let command_spec = extension.command_spec() catch {
+    let command_spec = Some(extension.command_spec()) catch {
       error => {
         self.validation_errors.push(
           ExtensionAdaptationFailed(extension_id=id, error~),

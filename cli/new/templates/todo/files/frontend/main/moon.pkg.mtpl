@@ -1,0 +1,12 @@
+import {
+  "{{shared_module}}" @shared,
+  "justjavac/proton_client",
+  "justjavac/proton_rabbita",
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/html",
+  "moonbit-community/rabbita/sub",
+}
+
+supported_targets = "js"
+
+pkgtype(kind: "executable")

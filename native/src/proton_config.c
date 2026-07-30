@@ -91,10 +91,18 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       valid = proton_json_read_int32(doc, value, &integer);
     } else if (strcmp(key, "title") == 0 ||
                strcmp(key, "initial_url") == 0 ||
+               strcmp(key, "size_hint") == 0 ||
                strcmp(key, "titlebar_style") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
-      if (valid && strcmp(key, "titlebar_style") == 0) {
-        valid = strcmp(text, "default") == 0 || strcmp(text, "overlay") == 0;
+      if (valid) {
+        if (strcmp(key, "size_hint") == 0) {
+          valid = strcmp(text, "none") == 0 ||
+                  strcmp(text, "fixed") == 0 ||
+                  strcmp(text, "min") == 0 || strcmp(text, "max") == 0;
+        } else if (strcmp(key, "titlebar_style") == 0) {
+          valid =
+              strcmp(text, "default") == 0 || strcmp(text, "overlay") == 0;
+        }
       }
     } else if (strcmp(key, "bridge") == 0) {
       valid = proton_json_is_object(doc, value);
@@ -292,6 +300,7 @@ static const char *const proton_window_config_keys[] = {
     "width",
     "height",
     "initial_url",
+    "size_hint",
     "titlebar_style",
     "bridge",
 };

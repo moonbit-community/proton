@@ -6,11 +6,11 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 ///|
 test "parse package args accepts repeated targets and overrides" {
   let raw = parse_package_args([
-    "--package", "desktop", "--target", "app", "--target", "zip", "--output", "dist",
-    "--no-build", "--dry-run",
+    "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
+    "--output", "dist", "--no-build", "--dry-run",
   ])
-  assert_eq(raw.app_package, "desktop")
-  @debug.assert_eq(raw.targets, ["app", "zip"])
+  @debug.assert_eq(raw.app_package, Some("desktop"))
+  @debug.assert_eq(raw.targets, ["app", "zip", "dmg"])
   @debug.assert_eq(raw.output, Some("dist"))
   assert_false(raw.build)
   assert_true(raw.dry_run)
@@ -18,11 +18,43 @@ test "parse package args accepts repeated targets and overrides" {
 
 ///|
 test "parse package args rejects unsupported target" {
-  try parse_package_args(["--target", "dmg"]) catch {
-    PackageUsageError::UnsupportedTarget(target="dmg") => ()
+  try parse_package_args(["--target", "msi"]) catch {
+    PackageUsageError::UnsupportedTarget(target="msi") => ()
     _ => abort("expected unsupported target")
   } noraise {
     _ => abort("expected unsupported target")
+  }
+}
+
+///|
+async test "package plan accepts dmg only on macOS" {
+  let project = @proton_config.ProjectConfig::new(
+    ".",
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Html("<main>demo</main>"),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.demo"),
+      version=Some("1.0.0"),
+    ),
+    bundle=Some(
+      @proton_config.ProjectBundleConfig::new(active=true, targets=[
+        "app", "dmg",
+      ]),
+    ),
+  )
+  let raw = parse_package_args([])
+  if is_macos_host() {
+    let plan = build_package_plan(raw, "moon.proton", project)
+    @debug.assert_eq(plan.targets, ["app", "dmg"])
+  } else {
+    try build_package_plan(raw, "moon.proton", project) catch {
+      PackagePlanError::UnsupportedTargetForPlatform(target="dmg", platform~) =>
+        assert_true(platform != "")
+      _ => abort("expected platform-specific target error")
+    } noraise {
+      _ => abort("expected dmg to be rejected outside macOS")
+    }
   }
 }
 
@@ -42,7 +74,7 @@ test "sign does not require notarization" {
 }
 
 ///|
-test "package plan requires active bundle" {
+async test "package plan requires active bundle" {
   let project = @proton_config.ProjectConfig::new(
     ".",
     @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
@@ -63,7 +95,7 @@ test "package plan requires active bundle" {
 }
 
 ///|
-test "package plan defaults to app and zip" {
+async test "package plan defaults to app and zip" {
   let project = @proton_config.ProjectConfig::new(
     ".",
     @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
@@ -85,6 +117,82 @@ test "package plan defaults to app and zip" {
       "/target/proton-package-build/dev-proton-demo",
     ),
   )
+}
+
+///|
+async test "package plan stages every window file entry" {
+  let root = resolve_path("target", "proton-package-window-entries")
+  remove_tree(root)
+  let main = resolve_path(root, "pages/main.html")
+  let secondary = resolve_path(root, "standalone/settings.html")
+  ensure_dir(path_parent(main))
+  ensure_dir(path_parent(secondary))
+  write_text(main, "<main>Main</main>")
+  write_text(secondary, "<main>Settings</main>")
+  let project = @proton_config.ProjectConfig::new(
+    root,
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Asset(main),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.window-entries"),
+      version=Some("1.0.0"),
+    ),
+    windows=[
+      @proton_config.ProjectAppWindowConfig::new(
+        "settings",
+        @proton_config.ProjectWindowConfig::new("Settings", 480, 360),
+        @proton_config.ProjectEntry::File(secondary),
+      ),
+    ],
+    bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
+  )
+  let plan = build_package_plan(
+    parse_package_args([]),
+    resolve_path(root, "moon.proton"),
+    project,
+  )
+  assert_eq(plan.entry_paths, [main, secondary])
+  let destination = resolve_path(root, "staged")
+  ensure_dir(destination)
+  stage_project_inputs(plan, destination)
+  assert_true(@mbfs.path_exists(resolve_path(destination, "pages/main.html")))
+  assert_true(
+    @mbfs.path_exists(resolve_path(destination, "standalone/settings.html")),
+  )
+}
+
+///|
+async test "package plan uses configured backend module and package" {
+  let base_dir = resolve_path("target", "proton package module paths")
+  let backend_path = resolve_path(base_dir, "modules/backend app")
+  let project = @proton_config.ProjectConfig::new(
+    base_dir,
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Html("<main>demo</main>"),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.module-paths"),
+      version=Some("1.0.0"),
+    ),
+    backend=Some(
+      @proton_config.ProjectBackendConfig::new(backend_path, "desktop"),
+    ),
+    bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
+  )
+  let configured = build_package_plan(
+    parse_package_args([]),
+    resolve_path(base_dir, "moon.proton"),
+    project,
+  )
+  assert_eq(configured.root, backend_path)
+  assert_eq(configured.app_package, "desktop")
+  let overridden = build_package_plan(
+    parse_package_args(["--package", "custom"]),
+    resolve_path(base_dir, "moon.proton"),
+    project,
+  )
+  assert_eq(overridden.app_package, "custom")
 }
 
 ///|
@@ -317,6 +425,48 @@ test "macOS icon plist entry is conditional" {
 }
 
 ///|
+test "release project config disables only the top-level debug field" {
+  let source =
+    #|product_name = "MoonBit 桌面应用"
+    #|window = { title: "debug = true", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<p>debug = true</p>" }
+    #|debug = true
+    #|bundle = { active: true }
+    #|
+  let release = release_project_config_text(source)
+  assert_true(release.contains("title: \"debug = true\""))
+  assert_true(release.contains("value: \"<p>debug = true</p>\""))
+  assert_true(release.contains("debug = false"))
+  assert_false(release.contains("\ndebug = true\n"))
+  let (ast, reports) = @proton_config.parse_moon_proton(release)
+  assert_eq(reports.length(), 0)
+  match ast {
+    Obj(fields, _) => {
+      let debug_values = fields.filter_map(fn(field) {
+        if field.key == "debug" {
+          Some(field.value)
+        } else {
+          None
+        }
+      })
+      match debug_values {
+        [Bool(false, _)] => ()
+        _ => abort("expected one disabled top-level debug field")
+      }
+    }
+    _ => abort("expected release config object")
+  }
+}
+
+///|
+test "release project config preserves an already disabled or absent debug field" {
+  let disabled = "window = { title: \"Demo\" }\ndebug = false\n"
+  assert_eq(release_project_config_text(disabled), disabled)
+  let absent = "window = { title: \"Demo\" }\n"
+  assert_eq(release_project_config_text(absent), absent)
+}
+
+///|
 async test "macOS icon selection stages icns and rejects a missing source" {
   let root = resolve_path("target", "proton-package-macos-icon")
   remove_tree(root)
@@ -344,9 +494,11 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: ["icon.png", icon],
+    url_schemes: [],
+    document_types: [],
     macos_icon: Some(icon),
     sign: false,
     notarize: false,
@@ -387,9 +539,17 @@ test "macOS plist contains bundle identity and executable" {
     build: false,
     base_dir: ".",
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
+    url_schemes: ["devtoys"],
+    document_types: [
+      @proton_config.ProjectDocumentType::new(
+        "Text",
+        ["txt", "md"],
+        role="Editor",
+      ),
+    ],
     macos_icon: None,
     sign: false,
     notarize: false,
@@ -399,7 +559,117 @@ test "macOS plist contains bundle identity and executable" {
   assert_true(plist.contains("<string>dev.proton.demo</string>"))
   assert_true(plist.contains("<string>demo-app</string>"))
   assert_true(plist.contains("<string>1.2.3</string>"))
+  assert_true(plist.contains("CFBundleURLTypes"))
+  assert_true(plist.contains("<string>devtoys</string>"))
+  assert_true(plist.contains("CFBundleDocumentTypes"))
+  assert_true(plist.contains("<string>Editor</string>"))
+  assert_true(plist.contains("<string>md</string>"))
   assert_false(plist.contains("CFBundleIconFile"))
+}
+
+///|
+async test "package manifest records launch metadata" {
+  let root = "target/proton-package-launch-metadata"
+  ensure_dir(root)
+  let plan = PackagePlan::{
+    root: ".",
+    workspace_root: ".",
+    build_target_dir: "target/proton-package-build/dev-proton-demo",
+    app_package: "app",
+    config_path: "moon.proton",
+    product_name: "Demo",
+    identifier: "dev.proton.demo",
+    version: "1.2.3",
+    macos_version: "1.2.3",
+    bundle_version: "1.2.3",
+    targets: ["app"],
+    output: "target",
+    build: false,
+    base_dir: ".",
+    frontend_dist: None,
+    entry_paths: [],
+    resources: [],
+    icons: [],
+    url_schemes: ["devtoys"],
+    document_types: [
+      @proton_config.ProjectDocumentType::new(
+        "Text",
+        ["txt", "md"],
+        role="Editor",
+      ),
+    ],
+    macos_icon: None,
+    sign: false,
+    notarize: false,
+  }
+  write_package_manifest(plan, root, "macos-app")
+  let manifest = @mbfs.read_file_to_string(
+    resolve_path(root, "proton-package.json"),
+    encoding="utf8",
+  ) catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_true(manifest.contains("\"url_schemes\":[\"devtoys\"]"))
+  assert_true(manifest.contains("\"extensions\":[\"txt\",\"md\"]"))
+  assert_true(manifest.contains("\"role\":\"Editor\""))
+}
+
+///|
+test "macOS package defines the complete CEF helper family" {
+  let helpers = macos_helper_specs("Demo & App", "dev.proton.demo")
+  @debug.assert_eq(helpers.map(fn(helper) { helper.bundle_name }), [
+    "Demo & App Helper", "Demo & App Helper (Alerts)", "Demo & App Helper (GPU)",
+    "Demo & App Helper (Plugin)", "Demo & App Helper (Renderer)",
+  ])
+  @debug.assert_eq(helpers.map(fn(helper) { helper.bundle_identifier }), [
+    "dev.proton.demo.helper", "dev.proton.demo.helper.alerts", "dev.proton.demo.helper.gpu",
+    "dev.proton.demo.helper.plugin", "dev.proton.demo.helper.renderer",
+  ])
+  for helper in helpers {
+    assert_eq(helper.executable_name, helper.bundle_name)
+  }
+}
+
+///|
+test "macOS helper plist matches its bundle identity" {
+  let plan = PackagePlan::{
+    root: ".",
+    workspace_root: ".",
+    build_target_dir: "target/proton-package-build/dev-proton-demo",
+    app_package: "app",
+    config_path: "moon.proton",
+    product_name: "Demo & App",
+    identifier: "dev.proton.demo",
+    version: "1.2.3",
+    macos_version: "1.2.3",
+    bundle_version: "42",
+    targets: ["app"],
+    output: "target",
+    build: false,
+    base_dir: ".",
+    frontend_dist: None,
+    entry_paths: [],
+    resources: [],
+    icons: [],
+    url_schemes: [],
+    document_types: [],
+    macos_icon: None,
+    sign: false,
+    notarize: false,
+  }
+  let helper = macos_helper_specs(plan.product_name, plan.identifier)[4]
+  let plist = helper_info_plist(plan, helper)
+  assert_true(
+    plist.contains(
+      "<key>CFBundleExecutable</key><string>Demo &amp; App Helper (Renderer)</string>",
+    ),
+  )
+  assert_true(
+    plist.contains(
+      "<key>CFBundleIdentifier</key><string>dev.proton.demo.helper.renderer</string>",
+    ),
+  )
+  assert_true(plist.contains("<key>CFBundleVersion</key><string>42</string>"))
 }
 
 ///|
@@ -410,7 +680,14 @@ async test "macOS staged app promotion rolls back when staging is missing" {
   let marker = resolve_path(destination, "Contents/old.txt")
   ensure_dir(path_parent(marker))
   write_text(marker, "old")
-  try promote_staged_app(resolve_path(root, "missing.app"), destination) catch {
+  try
+    promote_staged_artifacts([
+      StagedArtifact::{
+        staging: resolve_path(root, "missing.app"),
+        destination,
+      },
+    ])
+  catch {
     _ => ()
   } noraise {
     _ => abort("expected staging promotion failure")
@@ -428,13 +705,62 @@ async test "macOS staged app promotion recovers an interrupted backup" {
   let marker = resolve_path(backup, "Contents/old.txt")
   ensure_dir(path_parent(marker))
   write_text(marker, "old")
-  try promote_staged_app(resolve_path(root, "missing.app"), destination) catch {
+  try
+    promote_staged_artifacts([
+      StagedArtifact::{
+        staging: resolve_path(root, "missing.app"),
+        destination,
+      },
+    ])
+  catch {
     _ => ()
   } noraise {
     _ => abort("expected staging promotion failure")
   }
   assert_true(@mbfs.path_exists(resolve_path(destination, "Contents/old.txt")))
   assert_false(@mbfs.path_exists(backup))
+}
+
+///|
+async test "macOS artifact promotion rolls back the complete output set" {
+  let root = "target/proton-package-macos-transaction"
+  remove_tree(root)
+  let app = resolve_path(root, "Demo.app")
+  let app_backup = app + ".backup"
+  let staged_app = resolve_path(root, ".demo.staging.app")
+  let dmg = resolve_path(root, "Demo.dmg")
+  let staged_dmg = resolve_path(root, ".demo.staging.dmg")
+  let staged_zip = resolve_path(root, ".demo.staging.app.zip")
+  let invalid_zip = resolve_path(root, "missing/Demo.app.zip")
+  let old_marker = resolve_path(app, "Contents/old.txt")
+  let new_marker = resolve_path(staged_app, "Contents/new.txt")
+  ensure_dir(path_parent(old_marker))
+  ensure_dir(path_parent(new_marker))
+  write_text(old_marker, "old")
+  write_text(new_marker, "new")
+  write_text(dmg, "old-dmg")
+  write_text(staged_dmg, "new-dmg")
+  write_text(staged_zip, "zip")
+  try
+    promote_staged_artifacts([
+      StagedArtifact::{ staging: staged_app, destination: app },
+      StagedArtifact::{ staging: staged_dmg, destination: dmg },
+      StagedArtifact::{ staging: staged_zip, destination: invalid_zip },
+    ])
+  catch {
+    _ => ()
+  } noraise {
+    _ => abort("expected multi-artifact promotion failure")
+  }
+  assert_true(@mbfs.path_exists(old_marker))
+  assert_false(@mbfs.path_exists(resolve_path(app, "Contents/new.txt")))
+  assert_false(@mbfs.path_exists(app_backup))
+  let restored_dmg = @mbfs.read_file_to_string(dmg, encoding="utf8") catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_eq(restored_dmg, "old-dmg")
+  assert_false(@mbfs.path_exists(dmg + ".backup"))
+  assert_true(@mbfs.path_exists(staged_zip))
 }
 
 ///|
@@ -479,9 +805,11 @@ async test "macOS notarization validates success and cleans failed upload" {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: true,
     notarize: true,
@@ -557,9 +885,11 @@ async test "release executable lookup stays inside package target dir" {
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: false,
     notarize: false,
@@ -634,9 +964,11 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     build: false,
     base_dir: root,
     frontend_dist: None,
-    entry_path: None,
+    entry_paths: [],
     resources: [],
     icons: [],
+    url_schemes: [],
+    document_types: [],
     macos_icon: None,
     sign: false,
     notarize: false,

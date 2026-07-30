@@ -2,39 +2,21 @@
 package "justjavac/proton_ext/path"
 
 import {
-  "justjavac/proton/core",
+  "justjavac/proton/command",
   "justjavac/proton/extension",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/json",
+  "justjavac/proton_contract",
 }
 
 // Values
-pub fn core_extension() -> @core.Extension
-
-pub fn core_spec() -> @core.ExtensionSpec
-
 pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 
 // Types and methods
-type BasenamePayload derive(@json.FromJson)
-
-type BasenameReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ExtnameReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type IsAbsoluteReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type JoinPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type PathPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type PathReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type PathsPayload derive(@json.FromJson)
-
-type RelativePayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

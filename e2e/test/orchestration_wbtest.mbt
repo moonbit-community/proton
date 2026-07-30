@@ -486,22 +486,30 @@ async fn close_connected_browser(browser : @client.CdpClient) -> Unit {
   let targets = browser.get_targets() catch { _ => return }
   for info in targets {
     if info.target_type == "page" {
-      let response = browser.send_command(
-        "Target.closeTarget",
-        params=Json::object({ "targetId": Json::string(info.target_id) }),
-      )
-      match response.error {
-        None => ()
-        Some(error) if error.message.to_lower().contains("no target") => ()
-        Some(error) =>
-          fail(
-            "Target.closeTarget failed: " +
-            error.code.to_string() +
-            " " +
-            error.message,
-          )
-      }
+      close_page_target(browser, info.target_id)
     }
+  }
+}
+
+///|
+async fn close_page_target(
+  browser : @client.CdpClient,
+  target_id : String,
+) -> Unit {
+  let response = browser.send_command(
+    "Target.closeTarget",
+    params=Json::object({ "targetId": Json::string(target_id) }),
+  )
+  match response.error {
+    None => ()
+    Some(error) if error.message.to_lower().contains("no target") => ()
+    Some(error) =>
+      fail(
+        "Target.closeTarget failed: " +
+        error.code.to_string() +
+        " " +
+        error.message,
+      )
   }
 }
 
@@ -566,33 +574,35 @@ async fn run_scenario_probe_once(
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
-    if name == "41_app_commands" {
-      run_app_commands_full_probe(root, target, timeout, app.native_log_path)
-    } else if name == "40_event_broadcast" {
-      run_event_scenario_page_probe(app, target, timeout)
-    } else if name == "45_bridge_multi_window" {
-      run_multi_window_scenario_page_probe(app, target, timeout)
-    } else if name == "46_asset_sidecar_resources" {
-      run_asset_sidecar_scenario_page_probe(app, target, timeout)
+    let shutdown = if name == "45_bridge_multi_window" {
+      run_multi_window_scenario_probe(app, target, timeout)
     } else {
-      run_extension_scenario_page_probe(
-        app,
-        target,
-        name,
-        timeout,
-        app.native_log_path,
-      )
-    }
-    match app_exit_code(app.process) {
-      Some(code) =>
-        fail(
-          "scenario app exited before the probe completed: code=" +
-          code.to_string() +
-          app_output_suffix(app.output_path),
+      if name == "41_app_commands" {
+        run_app_commands_full_probe(root, target, timeout, app.native_log_path)
+      } else if name == "40_event_broadcast" {
+        run_event_scenario_page_probe(app, target, timeout)
+      } else if name == "46_asset_sidecar_resources" {
+        run_asset_sidecar_scenario_page_probe(app, target, timeout)
+      } else {
+        run_extension_scenario_page_probe(
+          app,
+          target,
+          name,
+          timeout,
+          app.native_log_path,
         )
-      None => ()
+      }
+      match app_exit_code(app.process) {
+        Some(code) =>
+          fail(
+            "scenario app exited before the probe completed: code=" +
+            code.to_string() +
+            app_output_suffix(app.output_path),
+          )
+        None => ()
+      }
+      finish_scenario_app(app, target)
     }
-    let shutdown = finish_scenario_app(app, target)
     println(
       "MoonBit " +
       name +
@@ -703,7 +713,6 @@ async test "headless 45_bridge_multi_window runs as a self-hosted e2e" {
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "45_bridge_multi_window", timeout)
-  run_multi_window_lifecycle_probe(root, timeout)
 }
 
 ///|

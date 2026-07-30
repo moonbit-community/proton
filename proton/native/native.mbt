@@ -127,7 +127,44 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event revision"))
   }
-  RuntimeEvent::{ event_type, window, menu_command_id, revision }
+  let items = match object.get("items") {
+    None => []
+    Some(Array(values)) => {
+      let items : Array[String] = []
+      for value in values {
+        items.push(decode_string_json(value, "runtime event item"))
+      }
+      items
+    }
+    Some(_) =>
+      raise InvalidPayload(
+        context="runtime event items",
+        message="expected string array",
+      )
+  }
+  let ok = match object.get("ok") {
+    None => None
+    Some(True) => Some(true)
+    Some(False) => Some(false)
+    Some(_) =>
+      raise InvalidPayload(
+        context="runtime event ok",
+        message="expected boolean",
+      )
+  }
+  let message = match object.get("message") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event message"))
+  }
+  RuntimeEvent::{
+    event_type,
+    window,
+    menu_command_id,
+    revision,
+    items,
+    ok,
+    message,
+  }
 }
 
 ///|
@@ -229,20 +266,34 @@ pub fn Runtime::new(
   if status < 0 {
     raise native_error(status)
   } else {
-    Runtime::{ handle: out_runtime.val }
+    Runtime::{ handle: out_runtime.val, lifecycle: RuntimeActive }
   }
 }
 
 ///|
 pub fn Runtime::destroy(self : Runtime) -> Unit raise NativeError {
-  if self.handle == proton_invalid_handle {
-    return
+  match self.lifecycle {
+    RuntimeDestroyed => return
+    RuntimeActive | RuntimeDestroying => self.lifecycle = RuntimeDestroying
   }
   let status = proton_runtime_destroy_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
     self.handle = proton_invalid_handle
+    self.lifecycle = RuntimeDestroyed
+  }
+}
+
+///|
+fn Runtime::active_handle(self : Runtime) -> Int64 raise NativeError {
+  match self.lifecycle {
+    RuntimeActive => self.handle
+    RuntimeDestroying | RuntimeDestroyed =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="runtime is destroying or destroyed",
+      )
   }
 }
 
@@ -251,7 +302,7 @@ pub fn Runtime::destroy(self : Runtime) -> Unit raise NativeError {
 ///
 /// Managed application runners own this loop and reject this operation.
 pub fn Runtime::run(self : Runtime) -> Unit raise NativeError {
-  check_status(proton_runtime_run_ffi(self.handle))
+  check_status(proton_runtime_run_ffi(self.active_handle()))
 }
 
 ///|
@@ -260,7 +311,7 @@ pub fn Runtime::run(self : Runtime) -> Unit raise NativeError {
 /// Managed application runners own the native message loop and reject this
 /// operation.
 pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
-  check_status(proton_runtime_do_message_loop_work_ffi(self.handle))
+  check_status(proton_runtime_do_message_loop_work_ffi(self.active_handle()))
 }
 
 ///|
@@ -284,7 +335,7 @@ pub fn Runtime::wait(
   }
   let ready_mask = Ref(runtime_wait_none)
   let status = proton_runtime_wait_ffi(
-    self.handle,
+    self.active_handle(),
     interest_mask,
     timeout_ms,
     ready_mask,
@@ -307,7 +358,9 @@ pub fn Runtime::set_wakeup_fd(
   if wakeup_fd < -1 {
     raise invalid_argument("wakeup_fd must be -1 or a valid descriptor")
   }
-  check_status(proton_runtime_set_wakeup_fd_ffi(self.handle, wakeup_fd))
+  check_status(
+    proton_runtime_set_wakeup_fd_ffi(self.active_handle(), wakeup_fd),
+  )
 }
 
 ///|
@@ -317,20 +370,18 @@ pub fn Runtime::set_wakeup_fd(
 pub fn Runtime::prepare_wakeup_source(
   self : Runtime,
 ) -> String raise NativeError {
+  let handle = self.active_handle()
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = proton_runtime_prepare_wakeup_source_ffi(
-    self.handle,
-    scratch,
-    0,
-    required,
+    handle, scratch, 0, required,
   )
   if status != proton_err_buffer_too_small && status < 0 {
     raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_prepare_wakeup_source_ffi(
-    self.handle,
+    handle,
     buffer,
     buffer.length(),
     required,
@@ -347,7 +398,7 @@ pub fn Runtime::prepare_wakeup_source(
 pub fn Runtime::activate_wakeup_source(
   self : Runtime,
 ) -> Unit raise NativeError {
-  check_status(proton_runtime_activate_wakeup_source_ffi(self.handle))
+  check_status(proton_runtime_activate_wakeup_source_ffi(self.active_handle()))
 }
 
 ///|
@@ -358,7 +409,10 @@ pub fn Runtime::activate_wakeup_source(
 /// operation.
 pub fn Runtime::next_wakeup_delay_ms(self : Runtime) -> Int? raise NativeError {
   let delay = Ref(-1L)
-  let status = proton_runtime_next_wakeup_delay_ms_ffi(self.handle, delay)
+  let status = proton_runtime_next_wakeup_delay_ms_ffi(
+    self.active_handle(),
+    delay,
+  )
   if status < 0 {
     raise native_error(status)
   } else if delay.val < 0L {
@@ -378,7 +432,7 @@ pub fn Runtime::set_menu(
 ) -> Unit raise NativeError {
   check_status(
     proton_runtime_set_menu_json_ffi(
-      self.handle,
+      self.active_handle(),
       @ffi.to_cstr(menu.to_json_string()),
     ),
   )
@@ -390,19 +444,15 @@ pub fn Runtime::set_menu(
 /// Managed application runners own the native message loop and reject this
 /// operation. Destroy the runtime to finish a managed application.
 pub fn Runtime::quit(self : Runtime) -> Unit raise NativeError {
-  check_status(proton_runtime_quit_ffi(self.handle))
+  check_status(proton_runtime_quit_ffi(self.active_handle()))
 }
 
 ///|
 pub fn Runtime::poll_event_json(self : Runtime) -> String? raise NativeError {
+  let handle = self.active_handle()
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
-  let status = proton_runtime_poll_event_json_ffi(
-    self.handle,
-    scratch,
-    0,
-    required,
-  )
+  let status = proton_runtime_poll_event_json_ffi(handle, scratch, 0, required)
   if status == proton_event_none {
     return None
   }
@@ -411,7 +461,7 @@ pub fn Runtime::poll_event_json(self : Runtime) -> String? raise NativeError {
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_poll_event_json_ffi(
-    self.handle,
+    handle,
     buffer,
     buffer.length(),
     required,
@@ -435,13 +485,11 @@ pub fn Runtime::poll_event(self : Runtime) -> RuntimeEvent? raise NativeError {
 pub fn Runtime::poll_bridge_request_json(
   self : Runtime,
 ) -> String? raise NativeError {
+  let handle = self.active_handle()
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
   let status = proton_runtime_poll_bridge_request_json_ffi(
-    self.handle,
-    scratch,
-    0,
-    required,
+    handle, scratch, 0, required,
   )
   if status == proton_event_none {
     return None
@@ -451,7 +499,7 @@ pub fn Runtime::poll_bridge_request_json(
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
   let second_status = proton_runtime_poll_bridge_request_json_ffi(
-    self.handle,
+    handle,
     buffer,
     buffer.length(),
     required,
@@ -480,7 +528,7 @@ pub fn Runtime::respond_bridge_request(
 ) -> Unit raise NativeError {
   check_status(
     proton_runtime_respond_bridge_request_json_ffi(
-      self.handle,
+      self.active_handle(),
       @ffi.to_cstr(response.to_json_string()),
     ),
   )
@@ -494,62 +542,93 @@ pub fn Window::new(
   validate_window_config(config)
   let out_window = Ref(proton_invalid_handle)
   let status = proton_window_create_json_ffi(
-    runtime.handle,
+    runtime.active_handle(),
     @ffi.to_cstr(config.to_json_string()),
     out_window,
   )
   if status < 0 {
     raise native_error(status)
   } else {
-    Window::{ handle: out_window.val }
+    Window::{ handle: out_window.val, lifecycle: WindowLive }
   }
 }
 
 ///|
 pub fn Window::destroy(self : Window) -> Unit raise NativeError {
-  if self.handle == proton_invalid_handle {
-    return
+  match self.lifecycle {
+    WindowDestroyed => return
+    WindowLive | WindowCloseRequested | WindowDestroying =>
+      self.lifecycle = WindowDestroying
   }
   let status = proton_window_destroy_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
     self.handle = proton_invalid_handle
+    self.lifecycle = WindowDestroyed
+  }
+}
+
+///|
+fn Window::live_handle(self : Window) -> Int64 raise NativeError {
+  match self.lifecycle {
+    WindowLive => self.handle
+    WindowCloseRequested | WindowDestroying | WindowDestroyed =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="window is closing or destroyed",
+      )
   }
 }
 
 ///|
 pub fn Window::show(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_show_ffi(self.handle))
+  check_status(proton_window_show_ffi(self.live_handle()))
 }
 
 ///|
 /// Borrows this owning window handle for APIs that must not destroy it.
 pub fn Window::as_ref(self : Window) -> WindowRef {
-  WindowRef::unsafe_from_handle(self.handle)
+  WindowRef::unsafe_from_handle(
+    match self.lifecycle {
+      WindowLive => self.handle
+      WindowCloseRequested | WindowDestroying | WindowDestroyed =>
+        proton_invalid_handle
+    },
+  )
+}
+
+///|
+/// Returns the stable native handle used to correlate runtime events.
+pub fn Window::id(self : Window) -> Int64 {
+  match self.lifecycle {
+    WindowLive | WindowCloseRequested => self.handle
+    WindowDestroying | WindowDestroyed => proton_invalid_handle
+  }
 }
 
 ///|
 pub fn Window::hide(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_hide_ffi(self.handle))
+  check_status(proton_window_hide_ffi(self.live_handle()))
 }
 
 ///|
 pub fn Window::close(self : Window) -> Unit raise NativeError {
-  if self.handle == proton_invalid_handle {
-    return
+  match self.lifecycle {
+    WindowCloseRequested | WindowDestroying | WindowDestroyed => return
+    WindowLive => ()
   }
   let status = proton_window_close_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
-    self.handle = proton_invalid_handle
+    self.lifecycle = WindowCloseRequested
   }
 }
 
 ///|
 pub fn Window::focus(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_focus_ffi(self.handle))
+  check_status(proton_window_focus_ffi(self.live_handle()))
 }
 
 ///|
@@ -557,7 +636,9 @@ pub fn Window::set_title(
   self : Window,
   title : String,
 ) -> Unit raise NativeError {
-  check_status(proton_window_set_title_ffi(self.handle, @ffi.to_cstr(title)))
+  check_status(
+    proton_window_set_title_ffi(self.live_handle(), @ffi.to_cstr(title)),
+  )
 }
 
 ///|
@@ -569,12 +650,14 @@ pub fn Window::set_size(
   if width <= 0 || height <= 0 {
     raise invalid_argument("width and height must be positive")
   }
-  check_status(proton_window_set_size_ffi(self.handle, width, height))
+  check_status(proton_window_set_size_ffi(self.live_handle(), width, height))
 }
 
 ///|
 pub fn Window::load_url(self : Window, url : String) -> Unit raise NativeError {
-  check_status(proton_window_load_url_ffi(self.handle, @ffi.to_cstr(url)))
+  check_status(
+    proton_window_load_url_ffi(self.live_handle(), @ffi.to_cstr(url)),
+  )
 }
 
 ///|
@@ -585,7 +668,7 @@ pub fn Window::load_html(
 ) -> Unit raise NativeError {
   check_status(
     proton_window_load_html_ffi(
-      self.handle,
+      self.live_handle(),
       @ffi.to_cstr(html),
       @ffi.to_cstr(base_url),
     ),
@@ -594,7 +677,7 @@ pub fn Window::load_html(
 
 ///|
 pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
-  check_status(proton_window_eval_ffi(self.handle, @ffi.to_cstr(script)))
+  check_status(proton_window_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
 }
 
 ///|
@@ -604,7 +687,7 @@ pub fn Window::emit_bridge_event_json(
 ) -> Unit raise NativeError {
   check_status(
     proton_window_emit_bridge_event_json_ffi(
-      self.handle,
+      self.live_handle(),
       @ffi.to_cstr(event_json),
     ),
   )
@@ -618,7 +701,8 @@ fn window_bridge_json(
 ) -> String? raise NativeError {
   let required = Ref(0)
   let scratch = FixedArray::make(1, b'\x00')
-  let status = query(window.handle, scratch, 0, required)
+  let handle = window.live_handle()
+  let status = query(handle, scratch, 0, required)
   if optional && status == proton_event_none {
     return None
   }
@@ -626,7 +710,7 @@ fn window_bridge_json(
     raise native_error(status)
   }
   let buffer = FixedArray::make(required.val + 1, b'\x00')
-  let second_status = query(window.handle, buffer, buffer.length(), required)
+  let second_status = query(handle, buffer, buffer.length(), required)
   if second_status < 0 {
     raise native_error(second_status)
   } else {
@@ -688,15 +772,6 @@ pub fn Window::take_bridge_failure(
 }
 
 ///|
-fn dialog_level_to_int(level : DialogLevel) -> Int {
-  match level {
-    Info => 0
-    Warning => 1
-    Error => 2
-  }
-}
-
-///|
 fn optional_dialog_text_buffer(value : String?) -> Bytes {
   match value {
     Some(value) => @ffi.to_cstr(value)
@@ -733,7 +808,7 @@ pub fn WindowRef::begin_message_dialog(
     dialog_text_payload_len(title_buffer),
     message_buffer,
     dialog_text_payload_len(message_buffer),
-    dialog_level_to_int(level),
+    level,
     dialog,
   )
   if status < 0 {
@@ -754,12 +829,12 @@ pub fn Runtime::begin_message_dialog(
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
   let status = proton_runtime_begin_message_dialog_ffi(
-    self.handle,
+    self.active_handle(),
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
     dialog_text_payload_len(message_buffer),
-    dialog_level_to_int(level),
+    level,
     dialog,
   )
   if status < 0 {
@@ -777,7 +852,7 @@ pub fn Runtime::poll_message_dialog(
   let required = Ref(0)
   let buffer = FixedArray::make(1, b'\x00')
   let status = proton_runtime_poll_dialog_result_ffi(
-    self.handle,
+    self.active_handle(),
     dialog,
     buffer,
     buffer.length(),
@@ -808,7 +883,7 @@ pub fn WindowRef::begin_confirm_dialog(
     dialog_text_payload_len(title_buffer),
     message_buffer,
     dialog_text_payload_len(message_buffer),
-    dialog_level_to_int(level),
+    level,
     dialog,
   )
   if status < 0 {

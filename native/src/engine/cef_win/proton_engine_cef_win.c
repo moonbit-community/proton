@@ -35,6 +35,7 @@
 
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
+#include "../cef_common/bridge_response.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -94,6 +95,7 @@ struct proton_engine_window {
   int osr_paint_height;
   int osr_popup_visible;
   cef_rect_t osr_popup_rect;
+  int size_hint;
   int titlebar_overlay;
   proton_win_titlebar_region_t *draggable_regions;
   size_t draggable_region_count;
@@ -1248,7 +1250,7 @@ static int proton_engine_send_bridge_response_to_frame(
     int renderer_pending_id,
     int ok,
     const char *payload_json,
-    const char *error_message) {
+    const char *error_text) {
   if (frame == NULL) {
     return 0;
   }
@@ -1270,7 +1272,7 @@ static int proton_engine_send_bridge_response_to_frame(
   cef_string_t payload = {0};
   cef_string_t error = {0};
   proton_engine_set_string(&payload, payload_json != NULL ? payload_json : "null");
-  proton_engine_set_string(&error, error_message != NULL ? error_message : "");
+  proton_engine_set_string(&error, error_text != NULL ? error_text : "");
   args->set_string(args, 2, &payload);
   args->set_string(args, 3, &error);
   cef_string_clear(&payload);
@@ -2358,14 +2360,16 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     }
     break;
   case WM_GETMINMAXINFO:
-    if (window != NULL && window->titlebar_overlay) {
+    if (window != NULL) {
+      bool handled = false;
+      MINMAXINFO *minmax = (MINMAXINFO *)lparam;
+      if (window->titlebar_overlay) {
       HMONITOR monitor =
           MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
       MONITORINFO monitor_info;
       memset(&monitor_info, 0, sizeof(monitor_info));
       monitor_info.cbSize = sizeof(monitor_info);
       if (monitor != NULL && GetMonitorInfoW(monitor, &monitor_info)) {
-        MINMAXINFO *minmax = (MINMAXINFO *)lparam;
         minmax->ptMaxPosition.x =
             monitor_info.rcWork.left - monitor_info.rcMonitor.left;
         minmax->ptMaxPosition.y =
@@ -2374,6 +2378,20 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
             monitor_info.rcWork.right - monitor_info.rcWork.left;
         minmax->ptMaxSize.y =
             monitor_info.rcWork.bottom - monitor_info.rcWork.top;
+          handled = true;
+        }
+      }
+      if (window->size_hint == 1 || window->size_hint == 2) {
+        minmax->ptMinTrackSize.x = window->width;
+        minmax->ptMinTrackSize.y = window->height;
+        handled = true;
+      }
+      if (window->size_hint == 1 || window->size_hint == 3) {
+        minmax->ptMaxTrackSize.x = window->width;
+        minmax->ptMaxTrackSize.y = window->height;
+        handled = true;
+      }
+      if (handled) {
         return 0;
       }
     }
@@ -3848,58 +3866,42 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_set_message(error, error_len, "response_json is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  int64_t request_id = 0;
-  int ok = 0;
-  if (!proton_engine_json_read_int64_field(response_json, "request_id",
-                                          &request_id) ||
-      !proton_engine_json_read_bool_field(response_json, "ok", &ok)) {
+  proton_engine_bridge_response_t response;
+  int parse_status =
+      proton_engine_bridge_response_parse(response_json, &response);
+  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_INVALID) {
     proton_engine_set_message(error, error_len,
-                              "bridge response is missing request_id or ok");
+                              "bridge response payload is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_NO_MEMORY) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate bridge response payload");
+    return PROTON_ERR_ENGINE;
+  }
+  int64_t request_id = response.request_id;
   proton_engine_bridge_pending_t *pending =
       proton_engine_bridge_pending_take(request_id);
   if (pending == NULL) {
+    proton_engine_bridge_response_dispose(&response);
     proton_engine_debug_log("bridge_response_no_pending request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "bridge request is no longer pending");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-
-  char *payload_json = NULL;
-  char *error_message = NULL;
-  if (ok) {
-    payload_json = proton_engine_json_copy_raw_field(response_json, "payload");
-    if (payload_json == NULL) {
-      payload_json = proton_engine_strdup("null");
-    }
-  } else {
-    char *error_json = proton_engine_json_copy_raw_field(response_json, "error");
-    if (error_json != NULL) {
-      error_message = proton_engine_json_copy_string_field(error_json, "message");
-      free(error_json);
-    }
-    if (error_message == NULL) {
-      error_message = proton_engine_json_copy_string_field(response_json, "message");
-    }
-    if (error_message == NULL) {
-      error_message = proton_engine_strdup("bridge request failed");
-    }
+    return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
 
   int sent = proton_engine_send_bridge_response_to_frame(
-      pending->frame, pending->renderer_pending_id, ok, payload_json,
-      error_message);
-  free(payload_json);
-  free(error_message);
+      pending->frame, pending->renderer_pending_id, response.ok,
+      response.payload_json, response.error_json);
+  proton_engine_bridge_response_dispose(&response);
   proton_engine_bridge_pending_free(pending);
   if (!sent) {
     proton_engine_debug_log("bridge_response_send_failed request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "failed to send bridge response to renderer");
-    return PROTON_ERR_ENGINE;
+    return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
   return PROTON_OK;
 }
@@ -3935,7 +3937,9 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   int32_t height = 0;
   char title[512] = {0};
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES] = {0};
+  char size_hint[32] = {0};
   char titlebar_style[32] = {0};
+  int parsed_size_hint = 0;
   int titlebar_overlay = 0;
   if (!proton_engine_parse_json_int_field(config_json, "width", &width) ||
       !proton_engine_parse_json_int_field(config_json, "height", &height) ||
@@ -3952,6 +3956,22 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                              initial_url,
                                              sizeof(initial_url))) {
     snprintf(initial_url, sizeof(initial_url), "about:blank");
+  }
+  if (proton_engine_parse_json_string_field(config_json, "size_hint",
+                                            size_hint,
+                                            sizeof(size_hint))) {
+    if (strcmp(size_hint, "fixed") == 0) {
+      parsed_size_hint = 1;
+    } else if (strcmp(size_hint, "min") == 0) {
+      parsed_size_hint = 2;
+    } else if (strcmp(size_hint, "max") == 0) {
+      parsed_size_hint = 3;
+    } else if (strcmp(size_hint, "none") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window size_hint must be none, fixed, min, or max");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
   }
   if (proton_engine_parse_json_string_field(config_json, "titlebar_style",
                                             titlebar_style,
@@ -3984,6 +4004,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   window->width = width;
   window->height = height;
   window->headless = runtime->headless;
+  window->size_hint = parsed_size_hint;
   window->titlebar_overlay = titlebar_overlay;
   window->runtime = runtime;
   window->bridge_config_json =
@@ -4007,6 +4028,9 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
         title, wide_title,
         (int)(sizeof(wide_title) / sizeof(wide_title[0])));
     DWORD window_style = WS_OVERLAPPEDWINDOW;
+    if (window->size_hint == 1) {
+      window_style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+    }
     if (window->titlebar_overlay) {
       window_style |= WS_CLIPCHILDREN;
     }

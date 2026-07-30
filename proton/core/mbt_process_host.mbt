@@ -1,4 +1,29 @@
 ///|
+priv struct CommandErrorPolicy {
+  expose_details : Bool
+}
+
+///|
+fn CommandErrorPolicy::new(expose_details : Bool) -> CommandErrorPolicy {
+  CommandErrorPolicy::{ expose_details, }
+}
+
+///|
+fn CommandErrorPolicy::response_message(
+  self : CommandErrorPolicy,
+  error : Error,
+  safe_message : String,
+) -> String {
+  let diagnostic = @debug.render(Repr(error))
+  if self.expose_details {
+    diagnostic
+  } else {
+    println("[proton] command dispatch failed: " + diagnostic)
+    safe_message
+  }
+}
+
+///|
 /// Command host intended to run in the MBT process.
 ///
 /// The host is independent from the browser window, so application code can use
@@ -7,16 +32,23 @@
 struct MbtProcessHost {
   registry : OpRegistry
   op_names : Array[String]
+  error_policy : CommandErrorPolicy
   mut registration_sealed : Bool
   mut closed : Bool
 }
 
 ///|
 /// Creates an empty MBT-side command host.
-pub fn MbtProcessHost::new() -> MbtProcessHost {
+///
+/// Handler diagnostics remain in backend logs by default. Set
+/// `expose_error_details` only for a trusted development frontend.
+pub fn MbtProcessHost::new(
+  expose_error_details? : Bool = false,
+) -> MbtProcessHost {
   MbtProcessHost::{
     registry: OpRegistry::new(),
     op_names: [],
+    error_policy: CommandErrorPolicy::new(expose_error_details),
     registration_sealed: false,
     closed: false,
   }
@@ -77,7 +109,12 @@ pub fn MbtProcessHost::dispatch(
   let fallback_id = ipc_request_fallback_response_id(request)
   let request = request.validate() catch {
     error => {
-      complete(@ipc.IpcOpResponse::err(fallback_id, error.message()))
+      complete(
+        @ipc.IpcOpResponse::err(
+          fallback_id,
+          self.error_policy.response_message(error, "invalid command request"),
+        ),
+      )
       return
     }
   }
@@ -96,7 +133,8 @@ pub fn MbtProcessHost::dispatch(
     )
   } else {
     let response = try self.registry.call(request.name, request.payload) catch {
-      error => @ipc.IpcOpResponse::err(request.id, error.message())
+      error =>
+        @ipc.IpcOpResponse::err(request.id, self.dispatch_error_message(error))
     } noraise {
       body => @ipc.IpcOpResponse::ok(request.id, body)
     }
@@ -115,7 +153,11 @@ pub async fn MbtProcessHost::dispatch_async(
 ) -> @ipc.IpcOpResponse {
   let fallback_id = ipc_request_fallback_response_id(request)
   let request = request.validate() catch {
-    error => return @ipc.IpcOpResponse::err(fallback_id, error.message())
+    error =>
+      return @ipc.IpcOpResponse::err(
+        fallback_id,
+        self.error_policy.response_message(error, "invalid command request"),
+      )
   }
   guard !self.closed else {
     return @ipc.IpcOpResponse::err(
@@ -126,11 +168,18 @@ pub async fn MbtProcessHost::dispatch_async(
   let body = if self.registry.has_async(request.name) {
     self.registry.call_async_direct(request.name, request.payload) catch {
       error =>
-        return @ipc.IpcOpResponse::err(request.id, @debug.render(Repr(error)))
+        return @ipc.IpcOpResponse::err(
+          request.id,
+          self.dispatch_error_message(error),
+        )
     }
   } else {
     self.registry.call(request.name, request.payload) catch {
-      error => return @ipc.IpcOpResponse::err(request.id, error.message())
+      error =>
+        return @ipc.IpcOpResponse::err(
+          request.id,
+          self.dispatch_error_message(error),
+        )
     }
   }
   @ipc.IpcOpResponse::ok(request.id, body)
@@ -145,7 +194,11 @@ pub async fn MbtProcessHost::dispatch_async_with_context(
 ) -> @ipc.IpcOpResponse {
   let fallback_id = ipc_request_fallback_response_id(request)
   let request = request.validate() catch {
-    error => return @ipc.IpcOpResponse::err(fallback_id, error.message())
+    error =>
+      return @ipc.IpcOpResponse::err(
+        fallback_id,
+        self.error_policy.response_message(error, "invalid command request"),
+      )
   }
   guard !self.closed else {
     return @ipc.IpcOpResponse::err(
@@ -159,9 +212,29 @@ pub async fn MbtProcessHost::dispatch_async_with_context(
     request.payload,
   ) catch {
     error =>
-      return @ipc.IpcOpResponse::err(request.id, @debug.render(Repr(error)))
+      return @ipc.IpcOpResponse::err(
+        request.id,
+        self.dispatch_error_message(error),
+      )
   }
   @ipc.IpcOpResponse::ok(request.id, body)
+}
+
+///|
+fn MbtProcessHost::dispatch_error_message(
+  self : MbtProcessHost,
+  error : Error,
+) -> String {
+  let safe_message = match error {
+    InvalidPayload(name~, ..) => "invalid payload for op " + name
+    HandlerFailed(name~, ..) => "op " + name + " failed"
+    UnknownOp(name~) => OpDispatchError::UnknownOp(name~).message()
+    OpDispatchError::HostClosed => OpDispatchError::HostClosed.message()
+    AsyncHandlerRequiresAsync(name~) =>
+      OpDispatchError::AsyncHandlerRequiresAsync(name~).message()
+    _ => "command dispatch failed"
+  }
+  self.error_policy.response_message(error, safe_message)
 }
 
 ///|
@@ -173,7 +246,12 @@ pub fn MbtProcessHost::dispatch_json(
 ) -> Unit {
   let request = @ipc.parse_ipc_op_request(raw) catch {
     error => {
-      complete(@ipc.IpcOpResponse::err("invalid", error.message()))
+      complete(
+        @ipc.IpcOpResponse::err(
+          "invalid",
+          self.error_policy.response_message(error, "invalid command request"),
+        ),
+      )
       return
     }
   }
@@ -187,7 +265,11 @@ pub async fn MbtProcessHost::dispatch_json_async(
   raw : String,
 ) -> @ipc.IpcOpResponse {
   let request = @ipc.parse_ipc_op_request(raw) catch {
-    error => return @ipc.IpcOpResponse::err("invalid", error.message())
+    error =>
+      return @ipc.IpcOpResponse::err(
+        "invalid",
+        self.error_policy.response_message(error, "invalid command request"),
+      )
   }
   self.dispatch_async(request)
 }

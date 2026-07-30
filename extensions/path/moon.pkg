@@ -1,12 +1,20 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/x/path" @mbpath,
-  "justjavac/proton/core",
+  "justjavac/proton",
   "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton_contract",
+  "justjavac/proton_ext/path/contract" @path_contract,
 }
 
 supported_targets = "native"
 
+formatter(ignore: [ "extension.g.mbt" ])
+
 options(
-  targets: { "extension.mbt": [ "native" ], "path_api.mbt": [ "native" ] },
+  targets: {
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "path_api.mbt": [ "native" ],
+  },
 )

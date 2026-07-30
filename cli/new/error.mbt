@@ -3,6 +3,7 @@
 pub(all) suberror NewProjectInputError {
   InvalidPositiveInteger(field~ : String, value~ : String)
   EmptyTitle
+  InvalidAuthor(author~ : String, reason~ : String)
   EmptyModuleName
   ModuleUsesBackslash
   ModuleHasBoundarySlash
@@ -33,13 +34,16 @@ pub(all) suberror NewProjectTemplateError {
 pub(all) suberror NewProjectWriteError {
   CreateDirectory(path~ : String, detail~ : String)
   WriteFile(path~ : String, detail~ : String)
+  Commit(target~ : String, detail~ : String)
+  Rollback(primary~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
-/// Failures from optional external tools run after project creation.
+/// Failures from optional external tools run before project publication.
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int)
+  RegistryDependenciesUnavailable(code~ : Int, project~ : String)
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Debug, Eq)
 
@@ -49,6 +53,8 @@ pub fn NewProjectInputError::message(self : NewProjectInputError) -> String {
     InvalidPositiveInteger(field~, value~) =>
       field + " must be a positive integer: " + value
     EmptyTitle => "app title must not be empty"
+    InvalidAuthor(author~, reason~) =>
+      "invalid module author " + author + ": " + reason
     EmptyModuleName => "module name must not be empty"
     ModuleUsesBackslash => "module name must use '/' instead of '\\'"
     ModuleHasBoundarySlash => "module name must not start or end with '/'"
@@ -95,6 +101,13 @@ pub fn NewProjectWriteError::message(self : NewProjectWriteError) -> String {
     CreateDirectory(path~, detail~) =>
       "failed to create " + path + ": " + detail
     WriteFile(path~, detail~) => "failed to write " + path + ": " + detail
+    Commit(target~, detail~) =>
+      "failed to commit generated project at " + target + ": " + detail
+    Rollback(primary~, detail~) =>
+      "project generation failed: " +
+      primary +
+      "\ntransaction rollback also failed: " +
+      detail
   }
 }
 
@@ -103,12 +116,21 @@ pub fn NewProjectToolError::message(self : NewProjectToolError) -> String {
   match self {
     Start(tool~, detail~) => "failed to run " + tool + ": " + detail
     Exit(tool~, code~) => tool + " failed with exit code " + code.to_string()
-    MoonCheckFailed(code~, project~) =>
-      "project was created, but moon check failed with exit code " +
-      code.to_string() +
-      "\n\nRetry with:\n  cd " +
+    RegistryDependenciesUnavailable(code~, project~) =>
+      "moon check could not resolve the registry dependencies required by " +
       project +
-      "\n  moon check --target native --diagnostic-limit 80"
+      " (exit code " +
+      code.to_string() +
+      ").\n\nRequired Proton release chain:\n  " +
+      scaffold_release_chain() +
+      "\n\nThe project was rolled back. Install a Proton CLI release whose " +
+      "template dependencies are available in the registry, then retry."
+    MoonCheckFailed(code~, project~) =>
+      "moon check failed with exit code " +
+      code.to_string() +
+      " while validating " +
+      project +
+      "\nNo generated files were committed."
   }
 }
 

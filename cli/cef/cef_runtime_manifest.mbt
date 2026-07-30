@@ -15,7 +15,7 @@ fn runtime_manifest_json(
 }
 
 ///|
-fn write_runtime_metadata(
+async fn write_runtime_metadata(
   root : String,
   runtime_dir : String,
   proton_version : String,
@@ -27,10 +27,10 @@ fn write_runtime_metadata(
     proton_version, platform, cef_name, relative_dist,
   )
   let runtime_manifest_path = path_join(runtime_dir, "manifest.json")
-  @mbfs.write_string_to_file(
+  @async_fs.write_file(
     runtime_manifest_path,
     manifest + "\n",
-    encoding="utf8",
+    create_mode=CreateOrTruncate,
   ) catch {
     err =>
       raise CefFileSystemError::Copy(
@@ -43,10 +43,10 @@ fn write_runtime_metadata(
     path_join(root, ".proton"),
     "runtime.json",
   )
-  @mbfs.write_string_to_file(
+  @async_fs.write_file(
     active_manifest_path,
     manifest + "\n",
-    encoding="utf8",
+    create_mode=CreateOrTruncate,
   ) catch {
     err =>
       raise CefFileSystemError::Copy(
@@ -56,10 +56,10 @@ fn write_runtime_metadata(
       )
   }
   let version_path = path_join(runtime_dir, "version.txt")
-  @mbfs.write_string_to_file(
+  @async_fs.write_file(
     version_path,
     "proton=" + proton_version + "\ncef=" + cef_name + "\n",
-    encoding="utf8",
+    create_mode=CreateOrTruncate,
   ) catch {
     err =>
       raise CefFileSystemError::Copy(
@@ -71,7 +71,7 @@ fn write_runtime_metadata(
 }
 
 ///|
-fn validate_active_runtime_manifest(
+async fn validate_active_runtime_manifest(
   root : String,
   platform : String,
   proton_version : String,

@@ -40,8 +40,14 @@ fn decode_project_config(
       validate_project_top_level_fields(fields)
       let window = required_project_window(fields)
       let entry = required_project_entry(fields, base_dir)
+      let windows = optional_project_windows(fields, base_dir)
       let debug = optional_project_debug(fields)
-      let metadata = decode_project_metadata(fields, base_dir)
+      let backend = optional_project_backend(fields, base_dir)
+      let metadata_base_dir = match backend {
+        Some(backend) => backend.path()
+        None => base_dir
+      }
+      let metadata = decode_project_metadata(fields, metadata_base_dir)
       let frontend = optional_project_frontend(fields, base_dir)
       let bundle = optional_project_bundle(fields, base_dir)
       ProjectConfig::new(
@@ -49,6 +55,8 @@ fn decode_project_config(
         window,
         entry,
         metadata,
+        windows~,
+        backend~,
         frontend~,
         bundle~,
         debug~,
@@ -71,12 +79,12 @@ fn validate_project_top_level_fields(
     }
     seen[field.key] = ()
     match field.key {
-      "window" | "entry" | "debug" => ()
+      "window" | "entry" | "windows" | "debug" => ()
       "product_name" | "identifier" =>
         validate_optional_non_empty_string(field.value, field.key) catch {
           error => errors.push(error)
         }
-      "frontend" | "bundle" =>
+      "backend" | "frontend" | "bundle" =>
         validate_optional_object(field.value, field.key) catch {
           error => errors.push(error)
         }
@@ -91,13 +99,6 @@ fn validate_project_top_level_fields(
         errors.push(
           UnsupportedField(
             path="moon.proton.permissions",
-            reason="is not supported in v1.",
-          ),
-        )
-      "windows" =>
-        errors.push(
-          UnsupportedField(
-            path="moon.proton.windows",
             reason="is not supported in v1.",
           ),
         )
@@ -116,32 +117,53 @@ fn validate_project_top_level_fields(
 fn required_project_window(
   fields : Array[ConfigField],
 ) -> ProjectWindowConfig raise ProjectConfigError {
-  let value = required_config_field(fields, "window")
+  decode_project_window(required_config_field(fields, "window"), "window")
+}
+
+///|
+fn decode_project_window(
+  value : Ast,
+  label : String,
+) -> ProjectWindowConfig raise ProjectConfigError {
   guard value is Obj(window_fields, _) else {
     raise InvalidField(
-      path="moon.proton.window",
+      path="moon.proton." + label,
       expectation="must be an object",
     )
   }
-  validate_object_fields(window_fields, "window", [
+  validate_object_fields(window_fields, label, [
     "title", "width", "height", "size_hint", "titlebar_style",
   ])
   let title = required_string_config_field(
-    window_fields, "title", "window.title",
+    window_fields,
+    "title",
+    label + ".title",
   )
   let width = required_positive_int_config_field(
-    window_fields, "width", "window.width",
+    window_fields,
+    "width",
+    label + ".width",
   )
   let height = required_positive_int_config_field(
-    window_fields, "height", "window.height",
+    window_fields,
+    "height",
+    label + ".height",
   )
   let size_hint = parse_project_size_hint(
-    optional_string_config_field(window_fields, "size_hint", "window.size_hint"),
+    optional_string_config_field(
+      window_fields,
+      "size_hint",
+      label + ".size_hint",
+    ),
+    label=label + ".size_hint",
   )
   let titlebar_style = parse_project_titlebar_style(
     optional_string_config_field(
-      window_fields, "titlebar_style", "window.titlebar_style",
+      window_fields,
+      "titlebar_style",
+      label + ".titlebar_style",
     ),
+    label=label + ".titlebar_style",
   )
   ProjectWindowConfig::new(title, width, height, size_hint~, titlebar_style~)
 }
@@ -149,6 +171,7 @@ fn required_project_window(
 ///|
 fn parse_project_titlebar_style(
   titlebar_style : String?,
+  label? : String = "window.titlebar_style",
 ) -> ProjectTitlebarStyle raise ProjectConfigError {
   match titlebar_style {
     None => TitlebarDefault
@@ -156,11 +179,7 @@ fn parse_project_titlebar_style(
       match normalize_keyword(titlebar_style) {
         "default" => TitlebarDefault
         "overlay" => TitlebarOverlay
-        _ =>
-          raise UnsupportedValue(
-            path="window.titlebar_style",
-            value=titlebar_style,
-          )
+        _ => raise UnsupportedValue(path=label, value=titlebar_style)
       }
   }
 }
@@ -168,6 +187,7 @@ fn parse_project_titlebar_style(
 ///|
 fn parse_project_size_hint(
   size_hint : String?,
+  label? : String = "window.size_hint",
 ) -> ProjectWindowSizeHint raise ProjectConfigError {
   match size_hint {
     None => WindowSizeNone
@@ -177,7 +197,7 @@ fn parse_project_size_hint(
         "min" => WindowSizeMin
         "max" => WindowSizeMax
         "fixed" => WindowSizeFixed
-        _ => raise UnsupportedValue(path="window.size_hint", value=size_hint)
+        _ => raise UnsupportedValue(path=label, value=size_hint)
       }
   }
 }
@@ -187,18 +207,31 @@ fn required_project_entry(
   fields : Array[ConfigField],
   base_dir : String,
 ) -> ProjectEntry raise ProjectConfigError {
-  let value = required_config_field(fields, "entry")
+  decode_project_entry(
+    required_config_field(fields, "entry"),
+    base_dir,
+    "entry",
+  )
+}
+
+///|
+fn decode_project_entry(
+  value : Ast,
+  base_dir : String,
+  label : String,
+) -> ProjectEntry raise ProjectConfigError {
   guard value is Obj(entry_fields, _) else {
     raise InvalidField(
-      path="moon.proton.entry",
+      path="moon.proton." + label,
       expectation="must be an object",
     )
   }
-  validate_object_fields(entry_fields, "entry", ["kind", "value"])
+  validate_object_fields(entry_fields, label, ["kind", "value"])
   build_project_entry_from_parts(
-    required_string_config_field(entry_fields, "kind", "entry.kind"),
-    required_string_config_field(entry_fields, "value", "entry.value"),
+    required_string_config_field(entry_fields, "kind", label + ".kind"),
+    required_string_config_field(entry_fields, "value", label + ".value"),
     base_dir,
+    label~,
   )
 }
 
@@ -207,6 +240,7 @@ fn build_project_entry_from_parts(
   kind : String,
   value : String,
   base_dir : String,
+  label? : String = "entry",
 ) -> ProjectEntry raise ProjectConfigError {
   let normalized_kind = normalize_keyword(kind)
   let rebased_value = match normalized_kind {
@@ -218,8 +252,60 @@ fn build_project_entry_from_parts(
     "url" => ProjectEntry::Url(rebased_value)
     "file" => ProjectEntry::File(rebased_value)
     "asset" => ProjectEntry::Asset(rebased_value)
-    _ => raise UnsupportedValue(path="app entry kind", value=kind)
+    _ => raise UnsupportedValue(path=label + ".kind", value=kind)
   }
+}
+
+///|
+fn optional_project_windows(
+  fields : Array[ConfigField],
+  base_dir : String,
+) -> Array[ProjectAppWindowConfig] raise ProjectConfigError {
+  let values = match find_config_field(fields, "windows") {
+    None => return []
+    Some(Arr(values, _)) => values
+    Some(_) =>
+      raise InvalidField(
+        path="moon.proton.windows",
+        expectation="must be an array",
+      )
+  }
+  let windows : Array[ProjectAppWindowConfig] = []
+  let ids : Map[String, Unit] = Map([])
+  for index, value in values {
+    let label = "windows[" + index.to_string() + "]"
+    guard value is Obj(window_fields, _) else {
+      raise InvalidField(
+        path="moon.proton." + label,
+        expectation="must be an object",
+      )
+    }
+    validate_object_fields(window_fields, label, ["id", "window", "entry"])
+    let id = required_string_config_field(window_fields, "id", label + ".id")
+      .trim()
+      .to_owned()
+    guard id != "" else {
+      raise InvalidField(path=label + ".id", expectation="must not be empty")
+    }
+    guard id != "main" else {
+      raise UnsupportedValue(path=label + ".id", value=id)
+    }
+    guard !ids.contains(id) else {
+      raise DuplicateValue(path="windows", value=id)
+    }
+    ids[id] = ()
+    let window = decode_project_window(
+      required_config_field(window_fields, "window"),
+      label + ".window",
+    )
+    let entry = decode_project_entry(
+      required_config_field(window_fields, "entry"),
+      base_dir,
+      label + ".entry",
+    )
+    windows.push(ProjectAppWindowConfig::new(id, window, entry))
+  }
+  windows
 }
 
 ///|
@@ -263,6 +349,35 @@ fn decode_project_metadata(
 }
 
 ///|
+fn optional_project_backend(
+  fields : Array[ConfigField],
+  base_dir : String,
+) -> ProjectBackendConfig? raise ProjectConfigError {
+  match find_config_field(fields, "backend") {
+    None => None
+    Some(Obj(backend_fields, _)) => {
+      validate_object_fields(backend_fields, "backend", ["path", "package"])
+      Some(
+        ProjectBackendConfig::new(
+          rebase_project_path(
+            required_string_config_field(backend_fields, "path", "backend.path"),
+            base_dir,
+          ),
+          required_string_config_field(
+            backend_fields, "package", "backend.package",
+          ),
+        ),
+      )
+    }
+    Some(_) =>
+      raise InvalidField(
+        path="moon.proton.backend",
+        expectation="must be an object",
+      )
+  }
+}
+
+///|
 fn optional_project_frontend(
   fields : Array[ConfigField],
   base_dir : String,
@@ -271,15 +386,19 @@ fn optional_project_frontend(
     None => None
     Some(Obj(frontend_fields, _)) => {
       validate_object_fields(frontend_fields, "frontend", [
-        "dev_url", "dist", "before_dev", "before_build", "cwd",
+        "dev_url", "dist", "before_dev", "before_build", "path",
       ])
+      let path = optional_rebased_string_config_field(
+        frontend_fields, "path", "frontend.path", base_dir,
+      )
+      let frontend_base = path.unwrap_or(base_dir)
       Some(
         ProjectFrontendConfig::new(
           dev_url=optional_string_config_field(
             frontend_fields, "dev_url", "frontend.dev_url",
           ),
           dist=optional_rebased_string_config_field(
-            frontend_fields, "dist", "frontend.dist", base_dir,
+            frontend_fields, "dist", "frontend.dist", frontend_base,
           ),
           before_dev=optional_string_config_field(
             frontend_fields, "before_dev", "frontend.before_dev",
@@ -287,9 +406,7 @@ fn optional_project_frontend(
           before_build=optional_string_config_field(
             frontend_fields, "before_build", "frontend.before_build",
           ),
-          cwd=optional_rebased_string_config_field(
-            frontend_fields, "cwd", "frontend.cwd", base_dir,
-          ),
+          path~,
         ),
       )
     }
@@ -310,7 +427,8 @@ fn optional_project_bundle(
     None => None
     Some(Obj(bundle_fields, _)) => {
       validate_object_fields(bundle_fields, "bundle", [
-        "active", "targets", "icon", "resources", "output",
+        "active", "targets", "icon", "resources", "url_schemes", "document_types",
+        "output",
       ])
       let active = optional_bool_config_field(
         bundle_fields, "active", "bundle.active", false,
@@ -324,6 +442,10 @@ fn optional_project_bundle(
       let resources = optional_string_array_config_field(
         bundle_fields, "resources", "bundle.resources",
       ).map(fn(path) { rebase_project_path(path, base_dir) })
+      let url_schemes = optional_string_array_config_field(
+        bundle_fields, "url_schemes", "bundle.url_schemes",
+      )
+      let document_types = optional_project_document_types(bundle_fields)
       let output = rebase_project_path(
         optional_string_config_field(bundle_fields, "output", "bundle.output").unwrap_or(
           "target/proton-dist",
@@ -331,8 +453,17 @@ fn optional_project_bundle(
         base_dir,
       )
       validate_project_bundle_targets(targets)
+      validate_url_schemes(url_schemes)
       Some(
-        ProjectBundleConfig::new(active~, targets~, icon~, resources~, output~),
+        ProjectBundleConfig::new(
+          active~,
+          targets~,
+          icon~,
+          resources~,
+          url_schemes~,
+          document_types~,
+          output~,
+        ),
       )
     }
     Some(_) =>
@@ -344,12 +475,117 @@ fn optional_project_bundle(
 }
 
 ///|
+fn optional_project_document_types(
+  fields : Array[ConfigField],
+) -> Array[ProjectDocumentType] raise ProjectConfigError {
+  let values = match find_config_field(fields, "document_types") {
+    None => return []
+    Some(Arr(values, _)) => values
+    Some(_) =>
+      raise InvalidField(
+        path="bundle.document_types",
+        expectation="must be an array",
+      )
+  }
+  let document_types : Array[ProjectDocumentType] = []
+  for index, value in values {
+    let label = "bundle.document_types[" + index.to_string() + "]"
+    guard value is Obj(document_fields, _) else {
+      raise InvalidField(path=label, expectation="must be an object")
+    }
+    validate_object_fields(document_fields, label, [
+      "name", "extensions", "role",
+    ])
+    let name = required_string_config_field(
+      document_fields,
+      "name",
+      label + ".name",
+    )
+    let extensions = optional_string_array_config_field(
+      document_fields,
+      "extensions",
+      label + ".extensions",
+    )
+    guard extensions.length() > 0 else {
+      raise InvalidField(
+        path=label + ".extensions",
+        expectation="must contain at least one extension",
+      )
+    }
+    let seen_extensions : Map[String, Unit] = Map([])
+    for extension in extensions {
+      let normalized = extension.to_lower()
+      guard normalized != "" &&
+        !normalized.contains(".") &&
+        !normalized.contains("/") &&
+        !normalized.contains("\\") else {
+        raise UnsupportedValue(path=label + ".extensions", value=extension)
+      }
+      guard !seen_extensions.contains(normalized) else {
+        raise DuplicateValue(path=label + ".extensions", value=extension)
+      }
+      seen_extensions[normalized] = ()
+    }
+    let role = optional_string_config_field(
+      document_fields,
+      "role",
+      label + ".role",
+    ).unwrap_or("Viewer")
+    guard role == "Editor" ||
+      role == "Viewer" ||
+      role == "Shell" ||
+      role == "None" else {
+      raise UnsupportedValue(path=label + ".role", value=role)
+    }
+    document_types.push(ProjectDocumentType::new(name, extensions, role~))
+  }
+  document_types
+}
+
+///|
+fn validate_url_schemes(
+  schemes : Array[String],
+) -> Unit raise ProjectConfigError {
+  let seen : Map[String, Unit] = Map([])
+  for scheme in schemes {
+    let normalized = scheme.to_lower()
+    guard url_scheme_is_valid(normalized) else {
+      raise UnsupportedValue(path="bundle.url_schemes", value=scheme)
+    }
+    guard !seen.contains(normalized) else {
+      raise DuplicateValue(path="bundle.url_schemes", value=scheme)
+    }
+    seen[normalized] = ()
+  }
+}
+
+///|
+fn url_scheme_is_valid(scheme : String) -> Bool {
+  guard scheme.length() > 0 else { return false }
+  for index, ch in scheme {
+    let letter = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+    if index == 0 {
+      guard letter else { return false }
+    } else {
+      guard letter ||
+        (ch >= '0' && ch <= '9') ||
+        ch == '+' ||
+        ch == '-' ||
+        ch == '.' else {
+        return false
+      }
+    }
+  }
+  true
+}
+
+///|
 fn validate_project_bundle_targets(
   targets : Array[String],
 ) -> Unit raise ProjectConfigError {
   let seen : Map[String, Unit] = Map([])
   for target in targets {
-    guard target == "app" || target == "zip" else {
+    guard target == "app" || target == "zip" || target == "dmg" else {
       raise UnsupportedValue(path="bundle.targets", value=target)
     }
     guard !seen.contains(target) else {

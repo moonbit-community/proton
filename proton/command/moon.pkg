@@ -2,6 +2,11 @@ import {
   "moonbitlang/core/json",
   "justjavac/proton/core",
   "justjavac/proton/ipc",
+  "justjavac/proton_contract",
 }
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
 
 supported_targets = "native"

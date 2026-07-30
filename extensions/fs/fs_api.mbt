@@ -1,111 +1,26 @@
 ///|
-priv struct ReadFilePayload {
-  path : String
-  sync_timestamp : Bool?
-}
+type ReadFilePayload = @fs_contract.ReadFileRequest
 
 ///|
-priv struct ReadFileReply {
-  path : String
-  content : String
-  bytes_read : Int
-} derive(ToJson)
+type ReadFileReply = @fs_contract.ReadFileReply
 
 ///|
-priv struct WriteFilePayload {
-  path : String
-  content : String
-  append : Bool?
-  create_mode : String?
-  permission : Int?
-  sync : String?
-}
+type WriteFilePayload = @fs_contract.WriteFileRequest
 
 ///|
-priv struct WriteFileReply {
-  path : String
-  bytes_written : Int
-} derive(ToJson)
+type WriteFileReply = @fs_contract.WriteFileReply
 
 ///|
-struct ExistsReply {
-  exists : Bool
-} derive(ToJson, FromJson, Debug, Eq)
+type ReaddirPayload = @fs_contract.ReaddirRequest
 
 ///|
-priv struct KindReply {
-  path : String
-  kind : String
-} derive(ToJson)
+type MkdirPayload = @fs_contract.MkdirRequest
 
 ///|
-priv struct SizeReply {
-  path : String
-  size : Int64
-} derive(ToJson)
+type RemovePathPayload = @fs_contract.RemovePathRequest
 
 ///|
-priv struct ReaddirPayload {
-  path : String
-  include_hidden : Bool?
-  include_special : Bool?
-  sort : Bool?
-}
-
-///|
-priv struct ReaddirReply {
-  path : String
-  entries : Array[String]
-} derive(ToJson)
-
-///|
-priv struct MkdirPayload {
-  path : String
-  permission : Int?
-  recursive : Bool?
-}
-
-///|
-priv struct MkdirReply {
-  path : String
-  created : Bool
-} derive(ToJson)
-
-///|
-struct RemoveFileReply {
-  removed : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-priv struct RemovePathPayload {
-  path : String
-  recursive : Bool?
-}
-
-///|
-priv struct RemovePathReply {
-  path : String
-  removed : Bool
-} derive(ToJson)
-
-///|
-priv struct RenamePayload {
-  old_path : String
-  new_path : String
-  replace : Bool?
-}
-
-///|
-priv struct RenameReply {
-  old_path : String
-  new_path : String
-  renamed : Bool
-} derive(ToJson)
-
-///|
-priv struct RealpathReply {
-  path : String
-} derive(ToJson)
+type RenamePayload = @fs_contract.RenameRequest
 
 ///|
 fn option_bool(value : Bool?, default_value : Bool) -> Bool {

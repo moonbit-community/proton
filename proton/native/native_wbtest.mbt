@@ -159,10 +159,13 @@ test "runtime and window lifecycle uses non-zero Int64 handles" {
   window.destroy()
   runtime.destroy()
   runtime.destroy()
+  let error = expect_native_error(() => runtime.poll_event())
+  inspect(error.status(), content="-3")
+  assert_true(error.message().contains("destroying or destroyed"))
 }
 
 ///|
-test "window close invalidates MoonBit handle" {
+test "window close rejects further use and remains destroyable" {
   let runtime = Runtime::new()
   let window = Window::new(runtime)
   match runtime.poll_event() {
@@ -177,8 +180,8 @@ test "window close invalidates MoonBit handle" {
   window.close()
   window.destroy()
   let error = expect_native_error(() => window.show())
-  inspect(error.status(), content="-2")
-  assert_true(error.message().contains("invalid window handle"))
+  inspect(error.status(), content="-3")
+  assert_true(error.message().contains("closing or destroyed"))
   assert_true(runtime.poll_event() is None)
   runtime.destroy()
 }
@@ -452,7 +455,7 @@ test "execute_process does not ignore engine configs" {
 
 ///|
 test "invalid handle returns structured native error" {
-  let window = Window::{ handle: 0L }
+  let window = Window::{ handle: 0L, lifecycle: WindowLive }
   let error = expect_native_error(() => window.show())
   inspect(error.status(), content="-2")
   assert_true(error.message().contains("invalid window handle"))
@@ -584,6 +587,43 @@ test "typed window config serializes overlay titlebar style" {
 }
 
 ///|
+test "typed window config serializes supported size hints" {
+  let config = WindowConfig::new(size_hint=WindowSizeHint::Fixed)
+  let json = config.to_json_string()
+  let info = runtime_info() catch { _ => return }
+  if info.features.contains("window_size_hints") {
+    assert_true(json.contains("\"size_hint\":\"fixed\""))
+  } else {
+    assert_false(json.contains("\"size_hint\""))
+  }
+}
+
+///|
+test "runtime events decode typed launch inputs and notification results" {
+  let urls = decode_runtime_event_json(
+    "{\"type\":\"open_urls\",\"items\":[\"devtoys://open?id=1\"]}",
+  )
+  @debug.assert_eq(
+    urls.launch_input(),
+    Some(RuntimeLaunchInput::OpenUrls(["devtoys://open?id=1"])),
+  )
+  let files = decode_runtime_event_json(
+    "{\"type\":\"open_files\",\"items\":[\"/tmp/a.txt\"]}",
+  )
+  @debug.assert_eq(
+    files.launch_input(),
+    Some(RuntimeLaunchInput::OpenFiles(["/tmp/a.txt"])),
+  )
+  let denied = decode_runtime_event_json(
+    "{\"type\":\"notification_result\",\"ok\":false,\"message\":\"denied\"}",
+  )
+  @debug.assert_eq(
+    denied.notification_result(),
+    Some(NativeNotificationResult::Failed("denied")),
+  )
+}
+
+///|
 test "window config accepts overlay titlebar style" {
   let runtime = Runtime::new()
   let window = Window::new(
@@ -602,6 +642,22 @@ test "window config rejects unsupported titlebar style" {
       runtime,
       config=WindowConfig::unsafe_from_json(
         "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"titlebar_style\":\"hidden_inset\"}",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("invalid type or range"))
+  runtime.destroy()
+}
+
+///|
+test "window config rejects unsupported size hints" {
+  let runtime = Runtime::new()
+  let error = expect_native_error(() => {
+    Window::new(
+      runtime,
+      config=WindowConfig::unsafe_from_json(
+        "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"size_hint\":\"stretch\"}",
       ),
     )
   })

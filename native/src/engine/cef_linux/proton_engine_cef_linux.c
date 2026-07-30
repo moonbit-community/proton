@@ -38,6 +38,7 @@
 
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
+#include "../cef_common/bridge_response.h"
 
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
@@ -126,6 +127,7 @@ struct proton_engine_window {
   int osr_paint_height;
   int osr_popup_visible;
   cef_rect_t osr_popup_rect;
+  int size_hint;
   int titlebar_overlay;
   proton_linux_titlebar_region_t *draggable_regions;
   size_t draggable_region_count;
@@ -233,6 +235,7 @@ typedef struct {
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
   int32_t width;
   int32_t height;
+  int size_hint;
   int titlebar_overlay;
 } proton_engine_window_config_t;
 
@@ -1701,7 +1704,7 @@ static int proton_engine_send_bridge_response_to_frame(
     int renderer_pending_id,
     int ok,
     const char *payload_json,
-    const char *error_message) {
+    const char *error_text) {
   if (frame == NULL) {
     return 0;
   }
@@ -1723,7 +1726,7 @@ static int proton_engine_send_bridge_response_to_frame(
   cef_string_t payload = {0};
   cef_string_t error = {0};
   proton_engine_set_string(&payload, payload_json != NULL ? payload_json : "null");
-  proton_engine_set_string(&error, error_message != NULL ? error_message : "");
+  proton_engine_set_string(&error, error_text != NULL ? error_text : "");
   args->set_string(args, 2, &payload);
   args->set_string(args, 3, &error);
   cef_string_clear(&payload);
@@ -2326,6 +2329,22 @@ static int32_t proton_engine_parse_window_config(
   proton_engine_parse_json_string_field(config_json, "initial_url",
                                         config->initial_url,
                                         sizeof(config->initial_url));
+  char size_hint[32] = {0};
+  if (proton_engine_parse_json_string_field(
+          config_json, "size_hint", size_hint, sizeof(size_hint))) {
+    if (strcmp(size_hint, "fixed") == 0) {
+      config->size_hint = 1;
+    } else if (strcmp(size_hint, "min") == 0) {
+      config->size_hint = 2;
+    } else if (strcmp(size_hint, "max") == 0) {
+      config->size_hint = 3;
+    } else if (strcmp(size_hint, "none") != 0) {
+      proton_engine_set_message(
+          error, error_len,
+          "window size_hint must be none, fixed, min, or max");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+  }
   char titlebar_style[32] = {0};
   if (proton_engine_parse_json_string_field(config_json, "titlebar_style",
                                             titlebar_style,
@@ -4114,59 +4133,42 @@ int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_set_message(error, error_len, "response_json is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  int64_t request_id = 0;
-  int ok = 0;
-  if (!proton_engine_json_read_int64_field(response_json, "request_id",
-                                          &request_id) ||
-      !proton_engine_json_read_bool_field(response_json, "ok", &ok)) {
+  proton_engine_bridge_response_t response;
+  int parse_status =
+      proton_engine_bridge_response_parse(response_json, &response);
+  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_INVALID) {
     proton_engine_set_message(error, error_len,
-                              "bridge response is missing request_id or ok");
+                              "bridge response payload is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_NO_MEMORY) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate bridge response payload");
+    return PROTON_ERR_ENGINE;
+  }
+  int64_t request_id = response.request_id;
   proton_engine_bridge_pending_t *pending =
       proton_engine_bridge_pending_take(request_id);
   if (pending == NULL) {
+    proton_engine_bridge_response_dispose(&response);
     proton_engine_debug_log("bridge_response_no_pending request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "bridge request is no longer pending");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-
-  char *payload_json = NULL;
-  char *error_message = NULL;
-  if (ok) {
-    payload_json = proton_engine_json_copy_raw_field(response_json, "payload");
-    if (payload_json == NULL) {
-      payload_json = proton_engine_strdup("null");
-    }
-  } else {
-    char *error_json = proton_engine_json_copy_raw_field(response_json, "error");
-    if (error_json != NULL) {
-      error_message = proton_engine_json_copy_string_field(error_json, "message");
-      free(error_json);
-    }
-    if (error_message == NULL) {
-      error_message = proton_engine_json_copy_string_field(response_json,
-                                                           "message");
-    }
-    if (error_message == NULL) {
-      error_message = proton_engine_strdup("bridge request failed");
-    }
+    return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
 
   int sent = proton_engine_send_bridge_response_to_frame(
-      pending->frame, pending->renderer_pending_id, ok, payload_json,
-      error_message);
-  free(payload_json);
-  free(error_message);
+      pending->frame, pending->renderer_pending_id, response.ok,
+      response.payload_json, response.error_json);
+  proton_engine_bridge_response_dispose(&response);
   proton_engine_bridge_pending_free(pending);
   if (!sent) {
     proton_engine_debug_log("bridge_response_send_failed request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "failed to send bridge response to renderer");
-    return PROTON_ERR_ENGINE;
+    return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
   return PROTON_OK;
 }
@@ -4307,6 +4309,7 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   window->width = config.width;
   window->height = config.height;
   window->headless = runtime->headless;
+  window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
   window->bridge_config_json =
       proton_engine_json_copy_raw_field(config_json, "bridge");
@@ -4337,9 +4340,24 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                          config.title[0] != '\0' ? config.title : "Proton");
     gtk_window_set_default_size(GTK_WINDOW(window->window), config.width,
                                 config.height);
+    if (config.size_hint == 1) {
+      gtk_window_set_resizable(GTK_WINDOW(window->window), FALSE);
+    } else if (config.size_hint == 2 || config.size_hint == 3) {
+      GdkGeometry geometry = {0};
+      GdkWindowHints hints = config.size_hint == 2 ? GDK_HINT_MIN_SIZE
+                                                   : GDK_HINT_MAX_SIZE;
+      if (config.size_hint == 2) {
+        geometry.min_width = config.width;
+        geometry.min_height = config.height;
+      } else {
+        geometry.max_width = config.width;
+        geometry.max_height = config.height;
+      }
+      gtk_window_set_geometry_hints(GTK_WINDOW(window->window), NULL,
+                                    &geometry, hints);
+    }
     if (window->titlebar_overlay) {
       gtk_window_set_decorated(GTK_WINDOW(window->window), FALSE);
-      gtk_window_set_resizable(GTK_WINDOW(window->window), TRUE);
       window->overlay = gtk_overlay_new();
       if (window->overlay == NULL) {
         gtk_widget_destroy(window->window);

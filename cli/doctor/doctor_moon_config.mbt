@@ -48,11 +48,11 @@ fn ast_bool(ast : @moon_config.Ast?) -> Bool? {
 }
 
 ///|
-fn read_moon_file(path : String) -> String raise MoonConfigReadError {
-  if !@mbfs.path_exists(path) {
+async fn read_moon_file(path : String) -> String {
+  if !doctor_path_exists(path) {
     raise MissingFile(path)
   } else {
-    @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    @async_fs.read_file(path).text() catch {
       err => raise ReadFailed(path, @debug.render(Repr(err)))
     }
   }
@@ -129,7 +129,7 @@ fn parse_pkg_imports(ast : @moon_config.Ast) -> Array[MoonPackageImport] {
 }
 
 ///|
-fn read_moon_mod(path : String) -> MoonModuleConfig raise MoonConfigReadError {
+async fn read_moon_mod(path : String) -> MoonModuleConfig {
   let source = read_moon_file(path)
   let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
   if reports.length() > 0 && !reports_only_reject_source(reports) {
@@ -169,7 +169,7 @@ fn normalize_moon_pkg_source(source : String) -> (String, Bool) {
 }
 
 ///|
-fn read_moon_pkg(path : String) -> MoonPackageConfig raise MoonConfigReadError {
+async fn read_moon_pkg(path : String) -> MoonPackageConfig {
   let source = read_moon_file(path)
   let (source, is_executable) = normalize_moon_pkg_source(source)
   let (ast, reports) = @moon_config.parse_moon_pkg(name=path, source)

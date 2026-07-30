@@ -1,5 +1,6 @@
 #include "proton_native.h"
 #include "../src/engine/cef_common/bridge_lifecycle.h"
+#include "../src/engine/cef_common/bridge_response.h"
 #include "../src/proton_json.h"
 
 #include <stdio.h>
@@ -314,6 +315,74 @@ static int expect_valid_json(const char *label, const char *json) {
   return 0;
 }
 
+static int expect_root_json_values(void) {
+  static const char *values[] = {
+      "null",
+      "true",
+      "false",
+      "42",
+      "-1.5e+2",
+      "\"text\"",
+  };
+  for (size_t index = 0; index < sizeof(values) / sizeof(values[0]); index++) {
+    proton_json_doc_t doc;
+    if (!proton_json_parse(&doc, values[index])) {
+      fprintf(stderr, "root JSON value rejected: %s\n", values[index]);
+      return 1;
+    }
+    if (!proton_json_is_single_value(&doc)) {
+      fprintf(stderr, "root JSON value is not singular: %s\n", values[index]);
+      proton_json_dispose(&doc);
+      return 1;
+    }
+    proton_json_dispose(&doc);
+  }
+  return 0;
+}
+
+static int expect_bridge_response_payloads(void) {
+  proton_engine_bridge_response_t response;
+  int status = proton_engine_bridge_response_parse(
+      "{\"abi_version\":1,\"request_id\":\"42\",\"ok\":true,"
+      "\"payload\":{\"value\":\"pong\"}}",
+      &response);
+  if (status != PROTON_ENGINE_BRIDGE_RESPONSE_OK ||
+      response.request_id != 42 || !response.ok ||
+      response.payload_json == NULL ||
+      strcmp(response.payload_json, "{\"value\":\"pong\"}") != 0 ||
+      response.error_json != NULL) {
+    proton_engine_bridge_response_dispose(&response);
+    return fail("successful bridge response payload was not preserved");
+  }
+  proton_engine_bridge_response_dispose(&response);
+
+  status = proton_engine_bridge_response_parse(
+      "{\"abi_version\":1,\"request_id\":43,\"ok\":false,"
+      "\"error\":{\"code\":\"request_timeout\","
+      "\"message\":\"bridge request timed out\","
+      "\"detail\":\"backend deadline\"}}",
+      &response);
+  if (status != PROTON_ENGINE_BRIDGE_RESPONSE_OK ||
+      response.request_id != 43 || response.ok ||
+      response.payload_json != NULL || response.error_json == NULL ||
+      strcmp(response.error_json,
+             "{\"code\":\"request_timeout\","
+             "\"message\":\"bridge request timed out\","
+             "\"detail\":\"backend deadline\"}") != 0) {
+    proton_engine_bridge_response_dispose(&response);
+    return fail("failed bridge response error JSON was not preserved");
+  }
+  proton_engine_bridge_response_dispose(&response);
+
+  status = proton_engine_bridge_response_parse(
+      "{\"abi_version\":1,\"request_id\":44,\"ok\":false}", &response);
+  if (status != PROTON_ENGINE_BRIDGE_RESPONSE_INVALID) {
+    proton_engine_bridge_response_dispose(&response);
+    return fail("failed bridge response without error should be invalid");
+  }
+  return 0;
+}
+
 static int expect_bridge_lifecycle_state(void) {
   static const char first_failure[] =
       "{\"abi_version\":1,\"stage\":\"bootstrap\","
@@ -543,7 +612,7 @@ static int expect_runtime_info(void) {
   if (required <= 0) {
     return fail("runtime_info did not report required length");
   }
-  char buffer[256];
+  char buffer[512];
   status = proton_runtime_info_json(buffer, (int32_t)sizeof(buffer), &required);
   if (expect_status("runtime_info", status, PROTON_OK)) {
     return 1;
@@ -555,6 +624,8 @@ static int expect_runtime_info(void) {
   int has_titlebar_overlay =
       strstr(buffer, "\"titlebar_overlay\"") != NULL;
   int has_headless_osr = strstr(buffer, "\"headless_osr\"") != NULL;
+  int has_window_size_hints =
+      strstr(buffer, "\"window_size_hints\"") != NULL;
   int has_managed_app_runner =
       strstr(buffer, "\"managed_app_runner\"") != NULL;
   int has_wakeup_source =
@@ -576,6 +647,10 @@ static int expect_runtime_info(void) {
   }
   if (has_headless_osr != has_runtime) {
     fprintf(stderr, "unexpected headless OSR capability: %s\n", buffer);
+    return 1;
+  }
+  if (has_window_size_hints != has_runtime) {
+    fprintf(stderr, "unexpected window size hint capability: %s\n", buffer);
     return 1;
   }
 #else
@@ -916,6 +991,12 @@ int main(void) {
   int32_t status = PROTON_OK;
 
   if (expect_bridge_lifecycle_state()) {
+    return 1;
+  }
+  if (expect_root_json_values()) {
+    return 1;
+  }
+  if (expect_bridge_response_payloads()) {
     return 1;
   }
 
@@ -1335,6 +1416,46 @@ int main(void) {
   }
   if (expect_event_none(runtime)) {
     return 1;
+  }
+
+  proton_window_id_t queued_windows[32];
+  for (int i = 0; i < 32; i++) {
+    queued_windows[i] = PROTON_INVALID_HANDLE;
+    if (expect_status(
+            "window_create while filling event queue",
+            proton_window_create_json(
+                runtime, "{\"abi_version\":1,\"title\":\"Queued\","
+                         "\"width\":320,\"height\":240}",
+                &queued_windows[i]),
+            PROTON_OK)) {
+      return 1;
+    }
+  }
+  if (expect_status("window_destroy with full event queue",
+                    proton_window_destroy(queued_windows[0]),
+                    PROTON_ERR_QUEUE_FAILED) ||
+      expect_status("window remains live after destroy backpressure",
+                    proton_window_show(queued_windows[0]), PROTON_OK) ||
+      expect_event(runtime, "window_created") ||
+      expect_status("window_destroy after draining queue",
+                    proton_window_destroy(queued_windows[0]), PROTON_OK)) {
+    return 1;
+  }
+  for (int i = 1; i < 32; i++) {
+    if (expect_event(runtime, "window_created")) {
+      return 1;
+    }
+  }
+  if (expect_event(runtime, "window_closed") ||
+      expect_status("window_destroy after queue retry is idempotent",
+                    proton_window_destroy(queued_windows[0]), PROTON_OK)) {
+    return 1;
+  }
+  for (int i = 1; i < 32; i++) {
+    if (expect_status("queued window_destroy",
+                      proton_window_destroy(queued_windows[i]), PROTON_OK)) {
+      return 1;
+    }
   }
 
   if (expect_status("runtime_destroy", proton_runtime_destroy(runtime),

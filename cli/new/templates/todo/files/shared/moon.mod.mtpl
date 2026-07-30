@@ -1,0 +1,16 @@
+name = "{{shared_module}}"
+
+version = "0.1.0"
+
+import {
+  "justjavac/proton_contract@{{proton_contract_version}}",
+}
+
+license = "Apache-2.0"
+
+description = "Shared typed contracts for {{title}}."
+
+options(
+  warn_list: "",
+  supported_targets: "js+native",
+)

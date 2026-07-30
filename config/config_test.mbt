@@ -181,13 +181,19 @@ test "project config rebases file entry and frontend paths from config directory
     #|  value: "frontend/dist/index.html",
     #|}
     #|
+    #|backend = {
+    #|  path: "backend module",
+    #|  package: "app",
+    #|}
+    #|
     #|frontend = {
     #|  dev_url: "http://localhost:5173",
-    #|  dist: "frontend/dist",
-    #|  cwd: "frontend",
+    #|  dist: "dist",
+    #|  path: "frontend module",
     #|}
     #|
     #|bundle = {
+    #|  targets: ["app", "zip", "dmg"],
     #|  icon: ["icons/icon.ico"],
     #|  resources: ["resources/**"],
     #|  output: "target/proton-dist",
@@ -203,18 +209,26 @@ test "project config rebases file entry and frontend paths from config directory
       )
     _ => abort("expected asset entry")
   }
+  let backend = config.backend().unwrap()
+  assert_eq(backend.app_package(), "app")
+  assert_true(
+    normalize_test_path(backend.path()).has_suffix(
+      "target/proton-config/subdir/backend module",
+    ),
+  )
   let frontend = config.frontend().unwrap()
   assert_true(
     normalize_test_path(frontend.dist().unwrap()).has_suffix(
-      "target/proton-config/subdir/frontend/dist",
+      "target/proton-config/subdir/frontend module/dist",
     ),
   )
   assert_true(
-    normalize_test_path(frontend.cwd().unwrap()).has_suffix(
-      "target/proton-config/subdir/frontend",
+    normalize_test_path(frontend.path().unwrap()).has_suffix(
+      "target/proton-config/subdir/frontend module",
     ),
   )
   let bundle = config.bundle().unwrap()
+  assert_eq(bundle.targets, ["app", "zip", "dmg"])
   assert_true(
     normalize_test_path(bundle.icon[0]).has_suffix(
       "target/proton-config/subdir/icons/icon.ico",
@@ -229,6 +243,84 @@ test "project config rebases file entry and frontend paths from config directory
     normalize_test_path(bundle.output()).has_suffix(
       "target/proton-config/subdir/target/proton-dist",
     ),
+  )
+}
+
+///|
+test "project config reads module metadata from configured backend" {
+  let project_dir = "target/project-config-backend-metadata"
+  let backend_dir = project_dir + "/backend"
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.create_dir(project_dir) catch {
+    _ => ()
+  }
+  @mbfs.create_dir(backend_dir) catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(
+    backend_dir + "/moon.mod",
+    (
+      #|name = "example/backend"
+      #|version = "1.2.3"
+      #|description = "Backend module metadata"
+      #|license = "Apache-2.0"
+      #|
+    ),
+    encoding="utf8",
+  ) catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "frontend/dist/index.html",
+    #|}
+    #|
+    #|backend = {
+    #|  path: "backend",
+    #|  package: "app",
+    #|}
+    #|
+  let metadata = load_project_config_from_text(source, project_dir)
+    .config()
+    .metadata()
+  assert_eq(metadata.version, Some("1.2.3"))
+  assert_eq(metadata.description, Some("Backend module metadata"))
+  assert_eq(metadata.license, Some("Apache-2.0"))
+}
+
+///|
+test "project config rejects legacy frontend cwd" {
+  let source =
+    #|window = {
+    #|  title: "App",
+    #|  width: 900,
+    #|  height: 700,
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "html",
+    #|  value: "<main>App</main>",
+    #|}
+    #|
+    #|frontend = {
+    #|  cwd: "frontend",
+    #|}
+    #|
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_eq(
+    error.message(),
+    "Unexpected key 'cwd' found in moon.proton field `frontend`.",
   )
 }
 
@@ -326,6 +418,102 @@ test "loaded project config carries warnings" {
     "moon.proton field `legacy` is deprecated",
   ])
   assert_eq(with_warnings.config(), loaded.config())
+}
+
+///|
+test "project config decodes secondary windows and macOS launch metadata" {
+  let source =
+    #|window = {
+    #|  title: "Main",
+    #|  width: 900,
+    #|  height: 700,
+    #|  size_hint: "fixed",
+    #|}
+    #|
+    #|entry = {
+    #|  kind: "html",
+    #|  value: "<main>Main</main>",
+    #|}
+    #|
+    #|windows = [{
+    #|  id: "settings",
+    #|  window: {
+    #|    title: "Settings",
+    #|    width: 480,
+    #|    height: 360,
+    #|  },
+    #|  entry: {
+    #|    kind: "file",
+    #|    value: "settings.html",
+    #|  },
+    #|}]
+    #|
+    #|bundle = {
+    #|  active: true,
+    #|  url_schemes: ["devtoys"],
+    #|  document_types: [{
+    #|    name: "Text",
+    #|    extensions: ["txt", "md"],
+    #|    role: "Editor",
+    #|  }],
+    #|}
+    #|
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  assert_eq(config.windows().length(), 1)
+  assert_eq(config.windows()[0].id, "settings")
+  let entries = config.entries()
+  assert_eq(entries.length(), 2)
+  assert_eq(entries[0], ProjectEntry::Html("<main>Main</main>"))
+  match entries[1] {
+    ProjectEntry::File(path) =>
+      assert_true(
+        normalize_test_path(path).has_suffix(
+          "target/proton-config/settings.html",
+        ),
+      )
+    _ => abort("expected secondary file entry")
+  }
+  let bundle = config.bundle().unwrap()
+  assert_eq(bundle.url_schemes, ["devtoys"])
+  assert_eq(bundle.document_types.length(), 1)
+  assert_eq(bundle.document_types[0].extensions, ["txt", "md"])
+}
+
+///|
+test "project config rejects reserved window ids and invalid document extensions" {
+  let reserved =
+    #|window = { title: "Main", width: 900, height: 700 }
+    #|entry = { kind: "html", value: "<main>Main</main>" }
+    #|windows = [{
+    #|  id: "main",
+    #|  window: { title: "Other", width: 480, height: 360 },
+    #|  entry: { kind: "html", value: "other" },
+    #|}]
+    #|
+  let reserved_error = expect_project_config_error(() => {
+    load_project_config_from_text(reserved, ".")
+  })
+  assert_true(
+    reserved_error.message().contains("unsupported windows[0].id: main"),
+  )
+  let invalid_extension =
+    #|window = { title: "Main", width: 900, height: 700 }
+    #|entry = { kind: "html", value: "<main>Main</main>" }
+    #|bundle = {
+    #|  document_types: [{
+    #|    name: "Text",
+    #|    extensions: [".txt"],
+    #|  }],
+    #|}
+    #|
+  let extension_error = expect_project_config_error(() => {
+    load_project_config_from_text(invalid_extension, ".")
+  })
+  assert_true(
+    extension_error
+    .message()
+    .contains("unsupported bundle.document_types[0].extensions: .txt"),
+  )
 }
 
 ///|

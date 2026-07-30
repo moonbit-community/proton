@@ -30,6 +30,22 @@ pub(all) struct ProjectWindowConfig {
 } derive(Eq, Debug)
 
 ///|
+pub(all) struct ProjectAppWindowConfig {
+  id : String
+  window : ProjectWindowConfig
+  entry : ProjectEntry
+} derive(Eq, Debug)
+
+///|
+pub fn ProjectAppWindowConfig::new(
+  id : String,
+  window : ProjectWindowConfig,
+  entry : ProjectEntry,
+) -> ProjectAppWindowConfig {
+  ProjectAppWindowConfig::{ id, window, entry }
+}
+
+///|
 pub fn ProjectWindowConfig::new(
   title : String,
   width : Int,
@@ -61,12 +77,36 @@ pub fn ProjectMetadata::new(
 }
 
 ///|
+pub(all) struct ProjectBackendConfig {
+  path : String
+  app_package : String
+} derive(Eq, Debug)
+
+///|
+pub fn ProjectBackendConfig::new(
+  path : String,
+  app_package : String,
+) -> ProjectBackendConfig {
+  ProjectBackendConfig::{ path, app_package }
+}
+
+///|
+pub fn ProjectBackendConfig::path(self : ProjectBackendConfig) -> String {
+  self.path
+}
+
+///|
+pub fn ProjectBackendConfig::app_package(self : ProjectBackendConfig) -> String {
+  self.app_package
+}
+
+///|
 pub(all) struct ProjectFrontendConfig {
   dev_url : String?
   dist : String?
   before_dev : String?
   before_build : String?
-  cwd : String?
+  path : String?
 } derive(Eq, Debug)
 
 ///|
@@ -75,9 +115,9 @@ pub fn ProjectFrontendConfig::new(
   dist? : String? = None,
   before_dev? : String? = None,
   before_build? : String? = None,
-  cwd? : String? = None,
+  path? : String? = None,
 ) -> ProjectFrontendConfig {
-  ProjectFrontendConfig::{ dev_url, dist, before_dev, before_build, cwd }
+  ProjectFrontendConfig::{ dev_url, dist, before_dev, before_build, path }
 }
 
 ///|
@@ -105,8 +145,8 @@ pub fn ProjectFrontendConfig::before_build(
 }
 
 ///|
-pub fn ProjectFrontendConfig::cwd(self : ProjectFrontendConfig) -> String? {
-  self.cwd
+pub fn ProjectFrontendConfig::path(self : ProjectFrontendConfig) -> String? {
+  self.path
 }
 
 ///|
@@ -115,8 +155,26 @@ pub(all) struct ProjectBundleConfig {
   targets : Array[String]
   icon : Array[String]
   resources : Array[String]
+  url_schemes : Array[String]
+  document_types : Array[ProjectDocumentType]
   output : String
 } derive(Eq, Debug)
+
+///|
+pub(all) struct ProjectDocumentType {
+  name : String
+  extensions : Array[String]
+  role : String
+} derive(Eq, Debug)
+
+///|
+pub fn ProjectDocumentType::new(
+  name : String,
+  extensions : Array[String],
+  role? : String = "Viewer",
+) -> ProjectDocumentType {
+  ProjectDocumentType::{ name, extensions: extensions.copy(), role }
+}
 
 ///|
 pub fn ProjectBundleConfig::new(
@@ -124,6 +182,8 @@ pub fn ProjectBundleConfig::new(
   targets? : Array[String] = [],
   icon? : Array[String] = [],
   resources? : Array[String] = [],
+  url_schemes? : Array[String] = [],
+  document_types? : Array[ProjectDocumentType] = [],
   output? : String = "target/proton-dist",
 ) -> ProjectBundleConfig {
   ProjectBundleConfig::{
@@ -131,6 +191,8 @@ pub fn ProjectBundleConfig::new(
     targets: copy_strings(targets),
     icon: copy_strings(icon),
     resources: copy_strings(resources),
+    url_schemes: copy_strings(url_schemes),
+    document_types: document_types.copy(),
     output,
   }
 }
@@ -150,7 +212,9 @@ pub(all) struct ProjectConfig {
   base_dir : String
   window : ProjectWindowConfig
   entry : ProjectEntry
+  windows : Array[ProjectAppWindowConfig]
   metadata : ProjectMetadata
+  backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
   debug : Int
@@ -162,11 +226,23 @@ pub fn ProjectConfig::new(
   window : ProjectWindowConfig,
   entry : ProjectEntry,
   metadata : ProjectMetadata,
+  windows? : Array[ProjectAppWindowConfig] = [],
+  backend? : ProjectBackendConfig? = None,
   frontend? : ProjectFrontendConfig? = None,
   bundle? : ProjectBundleConfig? = None,
   debug? : Int = 0,
 ) -> ProjectConfig {
-  ProjectConfig::{ base_dir, window, entry, metadata, frontend, bundle, debug }
+  ProjectConfig::{
+    base_dir,
+    window,
+    entry,
+    windows: windows.copy(),
+    metadata,
+    backend,
+    frontend,
+    bundle,
+    debug,
+  }
 }
 
 ///|
@@ -185,8 +261,31 @@ pub fn ProjectConfig::entry(self : ProjectConfig) -> ProjectEntry {
 }
 
 ///|
+/// Returns the primary entry followed by each secondary window entry in
+/// declaration order.
+pub fn ProjectConfig::entries(self : ProjectConfig) -> Array[ProjectEntry] {
+  let entries = [self.entry]
+  for window in self.windows {
+    entries.push(window.entry)
+  }
+  entries
+}
+
+///|
+pub fn ProjectConfig::windows(
+  self : ProjectConfig,
+) -> Array[ProjectAppWindowConfig] {
+  self.windows.copy()
+}
+
+///|
 pub fn ProjectConfig::metadata(self : ProjectConfig) -> ProjectMetadata {
   self.metadata
+}
+
+///|
+pub fn ProjectConfig::backend(self : ProjectConfig) -> ProjectBackendConfig? {
+  self.backend
 }
 
 ///|

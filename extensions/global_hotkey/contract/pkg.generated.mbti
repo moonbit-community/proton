@@ -1,0 +1,54 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/global_hotkey/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[GlobalHotkeyActivity]
+
+pub let drain_triggered : @proton_contract.Command[EmptyRequest, GlobalHotkeyListReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let list : @proton_contract.Command[EmptyRequest, GlobalHotkeyListReply]
+
+pub let register : @proton_contract.Command[GlobalHotkeyRequest, GlobalHotkeyReply]
+
+pub let triggered : @proton_contract.Event[GlobalHotkeyTriggered]
+
+pub let unregister : @proton_contract.Command[GlobalHotkeyRequest, GlobalHotkeyReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct EmptyRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GlobalHotkeyActivity {
+  operation : String
+  accelerator : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GlobalHotkeyListReply {
+  accelerators : Array[String]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GlobalHotkeyReply {
+  registered : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GlobalHotkeyRequest {
+  accelerator : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct GlobalHotkeyTriggered {
+  accelerator : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

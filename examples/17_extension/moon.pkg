@@ -1,6 +1,4 @@
 import {
-  "moonbitlang/core/json",
-  "justjavac/proton/core",
   "justjavac/proton",
 }
 
@@ -13,5 +11,5 @@ formatter(ignore: [ "extension.mbt" ])
 pkgtype(kind: "executable")
 
 options(
-  targets: { "main.mbt": [ "native" ], "math_extension.mbt": [ "native" ] },
+  targets: { "main.mbt": [ "native" ] },
 )

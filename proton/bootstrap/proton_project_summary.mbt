@@ -8,10 +8,20 @@ pub fn ProtonProjectConfig::to_summary_json(self : ProtonProjectConfig) -> Json 
       "base_dir": optional_string_json(loaded.base_dir()),
       "window": window_summary_json(manifest.window),
       "entry": entry_summary_json(manifest.entry),
+      "windows": Json::array(
+        manifest.windows.map(fn(window) {
+          Json::object({
+            "id": Json::string(window.id),
+            "window": window_summary_json(window.window),
+            "entry": entry_summary_json(window.entry),
+          })
+        }),
+      ),
       "dev_entry": entry_summary_json(self.dev_manifest().manifest().entry),
       "debug": Json::boolean(manifest.debug != 0),
     }),
     "metadata": metadata_summary_json(self.metadata()),
+    "backend": backend_summary_json(self.backend()),
     "frontend": frontend_summary_json(self.frontend()),
     "bundle": bundle_summary_json(self.bundle()),
   })
@@ -29,6 +39,18 @@ fn metadata_summary_json(metadata : ProtonAppMetadata) -> Json {
 }
 
 ///|
+fn backend_summary_json(backend : ProtonBackendConfig?) -> Json {
+  match backend {
+    None => Json::null()
+    Some(backend) =>
+      Json::object({
+        "path": Json::string(backend.path()),
+        "package": Json::string(backend.app_package()),
+      })
+  }
+}
+
+///|
 fn frontend_summary_json(frontend : ProtonFrontendConfig?) -> Json {
   match frontend {
     None => Json::null()
@@ -38,7 +60,7 @@ fn frontend_summary_json(frontend : ProtonFrontendConfig?) -> Json {
         "dist": optional_string_json(frontend.dist()),
         "before_dev": optional_string_json(frontend.before_dev()),
         "before_build": optional_string_json(frontend.before_build()),
-        "cwd": optional_string_json(frontend.cwd()),
+        "path": optional_string_json(frontend.path()),
       })
   }
 }
@@ -53,6 +75,18 @@ fn bundle_summary_json(bundle : ProtonBundleConfig?) -> Json {
         "targets": string_array_json(bundle.targets()),
         "icon": string_array_json(bundle.icon()),
         "resources": string_array_json(bundle.resources()),
+        "url_schemes": string_array_json(bundle.url_schemes()),
+        "document_types": Json::array(
+          bundle
+          .document_types()
+          .map(fn(document_type) {
+            Json::object({
+              "name": Json::string(document_type.name),
+              "extensions": string_array_json(document_type.extensions),
+              "role": Json::string(document_type.role),
+            })
+          }),
+        ),
         "output": Json::string(bundle.output()),
       })
   }

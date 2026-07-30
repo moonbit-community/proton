@@ -4,30 +4,21 @@ package "justjavac/proton_ext/shell"
 import {
   "justjavac/proton/command",
   "justjavac/proton/extension",
+  "justjavac/proton_contract",
   "moonbitlang/core/debug",
-  "moonbitlang/core/json",
 }
 
 // Values
-pub async fn emit_shell_activity(@command.AppCommandExtensionContext, ShellActivity) -> Unit noraise
-
 pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type ShellError derive(Eq, @debug.Debug)
 
 // Types and methods
-type ProtonOpenPayload derive(@json.FromJson)
-
-type ProtonRevealItemPayload derive(@json.FromJson)
-
-type RevealItemPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ShellActivity derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ShellPayload derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-type ShellReply derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

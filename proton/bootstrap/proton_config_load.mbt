@@ -31,14 +31,27 @@ fn proton_project_config_from_project_config(
       proton_window_from_project_window(project.window()),
       proton_entry_from_project_entry(project.entry()),
       debug=project.debug(),
+      windows=project.windows().map(proton_app_window_from_project_window),
     ),
     base_dir=Some(project.base_dir()),
   )
   ProtonProjectConfig::new(
     loaded,
     proton_metadata_from_project_metadata(project.metadata()),
+    backend=project.backend().map(proton_backend_from_project_backend),
     frontend=project.frontend().map(proton_frontend_from_project_frontend),
     bundle=project.bundle().map(proton_bundle_from_project_bundle),
+  )
+}
+
+///|
+fn proton_app_window_from_project_window(
+  value : @proton_config.ProjectAppWindowConfig,
+) -> @manifest.AppWindowManifest {
+  @manifest.AppWindowManifest::new(
+    value.id,
+    proton_window_from_project_window(value.window),
+    proton_entry_from_project_entry(value.entry),
   )
 }
 
@@ -105,6 +118,13 @@ fn proton_metadata_from_project_metadata(
 }
 
 ///|
+fn proton_backend_from_project_backend(
+  backend : @proton_config.ProjectBackendConfig,
+) -> ProtonBackendConfig {
+  ProtonBackendConfig::new(backend.path(), backend.app_package())
+}
+
+///|
 fn proton_frontend_from_project_frontend(
   frontend : @proton_config.ProjectFrontendConfig,
 ) -> ProtonFrontendConfig {
@@ -113,7 +133,7 @@ fn proton_frontend_from_project_frontend(
     dist=frontend.dist(),
     before_dev=frontend.before_dev(),
     before_build=frontend.before_build(),
-    cwd=frontend.cwd(),
+    path=frontend.path(),
   )
 }
 
@@ -126,6 +146,8 @@ fn proton_bundle_from_project_bundle(
     targets=bundle.targets,
     icon=bundle.icon,
     resources=bundle.resources,
+    url_schemes=bundle.url_schemes,
+    document_types=bundle.document_types,
     output=bundle.output(),
   )
 }

@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_client"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub async fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
+
+pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> Unit, (ClientFailure) -> Unit) -> Subscription raise ClientFailure
+
+// Errors
+pub(all) suberror ClientFailure {
+  BridgeUnavailable
+  RequestCancelled
+  RequestTimedOut
+  InvalidContract(message~ : String)
+  RemoteFailure(code~ : String, message~ : String, detail~ : String?)
+  TransportFailure(message~ : String)
+  ResponseDecode(message~ : String)
+  EventDecode(message~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ClientFailure::message(Self) -> String
+
+// Types and methods
+pub struct Subscription {
+  mut closed : Bool
+  close_listener : () -> Unit
+}
+pub fn Subscription::close(Self) -> Unit
+
+// Type aliases
+
+// Traits
+

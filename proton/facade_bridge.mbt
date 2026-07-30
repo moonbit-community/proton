@@ -2,52 +2,61 @@
 fn build_command_host(
   manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-  base_dir : String?,
+  command_registrars? : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [],
 ) -> CommandHostRuntime? raise AppRunError {
-  let host = @core.AppCommandHost::new()
+  let host = @core.AppCommandHost::new(
+    expose_error_details=proton_dev_mode_enabled(),
+  )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let mut has_commands = false
+  let registrar = @proton_command.CommandRegistrar::new(host)
+  for register in command_registrars {
+    register(registrar) catch {
+      error => {
+        ignore(close_command_host_runtime(host, destroy_hooks))
+        raise CommandExtensionLifecycleError(
+          ApplicationRegistrationFailed(detail=@debug.render(Repr(error))),
+        )
+      }
+    }
+    has_commands = true
+  }
   let ordered_ids = enabled_command_extension_order(
     manifest, command_extensions,
   ) catch {
     error => {
-      close_command_host_runtime(host, destroy_hooks) catch {
-        _ => ()
-      }
+      ignore(close_command_host_runtime(host, destroy_hooks))
       raise ConfigurationError(error)
     }
   }
   for id in ordered_ids {
     let spec = command_extensions[id]
-    let setting = manifest.extension_setting(id).unwrap()
-    let context = @proton_command.AppCommandExtensionContext::new(
-      host,
-      id,
-      spec.js_namespace(),
-      options=setting.options(),
-      base_dir~,
-    )
-    spec.register(context) catch {
+    destroy_hooks.push(CommandExtensionDestroyHook::{
+      extension_id: id,
+      callback: fn() raise { spec.destroy() },
+    })
+    spec.register(registrar) catch {
       error => {
-        close_command_host_runtime(host, destroy_hooks) catch {
-          _ => ()
-        }
-        raise CommandExtensionLifecycleError(
+        let primary = CommandExtensionLifecycleError(
           RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),
         )
+        let cleanup_failures : Array[AppCleanupError] = []
+        for failure in close_command_host_runtime(host, destroy_hooks) {
+          cleanup_failures.push(CommandExtension(failure))
+        }
+        match cleanup_run_error(Some(primary), cleanup_failures) {
+          Some(combined) => raise combined
+          None => raise primary
+        }
       }
     }
     has_commands = true
-    destroy_hooks.push(CommandExtensionDestroyHook::{
-      extension_id: id,
-      callback: fn() raise { spec.destroy(context) },
-    })
   }
   if has_commands {
     host.seal_registrations()
     Some(CommandHostRuntime::{ host, destroy_hooks, closed: false })
   } else {
-    close_command_host_runtime(host, destroy_hooks)
+    ignore(close_command_host_runtime(host, destroy_hooks))
     None
   }
 }
@@ -56,13 +65,14 @@ fn build_command_host(
 fn close_command_host_runtime(
   host : @core.AppCommandHost,
   destroy_hooks : Array[CommandExtensionDestroyHook],
-) -> Unit raise AppRunError {
+) -> Array[CommandExtensionLifecycleError] {
+  let failures : Array[CommandExtensionLifecycleError] = []
   let hook_count = destroy_hooks.length()
   for index in 0..<hook_count {
     let hook = destroy_hooks[hook_count - index - 1]
     (hook.callback)() catch {
       error =>
-        raise CommandExtensionLifecycleError(
+        failures.push(
           DestroyFailed(
             extension_id=hook.extension_id,
             detail=@debug.render(Repr(error)),
@@ -71,6 +81,7 @@ fn close_command_host_runtime(
     }
   }
   host.close()
+  failures
 }
 
 ///|
@@ -211,14 +222,6 @@ fn command_proxy_name_is_invalid(name : String) -> Bool {
 }
 
 ///|
-fn install_extension_event_sender(
-  window : @native.Window,
-  host : @core.AppCommandHost,
-) -> Unit {
-  host.set_event_sender(extension_event_sender(window, None))
-}
-
-///|
 fn forward_menu_command(
   window : @native.Window,
   command_id : String,
@@ -268,20 +271,27 @@ fn bridge_event_json(
 }
 
 ///|
-fn extension_event_sender(
+fn typed_event_sender(
   window : @native.Window,
   page_instance : String?,
-) -> async (@ipc.IpcExtensionEvent) -> Unit noraise {
-  fn(event) {
-    window.emit_bridge_event_json(
-      bridge_event_json(
-        "extension",
-        event.event_name,
-        event.payload,
-        Some(event.extension_namespace),
-        page_instance,
-      ),
-    ) catch {
+) -> async (@proton_contract.ContractRoute, String, Json) -> Unit noraise {
+  fn(route, name, payload) {
+    let event_json = if route.is_application() {
+      bridge_event_json("frontend", name, payload, None, page_instance)
+    } else {
+      match route.extension_namespace() {
+        Some(extension_namespace) =>
+          bridge_event_json(
+            "extension",
+            name,
+            payload,
+            Some(extension_namespace),
+            page_instance,
+          )
+        None => return
+      }
+    }
+    window.emit_bridge_event_json(event_json) catch {
       _ => ()
     }
   }
@@ -295,21 +305,43 @@ async fn dispatch_bridge_request(
   policy : BridgePagePolicy,
   wake_signal : @core.RuntimeWakeSignal,
 ) -> @native.BridgeResponse {
+  let result : Ref[@native.BridgeResponse?] = Ref(None)
+  @async.with_task_group(command_tasks => {
+    result.val = Some(
+      dispatch_bridge_request_in_command_scope(
+        window, host, request, policy, wake_signal, command_tasks,
+      ),
+    )
+    command_tasks.return_immediately(())
+  })
+  result.val.unwrap()
+}
+
+///|
+async fn dispatch_bridge_request_in_command_scope(
+  window : @native.Window,
+  host : @core.AppCommandHost,
+  request : @native.BridgeRequest,
+  policy : BridgePagePolicy,
+  wake_signal : @core.RuntimeWakeSignal,
+  command_tasks : @async.TaskGroup[Unit],
+) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(
     request.window(),
+    command_tasks,
     wake_signal~,
+    emit_event=typed_event_sender(window, request.page_instance()),
   )
   let response = match
     @async.with_timeout_opt(policy.request_timeout_ms, () => {
-      host.dispatch_ipc_with_context_and_event_sender(
+      host.dispatch_ipc_with_context(
         request_context,
         @ipc.IpcOpRequest::new(
           request_id.to_string(),
           request.op(),
           request.payload(),
         ),
-        Some(extension_event_sender(window, request.page_instance())),
       )
     }) {
     Some(response) => response
@@ -337,13 +369,13 @@ fn default_bridge_page_policy() -> BridgePagePolicy {
 }
 
 ///|
-fn bridge_page_policy_for_manifest(
-  manifest : @manifest.AppManifest,
+fn bridge_page_policy_for_entry(
+  entry : @manifest.AppEntry,
 ) -> BridgePagePolicy raise AppConfigurationError {
   if !proton_dev_mode_enabled() {
     return default_bridge_page_policy()
   }
-  match manifest.entry {
+  match entry {
     @manifest.AppEntry::Url(url) =>
       BridgePagePolicy::{
         dev_origin: Some(url_origin(url)),
@@ -516,9 +548,15 @@ fn canonical_dev_origin_port_suffix(
 }
 
 ///|
-fn bridge_page_policy_dev_origins(policy : BridgePagePolicy) -> Array[String] {
-  match policy.dev_origin {
-    Some(origin) => [origin]
-    None => []
+fn bridge_page_policy_dev_origins(
+  policies : Array[BridgePagePolicy],
+) -> Array[String] {
+  let origins : Array[String] = []
+  for policy in policies {
+    match policy.dev_origin {
+      Some(origin) if !origins.contains(origin) => origins.push(origin)
+      _ => ()
+    }
   }
+  origins
 }

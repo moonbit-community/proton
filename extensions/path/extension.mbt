@@ -1,125 +1,110 @@
 ///|
-let extension_id = "justjavac/proton-path"
+let basename_command = @path_contract.basename
 
 ///|
-let extension_namespace = "path"
+let dirname_command = @path_contract.dirname
 
 ///|
-struct PathPayload {
-  path : String
-} derive(ToJson, FromJson, Debug, Eq)
+let extname_command = @path_contract.extname
 
 ///|
-struct BasenamePayload {
-  path : String
-  suffix : String?
-} derive(FromJson)
+let is_absolute_command = @path_contract.is_absolute
 
 ///|
-struct JoinPayload {
-  left : String
-  right : String
-} derive(ToJson, FromJson, Debug, Eq)
+let join_command = @path_contract.join
 
 ///|
-struct PathsPayload {
-  paths : Array[String]
-} derive(FromJson)
+let join_all_command = @path_contract.join_all
 
 ///|
-struct RelativePayload {
-  path : String
-  base : String
-} derive(ToJson, FromJson, Debug, Eq)
+let normalize_command = @path_contract.normalize
 
 ///|
-struct PathReply {
-  path : String
-} derive(ToJson, FromJson, Debug, Eq)
+let relative_command = @path_contract.relative
 
 ///|
-struct BasenameReply {
-  name : String
-} derive(ToJson, FromJson, Debug, Eq)
+let resolve_command = @path_contract.resolve
 
 ///|
-struct ExtnameReply {
-  ext : String
-} derive(ToJson, FromJson, Debug, Eq)
+let resolve_all_command = @path_contract.resolve_all
 
 ///|
-struct IsAbsoluteReply {
-  is_absolute : Bool
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-/// Registers a path API that returns a single `path` string field.
-fn register_path_reply_op(
-  extension : @core.ExtensionContext,
-  name : String,
-  callback : (String) -> String,
-) -> Unit raise {
-  extension.op(name, fn(payload : PathPayload) {
-    PathReply::{ path: callback(payload.path) }
-  })
+#proton.command(contract=basename_command)
+fn basename(
+  request : @path_contract.BasenameRequest,
+) -> @path_contract.BasenameReply {
+  @path_contract.BasenameReply::{
+    name: basename_path(request.path, suffix=request.suffix),
+  }
 }
 
 ///|
-/// Registers a path API that consumes many paths and returns one `path` string field.
-fn register_paths_reply_op(
-  extension : @core.ExtensionContext,
-  name : String,
-  callback : (Array[String]) -> String,
-) -> Unit raise {
-  extension.op(name, fn(payload : PathsPayload) {
-    PathReply::{ path: callback(payload.paths) }
-  })
+#proton.command(contract=dirname_command)
+fn dirname(request : @path_contract.PathRequest) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: dirname_path(request.path) }
 }
 
 ///|
-/// Builds the app-facing `path` extension.
+#proton.command(contract=extname_command)
+fn extname(request : @path_contract.PathRequest) -> @path_contract.ExtnameReply {
+  @path_contract.ExtnameReply::{ ext: extname_path(request.path) }
+}
+
+///|
+#proton.command(contract=is_absolute_command)
+fn is_absolute(
+  request : @path_contract.PathRequest,
+) -> @path_contract.IsAbsoluteReply {
+  @path_contract.IsAbsoluteReply::{
+    is_absolute: is_absolute_path(request.path),
+  }
+}
+
+///|
+#proton.command(contract=join_command)
+fn join(request : @path_contract.JoinRequest) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: join_paths(request.left, request.right) }
+}
+
+///|
+#proton.command(contract=join_all_command)
+fn join_all(request : @path_contract.PathsRequest) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: join_many_paths(request.paths) }
+}
+
+///|
+#proton.command(contract=normalize_command)
+fn normalize(request : @path_contract.PathRequest) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: normalize_path(request.path) }
+}
+
+///|
+#proton.command(contract=relative_command)
+fn relative(
+  request : @path_contract.RelativeRequest,
+) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: relative_path(request.path, request.base) }
+}
+
+///|
+#proton.command(contract=resolve_command)
+fn resolve(request : @path_contract.PathRequest) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: resolve_path(request.path) }
+}
+
+///|
+#proton.command(contract=resolve_all_command)
+fn resolve_all(
+  request : @path_contract.PathsRequest,
+) -> @path_contract.PathReply {
+  @path_contract.PathReply::{ path: resolve_many_paths(request.paths) }
+}
+
+///|
 pub fn extension() -> @proton_extension.Extension {
-  @proton_extension.from_core_spec(core_spec())
-}
-
-///|
-/// Builds the `path` extension for direct installation.
-///
-/// Future bridge work can install it on an `@core.ExtensionHost` to expose
-/// common path operations such as `resolve`, `join`, `dirname`, and `basename`.
-pub fn core_extension() -> @core.Extension {
-  @core.Extension::new(extension_id, extension_namespace, fn(extension) raise {
-    extension.op("basename", fn(payload : BasenamePayload) {
-      BasenameReply::{
-        name: basename_path(payload.path, suffix=payload.suffix),
-      }
-    })
-    register_path_reply_op(extension, "dirname", dirname_path)
-    extension.op("extname", fn(payload : PathPayload) {
-      ExtnameReply::{ ext: extname_path(payload.path) }
-    })
-    extension.op("is_absolute", fn(payload : PathPayload) {
-      IsAbsoluteReply::{ is_absolute: is_absolute_path(payload.path) }
-    })
-    extension.op("join", fn(payload : JoinPayload) {
-      PathReply::{ path: join_paths(payload.left, payload.right) }
-    })
-    register_paths_reply_op(extension, "join_all", join_many_paths)
-    register_path_reply_op(extension, "normalize", normalize_path)
-    extension.op("relative", fn(payload : RelativePayload) {
-      PathReply::{ path: relative_path(payload.path, payload.base) }
-    })
-    register_path_reply_op(extension, "resolve", resolve_path)
-    register_paths_reply_op(extension, "resolve_all", resolve_many_paths)
-  })
-}
-
-///|
-/// Builds the declarative `path` extension spec.
-/// Register this when common path operations should be linked declaratively
-/// through app composition.
-pub fn core_spec() -> @core.ExtensionSpec {
-  @core.ExtensionSpec::new(extension_id, extension_namespace, fn(_context) {
-    core_extension()
-  })
+  @proton_extension.typed(
+    @path_contract.extension,
+    generated_extension_command_routes(),
+    fn(registrar) raise { register_commands(registrar) },
+  )
 }

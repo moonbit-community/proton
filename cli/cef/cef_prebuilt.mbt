@@ -1,8 +1,5 @@
 ///|
-fn find_prebuilt_root(
-  root : String,
-  platform : ProtonPlatform,
-) -> String raise CefRuntimeError {
+async fn find_prebuilt_root(root : String, platform : ProtonPlatform) -> String {
   let package_prebuilt = path_join(
     path_join(path_join(root, "proton"), "prebuilt"),
     platform.id,
@@ -25,9 +22,7 @@ fn find_prebuilt_root(
 }
 
 ///|
-fn prebuilt_manifest_version(
-  prebuilt_root : String,
-) -> String raise CefRuntimeError {
+async fn prebuilt_manifest_version(prebuilt_root : String) -> String {
   let manifest_path = path_join(prebuilt_root, "manifest.json")
   guard path_is_file(manifest_path) else {
     raise ManifestRead(path=manifest_path, detail="file is missing")

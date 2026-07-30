@@ -4,6 +4,7 @@ package "justjavac/proton/command"
 import {
   "justjavac/proton/core",
   "justjavac/proton/ipc",
+  "justjavac/proton_contract",
   "moonbitlang/core/json",
 }
 
@@ -13,6 +14,11 @@ pub fn app_command_extension_op_name(String, String) -> String
 pub fn app_command_js_property_is_reserved(String) -> Bool
 
 // Errors
+pub(all) suberror ExtensionSpecError {
+  InvalidContract(detail~ : String)
+  ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
+} derive(Eq)
+pub fn ExtensionSpecError::message(Self) -> String
 
 // Types and methods
 pub struct AppCommandApiDescriptor {
@@ -21,25 +27,6 @@ pub struct AppCommandApiDescriptor {
 pub fn AppCommandApiDescriptor::api_name(Self) -> String
 pub fn AppCommandApiDescriptor::new(String) -> Self
 pub fn AppCommandApiDescriptor::to_ipc_api(Self) -> @ipc.IpcExtensionApi
-
-pub struct AppCommandExtensionContext {
-  host : @core.AppCommandHost
-  extension_id : String
-  js_namespace : String
-  options : Json?
-  base_dir : String?
-}
-pub fn AppCommandExtensionContext::base_dir(Self) -> String?
-pub async fn[Payload : ToJson] AppCommandExtensionContext::emit(Self, String, Payload) -> Unit noraise
-pub fn AppCommandExtensionContext::extension_id(Self) -> String
-pub fn AppCommandExtensionContext::host(Self) -> @core.AppCommandHost
-pub fn AppCommandExtensionContext::js_namespace(Self) -> String
-pub fn AppCommandExtensionContext::new(@core.AppCommandHost, String, String, options? : Json?, base_dir? : String?) -> Self
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op(Self, String, (Payload) -> Reply raise?, emits_events? : Bool) -> Unit raise @core.OpRegistrationError
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async(Self, String, async (Payload) -> Reply, emits_events? : Bool) -> Unit raise @core.OpRegistrationError
-pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandExtensionContext::op_async_with_context(Self, String, async (@core.AppCommandRequestContext, Payload) -> Reply, emits_events? : Bool) -> Unit raise @core.OpRegistrationError
-pub fn AppCommandExtensionContext::op_name(Self, String) -> String
-pub fn AppCommandExtensionContext::options(Self) -> Json?
 
 pub struct AppCommandExtensionDescriptor {
   id : String
@@ -67,19 +54,19 @@ pub struct AppCommandExtensionSpec {
   apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
-  register : (AppCommandExtensionContext) -> Unit raise
-  on_destroy : (AppCommandExtensionContext) -> Unit raise
+  register : (CommandRegistrar) -> Unit raise
+  on_destroy : () -> Unit raise
 }
 pub fn AppCommandExtensionSpec::apis(Self) -> Array[AppCommandApiDescriptor]
 pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::destroy(Self, AppCommandExtensionContext) -> Unit raise
+pub fn AppCommandExtensionSpec::destroy(Self) -> Unit raise
 pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
-pub fn AppCommandExtensionSpec::new(String, String, Array[AppCommandApiDescriptor], (AppCommandExtensionContext) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : (AppCommandExtensionContext) -> Unit raise) -> Self
 pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::register(Self, AppCommandExtensionContext) -> Unit raise
+pub fn AppCommandExtensionSpec::register(Self, CommandRegistrar) -> Unit raise
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
+pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
 
 pub struct AppCommandsConfig {
   op_names : Array[String]
@@ -92,8 +79,15 @@ pub fn AppCommandsConfig::from_ipc_descriptors(Array[String], Array[@ipc.IpcExte
 pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
 pub fn AppCommandsConfig::op_names(Self) -> Array[String]
 
+pub struct CommandRegistrar {
+  host : @core.AppCommandHost
+}
+pub fn[Request : @json.FromJson, Response : ToJson] CommandRegistrar::bind(Self, @proton_contract.Command[Request, Response], async (@core.AppCommandRequestContext, Request) -> Response) -> Unit raise
+
 // Type aliases
 pub using @core {type AppCommandRequestContext}
+
+pub using @core {type AppCommandRequestContext as CommandContext}
 
 // Traits
 

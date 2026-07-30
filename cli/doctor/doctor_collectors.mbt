@@ -95,15 +95,28 @@ fn runtime_manifest_string_field(
 }
 
 ///|
-fn runtime_manifest_from_project(
+fn doctor_runtime_error_message(error : Error) -> String {
+  match error {
+    DoctorRuntimeManifestError::Read(..) as error => error.message()
+    DoctorRuntimeManifestError::Syntax(..) as error => error.message()
+    DoctorRuntimeManifestError::UnknownField(..) as error => error.message()
+    DoctorRuntimeManifestError::MissingField(..) as error => error.message()
+    DoctorRuntimeManifestError::InvalidSchema(..) as error => error.message()
+    DoctorRuntimeManifestError::InvalidRoot(..) as error => error.message()
+    error => @debug.render(Repr(error))
+  }
+}
+
+///|
+async fn runtime_manifest_from_project(
   project : ProjectDoctorInfo,
-) -> DoctorRuntimeManifest? raise DoctorRuntimeManifestError {
+) -> DoctorRuntimeManifest? {
   let manifest_path = path_join(
     path_join(project.root, ".proton"),
     "runtime.json",
   )
-  guard @mbfs.path_exists(manifest_path) else { return None }
-  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+  guard doctor_path_exists(manifest_path) else { return None }
+  let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise Read(path=manifest_path)
   }
   let json = @json.parse(text) catch { _ => raise Syntax(path=manifest_path) }
@@ -142,9 +155,9 @@ fn runtime_manifest_from_project(
 }
 
 ///|
-fn development_native_dist(project : ProjectDoctorInfo) -> String {
+async fn development_native_dist(project : ProjectDoctorInfo) -> String {
   let project_dist = path_join(path_join(project.root, "native"), "dist")
-  if @mbfs.path_exists(project_dist) {
+  if doctor_path_exists(project_dist) {
     project_dist
   } else {
     match find_up(project.root, "native") {
@@ -155,29 +168,15 @@ fn development_native_dist(project : ProjectDoctorInfo) -> String {
 }
 
 ///|
-fn resolve_native_dist(
+async fn resolve_native_dist(
   project : ProjectDoctorInfo,
-) -> (String, DoctorRuntimeManifest?) raise DoctorRuntimeManifestError {
-  let native_dist_override = match @sys.get_env_var("PROTON_NATIVE_DIST") {
-    Some(root) => {
-      let root = root.trim().to_owned()
-      if root == "" {
-        None
-      } else {
-        Some(root)
-      }
-    }
-    None => None
-  }
+) -> (String, DoctorRuntimeManifest?) {
+  let native_dist_override = resolve_native_dist_override(
+    project,
+    @sys.get_env_var("PROTON_NATIVE_DIST"),
+  )
   match native_dist_override {
-    Some(root) => {
-      let path = if path_is_absolute_like(root) {
-        root
-      } else {
-        path_join(project.root, root)
-      }
-      (@path.Path(path).resolve().to_string(), None)
-    }
+    Some(path) => (path, None)
     None =>
       match runtime_manifest_from_project(project) {
         Some(manifest) => {
@@ -190,6 +189,29 @@ fn resolve_native_dist(
         }
         None => (development_native_dist(project), None)
       }
+  }
+}
+
+///|
+fn resolve_native_dist_override(
+  project : ProjectDoctorInfo,
+  configured_dist : String?,
+) -> String? {
+  match configured_dist {
+    Some(root) => {
+      let root = root.trim().to_owned()
+      if root == "" {
+        None
+      } else {
+        let path = if path_is_absolute_like(root) {
+          root
+        } else {
+          path_join(project.root, root)
+        }
+        Some(@path.Path(path).resolve().to_string())
+      }
+    }
+    None => None
   }
 }
 
@@ -712,7 +734,7 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
           "platform.runtime_manifest",
           Error,
           "platform runtime unavailable",
-          hint=error.message(),
+          hint=doctor_runtime_error_message(error),
         ),
       )
   } noraise {
@@ -720,7 +742,7 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
       match runtime_library_relative_path(platform_id) {
         Some(relative) => {
           let library_path = path_join(native_dist, relative)
-          if @mbfs.path_exists(library_path) {
+          if doctor_path_exists(library_path) {
             lines.push(
               platform_command_line(
                 "platform.library.file",
@@ -777,7 +799,7 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
         native_dist,
         runtime_helper_relative_path(platform_id),
       )
-      if @mbfs.path_exists(helper_path) {
+      if doctor_path_exists(helper_path) {
         lines.push(
           platform_command_line(
             "platform.helper.file",
@@ -854,7 +876,7 @@ async fn collect_runtime(
           "runtime.manifest.invalid",
           Error,
           "Proton runtime manifest is invalid",
-          hint=error.message(),
+          hint=doctor_runtime_error_message(error),
         ),
       )
       return DoctorSection::new(
@@ -913,7 +935,7 @@ async fn collect_runtime(
     }
     None => ()
   }
-  if @mbfs.path_exists(native_dist) {
+  if doctor_path_exists(native_dist) {
     lines.push(
       DoctorLine::coded(
         "runtime.dist",
@@ -922,8 +944,8 @@ async fn collect_runtime(
       ),
     )
     let version_path = path_join(native_dist, "version.txt")
-    if @mbfs.path_exists(version_path) {
-      let version = @mbfs.read_file_to_string(version_path, encoding="utf8") catch {
+    if doctor_path_exists(version_path) {
+      let version = @async_fs.read_file(version_path).text() catch {
         _ => "unknown"
       }
       lines.push(
@@ -947,7 +969,7 @@ async fn collect_runtime(
       platform_id,
     )
     for required in required_files {
-      if !@mbfs.path_exists(path_join(native_dist, required)) {
+      if !doctor_path_exists(path_join(native_dist, required)) {
         missing.push(required)
       }
     }
@@ -1017,12 +1039,12 @@ fn frontend_script_name(command : String) -> String? {
 }
 
 ///|
-fn push_frontend_dist_diagnostics(
+async fn push_frontend_dist_diagnostics(
   lines : Array[DoctorLine],
   project : ProjectDoctorInfo,
   dist : String?,
 ) -> Unit {
-  push_frontend_path_check(
+  push_app_path_check(
     lines,
     project,
     "frontend.dist",
@@ -1032,9 +1054,15 @@ fn push_frontend_dist_diagnostics(
   )
   match dist {
     Some(dist) => {
-      let exists = @mbfs.is_dir(dist) catch { _ => false }
+      let exists = doctor_path_is_dir(dist)
       if exists {
-        let entries = @mbfs.read_dir(dist) catch { _ => [] }
+        let entries = @async_fs.readdir(
+          dist,
+          include_hidden=true,
+          include_special=false,
+        ) catch {
+          _ => []
+        }
         if entries.length() > 0 {
           lines.push(
             DoctorLine::coded(
@@ -1120,13 +1148,13 @@ async fn collect_frontend(
       )
     }
   }
-  let frontend_root = frontend.cwd.unwrap_or(project.root)
+  let frontend_root = frontend.path.unwrap_or(config.base_dir)
   if !path_is_within_project(project, frontend_root) {
     lines.push(
       DoctorLine::coded(
-        "frontend.cwd.outside_project",
+        "frontend.path.outside_project",
         Error,
-        "frontend cwd is outside the project root: " + frontend_root,
+        "frontend path is outside the project root: " + frontend_root,
       ),
     )
     return DoctorSection::new(
@@ -1136,12 +1164,12 @@ async fn collect_frontend(
       lines,
     )
   }
-  if !(@mbfs.is_dir(frontend_root) catch { _ => false }) {
+  if !doctor_path_is_dir(frontend_root) {
     lines.push(
       DoctorLine::coded(
-        "frontend.cwd.missing",
+        "frontend.path.missing",
         Error,
-        "frontend cwd is missing: " + frontend_root,
+        "frontend path is missing: " + frontend_root,
       ),
     )
     return DoctorSection::new(
@@ -1152,13 +1180,11 @@ async fn collect_frontend(
     )
   }
   lines.push(
-    DoctorLine::coded("frontend.cwd", Ok, "frontend cwd: " + frontend_root),
+    DoctorLine::coded("frontend.path", Ok, "frontend path: " + frontend_root),
   )
   let package_path = path_join(frontend_root, "package.json")
-  let package_json = if @mbfs.path_exists(package_path) {
-    let text = @mbfs.read_file_to_string(package_path, encoding="utf8") catch {
-      _ => ""
-    }
+  let package_json = if doctor_path_exists(package_path) {
+    let text = @async_fs.read_file(package_path).text() catch { _ => "" }
     let parsed = @json.parse(text) catch { _ => Json::null() }
     match parsed {
       Object(object) => {
@@ -1198,7 +1224,7 @@ async fn collect_frontend(
   let mut lock_count = 0
   for item in lock_candidates {
     let (lock_name, candidate) = item
-    if @mbfs.path_exists(path_join(frontend_root, lock_name)) {
+    if doctor_path_exists(path_join(frontend_root, lock_name)) {
       lock_count += 1
       if manager is None {
         manager = Some(candidate)
@@ -1383,14 +1409,20 @@ async fn collect_frontend(
 }
 
 ///|
-fn collect_relative_files(
+async fn collect_relative_files(
   root : String,
   relative : String,
   depth : Int,
 ) -> Array[String] {
   guard depth >= 0 else { return [] }
   let directory = if relative == "" { root } else { path_join(root, relative) }
-  let entries = @mbfs.read_dir(directory) catch { _ => [] }
+  let entries = @async_fs.readdir(
+    directory,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
+    _ => []
+  }
   let files : Array[String] = []
   for entry in entries {
     let child_relative = if relative == "" {
@@ -1399,8 +1431,8 @@ fn collect_relative_files(
       relative + "/" + entry
     }
     let child = path_join(root, child_relative)
-    let is_file = @mbfs.is_file(child) catch { _ => false }
-    let is_dir = @mbfs.is_dir(child) catch { _ => false }
+    let is_file = doctor_path_is_file(child)
+    let is_dir = doctor_path_is_dir(child)
     if is_file {
       files.push(child_relative.replace_all(old="\\", new="/"))
     } else if is_dir {
@@ -1477,7 +1509,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
       } else {
         path_join(project.root, readme)
       }
-      if !@mbfs.path_exists(readme_path) {
+      if !doctor_path_exists(readme_path) {
         lines.push(
           DoctorLine::coded(
             "release.metadata.readme_file_missing",
@@ -1544,7 +1576,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
       let verifier = @path.Path(path_join(scripts_dir, "verify_generated.mjs"))
         .resolve()
         .to_string()
-      if @mbfs.path_exists(verifier) {
+      if doctor_path_exists(verifier) {
         let repository_root = @path.Path(
             path_parent(scripts_dir).unwrap_or(project.root),
           )
@@ -1585,12 +1617,12 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
     path_join(path_join(project.root, "proton"), "prebuilt"),
   ]
   for prebuilt_root in prebuilt_candidates {
-    let prebuilt_exists = @mbfs.is_dir(prebuilt_root) catch { _ => false }
+    let prebuilt_exists = doctor_path_is_dir(prebuilt_root)
     if prebuilt_exists {
       let mut forbidden_count = 0
       for platform_id in ["win32-x64", "darwin-arm64", "linux-x64"] {
         let platform_root = path_join(prebuilt_root, platform_id)
-        let platform_exists = @mbfs.is_dir(platform_root) catch { _ => false }
+        let platform_exists = doctor_path_is_dir(platform_root)
         if platform_exists {
           let allowed = @cef.proton_prebuilt_relative_files_for_platform(
             platform_id,
@@ -1995,7 +2027,7 @@ fn collect_packages(
 }
 
 ///|
-fn collect_extensions(
+async fn collect_extensions(
   project : ProjectDoctorInfo,
   package_config : Result[MoonPackageConfig, MoonConfigReadError]?,
 ) -> DoctorSection {
@@ -2007,13 +2039,22 @@ fn collect_extensions(
   let extension_root = extension_root_for_project(project)
   let lines : Array[DoctorLine] = []
   let namespaces : Map[String, String] = Map([])
-  let discovered = if @mbfs.path_exists(extension_root) {
-    let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
+  let discovered = if doctor_path_exists(extension_root) {
+    let entries = @async_fs.readdir(
+      extension_root,
+      include_hidden=true,
+      include_special=false,
+    ) catch {
+      _ => []
+    }
     let mut count = 0
     for entry in entries {
       let extension_dir = path_join(extension_root, entry)
+      if !doctor_path_is_dir(extension_dir) {
+        continue
+      }
       let ext_path = path_join(extension_dir, "moon.ext")
-      if (@mbfs.is_file(ext_path) catch { _ => false }) {
+      if doctor_path_is_file(ext_path) {
         count += 1
         let identity = try @codegen.read_moon_ext_identity(ext_path) catch {
           error => Err(error.to_string())
@@ -2061,7 +2102,7 @@ fn collect_extensions(
             )
         }
         let moon_pkg_path = path_join(extension_dir, "moon.pkg")
-        if !@mbfs.path_exists(moon_pkg_path) {
+        if !doctor_path_exists(moon_pkg_path) {
           lines.push(
             DoctorLine::coded(
               "extensions.moon_pkg.missing",
@@ -2071,7 +2112,7 @@ fn collect_extensions(
           )
         }
         let source_path = path_join(extension_dir, "extension.mbt")
-        if !@mbfs.path_exists(source_path) {
+        if !doctor_path_exists(source_path) {
           lines.push(
             DoctorLine::coded(
               "extensions.source.missing",
@@ -2080,15 +2121,11 @@ fn collect_extensions(
             ),
           )
         } else {
-          let source = @mbfs.read_file_to_string(source_path, encoding="utf8") catch {
-            _ => ""
-          }
+          let source = @async_fs.read_file(source_path).text() catch { _ => "" }
           let generated_path = path_join(extension_dir, "extension.g.mbt")
-          if source.contains("#proton.") {
+          if source.contains("#proton.command") {
             let generated_result = try
-              @codegen.generate_app_commands_from_file_with_metadata(
-                source_path,
-              )
+              @codegen.generate_typed_commands_from_files([source_path])
             catch {
               error => Err(error.to_string())
             } noraise {
@@ -2096,7 +2133,7 @@ fn collect_extensions(
             }
             match generated_result {
               Ok(generated) =>
-                if !@mbfs.path_exists(generated_path) {
+                if !doctor_path_exists(generated_path) {
                   lines.push(
                     DoctorLine::coded(
                       "extensions.generated.missing",
@@ -2105,10 +2142,7 @@ fn collect_extensions(
                     ),
                   )
                 } else {
-                  let committed = @mbfs.read_file_to_string(
-                    generated_path,
-                    encoding="utf8",
-                  ) catch {
+                  let committed = @async_fs.read_file(generated_path).text() catch {
                     _ => ""
                   }
                   if committed == generated.source {
@@ -2140,7 +2174,7 @@ fn collect_extensions(
                   ),
                 )
             }
-          } else if @mbfs.path_exists(generated_path) {
+          } else if doctor_path_exists(generated_path) {
             lines.push(
               DoctorLine::coded(
                 "extensions.generated.unexpected",
@@ -2185,9 +2219,9 @@ fn collect_extensions(
 }
 
 ///|
-fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
+async fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
   let nested_extension_root = path_join(project.root, "extensions")
-  if @mbfs.path_exists(nested_extension_root) {
+  if doctor_path_exists(nested_extension_root) {
     nested_extension_root
   } else {
     project.root
@@ -2195,8 +2229,9 @@ fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
 }
 
 ///|
-fn write_doctor_fix(path : String, text : String) -> Bool {
-  try @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
+async fn write_doctor_fix(path : String, text : String) -> Bool {
+  try @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
+    error if @async.is_being_cancelled() => raise error
     _ => return false
   } noraise {
     _ => true
@@ -2204,31 +2239,37 @@ fn write_doctor_fix(path : String, text : String) -> Bool {
 }
 
 ///|
-fn apply_doctor_fixes(
+async fn apply_doctor_fixes(
   project : ProjectDoctorInfo,
   dry_run~ : Bool,
 ) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   let extension_root = extension_root_for_project(project)
-  let entries = @mbfs.read_dir(extension_root) catch { _ => [] }
+  let entries = @async_fs.readdir(
+    extension_root,
+    include_hidden=true,
+    include_special=false,
+  ) catch {
+    _ => []
+  }
   let mut changed = 0
   for entry in entries {
     let extension_dir = path_join(extension_root, entry)
-    let source_path = path_join(extension_dir, "extension.mbt")
-    let metadata_path = path_join(extension_dir, "moon.ext")
-    if !(@mbfs.is_file(source_path) catch { _ => false }) ||
-      !(@mbfs.is_file(metadata_path) catch { _ => false }) {
+    if !doctor_path_is_dir(extension_dir) {
       continue
     }
-    let source = @mbfs.read_file_to_string(source_path, encoding="utf8") catch {
-      _ => ""
+    let source_path = path_join(extension_dir, "extension.mbt")
+    let metadata_path = path_join(extension_dir, "moon.ext")
+    if !doctor_path_is_file(source_path) || !doctor_path_is_file(metadata_path) {
+      continue
     }
-    if !source.contains("#proton.") {
+    let source = @async_fs.read_file(source_path).text() catch { _ => "" }
+    if !source.contains("#proton.command") {
       continue
     }
     let generated_path = path_join(extension_dir, "extension.g.mbt")
     let generated_result = try
-      @codegen.generate_app_commands_from_file_with_metadata(source_path)
+      @codegen.generate_typed_commands_from_files([source_path])
     catch {
       error => Err(error.to_string())
     } noraise {
@@ -2236,7 +2277,7 @@ fn apply_doctor_fixes(
     }
     match generated_result {
       Ok(generated) => {
-        let current = @mbfs.read_file_to_string(generated_path, encoding="utf8") catch {
+        let current = @async_fs.read_file(generated_path).text() catch {
           _ => ""
         }
         if current != generated.source {
@@ -2343,7 +2384,7 @@ fn entry_text(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
 }
 
 ///|
-fn push_entry_existence(
+async fn push_entry_existence(
   lines : Array[DoctorLine],
   project : ProjectDoctorInfo,
   entry : DoctorAppEntry,
@@ -2362,7 +2403,7 @@ fn push_entry_existence(
   }
   match entry.kind {
     "file" =>
-      if @mbfs.path_exists(path) {
+      if doctor_path_exists(path) {
         lines.push(DoctorLine::coded("app.entry.file", Ok, "entry file exists"))
       } else {
         lines.push(
@@ -2374,7 +2415,7 @@ fn push_entry_existence(
         )
       }
     "asset" =>
-      if @mbfs.path_exists(path) {
+      if doctor_path_exists(path) {
         lines.push(
           DoctorLine::coded("app.entry.asset", Ok, "entry asset exists"),
         )
@@ -2408,7 +2449,7 @@ fn push_optional_app_line(
 }
 
 ///|
-fn push_frontend_path_check(
+async fn push_app_path_check(
   lines : Array[DoctorLine],
   project : ProjectDoctorInfo,
   code : String,
@@ -2418,7 +2459,7 @@ fn push_frontend_path_check(
 ) -> Unit {
   match value {
     Some(path) => {
-      let exists = @mbfs.is_dir(path) catch { _ => false }
+      let exists = doctor_path_is_dir(path)
       if !path_is_within_project(project, path) {
         lines.push(
           DoctorLine::coded(
@@ -2452,7 +2493,7 @@ fn push_frontend_path_check(
 }
 
 ///|
-fn push_loaded_app(
+async fn push_loaded_app(
   lines : Array[DoctorLine],
   project : ProjectDoctorInfo,
   config : DoctorAppConfig,
@@ -2497,6 +2538,25 @@ fn push_loaded_app(
   )
   push_entry_existence(lines, project, config.entry)
   lines.push(DoctorLine::coded("app.debug", Neutral, "debug: \{config.debug}"))
+  match config.backend {
+    Some(backend) => {
+      push_optional_app_line(lines, "backend_path", Some(backend.path))
+      push_optional_app_line(
+        lines,
+        "backend_package",
+        Some(backend.app_package),
+      )
+      push_app_path_check(
+        lines,
+        project,
+        "app.backend.path",
+        "backend path",
+        Some(backend.path),
+        required=true,
+      )
+    }
+    None => ()
+  }
   match config.frontend {
     Some(frontend) => {
       push_optional_app_line(lines, "before_dev_command", frontend.before_dev)
@@ -2507,16 +2567,16 @@ fn push_loaded_app(
       )
       push_optional_app_line(lines, "frontend_dist", frontend.dist)
       push_optional_app_line(lines, "dev_url", frontend.dev_url)
-      push_optional_app_line(lines, "frontend_cwd", frontend.cwd)
-      push_frontend_path_check(
+      push_optional_app_line(lines, "frontend_path", frontend.path)
+      push_app_path_check(
         lines,
         project,
-        "app.frontend.cwd",
-        "frontend cwd",
-        frontend.cwd,
+        "app.frontend.path",
+        "frontend path",
+        frontend.path,
         required=true,
       )
-      push_frontend_path_check(
+      push_app_path_check(
         lines,
         project,
         "app.frontend.dist",
@@ -2563,7 +2623,7 @@ fn push_loaded_app(
 }
 
 ///|
-fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
+async fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   match project.moon_proton_path {
     Some(path) =>

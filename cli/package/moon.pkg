@@ -3,18 +3,23 @@ import {
   "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/build_cmd" @build,
   "justjavac/proton_cli/cef",
+  "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
-  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
 }
 
 import {
-  "moonbitlang/async",
+  "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 
 supported_targets = "native"
+
+options(
+  "native-stub": [ "package_windows_icon.c" ],
+)

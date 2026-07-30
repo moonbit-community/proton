@@ -15,12 +15,12 @@ let ready_probe_timeout_ms = 1000
 
 ///|
 struct RawDevOptions {
-  app_package : String
+  app_package : String?
   config_path : String?
   moon_target_dir : String?
   url : String?
   command : String?
-  frontend_cwd : String?
+  frontend_path : String?
   timeout_ms : Int
   ready_path : String?
   wait_for_dev_server : Bool
@@ -66,11 +66,7 @@ pub fn command() -> @argparse.Command {
       ),
     ],
     options=[
-      OptionArg(
-        "package",
-        default_values=[default_package],
-        about="MoonBit application package",
-      ),
+      OptionArg("package", about="MoonBit application package"),
       OptionArg(
         "config",
         allow_hyphen_values=true,
@@ -82,7 +78,7 @@ pub fn command() -> @argparse.Command {
       ),
       OptionArg("url", about="Override frontend.dev_url"),
       OptionArg("command", about="Override frontend.before_dev"),
-      OptionArg("frontend-cwd", about="Override frontend.cwd"),
+      OptionArg("frontend-path", about="Override frontend.path"),
       OptionArg(
         "timeout-ms",
         default_values=[default_timeout_ms.to_string()],
@@ -107,7 +103,14 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = find_project_root_from(cwd)
   let config_path = resolve_dev_config_path(cwd, root, raw)
-  let frontend_config = load_dev_frontend_config(config_path)
+  let project_config = load_dev_project_config(config_path)
+  let frontend_config = match project_config {
+    Some(config) => config.frontend()
+    None => None
+  }
+  let project_base = project_config
+    .map(fn(config) { config.base_dir() })
+    .unwrap_or(root)
   let frontend_url : String? = match raw.url {
     Some(url) => Some(url)
     None =>
@@ -126,20 +129,36 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => None
       }
   }
-  let frontend_cwd : String? = match raw.frontend_cwd {
-    Some(cwd) => Some(cwd)
+  let frontend_path : String? = match raw.frontend_path {
+    Some(path) => Some(resolve_path(project_base, path))
     None =>
       match frontend_config {
-        Some(config) => config.cwd()
+        Some(config) => config.path()
         None => None
       }
   }
-  let frontend_working_dir = resolve_frontend_cwd(
-    root,
-    frontend_cwd,
+  let frontend_working_dir = resolve_frontend_path(
+    project_base,
+    frontend_path,
     frontend_command,
     raw.start_frontend,
   )
+  let backend = match project_config {
+    Some(config) => config.backend()
+    None => None
+  }
+  let backend_path = resolve_backend_path(
+    project_base,
+    backend.map(fn(config) { config.path() }),
+  )
+  let app_package = match raw.app_package {
+    Some(app_package) => app_package
+    None =>
+      match backend {
+        Some(config) => config.app_package()
+        None => default_package
+      }
+  }
   let runtime = ensure_dev_runtime(root, raw.setup_runtime)
   let app_env = dev_process_env(runtime, frontend_url, config_path)
   let frontend_env = dev_frontend_process_env(
@@ -164,8 +183,8 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       )
     }
     let code = run_app(
-      root,
-      raw.app_package,
+      backend_path,
+      app_package,
       raw.app_args,
       app_env,
       moon_target_dir,
@@ -182,12 +201,12 @@ fn dev_options_from_matches(
 ) -> RawDevOptions raise DevUsageError {
   let timeout = @cli_args.required_value(matches, "timeout-ms")
   RawDevOptions::{
-    app_package: @cli_args.required_value(matches, "package"),
+    app_package: @cli_args.value(matches, "package"),
     config_path: @cli_args.value(matches, "config"),
     moon_target_dir: @cli_args.value(matches, "moon-target-dir"),
     url: @cli_args.value(matches, "url"),
     command: @cli_args.value(matches, "command"),
-    frontend_cwd: @cli_args.value(matches, "frontend-cwd"),
+    frontend_path: @cli_args.value(matches, "frontend-path"),
     timeout_ms: parse_non_negative_int(timeout, "--timeout-ms"),
     ready_path: @cli_args.value(matches, "ready-path"),
     wait_for_dev_server: !@cli_args.flag(matches, "no-dev-server-wait"),
@@ -213,19 +232,19 @@ fn parse_non_negative_int(
 }
 
 ///|
-fn resolve_frontend_cwd(
+async fn resolve_frontend_path(
   root : String,
-  frontend_cwd : String?,
+  frontend_path : String?,
   frontend_command : String?,
   start_frontend : Bool,
-) -> String raise DevConfigError {
+) -> String {
   if !start_frontend || frontend_command is None {
     return root
   }
-  match frontend_cwd {
+  match frontend_path {
     None => root
-    Some(cwd) => {
-      let path = resolve_path(root, cwd)
+    Some(configured_path) => {
+      let path = resolve_path(root, configured_path)
       if !path_exists(path) {
         raise FrontendDirectoryMissing(path~)
       } else if !path_is_dir(path) {
@@ -238,7 +257,24 @@ fn resolve_frontend_cwd(
 }
 
 ///|
-fn resolve_dev_config_path(
+async fn resolve_backend_path(root : String, backend_path : String?) -> String {
+  match backend_path {
+    None => root
+    Some(configured_path) => {
+      let path = resolve_path(root, configured_path)
+      if !path_exists(path) {
+        raise BackendDirectoryMissing(path~)
+      } else if !path_is_dir(path) {
+        raise BackendDirectoryNotDirectory(path~)
+      } else {
+        path
+      }
+    }
+  }
+}
+
+///|
+async fn resolve_dev_config_path(
   cwd : String,
   root : String,
   raw : RawDevOptions,
@@ -246,7 +282,10 @@ fn resolve_dev_config_path(
   match raw.config_path {
     Some(path) => Some(resolve_path(cwd, path))
     None => {
-      let package_config = package_config_path(cwd, raw.app_package)
+      let package_config = package_config_path(
+        cwd,
+        raw.app_package.unwrap_or(default_package),
+      )
       let cwd_config = join_path(cwd, default_config_file)
       let root_config = join_path(root, default_config_file)
       if path_exists(package_config) {
@@ -268,59 +307,72 @@ fn package_config_path(cwd : String, app_package : String) -> String {
 }
 
 ///|
-fn load_dev_frontend_config(
+async fn load_dev_project_config(
   config_path : String?,
-) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
+) -> @proton_config.ProjectConfig? {
   match config_path {
     None => None
     Some(path) => {
       if !path_exists(path) {
         raise NotFound(path~)
       }
-      read_dev_frontend_config(path)
+      Some(read_dev_project_config(path))
     }
   }
 }
 
 ///|
-fn read_dev_frontend_config(
+async fn read_dev_project_config(
   path : String,
-) -> @proton_config.ProjectFrontendConfig? raise DevConfigError {
-  let loaded = @proton_config.load_project_config_from_file(path) catch {
+) -> @proton_config.ProjectConfig raise DevConfigError {
+  let source = @async_fs.read_file(path).text() catch {
+    error =>
+      raise Invalid(
+        path~,
+        error=@proton_config.ProjectConfigError::FileRead(
+          path~,
+          detail=@debug.render(Repr(error)),
+        ),
+      )
+  }
+  let loaded = @proton_config.load_project_config_from_text(
+    source,
+    path_parent(path),
+    name=path,
+  ) catch {
     error => raise Invalid(path~, error~)
   }
-  loaded.config().frontend()
+  loaded.config()
 }
 
 ///|
-async fn ensure_dev_runtime(
-  root : String,
-  setup_runtime : Bool,
-) -> DevRuntime raise DevRuntimeError {
+async fn ensure_dev_runtime(root : String, setup_runtime : Bool) -> DevRuntime {
   let native_dist_override = dev_native_dist_override(root)
   read_dev_runtime(root) catch {
+    error if @async.is_being_cancelled() => raise error
     error =>
       match native_dist_override {
-        Some(_) => raise NativeDistOverride(detail=error.message())
+        Some(_) => raise NativeDistOverride(detail=error.to_string())
         None if setup_runtime => {
           @cef.setup_default(root) catch {
+            error if @async.is_being_cancelled() => raise error
             error => raise Setup(detail=error.to_string())
           }
           read_dev_runtime(root)
         }
-        None => raise SetupRequired(detail=error.message())
+        None => raise SetupRequired(detail=error.to_string())
       }
   }
 }
 
 ///|
-async fn read_dev_runtime(root : String) -> DevRuntime raise DevRuntimeError {
+async fn read_dev_runtime(root : String) -> DevRuntime {
   match dev_native_dist_override(root) {
     Some(path) => return dev_runtime_from_root(path, "PROTON_NATIVE_DIST")
     None => ()
   }
   let manifest_path = runtime_manifest_path(root)
-  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
+  let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise ManifestMissing(path=manifest_path)
   }
   let json = @json.parse(text) catch {
@@ -358,10 +410,10 @@ fn dev_native_dist_override(root : String) -> String? {
 }
 
 ///|
-fn dev_runtime_from_root(
+async fn dev_runtime_from_root(
   runtime_root : String,
   label : String,
-) -> DevRuntime raise DevRuntimeError {
+) -> DevRuntime {
   let bin_dir = join_path(runtime_root, "bin")
   let lib_dir = join_path(runtime_root, "lib")
   let helper_path = join_path(bin_dir, helper_executable_name())
@@ -416,7 +468,7 @@ fn helper_executable_name() -> String {
 }
 
 ///|
-fn dev_process_env(
+async fn dev_process_env(
   runtime : DevRuntime,
   frontend_url : String?,
   config_path : String?,
@@ -515,7 +567,7 @@ fn path_list_separator() -> String {
 ///|
 async fn[X] maybe_start_frontend(
   group : @async.TaskGroup[X],
-  frontend_cwd : String,
+  frontend_path : String,
   command : String?,
   start_frontend : Bool,
   env : Map[String, String],
@@ -527,13 +579,13 @@ async fn[X] maybe_start_frontend(
     None => None
     Some(command) => {
       println("Starting frontend: " + command)
-      println("Frontend cwd: " + frontend_cwd)
+      println("Frontend path: " + frontend_path)
       let (program, args) = shell_command(command)
       let process = @process.spawn(
         group,
         program,
         args,
-        cwd=frontend_cwd,
+        cwd=frontend_path,
         extra_env=env,
         cancel_handler=frontend_cancel_handler(),
         no_wait=true,
@@ -908,7 +960,7 @@ fn cancel_frontend(process : @process.Process?) -> Unit {
 }
 
 ///|
-fn find_project_root_from(start : String) -> String {
+async fn find_project_root_from(start : String) -> String {
   for dir = start; dir != ""; {
     if path_exists(join_path(dir, "moon.work")) ||
       path_exists(join_path(dir, "moon.mod")) {
@@ -992,13 +1044,14 @@ fn path_parent(path : String) -> String {
 }
 
 ///|
-fn path_exists(path : String) -> Bool {
-  @mbfs.path_exists(path)
+async fn path_exists(path : String) -> Bool {
+  @async_fs.exists(path)
 }
 
 ///|
-fn path_is_dir(path : String) -> Bool {
-  @mbfs.is_dir(path) catch {
-    _ => false
+async fn path_is_dir(path : String) -> Bool {
+  if !@async_fs.exists(path) {
+    return false
   }
+  @async_fs.kind(path) is Directory
 }

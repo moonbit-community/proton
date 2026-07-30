@@ -3,8 +3,13 @@ package "justjavac/proton"
 
 import {
   "justjavac/proton/bootstrap",
+  "justjavac/proton/command",
+  "justjavac/proton/core",
   "justjavac/proton/extension",
+  "justjavac/proton/manifest",
   "justjavac/proton/native",
+  "justjavac/proton_contract",
+  "moonbitlang/async",
   "moonbitlang/core/debug",
 }
 
@@ -12,6 +17,8 @@ import {
 pub fn abi_version() -> Int
 
 pub fn app() -> App
+
+pub fn app_data_dir(String) -> String raise AppPathError
 
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
@@ -36,6 +43,14 @@ pub fn runtime_info_json() -> String raise @native.NativeError
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 // Errors
+pub(all) suberror AppCleanupError {
+  CommandExtension(CommandExtensionLifecycleError)
+  LifecycleHook(LifecycleHookError)
+  WindowDestroy(@native.NativeError)
+  RuntimeDestroy(@native.NativeError)
+} derive(@debug.Debug)
+pub fn AppCleanupError::message(Self) -> String
+
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
   Bootstrap(@bootstrap.BootstrapError)
@@ -55,24 +70,48 @@ pub(all) suberror AppEntryError {
 } derive(@debug.Debug)
 pub fn AppEntryError::message(Self) -> String
 
+pub(all) suberror AppPathError {
+  InvalidIdentifier(identifier~ : String)
+  MissingHomeDirectory(platform~ : String)
+  PlatformProbe(@native.NativeError)
+} derive(Eq, @debug.Debug)
+pub fn AppPathError::message(Self) -> String
+
 pub(all) suberror AppRunError {
   RunnerError(String)
   ConfigurationError(AppConfigurationError)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
   RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
+  LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
   BridgeStartupError(@native.BridgeDiagnostic)
   BridgeRuntimeError(@native.BridgeDiagnostic)
+  CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(@debug.Debug)
 pub fn AppRunError::message(Self) -> String
 
 pub(all) suberror CommandExtensionLifecycleError {
+  ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn CommandExtensionLifecycleError::message(Self) -> String
+
+pub(all) suberror LifecycleHookError {
+  ApplicationStart(index~ : Int, detail~ : String)
+  ApplicationShutdown(index~ : Int, detail~ : String)
+  WindowReady(index~ : Int, detail~ : String)
+  WindowClose(index~ : Int, detail~ : String)
+} derive(@debug.Debug)
+pub fn LifecycleHookError::message(Self) -> String
+
+pub(all) suberror NotificationDeliveryError {
+  Native(@native.NativeError)
+  WaitInterrupted(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NotificationDeliveryError::message(Self) -> String
 
 pub(all) suberror RuntimeWakeupError {
   UnsupportedFeature(feature~ : String)
@@ -85,7 +124,10 @@ pub fn RuntimeWakeupError::message(Self) -> String
 
 // Types and methods
 type App
+pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @native.WindowSizeHint, titlebar_style? : @native.TitlebarStyle) -> Self
+pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
+pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::entry_asset(Self, String) -> Self
@@ -96,16 +138,45 @@ pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
+pub fn App::on_launch_input(Self, async (@native.RuntimeLaunchInput) -> Unit noraise) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
+pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
+
+pub struct ApplicationContext {
+  tasks : @async.TaskGroup[Unit]
+}
+pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
+
+pub struct WindowContext {
+  id : String
+  window : @native.WindowRef
+  tasks : @async.TaskGroup[Unit]
+  events : WindowEventEmitter
+}
+pub fn WindowContext::events(Self) -> WindowEventEmitter
+pub fn WindowContext::id(Self) -> String
+pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
+pub fn WindowContext::window(Self) -> @native.WindowRef
+
+pub struct WindowEventEmitter {
+  emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
+}
+pub async fn[Payload : ToJson] WindowEventEmitter::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
 
 // Type aliases
+pub using @manifest {type AppEntry}
+
 pub using @native {type BridgeDiagnostic}
 
 pub using @native {type BridgeLifecycleState}
+
+pub using @core {type AppCommandRequestContext as CommandContext}
+
+pub using @command {type CommandRegistrar}
 
 pub using @native {type Menu}
 
@@ -125,11 +196,14 @@ pub using @native {type RuntimeEvent}
 
 pub using @native {type RuntimeInfo}
 
+pub using @native {type RuntimeLaunchInput}
+
 pub using @native {type TitlebarStyle}
 
 pub using @native {type Window}
 
 pub using @native {type WindowConfig}
 
-// Traits
+pub using @native {type WindowSizeHint}
 
+// Traits

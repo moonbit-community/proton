@@ -3,20 +3,21 @@ import {
   "justjavac/proton_cli/cef",
   "justjavac/proton_cli/codegen",
   "justjavac/ffi",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/lexer/basic" @lexer_basic,
-  "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
   "moonbitlang/moon_config",
 }
 
 import {
-  "moonbitlang/async",
+  "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 
 supported_targets = "native"

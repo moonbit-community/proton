@@ -6,16 +6,16 @@ fn parse_build_args(args : Array[String]) -> RawBuildOptions raise {
 ///|
 fn[T] expect_build_error_message(action : () -> T raise) -> String raise {
   try action() catch {
-    error => error.to_string()
+    error => Show::to_string(error)
   } noraise {
     _ => fail("expected build error")
   }
 }
 
 ///|
-fn[T] expect_build_config_error(
-  action : () -> T raise BuildConfigError,
-) -> BuildConfigError raise {
+async fn[T] expect_build_config_error(
+  action : async () -> T raise BuildConfigError,
+) -> BuildConfigError {
   try action() catch {
     error => error
   } noraise {
@@ -57,7 +57,7 @@ let valid_build_config =
 ///|
 test "parse build args defaults and moon args" {
   let raw = parse_build_args(["--", "--warn-list", "+a"])
-  @debug.assert_eq(raw.app_package, "app")
+  @debug.assert_eq(raw.app_package, None)
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.moon_target_dir, None)
   @debug.assert_eq(raw.run_frontend_build, true)
@@ -81,7 +81,7 @@ test "parse build args package and config" {
   let raw = parse_build_args([
     "--package", "desktop", "--config", "config/moon.proton", "--no-frontend",
   ])
-  @debug.assert_eq(raw.app_package, "desktop")
+  @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.config_path, Some("config/moon.proton"))
   @debug.assert_eq(raw.run_frontend_build, false)
 }
@@ -137,17 +137,32 @@ test "moon build args prepend an isolated target directory" {
 }
 
 ///|
-test "frontend cwd validation reports missing directory" {
+async test "frontend path validation reports missing directory" {
   let root = "target/proton-build-cwd"
   ensure_build_test_dir(root)
-  let error = expect_build_error_message(() => {
-    resolve_frontend_cwd(root, Some("missing"), "npm run build")
-  })
-  assert_true(error.contains("frontend cwd does not exist"))
+  let error = try
+    resolve_frontend_path(root, Some("missing"), "npm run build")
+  catch {
+    BuildPathError::Missing(..) as error => error.message()
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
+  } noraise {
+    _ => fail("expected build error")
+  }
+  assert_true(error.contains("frontend path does not exist"))
 }
 
 ///|
-test "build config discovery prefers package-local moon.proton" {
+async test "backend path supports nested directories with spaces" {
+  let root = "target/proton build backend"
+  ensure_build_test_dir(root)
+  ensure_build_test_dir(join_path(root, "nested"))
+  ensure_build_test_dir(join_path(root, "nested/backend app"))
+  let path = resolve_backend_path(root, Some("nested/backend app"))
+  @debug.assert_eq(path, resolve_path(root, "nested/backend app"))
+}
+
+///|
+async test "build config discovery prefers package-local moon.proton" {
   let root = "target/proton-build-package-config"
   ensure_build_test_dir(root)
   ensure_build_test_dir(join_path(root, "desktop"))
@@ -159,7 +174,7 @@ test "build config discovery prefers package-local moon.proton" {
 }
 
 ///|
-test "resolve path accepts Windows backslash relative input" {
+async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
     let dir = "target/proton-build-path"
     ensure_build_test_dir(dir)
@@ -172,7 +187,7 @@ test "resolve path accepts Windows backslash relative input" {
 }
 
 ///|
-test "project config validation rejects unknown top-level fields" {
+async test "project config validation rejects unknown top-level fields" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "unknown.moon.proton")
@@ -190,7 +205,7 @@ test "project config validation rejects unknown top-level fields" {
 }
 
 ///|
-test "project config validation requires window" {
+async test "project config validation requires window" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "missing-window.moon.proton")
@@ -217,7 +232,7 @@ test "project config validation requires window" {
 }
 
 ///|
-test "project config validation rejects unsupported size_hint" {
+async test "project config validation rejects unsupported size_hint" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "bad-size-hint.moon.proton")
@@ -252,7 +267,7 @@ test "project config validation rejects unsupported size_hint" {
 }
 
 ///|
-test "project config parsing keeps active bundle metadata out of build validation" {
+async test "project config parsing keeps active bundle metadata out of build validation" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
   let path = join_path(dir, "active-bundle.moon.proton")
@@ -271,12 +286,17 @@ test "project config parsing keeps active bundle metadata out of build validatio
 }
 
 ///|
-test "production entry validation requires file-backed entry" {
-  let error = expect_build_error_message(() => {
+async test "production entry validation requires file-backed entry" {
+  let error = try
     validate_production_entry_file(
       @proton_config.ProjectEntry::Asset("target/proton-build-missing.html"),
     )
-  })
+  catch {
+    BuildPathError::Missing(..) as error => error.message()
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
+  } noraise {
+    _ => fail("expected build error")
+  }
   assert_true(error.contains("production entry does not exist"))
   let dir = "target/proton-build-entry"
   ensure_build_test_dir(dir)
@@ -285,6 +305,33 @@ test "production entry validation requires file-backed entry" {
     err => abort(@debug.render(Repr(err)))
   }
   validate_production_entry_file(@proton_config.ProjectEntry::Asset(file))
+}
+
+///|
+async test "release validation checks secondary window entry files" {
+  let dir = "target/proton-build-secondary-entry"
+  ensure_build_test_dir(dir)
+  let main = join_path(dir, "main.html")
+  let missing = join_path(dir, "secondary/missing.html")
+  write_build_test_file(main, "<!doctype html>")
+  let config = BuildProjectConfig::{
+    base_dir: dir,
+    entries: [
+      @proton_config.ProjectEntry::Asset(main),
+      @proton_config.ProjectEntry::File(missing),
+    ],
+    backend: None,
+    frontend: None,
+  }
+  try validate_release_files(dir, config) catch {
+    BuildPathError::Missing(role~, path~) => {
+      assert_eq(role, "production entry")
+      assert_eq(path, missing)
+    }
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
+  } noraise {
+    _ => fail("expected missing secondary entry")
+  }
 }
 
 ///|
@@ -306,7 +353,9 @@ test "frontend release rejects url production entry" {
 ///|
 test "frontend release config preflight rejects url entry" {
   let config = BuildProjectConfig::{
-    entry: @proton_config.ProjectEntry::Url("http://localhost:5173"),
+    base_dir: ".",
+    entries: [@proton_config.ProjectEntry::Url("http://localhost:5173")],
+    backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
         dist=Some("target/proton-build-entry"),
@@ -320,9 +369,11 @@ test "frontend release config preflight rejects url entry" {
 ///|
 test "frontend release requires dist" {
   let config = BuildProjectConfig::{
-    entry: @proton_config.ProjectEntry::Asset(
-      "target/proton-build-entry/index.html",
-    ),
+    base_dir: ".",
+    entries: [
+      @proton_config.ProjectEntry::Asset("target/proton-build-entry/index.html"),
+    ],
+    backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
         before_build=Some("npm run build"),
@@ -334,11 +385,16 @@ test "frontend release requires dist" {
 }
 
 ///|
-test "production entry validation rejects directories" {
+async test "production entry validation rejects directories" {
   let dir = "target/proton-build-entry-dir"
   ensure_build_test_dir(dir)
-  let error = expect_build_error_message(() => {
+  let error = try
     validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir))
-  })
+  catch {
+    BuildPathError::WrongKind(..) as error => error.message()
+    error => fail("unexpected error: " + @debug.render(Repr(error)))
+  } noraise {
+    _ => fail("expected build error")
+  }
   assert_true(error.contains("production entry is not a file"))
 }

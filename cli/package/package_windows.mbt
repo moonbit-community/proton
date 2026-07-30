@@ -57,7 +57,7 @@ fn windows_runtime_required_paths(runtime : String) -> Array[String] {
 }
 
 ///|
-fn require_windows_runtime_layout(runtime : String) -> Unit raise {
+async fn require_windows_runtime_layout(runtime : String) -> Unit {
   let missing : Array[String] = []
   for path in windows_runtime_required_paths(runtime) {
     if !path_is_file(path) {
@@ -105,8 +105,8 @@ fn windows_archive_staging_path(plan : PackagePlan) -> String {
 ///|
 async fn recover_windows_backup(destination : String, label : String) -> Unit {
   let backup = destination + ".backup"
-  guard @mbfs.path_exists(backup) else { return }
-  if @mbfs.path_exists(destination) {
+  guard path_exists(backup) else { return }
+  if path_exists(destination) {
     remove_tree(backup)
   } else {
     @async_fs.rename(backup, destination) catch {
@@ -128,7 +128,7 @@ async fn rollback_windows_promotion(
   primary : Error,
 ) -> Unit {
   let errors : Array[String] = []
-  if @mbfs.path_exists(destination) {
+  if path_exists(destination) {
     @async_fs.rename(destination, staging) catch {
       error =>
         errors.push(
@@ -139,7 +139,7 @@ async fn rollback_windows_promotion(
         )
     }
   }
-  if @mbfs.path_exists(backup) && !@mbfs.path_exists(destination) {
+  if path_exists(backup) && !path_exists(destination) {
     @async_fs.rename(backup, destination) catch {
       error =>
         errors.push(
@@ -179,7 +179,7 @@ async fn promote_windows_artifact(
 ) -> Unit {
   recover_windows_backup(destination, label)
   let backup = destination + ".backup"
-  let had_destination = @mbfs.path_exists(destination)
+  let had_destination = path_exists(destination)
   if had_destination {
     @async_fs.rename(destination, backup) catch {
       error =>
@@ -332,7 +332,15 @@ async fn stage_windows_portable_impl(
     executable,
     resolve_path(staging, package_executable_name(plan.product_name) + ".exe"),
   )
-  copy_file(plan.config_path, resolve_path(staging, "moon.proton"))
+  let staged_executable = resolve_path(
+    staging,
+    package_executable_name(plan.product_name) + ".exe",
+  )
+  stage_windows_icon(plan, staged_executable)
+  stage_release_project_config(
+    plan.config_path,
+    resolve_path(staging, "moon.proton"),
+  )
   stage_project_inputs(plan, staging)
   write_package_manifest(plan, staging, "windows-portable")
   validate_windows_portable_layout(plan, staging)
@@ -355,10 +363,10 @@ async fn stage_windows_portable_impl(
 }
 
 ///|
-fn validate_windows_portable_layout(
+async fn validate_windows_portable_layout(
   plan : PackagePlan,
   output : String,
-) -> Unit raise {
+) -> Unit {
   let required : Array[String] = [
     resolve_path(output, package_executable_name(plan.product_name) + ".exe"),
     resolve_path(output, "moon.proton"),
@@ -395,7 +403,7 @@ fn validate_windows_portable_layout(
       "proton.lib", "libcef.lib", "bootstrap.exe", "bootstrapc.exe", "bin",
     ] {
     let path = resolve_path(output, forbidden)
-    if @mbfs.path_exists(path) {
+    if path_exists(path) {
       raise WindowsPackagingError::Verification(
         detail="staged portable layout contains a build-only or sample artifact: " +
           path,
@@ -525,16 +533,16 @@ async fn sign_windows_portable_with_tool(
 }
 
 ///|
-fn windows_signing_config_from_env() -> WindowsSigningConfig raise WindowsPackagingError {
+async fn windows_signing_config_from_env() -> WindowsSigningConfig {
   let certificate = match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
     Some(path) if path.trim().to_owned() != "" => path.trim().to_owned()
     _ =>
-      raise InvalidConfiguration(
+      raise WindowsPackagingError::InvalidConfiguration(
         detail="--sign requires PROTON_WINDOWS_CERTIFICATE on Windows",
       )
   }
   guard path_is_file(certificate) else {
-    raise InvalidConfiguration(
+    raise WindowsPackagingError::InvalidConfiguration(
       detail="Windows signing certificate is missing: " + certificate,
     )
   }
