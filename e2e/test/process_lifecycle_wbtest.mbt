@@ -50,11 +50,29 @@ async fn finish_scenario_app_with_exit_timeout(
   target : String,
   exit_timeout : Int,
 ) -> ShutdownProbeResult {
+  let snapshot = snapshot_scenario_process_tree(app)
+  close_browser(target, process_shutdown_timeout_ms)
+  wait_for_scenario_app_shutdown(app, target, snapshot, exit_timeout)
+}
+
+///|
+async fn snapshot_scenario_process_tree(
+  app : SpawnedScenarioApp,
+) -> ProcessSnapshot {
   let snapshot = snapshot_process_tree(app.process.pid)
   guard snapshot.helper_pids.length() > 0 else {
     fail("headless process tree did not contain a cef_process helper")
   }
-  close_browser(target, process_shutdown_timeout_ms)
+  snapshot
+}
+
+///|
+async fn wait_for_scenario_app_shutdown(
+  app : SpawnedScenarioApp,
+  target : String,
+  snapshot : ProcessSnapshot,
+  exit_timeout : Int,
+) -> ShutdownProbeResult {
   wait_for_app_exit(app, exit_timeout)
   wait_for_process_tree_stop(snapshot, exit_timeout)
   wait_for_cdp_endpoint_stop(
@@ -70,18 +88,11 @@ async fn finish_scenario_app_with_connected_browser(
   target : String,
   browser : @client.CdpClient,
 ) -> ShutdownProbeResult {
-  let snapshot = snapshot_process_tree(app.process.pid)
-  guard snapshot.helper_pids.length() > 0 else {
-    fail("headless process tree did not contain a cef_process helper")
-  }
+  let snapshot = snapshot_scenario_process_tree(app)
   close_connected_browser(browser)
-  wait_for_app_exit(app, process_shutdown_timeout_ms)
-  wait_for_process_tree_stop(snapshot, process_shutdown_timeout_ms)
-  wait_for_cdp_endpoint_stop(
-    cdp_http_endpoint_from(target),
-    process_shutdown_timeout_ms,
+  wait_for_scenario_app_shutdown(
+    app, target, snapshot, process_shutdown_timeout_ms,
   )
-  ShutdownProbeResult::{ helper_processes: snapshot.helper_pids.length() }
 }
 
 ///|

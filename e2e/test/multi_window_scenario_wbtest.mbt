@@ -21,12 +21,16 @@ struct MultiWindowProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
-async fn run_multi_window_scenario_page_probe(
+async fn run_multi_window_scenario_probe(
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
-) -> Unit {
+) -> ShutdownProbeResult {
   let (target_a, target_b) = wait_for_multi_window_targets(target, timeout)
+  let browser = @client.connect_cdp_browser_target_with_timeout(
+    cdp_target_from(target),
+    timeout_ms=timeout,
+  )
   let page_a = @client.connect_cdp_page_target_with_timeout(
     cdp_target_from(target),
     target_id=target_a.target_id,
@@ -38,10 +42,11 @@ async fn run_multi_window_scenario_page_probe(
     timeout_ms=timeout,
   )
   defer {
+    browser.close()
     page_a.close()
     page_b.close()
   }
-  run_multi_window_page_clients(
+  let initial = run_multi_window_page_clients(
     page_a,
     page_b,
     target_a.target_id,
@@ -49,6 +54,40 @@ async fn run_multi_window_scenario_page_probe(
     timeout,
     Some(app.native_log_path),
   )
+  let snapshot = snapshot_scenario_process_tree(app)
+  close_page_target(browser, target_a.target_id)
+  wait_for_multi_window_closed_browsers(app.native_log_path, 1, timeout)
+  match app_exit_code(app.process) {
+    Some(code) =>
+      fail(
+        "multi-window app exited after only one window closed: code=" +
+        code.to_string() +
+        app_output_suffix(app.output_path),
+      )
+    None => ()
+  }
+  let surviving = decode_probe(
+    evaluate_json(page_b, multi_window_probe_expression(0), true),
+    "surviving multi-window B",
+  )
+  assert_multi_window_page(surviving, "B")
+  guard surviving.response.window == initial.b.response.window else {
+    fail("surviving window B changed native window handles")
+  }
+  guard surviving.response.request_id != initial.b.response.request_id else {
+    fail("surviving window B reused its previous request_id")
+  }
+  close_page_target(browser, target_b.target_id)
+  wait_for_multi_window_closed_browsers(app.native_log_path, 2, timeout)
+  let shutdown = wait_for_scenario_app_shutdown(
+    app, target, snapshot, process_shutdown_timeout_ms,
+  )
+  assert_multi_window_closed_log(app.native_log_path)
+  println(
+    "MoonBit 45_bridge_multi_window sequential lifecycle passed: helpers=" +
+    shutdown.helper_processes.to_string(),
+  )
+  shutdown
 }
 
 ///|
@@ -59,7 +98,7 @@ async fn run_multi_window_page_clients(
   target_b : String,
   timeout : Int,
   native_log_path : String?,
-) -> Unit {
+) -> MultiWindowProbe {
   ignore(page_a.send_schema_command("Runtime.enable"))
   ignore(page_b.send_schema_command("Runtime.enable"))
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
@@ -88,6 +127,7 @@ async fn run_multi_window_page_clients(
     None => ()
   }
   println("MoonBit 45_bridge_multi_window routing probe passed")
+  result
 }
 
 ///|
@@ -239,58 +279,81 @@ fn count_multi_window_osr_paints(log : String) -> Int {
 }
 
 ///|
-async fn run_multi_window_lifecycle_probe_once(
-  root : String,
+async fn wait_for_multi_window_closed_browsers(
+  path : String,
+  expected : Int,
   timeout : Int,
 ) -> Unit {
-  let name = "45_bridge_multi_window"
-  let port = choose_cdp_port()
-  let target = port.to_string()
-  @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, name, port)
-    let mut stopped = false
-    defer (if !stopped { app.process.cancel() })
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
-    ignore(wait_for_multi_window_targets(target, timeout))
-    let shutdown = finish_scenario_app(app, target)
-    assert_multi_window_closed_log(app.native_log_path)
-    println(
-      "MoonBit multi-window lifecycle passed: helpers=" +
-      shutdown.helper_processes.to_string(),
-    )
-    stopped = true
-  })
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let counts = multi_window_closed_browser_counts(path)
+    assert_closed_browser_counts_are_unique(counts)
+    if counts.length() == expected {
+      return
+    }
+    guard counts.length() < expected else {
+      fail(
+        "native log recorded more than " +
+        expected.to_string() +
+        " closed multi-window browsers",
+      )
+    }
+    @async.sleep(100)
+    elapsed = elapsed + 100
+  }
+  fail(
+    "native log did not record " +
+    expected.to_string() +
+    " closed multi-window browsers within " +
+    timeout.to_string() +
+    "ms",
+  )
 }
 
 ///|
 fn assert_multi_window_closed_log(path : String) -> Unit raise {
-  guard count_native_log_entries(path, "window_closed", "browser=") >= 2 else {
-    fail("native log recorded fewer than two closed multi-window browsers")
+  let counts = multi_window_closed_browser_counts(path)
+  assert_closed_browser_counts_are_unique(counts)
+  guard counts.length() == 2 else {
+    fail(
+      "native log recorded " +
+      counts.length().to_string() +
+      " distinct closed multi-window browsers; expected 2",
+    )
   }
 }
 
 ///|
-async fn run_multi_window_lifecycle_probe(root : String, timeout : Int) -> Unit {
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_multi_window_lifecycle_probe_once(root, timeout)
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_startup_error(error) {
-          raise error
-        }
-        println(
-          "MoonBit multi-window lifecycle startup attempt failed; retrying once",
-        )
-        false
+fn multi_window_closed_browser_counts(path : String) -> Map[String, Int] {
+  let counts : Map[String, Int] = Map([])
+  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    _ => return counts
+  }
+  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
+    let line = raw_line.to_owned()
+    if line.contains("window_closed") {
+      match log_field(line, "browser=") {
+        Some(browser_id) =>
+          counts[browser_id] = counts.get(browser_id).unwrap_or(0) + 1
+        None => ()
       }
     }
-    if succeeded {
-      return
+  }
+  counts
+}
+
+///|
+fn assert_closed_browser_counts_are_unique(
+  counts : Map[String, Int],
+) -> Unit raise {
+  for browser_id, count in counts {
+    guard count == 1 else {
+      fail(
+        "native log recorded window_closed " +
+        count.to_string() +
+        " times for browser " +
+        browser_id,
+      )
     }
-    @async.sleep(1000)
-    attempt = attempt + 1
   }
 }
