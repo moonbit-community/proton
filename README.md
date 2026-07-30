@@ -21,30 +21,46 @@ proton_cli new my-app \
 cd my-app
 ```
 
-Set up the native runtime and start development:
+Fetch the MoonBit dependencies, install the Warren frontend toolchain, and
+set up the native runtime:
 
 ```sh
+moon update
+moon install moonbit-community/warren
 proton_cli cef setup
+```
+
+Start development:
+
+```sh
 proton_cli dev
 ```
 
-The generated project contains a runnable `app/` package, an example command
-extension, and a `moon.proton` configuration file. `.proton/` is a local
-runtime cache and should not be committed.
+The generated project is a three-module workspace: `shared/` holds the typed
+command and event contracts used on both sides, `frontend/` is a Rabbita
+application built and served by Warren, and `backend/` runs the Proton
+desktop runtime. `.proton/` is a local runtime cache and should not be
+committed.
 
 ## Application entry
 
-Generated projects explicitly load `moon.proton` with `@proton.config(...)`:
+Generated projects explicitly load `moon.proton` with `@proton.config(...)`
+and register their typed commands in `backend/app/main.mbt`:
 
 ```moonbit
 fn main {
   @proton.run(() => {
+    let backend = @todo.Backend::new()
     @proton.config("moon.proton")
-    .extension(@counter.extension())
+    .commands(fn(registrar) raise { backend.register_commands(registrar) })
     .run_or_abort()
   })
 }
 ```
+
+Commands are declared once in the `shared/` contract package and wired into
+the runtime with `.commands(...)`; the frontend invokes them through the
+typed Rabbita client and can subscribe to events pushed by the backend.
 
 The default config name honors `PROTON_CONFIG_PATH` (including
 `proton_cli dev --config`) and resolves the packaged config location when the
@@ -70,7 +86,7 @@ The root package also supports URL, file, asset, and project-config entries
 through `@proton.url`, `@proton.file`, `@proton.asset`, and `@proton.config`.
 
 On macOS and Windows, web content can extend beneath the native titlebar while
-retaining the system window controls:
+retaining the system window controls. Set `titlebar_style` in `moon.proton`:
 
 ```moonbit
 window = {
@@ -163,22 +179,42 @@ X11 display; use Xvfb in display-less CI jobs.
 
 ## Frontend projects
 
-Vite, Next, and similar tools can be configured in `moon.proton`:
+Generated projects describe their toolchain in `moon.proton`:
 
 ```moonbit
+backend = {
+  path: "backend",
+  package: "app",
+}
+
 frontend = {
-  dev_url: "http://127.0.0.1:5173",
-  dist: "frontend/dist",
-  cwd: "frontend",
-  before_dev: "npm run dev -- --host 127.0.0.1 --strictPort",
-  before_build: "npm run build",
+  path: "frontend",
+  dev_url: "http://127.0.0.1:4300",
+  before_dev: "warren dev --port 4300",
+  before_build: "warren build",
+  dist: "dist",
+}
+
+entry = {
+  kind: "asset",
+  value: "frontend/dist/index.html",
 }
 ```
+
+`backend` selects the MoonBit package that runs the Proton runtime. `entry`
+selects what the main window loads: `kind` is `"html"`, `"url"`, `"file"`, or
+`"asset"`, and `file`/`asset` values resolve relative to the config file. The
+`frontend` block drives development and build orchestration: `path` is the
+frontend working directory, `before_dev`/`before_build` run there, `dev_url`
+is the development server to wait for, and `dist` is the build output to
+validate (resolved relative to `path`).
 
 `proton_cli dev` runs `frontend.before_dev`, waits for `frontend.dev_url`, and
 launches the app in development mode. `proton_cli build` runs
 `frontend.before_build`, validates `frontend.dist`, and builds the MoonBit app
-for the native target.
+for the native target. Vite, Next, and similar tools fit the same shape: point
+`path`, `before_dev`, `before_build`, `dev_url`, and `dist` at the equivalent
+npm scripts.
 
 ## Build
 
