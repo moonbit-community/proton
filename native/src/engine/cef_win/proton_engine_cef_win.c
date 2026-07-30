@@ -1209,7 +1209,7 @@ static int proton_engine_bridge_pending_cancel(
   if (page_instance == NULL || page_instance[0] == '\0') {
     return 0;
   }
-  proton_engine_bridge_pending_t **cursor = &g_bridge_pending;
+  proton_engine_bridge_pending_t **cursor = &g_proton_engine_bridge_pending;
   while (*cursor != NULL) {
     proton_engine_bridge_pending_t *pending = *cursor;
     if (pending->browser_id == browser_id &&
