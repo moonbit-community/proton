@@ -1,9 +1,15 @@
+#if !defined(_WIN32) && !defined(__APPLE__)
+#define _GNU_SOURCE
+#endif
+
 #include "native_stub.h"
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -51,10 +57,11 @@ void keepawake_platform_start(
 ) {
   int exec_error_pipe[2];
   pid_t pid;
+  pid_t parent_pid = getpid();
   const char *what = keepawake_linux_scope_to_what(scope);
   char error_buffer[64];
 
-  if (pipe(exec_error_pipe) != 0) {
+  if (pipe2(exec_error_pipe, O_CLOEXEC) != 0) {
     keepawake_set_error(
       guard,
       keepawake_STATUS_OPERATION_FAILED,
@@ -93,6 +100,13 @@ void keepawake_platform_start(
     };
     close(exec_error_pipe[0]);
     setpgid(0, 0);
+    /* Ask the kernel to SIGTERM us if the parent thread dies, so an
+       unclean app exit cannot orphan systemd-inhibit while it holds the
+       sleep lock. Re-check getppid() to close the fork/prctl race. */
+    prctl(PR_SET_PDEATHSIG, SIGTERM);
+    if (getppid() != parent_pid) {
+      _exit(1);
+    }
     execvp("systemd-inhibit", argv);
     snprintf(error_buffer, sizeof(error_buffer), "%d", errno);
     write(exec_error_pipe[1], error_buffer, strlen(error_buffer));

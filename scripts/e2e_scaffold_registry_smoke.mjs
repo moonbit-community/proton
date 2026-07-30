@@ -93,12 +93,15 @@ function verifyGeneratedDependencies() {
     path.join(projectDir, "backend/moon.mod"),
     "utf8",
   );
-  const cliDependency =
-    `"bin-deps": { "justjavac/proton_cli": "` +
-    moduleVersion("cli/moon.mod") +
-    `" }`;
-  if (!backend.includes(cliDependency)) {
-    throw new Error(`backend/moon.mod is missing ${cliDependency}`);
+  if (backend.includes("bin-deps")) {
+    throw new Error("backend/moon.mod must not depend on a CLI binary shim");
+  }
+  const generatedCommands = path.join(
+    projectDir,
+    "backend/todo/commands.g.mbt",
+  );
+  if (!fs.existsSync(generatedCommands)) {
+    throw new Error("new did not commit backend/todo/commands.g.mbt");
   }
 }
 
@@ -119,7 +122,7 @@ try {
     "-y",
   ]);
   verifyGeneratedDependencies();
-  run("moon", ["check", "--diagnostic-limit", "80"], {
+  run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
   succeeded = true;

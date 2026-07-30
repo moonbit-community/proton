@@ -249,6 +249,20 @@ static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
 static proton_engine_runtime_t *g_managed_shutdown_runtime = NULL;
 static pthread_mutex_t g_managed_shutdown_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* Guards g_windows list membership and the per-window html/html_url/html_len
+   fields. Writers run on the main thread; the scheme handler factory reads
+   them on CEF's IO thread, so both sides must take this lock. Keep critical
+   sections leaf-only: never call back into engine or CEF code while held. */
+static pthread_mutex_t g_proton_engine_window_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void proton_engine_window_lock(void) {
+  pthread_mutex_lock(&g_proton_engine_window_lock);
+}
+
+void proton_engine_window_unlock(void) {
+  pthread_mutex_unlock(&g_proton_engine_window_lock);
+}
 static pthread_cond_t g_managed_shutdown_condition = PTHREAD_COND_INITIALIZER;
 static int g_managed_shutdown_complete = 0;
 static uint64_t g_next_window_native_id = 1;
@@ -742,22 +756,26 @@ static void proton_engine_window_list_add(proton_engine_window_t *window) {
   if (window == NULL || window->window_listed) {
     return;
   }
+  proton_engine_window_lock();
   window->next = g_windows;
   g_windows = window;
   window->window_listed = 1;
+  proton_engine_window_unlock();
 }
 
 static void proton_engine_window_list_remove(proton_engine_window_t *window) {
+  proton_engine_window_lock();
   proton_engine_window_t **cursor = &g_windows;
   while (*cursor != NULL) {
     if (*cursor == window) {
       *cursor = window->next;
       window->next = NULL;
       window->window_listed = 0;
-      return;
+      break;
     }
     cursor = &(*cursor)->next;
   }
+  proton_engine_window_unlock();
 }
 
 static proton_engine_window_t *proton_engine_window_from_browser(
@@ -1477,7 +1495,9 @@ static void CEF_CALLBACK proton_engine_on_after_created(
 
   browser->base.add_ref((cef_base_ref_counted_t *)browser);
   window->browser = browser;
+  proton_engine_window_lock();
   window->browser_id = browser->get_identifier(browser);
+  proton_engine_window_unlock();
   window->browser_create_scheduled = 0;
   if (host != NULL) {
     if (window->headless) {
@@ -1863,8 +1883,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
        (!proton_engine_bridge_op_is_valid(op) ||
         !proton_engine_bridge_payload_is_valid(
             payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES))) ||
-      page_instance == NULL || page_instance[0] == '\0' ||
-      strlen(page_instance) >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+      !proton_engine_bridge_page_instance_is_valid(page_instance)) {
     proton_engine_debug_log(
         "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
         pending_id, op != NULL ? op : "",
@@ -2127,14 +2146,23 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 1;
   }
   if (!proton_engine_bridge_payload_is_valid(
-          payload_json, window->max_bridge_payload_bytes) ||
-      page_instance == NULL || page_instance[0] == '\0' ||
-      strlen(page_instance) >= PROTON_ENGINE_MAX_BRIDGE_OP_BYTES) {
+          payload_json, window->max_bridge_payload_bytes)) {
     proton_engine_debug_log("bridge_reject_payload_too_large browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge payload is too large");
+    free(op);
+    free(payload_json);
+    free(page_instance);
+    return 1;
+  }
+  if (!proton_engine_bridge_page_instance_is_valid(page_instance)) {
+    proton_engine_debug_log("bridge_reject_invalid_page_instance browser=%d pending=%d op=%s",
+                            browser_id, renderer_pending_id,
+                            op != NULL ? op : "");
+    proton_engine_reject_renderer_request(frame, renderer_pending_id,
+                                          "bridge page instance is invalid");
     free(op);
     free(payload_json);
     free(page_instance);
@@ -3772,6 +3800,7 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
     [window->delegate release];
     window->delegate = nil;
   }
+  proton_engine_window_lock();
   free(window->client);
   free(window->html_url);
   free(window->html);
@@ -3779,6 +3808,7 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   free(window->initial_url);
   proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
+  proton_engine_window_unlock();
 }
 
 static void proton_engine_window_detach_native_window(
@@ -4110,11 +4140,13 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
       return PROTON_ERR_ENGINE;
     }
   }
+  proton_engine_window_lock();
   free(window->html_url);
   free(window->html);
   window->html_url = url_copy;
   window->html = html_copy;
   window->html_len = strlen(html_copy);
+  proton_engine_window_unlock();
   if (pending_url != NULL) {
     free(window->initial_url);
     window->initial_url = pending_url;

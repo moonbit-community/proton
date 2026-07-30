@@ -286,30 +286,190 @@ fn Parser::parse_value(self : Parser) -> Ast {
 }
 
 ///|
-fn decode_config_string(value : String) -> String {
-  let builder = StringBuilder::new()
-  let mut escaped = false
-  for _, ch in value {
-    if escaped {
-      match ch {
-        '"' => builder.write_char('"')
-        '\\' => builder.write_char('\\')
-        'n' => builder.write_char('\n')
-        't' => builder.write_char('\t')
-        _ => {
-          builder.write_char('\\')
-          builder.write_char(ch)
-        }
-      }
-      escaped = false
-    } else if ch == '\\' {
-      escaped = true
-    } else {
-      builder.write_char(ch)
-    }
+fn hex_digit_value(ch : Char) -> Int {
+  if ch >= '0' && ch <= '9' {
+    ch.to_int() - '0'.to_int()
+  } else if ch >= 'a' && ch <= 'f' {
+    ch.to_int() - 'a'.to_int() + 10
+  } else if ch >= 'A' && ch <= 'F' {
+    ch.to_int() - 'A'.to_int() + 10
+  } else {
+    -1
   }
-  if escaped {
-    builder.write_char('\\')
+}
+
+///|
+fn octal_digit_value(ch : Char) -> Int {
+  if ch >= '0' && ch <= '7' {
+    ch.to_int() - '0'.to_int()
+  } else {
+    -1
+  }
+}
+
+///|
+/// Decodes every escape sequence the MoonBit string lexer accepts in config
+/// strings: the simple escapes plus `\xHH`, `\oOOO`, `\uHHHH` (including
+/// surrogate pairs) and `\u{...}`. Values that are not valid Unicode scalar
+/// values degrade to U+FFFD; malformed tails are preserved verbatim (the
+/// lexer only emits valid escapes, so those paths are defensive).
+fn decode_config_string(value : String) -> String {
+  let chars = value.to_array()
+  let len = chars.length()
+  let builder = StringBuilder::new()
+  let replacement = '\u{FFFD}'
+  let mut i = 0
+  while i < len {
+    let ch = chars[i]
+    if ch != '\\' {
+      builder.write_char(ch)
+      i += 1
+      continue
+    }
+    if i + 1 >= len {
+      builder.write_char('\\')
+      break
+    }
+    let esc = chars[i + 1]
+    match esc {
+      '"' | '\\' | '\'' | '`' | '/' | ' ' => {
+        builder.write_char(esc)
+        i += 2
+      }
+      'n' => {
+        builder.write_char('\n')
+        i += 2
+      }
+      't' => {
+        builder.write_char('\t')
+        i += 2
+      }
+      'b' => {
+        builder.write_char('\b')
+        i += 2
+      }
+      'r' => {
+        builder.write_char('\r')
+        i += 2
+      }
+      'f' => {
+        builder.write_char('\f')
+        i += 2
+      }
+      'x' => {
+        if i + 3 < len {
+          let hi = hex_digit_value(chars[i + 2])
+          let lo = hex_digit_value(chars[i + 3])
+          if hi >= 0 && lo >= 0 {
+            builder.write_char((hi * 16 + lo).unsafe_to_char())
+            i += 4
+            continue
+          }
+        }
+        builder.write_char('\\')
+        builder.write_char(esc)
+        i += 2
+      }
+      'o' => {
+        if i + 4 < len {
+          let a = octal_digit_value(chars[i + 2])
+          let b = octal_digit_value(chars[i + 3])
+          let c = octal_digit_value(chars[i + 4])
+          // The string lexer restricts octal escapes to \o[0-3][0-7]{2}.
+          if a >= 0 && a <= 3 && b >= 0 && c >= 0 {
+            builder.write_char((a * 64 + b * 8 + c).unsafe_to_char())
+            i += 5
+            continue
+          }
+        }
+        builder.write_char('\\')
+        builder.write_char(esc)
+        i += 2
+      }
+      'u' =>
+        if i + 2 < len && chars[i + 2] == '{' {
+          let mut j = i + 3
+          let mut cp = 0
+          let mut digits = 0
+          let mut overflow = false
+          while j < len && chars[j] != '}' {
+            let digit = hex_digit_value(chars[j])
+            if digit < 0 {
+              break
+            }
+            if cp > 0x10FFFF {
+              overflow = true
+            } else {
+              cp = cp * 16 + digit
+            }
+            digits += 1
+            j += 1
+          }
+          if j < len && chars[j] == '}' && digits > 0 {
+            if overflow || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF) {
+              builder.write_char(replacement)
+            } else {
+              builder.write_char(cp.unsafe_to_char())
+            }
+            i = j + 1
+            continue
+          }
+          builder.write_char('\\')
+          builder.write_char(esc)
+          i += 2
+        } else if i + 5 < len {
+          let h0 = hex_digit_value(chars[i + 2])
+          let h1 = hex_digit_value(chars[i + 3])
+          let h2 = hex_digit_value(chars[i + 4])
+          let h3 = hex_digit_value(chars[i + 5])
+          if h0 >= 0 && h1 >= 0 && h2 >= 0 && h3 >= 0 {
+            let cp = ((h0 * 16 + h1) * 16 + h2) * 16 + h3
+            if cp >= 0xD800 && cp <= 0xDBFF {
+              // High surrogate: combine with a following \uDC00-\uDFFF escape.
+              let mut combined = false
+              if i + 11 < len && chars[i + 6] == '\\' && chars[i + 7] == 'u' {
+                let l0 = hex_digit_value(chars[i + 8])
+                let l1 = hex_digit_value(chars[i + 9])
+                let l2 = hex_digit_value(chars[i + 10])
+                let l3 = hex_digit_value(chars[i + 11])
+                if l0 >= 0 && l1 >= 0 && l2 >= 0 && l3 >= 0 {
+                  let lo = ((l0 * 16 + l1) * 16 + l2) * 16 + l3
+                  if lo >= 0xDC00 && lo <= 0xDFFF {
+                    builder.write_char(
+                      (0x10000 + (cp - 0xD800) * 0x400 + (lo - 0xDC00)).unsafe_to_char(),
+                    )
+                    combined = true
+                    i += 12
+                  }
+                }
+              }
+              if !combined {
+                builder.write_char(replacement)
+                i += 6
+              }
+            } else if cp >= 0xDC00 && cp <= 0xDFFF {
+              builder.write_char(replacement)
+              i += 6
+            } else {
+              builder.write_char(cp.unsafe_to_char())
+              i += 6
+            }
+            continue
+          }
+          builder.write_char('\\')
+          builder.write_char(esc)
+          i += 2
+        } else {
+          builder.write_char('\\')
+          builder.write_char(esc)
+          i += 2
+        }
+      _ => {
+        builder.write_char('\\')
+        builder.write_char(esc)
+        i += 2
+      }
+    }
   }
   builder.to_string()
 }

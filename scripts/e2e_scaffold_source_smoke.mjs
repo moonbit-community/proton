@@ -141,14 +141,12 @@ function verifyGeneratedTree() {
     "utf8",
   );
   assert(
-    backendMod.includes('"bin-deps": { "justjavac/proton_cli": "0.1.10" }'),
-    "generated backend does not declare the Proton CLI binary dependency",
+    !backendMod.includes("bin-deps"),
+    "generated backend must not depend on a CLI binary shim",
   );
   assert(
-    todoPackage.includes(
-      'command: "$mooncake_bin/proton_cli codegen $input -o $output"',
-    ),
-    "generated backend does not use its declared Proton CLI binary",
+    !todoPackage.includes("$mooncake_bin"),
+    "generated backend must not run the CLI through $mooncake_bin",
   );
 }
 
@@ -190,30 +188,6 @@ function connectLocalSourceModules() {
     "",
   ].join("\n");
   fs.writeFileSync(path.join(projectDir, "moon.work"), work);
-
-  const backendModPath = path.join(projectDir, "backend", "moon.mod");
-  const backendMod = fs.readFileSync(backendModPath, "utf8");
-  const withoutUnpublishedCli = backendMod.replace(
-    '  "bin-deps": { "justjavac/proton_cli": "0.1.10" },\n',
-    "",
-  );
-  assert(
-    withoutUnpublishedCli !== backendMod,
-    "could not remove the unpublished CLI dependency from the source smoke",
-  );
-  fs.writeFileSync(backendModPath, withoutUnpublishedCli);
-
-  const todoPackagePath = path.join(projectDir, "backend", "todo", "moon.pkg");
-  const todoPackage = fs.readFileSync(todoPackagePath, "utf8");
-  const withoutDevBuild = todoPackage.replace(
-    /\nrule\([\s\S]*?\n\)\n\ndev_build\([\s\S]*?\n\)\n/,
-    "",
-  );
-  assert(
-    withoutDevBuild !== todoPackage,
-    "could not disable the unpublished CLI dev_build for the source smoke",
-  );
-  fs.writeFileSync(todoPackagePath, withoutDevBuild);
 }
 
 function verifyPackagedApp() {
@@ -731,7 +705,7 @@ async function main() {
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   connectLocalSourceModules();
 
-  run("moon", ["check", "--diagnostic-limit", "80"], { cwd: projectDir });
+  run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run("warren", ["build"], { cwd: frontendDir });
   run(

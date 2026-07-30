@@ -7,6 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* The engines define these per translation unit; mirror them so the shared
+   bridge_json.h validators can be exercised here. */
+#define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
+#define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
+#include "../src/engine/cef_common/bridge_json.h"
+
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -651,6 +657,44 @@ static int expect_bridge_lifecycle_state(void) {
   return 0;
 }
 
+static int expect_bridge_page_instance_validation(void) {
+  static const struct {
+    const char *value;
+    int expected;
+  } cases[] = {
+      {"12345-7", 1},
+      {"1-1", 1},
+      {"0-18446744073709551615", 1},
+      {"-", 1},
+      {NULL, 0},
+      {"", 0},
+      {"abc-1", 0},
+      {"12345_7", 0},
+      {"12345\"-7", 0},
+      {"12345\\-7", 0},
+      {"12345 -7", 0},
+      {"12345\n-7", 0},
+  };
+  for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+    if (proton_engine_bridge_page_instance_is_valid(cases[i].value) !=
+        cases[i].expected) {
+      fprintf(stderr, "page instance validation mismatch at case %zu\n", i);
+      return 1;
+    }
+  }
+  char long_instance[PROTON_ENGINE_MAX_BRIDGE_OP_BYTES + 1];
+  memset(long_instance, '1', PROTON_ENGINE_MAX_BRIDGE_OP_BYTES);
+  long_instance[PROTON_ENGINE_MAX_BRIDGE_OP_BYTES] = '\0';
+  if (proton_engine_bridge_page_instance_is_valid(long_instance)) {
+    return fail("page instance validation accepted an overlong instance");
+  }
+  long_instance[PROTON_ENGINE_MAX_BRIDGE_OP_BYTES - 1] = '\0';
+  if (!proton_engine_bridge_page_instance_is_valid(long_instance)) {
+    return fail("page instance validation rejected a boundary-length instance");
+  }
+  return 0;
+}
+
 static int expect_status(const char *label, int32_t actual, int32_t expected) {
   if (actual != expected) {
     fprintf(stderr, "%s: expected %d, got %d\n", label, expected, actual);
@@ -1063,6 +1107,9 @@ int main(void) {
   int32_t status = PROTON_OK;
 
   if (expect_bridge_lifecycle_state()) {
+    return 1;
+  }
+  if (expect_bridge_page_instance_validation()) {
     return 1;
   }
   if (expect_root_json_values()) {

@@ -502,9 +502,14 @@ async fn run_dev_extension_scenario_with_retry(
 fn retryable_dev_extension_error(error : Error) -> Bool {
   // This scenario deliberately reloads and replaces its direct page target.
   // On a loaded CI runner CEF can close the old page WebSocket just before the
-  // reconnect loop takes ownership.  Recreate the isolated scenario once;
-  // persistent transport closures still fail on the second attempt.
-  retryable_scenario_error(error)
+  // reconnect loop takes ownership, and a CDP command issued against the
+  // dying target then surfaces as CommandFailed.  Recreate the isolated
+  // scenario once; persistent transport closures still fail on the second
+  // attempt.
+  match error {
+    @client.BrowserError::CommandFailed(_, _) => true
+    _ => retryable_scenario_error(error)
+  }
 }
 
 ///|
@@ -512,7 +517,17 @@ test "dev extension retry classification stays narrow" {
   assert_true(retryable_dev_extension_error(@io.ReaderClosed))
   assert_true(
     retryable_dev_extension_error(
+      @client.BrowserError::CommandFailed(-32000, "Target closed"),
+    ),
+  )
+  assert_true(
+    retryable_dev_extension_error(
       Failure::Failure("scenario app exited before CDP became ready"),
+    ),
+  )
+  assert_false(
+    retryable_dev_extension_error(
+      @client.BrowserError::InvalidField("sessionId"),
     ),
   )
   assert_false(

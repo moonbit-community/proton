@@ -2,7 +2,7 @@
 let default_proton_version = "0.1.13"
 
 ///|
-let default_proton_cli_version = "0.1.10"
+let default_proton_cli_version = "0.1.11"
 
 ///|
 let default_proton_contract_version = "0.1.0"
@@ -190,7 +190,41 @@ fn plan_project_files(
   for spec in template_specs() {
     files.push(render_template(spec, context))
   }
+  files.push(generate_scaffold_commands(files))
   files
+}
+
+///|
+/// The scaffold commits its typed bridge as a plain generated file so
+/// `moon check` and `moon build` never depend on a CLI binary shim.
+let scaffold_commands_input = "backend/todo/commands.mbt"
+
+///|
+let scaffold_commands_output = "backend/todo/commands.g.mbt"
+
+///|
+fn generate_scaffold_commands(
+  files : Array[PlannedFile],
+) -> PlannedFile raise NewProjectTemplateError {
+  for file in files {
+    if file.path == scaffold_commands_input {
+      let output = @codegen.generate_typed_commands_from_sources(
+        [(file.path, file.content)],
+        extension_package=false,
+      ) catch {
+        error =>
+          raise CommandCodegen(
+            path=scaffold_commands_input,
+            detail=@debug.render(Repr(error)),
+          )
+      }
+      return { path: scaffold_commands_output, content: output.source }
+    }
+  }
+  raise CommandCodegen(
+    path=scaffold_commands_input,
+    detail="template is missing the scaffold commands source",
+  )
 }
 
 ///|

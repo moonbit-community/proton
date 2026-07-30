@@ -10,6 +10,11 @@
 
 typedef struct _cef_browser_t cef_browser_t;
 
+/* Serializes access to the window list and per-window html state between the
+   main thread (writers) and CEF's IO thread (scheme handler readers). */
+void proton_engine_window_lock(void);
+void proton_engine_window_unlock(void);
+
 uint64_t proton_engine_window_native_id(proton_engine_window_t *window);
 int proton_engine_runtime_is_headless(proton_engine_runtime_t *runtime);
 int proton_engine_window_is_headless(proton_engine_window_t *window);

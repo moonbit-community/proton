@@ -655,9 +655,13 @@ fn retryable_startup_error(error : Error) -> Bool {
   // Retry only failures emitted by the explicit startup waiters.  Transport
   // retry classification is handled by retryable_scenario_error using typed
   // errors; broad text matches such as "connection reset" would hide bugs.
+  // The navigation waiter covers the page load right after Page.navigate,
+  // which can stall on a loaded CI runner while the local server and CEF
+  // settle.
   text.contains("scenario app exited before cdp became ready") ||
   text.contains("cdp endpoint did not start within") ||
-  text.contains("cdp page target did not become ready within")
+  text.contains("cdp page target did not become ready within") ||
+  text.contains("timed out waiting for navigation to")
 }
 
 ///|
