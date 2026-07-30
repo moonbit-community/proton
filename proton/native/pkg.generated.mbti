@@ -187,6 +187,7 @@ pub fn RuntimeConfig::to_json_string(Self) -> String
 pub fn RuntimeConfig::unsafe_from_json(String) -> Self
 
 type RuntimeEvent derive(Eq, @debug.Debug)
+pub fn RuntimeEvent::bridge_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool

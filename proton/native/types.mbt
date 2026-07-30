@@ -62,6 +62,7 @@ pub(all) struct RuntimeWaitReady {
 struct RuntimeEvent {
   event_type : String
   window : Int64?
+  request_id : Int64?
   menu_command_id : String?
   revision : Int64?
   items : Array[String]
@@ -226,6 +227,15 @@ pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(self : RuntimeEvent) -> Bool {
   self.event_type == "bridge_lifecycle_changed"
+}
+
+///|
+pub fn RuntimeEvent::bridge_request_cancellation(self : RuntimeEvent) -> Int64? {
+  if self.event_type == "bridge_request_cancelled" {
+    self.request_id
+  } else {
+    None
+  }
 }
 
 ///|

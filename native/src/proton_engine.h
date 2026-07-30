@@ -67,6 +67,12 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
     int32_t *out_required_len,
     char *error,
     size_t error_len);
+int32_t proton_engine_runtime_poll_bridge_cancellation(
+    proton_engine_runtime_t *runtime,
+    int64_t *out_request_id,
+    int32_t *out_present,
+    char *error,
+    size_t error_len);
 int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_runtime_t *runtime,
     const char *response_json,

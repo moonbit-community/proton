@@ -755,6 +755,10 @@ async fn run_bridge_pump(
           dispatch_runtime_event(
             event, windows, forward_menu_events, launch_input_handlers, group,
           )
+          cancel_bridge_request_task(
+            pending,
+            event.bridge_request_cancellation(),
+          )
           if event.is_window_closed() {
             let closed_window = event.window_id()
             cancel_window_bridge_tasks(pending, closed_window)
@@ -1053,6 +1057,23 @@ fn cancel_window_bridge_tasks(
     Some(window_id) =>
       for item in pending {
         if item.window == window_id && item.state == Running {
+          item.task.cancel()
+          item.state = Cancelled
+        }
+      }
+    None => ()
+  }
+}
+
+///|
+fn cancel_bridge_request_task(
+  pending : Array[BridgeDispatchTask],
+  request_id : Int64?,
+) -> Unit {
+  match request_id {
+    Some(request_id) =>
+      for item in pending {
+        if item.request_id == request_id && item.state == Running {
           item.task.cancel()
           item.state = Cancelled
         }

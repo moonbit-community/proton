@@ -200,6 +200,31 @@ static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) 
   }
 }
 
+// Move renderer cancellations onto the owner-thread runtime event queue.
+static void proton_runtime_sync_bridge_cancellations(
+    proton_runtime_slot_t *runtime) {
+  while (runtime->event_count < PROTON_MAX_EVENTS) {
+    int64_t request_id = 0;
+    int32_t present = 0;
+    char engine_error[512] = {0};
+    if (proton_engine_runtime_poll_bridge_cancellation(
+            runtime->engine_runtime, &request_id, &present, engine_error,
+            sizeof(engine_error)) != PROTON_OK ||
+        present == 0) {
+      return;
+    }
+    char event_json[128];
+    int written = snprintf(
+        event_json, sizeof(event_json),
+        "{\"type\":\"bridge_request_cancelled\",\"request_id\":\"%lld\"}",
+        (long long)request_id);
+    if (written < 0 || written >= (int)sizeof(event_json) ||
+        !proton_runtime_enqueue_event(runtime, event_json)) {
+      return;
+    }
+  }
+}
+
 int32_t proton_abi_version(void) { return PROTON_ABI_VERSION; }
 
 int32_t proton_runtime_info_json(char *buffer,
@@ -462,6 +487,7 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
     if (status != PROTON_OK) {
       return status;
     }
+    proton_runtime_sync_bridge_cancellations(slot);
     proton_runtime_sync_menu_commands(slot);
     if (proton_runtime_has_events(slot)) {
       ready_mask |= PROTON_WAIT_EVENT;
@@ -492,7 +518,14 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
-  *out_ready_mask = engine_ready & engine_interest;
+  ready_mask = engine_ready & engine_interest;
+  if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
+    proton_runtime_sync_bridge_cancellations(slot);
+    if (proton_runtime_has_events(slot)) {
+      ready_mask |= PROTON_WAIT_EVENT;
+    }
+  }
+  *out_ready_mask = ready_mask;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -636,6 +669,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
     return status;
   }
   proton_runtime_sync_engine_bridge_lifecycle(runtime, slot);
+  proton_runtime_sync_bridge_cancellations(slot);
   proton_runtime_sync_menu_commands(slot);
   proton_runtime_sync_platform_events(slot);
   status = proton_runtime_poll_event(slot, buffer, buffer_len,

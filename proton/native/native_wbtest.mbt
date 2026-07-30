@@ -131,6 +131,15 @@ test "native text reader accepts lengths that include the terminator" {
 }
 
 ///|
+test "runtime events preserve bridge cancellation request ids" {
+  let event = decode_runtime_event_json(
+    "{\"type\":\"bridge_request_cancelled\",\"request_id\":\"42\"}",
+  )
+  assert_eq(event.event_type(), "bridge_request_cancelled")
+  assert_true(event.bridge_request_cancellation() == Some(42L))
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }

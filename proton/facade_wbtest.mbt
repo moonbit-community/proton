@@ -370,6 +370,47 @@ async test "startup dispatch retains an earlier window close" {
 }
 
 ///|
+async test "bridge cancellation targets only the matching handler task" {
+  @async.with_task_group(group => {
+    let first_task = group.spawn(
+      () => {
+        @async.sleep(10000)
+        @native.BridgeResponse::Ok(request_id=41L, payload=Json::null())
+      },
+      no_wait=true,
+      allow_failure=true,
+    )
+    let second_task = group.spawn(
+      () => {
+        @async.sleep(10000)
+        @native.BridgeResponse::Ok(request_id=42L, payload=Json::null())
+      },
+      no_wait=true,
+      allow_failure=true,
+    )
+    let pending = [
+      BridgeDispatchTask::{
+        request_id: 41L,
+        window: 1L,
+        task: first_task,
+        state: Running,
+      },
+      BridgeDispatchTask::{
+        request_id: 42L,
+        window: 1L,
+        task: second_task,
+        state: Running,
+      },
+    ]
+    cancel_bridge_request_task(pending, Some(42L))
+    assert_true(pending[0].state is Running)
+    assert_true(pending[1].state is Cancelled)
+    first_task.cancel()
+    group.return_immediately(())
+  })
+}
+
+///|
 test "extension events use structured bridge transport JSON" {
   let event = @ipc.IpcExtensionEvent::new(
     "ticker",

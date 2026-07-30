@@ -107,6 +107,10 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event window"))
   }
+  let request_id = match object.get("request_id") {
+    None => None
+    Some(value) => Some(decode_int64_json(value, "runtime event request id"))
+  }
   let menu_command_id = match object.get("command_id") {
     None => None
     Some(value) => Some(decode_string_json(value, "runtime event command id"))
@@ -147,6 +151,7 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   RuntimeEvent::{
     event_type,
     window,
+    request_id,
     menu_command_id,
     revision,
     items,
