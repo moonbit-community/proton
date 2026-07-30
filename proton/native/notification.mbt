@@ -56,7 +56,9 @@ pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError {
     let payload = if has_payload.val == 0 {
       None
     } else {
-      Some(@ffi.from_cstr(Bytes::from_array(buffer)))
+      // On success `required` is the payload plus its terminator, and the
+      // rest of the fixed buffer is zero fill. Decode exactly that span.
+      Some(@ffi.from_cstr(Bytes::from_array(buffer[0:required.val])))
     }
     Some(NativeNotificationClick::{ payload, })
   }
