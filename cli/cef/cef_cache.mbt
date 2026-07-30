@@ -11,8 +11,8 @@ fn assert_safe_install_dir(
   install_dir : String,
   root : String,
 ) -> Unit raise CefRuntimeError {
-  let normalized_install = install_dir.replace(old="/", new="\\")
-  let normalized_root = root.replace(old="/", new="\\")
+  let normalized_install = install_dir.replace_all(old="/", new="\\")
+  let normalized_root = root.replace_all(old="/", new="\\")
   let parent = path_parent(normalized_root)
   if normalized_install == "" ||
     normalized_install.has_suffix(":\\") ||

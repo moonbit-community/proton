@@ -43,6 +43,7 @@ pub(all) suberror CefRuntimeError {
   ManifestSyntax(path~ : String, detail~ : String)
   ManifestShape(path~ : String, detail~ : String)
   ManifestField(path~ : String, field~ : String)
+  ManifestFieldValue(path~ : String, field~ : String, detail~ : String)
   PrebuiltVersionMismatch(expected~ : String, actual~ : String)
   ActivePlatformMismatch(expected~ : String, actual~ : String)
   ActiveVersionMismatch(expected~ : String, actual~ : String)
@@ -126,6 +127,8 @@ pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
     ManifestShape(path~, detail~) => "Invalid manifest " + path + ": " + detail
     ManifestField(path~, field~) =>
       "Manifest " + path + " missing string field: " + field
+    ManifestFieldValue(path~, field~, detail~) =>
+      "Invalid manifest " + path + " field " + field + ": " + detail
     PrebuiltVersionMismatch(expected~, actual~) =>
       "Proton prebuilt version mismatch: expected " +
       expected +

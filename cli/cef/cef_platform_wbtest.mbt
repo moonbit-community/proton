@@ -146,3 +146,42 @@ test "custom CEF archives require a valid SHA-256 digest" {
   )
   assert_eq(value, uppercase.to_lower())
 }
+
+///|
+test "manifest proton versions cannot escape generated directories" {
+  for
+    version in [
+      "../evil", "a/../../b", "a\\..\\b", "/tmp/evil", "C:\\evil", ".", "..", "",
+      "with space", "0.1.12\n",
+    ] {
+    try validate_proton_version(version, "manifest.json") catch {
+      CefRuntimeError::ManifestFieldValue(field="proton_version", ..) => ()
+      _ => abort("expected invalid proton version: " + version)
+    } noraise {
+      _ => abort("expected unsafe proton version to fail: " + version)
+    }
+  }
+  for version in ["0.1.12", "0.1.13-beta.1+build", "1.0.0_rc1"] {
+    validate_proton_version(version, "manifest.json")
+  }
+}
+
+///|
+test "generated runtime directories must stay under the project root" {
+  let root = "/work/project"
+  assert_safe_generated_dir(
+    "/work/project/.proton/runtimes/darwin-arm64/proton-0.1.12_cef-x", root,
+  )
+  for
+    dir in [
+      "/work/project", "/work", "/.proton/runtimes/darwin-arm64/x", "/work/project.evil/x",
+      "", "/work/project/",
+    ] {
+    try assert_safe_generated_dir(dir, root) catch {
+      CefRuntimeError::UnsafeGeneratedDirectory(..) => ()
+      _ => abort("expected unsafe generated directory: " + dir)
+    } noraise {
+      _ => abort("expected unsafe generated directory to fail: " + dir)
+    }
+  }
+}
