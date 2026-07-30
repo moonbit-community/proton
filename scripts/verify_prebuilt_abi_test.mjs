@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   compareSymbolSets,
+  exportedAllSymbols,
   exportedProtonSymbols,
   publicAbiSymbols,
   verifyPrebuiltAbi,
@@ -52,8 +53,81 @@ test("requires the exact public export set", () => {
       ["proton_public"],
       ["proton_public", "proton_unexpected"],
     ),
-    ["library: unexpected Proton export proton_unexpected"],
+    ["library: unexpected export proton_unexpected"],
   );
+});
+
+test("extracts every nm export, not only proton_* ones", () => {
+  const output = `
+0000000000001000 T _proton_abi_version
+0000000000002000 T _cef_api_hash
+0000000000003000 T proton_runtime_wait
+`;
+  assert.deepEqual(exportedAllSymbols(output, "nm"), [
+    "cef_api_hash",
+    "proton_abi_version",
+    "proton_runtime_wait",
+  ]);
+});
+
+test("extracts every dumpbin export", () => {
+  const output = `
+    ordinal hint RVA      name
+          1    0 00001234 proton_abi_version
+          2    1 00005678 cef_api_hash
+          3    2 0000A1B0 cef_forwarded (forwarded to libcef.cef_forwarded)
+`;
+  assert.deepEqual(exportedAllSymbols(output, "dumpbin"), [
+    "cef_api_hash",
+    "cef_forwarded",
+    "proton_abi_version",
+  ]);
+});
+
+test("nm parser accepts absolute and weak symbol types", () => {
+  const output = `
+0000000000001000 T _proton_abi_version
+0000000000002000 A _cef_absolute
+0000000000003000 W _cef_weak
+`;
+  assert.deepEqual(exportedAllSymbols(output, "nm"), [
+    "cef_absolute",
+    "cef_weak",
+    "proton_abi_version",
+  ]);
+});
+
+test("extracts GNU and llvm objdump PE exports", () => {
+  const gnu = `
+[Ordinal/Name Pointer] Table
+\t[   0] proton_abi_version
+\t[   1] cef_api_hash
+`;
+  assert.deepEqual(exportedAllSymbols(gnu, "objdump"), [
+    "cef_api_hash",
+    "proton_abi_version",
+  ]);
+  const llvm = `
+Export Table:
+ DLL name: proton.dll
+ Ordinal base: 1
+ Ordinal      RVA  Name
+       1   0x61c0  proton_abi_version
+       2   0x61d0  cef_api_hash
+`;
+  assert.deepEqual(exportedAllSymbols(llvm, "objdump"), [
+    "cef_api_hash",
+    "proton_abi_version",
+  ]);
+});
+
+test("objdump parser ignores export address table entries", () => {
+  const gnuAddressTable = `
+ Export Address Table -- Ordinal Base 1
+\t[   0] + base[   1] 11000 Export RVA
+\t[   1] + base[   2] 12000 Export RVA
+`;
+  assert.deepEqual(exportedAllSymbols(gnuAddressTable, "objdump"), []);
 });
 
 test("metadata validation requires every shipped platform", () => {

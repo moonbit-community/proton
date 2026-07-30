@@ -164,6 +164,13 @@ if(PROTON_WITH_ENGINE)
     target_include_directories(proton_cef_loader PRIVATE "${PROTON_ENGINE_ROOT}")
     target_compile_definitions(proton_cef_loader PRIVATE WRAPPING_CEF_SHARED=1)
     target_compile_features(proton_cef_loader PRIVATE cxx_std_17)
+    # The loader is linked into libproton; keep the CEF C API it wraps out of
+    # the shipped dynamic export set (only proton_* may be exported).
+    set_target_properties(proton_cef_loader PROPERTIES
+      CXX_VISIBILITY_PRESET hidden
+      OBJCXX_VISIBILITY_PRESET hidden
+      VISIBILITY_INLINES_HIDDEN YES
+    )
     target_link_libraries(proton PRIVATE
       proton_cef_loader
       "-framework Cocoa"
@@ -318,6 +325,17 @@ set_target_properties(proton PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
+
+if(APPLE)
+  # CEF marks its C API CEF_EXPORT (visibility("default")), which beats
+  # -fvisibility=hidden, so the loader stubs would leak into the dynamic
+  # export set. Pin the shipped ABI to proton_* with a linker allowlist.
+  set(PROTON_DARWIN_EXPORTS "${CMAKE_CURRENT_BINARY_DIR}/proton_darwin.exports")
+  file(WRITE "${PROTON_DARWIN_EXPORTS}"
+    "# libproton public ABI (see native/include/proton_native.h)\n_proton_*\n")
+  target_link_options(proton PRIVATE
+    "LINKER:-exported_symbols_list,${PROTON_DARWIN_EXPORTS}")
+endif()
 
 if(WIN32)
   target_compile_definitions(proton PRIVATE

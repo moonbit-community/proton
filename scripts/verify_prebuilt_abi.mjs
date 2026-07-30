@@ -55,6 +55,40 @@ export function exportedProtonSymbols(toolOutput) {
   return [...symbols].sort();
 }
 
+// Extracts every exported symbol name (not just proton_*) so unexpected
+// dynamic exports — for example leaked cef_* wrappers — cannot slip through
+// the proton_*-filtered comparison. Parsing is per tool because nm, dumpbin,
+// and objdump print exports in different shapes.
+export function exportedAllSymbols(toolOutput, tool) {
+  const symbols = new Set();
+  const patterns = [];
+  if (tool === "nm") {
+    // "0000000000001000 T _proton_abi_version"
+    patterns.push(/^[0-9a-fA-F]+\s+\S\s+(\S+)\s*$/gm);
+  } else if (tool === "dumpbin") {
+    // "          1    0 00001234 proton_abi_version" (optionally followed by
+    // " (forwarded to lib.name)" for forwarded exports)
+    patterns.push(
+      /^\s*\d+\s+[0-9a-fA-F]+\s+[0-9a-fA-F]+\s+(\S+?)(?:\s+\(forwarded to .+\))?\s*$/gm,
+    );
+  } else if (tool === "objdump") {
+    // GNU objdump -p: "\t[   0] proton_abi_version" (name pointer table)
+    patterns.push(/^\s*\[\s*\d+\]\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/gm);
+    // llvm-objdump --private-headers: "       1   0x61c0  proton_abi_version"
+    patterns.push(/^\s+\d+\s+0x[0-9a-fA-F]+\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/gm);
+  } else {
+    throw new Error(`unsupported export listing tool: ${tool}`);
+  }
+  for (const pattern of patterns) {
+    for (const match of toolOutput.matchAll(pattern)) {
+      // Normalize the Mach-O leading underscore so comparisons and reports
+      // use the C symbol name.
+      symbols.add(match[1].replace(/^_/, ""));
+    }
+  }
+  return [...symbols].sort();
+}
+
 export function compareSymbolSets(
   label,
   expectedSymbols,
@@ -70,7 +104,7 @@ export function compareSymbolSets(
   }
   for (const symbol of actual) {
     if (!expected.has(symbol)) {
-      failures.push(`${label}: unexpected Proton export ${symbol}`);
+      failures.push(`${label}: unexpected export ${symbol}`);
     }
   }
   return failures;
@@ -145,21 +179,25 @@ function regularFile(pathname, label, failures) {
 
 function inspectCommand(platform, libraryPath) {
   if (platform === "darwin-arm64") {
-    return { command: "nm", args: ["-gU", libraryPath] };
+    return { command: "nm", args: ["-gU", libraryPath], tool: "nm" };
   }
   if (platform === "linux-x64") {
-    return { command: "nm", args: ["-D", "--defined-only", libraryPath] };
+    return {
+      command: "nm",
+      args: ["-D", "--defined-only", libraryPath],
+      tool: "nm",
+    };
   }
   if (platform === "win32-x64") {
     return process.platform === "win32"
-      ? { command: "dumpbin", args: ["/nologo", "/exports", libraryPath] }
-      : { command: "objdump", args: ["-p", libraryPath] };
+      ? { command: "dumpbin", args: ["/nologo", "/exports", libraryPath], tool: "dumpbin" }
+      : { command: "objdump", args: ["-p", libraryPath], tool: "objdump" };
   }
   throw new Error(`unsupported prebuilt platform: ${platform}`);
 }
 
 function inspectExports(platform, libraryPath, failures) {
-  const { command, args } = inspectCommand(platform, libraryPath);
+  const { command, args, tool } = inspectCommand(platform, libraryPath);
   const result = spawnSync(command, args, { encoding: "utf8" });
   if (result.error) {
     failures.push(
@@ -175,7 +213,7 @@ function inspectExports(platform, libraryPath, failures) {
     );
     return [];
   }
-  return exportedProtonSymbols(result.stdout);
+  return exportedAllSymbols(result.stdout, tool);
 }
 
 function inspectImportLibrary(platform, libraryPath, failures) {
