@@ -12,5 +12,4 @@ description = "Shared typed contracts for {{title}}."
 
 options(
   warn_list: "",
-  supported_targets: "js+native",
 )

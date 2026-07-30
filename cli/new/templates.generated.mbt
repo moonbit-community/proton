@@ -75,7 +75,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|options(
           #|  warn_list: "",
-          #|  supported_targets: "js+native",
           #|)
           #|
       ),
@@ -88,8 +87,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  "moonbitlang/core/json",
           #|  "justjavac/proton_contract",
           #|}
-          #|
-          #|supported_targets = "js+native"
           #|
       ),
     },
