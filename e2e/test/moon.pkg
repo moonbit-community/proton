@@ -18,7 +18,6 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path",
-  "moonbitlang/x/sys",
 } for "wbtest"
 
 supported_targets = "native"

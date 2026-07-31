@@ -299,7 +299,7 @@ fn scenario_app_command(root : String) -> (String, Array[String]) raise {
 
 ///|
 fn current_test_executable() -> String raise {
-  let args = @sys.get_cli_args()
+  let args = @env.args()
   guard args.length() > 0 else { fail("test executable path is unavailable") }
   let executable = normalize_platform_path(args[0])
   let path = @path.Path(executable)

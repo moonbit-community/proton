@@ -151,7 +151,7 @@ fn implicit_config_path() -> String? {
 
 ///|
 fn bundled_config_path() -> String? {
-  let argv = @sys.get_cli_args()
+  let argv = @env.args()
   guard argv.length() > 0 else { return None }
   let executable : @mbpath.Path = argv[0]
   let executable = executable.resolve()
