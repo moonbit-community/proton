@@ -49,17 +49,16 @@ export function hostPrebuiltPlatform({
   platform = process.platform,
   arch = process.arch,
 } = {}) {
+  // Only platforms with committed prebuilts can run the symbol-level check;
+  // anything else falls back to "--metadata-only" at the call site.
   if (platform === "win32") {
-    return "win32-x64";
+    return arch === "x64" ? "win32-x64" : null;
   }
   if (platform === "darwin") {
-    if (arch === "arm64" || arch === "x64") {
-      return `darwin-${arch}`;
-    }
-    return null;
+    return arch === "arm64" ? "darwin-arm64" : null;
   }
   if (platform === "linux") {
-    return "linux-x64";
+    return arch === "x64" ? "linux-x64" : null;
   }
   return null;
 }

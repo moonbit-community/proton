@@ -397,6 +397,36 @@ if(BUILD_TESTING)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)
+    add_executable(proton_win_titlebar_test
+      tests/proton_win_titlebar_test.c
+      src/engine/cef_win/proton_win_titlebar.c
+    )
+    target_include_directories(proton_win_titlebar_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_win
+    )
+    set_target_properties(proton_win_titlebar_test PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_win_titlebar_test COMMAND proton_win_titlebar_test)
+  endif()
+
+  if(UNIX AND NOT APPLE)
+    add_executable(proton_linux_titlebar_test
+      tests/proton_linux_titlebar_test.c
+      src/engine/cef_linux/proton_linux_titlebar.c
+    )
+    target_include_directories(proton_linux_titlebar_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_linux
+    )
+    set_target_properties(proton_linux_titlebar_test PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_linux_titlebar_test COMMAND proton_linux_titlebar_test)
+  endif()
+
+  if(WIN32)
     set(PROTON_TEST_PATH_MODIFICATIONS
       "PATH=path_list_prepend:$<TARGET_FILE_DIR:proton>"
     )
@@ -430,6 +460,29 @@ if(BUILD_TESTING)
         ENVIRONMENT
           "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
       )
+      add_executable(proton_win_overlay_smoke
+        tests/proton_win_overlay_smoke.c
+      )
+      target_link_libraries(proton_win_overlay_smoke PRIVATE proton)
+      set_target_properties(proton_win_overlay_smoke PROPERTIES
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+      )
+      add_test(NAME proton_win_overlay_smoke COMMAND proton_win_overlay_smoke)
+      if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+        set_tests_properties(proton_win_overlay_smoke PROPERTIES
+          ENVIRONMENT
+            "PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
+          ENVIRONMENT_MODIFICATION "${PROTON_TEST_PATH_MODIFICATIONS}"
+          TIMEOUT 120
+        )
+      else()
+        set_tests_properties(proton_win_overlay_smoke PROPERTIES
+          ENVIRONMENT
+            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
+          TIMEOUT 120
+        )
+      endif()
     endif()
   elseif(APPLE)
     if(PROTON_WITH_ENGINE)
@@ -464,6 +517,23 @@ if(BUILD_TESTING)
       set_tests_properties(proton_smoke PROPERTIES
         ENVIRONMENT
           "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};LD_PRELOAD=${PROTON_TEST_LD_PRELOAD};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+      add_executable(proton_linux_overlay_smoke
+        tests/proton_linux_overlay_smoke.c
+      )
+      target_link_libraries(proton_linux_overlay_smoke PRIVATE
+        proton
+        PkgConfig::PROTON_X11
+      )
+      set_target_properties(proton_linux_overlay_smoke PROPERTIES
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+      )
+      add_test(NAME proton_linux_overlay_smoke COMMAND proton_linux_overlay_smoke)
+      set_tests_properties(proton_linux_overlay_smoke PROPERTIES
+        ENVIRONMENT
+          "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};LD_PRELOAD=${PROTON_TEST_LD_PRELOAD};PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_linux_overlay_smoke_cache;PROTON_TEST_LOG_PATH=${CMAKE_CURRENT_BINARY_DIR}/proton_linux_overlay_smoke.log"
+        TIMEOUT 120
       )
     else()
       set_tests_properties(proton_smoke PROPERTIES
