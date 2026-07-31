@@ -15,10 +15,11 @@ let update_message_capacity = 512
 let update_path_capacity = 4096
 
 ///|
-#borrow(archive_path, destination_dir, bundle_buffer, error)
+#borrow(archive, parent_dir, bundle_buffer, error)
 extern "C" fn proton_update_expand_ffi(
-  archive_path : Bytes,
-  destination_dir : Bytes,
+  archive : Bytes,
+  archive_len : Int,
+  parent_dir : Bytes,
   bundle_buffer : FixedArray[Byte],
   bundle_buffer_len : Int,
   error : FixedArray[Byte],
@@ -90,20 +91,23 @@ fn update_check(
 /// The archive must already have been authenticated against the signed
 /// manifest. This step unpacks; it does not decide whether unpacking is safe.
 ///
-/// `destination_dir` is created by this call and must not exist. Reusing a
-/// directory would leave the contents of two archives mixed together, and a
-/// directory someone else can write is one someone else can replace between
-/// unpacking and installing.
+/// The bytes are passed rather than written to a file first. Verified bytes
+/// named by a path could be replaced between the check and the read, which
+/// would spend the signature check on one archive and install another. The
+/// native side writes them inside a private directory it creates under
+/// `parent_dir` — that directory is why `parent_dir` should be somewhere the
+/// application owns, such as `app_data_dir`.
 pub fn update_expand(
-  archive_path : String,
-  destination_dir : String,
+  archive : Bytes,
+  parent_dir : String,
 ) -> String raise NativeError {
   let bundle = FixedArray::make(update_path_capacity, b'\x00')
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
     proton_update_expand_ffi(
-      @ffi.to_cstr(archive_path),
-      @ffi.to_cstr(destination_dir),
+      archive,
+      archive.length(),
+      @ffi.to_cstr(parent_dir),
       bundle,
       bundle.length(),
       message,

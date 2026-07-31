@@ -43,7 +43,7 @@ pub let runtime_wait_platform : Int
 
 pub fn update_apply() -> Unit raise NativeError
 
-pub fn update_expand(String, String) -> String raise NativeError
+pub fn update_expand(Bytes, String) -> String raise NativeError
 
 pub fn update_relaunch() -> Unit raise NativeError
 

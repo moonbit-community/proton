@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <mach-o/dyld.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -44,13 +45,14 @@ const char *proton_update_previous_bundle_path(void) {
 
 #if !defined(__APPLE__)
 
-PROTON_API int32_t proton_update_expand(const char *archive_path,
-                                        const char *destination_dir,
+PROTON_API int32_t proton_update_expand(const char *archive, int32_t archive_len,
+                                        const char *parent_dir,
                                         char *bundle_buffer,
                                         int32_t bundle_buffer_len, char *error,
                                         int32_t error_len) {
-  (void)archive_path;
-  (void)destination_dir;
+  (void)archive;
+  (void)archive_len;
+  (void)parent_dir;
   if (bundle_buffer != NULL && bundle_buffer_len > 0) {
     bundle_buffer[0] = '\0';
   }
@@ -187,18 +189,56 @@ static int proton_update_find_bundle(const char *directory, char *out,
   return found == 1;
 }
 
-PROTON_API int32_t proton_update_expand(const char *archive_path,
-                                        const char *destination_dir,
+/* Removes a directory tree this file created.
+
+   Only ever called on a path mkdtemp returned below, so what it deletes is
+   something this process made and owns exclusively. */
+static void proton_update_remove_tree(const char *directory) {
+  char *const argv[] = {"/bin/rm", "-rf", (char *)directory, NULL};
+  (void)proton_update_run(argv);
+}
+
+/* Writes the archive into the staging directory.
+
+   O_EXCL because that directory was just created empty: anything already at
+   this name would mean the directory is not what it is assumed to be. */
+static int proton_update_write_archive(const char *path, const char *archive,
+                                       int32_t archive_len) {
+  int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+  if (fd < 0) {
+    return 0;
+  }
+  int32_t written = 0;
+  while (written < archive_len) {
+    ssize_t chunk =
+        write(fd, archive + written, (size_t)(archive_len - written));
+    if (chunk <= 0) {
+      if (chunk < 0 && errno == EINTR) {
+        continue;
+      }
+      close(fd);
+      return 0;
+    }
+    written += (int32_t)chunk;
+  }
+  return close(fd) == 0;
+}
+
+PROTON_API int32_t proton_update_expand(const char *archive, int32_t archive_len,
+                                        const char *parent_dir,
                                         char *bundle_buffer,
                                         int32_t bundle_buffer_len, char *error,
                                         int32_t error_len) {
   if (bundle_buffer != NULL && bundle_buffer_len > 0) {
     bundle_buffer[0] = '\0';
   }
-  if (archive_path == NULL || archive_path[0] != '/' ||
-      destination_dir == NULL || destination_dir[0] != '/') {
+  if (parent_dir == NULL || parent_dir[0] != '/') {
     proton_update_set_message(error, error_len,
-                              "archive and destination paths must be absolute");
+                              "the staging parent directory must be absolute");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (archive == NULL || archive_len <= 0) {
+    proton_update_set_message(error, error_len, "the update archive is empty");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (bundle_buffer == NULL || bundle_buffer_len <= 0) {
@@ -206,35 +246,65 @@ PROTON_API int32_t proton_update_expand(const char *archive_path,
                               "a buffer for the expanded bundle is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  /* The destination is created here rather than reused, and private to this
-     user. An expansion into a directory someone else can write is an
-     expansion someone else can replace between unpacking and installing. */
-  if (mkdir(destination_dir, S_IRWXU) != 0) {
+
+  /* mkdtemp rather than a directory the caller names. It creates a private
+     0700 directory under a name that cannot already be taken, in one step, so
+     there is no gap between deciding a path is free and claiming it. A caller
+     cannot do this for itself: it would have to invent a unique name and then
+     race everything else on the machine to it. */
+  char staging[PROTON_UPDATE_MAX_PATH];
+  int written =
+      snprintf(staging, sizeof(staging), "%s/proton-update-XXXXXX", parent_dir);
+  if (written < 0 || (size_t)written >= sizeof(staging)) {
     proton_update_set_message(error, error_len,
-                              "the expansion directory could not be created");
+                              "the staging directory path is too long");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (mkdtemp(staging) == NULL) {
+    proton_update_set_message(error, error_len,
+                              "the staging directory could not be created");
     return PROTON_ERR_PLATFORM;
   }
-  struct stat info;
-  if (lstat(destination_dir, &info) != 0 || !S_ISDIR(info.st_mode) ||
-      info.st_uid != geteuid() ||
-      (info.st_mode & (S_IRWXG | S_IRWXO)) != 0) {
-    proton_update_set_message(
-        error, error_len,
-        "the expansion directory is not private to the current user");
+
+  /* The archive arrives as bytes rather than as a path. Verified bytes handed
+     to `ditto` by name could be replaced between the check and the read, which
+     would spend the signature check on one archive and install another. Here
+     they are only ever written inside a directory nobody else can write. */
+  char archive_path[PROTON_UPDATE_MAX_PATH];
+  written =
+      snprintf(archive_path, sizeof(archive_path), "%s/update.zip", staging);
+  if (written < 0 || (size_t)written >= sizeof(archive_path)) {
+    proton_update_remove_tree(staging);
+    proton_update_set_message(error, error_len,
+                              "the staging directory path is too long");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (!proton_update_write_archive(archive_path, archive, archive_len)) {
+    proton_update_remove_tree(staging);
+    proton_update_set_message(error, error_len,
+                              "the update archive could not be written");
     return PROTON_ERR_PLATFORM;
   }
+
   /* `ditto` rather than an unzip implementation written here: a macOS bundle
      carries resource forks, symlinks and extended attributes that a plain
      extractor drops, and a bundle that loses them fails its code signature. */
-  char *const argv[] = {"/usr/bin/ditto", "-x", "-k", (char *)archive_path,
-                        (char *)destination_dir, NULL};
+  char *const argv[] = {"/usr/bin/ditto", "-x", "-k", archive_path, staging,
+                        NULL};
   if (!proton_update_run(argv)) {
+    proton_update_remove_tree(staging);
     proton_update_set_message(error, error_len,
                               "the update archive could not be expanded");
     return PROTON_ERR_PLATFORM;
   }
-  if (!proton_update_find_bundle(destination_dir, bundle_buffer,
+  /* The archive has done its job. Removing it keeps one copy of the
+     application on disk rather than two, and leaves the staging directory
+     empty once the bundle is moved out of it. */
+  (void)unlink(archive_path);
+
+  if (!proton_update_find_bundle(staging, bundle_buffer,
                                  (size_t)bundle_buffer_len)) {
+    proton_update_remove_tree(staging);
     proton_update_set_message(
         error, error_len,
         "the update archive does not contain exactly one .app bundle");
@@ -304,11 +374,22 @@ PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   char previous[PROTON_UPDATE_MAX_PATH];
-  int written = snprintf(previous, sizeof(previous), "%s.previous-%ld",
-                         proton_update_current, (long)getpid());
+  int written = snprintf(previous, sizeof(previous), "%s.previous-XXXXXX",
+                         proton_update_current);
   if (written < 0 || (size_t)written >= sizeof(previous)) {
     proton_update_set_message(error, error_len,
                               "the replaced bundle path is too long");
+    return PROTON_ERR_PLATFORM;
+  }
+  /* mkdtemp, not a name built from the process id: a second update in the same
+     process would reuse that name, and renaming a directory onto a non-empty
+     one fails. Here the name is reserved atomically, and because what it
+     reserves is an empty directory, the reservation doubles as the
+     destination — renaming onto an empty directory replaces it. */
+  if (mkdtemp(previous) == NULL) {
+    proton_update_set_message(error, error_len,
+                              "cannot reserve a place for the replaced "
+                              "application");
     return PROTON_ERR_PLATFORM;
   }
 
@@ -318,6 +399,7 @@ PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
      back. Nothing ever observes a half-written bundle, because neither rename
      copies anything. */
   if (rename(proton_update_current, previous) != 0) {
+    (void)rmdir(previous);
     proton_update_set_message(error, error_len,
                               "cannot move the installed application aside");
     return PROTON_ERR_PLATFORM;
@@ -341,6 +423,17 @@ PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
      install. */
   snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
            previous);
+
+  /* The directory the bundle came out of is now empty, so plain rmdir removes
+     it and does nothing at all if it holds anything unexpected. That is why it
+     is rmdir and not a recursive delete: `stage` accepts any bundle path, and
+     this must never remove a directory whose contents it did not put there. */
+  char *slash = strrchr(proton_update_staged, '/');
+  if (slash != NULL && slash != proton_update_staged) {
+    *slash = '\0';
+    (void)rmdir(proton_update_staged);
+  }
+  proton_update_staged[0] = '\0';
   return PROTON_OK;
 }
 

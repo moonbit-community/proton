@@ -12,14 +12,12 @@
 /// live in one test rather than four: run in this order, each starts from the
 /// state the previous one left.
 test "updater binding reports native refusals" {
-  let relative = expect_native_error(() => {
-    update_expand("update.zip", "/tmp/proton-update-binding")
-  })
+  let relative = expect_native_error(() => update_expand(b"zip", "staging"))
   assert_eq(relative.status(), -1)
-  assert_eq(
-    relative.message(),
-    "archive and destination paths must be absolute",
-  )
+  assert_eq(relative.message(), "the staging parent directory must be absolute")
+  let empty = expect_native_error(() => update_expand(b"", "/tmp"))
+  assert_eq(empty.status(), -1)
+  assert_eq(empty.message(), "the update archive is empty")
   let staged = expect_native_error(() => update_stage("Staged.app"))
   assert_eq(staged.status(), -1)
   assert_eq(staged.message(), "the staged bundle path must be absolute")
