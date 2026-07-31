@@ -49,7 +49,7 @@ delta artifacts can be introduced without a breaking schema change.
 | Adversary | Capability | Mitigation |
 | --- | --- | --- |
 | Network attacker | Observe and modify traffic | TLS for transport, plus an artifact signature that TLS does not provide |
-| Compromised host or CDN | Serve arbitrary bytes at the update URL | ECDSA P-256 signature; the private key never touches the distribution host |
+| Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
 | Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | Strict version monotonicity enforced on the client |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
 | Local attacker | Write to the staging directory between download and apply | Signature is re-verified at apply time, not only at download time; staging directory is created private to the current user |
@@ -77,7 +77,7 @@ release asset, or plain HTTP host can serve it.
       "url": "https://example.com/MyApp-0.2.0-darwin-arm64.zip",
       "size": 234881024,
       "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "signature": "8Qk3vN2pLzR7aWc...base64 of the 64-byte r||s pair..."
+      "signature": "3e23cf2dff913700...hex of the 256-byte signature..."
     }
   }
 }
@@ -95,6 +95,8 @@ Rules:
   `"delta"` can be added later, and a client that does not understand a `kind`
   treats that platform entry as unavailable rather than failing the whole
   manifest.
+- `sha256` and `signature` are hexadecimal, matching the key format. One
+  encoding throughout means one strict decoder rather than two.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a
   security control; only `signature` is.
 - A platform absent from `platforms` means no update is offered for it. This is
@@ -102,67 +104,85 @@ Rules:
 
 ## Signature
 
-ECDSA P-256 over SHA-256, applied twice: once over the manifest and once over
-each artifact.
+RSASSA-PKCS1-v1_5 over SHA-256, applied twice: once over the manifest and once
+over each artifact. Verification is implemented in `justjavac/proton_rsa`.
 
-### Why P-256, and who verifies
+### Why RSA, and who verifies
 
 Verification is the one function in this design that gates remote code
-execution. The goal is therefore to write none of it. P-256 is the only widely
-supported signature algorithm that every target platform can verify with its own
-audited implementation:
+execution, so the question is not which algorithm is most elegant but whose
+implementation is being trusted. Three candidates were considered.
 
-| Platform | Verification API |
-| --- | --- |
-| macOS | `SecKeyVerifySignature` (Security.framework) |
-| Windows | `BCryptVerifySignature` with `BCRYPT_ECDSA_ALGORITHM`, P-256 curve |
-| Linux | `EVP_DigestVerify` (OpenSSL libcrypto) |
+*A third-party MoonBit package.* Ed25519 implementations exist on Mooncakes at
+version 0.x. They are almost certainly unaudited, and Ed25519 verification has a
+class of pitfalls — cofactor handling, signature malleability, non-canonical
+encodings — that appear only on adversarially constructed input and therefore
+survive a green test suite. Rejected.
 
-Ed25519 was the first choice and was rejected: Windows CNG does not expose it
-for signature verification. CNG has supported Curve25519 since Windows 10, but
-for ECDH key agreement, not for EdDSA signatures. Choosing Ed25519 would
-therefore require shipping a signature implementation — either a third-party
-package at version 0.x or a vendored C library — and trusting it with the whole
-update channel. Neither the MoonBit core library nor `moonbitlang/x` provides
-any asymmetric signature algorithm, so there is no first-party option.
+*Platform verification APIs.* Every target can verify ECDSA P-256 with its own
+audited implementation, which would mean writing no cryptography at all. This is
+attractive and remains a reasonable alternative. It costs three platform
+bindings, a libcrypto dependency on Linux, and a wire format that has to
+reconcile CNG's raw `r || s` with Security.framework's and OpenSSL's DER.
+Ed25519 is not an option here at all: Windows CNG has supported Curve25519 since
+Windows 10, but for ECDH key agreement, not for EdDSA signatures.
 
-The cost of this choice is three small platform bindings instead of one, and a
-libcrypto dependency on Linux. The Linux runtime already links GTK and X11, so
-this does not change its dependency posture.
+*RSA verification written here.* Chosen. Neither the MoonBit core library nor
+`moonbitlang/x` provides any asymmetric signature algorithm, so something has to
+be written or vendored either way, and RSA verification is the asymmetric
+operation that can responsibly be written. It touches no secret data, so it
+needs no constant-time discipline. It consumes no randomness. It is modular
+exponentiation and a byte comparison, with no curve arithmetic, point
+decompression, or cofactor rules. `BigInt::pow(exponent, modulus~)` in the core
+library supplies the only hard part. Its one historical pitfall,
+Bleichenbacher's 2006 forgery, is defeated structurally rather than carefully:
+the verifier rebuilds the encoded block it expects and compares it whole, so
+there is no parser to be lenient.
+
+The consequence is that verification stays in MoonBit, works on every backend,
+and adds no platform bindings and no native dependency.
 
 ### Wire format
 
-The three APIs disagree about signature encoding: CNG takes a fixed 64-byte
-`r || s`, while Security.framework and OpenSSL take a DER-encoded X9.62
-`SEQUENCE`. The wire format is therefore **fixed-length raw `r || s`, 64 bytes**,
-and the macOS and Linux bindings wrap it into DER before calling.
+A signature is the raw big-endian integer, exactly as long as the modulus — 256
+bytes for a 2048-bit key. There is no container and no encoding layer.
 
-This direction is deliberate. Wrapping a known-length pair into DER is total and
-cannot fail on hostile input; parsing attacker-supplied DER is the opposite, and
-lenient ECDSA DER parsers are a recurring source of signature-malleability and
-forgery defects. Nothing in this design ever parses untrusted DER.
+Length equality is enforced rather than normalised: a short signature is not
+zero-extended and a long one is not trimmed, because accepting several
+encodings of one integer is where signature malleability begins. **Nothing in
+this design parses attacker-supplied DER**, which is what a container format
+would have required.
 
 ### Verification input
 
 Signatures are verified over a **digest**, never over a whole artifact.
-MoonBit streams the artifact through `@crypto.sha256` and passes the resulting
-32 bytes to native code. A 224 MB artifact therefore never crosses the ABI, and
-the native surface keeps the small caller-owned buffers the existing ABI rules
-require. All three platform APIs accept a pre-computed digest.
+`verify_pkcs1_sha256` takes the 32-byte SHA-256 produced by streaming the
+artifact through `@crypto.sha256`, so a 224 MB download is never held in memory
+and never crosses a function boundary as a value.
 
 ### Key format
 
-A trusted key carries its algorithm:
+A trusted key carries its algorithm and its parameters, in hexadecimal:
 
 ```
-p256:MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
+rsa-sha256:<modulus hex>:<exponent hex>
 ```
 
-An unknown prefix is rejected, not guessed. Tagging the algorithm now means a
-future migration — to a post-quantum scheme, or away from P-256 for any other
-reason — does not require a release that existing installations cannot accept.
-This is the same forward-compatibility argument as the trusted key list, and it
-is equally impossible to retrofit.
+There is no ASN.1 anywhere in the key path. `proton_cli updater public-key`
+converts an OpenSSL public key file into this form.
+
+An unknown algorithm tag is rejected, not guessed. Tagging the algorithm now
+means a future migration — to a post-quantum scheme, or away from RSA for any
+other reason — does not require a release that existing installations cannot
+accept. This is the same forward-compatibility argument as the trusted key
+list, and it is equally impossible to retrofit.
+
+Keys are validated when parsed, and the checks are security controls rather
+than hygiene: a modulus below 2048 bits verifies signatures perfectly well and
+protects nothing; a modulus written with a leading zero byte would let one key
+have two spellings with different values of `k`, and `k` decides which signature
+lengths are accepted; `e = 1` would make every signature equal to the encoded
+block.
 
 ### What is signed
 
@@ -187,16 +207,55 @@ re-parse the manifest.
 
 Both signatures must verify. Either failing aborts the update.
 
+### Who holds the key
+
+Three parties, and only the first has any key material:
+
+| Party | Provides |
+| --- | --- |
+| Application developer | Owns the key pair, signs releases, writes the public keys into their `moon.proton` |
+| Proton | Nothing. It verifies with the public keys the developer configured |
+| End user | Nothing |
+
+**Proton never generates, stores, or transmits a private key**, and the
+`proton_cli` surface is deliberately shaped so that it cannot. Developers create
+their own key pair with a mature tool:
+
+```sh
+openssl genrsa -out updater.pem 2048
+openssl rsa -in updater.pem -pubout -out updater.pub
+```
+
+`proton_cli` offers only a converter from that public key to the configured
+form:
+
+```sh
+proton_cli updater public-key updater.pub
+# rsa-sha256:94c05429a8686a46...:010001
+```
+
+This is a pure data transformation over public material. A `keygen` subcommand
+was considered and rejected: generating a private key would oblige Proton to
+own a cryptographic random source, to write a secret with the right
+permissions, and to keep it out of logs and build output. Tauri has already
+shipped a real instance of that last failure, leaking updater private keys
+through build-time environment variables. The responsibility is avoidable, so
+it is avoided — no secret passes through the framework at any point.
+
+An end user must **not** be able to supply a trusted key. If they could, so
+could anything running with their privileges, which would defeat the channel
+entirely. This is why the key belongs in the packaged, integrity-protected
+bundle rather than anywhere writable such as `app_data_dir()`, and why the
+absence of that protection on Windows and Linux is recorded as a limitation.
+
 Key handling:
 
-- Key pairs are generated by `proton_cli updater keygen`. A private key never
-  enters the repository and never enters the distribution host. One key pair
-  signs both the manifest and the artifacts of a given release.
-- ECDSA signing consumes a per-signature random nonce, and a reused or biased
-  nonce discloses the private key. Signing therefore uses a platform or
-  libcrypto implementation, never a hand-rolled one. This is a signer-side
-  risk confined to a maintainer machine or CI, unlike a verification defect,
-  which an attacker can trigger at will.
+- One key pair signs both the manifest and the artifacts of a given release. A
+  private key never enters the repository and never enters the distribution
+  host.
+- Signing is performed by OpenSSL, not by any code in this project. Key
+  generation and signing are where the operations that must not be improvised
+  live, and both stay outside the framework.
 - Trusted public keys are declared in `moon.proton` as a **list**. A signature
   verifies if it matches any key in that list. See [Key rotation](#key-rotation)
   for why this is a list from the first release rather than a single value.
@@ -230,8 +289,8 @@ Trusting a list instead of a single key removes both:
 ```moonbit
 updater = {
   public_keys: [
-    "p256:MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...",  // active signer
-    "p256:MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAF...",  // reserve, held offline
+    "rsa-sha256:94c05429a8686a46...:010001",  // active signer
+    "rsa-sha256:b71fe3a20c4d8815...:010001",  // reserve, held offline
   ],
 }
 ```
@@ -288,7 +347,7 @@ Proton.
    permission checks already used by the single-instance coordinator in
    `native/src/proton_app_instance.c` (`lstat` before trusting a directory,
    `O_NOFOLLOW` on open, refuse group and other permissions).
-4. **Verify.** Check `size`, then `sha256`, then the P-256 signature over that digest. A
+4. **Verify.** Check `size`, then `sha256`, then the signature over that digest. A
    failure at any step deletes the staged artifact. A partially verified
    artifact is never retained for a later attempt.
 5. **Stage.** Expand the artifact next to the staged download and re-verify the
@@ -304,29 +363,21 @@ Two functions, following the existing ABI rules: `proton_*` prefix, status
 codes, caller-owned error buffers, no platform types across the boundary.
 
 ```c
-int32_t proton_verify_p256_sha256(const uint8_t *digest, size_t digest_len,
-                                  const uint8_t *signature,
-                                  size_t signature_len,
-                                  const uint8_t *public_key,
-                                  size_t public_key_len, char *error,
-                                  size_t error_len);
-
 int32_t proton_update_stage(const char *staged_path, char *error,
                             size_t error_len);
 int32_t proton_update_apply_and_relaunch(char *error, size_t error_len);
 ```
 
-`proton_verify_p256_sha256` takes a 32-byte digest and a 64-byte raw `r || s`
-signature and returns a status code. It has no updater-specific knowledge and no
-state; it is a thin call into the platform verification API. Keeping it that
-narrow is what makes it reviewable.
+Signature verification is **not** here. Choosing RSA kept it in MoonBit, so the
+native surface is only what genuinely requires privilege: replacing an
+installed application and restarting it. Nothing that decides whether an update
+is authentic crosses this boundary.
 
-Everything platform-specific lives behind these three. Given that the three
+Everything platform-specific lives behind these two. Given that the three
 per-platform engine sources are already near-duplicates of one another — a
 duplication that has already produced one identical defect in all three copies —
 the shared portion belongs in `native/src/engine/cef_common/` from the start
-rather than being written three times. For verification only the API call itself
-differs; digest and signature handling are common.
+rather than being written three times.
 
 ### Per-platform apply
 
@@ -359,8 +410,8 @@ updater = {
   active: true,
   endpoint: "https://example.com/updates/latest.json",
   public_keys: [
-    "p256:MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...",
-    "p256:MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAF...",
+    "rsa-sha256:94c05429a8686a46...:010001",
+    "rsa-sha256:b71fe3a20c4d8815...:010001",
   ],
   check_on_launch: true,
   freshness_days: 30,
@@ -427,9 +478,13 @@ artifacts it already produces:
 - a `latest.json` manifest fragment for the built platform.
 
 Signing runs where the private key lives — a maintainer machine or CI with the
-key held as a secret — never as part of an ordinary build. Merging per-platform
-fragments into one manifest is a separate step because the three platforms are
-built on three machines, which is already true of `proton/prebuilt/`.
+key held as a secret — never as part of an ordinary build, and never through
+Proton. `proton_cli package` emits the artifact and the digest to be signed;
+producing the signature is an OpenSSL invocation the developer controls.
+
+Merging per-platform fragments into one manifest is a separate step because the
+three platforms are built on three machines, which is already true of
+`proton/prebuilt/`.
 
 ## Failure handling
 
@@ -468,10 +523,12 @@ built on three machines, which is already true of `proton/prebuilt/`.
 
 ## Open questions
 
-- **Reserve key custody.** A trusted list is only useful if the reserve key is
-  stored somewhere the compromise of the active key does not reach. Deciding
-  where that is — and who can reach it — is an operational question that the
-  design cannot answer.
+- **Documenting reserve key custody.** A trusted list is only useful if the
+  reserve key is stored somewhere the compromise of the active key does not
+  reach. That custody decision belongs to each application developer, not to
+  Proton, so the open question is how much guidance the documentation should
+  offer without appearing to take on a responsibility the framework has
+  deliberately declined.
 - **Freshness window default.** Thirty days is a placeholder. Too short and a
   quiet project locks its own users out of updating; too long and a pinning
   attacker gets a wide window.
