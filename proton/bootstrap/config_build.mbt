@@ -285,7 +285,7 @@ fn build_extension_setting_from_json(
     False => @manifest.ExtensionSetting::disabled()
     _ =>
       raise InvalidField(
-        path="app manifest.extensions." + name,
+        path="app manifest.extensions.\{name}",
         expectation="must be a boolean; declare extension configuration in the matching permission scope",
       )
   }

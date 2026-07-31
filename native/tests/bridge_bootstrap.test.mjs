@@ -29,7 +29,11 @@ function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
       request_timeout_ms: requestTimeoutMs,
       grants: [{
         source_origin: location.protocol === "proton:" ? "app" : location.origin,
-        ops: [{ name: "ext:add/sum" }],
+        ops: [
+          { name: "ext:add/sum" },
+          { name: "app:ping" },
+          { name: "app:devtoys.fs.stat" },
+        ],
         extensions: [{ namespace: "add", apis: ["sum"] }],
         initialization_units: [],
       }],
@@ -228,4 +232,35 @@ test("notifies native when a bridge request times out", async () => {
 test("uses the page instance assigned by native", () => {
   const { dispatcher } = createBridge("https://example.com/");
   assert.equal(dispatcher.pageInstance, "renderer-page-1");
+});
+
+test("exposes a proxy for every granted application command", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  assert.equal(typeof context.__MoonBit__.app.ping, "function");
+  assert.equal(typeof context.__MoonBit__.app["devtoys.fs.stat"], "function");
+
+  const ping = context.__MoonBit__.app.ping({ value: 1 });
+  assert.equal(calls[0].name, "app:ping");
+  assert.deepEqual(JSON.parse(calls[0].payloadJson), { value: 1 });
+  dispatcher.dispatchResponse(calls[0].id, true, '{"ok":true}', "");
+  assert.equal((await ping).ok, true);
+
+  const stat = context.__MoonBit__.app["devtoys.fs.stat"]({ path: "/tmp" });
+  assert.equal(calls[1].name, "app:devtoys.fs.stat");
+  dispatcher.dispatchResponse(calls[1].id, true, '{"kind":"dir"}', "");
+  assert.equal((await stat).kind, "dir");
+});
+
+test("prefixes dynamic application command invocations", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const result = context.__MoonBit__.app.invoke("ping", { value: 2 });
+  assert.equal(calls[0].name, "app:ping");
+  dispatcher.dispatchResponse(calls[0].id, true, "null", "");
+  await result;
+});
+
+test("does not expose application proxies for extension routes", () => {
+  const { context } = createBridge();
+  assert.equal(context.__MoonBit__.app.sum, undefined);
+  assert.equal(context.__MoonBit__.app["ext:add/sum"], undefined);
 });

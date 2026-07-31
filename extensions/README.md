@@ -19,6 +19,22 @@ the low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
 extension and example. Pages subscribe to events through either
 `window.__MoonBit__.events.on(...)` or `window.__MoonBit__.<namespace>.on(...)`.
 
+Application commands registered with `.commands(...)` are exposed under
+`window.__MoonBit__.app`, one proxy per granted command:
+
+```js
+await window.__MoonBit__.app.ping({ value: 1 });
+await window.__MoonBit__.app["devtoys.fs.stat"]({ path: "/tmp" });
+await window.__MoonBit__.app.invoke("ping", { value: 1 });
+```
+
+`invokeOp` is the transport-level entry point and takes the fully qualified
+route: `app:<name>` for application commands and `ext:<namespace>/<name>` for
+extension commands. Prefer the proxies above, which build the route for you.
+A request for a route no grant declares is rejected with
+`bridge op is not registered`; a route that exists but was not granted to the
+calling page is rejected with `bridge op is not allowed`.
+
 ## Packages
 
 - `fs`: host filesystem helper definitions

@@ -90,12 +90,29 @@ int main(void) {
   assert(request_json == NULL);
   assert(next_request_id == 8);
 
+  /* Granted to another origin, but not to this page: denied. */
   assert(proton_engine_bridge_build_request_json(
              bridge_config, "proton://app/index.html", "ext:fs/read_file",
              "{\"a\":1}", "1234-5", 1048576, 42, &next_request_id, &request_id,
              &request_json) == PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED);
   assert(request_json == NULL);
   assert(next_request_id == 8);
+
+  /* Declared by no grant at all: reported as unregistered rather than denied,
+     which is what an unprefixed application command looks like. */
+  assert(proton_engine_bridge_build_request_json(
+             bridge_config, "proton://app/index.html", "ping", "{\"a\":1}",
+             "1234-5", 1048576, 42, &next_request_id, &request_id,
+             &request_json) == PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN);
+  assert(request_json == NULL);
+  assert(next_request_id == 8);
+
+  assert(proton_engine_bridge_config_declares_op(bridge_config, "app:ping"));
+  assert(proton_engine_bridge_config_declares_op(bridge_config,
+                                                 "ext:fs/read_file"));
+  assert(!proton_engine_bridge_config_declares_op(bridge_config, "ping"));
+  assert(!proton_engine_bridge_config_declares_op(bridge_config,
+                                                  "app:not_registered"));
 
   assert(proton_engine_bridge_build_request_json(
              bridge_config, "proton://app/index.html", "app:ping", "{\"a\":1}",

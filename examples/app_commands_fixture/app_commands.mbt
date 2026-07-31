@@ -46,7 +46,7 @@ suberror AppCommandError {
 ///|
 let app_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
   id="examples/app-commands",
-  js_namespace="app",
+  js_namespace="appCommands",
 )
 
 ///|

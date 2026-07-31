@@ -228,14 +228,52 @@
     });
   }
 
+  // Application commands are granted as "app:<name>" transport routes. Exposing
+  // a proxy per granted command keeps plain-JavaScript pages from assembling
+  // that transport name by hand, the same way extension APIs are exposed under
+  // their namespace.
+  const appPrefix = "app:";
+  const app = {
+    name: "app",
+    invoke(commandName, payload) {
+      return invokeOp(`${appPrefix}${String(commandName)}`, payload);
+    },
+  };
+  const ops = Array.isArray(config.ops) ? config.ops : [];
+  for (const op of ops) {
+    const route = String(op && op.name || "");
+    if (!route.startsWith(appPrefix)) {
+      continue;
+    }
+    const commandName = route.slice(appPrefix.length);
+    if (
+      !commandName || commandName === "then" ||
+      Object.prototype.hasOwnProperty.call(app, commandName)
+    ) {
+      continue;
+    }
+    Object.defineProperty(app, commandName, {
+      value: function invokeAppCommand(payload) {
+        return invokeOp(route, payload);
+      },
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
   const root = {
     core: { invokeJson, invokeOp },
     events,
+    app,
   };
   const extensions = Array.isArray(config.extensions) ? config.extensions : [];
   for (const extension of extensions) {
     const namespace = String(extension && extension.namespace || "");
-    if (!namespace || namespace === "core" || namespace === "events") {
+    if (
+      !namespace || namespace === "core" || namespace === "events" ||
+      namespace === "app"
+    ) {
       continue;
     }
     const target = {

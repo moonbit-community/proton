@@ -158,9 +158,60 @@ static int proton_engine_bridge_config_allows_op(
   return match.allowed;
 }
 
+typedef struct {
+  const proton_json_doc_t *doc;
+  const char *op;
+  int declared;
+} proton_engine_bridge_op_scan_t;
+
+static bool proton_engine_bridge_grant_declares_op(proton_json_value_t value,
+                                                   void *user_data) {
+  proton_engine_bridge_op_scan_t *scan =
+      (proton_engine_bridge_op_scan_t *)user_data;
+  proton_json_value_t ops;
+  if (!proton_json_is_object(scan->doc, value) ||
+      !proton_json_object_get(scan->doc, value, "ops", &ops) ||
+      !proton_json_is_array(scan->doc, ops)) {
+    return true;
+  }
+  proton_engine_bridge_op_match_t match = {scan->doc, scan->op, 0};
+  proton_json_array_each(scan->doc, ops, proton_engine_bridge_op_match_item,
+                         &match);
+  scan->declared = match.allowed;
+  return scan->declared == 0;
+}
+
+/* Reports whether any grant in the configuration declares this op, regardless
+   of which origin holds it. A request for an op that no grant declares is a
+   different mistake from a request the page's own grant does not cover, and the
+   two are worth separating in diagnostics: the first usually means the caller
+   assembled the transport name by hand. */
+static int proton_engine_bridge_config_declares_op(
+    const char *bridge_config_json, const char *op) {
+  if (!proton_engine_bridge_op_is_valid(op) || bridge_config_json == NULL) {
+    return 0;
+  }
+  proton_json_doc_t doc;
+  proton_json_value_t root;
+  proton_json_value_t grants;
+  if (!proton_json_parse(&doc, bridge_config_json)) {
+    return 0;
+  }
+  proton_engine_bridge_op_scan_t scan = {&doc, op, 0};
+  if (proton_json_root_object(&doc, &root) &&
+      proton_json_object_get(&doc, root, "grants", &grants) &&
+      proton_json_is_array(&doc, grants)) {
+    proton_json_array_each(&doc, grants,
+                           proton_engine_bridge_grant_declares_op, &scan);
+  }
+  proton_json_dispose(&doc);
+  return scan.declared;
+}
+
 typedef enum {
   PROTON_ENGINE_BRIDGE_REQUEST_OK = 0,
   PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED,
+  PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN,
   PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED,
   PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED,
   PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED,
@@ -172,6 +223,8 @@ static const char *proton_engine_bridge_request_reject_event(
   switch (status) {
   case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
     return "bridge_reject_origin_not_allowed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN:
+    return "bridge_reject_op_not_registered";
   case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
     return "bridge_reject_not_allowed";
   case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
@@ -191,6 +244,9 @@ static const char *proton_engine_bridge_request_reject_message(
   switch (status) {
   case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
     return "bridge origin is not allowed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN:
+    return "bridge op is not registered; application commands are invoked as "
+           "\"app:<name>\" and extension commands as \"ext:<namespace>/<name>\"";
   case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
     return "bridge op is not allowed";
   case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
@@ -233,7 +289,9 @@ proton_engine_bridge_build_request_json(
       !proton_engine_bridge_config_allows_op(bridge_config_json, frame_url,
                                              op)) {
     free(source_origin);
-    return PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED;
+    return proton_engine_bridge_config_declares_op(bridge_config_json, op)
+               ? PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED
+               : PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN;
   }
   proton_engine_bridge_request_status_t status = PROTON_ENGINE_BRIDGE_REQUEST_OK;
   if (!proton_engine_bridge_payload_is_valid(payload_json,

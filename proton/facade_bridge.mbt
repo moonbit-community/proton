@@ -218,10 +218,14 @@ fn append_bridge_extension_frontend(
 }
 
 ///|
+/// Reports whether a name cannot be exposed as a bridge proxy on the renderer
+/// root object. `app` is reserved alongside `core` and `events` because the
+/// bridge publishes granted application commands under it.
 fn command_proxy_name_is_invalid(name : String) -> Bool {
   name.trim().to_owned() == "" ||
   name == "core" ||
   name == "events" ||
+  name == "app" ||
   @proton_command.app_command_js_property_is_reserved(name)
 }
 
