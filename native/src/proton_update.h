@@ -6,6 +6,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Expands a downloaded archive into a directory and reports the `.app` it
+   contains.
+
+   The archive is expected to be authenticated already: this function unpacks,
+   it does not decide whether unpacking is safe. */
+PROTON_API int32_t proton_update_expand(const char *archive_path,
+                                        const char *destination_dir,
+                                        char *bundle_out, size_t bundle_out_len,
+                                        char *error, size_t error_len);
+
 /* Records a staged application bundle after checking that installing it would
    be safe. Nothing is modified. */
 PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *error,

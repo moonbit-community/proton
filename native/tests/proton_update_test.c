@@ -65,6 +65,55 @@ int main(void) {
   proton_update_set_current_bundle_for_testing(installed);
 
 #if defined(__APPLE__)
+  /* Expansion: a real archive containing one bundle, produced the way a
+     release would produce it. */
+  char archive_root[1100];
+  char archive[1200];
+  char expanded[1100];
+  char command[2600];
+  snprintf(archive_root, sizeof(archive_root), "%s/archive", root);
+  assert(mkdir(archive_root, 0755) == 0);
+  char packed[1200];
+  snprintf(packed, sizeof(packed), "%s/Packed.app", archive_root);
+  make_bundle(packed);
+  write_marker(packed, "packed");
+  snprintf(archive, sizeof(archive), "%s/update.zip", root);
+  snprintf(command, sizeof(command),
+           "cd '%s' && /usr/bin/ditto -c -k --keepParent 'Packed.app' '%s'",
+           archive_root, archive);
+  assert(system(command) == 0);
+
+  char bundle[1100];
+  snprintf(expanded, sizeof(expanded), "%s/expanded", root);
+  assert(proton_update_expand(archive, expanded, bundle, sizeof(bundle), error,
+                              sizeof(error)) == 0);
+  assert(marker_is(bundle, "packed"));
+  /* The expansion directory is created by this call, so expanding twice into
+     the same place is refused rather than mixing two archives. */
+  assert(proton_update_expand(archive, expanded, bundle, sizeof(bundle), error,
+                              sizeof(error)) != 0);
+  /* An archive with no bundle, and one with two, are both refused: neither
+     says which application to install. */
+  char empty_root[1100];
+  char empty_archive[1200];
+  snprintf(empty_root, sizeof(empty_root), "%s/empty", root);
+  assert(mkdir(empty_root, 0755) == 0);
+  snprintf(command, sizeof(command), "touch '%s/README'", empty_root);
+  assert(system(command) == 0);
+  snprintf(empty_archive, sizeof(empty_archive), "%s/empty.zip", root);
+  snprintf(command, sizeof(command),
+           "cd '%s' && /usr/bin/ditto -c -k --keepParent 'README' '%s'",
+           empty_root, empty_archive);
+  assert(system(command) == 0);
+  char empty_out[1100];
+  char empty_dest[1100];
+  snprintf(empty_dest, sizeof(empty_dest), "%s/expanded-empty", root);
+  assert(proton_update_expand(empty_archive, empty_dest, empty_out,
+                              sizeof(empty_out), error, sizeof(error)) != 0);
+  /* Relative paths are refused before anything is created. */
+  assert(proton_update_expand("update.zip", expanded, bundle, sizeof(bundle),
+                              error, sizeof(error)) != 0);
+
   /* A relative path, a directory that is not a bundle, a missing bundle, and a
      bundle without an executable directory are all refused before anything is
      touched. */

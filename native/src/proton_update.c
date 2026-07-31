@@ -7,7 +7,9 @@
 #if defined(__APPLE__)
 #include <errno.h>
 #include <mach-o/dyld.h>
+#include <dirent.h>
 #include <spawn.h>
+#include <sys/wait.h>
 #include <sys/stat.h>
 #include <unistd.h>
 extern char **environ;
@@ -41,6 +43,20 @@ PROTON_API const char *proton_update_previous_bundle_path(void) {
 }
 
 #if !defined(__APPLE__)
+
+PROTON_API int32_t proton_update_expand(const char *archive_path,
+                                       const char *destination_dir,
+                                       char *bundle_out, size_t bundle_out_len,
+                                       char *error, size_t error_len) {
+  (void)archive_path;
+  (void)destination_dir;
+  if (bundle_out != NULL && bundle_out_len > 0) {
+    bundle_out[0] = '\0';
+  }
+  proton_update_set_message(error, error_len,
+                            "expanding an update is implemented on macOS only");
+  return PROTON_ERR_UNSUPPORTED;
+}
 
 PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *error,
                                  size_t error_len) {
@@ -110,6 +126,112 @@ static int proton_update_has_suffix(const char *value, const char *suffix) {
   size_t suffix_len = strlen(suffix);
   return value_len >= suffix_len &&
          strcmp(value + value_len - suffix_len, suffix) == 0;
+}
+
+/* Runs a command to completion and reports whether it succeeded. */
+static int proton_update_run(char *const argv[]) {
+  pid_t child = 0;
+  if (posix_spawn(&child, argv[0], NULL, NULL, argv, environ) != 0) {
+    return 0;
+  }
+  int status = 0;
+  if (waitpid(child, &status, 0) != child) {
+    return 0;
+  }
+  return WIFEXITED(status) && WEXITSTATUS(status) == 0;
+}
+
+/* Returns the single `.app` directory directly inside a directory.
+
+   Exactly one is required. An archive containing several bundles does not say
+   which one to install, and picking the first would make that choice silently.
+*/
+static int proton_update_find_bundle(const char *directory, char *out,
+                                     size_t out_len) {
+  DIR *handle = opendir(directory);
+  if (handle == NULL) {
+    return 0;
+  }
+  int found = 0;
+  struct dirent *entry = NULL;
+  while ((entry = readdir(handle)) != NULL) {
+    if (entry->d_name[0] == '.') {
+      continue;
+    }
+    if (!proton_update_has_suffix(entry->d_name, ".app")) {
+      continue;
+    }
+    char candidate[PROTON_UPDATE_MAX_PATH];
+    int written = snprintf(candidate, sizeof(candidate), "%s/%s", directory,
+                           entry->d_name);
+    if (written < 0 || (size_t)written >= sizeof(candidate)) {
+      continue;
+    }
+    if (!proton_update_is_directory(candidate)) {
+      continue;
+    }
+    found++;
+    if (found > 1) {
+      break;
+    }
+    snprintf(out, out_len, "%s", candidate);
+  }
+  closedir(handle);
+  return found == 1;
+}
+
+PROTON_API int32_t proton_update_expand(const char *archive_path,
+                                       const char *destination_dir,
+                                       char *bundle_out, size_t bundle_out_len,
+                                       char *error, size_t error_len) {
+  if (bundle_out != NULL && bundle_out_len > 0) {
+    bundle_out[0] = '\0';
+  }
+  if (archive_path == NULL || archive_path[0] != '/' ||
+      destination_dir == NULL || destination_dir[0] != '/') {
+    proton_update_set_message(error, error_len,
+                              "archive and destination paths must be absolute");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (bundle_out == NULL || bundle_out_len == 0) {
+    proton_update_set_message(error, error_len,
+                              "a buffer for the expanded bundle is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  /* The destination is created here rather than reused, and private to this
+     user. An expansion into a directory someone else can write is an
+     expansion someone else can replace between unpacking and installing. */
+  if (mkdir(destination_dir, S_IRWXU) != 0) {
+    proton_update_set_message(error, error_len,
+                              "the expansion directory could not be created");
+    return PROTON_ERR_PLATFORM;
+  }
+  struct stat info;
+  if (lstat(destination_dir, &info) != 0 || !S_ISDIR(info.st_mode) ||
+      info.st_uid != geteuid() ||
+      (info.st_mode & (S_IRWXG | S_IRWXO)) != 0) {
+    proton_update_set_message(
+        error, error_len,
+        "the expansion directory is not private to the current user");
+    return PROTON_ERR_PLATFORM;
+  }
+  /* `ditto` rather than an unzip implementation written here: a macOS bundle
+     carries resource forks, symlinks and extended attributes that a plain
+     extractor drops, and a bundle that loses them fails its code signature. */
+  char *const argv[] = {"/usr/bin/ditto", "-x", "-k", (char *)archive_path,
+                        (char *)destination_dir, NULL};
+  if (!proton_update_run(argv)) {
+    proton_update_set_message(error, error_len,
+                              "the update archive could not be expanded");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (!proton_update_find_bundle(destination_dir, bundle_out, bundle_out_len)) {
+    proton_update_set_message(
+        error, error_len,
+        "the update archive does not contain exactly one .app bundle");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  return PROTON_OK;
 }
 
 PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *error,
