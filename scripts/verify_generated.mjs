@@ -11,6 +11,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-generated-check-"));
 const failures = [];
+const abiFailures = [];
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -20,6 +21,12 @@ function run(command, args) {
   if (result.status !== 0) {
     throw new Error(`Command failed: ${command} ${args.join(" ")}`);
   }
+}
+
+function runAllowFailure(command, args) {
+  return (
+    spawnSync(command, args, { cwd: repoRoot, stdio: "inherit" }).status === 0
+  );
 }
 
 function sha256(filePath) {
@@ -45,32 +52,43 @@ function tempOutputPath(fileName) {
   return path.join(tempRoot, fileName);
 }
 
-export function hostPrebuiltPlatform({
-  platform = process.platform,
-  arch = process.arch,
-} = {}) {
-  if (platform === "win32") {
-    return "win32-x64";
+/// Every platform staged under proton/prebuilt/ ships from this repository, so
+/// all of them are validated regardless of the host. Checking only the host
+/// platform lets a rebuild that covers one platform pass while the others still
+/// carry binaries that predate the current public header.
+export function stagedPrebuiltPlatforms() {
+  const prebuiltRoot = path.join(repoRoot, "proton", "prebuilt");
+  if (!fs.existsSync(prebuiltRoot)) {
+    return [];
   }
-  if (platform === "darwin") {
-    if (arch === "arm64" || arch === "x64") {
-      return `darwin-${arch}`;
-    }
-    return null;
-  }
-  if (platform === "linux") {
-    return "linux-x64";
-  }
-  return null;
+  return fs
+    .readdirSync(prebuiltRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 }
 
 try {
   run("node", [path.join(repoRoot, "scripts", "verify_release_metadata.mjs")]);
-  const platform = hostPrebuiltPlatform();
-  run("node", [
-    path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
-    platform ?? "--metadata-only",
-  ]);
+  const platforms = stagedPrebuiltPlatforms();
+  if (platforms.length === 0) {
+    run("node", [
+      path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
+      "--metadata-only",
+    ]);
+  }
+  /// Each platform is reported before the run ends, so a single stale prebuilt
+  /// does not hide the state of the others or of the codegen comparison below.
+  for (const platform of platforms) {
+    if (
+      !runAllowFailure("node", [
+        path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
+        platform,
+      ])
+    ) {
+      abiFailures.push(platform);
+    }
+  }
 
   const codegenExtensions = [
     "auto_launch",
@@ -201,6 +219,12 @@ try {
     bridgeBootstrapOutput,
   );
 
+  if (abiFailures.length > 0) {
+    console.error(
+      `Prebuilt runtimes do not export the current public ABI: ${abiFailures.join(", ")}`,
+    );
+    process.exitCode = 1;
+  }
   if (failures.length > 0) {
     console.error(`Generated files are stale: ${failures.join(", ")}`);
     process.exitCode = 1;
