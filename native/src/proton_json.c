@@ -2,6 +2,11 @@
 
 #define JSMN_STATIC
 #define JSMN_STRICT
+// Without parent links, jsmn recomputes the superior token after each
+// closing bracket by scanning backward over already-closed sibling tokens,
+// which is quadratic in container WIDTH — a renderer-sized flat payload
+// would stall the browser process for tens of seconds.
+#define JSMN_PARENT_LINKS
 #include "../third_party/jsmn/jsmn.h"
 
 #include <errno.h>
@@ -86,6 +91,37 @@ static bool proton_json_has_trailing_comma(const char *json) {
   return false;
 }
 
+// jsmn is iterative and imposes no nesting limit, but
+// proton_json_subtree_end recurses per level, so the cap is enforced twice:
+// proton_json_exceeds_max_depth pre-filters over-depth input before jsmn
+// runs, and this backstop recomputes the depth from the real token stream
+// afterwards — parents are emitted before their children, and a container
+// has ended before any token outside it starts — so a pre-filter regression
+// cannot re-expose the recursion.
+static bool proton_json_tokens_exceed_max_depth(const jsmntok_t *tokens,
+                                                int token_count) {
+  int *container_ends = (int *)malloc((size_t)token_count * sizeof(int));
+  if (container_ends == NULL) {
+    return true;
+  }
+  int depth = 0;
+  bool exceeded = false;
+  for (int i = 0; i < token_count && !exceeded; i++) {
+    while (depth > 0 && tokens[i].start >= container_ends[depth - 1]) {
+      depth--;
+    }
+    if (tokens[i].type == JSMN_OBJECT || tokens[i].type == JSMN_ARRAY) {
+      container_ends[depth] = tokens[i].end;
+      depth++;
+      if (depth > PROTON_JSON_MAX_DEPTH) {
+        exceeded = true;
+      }
+    }
+  }
+  free(container_ends);
+  return exceeded;
+}
+
 static bool proton_json_copy_string_token(const proton_json_doc_t *doc,
                                           int index,
                                           char *out,
@@ -143,6 +179,82 @@ static bool proton_json_copy_string_token(const proton_json_doc_t *doc,
   return true;
 }
 
+// Text-level depth pre-filter, applied before jsmn runs: deeply nested input
+// is rejected in O(n) instead of paying tokenization only to be rejected
+// afterwards. The scanner
+// mirrors strict-mode jsmn tokenization exactly — NORMAL / IN_STRING /
+// IN_PRIMITIVE — so for every input jsmn accepts, the tracked depth equals
+// jsmn's real container nesting:
+//   * strings are entered only at a quote reached in NORMAL, and a backslash
+//     consumes the next character (jsmn rejects invalid escapes anyway);
+//   * primitives are entered on [-0-9tfn] (jsmn strict's start set) and then
+//     absorb every character — including quotes, colons and brackets — until
+//     a whitespace, ',', ']' or '}' delimiter (jsmn strict's delimiter set);
+//   * any other character makes strict jsmn reject the document, so the
+//     scanner's behavior there is irrelevant and it simply moves on.
+// Inputs jsmn would reject may be miscounted, but jsmn rejects them
+// regardless, so the check stays fail-closed.
+static bool proton_json_exceeds_max_depth(const char *json) {
+  if (json == NULL) {
+    return false;
+  }
+  bool in_string = false;
+  bool in_primitive = false;
+  int depth = 0;
+  for (const char *cursor = json; *cursor != '\0'; cursor++) {
+    char ch = *cursor;
+    if (in_string) {
+      if (ch == '\\' && cursor[1] != '\0') {
+        cursor++;
+      } else if (ch == '"') {
+        in_string = false;
+      }
+      continue;
+    }
+    if (in_primitive) {
+      if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == ',') {
+        in_primitive = false;
+      } else if (ch == ']' || ch == '}') {
+        in_primitive = false;
+        if (depth > 0) {
+          depth--;
+        }
+      }
+      continue;
+    }
+    switch (ch) {
+    case '{':
+    case '[':
+      depth++;
+      if (depth > PROTON_JSON_MAX_DEPTH) {
+        return true;
+      }
+      break;
+    case '}':
+    case ']':
+      if (depth > 0) {
+        depth--;
+      }
+      break;
+    case '"':
+      in_string = true;
+      break;
+    case '-':
+    case 't':
+    case 'f':
+    case 'n':
+      in_primitive = true;
+      break;
+    default:
+      if (ch >= '0' && ch <= '9') {
+        in_primitive = true;
+      }
+      break;
+    }
+  }
+  return false;
+}
+
 bool proton_json_parse(proton_json_doc_t *doc, const char *json) {
   if (doc == NULL || json == NULL) {
     return false;
@@ -151,6 +263,9 @@ bool proton_json_parse(proton_json_doc_t *doc, const char *json) {
   doc->text = json;
   if (proton_json_has_trailing_comma(json)) {
     doc->trailing_comma = true;
+    return false;
+  }
+  if (proton_json_exceeds_max_depth(json)) {
     return false;
   }
   jsmn_parser parser;
@@ -166,6 +281,12 @@ bool proton_json_parse(proton_json_doc_t *doc, const char *json) {
   jsmn_init(&parser);
   int parsed = jsmn_parse(&parser, json, strlen(json), tokens, (unsigned)needed);
   if (parsed != needed) {
+    free(tokens);
+    return false;
+  }
+  // Backstop: recompute the depth from the real token stream so a future
+  // pre-filter regression cannot re-expose proton_json_subtree_end.
+  if (proton_json_tokens_exceed_max_depth(tokens, parsed)) {
     free(tokens);
     return false;
   }

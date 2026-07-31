@@ -5,6 +5,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Maximum accepted JSON nesting depth. proton_json_parse rejects deeper
+// documents so renderer-controlled input cannot drive unbounded recursion in
+// proton_json_subtree_end. The bridge request and response wrappers each add
+// one nesting level around an application payload, so the effective
+// round-trip payload depth is PROTON_JSON_MAX_DEPTH - 1.
+#define PROTON_JSON_MAX_DEPTH 128
+
 typedef struct {
   const char *text;
   int token_count;

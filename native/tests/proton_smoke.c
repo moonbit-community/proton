@@ -389,6 +389,187 @@ static int expect_bridge_response_payloads(void) {
   return 0;
 }
 
+static char *make_nested_array_json(size_t depth) {
+  char *json = (char *)malloc(depth * 2 + 1);
+  if (json == NULL) {
+    return NULL;
+  }
+  memset(json, '[', depth);
+  memset(json + depth, ']', depth);
+  json[depth * 2] = '\0';
+  return json;
+}
+
+static int expect_json_depth_limit(void) {
+  // Nesting exactly at the cap parses; one level beyond is rejected.
+  char *json = make_nested_array_json(PROTON_JSON_MAX_DEPTH);
+  if (json == NULL) {
+    return fail("depth-limit allocation failed");
+  }
+  proton_json_doc_t doc;
+  if (!proton_json_parse(&doc, json) || !proton_json_is_single_value(&doc)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("JSON at the nesting depth limit should parse");
+  }
+  proton_json_dispose(&doc);
+  free(json);
+
+  json = make_nested_array_json((size_t)PROTON_JSON_MAX_DEPTH + 1);
+  if (json == NULL) {
+    return fail("depth-limit allocation failed");
+  }
+  if (proton_json_parse(&doc, json)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("JSON beyond the nesting depth limit should be rejected");
+  }
+  free(json);
+
+  // Regression: renderer-sized deep nesting must be rejected after jsmn
+  // tokenization, before any recursive accessor can walk it.
+  json = make_nested_array_json(500000);
+  if (json == NULL) {
+    return fail("deep nesting allocation failed");
+  }
+  if (proton_json_parse(&doc, json)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("deeply nested JSON should be rejected");
+  }
+  if (proton_json_is_single_value(&doc)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("rejected JSON must not be a single value");
+  }
+  proton_json_dispose(&doc);
+  free(json);
+
+  // Regression: a quote inside a jsmn primitive must not desync depth
+  // accounting — jsmn absorbs the quote into the primitive, so the brackets
+  // after 1" are real structure, not string content.
+  size_t deep = 500000;
+  json = (char *)malloc(deep * 2 + 10);
+  if (json == NULL) {
+    return fail("bypass payload allocation failed");
+  }
+  memcpy(json, "[1\",", 4);
+  memset(json + 4, '[', deep);
+  memset(json + 4 + deep, ']', deep);
+  memcpy(json + 4 + deep * 2, ",\"x\"]", 6);
+  if (proton_json_parse(&doc, json)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("primitive-quote deep nesting should be rejected");
+  }
+  if (proton_json_is_single_value(&doc)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("rejected bypass JSON must not be a single value");
+  }
+  proton_json_dispose(&doc);
+  free(json);
+
+  // Brackets inside strings and escaped quotes must not count as nesting.
+  size_t bracket_count = (size_t)PROTON_JSON_MAX_DEPTH + 100;
+  char *brackets = (char *)malloc(bracket_count + 5);
+  if (brackets == NULL) {
+    return fail("bracket string allocation failed");
+  }
+  brackets[0] = '[';
+  brackets[1] = '"';
+  memset(brackets + 2, '[', bracket_count);
+  brackets[bracket_count + 2] = '"';
+  brackets[bracket_count + 3] = ']';
+  brackets[bracket_count + 4] = '\0';
+  if (expect_valid_json("brackets inside strings", brackets)) {
+    free(brackets);
+    return 1;
+  }
+  free(brackets);
+
+  // A string holding an escaped quote plus brackets up to the cap parses;
+  // the same string followed by real over-cap structure is rejected.
+  char *escaped = (char *)malloc((size_t)PROTON_JSON_MAX_DEPTH + 8);
+  if (escaped == NULL) {
+    return fail("escaped-quote allocation failed");
+  }
+  escaped[0] = '[';
+  escaped[1] = '"';
+  escaped[2] = '\\';
+  escaped[3] = '"';
+  memset(escaped + 4, '[', PROTON_JSON_MAX_DEPTH);
+  escaped[PROTON_JSON_MAX_DEPTH + 4] = '"';
+  escaped[PROTON_JSON_MAX_DEPTH + 5] = ']';
+  escaped[PROTON_JSON_MAX_DEPTH + 6] = '\0';
+  if (expect_valid_json("escaped quote then brackets", escaped)) {
+    free(escaped);
+    return 1;
+  }
+  free(escaped);
+
+  size_t over = (size_t)PROTON_JSON_MAX_DEPTH + 1;
+  json = (char *)malloc(over * 2 + 8);
+  if (json == NULL) {
+    return fail("escaped-quote deep allocation failed");
+  }
+  memcpy(json, "[\"\\\"\",", 6);
+  memset(json + 6, '[', over);
+  memset(json + 6 + over, ']', over);
+  json[6 + over * 2] = ']';
+  json[6 + over * 2 + 1] = '\0';
+  if (proton_json_parse(&doc, json)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("structure after an escaped-quote string should be rejected");
+  }
+  free(json);
+
+  // Regression: ':' is not a primitive delimiter in strict jsmn, so the
+  // quote after 1: is absorbed into the primitive and the brackets are real
+  // structure; a naive string-state scanner would hide them.
+  json = (char *)malloc(deep * 2 + 7);
+  if (json == NULL) {
+    return fail("colon bypass allocation failed");
+  }
+  memcpy(json, "[1:\",", 5);
+  memset(json + 5, '[', deep);
+  memset(json + 5 + deep, ']', deep);
+  json[5 + deep * 2] = ']';
+  json[5 + deep * 2 + 1] = '\0';
+  if (proton_json_parse(&doc, json)) {
+    proton_json_dispose(&doc);
+    free(json);
+    return fail("colon-primitive deep nesting should be rejected");
+  }
+  free(json);
+
+  // A primitive ends at whitespace; a string starting after it must be
+  // tracked as a string — its brackets are not structure.
+  if (expect_valid_json("string after primitive", "[1 \"[[[[[[[[\"]")) {
+    return 1;
+  }
+
+  // Brackets absorbed into a primitive are not structure either; use enough
+  // of them that a scanner without a primitive state would over-reject.
+  size_t absorbed = PROTON_JSON_MAX_DEPTH;
+  json = (char *)malloc(absorbed + 8);
+  if (json == NULL) {
+    return fail("primitive bracket allocation failed");
+  }
+  json[0] = '[';
+  json[1] = '1';
+  memset(json + 2, '[', absorbed);
+  memcpy(json + 2 + absorbed, ",\"x\"]", 5);
+  json[2 + absorbed + 5] = '\0';
+  if (expect_valid_json("brackets absorbed by primitive", json)) {
+    free(json);
+    return 1;
+  }
+  free(json);
+  return 0;
+}
+
 static int expect_bridge_lifecycle_resize_retry(void) {
   proton_engine_bridge_lifecycle_t lifecycle;
   proton_engine_bridge_lifecycle_init(&lifecycle);
@@ -1116,6 +1297,9 @@ int main(void) {
     return 1;
   }
   if (expect_bridge_response_payloads()) {
+    return 1;
+  }
+  if (expect_json_depth_limit()) {
     return 1;
   }
 
