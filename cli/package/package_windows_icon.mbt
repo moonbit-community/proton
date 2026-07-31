@@ -28,7 +28,7 @@ fn first_windows_icon(icons : Array[String]) -> String? {
 ///|
 async fn stage_windows_icon(plan : PackagePlan, executable : String) -> Unit {
   guard first_windows_icon(plan.icons) is Some(icon) else { return }
-  guard path_is_file(icon) else {
+  guard @fsutil.path_is_file(icon) else {
     raise PackagePlanError::MissingIcon(path=icon)
   }
   let executable_bytes = @utf8.encode(executable)

@@ -11,62 +11,6 @@ priv struct ProtonPlatform {
 }
 
 ///|
-async fn path_exists(path : String) -> Bool {
-  @async_fs.exists(path)
-}
-
-///|
-async fn path_is_dir(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Directory
-}
-
-///|
-async fn path_is_file(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Regular
-}
-
-///|
-fn path_join(base : String, child : String) -> String {
-  if base == "" {
-    child
-  } else if child == "" {
-    base
-  } else if base.has_suffix("\\") || base.has_suffix("/") {
-    base + child
-  } else {
-    base + @path.sep.to_string() + child
-  }
-}
-
-///|
-fn path_parent(path : String) -> String {
-  let normalized = if path.has_suffix("\\") || path.has_suffix("/") {
-    path.unsafe_substring(start=0, end=path.length() - 1)
-  } else {
-    path
-  }
-  let slash = normalized.rev_find("/")
-  let backslash = normalized.rev_find("\\")
-  let index = match (slash, backslash) {
-    (Some(a), Some(b)) => Some(if a > b { a } else { b })
-    (Some(a), None) => Some(a)
-    (None, Some(b)) => Some(b)
-    (None, None) => None
-  }
-  match index {
-    Some(index) if index > 0 =>
-      normalized.unsafe_substring(start=0, end=index).to_string()
-    _ => normalized.to_string()
-  }
-}
-
-///|
 async fn current_platform() -> ProtonPlatform {
   match platform_from_override(@env.get_env_var("PROTON_CEF_PLATFORM")) {
     Some(platform) => platform
@@ -159,7 +103,7 @@ async fn detect_host_arch() -> String? {
 
 ///|
 async fn is_macos_host() -> Bool {
-  path_exists("/System/Library/CoreServices/SystemVersion.plist")
+  @fsutil.path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
 ///|
@@ -235,8 +179,8 @@ fn relative_runtime_dist(
   platform : ProtonPlatform,
   cef_name : String,
 ) -> String {
-  path_join(
-    path_join(path_join(".proton", "runtimes"), platform.id),
+  @fsutil.path_join(
+    @fsutil.path_join(@fsutil.path_join(".proton", "runtimes"), platform.id),
     proton_runtime_id(proton_version, platform, cef_name),
   )
 }
@@ -283,14 +227,16 @@ fn installed_cef_relative_files(platform : ProtonPlatform) -> Array[String] {
     files.push("Release/v8_context_snapshot.bin")
   } else if platform.id == "darwin-arm64" {
     let resource_root = "Release/Chromium Embedded Framework.framework/Resources"
-    files.push(path_join(resource_root, "chrome_100_percent.pak"))
-    files.push(path_join(resource_root, "chrome_200_percent.pak"))
-    files.push(path_join(resource_root, "resources.pak"))
-    files.push(path_join(resource_root, "v8_context_snapshot.arm64.bin"))
+    files.push(@fsutil.path_join(resource_root, "chrome_100_percent.pak"))
+    files.push(@fsutil.path_join(resource_root, "chrome_200_percent.pak"))
+    files.push(@fsutil.path_join(resource_root, "resources.pak"))
+    files.push(
+      @fsutil.path_join(resource_root, "v8_context_snapshot.arm64.bin"),
+    )
     let libraries_root = "Release/Chromium Embedded Framework.framework/Libraries"
-    files.push(path_join(libraries_root, "libEGL.dylib"))
-    files.push(path_join(libraries_root, "libGLESv2.dylib"))
-    files.push(path_join(libraries_root, "libvk_swiftshader.dylib"))
+    files.push(@fsutil.path_join(libraries_root, "libEGL.dylib"))
+    files.push(@fsutil.path_join(libraries_root, "libGLESv2.dylib"))
+    files.push(@fsutil.path_join(libraries_root, "libvk_swiftshader.dylib"))
   }
   files
 }
@@ -357,7 +303,9 @@ pub fn runtime_required_relative_files_for_platform(
 async fn all_exist(root : String, files : Array[String]) -> Bool {
   guard files.length() > 0 else { return false }
   for file in files {
-    guard path_exists(path_join(root, file)) else { return false }
+    guard @fsutil.path_exists(@fsutil.path_join(root, file)) else {
+      return false
+    }
   }
   true
 }

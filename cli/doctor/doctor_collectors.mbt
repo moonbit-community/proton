@@ -75,14 +75,6 @@ fn version_major_minor(version : String) -> String? {
 }
 
 ///|
-fn path_is_absolute_like(path : String) -> Bool {
-  path.has_prefix("\\") ||
-  path.has_prefix("/") ||
-  path.contains(":\\") ||
-  path.contains(":/")
-}
-
-///|
 fn runtime_manifest_string_field(
   object : Map[String, Json],
   field : String,
@@ -111,11 +103,11 @@ fn doctor_runtime_error_message(error : Error) -> String {
 async fn runtime_manifest_from_project(
   project : ProjectDoctorInfo,
 ) -> DoctorRuntimeManifest? {
-  let manifest_path = path_join(
-    path_join(project.root, ".proton"),
+  let manifest_path = @fsutil.path_join(
+    @fsutil.path_join(project.root, ".proton"),
     "runtime.json",
   )
-  guard doctor_path_exists(manifest_path) else { return None }
+  guard @fsutil.path_exists(manifest_path) else { return None }
   let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise Read(path=manifest_path)
   }
@@ -156,12 +148,15 @@ async fn runtime_manifest_from_project(
 
 ///|
 async fn development_native_dist(project : ProjectDoctorInfo) -> String {
-  let project_dist = path_join(path_join(project.root, "native"), "dist")
-  if doctor_path_exists(project_dist) {
+  let project_dist = @fsutil.path_join(
+    @fsutil.path_join(project.root, "native"),
+    "dist",
+  )
+  if @fsutil.path_exists(project_dist) {
     project_dist
   } else {
     match find_up(project.root, "native") {
-      Some(path) => path_join(path, "dist")
+      Some(path) => @fsutil.path_join(path, "dist")
       None => project_dist
     }
   }
@@ -180,10 +175,10 @@ async fn resolve_native_dist(
     None =>
       match runtime_manifest_from_project(project) {
         Some(manifest) => {
-          let path = if path_is_absolute_like(manifest.dist) {
+          let path = if @fsutil.path_is_absolute(manifest.dist) {
             manifest.dist
           } else {
-            path_join(project.root, manifest.dist)
+            @fsutil.path_join(project.root, manifest.dist)
           }
           (@path.Path(path).resolve().to_string(), Some(manifest))
         }
@@ -203,10 +198,10 @@ fn resolve_native_dist_override(
       if root == "" {
         None
       } else {
-        let path = if path_is_absolute_like(root) {
+        let path = if @fsutil.path_is_absolute(root) {
           root
         } else {
-          path_join(project.root, root)
+          @fsutil.path_join(project.root, root)
         }
         Some(@path.Path(path).resolve().to_string())
       }
@@ -637,7 +632,7 @@ fn push_deep_runtime_probe(
       return
     }
   }
-  let library_path = path_join(native_dist, library_relative)
+  let library_path = @fsutil.path_join(native_dist, library_relative)
   let config = Json::object({
     "abi_version": Json::number(
       doctor_native_expected_abi_version.to_double(),
@@ -645,7 +640,7 @@ fn push_deep_runtime_probe(
     ),
     "runtime_root": Json::string(native_dist),
     "helper_path": Json::string(
-      path_join(native_dist, runtime_helper_relative_path(platform_id)),
+      @fsutil.path_join(native_dist, runtime_helper_relative_path(platform_id)),
     ),
   }).stringify()
   match doctor_native_probe(library_path, config) {
@@ -741,8 +736,8 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
     (native_dist, _) => {
       match runtime_library_relative_path(platform_id) {
         Some(relative) => {
-          let library_path = path_join(native_dist, relative)
-          if doctor_path_exists(library_path) {
+          let library_path = @fsutil.path_join(native_dist, relative)
+          if @fsutil.path_exists(library_path) {
             lines.push(
               platform_command_line(
                 "platform.library.file",
@@ -795,11 +790,11 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
         }
         None => ()
       }
-      let helper_path = path_join(
+      let helper_path = @fsutil.path_join(
         native_dist,
         runtime_helper_relative_path(platform_id),
       )
-      if doctor_path_exists(helper_path) {
+      if @fsutil.path_exists(helper_path) {
         lines.push(
           platform_command_line(
             "platform.helper.file",
@@ -935,7 +930,7 @@ async fn collect_runtime(
     }
     None => ()
   }
-  if doctor_path_exists(native_dist) {
+  if @fsutil.path_exists(native_dist) {
     lines.push(
       DoctorLine::coded(
         "runtime.dist",
@@ -943,8 +938,8 @@ async fn collect_runtime(
         "Proton native dist: " + native_dist,
       ),
     )
-    let version_path = path_join(native_dist, "version.txt")
-    if doctor_path_exists(version_path) {
+    let version_path = @fsutil.path_join(native_dist, "version.txt")
+    if @fsutil.path_exists(version_path) {
       let version = @async_fs.read_file(version_path).text() catch {
         _ => "unknown"
       }
@@ -969,7 +964,7 @@ async fn collect_runtime(
       platform_id,
     )
     for required in required_files {
-      if !doctor_path_exists(path_join(native_dist, required)) {
+      if !@fsutil.path_exists(@fsutil.path_join(native_dist, required)) {
         missing.push(required)
       }
     }
@@ -1054,7 +1049,7 @@ async fn push_frontend_dist_diagnostics(
   )
   match dist {
     Some(dist) => {
-      let exists = doctor_path_is_dir(dist)
+      let exists = @fsutil.path_is_dir(dist)
       if exists {
         let entries = @async_fs.readdir(
           dist,
@@ -1164,7 +1159,7 @@ async fn collect_frontend(
       lines,
     )
   }
-  if !doctor_path_is_dir(frontend_root) {
+  if !@fsutil.path_is_dir(frontend_root) {
     lines.push(
       DoctorLine::coded(
         "frontend.path.missing",
@@ -1182,8 +1177,8 @@ async fn collect_frontend(
   lines.push(
     DoctorLine::coded("frontend.path", Ok, "frontend path: " + frontend_root),
   )
-  let package_path = path_join(frontend_root, "package.json")
-  let package_json = if doctor_path_exists(package_path) {
+  let package_path = @fsutil.path_join(frontend_root, "package.json")
+  let package_json = if @fsutil.path_exists(package_path) {
     let text = @async_fs.read_file(package_path).text() catch { _ => "" }
     let parsed = @json.parse(text) catch { _ => Json::null() }
     match parsed {
@@ -1224,7 +1219,7 @@ async fn collect_frontend(
   let mut lock_count = 0
   for item in lock_candidates {
     let (lock_name, candidate) = item
-    if doctor_path_exists(path_join(frontend_root, lock_name)) {
+    if @fsutil.path_exists(@fsutil.path_join(frontend_root, lock_name)) {
       lock_count += 1
       if manager is None {
         manager = Some(candidate)
@@ -1415,7 +1410,11 @@ async fn collect_relative_files(
   depth : Int,
 ) -> Array[String] {
   guard depth >= 0 else { return [] }
-  let directory = if relative == "" { root } else { path_join(root, relative) }
+  let directory = if relative == "" {
+    root
+  } else {
+    @fsutil.path_join(root, relative)
+  }
   let entries = @async_fs.readdir(
     directory,
     include_hidden=true,
@@ -1430,9 +1429,9 @@ async fn collect_relative_files(
     } else {
       relative + "/" + entry
     }
-    let child = path_join(root, child_relative)
-    let is_file = doctor_path_is_file(child)
-    let is_dir = doctor_path_is_dir(child)
+    let child = @fsutil.path_join(root, child_relative)
+    let is_file = @fsutil.path_is_file(child)
+    let is_dir = @fsutil.path_is_dir(child)
     if is_file {
       files.push(child_relative.replace_all(old="\\", new="/"))
     } else if is_dir {
@@ -1504,12 +1503,12 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
   push_release_metadata_line(lines, "description", module_config.description)
   match module_config.readme {
     Some(readme) => {
-      let readme_path = if path_is_absolute_like(readme) {
+      let readme_path = if @fsutil.path_is_absolute(readme) {
         readme
       } else {
-        path_join(project.root, readme)
+        @fsutil.path_join(project.root, readme)
       }
-      if !doctor_path_exists(readme_path) {
+      if !@fsutil.path_exists(readme_path) {
         lines.push(
           DoctorLine::coded(
             "release.metadata.readme_file_missing",
@@ -1573,12 +1572,19 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
 
   match find_up(project.root, "scripts") {
     Some(scripts_dir) => {
-      let verifier = @path.Path(path_join(scripts_dir, "verify_generated.mjs"))
+      let verifier = @path.Path(
+          @fsutil.path_join(scripts_dir, "verify_generated.mjs"),
+        )
         .resolve()
         .to_string()
-      if doctor_path_exists(verifier) {
+      if @fsutil.path_exists(verifier) {
+        let scripts_parent = @fsutil.path_parent(scripts_dir)
         let repository_root = @path.Path(
-            path_parent(scripts_dir).unwrap_or(project.root),
+            if scripts_parent == scripts_dir {
+              project.root
+            } else {
+              scripts_parent
+            },
           )
           .resolve()
           .to_string()
@@ -1613,16 +1619,16 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
   }
 
   let prebuilt_candidates = [
-    path_join(project.root, "prebuilt"),
-    path_join(path_join(project.root, "proton"), "prebuilt"),
+    @fsutil.path_join(project.root, "prebuilt"),
+    @fsutil.path_join(@fsutil.path_join(project.root, "proton"), "prebuilt"),
   ]
   for prebuilt_root in prebuilt_candidates {
-    let prebuilt_exists = doctor_path_is_dir(prebuilt_root)
+    let prebuilt_exists = @fsutil.path_is_dir(prebuilt_root)
     if prebuilt_exists {
       let mut forbidden_count = 0
       for platform_id in ["win32-x64", "darwin-arm64", "linux-x64"] {
-        let platform_root = path_join(prebuilt_root, platform_id)
-        let platform_exists = doctor_path_is_dir(platform_root)
+        let platform_root = @fsutil.path_join(prebuilt_root, platform_id)
+        let platform_exists = @fsutil.path_is_dir(platform_root)
         if platform_exists {
           let allowed = @cef.proton_prebuilt_relative_files_for_platform(
             platform_id,
@@ -2039,7 +2045,7 @@ async fn collect_extensions(
   let extension_root = extension_root_for_project(project)
   let lines : Array[DoctorLine] = []
   let namespaces : Map[String, String] = Map([])
-  let discovered = if doctor_path_exists(extension_root) {
+  let discovered = if @fsutil.path_exists(extension_root) {
     let entries = @async_fs.readdir(
       extension_root,
       include_hidden=true,
@@ -2049,12 +2055,12 @@ async fn collect_extensions(
     }
     let mut count = 0
     for entry in entries {
-      let extension_dir = path_join(extension_root, entry)
-      if !doctor_path_is_dir(extension_dir) {
+      let extension_dir = @fsutil.path_join(extension_root, entry)
+      if !@fsutil.path_is_dir(extension_dir) {
         continue
       }
-      let ext_path = path_join(extension_dir, "moon.ext")
-      if doctor_path_is_file(ext_path) {
+      let ext_path = @fsutil.path_join(extension_dir, "moon.ext")
+      if @fsutil.path_is_file(ext_path) {
         count += 1
         let identity = try @codegen.read_moon_ext_identity(ext_path) catch {
           error => Err(error.to_string())
@@ -2101,8 +2107,8 @@ async fn collect_extensions(
               ),
             )
         }
-        let moon_pkg_path = path_join(extension_dir, "moon.pkg")
-        if !doctor_path_exists(moon_pkg_path) {
+        let moon_pkg_path = @fsutil.path_join(extension_dir, "moon.pkg")
+        if !@fsutil.path_exists(moon_pkg_path) {
           lines.push(
             DoctorLine::coded(
               "extensions.moon_pkg.missing",
@@ -2111,8 +2117,8 @@ async fn collect_extensions(
             ),
           )
         }
-        let source_path = path_join(extension_dir, "extension.mbt")
-        if !doctor_path_exists(source_path) {
+        let source_path = @fsutil.path_join(extension_dir, "extension.mbt")
+        if !@fsutil.path_exists(source_path) {
           lines.push(
             DoctorLine::coded(
               "extensions.source.missing",
@@ -2122,7 +2128,9 @@ async fn collect_extensions(
           )
         } else {
           let source = @async_fs.read_file(source_path).text() catch { _ => "" }
-          let generated_path = path_join(extension_dir, "extension.g.mbt")
+          let generated_path = @fsutil.path_join(
+            extension_dir, "extension.g.mbt",
+          )
           if source.contains("#proton.command") {
             let generated_result = try
               @codegen.generate_typed_commands_from_files([source_path])
@@ -2133,7 +2141,7 @@ async fn collect_extensions(
             }
             match generated_result {
               Ok(generated) =>
-                if !doctor_path_exists(generated_path) {
+                if !@fsutil.path_exists(generated_path) {
                   lines.push(
                     DoctorLine::coded(
                       "extensions.generated.missing",
@@ -2174,7 +2182,7 @@ async fn collect_extensions(
                   ),
                 )
             }
-          } else if doctor_path_exists(generated_path) {
+          } else if @fsutil.path_exists(generated_path) {
             lines.push(
               DoctorLine::coded(
                 "extensions.generated.unexpected",
@@ -2220,8 +2228,8 @@ async fn collect_extensions(
 
 ///|
 async fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
-  let nested_extension_root = path_join(project.root, "extensions")
-  if doctor_path_exists(nested_extension_root) {
+  let nested_extension_root = @fsutil.path_join(project.root, "extensions")
+  if @fsutil.path_exists(nested_extension_root) {
     nested_extension_root
   } else {
     project.root
@@ -2254,20 +2262,21 @@ async fn apply_doctor_fixes(
   }
   let mut changed = 0
   for entry in entries {
-    let extension_dir = path_join(extension_root, entry)
-    if !doctor_path_is_dir(extension_dir) {
+    let extension_dir = @fsutil.path_join(extension_root, entry)
+    if !@fsutil.path_is_dir(extension_dir) {
       continue
     }
-    let source_path = path_join(extension_dir, "extension.mbt")
-    let metadata_path = path_join(extension_dir, "moon.ext")
-    if !doctor_path_is_file(source_path) || !doctor_path_is_file(metadata_path) {
+    let source_path = @fsutil.path_join(extension_dir, "extension.mbt")
+    let metadata_path = @fsutil.path_join(extension_dir, "moon.ext")
+    if !@fsutil.path_is_file(source_path) ||
+      !@fsutil.path_is_file(metadata_path) {
       continue
     }
     let source = @async_fs.read_file(source_path).text() catch { _ => "" }
     if !source.contains("#proton.command") {
       continue
     }
-    let generated_path = path_join(extension_dir, "extension.g.mbt")
+    let generated_path = @fsutil.path_join(extension_dir, "extension.g.mbt")
     let generated_result = try
       @codegen.generate_typed_commands_from_files([source_path])
     catch {
@@ -2357,13 +2366,10 @@ fn path_is_within_project(project : ProjectDoctorInfo, path : String) -> Bool {
 ///|
 fn entry_path(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
   if entry.kind == "file" || entry.kind == "asset" {
-    if entry.value.has_prefix("\\") ||
-      entry.value.has_prefix("/") ||
-      entry.value.contains(":\\") ||
-      entry.value.contains(":/") {
+    if @fsutil.path_is_absolute(entry.value) {
       entry.value
     } else {
-      path_join(project.root, entry.value)
+      @fsutil.path_join(project.root, entry.value)
     }
   } else {
     entry.value
@@ -2403,7 +2409,7 @@ async fn push_entry_existence(
   }
   match entry.kind {
     "file" =>
-      if doctor_path_exists(path) {
+      if @fsutil.path_exists(path) {
         lines.push(DoctorLine::coded("app.entry.file", Ok, "entry file exists"))
       } else {
         lines.push(
@@ -2415,7 +2421,7 @@ async fn push_entry_existence(
         )
       }
     "asset" =>
-      if doctor_path_exists(path) {
+      if @fsutil.path_exists(path) {
         lines.push(
           DoctorLine::coded("app.entry.asset", Ok, "entry asset exists"),
         )
@@ -2459,7 +2465,7 @@ async fn push_app_path_check(
 ) -> Unit {
   match value {
     Some(path) => {
-      let exists = doctor_path_is_dir(path)
+      let exists = @fsutil.path_is_dir(path)
       if !path_is_within_project(project, path) {
         lines.push(
           DoctorLine::coded(

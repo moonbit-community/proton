@@ -4,9 +4,9 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
   PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: resolve_path(root, "build"),
+    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "moon.proton"),
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -32,12 +32,12 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
 #cfg(not(platform="windows"))
 async test "macOS dmg uses drag-to-install layout and a verified UDZO image" {
   guard is_macos_host() else { return }
-  let root = resolve_path("target", "proton-package-dmg-real")
+  let root = @fsutil.resolve_path("target", "proton-package-dmg-real")
   remove_tree(root)
-  let app = resolve_path(root, "Source.app")
-  ensure_dir(resolve_path(app, "Contents"))
+  let app = @fsutil.resolve_path(root, "Source.app")
+  ensure_dir(@fsutil.resolve_path(app, "Contents"))
   write_text(
-    resolve_path(app, "Contents/Info.plist"),
+    @fsutil.resolve_path(app, "Contents/Info.plist"),
     "<?xml version=\"1.0\"?><plist><dict></dict></plist>",
   )
   let plan = macos_dmg_test_plan(root)

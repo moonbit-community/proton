@@ -155,22 +155,28 @@ async test "frontend path validation reports missing directory" {
 async test "backend path supports nested directories with spaces" {
   let root = "target/proton build backend"
   ensure_build_test_dir(root)
-  ensure_build_test_dir(join_path(root, "nested"))
-  ensure_build_test_dir(join_path(root, "nested/backend app"))
+  ensure_build_test_dir(@fsutil.path_join(root, "nested"))
+  ensure_build_test_dir(@fsutil.path_join(root, "nested/backend app"))
   let path = resolve_backend_path(root, Some("nested/backend app"))
-  @debug.assert_eq(path, resolve_path(root, "nested/backend app"))
+  @debug.assert_eq(path, @fsutil.resolve_path(root, "nested/backend app"))
 }
 
 ///|
 async test "build config discovery prefers package-local moon.proton" {
   let root = "target/proton-build-package-config"
   ensure_build_test_dir(root)
-  ensure_build_test_dir(join_path(root, "desktop"))
-  let package_config = join_path(join_path(root, "desktop"), "moon.proton")
+  ensure_build_test_dir(@fsutil.path_join(root, "desktop"))
+  let package_config = @fsutil.path_join(
+    @fsutil.path_join(root, "desktop"),
+    "moon.proton",
+  )
   write_build_test_file(package_config, "")
   let raw = parse_build_args(["--package", "desktop"])
   let resolved = resolve_build_config_path(root, root, raw)
-  @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
+  @debug.assert_eq(
+    resolved,
+    Some(@fsutil.resolve_path(root, "desktop/moon.proton")),
+  )
 }
 
 ///|
@@ -178,11 +184,11 @@ async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
     let dir = "target/proton-build-path"
     ensure_build_test_dir(dir)
-    let resolved = resolve_path(".", "target\\proton-build-path")
+    let resolved = @fsutil.resolve_path(".", "target\\proton-build-path")
     assert_true(resolved.contains(":/") || resolved.contains(":\\"))
-    assert_true(path_exists(resolved))
+    assert_true(@fsutil.path_exists(resolved))
     let absolute = resolved.replace_all(old="/", new="\\")
-    assert_true(path_exists(resolve_path(".", absolute)))
+    assert_true(@fsutil.path_exists(@fsutil.resolve_path(".", absolute)))
   }
 }
 
@@ -190,7 +196,7 @@ async test "resolve path accepts Windows backslash relative input" {
 async test "project config validation rejects unknown top-level fields" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = join_path(dir, "unknown.moon.proton")
+  let path = @fsutil.path_join(dir, "unknown.moon.proton")
   write_build_test_file(path, valid_build_config + "\nlegacy_runtime = true\n")
   let error = expect_build_config_error(() => read_project_config(path))
   assert_eq(
@@ -208,7 +214,7 @@ async test "project config validation rejects unknown top-level fields" {
 async test "project config validation requires window" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = join_path(dir, "missing-window.moon.proton")
+  let path = @fsutil.path_join(dir, "missing-window.moon.proton")
   write_build_test_file(
     path,
     (
@@ -235,7 +241,7 @@ async test "project config validation requires window" {
 async test "project config validation rejects unsupported size_hint" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = join_path(dir, "bad-size-hint.moon.proton")
+  let path = @fsutil.path_join(dir, "bad-size-hint.moon.proton")
   write_build_test_file(
     path,
     (
@@ -270,7 +276,7 @@ async test "project config validation rejects unsupported size_hint" {
 async test "project config parsing keeps active bundle metadata out of build validation" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = join_path(dir, "active-bundle.moon.proton")
+  let path = @fsutil.path_join(dir, "active-bundle.moon.proton")
   write_build_test_file(
     path,
     valid_build_config +
@@ -300,7 +306,7 @@ async test "production entry validation requires file-backed entry" {
   assert_true(error.contains("production entry does not exist"))
   let dir = "target/proton-build-entry"
   ensure_build_test_dir(dir)
-  let file = join_path(dir, "index.html")
+  let file = @fsutil.path_join(dir, "index.html")
   @mbfs.write_string_to_file(file, "<!doctype html>", encoding="utf8") catch {
     err => abort(@debug.render(Repr(err)))
   }
@@ -311,8 +317,8 @@ async test "production entry validation requires file-backed entry" {
 async test "release validation checks secondary window entry files" {
   let dir = "target/proton-build-secondary-entry"
   ensure_build_test_dir(dir)
-  let main = join_path(dir, "main.html")
-  let missing = join_path(dir, "secondary/missing.html")
+  let main = @fsutil.path_join(dir, "main.html")
+  let missing = @fsutil.path_join(dir, "secondary/missing.html")
   write_build_test_file(main, "<!doctype html>")
   let config = BuildProjectConfig::{
     base_dir: dir,

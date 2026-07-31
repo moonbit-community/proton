@@ -80,15 +80,18 @@ async fn setup(
   validate_cef_name(name)
   let sha256 = resolve_cef_archive_sha256(platform, name, url, requested_sha256)
   let root = project_root(cwd)
-  let proton_root = path_join(root, ".proton")
+  let proton_root = @fsutil.path_join(root, ".proton")
   let prebuilt_root = find_prebuilt_root(root, platform)
   let proton_version = prebuilt_manifest_version(prebuilt_root)
-  let cache_dir = path_join(
-    path_join(path_join(path_join(proton_root, "cache"), "cef"), platform.id),
+  let cache_dir = @fsutil.path_join(
+    @fsutil.path_join(
+      @fsutil.path_join(@fsutil.path_join(proton_root, "cache"), "cef"),
+      platform.id,
+    ),
     name,
   )
   let relative_dist = relative_runtime_dist(proton_version, platform, name)
-  let runtime_dir = path_join(root, relative_dist)
+  let runtime_dir = @fsutil.path_join(root, relative_dist)
   ensure_cef_cache(name, url, sha256, root, cache_dir, platform)
   validate_cef_root(cache_dir, platform)
   assemble_runtime(

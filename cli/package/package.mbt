@@ -100,7 +100,7 @@ pub fn command() -> @argparse.Command {
 pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = package_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = find_project_root_from(cwd)
+  let root = @fsutil.find_project_root_from(cwd)
   let config_path = match resolve_package_config_path(cwd, root, raw) {
     Some(path) => path
     None => raise PackageConfigError::NotFound(path="moon.proton")
@@ -117,7 +117,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   }
   let loaded = @proton_config.load_project_config_from_text(
     config_text,
-    path_parent(config_path),
+    @fsutil.path_parent(config_path),
     name=config_path,
   ) catch {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
@@ -204,11 +204,11 @@ async fn build_package_plan(
       platform=@cef.current_platform_id(),
     )
   }
-  let base_dir = resolve_path(project.base_dir(), ".")
+  let base_dir = @fsutil.resolve_path(project.base_dir(), ".")
   let backend = project.backend()
   let backend_root = match backend {
-    Some(backend) => resolve_path(base_dir, backend.path())
-    None => find_project_root_from(base_dir)
+    Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
+    None => @fsutil.find_project_root_from(base_dir)
   }
   let app_package = match raw.app_package {
     Some(app_package) => app_package
@@ -219,8 +219,8 @@ async fn build_package_plan(
       }
   }
   let output = match raw.output {
-    Some(output) => resolve_path(base_dir, output)
-    None => resolve_path(base_dir, bundle.output())
+    Some(output) => @fsutil.resolve_path(base_dir, output)
+    None => @fsutil.resolve_path(base_dir, bundle.output())
   }
   let frontend_dist = match project.frontend() {
     Some(frontend) => frontend.dist()
@@ -504,7 +504,7 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
 
 ///|
 async fn is_macos_host() -> Bool {
-  path_exists("/System/Library/CoreServices/SystemVersion.plist")
+  @fsutil.path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
 ///|
@@ -530,15 +530,15 @@ fn restore_package_env(name : String, value : String?) -> Unit {
 
 ///|
 async fn find_release_executable(plan : PackagePlan) -> String? {
-  let root = resolve_path(plan.build_target_dir, "native/release/build")
+  let root = @fsutil.resolve_path(plan.build_target_dir, "native/release/build")
   let package_name = path_basename(plan.app_package)
   find_named_file(root, package_name + ".exe")
 }
 
 ///|
 async fn find_named_file(root : String, name : String) -> String? {
-  guard path_exists(root) else { return None }
-  if path_is_file(root) {
+  guard @fsutil.path_exists(root) else { return None }
+  if @fsutil.path_is_file(root) {
     return if path_basename(root) == name { Some(root) } else { None }
   }
   let entries = @async_fs.readdir(
@@ -550,7 +550,7 @@ async fn find_named_file(root : String, name : String) -> String? {
     _ => return None
   }
   for entry in entries {
-    match find_named_file(resolve_path(root, entry), name) {
+    match find_named_file(@fsutil.resolve_path(root, entry), name) {
       Some(path) => return Some(path)
       None => ()
     }
@@ -562,10 +562,12 @@ async fn find_named_file(root : String, name : String) -> String? {
 async fn read_active_runtime(root : String) -> String {
   match @sys.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim().to_owned() != "" =>
-      return require_runtime(resolve_path(root, value.trim().to_owned()))
+      return require_runtime(
+        @fsutil.resolve_path(root, value.trim().to_owned()),
+      )
     _ => ()
   }
-  let manifest_path = resolve_path(root, ".proton/runtime.json")
+  let manifest_path = @fsutil.resolve_path(root, ".proton/runtime.json")
   let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise PackageRuntimeError::ManifestMissing(path=manifest_path)
   }
@@ -594,7 +596,7 @@ async fn read_active_runtime(root : String) -> String {
         )
       }
       match fields.get("dist") {
-        Some(String(dist)) => require_runtime(resolve_path(root, dist))
+        Some(String(dist)) => require_runtime(@fsutil.resolve_path(root, dist))
         _ =>
           raise PackageRuntimeError::ManifestField(
             path=manifest_path,
@@ -615,7 +617,7 @@ fn package_build_target_dir(
   workspace_root : String,
   identifier : String,
 ) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     workspace_root,
     "target/proton-package-build/" + package_executable_name(identifier),
   )
@@ -623,7 +625,7 @@ fn package_build_target_dir(
 
 ///|
 async fn require_runtime(path : String) -> String {
-  if path_is_dir(path) {
+  if @fsutil.path_is_dir(path) {
     path
   } else {
     raise DirectoryMissing(path~)
@@ -660,37 +662,43 @@ async fn stage_macos_app_impl(
   executable : String,
   runtime : String,
 ) -> Unit {
-  let final_app = resolve_path(plan.output, plan.product_name + ".app")
+  let final_app = @fsutil.resolve_path(plan.output, plan.product_name + ".app")
   let executable_name = package_executable_name(plan.product_name)
   let app = macos_staging_app_path(plan)
-  let contents = resolve_path(app, "Contents")
-  let macos = resolve_path(contents, "MacOS")
-  let resources = resolve_path(contents, "Resources")
-  let frameworks = resolve_path(contents, "Frameworks")
+  let contents = @fsutil.resolve_path(app, "Contents")
+  let macos = @fsutil.resolve_path(contents, "MacOS")
+  let resources = @fsutil.resolve_path(contents, "Resources")
+  let frameworks = @fsutil.resolve_path(contents, "Frameworks")
   remove_tree(macos_staging_root_path(plan))
   for dir in [macos, resources, frameworks] {
     ensure_dir(dir)
   }
-  copy_file(executable, resolve_path(macos, executable_name))
-  copy_tree(runtime, resolve_path(resources, "proton"))
+  copy_file(executable, @fsutil.resolve_path(macos, executable_name))
+  copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
-    resolve_path(resources, "moon.proton"),
+    @fsutil.resolve_path(resources, "moon.proton"),
   )
   stage_project_inputs(plan, resources)
   stage_macos_icon(plan, resources)
-  let helper_source = resolve_path(runtime, "bin/cef_process")
-  guard path_exists(helper_source) else {
+  let helper_source = @fsutil.resolve_path(runtime, "bin/cef_process")
+  guard @fsutil.path_exists(helper_source) else {
     raise PackageRuntimeError::HelperMissing(path=helper_source)
   }
   for helper in macos_helper_specs(plan.product_name, plan.identifier) {
-    let helper_app = resolve_path(frameworks, helper.bundle_name + ".app")
-    let helper_macos = resolve_path(helper_app, "Contents/MacOS")
-    let helper_executable = resolve_path(helper_macos, helper.executable_name)
+    let helper_app = @fsutil.resolve_path(
+      frameworks,
+      helper.bundle_name + ".app",
+    )
+    let helper_macos = @fsutil.resolve_path(helper_app, "Contents/MacOS")
+    let helper_executable = @fsutil.resolve_path(
+      helper_macos,
+      helper.executable_name,
+    )
     ensure_dir(helper_macos)
     copy_file(helper_source, helper_executable)
     write_text(
-      resolve_path(helper_app, "Contents/Info.plist"),
+      @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
       helper_info_plist(plan, helper),
     )
     add_macos_rpath(
@@ -698,7 +706,7 @@ async fn stage_macos_app_impl(
     )
   }
   write_text(
-    resolve_path(contents, "Info.plist"),
+    @fsutil.resolve_path(contents, "Info.plist"),
     macos_info_plist(plan, executable_name),
   )
   write_package_manifest(plan, resources, "macos-app")
@@ -761,7 +769,7 @@ async fn stage_macos_app_impl(
 
 ///|
 fn macos_staging_root_path(plan : PackagePlan) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".staging",
   )
@@ -769,17 +777,20 @@ fn macos_staging_root_path(plan : PackagePlan) -> String {
 
 ///|
 fn macos_staging_app_path(plan : PackagePlan) -> String {
-  resolve_path(macos_staging_root_path(plan), plan.product_name + ".app")
+  @fsutil.resolve_path(
+    macos_staging_root_path(plan),
+    plan.product_name + ".app",
+  )
 }
 
 ///|
 fn macos_zip_path(plan : PackagePlan) -> String {
-  resolve_path(plan.output, plan.product_name + ".app.zip")
+  @fsutil.resolve_path(plan.output, plan.product_name + ".app.zip")
 }
 
 ///|
 fn macos_zip_staging_path(plan : PackagePlan) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".staging.app.zip",
   )
@@ -788,8 +799,8 @@ fn macos_zip_staging_path(plan : PackagePlan) -> String {
 ///|
 async fn recover_staged_artifact_backup(destination : String) -> Unit {
   let backup = destination + ".backup"
-  if path_exists(backup) {
-    if path_exists(destination) {
+  if @fsutil.path_exists(backup) {
+    if @fsutil.path_exists(destination) {
       remove_tree(backup)
     } else {
       @async_fs.rename(backup, destination) catch {
@@ -828,7 +839,7 @@ async fn promote_staged_artifacts(artifacts : Array[StagedArtifact]) -> Unit {
   let promoted : Array[String] = []
   try {
     for artifact in artifacts {
-      if path_exists(artifact.destination) {
+      if @fsutil.path_exists(artifact.destination) {
         rename_staged_artifact(
           artifact.destination,
           artifact.destination + ".backup",
@@ -916,14 +927,14 @@ async fn stage_project_inputs(plan : PackagePlan, destination : String) -> Unit 
         raise PackagePlanError::UnsupportedResourceGlob(path=input)
       None => input
     }
-    guard path_exists(source) else {
+    guard @fsutil.path_exists(source) else {
       raise PackagePlanError::MissingInput(path=input)
     }
     let relative = match relative_to_base(plan.base_dir, source) {
       Some(relative) => relative
       None => raise PackagePlanError::InputOutsideProject(path=input)
     }
-    copy_tree(source, resolve_path(destination, relative))
+    copy_tree(source, @fsutil.resolve_path(destination, relative))
   }
 }
 
@@ -941,18 +952,18 @@ async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
   match plan.macos_icon {
     None => ()
     Some(icon) => {
-      guard path_exists(icon) else {
+      guard @fsutil.path_exists(icon) else {
         raise PackagePlanError::MissingIcon(path=icon)
       }
-      copy_file(icon, resolve_path(resources, "AppIcon.icns"))
+      copy_file(icon, @fsutil.resolve_path(resources, "AppIcon.icns"))
     }
   }
 }
 
 ///|
 fn relative_to_base(base : String, path : String) -> String? {
-  let base = normalize_slashes(resolve_path(base, "."))
-  let path = normalize_slashes(resolve_path(base, path))
+  let base = normalize_slashes(@fsutil.resolve_path(base, "."))
+  let path = normalize_slashes(@fsutil.resolve_path(base, path))
   let prefix = if base.has_suffix("/") { base } else { base + "/" }
   if path == base {
     Some(".")
@@ -1014,14 +1025,14 @@ fn package_executable_name(product_name : String) -> String {
 
 ///|
 async fn ensure_dir(path : String) -> Unit {
-  guard !path_exists(path) else { return }
-  let parent = path_parent(path)
-  if parent != path && !path_exists(parent) {
+  guard !@fsutil.path_exists(path) else { return }
+  let parent = @fsutil.path_parent(path)
+  if parent != path && !@fsutil.path_exists(parent) {
     ensure_dir(parent)
   }
   @async_fs.mkdir(path) catch {
     error => {
-      if path_exists(path) {
+      if @fsutil.path_exists(path) {
         return
       }
       raise PackageFileSystemError::CreateDirectory(
@@ -1034,8 +1045,8 @@ async fn ensure_dir(path : String) -> Unit {
 
 ///|
 async fn remove_tree(path : String) -> Unit {
-  guard path_exists(path) else { return }
-  if path_is_file(path) {
+  guard @fsutil.path_exists(path) else { return }
+  if @fsutil.path_is_file(path) {
     @async_fs.remove(path) catch {
       error =>
         raise PackageFileSystemError::Remove(
@@ -1056,7 +1067,7 @@ async fn remove_tree(path : String) -> Unit {
 
 ///|
 async fn copy_file(source : String, destination : String) -> Unit {
-  ensure_dir(path_parent(destination))
+  ensure_dir(@fsutil.path_parent(destination))
   if is_macos_host() {
     let code = @process.run("ditto", [source, destination]) catch {
       error =>
@@ -1089,13 +1100,13 @@ async fn copy_file(source : String, destination : String) -> Unit {
 
 ///|
 async fn copy_tree(source : String, destination : String) -> Unit {
-  if path_is_file(source) {
+  if @fsutil.path_is_file(source) {
     return copy_file(source, destination)
   }
-  guard path_is_dir(source) else {
+  guard @fsutil.path_is_dir(source) else {
     raise PackageFileSystemError::InvalidSource(path=source)
   }
-  ensure_dir(path_parent(destination))
+  ensure_dir(@fsutil.path_parent(destination))
   let code = if @path.sep == '\\' {
     let (code, _) = @process.collect_output_merged("robocopy", [
       source, destination, "/E", "/COPY:DAT", "/DCOPY:DAT", "/NFL", "/NDL", "/NJH",
@@ -1352,7 +1363,10 @@ async fn write_package_manifest(
       }),
     ),
   }).stringify()
-  write_text(resolve_path(destination, "proton-package.json"), json + "\n")
+  write_text(
+    @fsutil.resolve_path(destination, "proton-package.json"),
+    json + "\n",
+  )
 }
 
 ///|
@@ -1427,14 +1441,16 @@ async fn sign_macos_app_with_identity(
   allow_untrusted_libraries~ : Bool,
   verify_developer_id~ : Bool,
 ) -> Unit {
-  let contents = resolve_path(app, "Contents")
+  let contents = @fsutil.resolve_path(app, "Contents")
   let entitlements = resolve_macos_entitlements(app, allow_untrusted_libraries~)
-  let main = resolve_path(contents, "MacOS/" + executable_name)
-  let cef_framework = resolve_path(
+  let main = @fsutil.resolve_path(contents, "MacOS/" + executable_name)
+  let cef_framework = @fsutil.resolve_path(
     contents, "Resources/proton/Frameworks/Chromium Embedded Framework.framework",
   )
-  let libproton = resolve_path(contents, "Resources/proton/lib/libproton.dylib")
-  let runtime_bin = resolve_path(contents, "Resources/proton/bin")
+  let libproton = @fsutil.resolve_path(
+    contents, "Resources/proton/lib/libproton.dylib",
+  )
+  let runtime_bin = @fsutil.resolve_path(contents, "Resources/proton/bin")
   let targets = [
     MacosCodeSignTarget::{
       path: cef_framework,
@@ -1442,22 +1458,22 @@ async fn sign_macos_app_with_identity(
       deep: true,
     },
     MacosCodeSignTarget::{
-      path: resolve_path(runtime_bin, "libEGL.dylib"),
+      path: @fsutil.resolve_path(runtime_bin, "libEGL.dylib"),
       runtime_options: false,
       deep: false,
     },
     MacosCodeSignTarget::{
-      path: resolve_path(runtime_bin, "libGLESv2.dylib"),
+      path: @fsutil.resolve_path(runtime_bin, "libGLESv2.dylib"),
       runtime_options: false,
       deep: false,
     },
     MacosCodeSignTarget::{
-      path: resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
+      path: @fsutil.resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
       runtime_options: false,
       deep: false,
     },
     MacosCodeSignTarget::{
-      path: resolve_path(runtime_bin, "cef_process"),
+      path: @fsutil.resolve_path(runtime_bin, "cef_process"),
       runtime_options: false,
       deep: false,
     },
@@ -1469,7 +1485,10 @@ async fn sign_macos_app_with_identity(
   ]
   for helper in macos_helper_specs(plan.product_name, plan.identifier) {
     targets.push(MacosCodeSignTarget::{
-      path: resolve_path(contents, "Frameworks/" + helper.bundle_name + ".app"),
+      path: @fsutil.resolve_path(
+        contents,
+        "Frameworks/" + helper.bundle_name + ".app",
+      ),
       runtime_options: true,
       deep: false,
     })
@@ -1507,7 +1526,7 @@ async fn require_macos_codesign_targets(
   targets : Array[MacosCodeSignTarget],
 ) -> Unit {
   for target in targets {
-    guard path_exists(target.path) else {
+    guard @fsutil.path_exists(target.path) else {
       raise MacosSigningError::MissingTarget(path=target.path)
     }
   }
@@ -1669,7 +1688,7 @@ async fn resolve_macos_entitlements(
   match @sys.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
     Some(path) if path.trim().to_owned() != "" => {
       let path = @path.Path(path.trim().to_owned()).resolve().to_string()
-      if path_is_file(path) {
+      if @fsutil.path_is_file(path) {
         path
       } else {
         raise MacosSigningError::InvalidConfiguration(
@@ -1678,7 +1697,9 @@ async fn resolve_macos_entitlements(
       }
     }
     _ => {
-      let path = resolve_path(app, "Contents/Resources/proton.entitlements")
+      let path = @fsutil.resolve_path(
+        app, "Contents/Resources/proton.entitlements",
+      )
       write_text(path, default_macos_entitlements(allow_untrusted_libraries~))
       path
     }
@@ -1707,7 +1728,7 @@ fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
 ///|
 async fn notarize_macos_app(plan : PackagePlan, app : String) -> Unit {
   let profile = required_macos_notary_profile()
-  let archive = resolve_path(
+  let archive = @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".notary.zip",
   )
@@ -1874,19 +1895,19 @@ async fn resolve_package_config_path(
   raw : RawPackageOptions,
 ) -> String? {
   match raw.config_path {
-    Some(path) => Some(resolve_path(cwd, path))
+    Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => {
-      let package_config = resolve_path(
+      let package_config = @fsutil.resolve_path(
         cwd,
         raw.app_package.unwrap_or(default_package) + "/" + default_config_file,
       )
-      let cwd_config = resolve_path(cwd, default_config_file)
-      let root_config = resolve_path(root, default_config_file)
-      if path_exists(package_config) {
+      let cwd_config = @fsutil.resolve_path(cwd, default_config_file)
+      let root_config = @fsutil.resolve_path(root, default_config_file)
+      if @fsutil.path_exists(package_config) {
         Some(package_config)
-      } else if path_exists(cwd_config) {
+      } else if @fsutil.path_exists(cwd_config) {
         Some(cwd_config)
-      } else if path_exists(root_config) {
+      } else if @fsutil.path_exists(root_config) {
         Some(root_config)
       } else {
         None
@@ -1896,124 +1917,23 @@ async fn resolve_package_config_path(
 }
 
 ///|
-async fn find_project_root_from(start : String) -> String {
-  for dir = start; dir != ""; {
-    if path_exists(resolve_path(dir, "moon.work")) ||
-      path_exists(resolve_path(dir, "moon.mod")) {
-      return dir
-    }
-    let parent = path_parent(dir)
-    if parent == dir {
-      return start
-    }
-    continue parent
-  }
-  start
-}
-
-///|
 async fn find_workspace_root_from(start : String) -> String {
   let mut module_root : String? = None
   for dir = start; dir != ""; {
-    if path_exists(resolve_path(dir, "moon.work")) {
+    if @fsutil.path_exists(@fsutil.path_join(dir, "moon.work")) {
       return dir
     }
-    if module_root is None && path_exists(resolve_path(dir, "moon.mod")) {
+    if module_root is None &&
+      @fsutil.path_exists(@fsutil.path_join(dir, "moon.mod")) {
       module_root = Some(dir)
     }
-    let parent = path_parent(dir)
+    let parent = @fsutil.path_parent(dir)
     if parent == dir {
       return module_root.unwrap_or(start)
     }
     continue parent
   }
   module_root.unwrap_or(start)
-}
-
-///|
-fn path_parent(path : String) -> String {
-  let normalized = if path.has_suffix("\\") || path.has_suffix("/") {
-    path.unsafe_substring(start=0, end=path.length() - 1)
-  } else {
-    path
-  }
-  let slash = normalized.rev_find("/")
-  let backslash = normalized.rev_find("\\")
-  let index = match (slash, backslash) {
-    (Some(a), Some(b)) => Some(if a > b { a } else { b })
-    (Some(a), None) => Some(a)
-    (None, Some(b)) => Some(b)
-    (None, None) => None
-  }
-  match index {
-    Some(index) if index > 0 =>
-      normalized.unsafe_substring(start=0, end=index).to_string()
-    _ => normalized.to_string()
-  }
-}
-
-///|
-async fn path_exists(path : String) -> Bool {
-  @async_fs.exists(path)
-}
-
-///|
-async fn path_is_file(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Regular
-}
-
-///|
-async fn path_is_dir(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Directory
-}
-
-///|
-fn package_path_is_absolute(path : String) -> Bool {
-  if @path.sep == '\\' {
-    if path.has_prefix("\\") {
-      return true
-    }
-    guard path.length() >= 3 else { return false }
-    let drive = path[0]
-    ((drive >= 65 && drive <= 90) || (drive >= 97 && drive <= 122)) &&
-    path[1] == ':' &&
-    path[2] == '\\'
-  } else {
-    path.has_prefix("/")
-  }
-}
-
-///|
-fn resolve_path(base : String, child : String) -> String {
-  let base = if @path.sep == '\\' {
-    base.replace_all(old="/", new="\\")
-  } else {
-    base.replace_all(old="\\", new="/")
-  }
-  let child = if @path.sep == '\\' {
-    child.replace_all(old="/", new="\\")
-  } else {
-    child.replace_all(old="\\", new="/")
-  }
-  let path : @path.Path = child
-  if package_path_is_absolute(child) {
-    path.normalize().resolve().to_string()
-  } else {
-    let combined = if base == "" {
-      child
-    } else if base.has_suffix(@path.sep.to_string()) {
-      base + child
-    } else {
-      base + @path.sep.to_string() + child
-    }
-    @path.Path(combined).normalize().resolve().to_string()
-  }
 }
 
 ///|

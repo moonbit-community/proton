@@ -32,13 +32,14 @@ pub(all) suberror CefDownloadError {
   ExtractStart(path~ : String, detail~ : String)
   ExtractExit(path~ : String, code~ : Int)
   ExtractedRootNotFound(path~ : String)
+  ToolUnavailable(tool~ : String)
 } derive(Debug, Eq)
 
 ///|
 pub(all) suberror CefRuntimeError {
   InvalidCefRoot(path~ : String, missing~ : Array[String])
   InvalidRuntime(path~ : String, missing~ : Array[String])
-  PrebuiltNotFound(platform~ : String)
+  PrebuiltNotFound(platform~ : String, searched~ : Array[String])
   ManifestRead(path~ : String, detail~ : String)
   ManifestSyntax(path~ : String, detail~ : String)
   ManifestShape(path~ : String, detail~ : String)
@@ -108,6 +109,10 @@ pub fn CefDownloadError::message(self : CefDownloadError) -> String {
       "tar failed for " + path + " with exit code " + code.to_string()
     ExtractedRootNotFound(path~) =>
       "Could not find extracted CEF root in " + path
+    ToolUnavailable(tool~) =>
+      "Required tool \"" +
+      tool +
+      "\" is not available on PATH; install it and retry."
   }
 }
 
@@ -118,8 +123,13 @@ pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       "Invalid CEF root: " + path + "\nMissing:\n" + missing.join("\n")
     InvalidRuntime(path~, missing~) =>
       "Invalid Proton runtime: " + path + "\nMissing:\n" + missing.join("\n")
-    PrebuiltNotFound(platform~) =>
-      "Could not find Proton prebuilt artifacts for " + platform
+    PrebuiltNotFound(platform~, searched~) =>
+      "Could not find Proton prebuilt artifacts for " +
+      platform +
+      ".\nSearched:\n" +
+      searched.map(path => "  - " + path).join("\n") +
+      "\nEnsure justjavac/proton is a resolved dependency" +
+      " (moon install / moon update), or run inside a Proton project."
     ManifestRead(path~, detail~) =>
       "Failed to read manifest " + path + ": " + detail
     ManifestSyntax(path~, detail~) =>

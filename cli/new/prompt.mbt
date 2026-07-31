@@ -58,7 +58,7 @@ async fn prompt_new_project_options(
   let next = NewProjectOptions::{
     ..defaults,
     target_dir,
-    resolved_target_dir: resolve_new_path(defaults.cwd, target_dir),
+    resolved_target_dir: @fsutil.resolve_path(defaults.cwd, target_dir),
     title,
     author,
     project_name: slug,

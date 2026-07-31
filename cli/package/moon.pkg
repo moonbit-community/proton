@@ -3,6 +3,7 @@ import {
   "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/build_cmd" @build,
   "justjavac/proton_cli/cef",
+  "justjavac/proton_cli/fsutil",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
