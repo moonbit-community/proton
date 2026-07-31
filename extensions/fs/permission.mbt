@@ -322,6 +322,13 @@ async fn resolved_permission_roots(
 }
 
 ///|
+/// Resolves one renderer-supplied path to the canonical target the operation
+/// may act on.
+///
+/// The canonical form is what gets authorized and what gets returned. Handing
+/// back the pre-canonical path instead would leave the operation to re-resolve
+/// every symlink component itself, so a component swapped between this check
+/// and the operation would be followed to a target that was never authorized.
 async fn authorize_path(
   context : @proton.CommandContext,
   command : String,
@@ -332,7 +339,7 @@ async fn authorize_path(
   let candidate = canonical_candidate(resolved_path)
   for root in resolved_permission_roots(scope.roots) {
     if root.commands.contains(command) && path_is_within(root.path, candidate) {
-      return resolved_path
+      return candidate
     }
   }
   raise PermissionDenied(
