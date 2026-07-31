@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async/http",
   "justjavac/proton_rsa" @rsa,
   "justjavac/proton_updater" @manifest,
   "moonbitlang/core/debug",

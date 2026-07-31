@@ -8,6 +8,11 @@ import {
 }
 
 // Values
+pub async fn http_fetch(String) -> Bytes raise UpdateError
+
+pub async fn http_fetch_artifact(String) -> Bytes raise UpdateError
+
+pub let maximum_metadata_bytes : Int
 
 // Errors
 pub(all) suberror UpdateError {
