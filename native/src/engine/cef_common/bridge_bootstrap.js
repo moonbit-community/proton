@@ -238,6 +238,18 @@
     invoke(commandName, payload) {
       return invokeOp(`${appPrefix}${String(commandName)}`, payload);
     },
+    on(eventName, listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("MoonBit.app.on expects a listener function");
+      }
+      const name = String(eventName);
+      return addListener(
+        jsonListeners,
+        `${appPrefix}${name}`,
+        (payloadJson) => listener({ name, payload: JSON.parse(payloadJson) }),
+        "MoonBit.app.on",
+      );
+    },
   };
   const ops = Array.isArray(config.ops) ? config.ops : [];
   for (const op of ops) {
@@ -368,12 +380,12 @@
       if (!name) {
         return false;
       }
-      emit(name, {
-        name,
-        payload: event.payload === undefined ? null : event.payload,
-      });
+      // Application events are keyed by their route alone. Publishing them to
+      // the shared friendly-name table as well would let an application event
+      // named "add.finished" reach listeners registered for extension "add"'s
+      // "finished" event, which carries a different payload shape.
       emitJson(
-        `app:${name}`,
+        `${appPrefix}${name}`,
         JSON.stringify(event.payload === undefined ? null : event.payload),
       );
       return true;

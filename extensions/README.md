@@ -28,6 +28,22 @@ await window.__MoonBit__.app["devtoys.fs.stat"]({ path: "/tmp" });
 await window.__MoonBit__.app.invoke("ping", { value: 1 });
 ```
 
+Application events are delivered through `window.__MoonBit__.app.on`, which
+returns an unsubscribe function:
+
+```js
+const stop = window.__MoonBit__.app.on("changed", ({ name, payload }) => {
+  console.log(name, payload);
+});
+```
+
+Application events are keyed by route only, so they never reach the
+`window.__MoonBit__.events.on(...)` name table that carries extension events.
+Without that separation an application event named `add.finished` would be
+delivered to listeners registered for extension `add`'s `finished` event, which
+carries a different payload shape. `events.onJson("app:changed", ...)` still
+receives the raw payload text.
+
 `invokeOp` is the transport-level entry point and takes the fully qualified
 route: `app:<name>` for application commands and `ext:<namespace>/<name>` for
 extension commands. Prefer the proxies above, which build the route for you.

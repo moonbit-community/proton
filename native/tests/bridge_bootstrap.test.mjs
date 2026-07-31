@@ -264,3 +264,58 @@ test("does not expose application proxies for extension routes", () => {
   assert.equal(context.__MoonBit__.app.sum, undefined);
   assert.equal(context.__MoonBit__.app["ext:add/sum"], undefined);
 });
+
+test("delivers application events through the app namespace", () => {
+  const { context, dispatcher } = createBridge();
+  const received = [];
+  const unsubscribe = context.__MoonBit__.app.on("changed", (event) => {
+    received.push(event);
+  });
+  assert.equal(
+    dispatcher.dispatchEvent(
+      '{"kind":"frontend","name":"changed","payload":{"total":42}}',
+    ),
+    true,
+  );
+  unsubscribe();
+  dispatcher.dispatchEvent(
+    '{"kind":"frontend","name":"changed","payload":{"total":43}}',
+  );
+  assert.equal(received.length, 1);
+  assert.equal(received[0].name, "changed");
+  assert.equal(received[0].payload.total, 42);
+});
+
+test("keeps application events out of the extension name table", () => {
+  const { context, dispatcher } = createBridge();
+  const viaExtension = [];
+  const viaFriendlyName = [];
+  context.__MoonBit__.add.on("finished", (event) => viaExtension.push(event));
+  context.__MoonBit__.events.on(
+    "add.finished",
+    (event) => viaFriendlyName.push(event),
+  );
+
+  // An application event whose name collides with extension "add"'s
+  // "finished" route must not reach either friendly-name listener.
+  dispatcher.dispatchEvent(
+    '{"kind":"frontend","name":"add.finished","payload":{"secret":"app"}}',
+  );
+  assert.deepEqual(viaExtension, []);
+  assert.deepEqual(viaFriendlyName, []);
+
+  // The extension event still reaches them.
+  dispatcher.dispatchEvent(
+    '{"kind":"extension","extension":"add","name":"finished","payload":{"total":42}}',
+  );
+  assert.equal(viaExtension.length, 1);
+  assert.equal(viaFriendlyName.length, 1);
+});
+
+test("rejects a non-function application event listener", () => {
+  const { context } = createBridge();
+  assert.throws(
+    () => context.__MoonBit__.app.on("changed", null),
+    /MoonBit.app.on expects a listener function/,
+  );
+});
