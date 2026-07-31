@@ -22,15 +22,15 @@ static char proton_update_current[PROTON_UPDATE_MAX_PATH];
 static char proton_update_previous[PROTON_UPDATE_MAX_PATH];
 static char proton_update_override[PROTON_UPDATE_MAX_PATH];
 
-static void proton_update_set_message(char *error, size_t error_len,
+static void proton_update_set_message(char *error, int32_t error_len,
                                       const char *message) {
-  if (error == NULL || error_len == 0) {
+  if (error == NULL || error_len <= 0) {
     return;
   }
-  snprintf(error, error_len, "%s", message != NULL ? message : "");
+  snprintf(error, (size_t)error_len, "%s", message != NULL ? message : "");
 }
 
-PROTON_API void proton_update_set_current_bundle_for_testing(const char *path) {
+void proton_update_set_current_bundle_for_testing(const char *path) {
   if (path == NULL) {
     proton_update_override[0] = '\0';
     return;
@@ -38,28 +38,29 @@ PROTON_API void proton_update_set_current_bundle_for_testing(const char *path) {
   snprintf(proton_update_override, sizeof(proton_update_override), "%s", path);
 }
 
-PROTON_API const char *proton_update_previous_bundle_path(void) {
+const char *proton_update_previous_bundle_path(void) {
   return proton_update_previous;
 }
 
 #if !defined(__APPLE__)
 
 PROTON_API int32_t proton_update_expand(const char *archive_path,
-                                       const char *destination_dir,
-                                       char *bundle_out, size_t bundle_out_len,
-                                       char *error, size_t error_len) {
+                                        const char *destination_dir,
+                                        char *bundle_buffer,
+                                        int32_t bundle_buffer_len, char *error,
+                                        int32_t error_len) {
   (void)archive_path;
   (void)destination_dir;
-  if (bundle_out != NULL && bundle_out_len > 0) {
-    bundle_out[0] = '\0';
+  if (bundle_buffer != NULL && bundle_buffer_len > 0) {
+    bundle_buffer[0] = '\0';
   }
   proton_update_set_message(error, error_len,
                             "expanding an update is implemented on macOS only");
   return PROTON_ERR_UNSUPPORTED;
 }
 
-PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *error,
-                                 size_t error_len) {
+PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
+                                       char *error, int32_t error_len) {
   (void)staged_bundle_path;
   proton_update_set_message(
       error, error_len,
@@ -68,13 +69,13 @@ PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *err
   return PROTON_ERR_UNSUPPORTED;
 }
 
-PROTON_API int32_t proton_update_apply(char *error, size_t error_len) {
+PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
   proton_update_set_message(error, error_len,
                             "applying an update is implemented on macOS only");
   return PROTON_ERR_UNSUPPORTED;
 }
 
-PROTON_API int32_t proton_update_relaunch(char *error, size_t error_len) {
+PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {
   proton_update_set_message(error, error_len,
                             "applying an update is implemented on macOS only");
   return PROTON_ERR_UNSUPPORTED;
@@ -174,6 +175,12 @@ static int proton_update_find_bundle(const char *directory, char *out,
     if (found > 1) {
       break;
     }
+    /* A path that does not fit is not reported as a shorter path that exists:
+       truncation here would hand back a directory nobody asked to install. */
+    if (strlen(candidate) >= out_len) {
+      closedir(handle);
+      return 0;
+    }
     snprintf(out, out_len, "%s", candidate);
   }
   closedir(handle);
@@ -181,11 +188,12 @@ static int proton_update_find_bundle(const char *directory, char *out,
 }
 
 PROTON_API int32_t proton_update_expand(const char *archive_path,
-                                       const char *destination_dir,
-                                       char *bundle_out, size_t bundle_out_len,
-                                       char *error, size_t error_len) {
-  if (bundle_out != NULL && bundle_out_len > 0) {
-    bundle_out[0] = '\0';
+                                        const char *destination_dir,
+                                        char *bundle_buffer,
+                                        int32_t bundle_buffer_len, char *error,
+                                        int32_t error_len) {
+  if (bundle_buffer != NULL && bundle_buffer_len > 0) {
+    bundle_buffer[0] = '\0';
   }
   if (archive_path == NULL || archive_path[0] != '/' ||
       destination_dir == NULL || destination_dir[0] != '/') {
@@ -193,7 +201,7 @@ PROTON_API int32_t proton_update_expand(const char *archive_path,
                               "archive and destination paths must be absolute");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (bundle_out == NULL || bundle_out_len == 0) {
+  if (bundle_buffer == NULL || bundle_buffer_len <= 0) {
     proton_update_set_message(error, error_len,
                               "a buffer for the expanded bundle is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -225,7 +233,8 @@ PROTON_API int32_t proton_update_expand(const char *archive_path,
                               "the update archive could not be expanded");
     return PROTON_ERR_PLATFORM;
   }
-  if (!proton_update_find_bundle(destination_dir, bundle_out, bundle_out_len)) {
+  if (!proton_update_find_bundle(destination_dir, bundle_buffer,
+                                 (size_t)bundle_buffer_len)) {
     proton_update_set_message(
         error, error_len,
         "the update archive does not contain exactly one .app bundle");
@@ -234,8 +243,8 @@ PROTON_API int32_t proton_update_expand(const char *archive_path,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *error,
-                                 size_t error_len) {
+PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
+                                       char *error, int32_t error_len) {
   proton_update_staged[0] = '\0';
   proton_update_current[0] = '\0';
   if (staged_bundle_path == NULL || staged_bundle_path[0] != '/') {
@@ -288,7 +297,7 @@ PROTON_API int32_t proton_update_stage(const char *staged_bundle_path, char *err
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_apply(char *error, size_t error_len) {
+PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
   if (proton_update_staged[0] == '\0' || proton_update_current[0] == '\0') {
     proton_update_set_message(error, error_len,
                               "no staged bundle has been accepted");
@@ -335,7 +344,7 @@ PROTON_API int32_t proton_update_apply(char *error, size_t error_len) {
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_relaunch(char *error, size_t error_len) {
+PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {
   if (proton_update_current[0] == '\0') {
     proton_update_set_message(error, error_len,
                               "no application has been replaced");

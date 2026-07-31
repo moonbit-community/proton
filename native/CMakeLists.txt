@@ -386,6 +386,12 @@ if(BUILD_TESTING)
   target_include_directories(proton_update_test
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
+  # This test compiles the implementation rather than linking the library, so
+  # it defines the exported entry points itself. Without PROTON_BUILD they
+  # would be declared dllimport on Windows and the definitions would not build.
+  target_compile_definitions(proton_update_test
+    PRIVATE PROTON_BUILD
+  )
 
   target_link_libraries(proton_smoke PRIVATE proton)
   target_include_directories(proton_state_smoke PRIVATE
