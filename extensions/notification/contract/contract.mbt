@@ -2,6 +2,8 @@
 pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+/// `level` is a reserved severity hint: today it is only echoed back in the
+/// activity event and is not forwarded to the native backend.
 pub(all) struct NotificationRequest {
   title : String?
   body : String

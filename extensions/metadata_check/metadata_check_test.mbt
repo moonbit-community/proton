@@ -56,6 +56,20 @@ fn assert_metadata_matches_app_command_spec(
 ///|
 test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_app_command_spec(
+    load_descriptor("auto_launch"),
+    @auto_launch.extension().command_spec(),
+    "justjavac/proton_ext/auto_launch",
+    "justjavac/proton-auto-launch",
+    "autoLaunch",
+  )
+  assert_metadata_matches_app_command_spec(
+    load_descriptor("clipboard"),
+    @clipboard.extension().command_spec(),
+    "justjavac/proton_ext/clipboard",
+    "justjavac/proton-clipboard",
+    "clipboard",
+  )
+  assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
     @dialog.extension().command_spec(),
     "justjavac/proton_ext/dialog",
