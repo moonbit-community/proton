@@ -595,21 +595,3 @@ MOONBIT_FFI_EXPORT int32_t mb_auto_launch_last_error_code(void) {
 MOONBIT_FFI_EXPORT moonbit_bytes_t mb_auto_launch_last_error_message(void) {
   return mb_make_bytes_from_buffer(mb_last_error_message, strlen(mb_last_error_message));
 }
-
-MOONBIT_FFI_EXPORT moonbit_bytes_t mb_auto_launch_test_getenv(moonbit_bytes_t name) {
-  char *key = mb_bytes_to_c_string(name);
-  const char *value = NULL;
-
-  if (key == NULL) {
-    return moonbit_make_bytes(0, 0);
-  }
-
-  value = getenv(key);
-  free(key);
-
-  if (value == NULL) {
-    return moonbit_make_bytes(0, 0);
-  }
-
-  return mb_make_bytes_from_buffer(value, strlen(value));
-}

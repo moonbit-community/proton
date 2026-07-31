@@ -3,6 +3,10 @@ import {
   "moonbitlang/core/encoding/utf8",
 }
 
+import {
+  "justjavac/keepawake/testsupport",
+} for "wbtest"
+
 supported_targets = "native"
 
 options(
