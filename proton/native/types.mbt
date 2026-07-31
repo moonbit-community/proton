@@ -366,8 +366,29 @@ pub(all) enum TitlebarStyle {
 } derive(Debug, Eq)
 
 ///|
+/// Process-wide cache for `runtime_info`: the loaded runtime's identity and
+/// feature set cannot change within a process, so feature probes reuse the
+/// first successful result. Failures are not cached — callers keep the
+/// previous retry-on-failure behavior. A concurrent double-fill is benign
+/// (the query is pure and idempotent). The cached `features` array is shared
+/// with callers; all current callers only read it.
+let runtime_info_cache : Ref[RuntimeInfo?] = { val: None }
+
+///|
+fn cached_runtime_info() -> RuntimeInfo raise NativeError {
+  match runtime_info_cache.val {
+    Some(info) => info
+    None => {
+      let info = runtime_info()
+      runtime_info_cache.val = Some(info)
+      info
+    }
+  }
+}
+
+///|
 fn titlebar_overlay_config_supported() -> Bool {
-  let info = runtime_info() catch { _ => return false }
+  let info = cached_runtime_info() catch { _ => return false }
   info.features.contains("titlebar_overlay")
 }
 
@@ -382,7 +403,7 @@ pub(all) enum WindowSizeHint {
 
 ///|
 fn window_size_hint_config_supported() -> Bool {
-  let info = runtime_info() catch { _ => return false }
+  let info = cached_runtime_info() catch { _ => return false }
   info.features.contains("window_size_hints")
 }
 
