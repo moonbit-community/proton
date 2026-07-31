@@ -1,0 +1,59 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton/updater"
+
+import {
+  "justjavac/proton_rsa",
+  "justjavac/proton_updater",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror UpdateError {
+  FetchFailed(url~ : String, detail~ : String)
+  ManifestSignatureInvalid
+  ManifestUndecodable(detail~ : String)
+  ManifestStale(published_at~ : String, oldest_accepted~ : String)
+  MalformedSignature(url~ : String)
+  UntrustedKey(detail~ : String)
+  ArtifactSizeMismatch(expected~ : Int64, actual~ : Int64)
+  ArtifactDigestMismatch(expected~ : String, actual~ : String)
+  ArtifactSignatureInvalid
+} derive(Eq, @debug.Debug)
+pub fn UpdateError::message(Self) -> String
+
+// Types and methods
+pub struct AvailableUpdate {
+  version : @proton_updater.Version
+  notes_url : String?
+  url : String
+  size : Int64
+  sha256_hex : String
+  signature_hex : String
+} derive(Eq, @debug.Debug)
+pub fn AvailableUpdate::notes_url(Self) -> String?
+pub fn AvailableUpdate::size(Self) -> Int64
+pub fn AvailableUpdate::url(Self) -> String
+pub fn AvailableUpdate::version(Self) -> @proton_updater.Version
+
+pub enum CheckOutcome {
+  UpToDate
+  Available(AvailableUpdate)
+} derive(Eq, @debug.Debug)
+
+pub struct UpdateChannel {
+  endpoint : String
+  trusted_keys : Array[@proton_rsa.PublicKey]
+  platform : String
+  current_version : @proton_updater.Version
+}
+pub async fn UpdateChannel::check(Self, async (String) -> Bytes raise UpdateError, @proton_updater.Timestamp) -> CheckOutcome raise UpdateError
+pub async fn UpdateChannel::download(Self, async (String) -> Bytes raise UpdateError, AvailableUpdate) -> Bytes raise UpdateError
+pub fn UpdateChannel::new(String, Array[String], String, @proton_updater.Version) -> Self raise UpdateError
+
+// Type aliases
+pub type Fetch = async (String) -> Bytes raise UpdateError
+
+// Traits
+

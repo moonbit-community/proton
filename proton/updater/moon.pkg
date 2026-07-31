@@ -1,0 +1,13 @@
+import {
+  "justjavac/proton_rsa" @rsa,
+  "justjavac/proton_updater" @manifest,
+  "moonbitlang/core/debug",
+  "moonbitlang/x/crypto",
+  "moonbitlang/x/encoding",
+}
+
+supported_targets = "native"
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
