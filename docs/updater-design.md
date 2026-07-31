@@ -52,7 +52,7 @@ delta artifacts can be introduced without a breaking schema change.
 | Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
 | Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | Strict version monotonicity enforced on the client |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
-| Local attacker | Write to the staging directory between download and apply | Signature is re-verified at apply time, not only at download time; staging directory is created private to the current user |
+| Local attacker | Write to the staging directory between download and apply | The artifact is never written to a path an attacker can name: verified bytes go straight into a directory `mkdtemp` created 0700. A same-uid attacker can still alter the expanded bundle before the swap; closing that needs the macOS code-signature check described under [Per-platform apply](#per-platform-apply), which is **not yet implemented** |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
 | Manifest pinning | Serve a stale manifest so the client never learns about a fix | The signed manifest carries `published_at`; a manifest older than the configured freshness window is refused |
 
@@ -341,39 +341,53 @@ Proton.
 2. **Compare.** Offer the update only when the manifest version is strictly
    greater than the running version. Equal or lower is not an update; it is a
    rollback attempt or a stale manifest, and both are ignored.
-3. **Download.** Stream to
-   `app_data_dir()/<identifier>/updates/<version>/artifact`. The staging
-   directory is created private to the current user, following the ownership and
-   permission checks already used by the single-instance coordinator in
-   `native/src/proton_app_instance.c` (`lstat` before trusting a directory,
-   `O_NOFOLLOW` on open, refuse group and other permissions).
-4. **Verify.** Check `size`, then `sha256`, then the signature over that digest. A
-   failure at any step deletes the staged artifact. A partially verified
-   artifact is never retained for a later attempt.
-5. **Stage.** Expand the artifact next to the staged download and re-verify the
-   platform's own code signature where the platform has one. Mark ready only
-   after this completes.
-6. **Apply.** Hand the staged path to native code, which performs the swap and
-   relaunch. The signature is verified again immediately before the swap,
-   closing the window between download and apply.
+3. **Download.** Hold the artifact in memory. It is deliberately not written to
+   a path chosen before the bytes are trusted: a verified artifact named by a
+   path can be swapped between the check and the read, which would spend the
+   signature check on one archive and install another.
+4. **Verify.** Check `size`, then `sha256`, then the signature over that digest.
+   A failure at any step discards the bytes. A partially verified artifact is
+   never retained for a later attempt.
+5. **Expand.** Hand the verified bytes to native code, which creates a private
+   directory with `mkdtemp` under a caller-named parent, writes them there, and
+   unpacks with `ditto` so the bundle keeps the symlinks, resource forks and
+   extended attributes its own code signature covers. Exactly one `.app` must
+   result; zero or several do not say what to install.
+6. **Stage.** Check everything that can be checked while the installed
+   application is still untouched: the bundle is a real directory with an
+   executable inside, and it is not the running bundle itself.
+7. **Apply.** Two renames on one volume. The replaced application is kept beside
+   the install location rather than deleted, and the directory the new one was
+   expanded into is removed once it is empty.
+8. **Relaunch.** Separate from the swap, because when to restart is a question
+   about the user's unsaved work rather than about the update.
 
 ## Native surface
 
-Two functions, following the existing ABI rules: `proton_*` prefix, status
+Four functions, following the existing ABI rules: `proton_*` prefix, status
 codes, caller-owned error buffers, no platform types across the boundary.
 
 ```c
-int32_t proton_update_stage(const char *staged_path, char *error,
-                            size_t error_len);
-int32_t proton_update_apply_and_relaunch(char *error, size_t error_len);
+int32_t proton_update_expand(const char *archive, int32_t archive_len,
+                             const char *parent_dir, char *bundle_buffer,
+                             int32_t bundle_buffer_len, char *error,
+                             int32_t error_len);
+int32_t proton_update_stage(const char *staged_bundle_path, char *error,
+                            int32_t error_len);
+int32_t proton_update_apply(char *error, int32_t error_len);
+int32_t proton_update_relaunch(char *error, int32_t error_len);
 ```
+
+They are four rather than one because each boundary is a place the sequence can
+stop without having changed anything. `apply` is the only irreversible step, and
+everything checkable happens before it.
 
 Signature verification is **not** here. Choosing RSA kept it in MoonBit, so the
 native surface is only what genuinely requires privilege: replacing an
 installed application and restarting it. Nothing that decides whether an update
 is authentic crosses this boundary.
 
-Everything platform-specific lives behind these two. Given that the three
+Everything platform-specific lives behind these four. Given that the three
 per-platform engine sources are already near-duplicates of one another — a
 duplication that has already produced one identical defect in all three copies —
 the shared portion belongs in `native/src/engine/cef_common/` from the start
@@ -383,7 +397,9 @@ rather than being written three times.
 
 **macOS.** Verify the staged bundle with the platform code-signing check and
 confirm its signing identity matches the running application, as Sparkle does;
-an update signed by a different identity is refused. Swap the bundle with
+an update signed by a different identity is refused. **This is not implemented
+yet** — `stage` currently checks the bundle's shape, not its signature — and it
+is what the local-attacker row of the threat model above depends on. Swap the bundle with
 `rename` on the same volume, then relaunch. Two conditions must be reported
 clearly rather than worked around: an application installed somewhere the user
 cannot write, and an application still running from a quarantined or
