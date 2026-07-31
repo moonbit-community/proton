@@ -271,6 +271,11 @@ fn build_extension_settings_from_object(
 
 ///|
 /// Builds one normalized extension setting from the raw JSON value.
+///
+/// An extension entry only records enablement. Extension-specific configuration
+/// belongs to the permission scope, which is declared per grant and validated by
+/// the owning extension, so an object entry is rejected rather than silently
+/// discarded.
 fn build_extension_setting_from_json(
   name : String,
   value : Json,
@@ -278,14 +283,10 @@ fn build_extension_setting_from_json(
   match value {
     True => @manifest.ExtensionSetting::enabled()
     False => @manifest.ExtensionSetting::disabled()
-    Object(options) =>
-      @manifest.ExtensionSetting::enabled(
-        options=Some(Json::object(clone_json_object(options))),
-      )
     _ =>
       raise InvalidField(
         path="app manifest.extensions." + name,
-        expectation="must be a boolean or object",
+        expectation="must be a boolean; declare extension configuration in the matching permission scope",
       )
   }
 }

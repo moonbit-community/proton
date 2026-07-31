@@ -23,8 +23,7 @@ fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
 fn extension_setting_to_json(setting : @manifest.ExtensionSetting) -> Json {
   match setting {
     Disabled => Json::boolean(false)
-    Enabled(None) => Json::boolean(true)
-    Enabled(Some(options)) => clone_json(options)
+    Enabled => Json::boolean(true)
   }
 }
 

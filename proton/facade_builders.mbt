@@ -496,7 +496,6 @@ pub fn[State] App::window_lifecycle(
 pub fn App::extension(
   self : App,
   extension : @proton_extension.Extension,
-  options? : Json,
 ) -> App {
   let id = extension.id()
   if id.trim().to_owned() == "" {
@@ -504,7 +503,7 @@ pub fn App::extension(
       InvalidSetting(name="extension.id", message="must not be empty"),
     )
   } else {
-    self.extension_settings[id] = @manifest.ExtensionSetting::enabled(options~)
+    self.extension_settings[id] = @manifest.ExtensionSetting::enabled()
     let command_spec = Some(extension.command_spec()) catch {
       error => {
         self.validation_errors.push(

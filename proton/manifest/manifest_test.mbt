@@ -1,34 +1,9 @@
 ///|
-test "extension setting helpers preserve enabled state and options" {
-  let options = Json::object({ "scope": Json::string("read") })
-  let enabled = ExtensionSetting::enabled(options=Some(options))
+test "extension setting helpers report enabled state" {
+  let enabled = ExtensionSetting::enabled()
   assert_true(enabled.is_enabled())
-  @debug.assert_eq(enabled.options(), Some(options))
-
   let disabled = ExtensionSetting::disabled()
   assert_false(disabled.is_enabled())
-  @debug.assert_eq(disabled.options(), None)
-}
-
-///|
-test "extension setting options are deep snapshots" {
-  let options = Json::object({ "nested": Json::empty_object() })
-  let enabled = ExtensionSetting::enabled(options=Some(options))
-  match options {
-    Object(object) => object["late"] = Json::boolean(true)
-    _ => abort("expected object options")
-  }
-  match enabled.options() {
-    Some(Object(object)) => {
-      @debug.assert_eq(object.get("late"), None)
-      object["exposed"] = Json::boolean(true)
-    }
-    _ => abort("expected enabled object options")
-  }
-  match enabled.options() {
-    Some(Object(object)) => @debug.assert_eq(object.get("exposed"), None)
-    _ => abort("expected fresh enabled object options")
-  }
 }
 
 ///|
@@ -45,9 +20,7 @@ test "app manifest stores windows and extension settings" {
     debug=2,
     windows=[settings_window],
     extensions={
-      "justjavac/proton-fs": ExtensionSetting::enabled(
-        options=Some(Json::object({ "scope": Json::string("read") })),
-      ),
+      "justjavac/proton-fs": ExtensionSetting::enabled(),
       "justjavac/proton-dialog": ExtensionSetting::disabled(),
     },
   )
@@ -60,11 +33,7 @@ test "app manifest stores windows and extension settings" {
   @debug.assert_eq(manifest.windows, [settings_window])
   @debug.assert_eq(
     manifest.extension_setting("justjavac/proton-fs"),
-    Some(
-      ExtensionSetting::enabled(
-        options=Some(Json::object({ "scope": Json::string("read") })),
-      ),
-    ),
+    Some(ExtensionSetting::enabled()),
   )
   @debug.assert_eq(
     manifest.extension_setting("justjavac/proton-dialog"),
@@ -102,46 +71,6 @@ test "app manifest constructor copies mutable inputs" {
 
   assert_eq(manifest.windows.length(), 1)
   @debug.assert_eq(manifest.extension_setting("justjavac/proton-dialog"), None)
-}
-
-///|
-test "app manifest extension settings expose option snapshots" {
-  let options = Json::object({ "scope": Json::string("read") })
-  let extensions = {
-    "justjavac/proton-fs": ExtensionSetting::enabled(options=Some(options)),
-  }
-  let manifest = AppManifest::new(
-    WindowManifest::new("Main", 960, 720),
-    Html("<html></html>"),
-    extensions~,
-  )
-  match options {
-    Object(object) => object["late"] = Json::boolean(true)
-    _ => abort("expected object options")
-  }
-  match manifest.extension_setting("justjavac/proton-fs") {
-    Some(ExtensionSetting::Enabled(Some(Object(object)))) => {
-      @debug.assert_eq(object.get("late"), None)
-      object["exposed"] = Json::boolean(true)
-    }
-    _ => abort("expected fs extension options")
-  }
-  match manifest.extension_setting("justjavac/proton-fs") {
-    Some(ExtensionSetting::Enabled(Some(Object(object)))) =>
-      @debug.assert_eq(object.get("exposed"), None)
-    _ => abort("expected fresh fs extension options")
-  }
-  let entries = manifest.extension_settings()
-  match entries[0] {
-    (_, ExtensionSetting::Enabled(Some(Object(object)))) =>
-      object["entry"] = Json::boolean(true)
-    _ => abort("expected extension settings entry")
-  }
-  match manifest.extension_setting("justjavac/proton-fs") {
-    Some(ExtensionSetting::Enabled(Some(Object(object)))) =>
-      @debug.assert_eq(object.get("entry"), None)
-    _ => abort("expected fresh fs extension options after entries")
-  }
 }
 
 ///|

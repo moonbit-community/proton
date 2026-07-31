@@ -45,19 +45,19 @@ pub fn AppManifest::extension_setting(
   self : AppManifest,
   name : String,
 ) -> ExtensionSetting? {
-  self.extensions.get(name).map(copy_extension_setting)
+  self.extensions.get(name)
 }
 
 ///|
 /// Returns the configured extension entries as name/setting pairs.
 /// Each pair contains the manifest key together with its normalized declarative
-/// enablement state and optional JSON options.
+/// enablement state.
 pub fn AppManifest::extension_settings(
   self : AppManifest,
 ) -> Array[(String, ExtensionSetting)] {
   let entries : Array[(String, ExtensionSetting)] = []
   for name, setting in self.extensions {
-    entries.push((name, copy_extension_setting(setting)))
+    entries.push((name, setting))
   }
   entries
 }
@@ -68,15 +68,7 @@ fn copy_extension_settings(
 ) -> Map[String, ExtensionSetting] {
   let copied : Map[String, ExtensionSetting] = Map([])
   for name, setting in settings {
-    copied[name] = copy_extension_setting(setting)
+    copied[name] = setting
   }
   copied
-}
-
-///|
-fn copy_extension_setting(setting : ExtensionSetting) -> ExtensionSetting {
-  match setting {
-    Disabled => Disabled
-    Enabled(options) => Enabled(clone_json_option(options))
-  }
 }

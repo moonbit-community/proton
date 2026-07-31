@@ -736,9 +736,7 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
       ),
     ],
     extensions={
-      "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(
-        options=Some(Json::object({ "scope": Json::string("read") })),
-      ),
+      "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(),
       "justjavac/proton-tray": @manifest.ExtensionSetting::disabled(),
     },
     permissions=[
@@ -770,11 +768,7 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
   )
   @debug.assert_eq(
     roundtripped.extension_setting("justjavac/proton-fs"),
-    Some(
-      @manifest.ExtensionSetting::enabled(
-        options=Some(Json::object({ "scope": Json::string("read") })),
-      ),
-    ),
+    Some(@manifest.ExtensionSetting::enabled()),
   )
   @debug.assert_eq(
     roundtripped.extension_setting("justjavac/proton-tray"),

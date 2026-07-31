@@ -1,49 +1,36 @@
 ///|
 /// Runtime extension setting produced from MoonBit app code.
+///
+/// Extension-specific configuration is carried by the permission scope, which
+/// is validated at configuration time through `resolve_permission` and read per
+/// request through `AppCommandRequestContext::permission_scope`. This type only
+/// records whether an extension is active.
 pub(all) enum ExtensionSetting {
   Disabled
-  Enabled(Json?)
+  Enabled
 } derive(Debug, Eq)
 
 ///|
 pub impl Show for ExtensionSetting with fn output(self, logger) {
   match self {
     Disabled => logger.write_string("Disabled")
-    Enabled(options) => {
-      logger.write_string("Enabled(")
-      logger.write_string(@debug.render(Repr(options)))
-      logger.write_string(")")
-    }
+    Enabled => logger.write_string("Enabled")
   }
 }
 
 ///|
 /// Returns whether this setting enables an extension.
-/// This treats every `Enabled(...)` variant as active regardless of whether it
-/// also carries JSON options.
 pub fn ExtensionSetting::is_enabled(self : ExtensionSetting) -> Bool {
   match self {
     Disabled => false
-    Enabled(_) => true
+    Enabled => true
   }
 }
 
 ///|
-/// Returns the optional JSON options carried by an enabled extension setting.
-/// Disabled settings always return `None` so callers can branch on one accessor.
-pub fn ExtensionSetting::options(self : ExtensionSetting) -> Json? {
-  match self {
-    Disabled => None
-    Enabled(options) => clone_json_option(options)
-  }
-}
-
-///|
-/// Builds an enabled extension setting with optional JSON options.
-/// Pass `Some(json)` when the extension needs structured manifest-time
-/// configuration.
-pub fn ExtensionSetting::enabled(options? : Json? = None) -> ExtensionSetting {
-  Enabled(clone_json_option(options))
+/// Builds an enabled extension setting.
+pub fn ExtensionSetting::enabled() -> ExtensionSetting {
+  Enabled
 }
 
 ///|
