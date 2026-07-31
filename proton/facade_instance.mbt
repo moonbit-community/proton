@@ -2,7 +2,7 @@
 fn resolved_app_activation(config : ResolvedAppConfig) -> @native.AppActivation {
   let urls : Array[String] = []
   let files : Array[String] = []
-  let argv = @sys.get_cli_args()
+  let argv = @env.args()
   for index = 1; index < argv.length(); index = index + 1 {
     let argument = argv[index]
     if argument.has_prefix("-") {
