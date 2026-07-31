@@ -11,6 +11,10 @@ priv enum EventListenerInstallation {
 }
 
 ///|
+/// Type-erased tagger slots keyed by event route. Slots are kept for the
+/// process lifetime — bounded by the number of distinct routes — and are
+/// intentionally not pruned on unload, so a re-subscription reuses the same
+/// tagger identity.
 let event_tagger_slots : Map[String, @rabbita_js.Value] = Map([])
 
 ///|

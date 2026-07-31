@@ -220,7 +220,8 @@ native checks before handing off larger refactors.
   and assembles `.proton/runtimes/<platform>/...`.
 - Keep platform-specific setup decisions centralized in the CLI/native platform
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
-  `darwin-x64`, and future Linux ids.
+  and `linux-x64` (the shipped prebuilt set); add `darwin-x64` only when it
+  actually ships.
 - CEF is the native implementation detail. Do not expose CEF in MoonBit package
   names, C ABI prefixes, or public facade names.
 - `native/CMakeLists.txt` is the only native build source of truth. Do not add
@@ -228,7 +229,8 @@ native checks before handing off larger refactors.
 - `proton/native_link_config.mjs` owns MoonBit link flags. Keep MoonBit FFI simple:
   no loader shim unless a separate import-library/TCC spike proves it is needed.
   Its resolution order is `PROTON_NATIVE_DIST`, active `.proton/runtime.json`,
-  then development fallback `native/dist`.
+  development fallback `native/dist`, then the module's own
+  `prebuilt/<platform>` (the primary path for registry-installed consumers).
 - Keep `proton_*` ABI functions stable and MoonBit-facing: use status codes,
   `Int64` handle ids, caller-owned buffers, and typed MoonBit wrappers.
 - Runtime/window configs must keep explicit `abi_version` JSON schemas and
@@ -276,13 +278,16 @@ native checks before handing off larger refactors.
   `proton_runtime_wait` while that runner is active.
 - Handle ownership must stay centralized in the native registry. Handles are
   not raw pointers, must validate kind/generation/thread ownership, and must be
-  invalidated on destroy/close paths.
+  invalidated on destroy/close paths. Dialog handles are the documented
+  exception: sequential Int64 ids scoped to their owning runtime/window and
+  validated by list membership.
 - Respect the thread model. Runtime and window handles are owned by their
   creating thread; native callbacks or future pumps must marshal work to the
   owner thread instead of touching handles directly from arbitrary threads.
 - `proton/native_link_config.mjs` is the only MoonBit native-link integration point.
   Keep its resolution order simple: `PROTON_NATIVE_DIST`, active
-  `.proton/runtime.json`, then development fallback `native/dist`.
+  `.proton/runtime.json`, development fallback `native/dist`, then the
+  module's `prebuilt/<platform>`.
 - Published MoonBit packages ship Proton artifacts only under
   `proton/prebuilt/<platform>/`: the dynamic library, import library when the
   platform needs one, helper executable, public header, and manifest. Do not put
@@ -296,7 +301,7 @@ native checks before handing off larger refactors.
   temporary debugging switch; do not turn Chromium log noise back on by default.
 - When adding a platform, implement the same ABI behind the same exported
   function names and keep platform ids stable, for example `win32-x64`,
-  `darwin-arm64`, `darwin-x64`, and future Linux ids.
+  `darwin-arm64`, and `linux-x64`.
 - Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
   native tests for the FFI binding. Engine or bridge changes should also run the
   relevant examples and the MoonBit `e2e/` self-hosted scenarios (`moon -C e2e
