@@ -14,6 +14,8 @@ pub(all) suberror UpdateError {
   ArtifactSizeMismatch(expected~ : Int64, actual~ : Int64)
   ArtifactDigestMismatch(expected~ : String, actual~ : String)
   ArtifactSignatureInvalid
+  /// The system clock cannot produce a usable freshness bound.
+  ClockUnusable(detail~ : String)
   /// A native install step refused. `step` says how far the sequence got,
   /// which is what distinguishes "nothing was touched" from "the replacement
   /// ran and rolled back".
@@ -37,6 +39,8 @@ pub fn UpdateError::message(self : UpdateError) -> String {
     ArtifactDigestMismatch(expected~, actual~) =>
       "the artifact digest is \{actual}, the manifest declares \{expected}"
     ArtifactSignatureInvalid => "the artifact is not signed by a trusted key"
+    ClockUnusable(detail~) =>
+      "the update freshness window cannot be computed: \{detail}"
     InstallFailed(step~, detail~) =>
       "installing the update failed while it was about to \{step}: \{detail}"
   }

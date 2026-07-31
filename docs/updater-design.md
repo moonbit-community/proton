@@ -54,7 +54,7 @@ delta artifacts can be introduced without a breaking schema change.
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
 | Local attacker | Write to the staging directory between download and apply | The artifact is never written to a path an attacker can name: verified bytes go straight into a directory `mkdtemp` created 0700. A same-uid attacker can still alter the expanded bundle before the swap; closing that needs the macOS code-signature check described under [Per-platform apply](#per-platform-apply), which is **not yet implemented** |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
-| Manifest pinning | Serve a stale manifest so the client never learns about a fix | The signed manifest carries `published_at`; a manifest older than the configured freshness window is refused |
+| Manifest pinning | Serve a stale manifest so the client never learns about a fix | The signed manifest carries `published_at`; a manifest older than the configured freshness window is refused. The window is measured against the system clock, so this defence is only as good as that clock — a client whose clock is wrong refuses every update rather than accepting a stale one, which is the safe direction but not a silent one |
 
 TLS authenticates the server, not the payload. A signature is required
 independently because the distribution host is explicitly inside the threat

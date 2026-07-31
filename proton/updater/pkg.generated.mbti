@@ -16,6 +16,8 @@ pub fn install(Bytes, String) -> Unit raise UpdateError
 
 pub let maximum_metadata_bytes : Int
 
+pub fn oldest_accepted(Int) -> @proton_updater.Timestamp raise UpdateError
+
 pub fn relaunch() -> Unit raise UpdateError
 
 // Errors
@@ -29,6 +31,7 @@ pub(all) suberror UpdateError {
   ArtifactSizeMismatch(expected~ : Int64, actual~ : Int64)
   ArtifactDigestMismatch(expected~ : String, actual~ : String)
   ArtifactSignatureInvalid
+  ClockUnusable(detail~ : String)
   InstallFailed(step~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn UpdateError::message(Self) -> String
