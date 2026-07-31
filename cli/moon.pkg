@@ -18,6 +18,7 @@ import {
   "justjavac/proton_cli/new" @new_project,
   "justjavac/proton_cli/output",
   "justjavac/proton_cli/package",
+  "justjavac/proton_cli/updater",
 }
 
 import {
