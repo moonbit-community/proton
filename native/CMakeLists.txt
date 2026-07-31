@@ -63,6 +63,7 @@ add_library(proton SHARED
   src/proton_config.c
   src/proton_json.c
   src/proton_state.c
+  src/proton_update.c
   src/proton.c
   ${PROTON_APP_RUNNER_SOURCE}
   ${PROTON_NOTIFICATION_SOURCE}
@@ -378,6 +379,13 @@ if(BUILD_TESTING)
     tests/proton_state_smoke.c
     src/proton_state.c
   )
+  add_executable(proton_update_test
+    tests/proton_update_test.c
+    src/proton_update.c
+  )
+  target_include_directories(proton_update_test
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
 
   target_link_libraries(proton_smoke PRIVATE proton)
   target_include_directories(proton_state_smoke PRIVATE
@@ -405,6 +413,7 @@ if(BUILD_TESTING)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
+  add_test(NAME proton_update_test COMMAND proton_update_test)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)
