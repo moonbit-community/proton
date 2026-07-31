@@ -10,4 +10,3 @@ Primary entry points:
 - `load_config_manifest_from_file(...)`
 - `load_proton_project_config_from_file(...)`
 - `load_proton_project_summary_from_file(...)`
-- `load_runtime_manifest_from_json(...)`

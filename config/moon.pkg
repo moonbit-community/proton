@@ -22,7 +22,6 @@ options(
     "project_config.mbt": [ "native" ],
     "project_decode.mbt": [ "native" ],
     "project_paths.mbt": [ "native" ],
-    "result_zip.mbt": [ "native" ],
     "config_test.mbt": [ "native" ],
   },
 )

@@ -6,7 +6,7 @@ pub fn load_extension_catalog_summary_from_search_roots(
 }
 
 ///|
-/// Returns a normalized JSON summary suitable for `proton inspect extensions`.
+/// Returns a normalized JSON summary of the extension catalog.
 pub fn ExtensionCatalog::to_summary_json(self : ExtensionCatalog) -> Json {
   Json::object({
     "extensions": Json::array(

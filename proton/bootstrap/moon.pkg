@@ -14,16 +14,10 @@ supported_targets = "native"
 
 options(
   targets: {
-    "config.mbt": [ "native" ],
-    "config_build.mbt": [ "native" ],
-    "config_decode.mbt": [ "native" ],
-    "config_paths.mbt": [ "native" ],
     "proton_config_load.mbt": [ "native" ],
     "proton_project_config.mbt": [ "native" ],
     "proton_project_summary.mbt": [ "native" ],
     "config_test.mbt": [ "native" ],
-    "result_zip.mbt": [ "native" ],
-    "runtime_manifest_json.mbt": [ "native" ],
     "types.mbt": [ "native" ],
   },
 )

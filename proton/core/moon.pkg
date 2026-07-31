@@ -21,6 +21,5 @@ options(
     "js_template_render.mbt": [ "native" ],
     "mbt_process_host.mbt": [ "native" ],
     "op_registry.mbt": [ "native" ],
-    "resource_table.mbt": [ "native" ],
   },
 )

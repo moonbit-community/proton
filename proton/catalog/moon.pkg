@@ -11,12 +11,9 @@ supported_targets = "native"
 
 options(
   targets: {
-    "catalog_diagnostic.mbt": [ "native" ],
     "catalog_test.mbt": [ "native" ],
     "extension_catalog.mbt": [ "native" ],
     "extension_catalog_summary.mbt": [ "native" ],
     "extension_descriptor.mbt": [ "native" ],
-    "extension_link_plan.mbt": [ "native" ],
-    "result_zip.mbt": [ "native" ],
   },
 )

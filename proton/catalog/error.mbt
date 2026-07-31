@@ -108,31 +108,3 @@ pub fn ExtensionCatalogError::message(self : ExtensionCatalogError) -> String {
 impl Show for ExtensionCatalogError with fn output(self, logger) {
   logger.write_string(self.message())
 }
-
-///|
-/// Failures while expanding selected extension ids into a dependency link plan.
-pub(all) suberror ExtensionLinkError {
-  EmptySelectedId
-  UnknownExtension(id~ : String)
-  MissingDependency(extension_id~ : String, dependency_id~ : String)
-  DependencyCycle(id~ : String)
-} derive(Debug, Eq)
-
-///|
-pub fn ExtensionLinkError::message(self : ExtensionLinkError) -> String {
-  match self {
-    EmptySelectedId => "selected extension id must not be empty"
-    UnknownExtension(id~) => "unknown extension id: " + id
-    MissingDependency(extension_id~, dependency_id~) =>
-      "extension " +
-      extension_id +
-      " requires missing dependency " +
-      dependency_id
-    DependencyCycle(id~) => "extension dependency cycle detected at: " + id
-  }
-}
-
-///|
-impl Show for ExtensionLinkError with fn output(self, logger) {
-  logger.write_string(self.message())
-}

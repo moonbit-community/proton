@@ -1,5 +1,5 @@
 ///|
-/// Returns a normalized JSON summary suitable for `proton inspect config`.
+/// Returns a normalized JSON summary of the project configuration.
 pub fn ProtonProjectConfig::to_summary_json(self : ProtonProjectConfig) -> Json {
   let loaded = self.manifest()
   let manifest = loaded.manifest()

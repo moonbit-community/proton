@@ -28,26 +28,6 @@ pub fn AppCommandApiDescriptor::api_name(Self) -> String
 pub fn AppCommandApiDescriptor::new(String) -> Self
 pub fn AppCommandApiDescriptor::to_ipc_api(Self) -> @ipc.IpcExtensionApi
 
-pub struct AppCommandExtensionDescriptor {
-  id : String
-  js_namespace : String
-  apis : Array[AppCommandApiDescriptor]
-  scripts : Array[String]
-}
-pub fn AppCommandExtensionDescriptor::new(String, String, Array[AppCommandApiDescriptor], scripts? : Array[String]) -> Self
-pub fn AppCommandExtensionDescriptor::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
-
-pub struct AppCommandExtensionRegistry {
-  specs : Map[String, AppCommandExtensionSpec]
-  registration_order : Array[String]
-}
-pub fn AppCommandExtensionRegistry::get(Self, String) -> AppCommandExtensionSpec?
-pub fn AppCommandExtensionRegistry::new() -> Self
-pub fn AppCommandExtensionRegistry::ordered_names(Self) -> Array[String]
-pub fn AppCommandExtensionRegistry::register(Self, AppCommandExtensionSpec) -> Self
-pub fn AppCommandExtensionRegistry::registered_ids(Self) -> Array[String]
-pub fn AppCommandExtensionRegistry::spec_map(Self) -> Map[String, AppCommandExtensionSpec]
-
 pub struct AppCommandExtensionSpec {
   id : String
   js_namespace : String
@@ -67,17 +47,6 @@ pub fn AppCommandExtensionSpec::register(Self, CommandRegistrar) -> Unit raise
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
 pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
-
-pub struct AppCommandsConfig {
-  op_names : Array[String]
-  extensions : Array[@ipc.IpcExtensionDescriptor]
-  framework_extension_ids : Array[String]
-}
-pub fn AppCommandsConfig::extensions(Self) -> Array[@ipc.IpcExtensionDescriptor]
-pub fn AppCommandsConfig::framework_extension_ids(Self) -> Array[String]
-pub fn AppCommandsConfig::from_ipc_descriptors(Array[String], Array[@ipc.IpcExtensionDescriptor], Array[String]) -> Self
-pub fn AppCommandsConfig::new(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
-pub fn AppCommandsConfig::op_names(Self) -> Array[String]
 
 pub struct CommandRegistrar {
   host : @core.AppCommandHost
