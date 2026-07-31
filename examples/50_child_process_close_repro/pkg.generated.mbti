@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/48_child_process_close_repro"
+package "justjavac/proton/examples/50_child_process_close_repro"
 
 import {
   "moonbitlang/core/json",

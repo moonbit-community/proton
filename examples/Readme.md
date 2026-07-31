@@ -10,19 +10,21 @@ $runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
 $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 ```
 
-Generated-command examples use the released Proton CLI. Install it into the
-tool directory used by `examples/moon.mod`:
-
 ```sh
-moon install justjavac/proton_cli --bin target/proton-tools
+moon -C cli run . -- -C .. cef setup
+runtime="$PWD/$(node -p "JSON.parse(require('fs').readFileSync('.proton/runtime.json', 'utf8')).dist")"
+export PATH="$runtime/bin:$PATH"
 ```
 
-The installed executable is `proton_cli`; this repository's build rules call the
-CLI through `moon -C ../cli run ...` during local development.
+Generated-command examples run the repository CLI through
+`moon -C ../cli run ... codegen` build rules; no separate CLI install is
+needed when working inside this repository.
 
-To create a fresh app project instead of working inside `examples/`, use:
+To create a fresh app project instead of working inside `examples/`, install
+the released CLI and scaffold a project:
 
 ```sh
+moon install justjavac/proton_cli
 proton_cli new my-counter
 ```
 
@@ -42,7 +44,8 @@ moon -C examples run 01_run --target native
 
 - `01_run`: minimal app-style startup through `justjavac/proton`
 - `02_*` through `18_*`: root-facade examples that compile against the native
-  DLL route
+  DLL route (`02_local`, `03_remote`, `12_embed`, `17_extension`,
+  `18_extension_fs`).
 - `19_*` through `35_*`: extension and app-capability examples for filesystem,
   path, shell, desktop integration, notification, tray, hotkey, auto-launch,
   keepawake, and microphone behavior.
@@ -59,9 +62,10 @@ moon -C examples run 01_run --target native
   route.
 - `app_commands_fixture`: non-runnable shared implementation used by
   `41_app_commands` and the MoonBit E2E suite.
+- `e2e_fixtures`: non-runnable shared scenario implementations used by the
+  MoonBit E2E suite (`e2e/`).
 - `42_attribute_codegen_commands`: generated command metadata plus generated
   event helper over the native DLL bridge.
-- `43_native_bind_smoke`: low-level native binding smoke.
 - `44_project_config`: `moon.proton` project config decoding
 - `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
@@ -69,10 +73,10 @@ moon -C examples run 01_run --target native
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
   controls and compact web-rendered application chrome.
-- `48_child_process_close_repro`: long-lived child process and pending bridge
-  request for macOS close-lifecycle regression testing.
 - `49_app_menu`: app-level native menu definitions and macOS menu command
   events with the optional focused window id.
+- `50_child_process_close_repro`: long-lived child process and pending bridge
+  request for macOS close-lifecycle regression testing.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
