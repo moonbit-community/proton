@@ -83,7 +83,7 @@ proton_get_window(proton_window_id_t handle, proton_window_slot_t **out_slot);
 PROTON_INTERNAL int32_t proton_window_enqueue_closed_once(
     proton_runtime_slot_t *runtime, proton_window_slot_t *window,
     proton_window_id_t window_handle);
-PROTON_INTERNAL int32_t proton_runtime_sync_engine_closed_windows(
+PROTON_INTERNAL void proton_runtime_sync_engine_closed_windows(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(

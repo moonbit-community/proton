@@ -1597,6 +1597,72 @@ int main(void) {
   }
 
   runtime = PROTON_INVALID_HANDLE;
+  if (expect_status("runtime_create for close backpressure",
+                    proton_runtime_create_json("{\"abi_version\":1}", &runtime),
+                    PROTON_OK)) {
+    return 1;
+  }
+  proton_window_id_t close_queued_windows[32];
+  for (int i = 0; i < 32; i++) {
+    close_queued_windows[i] = PROTON_INVALID_HANDLE;
+    if (expect_status(
+            "window_create while filling event queue for close",
+            proton_window_create_json(
+                runtime, "{\"abi_version\":1,\"title\":\"Queued\","
+                         "\"width\":320,\"height\":240}",
+                &close_queued_windows[i]),
+            PROTON_OK)) {
+      return 1;
+    }
+  }
+  if (expect_status("window_close with full event queue",
+                    proton_window_close(close_queued_windows[0]),
+                    PROTON_ERR_QUEUE_FAILED) ||
+      expect_status("window remains live after close backpressure",
+                    proton_window_show(close_queued_windows[0]), PROTON_OK) ||
+      expect_runtime_wait_ready(runtime, PROTON_WAIT_EVENT,
+                                PROTON_WAIT_EVENT)) {
+    return 1;
+  }
+  for (int i = 0; i < 32; i++) {
+    if (expect_event(runtime, "window_created")) {
+      return 1;
+    }
+  }
+  if (expect_status("window_close after draining queue",
+                    proton_window_close(close_queued_windows[0]), PROTON_OK)) {
+    return 1;
+  }
+  char close_buffer[512];
+  int32_t close_required = 0;
+  status = proton_runtime_poll_event_json(runtime, close_buffer,
+                                          (int32_t)sizeof(close_buffer),
+                                          &close_required);
+  if (expect_status("poll_event after close retry", status, PROTON_OK)) {
+    return 1;
+  }
+  char expected_closed[96];
+  snprintf(expected_closed, sizeof(expected_closed),
+           "\"type\":\"window_closed\",\"window\":\"%lld\"",
+           (long long)close_queued_windows[0]);
+  if (strstr(close_buffer, expected_closed) == NULL) {
+    fprintf(stderr, "expected closed event '%s', got '%s'\n", expected_closed,
+            close_buffer);
+    return 1;
+  }
+  for (int i = 1; i < 32; i++) {
+    if (expect_status("close backpressure window_destroy",
+                      proton_window_destroy(close_queued_windows[i]),
+                      PROTON_OK)) {
+      return 1;
+    }
+  }
+  if (expect_status("runtime_destroy after close backpressure",
+                    proton_runtime_destroy(runtime), PROTON_OK)) {
+    return 1;
+  }
+
+  runtime = PROTON_INVALID_HANDLE;
   if (expect_status(
           "runtime_create accepts boolean headless",
           proton_runtime_create_json(

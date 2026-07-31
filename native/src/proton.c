@@ -483,10 +483,7 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
 
   uint32_t ready_mask = PROTON_WAIT_NONE;
   if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
-    status = proton_runtime_sync_engine_closed_windows(runtime, slot);
-    if (status != PROTON_OK) {
-      return status;
-    }
+    proton_runtime_sync_engine_closed_windows(runtime, slot);
     proton_runtime_sync_bridge_cancellations(slot);
     proton_runtime_sync_menu_commands(slot);
     if (proton_runtime_has_events(slot)) {
@@ -664,10 +661,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_required_len is required");
   }
-  status = proton_runtime_sync_engine_closed_windows(runtime, slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
+  proton_runtime_sync_engine_closed_windows(runtime, slot);
   proton_runtime_sync_engine_bridge_lifecycle(runtime, slot);
   proton_runtime_sync_bridge_cancellations(slot);
   proton_runtime_sync_menu_commands(slot);

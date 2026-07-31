@@ -364,10 +364,22 @@ if(BUILD_TESTING)
   add_executable(proton_exports_smoke
     tests/proton_exports_smoke.c
   )
+  add_executable(proton_state_smoke
+    tests/proton_state_smoke.c
+    src/proton_state.c
+  )
 
   target_link_libraries(proton_smoke PRIVATE proton)
+  target_include_directories(proton_state_smoke PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  set_target_properties(proton_state_smoke PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+  )
   if(NOT WIN32)
     target_link_libraries(proton_exports_smoke PRIVATE ${CMAKE_DL_LIBS})
+    target_link_libraries(proton_state_smoke PRIVATE Threads::Threads)
   endif()
 
   if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
@@ -381,6 +393,7 @@ if(BUILD_TESTING)
     add_test(NAME proton_smoke COMMAND proton_smoke)
   endif()
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
+  add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)
