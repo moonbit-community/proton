@@ -1,6 +1,6 @@
 ///|
 async fn prompt_text(label : String, default : String) -> String {
-  println(label + " [" + default + "]:")
+  @stdio.stdout.write(label + " [" + default + "]: ")
   match @stdio.stdin.read_until("\n") {
     Some(line) => {
       let value = line.trim().to_owned()
@@ -17,7 +17,7 @@ async fn prompt_text(label : String, default : String) -> String {
 ///|
 async fn prompt_bool(label : String, default : Bool) -> Bool {
   let suffix = if default { "Y/n" } else { "y/N" }
-  println(label + " [" + suffix + "]:")
+  @stdio.stdout.write(label + " [" + suffix + "]: ")
   match @stdio.stdin.read_until("\n") {
     Some(line) => {
       let value = line.trim().to_owned().to_lower()

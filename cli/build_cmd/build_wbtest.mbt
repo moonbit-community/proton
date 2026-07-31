@@ -95,8 +95,15 @@ test "parse build args accepts an isolated Moon target directory" {
 }
 
 ///|
-test "parse build args accepts explicit config path starting with dash" {
-  let raw = parse_build_args(["--config", "-custom.proton"])
+test "parse build args keeps dash-leading config paths behind --config=" {
+  // A bare value starting with '-' is parsed as the next flag, so a
+  // dash-leading path needs the equals form; this keeps `--config` from
+  // swallowing the following flag.
+  let error = expect_build_error_message(() => {
+    parse_build_args(["--config", "-custom.proton"])
+  })
+  assert_true(error.contains("a value is required for '--config'"))
+  let raw = parse_build_args(["--config=-custom.proton"])
   @debug.assert_eq(raw.config_path, Some("-custom.proton"))
 }
 

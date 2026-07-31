@@ -366,6 +366,7 @@ async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
         detail=@debug.render(Repr(error)),
       )
   }
+  println("wrote " + resolved_output)
   for warning in result.warnings {
     @output.write_stderr_line("warning: " + warning)
   }

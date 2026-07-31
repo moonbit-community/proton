@@ -117,11 +117,7 @@ pub fn command() -> @argparse.Command {
     ],
     options=[
       OptionArg("package", about="MoonBit application package"),
-      OptionArg(
-        "config",
-        allow_hyphen_values=true,
-        about="Proton project config",
-      ),
+      OptionArg("config", about="Proton project config"),
       OptionArg(
         "moon-target-dir",
         about="Target directory for the internal Moon build",
@@ -210,7 +206,7 @@ fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError 
   for arg in args {
     if arg == "--target" || arg.has_prefix("--target=") {
       raise InvalidArguments(
-        message="proton build always uses --target native; remove --target from MOON_BUILD_ARGS",
+        message="proton build always uses --target native; remove --target from the arguments after `--`",
       )
     }
   }
