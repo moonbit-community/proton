@@ -60,6 +60,7 @@ fn decode_project_config(
       }
       let frontend = optional_project_frontend(fields, base_dir)
       let bundle = optional_project_bundle(fields, base_dir)
+      let updater = optional_project_updater(fields)
       ProjectConfig::new(
         base_dir,
         window,
@@ -69,6 +70,7 @@ fn decode_project_config(
         backend~,
         frontend~,
         bundle~,
+        updater~,
         permissions~,
         debug~,
         single_instance~,
@@ -101,7 +103,7 @@ fn validate_project_top_level_fields(
         validate_optional_non_empty_string(field.value, field.key) catch {
           error => errors.push(error)
         }
-      "backend" | "frontend" | "bundle" =>
+      "backend" | "frontend" | "bundle" | "updater" =>
         validate_optional_object(field.value, field.key) catch {
           error => errors.push(error)
         }
@@ -618,6 +620,76 @@ fn optional_project_bundle(
     Some(_) =>
       raise InvalidField(
         path="moon.proton.bundle",
+        expectation="must be an object",
+      )
+  }
+}
+
+///|
+/// Decodes the optional `updater` block.
+///
+/// `public_keys` is a list from the first release rather than a single value:
+/// distributing a reserve key before it is needed is what lets a compromised
+/// signing key be abandoned without a transition release, and a transition
+/// release is exactly what a lost key makes impossible to produce.
+fn optional_project_updater(
+  fields : Array[ConfigField],
+) -> ProjectUpdaterConfig? raise ProjectConfigError {
+  match find_config_field(fields, "updater") {
+    None => None
+    Some(Obj(updater_fields, _)) => {
+      validate_object_fields(updater_fields, "updater", [
+        "active", "endpoint", "public_keys", "check_on_launch", "freshness_days",
+      ])
+      let active = optional_bool_config_field(
+        updater_fields, "active", "updater.active", true,
+      )
+      let endpoint = optional_string_config_field(
+        updater_fields, "endpoint", "updater.endpoint",
+      ).unwrap_or("")
+      let public_keys = optional_string_array_config_field(
+        updater_fields, "public_keys", "updater.public_keys",
+      )
+      let check_on_launch = optional_bool_config_field(
+        updater_fields, "check_on_launch", "updater.check_on_launch", true,
+      )
+      let freshness_days = match
+        find_config_field(updater_fields, "freshness_days") {
+        None => 30
+        Some(_) =>
+          required_positive_int_config_field(
+            updater_fields, "freshness_days", "updater.freshness_days",
+          )
+      }
+      if active {
+        guard endpoint.has_prefix("https://") else {
+          raise InvalidField(
+            path="moon.proton.updater.endpoint",
+            expectation="must be an https URL",
+          )
+        }
+        // An empty trusted list is a configuration error, never an invitation
+        // to skip verification.
+        guard public_keys.length() > 0 else {
+          raise InvalidField(
+            path="moon.proton.updater.public_keys",
+            expectation="must list at least one trusted key",
+          )
+        }
+      }
+      Some(
+        ProjectUpdaterConfig::new(
+          endpoint,
+          public_keys,
+          active~,
+          check_on_launch~,
+          freshness_days~,
+        ),
+      )
+    }
+    Some(_) =>
+      raise InvalidField(
+        path="moon.proton.updater",
         expectation="must be an object",
       )
   }

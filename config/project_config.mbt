@@ -249,6 +249,7 @@ pub(all) struct ProjectConfig {
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
+  updater : ProjectUpdaterConfig?
   permissions : Array[ProjectPermissionGrant]
   debug : Int
   single_instance : Bool
@@ -264,6 +265,7 @@ pub fn ProjectConfig::new(
   backend? : ProjectBackendConfig? = None,
   frontend? : ProjectFrontendConfig? = None,
   bundle? : ProjectBundleConfig? = None,
+  updater? : ProjectUpdaterConfig? = None,
   permissions? : Array[ProjectPermissionGrant] = [],
   debug? : Int = 0,
   single_instance? : Bool = false,
@@ -277,6 +279,7 @@ pub fn ProjectConfig::new(
     backend,
     frontend,
     bundle,
+    updater,
     permissions: permissions.copy(),
     debug,
     single_instance,
@@ -329,6 +332,11 @@ pub fn ProjectConfig::backend(self : ProjectConfig) -> ProjectBackendConfig? {
 ///|
 pub fn ProjectConfig::frontend(self : ProjectConfig) -> ProjectFrontendConfig? {
   self.frontend
+}
+
+///|
+pub fn ProjectConfig::updater(self : ProjectConfig) -> ProjectUpdaterConfig? {
+  self.updater
 }
 
 ///|
@@ -386,4 +394,64 @@ pub fn LoadedProjectConfig::warnings(
   self : LoadedProjectConfig,
 ) -> Array[String] {
   self.warnings
+}
+
+///|
+/// The application's update channel, as declared in `moon.proton`.
+///
+/// This carries only what the runtime needs in order to decide whether to
+/// check, and whom to trust when it does. No private key material appears
+/// here, or anywhere else the framework can reach.
+pub(all) struct ProjectUpdaterConfig {
+  active : Bool
+  endpoint : String
+  public_keys : Array[String]
+  check_on_launch : Bool
+  freshness_days : Int
+} derive(Eq, Debug)
+
+///|
+pub fn ProjectUpdaterConfig::new(
+  endpoint : String,
+  public_keys : Array[String],
+  active? : Bool = true,
+  check_on_launch? : Bool = true,
+  freshness_days? : Int = 30,
+) -> ProjectUpdaterConfig {
+  ProjectUpdaterConfig::{
+    active,
+    endpoint,
+    public_keys: copy_strings(public_keys),
+    check_on_launch,
+    freshness_days,
+  }
+}
+
+///|
+pub fn ProjectUpdaterConfig::endpoint(self : ProjectUpdaterConfig) -> String {
+  self.endpoint
+}
+
+///|
+pub fn ProjectUpdaterConfig::public_keys(
+  self : ProjectUpdaterConfig,
+) -> Array[String] {
+  copy_strings(self.public_keys)
+}
+
+///|
+pub fn ProjectUpdaterConfig::is_active(self : ProjectUpdaterConfig) -> Bool {
+  self.active
+}
+
+///|
+pub fn ProjectUpdaterConfig::checks_on_launch(
+  self : ProjectUpdaterConfig,
+) -> Bool {
+  self.check_on_launch
+}
+
+///|
+pub fn ProjectUpdaterConfig::freshness_days(self : ProjectUpdaterConfig) -> Int {
+  self.freshness_days
 }

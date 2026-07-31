@@ -655,3 +655,87 @@ test "project config rejects reserved window ids and invalid document extensions
 fn normalize_test_path(path : String) -> String {
   path.replace(old="\\", new="/")
 }
+
+///|
+test "decodes an updater block" {
+  let text =
+    #|window = { title: "App", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<html></html>" }
+    #|
+    #|updater = {
+    #|  endpoint: "https://example.com/latest.json",
+    #|  public_keys: ["rsa-sha256:aa:010001"],
+    #|}
+  let config = load_project_config_from_text(text, ".", name="moon.proton").config()
+  let updater = config.updater().unwrap()
+  assert_true(updater.is_active())
+  assert_eq(updater.endpoint(), "https://example.com/latest.json")
+  assert_eq(updater.public_keys(), ["rsa-sha256:aa:010001"])
+  // Checking on launch and a thirty day window are the documented defaults.
+  assert_true(updater.checks_on_launch())
+  assert_eq(updater.freshness_days(), 30)
+}
+
+///|
+test "an absent updater block leaves the channel unconfigured" {
+  let text =
+    #|window = { title: "App", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<html></html>" }
+  let config = load_project_config_from_text(text, ".", name="moon.proton").config()
+  assert_eq(config.updater(), None)
+}
+
+///|
+test "rejects an active updater that cannot be trusted or reached" {
+  let with_body = fn(body : String) {
+    (
+      $|window = { title: "App", width: 800, height: 600 }
+      $|entry = { kind: "html", value: "<html></html>" }
+      $|
+      $|updater = {\{body}}
+    )
+  }
+  let failure = fn(body : String) -> String {
+    let _ = load_project_config_from_text(
+      with_body(body),
+      ".",
+      name="moon.proton",
+    ) catch {
+      error => return error.message()
+    }
+    abort("expected \{body} to be rejected")
+  }
+  // An empty trusted list is a configuration error, not permission to skip
+  // verification.
+  assert_true(
+    failure("endpoint: \"https://example.com/latest.json\", public_keys: []").contains(
+      "public_keys",
+    ),
+  )
+  assert_true(
+    failure("public_keys: [\"rsa-sha256:aa:010001\"]").contains("endpoint"),
+  )
+  assert_true(
+    failure(
+      "endpoint: \"http://example.com/latest.json\", public_keys: [\"rsa-sha256:aa:010001\"]",
+    ).contains("endpoint"),
+  )
+  assert_true(
+    failure(
+      "endpoint: \"https://example.com/latest.json\", public_keys: [\"rsa-sha256:aa:010001\"], freshness_days: 0",
+    ).contains("freshness_days"),
+  )
+  assert_true(failure("unknown_field: true").contains("unknown_field"))
+}
+
+///|
+test "an inactive updater needs no endpoint or keys" {
+  let text =
+    #|window = { title: "App", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<html></html>" }
+    #|
+    #|updater = { active: false }
+  let config = load_project_config_from_text(text, ".", name="moon.proton").config()
+  let updater = config.updater().unwrap()
+  assert_false(updater.is_active())
+}

@@ -95,6 +95,7 @@ pub(all) struct ProjectConfig {
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
+  updater : ProjectUpdaterConfig?
   permissions : Array[ProjectPermissionGrant]
   debug : Int
   single_instance : Bool
@@ -107,9 +108,10 @@ pub fn ProjectConfig::entries(Self) -> Array[ProjectEntry]
 pub fn ProjectConfig::entry(Self) -> ProjectEntry
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
 pub fn ProjectConfig::metadata(Self) -> ProjectMetadata
-pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, windows? : Array[ProjectAppWindowConfig], backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, permissions? : Array[ProjectPermissionGrant], debug? : Int, single_instance? : Bool) -> Self
+pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, windows? : Array[ProjectAppWindowConfig], backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, updater? : ProjectUpdaterConfig?, permissions? : Array[ProjectPermissionGrant], debug? : Int, single_instance? : Bool) -> Self
 pub fn ProjectConfig::permissions(Self) -> Array[ProjectPermissionGrant]
 pub fn ProjectConfig::single_instance(Self) -> Bool
+pub fn ProjectConfig::updater(Self) -> ProjectUpdaterConfig?
 pub fn ProjectConfig::window(Self) -> ProjectWindowConfig
 pub fn ProjectConfig::windows(Self) -> Array[ProjectAppWindowConfig]
 
@@ -164,6 +166,20 @@ pub(all) enum ProjectTitlebarStyle {
   TitlebarOverlay
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ProjectUpdaterConfig {
+  active : Bool
+  endpoint : String
+  public_keys : Array[String]
+  check_on_launch : Bool
+  freshness_days : Int
+} derive(Eq, @debug.Debug)
+pub fn ProjectUpdaterConfig::checks_on_launch(Self) -> Bool
+pub fn ProjectUpdaterConfig::endpoint(Self) -> String
+pub fn ProjectUpdaterConfig::freshness_days(Self) -> Int
+pub fn ProjectUpdaterConfig::is_active(Self) -> Bool
+pub fn ProjectUpdaterConfig::new(String, Array[String], active? : Bool, check_on_launch? : Bool, freshness_days? : Int) -> Self
+pub fn ProjectUpdaterConfig::public_keys(Self) -> Array[String]
+
 pub(all) struct ProjectWindowConfig {
   title : String
   width : Int
@@ -184,4 +200,3 @@ pub(all) enum ProjectWindowSizeHint {
 pub using @basic {type Location as ConfigLoc}
 
 // Traits
-
