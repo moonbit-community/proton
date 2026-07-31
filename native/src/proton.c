@@ -149,8 +149,10 @@ static bool proton_json_escape_into(const char *value,
 }
 
 // Drain app-menu commands assigned to this runtime into its event queue.
+// Take from the engine queue only when the public queue has room, so a full
+// queue defers delivery instead of dropping commands.
 static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
-  for (;;) {
+  while (runtime->event_count < PROTON_MAX_EVENTS) {
     char command_id[PROTON_MAX_EVENT_BYTES];
     proton_window_id_t focused_window = PROTON_INVALID_HANDLE;
     int32_t present = 0;
@@ -184,8 +186,10 @@ static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
 }
 
 // Drain platform-originated events into the ordered runtime event queue.
+// Take from the engine queue only when the public queue has room, so a full
+// queue defers delivery instead of dropping events.
 static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) {
-  for (;;) {
+  while (runtime->event_count < PROTON_MAX_EVENTS) {
     char event_json[PROTON_MAX_EVENT_BYTES];
     int32_t present = 0;
     if (proton_engine_take_platform_event(
