@@ -181,15 +181,16 @@ static HKEY mb_open_run_key(REGSAM access) {
   return key;
 }
 
-/* Opens the Run key read-only without creating it. Query and delete paths
-   must not mutate the registry, so a missing key reports *out_missing
-   instead of being created the way RegCreateKeyExW would. */
-static HKEY mb_open_run_key_for_read(int *out_missing) {
+/* Opens the Run key with the requested access without creating it. Query
+   and delete paths must not mutate the registry, so a missing key reports
+   *out_missing instead of being created the way RegCreateKeyExW would.
+   Callers that delete values must request KEY_SET_VALUE in access. */
+static HKEY mb_open_run_key_no_create(REGSAM access, int *out_missing) {
   static const wchar_t subkey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
   HKEY key = NULL;
   LONG status;
   *out_missing = 0;
-  status = RegOpenKeyExW(HKEY_CURRENT_USER, subkey, 0, KEY_READ, &key);
+  status = RegOpenKeyExW(HKEY_CURRENT_USER, subkey, 0, access, &key);
   if (status == ERROR_FILE_NOT_FOUND) {
     *out_missing = 1;
     return NULL;
@@ -533,7 +534,7 @@ MOONBIT_FFI_EXPORT int32_t mb_auto_launch_windows_delete_run_entry(moonbit_bytes
     return MB_STATUS_ERROR;
   }
 
-  key = mb_open_run_key_for_read(&missing_key);
+  key = mb_open_run_key_no_create(KEY_READ | KEY_SET_VALUE, &missing_key);
   if (key == NULL) {
     free(wide_name);
     if (missing_key) {
@@ -582,7 +583,7 @@ MOONBIT_FFI_EXPORT int32_t mb_auto_launch_windows_run_entry_exists(moonbit_bytes
     return MB_STATUS_ERROR;
   }
 
-  key = mb_open_run_key_for_read(&missing_key);
+  key = mb_open_run_key_no_create(KEY_READ, &missing_key);
   if (key == NULL) {
     free(wide_name);
     if (missing_key) {
