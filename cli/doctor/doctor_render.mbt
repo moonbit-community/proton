@@ -3,43 +3,28 @@ fn render_doctor_text(report : DoctorReport) -> String {
   let builder = StringBuilder()
   for section_index, section in report.sections {
     if section_index > 0 {
-      builder.write_string("\n")
+      builder <+ "\n"
     }
-    builder.write_string(section.status.symbol())
-    builder.write_string(" ")
-    builder.write_string(section.title)
-    builder.write_string("\n")
+    builder <+ "\{section.status.symbol()} \{section.title}\n"
     for line in section.lines {
-      builder.write_string("  ")
-      builder.write_string(line.status.symbol())
-      builder.write_string(" ")
-      builder.write_string(line.text)
-      builder.write_string("\n")
+      builder <+ "  \{line.status.symbol()} \{line.text}\n"
       match line.hint {
-        Some(hint) => {
-          builder.write_string("    hint: ")
-          builder.write_string(hint)
-          builder.write_string("\n")
-        }
+        Some(hint) => builder <+ "    hint: \{hint}\n"
         None => ()
       }
     }
   }
   if report.dry_run {
-    builder.write_string("\n- doctor is read-only; no files will be changed\n")
+    builder <+
+      $|
+      $|- doctor is read-only; no files will be changed
+      $|
   }
   let summary = report.summary()
-  builder.write_string(
-    "\nSummary: " +
-    summary.errors.to_string() +
-    " errors, " +
-    summary.warnings.to_string() +
-    " warnings, " +
-    summary.passed.to_string() +
-    " passed, " +
-    summary.unknown.to_string() +
-    " unknown\n",
-  )
+  builder <+
+    $|
+    $|Summary: \{summary.errors} errors, \{summary.warnings} warnings, \{summary.passed} passed, \{summary.unknown} unknown
+    $|
   builder.to_string()
 }
 
@@ -111,23 +96,14 @@ fn render_doctor_quiet(report : DoctorReport) -> String {
   for section in report.sections {
     for line in section.lines {
       if line.status == Error || line.status == Missing || line.status == Warn {
-        builder.write_string(line.status.symbol())
-        builder.write_string(" [")
-        builder.write_string(line.code)
-        builder.write_string("] ")
-        builder.write_string(line.text)
-        builder.write_string("\n")
+        builder <+ "\{line.status.symbol()} [\{line.code}] \{line.text}\n"
       }
     }
   }
   let summary = report.summary()
-  builder.write_string(
-    "Summary: " +
-    summary.errors.to_string() +
-    " errors, " +
-    summary.warnings.to_string() +
-    " warnings\n",
-  )
+  builder <+
+    $|Summary: \{summary.errors} errors, \{summary.warnings} warnings
+    $|
   builder.to_string()
 }
 
