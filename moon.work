@@ -3,6 +3,7 @@ members = [
   "./contract",
   "./rabbita",
   "./rsa",
+  "./updater",
   "./proton",
   "./cli",
   "./config",

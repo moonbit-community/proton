@@ -1,0 +1,68 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_updater"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let supported_schema_version : Int
+
+// Errors
+pub(all) suberror ManifestError {
+  NotJson
+  NotAnObject(path~ : String)
+  UnknownSchemaVersion(found~ : Int)
+  UnknownField(path~ : String)
+  MissingField(path~ : String)
+  InvalidField(path~ : String, expectation~ : String)
+} derive(Eq, @debug.Debug)
+pub fn ManifestError::message(Self) -> String
+
+// Types and methods
+pub struct Manifest {
+  version : Version
+  published_at : Timestamp
+  notes_url : String?
+  platforms : Map[String, PlatformUpdate]
+}
+pub fn Manifest::from_json(Json) -> Self raise ManifestError
+pub fn Manifest::notes_url(Self) -> String?
+pub fn Manifest::parse(String) -> Self raise ManifestError
+pub fn Manifest::platform(Self, String) -> PlatformUpdate?
+pub fn Manifest::platforms(Self) -> Array[String]
+pub fn Manifest::published_at(Self) -> Timestamp
+pub fn Manifest::version(Self) -> Version
+
+pub struct PlatformUpdate {
+  url : String
+  size : Int64
+  sha256_hex : String
+  signature_hex : String
+} derive(Eq, @debug.Debug)
+pub fn PlatformUpdate::sha256_hex(Self) -> String
+pub fn PlatformUpdate::signature_hex(Self) -> String
+pub fn PlatformUpdate::size(Self) -> Int64
+pub fn PlatformUpdate::url(Self) -> String
+
+pub struct Timestamp {
+  text : String
+} derive(Eq, @debug.Debug)
+pub fn Timestamp::is_before(Self, Self) -> Bool
+pub fn Timestamp::parse(String) -> Self?
+pub fn Timestamp::to_text(Self) -> String
+pub impl Show for Timestamp
+
+pub struct Version {
+  major : Int
+  minor : Int
+  patch : Int
+} derive(Eq, @debug.Debug)
+pub fn Version::is_newer_than(Self, Self) -> Bool
+pub fn Version::parse(String) -> Self?
+pub impl Show for Version
+
+// Type aliases
+
+// Traits
+
