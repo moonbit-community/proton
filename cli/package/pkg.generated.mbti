@@ -12,6 +12,8 @@ pub fn command() -> @argparse.Command
 
 pub async fn run(String, @argparse.Matches) -> Unit
 
+pub async fn write_updater_metadata(PackagePlan, String, String) -> Unit raise UpdaterMetadataError
+
 // Errors
 pub(all) suberror MacosSigningError {
   InvalidConfiguration(detail~ : String)
@@ -74,6 +76,16 @@ pub(all) suberror PackageUsageError {
   UnsupportedTarget(target~ : String)
 } derive(Eq, @debug.Debug)
 pub fn PackageUsageError::message(Self) -> String
+
+pub(all) suberror UpdaterMetadataError {
+  NoDistributableArtifact
+  UnreadableArtifact(path~ : String, detail~ : String)
+  InvalidBaseUrl(url~ : String)
+  UnknownPlatform(detail~ : String)
+  MissingPublishedAt
+  UndecodableFragment(detail~ : String)
+} derive(Eq)
+pub fn UpdaterMetadataError::message(Self) -> String
 
 pub(all) suberror WindowsPackagingError {
   InvalidConfiguration(detail~ : String)

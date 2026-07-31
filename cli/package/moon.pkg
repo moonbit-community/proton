@@ -1,5 +1,6 @@
 import {
   "justjavac/proton_config",
+  "justjavac/proton_updater" @updater,
   "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/build_cmd" @build,
   "justjavac/proton_cli/cef",
@@ -11,6 +12,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
   "moonbitlang/x/path",
   "moonbitlang/x/sys",
 }

@@ -87,6 +87,14 @@ pub fn command() -> @argparse.Command {
         about="Package target (app, zip, or macOS dmg); may be repeated",
       ),
       OptionArg("output", about="Output directory"),
+      OptionArg(
+        "updater-base-url",
+        about="Emit update metadata with artifacts served from this https base URL",
+      ),
+      OptionArg(
+        "updater-published-at",
+        about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
+      ),
     ],
   )
 }
@@ -125,6 +133,18 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     return
   }
   execute_package_plan(plan)
+  match @cli_args.value(matches, "updater-base-url") {
+    Some(base_url) =>
+      write_updater_metadata(
+        plan,
+        base_url,
+        match @cli_args.value(matches, "updater-published-at") {
+          Some(published_at) => published_at
+          None => raise MissingPublishedAt
+        },
+      )
+    None => ()
+  }
 }
 
 ///|
