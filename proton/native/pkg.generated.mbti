@@ -41,6 +41,14 @@ pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
 
+pub fn update_apply() -> Unit raise NativeError
+
+pub fn update_expand(String, String) -> String raise NativeError
+
+pub fn update_relaunch() -> Unit raise NativeError
+
+pub fn update_stage(String) -> Unit raise NativeError
+
 // Errors
 pub(all) suberror NativeError {
   Status(status~ : Int, message~ : String)
