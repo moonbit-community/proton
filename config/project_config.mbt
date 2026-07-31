@@ -34,15 +34,40 @@ pub(all) struct ProjectAppWindowConfig {
   id : String
   window : ProjectWindowConfig
   entry : ProjectEntry
+  open_on_start : Bool
 } derive(Eq, Debug)
+
+///|
+/// One renderer capability grant from `moon.proton`.
+///
+/// `window` is `main` or a declared secondary window id. `origin` is `app`
+/// for bundled Proton pages or `entry` for the configured window entry.
+/// Extension-specific restrictions live in `scope`.
+pub(all) struct ProjectPermissionGrant {
+  window : String
+  origin : String
+  extension : String
+  scope : Json
+} derive(Eq, Debug)
+
+///|
+pub fn ProjectPermissionGrant::new(
+  window : String,
+  origin : String,
+  extension : String,
+  scope? : Json = Json::empty_object(),
+) -> ProjectPermissionGrant {
+  ProjectPermissionGrant::{ window, origin, extension, scope }
+}
 
 ///|
 pub fn ProjectAppWindowConfig::new(
   id : String,
   window : ProjectWindowConfig,
   entry : ProjectEntry,
+  open_on_start? : Bool = true,
 ) -> ProjectAppWindowConfig {
-  ProjectAppWindowConfig::{ id, window, entry }
+  ProjectAppWindowConfig::{ id, window, entry, open_on_start }
 }
 
 ///|
@@ -177,6 +202,13 @@ pub fn ProjectDocumentType::new(
 }
 
 ///|
+pub fn ProjectDocumentType::extensions(
+  self : ProjectDocumentType,
+) -> Array[String] {
+  self.extensions.copy()
+}
+
+///|
 pub fn ProjectBundleConfig::new(
   active? : Bool = false,
   targets? : Array[String] = [],
@@ -217,7 +249,9 @@ pub(all) struct ProjectConfig {
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
+  permissions : Array[ProjectPermissionGrant]
   debug : Int
+  single_instance : Bool
 } derive(Eq, Debug)
 
 ///|
@@ -230,7 +264,9 @@ pub fn ProjectConfig::new(
   backend? : ProjectBackendConfig? = None,
   frontend? : ProjectFrontendConfig? = None,
   bundle? : ProjectBundleConfig? = None,
+  permissions? : Array[ProjectPermissionGrant] = [],
   debug? : Int = 0,
+  single_instance? : Bool = false,
 ) -> ProjectConfig {
   ProjectConfig::{
     base_dir,
@@ -241,7 +277,9 @@ pub fn ProjectConfig::new(
     backend,
     frontend,
     bundle,
+    permissions: permissions.copy(),
     debug,
+    single_instance,
   }
 }
 
@@ -296,6 +334,18 @@ pub fn ProjectConfig::frontend(self : ProjectConfig) -> ProjectFrontendConfig? {
 ///|
 pub fn ProjectConfig::bundle(self : ProjectConfig) -> ProjectBundleConfig? {
   self.bundle
+}
+
+///|
+pub fn ProjectConfig::permissions(
+  self : ProjectConfig,
+) -> Array[ProjectPermissionGrant] {
+  self.permissions.copy()
+}
+
+///|
+pub fn ProjectConfig::single_instance(self : ProjectConfig) -> Bool {
+  self.single_instance
 }
 
 ///|

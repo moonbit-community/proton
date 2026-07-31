@@ -73,6 +73,8 @@ moon -C examples run 01_run --target native
   request for macOS close-lifecycle regression testing.
 - `49_app_menu`: app-level native menu definitions and macOS menu command
   events with the optional focused window id.
+- `50_browser_control`: asynchronous navigation, popup, download, certificate,
+  media-permission, and download-progress browser policy handlers.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle

@@ -9,7 +9,15 @@ fn main {
         debug=true,
       )
       .extension(@fs.extension())
-      .extension(@path.extension())
+      .permission(
+        @fs.permission([
+          @fs.PermissionRoot::new(".", [
+            "read_file", "write_file", "exists", "kind", "size", "readdir", "remove",
+            "realpath",
+          ]),
+        ]),
+      )
+      .expose(@path.extension())
     app.run_or_abort()
   })
 }

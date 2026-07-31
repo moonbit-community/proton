@@ -92,5 +92,5 @@ async fn run_ticker(
 
 ///|
 fn main {
-  @proton.run(() => @proton.app().extension(ticker_extension()).run_or_abort())
+  @proton.run(() => @proton.app().expose(ticker_extension()).run_or_abort())
 }

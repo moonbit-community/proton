@@ -33,6 +33,7 @@ pub struct AppCommandExtensionSpec {
   scripts : Array[String]
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
+  resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError
   on_destroy : () -> Unit raise
 }
 
@@ -100,6 +101,7 @@ pub fn AppCommandExtensionSpec::typed(
   register : (CommandRegistrar) -> Unit raise,
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
+  resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError,
   on_destroy? : () -> Unit raise = fn() {  },
 ) -> AppCommandExtensionSpec raise ExtensionSpecError {
   contract.validate() catch {
@@ -118,6 +120,26 @@ pub fn AppCommandExtensionSpec::typed(
     }
     apis.push(AppCommandApiDescriptor::new(route.member_name()))
   }
+  let resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError = match
+    resolve_permission {
+    Some(resolve) => resolve
+    None =>
+      fn(scope, _base_path) -> Json raise PermissionScopeValidationError {
+        guard scope is Object(fields) else {
+          raise PermissionScopeValidationError::Invalid(
+            detail="extension " + id + " permission scope must be an object",
+          )
+        }
+        for _, _ in fields {
+          raise PermissionScopeValidationError::Invalid(
+            detail="extension " +
+              id +
+              " does not accept a non-empty permission scope",
+          )
+        }
+        scope
+      }
+  }
   AppCommandExtensionSpec::{
     id,
     js_namespace,
@@ -125,6 +147,7 @@ pub fn AppCommandExtensionSpec::typed(
     scripts: copy_strings(scripts),
     dependencies: copy_strings(dependencies),
     register,
+    resolve_permission,
     on_destroy,
   }
 }
@@ -175,6 +198,15 @@ pub fn AppCommandExtensionSpec::register(
   registrar : CommandRegistrar,
 ) -> Unit raise {
   (self.register)(registrar)
+}
+
+///|
+pub fn AppCommandExtensionSpec::resolve_permission(
+  self : AppCommandExtensionSpec,
+  scope : Json,
+  base_path : String,
+) -> Json raise PermissionScopeValidationError {
+  (self.resolve_permission)(scope, base_path)
 }
 
 ///|
@@ -330,6 +362,7 @@ fn copy_app_command_extension_spec(
     scripts: copy_strings(spec.scripts),
     dependencies: copy_strings(spec.dependencies),
     register: spec.register,
+    resolve_permission: spec.resolve_permission,
     on_destroy: spec.on_destroy,
   }
 }

@@ -156,6 +156,7 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(info.contains("\"base_abi\""))
   assert_true(info.contains("\"event_polling\""))
   assert_true(info.contains("\"bridge_polling\""))
+  assert_true(info.contains("\"bridge_permission_grants\""))
   assert_true(info.contains("\"platform\":"))
   let typed = runtime_info()
   inspect(typed.abi_version, content="1")
@@ -165,6 +166,7 @@ test "runtime info reports ABI and Proton runtime metadata" {
   assert_true(typed.features.contains("base_abi"))
   assert_true(typed.features.contains("event_polling"))
   assert_true(typed.features.contains("bridge_polling"))
+  assert_true(typed.features.contains("bridge_permission_grants"))
   if (
       typed.platform == "macos" ||
       typed.platform == "windows" ||
@@ -173,9 +175,11 @@ test "runtime info reports ABI and Proton runtime metadata" {
     typed.runtime_available {
     assert_true(typed.features.contains("titlebar_overlay"))
     assert_true(typed.features.contains("headless_osr"))
+    assert_true(typed.features.contains("window_session"))
   } else {
     assert_false(typed.features.contains("titlebar_overlay"))
     assert_false(typed.features.contains("headless_osr"))
+    assert_false(typed.features.contains("window_session"))
   }
   if typed.runtime_available {
     match typed.platform {
@@ -295,6 +299,39 @@ test "runtime and window lifecycle uses non-zero Int64 handles" {
 }
 
 ///|
+test "runtime event decodes a complete window state snapshot" {
+  let event = decode_runtime_event_json(
+    (
+      #|{"type":"window_state_changed","window":"7","state":{"x":10,"y":20,"width":800,"height":600,"monitor":{"x":0,"y":0,"width":1920,"height":1080,"work_x":0,"work_y":24,"work_width":1920,"work_height":1056,"scale_factor_percent":200},"zoom_percent":125,"visible":true,"focused":true,"minimized":false,"maximized":false,"fullscreen":false,"always_on_top":true,"theme":"dark"}}
+    ),
+  )
+  debug_inspect(event.window_id(), content="Some(7)")
+  match event.window_state_change() {
+    Some(state) => {
+      inspect(state.x, content="10")
+      inspect(state.monitor.scale_factor_percent, content="200")
+      inspect(state.zoom_percent, content="125")
+      inspect(state.focused, content="true")
+      inspect(state.always_on_top, content="true")
+      inspect(state.theme, content="dark")
+    }
+    None => fail("expected window state")
+  }
+}
+
+///|
+test "runtime event decodes a sequenced window close request" {
+  let event = decode_runtime_event_json(
+    (
+      #|{"type":"window_close_requested","window":"9","request_id":"42"}
+    ),
+  )
+  debug_inspect(event.window_id(), content="Some(9)")
+  debug_inspect(event.window_close_request(), content="Some(42)")
+  assert_true(event.window_state_change() is None)
+}
+
+///|
 test "window close rejects further use and remains destroyable" {
   let runtime = Runtime::new()
   let window = Window::new(runtime)
@@ -339,30 +376,42 @@ test "typed configs generate stable JSON for native ABI" {
     title="Typed",
     width=320,
     height=240,
-    bridge=BridgeConfig::new(ops=["ext:app/ping"]),
+    browser=BrowserPolicy::new(
+      navigation=BrowserPolicyMode::Ask,
+      popup=BrowserPolicyMode::Ask,
+      download=BrowserPolicyMode::Ask,
+      certificate=BrowserPolicyMode::Ask,
+      media=BrowserPolicyMode::Ask,
+      devtools=true,
+    ),
+    bridge=BridgeConfig::new(grants=[
+      BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
+    ]),
   )
   let window_json = window_config.to_json_string()
   assert_true(window_json.contains("\"abi_version\":1"))
   assert_true(window_json.contains("\"title\":\"Typed\""))
   assert_true(window_json.contains("\"width\":320"))
   assert_true(window_json.contains("\"height\":240"))
+  assert_true(window_json.contains("\"navigation\":\"ask\""))
+  assert_true(window_json.contains("\"popup\":\"ask\""))
+  assert_true(window_json.contains("\"devtools\":true"))
   assert_true(window_json.contains("\"bridge\""))
-  let bridge_config = BridgeConfig::new(ops=["ext:app/ping"])
+  let bridge_config = BridgeConfig::new(grants=[
+    BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
+  ])
   let bridge_json = bridge_config.to_json_string()
-  assert_true(bridge_json.contains("\"abi_version\":1"))
+  assert_true(bridge_json.contains("\"abi_version\":2"))
   assert_true(bridge_json.contains("\"namespace\":\"__MoonBit__\""))
-  assert_true(bridge_json.contains("\"mode\":\"app_only\""))
+  assert_true(bridge_json.contains("\"source_origin\":\"app\""))
   assert_true(bridge_json.contains("\"name\":\"ext:app/ping\""))
   assert_true(!bridge_json.contains("\"dev_bootstrap_script\""))
-  let dev_bridge_json = BridgeConfig::new(
-    ops=["ext:app/ping"],
-    dev_origins=["http://localhost:5173"],
-    initialization_units=[
+  let dev_bridge_json = BridgeConfig::new(grants=[
+    BridgeGrantConfig::new("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
       BridgeInitializationUnit::new("test", "dev", "window.__protonDev = true;"),
-    ],
-  ).to_json_string()
-  assert_true(dev_bridge_json.contains("\"mode\":\"app_and_dev_origins\""))
-  assert_true(dev_bridge_json.contains("\"dev_origins\""))
+    ]),
+  ]).to_json_string()
+  assert_true(dev_bridge_json.contains("\"grants\""))
   assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
   assert_true(dev_bridge_json.contains("\"initialization_units\""))
   assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
@@ -391,11 +440,91 @@ test "runtime event decodes menu command payload" {
 }
 
 ///|
+test "runtime event decodes browser control requests" {
+  let navigation = decode_runtime_event_json(
+    "{\"type\":\"browser_navigation_requested\",\"window\":\"7\",\"request_id\":\"11\",\"url\":\"https://example.com/next\",\"method\":\"POST\",\"user_gesture\":true,\"redirect\":false}",
+  )
+  match navigation.browser_request() {
+    Some(Navigation(request_id~, url~, http_method~, user_gesture~, redirect~)) => {
+      assert_eq(request_id, 11L)
+      assert_eq(url, "https://example.com/next")
+      assert_eq(http_method, "POST")
+      assert_true(user_gesture)
+      assert_false(redirect)
+    }
+    _ => fail("expected navigation request")
+  }
+  let popup = decode_runtime_event_json(
+    "{\"type\":\"browser_popup_requested\",\"window\":\"7\",\"request_id\":\"12\",\"url\":\"https://example.com/popup\",\"disposition\":4,\"user_gesture\":false}",
+  )
+  match popup.browser_request() {
+    Some(Popup(request_id~, url~, disposition~, user_gesture~)) => {
+      assert_eq(request_id, 12L)
+      assert_eq(url, "https://example.com/popup")
+      assert_eq(disposition, 4)
+      assert_false(user_gesture)
+    }
+    _ => fail("expected popup request")
+  }
+  let download = decode_runtime_event_json(
+    "{\"type\":\"browser_download_requested\",\"window\":\"7\",\"request_id\":\"13\",\"download_id\":9,\"url\":\"https://example.com/file\",\"suggested_name\":\"file.txt\"}",
+  )
+  match download.browser_request() {
+    Some(Download(request_id~, download_id~, url~, suggested_name~)) => {
+      assert_eq(request_id, 13L)
+      assert_eq(download_id, 9)
+      assert_eq(url, "https://example.com/file")
+      assert_eq(suggested_name, "file.txt")
+    }
+    _ => fail("expected download request")
+  }
+  let certificate = decode_runtime_event_json(
+    "{\"type\":\"browser_certificate_error\",\"window\":\"7\",\"request_id\":\"14\",\"url\":\"https://expired.example\",\"error\":-201}",
+  )
+  match certificate.browser_request() {
+    Some(Certificate(request_id~, url~, error_code~)) => {
+      assert_eq(request_id, 14L)
+      assert_eq(url, "https://expired.example")
+      assert_eq(error_code, -201)
+    }
+    _ => fail("expected certificate request")
+  }
+  let media = decode_runtime_event_json(
+    "{\"type\":\"browser_media_permission_requested\",\"window\":\"7\",\"request_id\":\"15\",\"url\":\"https://example.com\",\"permissions\":3}",
+  )
+  match media.browser_request() {
+    Some(Media(request_id~, origin~, permissions~)) => {
+      assert_eq(request_id, 15L)
+      assert_eq(origin, "https://example.com")
+      assert_eq(permissions, 3)
+    }
+    _ => fail("expected media permission request")
+  }
+}
+
+///|
+test "runtime event decodes browser download progress" {
+  let event = decode_runtime_event_json(
+    "{\"type\":\"browser_download_updated\",\"window\":\"7\",\"download_id\":9,\"download_state\":\"progress\",\"received_bytes\":\"1024\",\"total_bytes\":\"4096\",\"percent\":25}",
+  )
+  match event.browser_download_update() {
+    Some(update) => {
+      assert_eq(update.download_id, 9)
+      assert_eq(update.state, "progress")
+      assert_eq(update.received_bytes, 1024L)
+      assert_eq(update.total_bytes, 4096L)
+      assert_eq(update.percent, 25)
+    }
+    None => fail("expected download update")
+  }
+}
+
+///|
 test "bridge request keeps transport metadata outside the payload" {
   let request = decode_bridge_request_json(
     "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
     "\"op\":\"ext:add/sum\",\"payload\":{\"left\":20,\"right\":22}," +
-    "\"page_instance\":\"page-1\"}",
+    "\"page_instance\":\"page-1\",\"source_origin\":\"app\"}",
   )
   inspect(request.request_id(), content="7")
   inspect(request.window(), content="11")
@@ -405,6 +534,7 @@ test "bridge request keeps transport metadata outside the payload" {
     Json::object({ "left": Json::number(20), "right": Json::number(22) }),
   )
   assert_eq(request.page_instance(), Some("page-1"))
+  assert_eq(request.source_origin(), "app")
 }
 
 ///|
@@ -417,17 +547,15 @@ test "bridge ABI wrappers validate config and poll empty queue" {
   let window = Window::new(
     runtime,
     config=WindowConfig::new(
-      bridge=BridgeConfig::new(
-        ops=["ext:app/ping"],
-        dev_origins=["http://localhost:5173"],
-        initialization_units=[
+      bridge=BridgeConfig::new(grants=[
+        BridgeGrantConfig::new("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
           BridgeInitializationUnit::new(
             "test",
             "large",
             large_script.to_string(),
           ),
-        ],
-      ),
+        ]),
+      ]),
     ),
   )
   match runtime.poll_event() {
@@ -440,7 +568,7 @@ test "bridge ABI wrappers validate config and poll empty queue" {
     Window::new(
       runtime,
       config=WindowConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":{\"abi_version\":1,\"namespace\":\"Other\",\"ops\":[],\"extensions\":[]}}",
+        "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":{\"abi_version\":2,\"namespace\":\"Other\",\"grants\":[]}}",
       ),
     )
   })
@@ -470,55 +598,42 @@ test "bridge config rejects unsafe schema variants" {
   let runtime = Runtime::new()
   let cases = [
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"debug\":true}",
+      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"grants\":[]}", "abi_version must be set to 2",
+    ),
+    (
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"debug\":true}",
       "unknown field: debug",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[{\"name\":\"bad\\nname\"}]}",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[{\"name\":\"bad\\nname\"}],\"extensions\":[],\"initialization_units\":[]}]}",
       "op name is invalid",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"max_payload_bytes\":0}",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"max_payload_bytes\":0}",
       "max_payload_bytes",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"request_timeout_ms\":0}",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"request_timeout_ms\":0}",
       "request_timeout_ms",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"unknown\"},\"ops\":[]}",
-      "origin_policy.mode",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"file://tmp\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",
+      "source_origin",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_only\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[]}",
-      "dev_origins requires",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"http://localhost:5173/app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",
+      "source_origin",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[]},\"ops\":[]}",
-      "dev_origins must not be empty",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]},{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",
+      "duplicate source origins",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173/app\"]},\"ops\":[]}",
-      "invalid origin",
-    ),
-    (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://user@localhost:5173\"]},\"ops\":[]}",
-      "invalid origin",
-    ),
-    (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://local host:5173\"]},\"ops\":[]}",
-      "invalid origin",
-    ),
-    (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"file://tmp\"]},\"ops\":[]}",
-      "invalid origin",
-    ),
-    (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"origin_policy\":{\"mode\":\"app_and_dev_origins\",\"dev_origins\":[\"http://localhost:5173\"]},\"ops\":[],\"extensions\":[],\"initialization_units\":false}",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":false}]}",
       "initialization_units",
     ),
     (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"ops\":[],\"initialization_units\":[{\"owner\":\"test\",\"name\":\"setup\",\"source\":\"\",\"unexpected\":true}]}",
+      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[{\"owner\":\"test\",\"name\":\"setup\",\"source\":\"\",\"unexpected\":true}]}]}",
       "unknown field: unexpected",
     ),
   ]
@@ -750,6 +865,18 @@ test "runtime events decode typed launch inputs and notification results" {
   @debug.assert_eq(
     denied.notification_result(),
     Some(NativeNotificationResult::Failed("denied")),
+  )
+}
+
+///|
+test "app activation JSON keeps stable schema fields" {
+  inspect(
+    AppActivation::new(urls=["dev.proton://open?id=1"], files=["/tmp/a.txt"])
+    .to_json()
+    .stringify(),
+    content=(
+      #|{"abi_version":1,"urls":["dev.proton://open?id=1"],"files":["/tmp/a.txt"],"reopen":false}
+    ),
   )
 }
 

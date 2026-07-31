@@ -190,6 +190,33 @@ test "project config parses overlay titlebar style" {
 }
 
 ///|
+test "project config requires an identifier for single instance mode" {
+  let source =
+    #|single_instance = true
+    #|window = { title: "App", width: 900, height: 700 }
+    #|entry = { kind: "html", value: "<main>App</main>" }
+    #|
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_true(error.message().contains("identifier"))
+  assert_true(error.message().contains("single_instance"))
+}
+
+///|
+test "project config decodes single instance mode" {
+  let source =
+    #|identifier = "dev.proton.single-instance"
+    #|single_instance = true
+    #|window = { title: "App", width: 900, height: 700 }
+    #|entry = { kind: "html", value: "<main>App</main>" }
+    #|
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  assert_true(config.single_instance())
+  assert_eq(config.metadata().identifier, Some("dev.proton.single-instance"))
+}
+
+///|
 test "project config rejects unsupported titlebar style" {
   let source =
     #|window = {
@@ -384,7 +411,7 @@ test "project config aggregates unknown and duplicate top-level fields" {
     #|
     #|legacy_runtime = true
     #|unknown_thing = 1
-    #|permissions = {}
+    #|permissions = []
     #|debug = true
     #|debug = false
     #|
@@ -393,8 +420,71 @@ test "project config aggregates unknown and duplicate top-level fields" {
   })
   assert_eq(
     error.message(),
-    "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nmoon.proton field `permissions` is not supported in v1.\nDuplicate key 'debug' found in moon.proton.",
+    "Unexpected key 'legacy_runtime' found in moon.proton.\nUnexpected key 'unknown_thing' found in moon.proton.\nDuplicate key 'debug' found in moon.proton.",
   )
+}
+
+///|
+test "project config decodes scoped permission grants" {
+  let source =
+    #|window = { title: "Main", width: 900, height: 700 }
+    #|entry = { kind: "asset", value: "app.html" }
+    #|windows = [{
+    #|  id: "settings",
+    #|  open_on_start: false,
+    #|  window: { title: "Settings", width: 480, height: 360 },
+    #|  entry: { kind: "asset", value: "settings.html" },
+    #|}]
+    #|permissions = [
+    #|  {
+    #|    window: "main",
+    #|    origin: "app",
+    #|    extension: "justjavac/proton-fs",
+    #|    scope: {
+    #|      read: ["./data"],
+    #|      write: false,
+    #|    },
+    #|  },
+    #|  {
+    #|    window: "settings",
+    #|    origin: "entry",
+    #|    extension: "justjavac/proton-dialog",
+    #|  },
+    #|]
+    #|
+  let config = load_project_config_from_text(source, ".").config()
+  let grants = config.permissions()
+  assert_eq(grants.length(), 2)
+  assert_eq(grants[0].window, "main")
+  assert_eq(grants[0].origin, "app")
+  assert_eq(grants[0].extension, "justjavac/proton-fs")
+  match grants[0].scope {
+    Object(scope) => {
+      @debug.assert_eq(
+        scope.get("read"),
+        Some(Json::array([Json::string("./data")])),
+      )
+      @debug.assert_eq(scope.get("write"), Some(Json::boolean(false)))
+    }
+    _ => abort("expected permission scope object")
+  }
+  @debug.assert_eq(grants[1].scope, Json::empty_object())
+}
+
+///|
+test "project config rejects ambiguous permission grants" {
+  let source =
+    #|window = { title: "Main", width: 900, height: 700 }
+    #|entry = { kind: "asset", value: "app.html" }
+    #|permissions = [
+    #|  { window: "main", origin: "app", extension: "fs" },
+    #|  { window: "main", origin: "app", extension: "fs" },
+    #|]
+    #|
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, ".")
+  })
+  assert_eq(error.message(), "duplicate value in permissions: main/app/fs")
 }
 
 ///|
@@ -505,6 +595,7 @@ test "project config decodes secondary windows and macOS launch metadata" {
   let config = load_project_config_from_text(source, "target/proton-config").config()
   assert_eq(config.windows().length(), 1)
   assert_eq(config.windows()[0].id, "settings")
+  assert_true(config.windows()[0].open_on_start)
   let entries = config.entries()
   assert_eq(entries.length(), 2)
   assert_eq(entries[0], ProjectEntry::Html("<main>Main</main>"))

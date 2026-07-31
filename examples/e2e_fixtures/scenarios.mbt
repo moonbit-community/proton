@@ -44,7 +44,7 @@ pub fn run_async_extension_add() -> Unit {
       width=840,
       height=560,
       debug=true,
-    ).extension(async_add_extension())
+    ).expose(async_add_extension())
     app.run_or_abort()
   })
 }
@@ -148,8 +148,8 @@ pub fn run_sync_async_extensions() -> Unit {
         height=620,
         debug=true,
       )
-      .extension(sync_math_fixture_extension())
-      .extension(async_add_fixture_extension())
+      .expose(sync_math_fixture_extension())
+      .expose(async_add_fixture_extension())
     app.run_or_abort()
   })
 }
@@ -169,7 +169,7 @@ pub fn run_attribute_codegen_commands() -> Unit {
       width=840,
       height=560,
       debug=true,
-    ).extension(extension())
+    ).expose(extension())
     app.run_or_abort()
   })
 }
@@ -284,7 +284,7 @@ pub fn run_event_broadcast() -> Unit {
       width=900,
       height=620,
       debug=true,
-    ).extension(event_ticker_extension())
+    ).expose(event_ticker_extension())
     app.run_or_abort()
   })
 }
@@ -311,7 +311,7 @@ pub fn run_asset_sidecar() -> Unit {
       width=760,
       height=500,
       debug=true,
-    ).extension(asset_sidecar_extension())
+    ).expose(asset_sidecar_extension())
     app.run_or_abort()
   })
 }

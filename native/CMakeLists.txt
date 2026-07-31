@@ -46,6 +46,7 @@ if(PROTON_WITH_ENGINE)
     message(FATAL_ERROR "PROTON_WITH_ENGINE is not wired for this platform")
   endif()
   list(APPEND PROTON_ENGINE_SOURCES
+    src/engine/cef_common/browser_session.c
     src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_renderer.c
   )
@@ -58,6 +59,7 @@ if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
 endif()
 
 add_library(proton SHARED
+  src/proton_app_instance.c
   src/proton_config.c
   src/proton_json.c
   src/proton_state.c
@@ -235,6 +237,7 @@ if(PROTON_WITH_ENGINE)
       PkgConfig::PROTON_GTK3
       PkgConfig::PROTON_X11
       ${CMAKE_DL_LIBS}
+      m
     )
     target_link_options(proton INTERFACE
       "LINKER:-rpath-link,${PROTON_ENGINE_ROOT}/Release"
@@ -342,7 +345,7 @@ if(WIN32)
     _WIN32_WINNT=0x0A00
     WINVER=0x0A00
   )
-  target_link_libraries(proton PRIVATE comctl32 dwmapi)
+  target_link_libraries(proton PRIVATE advapi32 comctl32 dwmapi)
   set_target_properties(proton PROPERTIES PREFIX "")
 endif()
 
@@ -359,10 +362,16 @@ if(BUILD_TESTING)
     tests/proton_smoke.c
     src/engine/cef_common/bridge_lifecycle.c
     src/engine/cef_common/bridge_response.c
+    src/proton_app_instance.c
     src/proton_json.c
   )
   add_executable(proton_exports_smoke
     tests/proton_exports_smoke.c
+  )
+  add_executable(proton_bridge_policy_test
+    tests/bridge_policy_test.c
+    src/engine/cef_common/bridge_policy.c
+    src/proton_json.c
   )
 
   target_link_libraries(proton_smoke PRIVATE proton)
@@ -381,6 +390,7 @@ if(BUILD_TESTING)
     add_test(NAME proton_smoke COMMAND proton_smoke)
   endif()
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
+  add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)

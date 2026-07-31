@@ -62,7 +62,15 @@ typos do not silently fall back to defaults.
 
 Only one runtime may be active in a process. A second
 `proton_runtime_create_json` call returns `PROTON_ERR_ALREADY_INITIALIZED` until
-the current runtime is destroyed.
+the current runtime is destroyed. This process-local invariant is separate from
+operating-system application single-instance coordination.
+
+`proton_app_instance_acquire` claims a stable application identifier before CEF
+startup. A secondary process forwards a bounded, schema-validated activation
+over a current-user local socket or named pipe and waits for an acknowledgement.
+The primary process attaches the instance handle to its runtime; the listener
+thread only queues events and signals the runtime wake source, while the runtime
+owner thread drains those events through `proton_runtime_poll_event_json`.
 
 In the current v1 ABI, `proton_window_close` closes the native window and
 releases the Proton window handle through the same path as

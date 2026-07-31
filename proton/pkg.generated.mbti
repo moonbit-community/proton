@@ -59,7 +59,9 @@ pub(all) suberror AppConfigurationError {
   ExtensionAdaptationFailed(extension_id~ : String, error~ : @extension.ExtensionAdapterError)
   InvalidJavaScriptNamespace(js_namespace~ : String)
   InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)
-  InvalidDevelopmentUrl(url~ : String, reason~ : String)
+  InvalidEntryUrl(url~ : String, reason~ : String)
+  InvalidPermissionGrant(detail~ : String)
+  MissingPermissionGrant(extension_id~ : String)
 } derive(@debug.Debug)
 pub fn AppConfigurationError::message(Self) -> String
 
@@ -80,6 +82,7 @@ pub fn AppPathError::message(Self) -> String
 pub(all) suberror AppRunError {
   RunnerError(String)
   ConfigurationError(AppConfigurationError)
+  UnsupportedNativeFeature(feature~ : String)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
   RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
@@ -122,9 +125,19 @@ pub(all) suberror RuntimeWakeupError {
 } derive(@debug.Debug)
 pub fn RuntimeWakeupError::message(Self) -> String
 
+pub(all) suberror WindowSessionError {
+  UnknownWindow(id~ : String)
+  AlreadyOpen(id~ : String)
+  StaleWindow(id~ : String)
+  Cancelled
+  OperationFailed(action~ : String, error~ : @native.NativeError)
+  StartupFailed(id~ : String, error~ : AppRunError)
+} derive(@debug.Debug)
+pub fn WindowSessionError::message(Self) -> String
+
 // Types and methods
 type App
-pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @native.WindowSizeHint, titlebar_style? : @native.TitlebarStyle) -> Self
+pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @native.WindowSizeHint, titlebar_style? : @native.TitlebarStyle, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
@@ -134,13 +147,24 @@ pub fn App::entry_asset(Self, String) -> Self
 pub fn App::entry_file(Self, String) -> Self
 pub fn App::entry_html(Self, String) -> Self
 pub fn App::entry_url(Self, String) -> Self
+pub fn App::expose(Self, @extension.Extension, window? : String, origin? : @manifest.PermissionOrigin, scope? : Json) -> Self
 pub fn App::extension(Self, @extension.Extension, options? : Json) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
+pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
+pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
+pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
 pub fn App::on_launch_input(Self, async (@native.RuntimeLaunchInput) -> Unit noraise) -> Self
+pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
+pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
+pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
+pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
+pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
+pub fn App::permission(Self, @manifest.PermissionGrant) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
+pub fn App::single_instance(Self, String) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
@@ -148,24 +172,162 @@ pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> S
 
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
+  windows : WindowManager
 }
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
+pub fn ApplicationContext::windows(Self) -> WindowManager
+
+pub struct BrowserHandle {
+  id : String
+  native_id : Int64
+  load_browser_url : (String) -> Unit raise WindowSessionError
+  load_browser_html : (String, String) -> Unit raise WindowSessionError
+  eval_browser_script : (String) -> Unit raise WindowSessionError
+  send_browser_command : (String, Int?) -> Unit raise WindowSessionError
+}
+pub fn BrowserHandle::back(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::cancel_download(Self, Int) -> Unit raise WindowSessionError
+pub fn BrowserHandle::close_devtools(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::eval(Self, String) -> Unit raise WindowSessionError
+pub fn BrowserHandle::forward(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
+pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
+pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::window_id(Self) -> String
+
+pub(all) enum BrowserPermissionDecision {
+  Allow
+  Deny
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CertificateError {
+  url : String
+  error_code : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum DownloadDecision {
+  Deny
+  ShowSaveDialog
+  SaveTo(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DownloadEvent {
+  id : Int
+  state : String
+  received_bytes : Int64
+  total_bytes : Int64
+  percent : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DownloadRequest {
+  id : Int
+  url : String
+  suggested_name : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct MediaPermissionRequest {
+  origin : String
+  permissions : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum NavigationDecision {
+  Allow
+  Deny
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NavigationRequest {
+  url : String
+  http_method : String
+  user_gesture : Bool
+  redirect : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum PopupDecision {
+  Deny
+  OpenInCurrent
+  OpenInWindow(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PopupRequest {
+  url : String
+  disposition : Int
+  user_gesture : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum WindowCloseDecision {
+  Allow
+  Deny
+} derive(Eq, @debug.Debug)
 
 pub struct WindowContext {
   id : String
   window : @native.WindowRef
+  handle : WindowHandle
+  windows : WindowManager
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
 }
 pub fn WindowContext::events(Self) -> WindowEventEmitter
+pub fn WindowContext::handle(Self) -> WindowHandle
 pub fn WindowContext::id(Self) -> String
 pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn WindowContext::window(Self) -> @native.WindowRef
+pub fn WindowContext::windows(Self) -> WindowManager
+
+pub(all) enum WindowEvent {
+  StateChanged(@native.WindowState)
+} derive(Eq, @debug.Debug)
 
 pub struct WindowEventEmitter {
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
 }
 pub async fn[Payload : ToJson] WindowEventEmitter::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+
+pub struct WindowHandle {
+  id : String
+  native_id : Int64
+  show_window : () -> Unit raise WindowSessionError
+  hide_window : () -> Unit raise WindowSessionError
+  close_window : () -> Unit raise WindowSessionError
+  focus_window : () -> Unit raise WindowSessionError
+  set_window_title : (String) -> Unit raise WindowSessionError
+  set_window_size : (Int, Int) -> Unit raise WindowSessionError
+  minimize_window : () -> Unit raise WindowSessionError
+  maximize_window : () -> Unit raise WindowSessionError
+  restore_window : () -> Unit raise WindowSessionError
+  set_window_fullscreen : (Bool) -> Unit raise WindowSessionError
+  set_window_position : (Int, Int) -> Unit raise WindowSessionError
+  set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
+  set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
+  read_window_state : () -> @native.WindowState raise WindowSessionError
+  browser : BrowserHandle
+}
+pub fn WindowHandle::as_native_ref(Self) -> @native.WindowRef
+pub fn WindowHandle::browser(Self) -> BrowserHandle
+pub fn WindowHandle::close(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::hide(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::id(Self) -> String
+pub fn WindowHandle::maximize(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::minimize(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::restore(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_position(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::state(Self) -> @native.WindowState raise WindowSessionError
+
+pub struct WindowManager {
+  open_window : async (String) -> WindowHandle raise WindowSessionError
+  find_window : (String) -> WindowHandle?
+}
+pub fn WindowManager::find(Self, String) -> WindowHandle?
+pub async fn WindowManager::open(Self, String) -> WindowHandle raise WindowSessionError
 
 // Type aliases
 pub using @manifest {type AppEntry}
@@ -186,6 +348,12 @@ pub using @native {type MenuItem}
 
 pub using @native {type NativeError}
 
+pub using @manifest {type PermissionGrant}
+
+pub using @manifest {type PermissionOrigin}
+
+pub using @command {type PermissionScopeValidationError}
+
 pub using @native {type ProcessResult}
 
 pub using @native {type Runtime}
@@ -204,6 +372,11 @@ pub using @native {type Window}
 
 pub using @native {type WindowConfig}
 
+pub using @native {type WindowMonitor}
+
 pub using @native {type WindowSizeHint}
 
+pub using @native {type WindowState}
+
 // Traits
+

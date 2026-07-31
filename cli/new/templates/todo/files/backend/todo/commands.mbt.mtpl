@@ -1,10 +1,5 @@
 ///|
-using @shared {
-  create_todo,
-  delete_todo,
-  list_todos,
-  set_todo_completed,
-}
+using @shared {create_todo, delete_todo, list_todos, set_todo_completed}
 
 ///|
 #proton.command(contract=list_todos)

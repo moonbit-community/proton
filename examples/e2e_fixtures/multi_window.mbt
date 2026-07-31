@@ -117,7 +117,9 @@ fn create_multi_window(
         width=520,
         height=420,
         initial_url="about:blank",
-        bridge=@native.BridgeConfig::new(ops=["ext:multi/identify"]),
+        bridge=@native.BridgeConfig::new(grants=[
+          @native.BridgeGrantConfig::new("app", ops=["ext:multi/identify"]),
+        ]),
       ),
     )
   })

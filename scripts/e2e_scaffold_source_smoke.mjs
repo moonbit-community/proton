@@ -112,7 +112,6 @@ function verifyGeneratedTree() {
     "backend/app/moon.pkg",
     "backend/moon.mod",
     "backend/todo/backend.mbt",
-    "backend/todo/commands.g.mbt",
     "backend/todo/commands.mbt",
     "backend/todo/moon.pkg",
     "frontend/main/main.mbt",
@@ -150,7 +149,7 @@ function verifyGeneratedTree() {
   );
 }
 
-function verifyCommittedCodegen() {
+function materializeSourceSmokeCodegen() {
   const generated = path.join(
     projectDir,
     "backend",
@@ -162,11 +161,17 @@ function verifyCommittedCodegen() {
     "codegen",
     path.join(projectDir, "backend", "todo", "commands.mbt"),
     "-o",
+    generated,
+  ]);
+  localCli([
+    "codegen",
+    path.join(projectDir, "backend", "todo", "commands.mbt"),
+    "-o",
     fresh,
   ]);
   assert(
     fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
-    "generated commands.g.mbt is stale",
+    "source-smoke commands.g.mbt is not reproducible",
   );
 }
 
@@ -627,7 +632,18 @@ async function terminateApp() {
   }
 }
 
-async function runPackagedAppSmoke(executable) {
+function setFrontendPackageRevision(revision) {
+  const indexPath = path.join(frontendDir, "public", "index.html");
+  const source = fs.readFileSync(indexPath, "utf8");
+  const updated = source.replace(
+    /<body(?: data-package-revision="[^"]*")?>/,
+    `<body data-package-revision=${JSON.stringify(revision)}>`,
+  );
+  assert(updated !== source, `could not set frontend package revision ${revision}`);
+  fs.writeFileSync(indexPath, updated);
+}
+
+async function runPackagedAppSmoke(executable, expectedRevision) {
   const cdpPort = await choosePort(9322);
   const logPath = path.join(tempRoot, "proton-native.log");
   const packagedEnv = {
@@ -663,6 +679,11 @@ async function runPackagedAppSmoke(executable) {
   await client.open();
   try {
     await client.send("Runtime.enable");
+    await waitForExpression(
+      client,
+      `document.body.dataset.packageRevision === ${JSON.stringify(expectedRevision)}`,
+      `packaged frontend revision ${expectedRevision}`,
+    );
     await probeTodoBridge(client);
     await probeBridgeUnavailable(client);
     await closeApplication(cdpPort);
@@ -701,8 +722,8 @@ async function main() {
     "-y",
   ]);
   verifyGeneratedTree();
-  verifyCommittedCodegen();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
+  materializeSourceSmokeCodegen();
   connectLocalSourceModules();
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
@@ -713,6 +734,7 @@ async function main() {
     ["-C", "backend", "build", "app", "--target", "native", "--diagnostic-limit", "80"],
     { cwd: projectDir, env: runtimeEnv() },
   );
+  setFrontendPackageRevision("first");
   localCli(["-C", projectDir, "package", "--target", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
@@ -720,8 +742,18 @@ async function main() {
     }),
     timeout: 600000,
   });
-  const packaged = verifyPackagedApp();
-  await runPackagedAppSmoke(packaged.executable);
+  let packaged = verifyPackagedApp();
+  await runPackagedAppSmoke(packaged.executable, "first");
+  setFrontendPackageRevision("second");
+  localCli(["-C", projectDir, "package", "--target", "app", "--sign"], {
+    env: runtimeEnv({
+      PROTON_MACOS_ALLOW_ADHOC: "1",
+      PROTON_MACOS_SIGNING_IDENTITY: "-",
+    }),
+    timeout: 600000,
+  });
+  packaged = verifyPackagedApp();
+  await runPackagedAppSmoke(packaged.executable, "second");
   succeeded = true;
   console.log("Scaffold E2E passed.");
 }

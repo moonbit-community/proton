@@ -13,11 +13,12 @@ const source = fs.readFileSync(
 
 function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
   const calls = [];
+  const location = new URL(url);
   const context = vm.createContext({
     URL,
     Promise,
     clearTimeout,
-    location: { href: url },
+    location,
     setTimeout,
   });
   const install = vm.runInContext(source, context);
@@ -25,12 +26,13 @@ function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
     (action, id, name, payloadJson, pageInstance) =>
       calls.push({ action, id, name, payloadJson, pageInstance }),
     {
-      origin_policy: {
-        mode: "app_and_dev_origins",
-        dev_origins: ["http://localhost:5173"],
-      },
       request_timeout_ms: requestTimeoutMs,
-      extensions: [{ namespace: "add", apis: ["sum"] }],
+      grants: [{
+        source_origin: location.protocol === "proton:" ? "app" : location.origin,
+        ops: [{ name: "ext:add/sum" }],
+        extensions: [{ namespace: "add", apis: ["sum"] }],
+        initialization_units: [],
+      }],
     },
     "renderer-page-1",
   );
@@ -46,6 +48,13 @@ test("installs the public bridge synchronously", () => {
   assert.equal(typeof context.__MoonBit__.add.sum, "function");
   assert.equal("ready" in context.__MoonBit__, false);
   assert.equal(context.__protonNativeInvokeOp, undefined);
+});
+
+test("does not treat other custom-scheme hosts as the trusted app origin", () => {
+  assert.throws(
+    () => createBridge("proton://untrusted/"),
+    /no grant for this page source/,
+  );
 });
 
 test("settles one request through the private dispatcher", async () => {

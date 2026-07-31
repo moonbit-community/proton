@@ -142,7 +142,7 @@ pub fn run() -> Unit {
       width=920,
       height=680,
       debug=true,
-    ).extension(app_commands_extension())
+    ).expose(app_commands_extension())
     app.run_or_abort()
   })
 }

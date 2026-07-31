@@ -30,13 +30,15 @@
 #endif
 
 #define PROTON_MAX_BRIDGE_BYTES 1048576
+#define PROTON_BRIDGE_CONFIG_ABI_VERSION 2
 #define PROTON_MAX_BRIDGE_CONFIG_BYTES PROTON_MAX_BRIDGE_BYTES
 #define PROTON_MAX_BRIDGE_OPS 256
-#define PROTON_MAX_BRIDGE_DEV_ORIGINS 16
 #define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
 #define PROTON_MAX_BRIDGE_EXTENSIONS 128
 #define PROTON_MAX_BRIDGE_APIS 256
 #define PROTON_MAX_BRIDGE_INITIALIZATION_UNITS 256
+#define PROTON_MAX_BRIDGE_GRANTS 32
+#define PROTON_MAX_BRIDGE_SOURCE_ORIGIN_BYTES 512
 #define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
 
@@ -56,9 +58,70 @@ typedef struct {
   const char *config_name;
   const char *const *allowed_keys;
   size_t allowed_key_count;
+  int32_t expected_abi_version;
   bool has_abi_version;
   int32_t status;
 } proton_abi_validation_t;
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  int32_t status;
+} proton_browser_policy_validation_t;
+
+static bool proton_validate_browser_policy_field(
+    const char *key, proton_json_value_t value, void *user_data) {
+  proton_browser_policy_validation_t *validation =
+      (proton_browser_policy_validation_t *)user_data;
+  if (strcmp(key, "devtools") == 0) {
+    bool enabled = false;
+    if (!proton_json_read_bool(validation->doc, value, &enabled)) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT,
+          "window browser devtools field must be a boolean");
+      return false;
+    }
+    return true;
+  }
+  if (strcmp(key, "navigation") != 0 && strcmp(key, "popup") != 0 &&
+      strcmp(key, "download") != 0 && strcmp(key, "certificate") != 0 &&
+      strcmp(key, "media") != 0) {
+    char message[192];
+    snprintf(message, sizeof(message),
+             "window browser policy contains unknown field: %s", key);
+    validation->status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    return false;
+  }
+  char mode[16] = {0};
+  if (!proton_json_read_string(validation->doc, value, mode, sizeof(mode)) ||
+      (strcmp(mode, "allow") != 0 && strcmp(mode, "deny") != 0 &&
+       strcmp(mode, "ask") != 0)) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "window browser policy must be allow, deny, or ask");
+    return false;
+  }
+  if ((strcmp(key, "popup") == 0 || strcmp(key, "certificate") == 0 ||
+       strcmp(key, "media") == 0) &&
+      strcmp(mode, "allow") == 0) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "popup, certificate, and media policies cannot allow without review");
+    return false;
+  }
+  return true;
+}
+
+static bool proton_validate_browser_policy(const proton_json_doc_t *doc,
+                                           proton_json_value_t value) {
+  if (!proton_json_is_object(doc, value)) {
+    return false;
+  }
+  proton_browser_policy_validation_t validation = {doc, PROTON_OK};
+  bool iterated = proton_json_object_each(
+      doc, value, proton_validate_browser_policy_field, &validation);
+  return iterated && validation.status == PROTON_OK;
+}
 
 static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
                                            const char *config_name,
@@ -106,20 +169,17 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       }
     } else if (strcmp(key, "bridge") == 0) {
       valid = proton_json_is_object(doc, value);
+    } else if (strcmp(key, "browser") == 0) {
+      valid = proton_validate_browser_policy(doc, value);
     }
   } else if (strcmp(config_name, "bridge") == 0) {
     if (strcmp(key, "namespace") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
-    } else if (strcmp(key, "initialization_units") == 0) {
+    } else if (strcmp(key, "grants") == 0) {
       valid = proton_json_is_array(doc, value);
     } else if (strcmp(key, "max_payload_bytes") == 0 ||
                strcmp(key, "request_timeout_ms") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
-    } else if (strcmp(key, "origin_policy") == 0) {
-      valid = proton_json_is_object(doc, value);
-    } else if (strcmp(key, "ops") == 0 ||
-               strcmp(key, "extensions") == 0) {
-      valid = proton_json_is_array(doc, value);
     }
   } else if (strcmp(config_name, "bridge response") == 0) {
     if (strcmp(key, "request_id") == 0) {
@@ -159,11 +219,11 @@ static bool proton_validate_abi_field(const char *key,
     int32_t abi_version = 0;
     validation->has_abi_version = true;
     if (!proton_json_read_int32(validation->doc, value, &abi_version) ||
-        abi_version != PROTON_ABI_VERSION) {
+        abi_version != validation->expected_abi_version) {
       char message[160];
       snprintf(message, sizeof(message),
                "%s config abi_version must be set to %d",
-               validation->config_name, PROTON_ABI_VERSION);
+               validation->config_name, validation->expected_abi_version);
       validation->status =
           proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
       return false;
@@ -181,7 +241,8 @@ static int32_t proton_validate_abi_config(
     const char *config_json,
     const char *config_name,
     const char *const *allowed_keys,
-    size_t allowed_key_count) {
+    size_t allowed_key_count,
+    int32_t expected_abi_version) {
   if (config_json == NULL) {
     char message[128];
     snprintf(message, sizeof(message), "%s config_json is required",
@@ -212,7 +273,8 @@ static int32_t proton_validate_abi_config(
   }
 
   proton_abi_validation_t validation = {
-      &doc, config_name, allowed_keys, allowed_key_count, false, PROTON_OK};
+      &doc, config_name, allowed_keys, allowed_key_count,
+      expected_abi_version, false, PROTON_OK};
   bool valid = proton_json_object_each(&doc, root, proton_validate_abi_field,
                                        &validation);
   if (!valid && validation.status == PROTON_OK) {
@@ -225,7 +287,7 @@ static int32_t proton_validate_abi_config(
     char message[160];
     snprintf(message, sizeof(message),
              "%s config must contain \"abi_version\": %d", config_name,
-             PROTON_ABI_VERSION);
+             expected_abi_version);
     validation.status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
   }
   proton_json_dispose(&doc);
@@ -303,17 +365,15 @@ static const char *const proton_window_config_keys[] = {
     "size_hint",
     "titlebar_style",
     "bridge",
+    "browser",
 };
 
 static const char *const proton_bridge_config_keys[] = {
     "abi_version",
     "namespace",
-    "origin_policy",
-    "ops",
+    "grants",
     "max_payload_bytes",
     "request_timeout_ms",
-    "extensions",
-    "initialization_units",
 };
 
 static const char *const proton_bridge_response_keys[] = {
@@ -700,179 +760,11 @@ static bool proton_bridge_op_name_valid(const char *name) {
   }
   for (const char *cursor = name; *cursor != '\0'; cursor++) {
     unsigned char ch = (unsigned char)*cursor;
-    if (ch <= 0x20 || ch >= 0x7f) {
+    if (ch <= 0x20 || ch >= 0x7f || ch == '"' || ch == '\\') {
       return false;
     }
   }
   return true;
-}
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  bool has_mode;
-  bool has_dev_origins;
-  char mode[32];
-  int32_t status;
-} proton_bridge_origin_policy_validation_t;
-
-static bool proton_bridge_dev_origin_valid(const char *origin) {
-  const char *authority = NULL;
-  if (origin == NULL) {
-    return false;
-  }
-  if (strncmp(origin, "http://", 7) == 0) {
-    authority = origin + 7;
-  } else if (strncmp(origin, "https://", 8) == 0) {
-    authority = origin + 8;
-  } else {
-    return false;
-  }
-  if (*authority == '\0') {
-    return false;
-  }
-  for (const char *cursor = authority; *cursor != '\0'; cursor++) {
-    unsigned char ch = (unsigned char)*cursor;
-    if (ch <= 0x20 || ch >= 0x7f || ch == '/' || ch == '?' || ch == '#' ||
-        ch == '@' || ch == '"' || ch == '\\') {
-      return false;
-    }
-  }
-  return true;
-}
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  size_t count;
-  int32_t status;
-} proton_bridge_dev_origins_validation_t;
-
-static bool proton_validate_bridge_dev_origin_item(proton_json_value_t value,
-                                                   void *user_data) {
-  proton_bridge_dev_origins_validation_t *validation =
-      (proton_bridge_dev_origins_validation_t *)user_data;
-  if (validation->count >= PROTON_MAX_BRIDGE_DEV_ORIGINS) {
-    validation->status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "bridge origin_policy.dev_origins array is too large");
-    return false;
-  }
-  char origin[PROTON_MAX_PATH_BYTES];
-  if (!proton_json_read_string(validation->doc, value, origin, sizeof(origin)) ||
-      !proton_bridge_dev_origin_valid(origin)) {
-    validation->status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "bridge origin_policy.dev_origins contains invalid origin");
-    return false;
-  }
-  validation->count++;
-  return true;
-}
-
-static int32_t proton_validate_bridge_dev_origins(
-    const proton_json_doc_t *doc,
-    proton_json_value_t value,
-    size_t *out_count) {
-  if (!proton_json_is_array(doc, value)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge origin_policy.dev_origins must be an array");
-  }
-  proton_bridge_dev_origins_validation_t validation = {doc, 0, PROTON_OK};
-  if (!proton_json_array_each(doc, value,
-                              proton_validate_bridge_dev_origin_item,
-                              &validation) &&
-      validation.status == PROTON_OK) {
-    validation.status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "bridge origin_policy.dev_origins array is malformed");
-  }
-  if (out_count != NULL) {
-    *out_count = validation.count;
-  }
-  return validation.status;
-}
-
-static bool proton_validate_bridge_origin_policy_field(
-    const char *key,
-    proton_json_value_t value,
-    void *user_data) {
-  proton_bridge_origin_policy_validation_t *validation =
-      (proton_bridge_origin_policy_validation_t *)user_data;
-  if (strcmp(key, "mode") == 0) {
-    char mode[32];
-    if (!proton_json_read_string(validation->doc, value, mode, sizeof(mode)) ||
-        (strcmp(mode, "app_only") != 0 &&
-         strcmp(mode, "app_and_dev_origins") != 0)) {
-      validation->status = proton_set_error(
-          PROTON_ERR_INVALID_ARGUMENT,
-          "bridge origin_policy.mode must be app_only or app_and_dev_origins");
-      return false;
-    }
-    snprintf(validation->mode, sizeof(validation->mode), "%s", mode);
-    validation->has_mode = true;
-    return true;
-  }
-  if (strcmp(key, "dev_origins") == 0) {
-    size_t count = 0;
-    int32_t status =
-        proton_validate_bridge_dev_origins(validation->doc, value, &count);
-    if (status != PROTON_OK) {
-      validation->status = status;
-      return false;
-    }
-    validation->has_dev_origins = true;
-    if (count == 0) {
-      validation->status = proton_set_error(
-          PROTON_ERR_INVALID_ARGUMENT,
-          "bridge origin_policy.dev_origins must not be empty");
-      return false;
-    }
-    return true;
-  }
-  {
-    char message[160];
-    snprintf(message, sizeof(message),
-             "bridge origin_policy contains unknown field: %s", key);
-    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    return false;
-  }
-}
-
-static int32_t proton_validate_bridge_origin_policy(
-    const proton_json_doc_t *doc,
-    proton_json_value_t value) {
-  if (!proton_json_is_object(doc, value)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge origin_policy must be an object");
-  }
-  proton_bridge_origin_policy_validation_t validation = {
-      doc, false, false, "", PROTON_OK};
-  if (!proton_json_object_each(doc, value,
-                               proton_validate_bridge_origin_policy_field,
-                               &validation) &&
-      validation.status == PROTON_OK) {
-    validation.status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT, "bridge origin_policy has an invalid field");
-  }
-  if (validation.status != PROTON_OK) {
-    return validation.status;
-  }
-  if (!validation.has_mode) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge origin_policy requires mode");
-  }
-  if (strcmp(validation.mode, "app_only") == 0 &&
-      validation.has_dev_origins) {
-    return proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "bridge origin_policy.dev_origins requires app_and_dev_origins mode");
-  }
-  if (strcmp(validation.mode, "app_and_dev_origins") == 0 &&
-      !validation.has_dev_origins) {
-    return proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "bridge origin_policy.app_and_dev_origins requires dev_origins");
-  }
-  return PROTON_OK;
 }
 
 typedef struct {
@@ -1205,6 +1097,159 @@ static int32_t proton_validate_bridge_initialization_units(
   return validation.status;
 }
 
+typedef struct {
+  const proton_json_doc_t *doc;
+  bool has_source_origin;
+  bool has_ops;
+  bool has_extensions;
+  bool has_initialization_units;
+  char source_origin[PROTON_MAX_BRIDGE_SOURCE_ORIGIN_BYTES];
+  int32_t status;
+} proton_bridge_grant_validation_t;
+
+static bool proton_bridge_source_origin_valid(const char *origin) {
+  const char *authority = NULL;
+  if (origin == NULL) {
+    return false;
+  }
+  if (strncmp(origin, "http://", 7) == 0) {
+    authority = origin + 7;
+  } else if (strncmp(origin, "https://", 8) == 0) {
+    authority = origin + 8;
+  } else {
+    return false;
+  }
+  if (*authority == '\0') {
+    return false;
+  }
+  for (const char *cursor = authority; *cursor != '\0'; cursor++) {
+    unsigned char ch = (unsigned char)*cursor;
+    if (ch <= 0x20 || ch >= 0x7f || ch == '/' || ch == '?' || ch == '#' ||
+        ch == '@' || ch == '"' || ch == '\\') {
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool proton_validate_bridge_grant_field(
+    const char *key, proton_json_value_t value, void *user_data) {
+  proton_bridge_grant_validation_t *validation =
+      (proton_bridge_grant_validation_t *)user_data;
+  if (strcmp(key, "source_origin") == 0) {
+    if (!proton_json_read_string(validation->doc, value,
+                                 validation->source_origin,
+                                 sizeof(validation->source_origin)) ||
+        (strcmp(validation->source_origin, "app") != 0 &&
+         !proton_bridge_source_origin_valid(validation->source_origin))) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT,
+          "bridge grant source_origin must be app or a canonical HTTP origin");
+      return false;
+    }
+    validation->has_source_origin = true;
+    return true;
+  }
+  if (strcmp(key, "ops") == 0) {
+    validation->status = proton_validate_bridge_ops(validation->doc, value);
+    validation->has_ops = validation->status == PROTON_OK;
+    return validation->has_ops;
+  }
+  if (strcmp(key, "extensions") == 0) {
+    validation->status =
+        proton_validate_bridge_extensions(validation->doc, value);
+    validation->has_extensions = validation->status == PROTON_OK;
+    return validation->has_extensions;
+  }
+  if (strcmp(key, "initialization_units") == 0) {
+    validation->status =
+        proton_validate_bridge_initialization_units(validation->doc, value);
+    validation->has_initialization_units = validation->status == PROTON_OK;
+    return validation->has_initialization_units;
+  }
+  {
+    char message[192];
+    snprintf(message, sizeof(message),
+             "bridge grant contains unknown field: %s", key);
+    validation->status =
+        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+    return false;
+  }
+}
+
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t count;
+  char source_origins[PROTON_MAX_BRIDGE_GRANTS]
+                     [PROTON_MAX_BRIDGE_SOURCE_ORIGIN_BYTES];
+  int32_t status;
+} proton_bridge_grants_validation_t;
+
+static bool proton_validate_bridge_grant_item(proton_json_value_t value,
+                                              void *user_data) {
+  proton_bridge_grants_validation_t *validation =
+      (proton_bridge_grants_validation_t *)user_data;
+  if (validation->count >= PROTON_MAX_BRIDGE_GRANTS) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge grants array is too large");
+    return false;
+  }
+  if (!proton_json_is_object(validation->doc, value)) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge grant must be an object");
+    return false;
+  }
+  proton_bridge_grant_validation_t grant = {
+      validation->doc, false, false, false, false, "", PROTON_OK};
+  if (!proton_json_object_each(validation->doc, value,
+                               proton_validate_bridge_grant_field, &grant) &&
+      grant.status == PROTON_OK) {
+    grant.status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                                    "bridge grant is malformed");
+  }
+  if (grant.status != PROTON_OK) {
+    validation->status = grant.status;
+    return false;
+  }
+  if (!grant.has_source_origin || !grant.has_ops || !grant.has_extensions ||
+      !grant.has_initialization_units) {
+    validation->status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "bridge grant requires source_origin, ops, extensions, and initialization_units");
+    return false;
+  }
+  for (size_t i = 0; i < validation->count; i++) {
+    if (strcmp(validation->source_origins[i], grant.source_origin) == 0) {
+      validation->status = proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT,
+          "bridge grants must not contain duplicate source origins");
+      return false;
+    }
+  }
+  snprintf(validation->source_origins[validation->count],
+           sizeof(validation->source_origins[validation->count]), "%s",
+           grant.source_origin);
+  validation->count++;
+  return true;
+}
+
+static int32_t proton_validate_bridge_grants(
+    const proton_json_doc_t *doc, proton_json_value_t value) {
+  if (!proton_json_is_array(doc, value)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge grants must be an array");
+  }
+  proton_bridge_grants_validation_t validation = {
+      .doc = doc, .count = 0, .status = PROTON_OK};
+  if (!proton_json_array_each(doc, value, proton_validate_bridge_grant_item,
+                              &validation) &&
+      validation.status == PROTON_OK) {
+    validation.status = proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT, "bridge grants array is malformed");
+  }
+  return validation.status;
+}
+
 int32_t proton_config_validate_bridge(const char *bridge_json) {
   if (bridge_json != NULL && strlen(bridge_json) > PROTON_MAX_BRIDGE_CONFIG_BYTES) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -1212,7 +1257,8 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
   }
   int32_t status = proton_validate_abi_config(
       bridge_json, "bridge", proton_bridge_config_keys,
-      sizeof(proton_bridge_config_keys) / sizeof(proton_bridge_config_keys[0]));
+      sizeof(proton_bridge_config_keys) / sizeof(proton_bridge_config_keys[0]),
+      PROTON_BRIDGE_CONFIG_ABI_VERSION);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1237,28 +1283,12 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
     }
   }
 
-  if (proton_json_object_get(&doc, root, "origin_policy", &value)) {
-    status = proton_validate_bridge_origin_policy(&doc, value);
-    if (status != PROTON_OK) {
-      proton_json_dispose(&doc);
-      return status;
-    }
-  }
-
-  if (proton_json_object_get(&doc, root, "initialization_units", &value)) {
-    status = proton_validate_bridge_initialization_units(&doc, value);
-    if (status != PROTON_OK) {
-      proton_json_dispose(&doc);
-      return status;
-    }
-  }
-
-  if (!proton_json_object_get(&doc, root, "ops", &value)) {
+  if (!proton_json_object_get(&doc, root, "grants", &value)) {
     proton_json_dispose(&doc);
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge config requires ops");
+                            "bridge config requires grants");
   }
-  status = proton_validate_bridge_ops(&doc, value);
+  status = proton_validate_bridge_grants(&doc, value);
   if (status != PROTON_OK) {
     proton_json_dispose(&doc);
     return status;
@@ -1284,17 +1314,6 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
     }
   }
 
-  if (!proton_json_object_get(&doc, root, "extensions", &value)) {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge config requires extensions");
-  }
-  status = proton_validate_bridge_extensions(&doc, value);
-  if (status != PROTON_OK) {
-    proton_json_dispose(&doc);
-    return status;
-  }
-
   proton_json_dispose(&doc);
   return PROTON_OK;
 }
@@ -1306,7 +1325,8 @@ int32_t proton_config_validate_menu(const char *menu_json) {
   }
   int32_t status = proton_validate_abi_config(
       menu_json, "menu", proton_menu_config_keys,
-      sizeof(proton_menu_config_keys) / sizeof(proton_menu_config_keys[0]));
+      sizeof(proton_menu_config_keys) / sizeof(proton_menu_config_keys[0]),
+      PROTON_ABI_VERSION);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1337,7 +1357,8 @@ int32_t proton_config_validate_bridge_response(const char *response_json) {
   int32_t status = proton_validate_abi_config(
       response_json, "bridge response", proton_bridge_response_keys,
       sizeof(proton_bridge_response_keys) /
-          sizeof(proton_bridge_response_keys[0]));
+          sizeof(proton_bridge_response_keys[0]),
+      PROTON_ABI_VERSION);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1371,7 +1392,8 @@ int32_t proton_config_validate_bridge_response(const char *response_json) {
 int32_t proton_config_validate_bridge_event(const char *event_json) {
   int32_t status = proton_validate_abi_config(
       event_json, "bridge event", proton_bridge_event_keys,
-      sizeof(proton_bridge_event_keys) / sizeof(proton_bridge_event_keys[0]));
+      sizeof(proton_bridge_event_keys) / sizeof(proton_bridge_event_keys[0]),
+      PROTON_ABI_VERSION);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1417,7 +1439,8 @@ int32_t proton_config_validate_bridge_event(const char *event_json) {
 int32_t proton_config_validate_runtime(const char *config_json) {
   return proton_validate_abi_config(
       config_json, "runtime", proton_runtime_config_keys,
-      sizeof(proton_runtime_config_keys) / sizeof(proton_runtime_config_keys[0]));
+      sizeof(proton_runtime_config_keys) / sizeof(proton_runtime_config_keys[0]),
+      PROTON_ABI_VERSION);
 }
 
 int32_t proton_config_validate_window(const char *config_json,
@@ -1425,7 +1448,8 @@ int32_t proton_config_validate_window(const char *config_json,
                                       int32_t *out_height) {
   int32_t status = proton_validate_abi_config(
       config_json, "window", proton_window_config_keys,
-      sizeof(proton_window_config_keys) / sizeof(proton_window_config_keys[0]));
+      sizeof(proton_window_config_keys) / sizeof(proton_window_config_keys[0]),
+      PROTON_ABI_VERSION);
   if (status != PROTON_OK) {
     return status;
   }

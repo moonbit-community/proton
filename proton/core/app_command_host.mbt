@@ -48,6 +48,10 @@ pub async fn RuntimeWakeSignal::wait_for_change(
 /// Request-scoped context for one bridged app command dispatch.
 pub struct AppCommandRequestContext {
   window : Int64
+  window_id : String
+  source_origin : String
+  permission_extension : String?
+  permission_scope_value : Json?
   tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
@@ -58,6 +62,10 @@ pub struct AppCommandRequestContext {
 pub fn AppCommandRequestContext::new(
   window : Int64,
   tasks : @async.TaskGroup[Unit],
+  window_id? : String = "main",
+  source_origin? : String = "app",
+  permission_extension? : String,
+  permission_scope? : Json,
   wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
   emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
     _route,
@@ -67,7 +75,16 @@ pub fn AppCommandRequestContext::new(
 
   },
 ) -> AppCommandRequestContext {
-  AppCommandRequestContext::{ window, tasks, wake_signal, emit_event }
+  AppCommandRequestContext::{
+    window,
+    window_id,
+    source_origin,
+    permission_extension,
+    permission_scope_value: permission_scope.map(clone_permission_json),
+    tasks,
+    wake_signal,
+    emit_event,
+  }
 }
 
 ///|
@@ -97,6 +114,49 @@ pub fn AppCommandRequestContext::window(
   self : AppCommandRequestContext,
 ) -> Int64 {
   self.window
+}
+
+///|
+pub fn AppCommandRequestContext::window_id(
+  self : AppCommandRequestContext,
+) -> String {
+  self.window_id
+}
+
+///|
+pub fn AppCommandRequestContext::source_origin(
+  self : AppCommandRequestContext,
+) -> String {
+  self.source_origin
+}
+
+///|
+/// Returns this request's extension-specific permission scope.
+pub fn AppCommandRequestContext::permission_scope(
+  self : AppCommandRequestContext,
+  extension_id : String,
+) -> Json raise CommandPermissionError {
+  match (self.permission_extension, self.permission_scope_value) {
+    (Some(actual), Some(scope)) if actual == extension_id =>
+      clone_permission_json(scope)
+    (Some(actual), _) => raise Foreign(expected=extension_id, actual~)
+    _ => raise Missing(extension_id~)
+  }
+}
+
+///|
+fn clone_permission_json(value : Json) -> Json {
+  match value {
+    Array(items) => Json::array(items.map(clone_permission_json))
+    Object(object) => {
+      let copy : Map[String, Json] = Map([])
+      for key, item in object {
+        copy[key] = clone_permission_json(item)
+      }
+      Json::object(copy)
+    }
+    _ => value
+  }
 }
 
 ///|

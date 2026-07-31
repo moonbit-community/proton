@@ -21,11 +21,23 @@ pub using @native {
   type TitlebarStyle,
   type Window,
   type WindowConfig,
+  type WindowMonitor,
   type WindowSizeHint,
+  type WindowState,
 }
 
 ///|
-pub using @proton_command {type CommandContext, type CommandRegistrar}
+pub using @proton_command {
+  type CommandContext,
+  type CommandRegistrar,
+  type PermissionScopeValidationError,
+}
 
 ///|
 pub type AppEntry = @manifest.AppEntry
+
+///|
+pub type PermissionGrant = @manifest.PermissionGrant
+
+///|
+pub type PermissionOrigin = @manifest.PermissionOrigin

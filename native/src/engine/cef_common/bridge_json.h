@@ -128,15 +128,22 @@ static bool proton_engine_bridge_op_match_item(proton_json_value_t value,
   return true;
 }
 
-static int proton_engine_bridge_config_allows_op(const char *bridge_config_json,
-                                                 const char *op) {
-  if (!proton_engine_bridge_op_is_valid(op) || bridge_config_json == NULL) {
+static int proton_engine_bridge_config_allows_op(
+    const char *bridge_config_json, const char *url, const char *op) {
+  if (!proton_engine_bridge_op_is_valid(op) || bridge_config_json == NULL ||
+      url == NULL) {
+    return 0;
+  }
+  char *grant_json =
+      proton_engine_bridge_config_copy_grant(bridge_config_json, url);
+  if (grant_json == NULL) {
     return 0;
   }
   proton_json_doc_t doc;
   proton_json_value_t root;
   proton_json_value_t ops;
-  if (!proton_json_parse(&doc, bridge_config_json)) {
+  if (!proton_json_parse(&doc, grant_json)) {
+    free(grant_json);
     return 0;
   }
   proton_engine_bridge_op_match_t match = {&doc, op, 0};
@@ -147,6 +154,7 @@ static int proton_engine_bridge_config_allows_op(const char *bridge_config_json,
                            &match);
   }
   proton_json_dispose(&doc);
+  free(grant_json);
   return match.allowed;
 }
 

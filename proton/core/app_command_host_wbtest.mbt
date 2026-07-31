@@ -107,6 +107,42 @@ async test "request context observes its shared runtime wake signal" {
 }
 
 ///|
+async test "request context exposes only its owning extension scope" {
+  let original : Map[String, Json] = { "root": Json::string("./data") }
+  @async.with_task_group(group => {
+    let context = AppCommandRequestContext::new(
+      7L,
+      group,
+      window_id="secondary",
+      source_origin="https://example.test",
+      permission_extension="examples/fs",
+      permission_scope=Json::object(original),
+    )
+    original["root"] = Json::string("./mutated")
+    assert_eq(context.window_id(), "secondary")
+    assert_eq(context.source_origin(), "https://example.test")
+    inspect(
+      context.permission_scope("examples/fs").stringify(),
+      content="{\"root\":\"./data\"}",
+    )
+    let foreign = try {
+      ignore(context.permission_scope("examples/shell"))
+      None
+    } catch {
+      error => Some(error)
+    }
+    match foreign {
+      Some(CommandPermissionError::Foreign(expected~, actual~)) => {
+        assert_eq(expected, "examples/shell")
+        assert_eq(actual, "examples/fs")
+      }
+      Some(error) => fail(@debug.render(Repr(error)))
+      None => fail("expected foreign extension scope access to fail")
+    }
+  })
+}
+
+///|
 async test "request context emits through its page-scoped destination" {
   let emitted_route = Ref("")
   let emitted_name = Ref("")

@@ -6,7 +6,6 @@ fn build_loaded_manifest_from_json(
   allow_extensions? : Bool = false,
 ) -> LoadedAppManifest raise BootstrapError {
   let object = expect_object(json, "app manifest")
-  reject_unsupported_permissions_field(object)
   LoadedAppManifest::new(
     build_app_manifest_from_object(object, base_dir, allow_extensions~),
     base_dir~,
@@ -35,6 +34,7 @@ fn build_app_manifest_from_object(
     object,
     allow_extensions~,
   )
+  let permissions = build_permission_grants_from_object(object, windows)
   let debug = build_debug_value_from_object(object)
   @manifest.AppManifest::new(
     window,
@@ -42,6 +42,7 @@ fn build_app_manifest_from_object(
     debug=int_or_default(debug, 0),
     windows~,
     extensions~,
+    permissions~,
   )
 }
 
@@ -96,14 +97,6 @@ fn build_debug_value_from_object(
   object : Map[String, Json],
 ) -> Int? raise BootstrapError {
   decode_optional_int(optional_field(object, "debug"), "app manifest.debug")
-}
-
-///|
-/// Rejects unsupported permissions fields on the root manifest object.
-fn reject_unsupported_permissions_field(
-  object : Map[String, Json],
-) -> Unit raise BootstrapError {
-  reject_unsupported_permissions(optional_field(object, "permissions"))
 }
 
 ///|
@@ -229,7 +222,17 @@ fn build_app_window_from_object(
   let entry = required_built_field(object, "entry", label + ".entry", entry_json => {
     build_app_entry_from_json(entry_json, base_dir)
   })
-  @manifest.AppWindowManifest::new(id, window, entry)
+  let open_on_start = match optional_field(object, "open_on_start") {
+    None => true
+    Some(True) => true
+    Some(False) => false
+    Some(_) =>
+      raise InvalidField(
+        path=label + ".open_on_start",
+        expectation="must be a boolean",
+      )
+  }
+  @manifest.AppWindowManifest::new(id, window, entry, open_on_start~)
 }
 
 ///|
@@ -288,14 +291,101 @@ fn build_extension_setting_from_json(
 }
 
 ///|
-/// Rejects unsupported `permissions` config.
-fn reject_unsupported_permissions(json : Json?) -> Unit raise BootstrapError {
-  match json {
-    None => ()
+fn build_permission_grants_from_object(
+  object : Map[String, Json],
+  windows : Array[@manifest.AppWindowManifest],
+) -> Array[@manifest.PermissionGrant] raise BootstrapError {
+  let values = match optional_field(object, "permissions") {
+    None => return []
+    Some(Array(values)) => values
     Some(_) =>
-      raise UnsupportedField(
+      raise InvalidField(
         path="app manifest.permissions",
-        reason="permissions are not implemented",
+        expectation="must be an array",
       )
+  }
+  let window_ids : Map[String, Unit] = { "main": () }
+  for window in windows {
+    window_ids[window.id] = ()
+  }
+  let identities : Map[String, Unit] = Map([])
+  let grants : Array[@manifest.PermissionGrant] = []
+  for index, value in values {
+    let path = "app manifest.permissions[" + index.to_string() + "]"
+    let grant = expect_object(value, path)
+    reject_unknown_permission_fields(grant, path)
+    let window = required_string_field(grant, "window", path + ".window")
+      .trim()
+      .to_owned()
+    guard window_ids.contains(window) else {
+      raise InvalidField(
+        path=path + ".window",
+        expectation="must name main or a declared secondary window",
+      )
+    }
+    let origin_text = required_string_field(grant, "origin", path + ".origin")
+      .trim()
+      .to_owned()
+    let origin = match origin_text {
+      "app" => @manifest.PermissionOrigin::App
+      "entry" => @manifest.PermissionOrigin::Entry
+      _ =>
+        raise InvalidField(
+          path=path + ".origin",
+          expectation="must be app or entry",
+        )
+    }
+    let extension = required_string_field(
+        grant,
+        "extension",
+        path + ".extension",
+      )
+      .trim()
+      .to_owned()
+    guard extension != "" else {
+      raise InvalidField(
+        path=path + ".extension",
+        expectation="must not be empty",
+      )
+    }
+    let identity = window + "\u{0}" + origin_text + "\u{0}" + extension
+    guard !identities.contains(identity) else {
+      raise InvalidField(
+        path~,
+        expectation="duplicates an earlier window/origin/extension grant",
+      )
+    }
+    identities[identity] = ()
+    let scope = match optional_field(grant, "scope") {
+      None => Json::empty_object()
+      Some(Object(scope)) => Json::object(clone_json_object(scope))
+      Some(_) =>
+        raise InvalidField(
+          path=path + ".scope",
+          expectation="must be an object",
+        )
+    }
+    grants.push(
+      @manifest.PermissionGrant::new(window, origin, extension, scope~),
+    )
+  }
+  grants
+}
+
+///|
+fn reject_unknown_permission_fields(
+  object : Map[String, Json],
+  path : String,
+) -> Unit raise BootstrapError {
+  for key, _ in object {
+    guard key == "window" ||
+      key == "origin" ||
+      key == "extension" ||
+      key == "scope" else {
+      raise InvalidField(
+        path=path + "." + key,
+        expectation="is not a supported permission field",
+      )
+    }
   }
 }

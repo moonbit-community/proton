@@ -19,6 +19,7 @@ pub fn ProtonProjectConfig::to_summary_json(self : ProtonProjectConfig) -> Json 
       ),
       "dev_entry": entry_summary_json(self.dev_manifest().manifest().entry),
       "debug": Json::boolean(manifest.debug != 0),
+      "single_instance": Json::boolean(self.single_instance()),
     }),
     "metadata": metadata_summary_json(self.metadata()),
     "backend": backend_summary_json(self.backend()),

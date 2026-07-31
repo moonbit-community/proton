@@ -8,9 +8,9 @@ fn main {
         height=760,
         debug=true,
       )
-      .extension(@tray.extension())
-      .extension(@notification.extension())
-      .extension(@global_hotkey.extension())
+      .expose(@tray.extension())
+      .expose(@notification.extension())
+      .expose(@global_hotkey.extension())
     app.run_or_abort()
   })
 }

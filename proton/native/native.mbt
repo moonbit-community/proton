@@ -29,6 +29,79 @@ pub fn runtime_info() -> RuntimeInfo raise NativeError {
 }
 
 ///|
+pub fn AppActivation::new(
+  urls? : Array[String] = [],
+  files? : Array[String] = [],
+  reopen? : Bool = false,
+) -> AppActivation {
+  AppActivation::{
+    abi_version: 1,
+    urls: urls.copy(),
+    files: files.copy(),
+    reopen,
+  }
+}
+
+///|
+/// Claims one operating-system application identity. A secondary process
+/// forwards its activation before returning `Forwarded`.
+pub fn AppInstance::acquire(
+  identifier : String,
+  activation : AppActivation,
+) -> AppInstanceAcquire raise NativeError {
+  if identifier.trim().to_owned() == "" {
+    raise invalid_argument("app instance identifier must not be empty")
+  }
+  let out_instance = Ref(proton_invalid_handle)
+  let out_primary = Ref(0)
+  let status = proton_app_instance_acquire_ffi(
+    @ffi.to_cstr(identifier),
+    @ffi.to_cstr(activation.to_json().stringify()),
+    out_instance,
+    out_primary,
+  )
+  if status < 0 {
+    raise native_error(status)
+  } else if out_primary.val == 0 {
+    AppInstanceAcquire::Forwarded
+  } else if out_instance.val == proton_invalid_handle {
+    raise InvalidPayload(
+      context="app instance",
+      message="primary acquisition returned an invalid handle",
+    )
+  } else {
+    AppInstanceAcquire::Primary(AppInstance::{
+      handle: out_instance.val,
+      destroyed: false,
+    })
+  }
+}
+
+///|
+/// Attaches the primary instance listener to a runtime's existing wake source.
+pub fn AppInstance::attach_runtime(
+  self : AppInstance,
+  runtime : Runtime,
+) -> Unit raise NativeError {
+  if self.destroyed {
+    raise invalid_argument("app instance is destroyed")
+  }
+  check_status(
+    proton_app_instance_attach_runtime_ffi(self.handle, runtime.active_handle()),
+  )
+}
+
+///|
+pub fn AppInstance::destroy(self : AppInstance) -> Unit raise NativeError {
+  if self.destroyed {
+    return
+  }
+  check_status(proton_app_instance_destroy_ffi(self.handle))
+  self.handle = proton_invalid_handle
+  self.destroyed = true
+}
+
+///|
 pub fn last_error_message() -> String {
   let required = proton_last_error_message_ffi(FixedArray::make(1, b'\x00'), 0)
   if required <= 0 {
@@ -90,6 +163,28 @@ fn decode_string_json(json : Json, label : String) -> String raise NativeError {
 }
 
 ///|
+fn decode_int_json(json : Json, label : String) -> Int raise NativeError {
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context=label,
+        message="expected integer: " + error.to_string(),
+      )
+  }
+}
+
+///|
+fn decode_bool_json(json : Json, label : String) -> Bool raise NativeError {
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context=label,
+        message="expected boolean: " + error.to_string(),
+      )
+  }
+}
+
+///|
 fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   let json = decode_native_json(text, "runtime event")
   let object = match json {
@@ -107,9 +202,77 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event window"))
   }
+  let state = match object.get("state") {
+    None => None
+    Some(value) =>
+      Some(
+        @json.from_json(value) catch {
+          error =>
+            raise InvalidPayload(
+              context="runtime event window state",
+              message=error.to_string(),
+            )
+        },
+      )
+  }
   let request_id = match object.get("request_id") {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event request id"))
+  }
+  let url = match object.get("url") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event URL"))
+  }
+  let http_method = match object.get("method") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event method"))
+  }
+  let user_gesture = match object.get("user_gesture") {
+    None => None
+    Some(value) => Some(decode_bool_json(value, "runtime event user gesture"))
+  }
+  let redirect = match object.get("redirect") {
+    None => None
+    Some(value) => Some(decode_bool_json(value, "runtime event redirect"))
+  }
+  let disposition = match object.get("disposition") {
+    None => None
+    Some(value) => Some(decode_int_json(value, "runtime event disposition"))
+  }
+  let download_id = match object.get("download_id") {
+    None => None
+    Some(value) => Some(decode_int_json(value, "runtime event download id"))
+  }
+  let suggested_name = match object.get("suggested_name") {
+    None => None
+    Some(value) =>
+      Some(decode_string_json(value, "runtime event suggested name"))
+  }
+  let download_state = match object.get("download_state") {
+    None => None
+    Some(value) =>
+      Some(decode_string_json(value, "runtime event download state"))
+  }
+  let received_bytes = match object.get("received_bytes") {
+    None => None
+    Some(value) =>
+      Some(decode_int64_json(value, "runtime event received bytes"))
+  }
+  let total_bytes = match object.get("total_bytes") {
+    None => None
+    Some(value) => Some(decode_int64_json(value, "runtime event total bytes"))
+  }
+  let percent = match object.get("percent") {
+    None => None
+    Some(value) => Some(decode_int_json(value, "runtime event percent"))
+  }
+  let error_code = match object.get("error") {
+    None => None
+    Some(value) => Some(decode_int_json(value, "runtime event error code"))
+  }
+  let permissions = match object.get("permissions") {
+    None => None
+    Some(value) => Some(decode_int_json(value, "runtime event permissions"))
   }
   let menu_command_id = match object.get("command_id") {
     None => None
@@ -151,7 +314,21 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   RuntimeEvent::{
     event_type,
     window,
+    state,
     request_id,
+    url,
+    http_method,
+    user_gesture,
+    redirect,
+    disposition,
+    download_id,
+    suggested_name,
+    download_state,
+    received_bytes,
+    total_bytes,
+    percent,
+    error_code,
+    permissions,
     menu_command_id,
     revision,
     items,
@@ -201,10 +378,25 @@ fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError 
     Some(String(value)) => Some(value)
     _ => None
   }
+  let source_origin = match object.get("source_origin") {
+    Some(value) => decode_string_json(value, "bridge request source_origin")
+    None =>
+      raise InvalidPayload(
+        context="bridge request",
+        message="missing source_origin",
+      )
+  }
   let request_id = decode_int64_json(request_id_json, "bridge request_id")
   let window = decode_int64_json(window_json, "bridge request window")
   let op = decode_string_json(op_json, "bridge request op")
-  BridgeRequest::{ request_id, window, op, payload, page_instance }
+  BridgeRequest::{
+    request_id,
+    window,
+    op,
+    payload,
+    page_instance,
+    source_origin,
+  }
 }
 
 ///|
@@ -606,6 +798,132 @@ pub fn Window::set_size(
 }
 
 ///|
+pub fn Window::minimize(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_minimize_ffi(self.live_handle()))
+}
+
+///|
+pub fn Window::maximize(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_maximize_ffi(self.live_handle()))
+}
+
+///|
+pub fn Window::restore(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_restore_ffi(self.live_handle()))
+}
+
+///|
+pub fn Window::set_fullscreen(
+  self : Window,
+  fullscreen : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    proton_window_set_fullscreen_ffi(
+      self.live_handle(),
+      if fullscreen {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_position(
+  self : Window,
+  x : Int,
+  y : Int,
+) -> Unit raise NativeError {
+  check_status(proton_window_set_position_ffi(self.live_handle(), x, y))
+}
+
+///|
+pub fn Window::set_always_on_top(
+  self : Window,
+  always_on_top : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    proton_window_set_always_on_top_ffi(
+      self.live_handle(),
+      if always_on_top {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_zoom_percent(
+  self : Window,
+  zoom_percent : Int,
+) -> Unit raise NativeError {
+  if zoom_percent < 25 || zoom_percent > 500 {
+    raise invalid_argument("zoom_percent must be between 25 and 500")
+  }
+  check_status(
+    proton_window_set_zoom_percent_ffi(self.live_handle(), zoom_percent),
+  )
+}
+
+///|
+pub fn Window::state(self : Window) -> WindowState raise NativeError {
+  let handle = self.live_handle()
+  let text = match
+    read_native_text("window state", PayloadBytesExcludingTerminator, (
+      buffer,
+      buffer_len,
+      required,
+    ) => proton_window_state_json_ffi(handle, buffer, buffer_len, required)) {
+    Some(text) => text
+    None =>
+      raise InvalidPayload(context="window state", message="missing payload")
+  }
+  @json.from_json(decode_native_json(text, "window state")) catch {
+    error =>
+      raise InvalidPayload(context="window state", message=error.to_string())
+  }
+}
+
+///|
+pub fn Window::set_close_interception(
+  self : Window,
+  enabled : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    proton_window_set_close_interception_ffi(
+      self.live_handle(),
+      if enabled {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::respond_close_request(
+  self : Window,
+  request_id : Int64,
+  allow : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    proton_window_respond_close_request_ffi(
+      self.live_handle(),
+      request_id,
+      if allow {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::load_url(self : Window, url : String) -> Unit raise NativeError {
   check_status(
     proton_window_load_url_ffi(self.live_handle(), @ffi.to_cstr(url)),
@@ -630,6 +948,52 @@ pub fn Window::load_html(
 ///|
 pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
   check_status(proton_window_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
+}
+
+///|
+pub fn Window::browser_command(
+  self : Window,
+  command : String,
+  download_id? : Int,
+) -> Unit raise NativeError {
+  let fields : Map[String, Json] = { "command": Json::string(command) }
+  match download_id {
+    Some(download_id) =>
+      fields["download_id"] = Json::number(
+        download_id.to_double(),
+        repr=download_id.to_string(),
+      )
+    None => ()
+  }
+  check_status(
+    proton_window_browser_command_json_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(Json::object(fields).stringify()),
+    ),
+  )
+}
+
+///|
+pub fn Window::respond_browser_request(
+  self : Window,
+  request_id : Int64,
+  action : String,
+  path? : String,
+) -> Unit raise NativeError {
+  let fields : Map[String, Json] = {
+    "request_id": Json::string(request_id.to_string()),
+    "action": Json::string(action),
+  }
+  match path {
+    Some(path) => fields["path"] = Json::string(path)
+    None => ()
+  }
+  check_status(
+    proton_window_respond_browser_request_json_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(Json::object(fields).stringify()),
+    ),
+  )
 }
 
 ///|

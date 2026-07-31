@@ -8,8 +8,8 @@ fn main {
         height=620,
         debug=true,
       )
-      .extension(sync_math_extension())
-      .extension(async_add_extension())
+      .expose(sync_math_extension())
+      .expose(async_add_extension())
     app.run_or_abort()
   })
 }

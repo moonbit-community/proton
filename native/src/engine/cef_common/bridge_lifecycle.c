@@ -17,6 +17,15 @@ typedef struct {
   int overflowed;
 } proton_engine_json_writer_t;
 
+int proton_engine_urls_same_document(const char *left, const char *right) {
+  if (left == NULL || right == NULL) {
+    return 0;
+  }
+  size_t left_len = strcspn(left, "#");
+  size_t right_len = strcspn(right, "#");
+  return left_len == right_len && strncmp(left, right, left_len) == 0;
+}
+
 static char *proton_engine_bridge_strdup(const char *value) {
   const char *source = value != NULL ? value : "";
   size_t len = strlen(source);
@@ -386,7 +395,8 @@ int proton_engine_bridge_lifecycle_report_browser_failure(
   if (lifecycle == NULL || url == NULL || code == NULL || message == NULL) {
     return 0;
   }
-  int same_navigation = lifecycle->url != NULL && strcmp(lifecycle->url, url) == 0;
+  int same_navigation =
+      proton_engine_urls_same_document(lifecycle->url, url);
   if (only_if_no_outcome && same_navigation && lifecycle->outcome != NULL &&
       strcmp(lifecycle->outcome, "pending") != 0) {
     return 0;

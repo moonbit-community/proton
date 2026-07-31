@@ -20,6 +20,11 @@ pub(all) suberror ExtensionSpecError {
 } derive(Eq)
 pub fn ExtensionSpecError::message(Self) -> String
 
+pub(all) suberror PermissionScopeValidationError {
+  Invalid(detail~ : String)
+} derive(Eq)
+pub fn PermissionScopeValidationError::message(Self) -> String
+
 // Types and methods
 pub struct AppCommandApiDescriptor {
   api_name : String
@@ -55,6 +60,7 @@ pub struct AppCommandExtensionSpec {
   scripts : Array[String]
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
+  resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError
   on_destroy : () -> Unit raise
 }
 pub fn AppCommandExtensionSpec::apis(Self) -> Array[AppCommandApiDescriptor]
@@ -64,9 +70,10 @@ pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
 pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::register(Self, CommandRegistrar) -> Unit raise
+pub fn AppCommandExtensionSpec::resolve_permission(Self, Json, String) -> Json raise PermissionScopeValidationError
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
-pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
+pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
 
 pub struct AppCommandsConfig {
   op_names : Array[String]

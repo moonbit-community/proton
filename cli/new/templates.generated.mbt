@@ -21,6 +21,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|product_name = {{title_mbt}}
           #|identifier = {{identifier_mbt}}
+          #|single_instance = true
           #|
           #|window = {
           #|  title: {{title_mbt}},
@@ -46,6 +47,14 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  kind: "asset",
           #|  value: "frontend/dist/index.html",
           #|}
+          #|
+          #|permissions = [
+          #|  {
+          #|    window: "main",
+          #|    origin: "entry",
+          #|    extension: "app",
+          #|  },
+          #|]
           #|
           #|debug = true
           #|
@@ -695,12 +704,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/todo/commands.mbt.mtpl",
       template_source: (
           #|///|
-          #|using @shared {
-          #|  create_todo,
-          #|  delete_todo,
-          #|  list_todos,
-          #|  set_todo_completed,
-          #|}
+          #|using @shared {create_todo, delete_todo, list_todos, set_todo_completed}
           #|
           #|///|
           #|#proton.command(contract=list_todos)

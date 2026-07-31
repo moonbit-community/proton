@@ -1,6 +1,9 @@
 ///|
 /// Failures produced by filesystem command validation and async I/O.
 suberror FsError {
+  InvalidPermissionScope(String)
+  PermissionPathResolutionFailed(path~ : String, detail~ : String)
+  PermissionDenied(command~ : String, path~ : String, detail~ : String)
   UnsupportedCreateMode(value~ : String)
   UnsupportedSyncMode(value~ : String)
   ReadFailed(path~ : String, detail~ : String)
@@ -19,6 +22,17 @@ suberror FsError {
 ///|
 fn FsError::message(self : FsError) -> String {
   match self {
+    InvalidPermissionScope(detail) =>
+      "invalid filesystem permission scope: " + detail
+    PermissionPathResolutionFailed(path~, detail~) =>
+      "failed to resolve filesystem permission path " + path + ": " + detail
+    PermissionDenied(command~, path~, detail~) =>
+      "filesystem permission denied for " +
+      command +
+      " on " +
+      path +
+      ": " +
+      detail
     UnsupportedCreateMode(value~) => "unsupported fs create_mode: " + value
     UnsupportedSyncMode(value~) => "unsupported fs sync mode: " + value
     ReadFailed(path~, detail~) => "failed to read file " + path + ": " + detail

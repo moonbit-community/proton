@@ -61,8 +61,9 @@ pub(all) struct ProjectAppWindowConfig {
   id : String
   window : ProjectWindowConfig
   entry : ProjectEntry
+  open_on_start : Bool
 } derive(Eq, @debug.Debug)
-pub fn ProjectAppWindowConfig::new(String, ProjectWindowConfig, ProjectEntry) -> Self
+pub fn ProjectAppWindowConfig::new(String, ProjectWindowConfig, ProjectEntry, open_on_start? : Bool) -> Self
 
 pub(all) struct ProjectBackendConfig {
   path : String
@@ -94,7 +95,9 @@ pub(all) struct ProjectConfig {
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   bundle : ProjectBundleConfig?
+  permissions : Array[ProjectPermissionGrant]
   debug : Int
+  single_instance : Bool
 } derive(Eq, @debug.Debug)
 pub fn ProjectConfig::backend(Self) -> ProjectBackendConfig?
 pub fn ProjectConfig::base_dir(Self) -> String
@@ -104,7 +107,9 @@ pub fn ProjectConfig::entries(Self) -> Array[ProjectEntry]
 pub fn ProjectConfig::entry(Self) -> ProjectEntry
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
 pub fn ProjectConfig::metadata(Self) -> ProjectMetadata
-pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, windows? : Array[ProjectAppWindowConfig], backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, debug? : Int) -> Self
+pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, windows? : Array[ProjectAppWindowConfig], backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, permissions? : Array[ProjectPermissionGrant], debug? : Int, single_instance? : Bool) -> Self
+pub fn ProjectConfig::permissions(Self) -> Array[ProjectPermissionGrant]
+pub fn ProjectConfig::single_instance(Self) -> Bool
 pub fn ProjectConfig::window(Self) -> ProjectWindowConfig
 pub fn ProjectConfig::windows(Self) -> Array[ProjectAppWindowConfig]
 
@@ -113,6 +118,7 @@ pub(all) struct ProjectDocumentType {
   extensions : Array[String]
   role : String
 } derive(Eq, @debug.Debug)
+pub fn ProjectDocumentType::extensions(Self) -> Array[String]
 pub fn ProjectDocumentType::new(String, Array[String], role? : String) -> Self
 
 pub(all) enum ProjectEntry {
@@ -145,6 +151,14 @@ pub(all) struct ProjectMetadata {
 } derive(Eq, @debug.Debug)
 pub fn ProjectMetadata::new(String, identifier? : String?, version? : String?, description? : String?, license? : String?) -> Self
 
+pub(all) struct ProjectPermissionGrant {
+  window : String
+  origin : String
+  extension : String
+  scope : Json
+} derive(Eq, @debug.Debug)
+pub fn ProjectPermissionGrant::new(String, String, String, scope? : Json) -> Self
+
 pub(all) enum ProjectTitlebarStyle {
   TitlebarDefault
   TitlebarOverlay
@@ -170,3 +184,4 @@ pub(all) enum ProjectWindowSizeHint {
 pub using @basic {type Location as ConfigLoc}
 
 // Traits
+

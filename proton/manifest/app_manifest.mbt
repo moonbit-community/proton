@@ -6,6 +6,7 @@ pub struct AppManifest {
   windows : Array[AppWindowManifest]
   debug : Int
   extensions : Map[String, ExtensionSetting]
+  permissions : Array[PermissionGrant]
 }
 
 ///|
@@ -18,6 +19,7 @@ pub fn AppManifest::new(
   debug? : Int = 0,
   windows? : Array[AppWindowManifest] = [],
   extensions? : Map[String, ExtensionSetting] = Map([]),
+  permissions? : Array[PermissionGrant] = [],
 ) -> AppManifest {
   AppManifest::{
     window,
@@ -25,7 +27,15 @@ pub fn AppManifest::new(
     windows: windows.map(fn(window) { window }),
     debug,
     extensions: copy_extension_settings(extensions),
+    permissions: copy_permission_grants(permissions),
   }
+}
+
+///|
+pub fn AppManifest::permission_grants(
+  self : AppManifest,
+) -> Array[PermissionGrant] {
+  copy_permission_grants(self.permissions)
 }
 
 ///|

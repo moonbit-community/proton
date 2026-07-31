@@ -26,8 +26,10 @@ pub fn AppConfigurationError::message(self : AppConfigurationError) -> String {
       js_namespace +
       "." +
       api_name
-    InvalidDevelopmentUrl(url~, reason~) =>
-      "invalid development bridge URL " + url + ": " + reason
+    InvalidEntryUrl(url~, reason~) => "invalid entry URL " + url + ": " + reason
+    InvalidPermissionGrant(detail~) => "invalid permission grant: " + detail
+    MissingPermissionGrant(extension_id~) =>
+      "registered renderer capability has no permission grant: " + extension_id
   }
 }
 
@@ -126,6 +128,24 @@ impl Show for AppCleanupError with fn output(self, logger) {
 }
 
 ///|
+pub fn WindowSessionError::message(self : WindowSessionError) -> String {
+  match self {
+    UnknownWindow(id~) => "window is not declared: " + id
+    AlreadyOpen(id~) => "window is already open: " + id
+    StaleWindow(id~) => "window instance is no longer active: " + id
+    Cancelled => "window operation was cancelled"
+    OperationFailed(action~, error~) => action + " failed: " + error.message()
+    StartupFailed(id~, error~) =>
+      "failed to open window " + id + ": " + error.message()
+  }
+}
+
+///|
+impl Show for WindowSessionError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
 fn cleanup_failure_message(
   primary : String?,
   failures : Array[AppCleanupError],
@@ -152,6 +172,9 @@ pub fn AppRunError::message(self : AppRunError) -> String {
     RunnerError(message) => "application runner is not active: " + message
     ConfigurationError(error) =>
       "application configuration failed: " + error.message()
+    UnsupportedNativeFeature(feature~) =>
+      "the active Proton native runtime does not support required feature: " +
+      feature
     NativeRuntimeError(action~, error~) =>
       "native runtime failed during " + action + ": " + error.message()
     RuntimeWakeupError(error) => "runtime wakeup failed: " + error.message()

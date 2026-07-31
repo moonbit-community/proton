@@ -114,6 +114,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     windows: [],
     debug_level_value: 0,
     headless_value: false,
+    single_instance_identifier: None,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,
@@ -122,10 +123,19 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
     menu: None,
     extension_settings: Map([]),
+    permission_grants: [],
     command_extensions: Map([]),
     command_registrars: [],
     application_lifecycle_hooks: [],
     launch_input_handlers: [],
+    window_event_handlers: [],
+    window_close_handler: None,
+    navigation_handler: None,
+    popup_handler: None,
+    download_handler: None,
+    certificate_handler: None,
+    media_handler: None,
+    download_event_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],
   }
@@ -152,6 +162,24 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 /// `PROTON_HEADLESS=1` to force this mode for automated test runs.
 pub fn App::headless(self : App, enabled? : Bool = true) -> App {
   self.headless_value = enabled
+  self
+}
+
+///|
+/// Ensures only one operating-system process owns this application identity.
+/// Later processes forward their URL, document, or reopen activation and exit.
+pub fn App::single_instance(self : App, identifier : String) -> App {
+  let identifier = identifier.trim().to_owned()
+  if identifier == "" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="single_instance",
+        message="identifier must not be empty",
+      ),
+    )
+  } else {
+    self.single_instance_identifier = Some(identifier)
+  }
   self
 }
 
@@ -250,6 +278,92 @@ pub fn App::on_launch_input(
 }
 
 ///|
+/// Observes coalesced native state changes for every running window.
+pub fn App::on_window_event(
+  self : App,
+  handler : async (WindowHandle, WindowEvent) -> Unit noraise,
+) -> App {
+  self.window_event_handlers.push(handler)
+  self
+}
+
+///|
+/// Intercepts user-initiated close requests without blocking the native UI
+/// thread. `WindowHandle::close` uses the same request path; forced cleanup is
+/// reserved for the session-owned destroy lifecycle.
+pub fn App::on_window_close_request(
+  self : App,
+  handler : async (WindowHandle) -> WindowCloseDecision noraise,
+) -> App {
+  self.window_close_handler = Some(handler)
+  self
+}
+
+///|
+/// Reviews top-level navigations asynchronously. The native browser cancels a
+/// pending navigation until this handler returns, then replays it exactly once
+/// when allowed.
+pub fn App::on_navigation_request(
+  self : App,
+  handler : async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise,
+) -> App {
+  self.navigation_handler = Some(handler)
+  self
+}
+
+///|
+/// Reviews `window.open` and new-tab requests. New Proton windows must already
+/// be declared with `add_window(..., open_on_start=false)`.
+pub fn App::on_popup_request(
+  self : App,
+  handler : async (BrowserHandle, PopupRequest) -> PopupDecision noraise,
+) -> App {
+  self.popup_handler = Some(handler)
+  self
+}
+
+///|
+/// Reviews downloads before CEF chooses a destination.
+pub fn App::on_download_request(
+  self : App,
+  handler : async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise,
+) -> App {
+  self.download_handler = Some(handler)
+  self
+}
+
+///|
+/// Reviews invalid TLS certificates. The default is denial.
+pub fn App::on_certificate_error(
+  self : App,
+  handler : async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise,
+) -> App {
+  self.certificate_handler = Some(handler)
+  self
+}
+
+///|
+/// Reviews camera, microphone, and display-capture requests. The default is
+/// denial.
+pub fn App::on_media_permission_request(
+  self : App,
+  handler : async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise,
+) -> App {
+  self.media_handler = Some(handler)
+  self
+}
+
+///|
+/// Observes download progress and terminal states.
+pub fn App::on_download_event(
+  self : App,
+  handler : async (BrowserHandle, DownloadEvent) -> Unit noraise,
+) -> App {
+  self.download_event_handlers.push(handler)
+  self
+}
+
+///|
 /// Adds a secondary window owned by the standard application lifecycle.
 pub fn App::add_window(
   self : App,
@@ -260,6 +374,7 @@ pub fn App::add_window(
   height? : Int = 700,
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  open_on_start? : Bool = true,
 ) -> App {
   let normalized_id = id.trim().to_owned()
   if normalized_id == "" || normalized_id == "main" {
@@ -295,6 +410,7 @@ pub fn App::add_window(
         titlebar_style=manifest_titlebar_style(titlebar_style),
       ),
       entry,
+      open_on_start~,
     ),
   )
   self
@@ -403,6 +519,34 @@ pub fn App::extension(
     }
   }
   self
+}
+
+///|
+/// Grants one registered extension to a trusted source in one window.
+///
+/// Extension registration alone never exposes renderer capabilities.
+pub fn App::permission(self : App, grant : @manifest.PermissionGrant) -> App {
+  self.permission_grants.push(grant)
+  self
+}
+
+///|
+/// Registers an extension and explicitly exposes it to one trusted page.
+///
+/// Use `extension` plus `permission` separately when an extension provides a
+/// typed permission builder, such as the filesystem extension.
+pub fn App::expose(
+  self : App,
+  extension : @proton_extension.Extension,
+  window? : String = "main",
+  origin? : @manifest.PermissionOrigin = Entry,
+  scope? : Json = Json::empty_object(),
+) -> App {
+  let extension_id = extension.id()
+  ignore(self.extension(extension))
+  self.permission(
+    @manifest.PermissionGrant::new(window, origin, extension_id, scope~),
+  )
 }
 
 ///|

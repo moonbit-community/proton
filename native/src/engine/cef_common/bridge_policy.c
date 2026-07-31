@@ -16,7 +16,12 @@ static char *proton_engine_bridge_copy_prefix(const char *value, size_t len) {
 }
 
 static int proton_engine_url_is_proton_app(const char *url) {
-  return url != NULL && strncmp(url, "proton://", 9) == 0;
+  if (url == NULL || strncmp(url, "proton://app", 12) != 0) {
+    return 0;
+  }
+  char boundary = url[12];
+  return boundary == '\0' || boundary == '/' || boundary == '?' ||
+         boundary == '#';
 }
 
 int proton_engine_url_is_bridge_candidate(const char *url) {
@@ -50,64 +55,66 @@ static char *proton_engine_url_origin(const char *url) {
 
 typedef struct {
   const proton_json_doc_t *doc;
-  const char *origin;
+  const char *source_origin;
   int matched;
+  char *grant_json;
 } proton_engine_bridge_origin_match_t;
 
-static bool proton_engine_bridge_origin_match_item(proton_json_value_t value,
-                                                   void *user_data) {
+static bool proton_engine_bridge_grant_match_item(proton_json_value_t value,
+                                                  void *user_data) {
   proton_engine_bridge_origin_match_t *match =
       (proton_engine_bridge_origin_match_t *)user_data;
-  char *candidate = proton_json_copy_string(match->doc, value);
-  if (candidate != NULL && strcmp(candidate, match->origin) == 0) {
+  proton_json_value_t origin_value;
+  char *candidate = NULL;
+  if (proton_json_is_object(match->doc, value) &&
+      proton_json_object_get(match->doc, value, "source_origin",
+                             &origin_value)) {
+    candidate = proton_json_copy_string(match->doc, origin_value);
+  }
+  if (candidate != NULL && strcmp(candidate, match->source_origin) == 0) {
     match->matched = 1;
+    match->grant_json = proton_json_copy_raw(match->doc, value);
   }
   free(candidate);
   return match->matched == 0;
 }
 
-static int proton_engine_bridge_config_allows_dev_origin(
-    const char *bridge_config_json, const char *origin) {
+char *proton_engine_bridge_source_origin(const char *url) {
+  if (proton_engine_url_is_proton_app(url)) {
+    return proton_engine_bridge_copy_prefix("app", 3);
+  }
+  return proton_engine_url_origin(url);
+}
+
+char *proton_engine_bridge_config_copy_grant(const char *bridge_config_json,
+                                             const char *url) {
   proton_json_doc_t doc;
   proton_json_value_t root;
-  proton_json_value_t policy;
-  proton_json_value_t mode_value;
-  proton_json_value_t origins_value;
-  if (bridge_config_json == NULL || origin == NULL ||
+  proton_json_value_t grants;
+  char *source_origin = proton_engine_bridge_source_origin(url);
+  if (bridge_config_json == NULL || source_origin == NULL ||
       !proton_json_parse(&doc, bridge_config_json)) {
-    return 0;
+    free(source_origin);
+    return NULL;
   }
-  char *mode = NULL;
-  int allowed = 0;
+  proton_engine_bridge_origin_match_t match = {
+      &doc, source_origin, 0, NULL};
   if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, "origin_policy", &policy) &&
-      proton_json_is_object(&doc, policy) &&
-      proton_json_object_get(&doc, policy, "mode", &mode_value) &&
-      (mode = proton_json_copy_string(&doc, mode_value)) != NULL &&
-      strcmp(mode, "app_and_dev_origins") == 0 &&
-      proton_json_object_get(&doc, policy, "dev_origins", &origins_value) &&
-      proton_json_is_array(&doc, origins_value)) {
-    proton_engine_bridge_origin_match_t match = {&doc, origin, 0};
-    proton_json_array_each(&doc, origins_value,
-                           proton_engine_bridge_origin_match_item, &match);
-    allowed = match.matched;
+      proton_json_object_get(&doc, root, "grants", &grants) &&
+      proton_json_is_array(&doc, grants)) {
+    proton_json_array_each(&doc, grants, proton_engine_bridge_grant_match_item,
+                           &match);
   }
-  free(mode);
   proton_json_dispose(&doc);
-  return allowed;
+  free(source_origin);
+  return match.grant_json;
 }
 
 int proton_engine_bridge_config_allows_page(const char *bridge_config_json,
                                             const char *url) {
-  if (proton_engine_url_is_proton_app(url)) {
-    return 1;
-  }
-  char *origin = proton_engine_url_origin(url);
-  if (origin == NULL) {
-    return 0;
-  }
-  int allowed =
-      proton_engine_bridge_config_allows_dev_origin(bridge_config_json, origin);
-  free(origin);
+  char *grant =
+      proton_engine_bridge_config_copy_grant(bridge_config_json, url);
+  int allowed = grant != NULL;
+  free(grant);
   return allowed;
 }

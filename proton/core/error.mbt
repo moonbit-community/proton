@@ -49,3 +49,20 @@ pub fn OpDispatchError::message(self : OpDispatchError) -> String {
 impl Show for OpDispatchError with fn output(self, logger) {
   logger.write_string(self.message())
 }
+
+///|
+/// A command attempted to use a capability outside its request grant.
+pub(all) suberror CommandPermissionError {
+  Missing(extension_id~ : String)
+  Foreign(expected~ : String, actual~ : String)
+} derive(Debug, Eq)
+
+///|
+pub fn CommandPermissionError::message(self : CommandPermissionError) -> String {
+  match self {
+    Missing(extension_id~) =>
+      "request has no permission for extension " + extension_id
+    Foreign(expected~, actual~) =>
+      "request permission belongs to " + actual + ", not " + expected
+  }
+}

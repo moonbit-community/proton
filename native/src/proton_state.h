@@ -27,6 +27,7 @@ typedef struct {
   bool running;
   bool quit_requested;
   proton_engine_runtime_t *engine_runtime;
+  int64_t app_instance;
   bool owner_thread_set;
   proton_thread_id_t owner_thread;
   char *events[PROTON_MAX_EVENTS];
@@ -41,11 +42,14 @@ typedef struct {
   bool destroyed;
   bool visible;
   bool closed_event_sent;
+  bool state_valid;
   uint64_t bridge_notified_revision;
+  uint64_t close_request_notified_revision;
   proton_runtime_id_t runtime;
   proton_engine_window_t *engine_window;
   int32_t width;
   int32_t height;
+  proton_engine_window_state_t state;
 } proton_window_slot_t;
 
 PROTON_INTERNAL int32_t proton_runtime_slot_create(
@@ -86,8 +90,20 @@ PROTON_INTERNAL int32_t proton_window_enqueue_closed_once(
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_closed_windows(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
+PROTON_INTERNAL int32_t proton_runtime_sync_engine_window_states(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime);
+PROTON_INTERNAL int32_t proton_runtime_sync_engine_close_requests(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime);
+PROTON_INTERNAL int32_t proton_runtime_sync_engine_browser_events(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_id_t runtime_handle, proton_runtime_slot_t *runtime);
+PROTON_INTERNAL int32_t proton_format_window_state_json(
+    const proton_engine_window_state_t *state, char *buffer,
+    size_t buffer_len);
 PROTON_INTERNAL int32_t
 proton_destroy_windows_for_runtime(proton_runtime_id_t runtime);
 

@@ -41,13 +41,23 @@ fn decode_project_config(
       let window = required_project_window(fields)
       let entry = required_project_entry(fields, base_dir)
       let windows = optional_project_windows(fields, base_dir)
+      let permissions = optional_project_permissions(fields, windows)
       let debug = optional_project_debug(fields)
+      let single_instance = optional_bool_config_field(
+        fields, "single_instance", "single_instance", false,
+      )
       let backend = optional_project_backend(fields, base_dir)
       let metadata_base_dir = match backend {
         Some(backend) => backend.path()
         None => base_dir
       }
       let metadata = decode_project_metadata(fields, metadata_base_dir)
+      if single_instance && metadata.identifier is None {
+        raise InvalidField(
+          path="moon.proton.identifier",
+          expectation="is required when single_instance is true",
+        )
+      }
       let frontend = optional_project_frontend(fields, base_dir)
       let bundle = optional_project_bundle(fields, base_dir)
       ProjectConfig::new(
@@ -59,7 +69,9 @@ fn decode_project_config(
         backend~,
         frontend~,
         bundle~,
+        permissions~,
         debug~,
+        single_instance~,
       )
     }
     _ => raise InvalidRoot
@@ -79,7 +91,12 @@ fn validate_project_top_level_fields(
     }
     seen[field.key] = ()
     match field.key {
-      "window" | "entry" | "windows" | "debug" => ()
+      "window"
+      | "entry"
+      | "windows"
+      | "permissions"
+      | "debug"
+      | "single_instance" => ()
       "product_name" | "identifier" =>
         validate_optional_non_empty_string(field.value, field.key) catch {
           error => errors.push(error)
@@ -93,13 +110,6 @@ fn validate_project_top_level_fields(
           UnsupportedField(
             path="moon.proton.extensions",
             reason="is not supported; declare extensions in MoonBit code with .extension(...).",
-          ),
-        )
-      "permissions" =>
-        errors.push(
-          UnsupportedField(
-            path="moon.proton.permissions",
-            reason="is not supported in v1.",
           ),
         )
       other => errors.push(UnknownField(path="moon.proton." + other))
@@ -280,7 +290,9 @@ fn optional_project_windows(
         expectation="must be an object",
       )
     }
-    validate_object_fields(window_fields, label, ["id", "window", "entry"])
+    validate_object_fields(window_fields, label, [
+      "id", "window", "entry", "open_on_start",
+    ])
     let id = required_string_config_field(window_fields, "id", label + ".id")
       .trim()
       .to_owned()
@@ -303,9 +315,146 @@ fn optional_project_windows(
       base_dir,
       label + ".entry",
     )
-    windows.push(ProjectAppWindowConfig::new(id, window, entry))
+    let open_on_start = optional_bool_config_field(
+      window_fields,
+      "open_on_start",
+      label + ".open_on_start",
+      true,
+    )
+    windows.push(ProjectAppWindowConfig::new(id, window, entry, open_on_start~))
   }
   windows
+}
+
+///|
+fn optional_project_permissions(
+  fields : Array[ConfigField],
+  windows : Array[ProjectAppWindowConfig],
+) -> Array[ProjectPermissionGrant] raise ProjectConfigError {
+  let values = match find_config_field(fields, "permissions") {
+    None => return []
+    Some(Arr(values, _)) => values
+    Some(_) =>
+      raise InvalidField(
+        path="moon.proton.permissions",
+        expectation="must be an array",
+      )
+  }
+  let window_ids : Map[String, Unit] = { "main": () }
+  for window in windows {
+    window_ids[window.id] = ()
+  }
+  let grants : Array[ProjectPermissionGrant] = []
+  let identities : Map[String, Unit] = Map([])
+  for index, value in values {
+    let label = "permissions[" + index.to_string() + "]"
+    guard value is Obj(grant_fields, _) else {
+      raise InvalidField(
+        path="moon.proton." + label,
+        expectation="must be an object",
+      )
+    }
+    validate_object_fields(grant_fields, label, [
+      "window", "origin", "extension", "scope",
+    ])
+    let window = required_string_config_field(
+        grant_fields,
+        "window",
+        label + ".window",
+      )
+      .trim()
+      .to_owned()
+    guard window_ids.contains(window) else {
+      raise UnsupportedValue(path=label + ".window", value=window)
+    }
+    let origin = required_string_config_field(
+        grant_fields,
+        "origin",
+        label + ".origin",
+      )
+      .trim()
+      .to_owned()
+    guard origin == "app" || origin == "entry" else {
+      raise UnsupportedValue(path=label + ".origin", value=origin)
+    }
+    let extension = required_string_config_field(
+        grant_fields,
+        "extension",
+        label + ".extension",
+      )
+      .trim()
+      .to_owned()
+    guard extension != "" else {
+      raise InvalidField(
+        path=label + ".extension",
+        expectation="must not be empty",
+      )
+    }
+    let identity = window + "\u{0}" + origin + "\u{0}" + extension
+    guard !identities.contains(identity) else {
+      raise DuplicateValue(
+        path="permissions",
+        value=window + "/" + origin + "/" + extension,
+      )
+    }
+    identities[identity] = ()
+    let scope = match find_config_field(grant_fields, "scope") {
+      None => Json::empty_object()
+      Some(Obj(scope_fields, _)) =>
+        permission_object_to_json(scope_fields, label + ".scope")
+      Some(_) =>
+        raise InvalidField(
+          path="moon.proton." + label + ".scope",
+          expectation="must be an object",
+        )
+    }
+    grants.push(ProjectPermissionGrant::new(window, origin, extension, scope~))
+  }
+  grants
+}
+
+///|
+fn permission_object_to_json(
+  fields : Array[ConfigField],
+  label : String,
+) -> Json raise ProjectConfigError {
+  let object : Map[String, Json] = Map([])
+  for field in fields {
+    guard !object.contains(field.key) else {
+      raise DuplicateField(path=label + "." + field.key)
+    }
+    object[field.key] = permission_value_to_json(
+      field.value,
+      label + "." + field.key,
+    )
+  }
+  Json::object(object)
+}
+
+///|
+fn permission_value_to_json(
+  value : Ast,
+  label : String,
+) -> Json raise ProjectConfigError {
+  match value {
+    Bool(value, _) => Json::boolean(value)
+    Str(value, _) => Json::string(value)
+    Int(value, _) =>
+      @json.parse(value) catch {
+        _ =>
+          raise InvalidField(path=label, expectation="must be a valid number")
+      }
+    Arr(values, _) => {
+      let items : Array[Json] = []
+      for index, item in values {
+        items.push(
+          permission_value_to_json(item, label + "[" + index.to_string() + "]"),
+        )
+      }
+      Json::array(items)
+    }
+    Obj(fields, _) => permission_object_to_json(fields, label)
+  }
 }
 
 ///|

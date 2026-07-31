@@ -13,6 +13,7 @@ typedef struct {
   uint32_t additional_failure_count;
 } proton_engine_bridge_lifecycle_t;
 
+int proton_engine_urls_same_document(const char *left, const char *right);
 void proton_engine_bridge_lifecycle_init(
     proton_engine_bridge_lifecycle_t *lifecycle);
 void proton_engine_bridge_lifecycle_dispose(

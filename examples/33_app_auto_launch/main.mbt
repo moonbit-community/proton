@@ -7,7 +7,7 @@ fn main {
       width=980,
       height=700,
       debug=true,
-    ).extension(@auto_launch.extension())
+    ).expose(@auto_launch.extension())
     app.run_or_abort()
   })
 }

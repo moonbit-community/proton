@@ -83,6 +83,22 @@ fn app_window_manifest_to_json(window : @manifest.AppWindowManifest) -> Json {
     "id": Json::string(window.id),
     "window": window_manifest_to_json(window.window),
     "entry": app_entry_to_json(window.entry),
+    "open_on_start": Json::boolean(window.open_on_start),
+  })
+}
+
+///|
+fn permission_grant_to_json(grant : @manifest.PermissionGrant) -> Json {
+  Json::object({
+    "window": Json::string(grant.window()),
+    "origin": Json::string(
+      match grant.origin() {
+        App => "app"
+        Entry => "entry"
+      },
+    ),
+    "extension": Json::string(grant.extension()),
+    "scope": grant.scope(),
   })
 }
 
@@ -105,6 +121,11 @@ pub fn app_manifest_to_json(manifest : @manifest.AppManifest) -> Json {
       extensions[name] = extension_setting_to_json(setting)
     }
     object["extensions"] = Json::object(extensions)
+  }
+  if manifest.permissions.length() > 0 {
+    object["permissions"] = Json::array(
+      manifest.permissions.map(permission_grant_to_json),
+    )
   }
   Json::object(object)
 }

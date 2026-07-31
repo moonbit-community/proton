@@ -20,6 +20,12 @@ pub fn render_js_template(String, Array[TemplateReplacement]) -> String
 pub fn replacement(String, String) -> TemplateReplacement
 
 // Errors
+pub(all) suberror CommandPermissionError {
+  Missing(extension_id~ : String)
+  Foreign(expected~ : String, actual~ : String)
+} derive(Eq, @debug.Debug)
+pub fn CommandPermissionError::message(Self) -> String
+
 pub(all) suberror OpDispatchError {
   InvalidPayload(name~ : String, detail~ : String)
   UnknownOp(name~ : String)
@@ -51,16 +57,23 @@ pub fn AppCommandHost::seal_registrations(Self) -> Unit
 
 pub struct AppCommandRequestContext {
   window : Int64
+  window_id : String
+  source_origin : String
+  permission_extension : String?
+  permission_scope_value : Json?
   tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
 }
 pub async fn[Payload : ToJson] AppCommandRequestContext::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+pub fn AppCommandRequestContext::permission_scope(Self, String) -> Json raise CommandPermissionError
+pub fn AppCommandRequestContext::source_origin(Self) -> String
 pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub async fn AppCommandRequestContext::wait_for_wake(Self, Int64) -> Unit
 pub fn AppCommandRequestContext::wake_revision(Self) -> Int64
 pub fn AppCommandRequestContext::wake_signal(Self) -> RuntimeWakeSignal
 pub fn AppCommandRequestContext::window(Self) -> Int64
+pub fn AppCommandRequestContext::window_id(Self) -> String
 
 type MbtProcessHost
 pub fn MbtProcessHost::close(Self) -> Unit

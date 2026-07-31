@@ -4,6 +4,7 @@ package "justjavac/proton_ext/fs"
 import {
   "justjavac/proton/command",
   "justjavac/proton/extension",
+  "justjavac/proton/manifest",
   "justjavac/proton_contract",
   "moonbitlang/core/debug",
 }
@@ -13,12 +14,19 @@ pub fn extension() -> @extension.Extension
 
 pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
 
+pub fn permission(Array[PermissionRoot], window? : String, origin? : @manifest.PermissionOrigin) -> @manifest.PermissionGrant raise FsError
+
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type FsError derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct PermissionRoot {
+  path : String
+  commands : Array[String]
+}
+pub fn PermissionRoot::new(String, Array[String]) -> Self raise FsError
 
 // Type aliases
 
