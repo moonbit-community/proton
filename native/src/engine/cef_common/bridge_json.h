@@ -158,4 +158,115 @@ static int proton_engine_bridge_config_allows_op(
   return match.allowed;
 }
 
+typedef enum {
+  PROTON_ENGINE_BRIDGE_REQUEST_OK = 0,
+  PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED,
+  PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED,
+  PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED,
+  PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED,
+  PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED
+} proton_engine_bridge_request_status_t;
+
+static const char *proton_engine_bridge_request_reject_event(
+    proton_engine_bridge_request_status_t status) {
+  switch (status) {
+  case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
+    return "bridge_reject_origin_not_allowed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
+    return "bridge_reject_not_allowed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
+    return "bridge_reject_payload_too_large";
+  case PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED:
+    return "bridge_reject_invalid_page_instance";
+  case PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED:
+    return "bridge_reject_allocation_failed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OK:
+  default:
+    return "bridge_accept";
+  }
+}
+
+static const char *proton_engine_bridge_request_reject_message(
+    proton_engine_bridge_request_status_t status) {
+  switch (status) {
+  case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
+    return "bridge origin is not allowed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
+    return "bridge op is not allowed";
+  case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
+    return "bridge payload is too large";
+  case PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED:
+    return "bridge page instance is invalid";
+  case PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED:
+    return "failed to allocate bridge request";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OK:
+  default:
+    return "";
+  }
+}
+
+/* Validates one renderer-supplied bridge request and renders its envelope.
+
+   Origin derivation, grant matching, payload and page-instance validation, and
+   the request-id assignment all live here so the per-platform message handlers
+   share a single allocation-ownership path. The derived source origin is
+   interned in this function alone; callers own only *out_request_json, and only
+   when the status is PROTON_ENGINE_BRIDGE_REQUEST_OK.
+
+   *io_next_request_id advances only once the request is accepted, so rejected
+   requests do not consume ids. */
+static proton_engine_bridge_request_status_t
+proton_engine_bridge_build_request_json(
+    const char *bridge_config_json, const char *frame_url, const char *op,
+    const char *payload_json, const char *page_instance,
+    int32_t max_payload_bytes, int64_t public_window_id,
+    int64_t *io_next_request_id, int64_t *out_request_id,
+    char **out_request_json) {
+  *out_request_id = 0;
+  *out_request_json = NULL;
+  if (bridge_config_json == NULL ||
+      !proton_engine_bridge_config_allows_page(bridge_config_json, frame_url)) {
+    return PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED;
+  }
+  char *source_origin = proton_engine_bridge_source_origin(frame_url);
+  if (source_origin == NULL ||
+      !proton_engine_bridge_config_allows_op(bridge_config_json, frame_url,
+                                             op)) {
+    free(source_origin);
+    return PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED;
+  }
+  proton_engine_bridge_request_status_t status = PROTON_ENGINE_BRIDGE_REQUEST_OK;
+  if (!proton_engine_bridge_payload_is_valid(payload_json,
+                                             (size_t)max_payload_bytes)) {
+    status = PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED;
+  } else if (!proton_engine_bridge_page_instance_is_valid(page_instance)) {
+    status = PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED;
+  }
+  if (status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
+    free(source_origin);
+    return status;
+  }
+  int64_t request_id = (*io_next_request_id)++;
+  if (*io_next_request_id <= 0) {
+    *io_next_request_id = 1;
+  }
+  size_t request_len = strlen(op) + strlen(payload_json) +
+                       strlen(page_instance) + strlen(source_origin) + 288;
+  char *request_json = (char *)malloc(request_len);
+  if (request_json == NULL) {
+    free(source_origin);
+    return PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED;
+  }
+  snprintf(request_json, request_len,
+           "{\"abi_version\":1,\"request_id\":\"%lld\",\"window\":\"%lld\","
+           "\"op\":\"%s\",\"payload\":%s,\"page_instance\":\"%s\","
+           "\"source_origin\":\"%s\"}",
+           (long long)request_id, (long long)public_window_id, op, payload_json,
+           page_instance, source_origin);
+  free(source_origin);
+  *out_request_id = request_id;
+  *out_request_json = request_json;
+  return PROTON_ENGINE_BRIDGE_REQUEST_OK;
+}
+
 #endif

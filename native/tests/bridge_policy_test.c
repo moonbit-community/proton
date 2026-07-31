@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -60,6 +61,56 @@ int main(void) {
       bridge_config, "https://example.com/workspace", "app:ping"));
   assert(!proton_engine_bridge_config_allows_op(
       bridge_config, "https://other.example/workspace", "ext:fs/read_file"));
+
+  /* Request-envelope construction. Rejected requests must leave the id counter
+     untouched and must not hand back an allocation. */
+  int64_t next_request_id = 7;
+  int64_t request_id = -1;
+  char *request_json = NULL;
+
+  assert(proton_engine_bridge_build_request_json(
+             bridge_config, "proton://app/index.html", "app:ping", "{\"a\":1}",
+             "1234-5", 1048576, 42, &next_request_id, &request_id,
+             &request_json) == PROTON_ENGINE_BRIDGE_REQUEST_OK);
+  assert(request_id == 7);
+  assert(next_request_id == 8);
+  assert(request_json != NULL);
+  assert(strstr(request_json, "\"request_id\":\"7\"") != NULL);
+  assert(strstr(request_json, "\"window\":\"42\"") != NULL);
+  assert(strstr(request_json, "\"op\":\"app:ping\"") != NULL);
+  assert(strstr(request_json, "\"payload\":{\"a\":1}") != NULL);
+  assert(strstr(request_json, "\"page_instance\":\"1234-5\"") != NULL);
+  assert(strstr(request_json, "\"source_origin\":\"app\"") != NULL);
+  free(request_json);
+
+  assert(proton_engine_bridge_build_request_json(
+             bridge_config, "https://other.example/page", "app:ping",
+             "{\"a\":1}", "1234-5", 1048576, 42, &next_request_id, &request_id,
+             &request_json) == PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED);
+  assert(request_json == NULL);
+  assert(next_request_id == 8);
+
+  assert(proton_engine_bridge_build_request_json(
+             bridge_config, "proton://app/index.html", "ext:fs/read_file",
+             "{\"a\":1}", "1234-5", 1048576, 42, &next_request_id, &request_id,
+             &request_json) == PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED);
+  assert(request_json == NULL);
+  assert(next_request_id == 8);
+
+  assert(proton_engine_bridge_build_request_json(
+             bridge_config, "proton://app/index.html", "app:ping", "{\"a\":1}",
+             "1234-5", 4, 42, &next_request_id, &request_id,
+             &request_json) == PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED);
+  assert(request_json == NULL);
+  assert(next_request_id == 8);
+
+  assert(proton_engine_bridge_build_request_json(
+             bridge_config, "proton://app/index.html", "app:ping", "{\"a\":1}",
+             "1234-5\",\"x\":\"", 1048576, 42, &next_request_id, &request_id,
+             &request_json) ==
+         PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED);
+  assert(request_json == NULL);
+  assert(next_request_id == 8);
 
   return 0;
 }

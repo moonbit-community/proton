@@ -1873,89 +1873,33 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
                             renderer_pending_id, op != NULL ? op : "");
 
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
-  int page_allowed =
-      window != NULL && window->bridge_config_json != NULL &&
-      proton_engine_bridge_config_allows_page(window->bridge_config_json,
-                                              frame_url);
-  if (window == NULL || window->runtime == NULL ||
-      window->bridge_config_json == NULL || !page_allowed) {
+  int64_t request_id = 0;
+  char *request_json = NULL;
+  proton_engine_bridge_request_status_t build_status =
+      window == NULL || window->runtime == NULL
+          ? PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED
+          : proton_engine_bridge_build_request_json(
+                window->bridge_config_json, frame_url, op, payload_json,
+                page_instance, window->max_bridge_payload_bytes,
+                window->public_window_id,
+                &window->runtime->next_bridge_request_id, &request_id,
+                &request_json);
+  if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
     proton_engine_debug_log(
-        "bridge_reject_origin_not_allowed browser=%d pending=%d url=%s",
-        browser_id, renderer_pending_id, proton_engine_log_url(frame_url));
-    proton_engine_reject_renderer_request(frame, renderer_pending_id,
-                                          "bridge origin is not allowed");
+        "%s browser=%d pending=%d op=%s url=%s",
+        proton_engine_bridge_request_reject_event(build_status), browser_id,
+        renderer_pending_id, op != NULL ? op : "",
+        proton_engine_log_url(frame_url));
+    proton_engine_reject_renderer_request(
+        frame, renderer_pending_id,
+        proton_engine_bridge_request_reject_message(build_status));
     free(frame_url);
     free(op);
     free(payload_json);
     free(page_instance);
-    return 1;
-  }
-  char *source_origin = proton_engine_bridge_source_origin(frame_url);
-  if (source_origin == NULL ||
-      !proton_engine_bridge_config_allows_op(window->bridge_config_json,
-                                             frame_url, op)) {
-    proton_engine_debug_log("bridge_reject_not_allowed browser=%d pending=%d op=%s",
-                            browser_id, renderer_pending_id,
-                            op != NULL ? op : "");
-    proton_engine_reject_renderer_request(frame, renderer_pending_id,
-                                          "bridge op is not allowed");
-    free(op);
-    free(payload_json);
-    free(page_instance);
-    free(source_origin);
-    free(frame_url);
     return 1;
   }
   free(frame_url);
-  if (!proton_engine_bridge_payload_is_valid(
-          payload_json, window->max_bridge_payload_bytes)) {
-    proton_engine_debug_log("bridge_reject_payload_too_large browser=%d pending=%d op=%s",
-                            browser_id, renderer_pending_id,
-                            op != NULL ? op : "");
-    proton_engine_reject_renderer_request(frame, renderer_pending_id,
-                                          "bridge payload is too large");
-    free(op);
-    free(payload_json);
-    free(page_instance);
-    free(source_origin);
-    return 1;
-  }
-  if (!proton_engine_bridge_page_instance_is_valid(page_instance)) {
-    proton_engine_debug_log("bridge_reject_invalid_page_instance browser=%d pending=%d op=%s",
-                            browser_id, renderer_pending_id,
-                            op != NULL ? op : "");
-    proton_engine_reject_renderer_request(frame, renderer_pending_id,
-                                          "bridge page instance is invalid");
-    free(op);
-    free(payload_json);
-    free(page_instance);
-    return 1;
-  }
-
-  int64_t request_id = window->runtime->next_bridge_request_id++;
-  if (window->runtime->next_bridge_request_id <= 0) {
-    window->runtime->next_bridge_request_id = 1;
-  }
-  size_t request_len =
-      strlen(op) + strlen(payload_json) + strlen(page_instance) +
-      strlen(source_origin) + 288;
-  char *request_json = (char *)malloc(request_len);
-  if (request_json == NULL) {
-    proton_engine_reject_renderer_request(frame, renderer_pending_id,
-                                          "failed to allocate bridge request");
-    free(op);
-    free(payload_json);
-    free(page_instance);
-    free(source_origin);
-    return 1;
-  }
-  snprintf(request_json, request_len,
-           "{\"abi_version\":1,\"request_id\":\"%lld\",\"window\":\"%lld\","
-           "\"op\":\"%s\",\"payload\":%s,\"page_instance\":\"%s\","
-           "\"source_origin\":\"%s\"}",
-           (long long)request_id, (long long)window->public_window_id, op,
-           payload_json, page_instance, source_origin);
-  free(source_origin);
   if (!proton_engine_bridge_pending_add(request_id, browser_id,
                                         renderer_pending_id, page_instance,
                                         frame) ||
