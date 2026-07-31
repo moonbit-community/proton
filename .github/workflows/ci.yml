@@ -192,7 +192,8 @@ jobs:
               justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
               justjavac/proton_cli/cef justjavac/proton_cli/codegen \
               justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-              justjavac/proton_cli/new justjavac/proton_cli/package \
+              justjavac/proton_cli/fsutil justjavac/proton_cli/new \
+              justjavac/proton_cli/output justjavac/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           else
             moon -C proton test native --target native --diagnostic-limit 80
@@ -200,7 +201,8 @@ jobs:
               justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
               justjavac/proton_cli/cef justjavac/proton_cli/codegen \
               justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-              justjavac/proton_cli/new justjavac/proton_cli/package \
+              justjavac/proton_cli/fsutil justjavac/proton_cli/new \
+              justjavac/proton_cli/output justjavac/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           fi
           moon -C e2e build --target native --diagnostic-limit 80
@@ -214,7 +216,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
           moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/new justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
+          moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/fsutil justjavac/proton_cli/new justjavac/proton_cli/output justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Test extensions on Unix
