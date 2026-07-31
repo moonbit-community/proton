@@ -1,11 +1,4 @@
 ///|
-extern "C" fn test_icon_path_ffi() -> Bytes = "moonbit_tray_test_icon_path"
-
-///|
-#borrow(path)
-extern "C" fn test_remove_file_ffi(path : Bytes) -> Bool = "moonbit_tray_test_remove_file"
-
-///|
 /// Builds a simulated tray value for white-box state transition tests.
 fn create_simulated_tray(
   identifier? : String = default_identifier(),
@@ -235,6 +228,58 @@ test "native hidden operations stay usable when backend is available" {
 }
 
 ///|
+test "native stale handles are rejected after destroy" {
+  if is_supported() {
+    let tray = match
+      create(identifier="justjavac.tray.test.stale", tooltip="stale") {
+      Ok(tray) => tray
+      Err(error) => fail(error)
+    }
+    let stale = tray.handle
+    tray.destroy()
+    inspect(hide_state_ffi(stale), content="false")
+    inspect(pump_state_ffi(stale, 0), content="-1")
+    let message = decode_bytes(last_state_error_ffi(stale)).unwrap_or("")
+    assert_true(message.contains("stale"))
+  } else {
+    inspect("unsupported", content="unsupported")
+  }
+}
+
+///|
+test "native macos trays destroy out of order" {
+  guard @env.get_env_var("MOONBIT_TRAY_RUN_NATIVE_TESTS") is Some("1") &&
+    current_platform() is MacOS else {
+    inspect("skipped", content="skipped")
+    return ()
+  }
+  if !is_supported() {
+    inspect("unsupported", content="unsupported")
+    return ()
+  }
+  let first = match
+    create(identifier="justjavac.tray.test.pool.a", tooltip="a") {
+    Ok(tray) => tray
+    Err(error) => fail(error)
+  }
+  let second = match
+    create(identifier="justjavac.tray.test.pool.b", tooltip="b") {
+    Ok(tray) => tray
+    Err(error) => {
+      first.destroy()
+      fail(error)
+    }
+  }
+  // Non-LIFO destroy: the first tray releases its pool count while the
+  // second keeps operating; the process must survive.
+  first.destroy()
+  debug_inspect(second.set_tooltip("b updated"), content="Ok(false)")
+  debug_inspect(second.hide(), content="Ok(false)")
+  second.destroy()
+  debug_inspect((first.destroyed, second.destroyed), content="(true, true)")
+}
+
+///|
 test "native macos custom icon path stays usable" {
   guard @env.get_env_var("MOONBIT_TRAY_RUN_NATIVE_TESTS") is Some("1") &&
     current_platform() is MacOS else {
@@ -245,7 +290,7 @@ test "native macos custom icon path stays usable" {
     inspect("unsupported", content="unsupported")
     return ()
   }
-  let icon_path = decode_bytes(test_icon_path_ffi()).unwrap_or("")
+  let icon_path = decode_bytes(@testsupport.make_test_icon_path()).unwrap_or("")
   guard !icon_path.is_empty() else { fail("failed to create test tray icon") }
   let tray = match
     create(
@@ -255,7 +300,7 @@ test "native macos custom icon path stays usable" {
     ) {
     Ok(tray) => tray
     Err(error) => {
-      ignore(test_remove_file_ffi(encode_text(icon_path)))
+      ignore(@testsupport.remove_test_file(icon_path))
       fail(error)
     }
   }
@@ -268,7 +313,7 @@ test "native macos custom icon path stays usable" {
   debug_inspect(tray.set_icon(Some(icon_path)), content="Ok(true)")
   debug_inspect(tray.hide(), content="Ok(false)")
   tray.destroy()
-  ignore(test_remove_file_ffi(encode_text(icon_path)))
+  ignore(@testsupport.remove_test_file(icon_path))
 }
 
 ///|
