@@ -287,7 +287,6 @@ fn RuntimeSession::create_window(
   let running = RunningWindow::{
     id: plan.id,
     window: created_window,
-    policy: definition.policy,
     permissions: definition.permissions,
     lifetime: WindowLifetime::new(),
     bridge_ready: !self.monitor_bridge,
@@ -1432,7 +1431,6 @@ fn RuntimeSession::start_bridge_request(
             target.permissions,
             host,
             request,
-            target.policy,
             self.wakeup.signal,
           )
         },

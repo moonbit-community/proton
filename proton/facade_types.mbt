@@ -74,7 +74,6 @@ priv struct BridgeDispatchTask {
 priv struct RunningWindow {
   id : String
   window : @native.Window
-  policy : BridgePagePolicy
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
   mut bridge_ready : Bool
@@ -110,7 +109,6 @@ priv struct PlannedWindow {
 priv struct PreparedWindow {
   plan : PlannedWindow
   bridge : @native.BridgeConfig?
-  policy : BridgePagePolicy
   permissions : WindowPermissionPolicy
   browser_policy : @native.BrowserPolicy
 }
@@ -131,7 +129,6 @@ priv struct CommandExtensionDestroyHook {
 ///|
 priv struct BridgePagePolicy {
   entry_origin : String?
-  request_timeout_ms : Int
 }
 
 ///|

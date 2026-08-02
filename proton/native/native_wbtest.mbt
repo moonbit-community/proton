@@ -614,7 +614,7 @@ test "bridge config rejects unsafe schema variants" {
     ),
     (
       "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"request_timeout_ms\":0}",
-      "request_timeout_ms",
+      "unknown field: request_timeout_ms",
     ),
     (
       "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"file://tmp\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",

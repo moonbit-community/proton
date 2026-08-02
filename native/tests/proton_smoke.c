@@ -696,17 +696,17 @@ static int expect_bridge_response_payloads(void) {
 
   status = proton_engine_bridge_response_parse(
       "{\"abi_version\":1,\"request_id\":43,\"ok\":false,"
-      "\"error\":{\"code\":\"request_timeout\","
-      "\"message\":\"bridge request timed out\","
-      "\"detail\":\"backend deadline\"}}",
+      "\"error\":{\"code\":\"backend_failed\","
+      "\"message\":\"command failed\","
+      "\"detail\":\"validation\"}}",
       &response);
   if (status != PROTON_ENGINE_BRIDGE_RESPONSE_OK ||
       response.request_id != 43 || response.ok ||
       response.payload_json != NULL || response.error_json == NULL ||
       strcmp(response.error_json,
-             "{\"code\":\"request_timeout\","
-             "\"message\":\"bridge request timed out\","
-             "\"detail\":\"backend deadline\"}") != 0) {
+             "{\"code\":\"backend_failed\","
+             "\"message\":\"command failed\","
+             "\"detail\":\"validation\"}") != 0) {
     proton_engine_bridge_response_dispose(&response);
     return fail("failed bridge response error JSON was not preserved");
   }
@@ -1963,8 +1963,7 @@ int main(int argc, char **argv) {
                                  "\"ops\":[{\"name\":\"ext:app/ping\"}],"
                                  "\"extensions\":[],"
                                  "\"initialization_units\":[]}],"
-                                 "\"max_payload_bytes\":1048576,"
-                                 "\"request_timeout_ms\":30000}}",
+                                 "\"max_payload_bytes\":1048576}}",
                         &window),
                     PROTON_OK)) {
     return 1;

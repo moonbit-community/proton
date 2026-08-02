@@ -11,22 +11,19 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
+function createBridge(url = "proton://app/") {
   const calls = [];
   const location = new URL(url);
   const context = vm.createContext({
     URL,
     Promise,
-    clearTimeout,
     location,
-    setTimeout,
   });
   const install = vm.runInContext(source, context);
   const dispatcher = install(
     (action, id, name, payloadJson, pageInstance) =>
       calls.push({ action, id, name, payloadJson, pageInstance }),
     {
-      request_timeout_ms: requestTimeoutMs,
       grants: [{
         source_origin: location.protocol === "proton:" ? "app" : location.origin,
         ops: [
@@ -206,17 +203,31 @@ test("rejects pending requests when the context is disposed", async () => {
   );
 });
 
-test("notifies native when a bridge request times out", async () => {
-  const { calls, context, dispatcher } = createBridge(
-    "proton://app/",
-    1,
+test("keeps a request pending until an explicit response", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  let settled = false;
+  const resultPromise = context.__MoonBit__.core.invokeOp("app:wait", {});
+  resultPromise.then(
+    () => { settled = true; },
+    () => { settled = true; },
   );
-  const resultPromise = context.__MoonBit__.core.invokeJson(
-    "app:timeout",
-    "{}",
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(settled, false);
+  assert.equal(calls.length, 1);
+  dispatcher.dispatchResponse(calls[0].id, true, '{"done":true}', "");
+  assert.equal((await resultPromise).done, true);
+});
+
+test("forwards invokeOp cancellation to native", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const controller = new AbortController();
+  const resultPromise = context.__MoonBit__.add.sum(
+    {},
+    { signal: controller.signal },
   );
+  controller.abort();
   await assert.rejects(resultPromise, (error) => {
-    assert.equal(error.code, "request_timeout");
+    assert.equal(error.code, "request_cancelled");
     return true;
   });
   assert.equal(calls.length, 2);

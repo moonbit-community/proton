@@ -157,7 +157,10 @@ pub async fn write_updater_metadata(
   )
   verify_fragment_decodes(fragment)
   let digest_path = "\{artifact}.sha256"
-  let fragment_path = resolve_path(plan.output, "latest-\{platform}.json")
+  let fragment_path = @fsutil.resolve_path(
+    plan.output,
+    "latest-\{platform}.json",
+  )
   write_text(digest_path, "\{sha256}  \{name}\n") catch {
     error =>
       raise UnreadableArtifact(

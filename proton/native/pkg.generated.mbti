@@ -83,10 +83,9 @@ pub enum AppInstanceAcquire {
 pub(all) struct BridgeConfig {
   raw_json : String?
   max_payload_bytes : Int
-  request_timeout_ms : Int
   grants : Array[BridgeGrantConfig]
 } derive(Eq, @debug.Debug)
-pub fn BridgeConfig::new(grants~ : Array[BridgeGrantConfig], max_payload_bytes? : Int, request_timeout_ms? : Int) -> Self
+pub fn BridgeConfig::new(grants~ : Array[BridgeGrantConfig], max_payload_bytes? : Int) -> Self
 pub fn BridgeConfig::to_json_string(Self) -> String
 pub fn BridgeConfig::unsafe_from_json(String) -> Self
 

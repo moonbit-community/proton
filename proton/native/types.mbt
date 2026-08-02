@@ -291,7 +291,6 @@ struct MenuItem {
 pub(all) struct BridgeConfig {
   raw_json : String?
   max_payload_bytes : Int
-  request_timeout_ms : Int
   grants : Array[BridgeGrantConfig]
 } derive(Debug, Eq)
 
@@ -845,24 +844,17 @@ pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
 pub fn BridgeConfig::new(
   grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
-  request_timeout_ms? : Int = 30000,
 ) -> BridgeConfig {
   {
     raw_json: None,
     max_payload_bytes,
-    request_timeout_ms,
     grants: grants.map(fn(grant) { grant.copy() }),
   }
 }
 
 ///|
 pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
-  {
-    raw_json: Some(raw_json),
-    max_payload_bytes: 1048576,
-    request_timeout_ms: 30000,
-    grants: [],
-  }
+  { raw_json: Some(raw_json), max_payload_bytes: 1048576, grants: [] }
 }
 
 ///|
@@ -1103,10 +1095,6 @@ fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
         "max_payload_bytes": Json::number(
           self.max_payload_bytes.to_double(),
           repr=self.max_payload_bytes.to_string(),
-        ),
-        "request_timeout_ms": Json::number(
-          self.request_timeout_ms.to_double(),
-          repr=self.request_timeout_ms.to_string(),
         ),
       }
       Json::object(fields)

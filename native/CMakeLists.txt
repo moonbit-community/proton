@@ -349,6 +349,15 @@ if(APPLE)
     "# libproton public ABI (see native/include/proton_native.h)\n_proton_*\n")
   target_link_options(proton PRIVATE
     "LINKER:-exported_symbols_list,${PROTON_DARWIN_EXPORTS}")
+elseif(UNIX)
+  # Visibility attributes do not hide linker-generated symbols such as
+  # _bss_start on every ELF toolchain. Enforce the public ABI at link time.
+  set(PROTON_ELF_VERSION_SCRIPT
+    "${CMAKE_CURRENT_BINARY_DIR}/proton_elf.map")
+  file(WRITE "${PROTON_ELF_VERSION_SCRIPT}"
+    "{\n  global:\n    proton_*;\n  local:\n    *;\n};\n")
+  target_link_options(proton PRIVATE
+    "LINKER:--version-script,${PROTON_ELF_VERSION_SCRIPT}")
 endif()
 
 if(WIN32)

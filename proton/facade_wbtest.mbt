@@ -383,10 +383,6 @@ async test "startup dispatch retains an earlier window close" {
     RunningWindow::{
       id: "main",
       window: first,
-      policy: BridgePagePolicy::{
-        entry_origin: None,
-        request_timeout_ms: 30000,
-      },
       permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
       bridge_ready: true,
@@ -395,10 +391,6 @@ async test "startup dispatch retains an earlier window close" {
     RunningWindow::{
       id: "secondary",
       window: second,
-      policy: BridgePagePolicy::{
-        entry_origin: None,
-        request_timeout_ms: 30000,
-      },
       permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
       bridge_ready: false,
@@ -628,24 +620,18 @@ test "dev bridge page policy parses exact http origins" {
 
 ///|
 test "native bridge config isolates each window entry origin" {
-  let first = native_bridge_config(
-    [@native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"])],
-    BridgePagePolicy::{
-      entry_origin: Some("http://localhost:3000"),
-      request_timeout_ms: 30000,
-    },
-  ).to_json_string()
-  let second = native_bridge_config(
-    [@native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"])],
-    BridgePagePolicy::{
-      entry_origin: Some("http://localhost:4000"),
-      request_timeout_ms: 30000,
-    },
-  ).to_json_string()
+  let first = native_bridge_config([
+    @native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"]),
+  ]).to_json_string()
+  let second = native_bridge_config([
+    @native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"]),
+  ]).to_json_string()
   assert_true(first.contains("http://localhost:3000"))
   assert_false(first.contains("http://localhost:4000"))
   assert_true(second.contains("http://localhost:4000"))
   assert_false(second.contains("http://localhost:3000"))
+  assert_false(first.contains("request_timeout_ms"))
+  assert_false(second.contains("request_timeout_ms"))
 }
 
 ///|
@@ -708,7 +694,7 @@ test "permission policy binds extension ops and scope to one trusted source" {
   let policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
       "main",
-      BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 },
+      BridgePagePolicy::{ entry_origin: None },
       manifest,
       "/trusted/project",
       specs,
@@ -803,7 +789,7 @@ test "extension permission scopes are validated before startup" {
       ignore(
         resolve_window_permission_policy(
           "main",
-          BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 },
+          BridgePagePolicy::{ entry_origin: None },
           manifest,
           "/trusted/project",
           specs,

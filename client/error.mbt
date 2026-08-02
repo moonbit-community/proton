@@ -3,7 +3,6 @@
 pub(all) suberror ClientFailure {
   BridgeUnavailable
   RequestCancelled
-  RequestTimedOut
   InvalidContract(message~ : String)
   RemoteFailure(code~ : String, message~ : String, detail~ : String?)
   TransportFailure(message~ : String)
@@ -17,7 +16,6 @@ pub fn ClientFailure::message(self : ClientFailure) -> String {
   match self {
     BridgeUnavailable => "the Proton bridge is not available on this page"
     RequestCancelled => "the Proton bridge request was cancelled"
-    RequestTimedOut => "the Proton bridge request timed out"
     InvalidContract(message~) => "invalid Proton contract: " + message
     RemoteFailure(code~, message~, detail~) =>
       match detail {
@@ -59,7 +57,6 @@ fn decode_bridge_failure(raw : String) -> ClientFailure {
   match wire.code {
     "bridge_unavailable" => BridgeUnavailable
     "request_cancelled" => RequestCancelled
-    "request_timeout" => RequestTimedOut
     "transport_failure" => TransportFailure(message=wire.message)
     code => RemoteFailure(code~, message=wire.message, detail=wire.detail)
   }

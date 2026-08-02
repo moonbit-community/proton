@@ -174,12 +174,6 @@ async test "client uses typed JSON commands and live events" {
 test "client preserves stable remote error codes" {
   assert_eq(
     decode_bridge_failure(
-      "{\"code\":\"request_timeout\",\"message\":\"bridge request timed out\"}",
-    ),
-    ClientFailure::RequestTimedOut,
-  )
-  assert_eq(
-    decode_bridge_failure(
       "{\"code\":\"backend_failed\",\"message\":\"command failed\",\"detail\":\"validation\"}",
     ),
     ClientFailure::RemoteFailure(
@@ -188,25 +182,6 @@ test "client preserves stable remote error codes" {
       detail=Some("validation"),
     ),
   )
-}
-
-///|
-async test "client maps bridge timeout rejection through invoke" {
-  install_fake_bridge(
-    "",
-    failure_json="{\"code\":\"request_timeout\",\"message\":\"bridge request timed out\"}",
-  )
-  defer remove_fake_bridge()
-  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
-    "echo",
-  )
-  try {
-    ignore(invoke(echo, { value: "ping" }))
-    fail("expected RequestTimedOut")
-  } catch {
-    ClientFailure::RequestTimedOut => ()
-    error => fail("expected RequestTimedOut, got " + error.to_string())
-  }
 }
 
 ///|
@@ -346,13 +321,6 @@ test "callback invocation preserves structured bridge failures" {
       ),
     ),
   )
-
-  let timeout = invoke_callback_outcome(
-    "",
-    failure_json="{\"code\":\"request_timeout\",\"message\":\"bridge request timed out\"}",
-  )
-  assert_eq(timeout.response, None)
-  assert_eq(timeout.failure, Some(ClientFailure::RequestTimedOut))
 
   let cancelled = invoke_callback_outcome(
     "",

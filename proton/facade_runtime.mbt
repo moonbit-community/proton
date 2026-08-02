@@ -256,14 +256,13 @@ async fn run_manifest(
           error => raise ConfigurationError(error)
         }
         ensure_entry_bridge_grant(grants, policies[index])
-        Some(native_bridge_config(grants, policies[index]))
+        Some(native_bridge_config(grants))
       } else {
         None
       }
       definitions.push(PreparedWindow::{
         plan,
         bridge,
-        policy: policies[index],
         permissions: permission_policies[index],
         browser_policy,
       })
@@ -433,12 +432,8 @@ fn native_window_config(
 ///|
 fn native_bridge_config(
   grants : Array[@native.BridgeGrantConfig],
-  policy : BridgePagePolicy,
 ) -> @native.BridgeConfig {
-  @native.BridgeConfig::new(
-    grants~,
-    request_timeout_ms=policy.request_timeout_ms,
-  )
+  @native.BridgeConfig::new(grants~)
 }
 
 ///|

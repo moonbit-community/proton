@@ -26,10 +26,6 @@
     throw new TypeError("Proton bridge requires a native page instance");
   }
 
-  const requestTimeoutMs = Number.isInteger(config.request_timeout_ms) &&
-      config.request_timeout_ms > 0
-    ? config.request_timeout_ms
-    : 30000;
   const pending = new Map();
   const listeners = new Map();
   const jsonListeners = new Map();
@@ -146,20 +142,7 @@
           signal.removeEventListener("abort", abortListener);
         }
       };
-      const timer = setTimeout(() => {
-        const entry = pending.get(id);
-        if (!entry) {
-          return;
-        }
-        cancelNativeRequest(id);
-        pending.delete(id);
-        finish();
-        reject(new ProtonBridgeError(
-          "request_timeout",
-          "Proton bridge request timed out",
-        ));
-      }, requestTimeoutMs);
-      pending.set(id, { resolve, reject, timer, finish });
+      pending.set(id, { resolve, reject, finish });
 
       if (signal) {
         abortListener = () => {
@@ -169,7 +152,6 @@
           }
           cancelNativeRequest(id);
           pending.delete(id);
-          clearTimeout(timer);
           finish();
           reject(new ProtonBridgeError(
             "request_cancelled",
@@ -192,7 +174,6 @@
           pageInstance,
         );
       } catch (error) {
-        clearTimeout(timer);
         pending.delete(id);
         finish();
         reject(bridgeError(
@@ -204,7 +185,7 @@
     });
   }
 
-  function invokeOp(name, payload) {
+  function invokeOp(name, payload, options) {
     let payloadJson;
     try {
       payloadJson = JSON.stringify(payload === undefined ? null : payload);
@@ -215,7 +196,7 @@
         "Proton bridge request could not be encoded",
       ));
     }
-    return invokeJson(name, payloadJson).then((responseJson) => {
+    return invokeJson(name, payloadJson, options).then((responseJson) => {
       try {
         return JSON.parse(responseJson);
       } catch (error) {
@@ -290,8 +271,8 @@
     }
     const target = {
       name: namespace,
-      invoke(apiName, payload) {
-        return invokeOp(`ext:${namespace}/${String(apiName)}`, payload);
+      invoke(apiName, payload, options) {
+        return invokeOp(`ext:${namespace}/${String(apiName)}`, payload, options);
       },
       on(eventName, listener) {
         return events.on(`${namespace}.${String(eventName)}`, listener);
@@ -303,8 +284,8 @@
       if (!apiName || apiName === "then") {
         continue;
       }
-      target[apiName] = function invokeExtension(payload) {
-        return invokeOp(`ext:${namespace}/${apiName}`, payload);
+      target[apiName] = function invokeExtension(payload, options) {
+        return invokeOp(`ext:${namespace}/${apiName}`, payload, options);
       };
     }
     root[namespace] = target;
@@ -325,7 +306,6 @@
         return false;
       }
       pending.delete(id);
-      clearTimeout(entry.timer);
       entry.finish();
       if (ok) {
         entry.resolve(payloadJson);
@@ -398,7 +378,6 @@
       const error = new Error(reason || "Proton bridge context was released");
       for (const [id, entry] of pending.entries()) {
         cancelNativeRequest(id);
-        clearTimeout(entry.timer);
         entry.finish();
         entry.reject(new ProtonBridgeError("bridge_disposed", error.message));
       }
