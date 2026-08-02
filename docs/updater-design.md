@@ -52,7 +52,7 @@ delta artifacts can be introduced without a breaking schema change.
 | Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
 | Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | Strict version monotonicity enforced on the client |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
-| Local attacker | Write to the staging directory between download and apply | The artifact is never written to a path an attacker can name: verified bytes go straight into a directory `mkdtemp` created 0700. A same-uid attacker can still alter the expanded bundle before the swap; closing that needs the macOS code-signature check described under [Per-platform apply](#per-platform-apply), which is **not yet implemented** |
+| Local attacker | Write to the staging directory between download and apply | The artifact is never written to a path an attacker can name: verified bytes go straight into a directory `mkdtemp` created 0700. `stage` then checks the expanded bundle's own code signature, which is what covers those files once the archive signature no longer does, and refuses a bundle signed as a different application |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
 | Manifest pinning | Serve a stale manifest so the client never learns about a fix | The signed manifest carries `published_at`; a manifest older than the configured freshness window is refused. The window is measured against the system clock, so this defence is only as good as that clock — a client whose clock is wrong refuses every update rather than accepting a stale one, which is the safe direction but not a silent one |
 
@@ -355,7 +355,8 @@ Proton.
    result; zero or several do not say what to install.
 6. **Stage.** Check everything that can be checked while the installed
    application is still untouched: the bundle is a real directory with an
-   executable inside, and it is not the running bundle itself.
+   executable inside, it is not the running bundle itself, its code signature
+   covers its contents, and it is signed as the same application.
 7. **Apply.** Two renames on one volume. The replaced application is kept beside
    the install location rather than deleted, and the directory the new one was
    expanded into is removed once it is empty.
@@ -395,11 +396,20 @@ rather than being written three times.
 
 ### Per-platform apply
 
-**macOS.** Verify the staged bundle with the platform code-signing check and
-confirm its signing identity matches the running application, as Sparkle does;
-an update signed by a different identity is refused. **This is not implemented
-yet** — `stage` currently checks the bundle's shape, not its signature — and it
-is what the local-attacker row of the threat model above depends on. Swap the bundle with
+**macOS.** `stage` verifies the staged bundle with `SecStaticCodeCheckValidity`
+including nested code, then compares its signing identifier and team identifier
+with the installed application's, as Sparkle does; an update signed as a
+different application or by a different team is refused.
+
+How much that establishes depends on how the application is signed. A Developer
+ID release carries a team identifier, so the comparison is a real statement
+about who produced the update. An ad-hoc signature — what `proton_cli package`
+applies when `--sign` is not given — carries no team identifier at all, and two
+absent teams compare equal. For those builds this establishes only that the
+bundle was not altered after signing and that it calls itself the same
+application. That is still the property the local-attacker row needs; it is not
+an identity guarantee, and an application that wants one has to ship with a
+Developer ID. Swap the bundle with
 `rename` on the same volume, then relaunch. Two conditions must be reported
 clearly rather than worked around: an application installed somewhere the user
 cannot write, and an application still running from a quarantined or

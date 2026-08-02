@@ -9,18 +9,72 @@
 
 static char root[1024];
 
-static void make_bundle(const char *path) {
-  char buffer[1200];
+/* Builds a real, signable application bundle.
+
+   The updater checks a staged bundle's code signature, so a directory tree
+   made with mkdir is no longer enough: these need an Info.plist, a Mach-O to
+   be the executable, and a seal over both. */
+static void make_bundle(const char *path, const char *identifier) {
+  char buffer[1400];
   assert(mkdir(path, 0755) == 0);
   snprintf(buffer, sizeof(buffer), "%s/Contents", path);
   assert(mkdir(buffer, 0755) == 0);
   snprintf(buffer, sizeof(buffer), "%s/Contents/MacOS", path);
   assert(mkdir(buffer, 0755) == 0);
+  snprintf(buffer, sizeof(buffer), "%s/Contents/Resources", path);
+  assert(mkdir(buffer, 0755) == 0);
+#if defined(__APPLE__)
+  char command[3000];
+  /* A real Mach-O, with the signature it arrived with removed: a bundle whose
+     executable is still signed by Apple is not the unsigned case this needs to
+     be able to produce. */
+  snprintf(command, sizeof(command),
+           "cp /bin/echo '%s/Contents/MacOS/app' && codesign --remove-signature "
+           "'%s/Contents/MacOS/app' 2>/dev/null",
+           path, path);
+  assert(system(command) == 0);
+  snprintf(buffer, sizeof(buffer), "%s/Contents/Info.plist", path);
+  FILE *plist = fopen(buffer, "w");
+  assert(plist != NULL);
+  fprintf(plist,
+          "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+          "<plist version=\"1.0\"><dict>\n"
+          "<key>CFBundleExecutable</key><string>app</string>\n"
+          "<key>CFBundleIdentifier</key><string>%s</string>\n"
+          "<key>CFBundlePackageType</key><string>APPL</string>\n"
+          "</dict></plist>\n",
+          identifier);
+  fclose(plist);
+#else
+  (void)identifier;
+#endif
 }
 
+/* Seals a bundle, ad-hoc.
+
+   The identifier is passed explicitly: without it codesign inherits the one
+   already on the copied executable, and the test would compare Apple's name
+   for /bin/echo rather than the bundle's own. */
+static void sign_bundle(const char *path, const char *identifier) {
+#if defined(__APPLE__)
+  char command[3000];
+  snprintf(command, sizeof(command),
+           "codesign --force --identifier '%s' --sign - '%s' 2>/dev/null",
+           identifier, path);
+  assert(system(command) == 0);
+#else
+  (void)path;
+  (void)identifier;
+#endif
+}
+
+/* Writes the file that identifies which bundle is which.
+
+   It goes under Contents/Resources because that is sealed. A loose file
+   directly under Contents is a subcomponent codesign refuses to sign. */
 static void write_marker(const char *bundle, const char *value) {
   char buffer[1200];
-  snprintf(buffer, sizeof(buffer), "%s/Contents/marker", bundle);
+  snprintf(buffer, sizeof(buffer), "%s/Contents/Resources/marker", bundle);
   FILE *file = fopen(buffer, "w");
   assert(file != NULL);
   fputs(value, file);
@@ -29,7 +83,7 @@ static void write_marker(const char *bundle, const char *value) {
 
 static int marker_is(const char *bundle, const char *value) {
   char buffer[1200];
-  snprintf(buffer, sizeof(buffer), "%s/Contents/marker", bundle);
+  snprintf(buffer, sizeof(buffer), "%s/Contents/Resources/marker", bundle);
   FILE *file = fopen(buffer, "r");
   if (file == NULL) {
     return 0;
@@ -62,6 +116,10 @@ static int exists(const char *path) {
   return lstat(path, &info) == 0;
 }
 
+/* Every bundle in this test claims to be the same application, because the
+   updater refuses one that does not. The cases that vary it say so. */
+static const char *const kIdentifier = "com.example.proton-update-test";
+
 int main(void) {
   char error[512];
   snprintf(root, sizeof(root), "/tmp/proton-update-test-%ld", (long)getpid());
@@ -71,10 +129,12 @@ int main(void) {
   char staged[1100];
   snprintf(installed, sizeof(installed), "%s/Installed.app", root);
   snprintf(staged, sizeof(staged), "%s/Staged.app", root);
-  make_bundle(installed);
-  make_bundle(staged);
+  make_bundle(installed, kIdentifier);
+  make_bundle(staged, kIdentifier);
   write_marker(installed, "old");
   write_marker(staged, "new");
+  sign_bundle(installed, kIdentifier);
+  sign_bundle(staged, kIdentifier);
 
   /* Nothing is treated as running until a test says so, and the running
      bundle is a throwaway directory rather than this test binary's own. */
@@ -90,8 +150,9 @@ int main(void) {
   assert(mkdir(archive_root, 0755) == 0);
   char packed[1200];
   snprintf(packed, sizeof(packed), "%s/Packed.app", archive_root);
-  make_bundle(packed);
+  make_bundle(packed, kIdentifier);
   write_marker(packed, "packed");
+  sign_bundle(packed, kIdentifier);
   snprintf(archive, sizeof(archive), "%s/update.zip", root);
   snprintf(command, sizeof(command),
            "cd '%s' && /usr/bin/ditto -c -k --keepParent 'Packed.app' '%s'",
@@ -180,6 +241,38 @@ int main(void) {
   /* Installing the running bundle over itself is refused rather than being a
      rename onto the same path. */
   assert(proton_update_stage(installed, error, sizeof(error)) != 0);
+
+  /* An unsigned bundle is refused: with no seal, nothing covers its contents
+     once the archive signature stopped applying. */
+  char unsigned_bundle[1100];
+  snprintf(unsigned_bundle, sizeof(unsigned_bundle), "%s/Unsigned.app", root);
+  make_bundle(unsigned_bundle, kIdentifier);
+  assert(proton_update_stage(unsigned_bundle, error, sizeof(error)) != 0);
+  assert(strcmp(error, "the staged bundle is not signed") == 0);
+
+  /* A bundle altered after it was signed is refused. This is the window the
+     archive signature cannot cover, because by now the archive is gone. */
+  char tampered[1100];
+  snprintf(tampered, sizeof(tampered), "%s/Tampered.app", root);
+  make_bundle(tampered, kIdentifier);
+  write_marker(tampered, "before");
+  sign_bundle(tampered, kIdentifier);
+  assert(proton_update_stage(tampered, error, sizeof(error)) == 0);
+  write_marker(tampered, "after");
+  assert(proton_update_stage(tampered, error, sizeof(error)) != 0);
+  assert(strncmp(error, "the staged bundle does not match its code signature",
+                 50) == 0);
+
+  /* A validly signed bundle that is a different application is refused. An
+     intact seal says only that a bundle was not altered. */
+  char stranger[1100];
+  snprintf(stranger, sizeof(stranger), "%s/Stranger.app", root);
+  make_bundle(stranger, "com.example.somebody-else");
+  write_marker(stranger, "stranger");
+  sign_bundle(stranger, "com.example.somebody-else");
+  assert(proton_update_stage(stranger, error, sizeof(error)) != 0);
+  assert(strcmp(error,
+                "the staged bundle is signed as a different application") == 0);
   /* Applying without a staged bundle is refused. */
   assert(proton_update_apply(error, sizeof(error)) != 0);
   assert(exists(installed));
@@ -200,8 +293,9 @@ int main(void) {
      installed application exactly as it was. */
   char vanishing[1100];
   snprintf(vanishing, sizeof(vanishing), "%s/Vanishing.app", root);
-  make_bundle(vanishing);
+  make_bundle(vanishing, kIdentifier);
   write_marker(vanishing, "never");
+  sign_bundle(vanishing, kIdentifier);
   assert(proton_update_stage(vanishing, error, sizeof(error)) == 0);
   char buffer[1300];
   snprintf(buffer, sizeof(buffer), "rm -rf '%s'", vanishing);

@@ -83,6 +83,16 @@ target_compile_definitions(proton
     PROTON_BUILD
 )
 
+if(APPLE)
+  # The updater checks a staged bundle's code signature before replacing the
+  # installed application. That is the only check covering the expanded files
+  # on disk, so it is linked unconditionally rather than with the engine.
+  target_link_libraries(proton PRIVATE
+    "-framework CoreFoundation"
+    "-framework Security"
+  )
+endif()
+
 if(NOT WIN32)
   target_link_libraries(proton PRIVATE Threads::Threads)
 endif()
@@ -392,6 +402,12 @@ if(BUILD_TESTING)
   target_compile_definitions(proton_update_test
     PRIVATE PROTON_BUILD
   )
+  if(APPLE)
+    target_link_libraries(proton_update_test PRIVATE
+      "-framework CoreFoundation"
+      "-framework Security"
+    )
+  endif()
 
   target_link_libraries(proton_smoke PRIVATE proton)
   target_include_directories(proton_state_smoke PRIVATE

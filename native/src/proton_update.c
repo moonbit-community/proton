@@ -5,6 +5,8 @@
 #include <string.h>
 
 #if defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+#include <Security/Security.h>
 #include <errno.h>
 #include <mach-o/dyld.h>
 #include <dirent.h>
@@ -313,6 +315,155 @@ PROTON_API int32_t proton_update_expand(const char *archive, int32_t archive_len
   return PROTON_OK;
 }
 
+/* The longest signing identifier this compares. Bundle identifiers are
+   reverse-DNS names and team identifiers are ten characters; anything past
+   this is not a name either side of the comparison would produce. */
+#define PROTON_UPDATE_MAX_IDENTITY 256
+
+static SecStaticCodeRef proton_update_static_code(const char *path) {
+  CFStringRef text =
+      CFStringCreateWithCString(NULL, path, kCFStringEncodingUTF8);
+  if (text == NULL) {
+    return NULL;
+  }
+  CFURLRef url =
+      CFURLCreateWithFileSystemPath(NULL, text, kCFURLPOSIXPathStyle, true);
+  CFRelease(text);
+  if (url == NULL) {
+    return NULL;
+  }
+  SecStaticCodeRef code = NULL;
+  OSStatus status = SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &code);
+  CFRelease(url);
+  if (status != errSecSuccess) {
+    return NULL;
+  }
+  return code;
+}
+
+/* Reads the two names that say who signed a bundle.
+
+   An absent team identifier is not a failure. An ad-hoc signature has none,
+   and that is the normal state of an application that has not been through a
+   Developer ID release — reporting it as an error would mean refusing to
+   update every unreleased build. */
+static int proton_update_signing_identity(SecStaticCodeRef code,
+                                          char *identifier, char *team) {
+  identifier[0] = '\0';
+  team[0] = '\0';
+  CFDictionaryRef info = NULL;
+  if (SecCodeCopySigningInformation(code, kSecCSSigningInformation, &info) !=
+          errSecSuccess ||
+      info == NULL) {
+    return 0;
+  }
+  int ok = 1;
+  CFStringRef value = CFDictionaryGetValue(info, kSecCodeInfoIdentifier);
+  if (value == NULL ||
+      !CFStringGetCString(value, identifier, PROTON_UPDATE_MAX_IDENTITY,
+                          kCFStringEncodingUTF8)) {
+    ok = 0;
+  }
+  value = CFDictionaryGetValue(info, kSecCodeInfoTeamIdentifier);
+  if (value != NULL && !CFStringGetCString(value, team,
+                                           PROTON_UPDATE_MAX_IDENTITY,
+                                           kCFStringEncodingUTF8)) {
+    ok = 0;
+  }
+  CFRelease(info);
+  return ok;
+}
+
+/* Reports whether the staged bundle is intact and is the same application as
+   the one it would replace.
+
+   This is the check the archive signature cannot make. That signature covered
+   the bytes that were downloaded, and stopped covering anything the moment
+   they were expanded into files another process running as this user can
+   write. What covers those files is the bundle's own seal.
+
+   Identity is compared as well, because an intact seal only says a bundle was
+   not altered — not that it is this application. A validly signed copy of
+   something else would pass the first check and fail this one. */
+static int proton_update_verify_bundle(const char *staged, const char *installed,
+                                       char *error, int32_t error_len) {
+  SecStaticCodeRef staged_code = proton_update_static_code(staged);
+  if (staged_code == NULL) {
+    proton_update_set_message(error, error_len,
+                              "the staged bundle cannot be read as an "
+                              "application");
+    return 0;
+  }
+  /* Nested code is checked as well as the resource seal. The engine framework
+     and helper are signed separately by the packager, so leaving them out
+     would exempt the largest part of the bundle from the check. */
+  OSStatus status = SecStaticCodeCheckValidity(
+      staged_code,
+      kSecCSDefaultFlags | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode,
+      NULL);
+  if (status == errSecCSUnsigned) {
+    CFRelease(staged_code);
+    proton_update_set_message(error, error_len,
+                              "the staged bundle is not signed");
+    return 0;
+  }
+  if (status != errSecSuccess) {
+    CFRelease(staged_code);
+    /* The status is reported as well as the sentence. Every way a seal can
+       fail to cover a bundle reaches this line, and which one it was is the
+       difference between a tampered download and a mis-signed release. */
+    char detail[192];
+    snprintf(detail, sizeof(detail),
+             "the staged bundle does not match its code signature (OSStatus "
+             "%d)",
+             (int)status);
+    proton_update_set_message(error, error_len, detail);
+    return 0;
+  }
+  SecStaticCodeRef installed_code = proton_update_static_code(installed);
+  if (installed_code == NULL) {
+    CFRelease(staged_code);
+    proton_update_set_message(
+        error, error_len,
+        "the installed application has no code signature to compare against");
+    return 0;
+  }
+  char staged_identifier[PROTON_UPDATE_MAX_IDENTITY];
+  char staged_team[PROTON_UPDATE_MAX_IDENTITY];
+  char installed_identifier[PROTON_UPDATE_MAX_IDENTITY];
+  char installed_team[PROTON_UPDATE_MAX_IDENTITY];
+  int read = proton_update_signing_identity(staged_code, staged_identifier,
+                                            staged_team) &&
+             proton_update_signing_identity(installed_code,
+                                            installed_identifier,
+                                            installed_team);
+  CFRelease(staged_code);
+  CFRelease(installed_code);
+  if (!read) {
+    proton_update_set_message(error, error_len,
+                              "the signing identity could not be read");
+    return 0;
+  }
+  if (strcmp(staged_identifier, installed_identifier) != 0) {
+    proton_update_set_message(
+        error, error_len,
+        "the staged bundle is signed as a different application");
+    return 0;
+  }
+  /* Both teams absent is a match: two ad-hoc signatures. That is a weaker
+     statement than two matching Developer ID teams — an ad-hoc signature
+     asserts no identity at all, so this only establishes that the bundle is
+     intact and calls itself the same application. An application that ships
+     with a Developer ID gets the strong form for free, because then the team
+     is present and must be the same one. */
+  if (strcmp(staged_team, installed_team) != 0) {
+    proton_update_set_message(error, error_len,
+                              "the staged bundle is signed by a different team");
+    return 0;
+  }
+  return 1;
+}
+
 PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
                                        char *error, int32_t error_len) {
   proton_update_staged[0] = '\0';
@@ -359,6 +510,10 @@ PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
   if (strcmp(current, staged_bundle_path) == 0) {
     proton_update_set_message(error, error_len,
                               "the staged bundle is the running bundle");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (!proton_update_verify_bundle(staged_bundle_path, current, error,
+                                   error_len)) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   snprintf(proton_update_staged, sizeof(proton_update_staged), "%s",
