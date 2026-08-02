@@ -219,7 +219,11 @@ PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
    separate from staging and from the relaunch. */
 PROTON_API int32_t proton_update_apply(char *error, int32_t error_len);
 
-/* Starts the replaced application. The caller exits afterwards. */
+/* Asks the system to start the replaced application. The caller exits
+   afterwards.
+
+   Success means the request was accepted, not that the application is running:
+   the platform decides that asynchronously and does not report back. */
 PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,

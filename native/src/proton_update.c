@@ -598,16 +598,26 @@ PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {
                               "no application has been replaced");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  /* `open -n` asks Launch Services to start a new instance, which gives the
-     replacement a clean session rather than one inherited from the process
-     that is about to exit. */
+  /* `-n` asks Launch Services for a new instance rather than activating one
+     that is already running. It does not give the replacement a fresh
+     environment: `open` passes this process's environment on, which was
+     established by running it. */
   char *const argv[] = {"/usr/bin/open", "-n", proton_update_current, NULL};
-  pid_t child = 0;
-  if (posix_spawn(&child, "/usr/bin/open", NULL, NULL, argv, environ) != 0) {
+  if (!proton_update_run(argv)) {
     proton_update_set_message(error, error_len,
                               "cannot start the replaced application");
     return PROTON_ERR_PLATFORM;
   }
+  /* This waits for `open` and reports what it said, which is more than the
+     spawn succeeding: a missing or malformed bundle is refused here rather
+     than silently reported as a relaunch.
+
+     It is still not proof that the application is running. Launch Services
+     accepts the request and decides afterwards, and it declines some locations
+     — an application under the per-user temporary directory, for instance —
+     without telling anyone. `open` exits 0 in that case and so does
+     LSOpenFromURLSpec, so there is nothing here to check. Success means the
+     request was accepted. */
   return PROTON_OK;
 }
 

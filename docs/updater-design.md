@@ -361,7 +361,8 @@ Proton.
    the install location rather than deleted, and the directory the new one was
    expanded into is removed once it is empty.
 8. **Relaunch.** Separate from the swap, because when to restart is a question
-   about the user's unsaved work rather than about the update.
+   about the user's unsaved work rather than about the update. It reports that
+   the request was accepted, which is all the platform will say — see below.
 
 ## Native surface
 
@@ -410,7 +411,22 @@ bundle was not altered after signing and that it calls itself the same
 application. That is still the property the local-attacker row needs; it is not
 an identity guarantee, and an application that wants one has to ship with a
 Developer ID. Swap the bundle with
-`rename` on the same volume, then relaunch. Two conditions must be reported
+`rename` on the same volume, then relaunch.
+
+Relaunching cannot be confirmed. `open -n` and `LSOpenFromURLSpec` both return
+success once Launch Services accepts the request, and Launch Services decides
+afterwards whether to honour it — it declines to start an application under the
+per-user temporary directory, for instance, and tells nobody. `relaunch` waits
+for `open` so that a missing or malformed bundle is reported rather than
+swallowed, and promises nothing beyond that. An application that needs to know
+the new version started has to learn it from the new version.
+
+The replaced bundle is kept beside the install location and **never removed**,
+so one copy of the application accumulates per update. Bounding that needs a
+policy decision — deleting the previous copy once the replacement has started
+successfully is the obvious one, and it needs the new version to do the
+deleting, because that is the first moment there is evidence worth acting on.
+It is not implemented. Two conditions must be reported
 clearly rather than worked around: an application installed somewhere the user
 cannot write, and an application still running from a quarantined or
 translocated location.
