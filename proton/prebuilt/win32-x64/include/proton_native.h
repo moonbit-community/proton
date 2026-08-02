@@ -30,6 +30,7 @@ extern "C" {
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
 typedef int64_t proton_app_instance_id_t;
+typedef int64_t proton_update_stage_id_t;
 typedef void (*proton_app_entry_t)(void);
 
 enum {
@@ -194,6 +195,23 @@ PROTON_API int32_t proton_window_begin_choose_directory_dialog(
 PROTON_API int32_t proton_window_poll_dialog_result(
     proton_window_id_t window, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);
+
+/* Creates a private artifact staging transaction for a streaming update.
+
+   The archive path never crosses the ABI. Chunks written to the returned
+   handle are the exact bytes later expanded by proton_update_stage_install,
+   so authenticating those chunks does not introduce a path-based TOCTOU
+   window. The handle is owned by the calling thread. */
+PROTON_API int32_t proton_update_stage_begin(
+    const char *parent_dir, int64_t expected_size,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_write(
+    proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
+    char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_install(
+    proton_update_stage_id_t stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_abort(
+    proton_update_stage_id_t stage, char *error, int32_t error_len);
 
 /* Installs an authenticated update archive over the running application.
 

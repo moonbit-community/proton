@@ -25,6 +25,20 @@ fn serving(entries : Array[(String, Bytes)]) -> Fetch {
 }
 
 ///|
+/// An artifact transport that emits one chunk and retains nothing afterwards.
+fn streaming(entries : Array[(String, Bytes)]) -> ArtifactFetch {
+  async fn(url, _expected_size, consume) -> Unit raise UpdateError {
+    for entry in entries {
+      if entry.0 == url {
+        consume(entry.1)
+        return
+      }
+    }
+    raise FetchFailed(url~, detail="not served")
+  }
+}
+
+///|
 fn text_bytes(text : String) -> Bytes {
   let out : Array[Byte] = []
   for character in text {
@@ -55,6 +69,17 @@ fn channel(current : String) -> UpdateChannel raise {
 ///|
 fn accepted_from() -> @manifest.Timestamp {
   @manifest.Timestamp::parse("2026-07-01T00:00:00Z").unwrap()
+}
+
+///|
+async fn expect_download_error(
+  action : async () -> Unit raise UpdateError,
+) -> UpdateError {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected the download to be refused")
+  }
 }
 
 ///|
@@ -91,8 +116,14 @@ async test "authenticates a newer release end to end" {
 
   // The artifact is authenticated separately from the manifest that described
   // it, so a compromised host cannot substitute one for the other.
-  let bytes = channel("0.2.0").download(serving(default_entries()), update)
-  assert_eq(bytes.length(), 11)
+  let written = Ref(0L)
+  channel("0.2.0").download_into(
+    streaming(default_entries()),
+    update,
+    fn(chunk) { written.val = written.val + chunk.length().to_int64() },
+    _ => (),
+  )
+  assert_eq(written.val, 11L)
 }
 
 ///|
@@ -215,7 +246,7 @@ async test "refuses an artifact whose bytes are not the ones described" {
   let download_error = async fn(body : String) -> UpdateError {
     let channel = channel("0.2.0")
     let entries : Array[(String, Bytes)] = [(artifact_url, text_bytes(body))]
-    let _ = channel.download(serving(entries), update) catch {
+    channel.download_into(streaming(entries), update, _ => (), _ => ()) catch {
       error => return error
     }
     abort("expected the artifact to be refused")
@@ -223,6 +254,43 @@ async test "refuses an artifact whose bytes are not the ones described" {
   assert_true(download_error("short") is ArtifactSizeMismatch(_))
   // Right length, wrong content: the digest is what catches this one.
   assert_true(download_error("proton ZIP\n") is ArtifactDigestMismatch(_))
+}
+
+///|
+async test "refuses an oversized artifact before accepting its extra chunk" {
+  let outcome = channel("0.2.0").check(
+    serving(default_entries()),
+    accepted_from(),
+  )
+  guard outcome is Available(update) else {
+    abort("expected an available update")
+  }
+  let continued = Ref(false)
+  let expected_by_transport = Ref(0L)
+  let fetch : ArtifactFetch = async fn(
+    _url,
+    expected_size,
+    consume,
+  ) -> Unit raise UpdateError {
+    expected_by_transport.val = expected_size
+    consume(vector_artifact)
+    consume(b"!")
+    continued.val = true
+  }
+  let subject = channel("0.2.0")
+  let staged = Ref(0L)
+  let error = expect_download_error(async fn() -> Unit raise UpdateError {
+    subject.download_into(
+      fetch,
+      update,
+      fn(chunk) { staged.val = staged.val + chunk.length().to_int64() },
+      _ => (),
+    )
+  })
+  assert_eq(error, ArtifactSizeMismatch(expected=11L, actual=12L))
+  assert_eq(expected_by_transport.val, 11L)
+  assert_eq(staged.val, 11L)
+  assert_false(continued.val)
 }
 
 ///|

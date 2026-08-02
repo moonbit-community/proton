@@ -88,9 +88,11 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 ///|
 /// Downloads this update and installs it over the running application.
 ///
-/// The bytes are authenticated before anything is written, and the expanded
-/// bundle's own code signature is checked before the installed application is
-/// touched. The application is not restarted — see `restart`.
+/// Downloaded chunks are written only to a private native stage while their
+/// size, digest, and signature are checked. The stage cannot be installed
+/// unless that authentication completes, and the expanded bundle's own code
+/// signature is checked before the installed application is touched. The
+/// application is not restarted — see `restart`.
 ///
 /// This is deliberately not something the framework does on its own. Checking
 /// without being asked is a reasonable default; installing without being asked
@@ -98,11 +100,14 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 /// this is a moment when that is acceptable.
 pub async fn PendingUpdate::install(
   self : PendingUpdate,
-  on_progress? : async (Int64) -> Unit = _ => (),
+  on_progress? : async (Int64) -> Unit noraise = _ => (),
 ) -> Unit {
-  let fetch = @updater.http_fetch_artifact_reporting(on_progress)
-  let artifact = self.channel.download(fetch, self.offer)
-  @updater.install(artifact, update_staging_parent(self.identifier))
+  self.channel.download_and_install(
+    @updater.http_fetch_artifact,
+    self.offer,
+    update_staging_parent(self.identifier),
+    on_progress~,
+  )
 }
 
 ///|

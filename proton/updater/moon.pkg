@@ -5,6 +5,7 @@ import {
   "justjavac/proton_updater" @manifest,
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
+  "moonbitlang/core/string",
   "moonbitlang/x/crypto",
   "moonbitlang/x/encoding",
   "moonbitlang/x/time",

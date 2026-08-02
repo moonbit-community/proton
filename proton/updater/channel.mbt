@@ -8,6 +8,35 @@
 pub type Fetch = async (String) -> Bytes raise UpdateError
 
 ///|
+/// Streams an artifact into a consumer without retaining the whole body.
+///
+/// The expected size is authenticated manifest data. A transport may use it to
+/// reject a mismatching response header early; `UpdateChannel` independently
+/// enforces it against the chunks actually delivered.
+pub type ArtifactFetch = async (
+  String,
+  Int64,
+  async (Bytes) -> Unit raise UpdateError,
+) -> Unit raise UpdateError
+
+///|
+fn artifact_size_after_chunk(
+  expected : Int64,
+  received : Int64,
+  chunk_size : Int64,
+) -> Int64 raise UpdateError {
+  guard chunk_size <= expected - received else {
+    let actual = if received > 0x7fffffffffffffffL - chunk_size {
+      0x7fffffffffffffffL
+    } else {
+      received + chunk_size
+    }
+    raise ArtifactSizeMismatch(expected~, actual~)
+  }
+  received + chunk_size
+}
+
+///|
 /// An update channel, resolved from configuration.
 pub struct UpdateChannel {
   endpoint : String
@@ -131,23 +160,37 @@ pub async fn UpdateChannel::check(
 }
 
 ///|
-/// Fetches an available update and authenticates the bytes received.
+/// Streams an available update into a staging consumer and authenticates it.
 ///
-/// The declared size and digest are checked before the signature, because both
-/// are cheap and a mismatch means the transfer was wrong regardless of who
-/// signed what. The signature is what makes the result trustworthy; the digest
-/// only makes the failure easier to describe.
-pub async fn UpdateChannel::download(
+/// No complete artifact buffer is built here. Each accepted chunk is counted,
+/// hashed and passed to `consume`; an oversized stream is refused before its
+/// first out-of-bounds chunk reaches staging. The caller must discard staging
+/// when this function raises, because bytes are not trusted until it returns.
+async fn UpdateChannel::download_into(
   self : UpdateChannel,
-  fetch : Fetch,
+  fetch : ArtifactFetch,
   update : AvailableUpdate,
-) -> Bytes raise UpdateError {
-  let artifact = fetch(update.url)
-  let actual_size = artifact.length().to_int64()
-  guard actual_size == update.size else {
-    raise ArtifactSizeMismatch(expected=update.size, actual=actual_size)
+  consume : async (Bytes) -> Unit raise UpdateError,
+  on_progress : async (Int64) -> Unit noraise,
+) -> Unit raise UpdateError {
+  let received = Ref(0L)
+  let hasher = @crypto.SHA256::new()
+  fetch(update.url, update.size, async fn(chunk) -> Unit raise UpdateError {
+    let chunk_size = chunk.length().to_int64()
+    let actual_size = artifact_size_after_chunk(
+      update.size,
+      received.val,
+      chunk_size,
+    )
+    consume(chunk)
+    hasher.update(chunk)
+    received.val = actual_size
+    on_progress(actual_size)
+  })
+  guard received.val == update.size else {
+    raise ArtifactSizeMismatch(expected=update.size, actual=received.val)
   }
-  let digest = sha256_of(artifact)
+  let digest = Bytes::from_array(hasher.finalize().iter().collect()[:])
   let actual_digest = @crypto.bytes_to_hex_string(digest)
   guard actual_digest == update.sha256_hex else {
     raise ArtifactDigestMismatch(
@@ -157,7 +200,6 @@ pub async fn UpdateChannel::download(
   }
   let signature = decode_hex_body_text(update.signature_hex, update.url)
   guard self.verifies(digest, signature) else { raise ArtifactSignatureInvalid }
-  artifact
 }
 
 ///|

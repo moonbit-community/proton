@@ -71,15 +71,39 @@ async fn run_update() -> Unit {
         raise @updater.FetchFailed(url~, detail=@debug.render(Repr(error)))
     }
   }
+  let artifact_fetch : @updater.ArtifactFetch = async fn(
+    url,
+    _expected_size,
+    consume,
+  ) -> Unit raise @updater.UpdateError {
+    guard url.has_prefix(base) else {
+      raise @updater.FetchFailed(url~, detail="not served by this harness")
+    }
+    let name = url[base.length():].to_owned()
+    let file = @async_fs.open("\{root}/\{name}", mode=ReadOnly) catch {
+      error =>
+        raise @updater.FetchFailed(url~, detail=@debug.render(Repr(error)))
+    }
+    defer file.close()
+    let buffer = FixedArray::make(1024 * 1024, b'\x00')
+    for ;; {
+      let read = file.read(buffer) catch {
+        error =>
+          raise @updater.FetchFailed(url~, detail=@debug.render(Repr(error)))
+      }
+      if read <= 0 {
+        break
+      }
+      consume(buffer.unsafe_reinterpret_as_bytes()[:read].to_owned())
+    }
+  }
   let bound = @updater.oldest_accepted(30)
   println("checking against \{bound.to_text()}")
   match channel.check(fetch, bound) {
     UpToDate => println("up to date")
     Available(update) => {
       println("offered \{update.version()}")
-      let artifact = channel.download(fetch, update)
-      println("downloaded \{artifact.length()} bytes")
-      @updater.install(artifact, staging)
+      channel.download_and_install(artifact_fetch, update, staging)
       println("installed")
       @updater.relaunch()
       println("relaunched")

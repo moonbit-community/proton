@@ -1,5 +1,7 @@
 #include "proton_update.h"
 
+#include "proton_handle.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +13,7 @@
 #include <mach-o/dyld.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -45,6 +48,50 @@ const char *proton_update_previous_bundle_path(void) {
 }
 
 #if !defined(__APPLE__)
+
+PROTON_API int32_t proton_update_stage_begin(
+    const char *parent_dir, int64_t expected_size,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  (void)parent_dir;
+  (void)expected_size;
+  if (out_stage != NULL) {
+    *out_stage = PROTON_INVALID_HANDLE;
+  }
+  proton_update_set_message(
+      error, error_len,
+      "streaming update staging is implemented on macOS only");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+PROTON_API int32_t proton_update_stage_write(
+    proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
+    char *error, int32_t error_len) {
+  (void)stage;
+  (void)chunk;
+  (void)chunk_len;
+  proton_update_set_message(
+      error, error_len,
+      "streaming update staging is implemented on macOS only");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+PROTON_API int32_t proton_update_stage_install(
+    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+  (void)stage;
+  proton_update_set_message(
+      error, error_len,
+      "applying a staged update is implemented on macOS only");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+PROTON_API int32_t proton_update_stage_abort(
+    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+  (void)stage;
+  proton_update_set_message(
+      error, error_len,
+      "streaming update staging is implemented on macOS only");
+  return PROTON_ERR_UNSUPPORTED;
+}
 
 PROTON_API int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
@@ -181,47 +228,234 @@ static void proton_update_remove_tree(const char *directory) {
   (void)proton_update_run(argv);
 }
 
-/* Writes the archive into the staging directory.
+#define PROTON_UPDATE_MAX_STAGES 8
+typedef struct {
+  uint32_t generation;
+  int occupied;
+  int destroyed;
+  pthread_t owner_thread;
+  int fd;
+  int64_t expected_size;
+  int64_t written_size;
+  char staging[PROTON_UPDATE_MAX_PATH];
+  char archive_path[PROTON_UPDATE_MAX_PATH];
+} proton_update_stage_slot_t;
 
-   O_EXCL because that directory was just created empty: anything already at
-   this name would mean the directory is not what it is assumed to be. */
-static int proton_update_write_archive(const char *path, const char *archive,
-                                       int32_t archive_len) {
-  int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-  if (fd < 0) {
-    return 0;
-  }
-  int32_t written = 0;
-  while (written < archive_len) {
-    ssize_t chunk =
-        write(fd, archive + written, (size_t)(archive_len - written));
-    if (chunk <= 0) {
-      if (chunk < 0 && errno == EINTR) {
-        continue;
-      }
-      close(fd);
-      return 0;
-    }
-    written += (int32_t)chunk;
-  }
-  return close(fd) == 0;
+static proton_update_stage_slot_t
+    g_update_stages[PROTON_UPDATE_MAX_STAGES];
+static pthread_mutex_t g_update_stage_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static proton_update_stage_id_t proton_update_make_stage_handle(
+    uint32_t generation, uint32_t index) {
+  uint64_t raw =
+      proton_make_handle(PROTON_HANDLE_TYPE_UPDATE_STAGE, generation, index);
+  return (proton_update_stage_id_t)raw;
 }
 
-static int32_t proton_update_expand_archive(
-    const char *archive, int32_t archive_len, const char *parent_dir,
-    char *bundle_buffer, int32_t bundle_buffer_len, char *error,
-    int32_t error_len) {
-  if (bundle_buffer != NULL && bundle_buffer_len > 0) {
-    bundle_buffer[0] = '\0';
+static void proton_update_stage_release(proton_update_stage_slot_t *slot,
+                                        int remove_staging) {
+  if (slot->fd >= 0) {
+    (void)close(slot->fd);
+    slot->fd = -1;
+  }
+  if (remove_staging && slot->staging[0] != '\0') {
+    proton_update_remove_tree(slot->staging);
+  }
+  pthread_mutex_lock(&g_update_stage_mutex);
+  slot->staging[0] = '\0';
+  slot->archive_path[0] = '\0';
+  slot->destroyed = 1;
+  slot->expected_size = 0;
+  slot->written_size = 0;
+  pthread_mutex_unlock(&g_update_stage_mutex);
+}
+
+static int32_t proton_update_get_stage(proton_update_stage_id_t handle,
+                                       proton_update_stage_slot_t **out_slot,
+                                       char *error, int32_t error_len) {
+  uint64_t raw = (uint64_t)handle;
+  pthread_mutex_lock(&g_update_stage_mutex);
+  if (handle == PROTON_INVALID_HANDLE ||
+      proton_handle_type(raw) != PROTON_HANDLE_TYPE_UPDATE_STAGE) {
+    pthread_mutex_unlock(&g_update_stage_mutex);
+    proton_update_set_message(error, error_len,
+                              "the update stage handle is invalid");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  uint32_t index = proton_handle_index(raw);
+  uint32_t generation = proton_handle_generation(raw);
+  if (index >= PROTON_UPDATE_MAX_STAGES) {
+    pthread_mutex_unlock(&g_update_stage_mutex);
+    proton_update_set_message(error, error_len,
+                              "the update stage handle is out of range");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  proton_update_stage_slot_t *slot = &g_update_stages[index];
+  if (!slot->occupied || slot->generation != generation) {
+    pthread_mutex_unlock(&g_update_stage_mutex);
+    proton_update_set_message(error, error_len,
+                              "the update stage handle is stale");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (slot->destroyed) {
+    pthread_mutex_unlock(&g_update_stage_mutex);
+    proton_update_set_message(error, error_len,
+                              "the update stage is already closed");
+    return PROTON_ERR_DESTROYED;
+  }
+  if (pthread_equal(slot->owner_thread, pthread_self()) == 0) {
+    pthread_mutex_unlock(&g_update_stage_mutex);
+    proton_update_set_message(error, error_len,
+                              "the update stage belongs to another thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  *out_slot = slot;
+  pthread_mutex_unlock(&g_update_stage_mutex);
+  return PROTON_OK;
+}
+
+PROTON_API int32_t proton_update_stage_begin(
+    const char *parent_dir, int64_t expected_size,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  if (out_stage != NULL) {
+    *out_stage = PROTON_INVALID_HANDLE;
   }
   if (parent_dir == NULL || parent_dir[0] != '/') {
     proton_update_set_message(error, error_len,
                               "the staging parent directory must be absolute");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (archive == NULL || archive_len <= 0) {
-    proton_update_set_message(error, error_len, "the update archive is empty");
+  if (expected_size <= 0) {
+    proton_update_set_message(error, error_len,
+                              "the expected update size must be positive");
     return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (out_stage == NULL) {
+    proton_update_set_message(error, error_len,
+                              "an update stage output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+
+  proton_update_stage_slot_t *slot = NULL;
+  uint32_t index = 0;
+  pthread_mutex_lock(&g_update_stage_mutex);
+  for (; index < PROTON_UPDATE_MAX_STAGES; index++) {
+    proton_update_stage_slot_t *candidate = &g_update_stages[index];
+    if (!candidate->occupied || candidate->destroyed) {
+      slot = candidate;
+      break;
+    }
+  }
+  if (slot == NULL) {
+    pthread_mutex_unlock(&g_update_stage_mutex);
+    proton_update_set_message(error, error_len,
+                              "the update stage registry is full");
+    return PROTON_ERR_ENGINE;
+  }
+  if (slot->generation == 0) {
+    slot->generation = 1;
+  } else {
+    slot->generation = proton_next_handle_generation(slot->generation);
+  }
+  slot->occupied = 1;
+  slot->destroyed = 0;
+  slot->owner_thread = pthread_self();
+  slot->fd = -1;
+  slot->expected_size = expected_size;
+  slot->written_size = 0;
+  slot->staging[0] = '\0';
+  slot->archive_path[0] = '\0';
+  pthread_mutex_unlock(&g_update_stage_mutex);
+
+  int written = snprintf(slot->staging, sizeof(slot->staging),
+                         "%s/proton-update-XXXXXX", parent_dir);
+  if (written < 0 || (size_t)written >= sizeof(slot->staging)) {
+    proton_update_stage_release(slot, 0);
+    proton_update_set_message(error, error_len,
+                              "the staging directory path is too long");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (mkdtemp(slot->staging) == NULL) {
+    proton_update_stage_release(slot, 0);
+    proton_update_set_message(error, error_len,
+                              "the staging directory could not be created");
+    return PROTON_ERR_PLATFORM;
+  }
+  written = snprintf(slot->archive_path, sizeof(slot->archive_path),
+                     "%s/update.zip", slot->staging);
+  if (written < 0 || (size_t)written >= sizeof(slot->archive_path)) {
+    proton_update_stage_release(slot, 1);
+    proton_update_set_message(error, error_len,
+                              "the staging directory path is too long");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  slot->fd = open(slot->archive_path, O_WRONLY | O_CREAT | O_EXCL,
+                  S_IRUSR | S_IWUSR);
+  if (slot->fd < 0) {
+    proton_update_stage_release(slot, 1);
+    proton_update_set_message(error, error_len,
+                              "the update archive could not be created");
+    return PROTON_ERR_PLATFORM;
+  }
+  *out_stage = proton_update_make_stage_handle(slot->generation, index);
+  return PROTON_OK;
+}
+
+PROTON_API int32_t proton_update_stage_write(
+    proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
+    char *error, int32_t error_len) {
+  proton_update_stage_slot_t *slot = NULL;
+  int32_t status =
+      proton_update_get_stage(stage, &slot, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (chunk_len < 0 || (chunk_len > 0 && chunk == NULL)) {
+    proton_update_set_message(error, error_len,
+                              "the update chunk is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if ((int64_t)chunk_len > slot->expected_size - slot->written_size) {
+    proton_update_set_message(error, error_len,
+                              "the update exceeds its signed size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  int32_t written = 0;
+  while (written < chunk_len) {
+    ssize_t count =
+        write(slot->fd, chunk + written, (size_t)(chunk_len - written));
+    if (count < 0 && errno == EINTR) {
+      continue;
+    }
+    if (count <= 0) {
+      proton_update_set_message(error, error_len,
+                                "the update archive could not be written");
+      return PROTON_ERR_PLATFORM;
+    }
+    written += (int32_t)count;
+  }
+  slot->written_size += chunk_len;
+  return PROTON_OK;
+}
+
+PROTON_API int32_t proton_update_stage_abort(
+    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+  proton_update_stage_slot_t *slot = NULL;
+  int32_t status =
+      proton_update_get_stage(stage, &slot, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_update_stage_release(slot, 1);
+  return PROTON_OK;
+}
+
+static int32_t proton_update_expand_staged_archive(
+    proton_update_stage_slot_t *stage,
+    char *bundle_buffer, int32_t bundle_buffer_len, char *error,
+    int32_t error_len) {
+  if (bundle_buffer != NULL && bundle_buffer_len > 0) {
+    bundle_buffer[0] = '\0';
   }
   if (bundle_buffer == NULL || bundle_buffer_len <= 0) {
     proton_update_set_message(error, error_len,
@@ -229,52 +463,12 @@ static int32_t proton_update_expand_archive(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
-  /* mkdtemp rather than a directory the caller names. It creates a private
-     0700 directory under a name that cannot already be taken, in one step, so
-     there is no gap between deciding a path is free and claiming it. A caller
-     cannot do this for itself: it would have to invent a unique name and then
-     race everything else on the machine to it. */
-  char staging[PROTON_UPDATE_MAX_PATH];
-  int written =
-      snprintf(staging, sizeof(staging), "%s/proton-update-XXXXXX", parent_dir);
-  if (written < 0 || (size_t)written >= sizeof(staging)) {
-    proton_update_set_message(error, error_len,
-                              "the staging directory path is too long");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (mkdtemp(staging) == NULL) {
-    proton_update_set_message(error, error_len,
-                              "the staging directory could not be created");
-    return PROTON_ERR_PLATFORM;
-  }
-
-  /* The archive arrives as bytes rather than as a path. Verified bytes handed
-     to `ditto` by name could be replaced between the check and the read, which
-     would spend the signature check on one archive and install another. Here
-     they are only ever written inside a directory nobody else can write. */
-  char archive_path[PROTON_UPDATE_MAX_PATH];
-  written =
-      snprintf(archive_path, sizeof(archive_path), "%s/update.zip", staging);
-  if (written < 0 || (size_t)written >= sizeof(archive_path)) {
-    proton_update_remove_tree(staging);
-    proton_update_set_message(error, error_len,
-                              "the staging directory path is too long");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_update_write_archive(archive_path, archive, archive_len)) {
-    proton_update_remove_tree(staging);
-    proton_update_set_message(error, error_len,
-                              "the update archive could not be written");
-    return PROTON_ERR_PLATFORM;
-  }
-
   /* `ditto` rather than an unzip implementation written here: a macOS bundle
      carries resource forks, symlinks and extended attributes that a plain
      extractor drops, and a bundle that loses them fails its code signature. */
-  char *const argv[] = {"/usr/bin/ditto", "-x", "-k", archive_path, staging,
-                        NULL};
+  char *const argv[] = {"/usr/bin/ditto", "-x", "-k", stage->archive_path,
+                        stage->staging, NULL};
   if (!proton_update_run(argv)) {
-    proton_update_remove_tree(staging);
     proton_update_set_message(error, error_len,
                               "the update archive could not be expanded");
     return PROTON_ERR_PLATFORM;
@@ -282,11 +476,10 @@ static int32_t proton_update_expand_archive(
   /* The archive has done its job. Removing it keeps one copy of the
      application on disk rather than two, and leaves the staging directory
      empty once the bundle is moved out of it. */
-  (void)unlink(archive_path);
+  (void)unlink(stage->archive_path);
 
-  if (!proton_update_find_bundle(staging, bundle_buffer,
+  if (!proton_update_find_bundle(stage->staging, bundle_buffer,
                                  (size_t)bundle_buffer_len)) {
-    proton_update_remove_tree(staging);
     proton_update_set_message(
         error, error_len,
         "the update archive does not contain exactly one .app bundle");
@@ -506,69 +699,98 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_install(const char *archive,
-                                         int32_t archive_len,
-                                         const char *parent_dir, char *error,
-                                         int32_t error_len) {
-  proton_update_current[0] = '\0';
-  char staged_bundle_path[PROTON_UPDATE_MAX_PATH];
-  int32_t status = proton_update_expand_archive(
-      archive, archive_len, parent_dir, staged_bundle_path,
-      (int32_t)sizeof(staged_bundle_path), error, error_len);
+PROTON_API int32_t proton_update_stage_install(
+    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+  proton_update_stage_slot_t *slot = NULL;
+  int32_t status =
+      proton_update_get_stage(stage, &slot, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
-
-  /* Expansion created this parent with mkdtemp and never exposed the bundle
-     path. Keep the parent so every refusal below can remove the whole private
-     transaction rather than leave untrusted files behind. */
-  char staging[PROTON_UPDATE_MAX_PATH];
-  snprintf(staging, sizeof(staging), "%s", staged_bundle_path);
-  char *slash = strrchr(staging, '/');
-  if (slash == NULL || slash == staging) {
+  if (slot->written_size != slot->expected_size) {
+    proton_update_set_message(
+        error, error_len,
+        "the staged update size does not match the signed size");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (slot->fd < 0 || close(slot->fd) != 0) {
+    slot->fd = -1;
     proton_update_set_message(error, error_len,
-                              "the expanded bundle path is invalid");
+                              "the update archive could not be closed");
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  *slash = '\0';
+  slot->fd = -1;
+
+  proton_update_current[0] = '\0';
+  char staged_bundle_path[PROTON_UPDATE_MAX_PATH];
+  status = proton_update_expand_staged_archive(
+      slot, staged_bundle_path,
+      (int32_t)sizeof(staged_bundle_path), error, error_len);
+  if (status != PROTON_OK) {
+    proton_update_stage_release(slot, 1);
+    return status;
+  }
 
   char executable_dir[PROTON_UPDATE_MAX_PATH];
   snprintf(executable_dir, sizeof(executable_dir), "%s/Contents/MacOS",
            staged_bundle_path);
   if (!proton_update_is_directory(executable_dir)) {
-    proton_update_remove_tree(staging);
     proton_update_set_message(
         error, error_len,
         "the staged bundle has no Contents/MacOS directory");
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   char current[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_bundle(current, sizeof(current))) {
-    proton_update_remove_tree(staging);
     proton_update_set_message(
         error, error_len,
         "the running executable is not inside a .app bundle, so there is "
         "nothing to replace");
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_UNSUPPORTED;
   }
   if (strcmp(current, staged_bundle_path) == 0) {
-    proton_update_remove_tree(staging);
     proton_update_set_message(error, error_len,
                               "the staged bundle is the running bundle");
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (!proton_update_verify_bundle(staged_bundle_path, current, error,
                                    error_len)) {
-    proton_update_remove_tree(staging);
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   int preserve_staging = 0;
   status = proton_update_replace_bundle(staged_bundle_path, current,
                                         &preserve_staging, error, error_len);
-  if (!preserve_staging) {
-    proton_update_remove_tree(staging);
-  }
+  proton_update_stage_release(slot, !preserve_staging);
   return status;
+}
+
+PROTON_API int32_t proton_update_install(const char *archive,
+                                         int32_t archive_len,
+                                         const char *parent_dir, char *error,
+                                         int32_t error_len) {
+  if (archive == NULL || archive_len <= 0) {
+    proton_update_set_message(error, error_len, "the update archive is empty");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
+  int32_t status = proton_update_stage_begin(
+      parent_dir, archive_len, &stage, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_update_stage_write(stage, archive, archive_len, error,
+                                     error_len);
+  if (status != PROTON_OK) {
+    (void)proton_update_stage_abort(stage, NULL, 0);
+    return status;
+  }
+  return proton_update_stage_install(stage, error, error_len);
 }
 
 PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {

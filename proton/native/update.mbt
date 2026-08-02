@@ -8,6 +8,42 @@
 let update_message_capacity = 512
 
 ///|
+#borrow(parent_dir, out_stage, error)
+extern "C" fn proton_update_stage_begin_ffi(
+  parent_dir : Bytes,
+  expected_size : Int64,
+  out_stage : Ref[Int64],
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_stage_begin"
+
+///|
+#borrow(chunk, error)
+extern "C" fn proton_update_stage_write_ffi(
+  stage : Int64,
+  chunk : Bytes,
+  chunk_len : Int,
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_stage_write"
+
+///|
+#borrow(error)
+extern "C" fn proton_update_stage_install_ffi(
+  stage : Int64,
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_stage_install"
+
+///|
+#borrow(error)
+extern "C" fn proton_update_stage_abort_ffi(
+  stage : Int64,
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_stage_abort"
+
+///|
 #borrow(archive, parent_dir, error)
 extern "C" fn proton_update_install_ffi(
   archive : Bytes,
@@ -23,6 +59,16 @@ extern "C" fn proton_update_relaunch_ffi(
   error : FixedArray[Byte],
   error_len : Int,
 ) -> Int = "proton_update_relaunch"
+
+///|
+/// A private native file that receives one artifact stream while it is checked.
+///
+/// The file path is deliberately not exposed. The native updater owns it from
+/// creation through expansion, which keeps verification and installation tied
+/// to the same bytes.
+struct UpdateStage {
+  handle : Int64
+}
 
 ///|
 /// Reads a C string out of a fixed buffer the native side wrote into.
@@ -59,6 +105,66 @@ fn update_check(
     return
   }
   raise Status(status~, message=update_text(message))
+}
+
+///|
+/// Starts a private update staging transaction.
+pub fn update_stage_begin(
+  parent_dir : String,
+  expected_size : Int64,
+) -> UpdateStage raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  let handle = Ref(0L)
+  update_check(
+    proton_update_stage_begin_ffi(
+      @ffi.to_cstr(parent_dir),
+      expected_size,
+      handle,
+      message,
+      message.length(),
+    ),
+    message,
+  )
+  { handle: handle.val }
+}
+
+///|
+/// Appends one downloaded chunk to a private update stage.
+pub fn UpdateStage::write(
+  self : UpdateStage,
+  chunk : Bytes,
+) -> Unit raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  update_check(
+    proton_update_stage_write_ffi(
+      self.handle,
+      chunk,
+      chunk.length(),
+      message,
+      message.length(),
+    ),
+    message,
+  )
+}
+
+///|
+/// Consumes a complete stage and installs the application it contains.
+pub fn UpdateStage::install(self : UpdateStage) -> Unit raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  update_check(
+    proton_update_stage_install_ffi(self.handle, message, message.length()),
+    message,
+  )
+}
+
+///|
+/// Discards an unfinished stage and all bytes written to it.
+pub fn UpdateStage::abort(self : UpdateStage) -> Unit raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  update_check(
+    proton_update_stage_abort_ffi(self.handle, message, message.length()),
+    message,
+  )
 }
 
 ///|

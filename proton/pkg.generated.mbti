@@ -273,7 +273,7 @@ pub struct PendingUpdate {
   offer : @updater.AvailableUpdate
   identifier : String
 }
-pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit) -> Unit
+pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> Unit
 pub fn PendingUpdate::notes_url(Self) -> String?
 pub fn PendingUpdate::restart(Self) -> Unit raise
 pub fn PendingUpdate::size(Self) -> Int64

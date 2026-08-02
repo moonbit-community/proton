@@ -91,11 +91,13 @@ async fn download(
   let window = context.window()
   let update = take_offered(window, context.page_instance())
   let total = update.size()
-  let report : async (Int64) -> Unit = async fn(received) {
+  let report : async (Int64) -> Unit noraise = async fn(received) noraise {
     context.emit(@updater_contract.progress, @updater_contract.UpdateProgress::{
       received,
       total,
-    })
+    }) catch {
+      _ => ()
+    }
   }
   update.install(on_progress=report)
   @updater_contract.UpdateInstalled::{ version: update.version() }

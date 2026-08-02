@@ -330,9 +330,9 @@ one.
 
 Implemented in MoonBit, in a new `proton/updater/` package. `moonbitlang/async`
 provides `http` (`get`, `get_stream`), `tls`, and `gzip`; `moonbitlang/x/crypto`
-provides `sha256`. Signature verification is the one step that calls into native
-code, because the verification is performed by the platform rather than by
-Proton.
+provides `sha256`, and `justjavac/proton_rsa` verifies the detached signatures.
+The platform-specific native check is for the expanded application's code
+signature, not for the updater manifest or artifact signature.
 
 1. **Check.** Fetch the manifest and its detached signature. Verify the
    signature before parsing anything. Reject unknown `schema_version`. Reject a
@@ -341,18 +341,20 @@ Proton.
 2. **Compare.** Offer the update only when the manifest version is strictly
    greater than the running version. Equal or lower is not an update; it is a
    rollback attempt or a stale manifest, and both are ignored.
-3. **Download.** Hold the artifact in memory. It is deliberately not written to
-   a path chosen before the bytes are trusted: a verified artifact named by a
-   path can be swapped between the check and the read, which would spend the
-   signature check on one archive and install another.
-4. **Verify.** Check `size`, then `sha256`, then the signature over that digest.
-   A failure at any step discards the bytes. A partially verified artifact is
-   never retained for a later attempt.
-5. **Install.** Hand the verified bytes to one native transaction. It creates a
-   private directory with `mkdtemp`, unpacks with `ditto`, requires exactly one
-   `.app`, validates that bundle's complete code signature and signing identity,
-   and then performs the replacement. The expanded path never crosses back to
-   MoonBit, so validation cannot be spent on one directory and installation on
+3. **Download.** Create an opaque native staging transaction and stream each
+   response chunk into it. The archive path never crosses into MoonBit. The
+   authenticated manifest size is passed to the transport, which rejects a
+   mismatching `Content-Length`, refuses the first oversized chunk, and closes
+   the response as soon as the declared number of bytes has arrived.
+4. **Verify.** Count and hash those same chunks incrementally in MoonBit. At the
+   end of the bounded stream, check the exact size, SHA-256, and signature over
+   that digest. Any transfer or verification failure aborts the native stage
+   and removes its private file.
+5. **Install.** Consume that same opaque stage in one native transaction. It
+   unpacks with `ditto`, requires exactly one `.app`, validates that bundle's
+   complete code signature and signing identity, and then performs the
+   replacement. Neither the archive path nor the expanded path crosses back to
+   MoonBit, so validation cannot be spent on one object and installation on
    another. The replaced application is retained beside the install location.
 6. **Relaunch.** Separate from the swap, because when to restart is a question
    about the user's unsaved work rather than about the update. It reports that
@@ -360,21 +362,36 @@ Proton.
 
 ## Native surface
 
-Two functions, following the existing ABI rules: `proton_*` prefix, status
-codes, caller-owned error buffers, no platform types across the boundary.
+The streaming surface follows the existing ABI rules: `proton_*` prefix,
+status codes, an opaque fixed-width handle, caller-owned buffers, and no
+platform types across the boundary.
 
 ```c
-int32_t proton_update_install(const char *archive, int32_t archive_len,
-                              const char *parent_dir, char *error,
-                              int32_t error_len);
+int32_t proton_update_stage_begin(const char *parent_dir,
+                                  int64_t expected_size,
+                                  proton_update_stage_id_t *out_stage,
+                                  char *error, int32_t error_len);
+int32_t proton_update_stage_write(proton_update_stage_id_t stage,
+                                  const char *chunk, int32_t chunk_len,
+                                  char *error, int32_t error_len);
+int32_t proton_update_stage_install(proton_update_stage_id_t stage,
+                                    char *error, int32_t error_len);
+int32_t proton_update_stage_abort(proton_update_stage_id_t stage,
+                                  char *error, int32_t error_len);
 int32_t proton_update_relaunch(char *error, int32_t error_len);
 ```
 
-Expansion, bundle validation, and replacement deliberately share one call.
-Separating validation from replacement by a caller-visible path creates a
-time-of-check/time-of-use race: the path can name a different bundle by the time
-replacement begins. Relaunch remains separate because the caller owns the
-decision about unsaved work and process exit.
+The older whole-buffer `proton_update_install` entry point remains exported for
+ABI stability, but the Proton updater no longer calls it. It is implemented on
+top of the same private staging transaction rather than as a second install
+path.
+
+The stage handle is generation-checked and owned by its creating thread. It
+names a private file that native code creates, writes, expands, and removes;
+there is no caller-visible path to replace between verification and use.
+Expansion, bundle validation, and replacement deliberately remain one consuming
+operation. Relaunch is separate because the caller owns the decision about
+unsaved work and process exit.
 
 Artifact RSA signature verification is **not** here. Choosing RSA kept that in
 MoonBit. Native code verifies the expanded bundle's platform code signature,
@@ -382,7 +399,7 @@ because that seal is what covers the directory tree after extraction, and owns
 the replacement and restart operations. Nothing that decides whether downloaded
 bytes are authentic crosses this boundary.
 
-Everything platform-specific lives behind these two. Given that the three
+Everything platform-specific lives behind this surface. Given that the three
 per-platform engine sources are already near-duplicates of one another — a
 duplication that has already produced one identical defect in all three copies —
 the shared portion belongs in `native/src/engine/cef_common/` from the start
@@ -581,7 +598,8 @@ three platforms are built on three machines, which is already true of
   `moon.proton`, which is protected by the code-signed bundle on macOS and by
   nothing on the current portable Windows and Linux layouts. Those platforms
   also lack the second trust anchor that makes key loss recoverable on macOS.
-- **Full-artifact transfer.** Documented above and accepted for version 1.
+- **Staging disk space.** The archive and expanded application coexist briefly
+  in the private staging directory; enough free disk space is still required.
 - **macOS only.** Blocked on Windows and Linux packaging targets.
 - **Dev runs never check.** A development run is not inside an installed
   bundle, so there is nothing an update could replace.

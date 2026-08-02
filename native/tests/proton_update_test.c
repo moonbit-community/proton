@@ -158,6 +158,28 @@ int main(void) {
   snprintf(parent, sizeof(parent), "%s/staging", root);
   assert(mkdir(parent, 0755) == 0);
 
+  /* A stage enforces the signed size independently of the MoonBit stream
+     consumer. Oversized chunks never reach disk, short stages are consumed and
+     removed, and a closed generation cannot be reused. */
+  proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
+  assert(proton_update_stage_begin("staging", 3, &stage, error,
+                                   sizeof(error)) != 0);
+  assert(stage == PROTON_INVALID_HANDLE);
+  assert(proton_update_stage_begin(parent, 3, &stage, error, sizeof(error)) ==
+         0);
+  assert(proton_update_stage_write(stage, "four", 4, error, sizeof(error)) !=
+         0);
+  assert(proton_update_stage_abort(stage, error, sizeof(error)) == 0);
+  assert(proton_update_stage_abort(stage, error, sizeof(error)) != 0);
+  assert(proton_update_stage_begin(parent, 3, &stage, error, sizeof(error)) ==
+         0);
+  assert(proton_update_stage_write(stage, "ab", 2, error, sizeof(error)) == 0);
+  assert(proton_update_stage_install(stage, error, sizeof(error)) != 0);
+  assert(strcmp(error,
+                "the staged update size does not match the signed size") == 0);
+  snprintf(command, sizeof(command), "test -z \"$(ls -A '%s')\"", parent);
+  assert(system(command) == 0);
+
   /* Invalid input and an archive with no bundle are refused before the
      installed application is touched, and private staging is removed. */
   assert(proton_update_install("zip", 3, "staging", error, sizeof(error)) !=
@@ -259,8 +281,15 @@ int main(void) {
   sign_bundle(substitute, kIdentifier);
   assert(rename(staged, accepted_original) == 0);
   assert(rename(substitute, staged) == 0);
-  assert(proton_update_install(accepted_bytes, (int32_t)accepted_len, parent,
-                               error, sizeof(error)) == 0);
+  assert(proton_update_stage_begin(parent, accepted_len, &stage, error,
+                                   sizeof(error)) == 0);
+  int32_t first_chunk = (int32_t)(accepted_len / 2);
+  assert(proton_update_stage_write(stage, accepted_bytes, first_chunk, error,
+                                   sizeof(error)) == 0);
+  assert(proton_update_stage_write(
+             stage, accepted_bytes + first_chunk,
+             (int32_t)accepted_len - first_chunk, error, sizeof(error)) == 0);
+  assert(proton_update_stage_install(stage, error, sizeof(error)) == 0);
   assert(marker_is(installed, "new"));
   assert(marker_is(staged, "substitute"));
   free(accepted_bytes);
@@ -273,6 +302,9 @@ int main(void) {
 #else
   /* Every entry point reports that it is unimplemented rather than pretending
      to have installed something. */
+  proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
+  assert(proton_update_stage_begin(root, 3, &stage, error, sizeof(error)) != 0);
+  assert(stage == PROTON_INVALID_HANDLE);
   assert(proton_update_install("zip", 3, root, error, sizeof(error)) != 0);
   assert(proton_update_relaunch(error, sizeof(error)) != 0);
   assert(marker_is(installed, "old"));

@@ -5,6 +5,17 @@ fn expect_update_error(
   try action() catch {
     error => error
   } noraise {
+    _ => fail("expected the operation to be refused")
+  }
+}
+
+///|
+async fn expect_install_error(
+  action : async () -> Unit raise UpdateError,
+) -> UpdateError {
+  try action() catch {
+    error => error
+  } noraise {
     _ => fail("expected the install to be refused")
   }
 }
@@ -16,21 +27,27 @@ fn expect_update_error(
 /// `native/tests/proton_update_test.c`, which can point the native side at a
 /// directory it is allowed to destroy — a MoonBit test would have to replace
 /// the application running it.
-test "install reports which step refused" {
-  let relative = expect_update_error(() => install(b"not an archive", "staging"))
+async test "install reports which step refused" {
+  let outcome = channel("0.2.0").check(
+    serving(default_entries()),
+    accepted_from(),
+  )
+  guard outcome is Available(update) else {
+    abort("expected an available update")
+  }
+  let subject = channel("0.2.0")
+  let relative = expect_install_error(async fn() -> Unit raise UpdateError {
+    subject.download_and_install(
+      streaming(default_entries()),
+      update,
+      "staging",
+    )
+  })
   assert_eq(
     relative,
     InstallFailed(
-      step="validate and replace the application",
+      step="prepare a private artifact stage",
       detail="the staging parent directory must be absolute",
-    ),
-  )
-  let empty = expect_update_error(() => install(b"", "/tmp"))
-  assert_eq(
-    empty,
-    InstallFailed(
-      step="validate and replace the application",
-      detail="the update archive is empty",
     ),
   )
 }

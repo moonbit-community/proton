@@ -45,6 +45,8 @@ pub fn update_install(Bytes, String) -> Unit raise NativeError
 
 pub fn update_relaunch() -> Unit raise NativeError
 
+pub fn update_stage_begin(String, Int64) -> UpdateStage raise NativeError
+
 // Errors
 pub(all) suberror NativeError {
   Status(status~ : Int, message~ : String)
@@ -294,6 +296,11 @@ pub(all) enum TitlebarStyle {
   Default
   Overlay
 } derive(Eq, @debug.Debug)
+
+type UpdateStage
+pub fn UpdateStage::abort(Self) -> Unit raise NativeError
+pub fn UpdateStage::install(Self) -> Unit raise NativeError
+pub fn UpdateStage::write(Self, Bytes) -> Unit raise NativeError
 
 type Window
 pub fn Window::as_ref(Self) -> WindowRef

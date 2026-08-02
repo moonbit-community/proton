@@ -1,5 +1,6 @@
 #include "proton_state.h"
 
+#include "proton_handle.h"
 #include "proton_internal.h"
 
 #include <stdio.h>
@@ -8,12 +9,6 @@
 
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
-#define PROTON_HANDLE_INDEX_MASK 0x00000000ffffffffULL
-#define PROTON_HANDLE_GENERATION_SHIFT 32
-#define PROTON_HANDLE_TYPE_SHIFT 60
-#define PROTON_HANDLE_TYPE_RUNTIME 1ULL
-#define PROTON_HANDLE_TYPE_WINDOW 2ULL
-
 static proton_runtime_slot_t g_runtimes[PROTON_MAX_RUNTIMES];
 static proton_window_slot_t g_windows[PROTON_MAX_WINDOWS];
 
@@ -34,25 +29,6 @@ static bool proton_thread_equal(proton_thread_id_t left,
 #endif
 }
 
-static uint64_t proton_make_handle(uint64_t type, uint32_t generation,
-                                   uint32_t index) {
-  return (type << PROTON_HANDLE_TYPE_SHIFT) |
-         ((uint64_t)generation << PROTON_HANDLE_GENERATION_SHIFT) |
-         (uint64_t)index;
-}
-
-static uint64_t proton_handle_type(uint64_t handle) {
-  return handle >> PROTON_HANDLE_TYPE_SHIFT;
-}
-
-static uint32_t proton_handle_generation(uint64_t handle) {
-  return (uint32_t)((handle >> PROTON_HANDLE_GENERATION_SHIFT) & 0x0fffffffU);
-}
-
-static uint32_t proton_handle_index(uint64_t handle) {
-  return (uint32_t)(handle & PROTON_HANDLE_INDEX_MASK);
-}
-
 static proton_runtime_id_t proton_make_runtime_handle(uint32_t generation,
                                                        uint32_t index) {
   return (proton_runtime_id_t)proton_make_handle(PROTON_HANDLE_TYPE_RUNTIME,
@@ -63,14 +39,6 @@ static proton_window_id_t proton_make_window_handle(uint32_t generation,
                                                      uint32_t index) {
   return (proton_window_id_t)proton_make_handle(PROTON_HANDLE_TYPE_WINDOW,
                                                 generation, index);
-}
-
-static uint32_t proton_next_generation(uint32_t generation) {
-  generation++;
-  if (generation == 0) {
-    generation = 1;
-  }
-  return generation;
 }
 
 static void proton_runtime_clear_events(proton_runtime_slot_t *slot) {
@@ -104,7 +72,7 @@ int32_t proton_runtime_slot_create(bool engine_backed,
     if (slot->generation == 0) {
       slot->generation = 1;
     } else if (slot->destroyed) {
-      slot->generation = proton_next_generation(slot->generation);
+      slot->generation = proton_next_handle_generation(slot->generation);
     }
     slot->occupied = true;
     slot->destroyed = false;
@@ -258,7 +226,7 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
     if (slot->generation == 0) {
       slot->generation = 1;
     } else if (slot->destroyed) {
-      slot->generation = proton_next_generation(slot->generation);
+      slot->generation = proton_next_handle_generation(slot->generation);
     }
     slot->occupied = true;
     slot->destroyed = false;
@@ -278,7 +246,7 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
       slot->destroyed = true;
       slot->occupied = false;
       slot->engine_window = NULL;
-      slot->generation = proton_next_generation(slot->generation);
+      slot->generation = proton_next_handle_generation(slot->generation);
       *out_window = PROTON_INVALID_HANDLE;
       return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                               "failed to queue window_created event");
