@@ -1021,4 +1021,3 @@ test "bridge request validates abi_version when present" {
   inspect(type_error.status(), content="-1")
   assert_true(type_error.message().contains("abi_version"))
 }
-

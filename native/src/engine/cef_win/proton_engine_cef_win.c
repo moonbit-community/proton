@@ -58,6 +58,10 @@
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
+// Posted to a frame window when its destruction must be deferred out of a
+// CEF callback: tearing the frame down inline during OnBeforeClose can
+// invalidate browser teardown state on the external message pump route.
+#define PROTON_ENGINE_WM_DESTROY_SELF (WM_USER + 0x31)
 typedef struct proton_engine_client proton_engine_client_t;
 
 struct proton_engine_runtime {
@@ -2519,6 +2523,11 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   proton_engine_window_t *window =
       (proton_engine_window_t *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
   switch (msg) {
+  case PROTON_ENGINE_WM_DESTROY_SELF:
+    // Self-destruction deferred from OnBeforeClose; the owning engine window
+    // may already be freed, so only the HWND is touched here.
+    DestroyWindow(hwnd);
+    return 0;
   case WM_NCCREATE: {
     CREATESTRUCTW *create = (CREATESTRUCTW *)lparam;
     window = (proton_engine_window_t *)create->lpCreateParams;
@@ -2860,6 +2869,18 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
   }
 }
 
+static int CEF_CALLBACK proton_engine_client_release(
+    cef_base_ref_counted_t *base) {
+  proton_engine_ref_counted_t *refs =
+      (proton_engine_ref_counted_t *)((char *)base + base->size);
+  LONG value = InterlockedDecrement(&refs->refs);
+  if (value <= 0) {
+    free(base);
+    return 1;
+  }
+  return 0;
+}
+
 static proton_engine_client_t *proton_engine_client_new(
     proton_engine_window_t *window) {
   proton_engine_client_t *client =
@@ -2870,6 +2891,10 @@ static proton_engine_client_t *proton_engine_client_new(
   client->window = window;
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
+  // The client must outlive the browser: CEF releases its own reference only
+  // after OnBeforeClose returns, so ownership is tracked by the refcount and
+  // the final release frees the allocation instead of an eager free().
+  client->client.base.release = proton_engine_client_release;
   client->client.on_process_message_received =
       proton_engine_client_on_process_message_received;
   client->client.get_life_span_handler =
@@ -2893,10 +2918,20 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
     return;
   }
   proton_engine_window_list_remove(window);
-  if (window->client != NULL) {
-    ((proton_engine_client_t *)window->client)->window = NULL;
+  if (window->hwnd != NULL) {
+    // A deferred destroy may still be queued for this frame; detach the
+    // window pointer so the message never dereferences the freed struct.
+    SetWindowLongPtrW(window->hwnd, GWLP_USERDATA, 0);
   }
-  free(window->client);
+  if (window->client != NULL) {
+    // Drop only the engine's reference. CEF releases its client reference
+    // after OnBeforeClose, and the last release frees the client.
+    cef_base_ref_counted_t *client_base =
+        (cef_base_ref_counted_t *)window->client;
+    ((proton_engine_client_t *)window->client)->window = NULL;
+    window->client = NULL;
+    client_base->release(client_base);
+  }
   free(window->html_url);
   free(window->html);
   free(window->bridge_config_json);
@@ -2961,8 +2996,11 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   window->closed = 1;
   window->browser_close_requested = 1;
   if (window->hwnd != NULL) {
-    DestroyWindow(window->hwnd);
-    window->hwnd = NULL;
+    // CEF keeps unwinding the browser teardown after this callback returns,
+    // and on the external message pump route it can still touch frame-window
+    // state. Defer the frame destruction to a later pump instead of tearing
+    // it down inline here.
+    PostMessageW(window->hwnd, PROTON_ENGINE_WM_DESTROY_SELF, 0, 0);
   }
   proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
   if (window->destroy_requested) {
@@ -3772,6 +3810,13 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     if (status != PROTON_OK) {
       return status;
     }
+    // Flush deferred frame destruction posted by OnBeforeClose so no frame
+    // window outlives the browser teardown.
+    status = proton_engine_runtime_do_message_loop_work(runtime, error,
+                                                        error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
     proton_engine_cef_shutdown();
     runtime->owns_cef_runtime = 0;
   }
@@ -4405,7 +4450,8 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
         0, PROTON_ENGINE_WINDOW_CLASS, wide_title, window_style, CW_USEDEFAULT,
         CW_USEDEFAULT, width, height, NULL, NULL, GetModuleHandleW(NULL), window);
     if (window->hwnd == NULL) {
-      free(window->client);
+      ((cef_base_ref_counted_t *)window->client)
+          ->release((cef_base_ref_counted_t *)window->client);
       proton_browser_session_destroy(window->browser_session);
       free(window->bridge_config_json);
       free(window);
@@ -4427,7 +4473,8 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
     if (window->hwnd != NULL) {
       DestroyWindow(window->hwnd);
     }
-    free(window->client);
+    ((cef_base_ref_counted_t *)window->client)
+        ->release((cef_base_ref_counted_t *)window->client);
     free(window->html_url);
     free(window->html);
     free(window->bridge_config_json);
