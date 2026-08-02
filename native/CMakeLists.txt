@@ -483,14 +483,14 @@ if(BUILD_TESTING)
       if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
         set_tests_properties(proton_win_overlay_smoke PROPERTIES
           ENVIRONMENT
-            "PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
+            "PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
           ENVIRONMENT_MODIFICATION "${PROTON_TEST_PATH_MODIFICATIONS}"
           TIMEOUT 120
         )
       else()
         set_tests_properties(proton_win_overlay_smoke PROPERTIES
           ENVIRONMENT
-            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
+            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
           TIMEOUT 120
         )
       endif()
