@@ -498,6 +498,25 @@ and is not something a framework should decide for every application.
 namespace. Update capability is exposed through the existing permission model.
 Registration alone grants nothing; a window needs an explicit grant.
 
+The recommended grant names the two typed commands separately, so adding a
+future updater command cannot silently enlarge an existing renderer's
+authority:
+
+```moonbit
+@proton.app()
+  .extension(@updater.extension())
+  .grant("main", [
+    @proton.Permission::command(@updater_contract.check),
+    @proton.Permission::command(@updater_contract.download),
+  ])
+```
+
+The logical-window grant is only one half of the decision. The native bridge
+also derives and validates the current frame origin from CEF; renderer input is
+not trusted to name its own origin. The MoonBit dispatcher checks the granted
+route again before calling a handler, so invoking a raw route through
+`core.invokeOp` cannot bypass the grant.
+
 - `updater.check` — returns `not_configured`, `up_to_date`, or `available` with
   the version, notes URL and size.
 - `updater.download` — downloads and installs what the last `check` found, and
@@ -508,8 +527,10 @@ Registration alone grants nothing; a window needs an explicit grant.
 **Neither op takes an argument.** That is the mechanism, not an accident of the
 schema: a page that could name an endpoint, a version, or a path would hold a
 remote code execution primitive over the host. `download` installs whatever the
-host already authenticated, or refuses. Everything it acts on comes from
-`moon.proton` and the signed manifest.
+host already authenticated for that same native window and renderer page
+instance, or refuses. A check performed by one window or by a page before
+navigation cannot be consumed by another page. Everything it acts on comes
+from `moon.proton` and the signed manifest.
 
 The extension is not in `@ext.all()` or `@ext.desktop()`. An application asking
 for "the built-in extensions" should not thereby hand its pages the ability to

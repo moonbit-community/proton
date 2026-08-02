@@ -1,7 +1,6 @@
-// The updater extension is deliberately not in either set. Registering it
-// hands a page the ability to start a download and replace the installed
-// application, and that is a decision an application makes for itself — not
-// something it acquires by asking for "all the built-in extensions".
+// The updater extension is deliberately not in either set. Even though
+// registration grants no renderer authority, installing the update backend is
+// an application decision rather than part of a general desktop capability set.
 
 ///|
 /// Returns every built-in Proton extension.

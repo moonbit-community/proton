@@ -15,7 +15,7 @@ pub fn register_commands(
 ) -> Unit raise {
   registrar.bind(
     check_command,
-    (_context, request) => check(request),
+    (context, request) => check(context, request),
   )
   registrar.bind(
     download_command,

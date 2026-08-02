@@ -352,6 +352,7 @@ async fn dispatch_bridge_request_in_command_scope(
     command_tasks,
     window_id~,
     source_origin=request.source_origin(),
+    page_instance=request.page_instance(),
     permission_extension=grant.extension_id,
     permission_scope=grant.scope,
     wake_signal~,

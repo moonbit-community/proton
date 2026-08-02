@@ -50,6 +50,7 @@ pub struct AppCommandRequestContext {
   window : Int64
   window_id : String
   source_origin : String
+  page_instance : String?
   permission_extension : String?
   permission_scope_value : Json?
   tasks : @async.TaskGroup[Unit]
@@ -64,6 +65,7 @@ pub fn AppCommandRequestContext::new(
   tasks : @async.TaskGroup[Unit],
   window_id? : String = "main",
   source_origin? : String = "app",
+  page_instance? : String? = None,
   permission_extension? : String,
   permission_scope? : Json,
   wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
@@ -79,6 +81,7 @@ pub fn AppCommandRequestContext::new(
     window,
     window_id,
     source_origin,
+    page_instance,
     permission_extension,
     permission_scope_value: permission_scope.map(clone_permission_json),
     tasks,
@@ -128,6 +131,15 @@ pub fn AppCommandRequestContext::source_origin(
   self : AppCommandRequestContext,
 ) -> String {
   self.source_origin
+}
+
+///|
+/// Returns the renderer page instance that issued this request, when the
+/// context came from the native bridge.
+pub fn AppCommandRequestContext::page_instance(
+  self : AppCommandRequestContext,
+) -> String? {
+  self.page_instance
 }
 
 ///|
