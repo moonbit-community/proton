@@ -87,18 +87,27 @@ pub fn path_is_absolute(path : String) -> Bool {
 
 ///|
 /// Resolves `path` against `base` and normalizes `.`/`..` segments. On
-/// Windows, `/` is rewritten to `\` first so `C:/x` and `..\child` inputs
-/// behave; on POSIX both inputs are used verbatim so legitimate backslash
-/// file names are preserved.
+/// Windows, `\` in a relative child is rewritten to `/` before joining:
+/// the moonbitlang/x win32 path lexer misclassifies backslash relative
+/// paths that start with `.` or a digit (`.\target\x`,
+/// `38_app\commands.mbt`) as absolute or prefixed, which would drop `base`
+/// or skip absolutization. Absolute inputs the lexer cannot classify
+/// (`C:/x`) are returned unchanged. On POSIX both inputs are used verbatim
+/// so legitimate backslash file names are preserved.
 pub fn resolve_path(base : String, path : String) -> String {
-  let (base, path) = if @path.sep == '\\' {
-    (base.replace_all(old="/", new="\\"), path.replace_all(old="/", new="\\"))
-  } else {
-    (base, path)
-  }
   if path_is_absolute(path) {
-    @path.Path(path).resolve().to_string()
+    let candidate : @path.Path = path
+    if @path.sep == '\\' && !candidate.is_absolute() {
+      path
+    } else {
+      candidate.resolve().to_string()
+    }
   } else {
+    let path = if @path.sep == '\\' {
+      path.replace_all(old="\\", new="/")
+    } else {
+      path
+    }
     @path.Path(base).join(path).resolve().to_string()
   }
 }
