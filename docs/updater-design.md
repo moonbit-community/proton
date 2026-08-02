@@ -52,7 +52,7 @@ delta artifacts can be introduced without a breaking schema change.
 | Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
 | Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | Strict version monotonicity enforced on the client |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
-| Local attacker | Write to the staging directory between download and apply | The artifact is never written to a path an attacker can name: verified bytes go straight into a directory `mkdtemp` created 0700. `stage` then checks the expanded bundle's own code signature, which is what covers those files once the archive signature no longer does, and refuses a bundle signed as a different application |
+| Local attacker | Replace a staged path between validation and installation | The authenticated archive bytes cross into one native install transaction. Native code creates a 0700 directory with `mkdtemp`, expands there, validates the bundle signature and identity, and replaces the application without exposing the expanded path between those operations |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
 | Manifest pinning | Serve a stale manifest so the client never learns about a fix | The signed manifest carries `published_at`; a manifest older than the configured freshness window is refused. The window is measured against the system clock, so this defence is only as good as that clock — a client whose clock is wrong refuses every update rather than accepting a stale one, which is the safe direction but not a silent one |
 
@@ -348,48 +348,41 @@ Proton.
 4. **Verify.** Check `size`, then `sha256`, then the signature over that digest.
    A failure at any step discards the bytes. A partially verified artifact is
    never retained for a later attempt.
-5. **Expand.** Hand the verified bytes to native code, which creates a private
-   directory with `mkdtemp` under a caller-named parent, writes them there, and
-   unpacks with `ditto` so the bundle keeps the symlinks, resource forks and
-   extended attributes its own code signature covers. Exactly one `.app` must
-   result; zero or several do not say what to install.
-6. **Stage.** Check everything that can be checked while the installed
-   application is still untouched: the bundle is a real directory with an
-   executable inside, it is not the running bundle itself, its code signature
-   covers its contents, and it is signed as the same application.
-7. **Apply.** Two renames on one volume. The replaced application is kept beside
-   the install location rather than deleted, and the directory the new one was
-   expanded into is removed once it is empty.
-8. **Relaunch.** Separate from the swap, because when to restart is a question
+5. **Install.** Hand the verified bytes to one native transaction. It creates a
+   private directory with `mkdtemp`, unpacks with `ditto`, requires exactly one
+   `.app`, validates that bundle's complete code signature and signing identity,
+   and then performs the replacement. The expanded path never crosses back to
+   MoonBit, so validation cannot be spent on one directory and installation on
+   another. The replaced application is retained beside the install location.
+6. **Relaunch.** Separate from the swap, because when to restart is a question
    about the user's unsaved work rather than about the update. It reports that
    the request was accepted, which is all the platform will say — see below.
 
 ## Native surface
 
-Four functions, following the existing ABI rules: `proton_*` prefix, status
+Two functions, following the existing ABI rules: `proton_*` prefix, status
 codes, caller-owned error buffers, no platform types across the boundary.
 
 ```c
-int32_t proton_update_expand(const char *archive, int32_t archive_len,
-                             const char *parent_dir, char *bundle_buffer,
-                             int32_t bundle_buffer_len, char *error,
-                             int32_t error_len);
-int32_t proton_update_stage(const char *staged_bundle_path, char *error,
-                            int32_t error_len);
-int32_t proton_update_apply(char *error, int32_t error_len);
+int32_t proton_update_install(const char *archive, int32_t archive_len,
+                              const char *parent_dir, char *error,
+                              int32_t error_len);
 int32_t proton_update_relaunch(char *error, int32_t error_len);
 ```
 
-They are four rather than one because each boundary is a place the sequence can
-stop without having changed anything. `apply` is the only irreversible step, and
-everything checkable happens before it.
+Expansion, bundle validation, and replacement deliberately share one call.
+Separating validation from replacement by a caller-visible path creates a
+time-of-check/time-of-use race: the path can name a different bundle by the time
+replacement begins. Relaunch remains separate because the caller owns the
+decision about unsaved work and process exit.
 
-Signature verification is **not** here. Choosing RSA kept it in MoonBit, so the
-native surface is only what genuinely requires privilege: replacing an
-installed application and restarting it. Nothing that decides whether an update
-is authentic crosses this boundary.
+Artifact RSA signature verification is **not** here. Choosing RSA kept that in
+MoonBit. Native code verifies the expanded bundle's platform code signature,
+because that seal is what covers the directory tree after extraction, and owns
+the replacement and restart operations. Nothing that decides whether downloaded
+bytes are authentic crosses this boundary.
 
-Everything platform-specific lives behind these four. Given that the three
+Everything platform-specific lives behind these two. Given that the three
 per-platform engine sources are already near-duplicates of one another — a
 duplication that has already produced one identical defect in all three copies —
 the shared portion belongs in `native/src/engine/cef_common/` from the start
@@ -397,10 +390,11 @@ rather than being written three times.
 
 ### Per-platform apply
 
-**macOS.** `stage` verifies the staged bundle with `SecStaticCodeCheckValidity`
-including nested code, then compares its signing identifier and team identifier
-with the installed application's, as Sparkle does; an update signed as a
-different application or by a different team is refused.
+**macOS.** `install` verifies the privately expanded bundle with
+`SecStaticCodeCheckValidity` including nested code, then compares its signing
+identifier and team identifier with the installed application's, as Sparkle
+does; an update signed as a different application or by a different team is
+refused before replacement.
 
 How much that establishes depends on how the application is signed. A Developer
 ID release carries a team identifier, so the comparison is a real statement
@@ -545,8 +539,8 @@ three platforms are built on three machines, which is already true of
 
 ## Failure handling
 
-- Any verification failure aborts and deletes staged state. The running
-  application is never modified.
+- Any verification failure aborts and deletes the private install transaction.
+  The running application is never modified.
 - The swap is the only irreversible step. It must be ordered so that a crash
   before it leaves the old application intact, and a crash after it leaves the
   new application intact. Nothing may observe a half-swapped bundle.

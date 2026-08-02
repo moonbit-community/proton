@@ -10,11 +10,9 @@ fn expect_update_error(
 }
 
 ///|
-/// The install sequence stops at its first refusal, and says which one.
-///
-/// Only the refusals are driven from here, and only the inert ones: expanding
-/// into a directory that cannot be used changes nothing. What a successful
-/// replacement does to a bundle is covered by
+/// Only inert refusals are driven from here: a transaction rejected before
+/// expansion changes nothing. What a successful replacement does to a bundle
+/// is covered by
 /// `native/tests/proton_update_test.c`, which can point the native side at a
 /// directory it is allowed to destroy — a MoonBit test would have to replace
 /// the application running it.
@@ -23,7 +21,7 @@ test "install reports which step refused" {
   assert_eq(
     relative,
     InstallFailed(
-      step="expand the archive",
+      step="validate and replace the application",
       detail="the staging parent directory must be absolute",
     ),
   )
@@ -31,7 +29,7 @@ test "install reports which step refused" {
   assert_eq(
     empty,
     InstallFailed(
-      step="expand the archive",
+      step="validate and replace the application",
       detail="the update archive is empty",
     ),
   )

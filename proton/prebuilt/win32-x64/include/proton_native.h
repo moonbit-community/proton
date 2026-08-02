@@ -195,29 +195,16 @@ PROTON_API int32_t proton_window_poll_dialog_result(
     proton_window_id_t window, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);
 
-/* Expands a downloaded update archive and reports the `.app` it contains.
+/* Installs an authenticated update archive over the running application.
 
-   The archive is passed as bytes, and a private directory is created under
-   parent_dir to hold it. The archive is expected to be authenticated already:
-   this expands, it does not decide whether expanding is safe. Implemented on
-   macOS; other platforms report PROTON_ERR_UNSUPPORTED rather than pretending
-   to have installed anything. */
-PROTON_API int32_t proton_update_expand(const char *archive, int32_t archive_len,
-                                        const char *parent_dir,
-                                        char *bundle_buffer,
-                                        int32_t bundle_buffer_len, char *error,
-                                        int32_t error_len);
-
-/* Records a staged application bundle after checking that installing it would
-   be safe. Nothing is modified. */
-PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
-                                       char *error, int32_t error_len);
-
-/* Replaces the running application with the staged bundle.
-
-   This is the only irreversible step in the updater, which is why it is
-   separate from staging and from the relaunch. */
-PROTON_API int32_t proton_update_apply(char *error, int32_t error_len);
+   Expansion, bundle signature validation, and replacement happen in one
+   native transaction. The expanded bundle path is never exposed between
+   validation and use. Implemented on macOS; other platforms report
+   PROTON_ERR_UNSUPPORTED rather than pretending to have installed anything. */
+PROTON_API int32_t proton_update_install(const char *archive,
+                                         int32_t archive_len,
+                                         const char *parent_dir, char *error,
+                                         int32_t error_len);
 
 /* Asks the system to start the replaced application. The caller exits
    afterwards.

@@ -20,7 +20,6 @@ extern char **environ;
 
 #define PROTON_UPDATE_MAX_PATH 4096
 
-static char proton_update_staged[PROTON_UPDATE_MAX_PATH];
 static char proton_update_current[PROTON_UPDATE_MAX_PATH];
 static char proton_update_previous[PROTON_UPDATE_MAX_PATH];
 static char proton_update_override[PROTON_UPDATE_MAX_PATH];
@@ -47,35 +46,17 @@ const char *proton_update_previous_bundle_path(void) {
 
 #if !defined(__APPLE__)
 
-PROTON_API int32_t proton_update_expand(const char *archive, int32_t archive_len,
-                                        const char *parent_dir,
-                                        char *bundle_buffer,
-                                        int32_t bundle_buffer_len, char *error,
-                                        int32_t error_len) {
+PROTON_API int32_t proton_update_install(const char *archive,
+                                         int32_t archive_len,
+                                         const char *parent_dir, char *error,
+                                         int32_t error_len) {
   (void)archive;
   (void)archive_len;
   (void)parent_dir;
-  if (bundle_buffer != NULL && bundle_buffer_len > 0) {
-    bundle_buffer[0] = '\0';
-  }
-  proton_update_set_message(error, error_len,
-                            "expanding an update is implemented on macOS only");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
-                                       char *error, int32_t error_len) {
-  (void)staged_bundle_path;
   proton_update_set_message(
       error, error_len,
       "applying an update is implemented on macOS only; other platforms need "
       "an installer to replace");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
-  proton_update_set_message(error, error_len,
-                            "applying an update is implemented on macOS only");
   return PROTON_ERR_UNSUPPORTED;
 }
 
@@ -226,11 +207,10 @@ static int proton_update_write_archive(const char *path, const char *archive,
   return close(fd) == 0;
 }
 
-PROTON_API int32_t proton_update_expand(const char *archive, int32_t archive_len,
-                                        const char *parent_dir,
-                                        char *bundle_buffer,
-                                        int32_t bundle_buffer_len, char *error,
-                                        int32_t error_len) {
+static int32_t proton_update_expand_archive(
+    const char *archive, int32_t archive_len, const char *parent_dir,
+    char *bundle_buffer, int32_t bundle_buffer_len, char *error,
+    int32_t error_len) {
   if (bundle_buffer != NULL && bundle_buffer_len > 0) {
     bundle_buffer[0] = '\0';
   }
@@ -464,73 +444,14 @@ static int proton_update_verify_bundle(const char *staged, const char *installed
   return 1;
 }
 
-PROTON_API int32_t proton_update_stage(const char *staged_bundle_path,
-                                       char *error, int32_t error_len) {
-  proton_update_staged[0] = '\0';
-  proton_update_current[0] = '\0';
-  if (staged_bundle_path == NULL || staged_bundle_path[0] != '/') {
-    proton_update_set_message(error, error_len,
-                              "the staged bundle path must be absolute");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (strlen(staged_bundle_path) >= PROTON_UPDATE_MAX_PATH) {
-    proton_update_set_message(error, error_len,
-                              "the staged bundle path is too long");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_update_has_suffix(staged_bundle_path, ".app")) {
-    proton_update_set_message(error, error_len,
-                              "the staged bundle must be a .app directory");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  /* lstat, not stat: a symlink pointing at a .app is not a bundle this code
-     will install, because what it points at can change after the check. */
-  if (!proton_update_is_directory(staged_bundle_path)) {
-    proton_update_set_message(error, error_len,
-                              "the staged bundle is not a directory");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char executable_dir[PROTON_UPDATE_MAX_PATH];
-  snprintf(executable_dir, sizeof(executable_dir), "%s/Contents/MacOS",
-           staged_bundle_path);
-  if (!proton_update_is_directory(executable_dir)) {
-    proton_update_set_message(
-        error, error_len,
-        "the staged bundle has no Contents/MacOS directory");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char current[PROTON_UPDATE_MAX_PATH];
-  if (!proton_update_running_bundle(current, sizeof(current))) {
-    proton_update_set_message(
-        error, error_len,
-        "the running executable is not inside a .app bundle, so there is "
-        "nothing to replace");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  if (strcmp(current, staged_bundle_path) == 0) {
-    proton_update_set_message(error, error_len,
-                              "the staged bundle is the running bundle");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_update_verify_bundle(staged_bundle_path, current, error,
-                                   error_len)) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  snprintf(proton_update_staged, sizeof(proton_update_staged), "%s",
-           staged_bundle_path);
-  snprintf(proton_update_current, sizeof(proton_update_current), "%s", current);
-  return PROTON_OK;
-}
-
-PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
-  if (proton_update_staged[0] == '\0' || proton_update_current[0] == '\0') {
-    proton_update_set_message(error, error_len,
-                              "no staged bundle has been accepted");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
+static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
+                                            const char *current,
+                                            int *preserve_staging, char *error,
+                                            int32_t error_len) {
+  *preserve_staging = 0;
   char previous[PROTON_UPDATE_MAX_PATH];
   int written = snprintf(previous, sizeof(previous), "%s.previous-XXXXXX",
-                         proton_update_current);
+                         current);
   if (written < 0 || (size_t)written >= sizeof(previous)) {
     proton_update_set_message(error, error_len,
                               "the replaced bundle path is too long");
@@ -553,14 +474,17 @@ PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
      only window is between them, and it is closed by moving the old bundle
      back. Nothing ever observes a half-written bundle, because neither rename
      copies anything. */
-  if (rename(proton_update_current, previous) != 0) {
+  if (rename(current, previous) != 0) {
     (void)rmdir(previous);
     proton_update_set_message(error, error_len,
                               "cannot move the installed application aside");
     return PROTON_ERR_PLATFORM;
   }
-  if (rename(proton_update_staged, proton_update_current) != 0) {
-    if (rename(previous, proton_update_current) != 0) {
+  if (rename(staged_bundle_path, current) != 0) {
+    if (rename(previous, current) != 0) {
+      *preserve_staging = 1;
+      snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
+               previous);
       proton_update_set_message(
           error, error_len,
           "the update could not be installed and the previous application "
@@ -578,18 +502,73 @@ PROTON_API int32_t proton_update_apply(char *error, int32_t error_len) {
      install. */
   snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
            previous);
-
-  /* The directory the bundle came out of is now empty, so plain rmdir removes
-     it and does nothing at all if it holds anything unexpected. That is why it
-     is rmdir and not a recursive delete: `stage` accepts any bundle path, and
-     this must never remove a directory whose contents it did not put there. */
-  char *slash = strrchr(proton_update_staged, '/');
-  if (slash != NULL && slash != proton_update_staged) {
-    *slash = '\0';
-    (void)rmdir(proton_update_staged);
-  }
-  proton_update_staged[0] = '\0';
+  snprintf(proton_update_current, sizeof(proton_update_current), "%s", current);
   return PROTON_OK;
+}
+
+PROTON_API int32_t proton_update_install(const char *archive,
+                                         int32_t archive_len,
+                                         const char *parent_dir, char *error,
+                                         int32_t error_len) {
+  proton_update_current[0] = '\0';
+  char staged_bundle_path[PROTON_UPDATE_MAX_PATH];
+  int32_t status = proton_update_expand_archive(
+      archive, archive_len, parent_dir, staged_bundle_path,
+      (int32_t)sizeof(staged_bundle_path), error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  /* Expansion created this parent with mkdtemp and never exposed the bundle
+     path. Keep the parent so every refusal below can remove the whole private
+     transaction rather than leave untrusted files behind. */
+  char staging[PROTON_UPDATE_MAX_PATH];
+  snprintf(staging, sizeof(staging), "%s", staged_bundle_path);
+  char *slash = strrchr(staging, '/');
+  if (slash == NULL || slash == staging) {
+    proton_update_set_message(error, error_len,
+                              "the expanded bundle path is invalid");
+    return PROTON_ERR_PLATFORM;
+  }
+  *slash = '\0';
+
+  char executable_dir[PROTON_UPDATE_MAX_PATH];
+  snprintf(executable_dir, sizeof(executable_dir), "%s/Contents/MacOS",
+           staged_bundle_path);
+  if (!proton_update_is_directory(executable_dir)) {
+    proton_update_remove_tree(staging);
+    proton_update_set_message(
+        error, error_len,
+        "the staged bundle has no Contents/MacOS directory");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  char current[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_bundle(current, sizeof(current))) {
+    proton_update_remove_tree(staging);
+    proton_update_set_message(
+        error, error_len,
+        "the running executable is not inside a .app bundle, so there is "
+        "nothing to replace");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (strcmp(current, staged_bundle_path) == 0) {
+    proton_update_remove_tree(staging);
+    proton_update_set_message(error, error_len,
+                              "the staged bundle is the running bundle");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (!proton_update_verify_bundle(staged_bundle_path, current, error,
+                                   error_len)) {
+    proton_update_remove_tree(staging);
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  int preserve_staging = 0;
+  status = proton_update_replace_bundle(staged_bundle_path, current,
+                                        &preserve_staging, error, error_len);
+  if (!preserve_staging) {
+    proton_update_remove_tree(staging);
+  }
+  return status;
 }
 
 PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {

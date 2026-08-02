@@ -8,38 +8,14 @@
 let update_message_capacity = 512
 
 ///|
-/// The buffer handed to the native updater for the expanded bundle path.
-///
-/// `PROTON_UPDATE_MAX_PATH` in `native/src/proton_update.c`. A shorter buffer
-/// would make `expand` fail on paths the native side is willing to handle.
-let update_path_capacity = 4096
-
-///|
-#borrow(archive, parent_dir, bundle_buffer, error)
-extern "C" fn proton_update_expand_ffi(
+#borrow(archive, parent_dir, error)
+extern "C" fn proton_update_install_ffi(
   archive : Bytes,
   archive_len : Int,
   parent_dir : Bytes,
-  bundle_buffer : FixedArray[Byte],
-  bundle_buffer_len : Int,
   error : FixedArray[Byte],
   error_len : Int,
-) -> Int = "proton_update_expand"
-
-///|
-#borrow(staged_bundle_path, error)
-extern "C" fn proton_update_stage_ffi(
-  staged_bundle_path : Bytes,
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_stage"
-
-///|
-#borrow(error)
-extern "C" fn proton_update_apply_ffi(
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_apply"
+) -> Int = "proton_update_install"
 
 ///|
 #borrow(error)
@@ -86,64 +62,26 @@ fn update_check(
 }
 
 ///|
-/// Expands a downloaded update archive and returns the bundle it contains.
+/// Installs an authenticated update archive over the running application.
 ///
-/// The archive must already have been authenticated against the signed
-/// manifest. This step unpacks; it does not decide whether unpacking is safe.
-///
-/// The bytes are passed rather than written to a file first. Verified bytes
-/// named by a path could be replaced between the check and the read, which
-/// would spend the signature check on one archive and install another. The
-/// native side writes them inside a private directory it creates under
-/// `parent_dir` — that directory is why `parent_dir` should be somewhere the
-/// application owns, such as `app_data_dir`.
-pub fn update_expand(
+/// Expansion, bundle signature validation, and replacement form one native
+/// transaction. The expanded bundle path never crosses the FFI boundary, so
+/// another task cannot replace the validated bundle before installation.
+pub fn update_install(
   archive : Bytes,
   parent_dir : String,
-) -> String raise NativeError {
-  let bundle = FixedArray::make(update_path_capacity, b'\x00')
+) -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
-    proton_update_expand_ffi(
+    proton_update_install_ffi(
       archive,
       archive.length(),
       @ffi.to_cstr(parent_dir),
-      bundle,
-      bundle.length(),
       message,
       message.length(),
     ),
     message,
   )
-  update_text(bundle)
-}
-
-///|
-/// Accepts a bundle as the one to install, without modifying anything.
-///
-/// Separate from `update_apply` so that everything that can be checked is
-/// checked before the single irreversible step runs.
-pub fn update_stage(bundle_path : String) -> Unit raise NativeError {
-  let message = FixedArray::make(update_message_capacity, b'\x00')
-  update_check(
-    proton_update_stage_ffi(
-      @ffi.to_cstr(bundle_path),
-      message,
-      message.length(),
-    ),
-    message,
-  )
-}
-
-///|
-/// Replaces the running application with the staged bundle.
-///
-/// This is the point of no return. The previous application is kept beside the
-/// install location rather than deleted: until the replacement has started
-/// once, there is no evidence it works.
-pub fn update_apply() -> Unit raise NativeError {
-  let message = FixedArray::make(update_message_capacity, b'\x00')
-  update_check(proton_update_apply_ffi(message, message.length()), message)
 }
 
 ///|

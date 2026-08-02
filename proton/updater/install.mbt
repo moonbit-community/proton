@@ -10,10 +10,9 @@
 /// resolves one. The private directory the archive is expanded into is created
 /// beneath it and removed again once the bundle has been moved into place.
 ///
-/// The three steps run in order and stop at the first refusal. Only the last
-/// one changes anything: expanding and staging leave the installed application
-/// exactly as it was, and staging exists precisely so that everything that can
-/// be checked is checked before the one irreversible step.
+/// Expansion, bundle signature validation, and replacement are one native
+/// transaction. Keeping the expanded path inside native code prevents another
+/// task from replacing the validated bundle before it is installed.
 ///
 /// The application is not restarted. When to do that is a question about the
 /// user's unsaved work, not about the update, so it belongs to the caller —
@@ -22,18 +21,10 @@ pub fn install(
   artifact : Bytes,
   staging_parent : String,
 ) -> Unit raise UpdateError {
-  let bundle = @native.update_expand(artifact, staging_parent) catch {
-    error =>
-      raise InstallFailed(step="expand the archive", detail=error.message())
-  }
-  @native.update_stage(bundle) catch {
-    error =>
-      raise InstallFailed(step="accept the new bundle", detail=error.message())
-  }
-  @native.update_apply() catch {
+  @native.update_install(artifact, staging_parent) catch {
     error =>
       raise InstallFailed(
-        step="replace the application",
+        step="validate and replace the application",
         detail=error.message(),
       )
   }
