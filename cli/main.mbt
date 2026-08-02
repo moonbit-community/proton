@@ -147,19 +147,12 @@ async fn fetch_latest_cli_version() -> String? {
 }
 
 ///|
-async fn write_stderr_line(message : String) -> Unit {
-  @stdio.stderr.write(message + "\n") catch {
-    _ => ()
-  }
-}
-
-///|
 async fn check_cli_update() -> Unit {
   guard !cli_update_check_disabled() else { return }
   match fetch_latest_cli_version() {
     Some(latest) =>
       if cli_version_is_newer(latest, cli_current_version) {
-        write_stderr_line(
+        @output.write_stderr_line(
           "warning: proton_cli " +
           latest +
           " is available (current " +
@@ -172,11 +165,11 @@ async fn check_cli_update() -> Unit {
 }
 
 ///|
-fn print_error_message(message : String) -> Unit {
+async fn print_error_message(message : String) -> Unit {
   if message.has_prefix("error: ") {
-    println(message)
+    @output.write_stderr_line(message)
   } else {
-    println("error: " + message)
+    @output.write_stderr_line("error: " + message)
   }
 }
 
@@ -284,17 +277,6 @@ fn cli_command() -> @argparse.Command {
 }
 
 ///|
-fn resolve_cli_path(cwd : String, path : String) -> String {
-  let candidate : @path.Path = path
-  if candidate.is_absolute() {
-    candidate.normalize().resolve().to_string()
-  } else {
-    let base : @path.Path = cwd
-    base.join(path).normalize().resolve().to_string()
-  }
-}
-
-///|
 async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
   let dry_run = @cli_args.flag(matches, "dry-run")
   let verbose = @cli_args.flag(matches, "verbose")
@@ -329,7 +311,7 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
     }
   }
   let output = match @cli_args.value(matches, "output") {
-    Some(path) => Some(resolve_cli_path(cwd, path))
+    Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => None
   }
   @doctor.run(
@@ -351,8 +333,8 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
 async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
   let inputs = @cli_args.values(matches, "input_files")
   let output = @cli_args.required_value(matches, "output-file")
-  let resolved_inputs = inputs.map(input => resolve_cli_path(cwd, input))
-  let resolved_output = resolve_cli_path(cwd, output)
+  let resolved_inputs = inputs.map(input => @fsutil.resolve_path(cwd, input))
+  let resolved_output = @fsutil.resolve_path(cwd, output)
   let extension_identity = @cli_args.flag(matches, "extension-identity")
   let identity_name = @cli_args.value(matches, "identity-name")
   if !extension_identity && identity_name is Some(_) {
@@ -384,8 +366,9 @@ async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
         detail=@debug.render(Repr(error)),
       )
   }
+  println("wrote " + resolved_output)
   for warning in result.warnings {
-    println("warning: " + warning)
+    @output.write_stderr_line("warning: " + warning)
   }
 }
 

@@ -41,6 +41,10 @@ pub struct Event[Payload] {
 }
 
 ///|
+/// Process-global registry of declared event routes. Routes are expected to
+/// be declared once at initialization; re-declaring the same route (after a
+/// hot reload, or from two independent libraries) is rejected as
+/// DuplicateEventRoute, and the map is intentionally not synchronized.
 let declared_event_routes : Map[String, Unit] = Map([])
 
 ///|

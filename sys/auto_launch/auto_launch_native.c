@@ -180,6 +180,27 @@ static HKEY mb_open_run_key(REGSAM access) {
   }
   return key;
 }
+
+/* Opens the Run key with the requested access without creating it. Query
+   and delete paths must not mutate the registry, so a missing key reports
+   *out_missing instead of being created the way RegCreateKeyExW would.
+   Callers that delete values must request KEY_SET_VALUE in access. */
+static HKEY mb_open_run_key_no_create(REGSAM access, int *out_missing) {
+  static const wchar_t subkey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+  HKEY key = NULL;
+  LONG status;
+  *out_missing = 0;
+  status = RegOpenKeyExW(HKEY_CURRENT_USER, subkey, 0, access, &key);
+  if (status == ERROR_FILE_NOT_FOUND) {
+    *out_missing = 1;
+    return NULL;
+  }
+  if (status != ERROR_SUCCESS) {
+    mb_set_windows_error((DWORD)status, "Failed to open Windows Run registry key");
+    return NULL;
+  }
+  return key;
+}
 #endif
 
 static int mb_ensure_parent_directory(const char *path) {
@@ -507,14 +528,19 @@ MOONBIT_FFI_EXPORT int32_t mb_auto_launch_windows_delete_run_entry(moonbit_bytes
   );
   HKEY key = NULL;
   LONG status = ERROR_SUCCESS;
+  int missing_key = 0;
 
   if (wide_name == NULL) {
     return MB_STATUS_ERROR;
   }
 
-  key = mb_open_run_key(KEY_SET_VALUE);
+  key = mb_open_run_key_no_create(KEY_READ | KEY_SET_VALUE, &missing_key);
   if (key == NULL) {
     free(wide_name);
+    if (missing_key) {
+      mb_clear_error();
+      return MB_STATUS_OK;
+    }
     return MB_STATUS_ERROR;
   }
 
@@ -551,14 +577,19 @@ MOONBIT_FFI_EXPORT int32_t mb_auto_launch_windows_run_entry_exists(moonbit_bytes
   DWORD type = 0;
   DWORD size = 0;
   LONG status = ERROR_SUCCESS;
+  int missing_key = 0;
 
   if (wide_name == NULL) {
     return MB_STATUS_ERROR;
   }
 
-  key = mb_open_run_key(KEY_QUERY_VALUE);
+  key = mb_open_run_key_no_create(KEY_READ, &missing_key);
   if (key == NULL) {
     free(wide_name);
+    if (missing_key) {
+      mb_clear_error();
+      return 0;
+    }
     return MB_STATUS_ERROR;
   }
 
@@ -594,22 +625,4 @@ MOONBIT_FFI_EXPORT int32_t mb_auto_launch_last_error_code(void) {
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t mb_auto_launch_last_error_message(void) {
   return mb_make_bytes_from_buffer(mb_last_error_message, strlen(mb_last_error_message));
-}
-
-MOONBIT_FFI_EXPORT moonbit_bytes_t mb_auto_launch_test_getenv(moonbit_bytes_t name) {
-  char *key = mb_bytes_to_c_string(name);
-  const char *value = NULL;
-
-  if (key == NULL) {
-    return moonbit_make_bytes(0, 0);
-  }
-
-  value = getenv(key);
-  free(key);
-
-  if (value == NULL) {
-    return moonbit_make_bytes(0, 0);
-  }
-
-  return mb_make_bytes_from_buffer(value, strlen(value));
 }

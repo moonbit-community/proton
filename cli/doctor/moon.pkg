@@ -2,6 +2,7 @@ import {
   "justjavac/proton_config",
   "justjavac/proton_cli/cef",
   "justjavac/proton_cli/codegen",
+  "justjavac/proton_cli/fsutil",
   "justjavac/ffi",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,

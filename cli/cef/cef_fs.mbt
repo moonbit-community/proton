@@ -56,20 +56,20 @@ fn make_executable(_path : String) -> Unit {
 
 ///|
 async fn copy_file_if_exists(src : String, dest : String) -> Unit {
-  guard path_exists(src) else { return }
+  guard @fsutil.path_exists(src) else { return }
   copy_file(src, dest)
 }
 
 ///|
 async fn copy_tree(src : String, dest : String) -> Unit {
-  if path_is_file(src) {
+  if @fsutil.path_is_file(src) {
     copy_file(src, dest)
     return
   }
-  if !path_is_dir(src) {
+  if !@fsutil.path_is_dir(src) {
     raise CefFileSystemError::InvalidSource(path=src)
   }
-  if !path_exists(dest) {
+  if !@fsutil.path_exists(dest) {
     @async_fs.mkdir(dest, recursive=true) catch {
       err =>
         raise CefFileSystemError::CreateDirectory(
@@ -90,13 +90,13 @@ async fn copy_tree(src : String, dest : String) -> Unit {
       )
   }
   for entry in entries {
-    copy_tree(path_join(src, entry), path_join(dest, entry))
+    copy_tree(@fsutil.path_join(src, entry), @fsutil.path_join(dest, entry))
   }
 }
 
 ///|
 async fn ensure_dir(path : String) -> Unit {
-  guard !path_exists(path) else { return }
+  guard !@fsutil.path_exists(path) else { return }
   @async_fs.mkdir(path, recursive=true) catch {
     err =>
       raise CefFileSystemError::CreateDirectory(
@@ -108,8 +108,8 @@ async fn ensure_dir(path : String) -> Unit {
 
 ///|
 async fn normalize_cef_runtime_layout(root : String) -> Unit {
-  let release_dir = path_join(root, "Release")
-  if !path_exists(release_dir) {
+  let release_dir = @fsutil.path_join(root, "Release")
+  if !@fsutil.path_exists(release_dir) {
     @async_fs.mkdir(release_dir, recursive=true) catch {
       err =>
         raise CefFileSystemError::CreateDirectory(
@@ -123,21 +123,21 @@ async fn normalize_cef_runtime_layout(root : String) -> Unit {
       "icudtl.dat", "chrome_100_percent.pak", "chrome_200_percent.pak", "resources.pak",
     ] {
     copy_file_if_exists(
-      path_join(path_join(root, "Resources"), file_name),
-      path_join(release_dir, file_name),
+      @fsutil.path_join(@fsutil.path_join(root, "Resources"), file_name),
+      @fsutil.path_join(release_dir, file_name),
     )
   }
 }
 
 ///|
 async fn remove_tree(path : String) -> Unit {
-  guard path_exists(path) else { return }
-  if path_is_file(path) {
+  guard @fsutil.path_exists(path) else { return }
+  if @fsutil.path_is_file(path) {
     @async_fs.remove(path) catch {
       err =>
         raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))
     }
-  } else if path_is_dir(path) {
+  } else if @fsutil.path_is_dir(path) {
     @async_fs.rmdir(path, recursive=true) catch {
       err =>
         raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))

@@ -72,10 +72,12 @@ The primary process attaches the instance handle to its runtime; the listener
 thread only queues events and signals the runtime wake source, while the runtime
 owner thread drains those events through `proton_runtime_poll_event_json`.
 
-In the current v1 ABI, `proton_window_close` closes the native window and
-releases the Proton window handle through the same path as
-`proton_window_destroy`; callers should treat a successful close as consuming
-that window handle.
+In the current v1 ABI, `proton_window_close` behaves per window kind. For
+engine-less windows it enqueues the closed event and releases the Proton
+window handle immediately, like `proton_window_destroy`; callers should treat
+a successful close as consuming that window handle. For engine-backed windows
+it only requests the native close; the handle stays valid until the engine
+reports the window closed and `proton_window_destroy` runs.
 
 Engine-specific code is isolated behind `src/proton_engine.h`. The default
 build uses `src/engine/proton_engine_none.c`, so ABI and MoonBit binding tests

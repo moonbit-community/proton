@@ -1,11 +1,6 @@
 # justjavac/microphone
 
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-microphone)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-microphone)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-microphone)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-microphone)
-
-Native-only microphone discovery and capture-session helpers.
+Native-only microphone device discovery helpers for MoonBit.
 
 ```mbt nocheck
 ///|

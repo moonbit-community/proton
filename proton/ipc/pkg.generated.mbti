@@ -7,8 +7,6 @@ import {
 }
 
 // Values
-pub fn parse_ipc_frame(String) -> IpcFrame raise IpcError
-
 pub fn parse_ipc_op_request(String) -> IpcOpRequest raise IpcError
 
 pub fn parse_ipc_op_response(String) -> IpcOpResponse raise IpcError
@@ -20,8 +18,6 @@ pub(all) suberror IpcError {
   MalformedJson(detail~ : String)
   InvalidPayload(kind~ : String, detail~ : String)
   UnsupportedVersion(scope~ : String, actual~ : Int, supported~ : Int)
-  UnsupportedFrameKind(kind~ : String)
-  UnexpectedFrameKind(expected~ : String, actual~ : String)
   EmptyField(path~ : String)
   InvalidErrorResponseBody
 } derive(Eq, @debug.Debug)
@@ -49,20 +45,6 @@ pub(all) struct IpcExtensionEvent {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn IpcExtensionEvent::new(String, String, Json) -> Self
 pub fn IpcExtensionEvent::validate(Self) -> Self raise IpcError
-
-pub(all) struct IpcFrame {
-  version : Int
-  kind : String
-  payload : Json
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn IpcFrame::as_event(Self) -> IpcExtensionEvent raise IpcError
-pub fn IpcFrame::as_request(Self) -> IpcOpRequest raise IpcError
-pub fn IpcFrame::as_response(Self) -> IpcOpResponse raise IpcError
-pub fn IpcFrame::event(IpcExtensionEvent) -> Self
-pub fn IpcFrame::request(IpcOpRequest) -> Self
-pub fn IpcFrame::response(IpcOpResponse) -> Self
-pub fn IpcFrame::stringify(Self) -> String
-pub fn IpcFrame::validate(Self) -> Self raise IpcError
 
 pub(all) struct IpcOpRequest {
   version : Int

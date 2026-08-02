@@ -127,13 +127,15 @@ pub fn NewProjectToolError::message(self : NewProjectToolError) -> String {
       ").\n\nRequired Proton release chain:\n  " +
       scaffold_release_chain() +
       "\n\nThe project was rolled back. Install a Proton CLI release whose " +
-      "template dependencies are available in the registry, then retry."
+      "template dependencies are available in the registry, then retry, " +
+      "or retry with `proton_cli new --no-check` to skip validation."
     MoonCheckFailed(code~, project~) =>
       "moon check failed with exit code " +
       code.to_string() +
       " while validating " +
       project +
-      "\nNo generated files were committed."
+      "\nNo generated files were committed. " +
+      "Retry with `proton_cli new --no-check` to skip validation."
   }
 }
 

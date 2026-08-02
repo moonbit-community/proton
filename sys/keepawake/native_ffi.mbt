@@ -4,7 +4,11 @@
 /// A `Guard` is created by `acquire` and released explicitly through
 /// `Guard::release` or implicitly when the runtime reclaims it. The type is
 /// intentionally opaque so callers interact only through the safe public API
-/// instead of depending on backend-specific state layout.
+/// instead of depending on backend-specific state layout. On Windows the
+/// implicit reclaim may run on a different thread than the one that acquired
+/// the guard: the release is then accounted for correctly, but the acquiring
+/// thread's power-state flags can persist until that thread exits, so
+/// explicit release is the recommended path.
 pub type Guard
 
 ///|

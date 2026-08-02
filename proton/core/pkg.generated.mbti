@@ -77,24 +77,13 @@ pub fn AppCommandRequestContext::window_id(Self) -> String
 
 type MbtProcessHost
 pub fn MbtProcessHost::close(Self) -> Unit
-pub fn MbtProcessHost::dispatch(Self, @ipc.IpcOpRequest, (@ipc.IpcOpResponse) -> Unit) -> Unit
 pub async fn MbtProcessHost::dispatch_async(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub fn MbtProcessHost::dispatch_json(Self, String, (@ipc.IpcOpResponse) -> Unit) -> Unit
-pub async fn MbtProcessHost::dispatch_json_async(Self, String) -> @ipc.IpcOpResponse
 pub fn MbtProcessHost::new(expose_error_details? : Bool) -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn MbtProcessHost::registered_ops(Self) -> Array[String]
-
-type ResourceTable[T]
-pub fn[T] ResourceTable::add(Self[T], T) -> Int
-pub fn[T] ResourceTable::contains(Self[T], Int) -> Bool
-pub fn[T] ResourceTable::get(Self[T], Int) -> T?
-pub fn[T] ResourceTable::new() -> Self[T]
-pub fn[T] ResourceTable::remove(Self[T], Int) -> T?
-pub fn[T] ResourceTable::rids(Self[T]) -> Array[Int]
 
 pub struct RuntimeWakeSignal {
   mut revision : Int64

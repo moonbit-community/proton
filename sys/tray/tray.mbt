@@ -177,6 +177,10 @@ pub fn ensure_supported() -> Result[Unit, String] {
 /// `Err(message)` with either the support-probe failure or the most recent
 /// backend creation error.
 ///
+/// Native tray operations, including `destroy()`, must run on the thread that
+/// called `create()`; macOS already required this, and it is now enforced on
+/// all platforms.
+///
 /// # Example
 /// ```mbt nocheck
 /// let tray = @tray.create(icon=Some("/path/to/icon.png"), tooltip="My App").unwrap()
@@ -509,6 +513,10 @@ pub fn Tray::pump(
 /// After destruction the tray becomes permanently unusable: `show()`, `hide()`,
 /// `set_tooltip()`, `set_icon()`, `set_menu()`, and `pump()` will all return
 /// errors instead of touching the native backend again.
+///
+/// Native tray operations, including `destroy()`, must run on the thread that
+/// called `create()`; macOS already required this, and it is now enforced on
+/// all platforms.
 pub fn Tray::destroy(self : Tray) -> Unit {
   if self.destroyed {
     return ()
@@ -601,7 +609,10 @@ fn validate_clickable_menu_item(
   if text_has_nul(id) {
     return Err("tray menu item id must not contain NUL bytes")
   }
-  if encode_text(id).length() >= max_menu_item_id_bytes() {
+  // encode_text appends a NUL terminator, so the encoded length is the C
+  // strlen + 1; `>` keeps the exact 127-accept / 128-reject strlen boundary
+  // required by the native side (strlen(id) < 128).
+  if encode_text(id).length() > max_menu_item_id_bytes() {
     return Err("tray menu item id is too long")
   }
   if normalized_label.is_empty() {
@@ -643,10 +654,10 @@ fn validate_optional_c_text(
 }
 
 ///|
-/// Returns whether UTF-8 text contains an embedded C string terminator.
+/// Returns whether text contains an embedded C string terminator.
 fn text_has_nul(value : String) -> Bool {
-  for byte in encode_text(value) {
-    if byte.to_int() == 0 {
+  for c in value {
+    if c == '\u{0}' {
       return true
     }
   }
@@ -781,15 +792,15 @@ fn Tray::state_error(_self : Tray, handle : Int64, fallback : String) -> String 
 }
 
 ///|
-/// Encodes UTF-8 text for calls into the native backend.
+/// Encodes UTF-8 text as a NUL-terminated C string for the native backend.
 fn encode_text(value : String) -> Bytes {
-  @utf8.encode(value)
+  @ffi.to_cstr(value)
 }
 
 ///|
-/// Encodes optional text as UTF-8 bytes, using an empty payload for `None`.
+/// Encodes optional text as a NUL-terminated C string, empty for `None`.
 fn encode_optional_text(value : String?) -> Bytes {
-  @utf8.encode(value.unwrap_or(""))
+  @ffi.to_cstr(value.unwrap_or(""))
 }
 
 ///|

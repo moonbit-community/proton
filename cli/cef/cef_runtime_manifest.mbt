@@ -26,7 +26,7 @@ async fn write_runtime_metadata(
   let manifest = runtime_manifest_json(
     proton_version, platform, cef_name, relative_dist,
   )
-  let runtime_manifest_path = path_join(runtime_dir, "manifest.json")
+  let runtime_manifest_path = @fsutil.path_join(runtime_dir, "manifest.json")
   @async_fs.write_file(
     runtime_manifest_path,
     manifest + "\n",
@@ -39,8 +39,8 @@ async fn write_runtime_metadata(
         detail=@debug.render(Repr(err)),
       )
   }
-  let active_manifest_path = path_join(
-    path_join(root, ".proton"),
+  let active_manifest_path = @fsutil.path_join(
+    @fsutil.path_join(root, ".proton"),
     "runtime.json",
   )
   @async_fs.write_file(
@@ -55,7 +55,7 @@ async fn write_runtime_metadata(
         detail=@debug.render(Repr(err)),
       )
   }
-  let version_path = path_join(runtime_dir, "version.txt")
+  let version_path = @fsutil.path_join(runtime_dir, "version.txt")
   @async_fs.write_file(
     version_path,
     "proton=" + proton_version + "\ncef=" + cef_name + "\n",
@@ -77,7 +77,10 @@ async fn validate_active_runtime_manifest(
   proton_version : String,
   relative_dist : String,
 ) -> Unit raise CefRuntimeError {
-  let manifest_path = path_join(path_join(root, ".proton"), "runtime.json")
+  let manifest_path = @fsutil.path_join(
+    @fsutil.path_join(root, ".proton"),
+    "runtime.json",
+  )
   let json = read_json_file(manifest_path)
   let actual_platform = json_string_field(json, "platform", manifest_path)
   if actual_platform != platform {

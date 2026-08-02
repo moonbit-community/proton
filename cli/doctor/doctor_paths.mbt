@@ -1,79 +1,32 @@
 ///|
-async fn doctor_path_exists(path : String) -> Bool {
-  @async_fs.exists(path)
-}
-
-///|
-async fn doctor_path_is_file(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Regular
-}
-
-///|
-async fn doctor_path_is_dir(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Directory
-}
-
-///|
-fn path_join(base : String, name : String) -> String {
-  if base == "" || base == "." {
-    name
-  } else if base.has_suffix("\\") || base.has_suffix("/") {
-    base + name
-  } else {
-    base + @path.sep.to_string() + name
-  }
-}
-
-///|
-fn path_parent(path : String) -> String? {
-  let normalized = if path.has_suffix("\\") || path.has_suffix("/") {
-    path.unsafe_substring(start=0, end=path.length() - 1)
-  } else {
-    path
-  }
-  match normalized.rev_find("\\") {
-    Some(index) if index > 0 =>
-      Some(normalized.unsafe_substring(start=0, end=index))
-    _ =>
-      match normalized.rev_find("/") {
-        Some(index) if index > 0 =>
-          Some(normalized.unsafe_substring(start=0, end=index))
-        _ => None
-      }
-  }
-}
-
-///|
 async fn find_up(start : String, file_name : String) -> String? {
-  let candidate = path_join(start, file_name)
-  if doctor_path_exists(candidate) {
+  let candidate = @fsutil.path_join(start, file_name)
+  if @fsutil.path_exists(candidate) {
     Some(candidate)
   } else {
-    match path_parent(start) {
-      Some(parent) => find_up(parent, file_name)
-      None => None
+    let parent = @fsutil.path_parent(start)
+    if parent == start {
+      None
+    } else {
+      find_up(parent, file_name)
     }
   }
 }
 
 ///|
 async fn find_project_root_marker(start : String) -> (String, String?)? {
-  let moon_mod_path = path_join(start, "moon.mod")
-  if doctor_path_exists(moon_mod_path) {
+  let moon_mod_path = @fsutil.path_join(start, "moon.mod")
+  if @fsutil.path_exists(moon_mod_path) {
     return Some((start, Some(moon_mod_path)))
   }
-  if doctor_path_exists(path_join(start, "moon.work")) {
+  if @fsutil.path_exists(@fsutil.path_join(start, "moon.work")) {
     return Some((start, None))
   }
-  match path_parent(start) {
-    Some(parent) => find_project_root_marker(parent)
-    None => None
+  let parent = @fsutil.path_parent(start)
+  if parent == start {
+    None
+  } else {
+    find_project_root_marker(parent)
   }
 }
 
@@ -145,16 +98,22 @@ async fn discover_project(cwd : String) -> ProjectDoctorInfo {
   let discovered_app_json_path = find_up(cwd, "app.json")
   let fallback_root = match
     (discovered_moon_proton_path, discovered_app_json_path) {
-    (Some(path), _) =>
-      match path_parent(path) {
-        Some(parent) => parent
-        None => cwd
+    (Some(path), _) => {
+      let parent = @fsutil.path_parent(path)
+      if parent == path {
+        cwd
+      } else {
+        parent
       }
-    (_, Some(path)) =>
-      match path_parent(path) {
-        Some(parent) => parent
-        None => cwd
+    }
+    (_, Some(path)) => {
+      let parent = @fsutil.path_parent(path)
+      if parent == path {
+        cwd
+      } else {
+        parent
       }
+    }
     _ => cwd
   }
   let (root, moon_mod_path) = match find_project_root_marker(cwd) {
@@ -173,8 +132,11 @@ async fn discover_project(cwd : String) -> ProjectDoctorInfo {
   let moon_pkg_path = match discovered_moon_pkg_path {
     Some(path) => Some(path)
     None if mode == AppProject => {
-      let app_package = path_join(path_join(root, "app"), "moon.pkg")
-      if doctor_path_exists(app_package) {
+      let app_package = @fsutil.path_join(
+        @fsutil.path_join(root, "app"),
+        "moon.pkg",
+      )
+      if @fsutil.path_exists(app_package) {
         Some(app_package)
       } else {
         None
@@ -183,11 +145,14 @@ async fn discover_project(cwd : String) -> ProjectDoctorInfo {
     None => None
   }
   let package_dir = match moon_pkg_path {
-    Some(path) =>
-      match path_parent(path) {
-        Some(parent) => parent
-        None => cwd
+    Some(path) => {
+      let parent = @fsutil.path_parent(path)
+      if parent == path {
+        cwd
+      } else {
+        parent
       }
+    }
     None => cwd
   }
   {

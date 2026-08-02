@@ -4,8 +4,6 @@ pub(all) suberror IpcError {
   MalformedJson(detail~ : String)
   InvalidPayload(kind~ : String, detail~ : String)
   UnsupportedVersion(scope~ : String, actual~ : Int, supported~ : Int)
-  UnsupportedFrameKind(kind~ : String)
-  UnexpectedFrameKind(expected~ : String, actual~ : String)
   EmptyField(path~ : String)
   InvalidErrorResponseBody
 } derive(Debug, Eq)
@@ -24,9 +22,6 @@ pub fn IpcError::message(self : IpcError) -> String {
       " (supported: " +
       supported.to_string() +
       ")"
-    UnsupportedFrameKind(kind~) => "Unsupported IPC frame kind: " + kind
-    UnexpectedFrameKind(expected~, actual~) =>
-      "IPC frame kind is not " + expected + ": " + actual
     EmptyField(path~) => path + " must not be empty"
     InvalidErrorResponseBody => "IPC error response body must be a string"
   }

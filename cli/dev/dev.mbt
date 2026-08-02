@@ -67,11 +67,7 @@ pub fn command() -> @argparse.Command {
     ],
     options=[
       OptionArg("package", about="MoonBit application package"),
-      OptionArg(
-        "config",
-        allow_hyphen_values=true,
-        about="Proton project config",
-      ),
+      OptionArg("config", about="Proton project config"),
       OptionArg(
         "moon-target-dir",
         about="Target directory for the app's internal Moon invocation",
@@ -101,7 +97,7 @@ pub fn command() -> @argparse.Command {
 pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = dev_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = find_project_root_from(cwd)
+  let root = @fsutil.find_project_root_from(cwd)
   let config_path = resolve_dev_config_path(cwd, root, raw)
   let project_config = load_dev_project_config(config_path)
   let frontend_config = match project_config {
@@ -119,7 +115,9 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => None
       }
   }
-  let moon_target_dir = raw.moon_target_dir.map(path => resolve_path(root, path))
+  let moon_target_dir = raw.moon_target_dir.map(path => {
+    @fsutil.resolve_path(root, path)
+  })
   validate_frontend_dev_url(frontend_url, raw.ready_path)
   let frontend_command : String? = match raw.command {
     Some(command) => Some(command)
@@ -130,7 +128,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       }
   }
   let frontend_path : String? = match raw.frontend_path {
-    Some(path) => Some(resolve_path(project_base, path))
+    Some(path) => Some(@fsutil.resolve_path(project_base, path))
     None =>
       match frontend_config {
         Some(config) => config.path()
@@ -244,10 +242,10 @@ async fn resolve_frontend_path(
   match frontend_path {
     None => root
     Some(configured_path) => {
-      let path = resolve_path(root, configured_path)
-      if !path_exists(path) {
+      let path = @fsutil.resolve_path(root, configured_path)
+      if !@fsutil.path_exists(path) {
         raise FrontendDirectoryMissing(path~)
-      } else if !path_is_dir(path) {
+      } else if !@fsutil.path_is_dir(path) {
         raise FrontendDirectoryNotDirectory(path~)
       } else {
         path
@@ -261,10 +259,10 @@ async fn resolve_backend_path(root : String, backend_path : String?) -> String {
   match backend_path {
     None => root
     Some(configured_path) => {
-      let path = resolve_path(root, configured_path)
-      if !path_exists(path) {
+      let path = @fsutil.resolve_path(root, configured_path)
+      if !@fsutil.path_exists(path) {
         raise BackendDirectoryMissing(path~)
-      } else if !path_is_dir(path) {
+      } else if !@fsutil.path_is_dir(path) {
         raise BackendDirectoryNotDirectory(path~)
       } else {
         path
@@ -280,19 +278,19 @@ async fn resolve_dev_config_path(
   raw : RawDevOptions,
 ) -> String? {
   match raw.config_path {
-    Some(path) => Some(resolve_path(cwd, path))
+    Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => {
       let package_config = package_config_path(
         cwd,
         raw.app_package.unwrap_or(default_package),
       )
-      let cwd_config = join_path(cwd, default_config_file)
-      let root_config = join_path(root, default_config_file)
-      if path_exists(package_config) {
+      let cwd_config = @fsutil.path_join(cwd, default_config_file)
+      let root_config = @fsutil.path_join(root, default_config_file)
+      if @fsutil.path_exists(package_config) {
         Some(package_config)
-      } else if path_exists(cwd_config) {
+      } else if @fsutil.path_exists(cwd_config) {
         Some(cwd_config)
-      } else if path_exists(root_config) {
+      } else if @fsutil.path_exists(root_config) {
         Some(root_config)
       } else {
         None
@@ -303,7 +301,7 @@ async fn resolve_dev_config_path(
 
 ///|
 fn package_config_path(cwd : String, app_package : String) -> String {
-  resolve_path(cwd, join_path(app_package, default_config_file))
+  @fsutil.resolve_path(cwd, @fsutil.path_join(app_package, default_config_file))
 }
 
 ///|
@@ -313,7 +311,7 @@ async fn load_dev_project_config(
   match config_path {
     None => None
     Some(path) => {
-      if !path_exists(path) {
+      if !@fsutil.path_exists(path) {
         raise NotFound(path~)
       }
       Some(read_dev_project_config(path))
@@ -337,7 +335,7 @@ async fn read_dev_project_config(
   }
   let loaded = @proton_config.load_project_config_from_text(
     source,
-    path_parent(path),
+    @fsutil.path_parent(path),
     name=path,
   ) catch {
     error => raise Invalid(path~, error~)
@@ -391,7 +389,10 @@ async fn read_dev_runtime(root : String) -> DevRuntime {
     raise PlatformMismatch(expected=expected_platform, actual=platform)
   }
   let dist = json_string_field(json, "dist", manifest_path)
-  dev_runtime_from_root(resolve_path(root, dist), "active Proton runtime")
+  dev_runtime_from_root(
+    @fsutil.resolve_path(root, dist),
+    "active Proton runtime",
+  )
 }
 
 ///|
@@ -402,7 +403,7 @@ fn dev_native_dist_override(root : String) -> String? {
       if value == "" {
         None
       } else {
-        Some(resolve_path(root, value))
+        Some(@fsutil.resolve_path(root, value))
       }
     }
     None => None
@@ -414,13 +415,13 @@ async fn dev_runtime_from_root(
   runtime_root : String,
   label : String,
 ) -> DevRuntime {
-  let bin_dir = join_path(runtime_root, "bin")
-  let lib_dir = join_path(runtime_root, "lib")
-  let helper_path = join_path(bin_dir, helper_executable_name())
-  if !path_exists(runtime_root) {
+  let bin_dir = @fsutil.path_join(runtime_root, "bin")
+  let lib_dir = @fsutil.path_join(runtime_root, "lib")
+  let helper_path = @fsutil.path_join(bin_dir, helper_executable_name())
+  if !@fsutil.path_exists(runtime_root) {
     raise DirectoryMissing(label~, path=runtime_root)
   }
-  if !path_exists(helper_path) {
+  if !@fsutil.path_exists(helper_path) {
     raise HelperMissing(label~, path=helper_path)
   }
   DevRuntime::{ root: runtime_root, bin_dir, lib_dir, helper_path }
@@ -428,7 +429,7 @@ async fn dev_runtime_from_root(
 
 ///|
 fn runtime_manifest_path(root : String) -> String {
-  join_path(join_path(root, ".proton"), "runtime.json")
+  @fsutil.path_join(@fsutil.path_join(root, ".proton"), "runtime.json")
 }
 
 ///|
@@ -500,7 +501,7 @@ async fn dev_process_env(
       runtime.lib_dir,
       prepend_env_path(runtime.bin_dir, current_env_value("DYLD_LIBRARY_PATH")),
     )
-    if path_exists(join_path(runtime.bin_dir, "libcef.so")) {
+    if @fsutil.path_exists(@fsutil.path_join(runtime.bin_dir, "libcef.so")) {
       // Keep the preload entry free of path separators so Linux runtime roots
       // containing spaces remain valid. LD_LIBRARY_PATH resolves this name.
       env["LD_PRELOAD"] = prepend_env_path(
@@ -578,8 +579,8 @@ async fn[X] maybe_start_frontend(
   match command {
     None => None
     Some(command) => {
-      println("Starting frontend: " + command)
-      println("Frontend path: " + frontend_path)
+      @output.info("Starting frontend: " + command)
+      @output.info("Frontend path: " + frontend_path)
       let (program, args) = shell_command(command)
       let process = @process.spawn(
         group,
@@ -675,7 +676,7 @@ async fn wait_for_frontend(
     Some(url) => {
       let endpoint = parse_dev_url_endpoint(url, ready_path)
       validate_ready_probe(ready_path)
-      println("Waiting for frontend dev server: " + endpoint.url)
+      @output.info("Waiting for frontend dev server: " + endpoint.url)
       let mut elapsed = 0
       while elapsed <= timeout_ms {
         match frontend_exit_code(frontend_process) {
@@ -944,7 +945,7 @@ async fn run_app(
       moon_args.push(arg)
     }
   }
-  println("Starting Proton app: moon " + moon_args.join(" "))
+  @output.info("Starting Proton app: moon " + moon_args.join(" "))
   let code = @process.run("moon", moon_args, cwd=root, extra_env=env) catch {
     err => raise Start(role="MoonBit app", detail=@debug.render(Repr(err)))
   }
@@ -957,101 +958,4 @@ fn cancel_frontend(process : @process.Process?) -> Unit {
     Some(process) => process.cancel()
     None => ()
   }
-}
-
-///|
-async fn find_project_root_from(start : String) -> String {
-  for dir = start; dir != ""; {
-    if path_exists(join_path(dir, "moon.work")) ||
-      path_exists(join_path(dir, "moon.mod")) {
-      return dir
-    }
-    let parent = path_parent(dir)
-    if parent == dir {
-      return start
-    }
-    continue parent
-  }
-  start
-}
-
-///|
-fn resolve_path(base : String, path : String) -> String {
-  if path_input_is_absolute(path) {
-    let candidate : @path.Path = path
-    if candidate.is_absolute() {
-      candidate.resolve().to_string()
-    } else {
-      path
-    }
-  } else {
-    let path = normalize_relative_path_input(path)
-    let base_path : @path.Path = base
-    base_path.join(path).normalize().resolve().to_string()
-  }
-}
-
-///|
-fn path_input_is_absolute(path : String) -> Bool {
-  path.has_prefix("\\") ||
-  path.has_prefix("/") ||
-  path.contains(":\\") ||
-  path.contains(":/")
-}
-
-///|
-fn normalize_relative_path_input(path : String) -> String {
-  if @path.sep == '\\' {
-    path.replace_all(old="\\", new="/")
-  } else {
-    path
-  }
-}
-
-///|
-fn join_path(base : String, child : String) -> String {
-  if base == "" {
-    child
-  } else if child == "" {
-    base
-  } else if base.has_suffix("\\") || base.has_suffix("/") {
-    base + child
-  } else {
-    base + @path.sep.to_string() + child
-  }
-}
-
-///|
-fn path_parent(path : String) -> String {
-  let normalized = if path.has_suffix("\\") || path.has_suffix("/") {
-    path.unsafe_substring(start=0, end=path.length() - 1)
-  } else {
-    path
-  }
-  let slash = normalized.rev_find("/")
-  let backslash = normalized.rev_find("\\")
-  let index = match (slash, backslash) {
-    (Some(a), Some(b)) => Some(if a > b { a } else { b })
-    (Some(a), None) => Some(a)
-    (None, Some(b)) => Some(b)
-    (None, None) => None
-  }
-  match index {
-    Some(index) if index > 0 =>
-      normalized.unsafe_substring(start=0, end=index).to_string()
-    _ => normalized.to_string()
-  }
-}
-
-///|
-async fn path_exists(path : String) -> Bool {
-  @async_fs.exists(path)
-}
-
-///|
-async fn path_is_dir(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Directory
 }

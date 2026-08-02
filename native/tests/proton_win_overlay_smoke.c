@@ -395,7 +395,7 @@ static int expect_web_draggable_regions(proton_runtime_id_t runtime,
 }
 
 int main(void) {
-  char info[256];
+  char info[512];
   int32_t required = 0;
   if (expect_status("runtime_info",
                     proton_runtime_info_json(info, (int32_t)sizeof(info),

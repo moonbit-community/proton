@@ -8,6 +8,11 @@ fn parse_moon_mod_document(
 }
 
 ///|
+/// The moon.mod AST conversion is intentionally lossy: `Null` maps to
+/// `Ast::Str("")`, `Float` maps to `Ast::Int`, and key locations track the
+/// value position, because the module only reads version/description/license
+/// style fields today. Add proper Float/Null Ast cases and key positions if
+/// richer moon.mod values ever need validation.
 fn convert_moon_config_ast(ast : @moon_config.Ast) -> Ast {
   match ast {
     Null(loc~) => Ast::Str("", convert_moon_config_loc(loc))

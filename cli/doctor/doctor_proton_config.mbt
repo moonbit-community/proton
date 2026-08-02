@@ -9,7 +9,8 @@ async fn read_proton_project_config(
         detail=@debug.render(Repr(error)),
       )
   }
-  let base_dir = path_parent(path).unwrap_or(".")
+  let parent = @fsutil.path_parent(path)
+  let base_dir = if parent == path { "." } else { parent }
   let loaded = @proton_config.load_project_config_from_text(
     source,
     base_dir,

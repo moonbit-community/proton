@@ -5,9 +5,8 @@ JavaScript.
 
 It provides:
 
-- extension specs and installation
 - op registration and dispatch
-- resource tables
+- command host dispatch over the IPC protocol
 - `window.__MoonBit__` bridge wiring
 - extension events
 

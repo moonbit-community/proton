@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_cli/fsutil"
+
+// Values
+pub async fn find_project_root_from(String) -> String
+
+pub async fn path_exists(String) -> Bool
+
+pub fn path_is_absolute(String) -> Bool
+
+pub async fn path_is_dir(String) -> Bool
+
+pub async fn path_is_file(String) -> Bool
+
+pub fn path_join(String, String) -> String
+
+pub fn path_parent(String) -> String
+
+pub fn resolve_path(String, String) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

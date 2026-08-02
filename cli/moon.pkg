@@ -1,15 +1,12 @@
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/io",
   "moonbitlang/async/process",
-  "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
-  "moonbitlang/x/path",
   "moonbitlang/x/sys",
   "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/cef",
@@ -17,7 +14,9 @@ import {
   "justjavac/proton_cli/codegen",
   "justjavac/proton_cli/dev",
   "justjavac/proton_cli/doctor",
+  "justjavac/proton_cli/fsutil",
   "justjavac/proton_cli/new" @new_project,
+  "justjavac/proton_cli/output",
   "justjavac/proton_cli/package",
 }
 

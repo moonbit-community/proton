@@ -44,15 +44,15 @@ fn windows_runtime_root_data_files() -> Array[String] {
 fn windows_runtime_required_paths(runtime : String) -> Array[String] {
   let paths : Array[String] = []
   for name in windows_runtime_binary_files() {
-    paths.push(resolve_path(runtime, "bin/" + name))
+    paths.push(@fsutil.resolve_path(runtime, "bin/" + name))
   }
   for name in windows_runtime_root_data_files() {
-    paths.push(resolve_path(runtime, "bin/" + name))
+    paths.push(@fsutil.resolve_path(runtime, "bin/" + name))
   }
   for name in windows_runtime_resource_files() {
-    paths.push(resolve_path(runtime, "Resources/" + name))
+    paths.push(@fsutil.resolve_path(runtime, "Resources/" + name))
   }
-  paths.push(resolve_path(runtime, "Resources/locales/en-US.pak"))
+  paths.push(@fsutil.resolve_path(runtime, "Resources/locales/en-US.pak"))
   paths
 }
 
@@ -60,12 +60,12 @@ fn windows_runtime_required_paths(runtime : String) -> Array[String] {
 async fn require_windows_runtime_layout(runtime : String) -> Unit {
   let missing : Array[String] = []
   for path in windows_runtime_required_paths(runtime) {
-    if !path_is_file(path) {
+    if !@fsutil.path_is_file(path) {
       missing.push(path)
     }
   }
-  let locales = resolve_path(runtime, "Resources/locales")
-  if !path_is_dir(locales) {
+  let locales = @fsutil.resolve_path(runtime, "Resources/locales")
+  if !@fsutil.path_is_dir(locales) {
     missing.push(locales)
   }
   if missing.length() > 0 {
@@ -78,12 +78,12 @@ async fn require_windows_runtime_layout(runtime : String) -> Unit {
 
 ///|
 fn windows_portable_output(plan : PackagePlan) -> String {
-  resolve_path(plan.output, package_executable_name(plan.product_name))
+  @fsutil.resolve_path(plan.output, package_executable_name(plan.product_name))
 }
 
 ///|
 fn windows_portable_staging(plan : PackagePlan) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".staging",
   )
@@ -91,12 +91,15 @@ fn windows_portable_staging(plan : PackagePlan) -> String {
 
 ///|
 fn windows_archive_path(plan : PackagePlan) -> String {
-  resolve_path(plan.output, package_executable_name(plan.product_name) + ".zip")
+  @fsutil.resolve_path(
+    plan.output,
+    package_executable_name(plan.product_name) + ".zip",
+  )
 }
 
 ///|
 fn windows_archive_staging_path(plan : PackagePlan) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".staging.zip",
   )
@@ -105,8 +108,8 @@ fn windows_archive_staging_path(plan : PackagePlan) -> String {
 ///|
 async fn recover_windows_backup(destination : String, label : String) -> Unit {
   let backup = destination + ".backup"
-  guard path_exists(backup) else { return }
-  if path_exists(destination) {
+  guard @fsutil.path_exists(backup) else { return }
+  if @fsutil.path_exists(destination) {
     remove_tree(backup)
   } else {
     @async_fs.rename(backup, destination) catch {
@@ -128,7 +131,7 @@ async fn rollback_windows_promotion(
   primary : Error,
 ) -> Unit {
   let errors : Array[String] = []
-  if path_exists(destination) {
+  if @fsutil.path_exists(destination) {
     @async_fs.rename(destination, staging) catch {
       error =>
         errors.push(
@@ -139,7 +142,7 @@ async fn rollback_windows_promotion(
         )
     }
   }
-  if path_exists(backup) && !path_exists(destination) {
+  if @fsutil.path_exists(backup) && !@fsutil.path_exists(destination) {
     @async_fs.rename(backup, destination) catch {
       error =>
         errors.push(
@@ -179,7 +182,7 @@ async fn promote_windows_artifact(
 ) -> Unit {
   recover_windows_backup(destination, label)
   let backup = destination + ".backup"
-  let had_destination = path_exists(destination)
+  let had_destination = @fsutil.path_exists(destination)
   if had_destination {
     @async_fs.rename(destination, backup) catch {
       error =>
@@ -313,33 +316,42 @@ async fn stage_windows_portable_impl(
   announce : Bool,
 ) -> Unit {
   require_windows_runtime_layout(runtime)
-  guard path_is_file(executable) else {
+  guard @fsutil.path_is_file(executable) else {
     raise WindowsPackagingError::MissingTarget(path=executable)
   }
   let staging = windows_portable_staging(plan)
   ensure_dir(staging)
   for name in windows_runtime_binary_files() {
-    copy_file(resolve_path(runtime, "bin/" + name), resolve_path(staging, name))
+    copy_file(
+      @fsutil.resolve_path(runtime, "bin/" + name),
+      @fsutil.resolve_path(staging, name),
+    )
   }
   for name in windows_runtime_root_data_files() {
-    copy_file(resolve_path(runtime, "bin/" + name), resolve_path(staging, name))
+    copy_file(
+      @fsutil.resolve_path(runtime, "bin/" + name),
+      @fsutil.resolve_path(staging, name),
+    )
   }
   copy_tree(
-    resolve_path(runtime, "Resources"),
-    resolve_path(staging, "Resources"),
+    @fsutil.resolve_path(runtime, "Resources"),
+    @fsutil.resolve_path(staging, "Resources"),
   )
   copy_file(
     executable,
-    resolve_path(staging, package_executable_name(plan.product_name) + ".exe"),
+    @fsutil.resolve_path(
+      staging,
+      package_executable_name(plan.product_name) + ".exe",
+    ),
   )
-  let staged_executable = resolve_path(
+  let staged_executable = @fsutil.resolve_path(
     staging,
     package_executable_name(plan.product_name) + ".exe",
   )
   stage_windows_icon(plan, staged_executable)
   stage_release_project_config(
     plan.config_path,
-    resolve_path(staging, "moon.proton"),
+    @fsutil.resolve_path(staging, "moon.proton"),
   )
   stage_project_inputs(plan, staging)
   write_package_manifest(plan, staging, "windows-portable")
@@ -368,28 +380,31 @@ async fn validate_windows_portable_layout(
   output : String,
 ) -> Unit {
   let required : Array[String] = [
-    resolve_path(output, package_executable_name(plan.product_name) + ".exe"),
-    resolve_path(output, "moon.proton"),
-    resolve_path(output, "proton-package.json"),
+    @fsutil.resolve_path(
+      output,
+      package_executable_name(plan.product_name) + ".exe",
+    ),
+    @fsutil.resolve_path(output, "moon.proton"),
+    @fsutil.resolve_path(output, "proton-package.json"),
   ]
   for name in windows_runtime_binary_files() {
-    required.push(resolve_path(output, name))
+    required.push(@fsutil.resolve_path(output, name))
   }
   for name in windows_runtime_root_data_files() {
-    required.push(resolve_path(output, name))
+    required.push(@fsutil.resolve_path(output, name))
   }
   for name in windows_runtime_resource_files() {
-    required.push(resolve_path(output, "Resources/" + name))
+    required.push(@fsutil.resolve_path(output, "Resources/" + name))
   }
-  required.push(resolve_path(output, "Resources/locales/en-US.pak"))
+  required.push(@fsutil.resolve_path(output, "Resources/locales/en-US.pak"))
   let missing : Array[String] = []
   for path in required {
-    if !path_is_file(path) {
+    if !@fsutil.path_is_file(path) {
       missing.push(path)
     }
   }
-  let locales = resolve_path(output, "Resources/locales")
-  if !path_is_dir(locales) {
+  let locales = @fsutil.resolve_path(output, "Resources/locales")
+  if !@fsutil.path_is_dir(locales) {
     missing.push(locales)
   }
   if missing.length() > 0 {
@@ -402,8 +417,8 @@ async fn validate_windows_portable_layout(
     forbidden in [
       "proton.lib", "libcef.lib", "bootstrap.exe", "bootstrapc.exe", "bin",
     ] {
-    let path = resolve_path(output, forbidden)
-    if path_exists(path) {
+    let path = @fsutil.resolve_path(output, forbidden)
+    if @fsutil.path_exists(path) {
       raise WindowsPackagingError::Verification(
         detail="staged portable layout contains a build-only or sample artifact: " +
           path,
@@ -419,15 +434,21 @@ fn windows_owned_sign_targets(
   output : String,
 ) -> Array[String] {
   [
-    resolve_path(output, package_executable_name(plan.product_name) + ".exe"),
-    resolve_path(output, "cef_process.exe"),
-    resolve_path(output, "proton.dll"),
+    @fsutil.resolve_path(
+      output,
+      package_executable_name(plan.product_name) + ".exe",
+    ),
+    @fsutil.resolve_path(output, "cef_process.exe"),
+    @fsutil.resolve_path(output, "proton.dll"),
   ]
 }
 
 ///|
 fn windows_upstream_signature_targets(output : String) -> Array[String] {
-  [resolve_path(output, "d3dcompiler_47.dll"), resolve_path(output, "dxil.dll")]
+  [
+    @fsutil.resolve_path(output, "d3dcompiler_47.dll"),
+    @fsutil.resolve_path(output, "dxil.dll"),
+  ]
 }
 
 ///|
@@ -511,7 +532,7 @@ async fn verify_windows_signature_with_tool(
   target : String,
   label : String,
 ) -> Unit {
-  guard path_is_file(target) else {
+  guard @fsutil.path_is_file(target) else {
     raise WindowsPackagingError::MissingTarget(path=target)
   }
   run_windows_signtool(
@@ -541,7 +562,7 @@ async fn windows_signing_config_from_env() -> WindowsSigningConfig {
         detail="--sign requires PROTON_WINDOWS_CERTIFICATE on Windows",
       )
   }
-  guard path_is_file(certificate) else {
+  guard @fsutil.path_is_file(certificate) else {
     raise WindowsPackagingError::InvalidConfiguration(
       detail="Windows signing certificate is missing: " + certificate,
     )
@@ -562,14 +583,14 @@ async fn sign_windows_portable_configured(
   tool : WindowsSignTool,
   signing : WindowsSigningConfig,
 ) -> Unit {
-  guard path_is_file(signing.certificate) else {
+  guard @fsutil.path_is_file(signing.certificate) else {
     raise WindowsPackagingError::InvalidConfiguration(
       detail="Windows signing certificate is missing: " + signing.certificate,
     )
   }
   let owned_targets = windows_owned_sign_targets(plan, output)
   for target in owned_targets {
-    guard path_is_file(target) else {
+    guard @fsutil.path_is_file(target) else {
       raise WindowsPackagingError::MissingTarget(path=target)
     }
   }

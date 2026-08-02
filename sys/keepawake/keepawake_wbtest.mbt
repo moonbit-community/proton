@@ -9,6 +9,11 @@ extern "C" fn native_test_guard_make(
 ) -> Guard = "moonbit_keepawake_test_guard_make"
 
 ///|
+test "test support package is linked into the test build" {
+  assert_true(@testsupport.stub_linked())
+}
+
+///|
 test "normalize_reason trims surrounding whitespace" {
   assert_eq(normalize_reason("  writing backups  "), "writing backups")
   assert_eq(normalize_reason("   "), default_reason)

@@ -66,28 +66,6 @@ keepawake_guard_t *moonbit_keepawake_guard_create(
 }
 
 MOONBIT_FFI_EXPORT
-keepawake_guard_t *moonbit_keepawake_test_guard_make(
-  int32_t active,
-  int32_t status,
-  moonbit_bytes_t last_error,
-  int32_t scope
-) {
-  keepawake_guard_t *guard =
-    (keepawake_guard_t *)moonbit_make_external_object(
-      keepawake_guard_finalize,
-      (uint32_t)sizeof(keepawake_guard_t)
-    );
-  memset(guard, 0, sizeof(*guard));
-  guard->active = active;
-  guard->status = status;
-  guard->scope = scope;
-  if (last_error != NULL && last_error[0] != '\0') {
-    guard->last_error = keepawake_duplicate_string((const char *)last_error);
-  }
-  return guard;
-}
-
-MOONBIT_FFI_EXPORT
 int32_t moonbit_keepawake_guard_is_active(keepawake_guard_t *guard) {
   return guard->active;
 }

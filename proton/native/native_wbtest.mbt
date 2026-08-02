@@ -938,3 +938,87 @@ test "window config requires abi_version 1" {
   assert_true(error.message().contains("abi_version"))
   runtime.destroy()
 }
+
+///|
+test "runtime info payload requires abi_version 1" {
+  let error = expect_native_error(() => {
+    decode_runtime_info(
+      "{\"abi_version\":2,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"features\":[]}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let info = decode_runtime_info(
+    "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"features\":[]}",
+  )
+  inspect(info.platform, content="test")
+}
+
+///|
+test "bridge lifecycle state payload requires abi_version 1" {
+  let error = expect_native_error(() => {
+    decode_bridge_lifecycle_state(
+      "{\"abi_version\":2,\"revision\":\"7\",\"outcome\":\"ready\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"failure_pending\":false}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let state = decode_bridge_lifecycle_state(
+    "{\"abi_version\":1,\"revision\":\"7\",\"outcome\":\"ready\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"failure_pending\":false}",
+  )
+  inspect(state.revision, content="7")
+}
+
+///|
+test "bridge diagnostic payload requires abi_version 1" {
+  let error = expect_native_error(() => {
+    decode_bridge_diagnostic(
+      "{\"abi_version\":2,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let diagnostic = decode_bridge_diagnostic(
+    "{\"abi_version\":1,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
+  )
+  inspect(diagnostic.stage, content="load")
+}
+
+///|
+test "runtime event validates abi_version when present" {
+  let accepted = decode_runtime_event_json(
+    "{\"type\":\"window_closed\",\"window\":\"1\",\"abi_version\":1}",
+  )
+  inspect(accepted.event_type(), content="window_closed")
+  let error = expect_native_error(() => {
+    decode_runtime_event_json("{\"type\":\"window_closed\",\"abi_version\":2}")
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let type_error = expect_native_error(() => {
+    decode_runtime_event_json(
+      "{\"type\":\"window_closed\",\"abi_version\":\"1\"}",
+    )
+  })
+  inspect(type_error.status(), content="-1")
+  assert_true(type_error.message().contains("abi_version"))
+}
+
+///|
+test "bridge request validates abi_version when present" {
+  let error = expect_native_error(() => {
+    decode_bridge_request_json(
+      "{\"abi_version\":2,\"request_id\":\"7\",\"window\":\"11\",\"op\":\"ext:add/sum\"}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let type_error = expect_native_error(() => {
+    decode_bridge_request_json(
+      "{\"abi_version\":\"1\",\"request_id\":\"7\",\"window\":\"11\",\"op\":\"ext:add/sum\"}",
+    )
+  })
+  inspect(type_error.status(), content="-1")
+  assert_true(type_error.message().contains("abi_version"))
+}
+

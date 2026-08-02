@@ -38,10 +38,10 @@ fn find_planned_file(files : Array[PlannedFile], path : String) -> String? {
 
 ///|
 async fn remove_new_test_tree(path : String) -> Unit {
-  if !path_exists(path) {
+  if !@fsutil.path_exists(path) {
     return
   }
-  if path_is_dir(path) {
+  if @fsutil.path_is_dir(path) {
     @async_fs.rmdir(path, recursive=true)
   } else {
     @async_fs.remove(path)
@@ -91,6 +91,12 @@ test "current directory path uses cwd basename as default slug" {
   assert_eq(options.author, "username")
   assert_eq(options.project_name, "sample-app")
   assert_eq(options.identifier, "dev.proton.sample-app")
+}
+
+///|
+test "parent directory slug derives from cwd" {
+  assert_eq(project_slug("C:\\Users\\dev\\sample-app", ".."), "dev")
+  assert_eq(project_slug("plaindir", ".."), "plaindir")
 }
 
 ///|
@@ -390,18 +396,20 @@ async test "project generation commits a complete staged tree" {
   let files = must_plan(options)
   create_project(options, files)
   assert_true(
-    path_exists(new_path_join(options.resolved_target_dir, "moon.work")),
-  )
-  assert_true(
-    path_exists(
-      new_path_join(options.resolved_target_dir, "backend/app/main.mbt"),
+    @fsutil.path_exists(
+      @fsutil.path_join(options.resolved_target_dir, "moon.work"),
     ),
   )
-  let staging = new_path_join(
-    new_path_parent(options.resolved_target_dir),
+  assert_true(
+    @fsutil.path_exists(
+      @fsutil.path_join(options.resolved_target_dir, "backend/app/main.mbt"),
+    ),
+  )
+  let staging = @fsutil.path_join(
+    @fsutil.path_parent(options.resolved_target_dir),
     staging_directory_name(options.resolved_target_dir, 0),
   )
-  assert_false(path_exists(staging))
+  assert_false(@fsutil.path_exists(staging))
   remove_new_test_tree(options.resolved_target_dir)
 }
 
@@ -419,12 +427,12 @@ async test "failed project writes leave no target or staging tree" {
   } noraise {
     _ => abort("expected project generation to fail")
   }
-  assert_false(path_exists(options.resolved_target_dir))
-  let staging = new_path_join(
-    new_path_parent(options.resolved_target_dir),
+  assert_false(@fsutil.path_exists(options.resolved_target_dir))
+  let staging = @fsutil.path_join(
+    @fsutil.path_parent(options.resolved_target_dir),
     staging_directory_name(options.resolved_target_dir, 0),
   )
-  assert_false(path_exists(staging))
+  assert_false(@fsutil.path_exists(staging))
 }
 
 ///|
@@ -444,7 +452,7 @@ async test "failed project writes restore an existing empty target" {
   } noraise {
     _ => abort("expected project generation to fail")
   }
-  assert_true(path_is_dir(options.resolved_target_dir))
+  assert_true(@fsutil.path_is_dir(options.resolved_target_dir))
   assert_true(target_dir_is_empty(options.resolved_target_dir))
   remove_new_test_tree(options.resolved_target_dir)
 }
@@ -459,12 +467,12 @@ async test "cancelled project generation removes its staging tree" {
     create_project(options, must_plan(options))
   })
   assert_true(outcome is None)
-  assert_false(path_exists(options.resolved_target_dir))
-  let staging = new_path_join(
-    new_path_parent(options.resolved_target_dir),
+  assert_false(@fsutil.path_exists(options.resolved_target_dir))
+  let staging = @fsutil.path_join(
+    @fsutil.path_parent(options.resolved_target_dir),
     staging_directory_name(options.resolved_target_dir, 0),
   )
-  assert_false(path_exists(staging))
+  assert_false(@fsutil.path_exists(staging))
 }
 
 ///|
@@ -484,10 +492,10 @@ async test "moon check failure is rolled back before publication" {
   } noraise {
     _ => abort("expected project validation to fail")
   }
-  assert_false(path_exists(options.resolved_target_dir))
-  let staging = new_path_join(
-    new_path_parent(options.resolved_target_dir),
+  assert_false(@fsutil.path_exists(options.resolved_target_dir))
+  let staging = @fsutil.path_join(
+    @fsutil.path_parent(options.resolved_target_dir),
     staging_directory_name(options.resolved_target_dir, 0),
   )
-  assert_false(path_exists(staging))
+  assert_false(@fsutil.path_exists(staging))
 }

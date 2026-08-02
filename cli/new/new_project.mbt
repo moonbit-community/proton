@@ -154,7 +154,7 @@ fn options_from_raw(
   let options = NewProjectOptions::{
     cwd,
     target_dir,
-    resolved_target_dir: resolve_new_path(cwd, target_dir),
+    resolved_target_dir: @fsutil.resolve_path(cwd, target_dir),
     title,
     author,
     project_name: slug,
@@ -203,8 +203,8 @@ async fn create_project(
   files : Array[PlannedFile],
 ) -> Unit {
   validate_target_dir_for_write(options.resolved_target_dir)
-  let target_existed = path_exists(options.resolved_target_dir)
-  let target_parent = new_path_parent(options.resolved_target_dir)
+  let target_existed = @fsutil.path_exists(options.resolved_target_dir)
+  let target_parent = @fsutil.path_parent(options.resolved_target_dir)
   let existing_ancestor = nearest_existing_ancestor(target_parent)
   let mut staging_dir = ""
   @async.protect_from_cancel(() => {
@@ -244,7 +244,7 @@ async fn create_project(
       let rollback_failures : Array[String] = []
       @async.protect_from_cancel(resume_on_cancel=true, () => {
         remove_transaction_tree(staging_dir, rollback_failures)
-        if target_existed && !path_exists(options.resolved_target_dir) {
+        if target_existed && !@fsutil.path_exists(options.resolved_target_dir) {
           restore_empty_target(options.resolved_target_dir, rollback_failures)
         }
         remove_created_parent_directories(
@@ -287,8 +287,8 @@ async fn write_project_files(
 ///|
 async fn nearest_existing_ancestor(path : String) -> String {
   let mut current = path
-  while current != "" && !path_exists(current) {
-    let parent = new_path_parent(current)
+  while current != "" && !@fsutil.path_exists(current) {
+    let parent = @fsutil.path_parent(current)
     if parent == current {
       break
     }
@@ -318,11 +318,11 @@ async fn reserve_staging_directory(
   target_dir : String,
 ) -> String {
   for attempt in 0..<1024 {
-    let staging_dir = new_path_join(
+    let staging_dir = @fsutil.path_join(
       existing_ancestor,
       staging_directory_name(target_dir, attempt),
     )
-    if path_exists(staging_dir) {
+    if @fsutil.path_exists(staging_dir) {
       continue
     }
     let created = try {
@@ -330,7 +330,7 @@ async fn reserve_staging_directory(
       true
     } catch {
       error =>
-        if path_exists(staging_dir) {
+        if @fsutil.path_exists(staging_dir) {
           false
         } else {
           raise NewProjectWriteError::CreateDirectory(
@@ -382,7 +382,7 @@ async fn remove_transaction_tree(
   path : String,
   failures : Array[String],
 ) -> Unit {
-  if path == "" || !path_exists(path) {
+  if path == "" || !@fsutil.path_exists(path) {
     return
   }
   @async_fs.rmdir(path, recursive=true) catch {
@@ -411,11 +411,11 @@ async fn remove_created_parent_directories(
 ) -> Unit {
   let mut current = start
   while current != "" && current != existing_ancestor {
-    if !path_exists(current) {
-      current = new_path_parent(current)
+    if !@fsutil.path_exists(current) {
+      current = @fsutil.path_parent(current)
       continue
     }
-    if !path_is_dir(current) {
+    if !@fsutil.path_is_dir(current) {
       return
     }
     let entries = @async_fs.readdir(
@@ -442,7 +442,7 @@ async fn remove_created_parent_directories(
         return
       }
     }
-    current = new_path_parent(current)
+    current = @fsutil.path_parent(current)
   }
 }
 
@@ -450,15 +450,15 @@ async fn remove_created_parent_directories(
 fn project_file_path(root : String, relative : String) -> String {
   let mut current = root
   for part in relative.split("/") {
-    current = new_path_join(current, part.to_owned())
+    current = @fsutil.path_join(current, part.to_owned())
   }
   current
 }
 
 ///|
 async fn ensure_file_parent(path : String) -> Unit {
-  let parent = new_path_parent(path)
-  if parent == path || parent == "" || path_exists(parent) {
+  let parent = @fsutil.path_parent(path)
+  if parent == path || @fsutil.path_exists(parent) {
     return
   }
   ensure_dir_recursive(parent)
@@ -466,37 +466,15 @@ async fn ensure_file_parent(path : String) -> Unit {
 
 ///|
 async fn ensure_dir_recursive(path : String) -> Unit {
-  if path == "" || path_exists(path) {
+  if path == "" || @fsutil.path_exists(path) {
     return
   }
-  let parent = new_path_parent(path)
-  if parent != "" && parent != path {
+  let parent = @fsutil.path_parent(path)
+  if parent != path {
     ensure_dir_recursive(parent)
   }
   @async_fs.mkdir(path) catch {
     err => raise CreateDirectory(path~, detail=@debug.render(Repr(err)))
-  }
-}
-
-///|
-fn new_path_parent(path : String) -> String {
-  let normalized = if path.has_suffix("\\") || path.has_suffix("/") {
-    path.unsafe_substring(start=0, end=path.length() - 1)
-  } else {
-    path
-  }
-  let slash = normalized.rev_find("/")
-  let backslash = normalized.rev_find("\\")
-  let index = match (slash, backslash) {
-    (Some(a), Some(b)) => Some(if a > b { a } else { b })
-    (Some(a), None) => Some(a)
-    (None, Some(b)) => Some(b)
-    (None, None) => None
-  }
-  match index {
-    Some(index) if index > 0 =>
-      normalized.unsafe_substring(start=0, end=index).to_string()
-    _ => ""
   }
 }
 

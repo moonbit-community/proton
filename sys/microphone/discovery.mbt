@@ -1,7 +1,16 @@
 ///|
-/// Check whether a native source name describes a monitor device.
+/// Check whether a native source name matches the monitor/source-loopback
+/// shapes produced by Linux audio stacks ("Monitor of ...", "*.monitor",
+/// "monitor-source", "...-monitor"). Other platforms may legitimately carry
+/// "monitor" in a device name (a display's built-in microphone), so a bare
+/// substring match is intentionally not enough.
 fn is_monitor_name(name : String) -> Bool {
-  name.to_lower().contains("monitor")
+  let lower = name.to_lower()
+  lower.contains("monitor of") ||
+  lower.contains(".monitor") ||
+  lower.contains("monitor-source") ||
+  lower.has_suffix("-monitor") ||
+  lower == "monitor"
 }
 
 ///|

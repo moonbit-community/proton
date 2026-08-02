@@ -3,7 +3,9 @@ extern "js" fn bridge_available() -> Bool =
   #| () => Boolean(
   #|   globalThis.__MoonBit__ &&
   #|   globalThis.__MoonBit__.core &&
-  #|   typeof globalThis.__MoonBit__.core.invokeJson === "function"
+  #|   typeof globalThis.__MoonBit__.core.invokeJson === "function" &&
+  #|   globalThis.__MoonBit__.events &&
+  #|   typeof globalThis.__MoonBit__.events.onJson === "function"
   #| )
 
 ///|

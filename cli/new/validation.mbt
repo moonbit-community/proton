@@ -11,47 +11,6 @@ let default_width = 960
 let default_height = 640
 
 ///|
-fn new_path_join(base : String, child : String) -> String {
-  if base == "" {
-    child
-  } else if child == "" {
-    base
-  } else if base.has_suffix("\\") || base.has_suffix("/") {
-    base + child
-  } else {
-    base + @path.sep.to_string() + child
-  }
-}
-
-///|
-fn new_path_is_absolute(path : String) -> Bool {
-  @path.Path(path).is_absolute()
-}
-
-///|
-fn resolve_new_path(cwd : String, target : String) -> String {
-  let raw = if new_path_is_absolute(target) {
-    target
-  } else {
-    new_path_join(cwd, target)
-  }
-  @path.Path(raw).resolve().to_string()
-}
-
-///|
-async fn path_exists(path : String) -> Bool {
-  @async_fs.exists(path)
-}
-
-///|
-async fn path_is_dir(path : String) -> Bool {
-  if !@async_fs.exists(path) {
-    return false
-  }
-  @async_fs.kind(path) is Directory
-}
-
-///|
 fn path_basename(path : String) -> String {
   let normalized = normalize_slashes(path)
   let trimmed = trim_trailing_slashes(normalized)
@@ -71,7 +30,7 @@ fn path_basename(path : String) -> String {
 fn project_slug(cwd : String, target : String) -> String {
   match path_basename(target) {
     "." => path_basename(cwd)
-    ".." => path_basename(new_path_parent(cwd))
+    ".." => path_basename(@fsutil.path_parent(cwd))
     slug => slug
   }
 }
@@ -241,10 +200,10 @@ fn validate_target_dir(target_dir : String) -> Unit raise NewProjectInputError {
 
 ///|
 async fn target_dir_is_empty(target_dir : String) -> Bool {
-  if !path_exists(target_dir) {
+  if !@fsutil.path_exists(target_dir) {
     return true
   }
-  if !path_is_dir(target_dir) {
+  if !@fsutil.path_is_dir(target_dir) {
     raise NotDirectory(path=target_dir)
   }
   let entries = @async_fs.readdir(
@@ -260,8 +219,8 @@ async fn target_dir_is_empty(target_dir : String) -> Bool {
 
 ///|
 async fn validate_target_dir_for_write(target_dir : String) -> Unit {
-  let moon_mod_path = new_path_join(target_dir, "moon.mod")
-  if path_exists(moon_mod_path) {
+  let moon_mod_path = @fsutil.path_join(target_dir, "moon.mod")
+  if @fsutil.path_exists(moon_mod_path) {
     raise ContainsMoonModule(path=target_dir)
   }
   if !target_dir_is_empty(target_dir) {

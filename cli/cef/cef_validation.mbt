@@ -7,13 +7,13 @@ async fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool 
 async fn validate_cef_root(root : String, platform : ProtonPlatform) -> Unit {
   let missing : Array[String] = []
   for relative in installed_cef_relative_files(platform) {
-    let path = path_join(root, relative)
-    if !path_exists(path) {
+    let path = @fsutil.path_join(root, relative)
+    if !@fsutil.path_exists(path) {
       missing.push(path)
     }
   }
-  let version_path = path_join(root, "version.txt")
-  if !path_exists(version_path) {
+  let version_path = @fsutil.path_join(root, "version.txt")
+  if !@fsutil.path_exists(version_path) {
     missing.push(version_path)
   }
   if missing.length() > 0 {
@@ -28,8 +28,8 @@ async fn validate_runtime_dist(
 ) -> Unit {
   let missing : Array[String] = []
   for relative in runtime_required_relative_files(platform) {
-    let path = path_join(root, relative)
-    if !path_exists(path) {
+    let path = @fsutil.path_join(root, relative)
+    if !@fsutil.path_exists(path) {
       missing.push(path)
     }
   }
