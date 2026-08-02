@@ -469,6 +469,9 @@ must not also update itself.
 
 ## Automatic check
 
+*Implemented.* `App::on_update_available` registers the handler; the check runs
+from the application task group and calls it with a `PendingUpdate`.
+
 The runtime checks on launch by default. Four properties are required of that
 default, because a check that runs without the user asking for it is held to a
 higher standard than one they triggered.
@@ -485,7 +488,9 @@ higher standard than one they triggered.
 - **It is disclosed and can be turned off.** `check_on_launch: false` disables
   it. Contacting a server on every launch is a privacy decision as much as a
   technical one, and applications that cannot make that request on their users'
-  behalf need a way to say so.
+  behalf need a way to say so. Registering no handler disables it too: an
+  application with nothing to do about an update is not asked to go and find
+  one.
 
 Finding an update does **not** start a download and does not apply anything. The
 runtime reports availability; the application decides what to do with it. The
@@ -494,6 +499,10 @@ automatic *installing* changes the code a user is running without their consent
 and is not something a framework should decide for every application.
 
 ## Renderer surface
+
+*Not implemented.* The ops below do not exist yet; an application reaches the
+updater from its backend, through `App::on_update_available` and
+`PendingUpdate`.
 
 Update capability is exposed through the existing permission model. Registration
 alone grants nothing; a window needs an explicit grant for a trusted source and
@@ -553,6 +562,10 @@ three platforms are built on three machines, which is already true of
   also lack the second trust anchor that makes key loss recoverable on macOS.
 - **Full-artifact transfer.** Documented above and accepted for version 1.
 - **macOS only.** Blocked on Windows and Linux packaging targets.
+- **No renderer surface.** A page cannot ask about updates; only the backend
+  can. The permission model for it is designed but unbuilt.
+- **Dev runs never check.** A development run is not inside an installed
+  bundle, so there is nothing an update could replace.
 
 ## Phasing
 

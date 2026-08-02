@@ -136,6 +136,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     certificate_handler: None,
     media_handler: None,
     download_event_handlers: [],
+    update_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],
   }
@@ -269,6 +270,25 @@ pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
 
 ///|
 /// Registers an application-level handler for URL, file, and reopen inputs.
+/// Registers a handler for an update the channel offers.
+///
+/// Registering one is what turns the automatic check on: an application that
+/// has not said what to do when an update exists is not asked to contact a
+/// server on launch. The handler runs after the application is up, on the
+/// application task group, and never on the startup path.
+///
+/// It is called with an update that has already been authenticated and found
+/// newer. Nothing has been downloaded and nothing will be until the handler
+/// asks for it.
+pub fn App::on_update_available(
+  self : App,
+  handler : async (PendingUpdate) -> Unit noraise,
+) -> App {
+  self.update_handlers.push(handler)
+  self
+}
+
+///|
 pub fn App::on_launch_input(
   self : App,
   handler : async (RuntimeLaunchInput) -> Unit noraise,

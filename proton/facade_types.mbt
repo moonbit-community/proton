@@ -34,6 +34,7 @@ struct App {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
+  update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
 }
@@ -48,6 +49,17 @@ priv struct ResolvedAppConfig {
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]
+  /// The update channel and the identity it updates, when `moon.proton`
+  /// declares one. Absent for an application configured inline: there is no
+  /// file to declare an endpoint in, and inventing one would be worse.
+  update_channel : ResolvedUpdateChannel?
+}
+
+///|
+priv struct ResolvedUpdateChannel {
+  config : @bootstrap.ProtonUpdaterConfig
+  identifier : String
+  version : String
 }
 
 ///|

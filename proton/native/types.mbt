@@ -60,6 +60,9 @@ pub(all) struct RuntimeInfo {
   runtime_available : Bool
   build_mode : String
   platform : String
+  /// The prebuilt identifier this library was built as, such as
+  /// `darwin-arm64`. Matches the platform keys in an update manifest.
+  platform_id : String
   features : Array[String]
 } derive(Debug, Eq, FromJson)
 

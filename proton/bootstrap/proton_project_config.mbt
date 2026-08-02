@@ -206,6 +206,58 @@ pub fn ProtonBundleConfig::output(self : ProtonBundleConfig) -> String {
 
 ///|
 /// Complete `moon.proton` document for developer tooling.
+/// The application's update channel, as declared in `moon.proton`.
+///
+/// Only what the runtime needs to decide whether to check, and whom to trust
+/// when it does. No private key material reaches here, because none of it is
+/// anywhere the framework can see.
+struct ProtonUpdaterConfig {
+  endpoint : String
+  public_keys : Array[String]
+  check_on_launch : Bool
+  freshness_days : Int
+}
+
+///|
+pub fn ProtonUpdaterConfig::new(
+  endpoint : String,
+  public_keys : Array[String],
+  check_on_launch? : Bool = true,
+  freshness_days? : Int = 30,
+) -> ProtonUpdaterConfig {
+  ProtonUpdaterConfig::{
+    endpoint,
+    public_keys: copy_strings(public_keys),
+    check_on_launch,
+    freshness_days,
+  }
+}
+
+///|
+pub fn ProtonUpdaterConfig::endpoint(self : ProtonUpdaterConfig) -> String {
+  self.endpoint
+}
+
+///|
+pub fn ProtonUpdaterConfig::public_keys(
+  self : ProtonUpdaterConfig,
+) -> Array[String] {
+  copy_strings(self.public_keys)
+}
+
+///|
+pub fn ProtonUpdaterConfig::checks_on_launch(
+  self : ProtonUpdaterConfig,
+) -> Bool {
+  self.check_on_launch
+}
+
+///|
+pub fn ProtonUpdaterConfig::freshness_days(self : ProtonUpdaterConfig) -> Int {
+  self.freshness_days
+}
+
+///|
 struct ProtonProjectConfig {
   manifest : LoadedAppManifest
   metadata : ProtonAppMetadata
@@ -213,6 +265,7 @@ struct ProtonProjectConfig {
   backend : ProtonBackendConfig?
   frontend : ProtonFrontendConfig?
   bundle : ProtonBundleConfig?
+  updater : ProtonUpdaterConfig?
 }
 
 ///|
@@ -223,6 +276,7 @@ pub fn ProtonProjectConfig::new(
   backend? : ProtonBackendConfig? = None,
   frontend? : ProtonFrontendConfig? = None,
   bundle? : ProtonBundleConfig? = None,
+  updater? : ProtonUpdaterConfig? = None,
 ) -> ProtonProjectConfig {
   ProtonProjectConfig::{
     manifest,
@@ -231,6 +285,7 @@ pub fn ProtonProjectConfig::new(
     backend,
     frontend,
     bundle,
+    updater,
   }
 }
 
@@ -272,6 +327,18 @@ pub fn ProtonProjectConfig::bundle(
   self : ProtonProjectConfig,
 ) -> ProtonBundleConfig? {
   self.bundle
+}
+
+///|
+/// Returns the update channel, when one is declared and active.
+///
+/// An inactive channel is reported as absent rather than as a channel that
+/// happens to be switched off: nothing downstream should have to remember to
+/// check a flag before trusting an endpoint.
+pub fn ProtonProjectConfig::updater(
+  self : ProtonProjectConfig,
+) -> ProtonUpdaterConfig? {
+  self.updater
 }
 
 ///|

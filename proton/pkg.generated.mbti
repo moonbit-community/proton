@@ -8,6 +8,7 @@ import {
   "justjavac/proton/extension",
   "justjavac/proton/manifest",
   "justjavac/proton/native",
+  "justjavac/proton/updater",
   "justjavac/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
@@ -162,6 +163,7 @@ pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupD
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::permission(Self, @manifest.PermissionGrant) -> Self
+pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::single_instance(Self, String) -> Self
@@ -260,6 +262,20 @@ pub(all) enum WindowCloseDecision {
   Allow
   Deny
 } derive(Eq, @debug.Debug)
+
+pub struct PendingUpdate {
+  version : String
+  notes_url : String?
+  size : Int64
+  channel : @updater.UpdateChannel
+  offer : @updater.AvailableUpdate
+  identifier : String
+}
+pub async fn PendingUpdate::install(Self) -> Unit
+pub fn PendingUpdate::notes_url(Self) -> String?
+pub fn PendingUpdate::restart(Self) -> Unit raise
+pub fn PendingUpdate::size(Self) -> Int64
+pub fn PendingUpdate::version(Self) -> String
 
 pub struct WindowContext {
   id : String
@@ -379,4 +395,3 @@ pub using @native {type WindowSizeHint}
 pub using @native {type WindowState}
 
 // Traits
-

@@ -29,6 +29,22 @@
 #define PROTON_PLATFORM_NAME "linux"
 #endif
 
+/* The prebuilt this library was built as, in the same vocabulary as
+   `proton/prebuilt/<id>/` and the update manifest's platform keys.
+
+   It is reported rather than derived by the caller because this library is the
+   platform-specific artifact: anything reconstructing the pair from a platform
+   name and a CPU query is guessing at what this file already knows. */
+#if defined(_WIN32)
+#define PROTON_PLATFORM_ID "win32-x64"
+#elif defined(__APPLE__) && defined(__aarch64__)
+#define PROTON_PLATFORM_ID "darwin-arm64"
+#elif defined(__APPLE__)
+#define PROTON_PLATFORM_ID "darwin-x64"
+#else
+#define PROTON_PLATFORM_ID "linux-x64"
+#endif
+
 #if PROTON_WITH_ENGINE && \
     (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
 #define PROTON_RUNTIME_WAIT_FEATURE ",\"runtime_wait\""
@@ -255,6 +271,7 @@ int32_t proton_runtime_info_json(char *buffer,
       info, sizeof(info),
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
+      "\"platform_id\":\"%s\","
       "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\","
       "\"bridge_permission_grants\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
@@ -267,7 +284,8 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
           PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
-      PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME);
+      PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,
+      PROTON_PLATFORM_ID);
   if (required < 0 || required >= (int)sizeof(info)) {
     return proton_set_error(PROTON_ERR_ENGINE,
                             "runtime info buffer is too small internally");

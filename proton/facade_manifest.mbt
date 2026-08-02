@@ -40,6 +40,7 @@ fn App::new(
     certificate_handler: None,
     media_handler: None,
     download_event_handlers: [],
+    update_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],
   }
@@ -92,12 +93,21 @@ fn App::resolved_config_manifest(
   let project = @bootstrap.load_proton_project_config_from_file(path) catch {
     error => raise Bootstrap(error)
   }
-  let loaded = if proton_dev_mode_enabled() {
+  let dev_mode = proton_dev_mode_enabled()
+  let loaded = if dev_mode {
     resolved_dev_manifest(project)
   } else {
     project.manifest()
   }
-  self.merge_config(loaded, project=Some(project))
+  self.merge_config(
+    loaded,
+    project=Some(project),
+    update_channel=if dev_mode {
+      None
+    } else {
+      resolved_update_channel(project)
+    },
+  )
 }
 
 ///|
@@ -247,7 +257,25 @@ fn App::inline_app_config(self : App) -> ResolvedAppConfig {
     instance_identifier: self.single_instance_identifier,
     url_schemes: [],
     document_extensions: [],
+    update_channel: None,
   }
+}
+
+///|
+/// Resolves the update channel from a loaded project configuration.
+///
+/// A channel needs a version to compare against and an identifier to name the
+/// directory it stages under. Both come from the release metadata, and a
+/// project missing either has no channel — an update check that cannot say
+/// what it is running is not a check.
+fn resolved_update_channel(
+  project : @bootstrap.ProtonProjectConfig,
+) -> ResolvedUpdateChannel? {
+  guard project.updater() is Some(config) else { return None }
+  let metadata = project.metadata()
+  guard metadata.identifier() is Some(identifier) else { return None }
+  guard metadata.version() is Some(version) else { return None }
+  Some(ResolvedUpdateChannel::{ config, identifier, version })
 }
 
 ///|
@@ -267,6 +295,7 @@ fn App::merge_config(
   self : App,
   loaded : @bootstrap.LoadedAppManifest,
   project? : @bootstrap.ProtonProjectConfig? = None,
+  update_channel? : ResolvedUpdateChannel? = None,
 ) -> ResolvedAppConfig {
   self.warn_config_overrides()
   let manifest = loaded.manifest()
@@ -316,6 +345,7 @@ fn App::merge_config(
     },
     url_schemes: resolved_url_schemes(project),
     document_extensions: resolved_document_extensions(project),
+    update_channel,
   }
 }
 

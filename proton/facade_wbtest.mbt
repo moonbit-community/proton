@@ -1436,3 +1436,55 @@ test "app data directory follows platform conventions" {
     _ => fail("expected invalid identifier")
   }
 }
+
+///|
+fn updater_test_channel(
+  check_on_launch : Bool,
+  identifier? : String? = Some("com.example.app"),
+  version? : String? = Some("1.2.3"),
+) -> ResolvedUpdateChannel? {
+  let project = @bootstrap.ProtonProjectConfig::new(
+    @bootstrap.LoadedAppManifest::new(
+      @manifest.AppManifest::new(
+        @manifest.WindowManifest::new("Test", 800, 600),
+        @manifest.AppEntry::Url("https://example.com/"),
+      ),
+      base_dir=None,
+    ),
+    @bootstrap.ProtonAppMetadata::new("Test", identifier~, version~),
+    updater=Some(
+      @bootstrap.ProtonUpdaterConfig::new(
+        "https://updates.example.com/latest.json",
+        ["rsa-sha256:ab:010001"],
+        check_on_launch~,
+      ),
+    ),
+  )
+  resolved_update_channel(project)
+}
+
+///|
+/// A channel needs an identity to be usable, and says so by not existing.
+test "an update channel without release metadata is no channel" {
+  assert_true(updater_test_channel(true) is Some(_))
+  assert_true(updater_test_channel(true, identifier=None) is None)
+  assert_true(updater_test_channel(true, version=None) is None)
+}
+
+///|
+/// Launching contacts the endpoint only when the application is prepared to
+/// act on the answer and has not turned the check off.
+test "the launch check is opt-in twice over" {
+  guard updater_test_channel(true) is Some(enabled) else {
+    fail("expected a channel")
+  }
+  guard updater_test_channel(false) is Some(disabled) else {
+    fail("expected a channel")
+  }
+  assert_true(checks_on_launch(enabled, 1))
+  // Declared but nothing registered to act on it: no request is made.
+  assert_false(checks_on_launch(enabled, 0))
+  // check_on_launch: false wins even when a handler is registered.
+  assert_false(checks_on_launch(disabled, 1))
+  assert_false(checks_on_launch(disabled, 0))
+}

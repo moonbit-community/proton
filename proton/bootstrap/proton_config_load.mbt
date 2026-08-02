@@ -45,6 +45,18 @@ fn proton_project_config_from_project_config(
     backend=project.backend().map(proton_backend_from_project_backend),
     frontend=project.frontend().map(proton_frontend_from_project_frontend),
     bundle=project.bundle().map(proton_bundle_from_project_bundle),
+    updater=match project.updater() {
+      Some(updater) if updater.is_active() =>
+        Some(
+          ProtonUpdaterConfig::new(
+            updater.endpoint(),
+            updater.public_keys(),
+            check_on_launch=updater.checks_on_launch(),
+            freshness_days=updater.freshness_days(),
+          ),
+        )
+      _ => None
+    },
   )
 }
 

@@ -47,6 +47,8 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     certificate_handler=self.certificate_handler,
     media_handler=self.media_handler,
     download_event_handlers=self.download_event_handlers,
+    update_channel=resolved.update_channel,
+    update_handlers=self.update_handlers,
   ) catch {
     error => {
       match app_instance {
@@ -95,6 +97,8 @@ async fn run_manifest(
   download_event_handlers? : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ] = [],
+  update_channel? : ResolvedUpdateChannel? = None,
+  update_handlers? : Array[async (PendingUpdate) -> Unit noraise] = [],
 ) -> Unit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
@@ -289,6 +293,7 @@ async fn run_manifest(
           allow_failure=true,
         )
         session.drive_until_complete(application_start)
+        start_update_check(update_channel, update_handlers, application_tasks)
         for definition in definitions {
           if definition.plan.open_on_start &&
             session.find_active_window(definition.plan.id) is None {

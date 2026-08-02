@@ -276,6 +276,7 @@ pub(all) struct RuntimeInfo {
   runtime_available : Bool
   build_mode : String
   platform : String
+  platform_id : String
   features : Array[String]
 } derive(Eq, @debug.Debug, @json.FromJson)
 
@@ -381,4 +382,3 @@ pub(all) struct WindowState {
 // Type aliases
 
 // Traits
-
