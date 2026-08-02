@@ -16,6 +16,44 @@ let update_check_delay_ms : Int = 20 * 1000
 let update_check_jitter_ms : Int = 40 * 1000
 
 ///|
+/// The channel this process resolved from `moon.proton`, once it is running.
+///
+/// Process-global because the update channel is a property of the installed
+/// application, not of a window or a request. The renderer-facing extension
+/// reads it through `check_for_update`, which is the only way it can: a page
+/// must never be able to name an endpoint.
+let active_update_channel : Ref[ResolvedUpdateChannel?] = Ref(None)
+
+///|
+/// What asking the channel concluded.
+pub enum UpdateCheck {
+  /// This application has no update channel configured.
+  NotConfigured
+  /// Nothing newer is on offer.
+  UpToDate
+  /// A newer release is available and fully authenticated.
+  Available(PendingUpdate)
+}
+
+///|
+/// Asks the configured channel whether a newer release is on offer.
+///
+/// Available to the application at any time, not only at launch. Returns
+/// `NotConfigured` rather than `UpToDate` when there is no channel, because
+/// "nobody told us where to look" and "we looked and found nothing" are
+/// different answers and only one of them is worth showing a user.
+pub async fn check_for_update() -> UpdateCheck {
+  match active_update_channel.val {
+    None => NotConfigured
+    Some(channel) =>
+      match channel.poll() {
+        Some(update) => Available(update)
+        None => UpToDate
+      }
+  }
+}
+
+///|
 /// An update the channel offered, and the means to take it.
 ///
 /// Being handed one means the manifest was signed by a trusted key, is fresh,
@@ -58,8 +96,12 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 /// without being asked is a reasonable default; installing without being asked
 /// changes the code someone is running, and only the application knows whether
 /// this is a moment when that is acceptable.
-pub async fn PendingUpdate::install(self : PendingUpdate) -> Unit {
-  let artifact = self.channel.download(@updater.http_fetch_artifact, self.offer)
+pub async fn PendingUpdate::install(
+  self : PendingUpdate,
+  on_progress? : async (Int64) -> Unit = _ => (),
+) -> Unit {
+  let fetch = @updater.http_fetch_artifact_reporting(on_progress)
+  let artifact = self.channel.download(fetch, self.offer)
   @updater.install(artifact, update_staging_parent(self.identifier))
 }
 

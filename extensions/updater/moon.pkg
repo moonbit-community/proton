@@ -1,0 +1,26 @@
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "justjavac/proton",
+  "justjavac/proton/extension" @proton_extension,
+  "justjavac/proton_contract",
+  "justjavac/proton_ext/updater/contract" @updater_contract,
+}
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/async",
+} for "wbtest"
+
+supported_targets = "native"
+
+formatter(ignore: [ "extension.g.mbt" ])
+
+options(
+  targets: {
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "error.mbt": [ "native" ],
+    "updater_wbtest.mbt": [ "native" ],
+  },
+)

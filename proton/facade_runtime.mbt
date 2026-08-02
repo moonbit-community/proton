@@ -293,6 +293,7 @@ async fn run_manifest(
           allow_failure=true,
         )
         session.drive_until_complete(application_start)
+        active_update_channel.val = update_channel
         start_update_check(update_channel, update_handlers, application_tasks)
         for definition in definitions {
           if definition.plan.open_on_start &&

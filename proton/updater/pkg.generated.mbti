@@ -12,6 +12,8 @@ pub async fn http_fetch(String) -> Bytes raise UpdateError
 
 pub async fn http_fetch_artifact(String) -> Bytes raise UpdateError
 
+pub fn http_fetch_artifact_reporting(async (Int64) -> Unit) -> async (String) -> Bytes raise UpdateError
+
 pub fn install(Bytes, String) -> Unit raise UpdateError
 
 pub let maximum_metadata_bytes : Int
@@ -69,4 +71,3 @@ pub fn UpdateChannel::new(String, Array[String], String, @proton_updater.Version
 pub type Fetch = async (String) -> Bytes raise UpdateError
 
 // Traits
-

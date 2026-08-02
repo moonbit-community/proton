@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/updater"
+
+import {
+  "justjavac/proton/command",
+  "justjavac/proton/extension",
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
+
+// Errors
+type UpdaterError derive(@debug.Debug)
+
+// Types and methods
+
+// Type aliases
+
+// Traits

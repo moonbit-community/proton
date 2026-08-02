@@ -500,20 +500,26 @@ and is not something a framework should decide for every application.
 
 ## Renderer surface
 
-*Not implemented.* The ops below do not exist yet; an application reaches the
-updater from its backend, through `App::on_update_available` and
-`PendingUpdate`.
+*Implemented* as the `justjavac/proton-updater` extension, in the `updater`
+namespace. Update capability is exposed through the existing permission model.
+Registration alone grants nothing; a window needs an explicit grant.
 
-Update capability is exposed through the existing permission model. Registration
-alone grants nothing; a window needs an explicit grant for a trusted source and
-the `app` extension.
+- `updater.check` — returns `not_configured`, `up_to_date`, or `available` with
+  the version, notes URL and size.
+- `updater.download` — downloads and installs what the last `check` found, and
+  reports progress through `window.__MoonBit__.updater.on("progress", ...)`.
+- Restarting is **not** a renderer capability. Deciding when to interrupt
+  someone belongs to the application.
 
-- `app:updater.check` — grantable. Returns availability, version, and notes URL.
-- `app:updater.download` — grantable. Reports progress through
-  `window.__MoonBit__.app.on("updater.progress", ...)`.
-- Applying an update is **not** a renderer capability. A page may request it; the
-  backend handler decides. The renderer never supplies a URL, a version, or a
-  path.
+**Neither op takes an argument.** That is the mechanism, not an accident of the
+schema: a page that could name an endpoint, a version, or a path would hold a
+remote code execution primitive over the host. `download` installs whatever the
+host already authenticated, or refuses. Everything it acts on comes from
+`moon.proton` and the signed manifest.
+
+The extension is not in `@ext.all()` or `@ext.desktop()`. An application asking
+for "the built-in extensions" should not thereby hand its pages the ability to
+replace it; registering this one is a separate decision.
 
 A renderer that could choose the update URL would hold a remote code execution
 primitive over the host. That is the single most important boundary in this
@@ -562,8 +568,6 @@ three platforms are built on three machines, which is already true of
   also lack the second trust anchor that makes key loss recoverable on macOS.
 - **Full-artifact transfer.** Documented above and accepted for version 1.
 - **macOS only.** Blocked on Windows and Linux packaging targets.
-- **No renderer surface.** A page cannot ask about updates; only the backend
-  can. The permission model for it is designed but unbuilt.
 - **Dev runs never check.** A development run is not inside an installed
   bundle, so there is nothing an update could replace.
 
