@@ -51,7 +51,10 @@ static int file_contains(const char *path, const char *needle) {
 static int pump_until_log(proton_runtime_id_t runtime,
                           const char *log_path,
                           const char *needle) {
-  for (int i = 0; i < 800; i++) {
+  // Slow headless renderers (CI runners without a real window manager) can
+  // take tens of seconds to deliver the first draggable-region update, so
+  // give the pump loop a generous budget instead of a wall-clock-tight one.
+  for (int i = 0; i < 3000; i++) {
     if (proton_runtime_do_message_loop_work(runtime) != PROTON_OK) {
       return 0;
     }
