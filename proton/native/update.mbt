@@ -125,7 +125,10 @@ fn update_check(
 }
 
 ///|
-/// Starts a private update staging transaction.
+/// Starts a private update staging transaction in an explicit directory.
+///
+/// Application updates should use `update_stage_begin_for_current_app` so the
+/// stage and installed bundle are guaranteed to be on the same filesystem.
 pub fn update_stage_begin(
   parent_dir : String,
   expected_size : Int64,
@@ -145,6 +148,19 @@ pub fn update_stage_begin(
     message,
   )
   { handle: handle.val }
+}
+
+///|
+/// Starts a private update stage beside the running application bundle.
+///
+/// Keeping the stage on the installed application's filesystem makes the
+/// final bundle replacement an atomic rename even when the application runs
+/// from an external volume.
+pub fn update_stage_begin_for_current_app(
+  expected_size : Int64,
+  target_revision : UInt64,
+) -> UpdateStage raise NativeError {
+  update_stage_begin("", expected_size, target_revision)
 }
 
 ///|

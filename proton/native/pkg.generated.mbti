@@ -49,6 +49,8 @@ pub fn update_relaunch() -> Unit raise NativeError
 
 pub fn update_stage_begin(String, Int64, UInt64) -> UpdateStage raise NativeError
 
+pub fn update_stage_begin_for_current_app(Int64, UInt64) -> UpdateStage raise NativeError
+
 // Errors
 pub(all) suberror NativeError {
   Status(status~ : Int, message~ : String)

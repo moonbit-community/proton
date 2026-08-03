@@ -1450,11 +1450,12 @@ fn updater_test_channel(
 }
 
 ///|
-/// A channel needs an identity to be usable, and says so by not existing.
-test "an update channel without release metadata is no channel" {
+/// Channel identity and release ordering come from the signed application
+/// bundle rather than optional project release metadata.
+test "an update channel does not require release metadata" {
   assert_true(updater_test_channel(true) is Some(_))
-  assert_true(updater_test_channel(true, identifier=None) is None)
-  assert_true(updater_test_channel(true, version=None) is None)
+  assert_true(updater_test_channel(true, identifier=None) is Some(_))
+  assert_true(updater_test_channel(true, version=None) is Some(_))
 }
 
 ///|

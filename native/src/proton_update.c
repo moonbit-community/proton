@@ -179,6 +179,21 @@ static int proton_update_running_bundle(char *out, size_t out_len) {
   return 1;
 }
 
+static int proton_update_parent_path(const char *path, char *out,
+                                     size_t out_len) {
+  const char *slash = strrchr(path, '/');
+  if (slash == NULL) {
+    return 0;
+  }
+  size_t length = slash == path ? 1 : (size_t)(slash - path);
+  if (length >= out_len) {
+    return 0;
+  }
+  memcpy(out, path, length);
+  out[length] = '\0';
+  return 1;
+}
+
 static int proton_update_is_directory(const char *path) {
   struct stat info;
   return lstat(path, &info) == 0 && S_ISDIR(info.st_mode);
@@ -352,10 +367,40 @@ PROTON_API int32_t proton_update_stage_begin_revision(
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
   }
-  if (parent_dir == NULL || parent_dir[0] != '/') {
+  if (parent_dir != NULL && parent_dir[0] != '\0' && parent_dir[0] != '/') {
     proton_update_set_message(error, error_len,
                               "the staging parent directory must be absolute");
     return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  char current_bundle[PROTON_UPDATE_MAX_PATH];
+  char current_parent[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_bundle(current_bundle, sizeof(current_bundle)) ||
+      !proton_update_parent_path(current_bundle, current_parent,
+                                 sizeof(current_parent))) {
+    proton_update_set_message(
+        error, error_len,
+        "the running executable is not inside a .app bundle, so a "
+        "same-volume update stage cannot be created");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (parent_dir == NULL || parent_dir[0] == '\0') {
+    parent_dir = current_parent;
+  } else {
+    struct stat parent_info;
+    struct stat current_parent_info;
+    if (stat(parent_dir, &parent_info) != 0 ||
+        stat(current_parent, &current_parent_info) != 0) {
+      proton_update_set_message(
+          error, error_len,
+          "the staging parent filesystem could not be inspected");
+      return PROTON_ERR_PLATFORM;
+    }
+    if (parent_info.st_dev != current_parent_info.st_dev) {
+      proton_update_set_message(
+          error, error_len,
+          "the staging parent must be on the running application's filesystem");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
   }
   if (expected_size <= 0) {
     proton_update_set_message(error, error_len,
@@ -401,7 +446,7 @@ PROTON_API int32_t proton_update_stage_begin_revision(
   pthread_mutex_unlock(&g_update_stage_mutex);
 
   int written = snprintf(slot->staging, sizeof(slot->staging),
-                         "%s/proton-update-XXXXXX", parent_dir);
+                         "%s/.proton-update-XXXXXX", parent_dir);
   if (written < 0 || (size_t)written >= sizeof(slot->staging)) {
     proton_update_stage_release(slot, 0);
     proton_update_set_message(error, error_len,

@@ -66,7 +66,6 @@ pub struct PendingUpdate {
   size : Int64
   channel : @updater.UpdateChannel
   offer : @updater.AvailableUpdate
-  identifier : String
 }
 
 ///|
@@ -121,34 +120,10 @@ pub async fn PendingUpdate::install(
     self.channel.download_and_install(
       @updater.http_fetch_artifact,
       self.offer,
-      update_staging_parent(self.identifier),
       on_progress~,
     ) {
     @updater.Installed => Installed
     @updater.AlreadyInstalled => AlreadyInstalled
-  }
-}
-
-///|
-/// Returns the directory an update is expanded under, creating it.
-///
-/// `app_data_dir` resolves a path without creating it, and the native
-/// expansion makes its own private directory *inside* this one, so this has to
-/// exist first. It is a named subdirectory rather than the data directory
-/// itself so that what an update leaves behind stays separable from what the
-/// application stores.
-fn update_staging_parent(identifier : String) -> String raise {
-  let base = app_data_dir(identifier)
-  ensure_directory(base)
-  let staging = "\{base}/updates"
-  ensure_directory(staging)
-  staging
-}
-
-///|
-fn ensure_directory(path : String) -> Unit raise {
-  if !@mbfs.path_exists(path) {
-    @mbfs.create_dir(path)
   }
 }
 
@@ -196,7 +171,6 @@ async fn ResolvedUpdateChannel::poll(
         size: offer.size(),
         channel,
         offer,
-        identifier: self.identifier,
       })
   }
 }

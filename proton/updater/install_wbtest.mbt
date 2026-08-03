@@ -34,13 +34,7 @@ async test "install reports an unavailable installed revision" {
   }
   let subject = channel(2UL)
   let relative = expect_install_error(async fn() -> Unit raise UpdateError {
-    ignore(
-      subject.download_and_install(
-        streaming(default_entries()),
-        update,
-        "staging",
-      ),
-    )
+    ignore(subject.download_and_install(streaming(default_entries()), update))
   })
   assert_eq(
     relative,

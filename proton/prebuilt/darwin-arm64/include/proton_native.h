@@ -209,7 +209,13 @@ PROTON_API int32_t proton_window_poll_dialog_result(
    The archive path never crosses the ABI. Chunks written to the returned
    handle are the exact bytes later expanded by proton_update_stage_install,
    so authenticating those chunks does not introduce a path-based TOCTOU
-   window. The handle is owned by the calling thread. */
+   window. The handle is owned by the calling thread.
+
+   Application updates should pass NULL or an empty parent_dir. Proton then
+   creates the stage beside the running .app, guaranteeing that final bundle
+   replacement stays on one filesystem. An explicit absolute parent is kept
+   for low-level hosts and tests, but is rejected unless it is on that same
+   filesystem. */
 PROTON_API int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len);

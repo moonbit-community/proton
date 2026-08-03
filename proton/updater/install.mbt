@@ -39,10 +39,11 @@ async fn coordinate_install(
 /// expansion. `download_into` authenticates the same chunks written there, and
 /// any transfer or authentication failure discards the stage before returning.
 ///
-/// `staging_parent` should be a directory the application owns — `app_data_dir`
-/// resolves one. Neither the archive path nor the expanded bundle path crosses
-/// the FFI boundary, so verification cannot be separated from use by replacing
-/// a path after it was checked.
+/// The native stage is created beside the running application bundle. This is
+/// what keeps final replacement on one filesystem when the application is
+/// installed on an external volume. Neither the archive path nor the expanded
+/// bundle path crosses the FFI boundary, so verification cannot be separated
+/// from use by replacing a path after it was checked.
 ///
 /// The application is not restarted. When to do that is a question about the
 /// user's unsaved work, not about the update, so it belongs to the caller —
@@ -51,7 +52,6 @@ pub async fn UpdateChannel::download_and_install(
   self : UpdateChannel,
   fetch : ArtifactFetch,
   update : AvailableUpdate,
-  staging_parent : String,
   on_progress? : async (Int64) -> Unit noraise = _ => (),
 ) -> InstallOutcome raise UpdateError {
   coordinate_install(
@@ -66,8 +66,7 @@ pub async fn UpdateChannel::download_and_install(
       }
     },
     async fn() -> InstallOutcome raise UpdateError {
-      let stage = @native.update_stage_begin(
-        staging_parent,
+      let stage = @native.update_stage_begin_for_current_app(
         update.size,
         update.revision,
       ) catch {

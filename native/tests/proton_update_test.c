@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -135,12 +136,12 @@ static char *archive_bundle(const char *bundle, const char *archive,
   return read_file(archive, length);
 }
 
-static int32_t install_archive(const char *parent, const char *bytes,
-                               int32_t length, uint64_t revision,
+static int32_t install_archive(const char *bytes, int32_t length,
+                               uint64_t revision,
                                int32_t *out_outcome, char *error,
                                int32_t error_len) {
   proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
-  int32_t status = proton_update_stage_begin_revision(parent, length, revision,
+  int32_t status = proton_update_stage_begin_revision(NULL, length, revision,
                                                       &stage, error, error_len);
   if (status != PROTON_OK) {
     return status;
@@ -157,6 +158,22 @@ static int32_t install_archive(const char *parent, const char *bytes,
 static int exists(const char *path) {
   struct stat info;
   return lstat(path, &info) == 0;
+}
+
+static int count_entries_with_prefix(const char *directory,
+                                     const char *prefix) {
+  DIR *handle = opendir(directory);
+  REQUIRE(handle != NULL);
+  int count = 0;
+  size_t prefix_len = strlen(prefix);
+  struct dirent *entry = NULL;
+  while ((entry = readdir(handle)) != NULL) {
+    if (strncmp(entry->d_name, prefix, prefix_len) == 0) {
+      count++;
+    }
+  }
+  closedir(handle);
+  return count;
 }
 
 /* Every bundle in this test claims to be the same application, because the
@@ -217,6 +234,15 @@ int main(void) {
                  "the staged update size does not match the signed size") == 0);
   snprintf(command, sizeof(command), "test -z \"$(ls -A '%s')\"", parent);
   REQUIRE(system(command) == 0);
+
+  /* The application-facing default creates its private stage beside the
+     installed bundle, not under a user-data or temporary directory that may
+     be mounted on another filesystem. */
+  REQUIRE(proton_update_stage_begin_revision(NULL, 3, 2, &stage, error,
+                                             sizeof(error)) == 0);
+  REQUIRE(count_entries_with_prefix(root, ".proton-update-") == 1);
+  REQUIRE(proton_update_stage_abort(stage, error, sizeof(error)) == 0);
+  REQUIRE(count_entries_with_prefix(root, ".proton-update-") == 0);
 
   /* Invalid input and an archive with no bundle are refused before the
      installed application is touched, and private staging is removed. */
@@ -315,7 +341,7 @@ int main(void) {
   REQUIRE(lock_fd >= 0);
   REQUIRE(flock(lock_fd, LOCK_EX | LOCK_NB) == 0);
   install_outcome = PROTON_UPDATE_INSTALLED;
-  REQUIRE(install_archive(parent, accepted_bytes, (int32_t)accepted_len, 2,
+  REQUIRE(install_archive(accepted_bytes, (int32_t)accepted_len, 2,
                           &install_outcome, error,
                           sizeof(error)) == PROTON_ERR_UPDATE_BUSY);
   REQUIRE(marker_is(installed, "old"));
@@ -331,7 +357,7 @@ int main(void) {
   sign_bundle(substitute, kIdentifier);
   REQUIRE(rename(staged, accepted_original) == 0);
   REQUIRE(rename(substitute, staged) == 0);
-  REQUIRE(proton_update_stage_begin_revision(parent, accepted_len, 2, &stage,
+  REQUIRE(proton_update_stage_begin_revision(NULL, accepted_len, 2, &stage,
                                              error, sizeof(error)) == 0);
   int32_t first_chunk = (int32_t)(accepted_len / 2);
   REQUIRE(proton_update_stage_write(stage, accepted_bytes, first_chunk, error,
@@ -368,7 +394,7 @@ int main(void) {
   long equal_len = 0;
   char *equal_bytes = archive_bundle(equal_bundle, equal_archive, &equal_len);
   install_outcome = PROTON_UPDATE_INSTALLED;
-  REQUIRE(install_archive(parent, equal_bytes, (int32_t)equal_len, 2,
+  REQUIRE(install_archive(equal_bytes, (int32_t)equal_len, 2,
                           &install_outcome, error, sizeof(error)) == 0);
   REQUIRE(install_outcome == PROTON_UPDATE_ALREADY_INSTALLED);
   REQUIRE(marker_is(installed, "new"));
@@ -387,7 +413,7 @@ int main(void) {
   long rollback_len = 0;
   char *rollback_bytes =
       archive_bundle(rollback_bundle, rollback_archive, &rollback_len);
-  REQUIRE(install_archive(parent, rollback_bytes, (int32_t)rollback_len, 1,
+  REQUIRE(install_archive(rollback_bytes, (int32_t)rollback_len, 1,
                           &install_outcome, error,
                           sizeof(error)) == PROTON_ERR_UPDATE_ROLLBACK);
   REQUIRE(marker_is(installed, "new"));
@@ -403,7 +429,7 @@ int main(void) {
   long mismatch_len = 0;
   char *mismatch_bytes =
       archive_bundle(mismatch_bundle, mismatch_archive, &mismatch_len);
-  REQUIRE(install_archive(parent, mismatch_bytes, (int32_t)mismatch_len, 4,
+  REQUIRE(install_archive(mismatch_bytes, (int32_t)mismatch_len, 4,
                           &install_outcome, error, sizeof(error)) ==
           PROTON_ERR_UPDATE_REVISION_MISMATCH);
   REQUIRE(marker_is(installed, "new"));

@@ -36,7 +36,7 @@ if [ ! -x "$binary" ]; then
 fi
 
 rm -rf "$work"
-mkdir -p "$work/keys" "$work/server" "$work/install" "$work/staging" "$work/build"
+mkdir -p "$work/keys" "$work/server" "$work/install" "$work/build"
 
 # The publisher's key. A real release keeps this offline; here it lives beside
 # the artifacts it signs because nothing about it is secret to this test.
@@ -113,7 +113,6 @@ echo "installed version before: $(cat "$work/install/Updatee.app/Contents/Resour
 PROTON_E2E_ENDPOINT="${base}latest.json" \
 PROTON_E2E_BASE="$base" \
 PROTON_E2E_ROOT="$work/server" \
-PROTON_E2E_STAGING="$work/staging" \
 PROTON_E2E_KEY="$(cat "$work/keys/trusted.txt")" \
 PROTON_E2E_ROLE="update" \
   "$work/install/Updatee.app/Contents/MacOS/updatee"
@@ -134,12 +133,12 @@ echo "installed version after:  $(cat "$work/install/Updatee.app/Contents/Resour
 echo "launch log:"
 sed 's/^/  /' "$work/install/relaunched.txt"
 echo "kept previous bundles: $(ls -d "$work/install/"*.previous-* 2>/dev/null | wc -l | tr -d ' ')"
-echo "staging entries left:  $(ls -A "$work/staging" | wc -l | tr -d ' ')"
+echo "staging entries left:  $(find "$work/install" -maxdepth 1 -name '.proton-update-*' | wc -l | tr -d ' ')"
 codesign --verify --strict "$work/install/Updatee.app"
 echo "installed bundle signature: valid"
 
 test "$(cat "$work/install/Updatee.app/Contents/Resources/version")" = "0.2.0"
 grep -q 'started 0\.1\.0' "$work/install/relaunched.txt"
 grep -q 'started 0\.2\.0' "$work/install/relaunched.txt"
-test "$(ls -A "$work/staging" | wc -l | tr -d ' ')" = "0"
+test "$(find "$work/install" -maxdepth 1 -name '.proton-update-*' | wc -l | tr -d ' ')" = "0"
 echo "OK"

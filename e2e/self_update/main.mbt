@@ -46,7 +46,6 @@ fn report_launch(bundle : String, version : String) -> Unit raise {
 async fn run_update() -> Unit {
   let endpoint = require_env("PROTON_E2E_ENDPOINT")
   let root = require_env("PROTON_E2E_ROOT")
-  let staging = require_env("PROTON_E2E_STAGING")
   let base = require_env("PROTON_E2E_BASE")
   let key = require_env("PROTON_E2E_KEY")
   // The running version is read from the bundle, not from the environment.
@@ -110,7 +109,7 @@ async fn run_update() -> Unit {
     UpToDate => println("up to date")
     Available(update) => {
       println("offered \{update.version()}")
-      ignore(channel.download_and_install(artifact_fetch, update, staging))
+      ignore(channel.download_and_install(artifact_fetch, update))
       println("installed")
       @updater.relaunch()
       println("relaunched")
