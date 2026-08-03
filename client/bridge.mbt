@@ -39,10 +39,11 @@ extern "js" fn invoke_json(
 extern "js" fn invoke_json_with_callbacks(
   route : String,
   request_json : String,
+  signal : @js_async.AbortSignal,
   success : (String) -> Unit,
   failure : (String) -> Unit,
 ) -> Unit =
-  #| (route, requestJson, success, failure) => {
+  #| (route, requestJson, signal, success, failure) => {
   #|   const root = globalThis.__MoonBit__;
   #|   if (!root || !root.core ||
   #|       typeof root.core.invokeJson !== "function") {
@@ -52,7 +53,7 @@ extern "js" fn invoke_json_with_callbacks(
   #|     }));
   #|     return;
   #|   }
-  #|   root.core.invokeJson(route, requestJson).then(success, (error) => {
+  #|   root.core.invokeJson(route, requestJson, { signal }).then(success, (error) => {
   #|     const detail = error && error.detail;
   #|     failure(JSON.stringify({
   #|       code: error && error.code ? String(error.code) : "transport_failure",

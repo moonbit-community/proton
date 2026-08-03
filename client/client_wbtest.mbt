@@ -83,6 +83,33 @@ extern "js" fn install_fake_callback_bridge(
   #| }
 
 ///|
+extern "js" fn install_pending_callback_bridge() -> Unit =
+  #| () => {
+  #|   globalThis.__protonClientTest = {
+  #|     route: "",
+  #|     requestJson: "",
+  #|     signal: null,
+  #|     aborts: 0,
+  #|   };
+  #|   globalThis.__MoonBit__ = {
+  #|     core: {
+  #|       invokeJson(route, requestJson, options) {
+  #|         globalThis.__protonClientTest.route = route;
+  #|         globalThis.__protonClientTest.requestJson = requestJson;
+  #|         const signal = options && options.signal;
+  #|         globalThis.__protonClientTest.signal = signal;
+  #|         if (signal) {
+  #|           signal.addEventListener("abort", () => {
+  #|             globalThis.__protonClientTest.aborts += 1;
+  #|           });
+  #|         }
+  #|         return new Promise(() => {});
+  #|       },
+  #|     },
+  #|   };
+  #| }
+
+///|
 extern "js" fn remove_fake_bridge() -> Unit =
   #| () => {
   #|   delete globalThis.__MoonBit__;
@@ -96,6 +123,17 @@ extern "js" fn fake_route() -> String =
 ///|
 extern "js" fn fake_request_json() -> String =
   #| () => globalThis.__protonClientTest.requestJson
+
+///|
+extern "js" fn fake_callback_signal_aborted() -> Bool =
+  #| () => Boolean(
+  #|   globalThis.__protonClientTest.signal &&
+  #|   globalThis.__protonClientTest.signal.aborted
+  #| )
+
+///|
+extern "js" fn fake_callback_abort_count() -> Int =
+  #| () => globalThis.__protonClientTest.aborts
 
 ///|
 extern "js" fn emit_fake_event(route : String, payload_json : String) -> Unit =
@@ -120,11 +158,13 @@ fn invoke_callback_outcome(
   let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
     "callback_echo",
   )
-  invoke_with_callbacks(
-    echo,
-    { value: "ping" },
-    value => response.val = Some(value),
-    error => failure.val = Some(error),
+  ignore(
+    invoke_with_callbacks(
+      echo,
+      { value: "ping" },
+      value => response.val = Some(value),
+      error => failure.val = Some(error),
+    ),
   )
   {
     response: response.val,
@@ -270,17 +310,36 @@ test "callback invocation serializes requests and decodes responses" {
 }
 
 ///|
+test "callback invocation returns an idempotent bridge cancellation" {
+  install_pending_callback_bridge()
+  defer remove_fake_bridge()
+  let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
+    "callback_cancel",
+  )
+  let cancel = invoke_with_callbacks(echo, { value: "ping" }, _value => (), _error => {
+    ()
+  })
+  assert_false(fake_callback_signal_aborted())
+  cancel()
+  cancel()
+  assert_true(fake_callback_signal_aborted())
+  assert_eq(fake_callback_abort_count(), 1)
+}
+
+///|
 test "callback invocation reports synchronous preflight failures" {
   let response_called = Ref(false)
   let failure : Ref[ClientFailure?] = Ref(None)
   let invalid : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
     "",
   )
-  invoke_with_callbacks(
-    invalid,
-    { value: "ping" },
-    _value => response_called.val = true,
-    error => failure.val = Some(error),
+  ignore(
+    invoke_with_callbacks(
+      invalid,
+      { value: "ping" },
+      _value => response_called.val = true,
+      error => failure.val = Some(error),
+    ),
   )
   assert_false(response_called.val)
   match failure.val {
@@ -294,11 +353,13 @@ test "callback invocation reports synchronous preflight failures" {
   let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
     "callback_bridge_unavailable",
   )
-  invoke_with_callbacks(
-    echo,
-    { value: "ping" },
-    _value => response_called.val = true,
-    error => failure.val = Some(error),
+  ignore(
+    invoke_with_callbacks(
+      echo,
+      { value: "ping" },
+      _value => response_called.val = true,
+      error => failure.val = Some(error),
+    ),
   )
   assert_false(response_called.val)
   assert_eq(failure.val, Some(ClientFailure::BridgeUnavailable))

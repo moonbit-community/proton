@@ -51,10 +51,12 @@ extern "js" fn install_fake_bridge(response_json : String) -> Unit =
   #|     responseJson,
   #|     listener: null,
   #|     installs: 0,
+  #|     signal: null,
   #|   };
   #|   globalThis.__MoonBit__ = {
   #|     core: {
-  #|       invokeJson() {
+  #|       invokeJson(_route, _requestJson, options) {
+  #|         globalThis.__protonRabbitaTest.signal = options && options.signal;
   #|         return {
   #|           then(success) {
   #|             success(globalThis.__protonRabbitaTest.responseJson);
@@ -97,6 +99,10 @@ extern "js" fn fake_has_listener() -> Bool =
   #| () => globalThis.__protonRabbitaTest.listener !== null
 
 ///|
+extern "js" fn fake_has_abort_signal() -> Bool =
+  #| () => Boolean(globalThis.__protonRabbitaTest.signal)
+
+///|
 test "invoke schedules bridge callbacks without entering async from an effect" {
   install_fake_bridge("{\"value\":\"pong\"}")
   let scheduler = TestScheduler::new()
@@ -125,6 +131,7 @@ test "invoke schedules bridge callbacks without entering async from an effect" {
   )
   assert_eq(response.val, "pong")
   assert_eq(failure_code.val, "")
+  assert_true(fake_has_abort_signal())
 
   remove_fake_bridge()
   @cmd.Scheduler::add(
