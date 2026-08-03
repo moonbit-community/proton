@@ -133,6 +133,51 @@ test("cancels renderer pending state without settling late replies", async () =>
   );
 });
 
+test("rejects an invalid abort signal without poisoning disposal", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const resultPromise = context.__MoonBit__.core.invokeJson(
+    "app:invalid-signal",
+    "{}",
+    { signal: {} },
+  );
+  let failure;
+  try {
+    await resultPromise;
+  } catch (error) {
+    failure = error;
+  }
+  assert.equal(failure?.name, "TypeError");
+  assert.equal(
+    failure?.message,
+    "Proton bridge options.signal must be an AbortSignal",
+  );
+  assert.equal(calls.length, 0);
+  assert.doesNotThrow(() => dispatcher.dispose("test complete"));
+  assert.equal(calls.length, 0);
+});
+
+test("rolls back pending state when abort listener registration fails", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const signal = {
+    aborted: false,
+    addEventListener() {
+      throw new Error("registration failed");
+    },
+    removeEventListener() {},
+  };
+  await assert.rejects(
+    context.__MoonBit__.core.invokeJson(
+      "app:registration-failure",
+      "{}",
+      { signal },
+    ),
+    /registration failed/,
+  );
+  assert.equal(calls.length, 0);
+  assert.doesNotThrow(() => dispatcher.dispose("test complete"));
+  assert.equal(calls.length, 0);
+});
+
 test("delivers extension events and supports unsubscribe", () => {
   const { context, dispatcher } = createBridge();
   const received = [];
