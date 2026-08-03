@@ -990,6 +990,23 @@ async test "application lifecycle hooks shut down in reverse order" {
 }
 
 ///|
+#cfg(not(platform="windows"))
+async test "runtime wakeup preserves notification before suspension" {
+  let (reader, writer) = @pipe.pipe()
+  let wakeup = RuntimeWakeup::{
+    reader: RuntimeWakeReader(reader),
+    writer: Some(writer),
+    signal: @core.RuntimeWakeSignal::new(),
+    closed: false,
+  }
+  defer wakeup.close()
+  let revision = wakeup.revision()
+  wakeup.signal.notify()
+  let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))
+  assert_true(completed is Some(_))
+}
+
+///|
 async test "application lifecycle startup rolls back completed hooks" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []

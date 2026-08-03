@@ -658,10 +658,11 @@ async fn show_runtime_failure_dialog(
     _ => return
   }
   while true {
+    let revision = wakeup.revision()
     let completed = runtime.poll_message_dialog(dialog) catch { _ => return }
     match completed {
       true => return
-      false => wakeup.wait() catch { _ => return }
+      false => wakeup.wait_after(revision) catch { _ => return }
     }
   }
 }
@@ -680,17 +681,15 @@ async fn show_window_failure_dialog(
     _ => return
   }
   while true {
-    let revision = wakeup.signal.revision()
+    let revision = wakeup.revision()
     let result = window.poll_dialog_result(dialog) catch { _ => return }
     match result {
       @native.DialogPollResult::Ready(_) => return
       @native.DialogPollResult::Pending =>
         // The main pump is no longer running on this error path, so this
         // waiter must consume the native pipe itself.
-        if wakeup.signal.revision() == revision {
-          wakeup.wait() catch {
-            _ => return
-          }
+        wakeup.wait_after(revision) catch {
+          _ => return
         }
     }
   }
