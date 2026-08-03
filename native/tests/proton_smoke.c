@@ -534,6 +534,11 @@ static void smoke_app_entry(void) {
     }
     if (g_app_entry_wakeup_status == PROTON_OK) {
       g_app_entry_first_wakeup = consume_wakeup_byte(wakeup_reader);
+      g_app_entry_wakeup_status =
+          proton_runtime_activate_wakeup_source(runtime);
+      if (g_app_entry_wakeup_status == PROTON_OK) {
+        g_app_entry_second_wakeup = consume_wakeup_byte(wakeup_reader);
+      }
     }
 #else
     int wakeup_pipe[2] = {-1, -1};
