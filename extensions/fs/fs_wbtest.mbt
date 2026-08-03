@@ -257,6 +257,12 @@ async test "fs permission scope rejects a symbolic-link escape" {
 ///|
 test "fs permission resolution anchors relative paths to the trusted base" {
   let base : @mbpath.Path = "/trusted/app"
+  // The resolved base is the platform-canonical absolute form: verbatim on
+  // POSIX, backslash-normalized on Windows.
+  let canonical_base = @mbpath.Path(path_for_platform(base.to_string()))
+    .resolve()
+    .normalize()
+    .to_string()
   let resolved = resolve_fs_permission_scope(
     Json::object({
       "roots": Json::array([
@@ -273,13 +279,19 @@ test "fs permission resolution anchors relative paths to the trusted base" {
   guard resolved is Object(fields) else {
     fail("expected resolved scope object")
   }
-  assert_eq(fields.get("base_path"), Some(Json::string(base.to_string())))
+  assert_eq(fields.get("base_path"), Some(Json::string(canonical_base)))
   guard fields.get("roots") is Some(Array([Object(root)])) else {
     fail("expected one resolved permission root")
   }
   assert_eq(
     root.get("path"),
-    Some(Json::string(base.join("workspace").normalize().to_string())),
+    Some(
+      Json::string(
+        @mbpath.Path(path_for_platform(base.join("workspace").to_string()))
+        .normalize()
+        .to_string(),
+      ),
+    ),
   )
   assert_eq(
     root.get("commands"),

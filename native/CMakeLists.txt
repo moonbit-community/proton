@@ -361,6 +361,7 @@ if(BUILD_TESTING)
   add_executable(proton_smoke
     tests/proton_smoke.c
     src/engine/cef_common/bridge_lifecycle.c
+    src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_response.c
     src/proton_app_instance.c
     src/proton_json.c
@@ -373,10 +374,22 @@ if(BUILD_TESTING)
     src/engine/cef_common/bridge_policy.c
     src/proton_json.c
   )
+  add_executable(proton_state_smoke
+    tests/proton_state_smoke.c
+    src/proton_state.c
+  )
 
   target_link_libraries(proton_smoke PRIVATE proton)
+  target_include_directories(proton_state_smoke PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  set_target_properties(proton_state_smoke PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+  )
   if(NOT WIN32)
     target_link_libraries(proton_exports_smoke PRIVATE ${CMAKE_DL_LIBS})
+    target_link_libraries(proton_state_smoke PRIVATE Threads::Threads)
   endif()
 
   if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
@@ -391,7 +404,38 @@ if(BUILD_TESTING)
   endif()
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
+  add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
+
+  if(WIN32)
+    add_executable(proton_win_titlebar_test
+      tests/proton_win_titlebar_test.c
+      src/engine/cef_win/proton_win_titlebar.c
+    )
+    target_include_directories(proton_win_titlebar_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_win
+    )
+    set_target_properties(proton_win_titlebar_test PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_win_titlebar_test COMMAND proton_win_titlebar_test)
+  endif()
+
+  if(UNIX AND NOT APPLE)
+    add_executable(proton_linux_titlebar_test
+      tests/proton_linux_titlebar_test.c
+      src/engine/cef_linux/proton_linux_titlebar.c
+    )
+    target_include_directories(proton_linux_titlebar_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_linux
+    )
+    set_target_properties(proton_linux_titlebar_test PROPERTIES
+      C_STANDARD 11
+      C_STANDARD_REQUIRED ON
+    )
+    add_test(NAME proton_linux_titlebar_test COMMAND proton_linux_titlebar_test)
+  endif()
 
   if(WIN32)
     set(PROTON_TEST_PATH_MODIFICATIONS
@@ -410,23 +454,57 @@ if(BUILD_TESTING)
         ENVIRONMENT_MODIFICATION "${PROTON_TEST_PATH_MODIFICATIONS}"
       )
     else()
+      # CMake < 3.22 has no ENVIRONMENT_MODIFICATION. Spell out every
+      # variable in one ENVIRONMENT call per test: repeated
+      # set_tests_properties(ENVIRONMENT) calls overwrite each other, and
+      # list separators inside a value must be escaped or CTest splits the
+      # value into bogus variables.
+      string(REPLACE ";" "\\;" PROTON_TEST_HOST_PATH "$ENV{PATH}")
       if(PROTON_WITH_ENGINE)
-        set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>;${PROTON_ENGINE_ROOT}/Release;$ENV{PATH}")
+        set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>\;${PROTON_ENGINE_ROOT}/Release\;${PROTON_TEST_HOST_PATH}")
+        set_tests_properties(proton_smoke PROPERTIES
+          ENVIRONMENT "PATH=${PROTON_TEST_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+        )
       else()
-        set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>;$ENV{PATH}")
+        set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>\;${PROTON_TEST_HOST_PATH}")
+        set_tests_properties(proton_smoke PROPERTIES
+          ENVIRONMENT "PATH=${PROTON_TEST_PATH}"
+        )
       endif()
-      set_tests_properties(proton_smoke PROPERTIES
-        ENVIRONMENT "PATH=${PROTON_TEST_PATH}"
-      )
       set_tests_properties(proton_exports_smoke PROPERTIES
         ENVIRONMENT "PATH=${PROTON_TEST_PATH}"
       )
     endif()
     if(PROTON_WITH_ENGINE)
-      set_tests_properties(proton_smoke PROPERTIES
-        ENVIRONMENT
-          "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+        set_tests_properties(proton_smoke PROPERTIES
+          ENVIRONMENT
+            "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+        )
+      endif()
+      add_executable(proton_win_overlay_smoke
+        tests/proton_win_overlay_smoke.c
       )
+      target_link_libraries(proton_win_overlay_smoke PRIVATE proton)
+      set_target_properties(proton_win_overlay_smoke PROPERTIES
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+      )
+      add_test(NAME proton_win_overlay_smoke COMMAND proton_win_overlay_smoke)
+      if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+        set_tests_properties(proton_win_overlay_smoke PROPERTIES
+          ENVIRONMENT
+            "PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
+          ENVIRONMENT_MODIFICATION "${PROTON_TEST_PATH_MODIFICATIONS}"
+          TIMEOUT 120
+        )
+      else()
+        set_tests_properties(proton_win_overlay_smoke PROPERTIES
+          ENVIRONMENT
+            "PATH=${PROTON_TEST_PATH};PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_win_overlay_smoke_cache"
+          TIMEOUT 120
+        )
+      endif()
     endif()
   elseif(APPLE)
     if(PROTON_WITH_ENGINE)
@@ -461,6 +539,23 @@ if(BUILD_TESTING)
       set_tests_properties(proton_smoke PROPERTIES
         ENVIRONMENT
           "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};LD_PRELOAD=${PROTON_TEST_LD_PRELOAD};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+      )
+      add_executable(proton_linux_overlay_smoke
+        tests/proton_linux_overlay_smoke.c
+      )
+      target_link_libraries(proton_linux_overlay_smoke PRIVATE
+        proton
+        PkgConfig::PROTON_X11
+      )
+      set_target_properties(proton_linux_overlay_smoke PROPERTIES
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+      )
+      add_test(NAME proton_linux_overlay_smoke COMMAND proton_linux_overlay_smoke)
+      set_tests_properties(proton_linux_overlay_smoke PROPERTIES
+        ENVIRONMENT
+          "LD_LIBRARY_PATH=${PROTON_TEST_LD_LIBRARY_PATH};LD_PRELOAD=${PROTON_TEST_LD_PRELOAD};PROTON_TEST_ENGINE_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_TEST_CACHE_ROOT=${CMAKE_BINARY_DIR}/proton_linux_overlay_smoke_cache;PROTON_TEST_LOG_PATH=${CMAKE_CURRENT_BINARY_DIR}/proton_linux_overlay_smoke.log"
+        TIMEOUT 120
       )
     else()
       set_tests_properties(proton_smoke PROPERTIES

@@ -6,8 +6,6 @@ import {
 }
 
 // Values
-pub fn build_extension_link_plan(ExtensionCatalog, Array[String]) -> ExtensionLinkPlan raise ExtensionLinkError
-
 pub fn discover_extension_descriptor_files(Array[String]) -> Array[String] raise ExtensionCatalogError
 
 pub fn load_extension_catalog_from_descriptor_files(Array[String]) -> ExtensionCatalog raise ExtensionCatalogError
@@ -40,14 +38,6 @@ pub(all) suberror ExtensionDescriptorError {
 } derive(Eq, @debug.Debug)
 pub fn ExtensionDescriptorError::message(Self) -> String
 
-pub(all) suberror ExtensionLinkError {
-  EmptySelectedId
-  UnknownExtension(id~ : String)
-  MissingDependency(extension_id~ : String, dependency_id~ : String)
-  DependencyCycle(id~ : String)
-} derive(Eq, @debug.Debug)
-pub fn ExtensionLinkError::message(Self) -> String
-
 pub(all) suberror ExtensionMetadataError {
   DuplicateField(field~ : String)
   UnknownField(field~ : String)
@@ -64,25 +54,6 @@ pub(all) suberror ExtensionMetadataError {
 pub fn ExtensionMetadataError::message(Self) -> String
 
 // Types and methods
-pub struct CatalogDiagnostic {
-  kind : CatalogDiagnosticKind
-  path : String
-  message : String
-} derive(Eq, @debug.Debug)
-pub fn CatalogDiagnostic::new(CatalogDiagnosticKind, String, String) -> Self
-pub fn CatalogDiagnostic::to_error_string(Self) -> String
-
-pub(all) enum CatalogDiagnosticKind {
-  MissingFile
-  InvalidSearchRoot
-  DirectoryReadFailed
-  InvalidJson
-  InvalidMetadata
-  DuplicateExtensionId
-  UnknownExtensionId
-  DependencyCycle
-} derive(Eq, @debug.Debug)
-
 pub struct ExtensionCatalog {
   descriptors : Map[String, ExtensionDescriptor]
   discovery_order : Array[String]
@@ -128,19 +99,6 @@ pub fn ExtensionDescriptor::readme(Self) -> String?
 pub fn ExtensionDescriptor::repository(Self) -> String?
 pub fn ExtensionDescriptor::root_dir(Self) -> String
 pub fn ExtensionDescriptor::version(Self) -> String
-
-pub struct ExtensionLinkInput {
-  id : String
-  moonbit_import_path : String
-} derive(Eq, @debug.Debug)
-pub fn ExtensionLinkInput::id(Self) -> String
-pub fn ExtensionLinkInput::moonbit_import_path(Self) -> String
-
-pub struct ExtensionLinkPlan {
-  ordered_inputs : Array[ExtensionLinkInput]
-} derive(Eq, @debug.Debug)
-pub fn ExtensionLinkPlan::extension_ids(Self) -> Array[String]
-pub fn ExtensionLinkPlan::inputs(Self) -> Array[ExtensionLinkInput]
 
 // Type aliases
 

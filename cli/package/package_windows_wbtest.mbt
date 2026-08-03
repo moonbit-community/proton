@@ -7,21 +7,21 @@ fn windows_test_plan(
   PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: resolve_path(root, "package-build"),
+    build_target_dir: @fsutil.resolve_path(root, "package-build"),
     app_package: "app",
-    config_path: resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "moon.proton"),
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
     targets,
-    output: resolve_path(root, "output with spaces"),
+    output: @fsutil.resolve_path(root, "output with spaces"),
     build: false,
     base_dir: root,
-    frontend_dist: Some(resolve_path(root, "frontend/dist")),
-    entry_paths: [resolve_path(root, "frontend/dist/index.html")],
-    resources: [resolve_path(root, "bundle resources/**")],
+    frontend_dist: Some(@fsutil.resolve_path(root, "frontend/dist")),
+    entry_paths: [@fsutil.resolve_path(root, "frontend/dist/index.html")],
+    resources: [@fsutil.resolve_path(root, "bundle resources/**")],
     icons: [],
     url_schemes: [],
     document_types: [],
@@ -34,7 +34,7 @@ fn windows_test_plan(
 ///|
 async fn ensure_windows_test_dir(path : String) -> Unit {
   guard !@mbfs.path_exists(path) else { return }
-  let parent = path_parent(path)
+  let parent = @fsutil.path_parent(path)
   if parent != path && !@mbfs.path_exists(parent) {
     ensure_windows_test_dir(parent)
   }
@@ -43,21 +43,21 @@ async fn ensure_windows_test_dir(path : String) -> Unit {
 
 ///|
 async fn write_windows_test_file(path : String, text : String) -> Unit {
-  ensure_windows_test_dir(path_parent(path))
+  ensure_windows_test_dir(@fsutil.path_parent(path))
   write_text(path, text)
 }
 
 ///|
 async fn prepare_windows_test_inputs(root : String) -> (String, String) {
   remove_tree(root)
-  let executable = resolve_path(root, "build output/demo.exe")
-  let config = resolve_path(root, "moon.proton")
+  let executable = @fsutil.resolve_path(root, "build output/demo.exe")
+  let config = @fsutil.resolve_path(root, "moon.proton")
   for
     item in [
       (executable, "exe"),
       (config, "config"),
-      (resolve_path(root, "frontend/dist/index.html"), "frontend"),
-      (resolve_path(root, "bundle resources/data.txt"), "resource"),
+      (@fsutil.resolve_path(root, "frontend/dist/index.html"), "frontend"),
+      (@fsutil.resolve_path(root, "bundle resources/data.txt"), "resource"),
     ] {
     let (path, text) = item
     write_windows_test_file(path, text)
@@ -67,19 +67,22 @@ async fn prepare_windows_test_inputs(root : String) -> (String, String) {
 
 ///|
 async fn prepare_windows_test_runtime(root : String) -> String {
-  let runtime = resolve_path(root, "runtime files")
+  let runtime = @fsutil.resolve_path(root, "runtime files")
   for name in windows_runtime_binary_files() {
-    write_windows_test_file(resolve_path(runtime, "bin/" + name), name)
+    write_windows_test_file(@fsutil.resolve_path(runtime, "bin/" + name), name)
   }
   for name in windows_runtime_root_data_files() {
-    write_windows_test_file(resolve_path(runtime, "bin/" + name), name)
+    write_windows_test_file(@fsutil.resolve_path(runtime, "bin/" + name), name)
   }
   for name in windows_runtime_resource_files() {
-    write_windows_test_file(resolve_path(runtime, "Resources/" + name), name)
+    write_windows_test_file(
+      @fsutil.resolve_path(runtime, "Resources/" + name),
+      name,
+    )
   }
   for locale in ["en-US.pak", "fr.pak"] {
     write_windows_test_file(
-      resolve_path(runtime, "Resources/locales/" + locale),
+      @fsutil.resolve_path(runtime, "Resources/locales/" + locale),
       locale,
     )
   }
@@ -87,7 +90,7 @@ async fn prepare_windows_test_runtime(root : String) -> String {
     extra in [
       "bin/libcef.lib", "bin/bootstrap.exe", "bin/bootstrapc.exe", "lib/proton.lib",
     ] {
-    write_windows_test_file(resolve_path(runtime, extra), "build-only")
+    write_windows_test_file(@fsutil.resolve_path(runtime, extra), "build-only")
   }
   runtime
 }
@@ -97,7 +100,7 @@ async fn windows_test_sign_tool(
   root : String,
   mode : String,
 ) -> WindowsSignTool {
-  let script = resolve_path(root, "fake signtool.ps1")
+  let script = @fsutil.resolve_path(root, "fake signtool.ps1")
   let text =
     #|$mode = "{{MODE}}"
     #|$kind = if ($args.Count -gt 0) { $args[0] } else { "" }
@@ -150,7 +153,7 @@ test "Windows signtool args use SHA-256 and RFC3161 timestamp" {
 async test "Windows icon selection accepts ico and rejects a missing source" {
   let root = "target/proton-package-windows-icon"
   remove_tree(root)
-  let selected = resolve_path(root, "Demo.ICO")
+  let selected = @fsutil.resolve_path(root, "Demo.ICO")
   assert_eq(
     first_windows_icon(["icons/icon.png", selected, "icons/fallback.ico"]),
     Some(selected),
@@ -158,7 +161,7 @@ async test "Windows icon selection accepts ico and rejects a missing source" {
   assert_eq(first_windows_icon(["icons/icon.png", "icons/icon.icns"]), None)
   let plan = windows_test_plan(root, ["app"], false)
   plan.icons.push(selected)
-  try stage_windows_icon(plan, resolve_path(root, "demo.exe")) catch {
+  try stage_windows_icon(plan, @fsutil.resolve_path(root, "demo.exe")) catch {
     PackagePlanError::MissingIcon(path~) => assert_eq(path, selected)
     _ => abort("expected missing Windows icon")
   } noraise {
@@ -169,7 +172,7 @@ async test "Windows icon selection accepts ico and rejects a missing source" {
 ///|
 test "Windows path resolution keeps dotted relative children under the base" {
   let path = normalize_slashes(
-    resolve_path("target/proton-path-base", ".proton/runtime.json"),
+    @fsutil.resolve_path("target/proton-path-base", ".proton/runtime.json"),
   )
   assert_true(path.has_suffix("/target/proton-path-base/.proton/runtime.json"))
 }
@@ -179,7 +182,7 @@ async test "Windows runtime validation rejects a missing required file" {
   let root = "target/proton-package-windows-missing-runtime"
   ignore(prepare_windows_test_inputs(root))
   let runtime = prepare_windows_test_runtime(root)
-  let missing = resolve_path(runtime, "bin/chrome_elf.dll")
+  let missing = @fsutil.resolve_path(runtime, "bin/chrome_elf.dll")
   remove_tree(missing)
   try require_windows_runtime_layout(runtime) catch {
     WindowsPackagingError::InvalidConfiguration(detail~) => {
@@ -202,7 +205,7 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
   let plan = windows_test_plan(root, ["app"], false)
   let output = windows_portable_output(plan)
   ensure_dir(output)
-  write_windows_test_file(resolve_path(output, "old.txt"), "old")
+  write_windows_test_file(@fsutil.resolve_path(output, "old.txt"), "old")
   stage_windows_portable_with_options(
     plan,
     executable,
@@ -217,13 +220,13 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
       "Resources/icudtl.dat", "Resources/locales/en-US.pak", "moon.proton", "frontend/dist/index.html",
       "bundle resources/data.txt", "proton-package.json",
     ] {
-    assert_true(@mbfs.path_exists(resolve_path(output, required)))
+    assert_true(@mbfs.path_exists(@fsutil.resolve_path(output, required)))
   }
   for
     forbidden in [
       "old.txt", "proton.lib", "libcef.lib", "bootstrap.exe", "bootstrapc.exe", "bin",
     ] {
-    assert_false(@mbfs.path_exists(resolve_path(output, forbidden)))
+    assert_false(@mbfs.path_exists(@fsutil.resolve_path(output, forbidden)))
   }
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))
   assert_false(@mbfs.path_exists(output + ".backup"))
@@ -245,10 +248,10 @@ async test "Windows portable zip is atomic and extracts from paths with spaces" 
     false,
   )
   let archive = windows_archive_path(plan)
-  assert_true(path_is_file(archive))
+  assert_true(@fsutil.path_is_file(archive))
   assert_false(@mbfs.path_exists(windows_archive_staging_path(plan)))
   assert_false(@mbfs.path_exists(archive + ".backup"))
-  let extracted = resolve_path(root, "extracted archive with spaces")
+  let extracted = @fsutil.resolve_path(root, "extracted archive with spaces")
   let script =
     #|& {
     #|  $ErrorActionPreference = "Stop"
@@ -263,19 +266,23 @@ async test "Windows portable zip is atomic and extracts from paths with spaces" 
     },
   )
   assert_eq(code, 0)
-  assert_true(path_is_file(resolve_path(extracted, "demo-app/demo-app.exe")))
+  assert_true(
+    @fsutil.path_is_file(
+      @fsutil.resolve_path(extracted, "demo-app/demo-app.exe"),
+    ),
+  )
 }
 
 ///|
 async test "Windows promotion rolls back when staging is missing" {
   let root = "target/proton-package-windows-rollback"
   remove_tree(root)
-  let destination = resolve_path(root, "Demo App")
-  let marker = resolve_path(destination, "old.txt")
+  let destination = @fsutil.resolve_path(root, "Demo App")
+  let marker = @fsutil.resolve_path(destination, "old.txt")
   write_windows_test_file(marker, "old")
   try
     promote_windows_artifact(
-      resolve_path(root, "missing staging"),
+      @fsutil.resolve_path(root, "missing staging"),
       destination,
       "Windows app",
     )
@@ -286,7 +293,7 @@ async test "Windows promotion rolls back when staging is missing" {
   } noraise {
     _ => abort("expected promotion failure")
   }
-  assert_true(path_is_file(marker))
+  assert_true(@fsutil.path_is_file(marker))
   assert_false(@mbfs.path_exists(destination + ".backup"))
 }
 
@@ -294,13 +301,13 @@ async test "Windows promotion rolls back when staging is missing" {
 async test "Windows promotion restores a stale backup before continuing" {
   let root = "target/proton-package-windows-stale-backup"
   remove_tree(root)
-  let destination = resolve_path(root, "Demo App")
+  let destination = @fsutil.resolve_path(root, "Demo App")
   let backup = destination + ".backup"
-  let marker = resolve_path(backup, "old.txt")
+  let marker = @fsutil.resolve_path(backup, "old.txt")
   write_windows_test_file(marker, "old")
   try
     promote_windows_artifact(
-      resolve_path(root, "missing staging"),
+      @fsutil.resolve_path(root, "missing staging"),
       destination,
       "Windows app",
     )
@@ -309,7 +316,9 @@ async test "Windows promotion restores a stale backup before continuing" {
   } noraise {
     _ => abort("expected promotion failure")
   }
-  assert_true(path_is_file(resolve_path(destination, "old.txt")))
+  assert_true(
+    @fsutil.path_is_file(@fsutil.resolve_path(destination, "old.txt")),
+  )
   assert_false(@mbfs.path_exists(backup))
 }
 
@@ -317,15 +326,15 @@ async test "Windows promotion restores a stale backup before continuing" {
 async test "Windows signing rejects a missing target before invoking signtool" {
   let root = "target/proton-package-windows-missing-sign-target"
   let (_, _) = prepare_windows_test_inputs(root)
-  let output = resolve_path(root, "portable")
+  let output = @fsutil.resolve_path(root, "portable")
   for
     path in [
-      resolve_path(output, "demo-app.exe"),
-      resolve_path(output, "proton.dll"),
+      @fsutil.resolve_path(output, "demo-app.exe"),
+      @fsutil.resolve_path(output, "proton.dll"),
     ] {
     write_windows_test_file(path, "binary")
   }
-  let certificate = resolve_path(root, "test certificate.pfx")
+  let certificate = @fsutil.resolve_path(root, "test certificate.pfx")
   write_windows_test_file(certificate, "certificate")
   try
     sign_windows_portable_configured(
@@ -353,7 +362,7 @@ async test "Windows signing rejects a missing target before invoking signtool" {
 async test "Windows signing failure does not leak the certificate password" {
   let root = "target/proton-package-windows-sign-failure"
   let (_, _) = prepare_windows_test_inputs(root)
-  let output = resolve_path(root, "portable")
+  let output = @fsutil.resolve_path(root, "portable")
   let plan = windows_test_plan(root, ["app"], true)
   for target in windows_owned_sign_targets(plan, output) {
     write_windows_test_file(target, "binary")
@@ -361,7 +370,7 @@ async test "Windows signing failure does not leak the certificate password" {
   for target in windows_upstream_signature_targets(output) {
     write_windows_test_file(target, "upstream")
   }
-  let certificate = resolve_path(root, "test certificate.pfx")
+  let certificate = @fsutil.resolve_path(root, "test certificate.pfx")
   write_windows_test_file(certificate, "certificate")
   let password = "do-not-print-this-password"
   try
@@ -391,9 +400,9 @@ async test "Windows signing failure blocks promotion" {
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app"], true)
   let output = windows_portable_output(plan)
-  let marker = resolve_path(output, "old.txt")
+  let marker = @fsutil.resolve_path(output, "old.txt")
   write_windows_test_file(marker, "old")
-  let certificate = resolve_path(root, "test certificate.pfx")
+  let certificate = @fsutil.resolve_path(root, "test certificate.pfx")
   write_windows_test_file(certificate, "certificate")
   try
     stage_windows_portable_with_options(
@@ -413,7 +422,7 @@ async test "Windows signing failure blocks promotion" {
   } noraise {
     _ => abort("expected signtool signing failure")
   }
-  assert_true(path_is_file(marker))
+  assert_true(@fsutil.path_is_file(marker))
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))
   assert_false(@mbfs.path_exists(output + ".backup"))
 }
@@ -426,9 +435,9 @@ async test "Windows signature verification failure blocks promotion" {
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app"], true)
   let output = windows_portable_output(plan)
-  let marker = resolve_path(output, "old.txt")
+  let marker = @fsutil.resolve_path(output, "old.txt")
   write_windows_test_file(marker, "old")
-  let certificate = resolve_path(root, "test certificate.pfx")
+  let certificate = @fsutil.resolve_path(root, "test certificate.pfx")
   write_windows_test_file(certificate, "certificate")
   try
     stage_windows_portable_with_options(
@@ -452,7 +461,7 @@ async test "Windows signature verification failure blocks promotion" {
   } noraise {
     _ => abort("expected signtool verification failure")
   }
-  assert_true(path_is_file(marker))
+  assert_true(@fsutil.path_is_file(marker))
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))
   assert_false(@mbfs.path_exists(output + ".backup"))
 }

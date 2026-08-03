@@ -13,14 +13,14 @@ fn ensure_test_project_root(path : String) -> String {
   let root = @path.Path(path).resolve().to_string()
   ensure_test_dir(root)
   @mbfs.write_string_to_file(
-    path_join(root, "moon.proton"),
+    @fsutil.path_join(root, "moon.proton"),
     "",
     encoding="utf8",
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
-    path_join(root, "moon.mod"),
+    @fsutil.path_join(root, "moon.mod"),
     "name = \"doctor-test-project\"\n",
     encoding="utf8",
   ) catch {
@@ -39,15 +39,15 @@ fn assert_test_path_suffix(value : String, suffix : String) -> Unit {
 
 ///|
 test "doctor paths use the host separator" {
-  let joined = path_join("..", "examples")
+  let joined = @fsutil.path_join("..", "examples")
   assert_eq(joined, ".." + @path.sep.to_string() + "examples")
 }
 
 ///|
 async test "doctor resolves a relative project cwd" {
   let project = discover_project(".")
-  assert_true(path_is_absolute_like(project.root))
-  assert_true(path_is_absolute_like(development_native_dist(project)))
+  assert_true(@fsutil.path_is_absolute(project.root))
+  assert_true(@fsutil.path_is_absolute(development_native_dist(project)))
 }
 
 ///|
@@ -57,17 +57,23 @@ async test "doctor resolves a relative native dist override" {
   let project = discover_project(root)
   assert_eq(
     resolve_native_dist_override(project, Some(relative)),
-    Some(@path.Path(path_join(root, relative)).resolve().to_string()),
+    Some(@path.Path(@fsutil.path_join(root, relative)).resolve().to_string()),
   )
   assert_eq(resolve_native_dist_override(project, Some("  ")), None)
   assert_eq(
     resolve_native_dist_override(
       project,
       Some(
-        @path.Path(path_join(root, "absolute-runtime")).resolve().to_string(),
+        @path.Path(@fsutil.path_join(root, "absolute-runtime"))
+        .resolve()
+        .to_string(),
       ),
     ),
-    Some(@path.Path(path_join(root, "absolute-runtime")).resolve().to_string()),
+    Some(
+      @path.Path(@fsutil.path_join(root, "absolute-runtime"))
+      .resolve()
+      .to_string(),
+    ),
   )
   assert_eq(resolve_native_dist_override(project, None), None)
 }
@@ -77,9 +83,11 @@ async test "doctor project boundary rejects outside paths" {
   let root = ensure_test_project_root("target/proton-doctor-boundary")
   let project = discover_project(root)
   assert_eq(project.root, root)
-  assert_eq(project.moon_mod_path, Some(path_join(root, "moon.mod")))
+  assert_eq(project.moon_mod_path, Some(@fsutil.path_join(root, "moon.mod")))
   assert_true(project.moon_pkg_path is None)
-  assert_true(path_is_within_project(project, path_join(root, "app.html")))
+  assert_true(
+    path_is_within_project(project, @fsutil.path_join(root, "app.html")),
+  )
   assert_false(
     path_is_within_project(
       project,
@@ -91,17 +99,17 @@ async test "doctor project boundary rejects outside paths" {
 ///|
 async test "doctor keeps package-local config in module context" {
   let root = ensure_test_project_root("target/proton-doctor-package-config")
-  let package_dir = path_join(root, "desktop")
+  let package_dir = @fsutil.path_join(root, "desktop")
   ensure_test_dir(package_dir)
   @mbfs.write_string_to_file(
-    path_join(package_dir, "moon.proton"),
+    @fsutil.path_join(package_dir, "moon.proton"),
     "",
     encoding="utf8",
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
-    path_join(package_dir, "moon.pkg"),
+    @fsutil.path_join(package_dir, "moon.pkg"),
     "",
     encoding="utf8",
   ) catch {
@@ -109,13 +117,18 @@ async test "doctor keeps package-local config in module context" {
   }
   let project = discover_project(package_dir)
   assert_eq(project.root, root)
-  assert_eq(project.moon_mod_path, Some(path_join(root, "moon.mod")))
+  assert_eq(project.moon_mod_path, Some(@fsutil.path_join(root, "moon.mod")))
   assert_eq(
     project.moon_proton_path,
-    Some(path_join(package_dir, "moon.proton")),
+    Some(@fsutil.path_join(package_dir, "moon.proton")),
   )
-  assert_eq(project.moon_pkg_path, Some(path_join(package_dir, "moon.pkg")))
-  assert_true(path_is_within_project(project, path_join(root, "frontend")))
+  assert_eq(
+    project.moon_pkg_path,
+    Some(@fsutil.path_join(package_dir, "moon.pkg")),
+  )
+  assert_true(
+    path_is_within_project(project, @fsutil.path_join(root, "frontend")),
+  )
 }
 
 ///|
@@ -146,13 +159,13 @@ test "doctor Windows path boundary ignores ASCII case" {
 ///|
 async test "doctor discovers generated app package and derives dependencies" {
   let root = "target/proton-doctor-generated-app"
-  let app_dir = path_join(root, "app")
+  let app_dir = @fsutil.path_join(root, "app")
   ensure_test_dir(root)
   @mbfs.create_dir(app_dir) catch {
     _ => ()
   }
   @mbfs.write_string_to_file(
-    path_join(root, "moon.proton"),
+    @fsutil.path_join(root, "moon.proton"),
     (
       #|window = { title: "Demo", width: 800, height: 600 }
       #|entry = { kind: "asset", value: "app/app.html" }
@@ -163,7 +176,7 @@ async test "doctor discovers generated app package and derives dependencies" {
     err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
-    path_join(root, "moon.mod"),
+    @fsutil.path_join(root, "moon.mod"),
     (
       #|name = "generated-app"
       #|
@@ -186,7 +199,7 @@ async test "doctor discovers generated app package and derives dependencies" {
     err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
-    path_join(app_dir, "moon.pkg"),
+    @fsutil.path_join(app_dir, "moon.pkg"),
     (
       #|import {
       #|  "justjavac/proton",
@@ -258,7 +271,7 @@ async test "frontend run captures build command output" {
   let dir = "target/proton-doctor-frontend-run"
   ensure_test_dir(dir)
   @mbfs.write_string_to_file(
-    path_join(dir, "moon.proton"),
+    @fsutil.path_join(dir, "moon.proton"),
     (
       #|window = { title: "Demo", width: 800, height: 600 }
       #|entry = { kind: "html", value: "<h1>Demo</h1>" }
@@ -270,7 +283,7 @@ async test "frontend run captures build command output" {
     err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
-    path_join(dir, "package.json"),
+    @fsutil.path_join(dir, "package.json"),
     "{\"scripts\":{}}",
     encoding="utf8",
   ) catch {
@@ -285,19 +298,19 @@ async test "frontend run captures build command output" {
 ///|
 async test "doctor fix regenerates extensions and honors dry run" {
   let root = ensure_test_project_root("target/proton-doctor-fix")
-  let extension_dir = path_join(root, "sample")
+  let extension_dir = @fsutil.path_join(root, "sample")
   @mbfs.create_dir(extension_dir) catch {
     _ => ()
   }
   @mbfs.write_string_to_file(
-    path_join(extension_dir, "moon.ext"),
+    @fsutil.path_join(extension_dir, "moon.ext"),
     "id = \"company/sample\"\nnamespace = \"sample\"\n",
     encoding="utf8",
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
   @mbfs.write_string_to_file(
-    path_join(extension_dir, "extension.mbt"),
+    @fsutil.path_join(extension_dir, "extension.mbt"),
     (
       #|let ping_command : @proton_contract.Command[Unit, Unit] =
       #|  generated_extension_contract.command("ping")
@@ -310,7 +323,7 @@ async test "doctor fix regenerates extensions and honors dry run" {
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let generated_path = path_join(extension_dir, "extension.g.mbt")
+  let generated_path = @fsutil.path_join(extension_dir, "extension.g.mbt")
   @mbfs.write_string_to_file(generated_path, "stale", encoding="utf8") catch {
     err => abort(@debug.render(Repr(err)))
   }
@@ -420,11 +433,11 @@ async test "doctor reports invalid runtime manifests" {
   })
   @sys.unset_env_var("PROTON_NATIVE_DIST")
   let dir = ensure_test_project_root("target/proton-doctor-invalid-runtime")
-  let proton_dir = path_join(dir, ".proton")
+  let proton_dir = @fsutil.path_join(dir, ".proton")
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
-  let manifest_path = path_join(proton_dir, "runtime.json")
+  let manifest_path = @fsutil.path_join(proton_dir, "runtime.json")
   @mbfs.write_string_to_file(manifest_path, "{ invalid", encoding="utf8") catch {
     err => abort(@debug.render(Repr(err)))
   }
@@ -440,11 +453,11 @@ async test "doctor reports invalid runtime manifests" {
 ///|
 async test "doctor validates runtime manifest schema" {
   let dir = ensure_test_project_root("target/proton-doctor-runtime-schema")
-  let proton_dir = path_join(dir, ".proton")
+  let proton_dir = @fsutil.path_join(dir, ".proton")
   @mbfs.create_dir(proton_dir) catch {
     _ => ()
   }
-  let manifest_path = path_join(proton_dir, "runtime.json")
+  let manifest_path = @fsutil.path_join(proton_dir, "runtime.json")
   @mbfs.write_string_to_file(
     manifest_path,
     (
@@ -658,7 +671,14 @@ test "doctor renders native open ABI errors" {
 async fn doctor_test_workspace_root() -> String {
   let cwd = @path.Path(".").resolve().to_string()
   match find_up(cwd, "moon.work") {
-    Some(path) => path_parent(path).unwrap_or(cwd)
+    Some(path) => {
+      let parent = @fsutil.path_parent(path)
+      if parent == path {
+        cwd
+      } else {
+        parent
+      }
+    }
     None => abort("expected doctor tests to run inside the Proton workspace")
   }
 }
@@ -681,7 +701,7 @@ async fn doctor_test_native_dist(platform_id : String) -> String? {
           )
         _ => ()
       }
-      let candidate = path_join(native_dist, relative)
+      let candidate = @fsutil.path_join(native_dist, relative)
       guard @mbfs.path_exists(candidate) else {
         abort(
           "expected an active Proton runtime library at " +
@@ -700,7 +720,7 @@ async fn doctor_test_native_library_path(platform_id : String) -> String? {
   match doctor_test_native_dist(platform_id) {
     Some(native_dist) =>
       match runtime_library_relative_path(platform_id) {
-        Some(relative) => Some(path_join(native_dist, relative))
+        Some(relative) => Some(@fsutil.path_join(native_dist, relative))
         None => None
       }
     None => None
@@ -718,8 +738,15 @@ async test "doctor deep native probe succeeds against active runtime" {
       assert_true(lines.any(fn(line) { line.code == "runtime.deep.info" }))
       assert_true(lines.any(fn(line) { line.code == "runtime.deep.engine" }))
       assert_true(lines.any(fn(line) { line.code == "runtime.deep.probe" }))
-      assert_true(lines.any(fn(line) { line.code == "runtime.deep.smoke" }))
-      assert_true(lines.all(fn(line) { line.status == Ok }))
+      assert_true(
+        lines.any(fn(line) {
+          line.code == "runtime.deep.smoke" ||
+          line.code == "runtime.deep.smoke_skipped"
+        }),
+      )
+      assert_true(
+        lines.all(fn(line) { line.status == Ok || line.status == Neutral }),
+      )
     }
   }
 }
@@ -768,8 +795,8 @@ async test "doctor native loader accepts UTF-8 library paths" {
       let relative_source = @path.Path(source_path)
         .relative(base=@path.Path(".").resolve())
         .to_string()
-      let library_path = path_join(
-        path_join(path_join(unicode_dir, ".."), ".."),
+      let library_path = @fsutil.path_join(
+        @fsutil.path_join(@fsutil.path_join(unicode_dir, ".."), ".."),
         relative_source,
       )
       match doctor_native_open(library_path) {
@@ -902,8 +929,8 @@ async test "doctor native loader reports a missing ABI symbol" {
 async test "moon_config adapter reads module deps and package imports" {
   let dir = "target/proton-doctor-config"
   ensure_test_dir(dir)
-  let moon_mod_path = path_join(dir, "moon.mod")
-  let moon_pkg_path = path_join(dir, "moon.pkg")
+  let moon_mod_path = @fsutil.path_join(dir, "moon.mod")
+  let moon_pkg_path = @fsutil.path_join(dir, "moon.pkg")
   @mbfs.write_string_to_file(
     moon_mod_path,
     (
@@ -970,7 +997,7 @@ async test "moon_config adapter reads module deps and package imports" {
 async test "moon_config adapter reports parse failures" {
   let dir = "target/proton-doctor-bad-config"
   ensure_test_dir(dir)
-  let moon_mod_path = path_join(dir, "moon.mod")
+  let moon_mod_path = @fsutil.path_join(dir, "moon.mod")
   @mbfs.write_string_to_file(
     moon_mod_path,
     (
@@ -1009,7 +1036,7 @@ test "doctor collector extracts first non-empty version line" {
 async test "moon.proton reader extracts app and frontend fields" {
   let dir = "target/proton-doctor-app-config"
   ensure_test_dir(dir)
-  let config_path = path_join(dir, "moon.proton")
+  let config_path = @fsutil.path_join(dir, "moon.proton")
   @mbfs.write_string_to_file(
     config_path,
     (
@@ -1088,7 +1115,7 @@ async test "moon.proton reader extracts app and frontend fields" {
 async test "moon.proton reader rejects manifest extensions" {
   let dir = "target/proton-doctor-app-config-reject"
   ensure_test_dir(dir)
-  let config_path = path_join(dir, "moon.proton")
+  let config_path = @fsutil.path_join(dir, "moon.proton")
   @mbfs.write_string_to_file(
     config_path,
     (

@@ -13,7 +13,7 @@ fn assert_safe_install_dir(
 ) -> Unit raise CefRuntimeError {
   let normalized_install = install_dir.replace_all(old="/", new="\\")
   let normalized_root = root.replace_all(old="/", new="\\")
-  let parent = path_parent(normalized_root)
+  let parent = @fsutil.path_parent(normalized_root)
   if normalized_install == "" ||
     normalized_install.has_suffix(":\\") ||
     normalized_install == normalized_root ||
@@ -33,10 +33,10 @@ async fn install_cef_root(
 ) -> Unit {
   assert_safe_install_dir(install_dir, root)
   remove_tree(install_dir)
-  println("[INFO] Installing CEF into: " + install_dir)
+  @output.info("[INFO] Installing CEF into: " + install_dir)
   copy_tree(extracted_root, install_dir)
   normalize_cef_runtime_layout(install_dir)
-  let version_path = path_join(install_dir, "version.txt")
+  let version_path = @fsutil.path_join(install_dir, "version.txt")
   @async_fs.write_file(version_path, name + "\n", create_mode=CreateOrTruncate) catch {
     err =>
       raise CefFileSystemError::Write(
@@ -44,7 +44,7 @@ async fn install_cef_root(
         detail=@debug.render(Repr(err)),
       )
   }
-  let checksum_path = path_join(install_dir, "sha256.txt")
+  let checksum_path = @fsutil.path_join(install_dir, "sha256.txt")
   @async_fs.write_file(
     checksum_path,
     sha256 + "\n",
@@ -73,13 +73,26 @@ async fn ensure_cef_cache(
     normalize_cef_runtime_layout(cache_dir)
     return
   }
-  let legacy_cache = path_join(root, ".cef-cache")
+  let legacy_cache = @fsutil.path_join(root, ".cef-cache")
   if installed_version(legacy_cache) == name &&
     installed_checksum(legacy_cache) == sha256 {
     install_cef_root(legacy_cache, cache_dir, name, sha256, root, platform)
     return
   }
   setup_downloaded_cef(name, url, sha256, root, cache_dir, platform)
+}
+
+///|
+/// Probes that `tool` runs before a CEF download starts. A spawn failure or a
+/// non-zero exit code means the tool is not available on PATH. Probe output is
+/// captured and discarded so version banners never reach the command's own
+/// output streams.
+async fn ensure_download_tool(tool : String) -> Unit {
+  let (code, _) = @process.collect_output_merged(tool, ["--version"]) catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => raise CefDownloadError::ToolUnavailable(tool~)
+  }
+  guard code == 0 else { raise CefDownloadError::ToolUnavailable(tool~) }
 }
 
 ///|
@@ -91,8 +104,10 @@ async fn setup_downloaded_cef(
   install_dir : String,
   platform : ProtonPlatform,
 ) -> Unit {
+  ensure_download_tool("curl")
+  ensure_download_tool("tar")
   let temp_dir = make_temp_dir()
-  let archive_path = path_join(temp_dir, name + ".tar.bz2")
+  let archive_path = @fsutil.path_join(temp_dir, name + ".tar.bz2")
   try {
     download_file(archive_url(name, url), archive_path, sha256)
     extract_tar_bz2(archive_path, temp_dir)
@@ -111,8 +126,8 @@ async fn setup_downloaded_cef(
 
 ///|
 async fn installed_version(install_dir : String) -> String {
-  let version_path = path_join(install_dir, "version.txt")
-  if path_is_file(version_path) {
+  let version_path = @fsutil.path_join(install_dir, "version.txt")
+  if @fsutil.path_is_file(version_path) {
     @async_fs.read_file(version_path).text().trim().to_owned() catch {
       error if @async.is_being_cancelled() => raise error
       _ => ""
@@ -124,8 +139,8 @@ async fn installed_version(install_dir : String) -> String {
 
 ///|
 async fn installed_checksum(install_dir : String) -> String {
-  let checksum_path = path_join(install_dir, "sha256.txt")
-  if path_is_file(checksum_path) {
+  let checksum_path = @fsutil.path_join(install_dir, "sha256.txt")
+  if @fsutil.path_is_file(checksum_path) {
     @async_fs.read_file(checksum_path).text().trim().to_owned() catch {
       error if @async.is_being_cancelled() => raise error
       _ => ""

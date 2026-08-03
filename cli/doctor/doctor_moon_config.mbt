@@ -49,7 +49,7 @@ fn ast_bool(ast : @moon_config.Ast?) -> Bool? {
 
 ///|
 async fn read_moon_file(path : String) -> String {
-  if !doctor_path_exists(path) {
+  if !@fsutil.path_exists(path) {
     raise MissingFile(path)
   } else {
     @async_fs.read_file(path).text() catch {

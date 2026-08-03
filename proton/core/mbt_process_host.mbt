@@ -97,52 +97,6 @@ pub fn MbtProcessHost::registered_ops(self : MbtProcessHost) -> Array[String] {
 }
 
 ///|
-/// Dispatches one decoded IPC request.
-///
-/// Async handlers complete later through `complete`; synchronous handlers call it
-/// before this function returns.
-pub fn MbtProcessHost::dispatch(
-  self : MbtProcessHost,
-  request : @ipc.IpcOpRequest,
-  complete : (@ipc.IpcOpResponse) -> Unit,
-) -> Unit {
-  let fallback_id = ipc_request_fallback_response_id(request)
-  let request = request.validate() catch {
-    error => {
-      complete(
-        @ipc.IpcOpResponse::err(
-          fallback_id,
-          self.error_policy.response_message(error, "invalid command request"),
-        ),
-      )
-      return
-    }
-  }
-  guard !self.closed else {
-    complete(
-      @ipc.IpcOpResponse::err(request.id, OpDispatchError::HostClosed.message()),
-    )
-    return
-  }
-  if self.registry.has_async(request.name) {
-    complete(
-      @ipc.IpcOpResponse::err(
-        request.id,
-        OpDispatchError::AsyncHandlerRequiresAsync(name=request.name).message(),
-      ),
-    )
-  } else {
-    let response = try self.registry.call(request.name, request.payload) catch {
-      error =>
-        @ipc.IpcOpResponse::err(request.id, self.dispatch_error_message(error))
-    } noraise {
-      body => @ipc.IpcOpResponse::ok(request.id, body)
-    }
-    complete(response)
-  }
-}
-
-///|
 /// Dispatches one decoded IPC request on the current async loop.
 ///
 /// User command hosts use this path so async ops run inside the user process
@@ -235,43 +189,6 @@ fn MbtProcessHost::dispatch_error_message(
     _ => "command dispatch failed"
   }
   self.error_policy.response_message(error, safe_message)
-}
-
-///|
-/// Parses and dispatches one JSON IPC request payload.
-pub fn MbtProcessHost::dispatch_json(
-  self : MbtProcessHost,
-  raw : String,
-  complete : (@ipc.IpcOpResponse) -> Unit,
-) -> Unit {
-  let request = @ipc.parse_ipc_op_request(raw) catch {
-    error => {
-      complete(
-        @ipc.IpcOpResponse::err(
-          "invalid",
-          self.error_policy.response_message(error, "invalid command request"),
-        ),
-      )
-      return
-    }
-  }
-  self.dispatch(request, complete)
-}
-
-///|
-/// Parses and dispatches one JSON IPC request payload on the current async loop.
-pub async fn MbtProcessHost::dispatch_json_async(
-  self : MbtProcessHost,
-  raw : String,
-) -> @ipc.IpcOpResponse {
-  let request = @ipc.parse_ipc_op_request(raw) catch {
-    error =>
-      return @ipc.IpcOpResponse::err(
-        "invalid",
-        self.error_policy.response_message(error, "invalid command request"),
-      )
-  }
-  self.dispatch_async(request)
 }
 
 ///|

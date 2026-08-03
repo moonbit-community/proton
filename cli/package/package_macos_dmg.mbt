@@ -1,11 +1,11 @@
 ///|
 fn macos_dmg_path(plan : PackagePlan) -> String {
-  resolve_path(plan.output, plan.product_name + ".dmg")
+  @fsutil.resolve_path(plan.output, plan.product_name + ".dmg")
 }
 
 ///|
 fn macos_dmg_staging_path(plan : PackagePlan) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".staging.dmg",
   )
@@ -13,7 +13,7 @@ fn macos_dmg_staging_path(plan : PackagePlan) -> String {
 
 ///|
 fn macos_dmg_root_path(plan : PackagePlan) -> String {
-  resolve_path(
+  @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".dmg-root",
   )
@@ -52,8 +52,8 @@ async fn create_macos_dmg_impl(
   root : String,
   staging : String,
 ) -> Unit {
-  copy_tree(app, resolve_path(root, plan.product_name + ".app"))
-  let applications = resolve_path(root, "Applications")
+  copy_tree(app, @fsutil.resolve_path(root, plan.product_name + ".app"))
+  let applications = @fsutil.resolve_path(root, "Applications")
   @async_fs.symlink(target="/Applications", applications) catch {
     error =>
       raise PackageFileSystemError::Write(

@@ -105,10 +105,10 @@ pub async fn run(
   sections~ : Array[String],
   output~ : String?,
 ) -> Bool {
-  if !doctor_path_exists(cwd) {
+  if !@fsutil.path_exists(cwd) {
     raise WorkingDirectoryMissing(path=cwd)
   }
-  let cwd_is_dir = doctor_path_is_dir(cwd)
+  let cwd_is_dir = @fsutil.path_is_dir(cwd)
   if !cwd_is_dir {
     raise WorkingDirectoryNotDirectory(path=cwd)
   }

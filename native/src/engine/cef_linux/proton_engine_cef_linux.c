@@ -1490,6 +1490,13 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
   }
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
+  // On Xvfb-based CI displays Chromium's occlusion tracking can mark the
+  // window hidden and throttle the renderer, which then never lays out and
+  // never reports draggable regions. Keep the renderer active so region
+  // computation proceeds regardless of window-manager occlusion state.
+  proton_engine_append_switch(command_line,
+                              "disable-backgrounding-occluded-windows");
+  proton_engine_append_switch(command_line, "disable-renderer-backgrounding");
   proton_engine_append_switch(command_line, "disable-background-networking");
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
@@ -2352,12 +2359,14 @@ static void CEF_CALLBACK proton_engine_on_load_end(
     cef_frame_t *frame,
     int httpStatusCode) {
   (void)self;
-  (void)httpStatusCode;
   if (frame == NULL || !frame->is_main(frame)) {
     return;
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   char *url = proton_engine_userfree_to_utf8(frame->get_url(frame));
+  proton_engine_debug_log("load_end browser=%d status=%d url=%s",
+                          window != NULL ? window->browser_id : -1,
+                          httpStatusCode, url != NULL ? url : "(null)");
   if (window != NULL && window->bridge_config_json != NULL && url != NULL &&
       strcmp(url, "about:blank") != 0) {
     (void)proton_engine_bridge_send_lifecycle_probe(frame);
@@ -2460,6 +2469,9 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     const cef_string_t *error_string) {
   (void)self;
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_engine_debug_log(
+      "render_terminated browser=%d status=%d code=%d",
+      window != NULL ? window->browser_id : -1, (int)status, error_code);
   if (window == NULL || window->bridge_config_json == NULL || window->closing) {
     return;
   }

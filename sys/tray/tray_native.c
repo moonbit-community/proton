@@ -13,6 +13,7 @@
 #endif
 #elif defined(__linux__)
 #include <dlfcn.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #elif defined(__APPLE__)
 #include <dlfcn.h>
@@ -81,12 +82,121 @@ typedef struct moonbit_tray_state {
 static char moonbit_tray_create_error[256];
 static char moonbit_tray_support_message[256];
 
-static moonbit_tray_state_t *moonbit_tray_from_handle(int64_t handle) {
-  return (moonbit_tray_state_t *)(uintptr_t)handle;
+#define MOONBIT_TRAY_MAX_STATES 16
+
+#ifdef _WIN32
+typedef DWORD moonbit_tray_thread_id_t;
+
+static moonbit_tray_thread_id_t moonbit_tray_thread_self(void) {
+  return GetCurrentThreadId();
 }
 
-static int64_t moonbit_tray_to_handle(moonbit_tray_state_t *state) {
-  return (int64_t)(uintptr_t)state;
+static int32_t moonbit_tray_thread_equal(
+    moonbit_tray_thread_id_t left,
+    moonbit_tray_thread_id_t right) {
+  return left == right;
+}
+#elif defined(__linux__) || defined(__APPLE__)
+typedef pthread_t moonbit_tray_thread_id_t;
+
+static moonbit_tray_thread_id_t moonbit_tray_thread_self(void) {
+  return pthread_self();
+}
+
+static int32_t moonbit_tray_thread_equal(
+    moonbit_tray_thread_id_t left,
+    moonbit_tray_thread_id_t right) {
+  return pthread_equal(left, right);
+}
+#else
+typedef int moonbit_tray_thread_id_t;
+
+static moonbit_tray_thread_id_t moonbit_tray_thread_self(void) {
+  return 0;
+}
+
+static int32_t moonbit_tray_thread_equal(
+    moonbit_tray_thread_id_t left,
+    moonbit_tray_thread_id_t right) {
+  return left == right;
+}
+#endif
+
+typedef struct {
+  moonbit_tray_state_t *state;  /* NULL = slot free */
+  uint32_t generation;          /* bumped on each insert, skips 0 */
+  moonbit_tray_thread_id_t owner;  /* creating thread */
+} moonbit_tray_slot_t;
+
+/*
+ * No mutex protects g_tray_slots: all legal FFI calls and native callbacks
+ * run on the slot's owner thread (callbacks fire synchronously inside pump),
+ * and the owner check rejects foreign-thread calls before any slot pointer
+ * is handed out. A mutex held across calls would deadlock on pump's
+ * synchronous callbacks. Concurrent create from multiple threads is not
+ * supported.
+ */
+static moonbit_tray_slot_t g_tray_slots[MOONBIT_TRAY_MAX_STATES];
+
+static moonbit_tray_slot_t *moonbit_tray_registry_lookup(int64_t handle) {
+  uint32_t index;
+  uint32_t generation;
+  moonbit_tray_slot_t *slot;
+  if (handle <= 0) {
+    return NULL;
+  }
+  index = (uint32_t)((uint64_t)handle & 0xFFFFFFFFu);
+  generation = (uint32_t)((uint64_t)handle >> 32);
+  if (index == 0 || index > MOONBIT_TRAY_MAX_STATES || generation == 0) {
+    return NULL;
+  }
+  slot = &g_tray_slots[index - 1];
+  if (slot->generation != generation || slot->state == NULL) {
+    return NULL;
+  }
+  if (!moonbit_tray_thread_equal(slot->owner, moonbit_tray_thread_self())) {
+    return NULL;
+  }
+  return slot;
+}
+
+static moonbit_tray_state_t *moonbit_tray_from_handle(int64_t handle) {
+  moonbit_tray_slot_t *slot = moonbit_tray_registry_lookup(handle);
+  if (slot == NULL) {
+    return NULL;
+  }
+  return slot->state;
+}
+
+/* Handle 0 stays permanently invalid: slot indexes are stored +1. */
+static int64_t moonbit_tray_registry_insert(moonbit_tray_state_t *state) {
+  uint32_t index;
+  for (index = 0; index < MOONBIT_TRAY_MAX_STATES; index++) {
+    moonbit_tray_slot_t *slot = &g_tray_slots[index];
+    if (slot->state != NULL) {
+      continue;
+    }
+    slot->generation++;
+    if (slot->generation == 0 || slot->generation > 0x7FFFFFFFu) {
+      /* Keep the packed handle positive: bit 63 must stay clear. */
+      slot->generation = 1;
+    }
+    slot->state = state;
+    slot->owner = moonbit_tray_thread_self();
+    return ((int64_t)slot->generation << 32) | (int64_t)(index + 1);
+  }
+  return 0;
+}
+
+static moonbit_tray_state_t *moonbit_tray_registry_invalidate(int64_t handle) {
+  moonbit_tray_slot_t *slot = moonbit_tray_registry_lookup(handle);
+  moonbit_tray_state_t *state;
+  if (slot == NULL) {
+    return NULL;
+  }
+  state = slot->state;
+  slot->state = NULL;
+  return state;
 }
 
 static const char *moonbit_tray_text_or(const char *value, const char *fallback) {
@@ -219,84 +329,6 @@ static int32_t moonbit_tray_enqueue_menu_event(
     return 0;
   }
   return moonbit_tray_enqueue_event(state, event_json);
-}
-
-static const unsigned char moonbit_tray_test_bmp[] = {
-    0x42, 0x4d, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00,
-    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00,
-    0x00, 0x00, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x13, 0x0b,
-    0x00, 0x00, 0x13, 0x0b, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66,
-    0xcc, 0xff};
-
-static int32_t moonbit_tray_test_icon_path_buffer(
-    char *path,
-    size_t path_size) {
-#ifdef _WIN32
-  DWORD len;
-  int written;
-  if (path_size == 0) {
-    return 0;
-  }
-  len = GetTempPathA((DWORD)path_size, path);
-  if (len == 0 || len >= path_size) {
-    return 0;
-  }
-  written = snprintf(
-      path + len,
-      path_size - (size_t)len,
-      "moonbit-tray-test-icon-%lu.bmp",
-      (unsigned long)GetCurrentProcessId());
-  return written > 0 && (size_t)written < path_size - (size_t)len;
-#else
-  const char *tmp = getenv("TMPDIR");
-  if (tmp == NULL || tmp[0] == '\0') {
-    tmp = "/tmp";
-  }
-  {
-    int written = snprintf(
-        path,
-        path_size,
-        "%s/moonbit-tray-test-icon-%lu.bmp",
-        tmp,
-        (unsigned long)getpid());
-    return written > 0 && (size_t)written < path_size;
-  }
-#endif
-}
-
-MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_test_icon_path(void) {
-  char path[1024];
-  FILE *file;
-  if (!moonbit_tray_test_icon_path_buffer(path, sizeof(path))) {
-    return moonbit_tray_copy_message("");
-  }
-  file = fopen(path, "wb");
-  if (file == NULL) {
-    return moonbit_tray_copy_message("");
-  }
-  if (fwrite(
-          moonbit_tray_test_bmp,
-          1,
-          sizeof(moonbit_tray_test_bmp),
-          file) != sizeof(moonbit_tray_test_bmp)) {
-    fclose(file);
-    remove(path);
-    return moonbit_tray_copy_message("");
-  }
-  fclose(file);
-  return moonbit_tray_copy_message(path);
-}
-
-MOONBIT_FFI_EXPORT int32_t moonbit_tray_test_remove_file(
-    moonbit_bytes_t path) {
-  const char *text = (const char *)path;
-  if (text == NULL || text[0] == '\0') {
-    return 0;
-  }
-  return remove(text) == 0;
 }
 
 static char *moonbit_tray_strdup(const char *value) {
@@ -1827,6 +1859,39 @@ static void moonbit_tray_macos_drain_pool(moonbit_tray_id pool) {
   }
 }
 
+/*
+ * All tray states share one autorelease pool, tracked by user count: the
+ * first create pushes it and the last destroy drains it. Per-tray pools
+ * imposed stack-discipline (LIFO) destroy ordering — destroying two live
+ * trays out of order aborted the process. state->pool doubles as the token
+ * recording that this state holds one user count. Create and destroy must
+ * run outside any foreign autorelease-pool scope: a host pool pushed after
+ * ours must also be drained before our last destroy.
+ */
+static int g_tray_macos_pool_users = 0;
+static moonbit_tray_id g_tray_macos_shared_pool = NULL;
+
+static moonbit_tray_id moonbit_tray_macos_pool_acquire(void) {
+  if (g_tray_macos_shared_pool == NULL) {
+    g_tray_macos_shared_pool = moonbit_tray_macos_new_pool();
+  }
+  if (g_tray_macos_shared_pool == NULL) {
+    return NULL; /* no user counted */
+  }
+  g_tray_macos_pool_users++;
+  return g_tray_macos_shared_pool;
+}
+
+static void moonbit_tray_macos_pool_release(void) {
+  if (g_tray_macos_pool_users > 0) {
+    g_tray_macos_pool_users--;
+    if (g_tray_macos_pool_users == 0) {
+      moonbit_tray_macos_drain_pool(g_tray_macos_shared_pool);
+      g_tray_macos_shared_pool = NULL;
+    }
+  }
+}
+
 static moonbit_tray_id moonbit_tray_macos_string(const char *value) {
   return moonbit_tray_macos_send_id_cstring(
       moonbit_tray_macos_class("NSString"),
@@ -2233,7 +2298,7 @@ static void moonbit_tray_macos_release_state(moonbit_tray_state_t *state) {
     state->status_item = NULL;
   }
   if (state->pool != NULL) {
-    moonbit_tray_macos_send_void(state->pool, "drain");
+    moonbit_tray_macos_pool_release();
     state->pool = NULL;
   }
 }
@@ -2282,6 +2347,52 @@ MOONBIT_FFI_EXPORT int32_t moonbit_tray_is_supported(void) {
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_support_error(void) {
   return moonbit_tray_copy_message(moonbit_tray_support_message);
+}
+
+static void moonbit_tray_teardown_state(moonbit_tray_state_t *state) {
+#ifdef _WIN32
+  if (state->visible) {
+    Shell_NotifyIconW(NIM_DELETE, &state->icon_data);
+  }
+  moonbit_tray_win_destroy_pending_menu(state);
+  moonbit_tray_win_destroy_menu(state);
+  if (state->icon_owned && state->icon_data.hIcon != NULL) {
+    DestroyIcon(state->icon_data.hIcon);
+  }
+  if (state->hwnd != NULL) {
+    DestroyWindow(state->hwnd);
+  }
+#elif defined(__linux__)
+  if (state->indicator != NULL) {
+    moonbit_tray_linux_backend.app_indicator_set_status(
+        state->indicator,
+        MOONBIT_TRAY_APPINDICATOR_STATUS_PASSIVE);
+  }
+  moonbit_tray_linux_destroy_pending_menu(state);
+  moonbit_tray_linux_destroy_menu_widget(&state->menu);
+  if (moonbit_tray_linux_backend.g_object_unref != NULL) {
+    if (state->indicator != NULL) {
+      moonbit_tray_linux_backend.g_object_unref(state->indicator);
+    }
+  }
+#elif defined(__APPLE__)
+  moonbit_tray_macos_release_state(state);
+#endif
+}
+
+/* Shared by the three create exits: register, or tear down when full. */
+static int64_t moonbit_tray_finish_create(moonbit_tray_state_t *state) {
+  int64_t handle = moonbit_tray_registry_insert(state);
+  if (handle == 0) {
+    moonbit_tray_set_message(
+        moonbit_tray_create_error,
+        sizeof(moonbit_tray_create_error),
+        "too many live tray states");
+    moonbit_tray_teardown_state(state);
+    free(state);
+    return 0;
+  }
+  return handle;
 }
 
 MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
@@ -2347,7 +2458,7 @@ MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
   moonbit_tray_clear_message(
       moonbit_tray_create_error,
       sizeof(moonbit_tray_create_error));
-  return moonbit_tray_to_handle(state);
+  return moonbit_tray_finish_create(state);
 #elif defined(__linux__)
   if (!moonbit_tray_linux_backend_init()) {
     moonbit_tray_set_message(
@@ -2407,7 +2518,7 @@ MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
   moonbit_tray_clear_message(
       moonbit_tray_create_error,
       sizeof(moonbit_tray_create_error));
-  return moonbit_tray_to_handle(state);
+  return moonbit_tray_finish_create(state);
 #elif defined(__APPLE__)
   if (!moonbit_tray_macos_backend_init()) {
     moonbit_tray_set_message(
@@ -2431,7 +2542,15 @@ MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
         "failed to allocate tray state");
     return 0;
   }
-  state->pool = moonbit_tray_macos_new_pool();
+  state->pool = moonbit_tray_macos_pool_acquire();
+  if (state->pool == NULL) {
+    moonbit_tray_set_message(
+        moonbit_tray_create_error,
+        sizeof(moonbit_tray_create_error),
+        "failed to create tray autorelease pool");
+    free(state);
+    return 0;
+  }
   state->app = moonbit_tray_macos_send_id(
       moonbit_tray_macos_class("NSApplication"),
       "sharedApplication");
@@ -2489,7 +2608,7 @@ MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
   moonbit_tray_clear_message(
       moonbit_tray_create_error,
       sizeof(moonbit_tray_create_error));
-  return moonbit_tray_to_handle(state);
+  return moonbit_tray_finish_create(state);
 #else
   moonbit_tray_set_message(
       moonbit_tray_create_error,
@@ -2504,38 +2623,11 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_last_create_error(void) {
 }
 
 MOONBIT_FFI_EXPORT void moonbit_tray_destroy(int64_t handle) {
-  moonbit_tray_state_t *state = moonbit_tray_from_handle(handle);
+  moonbit_tray_state_t *state = moonbit_tray_registry_invalidate(handle);
   if (state == NULL) {
     return;
   }
-#ifdef _WIN32
-  if (state->visible) {
-    Shell_NotifyIconW(NIM_DELETE, &state->icon_data);
-  }
-  moonbit_tray_win_destroy_pending_menu(state);
-  moonbit_tray_win_destroy_menu(state);
-  if (state->icon_owned && state->icon_data.hIcon != NULL) {
-    DestroyIcon(state->icon_data.hIcon);
-  }
-  if (state->hwnd != NULL) {
-    DestroyWindow(state->hwnd);
-  }
-#elif defined(__linux__)
-  if (state->indicator != NULL) {
-    moonbit_tray_linux_backend.app_indicator_set_status(
-        state->indicator,
-        MOONBIT_TRAY_APPINDICATOR_STATUS_PASSIVE);
-  }
-  moonbit_tray_linux_destroy_pending_menu(state);
-  moonbit_tray_linux_destroy_menu_widget(&state->menu);
-  if (moonbit_tray_linux_backend.g_object_unref != NULL) {
-    if (state->indicator != NULL) {
-      moonbit_tray_linux_backend.g_object_unref(state->indicator);
-    }
-  }
-#elif defined(__APPLE__)
-  moonbit_tray_macos_release_state(state);
-#endif
+  moonbit_tray_teardown_state(state);
   free(state);
 }
 
@@ -2992,7 +3084,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_last_error(
     int64_t handle) {
   moonbit_tray_state_t *state = moonbit_tray_from_handle(handle);
   if (state == NULL) {
-    return moonbit_tray_copy_message("tray state is null");
+    return moonbit_tray_copy_message("invalid or stale tray handle");
   }
   return moonbit_tray_copy_message(state->last_error);
 }

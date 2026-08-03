@@ -13,8 +13,12 @@ pub let default_reason : String = "MoonBit keepawake request"
 ///
 /// The returned guard activates the native inhibition immediately and keeps it
 /// alive until `Guard::release` is called or the guard is reclaimed by the
-/// runtime. Blank reasons are normalized to `default_reason` so callers can
-/// keep call sites simple without losing readable backend diagnostics.
+/// runtime. On Windows the reclaim path may run on a different thread; the
+/// release is accounted for correctly, but the acquiring thread's power-state
+/// flags can persist until that thread exits, so explicit release from the
+/// acquiring thread is recommended. Blank reasons are normalized to
+/// `default_reason` so callers can keep call sites simple without losing
+/// readable backend diagnostics.
 ///
 /// `reason` should describe the user-visible work being protected, such as
 /// `"Exporting a large report"` or `"Downloading offline assets"`. `scope`

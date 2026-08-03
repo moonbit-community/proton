@@ -17,27 +17,6 @@ fn resolve_fixture_path(candidates : Array[String]) -> String {
 }
 
 ///|
-/// Builds one minimal descriptor for link-planning tests.
-fn stub_descriptor(
-  id : String,
-  js_namespace : String,
-  dependencies? : Array[String] = [],
-  moonbit_import_path? : String = "justjavac/proton_ext/" + js_namespace,
-) -> ExtensionDescriptor {
-  ExtensionDescriptor::new(
-    id,
-    "0.1.0",
-    id,
-    id + " extension",
-    js_namespace,
-    moonbit_import_path,
-    ["windows"],
-    dependencies,
-    moonbit_import_path,
-  )
-}
-
-///|
 /// Resolves the root directory of one built-in extension fixture for tests.
 fn builtin_extension_root(name : String) -> String {
   resolve_fixture_path([
@@ -80,17 +59,6 @@ fn[T] expect_descriptor_error(
     error => error
   } noraise {
     _ => fail("expected extension descriptor error")
-  }
-}
-
-///|
-fn[T] expect_link_error(
-  action : () -> T raise ExtensionLinkError,
-) -> ExtensionLinkError raise {
-  try action() catch {
-    error => error
-  } noraise {
-    _ => fail("expected extension link error")
   }
 }
 
@@ -354,45 +322,4 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
     catalog_test_path("testdata/vendor_extensions"),
   ])
   @debug.assert_eq(summary_from_roots, catalog.to_summary_json())
-}
-
-///|
-test "build_extension_link_plan expands metadata dependencies in order" {
-  let fs_descriptor = stub_descriptor("justjavac/proton-fs", "fs", dependencies=[
-    "justjavac/proton-path",
-  ])
-  let catalog = ExtensionCatalog::from_descriptors([
-    stub_descriptor("justjavac/proton-path", "path"),
-    fs_descriptor,
-    stub_descriptor("justjavac/proton-dialog", "dialog"),
-  ])
-  fs_descriptor.dependencies.push("vendor/mutated")
-
-  let plan = build_extension_link_plan(catalog, [
-    "justjavac/proton-fs", "justjavac/proton-dialog",
-  ])
-
-  @debug.assert_eq(plan.extension_ids(), [
-    "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
-  ])
-  assert_eq(plan.inputs()[0].moonbit_import_path(), "justjavac/proton_ext/path")
-
-  let inputs = plan.inputs()
-  inputs.push(inputs[0])
-  @debug.assert_eq(plan.extension_ids(), [
-    "justjavac/proton-path", "justjavac/proton-fs", "justjavac/proton-dialog",
-  ])
-}
-
-///|
-test "build_extension_link_plan rejects dependency cycles" {
-  let catalog = ExtensionCatalog::from_descriptors([
-    stub_descriptor("vendor/alpha", "alpha", dependencies=["vendor/beta"]),
-    stub_descriptor("vendor/beta", "beta", dependencies=["vendor/alpha"]),
-  ])
-
-  let error = expect_link_error(() => {
-    build_extension_link_plan(catalog, ["vendor/alpha"])
-  })
-  assert_eq(error, ExtensionLinkError::DependencyCycle(id="vendor/alpha"))
 }

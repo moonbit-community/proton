@@ -11,9 +11,15 @@ fn[T] expect_ipc_error(action : () -> T raise IpcError) -> IpcError raise {
 test "protocol version is shared by constructors" {
   assert_eq(protocol_version(), 1)
   assert_eq(
-    IpcFrame::request(
-      IpcOpRequest::new("req-version", "app:ping", Json::null()),
-    ).version,
+    IpcOpRequest::new("req-version", "app:ping", Json::null()).version,
+    protocol_version(),
+  )
+  assert_eq(
+    IpcOpResponse::ok("req-version", Json::null()).version,
+    protocol_version(),
+  )
+  assert_eq(
+    IpcExtensionEvent::new("ticker", "tick", Json::null()).version,
     protocol_version(),
   )
 }
@@ -61,61 +67,6 @@ test "decoded requests expose reusable validation" {
       supported=protocol_version(),
     ),
   )
-}
-
-///|
-test "transport frames decode by kind" {
-  let request = IpcOpRequest::new("req-2", "app:ping", Json::null())
-  let frame = IpcFrame::request(request)
-  let parsed_request = parse_ipc_frame(frame.stringify()).as_request()
-  assert_eq(parsed_request, request)
-}
-
-///|
-test "event frames validate payload shape" {
-  let event = IpcExtensionEvent::new("ticker", "tick", Json::null())
-  let parsed_event = parse_ipc_frame(IpcFrame::event(event).stringify()).as_event()
-  assert_eq(parsed_event, event)
-
-  let invalid_event = IpcFrame::{
-    version: 1,
-    kind: "event",
-    payload: Json::object({
-      "version": Json::number(1),
-      "extension_namespace": Json::string(""),
-      "event_name": Json::string("tick"),
-      "payload": Json::null(),
-    }),
-  }
-  let error = expect_ipc_error(() => invalid_event.as_event())
-  assert_eq(error, IpcError::EmptyField(path="IPC event extension namespace"))
-}
-
-///|
-test "frame decoders validate outer envelope" {
-  let request = IpcOpRequest::new("req-3", "app:ping", Json::null())
-  let invalid_version = IpcFrame::{
-    version: protocol_version() + 1,
-    kind: "request",
-    payload: ToJson::to_json(request),
-  }
-  let error = expect_ipc_error(() => invalid_version.as_request())
-  assert_eq(
-    error,
-    IpcError::UnsupportedVersion(
-      scope="frame",
-      actual=protocol_version() + 1,
-      supported=protocol_version(),
-    ),
-  )
-
-  let invalid_kind = IpcFrame::{
-    version: protocol_version(),
-    kind: "unknown",
-    payload: ToJson::to_json(request),
-  }
-  let error = expect_ipc_error(() => invalid_kind.as_request())
-  assert_eq(error, IpcError::UnsupportedFrameKind(kind="unknown"))
 }
 
 ///|

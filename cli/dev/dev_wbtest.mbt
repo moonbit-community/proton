@@ -27,14 +27,14 @@ fn write_dev_test_file(path : String, text : String) -> Unit {
 
 ///|
 fn create_fake_dev_runtime(root : String) -> String {
-  let runtime = join_path(root, "runtime")
-  let bin = join_path(runtime, "bin")
-  let lib = join_path(runtime, "lib")
+  let runtime = @fsutil.path_join(root, "runtime")
+  let bin = @fsutil.path_join(runtime, "bin")
+  let lib = @fsutil.path_join(runtime, "lib")
   ensure_dev_test_dir(root)
   ensure_dev_test_dir(runtime)
   ensure_dev_test_dir(bin)
   ensure_dev_test_dir(lib)
-  write_dev_test_file(join_path(bin, helper_executable_name()), "")
+  write_dev_test_file(@fsutil.path_join(bin, helper_executable_name()), "")
   runtime
 }
 
@@ -88,7 +88,7 @@ test "parse dev args accepts an isolated Moon target directory" {
 async test "read dev project config extracts module paths" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
-  let path = join_path(dir, "moon.proton")
+  let path = @fsutil.path_join(dir, "moon.proton")
   @mbfs.write_string_to_file(
     path,
     (
@@ -133,7 +133,7 @@ async test "read dev project config extracts module paths" {
 async test "read dev frontend config validates full project config" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
-  let path = join_path(dir, "bad-size-hint.moon.proton")
+  let path = @fsutil.path_join(dir, "bad-size-hint.moon.proton")
   @mbfs.write_string_to_file(
     path,
     (
@@ -176,7 +176,7 @@ async test "read dev frontend config validates full project config" {
 async test "frontend path is validated only when frontend starts" {
   let root = "target/proton-dev-cwd"
   ensure_dev_test_dir(root)
-  ensure_dev_test_dir(join_path(root, "frontend"))
+  ensure_dev_test_dir(@fsutil.path_join(root, "frontend"))
   let resolved = resolve_frontend_path(
     root,
     Some("frontend"),
@@ -211,49 +211,60 @@ async test "frontend path is validated only when frontend starts" {
 async test "dev config discovery prefers package-local moon.proton" {
   let root = "target/proton-dev-package-config"
   ensure_dev_test_dir(root)
-  ensure_dev_test_dir(join_path(root, "desktop"))
-  let package_config = join_path(join_path(root, "desktop"), "moon.proton")
+  ensure_dev_test_dir(@fsutil.path_join(root, "desktop"))
+  let package_config = @fsutil.path_join(
+    @fsutil.path_join(root, "desktop"),
+    "moon.proton",
+  )
   @mbfs.write_string_to_file(package_config, "", encoding="utf8") catch {
     err => abort(@debug.render(Repr(err)))
   }
   let raw = parse_dev_args(["--package", "desktop"])
   let resolved = resolve_dev_config_path(root, root, raw)
-  @debug.assert_eq(resolved, Some(resolve_path(root, "desktop/moon.proton")))
+  @debug.assert_eq(
+    resolved,
+    Some(@fsutil.resolve_path(root, "desktop/moon.proton")),
+  )
 }
 
 ///|
 async test "backend path supports nested directories with spaces" {
   let root = "target/proton dev backend"
-  let backend = join_path(root, "modules/backend app")
+  let backend = @fsutil.path_join(root, "modules/backend app")
   ensure_dev_test_dir(root)
-  ensure_dev_test_dir(join_path(root, "modules"))
+  ensure_dev_test_dir(@fsutil.path_join(root, "modules"))
   ensure_dev_test_dir(backend)
   let resolved = resolve_backend_path(root, Some("modules/backend app"))
-  @debug.assert_eq(resolved, resolve_path(root, "modules/backend app"))
+  @debug.assert_eq(resolved, @fsutil.resolve_path(root, "modules/backend app"))
 }
 
 ///|
 async test "dev runtime layout validates helper" {
   let root = "target/proton-dev-runtime-layout"
   let runtime = create_fake_dev_runtime(root)
-  let loaded = dev_runtime_from_root(resolve_path(".", runtime), "test runtime")
+  let loaded = dev_runtime_from_root(
+    @fsutil.resolve_path(".", runtime),
+    "test runtime",
+  )
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.root),
-    normalize_dev_test_slashes(resolve_path(".", runtime)),
+    normalize_dev_test_slashes(@fsutil.resolve_path(".", runtime)),
   )
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.bin_dir),
-    normalize_dev_test_slashes(join_path(resolve_path(".", runtime), "bin")),
+    normalize_dev_test_slashes(
+      @fsutil.path_join(@fsutil.resolve_path(".", runtime), "bin"),
+    ),
   )
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.helper_path),
     normalize_dev_test_slashes(
-      join_path(loaded.bin_dir, helper_executable_name()),
+      @fsutil.path_join(loaded.bin_dir, helper_executable_name()),
     ),
   )
   try
     dev_runtime_from_root(
-      resolve_path(".", join_path(root, "missing")),
+      @fsutil.resolve_path(".", @fsutil.path_join(root, "missing")),
       "test runtime",
     )
   catch {
@@ -272,10 +283,10 @@ async test "dev process preloads an indirect Linux CEF runtime" {
   let root = "target/proton-dev-runtime-preload"
   let runtime_path = create_fake_dev_runtime(root)
   let runtime = dev_runtime_from_root(
-    resolve_path(".", runtime_path),
+    @fsutil.resolve_path(".", runtime_path),
     "test runtime",
   )
-  write_dev_test_file(join_path(runtime.bin_dir, "libcef.so"), "")
+  write_dev_test_file(@fsutil.path_join(runtime.bin_dir, "libcef.so"), "")
   let previous = @sys.get_env_var("LD_PRELOAD")
   defer (match previous {
     Some(value) => @sys.set_env_var("LD_PRELOAD", value)
@@ -323,21 +334,21 @@ async test "read dev runtime honors PROTON_NATIVE_DIST override" {
     None => @sys.unset_env_var("PROTON_NATIVE_DIST")
   })
   @sys.set_env_var("PROTON_NATIVE_DIST", "runtime")
-  let loaded = read_dev_runtime(resolve_path(".", root))
+  let loaded = read_dev_runtime(@fsutil.resolve_path(".", root))
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.root),
-    normalize_dev_test_slashes(resolve_path(".", runtime)),
+    normalize_dev_test_slashes(@fsutil.resolve_path(".", runtime)),
   )
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.helper_path),
     normalize_dev_test_slashes(
-      join_path(loaded.bin_dir, helper_executable_name()),
+      @fsutil.path_join(loaded.bin_dir, helper_executable_name()),
     ),
   )
   let bad_root = "target/proton-dev-runtime-bad-env"
   ensure_dev_test_dir(bad_root)
   @sys.set_env_var("PROTON_NATIVE_DIST", "missing-runtime")
-  try ensure_dev_runtime(resolve_path(".", bad_root), true) catch {
+  try ensure_dev_runtime(@fsutil.resolve_path(".", bad_root), true) catch {
     DevRuntimeError::NativeDistOverride(detail~) => {
       assert_true(detail.contains("PROTON_NATIVE_DIST directory is missing"))
       assert_false(detail.contains("proton_cli dev --setup"))
@@ -353,11 +364,11 @@ async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
     let dir = "target/proton-dev-path"
     ensure_dev_test_dir(dir)
-    let resolved = resolve_path(".", "target\\proton-dev-path")
+    let resolved = @fsutil.resolve_path(".", "target\\proton-dev-path")
     assert_true(resolved.contains(":/") || resolved.contains(":\\"))
-    assert_true(path_exists(resolved))
+    assert_true(@fsutil.path_exists(resolved))
     let absolute = resolved.replace_all(old="/", new="\\")
-    assert_true(path_exists(resolve_path(".", absolute)))
+    assert_true(@fsutil.path_exists(@fsutil.resolve_path(".", absolute)))
   }
 }
 
@@ -450,7 +461,7 @@ async test "ready path validates curl probe availability" {
 async test "frontend cancellation terminates child processes" {
   let dir = "target/proton-dev-cancel-tree"
   ensure_dev_test_dir(dir)
-  let pid_path = join_path(dir, "child.pid")
+  let pid_path = @fsutil.path_join(dir, "child.pid")
   @mbfs.remove_file(pid_path) catch {
     _ => ()
   }

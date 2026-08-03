@@ -25,10 +25,3 @@ fn copy_extension_descriptor(
     metadata_path=Some(descriptor.metadata_path()),
   )
 }
-
-///|
-fn copy_link_inputs(
-  inputs : Array[ExtensionLinkInput],
-) -> Array[ExtensionLinkInput] {
-  inputs.map(fn(input) { input })
-}

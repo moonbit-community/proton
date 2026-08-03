@@ -6,15 +6,19 @@ on:
       - main
   pull_request:
 
+env:
+  PROTON_NO_UPDATE_CHECK: 1
+
 jobs:
   format:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: moon version
@@ -33,14 +37,28 @@ jobs:
           - windows-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache MoonBit packages
+        uses: actions/cache@v4
+        with:
+          path: .mooncakes
+          key: ${{ runner.os }}-mooncakes-${{ hashFiles('**/moon.mod') }}
+          restore-keys: ${{ runner.os }}-mooncakes-
+
+      - name: Cache CEF downloads
+        uses: actions/cache@v4
+        with:
+          path: .proton/cache/cef
+          key: ${{ runner.os }}-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
+
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       # moonc v0.10.5 bundles mimalloc in libmoonbitrun.o and interposes the
@@ -67,7 +85,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb
+          sudo apt-get install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb openbox
 
       - name: moon version
         run: |
@@ -89,6 +107,12 @@ jobs:
       - name: Test prebuilt ABI verifier
         run: node --test scripts/verify_prebuilt_abi_test.mjs
 
+      - name: Test bridge bootstrap JS
+        run: node --test native/tests/bridge_bootstrap.test.mjs
+
+      - name: Verify generated files
+        run: node scripts/verify_generated.mjs
+
       - name: Verify Linux prebuilt ABI
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: node scripts/verify_prebuilt_abi.mjs linux-x64
@@ -100,17 +124,6 @@ jobs:
       - name: Verify Windows prebuilt ABI
         if: ${{ matrix.os == 'windows-latest' }}
         run: node scripts/verify_prebuilt_abi.mjs win32-x64
-
-      - name: Install Proton CLI for pre-build codegen on Unix
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          moon install --path cli --bin target/proton-tools
-          chmod +x target/proton-tools/proton_cli
-
-      - name: Install Proton CLI for pre-build codegen on Windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          moon install --path cli --bin target/proton-tools
 
       - name: Build active Proton engine runtime on Unix
         if: ${{ matrix.os != 'windows-latest' }}
@@ -127,7 +140,9 @@ jobs:
           cmake --build native/build-engine
           cmake --install native/build-engine
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a ctest --test-dir native/build-engine --output-on-failure
+            # The overlay titlebar path needs a real window manager for CEF to
+            # deliver draggable regions; Xvfb alone has none.
+            xvfb-run -a sh -c 'openbox & sleep 1; ctest --test-dir native/build-engine --output-on-failure'
           else
             # The raw C smoke is not an app bundle. Exercise the managed macOS
             # GUI lifecycle in the bounded example e2e step below instead.
@@ -156,6 +171,9 @@ jobs:
             "-DPROTON_ENGINE_ROOT=$cefRoot"
           cmake --build native\build-engine --config Debug
           cmake --install native\build-engine --config Debug
+          # windows-latest runners have no usable D3D device; force ANGLE's
+          # SwiftShader path so the engine's GPU process can start at all.
+          $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
           ctest --test-dir native\build-engine -C Debug --output-on-failure
           if (!(Test-Path "$runtime\bin\proton.dll")) {
             throw "missing active proton.dll"
@@ -178,7 +196,8 @@ jobs:
               justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
               justjavac/proton_cli/cef justjavac/proton_cli/codegen \
               justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-              justjavac/proton_cli/new justjavac/proton_cli/package \
+              justjavac/proton_cli/fsutil justjavac/proton_cli/new \
+              justjavac/proton_cli/output justjavac/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           else
             moon -C proton test native --target native --diagnostic-limit 80
@@ -186,7 +205,8 @@ jobs:
               justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
               justjavac/proton_cli/cef justjavac/proton_cli/codegen \
               justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-              justjavac/proton_cli/new justjavac/proton_cli/package \
+              justjavac/proton_cli/fsutil justjavac/proton_cli/new \
+              justjavac/proton_cli/output justjavac/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           fi
           moon -C e2e build --target native --diagnostic-limit 80
@@ -200,12 +220,37 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
           moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/new justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
+          moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/fsutil justjavac/proton_cli/new justjavac/proton_cli/output justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
-      - name: Check extension catalog on Unix
+      - name: Test extensions on Unix
         if: ${{ matrix.os != 'windows-latest' }}
-        run: moon -C extensions check --target native
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C extensions test -p justjavac/proton_ext \
+              justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard \
+              justjavac/proton_ext/dialog justjavac/proton_ext/fs \
+              justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake \
+              justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone \
+              justjavac/proton_ext/notification justjavac/proton_ext/path \
+              justjavac/proton_ext/shell justjavac/proton_ext/tray \
+              --target native
+            xvfb-run -a moon test -p justjavac/auto_launch justjavac/clipboard \
+              justjavac/global_hotkey justjavac/keepawake justjavac/microphone \
+              justjavac/tray --target native
+          else
+            moon -C extensions test -p justjavac/proton_ext \
+              justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard \
+              justjavac/proton_ext/dialog justjavac/proton_ext/fs \
+              justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake \
+              justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone \
+              justjavac/proton_ext/notification justjavac/proton_ext/path \
+              justjavac/proton_ext/shell justjavac/proton_ext/tray \
+              --target native
+            moon test -p justjavac/auto_launch justjavac/clipboard \
+              justjavac/global_hotkey justjavac/keepawake justjavac/microphone \
+              justjavac/tray --target native
+          fi
 
       - name: Test extensions on Windows
         if: ${{ matrix.os == 'windows-latest' }}
@@ -229,6 +274,15 @@ jobs:
             "justjavac/proton_ext/tray"
           )
           moon -C extensions test -p $extensionPackages --target native
+          $sysPackages = @(
+            "justjavac/auto_launch"
+            "justjavac/clipboard"
+            "justjavac/global_hotkey"
+            "justjavac/keepawake"
+            "justjavac/microphone"
+            "justjavac/tray"
+          )
+          moon test -p $sysPackages --target native
 
       - name: Build examples
         if: ${{ matrix.os != 'windows-latest' }}

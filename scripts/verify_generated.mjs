@@ -33,6 +33,13 @@ function sha256(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
+/// Generated sources are text; a CRLF checkout on Windows must not turn an
+/// otherwise identical file into a stale one, so compare with EOLs folded.
+function normalizedTextSha256(filePath) {
+  const text = fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
+  return crypto.createHash("sha256").update(text, "utf8").digest("hex");
+}
+
 function compareGeneratedFile(expectedRelativePath, actualPath) {
   const expectedPath = path.join(repoRoot, expectedRelativePath);
   if (!fs.existsSync(expectedPath)) {
@@ -43,7 +50,7 @@ function compareGeneratedFile(expectedRelativePath, actualPath) {
     failures.push(`generator did not create: ${expectedRelativePath}`);
     return;
   }
-  if (sha256(expectedPath) !== sha256(actualPath)) {
+  if (normalizedTextSha256(expectedPath) !== normalizedTextSha256(actualPath)) {
     failures.push(expectedRelativePath);
   }
 }
@@ -79,7 +86,26 @@ try {
   }
   /// Each platform is reported before the run ends, so a single stale prebuilt
   /// does not hide the state of the others or of the codegen comparison below.
+  /// Platforms whose artifact format the host inspection tool cannot read
+  /// (for example GNU nm on a Mach-O dylib) are skipped rather than reported
+  /// as failures; every platform is still verified on its own host's CI leg.
   for (const platform of platforms) {
+    const probe = spawnSync(
+      "node",
+      [
+        path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
+        "--tool-probe",
+        platform,
+      ],
+      { encoding: "utf8" },
+    );
+    if (probe.status !== 0) {
+      const detail = (probe.stdout || probe.stderr || "")
+        .trim()
+        .replace(/^\[SKIP\]\s*/, "");
+      console.log(`[SKIP] ${platform}: ${detail}`);
+      continue;
+    }
     if (
       !runAllowFailure("node", [
         path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),

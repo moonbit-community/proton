@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/x/path",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/x/fs" @mbfs,
+} for "wbtest"
+
+supported_targets = "native"

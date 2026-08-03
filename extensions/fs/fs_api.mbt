@@ -151,9 +151,8 @@ async fn path_kind(
 async fn path_size(path : String) -> Int64 raise FsError {
   try {
     let file = @async_fs.open(path, mode=ReadOnly)
-    let size = file.size()
-    file.close()
-    size
+    defer file.close()
+    file.size()
   } catch {
     error => raise SizeFailed(path~, detail=fs_error_detail(error))
   }

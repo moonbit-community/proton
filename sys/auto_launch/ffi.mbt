@@ -12,8 +12,7 @@ extern "C" fn home_directory_ffi() -> Bytes = "mb_auto_launch_home_directory"
 
 ///|
 /// Writes a UTF-8 text file and returns a native status code.
-#borrow(path)
-#owned(contents)
+#borrow(path, contents)
 extern "C" fn write_text_file_ffi(path : Bytes, contents : Bytes) -> Int = "mb_auto_launch_write_text_file"
 
 ///|
@@ -28,8 +27,7 @@ extern "C" fn file_exists_ffi(path : Bytes) -> Int = "mb_auto_launch_file_exists
 
 ///|
 /// Creates or updates a current-user Windows `Run` registry value.
-#borrow(name)
-#owned(command)
+#borrow(name, command)
 extern "C" fn windows_set_run_entry_ffi(name : Bytes, command : Bytes) -> Int = "mb_auto_launch_windows_set_run_entry"
 
 ///|

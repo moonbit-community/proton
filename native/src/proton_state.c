@@ -349,7 +349,10 @@ int32_t proton_window_enqueue_closed_once(
   return PROTON_OK;
 }
 
-int32_t proton_runtime_sync_engine_closed_windows(
+// A full event queue defers window_closed delivery: closed_event_sent stays
+// false and visible stays true, so a later poll/wait retries after the
+// consumer drains.
+void proton_runtime_sync_engine_closed_windows(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime) {
   for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
@@ -365,11 +368,10 @@ int32_t proton_runtime_sync_engine_closed_windows(
     int32_t status =
         proton_window_enqueue_closed_once(runtime, window, window_handle);
     if (status != PROTON_OK) {
-      return status;
+      continue;
     }
     window->visible = false;
   }
-  return PROTON_OK;
 }
 
 int32_t proton_format_window_state_json(

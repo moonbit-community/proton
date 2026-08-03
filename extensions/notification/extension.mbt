@@ -21,11 +21,7 @@ async fn show_notification(
 ) -> @notification_contract.NotificationReply raise NotificationError {
   let body = ensure_body(payload.body)
   notification_native_ensure_supported()
-  notification_native_show(
-    payload.title.unwrap_or("Lepus"),
-    body,
-    payload.payload,
-  )
+  notification_native_show(payload.title.unwrap_or(""), body, payload.payload)
   @notification_contract.NotificationReply::{ shown: true }
 }
 

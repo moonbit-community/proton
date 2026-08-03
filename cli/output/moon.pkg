@@ -1,0 +1,5 @@
+import {
+  "moonbitlang/async/stdio",
+}
+
+supported_targets = "native"

@@ -121,12 +121,12 @@ async test "package plan defaults to app and zip" {
 
 ///|
 async test "package plan stages every window file entry" {
-  let root = resolve_path("target", "proton-package-window-entries")
+  let root = @fsutil.resolve_path("target", "proton-package-window-entries")
   remove_tree(root)
-  let main = resolve_path(root, "pages/main.html")
-  let secondary = resolve_path(root, "standalone/settings.html")
-  ensure_dir(path_parent(main))
-  ensure_dir(path_parent(secondary))
+  let main = @fsutil.resolve_path(root, "pages/main.html")
+  let secondary = @fsutil.resolve_path(root, "standalone/settings.html")
+  ensure_dir(@fsutil.path_parent(main))
+  ensure_dir(@fsutil.path_parent(secondary))
   write_text(main, "<main>Main</main>")
   write_text(secondary, "<main>Settings</main>")
   let project = @proton_config.ProjectConfig::new(
@@ -149,23 +149,27 @@ async test "package plan stages every window file entry" {
   )
   let plan = build_package_plan(
     parse_package_args([]),
-    resolve_path(root, "moon.proton"),
+    @fsutil.resolve_path(root, "moon.proton"),
     project,
   )
   assert_eq(plan.entry_paths, [main, secondary])
-  let destination = resolve_path(root, "staged")
+  let destination = @fsutil.resolve_path(root, "staged")
   ensure_dir(destination)
   stage_project_inputs(plan, destination)
-  assert_true(@mbfs.path_exists(resolve_path(destination, "pages/main.html")))
   assert_true(
-    @mbfs.path_exists(resolve_path(destination, "standalone/settings.html")),
+    @mbfs.path_exists(@fsutil.resolve_path(destination, "pages/main.html")),
+  )
+  assert_true(
+    @mbfs.path_exists(
+      @fsutil.resolve_path(destination, "standalone/settings.html"),
+    ),
   )
 }
 
 ///|
 async test "package plan uses configured backend module and package" {
-  let base_dir = resolve_path("target", "proton package module paths")
-  let backend_path = resolve_path(base_dir, "modules/backend app")
+  let base_dir = @fsutil.resolve_path("target", "proton package module paths")
+  let backend_path = @fsutil.resolve_path(base_dir, "modules/backend app")
   let project = @proton_config.ProjectConfig::new(
     base_dir,
     @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
@@ -182,14 +186,14 @@ async test "package plan uses configured backend module and package" {
   )
   let configured = build_package_plan(
     parse_package_args([]),
-    resolve_path(base_dir, "moon.proton"),
+    @fsutil.resolve_path(base_dir, "moon.proton"),
     project,
   )
   assert_eq(configured.root, backend_path)
   assert_eq(configured.app_package, "desktop")
   let overridden = build_package_plan(
     parse_package_args(["--package", "custom"]),
-    resolve_path(base_dir, "moon.proton"),
+    @fsutil.resolve_path(base_dir, "moon.proton"),
     project,
   )
   assert_eq(overridden.app_package, "custom")
@@ -198,40 +202,46 @@ async test "package plan uses configured backend module and package" {
 ///|
 #cfg(not(platform="windows"))
 test "macOS package paths normalize absolute and relative inputs" {
-  let base = resolve_path("target", "proton package path base")
-  assert_eq(resolve_path(base, "/"), "/")
+  let base = @fsutil.resolve_path("target", "proton package path base")
+  assert_eq(@fsutil.resolve_path(base, "/"), "/")
   assert_eq(
-    resolve_path(base, "/tmp/proton absolute path"),
+    @fsutil.resolve_path(base, "/tmp/proton absolute path"),
     "/tmp/proton absolute path",
   )
   assert_eq(
-    resolve_path(base, "relative/file.txt"),
+    @fsutil.resolve_path(base, "relative/file.txt"),
     base + "/relative/file.txt",
   )
   assert_eq(
-    resolve_path(base, ".proton/runtime.json"),
+    @fsutil.resolve_path(base, ".proton/runtime.json"),
     base + "/.proton/runtime.json",
   )
   assert_eq(
-    resolve_path(base, "directory with spaces/file.txt"),
+    @fsutil.resolve_path(base, "directory with spaces/file.txt"),
     base + "/directory with spaces/file.txt",
   )
   assert_eq(
-    resolve_path(base, "../sibling"),
-    resolve_path(path_parent(base), "sibling"),
+    @fsutil.resolve_path(base, "../sibling"),
+    @fsutil.resolve_path(@fsutil.path_parent(base), "sibling"),
   )
-  assert_eq(resolve_path(base, "nested\\child.txt"), base + "/nested/child.txt")
-  assert_eq(resolve_path(base, "\\tmp\\proton path"), "/tmp/proton path")
+  assert_eq(
+    @fsutil.resolve_path(base, "nested\\child.txt"),
+    base + "/nested\\child.txt",
+  )
+  assert_eq(
+    @fsutil.resolve_path(base, "\\tmp\\proton path"),
+    base + "/\\tmp\\proton path",
+  )
 }
 
 ///|
 #cfg(not(platform="windows"))
 async test "macOS ensure_dir recursively creates absolute paths with spaces" {
-  let root = resolve_path("target", "proton package ensure dir")
+  let root = @fsutil.resolve_path("target", "proton package ensure dir")
   remove_tree(root)
-  let nested = resolve_path(root, "parent with spaces/child/grandchild")
+  let nested = @fsutil.resolve_path(root, "parent with spaces/child/grandchild")
   ensure_dir(nested)
-  assert_true(path_is_dir(nested))
+  assert_true(@fsutil.path_is_dir(nested))
 }
 
 ///|
@@ -388,7 +398,9 @@ test "macOS framework signing uses deep sealing without app entitlements" {
 
 ///|
 async test "macOS signing rejects a missing required target" {
-  let missing = resolve_path("target", "proton-package-missing-signing-target")
+  let missing = @fsutil.resolve_path(
+    "target", "proton-package-missing-signing-target",
+  )
   remove_tree(missing)
   try
     require_macos_codesign_targets([
@@ -468,10 +480,10 @@ test "release project config preserves an already disabled or absent debug field
 
 ///|
 async test "macOS icon selection stages icns and rejects a missing source" {
-  let root = resolve_path("target", "proton-package-macos-icon")
+  let root = @fsutil.resolve_path("target", "proton-package-macos-icon")
   remove_tree(root)
-  let resources = resolve_path(root, "Resources")
-  let icon = resolve_path(root, "Demo.ICNS")
+  let resources = @fsutil.resolve_path(root, "Resources")
+  let icon = @fsutil.resolve_path(root, "Demo.ICNS")
   ensure_dir(resources)
   write_text(icon, "test-icns")
   match first_macos_icon(["icon.png", icon]) {
@@ -481,9 +493,9 @@ async test "macOS icon selection stages icns and rejects a missing source" {
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: resolve_path(root, "build"),
+    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "moon.proton"),
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -505,7 +517,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
   }
   stage_macos_icon(plan, resources)
   let staged = @mbfs.read_file_to_string(
-    resolve_path(resources, "AppIcon.icns"),
+    @fsutil.resolve_path(resources, "AppIcon.icns"),
     encoding="utf8",
   ) catch {
     error => abort(@debug.render(Repr(error)))
@@ -604,7 +616,7 @@ async test "package manifest records launch metadata" {
   }
   write_package_manifest(plan, root, "macos-app")
   let manifest = @mbfs.read_file_to_string(
-    resolve_path(root, "proton-package.json"),
+    @fsutil.resolve_path(root, "proton-package.json"),
     encoding="utf8",
   ) catch {
     error => abort(@debug.render(Repr(error)))
@@ -675,14 +687,14 @@ test "macOS helper plist matches its bundle identity" {
 ///|
 async test "macOS ZIP uses the final app name without metadata entries" {
   guard is_macos_host() else { return }
-  let root = resolve_path("target", "proton-package-macos-zip-layout")
+  let root = @fsutil.resolve_path("target", "proton-package-macos-zip-layout")
   remove_tree(root)
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: resolve_path(root, "build"),
+    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "moon.proton"),
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -703,8 +715,8 @@ async test "macOS ZIP uses the final app name without metadata entries" {
     notarize: false,
   }
   let app = macos_staging_app_path(plan)
-  let payload = resolve_path(app, "Contents/Resources/payload.txt")
-  ensure_dir(path_parent(payload))
+  let payload = @fsutil.resolve_path(app, "Contents/Resources/payload.txt")
+  ensure_dir(@fsutil.path_parent(payload))
   write_text(payload, "payload")
   let xattr_code = @process.run("xattr", [
     "-w", "com.proton.package-test", "value", payload,
@@ -733,14 +745,14 @@ async test "macOS ZIP uses the final app name without metadata entries" {
 async test "macOS staged app promotion rolls back when staging is missing" {
   let root = "target/proton-package-macos-promotion"
   remove_tree(root)
-  let destination = resolve_path(root, "Demo.app")
-  let marker = resolve_path(destination, "Contents/old.txt")
-  ensure_dir(path_parent(marker))
+  let destination = @fsutil.resolve_path(root, "Demo.app")
+  let marker = @fsutil.resolve_path(destination, "Contents/old.txt")
+  ensure_dir(@fsutil.path_parent(marker))
   write_text(marker, "old")
   try
     promote_staged_artifacts([
       StagedArtifact::{
-        staging: resolve_path(root, "missing.app"),
+        staging: @fsutil.resolve_path(root, "missing.app"),
         destination,
       },
     ])
@@ -757,15 +769,15 @@ async test "macOS staged app promotion rolls back when staging is missing" {
 async test "macOS staged app promotion recovers an interrupted backup" {
   let root = "target/proton-package-macos-stale-backup"
   remove_tree(root)
-  let destination = resolve_path(root, "Demo.app")
+  let destination = @fsutil.resolve_path(root, "Demo.app")
   let backup = destination + ".backup"
-  let marker = resolve_path(backup, "Contents/old.txt")
-  ensure_dir(path_parent(marker))
+  let marker = @fsutil.resolve_path(backup, "Contents/old.txt")
+  ensure_dir(@fsutil.path_parent(marker))
   write_text(marker, "old")
   try
     promote_staged_artifacts([
       StagedArtifact::{
-        staging: resolve_path(root, "missing.app"),
+        staging: @fsutil.resolve_path(root, "missing.app"),
         destination,
       },
     ])
@@ -774,7 +786,9 @@ async test "macOS staged app promotion recovers an interrupted backup" {
   } noraise {
     _ => abort("expected staging promotion failure")
   }
-  assert_true(@mbfs.path_exists(resolve_path(destination, "Contents/old.txt")))
+  assert_true(
+    @mbfs.path_exists(@fsutil.resolve_path(destination, "Contents/old.txt")),
+  )
   assert_false(@mbfs.path_exists(backup))
 }
 
@@ -782,17 +796,17 @@ async test "macOS staged app promotion recovers an interrupted backup" {
 async test "macOS artifact promotion rolls back the complete output set" {
   let root = "target/proton-package-macos-transaction"
   remove_tree(root)
-  let app = resolve_path(root, "Demo.app")
+  let app = @fsutil.resolve_path(root, "Demo.app")
   let app_backup = app + ".backup"
-  let staged_app = resolve_path(root, ".demo.staging.app")
-  let dmg = resolve_path(root, "Demo.dmg")
-  let staged_dmg = resolve_path(root, ".demo.staging.dmg")
-  let staged_zip = resolve_path(root, ".demo.staging.app.zip")
-  let invalid_zip = resolve_path(root, "missing/Demo.app.zip")
-  let old_marker = resolve_path(app, "Contents/old.txt")
-  let new_marker = resolve_path(staged_app, "Contents/new.txt")
-  ensure_dir(path_parent(old_marker))
-  ensure_dir(path_parent(new_marker))
+  let staged_app = @fsutil.resolve_path(root, ".demo.staging.app")
+  let dmg = @fsutil.resolve_path(root, "Demo.dmg")
+  let staged_dmg = @fsutil.resolve_path(root, ".demo.staging.dmg")
+  let staged_zip = @fsutil.resolve_path(root, ".demo.staging.app.zip")
+  let invalid_zip = @fsutil.resolve_path(root, "missing/Demo.app.zip")
+  let old_marker = @fsutil.resolve_path(app, "Contents/old.txt")
+  let new_marker = @fsutil.resolve_path(staged_app, "Contents/new.txt")
+  ensure_dir(@fsutil.path_parent(old_marker))
+  ensure_dir(@fsutil.path_parent(new_marker))
   write_text(old_marker, "old")
   write_text(new_marker, "new")
   write_text(dmg, "old-dmg")
@@ -810,7 +824,7 @@ async test "macOS artifact promotion rolls back the complete output set" {
     _ => abort("expected multi-artifact promotion failure")
   }
   assert_true(@mbfs.path_exists(old_marker))
-  assert_false(@mbfs.path_exists(resolve_path(app, "Contents/new.txt")))
+  assert_false(@mbfs.path_exists(@fsutil.resolve_path(app, "Contents/new.txt")))
   assert_false(@mbfs.path_exists(app_backup))
   let restored_dmg = @mbfs.read_file_to_string(dmg, encoding="utf8") catch {
     error => abort(@debug.render(Repr(error)))
@@ -823,16 +837,16 @@ async test "macOS artifact promotion rolls back the complete output set" {
 ///|
 async test "macOS notarization validates success and cleans failed upload" {
   guard is_macos_host() else { return }
-  let root = resolve_path("target", "proton-package-notarization-flow")
+  let root = @fsutil.resolve_path("target", "proton-package-notarization-flow")
   remove_tree(root)
-  let tools = resolve_path(root, "tools")
-  let app = resolve_path(root, "Demo.app")
-  let log = resolve_path(root, "commands.log")
-  for dir in [tools, resolve_path(app, "Contents")] {
+  let tools = @fsutil.resolve_path(root, "tools")
+  let app = @fsutil.resolve_path(root, "Demo.app")
+  let log = @fsutil.resolve_path(root, "commands.log")
+  for dir in [tools, @fsutil.resolve_path(app, "Contents")] {
     ensure_dir(dir)
   }
-  let xcrun = resolve_path(tools, "xcrun")
-  let spctl = resolve_path(tools, "spctl")
+  let xcrun = @fsutil.resolve_path(tools, "xcrun")
+  let spctl = @fsutil.resolve_path(tools, "spctl")
   let script = "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"" + log + "\"\nexit 0\n"
   for path in [xcrun, spctl] {
     write_text(path, script)
@@ -849,9 +863,9 @@ async test "macOS notarization validates success and cleans failed upload" {
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: resolve_path(root, "build"),
+    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "moon.proton"),
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -875,7 +889,7 @@ async test "macOS notarization validates success and cleans failed upload" {
   let commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
     error => abort(@debug.render(Repr(error)))
   }
-  let archive = resolve_path(root, ".demo.notary.zip")
+  let archive = @fsutil.resolve_path(root, ".demo.notary.zip")
   assert_eq(
     commands,
     "notarytool submit " +
@@ -920,25 +934,25 @@ async test "macOS notarization validates success and cleans failed upload" {
 async test "release executable lookup stays inside package target dir" {
   let root = "target/proton-package-executable-lookup"
   remove_tree(root)
-  let package_target = resolve_path(root, "package-target")
-  let unrelated = resolve_path(
+  let package_target = @fsutil.resolve_path(root, "package-target")
+  let unrelated = @fsutil.resolve_path(
     root, "workspace/native/release/build/other/app.exe",
   )
-  ensure_dir(path_parent(unrelated))
+  ensure_dir(@fsutil.path_parent(unrelated))
   write_text(unrelated, "wrong")
   let plan = PackagePlan::{
     root,
-    workspace_root: resolve_path(root, "workspace"),
+    workspace_root: @fsutil.resolve_path(root, "workspace"),
     build_target_dir: package_target,
     app_package: "app",
-    config_path: resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "moon.proton"),
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
     targets: ["app"],
-    output: resolve_path(root, "output"),
+    output: @fsutil.resolve_path(root, "output"),
     build: false,
     base_dir: root,
     frontend_dist: None,
@@ -952,10 +966,10 @@ async test "release executable lookup stays inside package target dir" {
     notarize: false,
   }
   @debug.assert_eq(find_release_executable(plan), None)
-  let expected = resolve_path(
+  let expected = @fsutil.resolve_path(
     package_target, "native/release/build/vendor/app/app.exe",
   )
-  ensure_dir(path_parent(expected))
+  ensure_dir(@fsutil.path_parent(expected))
   write_text(expected, "right")
   match find_release_executable(plan) {
     Some(actual) =>
@@ -968,7 +982,7 @@ async test "release executable lookup stays inside package target dir" {
 async test "active runtime rejects another platform" {
   let root = "target/proton-package-runtime-platform"
   remove_tree(root)
-  ensure_dir(resolve_path(root, ".proton"))
+  ensure_dir(@fsutil.resolve_path(root, ".proton"))
   let old_dist = @sys.get_env_var("PROTON_NATIVE_DIST")
   @sys.unset_env_var("PROTON_NATIVE_DIST")
   defer restore_package_env("PROTON_NATIVE_DIST", old_dist)
@@ -978,8 +992,8 @@ async test "active runtime rejects another platform" {
     "platform": Json::string(other),
     "dist": Json::string("runtime"),
   }).stringify()
-  write_text(resolve_path(root, ".proton/runtime.json"), manifest)
-  try read_active_runtime(resolve_path(root, ".")) catch {
+  write_text(@fsutil.resolve_path(root, ".proton/runtime.json"), manifest)
+  try read_active_runtime(@fsutil.resolve_path(root, ".")) catch {
     PackageRuntimeError::PlatformMismatch(
       expected=actual_expected,
       actual=actual_platform
@@ -996,11 +1010,11 @@ async test "active runtime rejects another platform" {
 ///|
 async test "Windows portable staging flattens runtime bin beside app executable" {
   let root = "target/proton-package-windows-layout"
-  let output = resolve_path(root, "output")
+  let output = @fsutil.resolve_path(root, "output")
   remove_tree(root)
   let runtime = prepare_windows_test_runtime(root)
-  let executable = resolve_path(root, "demo.exe")
-  let config = resolve_path(root, "moon.proton")
+  let executable = @fsutil.resolve_path(root, "demo.exe")
+  let config = @fsutil.resolve_path(root, "moon.proton")
   for item in [(executable, "exe"), (config, "config")] {
     let (path, text) = item
     write_windows_test_file(path, text)
@@ -1008,7 +1022,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: resolve_path(root, "package-build"),
+    build_target_dir: @fsutil.resolve_path(root, "package-build"),
     app_package: "app",
     config_path: config,
     product_name: "Demo App",
@@ -1038,11 +1052,17 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     None,
     false,
   )
-  let portable = resolve_path(output, "demo-app")
-  assert_true(@mbfs.path_exists(resolve_path(portable, "demo-app.exe")))
-  assert_true(@mbfs.path_exists(resolve_path(portable, "proton.dll")))
-  assert_true(@mbfs.path_exists(resolve_path(portable, "cef_process.exe")))
-  assert_true(@mbfs.path_exists(resolve_path(portable, "libcef.dll")))
-  assert_true(@mbfs.path_exists(resolve_path(portable, "Resources/icudtl.dat")))
-  assert_false(@mbfs.path_exists(resolve_path(portable, "bin/proton.dll")))
+  let portable = @fsutil.resolve_path(output, "demo-app")
+  assert_true(@mbfs.path_exists(@fsutil.resolve_path(portable, "demo-app.exe")))
+  assert_true(@mbfs.path_exists(@fsutil.resolve_path(portable, "proton.dll")))
+  assert_true(
+    @mbfs.path_exists(@fsutil.resolve_path(portable, "cef_process.exe")),
+  )
+  assert_true(@mbfs.path_exists(@fsutil.resolve_path(portable, "libcef.dll")))
+  assert_true(
+    @mbfs.path_exists(@fsutil.resolve_path(portable, "Resources/icudtl.dat")),
+  )
+  assert_false(
+    @mbfs.path_exists(@fsutil.resolve_path(portable, "bin/proton.dll")),
+  )
 }

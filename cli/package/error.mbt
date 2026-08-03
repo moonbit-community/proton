@@ -114,7 +114,10 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
 ///|
 pub fn PackageRuntimeError::message(self : PackageRuntimeError) -> String {
   match self {
-    ManifestMissing(path~) => "active Proton runtime is missing: " + path
+    ManifestMissing(path~) =>
+      "active Proton runtime is missing: " +
+      path +
+      "; run `proton_cli cef setup` to assemble it"
     ManifestInvalid(path~, detail~) =>
       "invalid active Proton runtime manifest " + path + ": " + detail
     ManifestField(path~, field~) =>
@@ -128,8 +131,13 @@ pub fn PackageRuntimeError::message(self : PackageRuntimeError) -> String {
       ", got " +
       actual
     DirectoryMissing(path~) =>
-      "active Proton runtime directory is missing: " + path
-    HelperMissing(path~) => "active Proton runtime helper is missing: " + path
+      "active Proton runtime directory is missing: " +
+      path +
+      "; run `proton_cli cef setup`"
+    HelperMissing(path~) =>
+      "active Proton runtime helper is missing: " +
+      path +
+      "; run `proton_cli cef setup`"
   }
 }
 

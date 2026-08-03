@@ -13,8 +13,7 @@ pub fn runtime_info_json() -> String raise NativeError {
 }
 
 ///|
-pub fn runtime_info() -> RuntimeInfo raise NativeError {
-  let text = runtime_info_json()
+fn decode_runtime_info(text : String) -> RuntimeInfo raise NativeError {
   let json = @json.parse(text) catch {
     error =>
       raise InvalidPayload(
@@ -22,10 +21,17 @@ pub fn runtime_info() -> RuntimeInfo raise NativeError {
         message=error.to_string(),
       )
   }
-  @json.from_json(json) catch {
+  let info : RuntimeInfo = @json.from_json(json) catch {
     error =>
       raise InvalidPayload(context="runtime info", message=error.to_string())
   }
+  expect_abi_version(info.abi_version, "runtime info")
+  info
+}
+
+///|
+pub fn runtime_info() -> RuntimeInfo raise NativeError {
+  decode_runtime_info(runtime_info_json())
 }
 
 ///|
@@ -185,6 +191,33 @@ fn decode_bool_json(json : Json, label : String) -> Bool raise NativeError {
 }
 
 ///|
+/// Rejects payloads whose `abi_version` does not match the schema version
+/// this binding implements.
+fn expect_abi_version(found : Int, context : String) -> Unit raise NativeError {
+  if found != 1 {
+    raise InvalidPayload(
+      context~,
+      message="unsupported abi_version " + found.to_string() + ", expected 1",
+    )
+  }
+}
+
+///|
+/// Validates an optional `abi_version` field: absent is accepted (older
+/// runtimes do not emit one), but a present field must be the number 1.
+fn decode_optional_abi_version(
+  object : Map[String, Json],
+  context : String,
+) -> Unit raise NativeError {
+  match object.get("abi_version") {
+    None => ()
+    Some(Number(version, ..)) => expect_abi_version(version.to_int(), context)
+    Some(_) =>
+      raise InvalidPayload(context~, message="expected number abi_version")
+  }
+}
+
+///|
 fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   let json = decode_native_json(text, "runtime event")
   let object = match json {
@@ -192,6 +225,7 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     _ =>
       raise InvalidPayload(context="runtime event", message="expected object")
   }
+  decode_optional_abi_version(object, "runtime event")
   let event_type_json = match object.get("type") {
     Some(value) => value
     None =>
@@ -356,6 +390,7 @@ fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError 
     _ =>
       raise InvalidPayload(context="bridge request", message="expected object")
   }
+  decode_optional_abi_version(object, "bridge request")
   let request_id_json = match object.get("request_id") {
     Some(value) => value
     None =>
@@ -1024,6 +1059,22 @@ fn window_bridge_json(
 }
 
 ///|
+fn decode_bridge_lifecycle_state(
+  text : String,
+) -> BridgeLifecycleState raise NativeError {
+  let json = decode_native_json(text, "bridge lifecycle state")
+  let state : BridgeLifecycleState = @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context="bridge lifecycle state",
+        message=error.to_string(),
+      )
+  }
+  expect_abi_version(state.abi_version, "bridge lifecycle state")
+  state
+}
+
+///|
 pub fn Window::bridge_lifecycle_state(
   self : Window,
 ) -> BridgeLifecycleState raise NativeError {
@@ -1038,14 +1089,23 @@ pub fn Window::bridge_lifecycle_state(
         message="missing payload",
       )
   }
-  let json = decode_native_json(text, "bridge lifecycle state")
-  @json.from_json(json) catch {
+  decode_bridge_lifecycle_state(text)
+}
+
+///|
+fn decode_bridge_diagnostic(
+  text : String,
+) -> BridgeDiagnostic raise NativeError {
+  let json = decode_native_json(text, "bridge diagnostic")
+  let diagnostic : BridgeDiagnostic = @json.from_json(json) catch {
     error =>
       raise InvalidPayload(
-        context="bridge lifecycle state",
+        context="bridge diagnostic",
         message=error.to_string(),
       )
   }
+  expect_abi_version(diagnostic.abi_version, "bridge diagnostic")
+  diagnostic
 }
 
 ///|
@@ -1057,17 +1117,7 @@ pub fn Window::take_bridge_failure(
       self, "bridge diagnostic", proton_window_take_bridge_failure_json_ffi,
     ) {
     None => None
-    Some(text) => {
-      let json = decode_native_json(text, "bridge diagnostic")
-      let diagnostic : BridgeDiagnostic = @json.from_json(json) catch {
-        error =>
-          raise InvalidPayload(
-            context="bridge diagnostic",
-            message=error.to_string(),
-          )
-      }
-      Some(diagnostic)
-    }
+    Some(text) => Some(decode_bridge_diagnostic(text))
   }
 }
 
