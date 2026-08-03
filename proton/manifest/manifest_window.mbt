@@ -64,6 +64,7 @@ pub struct AppWindowManifest {
   id : String
   window : WindowManifest
   entry : AppEntry
+  open_on_start : Bool
 } derive(Debug, Eq)
 
 ///|
@@ -74,6 +75,8 @@ pub impl Show for AppWindowManifest with fn output(self, logger) {
   logger.write_object(self.window)
   logger.write_string(", entry: ")
   logger.write_object(self.entry)
+  logger.write_string(", open_on_start: ")
+  logger.write_object(self.open_on_start)
   logger.write_string(" }")
 }
 
@@ -99,6 +102,7 @@ pub fn AppWindowManifest::new(
   id : String,
   window : WindowManifest,
   entry : AppEntry,
+  open_on_start? : Bool = true,
 ) -> AppWindowManifest {
-  AppWindowManifest::{ id, window, entry }
+  AppWindowManifest::{ id, window, entry, open_on_start }
 }

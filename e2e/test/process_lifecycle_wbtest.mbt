@@ -350,7 +350,7 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
     let initial_slow_adds = count_native_log_entries(
       app.native_log_path,
       "bridge_enqueue",
-      "op=ext:app/slowAdd",
+      "op=ext:appCommands/slowAdd",
     )
     ignore(
       evaluate_json(
@@ -361,7 +361,7 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
           #|  if (typeof invoke !== "function") {
           #|    throw new Error("bridge is not installed");
           #|  }
-          #|  window.__protonLifecyclePending = invoke("ext:app/slowAdd", {
+          #|  window.__protonLifecyclePending = invoke("ext:appCommands/slowAdd", {
           #|    left: 7,
           #|    right: 8,
           #|    delay_ms: 8000,
@@ -375,7 +375,7 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
     wait_for_native_log_count(
       app.native_log_path,
       "bridge_enqueue",
-      "op=ext:app/slowAdd",
+      "op=ext:appCommands/slowAdd",
       initial_slow_adds + 1,
       timeout,
     )

@@ -32,15 +32,34 @@ fn proton_project_config_from_project_config(
       proton_entry_from_project_entry(project.entry()),
       debug=project.debug(),
       windows=project.windows().map(proton_app_window_from_project_window),
+      permissions=project
+        .permissions()
+        .map(proton_permission_from_project_permission),
     ),
     base_dir=Some(project.base_dir()),
   )
   ProtonProjectConfig::new(
     loaded,
     proton_metadata_from_project_metadata(project.metadata()),
+    single_instance=project.single_instance(),
     backend=project.backend().map(proton_backend_from_project_backend),
     frontend=project.frontend().map(proton_frontend_from_project_frontend),
     bundle=project.bundle().map(proton_bundle_from_project_bundle),
+  )
+}
+
+///|
+fn proton_permission_from_project_permission(
+  value : @proton_config.ProjectPermissionGrant,
+) -> @manifest.PermissionGrant {
+  @manifest.PermissionGrant::new(
+    value.window,
+    match value.origin {
+      "app" => @manifest.PermissionOrigin::App
+      _ => @manifest.PermissionOrigin::Entry
+    },
+    value.extension,
+    scope=value.scope,
   )
 }
 
@@ -52,6 +71,7 @@ fn proton_app_window_from_project_window(
     value.id,
     proton_window_from_project_window(value.window),
     proton_entry_from_project_entry(value.entry),
+    open_on_start=value.open_on_start,
   )
 }
 

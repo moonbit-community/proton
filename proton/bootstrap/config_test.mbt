@@ -200,7 +200,7 @@ test "load_config_manifest_from_file rejects unsupported top-level fields" {
     "description = \"App\"", "Unexpected key 'description' found in moon.proton.",
   )
   expect_moon_proton_extra_field_error(
-    "permissions = {}", "moon.proton field `permissions` is not supported in v1.",
+    "permissions = {}", "moon.proton.permissions must be an array",
   )
   expect_moon_proton_extra_field_error(
     "debug = 1", "moon.proton.debug must be a bool",
@@ -736,11 +736,17 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
       ),
     ],
     extensions={
-      "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(
-        options=Some(Json::object({ "scope": Json::string("read") })),
-      ),
+      "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(),
       "justjavac/proton-tray": @manifest.ExtensionSetting::disabled(),
     },
+    permissions=[
+      @manifest.PermissionGrant::new(
+        "main",
+        @manifest.PermissionOrigin::App,
+        "justjavac/proton-fs",
+        scope=Json::object({ "read": Json::array([Json::string("./data")]) }),
+      ),
+    ],
   )
   let text = app_manifest_to_json(manifest).stringify(indent=2)
   let loaded = load_runtime_manifest_from_json(text)
@@ -762,14 +768,15 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
   )
   @debug.assert_eq(
     roundtripped.extension_setting("justjavac/proton-fs"),
-    Some(
-      @manifest.ExtensionSetting::enabled(
-        options=Some(Json::object({ "scope": Json::string("read") })),
-      ),
-    ),
+    Some(@manifest.ExtensionSetting::enabled()),
   )
   @debug.assert_eq(
     roundtripped.extension_setting("justjavac/proton-tray"),
     Some(@manifest.ExtensionSetting::disabled()),
   )
+  let grants = roundtripped.permission_grants()
+  assert_eq(grants.length(), 1)
+  assert_eq(grants[0].window(), "main")
+  assert_eq(grants[0].origin(), @manifest.PermissionOrigin::App)
+  assert_eq(grants[0].extension(), "justjavac/proton-fs")
 }

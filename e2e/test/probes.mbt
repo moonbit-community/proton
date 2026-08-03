@@ -8,24 +8,24 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|  if (location.href !== "proton://app/") return false;
         #|  if (document.title !== "MoonBit App Commands") return false;
         #|  if (typeof invoke !== "function") return false;
-        #|  const ping = await invoke("ext:app/ping", { name: "proton" });
+        #|  const ping = await invoke("ext:appCommands/ping", { name: "proton" });
         #|  if (!ping || ping.message !== "Hello proton from the app command layer") return false;
-        #|  const sum = await invoke("ext:app/slowAdd", { left: 20, right: 22, delay_ms: 50 });
+        #|  const sum = await invoke("ext:appCommands/slowAdd", { left: 20, right: 22, delay_ms: 50 });
         #|  if (!sum || sum.total !== 42 || sum.source !== "commands") return false;
         #|  try {
-        #|    await invoke("ext:app/unknown", {});
+        #|    await invoke("ext:appCommands/unknown", {});
         #|    return false;
         #|  } catch (error) {
-        #|    if (!String(error && error.message ? error.message : error).includes("bridge op is not allowed")) return false;
+        #|    if (!String(error && error.message ? error.message : error).includes("bridge op is not registered")) return false;
         #|  }
         #|  try {
-        #|    await invoke("ext:app/fail", { message: "Failure crossed command boundary" });
+        #|    await invoke("ext:appCommands/fail", { message: "Failure crossed command boundary" });
         #|    return false;
         #|  } catch (error) {
-        #|    if (!String(error && error.message ? error.message : error).includes("op ext:app/fail failed")) return false;
+        #|    if (!String(error && error.message ? error.message : error).includes("op ext:appCommands/fail failed")) return false;
         #|  }
         #|  try {
-        #|    await invoke("ext:app/ping", { oversized: "x".repeat(1048577) });
+        #|    await invoke("ext:appCommands/ping", { oversized: "x".repeat(1048577) });
         #|    return false;
         #|  } catch (error) {
         #|    const message = String(error && error.message ? error.message : error);

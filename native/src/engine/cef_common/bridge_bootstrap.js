@@ -5,10 +5,22 @@
     throw new TypeError("Proton bridge requires a native invoke function");
   }
 
-  const config = typeof rawConfig === "string" ? JSON.parse(rawConfig) : rawConfig;
-  if (!config || typeof config !== "object") {
+  const rootConfig = typeof rawConfig === "string" ? JSON.parse(rawConfig) : rawConfig;
+  if (!rootConfig || typeof rootConfig !== "object") {
     throw new TypeError("Proton bridge config must be an object");
   }
+  const sourceOrigin = globalThis.location.protocol === "proton:" &&
+      globalThis.location.hostname === "app"
+    ? "app"
+    : globalThis.location.origin;
+  const grant = Array.isArray(rootConfig.grants)
+    ? rootConfig.grants.find((candidate) =>
+        candidate && candidate.source_origin === sourceOrigin)
+    : undefined;
+  if (!grant) {
+    throw new TypeError("Proton bridge has no grant for this page source");
+  }
+  const config = { ...rootConfig, ...grant };
 
   if (typeof pageInstance !== "string" || !pageInstance) {
     throw new TypeError("Proton bridge requires a native page instance");
@@ -216,14 +228,64 @@
     });
   }
 
+  // Application commands are granted as "app:<name>" transport routes. Exposing
+  // a proxy per granted command keeps plain-JavaScript pages from assembling
+  // that transport name by hand, the same way extension APIs are exposed under
+  // their namespace.
+  const appPrefix = "app:";
+  const app = {
+    name: "app",
+    invoke(commandName, payload) {
+      return invokeOp(`${appPrefix}${String(commandName)}`, payload);
+    },
+    on(eventName, listener) {
+      if (typeof listener !== "function") {
+        throw new TypeError("MoonBit.app.on expects a listener function");
+      }
+      const name = String(eventName);
+      return addListener(
+        jsonListeners,
+        `${appPrefix}${name}`,
+        (payloadJson) => listener({ name, payload: JSON.parse(payloadJson) }),
+        "MoonBit.app.on",
+      );
+    },
+  };
+  const ops = Array.isArray(config.ops) ? config.ops : [];
+  for (const op of ops) {
+    const route = String(op && op.name || "");
+    if (!route.startsWith(appPrefix)) {
+      continue;
+    }
+    const commandName = route.slice(appPrefix.length);
+    if (
+      !commandName || commandName === "then" ||
+      Object.prototype.hasOwnProperty.call(app, commandName)
+    ) {
+      continue;
+    }
+    Object.defineProperty(app, commandName, {
+      value: function invokeAppCommand(payload) {
+        return invokeOp(route, payload);
+      },
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
   const root = {
     core: { invokeJson, invokeOp },
     events,
+    app,
   };
   const extensions = Array.isArray(config.extensions) ? config.extensions : [];
   for (const extension of extensions) {
     const namespace = String(extension && extension.namespace || "");
-    if (!namespace || namespace === "core" || namespace === "events") {
+    if (
+      !namespace || namespace === "core" || namespace === "events" ||
+      namespace === "app"
+    ) {
       continue;
     }
     const target = {
@@ -318,12 +380,12 @@
       if (!name) {
         return false;
       }
-      emit(name, {
-        name,
-        payload: event.payload === undefined ? null : event.payload,
-      });
+      // Application events are keyed by their route alone. Publishing them to
+      // the shared friendly-name table as well would let an application event
+      // named "add.finished" reach listeners registered for extension "add"'s
+      // "finished" event, which carries a different payload shape.
       emitJson(
-        `app:${name}`,
+        `${appPrefix}${name}`,
         JSON.stringify(event.payload === undefined ? null : event.payload),
       );
       return true;

@@ -1,6 +1,7 @@
 #include "bridge_renderer.h"
 
 #include "../../proton_json.h"
+#include "bridge_lifecycle.h"
 #include "bridge_policy.h"
 
 #include <stddef.h>
@@ -506,10 +507,16 @@ static bool proton_engine_bridge_initialize_unit(proton_json_value_t value,
 static int proton_engine_bridge_initialize_units(
     const char *config_json, cef_v8_context_t *context, cef_frame_t *frame,
     const char *page_instance, const char *url) {
+  char *grant_json =
+      proton_engine_bridge_config_copy_grant(config_json, url);
+  if (grant_json == NULL) {
+    return 0;
+  }
   proton_json_doc_t doc;
   proton_json_value_t root;
   proton_json_value_t units;
-  if (!proton_json_parse(&doc, config_json)) {
+  if (!proton_json_parse(&doc, grant_json)) {
+    free(grant_json);
     return 0;
   }
   int initialized = 1;
@@ -527,6 +534,7 @@ static int proton_engine_bridge_initialize_units(
     }
   }
   proton_json_dispose(&doc);
+  free(grant_json);
   return initialized;
 }
 
@@ -1172,9 +1180,9 @@ static int proton_engine_bridge_handle_lifecycle_probe(
     free(url);
     return 1;
   }
-  int same_page = config->lifecycle_url != NULL &&
-                  strcmp(config->lifecycle_url, url) == 0 &&
-                  config->lifecycle_page_instance != NULL;
+  int same_page =
+      proton_engine_urls_same_document(config->lifecycle_url, url) &&
+      config->lifecycle_page_instance != NULL;
   if (same_page && config->lifecycle_outcome != NULL &&
       strcmp(config->lifecycle_outcome, "pending") != 0) {
     proton_engine_bridge_send_lifecycle(

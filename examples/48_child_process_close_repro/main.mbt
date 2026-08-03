@@ -59,7 +59,7 @@ fn main {
       width=760,
       height=520,
       debug=true,
-    ).extension(child_process_extension())
+    ).expose(child_process_extension())
     app.run_or_abort()
   })
 }

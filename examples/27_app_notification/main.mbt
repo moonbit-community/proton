@@ -7,7 +7,7 @@ fn main {
       width=940,
       height=720,
       debug=true,
-    ).extension(@notification.extension())
+    ).expose(@notification.extension())
     app.run_or_abort()
   })
 }

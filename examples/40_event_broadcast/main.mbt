@@ -99,7 +99,7 @@ fn main {
       width=900,
       height=620,
       debug=true,
-    ).extension(ticker_extension())
+    ).expose(ticker_extension())
     app.run_or_abort()
   })
 }

@@ -7,7 +7,7 @@ fn main {
       width=1040,
       height=760,
       debug=true,
-    ).extension(@microphone.extension())
+    ).expose(@microphone.extension())
     app.run_or_abort()
   })
 }

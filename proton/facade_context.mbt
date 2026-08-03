@@ -2,6 +2,7 @@
 /// Application-lifetime capabilities supplied to startup hooks.
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
+  windows : WindowManager
 }
 
 ///|
@@ -9,6 +10,8 @@ pub struct ApplicationContext {
 pub struct WindowContext {
   id : String
   window : @native.WindowRef
+  handle : WindowHandle
+  windows : WindowManager
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
 }
@@ -42,18 +45,21 @@ priv struct WindowLifecycleHook {
 ///|
 fn ApplicationContext::new(
   tasks : @async.TaskGroup[Unit],
+  windows : WindowManager,
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, }
+  ApplicationContext::{ tasks, windows }
 }
 
 ///|
 fn WindowContext::new(
   id : String,
   window : @native.WindowRef,
+  handle : WindowHandle,
+  windows : WindowManager,
   tasks : @async.TaskGroup[Unit],
   events : WindowEventEmitter,
 ) -> WindowContext {
-  WindowContext::{ id, window, tasks, events }
+  WindowContext::{ id, window, handle, windows, tasks, events }
 }
 
 ///|
@@ -79,9 +85,27 @@ pub fn ApplicationContext::task_group(
 }
 
 ///|
+/// Returns the window manager owned by this running application.
+pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
+  self.windows
+}
+
+///|
 /// Returns a non-owning reference to this window.
 pub fn WindowContext::window(self : WindowContext) -> @native.WindowRef {
   self.window
+}
+
+///|
+/// Returns the session-controlled handle for this concrete window instance.
+pub fn WindowContext::handle(self : WindowContext) -> WindowHandle {
+  self.handle
+}
+
+///|
+/// Returns the application window manager.
+pub fn WindowContext::windows(self : WindowContext) -> WindowManager {
+  self.windows
 }
 
 ///|

@@ -112,6 +112,7 @@ int32_t proton_runtime_slot_create(bool engine_backed,
     slot->running = false;
     slot->quit_requested = false;
     slot->engine_runtime = engine_runtime;
+    slot->app_instance = PROTON_INVALID_HANDLE;
     slot->owner_thread_set = true;
     slot->owner_thread = proton_current_thread_id();
     proton_runtime_clear_events(slot);
@@ -131,6 +132,7 @@ void proton_runtime_slot_destroy(proton_runtime_slot_t *slot) {
   slot->engine_backed = false;
   slot->running = false;
   slot->quit_requested = true;
+  slot->app_instance = PROTON_INVALID_HANDLE;
   slot->owner_thread_set = false;
 }
 
@@ -262,11 +264,14 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
     slot->destroyed = false;
     slot->visible = false;
     slot->closed_event_sent = false;
+    slot->state_valid = false;
     slot->bridge_notified_revision = 0;
+    slot->close_request_notified_revision = 0;
     slot->runtime = runtime_handle;
     slot->engine_window = engine_window;
     slot->width = width;
     slot->height = height;
+    memset(&slot->state, 0, sizeof(slot->state));
     *out_window = proton_make_window_handle(slot->generation, i);
     if (!proton_runtime_enqueue_window_event(runtime, "window_created",
                                              *out_window)) {
@@ -363,6 +368,161 @@ int32_t proton_runtime_sync_engine_closed_windows(
       return status;
     }
     window->visible = false;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_format_window_state_json(
+    const proton_engine_window_state_t *state, char *buffer,
+    size_t buffer_len) {
+  if (state == NULL || buffer == NULL || buffer_len == 0) {
+    return -1;
+  }
+  const char *theme =
+      state->theme == 2 ? "dark" : state->theme == 1 ? "light" : "system";
+  return snprintf(
+      buffer, buffer_len,
+      "{\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
+      "\"monitor\":{\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
+      "\"work_x\":%d,\"work_y\":%d,\"work_width\":%d,\"work_height\":%d,"
+      "\"scale_factor_percent\":%d},"
+      "\"zoom_percent\":%d,\"visible\":%s,\"focused\":%s,"
+      "\"minimized\":%s,\"maximized\":%s,\"fullscreen\":%s,"
+      "\"always_on_top\":%s,\"theme\":\"%s\"}",
+      state->x, state->y, state->width, state->height, state->monitor_x,
+      state->monitor_y, state->monitor_width, state->monitor_height,
+      state->work_x, state->work_y, state->work_width, state->work_height,
+      state->scale_factor_percent, state->zoom_percent,
+      state->visible ? "true" : "false", state->focused ? "true" : "false",
+      state->minimized ? "true" : "false",
+      state->maximized ? "true" : "false",
+      state->fullscreen ? "true" : "false",
+      state->always_on_top ? "true" : "false", theme);
+}
+
+int32_t proton_runtime_sync_engine_window_states(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime) {
+  for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
+    proton_window_slot_t *window = &g_windows[i];
+    if (!window->occupied || window->destroyed ||
+        window->runtime != runtime_handle || window->engine_window == NULL ||
+        proton_engine_window_is_closed(window->engine_window)) {
+      continue;
+    }
+
+    proton_engine_window_state_t state;
+    char engine_error[512] = {0};
+    int32_t status = proton_engine_window_get_state(
+        window->engine_window, &state, engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+    if (window->state_valid &&
+        memcmp(&window->state, &state, sizeof(state)) == 0) {
+      continue;
+    }
+
+    char state_json[1024];
+    int state_written =
+        proton_format_window_state_json(&state, state_json, sizeof(state_json));
+    if (state_written < 0 || state_written >= (int)sizeof(state_json)) {
+      return proton_set_error(PROTON_ERR_ENGINE,
+                              "window state payload is too large");
+    }
+    proton_window_id_t window_handle =
+        proton_make_window_handle(window->generation, i);
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int event_written = snprintf(
+        event_json, sizeof(event_json),
+        "{\"type\":\"window_state_changed\",\"window\":\"%lld\","
+        "\"state\":%s}",
+        (long long)window_handle, state_json);
+    if (event_written < 0 || event_written >= (int)sizeof(event_json)) {
+      return proton_set_error(PROTON_ERR_ENGINE,
+                              "window state event payload is too large");
+    }
+    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      return PROTON_OK;
+    }
+    window->state = state;
+    window->state_valid = true;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_sync_engine_close_requests(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime) {
+  for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
+    proton_window_slot_t *window = &g_windows[i];
+    if (!window->occupied || window->destroyed ||
+        window->runtime != runtime_handle || window->engine_window == NULL) {
+      continue;
+    }
+    uint64_t request_id = 0;
+    int32_t pending = 0;
+    char engine_error[512] = {0};
+    int32_t status = proton_engine_window_get_close_request(
+        window->engine_window, &request_id, &pending, engine_error,
+        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+    if (!pending || request_id == 0 ||
+        request_id == window->close_request_notified_revision) {
+      continue;
+    }
+    proton_window_id_t window_handle =
+        proton_make_window_handle(window->generation, i);
+    char event_json[PROTON_MAX_EVENT_BYTES];
+    int written = snprintf(
+        event_json, sizeof(event_json),
+        "{\"type\":\"window_close_requested\",\"window\":\"%lld\","
+        "\"request_id\":\"%llu\"}",
+        (long long)window_handle, (unsigned long long)request_id);
+    if (written < 0 || written >= (int)sizeof(event_json)) {
+      return proton_set_error(PROTON_ERR_ENGINE,
+                              "window close request payload is too large");
+    }
+    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      return PROTON_OK;
+    }
+    window->close_request_notified_revision = request_id;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_sync_engine_browser_events(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime) {
+  char event_json[PROTON_MAX_EVENT_BYTES];
+  for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
+    proton_window_slot_t *window = &g_windows[i];
+    if (!window->occupied || window->destroyed ||
+        window->runtime != runtime_handle || window->engine_window == NULL) {
+      continue;
+    }
+    while (runtime->event_count < PROTON_MAX_EVENTS) {
+      int32_t required = 0;
+      char error[512] = {0};
+      int32_t status = proton_engine_window_poll_browser_event_json(
+          window->engine_window, event_json, sizeof(event_json), &required,
+          error, sizeof(error));
+      if (status == PROTON_EVENT_NONE) {
+        break;
+      }
+      if (status != PROTON_OK) {
+        return proton_set_engine_status(status, error);
+      }
+      if (!proton_runtime_enqueue_event(runtime, event_json)) {
+        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                                "failed to queue browser event");
+      }
+    }
+    if (runtime->event_count >= PROTON_MAX_EVENTS) {
+      break;
+    }
   }
   return PROTON_OK;
 }

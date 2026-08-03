@@ -85,6 +85,55 @@ fn main {
 The root package also supports URL, file, asset, and project-config entries
 through `@proton.url`, `@proton.file`, `@proton.asset`, and `@proton.config`.
 
+## Renderer permissions
+
+Registering backend commands does not expose them to a renderer. Every
+renderer capability requires a grant for one window, one trusted source, and
+one extension. Missing grants are denied.
+
+Commands registered directly with `.commands(...)` belong to the `app`
+permission id. Generated projects declare that grant in `moon.proton`:
+
+```moonbit
+permissions = [
+  {
+    window: "main",
+    origin: "entry",
+    extension: "app",
+  },
+]
+```
+
+`origin: "app"` names bundled `proton://app` content. `origin: "entry"` follows
+the configured entry and resolves URL entries to their exact HTTP(S) origin,
+including `frontend.dev_url` during development. Arbitrary origins cannot be
+granted.
+
+For extensions without an additional scope, `.expose(extension)` is the
+explicit shorthand for registration plus an empty grant. Filesystem access
+must declare path ranges and exact commands:
+
+```moonbit
+@proton.html("Files", html)
+.extension(@fs.extension())
+.permission(
+  @fs.permission([
+    @fs.PermissionRoot::new("./workspace", [
+      "read_file",
+      "write_file",
+      "readdir",
+    ]),
+  ]),
+)
+```
+
+The renderer cannot select or widen these roots. Proton matches the trusted
+frame origin in native code, rechecks the grant during MoonBit dispatch, and
+the filesystem extension validates the canonical target before each operation.
+Relative filesystem roots and request paths are anchored to the directory
+containing `moon.proton`; apps configured entirely in MoonBit use the working
+directory captured during startup.
+
 On macOS and Windows, web content can extend beneath the native titlebar while
 retaining the system window controls. Set `titlebar_style` in `moon.proton`:
 
@@ -136,14 +185,57 @@ pump:
   @proton.AppEntry::Html(details_html),
   width=640,
   height=480,
+  open_on_start=false,
+)
+.app_lifecycle(
+  on_start=async fn(context) {
+    let details = context.windows().open("details")
+    details.set_position(80, 80)
+    details.set_zoom_percent(110)
+  },
+  on_shutdown=fn(_) {  },
 )
 ```
 
-Each window has a stable id. The process remains active until every window has
-closed. See `examples/45_bridge_multi_window`.
+Runtime-created windows must be declared before startup so packaging inputs,
+origins, and permissions remain explicit. `open_on_start=false` declares a
+template without creating it; `WindowManager::open` creates a fresh concrete
+instance when the application needs it. `WindowHandle` supports show, hide,
+focus, close, title, size, position, minimize, maximize, restore, fullscreen,
+always-on-top, zoom, and a `WindowState` snapshot containing the current
+monitor, work area, scale factor, focus, and theme.
 
-On macOS, packaged URL and file activations are delivered through a typed app
-handler:
+Window state and close requests are delivered by the managed runtime session:
+
+```moonbit
+@proton.app()
+.on_window_event(async fn(window, event) noraise {
+  match event {
+    StateChanged(state) => println(window.id() + ": " + state.theme)
+  }
+})
+.on_window_close_request(async fn(_window) noraise {
+  @proton.WindowCloseDecision::Allow
+})
+```
+
+Close handlers run asynchronously without blocking the native UI thread.
+`WindowHandle::close` follows the same cancellable request path; session
+cleanup uses the owning destroy lifecycle. The process remains active until
+every concrete window has closed. See `examples/45_bridge_multi_window`.
+
+Enable operating-system single-instance routing with a stable application
+identifier:
+
+```moonbit
+identifier = "com.example.my-app"
+single_instance = true
+```
+
+When another process starts, Proton forwards its protocol URLs and document
+paths to the primary process before creating CEF, then exits. The primary
+process restores and focuses its application window before delivering the typed
+activation:
 
 ```moonbit
 @proton.config("moon.proton")
@@ -155,6 +247,13 @@ handler:
   }
 })
 ```
+
+The instance coordinator is implemented on macOS, Windows, and Linux. Packaged
+macOS applications register `bundle.url_schemes` and `bundle.document_types`
+through `Info.plist`. Windows portable ZIPs and the current Linux build do not
+install operating-system associations; their `proton-package.json` metadata is
+intended for a future installer/package target. Direct launches and associations
+installed by another package manager still use the same forwarding path.
 
 Use `@proton.app_data_dir("com.example.my-app")` to resolve the stable native
 data directory for an application identifier. The function does not create the
@@ -253,6 +352,8 @@ The `bundle` block in `moon.proton` enables package creation and selects its
 default targets and output directory:
 
 ```moonbit
+single_instance = true
+
 bundle = {
   active: true,
   targets: ["app", "zip"],

@@ -5,6 +5,7 @@ struct Extension {
   register : (@proton_command.CommandRegistrar) -> Unit raise
   scripts : Array[String]
   dependencies : Array[String]
+  resolve_permission : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError
   on_destroy : () -> Unit raise
 }
 
@@ -24,6 +25,26 @@ pub fn typed(
   register : (@proton_command.CommandRegistrar) -> Unit raise,
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
+  resolve_permission? : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError = fn(
+    scope,
+    _base_path,
+  ) -> Json raise @proton_command.PermissionScopeValidationError {
+    guard scope is Object(fields) else {
+      raise @proton_command.PermissionScopeValidationError::Invalid(
+        detail="extension " +
+          contract.id() +
+          " permission scope must be an object",
+      )
+    }
+    for _, _ in fields {
+      raise @proton_command.PermissionScopeValidationError::Invalid(
+        detail="extension " +
+          contract.id() +
+          " does not accept a non-empty permission scope",
+      )
+    }
+    scope
+  },
   on_destroy? : () -> Unit raise = fn() {  },
 ) -> Extension {
   Extension::{
@@ -32,6 +53,7 @@ pub fn typed(
     register,
     scripts: scripts.map(script => script),
     dependencies: dependencies.map(dependency => dependency),
+    resolve_permission,
     on_destroy,
   }
 }
@@ -61,6 +83,7 @@ pub fn Extension::command_spec(
     self.register,
     scripts=self.scripts,
     dependencies=self.dependencies,
+    resolve_permission=self.resolve_permission,
     on_destroy=self.on_destroy,
   ) catch {
     error =>

@@ -32,7 +32,7 @@ pub fn register_commands(
   )
   registrar.bind(
     exists_command,
-    (_context, request) => exists(request),
+    (context, request) => exists(context, request),
   )
   registrar.bind(
     kind_command,

@@ -18,6 +18,7 @@ fn App::new(
     windows: [],
     debug_level_value: debug,
     headless_value: false,
+    single_instance_identifier: None,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,
@@ -26,10 +27,19 @@ fn App::new(
     bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
     menu: None,
     extension_settings: Map([]),
+    permission_grants: [],
     command_extensions: Map([]),
     command_registrars: [],
     application_lifecycle_hooks: [],
     launch_input_handlers: [],
+    window_event_handlers: [],
+    window_close_handler: None,
+    navigation_handler: None,
+    popup_handler: None,
+    download_handler: None,
+    certificate_handler: None,
+    media_handler: None,
+    download_event_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],
   }
@@ -79,36 +89,30 @@ fn App::resolved_config_manifest(
   self : App,
   path : String,
 ) -> ResolvedAppConfig raise AppConfigurationError {
-  if proton_dev_mode_enabled() {
-    self.merge_config(resolved_dev_manifest(path))
-  } else {
-    let loaded = @bootstrap.load_config_manifest_from_file(path) catch {
-      error => raise Bootstrap(error)
-    }
-    self.merge_config(loaded)
+  let project = @bootstrap.load_proton_project_config_from_file(path) catch {
+    error => raise Bootstrap(error)
   }
+  let loaded = if proton_dev_mode_enabled() {
+    resolved_dev_manifest(project)
+  } else {
+    project.manifest()
+  }
+  self.merge_config(loaded, project=Some(project))
 }
 
 ///|
 fn resolved_dev_manifest(
-  path : String,
-) -> @bootstrap.LoadedAppManifest raise AppConfigurationError {
+  config : @bootstrap.ProtonProjectConfig,
+) -> @bootstrap.LoadedAppManifest {
   match proton_dev_url_override() {
     Some(url) => {
-      let loaded = @bootstrap.load_config_manifest_from_file(path) catch {
-        error => raise Bootstrap(error)
-      }
+      let loaded = config.manifest()
       @bootstrap.LoadedAppManifest::new(
         manifest_with_entry(loaded.manifest(), @manifest.AppEntry::Url(url)),
         base_dir=loaded.base_dir(),
       )
     }
-    None => {
-      let config = @bootstrap.load_proton_project_config_from_file(path) catch {
-        error => raise Bootstrap(error)
-      }
-      config.dev_manifest()
-    }
+    None => config.dev_manifest()
   }
 }
 
@@ -123,6 +127,7 @@ fn manifest_with_entry(
     debug=manifest.debug,
     windows=manifest.windows,
     extensions=manifest.extensions,
+    permissions=manifest.permission_grants(),
   )
 }
 
@@ -236,7 +241,13 @@ fn App::resolved_headless(self : App) -> Bool {
 
 ///|
 fn App::inline_app_config(self : App) -> ResolvedAppConfig {
-  ResolvedAppConfig::{ manifest: self.inline_manifest() }
+  ResolvedAppConfig::{
+    manifest: self.inline_manifest(),
+    permission_base_path: current_permission_base_path(),
+    instance_identifier: self.single_instance_identifier,
+    url_schemes: [],
+    document_extensions: [],
+  }
 }
 
 ///|
@@ -247,6 +258,7 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
     debug=self.debug_level_value,
     windows=self.windows,
     extensions=self.extension_settings,
+    permissions=self.permission_grants,
   )
 }
 
@@ -254,6 +266,7 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
 fn App::merge_config(
   self : App,
   loaded : @bootstrap.LoadedAppManifest,
+  project? : @bootstrap.ProtonProjectConfig? = None,
 ) -> ResolvedAppConfig {
   self.warn_config_overrides()
   let manifest = loaded.manifest()
@@ -268,6 +281,10 @@ fn App::merge_config(
     manifest.extensions,
     self.extension_settings,
   )
+  let permissions = manifest.permission_grants()
+  for grant in self.permission_grants {
+    permissions.push(grant)
+  }
   let windows = manifest.windows.copy()
   for window in self.windows {
     windows.push(window)
@@ -279,8 +296,66 @@ fn App::merge_config(
       debug~,
       windows~,
       extensions~,
+      permissions~,
     ),
+    permission_base_path: match loaded.base_dir() {
+      Some(base_dir) => {
+        let base : @mbpath.Path = base_dir
+        base.resolve().to_string()
+      }
+      None => current_permission_base_path()
+    },
+    instance_identifier: match self.single_instance_identifier {
+      Some(identifier) => Some(identifier)
+      None =>
+        match project {
+          Some(project) if project.single_instance() =>
+            project.metadata().identifier()
+          _ => None
+        }
+    },
+    url_schemes: resolved_url_schemes(project),
+    document_extensions: resolved_document_extensions(project),
   }
+}
+
+///|
+fn resolved_url_schemes(
+  project : @bootstrap.ProtonProjectConfig?,
+) -> Array[String] {
+  match project {
+    Some(project) =>
+      match project.bundle() {
+        Some(bundle) => bundle.url_schemes()
+        None => []
+      }
+    None => []
+  }
+}
+
+///|
+fn resolved_document_extensions(
+  project : @bootstrap.ProtonProjectConfig?,
+) -> Array[String] {
+  let extensions : Array[String] = []
+  match project {
+    Some(project) =>
+      match project.bundle() {
+        Some(bundle) =>
+          for extension in bundle.document_extensions() {
+            extensions.push(extension.to_lower())
+          }
+        None => ()
+      }
+    None => ()
+  }
+  extensions
+}
+
+///|
+fn current_permission_base_path() -> String {
+  let current : @mbpath.Path = "."
+  current.resolve().to_string()
 }
 
 ///|

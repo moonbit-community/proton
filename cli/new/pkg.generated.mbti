@@ -37,6 +37,7 @@ pub fn NewProjectTargetError::message(Self) -> String
 
 pub(all) suberror NewProjectTemplateError {
   UnresolvedPlaceholder(template~ : String)
+  CommandCodegen(path~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NewProjectTemplateError::message(Self) -> String
 

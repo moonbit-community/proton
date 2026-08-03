@@ -34,6 +34,16 @@ pub fn NativeError::is_stale_bridge_response(self : NativeError) -> Bool {
 }
 
 ///|
+pub fn NativeError::is_stale_window_request(self : NativeError) -> Bool {
+  self.status() == proton_err_stale_window_request
+}
+
+///|
+pub fn NativeError::is_stale_browser_request(self : NativeError) -> Bool {
+  self.status() == proton_err_stale_browser_request
+}
+
+///|
 impl Show for NativeError with fn output(self, logger) {
   logger.write_string(self.message())
 }
@@ -59,10 +69,46 @@ pub(all) struct RuntimeWaitReady {
 } derive(Debug, Eq)
 
 ///|
+/// Inputs forwarded by a second operating-system application instance.
+pub(all) struct AppActivation {
+  abi_version : Int
+  urls : Array[String]
+  files : Array[String]
+  reopen : Bool
+} derive(Debug, Eq, ToJson)
+
+///|
+/// Result of claiming an operating-system application identity.
+pub enum AppInstanceAcquire {
+  Primary(AppInstance)
+  Forwarded
+}
+
+///|
+struct AppInstance {
+  mut handle : Int64
+  mut destroyed : Bool
+}
+
+///|
 struct RuntimeEvent {
   event_type : String
   window : Int64?
+  state : WindowState?
   request_id : Int64?
+  url : String?
+  http_method : String?
+  user_gesture : Bool?
+  redirect : Bool?
+  disposition : Int?
+  download_id : Int?
+  suggested_name : String?
+  download_state : String?
+  received_bytes : Int64?
+  total_bytes : Int64?
+  percent : Int?
+  error_code : Int?
+  permissions : Int?
   menu_command_id : String?
   revision : Int64?
   items : Array[String]
@@ -82,6 +128,40 @@ pub(all) enum RuntimeLaunchInput {
 pub(all) enum NativeNotificationResult {
   Delivered
   Failed(String)
+} derive(Debug, Eq)
+
+///|
+pub(all) enum NativeBrowserRequest {
+  Navigation(
+    request_id~ : Int64,
+    url~ : String,
+    http_method~ : String,
+    user_gesture~ : Bool,
+    redirect~ : Bool
+  )
+  Popup(
+    request_id~ : Int64,
+    url~ : String,
+    disposition~ : Int,
+    user_gesture~ : Bool
+  )
+  Download(
+    request_id~ : Int64,
+    download_id~ : Int,
+    url~ : String,
+    suggested_name~ : String
+  )
+  Certificate(request_id~ : Int64, url~ : String, error_code~ : Int)
+  Media(request_id~ : Int64, origin~ : String, permissions~ : Int)
+} derive(Debug, Eq)
+
+///|
+pub(all) struct NativeDownloadUpdate {
+  download_id : Int
+  state : String
+  received_bytes : Int64
+  total_bytes : Int64
+  percent : Int
 } derive(Debug, Eq)
 
 ///|
@@ -119,6 +199,7 @@ pub(all) struct BridgeRequest {
   op : String
   payload : Json
   page_instance : String?
+  source_origin : String
 } derive(Debug)
 
 ///|
@@ -139,6 +220,38 @@ pub(all) enum DialogPollResult {
   Pending
   Ready(String)
 } derive(Debug, Eq)
+
+///|
+/// Geometry and scaling information for the monitor containing a window.
+pub(all) struct WindowMonitor {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+} derive(Debug, Eq, FromJson)
+
+///|
+/// A point-in-time native window state snapshot.
+pub(all) struct WindowState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  monitor : WindowMonitor
+  zoom_percent : Int
+  visible : Bool
+  focused : Bool
+  minimized : Bool
+  maximized : Bool
+  fullscreen : Bool
+  always_on_top : Bool
+  theme : String
+} derive(Debug, Eq, FromJson)
 
 ///|
 /// A native notification activation, optionally carrying its application
@@ -174,10 +287,16 @@ struct MenuItem {
 ///|
 pub(all) struct BridgeConfig {
   raw_json : String?
-  ops : Array[String]
   max_payload_bytes : Int
   request_timeout_ms : Int
-  dev_origins : Array[String]
+  grants : Array[BridgeGrantConfig]
+} derive(Debug, Eq)
+
+///|
+/// Renderer capabilities granted to one canonical source in one window.
+pub(all) struct BridgeGrantConfig {
+  source_origin : String
+  ops : Array[String]
   extensions : Array[BridgeExtensionConfig]
   initialization_units : Array[BridgeInitializationUnit]
 } derive(Debug, Eq)
@@ -222,6 +341,95 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self.event_type == "window_closed"
+}
+
+///|
+pub fn RuntimeEvent::window_state_change(self : RuntimeEvent) -> WindowState? {
+  if self.event_type == "window_state_changed" {
+    self.state
+  } else {
+    None
+  }
+}
+
+///|
+pub fn RuntimeEvent::window_close_request(self : RuntimeEvent) -> Int64? {
+  if self.event_type == "window_close_requested" {
+    self.request_id
+  } else {
+    None
+  }
+}
+
+///|
+pub fn RuntimeEvent::browser_request(
+  self : RuntimeEvent,
+) -> NativeBrowserRequest? {
+  let request_id = self.request_id
+  let url = self.url
+  match (self.event_type, request_id, url) {
+    ("browser_navigation_requested", Some(request_id), Some(url)) =>
+      Some(
+        Navigation(
+          request_id~,
+          url~,
+          http_method=self.http_method.unwrap_or("GET"),
+          user_gesture=self.user_gesture.unwrap_or(false),
+          redirect=self.redirect.unwrap_or(false),
+        ),
+      )
+    ("browser_popup_requested", Some(request_id), Some(url)) =>
+      Some(
+        Popup(
+          request_id~,
+          url~,
+          disposition=self.disposition.unwrap_or(0),
+          user_gesture=self.user_gesture.unwrap_or(false),
+        ),
+      )
+    ("browser_download_requested", Some(request_id), Some(url)) =>
+      Some(
+        Download(
+          request_id~,
+          download_id=self.download_id.unwrap_or(0),
+          url~,
+          suggested_name=self.suggested_name.unwrap_or(""),
+        ),
+      )
+    ("browser_certificate_error", Some(request_id), Some(url)) =>
+      Some(
+        Certificate(request_id~, url~, error_code=self.error_code.unwrap_or(0)),
+      )
+    ("browser_media_permission_requested", Some(request_id), Some(origin)) =>
+      Some(
+        Media(request_id~, origin~, permissions=self.permissions.unwrap_or(0)),
+      )
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::browser_download_update(
+  self : RuntimeEvent,
+) -> NativeDownloadUpdate? {
+  guard self.event_type == "browser_download_updated" else { return None }
+  match
+    (
+      self.download_id,
+      self.download_state,
+      self.received_bytes,
+      self.total_bytes,
+      self.percent,
+    ) {
+    (
+      Some(download_id),
+      Some(state),
+      Some(received_bytes),
+      Some(total_bytes),
+      Some(percent),
+    ) => Some({ download_id, state, received_bytes, total_bytes, percent })
+    _ => None
+  }
 }
 
 ///|
@@ -328,6 +536,11 @@ pub fn BridgeRequest::page_instance(self : BridgeRequest) -> String? {
 }
 
 ///|
+pub fn BridgeRequest::source_origin(self : BridgeRequest) -> String {
+  self.source_origin
+}
+
+///|
 priv enum RuntimeLifecycleState {
   RuntimeActive = 0
   RuntimeDestroying = 1
@@ -381,9 +594,44 @@ pub(all) enum WindowSizeHint {
 } derive(Debug, Eq)
 
 ///|
+pub(all) enum BrowserPolicyMode {
+  Allow
+  Deny
+  Ask
+} derive(Debug, Eq)
+
+///|
+pub(all) struct BrowserPolicy {
+  navigation : BrowserPolicyMode
+  popup : BrowserPolicyMode
+  download : BrowserPolicyMode
+  certificate : BrowserPolicyMode
+  media : BrowserPolicyMode
+  devtools : Bool
+} derive(Debug, Eq)
+
+///|
+pub fn BrowserPolicy::new(
+  navigation? : BrowserPolicyMode = BrowserPolicyMode::Allow,
+  popup? : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  download? : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  certificate? : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  media? : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  devtools? : Bool = false,
+) -> BrowserPolicy {
+  { navigation, popup, download, certificate, media, devtools }
+}
+
+///|
 fn window_size_hint_config_supported() -> Bool {
   let info = runtime_info() catch { _ => return false }
   info.features.contains("window_size_hints")
+}
+
+///|
+pub fn bridge_permission_grants_supported() -> Bool {
+  let info = runtime_info() catch { _ => return false }
+  info.features.contains("bridge_permission_grants")
 }
 
 ///|
@@ -408,6 +656,7 @@ struct WindowConfig {
   initial_url : String
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
+  browser : BrowserPolicy
   bridge : BridgeConfig?
 } derive(Debug, Eq)
 
@@ -488,6 +737,7 @@ pub fn WindowConfig::new(
   initial_url? : String = "about:blank",
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  browser? : BrowserPolicy = BrowserPolicy::new(),
   bridge? : BridgeConfig,
 ) -> WindowConfig {
   {
@@ -498,6 +748,7 @@ pub fn WindowConfig::new(
     initial_url,
     size_hint,
     titlebar_style,
+    browser,
     bridge,
   }
 }
@@ -512,6 +763,7 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     initial_url: "about:blank",
     size_hint: WindowSizeHint::Unconstrained,
     titlebar_style: TitlebarStyle::Default,
+    browser: BrowserPolicy::new(),
     bridge: None,
   }
 }
@@ -567,21 +819,15 @@ pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
 
 ///|
 pub fn BridgeConfig::new(
-  ops~ : Array[String],
+  grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
   request_timeout_ms? : Int = 30000,
-  dev_origins? : Array[String] = [],
-  extensions? : Array[BridgeExtensionConfig] = [],
-  initialization_units? : Array[BridgeInitializationUnit] = [],
 ) -> BridgeConfig {
   {
     raw_json: None,
-    ops,
     max_payload_bytes,
     request_timeout_ms,
-    dev_origins: copy_strings(dev_origins),
-    extensions: extensions.map(fn(extension) { extension.copy() }),
-    initialization_units: initialization_units.map(fn(unit) { unit.copy() }),
+    grants: grants.map(fn(grant) { grant.copy() }),
   }
 }
 
@@ -589,12 +835,24 @@ pub fn BridgeConfig::new(
 pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
   {
     raw_json: Some(raw_json),
-    ops: [],
     max_payload_bytes: 1048576,
     request_timeout_ms: 30000,
-    dev_origins: [],
-    extensions: [],
-    initialization_units: [],
+    grants: [],
+  }
+}
+
+///|
+pub fn BridgeGrantConfig::new(
+  source_origin : String,
+  ops~ : Array[String],
+  extensions? : Array[BridgeExtensionConfig] = [],
+  initialization_units? : Array[BridgeInitializationUnit] = [],
+) -> BridgeGrantConfig {
+  {
+    source_origin,
+    ops: copy_strings(ops),
+    extensions: extensions.map(fn(extension) { extension.copy() }),
+    initialization_units: initialization_units.map(fn(unit) { unit.copy() }),
   }
 }
 
@@ -627,6 +885,16 @@ fn BridgeExtensionConfig::copy(
   self : BridgeExtensionConfig,
 ) -> BridgeExtensionConfig {
   { js_namespace: self.js_namespace, apis: copy_strings(self.apis) }
+}
+
+///|
+fn BridgeGrantConfig::copy(self : BridgeGrantConfig) -> BridgeGrantConfig {
+  BridgeGrantConfig::new(
+    self.source_origin,
+    ops=self.ops,
+    extensions=self.extensions,
+    initialization_units=self.initialization_units,
+  )
 }
 
 ///|
@@ -675,6 +943,27 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
 }
 
 ///|
+fn BrowserPolicyMode::to_json_string(self : BrowserPolicyMode) -> String {
+  match self {
+    Allow => "allow"
+    Deny => "deny"
+    Ask => "ask"
+  }
+}
+
+///|
+fn BrowserPolicy::to_json(self : BrowserPolicy) -> Json {
+  Json::object({
+    "navigation": Json::string(self.navigation.to_json_string()),
+    "popup": Json::string(self.popup.to_json_string()),
+    "download": Json::string(self.download.to_json_string()),
+    "certificate": Json::string(self.certificate.to_json_string()),
+    "media": Json::string(self.media.to_json_string()),
+    "devtools": Json::boolean(self.devtools),
+  })
+}
+
+///|
 pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
   match self.raw_json {
     Some(raw) => raw
@@ -711,6 +1000,7 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
         Some(bridge) => fields.set("bridge", bridge.to_json())
         None => ()
       }
+      fields.set("browser", self.browser.to_json())
       Json::object(fields).stringify()
     }
   }
@@ -752,24 +1042,40 @@ fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
   match self.raw_json {
     Some(raw) => @json.parse(raw) catch { _ => Json::null() }
     None => {
-      let ops_json = self.ops.map(fn(name) {
-        Json::object({ "name": Json::string(name) })
-      })
-      let origin_policy = if self.dev_origins.length() == 0 {
-        Json::object({ "mode": Json::string("app_only") })
-      } else {
-        Json::object({
-          "mode": Json::string("app_and_dev_origins"),
-          "dev_origins": Json::array(
-            self.dev_origins.map(fn(origin) { Json::string(origin) }),
-          ),
-        })
-      }
       let fields : Map[String, Json] = {
-        "abi_version": Json::number(1.0, repr="1"),
+        "abi_version": Json::number(2.0, repr="2"),
         "namespace": Json::string("__MoonBit__"),
-        "origin_policy": origin_policy,
-        "ops": Json::array(ops_json),
+        "grants": Json::array(
+          self.grants.map(fn(grant) {
+            Json::object({
+              "source_origin": Json::string(grant.source_origin),
+              "ops": Json::array(
+                grant.ops.map(fn(name) {
+                  Json::object({ "name": Json::string(name) })
+                }),
+              ),
+              "extensions": Json::array(
+                grant.extensions.map(fn(extension) {
+                  Json::object({
+                    "namespace": Json::string(extension.js_namespace),
+                    "apis": Json::array(
+                      extension.apis.map(fn(api) { Json::string(api) }),
+                    ),
+                  })
+                }),
+              ),
+              "initialization_units": Json::array(
+                grant.initialization_units.map(fn(unit) {
+                  Json::object({
+                    "owner": Json::string(unit.owner),
+                    "name": Json::string(unit.name),
+                    "source": Json::string(unit.source),
+                  })
+                }),
+              ),
+            })
+          }),
+        ),
         "max_payload_bytes": Json::number(
           self.max_payload_bytes.to_double(),
           repr=self.max_payload_bytes.to_string(),
@@ -778,29 +1084,7 @@ fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
           self.request_timeout_ms.to_double(),
           repr=self.request_timeout_ms.to_string(),
         ),
-        "extensions": Json::array(
-          self.extensions.map(fn(extension) {
-            Json::object({
-              "namespace": Json::string(extension.js_namespace),
-              "apis": Json::array(
-                extension.apis.map(fn(api) { Json::string(api) }),
-              ),
-            })
-          }),
-        ),
       }
-      fields.set(
-        "initialization_units",
-        Json::array(
-          self.initialization_units.map(fn(unit) {
-            Json::object({
-              "owner": Json::string(unit.owner),
-              "name": Json::string(unit.name),
-              "source": Json::string(unit.source),
-            })
-          }),
-        ),
-      )
       Json::object(fields)
     }
   }

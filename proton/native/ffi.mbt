@@ -14,6 +14,12 @@ let proton_err_buffer_too_small = -11
 let proton_err_stale_bridge_response = -12
 
 ///|
+let proton_err_stale_window_request = -13
+
+///|
+let proton_err_stale_browser_request = -14
+
+///|
 pub let runtime_wait_none : Int = 0
 
 ///|
@@ -47,6 +53,24 @@ extern "C" fn proton_runtime_info_json_ffi(
   buffer_len : Int,
   out_required_len : Ref[Int],
 ) -> Int = "proton_runtime_info_json"
+
+///|
+#borrow(identifier, activation_json, out_instance, out_primary)
+extern "C" fn proton_app_instance_acquire_ffi(
+  identifier : Bytes,
+  activation_json : Bytes,
+  out_instance : Ref[Int64],
+  out_primary : Ref[Int],
+) -> Int = "proton_app_instance_acquire"
+
+///|
+extern "C" fn proton_app_instance_attach_runtime_ffi(
+  instance : Int64,
+  runtime : Int64,
+) -> Int = "proton_app_instance_attach_runtime"
+
+///|
+extern "C" fn proton_app_instance_destroy_ffi(instance : Int64) -> Int = "proton_app_instance_destroy"
 
 ///|
 #borrow(config_json, out_exit_code)
@@ -227,6 +251,76 @@ extern "C" fn proton_window_set_size_ffi(
   width : Int,
   height : Int,
 ) -> Int = "proton_window_set_size"
+
+///|
+extern "C" fn proton_window_minimize_ffi(window : Int64) -> Int = "proton_window_minimize"
+
+///|
+extern "C" fn proton_window_maximize_ffi(window : Int64) -> Int = "proton_window_maximize"
+
+///|
+extern "C" fn proton_window_restore_ffi(window : Int64) -> Int = "proton_window_restore"
+
+///|
+extern "C" fn proton_window_set_fullscreen_ffi(
+  window : Int64,
+  fullscreen : Int,
+) -> Int = "proton_window_set_fullscreen"
+
+///|
+extern "C" fn proton_window_set_position_ffi(
+  window : Int64,
+  x : Int,
+  y : Int,
+) -> Int = "proton_window_set_position"
+
+///|
+extern "C" fn proton_window_set_always_on_top_ffi(
+  window : Int64,
+  always_on_top : Int,
+) -> Int = "proton_window_set_always_on_top"
+
+///|
+extern "C" fn proton_window_set_zoom_percent_ffi(
+  window : Int64,
+  zoom_percent : Int,
+) -> Int = "proton_window_set_zoom_percent"
+
+///|
+#borrow(command_json)
+extern "C" fn proton_window_browser_command_json_ffi(
+  window : Int64,
+  command_json : Bytes,
+) -> Int = "proton_window_browser_command_json"
+
+///|
+#borrow(response_json)
+extern "C" fn proton_window_respond_browser_request_json_ffi(
+  window : Int64,
+  response_json : Bytes,
+) -> Int = "proton_window_respond_browser_request_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_state_json_ffi(
+  window : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_state_json"
+
+///|
+extern "C" fn proton_window_set_close_interception_ffi(
+  window : Int64,
+  enabled : Int,
+) -> Int = "proton_window_set_close_interception"
+
+///|
+extern "C" fn proton_window_respond_close_request_ffi(
+  window : Int64,
+  request_id : Int64,
+  allow : Int,
+) -> Int = "proton_window_respond_close_request"
 
 ///|
 #borrow(url)

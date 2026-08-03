@@ -9,6 +9,8 @@ import {
 // Values
 pub fn abi_version() -> Int
 
+pub fn bridge_permission_grants_supported() -> Bool
+
 pub fn execute_process(config? : RuntimeConfig) -> ProcessResult raise NativeError
 
 pub fn last_error_message() -> String
@@ -46,20 +48,37 @@ pub(all) suberror NativeError {
   InvalidPayload(context~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NativeError::is_stale_bridge_response(Self) -> Bool
+pub fn NativeError::is_stale_browser_request(Self) -> Bool
+pub fn NativeError::is_stale_window_request(Self) -> Bool
 pub fn NativeError::message(Self) -> String
 pub fn NativeError::status(Self) -> Int
 
 // Types and methods
+pub(all) struct AppActivation {
+  abi_version : Int
+  urls : Array[String]
+  files : Array[String]
+  reopen : Bool
+} derive(Eq, ToJson, @debug.Debug)
+pub fn AppActivation::new(urls? : Array[String], files? : Array[String], reopen? : Bool) -> Self
+
+type AppInstance
+pub fn AppInstance::acquire(String, AppActivation) -> AppInstanceAcquire raise NativeError
+pub fn AppInstance::attach_runtime(Self, Runtime) -> Unit raise NativeError
+pub fn AppInstance::destroy(Self) -> Unit raise NativeError
+
+pub enum AppInstanceAcquire {
+  Primary(AppInstance)
+  Forwarded
+}
+
 pub(all) struct BridgeConfig {
   raw_json : String?
-  ops : Array[String]
   max_payload_bytes : Int
   request_timeout_ms : Int
-  dev_origins : Array[String]
-  extensions : Array[BridgeExtensionConfig]
-  initialization_units : Array[BridgeInitializationUnit]
+  grants : Array[BridgeGrantConfig]
 } derive(Eq, @debug.Debug)
-pub fn BridgeConfig::new(ops~ : Array[String], max_payload_bytes? : Int, request_timeout_ms? : Int, dev_origins? : Array[String], extensions? : Array[BridgeExtensionConfig], initialization_units? : Array[BridgeInitializationUnit]) -> Self
+pub fn BridgeConfig::new(grants~ : Array[BridgeGrantConfig], max_payload_bytes? : Int, request_timeout_ms? : Int) -> Self
 pub fn BridgeConfig::to_json_string(Self) -> String
 pub fn BridgeConfig::unsafe_from_json(String) -> Self
 
@@ -86,6 +105,14 @@ pub(all) struct BridgeExtensionConfig {
 } derive(Eq, @debug.Debug)
 pub fn BridgeExtensionConfig::new(String, apis~ : Array[String]) -> Self
 
+pub(all) struct BridgeGrantConfig {
+  source_origin : String
+  ops : Array[String]
+  extensions : Array[BridgeExtensionConfig]
+  initialization_units : Array[BridgeInitializationUnit]
+} derive(Eq, @debug.Debug)
+pub fn BridgeGrantConfig::new(String, ops~ : Array[String], extensions? : Array[BridgeExtensionConfig], initialization_units? : Array[BridgeInitializationUnit]) -> Self
+
 pub(all) struct BridgeInitializationUnit {
   owner : String
   name : String
@@ -108,11 +135,13 @@ pub(all) struct BridgeRequest {
   op : String
   payload : Json
   page_instance : String?
+  source_origin : String
 } derive(@debug.Debug)
 pub fn BridgeRequest::op(Self) -> String
 pub fn BridgeRequest::page_instance(Self) -> String?
 pub fn BridgeRequest::payload(Self) -> Json
 pub fn BridgeRequest::request_id(Self) -> Int64
+pub fn BridgeRequest::source_origin(Self) -> String
 pub fn BridgeRequest::window(Self) -> Int64
 
 pub(all) enum BridgeResponse {
@@ -120,6 +149,22 @@ pub(all) enum BridgeResponse {
   Err(request_id~ : Int64, code~ : String, message~ : String)
 } derive(@debug.Debug)
 pub fn BridgeResponse::to_json_string(Self) -> String
+
+pub(all) struct BrowserPolicy {
+  navigation : BrowserPolicyMode
+  popup : BrowserPolicyMode
+  download : BrowserPolicyMode
+  certificate : BrowserPolicyMode
+  media : BrowserPolicyMode
+  devtools : Bool
+} derive(Eq, @debug.Debug)
+pub fn BrowserPolicy::new(navigation? : BrowserPolicyMode, popup? : BrowserPolicyMode, download? : BrowserPolicyMode, certificate? : BrowserPolicyMode, media? : BrowserPolicyMode, devtools? : Bool) -> Self
+
+pub(all) enum BrowserPolicyMode {
+  Allow
+  Deny
+  Ask
+} derive(Eq, @debug.Debug)
 
 pub(all) enum DialogLevel {
   Info
@@ -144,6 +189,22 @@ type MenuItem derive(Eq, @debug.Debug)
 pub fn MenuItem::command(String, String, key? : String) -> Self
 pub fn MenuItem::role(String, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
+
+pub(all) enum NativeBrowserRequest {
+  Navigation(request_id~ : Int64, url~ : String, http_method~ : String, user_gesture~ : Bool, redirect~ : Bool)
+  Popup(request_id~ : Int64, url~ : String, disposition~ : Int, user_gesture~ : Bool)
+  Download(request_id~ : Int64, download_id~ : Int, url~ : String, suggested_name~ : String)
+  Certificate(request_id~ : Int64, url~ : String, error_code~ : Int)
+  Media(request_id~ : Int64, origin~ : String, permissions~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct NativeDownloadUpdate {
+  download_id : Int
+  state : String
+  received_bytes : Int64
+  total_bytes : Int64
+  percent : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) struct NativeNotificationClick {
   payload : String?
@@ -188,6 +249,8 @@ pub fn RuntimeConfig::unsafe_from_json(String) -> Self
 
 type RuntimeEvent derive(Eq, @debug.Debug)
 pub fn RuntimeEvent::bridge_request_cancellation(Self) -> Int64?
+pub fn RuntimeEvent::browser_download_update(Self) -> NativeDownloadUpdate?
+pub fn RuntimeEvent::browser_request(Self) -> NativeBrowserRequest?
 pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool
@@ -196,7 +259,9 @@ pub fn RuntimeEvent::is_window_created(Self) -> Bool
 pub fn RuntimeEvent::launch_input(Self) -> RuntimeLaunchInput?
 pub fn RuntimeEvent::menu_command_id(Self) -> String?
 pub fn RuntimeEvent::notification_result(Self) -> NativeNotificationResult?
+pub fn RuntimeEvent::window_close_request(Self) -> Int64?
 pub fn RuntimeEvent::window_id(Self) -> Int64?
+pub fn RuntimeEvent::window_state_change(Self) -> WindowState?
 
 pub(all) struct RuntimeInfo {
   abi_version : Int
@@ -229,6 +294,7 @@ pub(all) enum TitlebarStyle {
 type Window
 pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise NativeError
+pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
 pub fn Window::destroy(Self) -> Unit raise NativeError
 pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
@@ -238,16 +304,39 @@ pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64
 pub fn Window::load_html(Self, String, String) -> Unit raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
+pub fn Window::maximize(Self) -> Unit raise NativeError
+pub fn Window::minimize(Self) -> Unit raise NativeError
 pub fn Window::new(Runtime, config? : WindowConfig) -> Self raise NativeError
+pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
+pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError
+pub fn Window::restore(Self) -> Unit raise NativeError
+pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_position(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
+pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
+pub fn Window::state(Self) -> WindowState raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, bridge? : BridgeConfig) -> Self
+pub fn WindowConfig::new(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, browser? : BrowserPolicy, bridge? : BridgeConfig) -> Self
 pub fn WindowConfig::to_json_string(Self) -> String
 pub fn WindowConfig::unsafe_from_json(String) -> Self
+
+pub(all) struct WindowMonitor {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+} derive(Eq, @debug.Debug, @json.FromJson)
 
 type WindowRef derive(Eq, @debug.Debug)
 pub fn WindowRef::begin_choose_directory_dialog(Self, String?, String?) -> Int64 raise NativeError
@@ -265,6 +354,23 @@ pub(all) enum WindowSizeHint {
   Max
 } derive(Eq, @debug.Debug)
 
+pub(all) struct WindowState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  monitor : WindowMonitor
+  zoom_percent : Int
+  visible : Bool
+  focused : Bool
+  minimized : Bool
+  maximized : Bool
+  fullscreen : Bool
+  always_on_top : Bool
+  theme : String
+} derive(Eq, @debug.Debug, @json.FromJson)
+
 // Type aliases
 
 // Traits
+

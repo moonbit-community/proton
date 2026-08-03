@@ -186,8 +186,8 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
     (
       #|;(async () => {
       #|  const invoke = window.__MoonBit__?.core?.invokeOp;
-      #|  const ping = await invoke("ext:app/ping", { name: "proton" });
-      #|  const sum = await invoke("ext:app/slowAdd", {
+      #|  const ping = await invoke("ext:appCommands/ping", { name: "proton" });
+      #|  const sum = await invoke("ext:appCommands/slowAdd", {
       #|    left: 20,
       #|    right: 22,
       #|    delay_ms: 50,
@@ -195,7 +195,7 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
       #|  let unknown_rejected = false;
       #|  let unknown_message = "";
       #|  try {
-      #|    await invoke("ext:app/unknown", {});
+      #|    await invoke("ext:appCommands/unknown", {});
       #|  } catch (error) {
       #|    unknown_rejected = true;
       #|    unknown_message = String(error && error.message ? error.message : error);
@@ -203,7 +203,7 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
       #|  let fail_rejected = false;
       #|  let fail_message = "";
       #|  try {
-      #|    await invoke("ext:app/fail", {
+      #|    await invoke("ext:appCommands/fail", {
       #|      message: "Failure crossed command boundary",
       #|    });
       #|  } catch (error) {
@@ -213,7 +213,7 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
       #|  let large_payload_rejected = false;
       #|  let large_payload_message = "";
       #|  try {
-      #|    await invoke("ext:app/ping", {
+      #|    await invoke("ext:appCommands/ping", {
       #|      oversized: "x".repeat(1048577),
       #|    });
       #|  } catch (error) {
@@ -254,11 +254,11 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
     fail("unexpected slowAdd result: " + value.stringify())
   }
   guard result.unknown_rejected &&
-    result.unknown_message.contains("bridge op is not allowed") else {
+    result.unknown_message.contains("bridge op is not registered") else {
     fail("unknown op did not reject correctly: " + value.stringify())
   }
   guard result.fail_rejected &&
-    result.fail_message.contains("op ext:app/fail failed") else {
+    result.fail_message.contains("op ext:appCommands/fail failed") else {
     fail("failing command did not reject correctly: " + value.stringify())
   }
   guard result.large_payload_rejected &&
@@ -279,7 +279,7 @@ async fn run_queue_full_probe(page : @client.CdpClient) -> QueueFullProbeResult 
       #|  const invoke = window.__MoonBit__?.core?.invokeOp;
       #|  const requested = 320;
       #|  const calls = Array.from({ length: requested }, (_, index) =>
-      #|    invoke("ext:app/slowAdd", {
+      #|    invoke("ext:appCommands/slowAdd", {
       #|      left: index,
       #|      right: 1,
       #|      delay_ms: 3500,
@@ -328,7 +328,7 @@ async fn run_reload_probe(
         #|(() => {
         #|  const invoke = window.__MoonBit__?.core?.invokeOp;
         #|  if (typeof invoke === "function") {
-        #|    void invoke("ext:app/slowAdd", {
+        #|    void invoke("ext:appCommands/slowAdd", {
         #|      left: 1,
         #|      right: 2,
         #|      delay_ms: 1000,
@@ -361,7 +361,7 @@ async fn run_reload_probe(
     (
       #|;(async () => {
       #|  const invoke = window.__MoonBit__?.core?.invokeOp;
-      #|  const ping = await invoke("ext:app/ping", { name: "reload" });
+      #|  const ping = await invoke("ext:appCommands/ping", { name: "reload" });
       #|  return {
       #|    url: location.href,
       #|    title: document.title,
@@ -607,18 +607,19 @@ fn assert_native_bridge_guards(native_log_path : String) -> Unit raise {
   let mut osr_paint_valid = false
   for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
     let line = raw_line.to_owned()
-    if line.contains("bridge_reject_not_allowed") &&
-      line.contains("op=ext:app/unknown") {
+    if line.contains("bridge_reject_op_not_registered") &&
+      line.contains("op=ext:appCommands/unknown") {
       unknown_rejected = true
     }
-    if line.contains("bridge_enqueue") && line.contains("op=ext:app/unknown") {
+    if line.contains("bridge_enqueue") &&
+      line.contains("op=ext:appCommands/unknown") {
       unknown_enqueued = true
     }
     if line.contains("bridge_reject_queue_full") {
       queue_full_rejected = true
     }
     if line.contains("bridge_reject_invalid_renderer") &&
-      line.contains("op=ext:app/ping") {
+      line.contains("op=ext:appCommands/ping") {
       match
         (log_int_field(line, "payload_bytes="), log_field(line, "pending=")) {
         (Some(bytes), Some(pending)) if bytes > 1048576 =>
@@ -661,7 +662,7 @@ fn assert_native_bridge_guards(native_log_path : String) -> Unit raise {
         line.contains("bridge_enqueue")
       ) &&
       line.contains(pending_token) &&
-      line.contains("op=ext:app/ping") {
+      line.contains("op=ext:appCommands/ping") {
       oversized_crossed_boundary = true
     }
   }

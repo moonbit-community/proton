@@ -15,11 +15,3 @@ fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
   }
   cloned
 }
-
-///|
-fn clone_json_option(value : Json?) -> Json? {
-  match value {
-    Some(json) => Some(clone_json(json))
-    None => None
-  }
-}

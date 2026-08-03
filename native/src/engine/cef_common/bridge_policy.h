@@ -4,5 +4,8 @@
 int proton_engine_bridge_config_allows_page(const char *bridge_config_json,
                                             const char *url);
 int proton_engine_url_is_bridge_candidate(const char *url);
+char *proton_engine_bridge_source_origin(const char *url);
+char *proton_engine_bridge_config_copy_grant(const char *bridge_config_json,
+                                             const char *url);
 
 #endif

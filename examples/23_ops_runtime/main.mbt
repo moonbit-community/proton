@@ -9,7 +9,8 @@ fn main {
         debug=true,
       )
       .extension(@fs.extension())
-      .extension(@path.extension())
+      .permission(@fs.permission([@fs.PermissionRoot::new(".", ["readdir"])]))
+      .expose(@path.extension())
     app.run_or_abort()
   })
 }

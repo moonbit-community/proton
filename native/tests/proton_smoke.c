@@ -1,6 +1,7 @@
 #include "proton_native.h"
 #include "../src/engine/cef_common/bridge_lifecycle.h"
 #include "../src/engine/cef_common/bridge_response.h"
+#include "../src/proton_app_instance.h"
 #include "../src/proton_json.h"
 
 #include <stdio.h>
@@ -34,6 +35,7 @@
 #include <pthread.h>
 #include <poll.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #define mkdir_one(path) mkdir(path, 0777)
 #define PATH_SEP "/"
@@ -47,6 +49,279 @@ static int fail(const char *message) {
 
 static int g_runtime_available = 0;
 static int expect_status(const char *label, int32_t actual, int32_t expected);
+
+void proton_engine_runtime_signal_external_event(
+    proton_engine_runtime_t *runtime) {
+  (void)runtime;
+}
+
+static int app_instance_secondary_main(const char *identifier,
+                                       const char *activation_kind) {
+  const char *activation =
+      strcmp(activation_kind, "data") == 0
+          ? "{\"abi_version\":1,\"urls\":[\"proton-test://open\"],"
+            "\"files\":[\"/tmp/proton-test.txt\"],\"reopen\":false}"
+          : "{\"abi_version\":1,\"urls\":[],\"files\":[],"
+            "\"reopen\":false}";
+  proton_app_instance_id_t instance = PROTON_INVALID_HANDLE;
+  int32_t is_primary = 1;
+  char error[256] = {0};
+  int32_t status = proton_app_instance_acquire_impl(
+      identifier, activation, &instance, &is_primary, error, sizeof(error));
+  if (status != PROTON_OK || is_primary ||
+      instance != PROTON_INVALID_HANDLE) {
+    fprintf(stderr, "secondary activation failed: status=%d primary=%d %s\n",
+            status, is_primary, error);
+    if (instance != PROTON_INVALID_HANDLE) {
+      (void)proton_app_instance_destroy_impl(instance, error, sizeof(error));
+    }
+    return 1;
+  }
+  return 0;
+}
+
+static int run_app_instance_secondary(const char *executable,
+                                      const char *identifier,
+                                      const char *activation_kind) {
+#ifdef _WIN32
+  char executable_path[MAX_PATH];
+  if (GetModuleFileNameA(NULL, executable_path, MAX_PATH) == 0) {
+    return fail("failed to locate app instance test executable");
+  }
+  char command[2048];
+  snprintf(command, sizeof(command), "\"%s\" --app-instance-secondary %s %s",
+           executable_path, identifier, activation_kind);
+  STARTUPINFOA startup;
+  PROCESS_INFORMATION process;
+  memset(&startup, 0, sizeof(startup));
+  memset(&process, 0, sizeof(process));
+  startup.cb = sizeof(startup);
+  if (!CreateProcessA(NULL, command, NULL, NULL, FALSE, 0, NULL, NULL,
+                      &startup, &process)) {
+    return fail("failed to start secondary app instance process");
+  }
+  DWORD wait_status = WaitForSingleObject(process.hProcess, 10000);
+  DWORD exit_code = 1;
+  if (wait_status == WAIT_OBJECT_0) {
+    (void)GetExitCodeProcess(process.hProcess, &exit_code);
+  } else {
+    TerminateProcess(process.hProcess, 1);
+  }
+  CloseHandle(process.hThread);
+  CloseHandle(process.hProcess);
+  return wait_status == WAIT_OBJECT_0 && exit_code == 0
+             ? 0
+             : fail("secondary app instance process failed");
+#else
+  pid_t child = fork();
+  if (child < 0) {
+    return fail("failed to fork secondary app instance process");
+  }
+  if (child == 0) {
+    execl(executable, executable, "--app-instance-secondary", identifier,
+          activation_kind, (char *)NULL);
+    _exit(127);
+  }
+  int status = 0;
+  if (waitpid(child, &status, 0) != child || !WIFEXITED(status) ||
+      WEXITSTATUS(status) != 0) {
+    return fail("secondary app instance process failed");
+  }
+  return 0;
+#endif
+}
+
+static int expect_app_instance_forwarding(void) {
+  char identifier[96];
+#ifdef _WIN32
+  unsigned long process_id = (unsigned long)GetCurrentProcessId();
+#else
+  unsigned long process_id = (unsigned long)getpid();
+#endif
+  snprintf(identifier, sizeof(identifier), "dev.proton.instance-smoke.%lu",
+           process_id);
+  proton_app_instance_id_t primary = PROTON_INVALID_HANDLE;
+  int32_t is_primary = 0;
+  char error[256] = {0};
+  if (expect_status(
+          "app instance rejects invalid activation",
+          proton_app_instance_acquire_impl(
+              identifier, "{}bogus", &primary, &is_primary, error,
+              sizeof(error)),
+          PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_status(
+          "app instance rejects incomplete activation",
+          proton_app_instance_acquire_impl(
+              identifier, "{\"abi_version\":1,\"urls\":[],\"files\":[]}",
+              &primary, &is_primary, error, sizeof(error)),
+          PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_status(
+          "app instance rejects duplicate activation fields",
+          proton_app_instance_acquire_impl(
+              identifier,
+              "{\"abi_version\":1,\"urls\":[],\"urls\":[],\"files\":[],"
+              "\"reopen\":false}",
+              &primary, &is_primary, error, sizeof(error)),
+          PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (expect_status(
+          "acquire primary app instance",
+          proton_app_instance_acquire_impl(
+              identifier,
+              "{\"abi_version\":1,\"urls\":[],\"files\":[],"
+              "\"reopen\":false}",
+              &primary, &is_primary, error, sizeof(error)),
+          PROTON_OK) ||
+      !is_primary || primary == PROTON_INVALID_HANDLE) {
+    return fail("first app instance was not primary");
+  }
+  int runtime_sentinel = 0;
+  if (expect_status(
+          "attach app instance runtime",
+          proton_app_instance_attach_runtime_impl(
+              primary, (proton_engine_runtime_t *)&runtime_sentinel, error,
+              sizeof(error)),
+          PROTON_OK) ||
+      expect_status(
+          "reject attached app instance destroy",
+          proton_app_instance_destroy_impl(primary, error, sizeof(error)),
+          PROTON_ERR_ALREADY_INITIALIZED)) {
+    proton_app_instance_detach_runtime_impl(primary);
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return 1;
+  }
+  proton_app_instance_detach_runtime_impl(primary);
+
+  proton_app_instance_id_t secondary = PROTON_INVALID_HANDLE;
+  is_primary = 1;
+  if (expect_status(
+          "forward secondary app activation",
+          proton_app_instance_acquire_impl(
+              identifier,
+              "{\"abi_version\":1,\"urls\":[\"proton-test://open\"],"
+              "\"files\":[\"/tmp/proton-test.txt\"],\"reopen\":false}",
+              &secondary, &is_primary, error, sizeof(error)),
+          PROTON_OK) ||
+      is_primary || secondary != PROTON_INVALID_HANDLE) {
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return fail("second app instance was not forwarded");
+  }
+
+  const char *expected[] = {"\"type\":\"open_urls\"",
+                            "\"type\":\"open_files\""};
+  for (size_t i = 0; i < 2; i++) {
+    char event[512];
+    int32_t present = 0;
+    if (expect_status(
+            "take forwarded app activation",
+            proton_app_instance_take_event_impl(
+                primary, event, sizeof(event), &present, error, sizeof(error)),
+            PROTON_OK) ||
+        !present || strstr(event, expected[i]) == NULL) {
+      proton_app_instance_destroy_impl(primary, error, sizeof(error));
+      return fail("forwarded app activation event was not preserved");
+    }
+  }
+
+  secondary = PROTON_INVALID_HANDLE;
+  is_primary = 1;
+  if (expect_status(
+          "forward secondary reopen",
+          proton_app_instance_acquire_impl(
+              identifier,
+              "{\"abi_version\":1,\"urls\":[],\"files\":[],"
+              "\"reopen\":false}",
+              &secondary, &is_primary, error, sizeof(error)),
+          PROTON_OK) ||
+      is_primary) {
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return fail("empty secondary activation was not forwarded");
+  }
+  char event[128];
+  int32_t present = 0;
+  if (expect_status(
+          "take forwarded reopen",
+          proton_app_instance_take_event_impl(
+              primary, event, sizeof(event), &present, error, sizeof(error)),
+          PROTON_OK) ||
+      !present || strstr(event, "\"type\":\"reopen\"") == NULL) {
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return fail("secondary reopen event was not synthesized");
+  }
+  return expect_status("destroy primary app instance",
+                       proton_app_instance_destroy_impl(
+                           primary, error, sizeof(error)),
+                       PROTON_OK);
+}
+
+static int expect_app_instance_cross_process_forwarding(
+    const char *executable) {
+  char identifier[96];
+#ifdef _WIN32
+  unsigned long process_id = (unsigned long)GetCurrentProcessId();
+#else
+  unsigned long process_id = (unsigned long)getpid();
+#endif
+  snprintf(identifier, sizeof(identifier),
+           "dev.proton.instance-process-smoke.%lu", process_id);
+  const char *empty_activation =
+      "{\"abi_version\":1,\"urls\":[],\"files\":[],\"reopen\":false}";
+  proton_app_instance_id_t primary = PROTON_INVALID_HANDLE;
+  int32_t is_primary = 0;
+  char error[256] = {0};
+  if (expect_status(
+          "acquire cross-process primary app instance",
+          proton_app_instance_acquire_impl(
+              identifier, empty_activation, &primary, &is_primary, error,
+              sizeof(error)),
+          PROTON_OK) ||
+      !is_primary || primary == PROTON_INVALID_HANDLE) {
+    return fail("cross-process app instance was not primary");
+  }
+  if (run_app_instance_secondary(executable, identifier, "data")) {
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return 1;
+  }
+  const char *expected[] = {"\"type\":\"open_urls\"",
+                            "\"type\":\"open_files\""};
+  for (size_t i = 0; i < 2; i++) {
+    char event[512];
+    int32_t present = 0;
+    if (expect_status(
+            "take cross-process app activation",
+            proton_app_instance_take_event_impl(
+                primary, event, sizeof(event), &present, error, sizeof(error)),
+            PROTON_OK) ||
+        !present || strstr(event, expected[i]) == NULL) {
+      proton_app_instance_destroy_impl(primary, error, sizeof(error));
+      return fail("cross-process app activation event was not preserved");
+    }
+  }
+  if (run_app_instance_secondary(executable, identifier, "reopen")) {
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return 1;
+  }
+  char event[128];
+  int32_t present = 0;
+  if (expect_status(
+          "take cross-process reopen",
+          proton_app_instance_take_event_impl(
+              primary, event, sizeof(event), &present, error, sizeof(error)),
+          PROTON_OK) ||
+      !present || strstr(event, "\"type\":\"reopen\"") == NULL) {
+    proton_app_instance_destroy_impl(primary, error, sizeof(error));
+    return fail("cross-process reopen event was not synthesized");
+  }
+  return expect_status("destroy cross-process primary app instance",
+                       proton_app_instance_destroy_impl(
+                           primary, error, sizeof(error)),
+                       PROTON_OK);
+}
 
 #if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
 static int g_app_entry_called = 0;
@@ -63,10 +338,19 @@ static int g_app_entry_first_wakeup = 0;
 static int g_app_entry_second_wakeup = 0;
 static int32_t g_app_entry_window_create_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_window_show_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_close_interception_status =
+    PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_window_close_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_close_denial_status =
+    PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_close_response_status =
+    PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_duplicate_close_response_status =
+    PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_window_destroy_status =
     PROTON_ERR_NOT_INITIALIZED;
 static int g_app_entry_browser_ready = 0;
+static int g_app_entry_state_event_seen = 0;
 static int g_app_entry_window_closed = 0;
 static int32_t g_app_entry_destroy_status = PROTON_ERR_NOT_INITIALIZED;
 static char g_app_runtime_config[1024];
@@ -185,6 +469,15 @@ static int escape_json_string(const char *value,
   return 1;
 }
 
+static int64_t close_request_id_from_event(const char *event_json) {
+  const char *field = strstr(event_json, "\"request_id\":\"");
+  if (field == NULL) {
+    return 0;
+  }
+  field += strlen("\"request_id\":\"");
+  return (int64_t)strtoll(field, NULL, 10);
+}
+
 static void smoke_app_entry(void) {
   g_app_entry_called = 1;
 #ifdef _WIN32
@@ -271,24 +564,6 @@ static void smoke_app_entry(void) {
       g_app_entry_window_show_status = proton_window_show(window);
 #ifdef _WIN32
       g_app_entry_browser_ready = 1;
-      g_app_entry_window_close_status = proton_window_close(window);
-      if (g_app_entry_window_close_status == PROTON_OK) {
-        g_app_entry_second_wakeup = consume_wakeup_byte(wakeup_reader);
-        for (int attempt = 0; attempt < 100; attempt++) {
-          char event_json[512] = {0};
-          int32_t event_required = 0;
-          int32_t event_status = proton_runtime_poll_event_json(
-              runtime, event_json, (int32_t)sizeof(event_json),
-              &event_required);
-          if (event_status == PROTON_OK &&
-              strstr(event_json, "\"type\":\"window_closed\"") != NULL) {
-            g_app_entry_window_closed = 1;
-            break;
-          }
-          Sleep(10);
-        }
-      }
-      g_app_entry_window_destroy_status = proton_window_destroy(window);
 #else
       for (int attempt = 0; attempt < 100; attempt++) {
         const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
@@ -300,6 +575,58 @@ static void smoke_app_entry(void) {
         usleep(10000);
       }
 #endif
+      if (g_app_entry_browser_ready) {
+        g_app_entry_close_interception_status =
+            proton_window_set_close_interception(window, 1);
+        if (g_app_entry_close_interception_status == PROTON_OK) {
+          g_app_entry_window_close_status = proton_window_close(window);
+        }
+        int close_responded = 0;
+        int64_t denied_request_id = 0;
+        for (int attempt = 0; attempt < 300; attempt++) {
+          char event_json[2048] = {0};
+          int32_t event_required = 0;
+          int32_t event_status = proton_runtime_poll_event_json(
+              runtime, event_json, (int32_t)sizeof(event_json),
+              &event_required);
+          if (event_status == PROTON_OK) {
+            if (strstr(event_json,
+                       "\"type\":\"window_state_changed\"") != NULL) {
+              g_app_entry_state_event_seen = 1;
+            } else if (strstr(event_json,
+                       "\"type\":\"window_close_requested\"") != NULL) {
+              int64_t request_id = close_request_id_from_event(event_json);
+              if (denied_request_id == 0) {
+                denied_request_id = request_id;
+                g_app_entry_close_denial_status =
+                    proton_window_respond_close_request(window, request_id, 0);
+                if (g_app_entry_close_denial_status == PROTON_OK) {
+                  (void)proton_window_close(window);
+                }
+              } else if (request_id > denied_request_id) {
+                g_app_entry_close_response_status =
+                    proton_window_respond_close_request(window, request_id, 1);
+                close_responded =
+                    g_app_entry_close_response_status == PROTON_OK;
+                if (close_responded) {
+                  g_app_entry_duplicate_close_response_status =
+                      proton_window_respond_close_request(window, request_id, 1);
+                }
+              }
+            } else if (strstr(event_json,
+                              "\"type\":\"window_closed\"") != NULL) {
+              g_app_entry_window_closed = close_responded;
+              break;
+            }
+          }
+#ifdef _WIN32
+          Sleep(10);
+#else
+          usleep(10000);
+#endif
+        }
+      }
+      g_app_entry_window_destroy_status = proton_window_destroy(window);
     }
     g_app_entry_destroy_status = proton_runtime_destroy(runtime);
 #ifdef _WIN32
@@ -459,6 +786,17 @@ static int expect_bridge_lifecycle_resize_retry(void) {
 }
 
 static int expect_bridge_lifecycle_state(void) {
+  if (!proton_engine_urls_same_document(
+          "proton://app/index.html", "proton://app/index.html#ready") ||
+      !proton_engine_urls_same_document(
+          "proton://app/index.html#first",
+          "proton://app/index.html#second") ||
+      proton_engine_urls_same_document(
+          "proton://app/index.html?mode=one",
+          "proton://app/index.html?mode=two") ||
+      proton_engine_urls_same_document(NULL, "proton://app/index.html")) {
+    return fail("same-document URL matching should ignore only fragments");
+  }
   if (expect_bridge_lifecycle_resize_retry()) {
     return 1;
   }
@@ -742,6 +1080,7 @@ static int expect_runtime_info(void) {
   int has_headless_osr = strstr(buffer, "\"headless_osr\"") != NULL;
   int has_window_size_hints =
       strstr(buffer, "\"window_size_hints\"") != NULL;
+  int has_window_session = strstr(buffer, "\"window_session\"") != NULL;
   int has_managed_app_runner =
       strstr(buffer, "\"managed_app_runner\"") != NULL;
   int has_wakeup_source =
@@ -769,6 +1108,10 @@ static int expect_runtime_info(void) {
     fprintf(stderr, "unexpected window size hint capability: %s\n", buffer);
     return 1;
   }
+  if (has_window_session != has_runtime) {
+    fprintf(stderr, "unexpected window session capability: %s\n", buffer);
+    return 1;
+  }
 #else
   if (has_titlebar_overlay) {
     fprintf(stderr, "unsupported titlebar overlay capability: %s\n", buffer);
@@ -776,6 +1119,10 @@ static int expect_runtime_info(void) {
   }
   if (has_headless_osr) {
     fprintf(stderr, "unsupported headless OSR capability: %s\n", buffer);
+    return 1;
+  }
+  if (has_window_session) {
+    fprintf(stderr, "unsupported window session capability: %s\n", buffer);
     return 1;
   }
 #endif
@@ -1100,7 +1447,10 @@ static int expect_wrong_thread_window_rejected(proton_window_id_t window) {
   return 0;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc == 4 && strcmp(argv[1], "--app-instance-secondary") == 0) {
+    return app_instance_secondary_main(argv[2], argv[3]);
+  }
   char probe_config[256];
   char installed_probe_config[256];
   char missing_helper_config[256];
@@ -1123,6 +1473,12 @@ int main(void) {
     return 1;
   }
   if (expect_runtime_info()) {
+    return 1;
+  }
+  if (expect_app_instance_forwarding()) {
+    return 1;
+  }
+  if (expect_app_instance_cross_process_forwarding(argv[0])) {
     return 1;
   }
   if (expect_status("app_run rejects null entry", proton_app_run(NULL),
@@ -1268,17 +1624,27 @@ int main(void) {
     if (!g_app_entry_browser_ready) {
       return fail("app_run browser did not become ready");
     }
-#ifdef _WIN32
     if (!g_app_entry_window_closed) {
-      return fail("app_run window close did not finish through CEF");
+      return fail("app_run intercepted window close did not finish");
     }
-    if (expect_status("app_run window close", g_app_entry_window_close_status,
+    if (!g_app_entry_state_event_seen) {
+      return fail("app_run did not publish an initial window state event");
+    }
+    if (expect_status("app_run close interception",
+                      g_app_entry_close_interception_status, PROTON_OK) ||
+        expect_status("app_run window close", g_app_entry_window_close_status,
                       PROTON_OK) ||
+        expect_status("app_run close denial",
+                      g_app_entry_close_denial_status, PROTON_OK) ||
+        expect_status("app_run close response",
+                      g_app_entry_close_response_status, PROTON_OK) ||
+        expect_status("app_run duplicate close response",
+                      g_app_entry_duplicate_close_response_status,
+                      PROTON_ERR_STALE_WINDOW_REQUEST) ||
         expect_status("app_run window destroy",
                       g_app_entry_window_destroy_status, PROTON_OK)) {
       return 1;
     }
-#endif
     if (expect_status("app_run runtime destroy", g_app_entry_destroy_status,
                       PROTON_OK)) {
       return 1;
@@ -1402,13 +1768,14 @@ int main(void) {
                     proton_window_create_json(
                         runtime, "{\"abi_version\":1,\"title\":\"Smoke\","
                                  "\"width\":320,\"height\":240,"
-                                 "\"bridge\":{\"abi_version\":1,"
+                                 "\"bridge\":{\"abi_version\":2,"
                                  "\"namespace\":\"__MoonBit__\","
-                                 "\"origin_policy\":{\"mode\":\"app_only\"},"
+                                 "\"grants\":[{\"source_origin\":\"app\","
                                  "\"ops\":[{\"name\":\"ext:app/ping\"}],"
+                                 "\"extensions\":[],"
+                                 "\"initialization_units\":[]}],"
                                  "\"max_payload_bytes\":1048576,"
-                                 "\"request_timeout_ms\":30000,"
-                                 "\"extensions\":[]}}",
+                                 "\"request_timeout_ms\":30000}}",
                         &window),
                     PROTON_OK)) {
     return 1;

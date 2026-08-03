@@ -10,7 +10,7 @@ import {
 // Values
 pub fn extensions(Array[Extension]) -> Extensions
 
-pub fn typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], on_destroy? : () -> Unit raise) -> Extension
+pub fn typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise @command.PermissionScopeValidationError, on_destroy? : () -> Unit raise) -> Extension
 
 // Errors
 pub(all) suberror ExtensionAdapterError {

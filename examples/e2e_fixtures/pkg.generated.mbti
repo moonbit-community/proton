@@ -60,3 +60,4 @@ type SyncDoubleReply derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
+

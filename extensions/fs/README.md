@@ -19,6 +19,17 @@ adding JavaScript helpers or hand-rolled filesystem behavior.
 
 ## Safety Notes
 
-- This extension grants direct host filesystem access when eventually exposed.
-- Use it only with trusted local HTML/JavaScript.
+- Registering this extension does not grant filesystem access.
+- Expose it with `@fs.permission(...)`; each `PermissionRoot` pairs one host
+  directory with the exact filesystem commands allowed below it.
+- Permission roots are backend configuration. Renderer requests cannot add or
+  widen them.
+- Relative permission roots and relative renderer paths are anchored to the
+  directory containing `moon.proton` (or the process working directory for an
+  app configured entirely in MoonBit). Packaging therefore does not change
+  their meaning.
+- Canonical path checks and filesystem operations are serialized so concurrent
+  renderer requests cannot race a path check with a rename.
+- A path that resolves outside every matching root is denied, including a
+  symbolic-link escape.
 - Text helpers use UTF-8 payloads.

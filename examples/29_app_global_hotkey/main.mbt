@@ -7,7 +7,7 @@ fn main {
       width=960,
       height=740,
       debug=true,
-    ).extension(@global_hotkey.extension())
+    ).expose(@global_hotkey.extension())
     app.run_or_abort()
   })
 }

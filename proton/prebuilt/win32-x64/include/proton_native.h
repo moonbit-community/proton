@@ -29,6 +29,7 @@ extern "C" {
 
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
+typedef int64_t proton_app_instance_id_t;
 typedef void (*proton_app_entry_t)(void);
 
 enum {
@@ -47,13 +48,22 @@ enum {
   PROTON_ERR_WRONG_THREAD = -9,
   PROTON_ERR_QUEUE_FAILED = -10,
   PROTON_ERR_BUFFER_TOO_SMALL = -11,
-  PROTON_ERR_STALE_BRIDGE_RESPONSE = -12
+  PROTON_ERR_STALE_BRIDGE_RESPONSE = -12,
+  PROTON_ERR_STALE_WINDOW_REQUEST = -13,
+  PROTON_ERR_STALE_BROWSER_REQUEST = -14
 };
 
 PROTON_API int32_t proton_abi_version(void);
 PROTON_API int32_t proton_runtime_info_json(char *buffer,
                                             int32_t buffer_len,
                                             int32_t *out_required_len);
+PROTON_API int32_t proton_app_instance_acquire(
+    const char *identifier, const char *activation_json,
+    proton_app_instance_id_t *out_instance, int32_t *out_primary);
+PROTON_API int32_t proton_app_instance_attach_runtime(
+    proton_app_instance_id_t instance, proton_runtime_id_t runtime);
+PROTON_API int32_t
+proton_app_instance_destroy(proton_app_instance_id_t instance);
 
 PROTON_API int32_t proton_app_run(proton_app_entry_t entry);
 
@@ -124,6 +134,24 @@ PROTON_API int32_t proton_window_set_title(proton_window_id_t window,
                                            const char *title);
 PROTON_API int32_t proton_window_set_size(proton_window_id_t window,
                                           int32_t width, int32_t height);
+PROTON_API int32_t proton_window_minimize(proton_window_id_t window);
+PROTON_API int32_t proton_window_maximize(proton_window_id_t window);
+PROTON_API int32_t proton_window_restore(proton_window_id_t window);
+PROTON_API int32_t proton_window_set_fullscreen(proton_window_id_t window,
+                                                int32_t fullscreen);
+PROTON_API int32_t proton_window_set_position(proton_window_id_t window,
+                                              int32_t x, int32_t y);
+PROTON_API int32_t proton_window_set_always_on_top(proton_window_id_t window,
+                                                   int32_t always_on_top);
+PROTON_API int32_t proton_window_set_zoom_percent(proton_window_id_t window,
+                                                  int32_t zoom_percent);
+PROTON_API int32_t proton_window_state_json(proton_window_id_t window,
+                                            char *buffer, int32_t buffer_len,
+                                            int32_t *out_required_len);
+PROTON_API int32_t proton_window_set_close_interception(
+    proton_window_id_t window, int32_t enabled);
+PROTON_API int32_t proton_window_respond_close_request(
+    proton_window_id_t window, int64_t request_id, int32_t allow);
 PROTON_API int32_t proton_window_load_url(proton_window_id_t window,
                                           const char *url);
 PROTON_API int32_t proton_window_load_html(proton_window_id_t window,
@@ -131,6 +159,10 @@ PROTON_API int32_t proton_window_load_html(proton_window_id_t window,
                                            const char *base_url);
 PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
+PROTON_API int32_t proton_window_browser_command_json(
+    proton_window_id_t window, const char *command_json);
+PROTON_API int32_t proton_window_respond_browser_request_json(
+    proton_window_id_t window, const char *response_json);
 PROTON_API int32_t proton_window_emit_bridge_event_json(
     proton_window_id_t window, const char *event_json);
 PROTON_API int32_t proton_window_bridge_state_json(

@@ -6,6 +6,7 @@ pub struct AppManifest {
   windows : Array[AppWindowManifest]
   debug : Int
   extensions : Map[String, ExtensionSetting]
+  permissions : Array[PermissionGrant]
 }
 
 ///|
@@ -18,6 +19,7 @@ pub fn AppManifest::new(
   debug? : Int = 0,
   windows? : Array[AppWindowManifest] = [],
   extensions? : Map[String, ExtensionSetting] = Map([]),
+  permissions? : Array[PermissionGrant] = [],
 ) -> AppManifest {
   AppManifest::{
     window,
@@ -25,7 +27,15 @@ pub fn AppManifest::new(
     windows: windows.map(fn(window) { window }),
     debug,
     extensions: copy_extension_settings(extensions),
+    permissions: copy_permission_grants(permissions),
   }
+}
+
+///|
+pub fn AppManifest::permission_grants(
+  self : AppManifest,
+) -> Array[PermissionGrant] {
+  copy_permission_grants(self.permissions)
 }
 
 ///|
@@ -35,19 +45,19 @@ pub fn AppManifest::extension_setting(
   self : AppManifest,
   name : String,
 ) -> ExtensionSetting? {
-  self.extensions.get(name).map(copy_extension_setting)
+  self.extensions.get(name)
 }
 
 ///|
 /// Returns the configured extension entries as name/setting pairs.
 /// Each pair contains the manifest key together with its normalized declarative
-/// enablement state and optional JSON options.
+/// enablement state.
 pub fn AppManifest::extension_settings(
   self : AppManifest,
 ) -> Array[(String, ExtensionSetting)] {
   let entries : Array[(String, ExtensionSetting)] = []
   for name, setting in self.extensions {
-    entries.push((name, copy_extension_setting(setting)))
+    entries.push((name, setting))
   }
   entries
 }
@@ -58,15 +68,7 @@ fn copy_extension_settings(
 ) -> Map[String, ExtensionSetting] {
   let copied : Map[String, ExtensionSetting] = Map([])
   for name, setting in settings {
-    copied[name] = copy_extension_setting(setting)
+    copied[name] = setting
   }
   copied
-}
-
-///|
-fn copy_extension_setting(setting : ExtensionSetting) -> ExtensionSetting {
-  match setting {
-    Disabled => Disabled
-    Enabled(options) => Enabled(clone_json_option(options))
-  }
 }

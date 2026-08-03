@@ -8,9 +8,12 @@ fn main {
         height=680,
         debug=true,
       )
-      .extension(@dialog.extension())
-      .extension(@clipboard.extension())
+      .expose(@dialog.extension())
+      .expose(@clipboard.extension())
       .extension(@fs.extension())
+      .permission(
+        @fs.permission([@fs.PermissionRoot::new(".", ["write_file"])]),
+      )
     app.run_or_abort()
   })
 }

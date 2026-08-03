@@ -13,11 +13,12 @@ const source = fs.readFileSync(
 
 function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
   const calls = [];
+  const location = new URL(url);
   const context = vm.createContext({
     URL,
     Promise,
     clearTimeout,
-    location: { href: url },
+    location,
     setTimeout,
   });
   const install = vm.runInContext(source, context);
@@ -25,12 +26,17 @@ function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
     (action, id, name, payloadJson, pageInstance) =>
       calls.push({ action, id, name, payloadJson, pageInstance }),
     {
-      origin_policy: {
-        mode: "app_and_dev_origins",
-        dev_origins: ["http://localhost:5173"],
-      },
       request_timeout_ms: requestTimeoutMs,
-      extensions: [{ namespace: "add", apis: ["sum"] }],
+      grants: [{
+        source_origin: location.protocol === "proton:" ? "app" : location.origin,
+        ops: [
+          { name: "ext:add/sum" },
+          { name: "app:ping" },
+          { name: "app:devtoys.fs.stat" },
+        ],
+        extensions: [{ namespace: "add", apis: ["sum"] }],
+        initialization_units: [],
+      }],
     },
     "renderer-page-1",
   );
@@ -46,6 +52,13 @@ test("installs the public bridge synchronously", () => {
   assert.equal(typeof context.__MoonBit__.add.sum, "function");
   assert.equal("ready" in context.__MoonBit__, false);
   assert.equal(context.__protonNativeInvokeOp, undefined);
+});
+
+test("does not treat other custom-scheme hosts as the trusted app origin", () => {
+  assert.throws(
+    () => createBridge("proton://untrusted/"),
+    /no grant for this page source/,
+  );
 });
 
 test("settles one request through the private dispatcher", async () => {
@@ -219,4 +232,90 @@ test("notifies native when a bridge request times out", async () => {
 test("uses the page instance assigned by native", () => {
   const { dispatcher } = createBridge("https://example.com/");
   assert.equal(dispatcher.pageInstance, "renderer-page-1");
+});
+
+test("exposes a proxy for every granted application command", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  assert.equal(typeof context.__MoonBit__.app.ping, "function");
+  assert.equal(typeof context.__MoonBit__.app["devtoys.fs.stat"], "function");
+
+  const ping = context.__MoonBit__.app.ping({ value: 1 });
+  assert.equal(calls[0].name, "app:ping");
+  assert.deepEqual(JSON.parse(calls[0].payloadJson), { value: 1 });
+  dispatcher.dispatchResponse(calls[0].id, true, '{"ok":true}', "");
+  assert.equal((await ping).ok, true);
+
+  const stat = context.__MoonBit__.app["devtoys.fs.stat"]({ path: "/tmp" });
+  assert.equal(calls[1].name, "app:devtoys.fs.stat");
+  dispatcher.dispatchResponse(calls[1].id, true, '{"kind":"dir"}', "");
+  assert.equal((await stat).kind, "dir");
+});
+
+test("prefixes dynamic application command invocations", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const result = context.__MoonBit__.app.invoke("ping", { value: 2 });
+  assert.equal(calls[0].name, "app:ping");
+  dispatcher.dispatchResponse(calls[0].id, true, "null", "");
+  await result;
+});
+
+test("does not expose application proxies for extension routes", () => {
+  const { context } = createBridge();
+  assert.equal(context.__MoonBit__.app.sum, undefined);
+  assert.equal(context.__MoonBit__.app["ext:add/sum"], undefined);
+});
+
+test("delivers application events through the app namespace", () => {
+  const { context, dispatcher } = createBridge();
+  const received = [];
+  const unsubscribe = context.__MoonBit__.app.on("changed", (event) => {
+    received.push(event);
+  });
+  assert.equal(
+    dispatcher.dispatchEvent(
+      '{"kind":"frontend","name":"changed","payload":{"total":42}}',
+    ),
+    true,
+  );
+  unsubscribe();
+  dispatcher.dispatchEvent(
+    '{"kind":"frontend","name":"changed","payload":{"total":43}}',
+  );
+  assert.equal(received.length, 1);
+  assert.equal(received[0].name, "changed");
+  assert.equal(received[0].payload.total, 42);
+});
+
+test("keeps application events out of the extension name table", () => {
+  const { context, dispatcher } = createBridge();
+  const viaExtension = [];
+  const viaFriendlyName = [];
+  context.__MoonBit__.add.on("finished", (event) => viaExtension.push(event));
+  context.__MoonBit__.events.on(
+    "add.finished",
+    (event) => viaFriendlyName.push(event),
+  );
+
+  // An application event whose name collides with extension "add"'s
+  // "finished" route must not reach either friendly-name listener.
+  dispatcher.dispatchEvent(
+    '{"kind":"frontend","name":"add.finished","payload":{"secret":"app"}}',
+  );
+  assert.deepEqual(viaExtension, []);
+  assert.deepEqual(viaFriendlyName, []);
+
+  // The extension event still reaches them.
+  dispatcher.dispatchEvent(
+    '{"kind":"extension","extension":"add","name":"finished","payload":{"total":42}}',
+  );
+  assert.equal(viaExtension.length, 1);
+  assert.equal(viaFriendlyName.length, 1);
+});
+
+test("rejects a non-function application event listener", () => {
+  const { context } = createBridge();
+  assert.throws(
+    () => context.__MoonBit__.app.on("changed", null),
+    /MoonBit.app.on expects a listener function/,
+  );
 });

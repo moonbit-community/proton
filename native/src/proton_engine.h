@@ -9,6 +9,47 @@
 typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
 
+typedef enum {
+  PROTON_ENGINE_WINDOW_MINIMIZE = 1,
+  PROTON_ENGINE_WINDOW_MAXIMIZE = 2,
+  PROTON_ENGINE_WINDOW_RESTORE = 3,
+  PROTON_ENGINE_WINDOW_SET_FULLSCREEN = 4,
+  PROTON_ENGINE_WINDOW_SET_POSITION = 5,
+  PROTON_ENGINE_WINDOW_SET_ALWAYS_ON_TOP = 6,
+  PROTON_ENGINE_WINDOW_SET_ZOOM_PERCENT = 7,
+} proton_engine_window_action_kind_t;
+
+typedef struct {
+  proton_engine_window_action_kind_t kind;
+  int32_t value;
+  int32_t x;
+  int32_t y;
+} proton_engine_window_action_t;
+
+typedef struct {
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t monitor_x;
+  int32_t monitor_y;
+  int32_t monitor_width;
+  int32_t monitor_height;
+  int32_t work_x;
+  int32_t work_y;
+  int32_t work_width;
+  int32_t work_height;
+  int32_t scale_factor_percent;
+  int32_t zoom_percent;
+  int32_t visible;
+  int32_t focused;
+  int32_t minimized;
+  int32_t maximized;
+  int32_t fullscreen;
+  int32_t always_on_top;
+  int32_t theme;
+} proton_engine_window_state_t;
+
 int32_t proton_engine_prepare_app(char *error, size_t error_len);
 int32_t proton_engine_run_app_loop(char *error, size_t error_len);
 void proton_engine_quit_app_loop(void);
@@ -56,6 +97,8 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
     int64_t *out_delay_ms,
     char *error,
     size_t error_len);
+void proton_engine_runtime_signal_external_event(
+    proton_engine_runtime_t *runtime);
 int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                                             const char *menu_json,
                                             char *error,
@@ -134,6 +177,25 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t height,
                                       char *error,
                                       size_t error_len);
+int32_t proton_engine_window_apply(
+    proton_engine_window_t *window,
+    const proton_engine_window_action_t *action,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_get_state(
+    proton_engine_window_t *window,
+    proton_engine_window_state_t *out_state,
+    char *error,
+    size_t error_len);
+int32_t proton_engine_window_set_close_interception(
+    proton_engine_window_t *window, int32_t enabled, char *error,
+    size_t error_len);
+int32_t proton_engine_window_get_close_request(
+    proton_engine_window_t *window, uint64_t *out_request_id,
+    int32_t *out_pending, char *error, size_t error_len);
+int32_t proton_engine_window_respond_close_request(
+    proton_engine_window_t *window, uint64_t request_id, int32_t allow,
+    char *error, size_t error_len);
 int32_t proton_engine_window_load_url(proton_engine_window_t *window,
                                       const char *url,
                                       char *error,
@@ -147,6 +209,15 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len);
+int32_t proton_engine_window_poll_browser_event_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_window_browser_command_json(
+    proton_engine_window_t *window, const char *command_json,
+    char *error, size_t error_len);
+int32_t proton_engine_window_respond_browser_request_json(
+    proton_engine_window_t *window, const char *response_json,
+    char *error, size_t error_len);
 int32_t proton_engine_window_emit_bridge_event_json(
     proton_engine_window_t *window,
     const char *event_json,

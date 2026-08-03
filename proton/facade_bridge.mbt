@@ -175,49 +175,57 @@ fn require_enabled_command_extension(
 }
 
 ///|
-fn build_bridge_frontend_config(
-  manifest : @manifest.AppManifest,
-  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+fn bridge_frontend_config_for_extension(
+  id : String,
+  spec : @proton_command.AppCommandExtensionSpec,
 ) -> BridgeFrontendConfig raise AppConfigurationError {
   let extensions : Array[@native.BridgeExtensionConfig] = []
   let initialization_units : Array[@native.BridgeInitializationUnit] = []
-  let ordered_ids = enabled_command_extension_order(
-    manifest, command_extensions,
-  )
-  for id in ordered_ids {
-    let spec = command_extensions[id]
-    let js_namespace = spec.js_namespace()
-    if command_proxy_name_is_invalid(js_namespace) {
-      raise InvalidJavaScriptNamespace(js_namespace~)
-    }
-    let apis : Array[String] = []
-    for api in spec.apis() {
-      let api_name = api.api_name()
-      if command_proxy_name_is_invalid(api_name) {
-        raise InvalidJavaScriptApi(js_namespace~, api_name~)
-      }
-      apis.push(api_name)
-    }
-    extensions.push(@native.BridgeExtensionConfig::new(js_namespace, apis~))
-    let scripts = spec.scripts()
-    for index, script in scripts {
-      initialization_units.push(
-        @native.BridgeInitializationUnit::new(
-          id,
-          "script-" + index.to_string(),
-          script,
-        ),
-      )
-    }
-  }
+  append_bridge_extension_frontend(id, spec, extensions, initialization_units)
   BridgeFrontendConfig::{ extensions, initialization_units }
 }
 
 ///|
+fn append_bridge_extension_frontend(
+  id : String,
+  spec : @proton_command.AppCommandExtensionSpec,
+  extensions : Array[@native.BridgeExtensionConfig],
+  initialization_units : Array[@native.BridgeInitializationUnit],
+) -> Unit raise AppConfigurationError {
+  let js_namespace = spec.js_namespace()
+  if command_proxy_name_is_invalid(js_namespace) {
+    raise InvalidJavaScriptNamespace(js_namespace~)
+  }
+  let apis : Array[String] = []
+  for api in spec.apis() {
+    let api_name = api.api_name()
+    if command_proxy_name_is_invalid(api_name) {
+      raise InvalidJavaScriptApi(js_namespace~, api_name~)
+    }
+    apis.push(api_name)
+  }
+  extensions.push(@native.BridgeExtensionConfig::new(js_namespace, apis~))
+  let scripts = spec.scripts()
+  for index, script in scripts {
+    initialization_units.push(
+      @native.BridgeInitializationUnit::new(
+        id,
+        "script-" + index.to_string(),
+        script,
+      ),
+    )
+  }
+}
+
+///|
+/// Reports whether a name cannot be exposed as a bridge proxy on the renderer
+/// root object. `app` is reserved alongside `core` and `events` because the
+/// bridge publishes granted application commands under it.
 fn command_proxy_name_is_invalid(name : String) -> Bool {
   name.trim().to_owned() == "" ||
   name == "core" ||
   name == "events" ||
+  name == "app" ||
   @proton_command.app_command_js_property_is_reserved(name)
 }
 
@@ -300,16 +308,28 @@ fn typed_event_sender(
 ///|
 async fn dispatch_bridge_request(
   window : @native.Window,
+  window_id : String,
+  permissions : WindowPermissionPolicy,
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   policy : BridgePagePolicy,
   wake_signal : @core.RuntimeWakeSignal,
 ) -> @native.BridgeResponse {
+  let grant = match
+    permissions.grant_for_request(request.source_origin(), request.op()) {
+    Some(grant) => grant
+    None =>
+      return @native.BridgeResponse::Err(
+        request_id=request.request_id(),
+        code="permission_denied",
+        message="the page is not permitted to invoke this operation",
+      )
+  }
   let result : Ref[@native.BridgeResponse?] = Ref(None)
   @async.with_task_group(command_tasks => {
     result.val = Some(
       dispatch_bridge_request_in_command_scope(
-        window, host, request, policy, wake_signal, command_tasks,
+        window, window_id, grant, host, request, policy, wake_signal, command_tasks,
       ),
     )
     command_tasks.return_immediately(())
@@ -320,6 +340,8 @@ async fn dispatch_bridge_request(
 ///|
 async fn dispatch_bridge_request_in_command_scope(
   window : @native.Window,
+  window_id : String,
+  grant : ResolvedPermissionGrant,
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   policy : BridgePagePolicy,
@@ -330,6 +352,10 @@ async fn dispatch_bridge_request_in_command_scope(
   let request_context = @core.AppCommandRequestContext::new(
     request.window(),
     command_tasks,
+    window_id~,
+    source_origin=request.source_origin(),
+    permission_extension=grant.extension_id,
+    permission_scope=grant.scope,
     wake_signal~,
     emit_event=typed_event_sender(window, request.page_instance()),
   )
@@ -365,20 +391,17 @@ async fn dispatch_bridge_request_in_command_scope(
 
 ///|
 fn default_bridge_page_policy() -> BridgePagePolicy {
-  BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 }
+  BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 }
 }
 
 ///|
 fn bridge_page_policy_for_entry(
   entry : @manifest.AppEntry,
 ) -> BridgePagePolicy raise AppConfigurationError {
-  if !proton_dev_mode_enabled() {
-    return default_bridge_page_policy()
-  }
   match entry {
     @manifest.AppEntry::Url(url) =>
       BridgePagePolicy::{
-        dev_origin: Some(url_origin(url)),
+        entry_origin: Some(url_origin(url)),
         request_timeout_ms: 30000,
       }
     _ => default_bridge_page_policy()
@@ -390,18 +413,15 @@ fn url_origin(url : String) -> String raise AppConfigurationError {
   let (scheme_view, rest_view) = match url.split_once("://") {
     Some(parts) => parts
     None =>
-      raise InvalidDevelopmentUrl(
-        url~,
-        reason="URL must include http:// or https://",
-      )
+      raise InvalidEntryUrl(url~, reason="URL must include http:// or https://")
   }
   let scheme = scheme_view.to_owned().to_lower()
   if scheme != "http" && scheme != "https" {
-    raise InvalidDevelopmentUrl(url~, reason="URL must use http or https")
+    raise InvalidEntryUrl(url~, reason="URL must use http or https")
   }
   let rest = rest_view.to_owned()
   if rest == "" {
-    raise InvalidDevelopmentUrl(url~, reason="URL is missing a host")
+    raise InvalidEntryUrl(url~, reason="URL is missing a host")
   }
   let mut end = rest.length()
   for delimiter in ["/", "?", "#"] {
@@ -411,17 +431,17 @@ fn url_origin(url : String) -> String raise AppConfigurationError {
     }
   }
   if end == 0 {
-    raise InvalidDevelopmentUrl(url~, reason="URL is missing a host")
+    raise InvalidEntryUrl(url~, reason="URL is missing a host")
   }
   let authority = rest.unsafe_substring(start=0, end~).to_string()
-  if !dev_origin_authority_is_valid(authority) {
-    raise InvalidDevelopmentUrl(url~, reason="URL has an invalid origin")
+  if !entry_origin_authority_is_valid(authority) {
+    raise InvalidEntryUrl(url~, reason="URL has an invalid origin")
   }
-  scheme + "://" + canonical_dev_origin_authority(authority, scheme, url)
+  scheme + "://" + canonical_entry_origin_authority(authority, scheme, url)
 }
 
 ///|
-fn dev_origin_authority_is_valid(authority : String) -> Bool {
+fn entry_origin_authority_is_valid(authority : String) -> Bool {
   if authority == "" || authority.contains("@") {
     return false
   }
@@ -441,7 +461,7 @@ fn dev_origin_authority_is_valid(authority : String) -> Bool {
 }
 
 ///|
-fn canonical_dev_origin_authority(
+fn canonical_entry_origin_authority(
   authority : String,
   scheme : String,
   source_url : String,
@@ -450,7 +470,7 @@ fn canonical_dev_origin_authority(
     let (host_part, suffix) = match authority.split_once("]") {
       Some(parts) => parts
       None =>
-        raise InvalidDevelopmentUrl(
+        raise InvalidEntryUrl(
           url=source_url,
           reason="URL has an invalid IPv6 origin",
         )
@@ -460,13 +480,10 @@ fn canonical_dev_origin_authority(
       .unsafe_substring(start=1, end=host_text.length())
       .to_string()
     if host == "" {
-      raise InvalidDevelopmentUrl(
-        url=source_url,
-        reason="URL host must not be empty",
-      )
+      raise InvalidEntryUrl(url=source_url, reason="URL host must not be empty")
     }
     if suffix != "" && !suffix.has_prefix(":") {
-      raise InvalidDevelopmentUrl(
+      raise InvalidEntryUrl(
         url=source_url,
         reason="URL has an invalid IPv6 origin",
       )
@@ -474,12 +491,12 @@ fn canonical_dev_origin_authority(
     "[" +
     host.to_lower() +
     "]" +
-    canonical_dev_origin_port_suffix(suffix.to_owned(), scheme, source_url)
+    canonical_entry_origin_port_suffix(suffix.to_owned(), scheme, source_url)
   } else {
     let first_colon = authority.find(":")
     let last_colon = authority.rev_find(":")
     if first_colon != last_colon {
-      raise InvalidDevelopmentUrl(
+      raise InvalidEntryUrl(
         url=source_url,
         reason="IPv6 origins must use brackets",
       )
@@ -492,26 +509,26 @@ fn canonical_dev_origin_authority(
           .unsafe_substring(start=index + 1, end=authority.length())
           .to_string()
         if host == "" {
-          raise InvalidDevelopmentUrl(
+          raise InvalidEntryUrl(
             url=source_url,
             reason="URL host must not be empty",
           )
         }
         if port == "" {
-          raise InvalidDevelopmentUrl(
+          raise InvalidEntryUrl(
             url=source_url,
             reason="URL port must not be empty",
           )
         }
         host.to_lower() +
-        canonical_dev_origin_port_suffix(port, scheme, source_url)
+        canonical_entry_origin_port_suffix(port, scheme, source_url)
       }
     }
   }
 }
 
 ///|
-fn canonical_dev_origin_port_suffix(
+fn canonical_entry_origin_port_suffix(
   port : String,
   scheme : String,
   source_url : String,
@@ -521,20 +538,17 @@ fn canonical_dev_origin_port_suffix(
   }
   let text = if port.has_prefix(":") { port[1:].to_owned() } else { port }
   if text == "" {
-    raise InvalidDevelopmentUrl(
-      url=source_url,
-      reason="URL port must not be empty",
-    )
+    raise InvalidEntryUrl(url=source_url, reason="URL port must not be empty")
   }
   let value = @string.parse_int(text[:]) catch {
     _ =>
-      raise InvalidDevelopmentUrl(
+      raise InvalidEntryUrl(
         url=source_url,
         reason="URL port must be an integer: " + text,
       )
   }
   if value <= 0 || value > 65535 {
-    raise InvalidDevelopmentUrl(
+    raise InvalidEntryUrl(
       url=source_url,
       reason="URL port is out of range: " + text,
     )

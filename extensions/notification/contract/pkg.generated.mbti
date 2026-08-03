@@ -52,3 +52,4 @@ pub(all) struct NotificationRequest {
 // Type aliases
 
 // Traits
+

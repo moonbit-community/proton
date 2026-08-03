@@ -1,4 +1,5 @@
 #include "proton_native.h"
+#include "proton_app_instance.h"
 #include "proton_config.h"
 #include "proton_engine.h"
 #include "proton_internal.h"
@@ -40,10 +41,14 @@
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
 #define PROTON_HEADLESS_OSR_FEATURE ",\"headless_osr\""
 #define PROTON_WINDOW_SIZE_HINTS_FEATURE ",\"window_size_hints\""
+#define PROTON_WINDOW_SESSION_FEATURE ",\"window_session\""
+#define PROTON_BROWSER_SESSION_FEATURE ",\"browser_session\""
 #else
 #define PROTON_TITLEBAR_OVERLAY_FEATURE ""
 #define PROTON_HEADLESS_OSR_FEATURE ""
 #define PROTON_WINDOW_SIZE_HINTS_FEATURE ""
+#define PROTON_WINDOW_SESSION_FEATURE ""
+#define PROTON_BROWSER_SESSION_FEATURE ""
 #endif
 
 #if PROTON_WITH_ENGINE && (defined(__APPLE__) || defined(__linux__))
@@ -58,6 +63,13 @@
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
 #define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
 #define PROTON_MANAGED_APP_RUNNER_FEATURE ""
+#endif
+
+#if PROTON_WITH_ENGINE && \
+    (defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
+#define PROTON_APP_SINGLE_INSTANCE_FEATURE ",\"app_single_instance\""
+#else
+#define PROTON_APP_SINGLE_INSTANCE_FEATURE ""
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
@@ -239,10 +251,14 @@ int32_t proton_runtime_info_json(char *buffer,
       info, sizeof(info),
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
-      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\""
+      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\","
+      "\"bridge_permission_grants\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
           PROTON_HEADLESS_OSR_FEATURE
           PROTON_WINDOW_SIZE_HINTS_FEATURE
+          PROTON_WINDOW_SESSION_FEATURE
+          PROTON_BROWSER_SESSION_FEATURE
+          PROTON_APP_SINGLE_INSTANCE_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
           PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
@@ -260,6 +276,52 @@ int32_t proton_runtime_info_json(char *buffer,
   memcpy(buffer, info, (size_t)required + 1);
   g_last_error[0] = '\0';
   return PROTON_OK;
+}
+
+int32_t proton_app_instance_acquire(
+    const char *identifier, const char *activation_json,
+    proton_app_instance_id_t *out_instance, int32_t *out_primary) {
+  char instance_error[512] = {0};
+  int32_t status = proton_app_instance_acquire_impl(
+      identifier, activation_json, out_instance, out_primary, instance_error,
+      sizeof(instance_error));
+  return proton_set_engine_status(status, instance_error);
+}
+
+int32_t proton_app_instance_attach_runtime(
+    proton_app_instance_id_t instance, proton_runtime_id_t runtime) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(
+        PROTON_ERR_UNSUPPORTED,
+        "app instance activation requires the native engine");
+  }
+  if (slot->app_instance != PROTON_INVALID_HANDLE &&
+      slot->app_instance != instance) {
+    return proton_set_error(
+        PROTON_ERR_ALREADY_INITIALIZED,
+        "runtime is already attached to an app instance");
+  }
+  char instance_error[512] = {0};
+  status = proton_app_instance_attach_runtime_impl(
+      instance, slot->engine_runtime, instance_error, sizeof(instance_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, instance_error);
+  }
+  slot->app_instance = instance;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_app_instance_destroy(proton_app_instance_id_t instance) {
+  char instance_error[512] = {0};
+  int32_t status = proton_app_instance_destroy_impl(
+      instance, instance_error, sizeof(instance_error));
+  return proton_set_engine_status(status, instance_error);
 }
 
 int32_t proton_execute_process(const char *config_json,
@@ -360,6 +422,10 @@ int32_t proton_runtime_destroy(proton_runtime_id_t runtime) {
     return status;
   }
 
+  if (slot->app_instance != PROTON_INVALID_HANDLE) {
+    proton_app_instance_detach_runtime_impl(slot->app_instance);
+    slot->app_instance = PROTON_INVALID_HANDLE;
+  }
   status = proton_destroy_windows_for_runtime(runtime);
   if (status != PROTON_OK) {
     return status;
@@ -668,10 +734,44 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
   if (status != PROTON_OK) {
     return status;
   }
+  if (!proton_runtime_has_events(slot)) {
+    status = proton_runtime_sync_engine_browser_events(runtime, slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    status = proton_runtime_sync_engine_window_states(runtime, slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    status = proton_runtime_sync_engine_close_requests(runtime, slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
+  }
   proton_runtime_sync_engine_bridge_lifecycle(runtime, slot);
   proton_runtime_sync_bridge_cancellations(slot);
   proton_runtime_sync_menu_commands(slot);
   proton_runtime_sync_platform_events(slot);
+  if (slot->app_instance != PROTON_INVALID_HANDLE) {
+    while (slot->event_count < PROTON_MAX_EVENTS) {
+      char event_json[PROTON_MAX_EVENT_BYTES];
+      int32_t present = 0;
+      char instance_error[512] = {0};
+      status = proton_app_instance_take_event_impl(
+          slot->app_instance, event_json, sizeof(event_json), &present,
+          instance_error, sizeof(instance_error));
+      if (status != PROTON_OK) {
+        return proton_set_engine_status(status, instance_error);
+      }
+      if (!present) {
+        break;
+      }
+      if (!proton_runtime_enqueue_event(slot, event_json)) {
+        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                                "failed to queue app activation event");
+      }
+    }
+  }
   status = proton_runtime_poll_event(slot, buffer, buffer_len,
                                      out_required_len);
   if (status < 0) {
@@ -965,6 +1065,203 @@ int32_t proton_window_set_size(proton_window_id_t window, int32_t width,
   return PROTON_OK;
 }
 
+static int32_t
+proton_window_apply_action(proton_window_id_t window,
+                           const proton_engine_window_action_t *action) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window operation requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_apply(slot->engine_window, action,
+                                      engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_minimize(proton_window_id_t window) {
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_MINIMIZE,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_maximize(proton_window_id_t window) {
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_MAXIMIZE,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_restore(proton_window_id_t window) {
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_RESTORE,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_set_fullscreen(proton_window_id_t window,
+                                     int32_t fullscreen) {
+  if (fullscreen != 0 && fullscreen != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "fullscreen must be 0 or 1");
+  }
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_FULLSCREEN,
+      .value = fullscreen,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_set_position(proton_window_id_t window,
+                                   int32_t x,
+                                   int32_t y) {
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_POSITION,
+      .x = x,
+      .y = y,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_set_always_on_top(proton_window_id_t window,
+                                        int32_t always_on_top) {
+  if (always_on_top != 0 && always_on_top != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "always_on_top must be 0 or 1");
+  }
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_ALWAYS_ON_TOP,
+      .value = always_on_top,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_set_zoom_percent(proton_window_id_t window,
+                                       int32_t zoom_percent) {
+  if (zoom_percent < 25 || zoom_percent > 500) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "zoom_percent must be between 25 and 500");
+  }
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_ZOOM_PERCENT,
+      .value = zoom_percent,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_state_json(proton_window_id_t window,
+                                 char *buffer,
+                                 int32_t buffer_len,
+                                 int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  *out_required_len = 0;
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_engine_window_state_t state = {
+      .width = slot->width,
+      .height = slot->height,
+      .scale_factor_percent = 100,
+      .zoom_percent = 100,
+      .visible = slot->visible ? 1 : 0,
+  };
+  if (slot->engine_window != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_window_get_state(
+        slot->engine_window, &state, engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  char json[1024];
+  int written = proton_format_window_state_json(&state, json, sizeof(json));
+  if (written < 0 || written >= (int)sizeof(json)) {
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "window state payload is too large");
+  }
+  *out_required_len = written;
+  if (buffer == NULL || buffer_len <= written) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "window state buffer is too small");
+  }
+  memcpy(buffer, json, (size_t)written + 1);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_close_interception(proton_window_id_t window,
+                                             int32_t enabled) {
+  if (enabled != 0 && enabled != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "enabled must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "close interception requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_close_interception(
+      slot->engine_window, enabled, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  if (!enabled) {
+    slot->close_request_notified_revision = 0;
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_respond_close_request(proton_window_id_t window,
+                                            int64_t request_id,
+                                            int32_t allow) {
+  if (request_id <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "request_id must be positive");
+  }
+  if (allow != 0 && allow != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "allow must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "close interception requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_respond_close_request(
+      slot->engine_window, (uint64_t)request_id, allow, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_load_url(proton_window_id_t window, const char *url) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1030,6 +1327,56 @@ int32_t proton_window_eval(proton_window_id_t window, const char *script) {
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_browser_command_json(proton_window_id_t window,
+                                           const char *command_json) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (command_json == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "browser command JSON is required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser commands require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_browser_command_json(
+      slot->engine_window, command_json, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_respond_browser_request_json(
+    proton_window_id_t window, const char *response_json) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (response_json == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "browser response JSON is required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser responses require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_respond_browser_request_json(
+      slot->engine_window, response_json, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;

@@ -22,8 +22,14 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   let resolved = self.resolved_app_config() catch {
     error => raise ConfigurationError(error)
   }
+  let app_instance = match acquire_app_instance(resolved) {
+    Some(@native.AppInstanceAcquire::Forwarded) => return
+    Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
+    None => None
+  }
   run_manifest(
     resolved.manifest,
+    resolved.permission_base_path,
     self.command_extensions,
     self.command_registrars,
     self.application_lifecycle_hooks,
@@ -31,8 +37,29 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.menu,
     self.bridge_startup_timeout_value_ms,
     self.resolved_headless(),
+    app_instance~,
     launch_input_handlers=self.launch_input_handlers,
-  )
+    window_event_handlers=self.window_event_handlers,
+    window_close_handler=self.window_close_handler,
+    navigation_handler=self.navigation_handler,
+    popup_handler=self.popup_handler,
+    download_handler=self.download_handler,
+    certificate_handler=self.certificate_handler,
+    media_handler=self.media_handler,
+    download_event_handlers=self.download_event_handlers,
+  ) catch {
+    error => {
+      match app_instance {
+        Some(instance) => destroy_app_instance(instance) catch { _ => () }
+        None => ()
+      }
+      raise error
+    }
+  }
+  match app_instance {
+    Some(instance) => destroy_app_instance(instance)
+    None => ()
+  }
 }
 
 ///|
@@ -46,6 +73,7 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 ///|
 async fn run_manifest(
   manifest : @manifest.AppManifest,
+  permission_base_path : String,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise],
   application_lifecycle_hooks : Array[ApplicationLifecycleHook],
@@ -53,7 +81,20 @@ async fn run_manifest(
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
   headless : Bool,
+  app_instance? : @native.AppInstance? = None,
   launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
+  window_event_handlers? : Array[
+    async (WindowHandle, WindowEvent) -> Unit noraise,
+  ] = [],
+  window_close_handler? : (async (WindowHandle) -> WindowCloseDecision noraise)? = None,
+  navigation_handler? : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)? = None,
+  popup_handler? : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)? = None,
+  download_handler? : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)? = None,
+  certificate_handler? : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)? = None,
+  media_handler? : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)? = None,
+  download_event_handlers? : Array[
+    async (BrowserHandle, DownloadEvent) -> Unit noraise,
+  ] = [],
 ) -> Unit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
@@ -91,6 +132,23 @@ async fn run_manifest(
   ) catch {
     error => raise native_run_error("create runtime", error)
   }
+  match app_instance {
+    Some(instance) =>
+      instance.attach_runtime(runtime) catch {
+        error => {
+          let attach_error = native_run_error("attach app instance", error)
+          let failure = cleanup_run_error(
+            Some(attach_error),
+            app_cleanup(lifecycle, runtime, [], None),
+          )
+          match failure {
+            Some(cleanup_error) => raise cleanup_error
+            None => raise attach_error
+          }
+        }
+      }
+    None => ()
+  }
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
@@ -120,102 +178,135 @@ async fn run_manifest(
       command_extensions,
       command_registrars~,
     )
-    @async.with_task_group(application_tasks => {
-      let application_context = ApplicationContext::new(application_tasks)
-      start_application_lifecycle_hooks(
-        application_lifecycle_hooks, application_context, application_tasks, lifecycle_failures,
-      )
-      let frontend = build_bridge_frontend_config(manifest, command_extensions) catch {
+    let policies : Array[BridgePagePolicy] = []
+    for plan in plans {
+      let policy = bridge_page_policy_for_entry(plan.entry) catch {
         error => raise ConfigurationError(error)
       }
-      let policies : Array[BridgePagePolicy] = []
-      for plan in plans {
-        let policy = bridge_page_policy_for_entry(plan.entry) catch {
+      policies.push(policy)
+    }
+    let ops = match command_host {
+      Some(host) => host.host.registered_ops()
+      None => []
+    }
+    validate_registered_capabilities_have_grants(
+      manifest, command_extensions, ops,
+    ) catch {
+      error => raise ConfigurationError(error)
+    }
+    let permission_policies : Array[WindowPermissionPolicy] = []
+    for index, plan in plans {
+      permission_policies.push(
+        resolve_window_permission_policy(
+          plan.id,
+          policies[index],
+          manifest,
+          permission_base_path,
+          command_extensions,
+          ops,
+        ) catch {
+          error => raise ConfigurationError(error)
+        },
+      )
+    }
+    let bridge_enabled = ops.length() > 0 ||
+      forward_menu_events ||
+      window_lifecycle_hooks.length() > 0
+    if bridge_enabled && !@native.bridge_permission_grants_supported() {
+      raise UnsupportedNativeFeature(feature="bridge_permission_grants")
+    }
+    let definitions : Array[PreparedWindow] = []
+    let browser_policy = @native.BrowserPolicy::new(
+      navigation=if navigation_handler is Some(_) {
+        @native.BrowserPolicyMode::Ask
+      } else {
+        @native.BrowserPolicyMode::Allow
+      },
+      popup=if popup_handler is Some(_) {
+        @native.BrowserPolicyMode::Ask
+      } else {
+        @native.BrowserPolicyMode::Deny
+      },
+      download=if download_handler is Some(_) {
+        @native.BrowserPolicyMode::Ask
+      } else {
+        @native.BrowserPolicyMode::Deny
+      },
+      certificate=if certificate_handler is Some(_) {
+        @native.BrowserPolicyMode::Ask
+      } else {
+        @native.BrowserPolicyMode::Deny
+      },
+      media=if media_handler is Some(_) {
+        @native.BrowserPolicyMode::Ask
+      } else {
+        @native.BrowserPolicyMode::Deny
+      },
+      devtools=manifest.debug > 0,
+    )
+    for index, plan in plans {
+      let bridge = if bridge_enabled {
+        let grants = permission_policies[index].native_grants(
+          command_extensions,
+        ) catch {
           error => raise ConfigurationError(error)
         }
-        policies.push(policy)
+        ensure_entry_bridge_grant(grants, policies[index])
+        Some(native_bridge_config(grants, policies[index]))
+      } else {
+        None
       }
-      let ops = match command_host {
-        Some(host) => host.host.registered_ops()
-        None => []
-      }
-      let bridge_enabled = ops.length() > 0 ||
-        frontend.extensions.length() > 0 ||
-        frontend.initialization_units.length() > 0 ||
-        forward_menu_events ||
-        window_lifecycle_hooks.length() > 0
+      definitions.push(PreparedWindow::{
+        plan,
+        bridge,
+        policy: policies[index],
+        permissions: permission_policies[index],
+        browser_policy,
+      })
+    }
+    @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
-        let host = match command_host {
-          Some(host) => Some(host.host)
-          None => None
-        }
-        let pending : Array[BridgeDispatchTask] = []
-        lifecycle.begin_window_create()
-        for index, plan in plans {
-          let bridge = if bridge_enabled {
-            Some(native_bridge_config(ops, frontend, policies[index]))
-          } else {
-            None
-          }
-          let created_window = @native.Window::new(
-            runtime,
-            config=native_window_config(plan.window, bridge),
-          ) catch {
-            error => raise native_run_error("create window " + plan.id, error)
-          }
-          let running = RunningWindow::{
-            id: plan.id,
-            window: created_window,
-            policy: policies[index],
-            lifetime: WindowLifetime::new(),
-            bridge_ready: false,
-            closed: false,
-          }
-          windows.push(running)
-          load_entry_after_create(created_window, plan.entry) catch {
-            error => raise EntryLoadError(error)
+        let session = RuntimeSession::new(
+          runtime, definitions, windows, command_host, wakeup, forward_menu_events,
+          bridge_enabled, launch_input_handlers, window_event_handlers, window_tasks,
+          window_close_handler, window_lifecycle_hooks, lifecycle_failures, bridge_startup_timeout_ms,
+          navigation_handler, popup_handler, download_handler, certificate_handler,
+          media_handler, download_event_handlers,
+        )
+        let application_context = ApplicationContext::new(
+          application_tasks,
+          session.window_manager(),
+        )
+        let application_start = application_tasks.spawn(
+          () => {
+            defer session.wakeup.signal.notify()
+            start_application_lifecycle_hooks(
+              application_lifecycle_hooks, application_context, application_tasks,
+              lifecycle_failures,
+            )
+          },
+          no_wait=true,
+          allow_failure=true,
+        )
+        session.drive_until_complete(application_start)
+        for definition in definitions {
+          if definition.plan.open_on_start &&
+            session.find_active_window(definition.plan.id) is None {
+            ignore(session.create_window(definition))
           }
         }
         if bridge_enabled {
-          wait_for_bridge_startup(
-            runtime, windows, host, pending, wakeup, forward_menu_events, bridge_startup_timeout_ms,
-            launch_input_handlers, window_tasks,
-          ) catch {
+          session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
             error => raise normalize_async_run_error(error)
           }
         }
-        lifecycle.finish_window_create()
         for running in windows {
-          if running.closed {
-            continue
-          }
-          let window_events = WindowEventEmitter::new(
-            typed_event_sender(running.window, None),
-          )
-          ignore(
-            window_tasks.spawn(
-              () => {
-                run_window_lifecycle_scope(
-                  running, window_events, window_lifecycle_hooks, lifecycle_failures,
-                )
-              },
-              no_wait=true,
-              allow_failure=true,
-            ),
-          )
-          running.lifetime.wait_until_ready()
-          if running.closed {
-            continue
-          }
-          running.window.show() catch {
-            error => raise native_run_error("show window " + running.id, error)
+          if !running.is_closed() {
+            session.activate_window(running)
           }
         }
         lifecycle.begin_running()
-        run_runtime_pump(
-          runtime, windows, host, pending, wakeup, forward_menu_events, bridge_enabled,
-          launch_input_handlers, window_tasks,
-        ) catch {
+        session.run() catch {
           error => raise normalize_async_run_error(error)
         }
         lifecycle.observe_window_closed()
@@ -281,6 +372,7 @@ fn planned_windows(
       id: "main",
       window: manifest.window,
       entry: manifest.entry,
+      open_on_start: true,
     },
   ]
   let ids : Map[String, Unit] = { "main": () }
@@ -296,7 +388,12 @@ fn planned_windows(
       )
     }
     ids[id] = ()
-    plans.push(PlannedWindow::{ id, window: window.window, entry: window.entry })
+    plans.push(PlannedWindow::{
+      id,
+      window: window.window,
+      entry: window.entry,
+      open_on_start: window.open_on_start,
+    })
   }
   plans
 }
@@ -305,6 +402,7 @@ fn planned_windows(
 fn native_window_config(
   window : @manifest.WindowManifest,
   bridge : @native.BridgeConfig?,
+  browser : @native.BrowserPolicy,
 ) -> @native.WindowConfig {
   @native.WindowConfig::new(
     title=window.title,
@@ -321,27 +419,34 @@ fn native_window_config(
       @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
       @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
     },
+    browser~,
     bridge?,
   )
 }
 
 ///|
 fn native_bridge_config(
-  ops : Array[String],
-  frontend : BridgeFrontendConfig,
+  grants : Array[@native.BridgeGrantConfig],
   policy : BridgePagePolicy,
 ) -> @native.BridgeConfig {
-  let dev_origins = match policy.dev_origin {
-    Some(origin) => [origin]
-    None => []
-  }
   @native.BridgeConfig::new(
-    ops~,
+    grants~,
     request_timeout_ms=policy.request_timeout_ms,
-    dev_origins~,
-    extensions=frontend.extensions,
-    initialization_units=frontend.initialization_units,
   )
+}
+
+///|
+fn ensure_entry_bridge_grant(
+  grants : Array[@native.BridgeGrantConfig],
+  policy : BridgePagePolicy,
+) -> Unit {
+  let source_origin = match policy.entry_origin {
+    Some(origin) => origin
+    None => "app"
+  }
+  if !grants.any(grant => grant.source_origin == source_origin) {
+    grants.push(@native.BridgeGrantConfig::new(source_origin, ops=[]))
+  }
 }
 
 ///|
@@ -430,112 +535,72 @@ fn bridge_failure(
 }
 
 ///|
-async fn wait_for_bridge_startup(
-  runtime : @native.Runtime,
-  windows : Array[RunningWindow],
-  host : @core.AppCommandHost?,
-  pending : Array[BridgeDispatchTask],
-  wakeup : RuntimeWakeup,
-  forward_menu_events : Bool,
-  timeout_ms : Int,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Unit raise AppRunError {
-  let completed = @async.with_timeout_opt(timeout_ms, () => {
-    while true {
-      let did_work = pump_runtime_once(
-        runtime,
-        windows,
-        host,
-        pending,
-        wakeup.signal,
-        forward_menu_events,
-        false,
-        launch_input_handlers,
-        group,
-      )
-      match refresh_bridge_startup_states(windows) {
-        None => return
-        Some(_) => if did_work { @async.sleep(0) } else { wakeup.wait() }
-      }
-    }
-  }) catch {
-    error => raise normalize_async_run_error(error)
-  }
-  match completed {
-    Some(_) => ()
-    None => {
-      ignore(
-        pump_runtime_once(
-          runtime,
-          windows,
-          host,
-          pending,
-          wakeup.signal,
-          forward_menu_events,
-          false,
-          launch_input_handlers,
-          group,
-        ),
-      )
-      match refresh_bridge_startup_states(windows) {
-        None => return
-        Some(state) =>
-          raise BridgeStartupError(
-            bridge_startup_timeout_diagnostic(state, timeout_ms),
-          )
-      }
-    }
-  }
-}
-
-///|
 fn refresh_bridge_startup_states(
   windows : Array[RunningWindow],
 ) -> @native.BridgeLifecycleState? raise AppRunError {
   let mut pending : @native.BridgeLifecycleState? = None
   for running in windows {
-    if running.bridge_ready {
+    if refresh_window_bridge_startup_state(running) {
       continue
     }
-    if running.closed {
-      raise EntryLoadError(ClosedDuringStartup)
-    }
-    let state = running.window.bridge_lifecycle_state() catch {
-      error =>
-        raise native_run_error(
-          "read bridge startup state for " + running.id,
-          error,
-        )
-    }
-    if state.url == "about:blank" {
-      if pending is None {
-        pending = Some(state)
-      }
-      continue
-    }
-    match state.outcome {
-      "ready" => running.bridge_ready = true
-      "failed" =>
-        try bridge_failure(running.window, state) catch {
+    if pending is None {
+      pending = Some(
+        running.window.bridge_lifecycle_state() catch {
           error =>
             raise native_run_error(
-              "read bridge startup failure for " + running.id,
+              "read bridge startup state for " + running.id,
               error,
             )
-        } noraise {
-          diagnostic => raise BridgeStartupError(diagnostic)
-        }
-      "ineligible" =>
-        raise BridgeStartupError(
-          bridge_protocol_diagnostic(
-            state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
-          ),
-        )
-      _ => if pending is None { pending = Some(state) }
+        },
+      )
     }
   }
   pending
+}
+
+///|
+fn refresh_window_bridge_startup_state(
+  running : RunningWindow,
+) -> Bool raise AppRunError {
+  if running.bridge_ready {
+    return true
+  }
+  if running.is_closed() {
+    raise EntryLoadError(ClosedDuringStartup)
+  }
+  let state = running.window.bridge_lifecycle_state() catch {
+    error =>
+      raise native_run_error(
+        "read bridge startup state for " + running.id,
+        error,
+      )
+  }
+  if state.url == "about:blank" {
+    return false
+  }
+  match state.outcome {
+    "ready" => {
+      running.bridge_ready = true
+      true
+    }
+    "failed" =>
+      try bridge_failure(running.window, state) catch {
+        error =>
+          raise native_run_error(
+            "read bridge startup failure for " + running.id,
+            error,
+          )
+      } noraise {
+        diagnostic => raise BridgeStartupError(diagnostic)
+      }
+    "ineligible" =>
+      raise BridgeStartupError(
+        bridge_protocol_diagnostic(
+          state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
+        ),
+      )
+    _ => false
+  }
 }
 
 ///|
@@ -566,6 +631,9 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
       cleanup_failure_message(primary, failures)
     EntryLoadError(error) => error.message()
     ConfigurationError(error) => error.message()
+    UnsupportedNativeFeature(feature~) =>
+      "The active Proton native runtime is incompatible with this application.\n\nMissing feature: " +
+      feature
     NativeRuntimeError(action~, error~) =>
       action + " failed: " + error.message()
     RuntimeWakeupError(error) => error.message()
@@ -643,43 +711,6 @@ async fn show_app_run_failure(
 }
 
 ///|
-async fn run_runtime_pump(
-  runtime : @native.Runtime,
-  windows : Array[RunningWindow],
-  host : @core.AppCommandHost?,
-  pending : Array[BridgeDispatchTask],
-  wakeup : RuntimeWakeup,
-  forward_menu_events : Bool,
-  monitor_bridge : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Unit raise AppRunError {
-  while !all_windows_closed(windows) {
-    let did_work = pump_runtime_once(
-      runtime,
-      windows,
-      host,
-      pending,
-      wakeup.signal,
-      forward_menu_events,
-      monitor_bridge,
-      launch_input_handlers,
-      group,
-    )
-    if did_work {
-      @async.sleep(0) catch {
-        error => raise normalize_async_run_error(error)
-      }
-    } else {
-      wakeup.wait() catch {
-        error => raise normalize_async_run_error(error)
-      }
-    }
-  }
-  cancel_all_bridge_tasks(pending)
-}
-
-///|
 fn take_runtime_bridge_failure(
   window : @native.Window,
 ) -> @native.BridgeDiagnostic? raise @native.NativeError {
@@ -688,253 +719,6 @@ fn take_runtime_bridge_failure(
     return None
   }
   Some(bridge_failure(window, state))
-}
-
-///|
-fn pump_runtime_once(
-  runtime : @native.Runtime,
-  windows : Array[RunningWindow],
-  host : @core.AppCommandHost?,
-  pending : Array[BridgeDispatchTask],
-  wake_signal : @core.RuntimeWakeSignal,
-  forward_menu_events : Bool,
-  monitor_bridge : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Bool raise AppRunError {
-  let mut did_work = false
-
-  let mut polling_events = true
-  while polling_events {
-    let next_event = runtime.poll_event() catch {
-      error => raise native_run_error("poll event", error)
-    }
-    match next_event {
-      None => polling_events = false
-      Some(event) => {
-        did_work = true
-        dispatch_runtime_event(
-          event, windows, forward_menu_events, launch_input_handlers, group,
-        )
-        cancel_bridge_request_task(pending, event.bridge_request_cancellation())
-        if event.is_window_closed() {
-          cancel_window_bridge_tasks(pending, event.window_id())
-        }
-      }
-    }
-  }
-
-  if monitor_bridge {
-    for running in windows {
-      if !running.closed {
-        let failure = take_runtime_bridge_failure(running.window) catch {
-          error =>
-            raise native_run_error(
-              "read bridge failure for " + running.id,
-              error,
-            )
-        }
-        match failure {
-          Some(diagnostic) => raise BridgeRuntimeError(diagnostic)
-          None => ()
-        }
-      }
-    }
-  }
-
-  let mut polling_bridge = true
-  while polling_bridge {
-    let next_request = runtime.poll_bridge_request() catch {
-      error => raise native_run_error("poll bridge request", error)
-    }
-    match next_request {
-      None => polling_bridge = false
-      Some(request) => {
-        did_work = true
-        let request_id = request.request_id()
-        let target = match find_running_window(windows, request.window()) {
-          Some(window) if !window.closed => window
-          _ => {
-            runtime.respond_bridge_request(
-              @native.BridgeResponse::Err(
-                request_id~,
-                code="window_closed",
-                message="the issuing window is no longer available",
-              ),
-            ) catch {
-              error =>
-                if !is_stale_bridge_response_error(error) {
-                  raise native_run_error("reject bridge request", error)
-                }
-            }
-            continue
-          }
-        }
-        match host {
-          None =>
-            runtime.respond_bridge_request(
-              @native.BridgeResponse::Err(
-                request_id~,
-                code="command_host_unavailable",
-                message="the application command host is not available",
-              ),
-            ) catch {
-              error =>
-                if !is_stale_bridge_response_error(error) {
-                  raise native_run_error("reject bridge request", error)
-                }
-            }
-          Some(host) => {
-            let task = group.spawn(
-              () => {
-                defer wake_signal.notify()
-                dispatch_bridge_request(
-                  target.window,
-                  host,
-                  request,
-                  target.policy,
-                  wake_signal,
-                )
-              },
-              no_wait=true,
-              allow_failure=true,
-            )
-            pending.push(BridgeDispatchTask::{
-              request_id,
-              window: target.window.id(),
-              task,
-              state: Running,
-            })
-          }
-        }
-      }
-    }
-  }
-
-  let remaining : Array[BridgeDispatchTask] = []
-  for item in pending {
-    if item.state == Cancelled {
-      continue
-    }
-    let completed = item.task.try_wait() catch {
-      _ =>
-        Some(
-          @native.BridgeResponse::Err(
-            request_id=item.request_id,
-            code="handler_failed",
-            message="bridge handler task failed",
-          ),
-        )
-    }
-    match completed {
-      Some(response) => {
-        did_work = true
-        item.state = Responding
-        runtime.respond_bridge_request(response) catch {
-          error =>
-            if is_stale_bridge_response_error(error) {
-              item.state = Stale
-            } else {
-              raise native_run_error("respond bridge request", error)
-            }
-        }
-        if item.state == Responding {
-          item.state = Completed
-        }
-      }
-      None => remaining.push(item)
-    }
-  }
-  pending.clear()
-  for item in remaining {
-    pending.push(item)
-  }
-  did_work
-}
-
-///|
-fn cancel_all_bridge_tasks(pending : Array[BridgeDispatchTask]) -> Unit {
-  for item in pending {
-    if item.state == Running {
-      item.task.cancel()
-      item.state = Cancelled
-    }
-  }
-  pending.clear()
-}
-
-///|
-fn dispatch_runtime_event(
-  event : @native.RuntimeEvent,
-  windows : Array[RunningWindow],
-  forward_menu_events : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Unit raise AppRunError {
-  dispatch_internal_runtime_event(event)
-  if event.is_window_closed() {
-    mark_window_closed(windows, event.window_id())
-  }
-  dispatch_launch_input(event, launch_input_handlers, group)
-  if forward_menu_events {
-    if event.menu_command_id() is Some(command_id) {
-      forward_menu_command_to_window(windows, command_id, event.window_id())
-    }
-  }
-}
-
-///|
-fn dispatch_internal_runtime_event(event : @native.RuntimeEvent) -> Unit {
-  match event.notification_result() {
-    Some(result) => publish_notification_result(result)
-    None => ()
-  }
-}
-
-///|
-fn dispatch_launch_input(
-  event : @native.RuntimeEvent,
-  handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
-  group : @async.TaskGroup[Unit],
-) -> Unit {
-  match event.launch_input() {
-    Some(input) =>
-      for handler in handlers {
-        ignore(group.spawn(() => handler(input), no_wait=true))
-      }
-    None => ()
-  }
-}
-
-///|
-fn find_running_window(
-  windows : Array[RunningWindow],
-  window_id : Int64,
-) -> RunningWindow? {
-  for running in windows {
-    if running.window.id() == window_id {
-      return Some(running)
-    }
-  }
-  None
-}
-
-///|
-fn mark_window_closed(
-  windows : Array[RunningWindow],
-  window_id : Int64?,
-) -> Unit {
-  match window_id {
-    Some(window_id) =>
-      match find_running_window(windows, window_id) {
-        Some(window) => {
-          window.closed = true
-          window.lifetime.close()
-        }
-        None => ()
-      }
-    None => ()
-  }
 }
 
 ///|
@@ -993,6 +777,8 @@ async fn WindowLifetime::wait_until_closed(self : WindowLifetime) -> Unit {
 ///|
 async fn run_window_lifecycle_scope(
   running : RunningWindow,
+  handle : WindowHandle,
+  windows : WindowManager,
   events : WindowEventEmitter,
   hooks : Array[WindowLifecycleHook],
   lifecycle_failures : Array[AppCleanupError],
@@ -1000,7 +786,14 @@ async fn run_window_lifecycle_scope(
   @async.with_task_group(tasks => {
     start_window_lifecycle_hooks(
       hooks,
-      WindowContext::new(running.id, running.window.as_ref(), tasks, events),
+      WindowContext::new(
+        running.id,
+        running.window.as_ref(),
+        handle,
+        windows,
+        tasks,
+        events,
+      ),
       tasks,
       lifecycle_failures,
     ) catch {
@@ -1016,66 +809,6 @@ async fn run_window_lifecycle_scope(
   }) catch {
     error =>
       running.lifetime.finish_start(Some(normalize_async_run_error(error)))
-  }
-}
-
-///|
-fn all_windows_closed(windows : Array[RunningWindow]) -> Bool {
-  windows.all(fn(window) { window.closed })
-}
-
-///|
-fn cancel_window_bridge_tasks(
-  pending : Array[BridgeDispatchTask],
-  window_id : Int64?,
-) -> Unit {
-  match window_id {
-    Some(window_id) =>
-      for item in pending {
-        if item.window == window_id && item.state == Running {
-          item.task.cancel()
-          item.state = Cancelled
-        }
-      }
-    None => ()
-  }
-}
-
-///|
-fn cancel_bridge_request_task(
-  pending : Array[BridgeDispatchTask],
-  request_id : Int64?,
-) -> Unit {
-  match request_id {
-    Some(request_id) =>
-      for item in pending {
-        if item.request_id == request_id && item.state == Running {
-          item.task.cancel()
-          item.state = Cancelled
-        }
-      }
-    None => ()
-  }
-}
-
-///|
-fn forward_menu_command_to_window(
-  windows : Array[RunningWindow],
-  command_id : String,
-  focused_window : Int64?,
-) -> Unit raise AppRunError {
-  let target = match focused_window {
-    Some(window_id) => find_running_window(windows, window_id)
-    None => None
-  }
-  let target = match target {
-    Some(window) => Some(window)
-    None => windows.get(0)
-  }
-  match target {
-    Some(window) if !window.closed =>
-      forward_menu_command(window.window, command_id, focused_window)
-    _ => ()
   }
 }
 

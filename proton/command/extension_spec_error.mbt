@@ -6,6 +6,12 @@ pub(all) suberror ExtensionSpecError {
 } derive(Eq)
 
 ///|
+/// A stable validation failure for an extension's renderer permission scope.
+pub(all) suberror PermissionScopeValidationError {
+  Invalid(detail~ : String)
+} derive(Eq)
+
+///|
 pub fn ExtensionSpecError::message(self : ExtensionSpecError) -> String {
   match self {
     InvalidContract(detail~) => "invalid extension contract: " + detail
@@ -18,6 +24,20 @@ pub fn ExtensionSpecError::message(self : ExtensionSpecError) -> String {
 }
 
 ///|
+pub fn PermissionScopeValidationError::message(
+  self : PermissionScopeValidationError,
+) -> String {
+  match self {
+    Invalid(detail~) => detail
+  }
+}
+
+///|
 impl Show for ExtensionSpecError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for PermissionScopeValidationError with fn output(self, logger) {
   logger.write_string(self.message())
 }

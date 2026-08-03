@@ -36,6 +36,15 @@ async fn run_asset_sidecar_scenario_page_probe(
   let value = evaluate_json(page, asset_sidecar_probe_expression(), true)
   let result : AssetSidecarScenarioProbe = decode_probe(value, "asset sidecar")
   assert_asset_sidecar_probe(result, value)
+  ignore(
+    evaluate_json(
+      page, "location.href = new URL('navigated.html', location.href).href", false,
+    ),
+  )
+  wait_for_cdp_expression(
+    page, "document.title === 'Asset Navigation Complete' && document.querySelector('#navigation-result')?.textContent === 'Navigated with bridge: 42'",
+    "asset document navigation with bridge", timeout,
+  )
   assert_asset_sidecar_native_log(app.native_log_path)
   println("MoonBit 46_asset_sidecar_resources probe passed")
 }
@@ -93,6 +102,7 @@ fn assert_asset_sidecar_probe(
   value : Json,
 ) -> Unit raise {
   guard result.url.has_prefix("proton://app/") &&
+    result.url.has_suffix("#startup-fragment") &&
     result.title == "Asset Sidecar Resources" else {
     fail("asset sidecar page identity mismatch: " + value.stringify())
   }

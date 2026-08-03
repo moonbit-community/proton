@@ -46,7 +46,7 @@ suberror AppCommandError {
 ///|
 let app_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
   id="examples/app-commands",
-  js_namespace="app",
+  js_namespace="appCommands",
 )
 
 ///|
@@ -142,7 +142,7 @@ pub fn run() -> Unit {
       width=920,
       height=680,
       debug=true,
-    ).extension(app_commands_extension())
+    ).expose(app_commands_extension())
     app.run_or_abort()
   })
 }

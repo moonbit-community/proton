@@ -51,6 +51,7 @@ pub fn ProtonBackendConfig::path(Self) -> String
 
 type ProtonBundleConfig
 pub fn ProtonBundleConfig::active(Self) -> Bool
+pub fn ProtonBundleConfig::document_extensions(Self) -> Array[String]
 pub fn ProtonBundleConfig::document_types(Self) -> Array[@proton_config.ProjectDocumentType]
 pub fn ProtonBundleConfig::icon(Self) -> Array[String]
 pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], url_schemes? : Array[String], document_types? : Array[@proton_config.ProjectDocumentType], output? : String) -> Self
@@ -74,9 +75,11 @@ pub fn ProtonProjectConfig::dev_manifest(Self) -> LoadedAppManifest
 pub fn ProtonProjectConfig::frontend(Self) -> ProtonFrontendConfig?
 pub fn ProtonProjectConfig::manifest(Self) -> LoadedAppManifest
 pub fn ProtonProjectConfig::metadata(Self) -> ProtonAppMetadata
-pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, backend? : ProtonBackendConfig?, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?) -> Self
+pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, single_instance? : Bool, backend? : ProtonBackendConfig?, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?) -> Self
+pub fn ProtonProjectConfig::single_instance(Self) -> Bool
 pub fn ProtonProjectConfig::to_summary_json(Self) -> Json
 
 // Type aliases
 
 // Traits
+

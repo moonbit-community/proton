@@ -39,6 +39,53 @@ priv suberror FacadeLifecycleTestError {
 } derive(Debug)
 
 ///|
+async fn test_open_window(id : String) -> WindowHandle raise WindowSessionError {
+  @async.sleep(0) catch {
+    _ => raise UnknownWindow(id~)
+  }
+  raise UnknownWindow(id~)
+}
+
+///|
+fn test_window_manager() -> WindowManager {
+  WindowManager::{
+    open_window: test_open_window,
+    find_window: fn(_id) { None },
+  }
+}
+
+///|
+fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
+  let browser = BrowserHandle::{
+    id,
+    native_id,
+    load_browser_url: fn(_url) {  },
+    load_browser_html: fn(_html, _base_url) {  },
+    eval_browser_script: fn(_script) {  },
+    send_browser_command: fn(_command, _download_id) {  },
+  }
+  WindowHandle::{
+    id,
+    native_id,
+    show_window: fn() {  },
+    hide_window: fn() {  },
+    close_window: fn() {  },
+    focus_window: fn() {  },
+    set_window_title: fn(_title) {  },
+    set_window_size: fn(_width, _height) {  },
+    minimize_window: fn() {  },
+    maximize_window: fn() {  },
+    restore_window: fn() {  },
+    set_window_fullscreen: fn(_fullscreen) {  },
+    set_window_position: fn(_x, _y) {  },
+    set_window_always_on_top: fn(_always_on_top) {  },
+    set_window_zoom_percent: fn(_zoom_percent) {  },
+    read_window_state: fn() { abort("test window state is not available") },
+    browser,
+  }
+}
+
+///|
 fn test_command_manifest(
   extension_id : String,
   enabled? : Bool = true,
@@ -79,6 +126,7 @@ fn test_command_spec(
   api_names : Array[String],
   dependencies? : Array[String] = [],
   scripts? : Array[String] = [],
+  resolve_permission? : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError,
 ) -> @proton_command.AppCommandExtensionSpec {
   let contract = @proton_contract.extension(id=extension_id, js_namespace~)
   let routes = api_names.map(fn(api_name) {
@@ -93,6 +141,7 @@ fn test_command_spec(
     fn(_registrar) {  },
     scripts~,
     dependencies~,
+    resolve_permission?,
   ) catch {
     error => abort(error.message())
   }
@@ -133,14 +182,9 @@ test "command proxy rejects unsafe JS property names" {
 ///|
 test "bridge frontend config reflects enabled command extension metadata" {
   let extension_id = "examples/async-add"
-  let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[extension_id] = test_command_spec(extension_id, "add", [
-    "slowAdd",
-  ])
+  let spec = test_command_spec(extension_id, "add", ["slowAdd"])
   let config = unwrap_configuration(() => {
-    build_bridge_frontend_config(manifest, command_extensions)
+    bridge_frontend_config_for_extension(extension_id, spec)
   })
   inspect(config.extensions.length(), content="1")
   inspect(config.extensions[0].js_namespace, content="add")
@@ -151,17 +195,11 @@ test "bridge frontend config reflects enabled command extension metadata" {
 ///|
 test "bridge frontend config preserves initialization unit ownership" {
   let extension_id = "examples/scripts"
-  let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[extension_id] = test_command_spec(
-    extension_id,
-    "scripts",
-    [],
-    scripts=["globalThis.first = true;", "globalThis.second = true;"],
-  )
+  let spec = test_command_spec(extension_id, "scripts", [], scripts=[
+    "globalThis.first = true;", "globalThis.second = true;",
+  ])
   let config = unwrap_configuration(() => {
-    build_bridge_frontend_config(manifest, command_extensions)
+    bridge_frontend_config_for_extension(extension_id, spec)
   })
   inspect(config.initialization_units.length(), content="2")
   inspect(config.initialization_units[0].owner, content="examples/scripts")
@@ -261,7 +299,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
   let mut rejected = false
-  run_manifest(manifest, command_extensions, [], [], [], None, 30000, true) catch {
+  run_manifest(manifest, ".", command_extensions, [], [], [], None, 30000, true) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
@@ -285,6 +323,7 @@ async test "headless mode rejects native menus before runtime startup" {
   let mut rejected = false
   run_manifest(
     manifest,
+    ".",
     command_extensions,
     [],
     [],
@@ -344,37 +383,29 @@ async test "startup dispatch retains an earlier window close" {
     RunningWindow::{
       id: "main",
       window: first,
-      policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
+      policy: BridgePagePolicy::{
+        entry_origin: None,
+        request_timeout_ms: 30000,
+      },
+      permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
       bridge_ready: true,
-      closed: false,
+      state: WindowOpen,
     },
     RunningWindow::{
       id: "secondary",
       window: second,
-      policy: BridgePagePolicy::{ dev_origin: None, request_timeout_ms: 30000 },
+      policy: BridgePagePolicy::{
+        entry_origin: None,
+        request_timeout_ms: 30000,
+      },
+      permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
       bridge_ready: false,
-      closed: false,
+      state: WindowStarting,
     },
   ]
-  first.close()
   @async.with_task_group(group => {
-    ignore(
-      pump_runtime_once(
-        runtime,
-        windows,
-        None,
-        [],
-        @core.RuntimeWakeSignal::new(),
-        false,
-        false,
-        [],
-        group,
-      ) catch {
-        error => abort(error.message())
-      },
-    )
     let task = group.spawn(
       () => {
         @async.sleep(10000)
@@ -391,29 +422,20 @@ async test "startup dispatch retains an earlier window close" {
         state: Running,
       },
     ]
-    ignore(
-      pump_runtime_once(
-        runtime,
-        windows,
-        None,
-        pending,
-        @core.RuntimeWakeSignal::new(),
-        false,
-        false,
-        [],
-        group,
-      ) catch {
-        error => abort(error.message())
-      },
-    )
+    first.close()
+    match runtime.poll_event() {
+      Some(event) =>
+        runtime_session_dispatch_window_event(windows, pending, event)
+      None => fail("expected the first window close event")
+    }
     assert_eq(pending.length(), 1)
     assert_true(pending[0].state is Running)
-    cancel_all_bridge_tasks(pending)
+    runtime_session_cancel_all_bridge_tasks(pending)
     group.return_immediately(())
   })
-  assert_true(windows[0].closed)
+  assert_true(windows[0].is_closed())
   assert_true(windows[0].lifetime.closed)
-  assert_false(windows[1].closed)
+  assert_false(windows[1].is_closed())
   assert_false(windows[1].lifetime.closed)
 }
 
@@ -450,7 +472,7 @@ async test "bridge cancellation targets only the matching handler task" {
         state: Running,
       },
     ]
-    cancel_bridge_request_task(pending, Some(42L))
+    runtime_session_cancel_bridge_request(pending, Some(42L))
     assert_true(pending[0].state is Running)
     assert_true(pending[1].state is Cancelled)
     first_task.cancel()
@@ -597,7 +619,7 @@ test "dev bridge page policy parses exact http origins" {
     ] {
     let (url, expected_reason) = item
     match expect_configuration_error(() => url_origin(url)) {
-      InvalidDevelopmentUrl(reason~, ..) =>
+      InvalidEntryUrl(reason~, ..) =>
         assert_true(reason.contains(expected_reason))
       error => fail(error.message())
     }
@@ -605,19 +627,21 @@ test "dev bridge page policy parses exact http origins" {
 }
 
 ///|
-test "native bridge config isolates each window development origin" {
-  let frontend = BridgeFrontendConfig::{
-    extensions: [],
-    initialization_units: [],
-  }
-  let first = native_bridge_config(["app:ping"], frontend, BridgePagePolicy::{
-    dev_origin: Some("http://localhost:3000"),
-    request_timeout_ms: 30000,
-  }).to_json_string()
-  let second = native_bridge_config(["app:ping"], frontend, BridgePagePolicy::{
-    dev_origin: Some("http://localhost:4000"),
-    request_timeout_ms: 30000,
-  }).to_json_string()
+test "native bridge config isolates each window entry origin" {
+  let first = native_bridge_config(
+    [@native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"])],
+    BridgePagePolicy::{
+      entry_origin: Some("http://localhost:3000"),
+      request_timeout_ms: 30000,
+    },
+  ).to_json_string()
+  let second = native_bridge_config(
+    [@native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"])],
+    BridgePagePolicy::{
+      entry_origin: Some("http://localhost:4000"),
+      request_timeout_ms: 30000,
+    },
+  ).to_json_string()
   assert_true(first.contains("http://localhost:3000"))
   assert_false(first.contains("http://localhost:4000"))
   assert_true(second.contains("http://localhost:4000"))
@@ -625,35 +649,174 @@ test "native bridge config isolates each window development origin" {
 }
 
 ///|
-test "bridge frontend config ignores disabled command extensions" {
-  let extension_id = "examples/async-add"
-  let manifest = test_command_manifest(extension_id, enabled=false)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[extension_id] = test_command_spec(extension_id, "add", [
-    "slowAdd",
-  ])
-  let config = unwrap_configuration(() => {
-    build_bridge_frontend_config(manifest, command_extensions)
+test "HTTP entry permissions use the exact canonical origin" {
+  let policy = unwrap_configuration(() => {
+    bridge_page_policy_for_entry(
+      @manifest.AppEntry::Url("HTTPS://Example.COM:443/app"),
+    )
   })
-  assert_eq(config.extensions, [])
-  assert_eq(config.initialization_units, [])
+  assert_eq(policy.entry_origin, Some("https://example.com"))
 }
 
 ///|
-test "bridge frontend config can omit command extensions" {
-  let extension_id = "examples/async-add"
-  let manifest = test_command_manifest(extension_id, enabled=false)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
+test "replacing a development entry preserves permission grants" {
+  let original = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Development", 320, 240),
+    @manifest.AppEntry::Asset("app.html"),
+    permissions=[
+      @manifest.PermissionGrant::new(
+        "main",
+        @manifest.PermissionOrigin::Entry,
+        "app",
+      ),
+    ],
   )
-  command_extensions[extension_id] = test_command_spec(extension_id, "add", [
-    "slowAdd",
-  ])
-  let config = unwrap_configuration(() => {
-    build_bridge_frontend_config(manifest, command_extensions)
+  let replaced = manifest_with_entry(
+    original,
+    @manifest.AppEntry::Url("http://localhost:5173"),
+  )
+  let grants = replaced.permission_grants()
+  assert_eq(grants.length(), 1)
+  assert_eq(grants[0].extension(), "app")
+}
+
+///|
+test "permission policy binds extension ops and scope to one trusted source" {
+  let extension_id = "examples/scoped"
+  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
+  extensions[extension_id] = @manifest.ExtensionSetting::enabled()
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Scoped", 320, 240),
+    @manifest.AppEntry::Html("<html></html>"),
+    extensions~,
+    permissions=[
+      @manifest.PermissionGrant::new(
+        "main",
+        @manifest.PermissionOrigin::Entry,
+        extension_id,
+        scope=Json::object({ "root": Json::string("./data") }),
+      ),
+    ],
+  )
+  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
+  specs[extension_id] = test_command_spec(extension_id, "scoped", ["read"], resolve_permission=fn(
+    scope,
+    base_path,
+  ) {
+    Json::object({ "base_path": Json::string(base_path), "scope": scope })
   })
-  inspect(config.extensions.length(), content="0")
-  assert_eq(config.initialization_units, [])
+  let policy = unwrap_configuration(() => {
+    resolve_window_permission_policy(
+      "main",
+      BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 },
+      manifest,
+      "/trusted/project",
+      specs,
+      ["ext:scoped/read"],
+    )
+  })
+  assert_eq(policy.grants.length(), 1)
+  assert_eq(policy.grants[0].source_origin, "app")
+  assert_eq(policy.grants[0].ops, ["ext:scoped/read"])
+  inspect(
+    policy.grants[0].scope.stringify(),
+    content="{\"base_path\":\"/trusted/project\",\"scope\":{\"root\":\"./data\"}}",
+  )
+  assert_true(policy.grant_for_request("app", "ext:scoped/read") is Some(_))
+  assert_true(
+    policy.grant_for_request("https://example.com", "ext:scoped/read") is None,
+  )
+  assert_true(policy.grant_for_request("app", "app:read") is None)
+}
+
+///|
+test "registered renderer capabilities require an explicit grant" {
+  let extension_id = "examples/ungranted"
+  let manifest = test_command_manifest(extension_id)
+  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
+  specs[extension_id] = test_command_spec(extension_id, "ungranted", ["read"])
+  match
+    expect_configuration_error(() => {
+      validate_registered_capabilities_have_grants(manifest, specs, [
+        "ext:ungranted/read",
+      ])
+    }) {
+    MissingPermissionGrant(extension_id=actual) =>
+      assert_eq(actual, extension_id)
+    error => fail(error.message())
+  }
+}
+
+///|
+test "permission grants reject unknown windows" {
+  let extension_id = "examples/window"
+  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
+  extensions[extension_id] = @manifest.ExtensionSetting::enabled()
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Unknown window", 320, 240),
+    @manifest.AppEntry::Html("<html></html>"),
+    extensions~,
+    permissions=[
+      @manifest.PermissionGrant::new(
+        "missing",
+        @manifest.PermissionOrigin::Entry,
+        extension_id,
+      ),
+    ],
+  )
+  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
+  specs[extension_id] = test_command_spec(extension_id, "window", ["read"])
+  match
+    expect_configuration_error(() => {
+      validate_registered_capabilities_have_grants(manifest, specs, [
+        "ext:window/read",
+      ])
+    }) {
+    InvalidPermissionGrant(detail~) =>
+      assert_true(detail.contains("unknown window missing"))
+    error => fail(error.message())
+  }
+}
+
+///|
+test "extension permission scopes are validated before startup" {
+  let extension_id = "examples/unscoped"
+  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
+  extensions[extension_id] = @manifest.ExtensionSetting::enabled()
+  let manifest = @manifest.AppManifest::new(
+    @manifest.WindowManifest::new("Invalid scope", 320, 240),
+    @manifest.AppEntry::Html("<html></html>"),
+    extensions~,
+    permissions=[
+      @manifest.PermissionGrant::new(
+        "main",
+        @manifest.PermissionOrigin::Entry,
+        extension_id,
+        scope=Json::object({ "unexpected": Json::boolean(true) }),
+      ),
+    ],
+  )
+  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
+  specs[extension_id] = test_command_spec(extension_id, "unscoped", ["read"])
+  match
+    expect_configuration_error(() => {
+      ignore(
+        resolve_window_permission_policy(
+          "main",
+          BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 },
+          manifest,
+          "/trusted/project",
+          specs,
+          ["ext:unscoped/read"],
+        ),
+      )
+    }) {
+    InvalidPermissionGrant(detail~) =>
+      assert_true(
+        detail.contains("does not accept a non-empty permission scope"),
+      )
+    error => fail(error.message())
+  }
 }
 
 ///|
@@ -800,22 +963,15 @@ test "command host registration preserves cleanup failures" {
 test "application lifecycle advances through close and destroy" {
   let lifecycle = AppLifecycle::new()
   assert_true(lifecycle.state is Constructing)
-  assert_true(lifecycle.window_state is NotCreated)
   lifecycle.begin_starting()
-  lifecycle.begin_window_create()
-  lifecycle.finish_window_create()
   lifecycle.begin_running()
   assert_true(lifecycle.state is Running)
-  assert_true(lifecycle.window_state is Live)
   lifecycle.observe_window_closed()
   assert_true(lifecycle.state is Closing)
-  assert_true(lifecycle.window_state is VisiblyClosed)
   lifecycle.begin_draining()
   lifecycle.begin_destroying()
-  lifecycle.finish_window_destroy()
   lifecycle.finish()
   assert_true(lifecycle.state is Closed)
-  assert_true(lifecycle.window_state is Destroyed)
 }
 
 ///|
@@ -839,7 +995,7 @@ async test "application lifecycle hooks shut down in reverse order" {
   @async.with_task_group(group => {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
-      ApplicationContext::new(group),
+      ApplicationContext::new(group, test_window_manager()),
       group,
       [],
     )
@@ -874,7 +1030,7 @@ async test "application lifecycle startup rolls back completed hooks" {
     @async.with_task_group(group => {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
-        ApplicationContext::new(group),
+        ApplicationContext::new(group, test_window_manager()),
         group,
         cleanup_failures,
       )
@@ -919,6 +1075,8 @@ async test "window close joins owned tasks before close hooks" {
       WindowContext::new(
         "main",
         @native.WindowRef::unsafe_from_handle(17L),
+        test_window_handle("main", 17L),
+        test_window_manager(),
         group,
         WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
       ),
@@ -1100,6 +1258,10 @@ test "config API overrides manifest fields and keeps base dir" {
     .resolved_app_config()
   })
   let manifest = resolved.manifest
+  assert_eq(
+    resolved.permission_base_path,
+    facade_path_parent(@mbpath.Path(config_path).resolve().to_string()),
+  )
   assert_eq(manifest.window.title, "Code Title")
   assert_eq(manifest.window.width, 640)
   assert_eq(manifest.window.height, 480)
@@ -1153,6 +1315,7 @@ test "typed facade appends validated secondary windows" {
     width=480,
     height=360,
     size_hint=WindowSizeHint::Fixed,
+    open_on_start=false,
   )
   let manifest = configured.inline_manifest()
   assert_eq(manifest.windows.length(), 1)
@@ -1161,8 +1324,41 @@ test "typed facade appends validated secondary windows" {
     manifest.windows[0].window.size_hint,
     @manifest.WindowSizeHint::Fixed,
   )
+  assert_false(manifest.windows[0].open_on_start)
   let plans = planned_windows(manifest)
   assert_eq(plans.map(fn(plan) { plan.id }), ["main", "settings"])
+  assert_eq(plans.map(fn(plan) { plan.open_on_start }), [true, false])
+}
+
+///|
+test "single instance builder validates and resolves an inline identity" {
+  let invalid = html("App", "<main>App</main>").single_instance(" ")
+  assert_true(invalid.validation_error() is Some(_))
+  let resolved = html("App", "<main>App</main>")
+    .single_instance("dev.proton.inline")
+    .inline_app_config()
+  assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
+}
+
+///|
+test "launch activation classifies URLs and existing documents" {
+  let document = "target/proton-facade-activation.txt"
+  @mbfs.create_dir("target") catch {
+    _ => ()
+  }
+  @mbfs.write_string_to_file(document, "activation", encoding="utf8") catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+  assert_true(launch_argument_is_url("dev.proton://open", ["dev.proton"]))
+  assert_true(launch_argument_is_url("custom:value", ["custom"]))
+  assert_false(launch_argument_is_url("custom:value", ["other"]))
+  assert_true(launch_argument_is_document(document, ["txt"]))
+  assert_false(launch_argument_is_document(document, ["md"]))
+  assert_false(
+    launch_argument_is_document("target/proton-facade-activation-missing.txt", [
+      "txt",
+    ]),
+  )
 }
 
 ///|

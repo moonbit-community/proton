@@ -187,6 +187,19 @@ pub fn ProtonBundleConfig::document_types(
 }
 
 ///|
+pub fn ProtonBundleConfig::document_extensions(
+  self : ProtonBundleConfig,
+) -> Array[String] {
+  let extensions : Array[String] = []
+  for document_type in self.document_types {
+    for extension in document_type.extensions() {
+      extensions.push(extension)
+    }
+  }
+  extensions
+}
+
+///|
 pub fn ProtonBundleConfig::output(self : ProtonBundleConfig) -> String {
   self.output
 }
@@ -196,6 +209,7 @@ pub fn ProtonBundleConfig::output(self : ProtonBundleConfig) -> String {
 struct ProtonProjectConfig {
   manifest : LoadedAppManifest
   metadata : ProtonAppMetadata
+  single_instance : Bool
   backend : ProtonBackendConfig?
   frontend : ProtonFrontendConfig?
   bundle : ProtonBundleConfig?
@@ -205,11 +219,19 @@ struct ProtonProjectConfig {
 pub fn ProtonProjectConfig::new(
   manifest : LoadedAppManifest,
   metadata : ProtonAppMetadata,
+  single_instance? : Bool = false,
   backend? : ProtonBackendConfig? = None,
   frontend? : ProtonFrontendConfig? = None,
   bundle? : ProtonBundleConfig? = None,
 ) -> ProtonProjectConfig {
-  ProtonProjectConfig::{ manifest, metadata, backend, frontend, bundle }
+  ProtonProjectConfig::{
+    manifest,
+    metadata,
+    single_instance,
+    backend,
+    frontend,
+    bundle,
+  }
 }
 
 ///|
@@ -224,6 +246,11 @@ pub fn ProtonProjectConfig::metadata(
   self : ProtonProjectConfig,
 ) -> ProtonAppMetadata {
   self.metadata
+}
+
+///|
+pub fn ProtonProjectConfig::single_instance(self : ProtonProjectConfig) -> Bool {
+  self.single_instance
 }
 
 ///|
@@ -269,6 +296,7 @@ pub fn ProtonProjectConfig::dev_manifest(
           debug=manifest.debug,
           windows=manifest.windows,
           extensions=manifest.extensions,
+          permissions=manifest.permissions,
         ),
         base_dir=self.manifest.base_dir(),
       )

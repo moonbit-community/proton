@@ -10,11 +10,46 @@ The current supported route is:
 MoonBit app -> justjavac/proton -> proton dynamic library -> command bridge
 ```
 
-Applications register extensions with `.extension(...)`. Inline HTML entries
-can call generated proxies through `window.__MoonBit__.<namespace>` or the
-low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
+Applications register backend implementations with `.extension(...)` and grant
+renderer access separately with `.permission(...)`. `.expose(...)` is an
+explicit shorthand for both steps when an extension uses an empty scope.
+Registration alone never installs the extension API in a page. Inline HTML
+entries can call granted proxies through `window.__MoonBit__.<namespace>` or
+the low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
 extension and example. Pages subscribe to events through either
 `window.__MoonBit__.events.on(...)` or `window.__MoonBit__.<namespace>.on(...)`.
+
+Application commands registered with `.commands(...)` are exposed under
+`window.__MoonBit__.app`, one proxy per granted command:
+
+```js
+await window.__MoonBit__.app.ping({ value: 1 });
+await window.__MoonBit__.app["devtoys.fs.stat"]({ path: "/tmp" });
+await window.__MoonBit__.app.invoke("ping", { value: 1 });
+```
+
+Application events are delivered through `window.__MoonBit__.app.on`, which
+returns an unsubscribe function:
+
+```js
+const stop = window.__MoonBit__.app.on("changed", ({ name, payload }) => {
+  console.log(name, payload);
+});
+```
+
+Application events are keyed by route only, so they never reach the
+`window.__MoonBit__.events.on(...)` name table that carries extension events.
+Without that separation an application event named `add.finished` would be
+delivered to listeners registered for extension `add`'s `finished` event, which
+carries a different payload shape. `events.onJson("app:changed", ...)` still
+receives the raw payload text.
+
+`invokeOp` is the transport-level entry point and takes the fully qualified
+route: `app:<name>` for application commands and `ext:<namespace>/<name>` for
+extension commands. Prefer the proxies above, which build the route for you.
+A request for a route no grant declares is rejected with
+`bridge op is not registered`; a route that exists but was not granted to the
+calling page is rejected with `bridge op is not allowed`.
 
 ## Packages
 
@@ -35,8 +70,9 @@ extension and example. Pages subscribe to events through either
 
 Extension metadata is used by code generation, catalog checks, dependency
 planning, and generated command bridge packages. Applications should register
-extensions in top-level Proton code with `.extension(...)`; `moon.proton`
-extension settings are not the active configuration surface.
+extensions in top-level Proton code. Renderer permissions may be declared with
+typed builders in code or through the `permissions` array in `moon.proton`;
+extension settings in `moon.proton` are not the active registration surface.
 
 ## Tray Notes
 

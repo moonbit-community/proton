@@ -1,5 +1,6 @@
 product_name = {{title_mbt}}
 identifier = {{identifier_mbt}}
+single_instance = true
 
 window = {
   title: {{title_mbt}},
@@ -25,6 +26,14 @@ entry = {
   kind: "asset",
   value: "frontend/dist/index.html",
 }
+
+permissions = [
+  {
+    window: "main",
+    origin: "entry",
+    extension: "app",
+  },
+]
 
 debug = true
 

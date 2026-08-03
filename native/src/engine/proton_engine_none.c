@@ -156,6 +156,11 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
                                  proton_engine_unavailable_message());
 }
 
+void proton_engine_runtime_signal_external_event(
+    proton_engine_runtime_t *runtime) {
+  (void)runtime;
+}
+
 int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                                             const char *menu_json,
                                             char *error,
@@ -276,6 +281,61 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_window_apply(
+    proton_engine_window_t *window,
+    const proton_engine_window_action_t *action,
+    char *error,
+    size_t error_len) {
+  (void)window;
+  (void)action;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_get_state(
+    proton_engine_window_t *window,
+    proton_engine_window_state_t *out_state,
+    char *error,
+    size_t error_len) {
+  (void)window;
+  (void)out_state;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_set_close_interception(
+    proton_engine_window_t *window, int32_t enabled, char *error,
+    size_t error_len) {
+  (void)window;
+  (void)enabled;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_get_close_request(
+    proton_engine_window_t *window, uint64_t *out_request_id,
+    int32_t *out_pending, char *error, size_t error_len) {
+  (void)window;
+  if (out_request_id != NULL) {
+    *out_request_id = 0;
+  }
+  if (out_pending != NULL) {
+    *out_pending = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_respond_close_request(
+    proton_engine_window_t *window, uint64_t request_id, int32_t allow,
+    char *error, size_t error_len) {
+  (void)window;
+  (void)request_id;
+  (void)allow;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_window_load_url(proton_engine_window_t *window,
                                       const char *url,
                                       char *error,
@@ -304,6 +364,37 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   size_t error_len) {
   (void)window;
   (void)script;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_poll_browser_event_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  (void)window;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_browser_command_json(
+    proton_engine_window_t *window, const char *command_json,
+    char *error, size_t error_len) {
+  (void)window;
+  (void)command_json;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_respond_browser_request_json(
+    proton_engine_window_t *window, const char *response_json,
+    char *error, size_t error_len) {
+  (void)window;
+  (void)response_json;
   return proton_engine_set_error(error, error_len,
                                  proton_engine_unavailable_message());
 }

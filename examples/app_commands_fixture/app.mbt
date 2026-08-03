@@ -174,7 +174,7 @@ let resource : String =
   #|      }
   #|
   #|      async function invoke(name, payload) {
-  #|        return window.__MoonBit__.core.invokeOp(`ext:app/${name}`, payload);
+  #|        return window.__MoonBit__.core.invokeOp(`ext:appCommands/${name}`, payload);
   #|      }
   #|
   #|      async function reportCommandProbe(report) {
