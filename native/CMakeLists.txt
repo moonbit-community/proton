@@ -463,7 +463,7 @@ if(BUILD_TESTING)
       if(PROTON_WITH_ENGINE)
         set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>\;${PROTON_ENGINE_ROOT}/Release\;${PROTON_TEST_HOST_PATH}")
         set_tests_properties(proton_smoke PROPERTIES
-          ENVIRONMENT "PATH=${PROTON_TEST_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+          ENVIRONMENT "PATH=${PROTON_TEST_PATH};PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
         )
       else()
         set(PROTON_TEST_PATH "$<TARGET_FILE_DIR:proton>\;${PROTON_TEST_HOST_PATH}")
@@ -479,7 +479,7 @@ if(BUILD_TESTING)
       if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
         set_tests_properties(proton_smoke PROPERTIES
           ENVIRONMENT
-            "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=$<TARGET_FILE:cef_process>;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
+            "PROTON_TEST_RUNTIME_ROOT=${CMAKE_INSTALL_PREFIX};PROTON_TEST_HELPER_PATH=${CMAKE_INSTALL_PREFIX}/bin/cef_process.exe;PROTON_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log;PROTON_TEST_NATIVE_LOG=${CMAKE_BINARY_DIR}/proton-smoke-native.log"
         )
       endif()
       add_executable(proton_win_overlay_smoke

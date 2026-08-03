@@ -1423,6 +1423,7 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     return NULL;
   }
   char *url = proton_engine_request_url(request);
+  cef_resource_handler_t *handler = NULL;
   if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
       html_copy != NULL) {
     proton_engine_debug_log("scheme_serve_html url=%s len=%zu", url, html_len);
