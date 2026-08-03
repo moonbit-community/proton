@@ -66,6 +66,45 @@ static int pump_until_log(proton_runtime_id_t runtime,
   return 0;
 }
 
+static void dump_log_tail(const char *log_path, int max_lines) {
+  FILE *file = fopen(log_path, "rb");
+  if (file == NULL) {
+    fprintf(stderr, "no native log at %s\n", log_path);
+    return;
+  }
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return;
+  }
+  long size = ftell(file);
+  if (size < 0) {
+    fclose(file);
+    return;
+  }
+  rewind(file);
+  char *content = (char *)malloc((size_t)size + 1);
+  if (content == NULL) {
+    fclose(file);
+    return;
+  }
+  size_t read_bytes = fread(content, 1, (size_t)size, file);
+  fclose(file);
+  content[read_bytes] = '\0';
+  fprintf(stderr, "--- native log tail (%s) ---\n", log_path);
+  int line = 0;
+  for (char *cursor = content + read_bytes; cursor > content && line < max_lines;
+       line++) {
+    char *newline = cursor;
+    while (newline > content && newline[-1] != '\n') {
+      newline--;
+    }
+    fprintf(stderr, "%.*s", (int)(cursor - newline), newline);
+    cursor = newline > content ? newline - 1 : content;
+  }
+  fprintf(stderr, "--- end native log tail ---\n");
+  free(content);
+}
+
 static Window find_window_by_title(Display *display,
                                    Window parent,
                                    const char *title) {
@@ -310,6 +349,7 @@ int main(void) {
   }
   if (!pump_until_log(runtime, log_path, "draggable_regions browser=")) {
     fprintf(stderr, "CEF draggable regions did not reach the Linux engine\n");
+    dump_log_tail(log_path, 40);
     proton_window_destroy(window);
     proton_runtime_destroy(runtime);
     return 1;

@@ -171,6 +171,9 @@ jobs:
             "-DPROTON_ENGINE_ROOT=$cefRoot"
           cmake --build native\build-engine --config Debug
           cmake --install native\build-engine --config Debug
+          # windows-latest runners have no usable D3D device; force ANGLE's
+          # SwiftShader path so the engine's GPU process can start at all.
+          $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
           ctest --test-dir native\build-engine -C Debug --output-on-failure
           if (!(Test-Path "$runtime\bin\proton.dll")) {
             throw "missing active proton.dll"
