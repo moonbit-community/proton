@@ -361,6 +361,7 @@ if(BUILD_TESTING)
   add_executable(proton_smoke
     tests/proton_smoke.c
     src/engine/cef_common/bridge_lifecycle.c
+    src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_response.c
     src/proton_app_instance.c
     src/proton_json.c
