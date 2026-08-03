@@ -293,7 +293,6 @@ async fn run_manifest(
         )
         session.drive_until_complete(application_start)
         active_update_channel.val = update_channel
-        start_update_check(update_channel, update_handlers, application_tasks)
         for definition in definitions {
           if definition.plan.open_on_start &&
             session.find_active_window(definition.plan.id) is None {
@@ -311,6 +310,7 @@ async fn run_manifest(
           }
         }
         lifecycle.begin_running()
+        start_update_check(update_channel, update_handlers, application_tasks)
         session.run() catch {
           error => raise normalize_async_run_error(error)
         }
