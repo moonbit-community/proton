@@ -5,7 +5,7 @@ fn load_entry_after_create(
 ) -> Unit raise AppEntryError {
   match entry {
     @manifest.AppEntry::Html(html) =>
-      window.load_html(html, "proton://app/") catch {
+      window.load_html(html, asset_base_url()) catch {
         error => raise NativeLoad(action="load html", error~)
       }
     @manifest.AppEntry::Url(url) =>
@@ -25,10 +25,13 @@ fn load_file_entry_after_create(
   action : String,
   path : String,
 ) -> Unit raise AppEntryError {
-  let html = read_file_entry_html(path)
-  window.load_html(
-    inject_html_bootstrap(html, base_tag(asset_base_url(path))),
-    asset_document_url(path),
+  let file_path : @mbpath.Path = path
+  let resolved = file_path.resolve()
+  let html = read_file_entry_html(resolved.to_string())
+  window.load_asset(
+    inject_html_bootstrap(html, base_tag(asset_base_url())),
+    asset_document_url(resolved),
+    resolved.dirname().to_string(),
   ) catch {
     error => raise NativeLoad(action~, error~)
   }
@@ -67,22 +70,13 @@ fn html_attribute_escape(value : String) -> String {
 }
 
 ///|
-fn asset_base_url(path : String) -> String {
-  let document_url = asset_document_url(path)
-  match document_url.rev_find("/") {
-    Some(index) => document_url[:index + 1].to_owned()
-    None => document_url
-  }
+fn asset_base_url() -> String {
+  "https://proton.localhost/"
 }
 
 ///|
-fn asset_document_url(path : String) -> String {
-  let file_path : @mbpath.Path = path
-  let normalized = file_path
-    .resolve()
-    .to_string()
-    .replace_all(old="\\", new="/")
-  "proton://app/" + asset_url_path_encode(normalized)
+fn asset_document_url(path : @mbpath.Path) -> String {
+  asset_base_url() + asset_url_path_encode(path.basename().to_owned())
 }
 
 ///|

@@ -505,10 +505,8 @@ static bool proton_engine_bridge_initialize_unit(proton_json_value_t value,
 }
 
 static int proton_engine_bridge_initialize_units(
-    const char *config_json, cef_v8_context_t *context, cef_frame_t *frame,
+    const char *grant_json, cef_v8_context_t *context, cef_frame_t *frame,
     const char *page_instance, const char *url) {
-  char *grant_json =
-      proton_engine_bridge_config_copy_grant(config_json, url);
   if (grant_json == NULL) {
     return 0;
   }
@@ -516,7 +514,6 @@ static int proton_engine_bridge_initialize_units(
   proton_json_value_t root;
   proton_json_value_t units;
   if (!proton_json_parse(&doc, grant_json)) {
-    free(grant_json);
     return 0;
   }
   int initialized = 1;
@@ -534,7 +531,6 @@ static int proton_engine_bridge_initialize_units(
     }
   }
   proton_json_dispose(&doc);
-  free(grant_json);
   return initialized;
 }
 
@@ -877,8 +873,9 @@ void proton_engine_bridge_renderer_on_context_created(
   }
   proton_engine_bridge_send_lifecycle(frame, "pending", page_instance, url,
                                       NULL);
-  if (!proton_engine_bridge_config_allows_page(browser_config->config_json,
-                                                url)) {
+  char *grant_json = proton_engine_bridge_config_copy_grant(
+      browser_config->config_json, url);
+  if (grant_json == NULL) {
     proton_engine_bridge_send_lifecycle(frame, "ineligible", page_instance,
                                         url, NULL);
     free(url);
@@ -895,6 +892,7 @@ void proton_engine_bridge_renderer_on_context_created(
     free(diagnostic);
     free(url);
     free(page_instance);
+    free(grant_json);
     return;
   }
 
@@ -923,14 +921,14 @@ void proton_engine_bridge_renderer_on_context_created(
       "(globalThis." PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION ",";
   static const char invocation_page_separator[] = ",\"";
   static const char invocation_suffix[] = "\")";
-  size_t config_len = strlen(browser_config->config_json);
+  size_t grant_len = strlen(grant_json);
   size_t page_instance_len = strlen(page_instance);
   size_t invocation_len = proton_engine_bridge_bootstrap_source_len +
-                          sizeof(invocation_separator) - 1 + config_len +
+                          sizeof(invocation_separator) - 1 + grant_len +
                           sizeof(invocation_page_separator) - 1 +
                           page_instance_len + sizeof(invocation_suffix) - 1;
   char *invocation = NULL;
-  if (native_installed && invocation_len >= config_len) {
+  if (native_installed && invocation_len >= grant_len) {
     invocation = (char *)malloc(invocation_len + 1);
   }
   if (invocation != NULL) {
@@ -941,8 +939,8 @@ void proton_engine_bridge_renderer_on_context_created(
     memcpy(invocation + offset, invocation_separator,
            sizeof(invocation_separator) - 1);
     offset += sizeof(invocation_separator) - 1;
-    memcpy(invocation + offset, browser_config->config_json, config_len);
-    offset += config_len;
+    memcpy(invocation + offset, grant_json, grant_len);
+    offset += grant_len;
     memcpy(invocation + offset, invocation_page_separator,
            sizeof(invocation_page_separator) - 1);
     offset += sizeof(invocation_page_separator) - 1;
@@ -1015,8 +1013,7 @@ void proton_engine_bridge_renderer_on_context_created(
       proton_engine_bridge_log("renderer_bridge_context browser=%d installed=1",
                                entry->browser_id);
       int initialized = proton_engine_bridge_initialize_units(
-          browser_config->config_json, context, frame, entry->page_instance,
-          url);
+          grant_json, context, frame, entry->page_instance, url);
       if (initialized) {
         proton_engine_bridge_send_lifecycle(
             frame, "ready", entry->page_instance, url, NULL);
@@ -1036,6 +1033,7 @@ void proton_engine_bridge_renderer_on_context_created(
   }
   free(page_instance);
   free(url);
+  free(grant_json);
   if (dispatcher != NULL) {
     dispatcher->base.release((cef_base_ref_counted_t *)dispatcher);
   }

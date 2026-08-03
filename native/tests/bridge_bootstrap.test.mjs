@@ -24,16 +24,14 @@ function createBridge(url = "proton://app/") {
     (action, id, name, payloadJson, pageInstance) =>
       calls.push({ action, id, name, payloadJson, pageInstance }),
     {
-      grants: [{
-        source_origin: location.protocol === "proton:" ? "app" : location.origin,
-        ops: [
-          { name: "ext:add/sum" },
-          { name: "app:ping" },
-          { name: "app:devtoys.fs.stat" },
-        ],
-        extensions: [{ namespace: "add", apis: ["sum"] }],
-        initialization_units: [],
-      }],
+      source_origin: location.protocol === "proton:" ? "app" : location.origin,
+      ops: [
+        { name: "ext:add/sum" },
+        { name: "app:ping" },
+        { name: "app:devtoys.fs.stat" },
+      ],
+      extensions: [{ namespace: "add", apis: ["sum"] }],
+      initialization_units: [],
     },
     "renderer-page-1",
   );
@@ -51,10 +49,16 @@ test("installs the public bridge synchronously", () => {
   assert.equal(context.__protonNativeInvokeOp, undefined);
 });
 
-test("does not treat other custom-scheme hosts as the trusted app origin", () => {
+test("rejects a missing native-selected grant", () => {
+  const context = vm.createContext({
+    URL,
+    Promise,
+    location: new URL("proton://app/"),
+  });
+  const install = vm.runInContext(source, context);
   assert.throws(
-    () => createBridge("proton://untrusted/"),
-    /no grant for this page source/,
+    () => install(() => {}, null, "renderer-page-1"),
+    /grant must be an object/,
   );
 });
 

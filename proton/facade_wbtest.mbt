@@ -522,14 +522,13 @@ test "base tags escape HTML attributes" {
 }
 
 ///|
-test "asset urls resolve under the local file path" {
+test "asset urls expose a document root instead of the local file path" {
   let path = "46_asset_sidecar_resources/app/app.html"
-  let base = asset_base_url(path).replace_all(old="\\", new="/")
-  let document = asset_document_url(path).replace_all(old="\\", new="/")
-  assert_true(base.has_prefix("proton://app/"))
-  assert_true(base.has_suffix("/46_asset_sidecar_resources/app/"))
-  assert_true(document.has_prefix("proton://app/"))
-  assert_true(document.has_suffix("/46_asset_sidecar_resources/app/app.html"))
+  let file_path : @mbpath.Path = path
+  let base = asset_base_url().replace_all(old="\\", new="/")
+  let document = asset_document_url(file_path).replace_all(old="\\", new="/")
+  inspect(base, content="https://proton.localhost/")
+  inspect(document, content="https://proton.localhost/app.html")
 }
 
 ///|
@@ -1188,6 +1187,18 @@ test "implicit config path honors PROTON_CONFIG_PATH" {
 
   @env.set_env_var("PROTON_CONFIG_PATH", config_path)
   @debug.assert_eq(implicit_config_path(), Some(config_path))
+}
+
+///|
+test "packaged config takes precedence over environment and working directory" {
+  @debug.assert_eq(
+    choose_implicit_config_path(
+      bundled=Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
+      environment=Some("/tmp/override.moon.proton"),
+      cwd_has_default=true,
+    ),
+    Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
+  )
 }
 
 ///|

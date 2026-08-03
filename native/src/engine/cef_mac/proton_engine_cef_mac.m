@@ -32,6 +32,7 @@
 #include "include/internal/cef_string.h"
 #include "include/wrapper/cef_library_loader.h"
 
+#include "../cef_common/app_origin.h"
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/bridge_response.h"
@@ -93,6 +94,7 @@ typedef struct proton_engine_client proton_engine_client_t;
 struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
+  char *asset_root;
   int64_t next_bridge_request_id;
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
@@ -778,7 +780,8 @@ static int proton_engine_browser_id(cef_browser_t *browser) {
 }
 
 static int proton_engine_url_is_proton(const char *url) {
-  return url != NULL && strncmp(url, "proton://", 9) == 0;
+  return proton_engine_url_is_app(url) ||
+         (url != NULL && strncmp(url, "proton://", 9) == 0);
 }
 
 static proton_engine_client_t *proton_engine_client_from_base(
@@ -900,6 +903,15 @@ proton_engine_window_t *proton_engine_window_lookup_browser(
 
 const char *proton_engine_window_html_url(proton_engine_window_t *window) {
   return window != NULL ? window->html_url : NULL;
+}
+
+const char *proton_engine_runtime_asset_root(
+    proton_engine_window_t *window) {
+  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
+  if (runtime == NULL && g_windows != NULL) {
+    runtime = g_windows->runtime;
+  }
+  return runtime != NULL ? runtime->asset_root : NULL;
 }
 
 const char *proton_engine_window_html(proton_engine_window_t *window,
@@ -1833,6 +1845,17 @@ static int proton_engine_register_scheme_factory(void) {
       cef_register_scheme_handler_factory(&scheme, NULL,
                                           &g_scheme_factory.factory);
   cef_string_clear(&scheme);
+  if (!ok) {
+    return 0;
+  }
+  cef_string_t https_scheme = {0};
+  cef_string_t app_domain = {0};
+  proton_engine_set_string(&https_scheme, PROTON_ENGINE_APP_SCHEME);
+  proton_engine_set_string(&app_domain, PROTON_ENGINE_APP_DOMAIN);
+  ok = cef_register_scheme_handler_factory(
+      &https_scheme, &app_domain, &g_scheme_factory.factory);
+  cef_string_clear(&https_scheme);
+  cef_string_clear(&app_domain);
   return ok;
 }
 
@@ -3150,6 +3173,7 @@ static int32_t proton_engine_finish_managed_runtime_destroy(
   proton_engine_clear_wakeup_fd();
   g_proton_cef_runtime_active = 0;
   proton_engine_debug_log("managed_runtime_destroy_complete");
+  free(runtime->asset_root);
   free(runtime);
   return PROTON_OK;
 }
@@ -3206,6 +3230,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   proton_engine_clear_wakeup_fd();
   g_proton_cef_runtime_active = 0;
+  free(runtime->asset_root);
   free(runtime);
   return PROTON_OK;
 }
@@ -4545,13 +4570,10 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_load_html(proton_engine_window_t *window,
-                                       const char *html,
-                                       const char *base_url,
-                                       char *error,
-                                       size_t error_len) {
-  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_window_load_html(
-      window, html, base_url, error, error_len));
+static int32_t proton_engine_window_load_document(
+    proton_engine_window_t *window, const char *html,
+    const char *document_url, const char *asset_root, char *error,
+    size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -4559,53 +4581,105 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
   if (html == NULL) {
     html = "";
   }
-  const char *effective_base_url =
-      base_url != NULL && base_url[0] != '\0' ? base_url : "proton://app/";
-  if (!proton_engine_url_is_proton(effective_base_url)) {
+  const char *effective_document_url =
+      document_url != NULL && document_url[0] != '\0'
+          ? document_url
+          : PROTON_ENGINE_APP_URL_PREFIX;
+  if (!proton_engine_url_is_proton(effective_document_url)) {
     proton_engine_set_message(error, error_len,
-                              "base_url must use the proton:// scheme");
+                              "document_url must use a Proton application origin");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  char *url_copy = proton_engine_strdup(effective_base_url);
+  char *url_copy = proton_engine_strdup(effective_document_url);
   char *html_copy = proton_engine_strdup(html);
+  char *root_copy =
+      asset_root != NULL ? realpath(asset_root, NULL) : NULL;
   char *pending_url = NULL;
-  if (url_copy == NULL || html_copy == NULL) {
+  if (url_copy == NULL || html_copy == NULL ||
+      (asset_root != NULL && root_copy == NULL)) {
     free(url_copy);
     free(html_copy);
-    proton_engine_set_message(error, error_len, "failed to copy html");
+    free(root_copy);
+    proton_engine_set_message(error, error_len,
+                              "failed to prepare html document");
     return PROTON_ERR_ENGINE;
   }
   if ((window->browser == NULL &&
        (window->browser_create_pending || window->browser_create_scheduled)) ||
       window->initial_navigation_pending) {
-    pending_url = proton_engine_strdup(effective_base_url);
+    pending_url = proton_engine_strdup(effective_document_url);
     if (pending_url == NULL) {
       free(url_copy);
       free(html_copy);
+      free(root_copy);
       proton_engine_set_message(error, error_len,
                                 "failed to copy pending browser url");
       return PROTON_ERR_ENGINE;
     }
   }
   proton_engine_window_lock();
+  if (root_copy != NULL && window->runtime->asset_root != NULL &&
+      strcmp(root_copy, window->runtime->asset_root) != 0) {
+    proton_engine_window_unlock();
+    free(url_copy);
+    free(html_copy);
+    free(root_copy);
+    free(pending_url);
+    proton_engine_set_message(
+        error, error_len,
+        "the Proton application origin already has a different asset root");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (root_copy != NULL && window->runtime->asset_root == NULL) {
+    window->runtime->asset_root = root_copy;
+    root_copy = NULL;
+  }
   free(window->html_url);
   free(window->html);
   window->html_url = url_copy;
   window->html = html_copy;
   window->html_len = strlen(html_copy);
   proton_engine_window_unlock();
+  free(root_copy);
   if (pending_url != NULL) {
     free(window->initial_url);
     window->initial_url = pending_url;
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
-  proton_engine_debug_log("load_html browser=%d base_url=%s bytes=%llu",
-                          window->browser_id, effective_base_url,
+  proton_engine_debug_log("load_html browser=%d document_url=%s bytes=%llu",
+                          window->browser_id, effective_document_url,
                           (unsigned long long)window->html_len);
-  int32_t status = proton_engine_window_load_url(window, effective_base_url,
-                                                 error, error_len);
+  int32_t status = proton_engine_window_load_url(
+      window, effective_document_url, error, error_len);
   return status;
+}
+
+int32_t proton_engine_window_load_html(proton_engine_window_t *window,
+                                       const char *html,
+                                       const char *base_url,
+                                       char *error,
+                                       size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_window_load_html(
+      window, html, base_url, error, error_len));
+  return proton_engine_window_load_document(window, html, base_url, NULL,
+                                             error, error_len);
+}
+
+int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
+                                        const char *html,
+                                        const char *document_url,
+                                        const char *asset_root,
+                                        char *error,
+                                        size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_window_load_asset(
+      window, html, document_url, asset_root, error, error_len));
+  if (asset_root == NULL || asset_root[0] == '\0') {
+    proton_engine_set_message(error, error_len, "asset_root is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  return proton_engine_window_load_document(
+      window, html, document_url, asset_root, error, error_len);
 }
 
 int32_t proton_engine_window_eval(proton_engine_window_t *window,

@@ -22,6 +22,7 @@
 #include <direct.h>
 #define mkdir_one(path) _mkdir(path)
 #define PATH_SEP "\\"
+#define PROTON_ENGINE_PATH_SEPARATOR '\\'
 #define EXPECTED_PLATFORM "\"platform\":\"windows\""
 #elif defined(__APPLE__)
 #include <pthread.h>
@@ -30,6 +31,7 @@
 #include <unistd.h>
 #define mkdir_one(path) mkdir(path, 0777)
 #define PATH_SEP "/"
+#define PROTON_ENGINE_PATH_SEPARATOR '/'
 #define EXPECTED_PLATFORM "\"platform\":\"macos\""
 #else
 #include <pthread.h>
@@ -39,8 +41,11 @@
 #include <unistd.h>
 #define mkdir_one(path) mkdir(path, 0777)
 #define PATH_SEP "/"
+#define PROTON_ENGINE_PATH_SEPARATOR '/'
 #define EXPECTED_PLATFORM "\"platform\":\"linux\""
 #endif
+
+#include "../src/engine/cef_common/assets.h"
 
 static int fail(const char *message) {
   fprintf(stderr, "%s\n", message);
@@ -1113,6 +1118,20 @@ static int expect_bridge_lifecycle_state(void) {
           &lifecycle, "pending", "page-ready", "proton://app/", NULL) ||
       !proton_engine_bridge_lifecycle_update(
           &lifecycle, "ready", "page-ready", "proton://app/", NULL) ||
+      proton_engine_bridge_lifecycle_report_load_failure(
+          &lifecycle, "proton://app/missing.html", "not found", 0) ||
+      proton_engine_bridge_lifecycle_take_failure_json(
+          &lifecycle, NULL, 0, &required) != PROTON_EVENT_NONE) {
+    proton_engine_bridge_lifecycle_dispose(&lifecycle);
+    return fail("post-startup load failure became a fatal bridge failure");
+  }
+  proton_engine_bridge_lifecycle_dispose(&lifecycle);
+
+  proton_engine_bridge_lifecycle_init(&lifecycle);
+  if (!proton_engine_bridge_lifecycle_update(
+          &lifecycle, "pending", "page-ready", "proton://app/", NULL) ||
+      !proton_engine_bridge_lifecycle_update(
+          &lifecycle, "ready", "page-ready", "proton://app/", NULL) ||
       !proton_engine_bridge_lifecycle_report_browser_failure(
           &lifecycle, "proton://app/", "renderer_process_terminated",
           "renderer process terminated", 0)) {
@@ -1335,6 +1354,47 @@ static int write_empty_file(const char *path) {
     return 1;
   }
   fclose(file);
+  return 0;
+}
+
+static int expect_asset_document_root_resolution(void) {
+  mkdir_one("asset-root");
+  mkdir_one("asset-root" PATH_SEP "scripts");
+  mkdir_one("asset-outside");
+  if (write_empty_file("asset-root" PATH_SEP "scripts" PATH_SEP "app.js") ||
+      write_empty_file("asset-outside" PATH_SEP "secret.txt")) {
+    return 1;
+  }
+  char *path = proton_engine_url_to_rooted_asset_path(
+      PROTON_ENGINE_APP_URL_PREFIX "scripts/app.js?cache=1", "asset-root");
+  if (path == NULL ||
+      strstr(path, "asset-root" PATH_SEP "scripts" PATH_SEP "app.js") ==
+          NULL) {
+    free(path);
+    return fail("asset URL did not resolve below its document root");
+  }
+  free(path);
+  if (proton_engine_url_to_rooted_asset_path(
+          PROTON_ENGINE_APP_URL_PREFIX "../asset-outside/secret.txt",
+          "asset-root") != NULL ||
+      proton_engine_url_to_rooted_asset_path(
+          PROTON_ENGINE_APP_URL_PREFIX "%2e%2e/asset-outside/secret.txt",
+          "asset-root") !=
+          NULL ||
+      proton_engine_url_to_rooted_asset_path(
+          PROTON_ENGINE_APP_URL_PREFIX "/absolute/path", "asset-root") !=
+          NULL) {
+    return fail("asset URL escaped or replaced its document root");
+  }
+#ifndef _WIN32
+  unlink("asset-root" PATH_SEP "outside-link");
+  if (symlink(".." PATH_SEP "asset-outside" PATH_SEP "secret.txt",
+              "asset-root" PATH_SEP "outside-link") == 0 &&
+      proton_engine_url_to_rooted_asset_path(
+          PROTON_ENGINE_APP_URL_PREFIX "outside-link", "asset-root") != NULL) {
+    return fail("asset URL followed a symlink outside its document root");
+  }
+#endif
   return 0;
 }
 
@@ -1655,6 +1715,9 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (expect_json_depth_limit()) {
+    return 1;
+  }
+  if (expect_asset_document_root_resolution()) {
     return 1;
   }
 

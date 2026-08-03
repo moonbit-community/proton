@@ -376,6 +376,20 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                  proton_engine_unavailable_message());
 }
 
+int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
+                                        const char *html,
+                                        const char *document_url,
+                                        const char *asset_root,
+                                        char *error,
+                                        size_t error_len) {
+  (void)window;
+  (void)html;
+  (void)document_url;
+  (void)asset_root;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,

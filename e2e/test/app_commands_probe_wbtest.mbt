@@ -240,7 +240,7 @@ async fn assert_app_commands_probe(page : @client.CdpClient) -> Unit {
     true,
   )
   let result : AppCommandsProbeResult = decode_probe(value, "app commands")
-  guard result.url == "proton://app/" else {
+  guard result.url == "https://proton.localhost/" else {
     fail("unexpected app commands URL: " + value.stringify())
   }
   guard result.title == "MoonBit App Commands" && result.has_bridge else {
@@ -344,7 +344,7 @@ async fn run_reload_probe(
   page.close()
   let reloaded_page = connect_page_matching_expression(
     target,
-    "proton://app/",
+    "https://proton.localhost/",
     false,
     (
       #|Boolean(
@@ -374,7 +374,7 @@ async fn run_reload_probe(
     true,
   )
   let result : ReloadProbeResult = decode_probe(value, "reload")
-  guard result.url == "proton://app/" &&
+  guard result.url == "https://proton.localhost/" &&
     result.title == "MoonBit App Commands" &&
     result.has_bridge &&
     result.navigation_type == "reload" &&
@@ -402,7 +402,9 @@ async fn run_non_proton_probe(
   assert_non_proton_origin("about", about)
   assert_non_proton_origin("file", file)
   assert_non_proton_origin("http", http_page)
-  let proton_page = navigate_page_and_connect(target, "proton://app/", timeout)
+  let proton_page = navigate_page_and_connect(
+    target, "https://proton.localhost/", timeout,
+  )
   defer proton_page.close()
   wait_for_ready(
     proton_page,

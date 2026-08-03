@@ -981,6 +981,24 @@ pub fn Window::load_html(
 }
 
 ///|
+/// Load an HTML document whose relative URLs resolve inside `asset_root`.
+pub fn Window::load_asset(
+  self : Window,
+  html : String,
+  document_url : String,
+  asset_root : String,
+) -> Unit raise NativeError {
+  check_status(
+    proton_window_load_asset_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(html),
+      @ffi.to_cstr(document_url),
+      @ffi.to_cstr(asset_root),
+    ),
+  )
+}
+
+///|
 pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
   check_status(proton_window_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
 }

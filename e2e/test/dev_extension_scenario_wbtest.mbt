@@ -466,7 +466,7 @@ fn assert_dev_extension_production_probe(
   result : DevExtensionReloadProbe,
   value : Json,
 ) -> Unit raise {
-  guard result.url.has_prefix("proton://app/") &&
+  guard result.url.has_prefix("https://proton.localhost/") &&
     result.title == "Proton Dev Extension JS" else {
     fail(
       "production dev extension page identity mismatch: " + value.stringify(),

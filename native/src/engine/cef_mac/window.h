@@ -27,6 +27,7 @@ proton_engine_window_t *proton_engine_window_lookup_native_id(
 proton_engine_window_t *proton_engine_window_lookup_browser(
     cef_browser_t *browser);
 const char *proton_engine_window_html_url(proton_engine_window_t *window);
+const char *proton_engine_runtime_asset_root(proton_engine_window_t *window);
 const char *proton_engine_window_html(proton_engine_window_t *window,
                                      size_t *len);
 proton_window_id_t

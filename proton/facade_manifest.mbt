@@ -143,19 +143,37 @@ fn manifest_with_entry(
 
 ///|
 fn implicit_config_path() -> String? {
-  match @env.get_env_var("PROTON_CONFIG_PATH") {
+  let environment = match @env.get_env_var("PROTON_CONFIG_PATH") {
     Some(value) => {
       let trimmed = value.trim().to_owned()
       if trimmed != "" {
-        return Some(trimmed)
+        Some(trimmed)
+      } else {
+        None
       }
     }
-    None => ()
+    None => None
   }
-  if @mbfs.path_exists(default_config_file) {
-    Some(default_config_file)
-  } else {
-    bundled_config_path()
+  choose_implicit_config_path(
+    bundled=bundled_config_path(),
+    environment~,
+    cwd_has_default=@mbfs.path_exists(default_config_file),
+  )
+}
+
+///|
+fn choose_implicit_config_path(
+  bundled~ : String?,
+  environment~ : String?,
+  cwd_has_default~ : Bool,
+) -> String? {
+  match bundled {
+    Some(path) => Some(path)
+    None =>
+      match environment {
+        Some(path) => Some(path)
+        None => if cwd_has_default { Some(default_config_file) } else { None }
+      }
   }
 }
 

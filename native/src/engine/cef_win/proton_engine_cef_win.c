@@ -5151,6 +5151,22 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
+                                        const char *html,
+                                        const char *document_url,
+                                        const char *asset_root,
+                                        char *error,
+                                        size_t error_len) {
+  (void)window;
+  (void)html;
+  (void)document_url;
+  (void)asset_root;
+  /* TODO: Port the host-scoped HTTPS asset origin from the macOS engine. */
+  proton_engine_set_message(error, error_len,
+                            "asset documents are not supported on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,

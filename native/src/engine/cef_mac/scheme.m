@@ -23,6 +23,7 @@ typedef struct {
   char *data;
   size_t len;
   char *mime_type;
+  int status;
   size_t offset;
 } proton_engine_resource_handler_t;
 
@@ -73,7 +74,7 @@ static void CEF_CALLBACK proton_engine_resource_get_response_headers(
     proton_engine_set_string(&mime, handler->mime_type != NULL
                                         ? handler->mime_type
                                         : "text/html");
-    response->set_status(response, 200);
+    response->set_status(response, handler->status);
     response->set_mime_type(response, &mime);
     cef_string_clear(&mime);
   }
@@ -137,7 +138,8 @@ static int CEF_CALLBACK proton_engine_resource_handler_release(
 static cef_resource_handler_t *proton_engine_resource_handler_create(
     const char *data,
     size_t data_len,
-    const char *mime_type) {
+    const char *mime_type,
+    int status) {
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)calloc(1, sizeof(*handler));
   if (handler == NULL) {
@@ -155,6 +157,7 @@ static cef_resource_handler_t *proton_engine_resource_handler_create(
   memcpy(handler->data, data != NULL ? data : "", data_len);
   handler->data[data_len] = '\0';
   handler->len = data_len;
+  handler->status = status;
   handler->mime_type = proton_engine_strdup(mime_type != NULL ? mime_type
                                                               : "text/html");
   if (handler->mime_type == NULL) {
@@ -186,8 +189,13 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
   char *html_url = NULL;
+  char *asset_root = NULL;
   char *html_copy = NULL;
   size_t html_len = 0;
+  const char *root_value = proton_engine_runtime_asset_root(window);
+  if (root_value != NULL) {
+    asset_root = proton_engine_strdup(root_value);
+  }
   if (window != NULL) {
     const char *url_value = proton_engine_window_html_url(window);
     if (url_value != NULL) {
@@ -205,7 +213,7 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     }
   }
   proton_engine_window_unlock();
-  if (window == NULL) {
+  if (window == NULL && asset_root == NULL) {
     return NULL;
   }
 
@@ -214,28 +222,29 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
       html_copy != NULL) {
     handler = proton_engine_resource_handler_create(html_copy, html_len,
-                                                    "text/html");
+                                                    "text/html", 200);
   } else {
-    char *asset_path = proton_engine_url_to_asset_path(url);
+    char *asset_path =
+        proton_engine_url_to_rooted_asset_path(url, asset_root);
     if (asset_path != NULL) {
-      char *html_path = proton_engine_url_to_asset_path(html_url);
-      char *asset_root = proton_engine_asset_path_dirname(html_path);
-      if (proton_engine_asset_path_is_under_root(asset_path, asset_root)) {
-        char *data = NULL;
-        size_t data_len = 0;
-        if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
-          handler = proton_engine_resource_handler_create(
-              data, data_len, proton_engine_asset_mime_type(asset_path));
-          free(data);
-        }
+      char *data = NULL;
+      size_t data_len = 0;
+      if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
+        handler = proton_engine_resource_handler_create(
+            data, data_len, proton_engine_asset_mime_type(asset_path), 200);
+        free(data);
       }
-      free(asset_root);
-      free(html_path);
       free(asset_path);
     }
   }
-  free(url);
+  if (handler == NULL && proton_engine_url_is_app(url)) {
+    static const char not_found[] = "Not Found";
+    handler = proton_engine_resource_handler_create(
+        not_found, sizeof(not_found) - 1, "text/plain", 404);
+  }
   free(html_url);
+  free(asset_root);
   free(html_copy);
+  free(url);
   return handler;
 }

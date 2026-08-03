@@ -1324,6 +1324,33 @@ int32_t proton_window_load_html(proton_window_id_t window, const char *html,
   return PROTON_OK;
 }
 
+int32_t proton_window_load_asset(proton_window_id_t window, const char *html,
+                                 const char *document_url,
+                                 const char *asset_root) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (html == NULL || document_url == NULL || document_url[0] == '\0' ||
+      asset_root == NULL || asset_root[0] == '\0') {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "html, document_url, and asset_root are required");
+  }
+  if (slot->engine_window != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_window_load_asset(
+        slot->engine_window, html, document_url, asset_root, engine_error,
+        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 
 
 int32_t proton_window_eval(proton_window_id_t window, const char *script) {

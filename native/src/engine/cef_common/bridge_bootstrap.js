@@ -1,26 +1,14 @@
-(function installMoonBitBridge(nativeInvoke, rawConfig, pageInstance) {
+(function installMoonBitBridge(nativeInvoke, rawGrant, pageInstance) {
   "use strict";
 
   if (typeof nativeInvoke !== "function") {
     throw new TypeError("Proton bridge requires a native invoke function");
   }
 
-  const rootConfig = typeof rawConfig === "string" ? JSON.parse(rawConfig) : rawConfig;
-  if (!rootConfig || typeof rootConfig !== "object") {
-    throw new TypeError("Proton bridge config must be an object");
+  const config = typeof rawGrant === "string" ? JSON.parse(rawGrant) : rawGrant;
+  if (!config || typeof config !== "object") {
+    throw new TypeError("Proton bridge grant must be an object");
   }
-  const sourceOrigin = globalThis.location.protocol === "proton:" &&
-      globalThis.location.hostname === "app"
-    ? "app"
-    : globalThis.location.origin;
-  const grant = Array.isArray(rootConfig.grants)
-    ? rootConfig.grants.find((candidate) =>
-        candidate && candidate.source_origin === sourceOrigin)
-    : undefined;
-  if (!grant) {
-    throw new TypeError("Proton bridge has no grant for this page source");
-  }
-  const config = { ...rootConfig, ...grant };
 
   if (typeof pageInstance !== "string" || !pageInstance) {
     throw new TypeError("Proton bridge requires a native page instance");

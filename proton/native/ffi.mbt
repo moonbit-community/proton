@@ -344,6 +344,15 @@ extern "C" fn proton_window_load_html_ffi(
 ) -> Int = "proton_window_load_html"
 
 ///|
+#borrow(html, document_url, asset_root)
+extern "C" fn proton_window_load_asset_ffi(
+  window : Int64,
+  html : Bytes,
+  document_url : Bytes,
+  asset_root : Bytes,
+) -> Int = "proton_window_load_asset"
+
+///|
 #borrow(script)
 extern "C" fn proton_window_eval_ffi(window : Int64, script : Bytes) -> Int = "proton_window_eval"
 
