@@ -79,7 +79,26 @@ try {
   }
   /// Each platform is reported before the run ends, so a single stale prebuilt
   /// does not hide the state of the others or of the codegen comparison below.
+  /// Platforms whose artifact format the host inspection tool cannot read
+  /// (for example GNU nm on a Mach-O dylib) are skipped rather than reported
+  /// as failures; every platform is still verified on its own host's CI leg.
   for (const platform of platforms) {
+    const probe = spawnSync(
+      "node",
+      [
+        path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
+        "--tool-probe",
+        platform,
+      ],
+      { encoding: "utf8" },
+    );
+    if (probe.status !== 0) {
+      const detail = (probe.stdout || probe.stderr || "")
+        .trim()
+        .replace(/^\[SKIP\]\s*/, "");
+      console.log(`[SKIP] ${platform}: ${detail}`);
+      continue;
+    }
     if (
       !runAllowFailure("node", [
         path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),

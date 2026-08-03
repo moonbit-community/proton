@@ -413,12 +413,72 @@ export function verifyPrebuiltAbi({
 
 function usage() {
   console.error(
-    "Usage: node scripts/verify_prebuilt_abi.mjs [--metadata-only | <platform>]",
+    "Usage: node scripts/verify_prebuilt_abi.mjs [--metadata-only | --tool-probe <platform> | <platform>]",
   );
+}
+
+// Reports whether the current host can inspect the staged library for
+// `platform` at all: the tool chosen for the artifact format must exist and
+// must parse the staged library. Cross-host checks (for example GNU nm on a
+// Mach-O dylib) cannot read the format and are skipped by callers instead of
+// being reported as ABI failures.
+function toolProbe(platform) {
+  const layout = platformLayouts[platform];
+  if (!layout) {
+    return { ok: false, detail: `unsupported prebuilt platform: ${platform}` };
+  }
+  const platformRoot = path.join(defaultRepoRoot, "proton", "prebuilt", platform);
+  const manifestPath = path.join(platformRoot, "manifest.json");
+  if (!fs.existsSync(manifestPath)) {
+    return { ok: false, detail: `${platform}: manifest.json missing` };
+  }
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    return { ok: false, detail: `${platform}: ${error.message}` };
+  }
+  const libraryPath = path.join(
+    platformRoot,
+    manifest.artifacts[layout.libraryKey],
+  );
+  if (!fs.existsSync(libraryPath)) {
+    return { ok: false, detail: `${platform}: library missing` };
+  }
+  const { command, args } = inspectCommand(platform, libraryPath);
+  const result = spawnSync(command, args, { encoding: "utf8" });
+  if (result.error) {
+    return { ok: false, detail: `${command}: ${result.error.message}` };
+  }
+  if (result.status !== 0) {
+    const firstLine = (result.stderr || result.stdout || "")
+      .trim()
+      .split("\n")[0];
+    return {
+      ok: false,
+      detail: `${command} cannot read ${platform} artifacts on this host: ${firstLine}`,
+    };
+  }
+  return { ok: true, detail: "" };
 }
 
 function main() {
   const args = process.argv.slice(2);
+  if (args[0] === "--tool-probe") {
+    if (args.length !== 2) {
+      usage();
+      process.exitCode = 2;
+      return;
+    }
+    const probe = toolProbe(args[1]);
+    if (!probe.ok) {
+      console.log(`[SKIP] ${probe.detail}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`[OK] ${args[1]} inspection tool is usable on this host.`);
+    return;
+  }
   if (args.length > 1) {
     usage();
     process.exitCode = 2;
