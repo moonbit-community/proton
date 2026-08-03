@@ -1426,7 +1426,6 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   cef_resource_handler_t *handler = NULL;
   if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
       html_copy != NULL) {
-    proton_engine_debug_log("scheme_serve_html url=%s len=%zu", url, html_len);
     handler = proton_engine_resource_handler_create(html_copy, html_len,
                                                     "text/html");
   } else {
@@ -1446,11 +1445,6 @@ static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
       free(asset_root);
       free(html_path);
       free(asset_path);
-    }
-    if (handler == NULL) {
-      proton_engine_debug_log("scheme_miss url=%s html_url=%s",
-                              url != NULL ? url : "(null)",
-                              html_url != NULL ? html_url : "(null)");
     }
   }
   free(url);
@@ -5414,8 +5408,6 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   }
   cef_string_t cef_url = {0};
   proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-  proton_engine_debug_log("load_url browser=%d url=%s", window->browser_id,
-                          url != NULL ? url : "about:blank");
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);
   frame->base.release((cef_base_ref_counted_t *)frame);

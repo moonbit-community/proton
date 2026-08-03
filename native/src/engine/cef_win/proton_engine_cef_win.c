@@ -1942,9 +1942,9 @@ static void proton_engine_on_before_command_line_processing(
   proton_engine_append_switch(command_line, "disable-gpu");
   // A bare --disable-gpu still launches a GPU process for SwiftShader, and
   // that process dies on display-limited CI runners (no usable D3D device),
-  // which FATALs the browser. Disabling GPU compositing as well keeps all
-  // compositing on the CPU in the browser process, so no GPU process is
-  // needed for window presentation.
+  // which FATALs the browser. Disabling GPU compositing keeps presentation
+  // on the CPU in the browser process, so no GPU process is needed for
+  // window display.
   proton_engine_append_switch(command_line, "disable-gpu-compositing");
   proton_engine_append_switch(command_line, "disable-background-networking");
   proton_engine_append_switch(command_line, "disable-component-update");
