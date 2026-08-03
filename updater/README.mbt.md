@@ -15,7 +15,7 @@ nothing more, and a type that could be mistaken for a trusted manifest is worse
 than one that obviously is not.
 
 The caller is responsible, in order, for: verifying the manifest signature,
-rejecting a version that is not strictly newer than the running one, and
+rejecting a `revision` that is not strictly newer than the installed one, and
 rejecting a manifest older than its freshness window.
 
 ## Decoding
@@ -28,7 +28,7 @@ match manifest.platform("darwin-arm64") {
 }
 ```
 
-`schema_version` must be exactly `1`, and unknown fields are an error rather
+`schema_version` must be exactly `2`, and unknown fields are an error rather
 than something to skip — the same discipline `moon.proton` and the native
 runtime configs already follow, so that a typo in a release manifest fails
 loudly instead of silently omitting whatever it was meant to say.
@@ -40,13 +40,16 @@ platform at once, including the platforms it could still have served.
 
 ## Ordering
 
+`revision` is a positive unsigned 64-bit release sequence. It is the security
+ordering: every published update increments it, and it never resets when the
+display version changes. Keeping it separate lets applications use ordinary
+version labels without making rollback prevention depend on semantic-version
+policy.
+
 `Version` is exactly three non-negative integers, with no leading zeros and no
-pre-release or build suffix. Ordering is a security control here, not a display
-concern: `is_newer_than` is what stops a replayed older release from
-reintroducing a fixed vulnerability, so the comparison is kept small enough to
-be obviously right. Suffixed versions are rejected rather than approximated —
-`1.0.0-rc.1` precedes `1.0.0` while `-rc.10` follows `-rc.2`, and a rule that
-subtle does not belong in this particular comparison.
+pre-release or build suffix. It is display metadata, not the install ordering;
+the strict shape keeps manifests predictable while `revision` decides whether
+an artifact may replace the installed application.
 
 `Timestamp` accepts only `YYYY-MM-DDTHH:MM:SSZ`. Every field is fixed width in
 that form, so lexicographic order is chronological order and `is_before` needs

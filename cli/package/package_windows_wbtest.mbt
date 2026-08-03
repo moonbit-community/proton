@@ -15,6 +15,7 @@ fn windows_test_plan(
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets,
     output: @fsutil.resolve_path(root, "output with spaces"),
     build: false,

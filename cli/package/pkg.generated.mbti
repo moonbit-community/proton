@@ -83,6 +83,8 @@ pub(all) suberror UpdaterMetadataError {
   InvalidBaseUrl(url~ : String)
   UnknownPlatform(detail~ : String)
   MissingPublishedAt
+  MissingRevision
+  InvalidRevision(value~ : String)
   UndecodableFragment(detail~ : String)
 } derive(Eq)
 pub fn UpdaterMetadataError::message(Self) -> String
@@ -109,4 +111,3 @@ type WindowsSigningConfig derive(Eq, @debug.Debug)
 // Type aliases
 
 // Traits
-

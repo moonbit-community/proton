@@ -30,6 +30,10 @@ pub(all) suberror UpdateError {
   ArtifactDigestMismatch(expected~ : String, actual~ : String)
   ArtifactSignatureInvalid
   ClockUnusable(detail~ : String)
+  InstallBusy
+  RollbackRejected(target~ : UInt64, installed~ : UInt64)
+  RevisionMismatch(detail~ : String)
+  InstallInterrupted(detail~ : String)
   InstallFailed(step~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn UpdateError::message(Self) -> String
@@ -37,6 +41,7 @@ pub fn UpdateError::message(Self) -> String
 // Types and methods
 pub struct AvailableUpdate {
   version : @proton_updater.Version
+  revision : UInt64
   notes_url : String?
   url : String
   size : Int64
@@ -44,6 +49,7 @@ pub struct AvailableUpdate {
   signature_hex : String
 } derive(Eq, @debug.Debug)
 pub fn AvailableUpdate::notes_url(Self) -> String?
+pub fn AvailableUpdate::revision(Self) -> UInt64
 pub fn AvailableUpdate::size(Self) -> Int64
 pub fn AvailableUpdate::url(Self) -> String
 pub fn AvailableUpdate::version(Self) -> @proton_updater.Version
@@ -53,15 +59,20 @@ pub enum CheckOutcome {
   Available(AvailableUpdate)
 } derive(Eq, @debug.Debug)
 
+pub enum InstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Eq, @debug.Debug)
+
 pub struct UpdateChannel {
   endpoint : String
   trusted_keys : Array[@proton_rsa.PublicKey]
   platform : String
-  current_version : @proton_updater.Version
+  current_revision : UInt64
 }
 pub async fn UpdateChannel::check(Self, async (String) -> Bytes raise UpdateError, @proton_updater.Timestamp) -> CheckOutcome raise UpdateError
-pub async fn UpdateChannel::download_and_install(Self, async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError, AvailableUpdate, String, on_progress? : async (Int64) -> Unit noraise) -> Unit raise UpdateError
-pub fn UpdateChannel::new(String, Array[String], String, @proton_updater.Version) -> Self raise UpdateError
+pub async fn UpdateChannel::download_and_install(Self, async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError, AvailableUpdate, String, on_progress? : async (Int64) -> Unit noraise) -> InstallOutcome raise UpdateError
+pub fn UpdateChannel::new(String, Array[String], String, UInt64) -> Self raise UpdateError
 
 // Type aliases
 pub type ArtifactFetch = async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError

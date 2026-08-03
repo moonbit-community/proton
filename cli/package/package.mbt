@@ -28,6 +28,7 @@ struct PackagePlan {
   version : String
   macos_version : String
   bundle_version : String
+  update_revision : UInt64
   targets : Array[String]
   output : String
   build : Bool
@@ -95,6 +96,11 @@ pub fn command() -> @argparse.Command {
         "updater-published-at",
         about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
       ),
+      OptionArg(
+        "updater-revision",
+        allow_hyphen_values=true,
+        about="Monotonic release sequence embedded in the app and signed manifest",
+      ),
     ],
   )
 }
@@ -127,13 +133,15 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
   let project = loaded.config()
-  let plan = build_package_plan(raw, config_path, project)
+  let updater_base_url = @cli_args.value(matches, "updater-base-url")
+  let update_revision = updater_revision_from_matches(matches, updater_base_url)
+  let plan = build_package_plan(raw, config_path, project, update_revision)
   print_package_plan(plan, raw.dry_run)
   if raw.dry_run {
     return
   }
   execute_package_plan(plan)
-  match @cli_args.value(matches, "updater-base-url") {
+  match updater_base_url {
     Some(base_url) =>
       write_updater_metadata(
         plan,
@@ -144,6 +152,26 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         },
       )
     None => ()
+  }
+}
+
+///|
+fn updater_revision_from_matches(
+  matches : @argparse.Matches,
+  base_url : String?,
+) -> UInt64 raise UpdaterMetadataError {
+  match @cli_args.value(matches, "updater-revision") {
+    None => {
+      guard base_url is None else { raise MissingRevision }
+      0UL
+    }
+    Some(value) => {
+      let revision = @string.parse_uint64(value[:]) catch {
+        _ => raise InvalidRevision(value~)
+      }
+      guard revision > 0UL else { raise InvalidRevision(value~) }
+      revision
+    }
   }
 }
 
@@ -180,6 +208,7 @@ async fn build_package_plan(
   raw : RawPackageOptions,
   config_path : String,
   project : @proton_config.ProjectConfig,
+  update_revision : UInt64,
 ) -> PackagePlan {
   let bundle = match project.bundle() {
     Some(bundle) if bundle.active() => bundle
@@ -261,6 +290,7 @@ async fn build_package_plan(
     version,
     macos_version,
     bundle_version,
+    update_revision,
     targets,
     output,
     build: raw.build,
@@ -480,6 +510,7 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  product: " + plan.product_name)
   println("  identifier: " + plan.identifier)
   println("  version: " + plan.version)
+  println("  update revision: " + plan.update_revision.to_string())
   println("  targets: " + plan.targets.join(", "))
   println("  output: " + plan.output)
   println("  build target: " + plan.build_target_dir)
@@ -1222,6 +1253,7 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
     #|<key>CFBundlePackageType</key><string>APPL</string>
     #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
     #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
+    #|<key>ProtonUpdateRevision</key><string>{{UPDATE_REVISION}}</string>
     #|<key>LSMinimumSystemVersion</key><string>12.0</string>
     #|<key>NSHighResolutionCapable</key><true/>
     #|</dict></plist>
@@ -1233,6 +1265,7 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
   .replace_all(old="{{VERSION}}", new=xml_escape(plan.version))
   .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
   .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
+  .replace_all(old="{{UPDATE_REVISION}}", new=plan.update_revision.to_string())
   .replace_all(old="{{ICON}}", new=macos_icon_plist_entry(plan.macos_icon))
   .replace_all(old="{{URL_TYPES}}", new=macos_url_types_plist_entry(plan))
   .replace_all(

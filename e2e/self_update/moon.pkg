@@ -5,7 +5,8 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/x/fs" @mbfs,
   "justjavac/proton/updater",
-  "justjavac/proton_updater" @manifest,
+  "justjavac/proton/native",
+  "justjavac/proton_updater",
 }
 
 supported_targets = "native"

@@ -16,6 +16,7 @@ pub(all) struct UpdateStatus {
 /// What taking an update did.
 pub(all) struct UpdateInstalled {
   version : String
+  changed : Bool
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

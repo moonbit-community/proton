@@ -16,6 +16,14 @@ pub(all) suberror UpdateError {
   ArtifactSignatureInvalid
   /// The system clock cannot produce a usable freshness bound.
   ClockUnusable(detail~ : String)
+  /// Another process owns the short-lived update commit lock.
+  InstallBusy
+  /// A signed release is older than what is currently installed.
+  RollbackRejected(target~ : UInt64, installed~ : UInt64)
+  /// The app bundle does not carry the revision authenticated by the manifest.
+  RevisionMismatch(detail~ : String)
+  /// Waiting for the process-local install coordinator was interrupted.
+  InstallInterrupted(detail~ : String)
   /// A native install step refused. `step` says how far the sequence got,
   /// which is what distinguishes "nothing was touched" from "the replacement
   /// ran and rolled back".
@@ -41,6 +49,13 @@ pub fn UpdateError::message(self : UpdateError) -> String {
     ArtifactSignatureInvalid => "the artifact is not signed by a trusted key"
     ClockUnusable(detail~) =>
       "the update freshness window cannot be computed: \{detail}"
+    InstallBusy => "another process is installing an update"
+    RollbackRejected(target~, installed~) =>
+      "update revision \{target} is older than installed revision \{installed}"
+    RevisionMismatch(detail~) =>
+      "the update revision could not be authenticated: \{detail}"
+    InstallInterrupted(detail~) =>
+      "waiting to install the update was interrupted: \{detail}"
     InstallFailed(step~, detail~) =>
       "installing the update failed while it was about to \{step}: \{detail}"
   }

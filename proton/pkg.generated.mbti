@@ -267,15 +267,17 @@ pub(all) enum WindowCloseDecision {
 
 pub struct PendingUpdate {
   version : String
+  revision : UInt64
   notes_url : String?
   size : Int64
   channel : @updater.UpdateChannel
   offer : @updater.AvailableUpdate
   identifier : String
 }
-pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> Unit
+pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> UpdateInstallOutcome
 pub fn PendingUpdate::notes_url(Self) -> String?
 pub fn PendingUpdate::restart(Self) -> Unit raise
+pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
 
@@ -284,6 +286,11 @@ pub enum UpdateCheck {
   UpToDate
   Available(PendingUpdate)
 }
+
+pub enum UpdateInstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Eq, @debug.Debug)
 
 pub struct WindowContext {
   id : String

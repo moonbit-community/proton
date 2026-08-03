@@ -51,7 +51,15 @@ enum {
   PROTON_ERR_BUFFER_TOO_SMALL = -11,
   PROTON_ERR_STALE_BRIDGE_RESPONSE = -12,
   PROTON_ERR_STALE_WINDOW_REQUEST = -13,
-  PROTON_ERR_STALE_BROWSER_REQUEST = -14
+  PROTON_ERR_STALE_BROWSER_REQUEST = -14,
+  PROTON_ERR_UPDATE_BUSY = -15,
+  PROTON_ERR_UPDATE_ROLLBACK = -16,
+  PROTON_ERR_UPDATE_REVISION_MISMATCH = -17
+};
+
+enum {
+  PROTON_UPDATE_INSTALLED = 0,
+  PROTON_UPDATE_ALREADY_INSTALLED = 1
 };
 
 PROTON_API int32_t proton_abi_version(void);
@@ -205,13 +213,27 @@ PROTON_API int32_t proton_window_poll_dialog_result(
 PROTON_API int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_begin_revision(
+    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
 PROTON_API int32_t proton_update_stage_write(
     proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
     char *error, int32_t error_len);
 PROTON_API int32_t proton_update_stage_install(
     proton_update_stage_id_t stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_install_outcome(
+    proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
+    int32_t error_len);
 PROTON_API int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len);
+
+/* Reads the monotonic update revision embedded in the installed application.
+
+   This is an optimistic process-local check used to avoid downloading an
+   update another task already installed. The install transaction repeats the
+   comparison while holding the cross-process commit lock. */
+PROTON_API int32_t proton_update_current_revision(
+    uint64_t *out_revision, char *error, int32_t error_len);
 
 /* Installs an authenticated update archive over the running application.
 

@@ -29,6 +29,7 @@ Darwin) ;;
 esac
 
 binary="$repo/_build/native/debug/build/justjavac/proton/e2e/self_update/self_update.exe"
+native_dist="${PROTON_NATIVE_DIST:-$repo/native/dist}"
 if [ ! -x "$binary" ]; then
   echo "build it first: moon -C e2e build --target native" >&2
   exit 1
@@ -50,8 +51,13 @@ printf 'rsa-sha256:%s:010001' "$modulus" > "$work/keys/trusted.txt"
 make_bundle() {
   app="$1"
   version="$2"
-  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+  revision="$3"
+  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" \
+    "$app/Contents/Frameworks"
   cp "$binary" "$app/Contents/MacOS/updatee"
+  cp "$native_dist/lib/libproton.dylib" "$app/Contents/Frameworks/libproton.dylib"
+  install_name_tool -rpath "$native_dist/lib" '@executable_path/../Frameworks' \
+    "$app/Contents/MacOS/updatee"
   printf '%s' "$version" > "$app/Contents/Resources/version"
   cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -61,15 +67,17 @@ make_bundle() {
 <key>CFBundleName</key><string>Updatee</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$version</string>
+<key>ProtonUpdateRevision</key><string>$revision</string>
 <key>LSBackgroundOnly</key><true/>
 </dict></plist>
 PLIST
+  codesign --force --sign - "$app/Contents/Frameworks/libproton.dylib" 2>/dev/null
   codesign --force --identifier "$identifier" --sign - "$app" 2>/dev/null
   codesign --verify --strict "$app"
 }
 
-make_bundle "$work/install/Updatee.app" "0.1.0"
-make_bundle "$work/build/Updatee.app" "0.2.0"
+make_bundle "$work/install/Updatee.app" "0.1.0" "1"
+make_bundle "$work/build/Updatee.app" "0.2.0" "2"
 
 # ditto, because the archive has to preserve what the bundle's own signature
 # covers.
@@ -83,8 +91,9 @@ artifact_signature="$(openssl dgst -sha256 -sign "$work/keys/private.pem" "$zip"
   xxd -p | tr -d '\n')"
 cat > "$work/server/latest.json" <<JSON
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "version": "0.2.0",
+  "revision": 2,
   "published_at": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
   "platforms": {
     "darwin-arm64": {
@@ -106,6 +115,7 @@ PROTON_E2E_BASE="$base" \
 PROTON_E2E_ROOT="$work/server" \
 PROTON_E2E_STAGING="$work/staging" \
 PROTON_E2E_KEY="$(cat "$work/keys/trusted.txt")" \
+PROTON_E2E_ROLE="update" \
   "$work/install/Updatee.app/Contents/MacOS/updatee"
 
 # The relaunched process is started by Launch Services, so it finishes after

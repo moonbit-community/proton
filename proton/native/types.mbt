@@ -44,6 +44,21 @@ pub fn NativeError::is_stale_browser_request(self : NativeError) -> Bool {
 }
 
 ///|
+pub fn NativeError::is_update_busy(self : NativeError) -> Bool {
+  self.status() == proton_err_update_busy
+}
+
+///|
+pub fn NativeError::is_update_rollback(self : NativeError) -> Bool {
+  self.status() == proton_err_update_rollback
+}
+
+///|
+pub fn NativeError::is_update_revision_mismatch(self : NativeError) -> Bool {
+  self.status() == proton_err_update_revision_mismatch
+}
+
+///|
 impl Show for NativeError with fn output(self, logger) {
   logger.write_string(self.message())
 }

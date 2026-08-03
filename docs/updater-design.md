@@ -1,6 +1,6 @@
 # Proton Updater Design
 
-Status: draft for review. Nothing in this document is implemented.
+Status: implemented on macOS; Windows and Linux apply remain unsupported.
 
 An updater is a remote code execution channel that the application installs on
 itself deliberately. Every decision here is made from that starting point: the
@@ -50,7 +50,7 @@ delta artifacts can be introduced without a breaking schema change.
 | --- | --- | --- |
 | Network attacker | Observe and modify traffic | TLS for transport, plus an artifact signature that TLS does not provide |
 | Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
-| Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | Strict version monotonicity enforced on the client |
+| Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | A signed monotonic revision is checked again under the native commit lock |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
 | Local attacker | Replace a staged path between validation and installation | The authenticated archive bytes cross into one native install transaction. Native code creates a 0700 directory with `mkdtemp`, expands there, validates the bundle signature and identity, and replaces the application without exposing the expanded path between those operations |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
@@ -67,8 +67,9 @@ release asset, or plain HTTP host can serve it.
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "version": "0.2.0",
+  "revision": 42,
   "published_at": "2026-08-01T00:00:00Z",
   "notes_url": "https://example.com/releases/0.2.0",
   "platforms": {
@@ -88,6 +89,8 @@ Rules:
 - `schema_version` is rejected when unknown. This follows the discipline already
   applied to `moon.proton` and the native runtime and window configs: unknown
   top-level fields are an error, never silently ignored.
+- `revision` is a positive unsigned 64-bit release sequence. It is independent
+  of the display `version`, increases for every release, and never resets.
 - Platform keys reuse the identifiers Proton already uses everywhere else:
   `darwin-arm64`, `darwin-x64`, `win32-x64`, `linux-x64`. Introducing a second
   naming scheme for the same concept would be a defect.
@@ -194,8 +197,9 @@ how keys are ordered, how numbers are formatted — and every disagreement betwe
 signer and verifier about that rule is a forgery opportunity. Signing the file
 as transmitted has no such rule.
 
-Because the manifest carries `version` and each artifact's `sha256`, this
-signature binds a version to a specific artifact. That is what defeats manifest
+Because the manifest carries `revision`, `version`, and each artifact's
+`sha256`, this signature binds one release order to a specific artifact. That
+is what defeats manifest
 substitution, and together with `published_at` it is what makes staleness
 detectable.
 
@@ -338,9 +342,10 @@ signature, not for the updater manifest or artifact signature.
    signature before parsing anything. Reject unknown `schema_version`. Reject a
    manifest whose `published_at` is older than the configured freshness window.
    Select the entry for the running platform.
-2. **Compare.** Offer the update only when the manifest version is strictly
-   greater than the running version. Equal or lower is not an update; it is a
-   rollback attempt or a stale manifest, and both are ignored.
+2. **Compare.** Offer the update only when the signed manifest revision is
+   strictly greater than the installed app revision. This check avoids work;
+   native code repeats it at commit time because another process may install
+   between the check and apply.
 3. **Download.** Create an opaque native staging transaction and stream each
    response chunk into it. The archive path never crosses into MoonBit. The
    authenticated manifest size is passed to the transport, which rejects a
@@ -367,24 +372,31 @@ status codes, an opaque fixed-width handle, caller-owned buffers, and no
 platform types across the boundary.
 
 ```c
-int32_t proton_update_stage_begin(const char *parent_dir,
-                                  int64_t expected_size,
-                                  proton_update_stage_id_t *out_stage,
-                                  char *error, int32_t error_len);
+int32_t proton_update_stage_begin_revision(
+    const char *parent_dir,
+    int64_t expected_size,
+    uint64_t target_revision,
+    proton_update_stage_id_t *out_stage,
+    char *error, int32_t error_len);
 int32_t proton_update_stage_write(proton_update_stage_id_t stage,
                                   const char *chunk, int32_t chunk_len,
                                   char *error, int32_t error_len);
-int32_t proton_update_stage_install(proton_update_stage_id_t stage,
-                                    char *error, int32_t error_len);
+int32_t proton_update_stage_install_outcome(
+    proton_update_stage_id_t stage,
+    int32_t *out_outcome,
+    char *error, int32_t error_len);
 int32_t proton_update_stage_abort(proton_update_stage_id_t stage,
                                   char *error, int32_t error_len);
+int32_t proton_update_current_revision(uint64_t *out_revision,
+                                       char *error, int32_t error_len);
 int32_t proton_update_relaunch(char *error, int32_t error_len);
 ```
 
-The older whole-buffer `proton_update_install` entry point remains exported for
-ABI stability, but the Proton updater no longer calls it. It is implemented on
-top of the same private staging transaction rather than as a second install
-path.
+The older `proton_update_stage_begin`, `proton_update_stage_install`, and
+whole-buffer `proton_update_install` entry points remain exported with their
+original signatures for ABI stability, but the Proton updater no longer calls
+them. They are implemented on top of the same private staging transaction
+rather than as separate install paths.
 
 The stage handle is generation-checked and owned by its creating thread. It
 names a private file that native code creates, writes, expands, and removes;
@@ -392,6 +404,14 @@ there is no caller-visible path to replace between verification and use.
 Expansion, bundle validation, and replacement deliberately remain one consuming
 operation. Relaunch is separate because the caller owns the decision about
 unsaved work and process exit.
+
+MoonBit serializes installs within one process. A waiting request re-reads the
+installed revision after the active request finishes, so it skips both download
+and apply when that revision is already present. Native code acquires a
+non-blocking file lock only for the final commit decision and rename. Under that
+lock it re-reads the installed bundle, requires the staged app's code-signed
+revision to equal the signed manifest revision, and returns distinct busy,
+already-installed, rollback, and revision-mismatch outcomes.
 
 Artifact RSA signature verification is **not** here. Choosing RSA kept that in
 MoonBit. Native code verifies the expanded bundle's platform code signature,
@@ -570,6 +590,11 @@ Signing runs where the private key lives — a maintainer machine or CI with the
 key held as a secret — never as part of an ordinary build, and never through
 Proton. `proton_cli package` emits the artifact and the digest to be signed;
 producing the signature is an OpenSSL invocation the developer controls.
+
+`--updater-revision` is required with `--updater-base-url`. The same value is
+written to `ProtonUpdateRevision` in the app's signed `Info.plist` and to the
+manifest fragment, so native apply can prove it is committing the artifact the
+manifest ordered.
 
 Merging per-platform fragments into one manifest is a separate step because the
 three platforms are built on three machines, which is already true of

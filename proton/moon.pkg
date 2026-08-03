@@ -17,7 +17,7 @@ import {
   "justjavac/proton/manifest",
   "justjavac/proton/native",
   "justjavac/proton/updater",
-  "justjavac/proton_updater" @updater_manifest,
+  "justjavac/proton_updater",
   "justjavac/proton_contract",
 }
 

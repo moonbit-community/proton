@@ -1,7 +1,7 @@
 ///|
 test "renders a fragment the updater module accepts" {
   let fragment = updater_fragment_json(
-    "darwin-arm64", "0.2.0", "2026-08-01T00:00:00Z", "https://example.com/releases/Draw.app.zip",
+    "darwin-arm64", "0.2.0", 42UL, "2026-08-01T00:00:00Z", "https://example.com/releases/Draw.app.zip",
     234881024L, "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
   )
   // Emitting and decoding are implemented in different modules, so the shape
@@ -11,8 +11,9 @@ test "renders a fragment the updater module accepts" {
     fragment,
     content=(
       $|{
-      $|  "schema_version": 1,
+      $|  "schema_version": 2,
       $|  "version": "0.2.0",
+      $|  "revision": 42,
       $|  "published_at": "2026-08-01T00:00:00Z",
       $|  "platforms": {
       $|    "darwin-arm64": {
@@ -34,6 +35,7 @@ test "leaves the signature empty because signing needs the private key" {
   let fragment = updater_fragment_json(
     "win32-x64",
     "1.0.0",
+    7UL,
     "2026-08-01T00:00:00Z",
     "https://example.com/App.zip",
     1024L,
@@ -49,7 +51,7 @@ test "the emitted fragment decodes with the runtime parser" {
   // than leaving it to be discovered at an installation.
   verify_fragment_decodes(
     updater_fragment_json(
-      "darwin-arm64", "0.2.0", "2026-08-01T00:00:00Z", "https://example.com/releases/Draw.app.zip",
+      "darwin-arm64", "0.2.0", 42UL, "2026-08-01T00:00:00Z", "https://example.com/releases/Draw.app.zip",
       234881024L, "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
     ),
   )
@@ -68,6 +70,7 @@ test "a malformed fragment is caught at package time" {
   let bad_version = updater_fragment_json(
     "darwin-arm64",
     "0.2",
+    1UL,
     "2026-08-01T00:00:00Z",
     "https://example.com/app.zip",
     1024L,
@@ -77,6 +80,7 @@ test "a malformed fragment is caught at package time" {
   let bad_instant = updater_fragment_json(
     "darwin-arm64",
     "0.2.0",
+    1UL,
     "2026-08-01 12:00:00",
     "https://example.com/app.zip",
     1024L,

@@ -1,4 +1,38 @@
 ///|
+/// Serializes update downloads in this process.
+///
+/// The native commit lock is intentionally much shorter lived. This mutex
+/// prevents two windows in one application from downloading the same release;
+/// the native lock protects the final decision against other processes.
+let update_install_mutex : @async.Mutex = @async.Mutex::Mutex()
+
+///|
+pub enum InstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Debug, Eq)
+
+///|
+async fn coordinate_install(
+  target_revision : UInt64,
+  current_revision : () -> UInt64 raise UpdateError,
+  apply : async () -> InstallOutcome raise UpdateError,
+) -> InstallOutcome raise UpdateError {
+  update_install_mutex.acquire() catch {
+    error => raise InstallInterrupted(detail=@debug.render(Repr(error)))
+  }
+  defer update_install_mutex.release()
+  let installed_revision = current_revision()
+  if target_revision < installed_revision {
+    raise RollbackRejected(target=target_revision, installed=installed_revision)
+  }
+  if target_revision == installed_revision {
+    return AlreadyInstalled
+  }
+  apply()
+}
+
+///|
 /// Streams, authenticates and installs an available update.
 ///
 /// The native stage owns a private archive from the first chunk through
@@ -19,38 +53,77 @@ pub async fn UpdateChannel::download_and_install(
   update : AvailableUpdate,
   staging_parent : String,
   on_progress? : async (Int64) -> Unit noraise = _ => (),
-) -> Unit raise UpdateError {
-  let stage = @native.update_stage_begin(staging_parent, update.size) catch {
-    error =>
-      raise InstallFailed(
-        step="prepare a private artifact stage",
-        detail=error.message(),
-      )
-  }
-  let active = Ref(true)
-  defer (if active.val { stage.abort() catch { _ => () } })
-  self.download_into(
-    fetch,
-    update,
-    fn(chunk) -> Unit raise UpdateError {
-      stage.write(chunk) catch {
+) -> InstallOutcome raise UpdateError {
+  coordinate_install(
+    update.revision,
+    fn() -> UInt64 raise UpdateError {
+      @native.update_current_revision() catch {
         error =>
           raise InstallFailed(
-            step="write the private artifact stage",
+            step="read the installed update revision",
             detail=error.message(),
           )
       }
     },
-    on_progress,
-  )
-  stage.install() catch {
-    error =>
-      raise InstallFailed(
-        step="validate and replace the application",
-        detail=error.message(),
+    async fn() -> InstallOutcome raise UpdateError {
+      let stage = @native.update_stage_begin(
+        staging_parent,
+        update.size,
+        update.revision,
+      ) catch {
+        error =>
+          raise InstallFailed(
+            step="prepare a private artifact stage",
+            detail=error.message(),
+          )
+      }
+      let active = Ref(true)
+      defer (if active.val { stage.abort() catch { _ => () } })
+      self.download_into(
+        fetch,
+        update,
+        fn(chunk) -> Unit raise UpdateError {
+          stage.write(chunk) catch {
+            error =>
+              raise InstallFailed(
+                step="write the private artifact stage",
+                detail=error.message(),
+              )
+          }
+        },
+        on_progress,
       )
-  }
-  active.val = false
+      let outcome = stage.install() catch {
+        error => {
+          if error.is_update_busy() {
+            raise InstallBusy
+          }
+          if error.is_update_rollback() {
+            let current = @native.update_current_revision() catch {
+              read_error =>
+                raise InstallFailed(
+                  step="read the installed revision after a concurrent update",
+                  detail=read_error.message(),
+                )
+            }
+            raise RollbackRejected(target=update.revision, installed=current)
+          }
+          if error.is_update_revision_mismatch() {
+            raise RevisionMismatch(detail=error.message())
+          }
+          raise InstallFailed(
+            step="validate and replace the application",
+            detail=error.message(),
+          )
+        }
+      }
+      active.val = false
+      match outcome {
+        @native.Installed => Installed
+        @native.AlreadyInstalled => AlreadyInstalled
+      }
+    },
+  )
 }
 
 ///|

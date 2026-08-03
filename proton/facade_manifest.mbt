@@ -264,18 +264,15 @@ fn App::inline_app_config(self : App) -> ResolvedAppConfig {
 ///|
 /// Resolves the update channel from a loaded project configuration.
 ///
-/// A channel needs a version to compare against and an identifier to name the
-/// directory it stages under. Both come from the release metadata, and a
-/// project missing either has no channel — an update check that cannot say
-/// what it is running is not a check.
+/// A channel needs an identifier to name the directory it stages under. The
+/// installed revision comes from the signed application bundle itself.
 fn resolved_update_channel(
   project : @bootstrap.ProtonProjectConfig,
 ) -> ResolvedUpdateChannel? {
   guard project.updater() is Some(config) else { return None }
   let metadata = project.metadata()
   guard metadata.identifier() is Some(identifier) else { return None }
-  guard metadata.version() is Some(version) else { return None }
-  Some(ResolvedUpdateChannel::{ config, identifier, version })
+  Some(ResolvedUpdateChannel::{ config, identifier })
 }
 
 ///|

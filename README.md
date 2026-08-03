@@ -415,6 +415,17 @@ the quarantine. Deleting the attribute from the top-level `.app` (or moving
 the app once in Finder) is sufficient. Apps signed and notarized with
 `--sign --notarize` skip this step entirely.
 
+When emitting updater metadata, provide a monotonically increasing release
+revision as well as the reproducible publication time. The revision is embedded
+in the signed app and emitted into the signed manifest fragment:
+
+```sh
+proton_cli package --target zip \
+  --updater-base-url https://example.com/releases \
+  --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --updater-revision 42
+```
+
 ## Diagnose a project
 
 ```sh

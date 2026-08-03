@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <spawn.h>
+#include <sys/file.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -49,11 +50,12 @@ const char *proton_update_previous_bundle_path(void) {
 
 #if !defined(__APPLE__)
 
-PROTON_API int32_t proton_update_stage_begin(
-    const char *parent_dir, int64_t expected_size,
+PROTON_API int32_t proton_update_stage_begin_revision(
+    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   (void)parent_dir;
   (void)expected_size;
+  (void)target_revision;
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
   }
@@ -61,6 +63,13 @@ PROTON_API int32_t proton_update_stage_begin(
       error, error_len,
       "streaming update staging is implemented on macOS only");
   return PROTON_ERR_UNSUPPORTED;
+}
+
+PROTON_API int32_t proton_update_stage_begin(
+    const char *parent_dir, int64_t expected_size,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
+                                            out_stage, error, error_len);
 }
 
 PROTON_API int32_t proton_update_stage_write(
@@ -75,12 +84,33 @@ PROTON_API int32_t proton_update_stage_write(
   return PROTON_ERR_UNSUPPORTED;
 }
 
-PROTON_API int32_t proton_update_stage_install(
-    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+PROTON_API int32_t proton_update_stage_install_outcome(
+    proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
+    int32_t error_len) {
   (void)stage;
+  if (out_outcome != NULL) {
+    *out_outcome = PROTON_UPDATE_INSTALLED;
+  }
   proton_update_set_message(
       error, error_len,
       "applying a staged update is implemented on macOS only");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+PROTON_API int32_t proton_update_stage_install(
+    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+  int32_t outcome = PROTON_UPDATE_INSTALLED;
+  return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
+}
+
+PROTON_API int32_t proton_update_current_revision(
+    uint64_t *out_revision, char *error, int32_t error_len) {
+  if (out_revision != NULL) {
+    *out_revision = 0;
+  }
+  proton_update_set_message(
+      error, error_len,
+      "reading an application update revision is implemented on macOS only");
   return PROTON_ERR_UNSUPPORTED;
 }
 
@@ -237,6 +267,7 @@ typedef struct {
   int fd;
   int64_t expected_size;
   int64_t written_size;
+  uint64_t target_revision;
   char staging[PROTON_UPDATE_MAX_PATH];
   char archive_path[PROTON_UPDATE_MAX_PATH];
 } proton_update_stage_slot_t;
@@ -267,6 +298,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
   slot->destroyed = 1;
   slot->expected_size = 0;
   slot->written_size = 0;
+  slot->target_revision = 0;
   pthread_mutex_unlock(&g_update_stage_mutex);
 }
 
@@ -314,8 +346,8 @@ static int32_t proton_update_get_stage(proton_update_stage_id_t handle,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_begin(
-    const char *parent_dir, int64_t expected_size,
+PROTON_API int32_t proton_update_stage_begin_revision(
+    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
@@ -363,6 +395,7 @@ PROTON_API int32_t proton_update_stage_begin(
   slot->fd = -1;
   slot->expected_size = expected_size;
   slot->written_size = 0;
+  slot->target_revision = target_revision;
   slot->staging[0] = '\0';
   slot->archive_path[0] = '\0';
   pthread_mutex_unlock(&g_update_stage_mutex);
@@ -399,6 +432,13 @@ PROTON_API int32_t proton_update_stage_begin(
   }
   *out_stage = proton_update_make_stage_handle(slot->generation, index);
   return PROTON_OK;
+}
+
+PROTON_API int32_t proton_update_stage_begin(
+    const char *parent_dir, int64_t expected_size,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
+  return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
+                                            out_stage, error, error_len);
 }
 
 PROTON_API int32_t proton_update_stage_write(
@@ -512,6 +552,175 @@ static SecStaticCodeRef proton_update_static_code(const char *path) {
     return NULL;
   }
   return code;
+}
+
+#define PROTON_UPDATE_REVISION_KEY "ProtonUpdateRevision"
+
+/* Reads the revision through CoreFoundation's property-list parser. Keeping it
+   as a decimal string in Info.plist preserves the full uint64_t range; plist
+   integers and JSON doubles do not provide that guarantee on every reader. */
+static int proton_update_bundle_revision(const char *bundle,
+                                         int missing_is_zero,
+                                         uint64_t *out_revision, char *error,
+                                         int32_t error_len) {
+  char path[PROTON_UPDATE_MAX_PATH];
+  int written = snprintf(path, sizeof(path), "%s/Contents/Info.plist", bundle);
+  if (written < 0 || (size_t)written >= sizeof(path)) {
+    proton_update_set_message(error, error_len,
+                              "the application Info.plist path is too long");
+    return 0;
+  }
+  FILE *file = fopen(path, "rb");
+  if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
+    if (file != NULL) {
+      fclose(file);
+    }
+    proton_update_set_message(error, error_len,
+                              "the application Info.plist cannot be read");
+    return 0;
+  }
+  long length = ftell(file);
+  if (length <= 0 || length > 1024 * 1024 || fseek(file, 0, SEEK_SET) != 0) {
+    fclose(file);
+    proton_update_set_message(error, error_len,
+                              "the application Info.plist has an invalid size");
+    return 0;
+  }
+  UInt8 *bytes = malloc((size_t)length);
+  if (bytes == NULL || fread(bytes, 1, (size_t)length, file) != (size_t)length) {
+    free(bytes);
+    fclose(file);
+    proton_update_set_message(error, error_len,
+                              "the application Info.plist cannot be read");
+    return 0;
+  }
+  fclose(file);
+  CFDataRef data = CFDataCreate(NULL, bytes, (CFIndex)length);
+  free(bytes);
+  if (data == NULL) {
+    proton_update_set_message(error, error_len,
+                              "the application Info.plist cannot be decoded");
+    return 0;
+  }
+  CFErrorRef parse_error = NULL;
+  CFPropertyListRef property = CFPropertyListCreateWithData(
+      NULL, data, kCFPropertyListImmutable, NULL, &parse_error);
+  CFRelease(data);
+  if (parse_error != NULL) {
+    CFRelease(parse_error);
+  }
+  if (property == NULL || CFGetTypeID(property) != CFDictionaryGetTypeID()) {
+    if (property != NULL) {
+      CFRelease(property);
+    }
+    proton_update_set_message(error, error_len,
+                              "the application Info.plist is not a dictionary");
+    return 0;
+  }
+  CFTypeRef raw = CFDictionaryGetValue((CFDictionaryRef)property,
+                                       CFSTR(PROTON_UPDATE_REVISION_KEY));
+  if (raw == NULL && missing_is_zero) {
+    CFRelease(property);
+    *out_revision = 0;
+    return 1;
+  }
+  if (raw == NULL || CFGetTypeID(raw) != CFStringGetTypeID()) {
+    CFRelease(property);
+    proton_update_set_message(
+        error, error_len,
+        "the application has no valid monotonic update revision");
+    return 0;
+  }
+  char text[32];
+  int converted = CFStringGetCString((CFStringRef)raw, text, sizeof(text),
+                                     kCFStringEncodingASCII);
+  CFRelease(property);
+  if (!converted || text[0] == '\0' || text[0] == '-') {
+    proton_update_set_message(
+        error, error_len,
+        "the application has no valid monotonic update revision");
+    return 0;
+  }
+  errno = 0;
+  char *end = NULL;
+  unsigned long long revision = strtoull(text, &end, 10);
+  if (errno == ERANGE || end == text || *end != '\0') {
+    proton_update_set_message(
+        error, error_len,
+        "the application has no valid monotonic update revision");
+    return 0;
+  }
+  *out_revision = (uint64_t)revision;
+  return 1;
+}
+
+PROTON_API int32_t proton_update_current_revision(
+    uint64_t *out_revision, char *error, int32_t error_len) {
+  if (out_revision == NULL) {
+    proton_update_set_message(error, error_len,
+                              "an update revision output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_revision = 0;
+  char current[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_bundle(current, sizeof(current))) {
+    proton_update_set_message(
+        error, error_len,
+        "the running executable is not inside a .app bundle, so its update "
+        "revision cannot be read");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (!proton_update_bundle_revision(current, 1, out_revision, error,
+                                     error_len)) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  return PROTON_OK;
+}
+
+/* Acquires the one commit lock shared by every process updating this install.
+
+   Downloads and extraction deliberately happen before this point. The lock
+   covers only re-reading installed state, deciding monotonicity, and the
+   rename transaction, so a slow network cannot block another process. */
+static int32_t proton_update_acquire_commit_lock(const char *current,
+                                                 int *out_fd, char *error,
+                                                 int32_t error_len) {
+  char path[PROTON_UPDATE_MAX_PATH];
+  int written = snprintf(path, sizeof(path), "%s.proton-update.lock", current);
+  if (written < 0 || (size_t)written >= sizeof(path)) {
+    proton_update_set_message(error, error_len,
+                              "the update commit lock path is too long");
+    return PROTON_ERR_PLATFORM;
+  }
+  int fd = open(path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW,
+                S_IRUSR | S_IWUSR);
+  if (fd < 0) {
+    proton_update_set_message(error, error_len,
+                              "the update commit lock cannot be opened");
+    return PROTON_ERR_PLATFORM;
+  }
+  struct stat info;
+  if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode) ||
+      info.st_uid != geteuid()) {
+    close(fd);
+    proton_update_set_message(error, error_len,
+                              "the update commit lock is not a private file");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (flock(fd, LOCK_EX | LOCK_NB) != 0) {
+    int lock_error = errno;
+    close(fd);
+    if (lock_error == EWOULDBLOCK || lock_error == EAGAIN) {
+      proton_update_set_message(error, error_len,
+                                "another process is installing an update");
+      return PROTON_ERR_UPDATE_BUSY;
+    }
+    proton_update_set_message(error, error_len,
+                              "the update commit lock cannot be acquired");
+    return PROTON_ERR_PLATFORM;
+  }
+  *out_fd = fd;
+  return PROTON_OK;
 }
 
 /* Reads the two names that say who signed a bundle.
@@ -699,8 +908,15 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_install(
-    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+PROTON_API int32_t proton_update_stage_install_outcome(
+    proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
+    int32_t error_len) {
+  if (out_outcome == NULL) {
+    proton_update_set_message(error, error_len,
+                              "an update install outcome is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_outcome = PROTON_UPDATE_INSTALLED;
   proton_update_stage_slot_t *slot = NULL;
   int32_t status =
       proton_update_get_stage(stage, &slot, error, error_len);
@@ -758,16 +974,68 @@ PROTON_API int32_t proton_update_stage_install(
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+
+  int lock_fd = -1;
+  status = proton_update_acquire_commit_lock(current, &lock_fd, error,
+                                             error_len);
+  if (status != PROTON_OK) {
+    proton_update_stage_release(slot, 1);
+    return status;
+  }
   if (!proton_update_verify_bundle(staged_bundle_path, current, error,
                                    error_len)) {
+    close(lock_fd);
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_INVALID_ARGUMENT;
+  }
+
+  uint64_t staged_revision = 0;
+  uint64_t current_revision = 0;
+  if (!proton_update_bundle_revision(staged_bundle_path, 0, &staged_revision,
+                                     error, error_len) ||
+      !proton_update_bundle_revision(current, 1, &current_revision, error,
+                                     error_len)) {
+    close(lock_fd);
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_UPDATE_REVISION_MISMATCH;
+  }
+  uint64_t target_revision = slot->target_revision != 0
+                                 ? slot->target_revision
+                                 : staged_revision;
+  if (staged_revision != target_revision) {
+    close(lock_fd);
+    proton_update_set_message(
+        error, error_len,
+        "the staged application revision does not match the signed manifest");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_UPDATE_REVISION_MISMATCH;
+  }
+  if (target_revision < current_revision) {
+    close(lock_fd);
+    proton_update_set_message(
+        error, error_len,
+        "the staged update revision is older than the installed application");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_UPDATE_ROLLBACK;
+  }
+  if (target_revision == current_revision) {
+    close(lock_fd);
+    *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
+    proton_update_stage_release(slot, 1);
+    return PROTON_OK;
   }
   int preserve_staging = 0;
   status = proton_update_replace_bundle(staged_bundle_path, current,
                                         &preserve_staging, error, error_len);
+  close(lock_fd);
   proton_update_stage_release(slot, !preserve_staging);
   return status;
+}
+
+PROTON_API int32_t proton_update_stage_install(
+    proton_update_stage_id_t stage, char *error, int32_t error_len) {
+  int32_t outcome = PROTON_UPDATE_INSTALLED;
+  return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
 PROTON_API int32_t proton_update_install(const char *archive,
@@ -779,8 +1047,8 @@ PROTON_API int32_t proton_update_install(const char *archive,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_update_stage_id_t stage = PROTON_INVALID_HANDLE;
-  int32_t status = proton_update_stage_begin(
-      parent_dir, archive_len, &stage, error, error_len);
+  int32_t status = proton_update_stage_begin_revision(
+      parent_dir, archive_len, 0, &stage, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
@@ -790,7 +1058,8 @@ PROTON_API int32_t proton_update_install(const char *archive,
     (void)proton_update_stage_abort(stage, NULL, 0);
     return status;
   }
-  return proton_update_stage_install(stage, error, error_len);
+  int32_t outcome = PROTON_UPDATE_INSTALLED;
+  return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
 PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {

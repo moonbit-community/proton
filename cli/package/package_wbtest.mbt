@@ -4,6 +4,11 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 }
 
 ///|
+fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
+  command().parse(argv=args, env=Map([]))
+}
+
+///|
 test "parse package args accepts repeated targets and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
@@ -27,6 +32,40 @@ test "parse package args rejects unsupported target" {
 }
 
 ///|
+test "updater revision is explicit, positive and full width" {
+  assert_eq(updater_revision_from_matches(parse_package_matches([]), None), 0UL)
+  let maximum = "18446744073709551615"
+  let matches = parse_package_matches(["--updater-revision", maximum])
+  assert_eq(
+    updater_revision_from_matches(matches, None),
+    18446744073709551615UL,
+  )
+  let no_revision = parse_package_matches([])
+  try
+    ignore(
+      updater_revision_from_matches(
+        no_revision,
+        Some("https://example.com/releases"),
+      ),
+    )
+  catch {
+    MissingRevision => ()
+    _ => abort("expected a missing updater revision")
+  } noraise {
+    _ => abort("expected the updater revision to be required")
+  }
+  for expected in ["0", "-1", "1.5", "not-a-number"] {
+    let invalid = parse_package_matches(["--updater-revision", expected])
+    try ignore(updater_revision_from_matches(invalid, None)) catch {
+      InvalidRevision(value~) => assert_eq(value, expected)
+      _ => abort("expected an invalid updater revision")
+    } noraise {
+      _ => abort("expected the updater revision to be rejected")
+    }
+  }
+}
+
+///|
 async test "package plan accepts dmg only on macOS" {
   let project = @proton_config.ProjectConfig::new(
     ".",
@@ -45,10 +84,10 @@ async test "package plan accepts dmg only on macOS" {
   )
   let raw = parse_package_args([])
   if is_macos_host() {
-    let plan = build_package_plan(raw, "moon.proton", project)
+    let plan = build_package_plan(raw, "moon.proton", project, 0UL)
     @debug.assert_eq(plan.targets, ["app", "dmg"])
   } else {
-    try build_package_plan(raw, "moon.proton", project) catch {
+    try build_package_plan(raw, "moon.proton", project, 0UL) catch {
       PackagePlanError::UnsupportedTargetForPlatform(target="dmg", platform~) =>
         assert_true(platform != "")
       _ => abort("expected platform-specific target error")
@@ -86,7 +125,7 @@ async test "package plan requires active bundle" {
     ),
   )
   let raw = parse_package_args([])
-  try build_package_plan(raw, "moon.proton", project) catch {
+  try build_package_plan(raw, "moon.proton", project, 0UL) catch {
     PackageConfigError::BundleMissing => ()
     _ => abort("expected missing bundle error")
   } noraise {
@@ -108,7 +147,7 @@ async test "package plan defaults to app and zip" {
     bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
   )
   let raw = parse_package_args([])
-  let plan = build_package_plan(raw, "moon.proton", project)
+  let plan = build_package_plan(raw, "moon.proton", project, 0UL)
   @debug.assert_eq(plan.targets, ["app", "zip"])
   assert_eq(plan.identifier, "dev.proton.demo")
   assert_eq(plan.version, "1.0.0")
@@ -151,6 +190,7 @@ async test "package plan stages every window file entry" {
     parse_package_args([]),
     @fsutil.resolve_path(root, "moon.proton"),
     project,
+    0UL,
   )
   assert_eq(plan.entry_paths, [main, secondary])
   let destination = @fsutil.resolve_path(root, "staged")
@@ -188,6 +228,7 @@ async test "package plan uses configured backend module and package" {
     parse_package_args([]),
     @fsutil.resolve_path(base_dir, "moon.proton"),
     project,
+    0UL,
   )
   assert_eq(configured.root, backend_path)
   assert_eq(configured.app_package, "desktop")
@@ -195,6 +236,7 @@ async test "package plan uses configured backend module and package" {
     parse_package_args(["--package", "custom"]),
     @fsutil.resolve_path(base_dir, "moon.proton"),
     project,
+    0UL,
   )
   assert_eq(overridden.app_package, "custom")
 }
@@ -501,6 +543,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets: ["app"],
     output: root,
     build: false,
@@ -546,6 +589,7 @@ test "macOS plist contains bundle identity and executable" {
     version: "1.2.3",
     macos_version: "1.2.3",
     bundle_version: "1.2.3",
+    update_revision: 42UL,
     targets: ["app"],
     output: "target",
     build: false,
@@ -571,6 +615,9 @@ test "macOS plist contains bundle identity and executable" {
   assert_true(plist.contains("<string>dev.proton.demo</string>"))
   assert_true(plist.contains("<string>demo-app</string>"))
   assert_true(plist.contains("<string>1.2.3</string>"))
+  assert_true(
+    plist.contains("<key>ProtonUpdateRevision</key><string>42</string>"),
+  )
   assert_true(plist.contains("CFBundleURLTypes"))
   assert_true(plist.contains("<string>devtoys</string>"))
   assert_true(plist.contains("CFBundleDocumentTypes"))
@@ -594,6 +641,7 @@ async test "package manifest records launch metadata" {
     version: "1.2.3",
     macos_version: "1.2.3",
     bundle_version: "1.2.3",
+    update_revision: 0UL,
     targets: ["app"],
     output: "target",
     build: false,
@@ -655,6 +703,7 @@ test "macOS helper plist matches its bundle identity" {
     version: "1.2.3",
     macos_version: "1.2.3",
     bundle_version: "42",
+    update_revision: 42UL,
     targets: ["app"],
     output: "target",
     build: false,
@@ -700,6 +749,7 @@ async test "macOS ZIP uses the final app name without metadata entries" {
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets: ["app", "zip"],
     output: root,
     build: false,
@@ -871,6 +921,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets: ["app"],
     output: root,
     build: false,
@@ -951,6 +1002,7 @@ async test "release executable lookup stays inside package target dir" {
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets: ["app"],
     output: @fsutil.resolve_path(root, "output"),
     build: false,
@@ -1030,6 +1082,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets: ["app"],
     output,
     build: false,

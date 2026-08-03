@@ -183,6 +183,17 @@ jobs:
           "PROTON_NATIVE_DIST=$runtimePath" | Out-File -FilePath $env:GITHUB_ENV -Append
           (Resolve-Path "$runtimePath\bin").Path | Out-File -FilePath $env:GITHUB_PATH -Append
 
+      - name: Test native updater in Release mode
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          cmake -S native -B native/build-release-tests \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPROTON_WITH_ENGINE=OFF
+          cmake --build native/build-release-tests --target proton_update_test
+          ctest --test-dir native/build-release-tests \
+            --output-on-failure \
+            -R '^proton_update_test$'
+
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
         run: |

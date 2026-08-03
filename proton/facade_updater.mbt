@@ -57,9 +57,11 @@ pub async fn check_for_update() -> UpdateCheck {
 /// An update the channel offered, and the means to take it.
 ///
 /// Being handed one means the manifest was signed by a trusted key, is fresh,
-/// and names a version newer than this one. Nothing has been downloaded.
+/// and carries a revision newer than the installed one. Nothing has been
+/// downloaded.
 pub struct PendingUpdate {
   version : String
+  revision : UInt64
   notes_url : String?
   size : Int64
   channel : @updater.UpdateChannel
@@ -72,6 +74,19 @@ pub struct PendingUpdate {
 pub fn PendingUpdate::version(self : PendingUpdate) -> String {
   self.version
 }
+
+///|
+/// The signed monotonic release order.
+pub fn PendingUpdate::revision(self : PendingUpdate) -> UInt64 {
+  self.revision
+}
+
+///|
+/// What applying an update changed.
+pub enum UpdateInstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Debug, Eq)
 
 ///|
 /// Where the release notes for it live, when the manifest says.
@@ -101,13 +116,17 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 pub async fn PendingUpdate::install(
   self : PendingUpdate,
   on_progress? : async (Int64) -> Unit noraise = _ => (),
-) -> Unit {
-  self.channel.download_and_install(
-    @updater.http_fetch_artifact,
-    self.offer,
-    update_staging_parent(self.identifier),
-    on_progress~,
-  )
+) -> UpdateInstallOutcome {
+  match
+    self.channel.download_and_install(
+      @updater.http_fetch_artifact,
+      self.offer,
+      update_staging_parent(self.identifier),
+      on_progress~,
+    ) {
+    @updater.Installed => Installed
+    @updater.AlreadyInstalled => AlreadyInstalled
+  }
 }
 
 ///|
@@ -148,17 +167,13 @@ pub fn PendingUpdate::restart(_self : PendingUpdate) -> Unit raise {
 fn ResolvedUpdateChannel::open(
   self : ResolvedUpdateChannel,
 ) -> @updater.UpdateChannel raise {
-  let version = match @updater_manifest.Version::parse(self.version) {
-    Some(version) => version
-    None =>
-      fail("the application version \{self.version} is not major.minor.patch")
-  }
   let platform = @native.runtime_info().platform_id
+  let current_revision = @native.update_current_revision()
   @updater.UpdateChannel::new(
     self.config.endpoint(),
     self.config.public_keys(),
     platform,
-    version,
+    current_revision,
   )
 }
 
@@ -176,6 +191,7 @@ async fn ResolvedUpdateChannel::poll(
     Available(offer) =>
       Some(PendingUpdate::{
         version: offer.version().to_string(),
+        revision: offer.revision(),
         notes_url: offer.notes_url(),
         size: offer.size(),
         channel,

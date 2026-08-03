@@ -4,7 +4,7 @@ let sample_sha256 : String = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd1
 ///|
 fn manifest_json(platforms : String) -> String {
   (
-    $|{"schema_version":1,"version":"0.2.0",
+    $|{"schema_version":2,"version":"0.2.0","revision":2,
     $| "published_at":"2026-08-01T00:00:00Z",
     $| "platforms":\{platforms}}
   )
@@ -29,6 +29,7 @@ fn parse_failure(text : String) -> ManifestError {
 test "decodes a well formed manifest" {
   let manifest = Manifest::parse(manifest_json(platform_json("")))
   inspect(manifest.version(), content="0.2.0")
+  assert_eq(manifest.revision(), 2UL)
   inspect(manifest.published_at(), content="2026-08-01T00:00:00Z")
   assert_eq(manifest.notes_url(), None)
   assert_eq(manifest.platforms(), ["darwin-arm64"])
@@ -49,17 +50,17 @@ test "rejects a document that is not a JSON object" {
 ///|
 test "rejects a schema version it does not implement" {
   let text = manifest_json(platform_json("")).replace(
-    old="\"schema_version\":1",
-    new="\"schema_version\":2",
+    old="\"schema_version\":2",
+    new="\"schema_version\":3",
   )
-  assert_eq(parse_failure(text), UnknownSchemaVersion(found=2))
+  assert_eq(parse_failure(text), UnknownSchemaVersion(found=3))
 }
 
 ///|
 test "rejects unknown fields rather than ignoring them" {
   let top = manifest_json(platform_json("")).replace(
-    old="\"schema_version\":1",
-    new="\"schema_version\":1,\"channel\":\"beta\"",
+    old="\"schema_version\":2",
+    new="\"schema_version\":2,\"channel\":\"beta\"",
   )
   assert_eq(parse_failure(top), UnknownField(path="manifest.channel"))
   let nested = manifest_json(platform_json(",\"minimum_os\":\"12.0\""))
@@ -76,14 +77,40 @@ test "reports a missing required field by path" {
     new="",
   )
   assert_eq(parse_failure(text), MissingField(path="manifest.version"))
+  let without_revision = manifest_json(platform_json("")).replace(
+    old="\"revision\":2,",
+    new="",
+  )
+  assert_eq(
+    parse_failure(without_revision),
+    MissingField(path="manifest.revision"),
+  )
   assert_eq(
     parse_failure(
       (
-        $|{"schema_version":1,"version":"0.2.0",
+        $|{"schema_version":2,"version":"0.2.0","revision":2,
         $| "published_at":"2026-08-01T00:00:00Z"}
       ),
     ),
     MissingField(path="manifest.platforms"),
+  )
+}
+
+///|
+test "rejects an invalid release revision" {
+  let replace_revision = fn(value : String) {
+    manifest_json(platform_json("")).replace(
+      old="\"revision\":2",
+      new="\"revision\":\{value}",
+    )
+  }
+  assert_true(parse_failure(replace_revision("0")) is InvalidField(_))
+  assert_true(parse_failure(replace_revision("-1")) is InvalidField(_))
+  assert_true(parse_failure(replace_revision("1.5")) is InvalidField(_))
+  assert_true(parse_failure(replace_revision("\"2\"")) is InvalidField(_))
+  assert_eq(
+    Manifest::parse(replace_revision("18446744073709551615")).revision(),
+    18446744073709551615UL,
   )
 }
 

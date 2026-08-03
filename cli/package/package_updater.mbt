@@ -6,6 +6,8 @@ pub(all) suberror UpdaterMetadataError {
   InvalidBaseUrl(url~ : String)
   UnknownPlatform(detail~ : String)
   MissingPublishedAt
+  MissingRevision
+  InvalidRevision(value~ : String)
   UndecodableFragment(detail~ : String)
 } derive(Eq)
 
@@ -31,6 +33,14 @@ pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
         $|
         $|  --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
       )
+    MissingRevision =>
+      (
+        $|--updater-revision is required with --updater-base-url
+        $|
+        $|Use a positive release sequence that never decreases or resets.
+      )
+    InvalidRevision(value~) =>
+      "updater revision must be a positive unsigned 64-bit integer: \{value}"
     UndecodableFragment(detail~) =>
       "the emitted manifest fragment does not decode: \{detail}"
   }
@@ -97,6 +107,7 @@ fn updater_artifact_path(plan : PackagePlan) -> String? {
 fn updater_fragment_json(
   platform : String,
   version : String,
+  revision : UInt64,
   published_at : String,
   url : String,
   size : Int64,
@@ -105,8 +116,9 @@ fn updater_fragment_json(
   let builder = StringBuilder::new()
   builder <+
     $|{
-    $|  "schema_version": 1,
+    $|  "schema_version": 2,
     $|  "version": "\{version}",
+    $|  "revision": \{revision},
     $|  "published_at": "\{published_at}",
     $|  "platforms": {
     $|    "\{platform}": {
@@ -134,6 +146,7 @@ pub async fn write_updater_metadata(
   base_url : String,
   published_at : String,
 ) -> Unit raise UpdaterMetadataError {
+  guard plan.update_revision > 0UL else { raise MissingRevision }
   guard base_url.has_prefix("https://") else {
     raise InvalidBaseUrl(url=base_url)
   }
@@ -150,6 +163,7 @@ pub async fn write_updater_metadata(
   let fragment = updater_fragment_json(
     platform,
     plan.version,
+    plan.update_revision,
     published_at,
     "\{trimmed}/\{name}",
     size,

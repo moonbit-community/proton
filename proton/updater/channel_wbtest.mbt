@@ -57,13 +57,8 @@ fn default_entries() -> Array[(String, Bytes)] {
 }
 
 ///|
-fn channel(current : String) -> UpdateChannel raise {
-  UpdateChannel::new(
-    manifest_url,
-    [trusted_key],
-    "darwin-arm64",
-    @manifest.Version::parse(current).unwrap(),
-  )
+fn channel(current : UInt64) -> UpdateChannel raise {
+  UpdateChannel::new(manifest_url, [trusted_key], "darwin-arm64", current)
 }
 
 ///|
@@ -85,7 +80,7 @@ async fn expect_download_error(
 ///|
 async fn check_error(
   entries : Array[(String, Bytes)],
-  current : String,
+  current : UInt64,
   oldest : @manifest.Timestamp,
 ) -> UpdateError {
   // The channel is built first so the catch below binds this package's error
@@ -99,14 +94,12 @@ async fn check_error(
 
 ///|
 async test "authenticates a newer release end to end" {
-  let outcome = channel("0.2.0").check(
-    serving(default_entries()),
-    accepted_from(),
-  )
+  let outcome = channel(2UL).check(serving(default_entries()), accepted_from())
   guard outcome is Available(update) else {
     abort("expected an available update")
   }
   inspect(update.version(), content="0.3.0")
+  assert_eq(update.revision(), 3UL)
   assert_eq(update.notes_url(), Some("https://example.com/notes"))
   assert_eq(update.url(), artifact_url)
   assert_eq(update.size(), 11L)
@@ -117,7 +110,7 @@ async test "authenticates a newer release end to end" {
   // The artifact is authenticated separately from the manifest that described
   // it, so a compromised host cannot substitute one for the other.
   let written = Ref(0L)
-  channel("0.2.0").download_into(
+  channel(2UL).download_into(
     streaming(default_entries()),
     update,
     fn(chunk) { written.val = written.val + chunk.length().to_int64() },
@@ -127,26 +120,21 @@ async test "authenticates a newer release end to end" {
 }
 
 ///|
-async test "offers nothing when the running version is not older" {
+async test "offers nothing when the installed revision is not older" {
   assert_eq(
-    channel("0.3.0").check(serving(default_entries()), accepted_from()),
+    channel(3UL).check(serving(default_entries()), accepted_from()),
     UpToDate,
   )
-  // A replayed older release is the rollback the version rule exists to stop.
+  // A replayed older release is the rollback the revision rule exists to stop.
   assert_eq(
-    channel("0.4.0").check(serving(default_entries()), accepted_from()),
+    channel(4UL).check(serving(default_entries()), accepted_from()),
     UpToDate,
   )
 }
 
 ///|
 async test "offers nothing for a platform the manifest does not name" {
-  let other = UpdateChannel::new(
-    manifest_url,
-    [trusted_key],
-    "win32-x64",
-    @manifest.Version::parse("0.2.0").unwrap(),
-  )
+  let other = UpdateChannel::new(manifest_url, [trusted_key], "win32-x64", 2UL)
   assert_eq(other.check(serving(default_entries()), accepted_from()), UpToDate)
 }
 
@@ -163,7 +151,7 @@ async test "refuses a manifest that a trusted key did not sign" {
     (artifact_url, vector_artifact),
   ]
   assert_eq(
-    check_error(entries, "0.2.0", accepted_from()),
+    check_error(entries, 2UL, accepted_from()),
     ManifestSignatureInvalid,
   )
 }
@@ -179,7 +167,7 @@ async test "refuses a manifest whose contents were altered after signing" {
     ("\{manifest_url}.sig", text_bytes(vector_manifest_signature_hex)),
   ]
   assert_eq(
-    check_error(entries, "0.2.0", accepted_from()),
+    check_error(entries, 2UL, accepted_from()),
     ManifestSignatureInvalid,
   )
 }
@@ -190,7 +178,7 @@ async test "refuses a manifest older than the freshness window" {
   // signature is valid here; the publication instant is what refuses it.
   let error = check_error(
     default_entries(),
-    "0.2.0",
+    2UL,
     @manifest.Timestamp::parse("2026-09-01T00:00:00Z").unwrap(),
   )
   assert_eq(
@@ -207,12 +195,12 @@ async test "refuses when the manifest or its signature cannot be fetched" {
   assert_true(
     check_error(
       [(manifest_url, text_bytes(vector_manifest))],
-      "0.2.0",
+      2UL,
       accepted_from(),
     )
     is FetchFailed(_),
   )
-  assert_true(check_error([], "0.2.0", accepted_from()) is FetchFailed(_))
+  assert_true(check_error([], 2UL, accepted_from()) is FetchFailed(_))
 }
 
 ///|
@@ -222,7 +210,7 @@ async test "refuses a signature that is not hexadecimal" {
     ("\{manifest_url}.sig", text_bytes("not a signature")),
   ]
   assert_true(
-    check_error(entries, "0.2.0", accepted_from()) is MalformedSignature(_),
+    check_error(entries, 2UL, accepted_from()) is MalformedSignature(_),
   )
   // A shell pipeline appends a newline; that must not be a failure.
   let padded = [
@@ -230,21 +218,18 @@ async test "refuses a signature that is not hexadecimal" {
     ("\{manifest_url}.sig", text_bytes("\{vector_manifest_signature_hex}\n")),
   ]
   assert_true(
-    channel("0.2.0").check(serving(padded), accepted_from()) is Available(_),
+    channel(2UL).check(serving(padded), accepted_from()) is Available(_),
   )
 }
 
 ///|
 async test "refuses an artifact whose bytes are not the ones described" {
-  let outcome = channel("0.2.0").check(
-    serving(default_entries()),
-    accepted_from(),
-  )
+  let outcome = channel(2UL).check(serving(default_entries()), accepted_from())
   guard outcome is Available(update) else {
     abort("expected an available update")
   }
   let download_error = async fn(body : String) -> UpdateError {
-    let channel = channel("0.2.0")
+    let channel = channel(2UL)
     let entries : Array[(String, Bytes)] = [(artifact_url, text_bytes(body))]
     channel.download_into(streaming(entries), update, _ => (), _ => ()) catch {
       error => return error
@@ -258,10 +243,7 @@ async test "refuses an artifact whose bytes are not the ones described" {
 
 ///|
 async test "refuses an oversized artifact before accepting its extra chunk" {
-  let outcome = channel("0.2.0").check(
-    serving(default_entries()),
-    accepted_from(),
-  )
+  let outcome = channel(2UL).check(serving(default_entries()), accepted_from())
   guard outcome is Available(update) else {
     abort("expected an available update")
   }
@@ -277,7 +259,7 @@ async test "refuses an oversized artifact before accepting its extra chunk" {
     consume(b"!")
     continued.val = true
   }
-  let subject = channel("0.2.0")
+  let subject = channel(2UL)
   let staged = Ref(0L)
   let error = expect_download_error(async fn() -> Unit raise UpdateError {
     subject.download_into(
@@ -300,7 +282,7 @@ async test "refuses a key that cannot be used" {
       manifest_url,
       ["rsa-sha256:00\{vector_modulus_hex}:010001"],
       "darwin-arm64",
-      @manifest.Version::parse("0.2.0").unwrap(),
+      2UL,
     ) catch {
       error => return error
     }
@@ -319,7 +301,7 @@ async test "accepts a signature from any trusted key, not only the first" {
     manifest_url,
     [unrelated, trusted_key],
     "darwin-arm64",
-    @manifest.Version::parse("0.2.0").unwrap(),
+    2UL,
   )
   assert_true(
     rotated.check(serving(default_entries()), accepted_from()) is Available(_),

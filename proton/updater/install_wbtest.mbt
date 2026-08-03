@@ -27,27 +27,95 @@ async fn expect_install_error(
 /// `native/tests/proton_update_test.c`, which can point the native side at a
 /// directory it is allowed to destroy — a MoonBit test would have to replace
 /// the application running it.
-async test "install reports which step refused" {
-  let outcome = channel("0.2.0").check(
-    serving(default_entries()),
-    accepted_from(),
-  )
+async test "install reports an unavailable installed revision" {
+  let outcome = channel(2UL).check(serving(default_entries()), accepted_from())
   guard outcome is Available(update) else {
     abort("expected an available update")
   }
-  let subject = channel("0.2.0")
+  let subject = channel(2UL)
   let relative = expect_install_error(async fn() -> Unit raise UpdateError {
-    subject.download_and_install(
-      streaming(default_entries()),
-      update,
-      "staging",
+    ignore(
+      subject.download_and_install(
+        streaming(default_entries()),
+        update,
+        "staging",
+      ),
     )
   })
   assert_eq(
     relative,
     InstallFailed(
-      step="prepare a private artifact stage",
-      detail="the staging parent directory must be absolute",
+      step="read the installed update revision",
+      detail="the running executable is not inside a .app bundle, so its update revision cannot be read",
     ),
   )
+}
+
+///|
+async test "process coordinator makes an installed revision idempotent" {
+  let applied = Ref(false)
+  assert_eq(
+    coordinate_install(7UL, fn() { 7UL }, fn() {
+      applied.val = true
+      Installed
+    }),
+    AlreadyInstalled,
+  )
+  assert_false(applied.val)
+}
+
+///|
+async test "process coordinator rejects rollback before applying" {
+  let applied = Ref(false)
+  let error = expect_install_error(async fn() -> Unit raise UpdateError {
+    ignore(
+      coordinate_install(6UL, fn() { 7UL }, fn() {
+        applied.val = true
+        Installed
+      }),
+    )
+  })
+  assert_eq(error, RollbackRejected(target=6UL, installed=7UL))
+  assert_false(applied.val)
+}
+
+///|
+async test "concurrent process requests apply one revision once" {
+  let current = Ref(1UL)
+  let apply_count = Ref(0)
+  let entered = Ref(false)
+  let release = Ref(false)
+  let entered_signal = @async.CondVar::Cond()
+  let release_signal = @async.CondVar::Cond()
+  @async.with_task_group(group => {
+    let first = group.spawn(no_wait=true, () => {
+      coordinate_install(2UL, fn() { current.val }, async fn() -> InstallOutcome raise UpdateError {
+        apply_count.val = apply_count.val + 1
+        entered.val = true
+        entered_signal.broadcast()
+        while !release.val {
+          release_signal.wait() catch {
+            error => raise InstallInterrupted(detail=@debug.render(Repr(error)))
+          }
+        }
+        current.val = 2UL
+        Installed
+      })
+    })
+    while !entered.val {
+      entered_signal.wait()
+    }
+    let second = group.spawn(no_wait=true, () => {
+      coordinate_install(2UL, fn() { current.val }, fn() {
+        apply_count.val = apply_count.val + 100
+        Installed
+      })
+    })
+    release.val = true
+    release_signal.broadcast()
+    assert_eq(first.wait(), Installed)
+    assert_eq(second.wait(), AlreadyInstalled)
+    assert_eq(apply_count.val, 1)
+    group.return_immediately(())
+  })
 }

@@ -20,6 +20,15 @@ let proton_err_stale_window_request = -13
 let proton_err_stale_browser_request = -14
 
 ///|
+let proton_err_update_busy = -15
+
+///|
+let proton_err_update_rollback = -16
+
+///|
+let proton_err_update_revision_mismatch = -17
+
+///|
 pub let runtime_wait_none : Int = 0
 
 ///|

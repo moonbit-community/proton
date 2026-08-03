@@ -21,6 +21,7 @@ pub let progress : @proton_contract.Event[UpdateProgress]
 // Types and methods
 pub(all) struct UpdateInstalled {
   version : String
+  changed : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct UpdateProgress {

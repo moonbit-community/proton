@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbitlang/async/http",
   "justjavac/proton_rsa" @rsa,
   "justjavac/proton/native",
@@ -12,7 +13,3 @@ import {
 }
 
 supported_targets = "native"
-
-import {
-  "moonbitlang/async",
-} for "wbtest"

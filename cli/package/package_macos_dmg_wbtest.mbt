@@ -12,6 +12,7 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
     version: "1.0.0",
     macos_version: "1.0.0",
     bundle_version: "1.0.0",
+    update_revision: 0UL,
     targets: ["app", "dmg"],
     output: root,
     build: false,

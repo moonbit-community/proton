@@ -41,11 +41,13 @@ pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
 
+pub fn update_current_revision() -> UInt64 raise NativeError
+
 pub fn update_install(Bytes, String) -> Unit raise NativeError
 
 pub fn update_relaunch() -> Unit raise NativeError
 
-pub fn update_stage_begin(String, Int64) -> UpdateStage raise NativeError
+pub fn update_stage_begin(String, Int64, UInt64) -> UpdateStage raise NativeError
 
 // Errors
 pub(all) suberror NativeError {
@@ -56,6 +58,9 @@ pub(all) suberror NativeError {
 pub fn NativeError::is_stale_bridge_response(Self) -> Bool
 pub fn NativeError::is_stale_browser_request(Self) -> Bool
 pub fn NativeError::is_stale_window_request(Self) -> Bool
+pub fn NativeError::is_update_busy(Self) -> Bool
+pub fn NativeError::is_update_revision_mismatch(Self) -> Bool
+pub fn NativeError::is_update_rollback(Self) -> Bool
 pub fn NativeError::message(Self) -> String
 pub fn NativeError::status(Self) -> Int
 
@@ -297,9 +302,14 @@ pub(all) enum TitlebarStyle {
   Overlay
 } derive(Eq, @debug.Debug)
 
+pub enum UpdateInstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Eq, @debug.Debug)
+
 type UpdateStage
 pub fn UpdateStage::abort(Self) -> Unit raise NativeError
-pub fn UpdateStage::install(Self) -> Unit raise NativeError
+pub fn UpdateStage::install(Self) -> UpdateInstallOutcome raise NativeError
 pub fn UpdateStage::write(Self, Bytes) -> Unit raise NativeError
 
 type Window

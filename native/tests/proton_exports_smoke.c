@@ -101,10 +101,13 @@ static const char *const expected_exports[] = {
     "proton_window_begin_choose_directory_dialog",
     "proton_window_poll_dialog_result",
     "proton_update_stage_begin",
+    "proton_update_stage_begin_revision",
     "proton_update_stage_write",
     "proton_update_stage_install",
+    "proton_update_stage_install_outcome",
     "proton_update_stage_abort",
     "proton_update_install",
+    "proton_update_current_revision",
     "proton_update_relaunch",
     "proton_last_error_message",
 };

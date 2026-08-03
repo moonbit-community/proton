@@ -99,8 +99,11 @@ async fn download(
       _ => ()
     }
   }
-  update.install(on_progress=report)
-  @updater_contract.UpdateInstalled::{ version: update.version() }
+  let outcome = update.install(on_progress=report)
+  @updater_contract.UpdateInstalled::{
+    version: update.version(),
+    changed: outcome is Installed,
+  }
 }
 
 ///|

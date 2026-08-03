@@ -12,10 +12,11 @@ let update_message_capacity = 512
 extern "C" fn proton_update_stage_begin_ffi(
   parent_dir : Bytes,
   expected_size : Int64,
+  target_revision : Int64,
   out_stage : Ref[Int64],
   error : FixedArray[Byte],
   error_len : Int,
-) -> Int = "proton_update_stage_begin"
+) -> Int = "proton_update_stage_begin_revision"
 
 ///|
 #borrow(chunk, error)
@@ -28,12 +29,21 @@ extern "C" fn proton_update_stage_write_ffi(
 ) -> Int = "proton_update_stage_write"
 
 ///|
-#borrow(error)
+#borrow(out_outcome, error)
 extern "C" fn proton_update_stage_install_ffi(
   stage : Int64,
+  out_outcome : Ref[Int],
   error : FixedArray[Byte],
   error_len : Int,
-) -> Int = "proton_update_stage_install"
+) -> Int = "proton_update_stage_install_outcome"
+
+///|
+#borrow(out_revision, error)
+extern "C" fn proton_update_current_revision_ffi(
+  out_revision : Ref[Int64],
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_current_revision"
 
 ///|
 #borrow(error)
@@ -69,6 +79,13 @@ extern "C" fn proton_update_relaunch_ffi(
 struct UpdateStage {
   handle : Int64
 }
+
+///|
+/// What consuming an authenticated update stage changed.
+pub enum UpdateInstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Debug, Eq)
 
 ///|
 /// Reads a C string out of a fixed buffer the native side wrote into.
@@ -112,6 +129,7 @@ fn update_check(
 pub fn update_stage_begin(
   parent_dir : String,
   expected_size : Int64,
+  target_revision : UInt64,
 ) -> UpdateStage raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   let handle = Ref(0L)
@@ -119,6 +137,7 @@ pub fn update_stage_begin(
     proton_update_stage_begin_ffi(
       @ffi.to_cstr(parent_dir),
       expected_size,
+      target_revision.reinterpret_as_int64(),
       handle,
       message,
       message.length(),
@@ -126,6 +145,21 @@ pub fn update_stage_begin(
     message,
   )
   { handle: handle.val }
+}
+
+///|
+/// Reads the installed application's monotonic update revision.
+///
+/// This is an optimistic check for process-local coordination. Installation
+/// repeats it while holding the native cross-process commit lock.
+pub fn update_current_revision() -> UInt64 raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  let revision = Ref(0L)
+  update_check(
+    proton_update_current_revision_ffi(revision, message, message.length()),
+    message,
+  )
+  revision.val.reinterpret_as_uint64()
 }
 
 ///|
@@ -149,12 +183,29 @@ pub fn UpdateStage::write(
 
 ///|
 /// Consumes a complete stage and installs the application it contains.
-pub fn UpdateStage::install(self : UpdateStage) -> Unit raise NativeError {
+pub fn UpdateStage::install(
+  self : UpdateStage,
+) -> UpdateInstallOutcome raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
+  let outcome = Ref(0)
   update_check(
-    proton_update_stage_install_ffi(self.handle, message, message.length()),
+    proton_update_stage_install_ffi(
+      self.handle,
+      outcome,
+      message,
+      message.length(),
+    ),
     message,
   )
+  match outcome.val {
+    0 => Installed
+    1 => AlreadyInstalled
+    value =>
+      raise InvalidPayload(
+        context="update install outcome",
+        message="unknown native value \{value}",
+      )
+  }
 }
 
 ///|

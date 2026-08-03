@@ -59,7 +59,6 @@ priv struct ResolvedAppConfig {
 priv struct ResolvedUpdateChannel {
   config : @bootstrap.ProtonUpdaterConfig
   identifier : String
-  version : String
 }
 
 ///|

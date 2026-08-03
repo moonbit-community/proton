@@ -7,10 +7,20 @@
 /// records that it ran and which version it is. The second role is the only
 /// evidence that the relaunch worked, because by then nothing is watching.
 async fn main {
-  run_update() catch {
-    error => {
-      println("failed: \{error}")
-      panic()
+  match @env.get_env_var("PROTON_E2E_ROLE") {
+    Some("update") =>
+      run_update() catch {
+        error => {
+          println("failed: \{error}")
+          panic()
+        }
+      }
+    _ => {
+      let bundle = running_bundle()
+      let version = @mbfs.read_file_to_string(
+        "\{bundle}/Contents/Resources/version",
+      )
+      report_launch(bundle, version)
     }
   }
 }
@@ -45,17 +55,14 @@ async fn run_update() -> Unit {
   // the new version.
   let bundle = running_bundle()
   let text = @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version")
-  let current = match @manifest.Version::parse(text) {
-    Some(version) => version
-    None => fail("the bundle version file reads \{text}")
-  }
+  let current_revision = @native.update_current_revision()
   report_launch(bundle, text)
   println("running \{text}")
   let channel = @updater.UpdateChannel::new(
     endpoint,
     [key],
     "darwin-arm64",
-    current,
+    current_revision,
   )
   // The network is the one piece this harness supplies itself. Every URL is
   // still an https URL, because the manifest schema refuses anything else;
@@ -103,7 +110,7 @@ async fn run_update() -> Unit {
     UpToDate => println("up to date")
     Available(update) => {
       println("offered \{update.version()}")
-      channel.download_and_install(artifact_fetch, update, staging)
+      ignore(channel.download_and_install(artifact_fetch, update, staging))
       println("installed")
       @updater.relaunch()
       println("relaunched")
