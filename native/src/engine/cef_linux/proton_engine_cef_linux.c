@@ -1496,6 +1496,13 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
   }
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
+  // On Xvfb-based CI displays Chromium's occlusion tracking can mark the
+  // window hidden and throttle the renderer, which then never lays out and
+  // never reports draggable regions. Keep the renderer active so region
+  // computation proceeds regardless of window-manager occlusion state.
+  proton_engine_append_switch(command_line,
+                              "disable-backgrounding-occluded-windows");
+  proton_engine_append_switch(command_line, "disable-renderer-backgrounding");
   proton_engine_append_switch(command_line, "disable-background-networking");
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
