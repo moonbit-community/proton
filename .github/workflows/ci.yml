@@ -18,7 +18,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s 0.1.20260724
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: moon version
@@ -58,7 +58,7 @@ jobs:
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s 0.1.20260724
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       # moonc v0.10.5 bundles mimalloc in libmoonbitrun.o and interposes the
@@ -78,7 +78,6 @@ jobs:
       - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          $env:MOONBIT_INSTALL_VERSION = "0.1.20260724"
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
           "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
