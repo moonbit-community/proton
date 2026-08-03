@@ -321,11 +321,11 @@ int main(void) {
 
   const char *html =
       "<!doctype html><html><head><style>html,body{margin:0;width:100%;"
-      "height:100%}.drag{height:40px;-webkit-app-region:drag}.control{"
+      "height:100%}.drag{height:40px;-webkit-app-region:no-drag}.control{"
       "margin-left:280px;width:240px;height:32px;-webkit-app-region:no-drag}"
       "</style></head><body><div class='drag'><button class='control'>"
       "control</button></div><script>setTimeout(()=>{document.querySelector("
-      "'.drag').style.webkitAppRegion='drag'},0)</script></body></html>";
+      "'.drag').style.webkitAppRegion='drag'},200)</script></body></html>";
   if (expect_status("overlay load_html",
                     proton_window_load_html(window, html,
                                             "proton://overlay-smoke/"),
