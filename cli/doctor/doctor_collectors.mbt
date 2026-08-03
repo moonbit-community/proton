@@ -541,6 +541,14 @@ fn push_deep_runtime_probe_result(
           "runtime create/destroy smoke test skipped because the layout probe failed",
         ),
       )
+    SkippedUnsafeHost =>
+      lines.push(
+        DoctorLine::coded(
+          "runtime.deep.smoke_skipped",
+          Neutral,
+          "runtime create/destroy smoke test skipped: in-process engine probing is unsafe on this host",
+        ),
+      )
     CreateFailed(error) =>
       lines.push(
         DoctorLine::coded(

@@ -39,6 +39,7 @@ priv struct DoctorNativeCallError {
 ///|
 priv enum DoctorNativeSmokeResult {
   Skipped
+  SkippedUnsafeHost
   Succeeded
   CreateFailed(DoctorNativeCallError)
   DestroyFailed(DoctorNativeCallError)
@@ -329,6 +330,18 @@ fn doctor_native_smoke(
 }
 
 ///|
+#cfg(platform="windows")
+fn doctor_smoke_unsafe_host() -> Bool {
+  true
+}
+
+///|
+#cfg(not(platform="windows"))
+fn doctor_smoke_unsafe_host() -> Bool {
+  false
+}
+
+///|
 fn doctor_native_probe(
   library_path : String,
   config_json : String,
@@ -348,8 +361,15 @@ fn doctor_native_probe(
   } else {
     Ok(())
   }
+  // Initializing and shutting down CEF inside the MoonBit async process
+  // terminates the host early on Windows (the native test driver and
+  // `proton_cli doctor --deep` lose all output and exit silently), so the
+  // in-process create/destroy smoke is skipped there. Engine lifecycle
+  // coverage stays with the ctest proton_smoke and the e2e suite.
   let smoke = if probe_status < 0 {
     Skipped
+  } else if doctor_smoke_unsafe_host() {
+    SkippedUnsafeHost
   } else {
     doctor_native_smoke(handle, config)
   }

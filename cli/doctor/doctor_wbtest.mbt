@@ -738,8 +738,15 @@ async test "doctor deep native probe succeeds against active runtime" {
       assert_true(lines.any(fn(line) { line.code == "runtime.deep.info" }))
       assert_true(lines.any(fn(line) { line.code == "runtime.deep.engine" }))
       assert_true(lines.any(fn(line) { line.code == "runtime.deep.probe" }))
-      assert_true(lines.any(fn(line) { line.code == "runtime.deep.smoke" }))
-      assert_true(lines.all(fn(line) { line.status == Ok }))
+      assert_true(
+        lines.any(fn(line) {
+          line.code == "runtime.deep.smoke" ||
+          line.code == "runtime.deep.smoke_skipped"
+        }),
+      )
+      assert_true(
+        lines.all(fn(line) { line.status == Ok || line.status == Neutral }),
+      )
     }
   }
 }
