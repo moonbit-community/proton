@@ -940,6 +940,29 @@ static proton_engine_view_t *proton_engine_view_from_native_id(
   return NULL;
 }
 
+// Resolves a view through the browser's client. Unlike the browser-id list
+// scan this also works while browser creation is still running, before the
+// view records its browser id.
+static proton_engine_view_t *proton_engine_view_from_browser_client(
+    cef_browser_t *browser) {
+  if (browser == NULL) {
+    return NULL;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    return NULL;
+  }
+  cef_client_t *cef_client = host->get_client(host);
+  proton_engine_view_t *view = NULL;
+  if (cef_client != NULL) {
+    proton_engine_client_t *client = proton_engine_client_from_base(cef_client);
+    view = client != NULL ? client->view : NULL;
+    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+  return view;
+}
+
 uint64_t proton_engine_window_native_id(proton_engine_window_t *window) {
   return window != NULL ? window->native_id : 0;
 }
@@ -1438,6 +1461,11 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   rect->x = 0;
   rect->y = 0;
   proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view == NULL) {
+    // CEF can query the viewport while browser creation is still running,
+    // before the view records its browser id; resolve via the client then.
+    view = proton_engine_view_from_browser_client(browser);
+  }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
     rect->height = view->height > 0 ? view->height : 1;
