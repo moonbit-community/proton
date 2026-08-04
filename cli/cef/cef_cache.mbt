@@ -60,6 +60,37 @@ async fn install_cef_root(
 }
 
 ///|
+/// Returns the shared user-level CEF cache directory for `name`, honoring the
+/// `PROTON_CEF_CACHE` override and otherwise defaulting to
+/// `~/.proton/cache/cef`. Returns `None` when no home directory is known, in
+/// which case caching stays project-local.
+fn global_cef_cache_dir(platform : ProtonPlatform, name : String) -> String? {
+  let root = match @env.get_env_var("PROTON_CEF_CACHE") {
+    Some(value) if value.trim().to_owned() != "" => value.trim().to_owned()
+    _ =>
+      match home_directory() {
+        Some(home) => @fsutil.path_join(home, ".proton/cache/cef")
+        None => return None
+      }
+  }
+  Some(@fsutil.path_join(@fsutil.path_join(root, platform.id), name))
+}
+
+///|
+fn home_directory() -> String? {
+  let primary = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
+  let fallback = if @path.sep == '\\' { "HOME" } else { "USERPROFILE" }
+  for name in [primary, fallback] {
+    match @env.get_env_var(name) {
+      Some(value) if value.trim().to_owned() != "" =>
+        return Some(value.trim().to_owned())
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
 async fn ensure_cef_cache(
   name : String,
   url : String?,
@@ -79,7 +110,18 @@ async fn ensure_cef_cache(
     install_cef_root(legacy_cache, cache_dir, name, sha256, root, platform)
     return
   }
-  setup_downloaded_cef(name, url, sha256, root, cache_dir, platform)
+  match global_cef_cache_dir(platform, name) {
+    Some(global_cache) if global_cache != cache_dir => {
+      if installed_version(global_cache) == name &&
+        installed_checksum(global_cache) == sha256 {
+        install_cef_root(global_cache, cache_dir, name, sha256, root, platform)
+        return
+      }
+      setup_downloaded_cef(name, url, sha256, root, global_cache, platform)
+      install_cef_root(global_cache, cache_dir, name, sha256, root, platform)
+    }
+    _ => setup_downloaded_cef(name, url, sha256, root, cache_dir, platform)
+  }
 }
 
 ///|

@@ -480,6 +480,9 @@ fn bool_text(value : Bool) -> String {
 
 ///|
 async fn execute_package_plan(plan : PackagePlan) -> Unit {
+  // Resolve the active runtime before any build work so a missing
+  // `proton_cli cef setup` fails fast instead of after a full release build.
+  let runtime = read_active_runtime(plan.workspace_root)
   if plan.build {
     run_release_build(plan)
   }
@@ -488,7 +491,6 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
     None =>
       raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
   }
-  let runtime = read_active_runtime(plan.workspace_root)
   if @path.sep == '\\' {
     stage_windows_portable(plan, executable, runtime)
   } else if is_macos_host() {

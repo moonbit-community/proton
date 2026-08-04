@@ -42,6 +42,10 @@ application built and served by Warren, and `backend/` runs the Proton
 desktop runtime. `.proton/` is a local runtime cache and should not be
 committed.
 
+`cef setup` stores downloaded CEF binaries in a shared user-level cache
+(`~/.proton/cache/cef`, overridable with `PROTON_CEF_CACHE`) so subsequent
+projects reuse the download instead of fetching it again.
+
 ## Application entry
 
 Generated projects explicitly load `moon.proton` with `@proton.config(...)`
@@ -392,6 +396,24 @@ With `--notarize`, Proton submits the DMG when that target is enabled, then
 staples and validates both the DMG and the app before creating any requested
 ZIP archive. Without a `dmg` target, the existing app notarization flow is
 used. Windows supports the `app` and `zip` targets.
+
+### Open an unsigned app on macOS
+
+Apps packaged without `--sign` are ad-hoc signed. When such an app reaches
+another Mac through a download (including ZIP archives produced by the
+`zip` target), Gatekeeper quarantines it and macOS may launch it from a
+randomized App Translocation path. After confirming the app comes from a
+trusted source, remove the quarantine attribute from the top-level bundle:
+
+```sh
+xattr -d com.apple.quarantine "My App.app"
+```
+
+Do not use `xattr -cr`: recent macOS protects `com.apple.provenance`, which
+makes recursive removal fail with `Operation not permitted` without clearing
+the quarantine. Deleting the attribute from the top-level `.app` (or moving
+the app once in Finder) is sufficient. Apps signed and notarized with
+`--sign --notarize` skip this step entirely.
 
 ## Diagnose a project
 
