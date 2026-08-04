@@ -88,7 +88,8 @@
 #define PROTON_APP_SINGLE_INSTANCE_FEATURE ""
 #endif
 
-#if PROTON_WITH_ENGINE && defined(__APPLE__)
+#if PROTON_WITH_ENGINE && \
+    (defined(__APPLE__) || defined(_WIN32) || defined(__linux__))
 #define PROTON_WEB_CONTENTS_VIEW_FEATURE ",\"web_contents_view\""
 #else
 #define PROTON_WEB_CONTENTS_VIEW_FEATURE ""

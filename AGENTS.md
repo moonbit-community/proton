@@ -293,13 +293,13 @@ native checks before handing off larger refactors.
   destroyed.
 - Web contents views follow the Electron `WebContentsView` model: child
   browsers hosted in a window's content area with top-left bounds, visibility,
-  z-order, and a load-url target, layered above the window's main browser.
-  The macOS engine implements them today; Windows and Linux return
-  `PROTON_ERR_UNSUPPORTED` until their engines grow the same path. Availability
-  is gated through the `web_contents_view` feature in
-  `proton_runtime_info_json`. On macOS a view browser owns no top-level window,
-  so its `do_close` must cancel CEF's default `performClose:` and complete the
-  teardown by detaching the browser host view instead.
+  z-order, load-url/load-html/eval, browser commands, and lifecycle events,
+  layered above the window's main browser. All three engines implement them
+  behind the same `proton_view_*` ABI; availability is gated through the
+  `web_contents_view` feature in `proton_runtime_info_json`. A view browser
+  owns no top-level window, so each engine's `do_close` must cancel CEF's
+  default top-level close and complete the teardown by destroying the browser
+  host view (NSView/child HWND/X window) instead.
 - Respect the thread model. Runtime and window handles are owned by their
   creating thread; native callbacks or future pumps must marshal work to the
   owner thread instead of touching handles directly from arbitrary threads.
