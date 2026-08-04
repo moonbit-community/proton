@@ -85,7 +85,7 @@ pub fn command() -> @argparse.Command {
       OptionArg(
         "target",
         action=Append,
-        about="Package target (app, zip, or macOS dmg); may be repeated",
+        about="Package target (app, zip, Windows nsis, macOS dmg, or Linux appimage); may be repeated",
       ),
       OptionArg("output", about="Output directory"),
       OptionArg(
@@ -198,7 +198,11 @@ fn package_options_from_matches(
 
 ///|
 fn validate_package_target(target : String) -> Unit raise PackageUsageError {
-  if target != "app" && target != "zip" && target != "dmg" {
+  if target != "app" &&
+    target != "zip" &&
+    target != "dmg" &&
+    target != "nsis" &&
+    target != "appimage" {
     raise UnsupportedTarget(target~)
   }
 }
@@ -240,12 +244,30 @@ async fn build_package_plan(
     copy_strings(raw.targets)
   } else if bundle.targets.length() > 0 {
     copy_strings(bundle.targets)
+  } else if !macos_host && @path.sep != '\\' {
+    // `app` names a macOS bundle and a Windows portable directory; on Linux
+    // the distributable unit is the AppImage itself.
+    ["appimage"]
   } else {
     ["app", "zip"]
   }
   if targets.contains("dmg") && !macos_host {
     raise PackagePlanError::UnsupportedTargetForPlatform(
       target="dmg",
+      platform=@cef.current_platform_id(),
+    )
+  }
+  // The installer packages a staged Windows tree, which only the Windows
+  // branch of stage_release_layout produces.
+  if targets.contains("nsis") && @path.sep != '\\' {
+    raise PackagePlanError::UnsupportedTargetForPlatform(
+      target="nsis",
+      platform=@cef.current_platform_id(),
+    )
+  }
+  if targets.contains("appimage") && (macos_host || @path.sep == '\\') {
+    raise PackagePlanError::UnsupportedTargetForPlatform(
+      target="appimage",
       platform=@cef.current_platform_id(),
     )
   }
@@ -547,7 +569,7 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
   } else if is_macos_host() {
     stage_macos_app(plan, executable, runtime)
   } else {
-    raise PackagePlanError::UnsupportedPlatform
+    stage_linux_appdir(plan, executable, runtime)
   }
 }
 
@@ -560,7 +582,12 @@ async fn is_macos_host() -> Bool {
 async fn run_release_build(plan : PackagePlan) -> Unit {
   let moon_args = ["--release", "--target-dir", plan.build_target_dir]
   let old_rpath = @sys.get_env_var("PROTON_PACKAGE_RPATH")
-  if @path.sep != '\\' {
+  // Mach-O only. The link config reads this on darwin; the Linux branch
+  // ignores it and keeps the absolute runtime rpath, which is what a
+  // development run wants. Linux gets its relocatable rpath from patchelf
+  // during staging instead, so `$ORIGIN` never passes through the link
+  // config's quoting.
+  if is_macos_host() {
     @sys.set_env_var(
       "PROTON_PACKAGE_RPATH", "@executable_path/../Resources/proton/lib",
     )

@@ -69,6 +69,14 @@ pub(all) suberror WindowsPackagingError {
 } derive(Debug, Eq)
 
 ///|
+pub(all) suberror LinuxPackagingError {
+  InvalidConfiguration(detail~ : String)
+  MissingTarget(path~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+  Verification(detail~ : String)
+} derive(Debug, Eq)
+
+///|
 pub fn PackageUsageError::message(self : PackageUsageError) -> String {
   match self {
     UnsupportedTarget(target~) => "unsupported package target: " + target
@@ -188,6 +196,16 @@ pub fn WindowsPackagingError::message(self : WindowsPackagingError) -> String {
 }
 
 ///|
+pub fn LinuxPackagingError::message(self : LinuxPackagingError) -> String {
+  match self {
+    InvalidConfiguration(detail~) => detail
+    MissingTarget(path~) => "required Linux target is missing: " + path
+    ToolFailure(stage~, detail~) => stage + " failed: " + detail
+    Verification(detail~) => "Linux package verification failed: " + detail
+  }
+}
+
+///|
 impl Show for PackageUsageError with fn output(self, logger) {
   logger.write_string(self.message())
 }
@@ -224,5 +242,10 @@ impl Show for MacosSigningError with fn output(self, logger) {
 
 ///|
 impl Show for WindowsPackagingError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for LinuxPackagingError with fn output(self, logger) {
   logger.write_string(self.message())
 }
