@@ -36,12 +36,17 @@ async test "install reports an unavailable installed revision" {
   let relative = expect_install_error(async fn() -> Unit raise UpdateError {
     ignore(subject.download_and_install(streaming(default_entries()), update))
   })
+  // The refusal comes from the native library, whose wording depends on the
+  // platform: macOS explains why this bundle has no revision, other platforms
+  // report the missing implementation.
+  let detail = if @native.runtime_info().platform_id.has_prefix("darwin-") {
+    "the running executable is not inside a .app bundle, so its update revision cannot be read"
+  } else {
+    "reading an application update revision is implemented on macOS only"
+  }
   assert_eq(
     relative,
-    InstallFailed(
-      step="read the installed update revision",
-      detail="the running executable is not inside a .app bundle, so its update revision cannot be read",
-    ),
+    InstallFailed(step="read the installed update revision", detail~),
   )
 }
 
