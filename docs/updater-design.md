@@ -463,18 +463,48 @@ cannot write, and an application still running from a quarantined or
 translocated location.
 
 **Windows.** The correct mechanism is to re-run the installer, which is what
-Tauri does. Proton has no Windows installer today; it ships a portable ZIP. A
-portable-ZIP path is possible — Windows permits renaming a running executable,
-so a helper can rename the old directory, move the new one in, and relaunch —
-but it is fragile and leaves no OS-level record of the install. This path is
-specified but should not be built before the installer exists.
+Tauri does. The `nsis` package target now produces one, so that mechanism is
+available: the installer closes the running application, replaces the
+installed tree, and records itself under the uninstall key. `/S` is NSIS's
+own switch, so the updater needs no cooperation from the generated script
+beyond its tolerance for being re-run over a live installation.
 
-**Linux.** There is no packaging target at all today. AppImage is the natural
-landing point because it has a self-update convention. Blocked on packaging.
+The portable ZIP remains a separate target and is not an update channel.
+Updating it in place would mean renaming the running directory and moving a
+new one in — Windows permits that, but it is fragile and leaves no OS-level
+record of the install. That path stays unbuilt now that the installer exists.
 
-**Consequence:** version 1 is macOS-only in practice. This is a packaging
-limitation, not an updater limitation, and it is the reason installer work
-should precede updater work.
+**Linux.** The `appimage` target now produces the distributable. An AppImage is
+a single file the application owns, which makes replacing it the direct
+analogue of the macOS bundle swap rather than a new mechanism.
+
+Flatpak was considered and rejected for this role. A Flatpak application cannot
+update itself at all: `/app` is read-only in the sandbox and updates are OSTree
+pulls performed by the Flatpak client, so there would be nothing for an apply
+path to do. It remains a reasonable *distribution* target later, with the
+updater reporting that updates are the system's responsibility.
+
+That points at a requirement the design did not previously state, now
+implemented. The updater had no notion of whether it owns its own
+installation, and on Linux it will run inside `.deb`, `.rpm`, Flatpak, and Snap
+installs where replacing itself is either impossible or actively fights the
+package manager — the latter failing silently at first and surfacing later as a
+downgrade on the next system upgrade.
+
+`proton_update_require_owned_medium` gates every apply path, not just the Linux
+branch, and runs before any bytes are downloaded so a managed installation
+reports the reason instead of staging work it could never install. Detection is
+`/.flatpak-info` for Flatpak, `$SNAP` for Snap, and `$APPIMAGE` for an AppImage,
+checked in that order because a Flatpak or Snap can inherit an unrelated
+`$APPIMAGE` from whatever launched it. Anything else on Linux is treated as
+package-managed and declined, which also covers a development tree, where there
+is nothing an update could correctly replace. macOS and Windows each have one
+supported shape, so detection has no work to do there. Tauri draws the same
+line, updating AppImages and refusing `.deb` and `.rpm`.
+
+**Consequence:** both platforms now have the packaging target that was blocking
+them, and the medium check that gates them. What remains is the apply paths
+themselves.
 
 ## Configuration
 
@@ -625,7 +655,8 @@ three platforms are built on three machines, which is already true of
   also lack the second trust anchor that makes key loss recoverable on macOS.
 - **Staging disk space.** The archive and expanded application coexist briefly
   in the private staging directory; enough free disk space is still required.
-- **macOS only.** Blocked on Windows and Linux packaging targets.
+- **macOS only.** The Windows and Linux packaging targets that were blocking
+  this now exist; the apply paths themselves are still unimplemented.
 - **Dev runs never check.** A development run is not inside an installed
   bundle, so there is nothing an update could replace.
 
@@ -636,7 +667,8 @@ three platforms are built on three machines, which is already true of
 2. MoonBit check, download, and verification, with no apply step. The update can
    be observed and validated end to end without ever modifying an installation.
 3. macOS apply and relaunch.
-4. Windows and Linux, after their installers exist.
+4. Windows and Linux apply, on top of the `nsis` and `appimage` targets, gated
+   by the install-medium check.
 
 ## Open questions
 

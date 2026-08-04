@@ -6,6 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Install-medium detection probes the filesystem, so this is needed on every
+   Unix, not just the platform that implements an apply path. */
+#if !defined(_WIN32)
+#include <unistd.h>
+#endif
+
 #if defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
@@ -48,6 +54,120 @@ const char *proton_update_previous_bundle_path(void) {
   return proton_update_previous;
 }
 
+/* An application may only replace an installation it owns.
+
+   A Flatpak or Snap image is mounted read-only and is updated by the system,
+   so there is nothing an apply path could write. A distribution package is
+   owned by dpkg or rpm, and replacing its files behind the package manager
+   leaves the two disagreeing about what is installed — the failure surfaces
+   later, as a downgrade on the next system upgrade. Only an AppImage is a
+   single file the user owns, which is why it is the one self-updatable Linux
+   medium. Tauri draws the same line.
+
+   macOS and Windows have a single supported shape each — a bundle and an
+   installed tree — so detection only has work to do on Linux. */
+typedef enum {
+  PROTON_UPDATE_MEDIUM_OWNED = 0,
+  PROTON_UPDATE_MEDIUM_APPIMAGE,
+  PROTON_UPDATE_MEDIUM_FLATPAK,
+  PROTON_UPDATE_MEDIUM_SNAP,
+  PROTON_UPDATE_MEDIUM_SYSTEM_PACKAGE,
+} proton_update_medium_t;
+
+static char proton_update_medium_override[32];
+
+void proton_update_set_medium_for_testing(const char *medium) {
+  if (medium == NULL) {
+    proton_update_medium_override[0] = '\0';
+    return;
+  }
+  snprintf(proton_update_medium_override,
+           sizeof(proton_update_medium_override), "%s", medium);
+}
+
+static int proton_update_env_is_set(const char *name) {
+  const char *value = getenv(name);
+  return value != NULL && value[0] != '\0';
+}
+
+static proton_update_medium_t proton_update_detect_medium(void) {
+  if (proton_update_medium_override[0] != '\0') {
+    const char *value = proton_update_medium_override;
+    if (strcmp(value, "appimage") == 0) {
+      return PROTON_UPDATE_MEDIUM_APPIMAGE;
+    }
+    if (strcmp(value, "flatpak") == 0) {
+      return PROTON_UPDATE_MEDIUM_FLATPAK;
+    }
+    if (strcmp(value, "snap") == 0) {
+      return PROTON_UPDATE_MEDIUM_SNAP;
+    }
+    if (strcmp(value, "package") == 0) {
+      return PROTON_UPDATE_MEDIUM_SYSTEM_PACKAGE;
+    }
+    return PROTON_UPDATE_MEDIUM_OWNED;
+  }
+#if defined(__linux__)
+  /* Ordered most specific first: a Flatpak or Snap can also carry an
+     unrelated APPIMAGE value inherited from whatever launched it. */
+  if (access("/.flatpak-info", F_OK) == 0) {
+    return PROTON_UPDATE_MEDIUM_FLATPAK;
+  }
+  if (proton_update_env_is_set("SNAP")) {
+    return PROTON_UPDATE_MEDIUM_SNAP;
+  }
+  if (proton_update_env_is_set("APPIMAGE")) {
+    return PROTON_UPDATE_MEDIUM_APPIMAGE;
+  }
+  /* Anything else on Linux is either package-managed or a development tree.
+     Declining is the safe default in both cases: there is nothing an update
+     could correctly replace. */
+  return PROTON_UPDATE_MEDIUM_SYSTEM_PACKAGE;
+#else
+  return PROTON_UPDATE_MEDIUM_OWNED;
+#endif
+}
+
+static const char *proton_update_medium_message(
+    proton_update_medium_t medium) {
+  switch (medium) {
+  case PROTON_UPDATE_MEDIUM_FLATPAK:
+    return "this application is installed as a Flatpak; updates are applied "
+           "by the Flatpak client, not by the application";
+  case PROTON_UPDATE_MEDIUM_SNAP:
+    return "this application is installed as a Snap; updates are applied by "
+           "snapd, not by the application";
+  case PROTON_UPDATE_MEDIUM_SYSTEM_PACKAGE:
+    return "this application was not installed as an AppImage; updates are "
+           "applied by whichever package manager installed it";
+  default:
+    return "";
+  }
+}
+
+/* Fails the apply path when the running installation is not ours to replace.
+   Checked before any bytes are downloaded or staged, so a managed install
+   reports the reason instead of doing throwaway work. */
+static int32_t proton_update_require_owned_medium(char *error,
+                                                  int32_t error_len) {
+  proton_update_medium_t medium = proton_update_detect_medium();
+  if (medium == PROTON_UPDATE_MEDIUM_OWNED ||
+      medium == PROTON_UPDATE_MEDIUM_APPIMAGE) {
+    return PROTON_OK;
+  }
+  proton_update_set_message(error, error_len,
+                            proton_update_medium_message(medium));
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+/* Windows and Linux have no apply path yet.
+
+   Sharing one with macOS means lifting the staging machinery — the handle
+   table, the private same-volume directory, the chunked write — out of the
+   block below, because it solves the same problem everywhere and only the
+   meaning of "install" differs: a bundle swap checked against a code
+   signature, versus replacing the single AppImage file the user owns. That
+   move is the bulk of the remaining work, and it is not started here. */
 #if !defined(__APPLE__)
 
 PROTON_API int32_t proton_update_stage_begin_revision(
@@ -58,6 +178,13 @@ PROTON_API int32_t proton_update_stage_begin_revision(
   (void)target_revision;
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
+  }
+  /* Checked even without an apply path. A Flatpak or Snap install would never
+     gain one, so naming the mechanism that does own the update is a better
+     answer than reporting the platform as unfinished. */
+  int32_t medium_status = proton_update_require_owned_medium(error, error_len);
+  if (medium_status != PROTON_OK) {
+    return medium_status;
   }
   proton_update_set_message(
       error, error_len,
@@ -132,8 +259,8 @@ PROTON_API int32_t proton_update_install(const char *archive,
   (void)parent_dir;
   proton_update_set_message(
       error, error_len,
-      "applying an update is implemented on macOS only; other platforms need "
-      "an installer to replace");
+      "applying an update is implemented on macOS only; the nsis and appimage "
+      "package targets now produce what the other platforms will replace");
   return PROTON_ERR_UNSUPPORTED;
 }
 
@@ -366,6 +493,12 @@ PROTON_API int32_t proton_update_stage_begin_revision(
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   if (out_stage != NULL) {
     *out_stage = PROTON_INVALID_HANDLE;
+  }
+  /* Before anything is downloaded: a managed installation reports why rather
+     than staging bytes it could never install. */
+  int32_t medium_status = proton_update_require_owned_medium(error, error_len);
+  if (medium_status != PROTON_OK) {
+    return medium_status;
   }
   if (parent_dir != NULL && parent_dir[0] != '\0' && parent_dir[0] != '/') {
     proton_update_set_message(error, error_len,

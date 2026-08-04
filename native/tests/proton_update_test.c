@@ -446,6 +446,55 @@ int main(void) {
   REQUIRE(marker_is(installed, "old"));
 #endif
 
+  /* Install-medium gating is shared, so it is exercised on every platform.
+     An application may only replace an installation it owns; a managed one
+     has to say so before any bytes are downloaded rather than stage work it
+     could never install. */
+  {
+#if defined(__APPLE__)
+    const char *expected_marker = "new";
+#else
+    const char *expected_marker = "old";
+#endif
+    proton_update_stage_id_t gated = PROTON_INVALID_HANDLE;
+    static const struct {
+      const char *medium;
+      const char *expected_fragment;
+    } managed[] = {
+        {"flatpak", "Flatpak client"},
+        {"snap", "snapd"},
+        {"package", "package manager"},
+    };
+    for (size_t i = 0; i < sizeof(managed) / sizeof(managed[0]); i++) {
+      proton_update_set_medium_for_testing(managed[i].medium);
+      error[0] = '\0';
+      gated = PROTON_INVALID_HANDLE;
+      REQUIRE(proton_update_stage_begin(root, 3, &gated, error,
+                                        sizeof(error)) ==
+              PROTON_ERR_UNSUPPORTED);
+      REQUIRE(gated == PROTON_INVALID_HANDLE);
+      /* The reason names the mechanism that does own the update, so the
+         message is actionable rather than a bare refusal. */
+      REQUIRE(strstr(error, managed[i].expected_fragment) != NULL);
+      /* Refusing must not touch the installation. */
+      REQUIRE(marker_is(installed, expected_marker));
+    }
+    /* An AppImage is a single file the user owns, so it is not gated. The
+       call still fails on this host for want of a real AppImage, but it must
+       fail past the medium check rather than at it. */
+    proton_update_set_medium_for_testing("appimage");
+    error[0] = '\0';
+    gated = PROTON_INVALID_HANDLE;
+    int32_t appimage_status =
+        proton_update_stage_begin(root, 3, &gated, error, sizeof(error));
+    REQUIRE(appimage_status != PROTON_ERR_UNSUPPORTED ||
+            strstr(error, "package manager") == NULL);
+    if (gated != PROTON_INVALID_HANDLE) {
+      REQUIRE(proton_update_stage_abort(gated, error, sizeof(error)) == 0);
+    }
+    proton_update_set_medium_for_testing(NULL);
+  }
+
   char cleanup[1300];
   snprintf(cleanup, sizeof(cleanup), "rm -rf '%s'", root);
   REQUIRE(system(cleanup) == 0);
