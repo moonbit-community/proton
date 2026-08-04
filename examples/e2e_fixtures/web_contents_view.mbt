@@ -3,9 +3,16 @@
 // with two web contents views rendered through OSR. The scenario drives the
 // app through CDP: it probes all three page targets, closes one view target,
 // then closes the host window and expects a clean shutdown.
+#cfg(not(platform="windows"))
 priv struct WebContentsViewWakeup {
   reader : @pipe.PipeRead
   writer : @pipe.PipeWrite
+}
+
+///|
+#cfg(platform="windows")
+priv struct WebContentsViewWakeup {
+  reader : @fs.File
 }
 
 ///|
@@ -219,6 +226,7 @@ async fn run_web_contents_view_pump(
 }
 
 ///|
+#cfg(not(platform="windows"))
 fn WebContentsViewWakeup::new(
   runtime : @native.Runtime,
 ) -> Result[WebContentsViewWakeup, String] {
@@ -240,6 +248,35 @@ fn WebContentsViewWakeup::new(
 }
 
 ///|
+#cfg(platform="windows")
+async fn WebContentsViewWakeup::new(
+  runtime : @native.Runtime,
+) -> Result[WebContentsViewWakeup, String] {
+  let source = match
+    wcv_native_result("prepare runtime wakeup source", () => {
+      runtime.prepare_wakeup_source()
+    }) {
+    Err(message) => return Err(message)
+    Ok(source) => source
+  }
+  let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
+    error =>
+      return Err("open runtime wakeup source failed: " + error.to_string())
+  }
+  match
+    wcv_native_result("activate runtime wakeup source", () => {
+      runtime.activate_wakeup_source()
+    }) {
+    Err(message) => {
+      reader.close()
+      Err(message)
+    }
+    Ok(_) => Ok(WebContentsViewWakeup::{ reader, })
+  }
+}
+
+///|
+#cfg(not(platform="windows"))
 fn WebContentsViewWakeup::close(
   self : WebContentsViewWakeup,
   runtime : @native.Runtime,
@@ -251,6 +288,15 @@ fn WebContentsViewWakeup::close(
   )
   self.reader.close()
   self.writer.close()
+}
+
+///|
+#cfg(platform="windows")
+fn WebContentsViewWakeup::close(
+  self : WebContentsViewWakeup,
+  _runtime : @native.Runtime,
+) -> Unit {
+  self.reader.close()
 }
 
 ///|
