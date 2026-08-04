@@ -162,10 +162,10 @@ pub fn App::on_launch_input(Self, async (@native.RuntimeLaunchInput) -> Unit nor
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
+pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::permission(Self, @manifest.PermissionGrant) -> Self
-pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::single_instance(Self, String) -> Self
@@ -248,6 +248,21 @@ pub(all) struct NavigationRequest {
   redirect : Bool
 } derive(Eq, @debug.Debug)
 
+pub struct PendingUpdate {
+  version : String
+  revision : UInt64
+  notes_url : String?
+  size : Int64
+  channel : @updater.UpdateChannel
+  offer : @updater.AvailableUpdate
+}
+pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> UpdateInstallOutcome
+pub fn PendingUpdate::notes_url(Self) -> String?
+pub fn PendingUpdate::restart(Self) -> Unit raise
+pub fn PendingUpdate::revision(Self) -> UInt64
+pub fn PendingUpdate::size(Self) -> Int64
+pub fn PendingUpdate::version(Self) -> String
+
 pub(all) enum PopupDecision {
   Deny
   OpenInCurrent
@@ -260,27 +275,6 @@ pub(all) struct PopupRequest {
   user_gesture : Bool
 } derive(Eq, @debug.Debug)
 
-pub(all) enum WindowCloseDecision {
-  Allow
-  Deny
-} derive(Eq, @debug.Debug)
-
-pub struct PendingUpdate {
-  version : String
-  revision : UInt64
-  notes_url : String?
-  size : Int64
-  channel : @updater.UpdateChannel
-  offer : @updater.AvailableUpdate
-  identifier : String
-}
-pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> UpdateInstallOutcome
-pub fn PendingUpdate::notes_url(Self) -> String?
-pub fn PendingUpdate::restart(Self) -> Unit raise
-pub fn PendingUpdate::revision(Self) -> UInt64
-pub fn PendingUpdate::size(Self) -> Int64
-pub fn PendingUpdate::version(Self) -> String
-
 pub enum UpdateCheck {
   NotConfigured
   UpToDate
@@ -290,6 +284,11 @@ pub enum UpdateCheck {
 pub enum UpdateInstallOutcome {
   Installed
   AlreadyInstalled
+} derive(Eq, @debug.Debug)
+
+pub(all) enum WindowCloseDecision {
+  Allow
+  Deny
 } derive(Eq, @debug.Debug)
 
 pub struct WindowContext {
