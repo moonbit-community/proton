@@ -14,17 +14,44 @@ async fn make_temp_dir() -> String {
 }
 
 ///|
+let cef_download_max_attempts = 3
+
+///|
+let cef_download_retry_delay_ms = 2000
+
+///|
 async fn download_file(
   url : String,
   destination : String,
   expected_sha256 : String,
 ) -> Unit {
   @output.info("[INFO] Downloading CEF: " + url)
-  let code = @process.run("curl", ["-L", "--fail", "--output", destination, url]) catch {
-    err => raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
+  let mut last_code = 1
+  for attempt in 1..<=cef_download_max_attempts {
+    let code = @process.run("curl", [
+      "-L", "--fail", "--retry", "5", "--retry-all-errors", "--retry-delay", "2",
+      "--connect-timeout", "30", "--output", destination, url,
+    ]) catch {
+      err =>
+        raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
+    }
+    if code == 0 {
+      verify_file_sha256(destination, expected_sha256)
+      return
+    }
+    last_code = code
+    if attempt < cef_download_max_attempts {
+      @output.info(
+        "[INFO] CEF download attempt " +
+        attempt.to_string() +
+        " failed (curl exit " +
+        code.to_string() +
+        "); retrying",
+      )
+      @async.sleep(cef_download_retry_delay_ms)
+    }
   }
-  guard code == 0 else { raise CefDownloadError::CurlExit(url~, code~) }
-  verify_file_sha256(destination, expected_sha256)
+  raise CefDownloadError::CurlExit(url~, code=last_code)
 }
 
 ///|
