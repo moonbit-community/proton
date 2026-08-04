@@ -164,6 +164,11 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     @sys.get_env_var("LD_PRELOAD"),
   )
   @async.with_task_group(group => {
+    // Announce the wait before the frontend child starts writing to the
+    // terminal, so its startup output cannot interleave with this line.
+    if raw.wait_for_dev_server {
+      announce_frontend_server_wait(frontend_url, raw.ready_path)
+    }
     let frontend_process = maybe_start_frontend(
       group,
       frontend_working_dir,
@@ -733,6 +738,23 @@ fn unix_frontend_tree_kill_script() -> String {
 }
 
 ///|
+/// Prints the dev-server wait line. Called before the frontend process
+/// spawns: the child inherits the terminal, and its startup banner would
+/// otherwise race with (and partially overwrite) this line.
+async fn announce_frontend_server_wait(
+  frontend_url : String?,
+  ready_path : String?,
+) -> Unit {
+  match frontend_url {
+    None => ()
+    Some(url) => {
+      let endpoint = parse_dev_url_endpoint(url, ready_path)
+      @output.info("Waiting for frontend dev server: " + endpoint.url)
+    }
+  }
+}
+
+///|
 async fn wait_for_frontend(
   frontend_url : String?,
   ready_path : String?,
@@ -744,7 +766,6 @@ async fn wait_for_frontend(
     Some(url) => {
       let endpoint = parse_dev_url_endpoint(url, ready_path)
       validate_ready_probe(ready_path)
-      @output.info("Waiting for frontend dev server: " + endpoint.url)
       let mut elapsed = 0
       while elapsed <= timeout_ms {
         match frontend_exit_code(frontend_process) {
