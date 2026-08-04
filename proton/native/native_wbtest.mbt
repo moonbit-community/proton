@@ -943,13 +943,13 @@ test "window config requires abi_version 1" {
 test "runtime info payload requires abi_version 1" {
   let error = expect_native_error(() => {
     decode_runtime_info(
-      "{\"abi_version\":2,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"features\":[]}",
+      "{\"abi_version\":2,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"platform_id\":\"test\",\"features\":[]}",
     )
   })
   inspect(error.status(), content="-1")
   assert_true(error.message().contains("abi_version"))
   let info = decode_runtime_info(
-    "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"features\":[]}",
+    "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"platform_id\":\"test\",\"features\":[]}",
   )
   inspect(info.platform, content="test")
 }
