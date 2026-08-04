@@ -1,5 +1,5 @@
 ///|
-let cli_current_version : String = "0.1.11"
+let cli_current_version : String = "0.1.12"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"

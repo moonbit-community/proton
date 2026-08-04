@@ -377,10 +377,10 @@ test "registry dependency failures are classified separately" {
     project="todo",
   )
   let message = error.message()
-  assert_true(message.contains("justjavac/proton_contract@0.1.0"))
-  assert_true(message.contains("justjavac/proton_client@0.1.0"))
-  assert_true(message.contains("justjavac/proton_rabbita@0.1.0"))
-  assert_true(message.contains("justjavac/proton@0.1.13"))
+  assert_true(message.contains("justjavac/proton_contract@0.1.1"))
+  assert_true(message.contains("justjavac/proton_client@0.1.1"))
+  assert_true(message.contains("justjavac/proton_rabbita@0.1.1"))
+  assert_true(message.contains("justjavac/proton@0.1.14"))
   assert_true(
     message.contains("justjavac/proton_cli@" + default_proton_cli_version),
   )

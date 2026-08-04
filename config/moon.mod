@@ -1,6 +1,6 @@
 name = "justjavac/proton_config"
 
-version = "0.1.7"
+version = "0.1.8"
 
 import {
   "moonbitlang/lexer@0.3.4",
