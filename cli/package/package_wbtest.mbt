@@ -132,7 +132,7 @@ async test "package plan requires active bundle" {
 }
 
 ///|
-async test "package plan defaults to app and zip" {
+async test "package plan uses the host defaults" {
   let project = @proton_config.ProjectConfig::new(
     ".",
     @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
@@ -146,7 +146,11 @@ async test "package plan defaults to app and zip" {
   )
   let raw = parse_package_args([])
   let plan = build_package_plan(raw, "moon.proton", project, 0UL)
-  @debug.assert_eq(plan.targets, ["app", "zip"])
+  let expected_targets = match current_package_host() {
+    Linux => ["appimage"]
+    Macos | Windows => ["app", "zip"]
+  }
+  @debug.assert_eq(plan.targets, expected_targets)
   assert_eq(plan.identifier, "dev.proton.demo")
   assert_eq(plan.version, "1.0.0")
   assert_true(
