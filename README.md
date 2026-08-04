@@ -228,6 +228,33 @@ Close handlers run asynchronously without blocking the native UI thread.
 cleanup uses the owning destroy lifecycle. The process remains active until
 every concrete window has closed. See `examples/45_bridge_multi_window`.
 
+A window can also host additional web contents views, following the Electron
+`WebContentsView` model: each view is an independent browser layered above the
+window's main page with explicit top-left bounds, visibility, and z-order.
+Views are added and removed imperatively through the window handle; per-view
+navigation uses `ViewHandle::load_url`. Engine support is reported through the
+`web_contents_view` runtime feature (currently the macOS engine; other
+platforms raise the native unsupported error).
+
+```moonbit
+let panel = window.add_view(
+  "panel",
+  @native.ViewConfig::new(
+    width=320,
+    height=240,
+    x=16,
+    y=16,
+    initial_url="https://example.com/",
+  ),
+)
+panel.set_bounds(16, 16, 480, 320)
+panel.set_z_order(1)
+panel.load_url("https://moonbitlang.com/")
+window.remove_view("panel")
+```
+
+See `examples/52_web_contents_view`.
+
 Enable operating-system single-instance routing with a stable application
 identifier:
 

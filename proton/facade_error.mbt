@@ -133,6 +133,9 @@ pub fn WindowSessionError::message(self : WindowSessionError) -> String {
     UnknownWindow(id~) => "window is not declared: " + id
     AlreadyOpen(id~) => "window is already open: " + id
     StaleWindow(id~) => "window instance is no longer active: " + id
+    UnknownView(id~) => "view does not exist in its window: " + id
+    AlreadyExists(id~) => "view already exists in its window: " + id
+    StaleView(id~) => "view instance is no longer active: " + id
     Cancelled => "window operation was cancelled"
     OperationFailed(action~, error~) => action + " failed: " + error.message()
     StartupFailed(id~, error~) =>

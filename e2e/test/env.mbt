@@ -44,7 +44,8 @@ fn is_supported_scenario(name : String) -> Bool {
     | "42_attribute_codegen_commands"
     | "45_bridge_multi_window"
     | "46_asset_sidecar_resources"
-    | "47_dev_extension_js" => true
+    | "47_dev_extension_js"
+    | "52_web_contents_view" => true
     _ => false
   }
 }

@@ -576,6 +576,8 @@ async fn run_scenario_probe_once(
     wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
     let shutdown = if name == "45_bridge_multi_window" {
       run_multi_window_scenario_probe(app, target, timeout)
+    } else if name == "52_web_contents_view" {
+      run_web_contents_view_scenario_probe(app, target, timeout)
     } else {
       if name == "41_app_commands" {
         run_app_commands_full_probe(root, target, timeout, app.native_log_path)
@@ -713,6 +715,15 @@ async test "headless 45_bridge_multi_window runs as a self-hosted e2e" {
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "45_bridge_multi_window", timeout)
+}
+
+///|
+async test "headless 52_web_contents_view runs as a self-hosted e2e" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
+  let root = repository_root()
+  let timeout = timeout_ms()
+  run_scenario_probe_with_retry(root, "52_web_contents_view", timeout)
 }
 
 ///|

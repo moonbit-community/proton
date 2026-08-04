@@ -454,3 +454,42 @@ extern "C" fn proton_last_error_message_ffi(
   buffer : FixedArray[Byte],
   buffer_len : Int,
 ) -> Int = "proton_last_error_message"
+
+///|
+#borrow(config_json, out_view)
+extern "C" fn proton_view_create_json_ffi(
+  window : Int64,
+  config_json : Bytes,
+  out_view : Ref[Int64],
+) -> Int = "proton_view_create_json"
+
+///|
+extern "C" fn proton_view_destroy_ffi(view : Int64) -> Int = "proton_view_destroy"
+
+///|
+extern "C" fn proton_view_set_bounds_ffi(
+  view : Int64,
+  x : Int,
+  y : Int,
+  width : Int,
+  height : Int,
+) -> Int = "proton_view_set_bounds"
+
+///|
+extern "C" fn proton_view_set_visible_ffi(view : Int64, visible : Int) -> Int = "proton_view_set_visible"
+
+///|
+extern "C" fn proton_view_set_z_order_ffi(view : Int64, z_order : Int) -> Int = "proton_view_set_z_order"
+
+///|
+#borrow(url)
+extern "C" fn proton_view_load_url_ffi(view : Int64, url : Bytes) -> Int = "proton_view_load_url"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_view_state_json_ffi(
+  view : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_view_state_json"

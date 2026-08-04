@@ -74,8 +74,15 @@ priv struct RunningWindow {
   window : @native.Window
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
+  views : Array[RunningView]
   mut bridge_ready : Bool
   mut state : SessionWindowState
+}
+
+///|
+priv struct RunningView {
+  id : String
+  view : @native.View
 }
 
 ///|
@@ -244,6 +251,25 @@ pub struct BrowserHandle {
 }
 
 ///|
+/// A non-owning reference to one concrete web contents view instance.
+///
+/// Views follow the Electron `WebContentsView` model: each view is an
+/// independent web page hosted inside its owning window's content area with
+/// explicit top-left bounds, visibility, and z-order. The instance id
+/// prevents a stale handle from targeting a later view that reuses the same
+/// declarative id.
+pub struct ViewHandle {
+  id : String
+  native_id : Int64
+  set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
+  set_view_visible : (Bool) -> Unit raise WindowSessionError
+  set_view_z_order : (Int) -> Unit raise WindowSessionError
+  load_view_url : (String) -> Unit raise WindowSessionError
+  read_view_state : () -> @native.ViewState raise WindowSessionError
+  close_view : () -> Unit raise WindowSessionError
+}
+
+///|
 /// A non-owning reference to one concrete window instance.
 ///
 /// The instance id prevents a stale handle from targeting a later window that
@@ -266,6 +292,9 @@ pub struct WindowHandle {
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_window_state : () -> @native.WindowState raise WindowSessionError
   browser : BrowserHandle
+  add_view : (String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
+  remove_view : (String) -> Unit raise WindowSessionError
+  list_views : () -> Array[ViewHandle]
 }
 
 ///|
@@ -363,6 +392,9 @@ pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
   StaleWindow(id~ : String)
+  UnknownView(id~ : String)
+  AlreadyExists(id~ : String)
+  StaleView(id~ : String)
   Cancelled
   OperationFailed(action~ : String, error~ : @native.NativeError)
   StartupFailed(id~ : String, error~ : AppRunError)

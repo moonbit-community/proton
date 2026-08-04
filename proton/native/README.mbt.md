@@ -104,3 +104,36 @@ test "runtime wait event readiness" {
   runtime.destroy()
 }
 ```
+
+Windows can host additional web contents views, following the Electron
+`WebContentsView` model: each view is an independent browser positioned with
+top-left coordinates inside the window's content area and stacked above the
+window's main browser. Engine support is reported through the
+`web_contents_view` runtime feature.
+
+```mbt check
+///|
+test "web contents view lifecycle" {
+  let runtime = Runtime::new()
+  let window = Window::new(runtime)
+  let view = View::new(
+    window,
+    ViewConfig::new(
+      width=320,
+      height=200,
+      x=10,
+      y=20,
+      initial_url="about:blank",
+    ),
+  )
+  view.set_bounds(20, 30, 300, 180)
+  view.set_z_order(1)
+  view.load_url("about:blank")
+  let state = view.state()
+  inspect(state.width, content="300")
+  inspect(state.visible, content="true")
+  view.destroy()
+  window.destroy()
+  runtime.destroy()
+}
+```

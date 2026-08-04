@@ -82,6 +82,9 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
     set_window_zoom_percent: fn(_zoom_percent) {  },
     read_window_state: fn() { abort("test window state is not available") },
     browser,
+    add_view: fn(_id, _config) { abort("test views are not available") },
+    remove_view: fn(_id) { abort("test views are not available") },
+    list_views: fn() { [] },
   }
 }
 
@@ -385,6 +388,7 @@ async test "startup dispatch retains an earlier window close" {
       window: first,
       permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
+      views: [],
       bridge_ready: true,
       state: WindowOpen,
     },
@@ -393,6 +397,7 @@ async test "startup dispatch retains an earlier window close" {
       window: second,
       permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
+      views: [],
       bridge_ready: false,
       state: WindowStarting,
     },
@@ -1503,4 +1508,52 @@ test "the launch check is opt-in twice over" {
   // check_on_launch: false wins even when a handler is registered.
   assert_false(checks_on_launch(disabled, 1))
   assert_false(checks_on_launch(disabled, 0))
+///|
+fn test_view_handle(
+  id : String,
+  native_id : Int64,
+  calls : Array[String],
+) -> ViewHandle {
+  ViewHandle::{
+    id,
+    native_id,
+    set_view_bounds: fn(x, y, width, height) {
+      calls.push("set_bounds:\{x},\{y},\{width},\{height}")
+    },
+    set_view_visible: fn(visible) { calls.push("set_visible:\{visible}") },
+    set_view_z_order: fn(z_order) { calls.push("set_z_order:\{z_order}") },
+    load_view_url: fn(url) { calls.push("load_url:\{url}") },
+    read_view_state: fn() {
+      { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1 }
+    },
+    close_view: fn() { calls.push("close") },
+  }
+}
+
+///|
+test "view handle routes operations through its closures" {
+  let calls : Array[String] = []
+  let view = test_view_handle("panel", 7L, calls)
+  inspect(view.id(), content="panel")
+  view.set_bounds(1, 2, 300, 200)
+  view.set_visible(false)
+  view.set_z_order(2)
+  view.load_url("https://example.com/")
+  let state = view.state()
+  inspect(state.width, content="300")
+  inspect(state.z_order, content="1")
+  assert_eq(view.as_native_ref(), @native.ViewRef::unsafe_from_handle(7L))
+  view.close()
+  debug_inspect(
+    calls,
+    content=(
+      #|[
+      #|  "set_bounds:1,2,300,200",
+      #|  "set_visible:false",
+      #|  "set_z_order:2",
+      #|  "load_url:https://example.com/",
+      #|  "close",
+      #|]
+    ),
+  )
 }

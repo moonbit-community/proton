@@ -206,6 +206,14 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|    events[0]?.payload?.total === 42;
         #|})()
       )
+    "52_web_contents_view" =>
+      (
+        #|;(() => {
+        #|  if (!['Web Contents View Host','WCV Left','WCV Right'].includes(document.title)) return false;
+        #|  if (document.readyState !== 'complete') return false;
+        #|  return document.body?.textContent.includes('marker') ?? false;
+        #|})()
+      )
     _ => fail("unsupported E2E scenario: " + name)
   }
 }
