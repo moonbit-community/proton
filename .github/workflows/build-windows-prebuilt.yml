@@ -15,6 +15,7 @@ concurrency:
 
 env:
   PROTON_NO_UPDATE_CHECK: 1
+  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton/cache/cef
   PROTON_PREBUILT_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
@@ -54,7 +55,10 @@ jobs:
         run: moon update
 
       - name: Set up CEF runtime
-        run: moon -C cli run . -- -C .. cef setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .proton\cache\cef\win32-x64 | Out-Null
+          moon -C cli run . -- -C .. cef setup
 
       - name: Build and install Release runtime
         shell: pwsh
