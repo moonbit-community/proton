@@ -126,7 +126,7 @@ test "web contents view lifecycle" {
       initial_url="about:blank",
     ),
   )
-  view.set_bounds(20, 30, 300, 180)
+  view.set_bounds(x=20, y=30, width=300, height=180)
   view.set_z_order(1)
   view.load_url("about:blank")
   let state = view.state()

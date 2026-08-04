@@ -85,6 +85,7 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
     add_view: fn(_id, _config) { abort("test views are not available") },
     remove_view: fn(_id) { abort("test views are not available") },
     list_views: fn() { [] },
+    find_view: fn(_id) { None },
   }
 }
 
@@ -1523,6 +1524,9 @@ fn test_view_handle(
     set_view_visible: fn(visible) { calls.push("set_visible:\{visible}") },
     set_view_z_order: fn(z_order) { calls.push("set_z_order:\{z_order}") },
     load_view_url: fn(url) { calls.push("load_url:\{url}") },
+    load_view_html: fn(_html, _base_url) {  },
+    eval_view_script: fn(_script) {  },
+    send_view_command: fn(_command, _download_id) {  },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1 }
     },
@@ -1535,7 +1539,7 @@ test "view handle routes operations through its closures" {
   let calls : Array[String] = []
   let view = test_view_handle("panel", 7L, calls)
   inspect(view.id(), content="panel")
-  view.set_bounds(1, 2, 300, 200)
+  view.set_bounds(x=1, y=2, width=300, height=200)
   view.set_visible(false)
   view.set_z_order(2)
   view.load_url("https://example.com/")

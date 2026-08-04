@@ -1,11 +1,20 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/proton/examples/52_web_contents_view"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+type NavigatePayload derive(ToJson, @json.FromJson)
+
+type NavigateReply derive(ToJson, @json.FromJson)
+
+type SimpleReply derive(ToJson, @json.FromJson)
 
 // Type aliases
 

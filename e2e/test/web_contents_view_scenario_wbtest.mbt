@@ -52,11 +52,13 @@ async fn run_web_contents_view_scenario_probe(
     decode_probe(left_value, "left web contents view"),
     "WCV Left",
     "left-marker",
+    "data:text/html",
   )
   assert_web_contents_view_page(
     decode_probe(right_value, "right web contents view"),
     "WCV Right",
     "right-marker",
+    "proton://view-right/",
   )
   guard left.target_id != right.target_id &&
     left.target_id != host.target_id &&
@@ -84,7 +86,9 @@ async fn run_web_contents_view_scenario_probe(
     evaluate_json(page_right, web_contents_view_probe_expression(), true),
     "surviving right web contents view",
   )
-  assert_web_contents_view_page(surviving, "WCV Right", "right-marker")
+  assert_web_contents_view_page(
+    surviving, "WCV Right", "right-marker", "proton://view-right/",
+  )
 
   // Closing the host window must tear down the remaining view with it and let
   // the app shut down cleanly.
@@ -93,6 +97,7 @@ async fn run_web_contents_view_scenario_probe(
     app, target, snapshot, process_shutdown_timeout_ms,
   )
   assert_web_contents_view_closed_log(app.native_log_path)
+  assert_web_contents_view_event_log(app.native_log_path)
   println(
     "MoonBit 52_web_contents_view sequential lifecycle passed: helpers=" +
     shutdown.helper_processes.to_string(),
@@ -163,15 +168,38 @@ fn assert_web_contents_view_page(
   page : WebContentsViewPageProbe,
   expected_title : String,
   expected_marker : String,
+  expected_url_prefix : String,
 ) -> Unit raise {
   guard page.title == expected_title else {
     fail("web contents view title mismatch: " + page.title)
   }
-  guard page.url.has_prefix("data:text/html") else {
+  guard page.url.has_prefix(expected_url_prefix) else {
     fail("web contents view URL mismatch: " + page.url)
   }
   guard page.marker.contains(expected_marker) else {
     fail("web contents view marker mismatch: " + page.marker)
+  }
+}
+
+///|
+fn assert_web_contents_view_event_log(native_log_path : String) -> Unit raise {
+  let path = native_log_path + ".view-events"
+  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    _ => fail("failed to read web contents view event log: " + path)
+  }
+  guard log.contains("view_navigated url=data:text/html") else {
+    fail("view event log missed the left view navigation: " + log)
+  }
+  guard log.contains("view_navigated url=proton://view-right/") else {
+    fail("view event log missed the right view navigation: " + log)
+  }
+  guard log.contains("view_title_updated title=WCV Left") &&
+    log.contains("view_title_updated title=WCV Right") else {
+    fail("view event log missed view titles: " + log)
+  }
+  guard log.contains("view_loading_changed loading=true") &&
+    log.contains("view_loading_changed loading=false") else {
+    fail("view event log missed loading state changes: " + log)
   }
 }
 

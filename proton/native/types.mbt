@@ -112,6 +112,9 @@ struct AppInstance {
 struct RuntimeEvent {
   event_type : String
   window : Int64?
+  view : Int64?
+  title : String?
+  is_loading : Bool?
   state : WindowState?
   request_id : Int64?
   url : String?
@@ -348,6 +351,37 @@ pub fn RuntimeEvent::has_window(self : RuntimeEvent) -> Bool {
 /// menu command this is the focused window at click time.
 pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
   self.window
+}
+
+///|
+/// Returns the web contents view associated with this event when one exists.
+pub fn RuntimeEvent::view_id(self : RuntimeEvent) -> Int64? {
+  self.view
+}
+
+///|
+/// The payload of a web contents view lifecycle event.
+pub(all) struct ViewEventInfo {
+  url : String?
+  title : String?
+  is_loading : Bool?
+  error_code : Int?
+  error_text : String?
+} derive(Debug, Eq)
+
+///|
+/// Returns the view event payload when this event carries one.
+pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
+  if !self.event_type.has_prefix("view_") {
+    return None
+  }
+  Some({
+    url: self.url,
+    title: self.title,
+    is_loading: self.is_loading,
+    error_code: self.error_code,
+    error_text: self.message,
+  })
 }
 
 ///|
@@ -1198,6 +1232,7 @@ struct ViewConfig {
   visible : Bool
   z_order : Int
   initial_url : String
+  background_color : String?
 } derive(Debug, Eq)
 
 ///|
@@ -1209,8 +1244,19 @@ pub fn ViewConfig::new(
   visible? : Bool = true,
   z_order? : Int = 0,
   initial_url? : String = "about:blank",
+  background_color? : String,
 ) -> ViewConfig {
-  { raw_json: None, x, y, width, height, visible, z_order, initial_url }
+  {
+    raw_json: None,
+    x,
+    y,
+    width,
+    height,
+    visible,
+    z_order,
+    initial_url,
+    background_color,
+  }
 }
 
 ///|
@@ -1225,6 +1271,7 @@ pub fn ViewConfig::unsafe_from_json(raw_json : String) -> ViewConfig {
     visible: true,
     z_order: 0,
     initial_url: "about:blank",
+    background_color: None,
   }
 }
 
@@ -1232,8 +1279,8 @@ pub fn ViewConfig::unsafe_from_json(raw_json : String) -> ViewConfig {
 pub fn ViewConfig::to_json_string(self : ViewConfig) -> String {
   match self.raw_json {
     Some(raw) => raw
-    None =>
-      Json::object({
+    None => {
+      let fields : Map[String, Json] = {
         "abi_version": Json::number(1.0, repr="1"),
         "x": Json::number(self.x.to_double(), repr=self.x.to_string()),
         "y": Json::number(self.y.to_double(), repr=self.y.to_string()),
@@ -1251,7 +1298,13 @@ pub fn ViewConfig::to_json_string(self : ViewConfig) -> String {
           repr=self.z_order.to_string(),
         ),
         "initial_url": Json::string(self.initial_url),
-      }).stringify()
+      }
+      match self.background_color {
+        Some(color) => fields.set("background_color", Json::string(color))
+        None => ()
+      }
+      Json::object(fields).stringify()
+    }
   }
 }
 

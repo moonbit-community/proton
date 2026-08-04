@@ -18,10 +18,11 @@ test "public native API creates and manages web contents views" {
     window,
     @native.ViewConfig::new(width=320, height=240, initial_url="about:blank"),
   )
-  view.set_bounds(10, 20, 300, 200)
+  view.set_bounds(x=10, y=20, width=300, height=200)
   view.set_visible(true)
   view.set_z_order(1)
   view.load_url("about:blank")
+  view.load_html("<p>view html</p>", "proton://view/")
   let state = view.state()
   inspect(state.x, content="10")
   inspect(state.y, content="20")
@@ -44,9 +45,21 @@ test "web contents view handles die with their owning window" {
     @native.ViewConfig::new(width=160, height=120),
   )
   window.destroy()
-  assert_true((try? view.state()) is Err(_))
-  assert_true((try? view.set_bounds(0, 0, 80, 60)) is Err(_))
-  assert_true((try? view.load_url("about:blank")) is Err(_))
+  try view.state() |> ignore catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected view state to fail after window destroy")
+  }
+  try view.set_bounds(x=0, y=0, width=80, height=60) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected view set_bounds to fail after window destroy")
+  }
+  try view.load_url("about:blank") catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected view load_url to fail after window destroy")
+  }
   view.destroy()
   runtime.destroy()
 }

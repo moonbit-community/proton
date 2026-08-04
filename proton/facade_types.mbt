@@ -25,6 +25,7 @@ struct App {
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
+  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
   mut popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
@@ -174,6 +175,7 @@ priv struct RuntimeSession {
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
+  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   window_tasks : @async.TaskGroup[Unit]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
@@ -265,6 +267,9 @@ pub struct ViewHandle {
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
+  load_view_html : (String, String) -> Unit raise WindowSessionError
+  eval_view_script : (String) -> Unit raise WindowSessionError
+  send_view_command : (String, Int?) -> Unit raise WindowSessionError
   read_view_state : () -> @native.ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
@@ -295,6 +300,7 @@ pub struct WindowHandle {
   add_view : (String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
   remove_view : (String) -> Unit raise WindowSessionError
   list_views : () -> Array[ViewHandle]
+  find_view : (String) -> ViewHandle?
 }
 
 ///|
@@ -308,6 +314,16 @@ pub struct WindowManager {
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
   StateChanged(@native.WindowState)
+} derive(Debug, Eq)
+
+///|
+/// An observed change to a running web contents view, following the Electron
+/// `webContents` lifecycle events.
+pub(all) enum ViewEvent {
+  LoadingChanged(is_loading~ : Bool)
+  Navigated(url~ : String)
+  TitleUpdated(title~ : String)
+  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
 } derive(Debug, Eq)
 
 ///|

@@ -33,6 +33,7 @@ fn App::new(
     application_lifecycle_hooks: [],
     launch_input_handlers: [],
     window_event_handlers: [],
+    view_event_handlers: [],
     window_close_handler: None,
     navigation_handler: None,
     popup_handler: None,

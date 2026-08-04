@@ -236,6 +236,18 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event window"))
   }
+  let view = match object.get("view") {
+    None => None
+    Some(value) => Some(decode_int64_json(value, "runtime event view"))
+  }
+  let title = match object.get("title") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event title"))
+  }
+  let is_loading = match object.get("is_loading") {
+    None => None
+    Some(value) => Some(decode_bool_json(value, "runtime event is_loading"))
+  }
   let state = match object.get("state") {
     None => None
     Some(value) =>
@@ -348,6 +360,9 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   RuntimeEvent::{
     event_type,
     window,
+    view,
+    title,
+    is_loading,
     state,
     request_id,
     url,
@@ -1413,10 +1428,10 @@ pub fn View::id(self : View) -> Int64 {
 /// window's content coordinate space, matching Electron's `setBounds`.
 pub fn View::set_bounds(
   self : View,
-  x : Int,
-  y : Int,
-  width : Int,
-  height : Int,
+  x~ : Int,
+  y~ : Int,
+  width~ : Int,
+  height~ : Int,
 ) -> Unit raise NativeError {
   if width <= 0 || height <= 0 {
     raise invalid_argument("view width and height must be positive")
@@ -1467,4 +1482,52 @@ pub fn View::state(self : View) -> ViewState raise NativeError {
     error =>
       raise InvalidPayload(context="view state", message=error.to_string())
   }
+}
+
+///|
+/// Loads inline HTML into the view, served from `base_url` on the `proton://`
+/// scheme, mirroring `Window::load_html`.
+pub fn View::load_html(
+  self : View,
+  html : String,
+  base_url : String,
+) -> Unit raise NativeError {
+  check_status(
+    proton_view_load_html_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(html),
+      @ffi.to_cstr(base_url),
+    ),
+  )
+}
+
+///|
+/// Executes JavaScript in the view's main frame without awaiting a result.
+pub fn View::eval(self : View, script : String) -> Unit raise NativeError {
+  check_status(proton_view_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
+}
+
+///|
+/// Sends a browser control command to the view: `back`, `forward`, `reload`,
+/// `reload_ignore_cache`, `stop`, `open_devtools`, or `close_devtools`.
+pub fn View::browser_command(
+  self : View,
+  command : String,
+  download_id? : Int,
+) -> Unit raise NativeError {
+  let fields : Map[String, Json] = { "command": Json::string(command) }
+  match download_id {
+    Some(download_id) =>
+      fields["download_id"] = Json::number(
+        download_id.to_double(),
+        repr=download_id.to_string(),
+      )
+    None => ()
+  }
+  check_status(
+    proton_view_browser_command_json_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(Json::object(fields).stringify()),
+    ),
+  )
 }

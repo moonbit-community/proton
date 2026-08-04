@@ -247,7 +247,7 @@ let panel = window.add_view(
     initial_url="https://example.com/",
   ),
 )
-panel.set_bounds(16, 16, 480, 320)
+panel.set_bounds(x=16, y=16, width=480, height=320)
 panel.set_z_order(1)
 panel.load_url("https://moonbitlang.com/")
 window.remove_view("panel")

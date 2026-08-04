@@ -12,6 +12,7 @@ fn RuntimeSession::new(
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ],
   window_tasks : @async.TaskGroup[Unit],
+  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise],
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?,
   window_lifecycle_hooks : Array[WindowLifecycleHook],
   lifecycle_failures : Array[AppCleanupError],
@@ -36,6 +37,7 @@ fn RuntimeSession::new(
     monitor_bridge,
     launch_input_handlers,
     window_event_handlers,
+    view_event_handlers,
     window_close_handler,
     window_tasks,
     window_lifecycle_hooks,
@@ -130,6 +132,7 @@ fn RuntimeSession::window_handle(
     },
     remove_view: view_id => self.remove_window_view(id, native_id, view_id),
     list_views: () => self.list_window_views(id, native_id),
+    find_view: view_id => self.find_window_view(id, native_id, view_id),
   }
 }
 
@@ -153,7 +156,7 @@ fn RuntimeSession::view_handle(
         id,
         native_id,
         "set bounds of",
-        view => view.set_bounds(x, y, width, height),
+        view => view.set_bounds(x~, y~, width~, height~),
       )
     },
     set_view_visible: visible => {
@@ -184,6 +187,36 @@ fn RuntimeSession::view_handle(
         native_id,
         "load URL in",
         view => view.load_url(url),
+      )
+    },
+    load_view_html: (html, base_url) => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        "load HTML in",
+        view => view.load_html(html, base_url),
+      )
+    },
+    eval_view_script: script => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        "evaluate script in",
+        view => view.eval(script),
+      )
+    },
+    send_view_command: (command, download_id) => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        command + " in",
+        view => view.browser_command(command, download_id?),
       )
     },
     read_view_state: () => {
@@ -329,6 +362,26 @@ fn RuntimeSession::list_window_views(
     Some(running) if running.window.id() == window_native_id =>
       running.views.map(view => self.view_handle(running, view))
     _ => []
+  }
+}
+
+///|
+fn RuntimeSession::find_window_view(
+  self : RuntimeSession,
+  window_id : String,
+  window_native_id : Int64,
+  view_id : String,
+) -> ViewHandle? {
+  match self.find_active_window(window_id) {
+    Some(running) if running.window.id() == window_native_id =>
+      for view in running.views {
+        if view.id == view_id {
+          return Some(self.view_handle(running, view))
+        }
+      } nobreak {
+        None
+      }
+    _ => None
   }
 }
 
@@ -923,6 +976,12 @@ pub fn WindowHandle::views(self : WindowHandle) -> Array[ViewHandle] {
 }
 
 ///|
+/// Returns the live view with the given declarative id, if one exists.
+pub fn WindowHandle::view(self : WindowHandle, id : String) -> ViewHandle? {
+  (self.find_view)(id)
+}
+
+///|
 /// Returns the declarative id of this view.
 pub fn ViewHandle::id(self : ViewHandle) -> String {
   self.id
@@ -939,10 +998,10 @@ pub fn ViewHandle::as_native_ref(self : ViewHandle) -> @native.ViewRef {
 /// window's content coordinate space, matching Electron's `setBounds`.
 pub fn ViewHandle::set_bounds(
   self : ViewHandle,
-  x : Int,
-  y : Int,
-  width : Int,
-  height : Int,
+  x~ : Int,
+  y~ : Int,
+  width~ : Int,
+  height~ : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_view_bounds)(x, y, width, height)
 }
@@ -973,6 +1032,70 @@ pub fn ViewHandle::load_url(
   url : String,
 ) -> Unit raise WindowSessionError {
   (self.load_view_url)(url)
+}
+
+///|
+/// Loads inline HTML into the view, served from `base_url` on the
+/// `proton://` scheme, mirroring `WindowHandle::load_html`.
+pub fn ViewHandle::load_html(
+  self : ViewHandle,
+  html : String,
+  base_url : String,
+) -> Unit raise WindowSessionError {
+  (self.load_view_html)(html, base_url)
+}
+
+///|
+/// Executes JavaScript in the view's main frame without awaiting a result.
+pub fn ViewHandle::eval(
+  self : ViewHandle,
+  script : String,
+) -> Unit raise WindowSessionError {
+  (self.eval_view_script)(script)
+}
+
+///|
+pub fn ViewHandle::back(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("back", None)
+}
+
+///|
+pub fn ViewHandle::forward(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("forward", None)
+}
+
+///|
+pub fn ViewHandle::reload(
+  self : ViewHandle,
+  ignore_cache? : Bool = false,
+) -> Unit raise WindowSessionError {
+  (self.send_view_command)(
+    if ignore_cache {
+      "reload_ignore_cache"
+    } else {
+      "reload"
+    },
+    None,
+  )
+}
+
+///|
+pub fn ViewHandle::stop(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("stop", None)
+}
+
+///|
+pub fn ViewHandle::open_devtools(
+  self : ViewHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_view_command)("open_devtools", None)
+}
+
+///|
+pub fn ViewHandle::close_devtools(
+  self : ViewHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_view_command)("close_devtools", None)
 }
 
 ///|
@@ -1222,6 +1345,7 @@ fn RuntimeSession::dispatch_runtime_event(
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
   self.dispatch_window_event(event)
+  self.dispatch_view_event(event)
   self.dispatch_browser_event(event)
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
@@ -1265,6 +1389,56 @@ fn RuntimeSession::dispatch_window_event(
     (Some(window_id), Some(request_id)) =>
       self.start_window_close_request(window_id, request_id)
     _ => ()
+  }
+}
+
+///|
+fn RuntimeSession::dispatch_view_event(
+  self : RuntimeSession,
+  event : @native.RuntimeEvent,
+) -> Unit {
+  if self.view_event_handlers.is_empty() {
+    return
+  }
+  let info = match event.view_event() {
+    Some(info) => info
+    None => return
+  }
+  let (window_native_id, view_native_id) = match
+    (event.window_id(), event.view_id()) {
+    (Some(window_id), Some(view_id)) => (window_id, view_id)
+    _ => return
+  }
+  let running = match self.find_window_by_native_id(window_native_id) {
+    Some(running) => running
+    None => return
+  }
+  for view in running.views {
+    if view.view.id() == view_native_id {
+      let handle = self.view_handle(running, view)
+      let view_event = match event.event_type() {
+        "view_loading_changed" =>
+          LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
+        "view_navigated" => Navigated(url=info.url.unwrap_or(""))
+        "view_title_updated" => TitleUpdated(title=info.title.unwrap_or(""))
+        "view_load_failed" =>
+          LoadFailed(
+            url=info.url.unwrap_or(""),
+            error_code=info.error_code.unwrap_or(0),
+            error_text=info.error_text.unwrap_or(""),
+          )
+        _ => return
+      }
+      for handler in self.view_event_handlers {
+        ignore(
+          self.window_tasks.spawn(
+            () => handler(handle, view_event),
+            no_wait=true,
+          ),
+        )
+      }
+      return
+    }
   }
 }
 

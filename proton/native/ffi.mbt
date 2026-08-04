@@ -493,3 +493,22 @@ extern "C" fn proton_view_state_json_ffi(
   buffer_len : Int,
   out_required_len : Ref[Int],
 ) -> Int = "proton_view_state_json"
+
+///|
+#borrow(html, base_url)
+extern "C" fn proton_view_load_html_ffi(
+  view : Int64,
+  html : Bytes,
+  base_url : Bytes,
+) -> Int = "proton_view_load_html"
+
+///|
+#borrow(script)
+extern "C" fn proton_view_eval_ffi(view : Int64, script : Bytes) -> Int = "proton_view_eval"
+
+///|
+#borrow(command_json)
+extern "C" fn proton_view_browser_command_json_ffi(
+  view : Int64,
+  command_json : Bytes,
+) -> Int = "proton_view_browser_command_json"

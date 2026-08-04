@@ -12,7 +12,21 @@ priv struct WebContentsViewWakeup {
 let wcv_left_url = "data:text/html,<html><head><title>WCV Left</title></head><body><h1>left-marker</h1></body></html>"
 
 ///|
-let wcv_right_url = "data:text/html,<html><head><title>WCV Right</title></head><body><h1>right-marker</h1></body></html>"
+let wcv_right_url = "proton://view-right/"
+
+///|
+let wcv_right_html =
+  #|<!doctype html>
+  #|<html>
+  #|  <head>
+  #|    <meta charset="utf-8">
+  #|    <title>WCV Right</title>
+  #|  </head>
+  #|  <body>
+  #|    <h1>right-marker</h1>
+  #|  </body>
+  #|</html>
+  #|
 
 ///|
 let wcv_host_page =
@@ -103,14 +117,7 @@ async fn run_web_contents_view_views(
     wcv_native_result("create right view", () => {
       @native.View::new(
         window,
-        @native.ViewConfig::new(
-          width=300,
-          height=220,
-          x=330,
-          y=10,
-          z_order=1,
-          initial_url=wcv_right_url,
-        ),
+        @native.ViewConfig::new(width=300, height=220, x=330, y=10, z_order=1),
       )
     }) {
     Ok(view) => view
@@ -119,7 +126,18 @@ async fn run_web_contents_view_views(
       return Err(message)
     }
   }
-  let pump_result = run_web_contents_view_pump(runtime)
+  match
+    wcv_native_result("load right view html", () => {
+      right.load_html(wcv_right_html, wcv_right_url)
+    }) {
+    Err(message) => {
+      ignore(wcv_native_result("destroy right view", () => right.destroy()))
+      ignore(wcv_native_result("destroy left view", () => left.destroy()))
+      return Err(message)
+    }
+    Ok(_) => ()
+  }
+  let pump_result = run_web_contents_view_pump(runtime, right)
   ignore(wcv_native_result("destroy right view", () => right.destroy()))
   ignore(wcv_native_result("destroy left view", () => left.destroy()))
   pump_result
@@ -128,12 +146,15 @@ async fn run_web_contents_view_views(
 ///|
 async fn run_web_contents_view_pump(
   runtime : @native.Runtime,
+  right : @native.View,
 ) -> Result[Unit, String] {
   let wakeup = match WebContentsViewWakeup::new(runtime) {
     Err(message) => return Err(message)
     Ok(wakeup) => wakeup
   }
   defer wakeup.close(runtime)
+  let view_events : Array[String] = []
+  let mut controls_sent = false
   let mut closed = false
   while !closed {
     let mut polling_events = true
@@ -141,12 +162,58 @@ async fn run_web_contents_view_pump(
       match wcv_native_result("poll event", () => runtime.poll_event()) {
         Err(message) => return Err(message)
         Ok(None) => polling_events = false
-        Ok(Some(event)) => if event.is_window_closed() { closed = true }
+        Ok(Some(event)) => {
+          if event.is_window_closed() {
+            closed = true
+          }
+          match event.view_event() {
+            Some(info) => {
+              if !controls_sent && event.event_type() == "view_navigated" {
+                // The view browser is live by now; exercise eval and browser
+                // commands deterministically.
+                controls_sent = true
+                ignore(
+                  wcv_native_result("eval right view", () => {
+                    right.eval("void 0")
+                  }),
+                )
+                ignore(
+                  wcv_native_result("stop right view", () => {
+                    right.browser_command("stop")
+                  }),
+                )
+              }
+              let mut line = event.event_type()
+              match info.url {
+                Some(url) => line = line + " url=" + url
+                None => ()
+              }
+              match info.title {
+                Some(title) => line = line + " title=" + title
+                None => ()
+              }
+              match info.is_loading {
+                Some(is_loading) =>
+                  line = line + " loading=" + is_loading.to_string()
+                None => ()
+              }
+              view_events.push(line)
+            }
+            None => ()
+          }
+        }
       }
     }
     if !closed {
       ignore(wakeup.wait())
     }
+  }
+  let events_path = match @env.get_env_var("PROTON_NATIVE_LOG") {
+    Some(native_log) => native_log + ".view-events"
+    None => "target/proton-e2e-view-events.json"
+  }
+  @mbfs.write_string_to_file(events_path, view_events.join("\n")) catch {
+    _ => ()
   }
   Ok(())
 }

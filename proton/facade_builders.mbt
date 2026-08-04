@@ -129,6 +129,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     application_lifecycle_hooks: [],
     launch_input_handlers: [],
     window_event_handlers: [],
+    view_event_handlers: [],
     window_close_handler: None,
     navigation_handler: None,
     popup_handler: None,
@@ -304,6 +305,17 @@ pub fn App::on_window_event(
   handler : async (WindowHandle, WindowEvent) -> Unit noraise,
 ) -> App {
   self.window_event_handlers.push(handler)
+  self
+}
+
+///|
+/// Observes lifecycle events for every running web contents view: loading
+/// changes, main-frame navigations, title updates, and load failures.
+pub fn App::on_view_event(
+  self : App,
+  handler : async (ViewHandle, ViewEvent) -> Unit noraise,
+) -> App {
+  self.view_event_handlers.push(handler)
   self
 }
 
