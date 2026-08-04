@@ -164,6 +164,27 @@ if(PROTON_WITH_ENGINE)
     install(FILES ${PROTON_ENGINE_RUNTIME_DATA} DESTINATION bin)
     install(DIRECTORY "${PROTON_ENGINE_RESOURCES_DIR}/" DESTINATION Resources)
     install(TARGETS cef_process RUNTIME DESTINATION bin)
+
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../proton/moon.mod"
+         PROTON_MOON_VERSION_LINE REGEX "^version = ")
+    string(REGEX REPLACE "^version = \"([^\"]+)\".*$" "\\1"
+           PROTON_PREBUILT_VERSION "${PROTON_MOON_VERSION_LINE}")
+    set(PROTON_PREBUILT_MANIFEST
+        "${CMAKE_BINARY_DIR}/proton_prebuilt_manifest.json")
+    file(WRITE "${PROTON_PREBUILT_MANIFEST}"
+      "{\n"
+      "  \"platform\": \"win32-x64\",\n"
+      "  \"proton_version\": \"${PROTON_PREBUILT_VERSION}\",\n"
+      "  \"artifacts\": {\n"
+      "    \"dll\": \"bin/proton.dll\",\n"
+      "    \"helper\": \"bin/cef_process.exe\",\n"
+      "    \"import_lib\": \"lib/proton.lib\",\n"
+      "    \"header\": \"include/proton_native.h\"\n"
+      "  }\n"
+      "}\n"
+    )
+    install(FILES "${PROTON_PREBUILT_MANIFEST}" DESTINATION .
+            RENAME manifest.json)
   elseif(APPLE)
     if(NOT EXISTS "${PROTON_ENGINE_FRAMEWORK_BINARY}")
       message(FATAL_ERROR "Missing engine framework binary: ${PROTON_ENGINE_FRAMEWORK_BINARY}")
