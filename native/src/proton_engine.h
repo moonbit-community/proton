@@ -334,5 +334,26 @@ int32_t proton_engine_view_load_url(proton_engine_view_t *view,
                                     const char *url,
                                     char *error,
                                     size_t error_len);
+int32_t proton_engine_view_eval(proton_engine_view_t *view,
+                                const char *script,
+                                char *error,
+                                size_t error_len);
+int32_t proton_engine_view_load_html(proton_engine_view_t *view,
+                                     const char *html,
+                                     const char *base_url,
+                                     char *error,
+                                     size_t error_len);
+int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
+                                                const char *command_json,
+                                                char *error,
+                                                size_t error_len);
+int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len,
+                                           char *error,
+                                           size_t error_len);
+void proton_engine_view_bind_public_id(proton_engine_view_t *view,
+                                       proton_view_id_t public_view);
 
 #endif

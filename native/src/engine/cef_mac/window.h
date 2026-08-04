@@ -21,6 +21,7 @@ NSWindow *proton_engine_window_retain_native_window(
 int proton_engine_window_is_closed_or_missing(proton_engine_window_t *window);
 proton_engine_window_t *proton_engine_window_lookup_native_id(
     uint64_t native_id);
+
 proton_window_id_t
 proton_engine_window_public_id(proton_engine_window_t *window);
 proton_window_id_t

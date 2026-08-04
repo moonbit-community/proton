@@ -368,8 +368,9 @@ static const char *const proton_window_config_keys[] = {
 };
 
 static const char *const proton_view_config_keys[] = {
-    "abi_version", "x",       "y",       "width",
-    "height",      "visible", "z_order", "initial_url",
+    "abi_version", "x",                "y",           "width",
+    "height",      "visible",          "z_order",     "initial_url",
+    "background_color",
 };
 
 static const char *const proton_bridge_config_keys[] = {

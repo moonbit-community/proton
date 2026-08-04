@@ -31,6 +31,23 @@ uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
   return 0;
 }
 
+int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len,
+                                           char *error,
+                                           size_t error_len) {
+  (void)view;
+  (void)buffer;
+  (void)buffer_len;
+  (void)error;
+  (void)error_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return PROTON_EVENT_NONE;
+}
+
 int32_t proton_engine_window_get_state(
     proton_engine_window_t *window,
     proton_engine_window_state_t *out_state, char *error, size_t error_len) {
@@ -251,7 +268,7 @@ int main(void) {
   proton_view_id_t view = PROTON_INVALID_HANDLE;
   proton_view_slot_t *view_slot = NULL;
   if (expect_status("view_slot_create",
-                    proton_view_slot_create(runtime_slot, runtime, handles[1],
+                    proton_view_slot_create(runtime, handles[1],
                                             (proton_engine_view_t *)0x3, 10,
                                             20, 320, 200, 1, true, &view,
                                             &view_slot),
@@ -276,7 +293,7 @@ int main(void) {
   }
   proton_view_id_t second_view = PROTON_INVALID_HANDLE;
   if (expect_status("second view_slot_create",
-                    proton_view_slot_create(runtime_slot, runtime, handles[1],
+                    proton_view_slot_create(runtime, handles[1],
                                             (proton_engine_view_t *)0x4, 0, 0,
                                             100, 100, 0, false, &second_view,
                                             NULL),
@@ -299,7 +316,7 @@ int main(void) {
     return 1;
   }
   if (expect_status("views on other windows stay live",
-                    proton_view_slot_create(runtime_slot, runtime, handles[2],
+                    proton_view_slot_create(runtime, handles[2],
                                             (proton_engine_view_t *)0x5, 0, 0,
                                             50, 50, 0, true, &view, NULL),
                     PROTON_OK)) {
@@ -307,7 +324,7 @@ int main(void) {
   }
   proton_view_id_t recycled = PROTON_INVALID_HANDLE;
   if (expect_status("recycled view slot is recreated",
-                    proton_view_slot_create(runtime_slot, runtime, handles[1],
+                    proton_view_slot_create(runtime, handles[1],
                                             (proton_engine_view_t *)0x6, 0, 0,
                                             50, 50, 0, true, &recycled, NULL),
                     PROTON_OK)) {

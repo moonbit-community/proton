@@ -114,6 +114,9 @@ PROTON_INTERNAL int32_t proton_runtime_sync_engine_close_requests(
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_browser_events(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
+PROTON_INTERNAL int32_t proton_runtime_sync_engine_view_events(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_id_t runtime_handle, proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_format_window_state_json(
@@ -123,7 +126,7 @@ PROTON_INTERNAL int32_t
 proton_destroy_windows_for_runtime(proton_runtime_id_t runtime);
 
 PROTON_INTERNAL int32_t proton_view_slot_create(
-    proton_runtime_slot_t *runtime, proton_runtime_id_t runtime_handle,
+    proton_runtime_id_t runtime_handle,
     proton_window_id_t window_handle, proton_engine_view_t *engine_view,
     int32_t x, int32_t y, int32_t width, int32_t height, int32_t z_order,
     bool visible, proton_view_id_t *out_view, proton_view_slot_t **out_slot);

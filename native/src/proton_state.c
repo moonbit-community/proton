@@ -508,6 +508,40 @@ int32_t proton_runtime_sync_engine_browser_events(
   return PROTON_OK;
 }
 
+int32_t proton_runtime_sync_engine_view_events(
+    proton_runtime_id_t runtime_handle,
+    proton_runtime_slot_t *runtime) {
+  char event_json[PROTON_MAX_EVENT_BYTES];
+  for (uint32_t i = 0; i < PROTON_MAX_VIEWS; i++) {
+    proton_view_slot_t *view = &g_views[i];
+    if (!view->occupied || view->destroyed ||
+        view->runtime != runtime_handle || view->engine_view == NULL) {
+      continue;
+    }
+    while (runtime->event_count < PROTON_MAX_EVENTS) {
+      int32_t required = 0;
+      char error[512] = {0};
+      int32_t status = proton_engine_view_poll_event_json(
+          view->engine_view, event_json, sizeof(event_json), &required, error,
+          sizeof(error));
+      if (status == PROTON_EVENT_NONE) {
+        break;
+      }
+      if (status != PROTON_OK) {
+        return proton_set_engine_status(status, error);
+      }
+      if (!proton_runtime_enqueue_event(runtime, event_json)) {
+        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
+                                "failed to queue view event");
+      }
+    }
+    if (runtime->event_count >= PROTON_MAX_EVENTS) {
+      break;
+    }
+  }
+  return PROTON_OK;
+}
+
 void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_id_t runtime_handle, proton_runtime_slot_t *runtime) {
   for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
@@ -558,15 +592,13 @@ int32_t proton_destroy_windows_for_runtime(proton_runtime_id_t runtime) {
   return PROTON_OK;
 }
 
-int32_t proton_view_slot_create(proton_runtime_slot_t *runtime,
-                                proton_runtime_id_t runtime_handle,
+int32_t proton_view_slot_create(proton_runtime_id_t runtime_handle,
                                 proton_window_id_t window_handle,
                                 proton_engine_view_t *engine_view, int32_t x,
                                 int32_t y, int32_t width, int32_t height,
                                 int32_t z_order, bool visible,
                                 proton_view_id_t *out_view,
                                 proton_view_slot_t **out_slot) {
-  (void)runtime;
   for (uint32_t i = 0; i < PROTON_MAX_VIEWS; i++) {
     proton_view_slot_t *slot = &g_views[i];
     if (slot->occupied && !slot->destroyed) {

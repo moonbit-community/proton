@@ -762,6 +762,10 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
     if (status != PROTON_OK) {
       return status;
     }
+    status = proton_runtime_sync_engine_view_events(runtime, slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
     status = proton_runtime_sync_engine_window_states(runtime, slot);
     if (status != PROTON_OK) {
       return status;
@@ -1946,7 +1950,7 @@ int32_t proton_view_create_json(proton_window_id_t window,
   }
 
   status = proton_view_slot_create(
-      runtime_slot, window_slot->runtime, window, engine_view, values.x,
+      window_slot->runtime, window, engine_view, values.x,
       values.y, values.width, values.height, values.z_order,
       values.visible != 0, out_view, NULL);
   if (status != PROTON_OK) {
@@ -1956,6 +1960,9 @@ int32_t proton_view_create_json(proton_window_id_t window,
                                        sizeof(engine_error));
     }
     return status;
+  }
+  if (engine_view != NULL) {
+    proton_engine_view_bind_public_id(engine_view, *out_view);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -2067,6 +2074,75 @@ int32_t proton_view_load_url(proton_view_id_t view, const char *url) {
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_load_html(proton_view_id_t view, const char *html,
+                              const char *base_url) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (html == NULL || base_url == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "html and base_url are required");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_load_html(slot->engine_view, html, base_url,
+                                          engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_eval(proton_view_id_t view, const char *script) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (script == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "script is required");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_eval(slot->engine_view, script, engine_error,
+                                     sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_browser_command_json(proton_view_id_t view,
+                                         const char *command_json) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (command_json == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "browser command JSON is required");
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser commands require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_browser_command_json(
+      slot->engine_view, command_json, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;

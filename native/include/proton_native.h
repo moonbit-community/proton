@@ -290,6 +290,12 @@ PROTON_API int32_t proton_view_set_z_order(proton_view_id_t view,
                                            int32_t z_order);
 PROTON_API int32_t proton_view_load_url(proton_view_id_t view,
                                         const char *url);
+PROTON_API int32_t proton_view_load_html(proton_view_id_t view,
+                                         const char *html,
+                                         const char *base_url);
+PROTON_API int32_t proton_view_eval(proton_view_id_t view, const char *script);
+PROTON_API int32_t proton_view_browser_command_json(
+    proton_view_id_t view, const char *command_json);
 PROTON_API int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
                                           int32_t buffer_len,
                                           int32_t *out_required_len);
