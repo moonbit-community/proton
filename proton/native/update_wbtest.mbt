@@ -9,6 +9,22 @@
 /// side at a throwaway directory.
 ///
 test "updater binding reports native refusals" {
+  if !runtime_info().platform_id.has_prefix("darwin-") {
+    let install = expect_native_error(() => update_install(b"zip", "staging"))
+    assert_eq(install.status(), -8)
+    assert_eq(
+      install.message(),
+      "applying an update is implemented on macOS only; the nsis and appimage " +
+      "package targets now produce what the other platforms will replace",
+    )
+    let relaunch = expect_native_error(update_relaunch)
+    assert_eq(relaunch.status(), -8)
+    assert_eq(
+      relaunch.message(),
+      "applying an update is implemented on macOS only",
+    )
+    return
+  }
   let relative = expect_native_error(() => update_install(b"zip", "staging"))
   assert_eq(relative.status(), -1)
   assert_eq(relative.message(), "the staging parent directory must be absolute")
