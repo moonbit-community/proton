@@ -15,7 +15,7 @@ concurrency:
 
 env:
   PROTON_NO_UPDATE_CHECK: 1
-  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton/cache/cef
+  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton-global-cache
   PROTON_PREBUILT_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
       - name: Cache CEF downloads
         uses: actions/cache@v4
         with:
-          path: .proton/cache/cef
+          path: .proton-global-cache
           key: Linux-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
 
       - name: Install MoonBit
@@ -56,12 +56,13 @@ jobs:
 
       - name: Set up CEF runtime
         run: |
+          mkdir -p .proton-global-cache/linux-x64
           mkdir -p .proton/cache/cef/linux-x64
           moon -C cli run . -- -C .. cef setup
 
       - name: Build and install Release runtime
         run: |
-          runtime="$PWD/$(node -p "require('./.proton/runtime.json').dist")"
+          runtime="$RUNNER_TEMP/proton-runtime"
           platform=$(node -p "require('./.proton/runtime.json').platform")
           cef_name=$(node -p "require('./.proton/runtime.json').cef_version")
           cef_root="$PWD/.proton/cache/cef/$platform/$cef_name"

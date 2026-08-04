@@ -15,7 +15,7 @@ concurrency:
 
 env:
   PROTON_NO_UPDATE_CHECK: 1
-  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton/cache/cef
+  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton-global-cache
   PROTON_PREBUILT_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
       - name: Cache CEF downloads
         uses: actions/cache@v4
         with:
-          path: .proton/cache/cef
+          path: .proton-global-cache
           key: Windows-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
 
       - name: Install MoonBit
@@ -57,6 +57,7 @@ jobs:
       - name: Set up CEF runtime
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force .proton-global-cache\win32-x64 | Out-Null
           New-Item -ItemType Directory -Force .proton\cache\cef\win32-x64 | Out-Null
           moon -C cli run . -- -C .. cef setup
 
@@ -69,7 +70,7 @@ jobs:
           if ($manifest.platform -ne "win32-x64") {
             throw "unexpected platform: $($manifest.platform)"
           }
-          $runtime = Join-Path $PWD $manifest.dist
+          $runtime = Join-Path $env:RUNNER_TEMP "proton-runtime"
           $cefRoot = Join-Path $PWD ".proton\cache\cef\$($manifest.platform)\$($manifest.cef_version)"
           cmake -S native -B native\build-prebuilt `
             "-DCMAKE_INSTALL_PREFIX=$runtime" `
