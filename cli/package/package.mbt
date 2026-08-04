@@ -197,12 +197,68 @@ fn package_options_from_matches(
 }
 
 ///|
+/// The platform `package` is running on.
+///
+/// Packaging drives the host's own tooling -- codesign, makensis,
+/// appimagetool -- so the host decides both which targets can be built and
+/// which artifact an update downloads.
+pub(all) enum PackageHost {
+  Macos
+  Windows
+  Linux
+} derive(Eq)
+
+///|
+/// The host `package` is running on, which is the platform it can build for.
+async fn current_package_host() -> PackageHost {
+  if @path.sep == '\\' {
+    Windows
+  } else if is_macos_host() {
+    Macos
+  } else {
+    Linux
+  }
+}
+
+///|
+/// The host a platform id names. Used where the question is which platform's
+/// artifacts are being described rather than which one is running -- update
+/// metadata names the platform it was built for, and has the id in hand.
+fn package_host_of(platform : String) -> PackageHost? {
+  if platform.has_prefix("darwin-") {
+    Some(Macos)
+  } else if platform.has_prefix("win32-") {
+    Some(Windows)
+  } else if platform.has_prefix("linux-") {
+    Some(Linux)
+  } else {
+    None
+  }
+}
+
+///|
+/// Every target `package` accepts, and the hosts that can build it.
+///
+/// A target only builds on the platform it targets, because producing it runs
+/// that platform's own tooling. Absent from this table means not a target at
+/// all, so one table answers both "is this a target?" and "can this host build
+/// it?" -- previously separate checks that could disagree.
+fn package_target_hosts(target : String) -> Array[PackageHost]? {
+  match target {
+    // `app` names a macOS bundle and a Windows portable directory; on Linux
+    // the distributable unit is the AppImage itself.
+    "app" => Some([Macos, Windows])
+    "zip" => Some([Macos, Windows])
+    "dmg" => Some([Macos])
+    "nsis" => Some([Windows])
+    "appimage" => Some([Linux])
+    _ => None
+  }
+}
+
+///|
 fn validate_package_target(target : String) -> Unit raise PackageUsageError {
-  if target != "app" &&
-    target != "zip" &&
-    target != "dmg" &&
-    target != "nsis" &&
-    target != "appimage" {
+  guard package_target_hosts(target) is Some(_) else {
     raise UnsupportedTarget(target~)
   }
 }
@@ -240,36 +296,24 @@ async fn build_package_plan(
   } else {
     (version, version)
   }
+  let host = current_package_host()
   let targets = if raw.targets.length() > 0 {
     copy_strings(raw.targets)
   } else if bundle.targets.length() > 0 {
     copy_strings(bundle.targets)
-  } else if !macos_host && @path.sep != '\\' {
-    // `app` names a macOS bundle and a Windows portable directory; on Linux
-    // the distributable unit is the AppImage itself.
-    ["appimage"]
   } else {
-    ["app", "zip"]
+    match host {
+      Linux => ["appimage"]
+      Macos | Windows => ["app", "zip"]
+    }
   }
-  if targets.contains("dmg") && !macos_host {
-    raise PackagePlanError::UnsupportedTargetForPlatform(
-      target="dmg",
-      platform=@cef.current_platform_id(),
-    )
-  }
-  // The installer packages a staged Windows tree, which only the Windows
-  // branch of stage_release_layout produces.
-  if targets.contains("nsis") && @path.sep != '\\' {
-    raise PackagePlanError::UnsupportedTargetForPlatform(
-      target="nsis",
-      platform=@cef.current_platform_id(),
-    )
-  }
-  if targets.contains("appimage") && (macos_host || @path.sep == '\\') {
-    raise PackagePlanError::UnsupportedTargetForPlatform(
-      target="appimage",
-      platform=@cef.current_platform_id(),
-    )
+  for target in targets {
+    guard package_target_hosts(target) is Some(hosts) && hosts.contains(host) else {
+      raise PackagePlanError::UnsupportedTargetForPlatform(
+        target~,
+        platform=@cef.current_platform_id(),
+      )
+    }
   }
   let base_dir = @fsutil.resolve_path(project.base_dir(), ".")
   let backend = project.backend()
@@ -564,12 +608,10 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
     None =>
       raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
   }
-  if @path.sep == '\\' {
-    stage_windows_portable(plan, executable, runtime)
-  } else if is_macos_host() {
-    stage_macos_app(plan, executable, runtime)
-  } else {
-    stage_linux_appdir(plan, executable, runtime)
+  match current_package_host() {
+    Windows => stage_windows_portable(plan, executable, runtime)
+    Macos => stage_macos_app(plan, executable, runtime)
+    Linux => stage_linux_appdir(plan, executable, runtime)
   }
 }
 

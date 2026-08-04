@@ -1,21 +1,24 @@
 // The Windows installer target.
 //
-// This exists because the updater needs something to re-run. A portable ZIP
-// has no install location of record and no way to replace a running tree, so
-// `proton_update_install` on Windows re-invokes this installer silently and
-// lets it do the replacing. Everything the script does must therefore be safe
-// to repeat over an existing installation.
+// This exists because the updater will need something to re-run. A portable
+// ZIP has no install location of record and no way to replace a running tree,
+// so the Windows apply path is planned as a silent re-invocation of this
+// installer, letting it do the replacing. That path is not implemented yet --
+// `proton_update_install` still reports PROTON_ERR_UNSUPPORTED on Windows --
+// but the script is written for it, so everything it does must be safe to
+// repeat over an existing installation.
 
 ///|
-/// NSIS derives the silent-install switch (`/S`) itself, so the updater needs
-/// no cooperation from the script beyond tolerating a running application.
+/// NSIS derives the silent-install switch (`/S`) itself, so that apply path
+/// will need no cooperation from the script beyond tolerating a running
+/// application.
 let windows_installer_tool : String = "makensis"
 
 ///|
 fn windows_installer_path(plan : PackagePlan) -> String {
   @fsutil.resolve_path(
     plan.output,
-    package_executable_name(plan.product_name) + "-setup.exe",
+    "\{package_executable_name(plan.product_name)}-setup.exe",
   )
 }
 
@@ -23,7 +26,7 @@ fn windows_installer_path(plan : PackagePlan) -> String {
 fn windows_installer_staging_path(plan : PackagePlan) -> String {
   @fsutil.resolve_path(
     plan.output,
-    "." + package_executable_name(plan.product_name) + ".staging-setup.exe",
+    ".\{package_executable_name(plan.product_name)}.staging-setup.exe",
   )
 }
 
@@ -31,7 +34,7 @@ fn windows_installer_staging_path(plan : PackagePlan) -> String {
 fn windows_installer_script_path(plan : PackagePlan) -> String {
   @fsutil.resolve_path(
     plan.output,
-    "." + package_executable_name(plan.product_name) + ".installer.nsi",
+    ".\{package_executable_name(plan.product_name)}.installer.nsi",
   )
 }
 
@@ -40,12 +43,12 @@ fn windows_installer_script_path(plan : PackagePlan) -> String {
 /// it — it re-runs the installer, which resolves the location itself — but
 /// Add/Remove Programs and a manual reinstall both do.
 fn windows_installer_registry_key(plan : PackagePlan) -> String {
-  "Software\\" + plan.identifier
+  "Software\\\{plan.identifier}"
 }
 
 ///|
 fn windows_uninstall_registry_key(plan : PackagePlan) -> String {
-  "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\" + plan.identifier
+  "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\{plan.identifier}"
 }
 
 ///|
@@ -97,7 +100,7 @@ fn windows_installer_quote(value : String) -> String {
 /// `makensis` needs Windows tooling that only the packaging step has.
 fn windows_installer_script(plan : PackagePlan, source : String) -> String {
   let product = windows_installer_quote(plan.product_name)
-  let executable = package_executable_name(plan.product_name) + ".exe"
+  let executable = "\{package_executable_name(plan.product_name)}.exe"
   let builder = StringBuilder::new()
   builder <+
     #|Unicode true
@@ -185,7 +188,7 @@ async fn create_windows_installer(
     error =>
       raise WindowsPackagingError::ToolFailure(
         stage="write Windows installer script",
-        detail=script + ": " + @debug.render(Repr(error)),
+        detail="\{script}: \{@debug.render(Repr(error))}",
       )
   }
   let (code, _) = @process.collect_output_merged(windows_installer_tool, [
@@ -200,17 +203,17 @@ async fn create_windows_installer(
   guard code == 0 else {
     raise WindowsPackagingError::ToolFailure(
       stage="create Windows installer",
-      detail="exit code " + code.to_string(),
+      detail="exit code \{code}",
     )
   }
   guard @fsutil.path_exists(staging) else {
     raise WindowsPackagingError::Verification(
-      detail="installer was not produced: " + staging,
+      detail="installer was not produced: \{staging}",
     )
   }
   promote_windows_artifact(staging, installer, "Windows installer")
   if announce {
-    println("Created installer: " + installer)
+    println("Created installer: \{installer}")
   }
   ()
 }

@@ -24,7 +24,7 @@ test "the AppDir mirrors the macOS bundle so nothing needs a Linux case" {
 test "linux artifacts stage beside the other outputs" {
   let plan = linux_test_plan("/tmp/proton-linux", ["appimage"])
   let appdir = linux_appdir_staging_path(plan)
-  let appimage = linux_appimage_path(plan)
+  let appimage = linux_appimage_path(plan, "x86_64")
   let staging = linux_appimage_staging_path(plan)
   // Staged paths are hidden so a failed run never leaves something that
   // looks like a finished artifact.
@@ -32,6 +32,15 @@ test "linux artifacts stage beside the other outputs" {
   assert_true(staging.has_suffix(".demo-app.staging.AppImage"))
   assert_true(appimage.has_suffix("demo-app-1.0.0-x86_64.AppImage"))
   assert_not_eq(appimage, staging)
+}
+
+///|
+test "the AppImage suffix follows the platform rather than a fixed value" {
+  // The suffix is what tells a user whether the download runs on their
+  // machine, so an unmapped platform has to be reported, not guessed at.
+  assert_eq(linux_appimage_arch_of("linux-x64"), Some("x86_64"))
+  assert_eq(linux_appimage_arch_of("linux-arm64"), Some("aarch64"))
+  assert_eq(linux_appimage_arch_of("linux-riscv64"), None)
 }
 
 ///|
@@ -61,13 +70,13 @@ test "AppRun resolves its own location rather than assuming a mount point" {
 ///|
 test "a png is required because appimagetool will not build without one" {
   let plan = windows_test_plan("/tmp/proton-linux", ["appimage"], false)
-  assert_true(first_linux_icon(plan.icons) is None)
+  assert_true(first_png_icon(plan.icons) is None)
   plan.icons.push("/tmp/proton-linux/assets/icon.ico")
   // A Windows icon is not a substitute.
-  assert_true(first_linux_icon(plan.icons) is None)
+  assert_true(first_png_icon(plan.icons) is None)
   plan.icons.push("/tmp/proton-linux/assets/icon.png")
   assert_eq(
-    first_linux_icon(plan.icons),
+    first_png_icon(plan.icons),
     Some("/tmp/proton-linux/assets/icon.png"),
   )
 }

@@ -19,7 +19,8 @@ pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
         $|no distributable artifact to describe
         $|
         $|An update is downloaded as a single file, so the manifest fragment
-        $|needs a zip or dmg target. A bare .app directory cannot be fetched.
+        $|needs a target that produces one: zip or dmg on macOS, nsis or zip on
+        $|Windows, appimage on Linux. A staged app directory cannot be fetched.
       )
     UnreadableArtifact(path~, detail~) => "cannot read \{path}: \{detail}"
     InvalidBaseUrl(url~) => "updater base URL must begin with https://: \{url}"
@@ -83,19 +84,64 @@ async fn artifact_digest_and_size(
 }
 
 ///|
+/// The updater's anti-rollback anchor. Written beside the staged `moon.proton`
+/// so the two always travel together, and read back by the native updater to
+/// decide whether an offered revision moves forward.
+///
+/// macOS has no need of it -- its revision lives in the code-signed
+/// `Info.plist`. The other two hosts have no signature to carry it, so the
+/// value lands in a plain file that is still awkward to forge in place: an
+/// AppImage's squashfs is read-only, and a Windows install tree sits under
+/// Program Files.
+///
+/// Held as a decimal string for the same reason macOS holds one: it preserves
+/// the full uint64 range that plist integers and JSON doubles do not.
+let update_revision_file_name : String = "proton-update-revision"
+
+///|
+async fn stage_update_revision(plan : PackagePlan, directory : String) -> Unit {
+  write_text(
+    @fsutil.resolve_path(directory, update_revision_file_name),
+    "\{plan.update_revision}\n",
+  )
+}
+
+///|
 /// Returns the artifact an update would download.
 ///
-/// A zip is preferred over a dmg because it is the smaller of the two and
-/// needs no mounting to expand. The `.app` directory is never a candidate: it
-/// is a directory, and an update is fetched as one file.
-fn updater_artifact_path(plan : PackagePlan) -> String? {
-  if plan.targets.contains("zip") {
-    return Some(macos_zip_path(plan))
+/// Always exactly one file, so a staged directory is never a candidate. Where
+/// a host builds more than one candidate the tie is broken by what the apply
+/// path wants: on Windows the installer, because applying an update re-runs
+/// it; on macOS the zip, because it is the smaller of the two and needs no
+/// mounting to expand.
+fn updater_artifact_path(plan : PackagePlan, platform : String) -> String? {
+  match package_host_of(platform) {
+    Some(Macos) =>
+      if plan.targets.contains("zip") {
+        Some(macos_zip_path(plan))
+      } else if plan.targets.contains("dmg") {
+        Some(macos_dmg_path(plan))
+      } else {
+        None
+      }
+    Some(Windows) =>
+      if plan.targets.contains("nsis") {
+        Some(windows_installer_path(plan))
+      } else if plan.targets.contains("zip") {
+        Some(windows_archive_path(plan))
+      } else {
+        None
+      }
+    Some(Linux) =>
+      // The suffix has to match what create_linux_appimage produced, so both
+      // read the architecture from the same platform id.
+      match
+        (plan.targets.contains("appimage"), linux_appimage_arch_of(platform)) {
+        (true, Some(arch)) => Some(linux_appimage_path(plan, arch))
+        _ => None
+      }
+    None => None
   }
-  if plan.targets.contains("dmg") {
-    return Some(macos_dmg_path(plan))
-  }
-  None
 }
 
 ///|
@@ -153,7 +199,7 @@ pub async fn write_updater_metadata(
   let platform = @cef.current_platform_id() catch {
     error => raise UnknownPlatform(detail=@debug.render(Repr(error)))
   }
-  let artifact = match updater_artifact_path(plan) {
+  let artifact = match updater_artifact_path(plan, platform) {
     Some(path) => path
     None => raise NoDistributableArtifact
   }

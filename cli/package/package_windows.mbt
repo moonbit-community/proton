@@ -364,6 +364,7 @@ async fn stage_windows_portable_impl(
     @fsutil.resolve_path(staging, "moon.proton"),
   )
   stage_project_inputs(plan, staging)
+  stage_update_revision(plan, staging)
   write_package_manifest(plan, staging, "windows-portable")
   validate_windows_portable_layout(plan, staging)
   if plan.sign {

@@ -13,11 +13,6 @@
 let linux_appimage_tool : String = "appimagetool"
 
 ///|
-/// Read back by `proton_update_current_revision` from inside the mounted
-/// AppImage. Kept beside `moon.proton` so both travel with the installation.
-let linux_revision_file_name : String = "proton-update-revision"
-
-///|
 /// Rewrites an ELF rpath after staging, the way `add_macos_rpath` does for
 /// Mach-O. Doing it here rather than at link time keeps the development build
 /// pointing at the absolute runtime, and keeps `$ORIGIN` out of the link
@@ -25,21 +20,47 @@ let linux_revision_file_name : String = "proton-update-revision"
 let linux_package_rpath : String = "$ORIGIN/../Resources/proton/lib"
 
 ///|
+/// The AppImage architecture name for a platform id.
+///
+/// appimagetool names the runtime it embeds by architecture and cannot infer
+/// one from an AppDir, so this decides both the `ARCH` it runs with and the
+/// suffix the artifact carries. Kept as a lookup rather than a constant
+/// because that suffix is what tells a user whether the download will run on
+/// their machine, and `None` reports an unmapped platform rather than
+/// mislabelling it.
+fn linux_appimage_arch_of(platform : String) -> String? {
+  match platform {
+    "linux-x64" => Some("x86_64")
+    "linux-arm64" => Some("aarch64")
+    _ => None
+  }
+}
+
+///|
+fn linux_appimage_arch(platform : String) -> String raise LinuxPackagingError {
+  match linux_appimage_arch_of(platform) {
+    Some(arch) => arch
+    None =>
+      raise LinuxPackagingError::InvalidConfiguration(
+        detail="the appimage target has no architecture mapping for \{platform}",
+      )
+  }
+}
+
+///|
 fn linux_appdir_staging_path(plan : PackagePlan) -> String {
   @fsutil.resolve_path(
     plan.output,
-    "." + package_executable_name(plan.product_name) + ".AppDir",
+    ".\{package_executable_name(plan.product_name)}.AppDir",
   )
 }
 
 ///|
-fn linux_appimage_path(plan : PackagePlan) -> String {
+fn linux_appimage_path(plan : PackagePlan, arch : String) -> String {
+  let executable = package_executable_name(plan.product_name)
   @fsutil.resolve_path(
     plan.output,
-    package_executable_name(plan.product_name) +
-    "-" +
-    plan.version +
-    "-x86_64.AppImage",
+    "\{executable}-\{plan.version}-\{arch}.AppImage",
   )
 }
 
@@ -47,12 +68,14 @@ fn linux_appimage_path(plan : PackagePlan) -> String {
 fn linux_appimage_staging_path(plan : PackagePlan) -> String {
   @fsutil.resolve_path(
     plan.output,
-    "." + package_executable_name(plan.product_name) + ".staging.AppImage",
+    ".\{package_executable_name(plan.product_name)}.staging.AppImage",
   )
 }
 
 ///|
-fn first_linux_icon(icons : Array[String]) -> String? {
+/// The desktop entry pairs with a PNG of the same stem at the AppDir root, so
+/// any other image format the bundle declares is no use here.
+fn first_png_icon(icons : Array[String]) -> String? {
   for icon in icons {
     if icon.to_lower().has_suffix(".png") {
       return Some(icon)
@@ -104,14 +127,13 @@ async fn set_linux_rpath(binary : String, rpath : String) -> Unit {
     error =>
       raise LinuxPackagingError::ToolFailure(
         stage="set rpath",
-        detail="patchelf is not available; install it to build the appimage target: " +
-          @debug.render(Repr(error)),
+        detail="patchelf is not available; install it to build the appimage target: \{@debug.render(Repr(error))}",
       )
   }
   if code != 0 {
     raise LinuxPackagingError::ToolFailure(
       stage="set rpath",
-      detail="patchelf exited with code " + code.to_string() + ": " + binary,
+      detail="patchelf exited with code \{code}: \{binary}",
     )
   }
 }
@@ -122,7 +144,7 @@ async fn stage_linux_appdir(
   executable : String,
   runtime : String,
 ) -> Unit {
-  stage_linux_appdir_impl(plan, executable, runtime, true) catch {
+  stage_linux_appdir_impl(plan, executable, runtime) catch {
     error => {
       for
         path in [
@@ -143,7 +165,6 @@ async fn stage_linux_appdir_impl(
   plan : PackagePlan,
   executable : String,
   runtime : String,
-  announce : Bool,
 ) -> Unit {
   guard @fsutil.path_is_file(executable) else {
     raise LinuxPackagingError::MissingTarget(path=executable)
@@ -173,7 +194,7 @@ async fn stage_linux_appdir_impl(
 
   // appimagetool refuses to build without an icon, and a placeholder would
   // ship a wrong one silently, so the requirement is reported instead.
-  let icon = match first_linux_icon(plan.icons) {
+  let icon = match first_png_icon(plan.icons) {
     Some(icon) => icon
     None =>
       raise LinuxPackagingError::InvalidConfiguration(
@@ -183,11 +204,11 @@ async fn stage_linux_appdir_impl(
   guard @fsutil.path_is_file(icon) else {
     raise PackagePlanError::MissingIcon(path=icon)
   }
-  let staged_icon = @fsutil.resolve_path(appdir, executable_name + ".png")
+  let staged_icon = @fsutil.resolve_path(appdir, "\{executable_name}.png")
   copy_file(icon, staged_icon)
   copy_file(icon, @fsutil.resolve_path(appdir, ".DirIcon"))
   write_text(
-    @fsutil.resolve_path(appdir, executable_name + ".desktop"),
+    @fsutil.resolve_path(appdir, "\{executable_name}.desktop"),
     linux_desktop_entry(plan),
   )
   let apprun = @fsutil.resolve_path(appdir, "AppRun")
@@ -199,56 +220,38 @@ async fn stage_linux_appdir_impl(
         detail=@debug.render(Repr(error)),
       )
   }
-  // The updater's anti-rollback anchor. macOS keeps it in the code-signed
-  // Info.plist; an AppImage has no signature, but its squashfs is read-only,
-  // so a revision inside it cannot be edited without rebuilding the image.
-  // Held as a decimal string for the same reason macOS does: it preserves the
-  // full uint64 range that plist integers and JSON doubles do not.
-  write_text(
-    @fsutil.resolve_path(resources, linux_revision_file_name),
-    plan.update_revision.to_string() + "\n",
-  )
+  stage_update_revision(plan, resources)
   write_package_manifest(plan, resources, "linux-appimage")
-  if plan.targets.contains("appimage") {
-    create_linux_appimage(plan, appdir, announce)
-  } else if announce {
-    println("Staged Linux AppDir: " + appdir)
-  }
+  create_linux_appimage(plan, appdir)
   ()
 }
 
 ///|
-async fn create_linux_appimage(
-  plan : PackagePlan,
-  appdir : String,
-  announce : Bool,
-) -> Unit {
+async fn create_linux_appimage(plan : PackagePlan, appdir : String) -> Unit {
+  let arch = linux_appimage_arch(@cef.current_platform_id())
   let staging = linux_appimage_staging_path(plan)
-  let output = linux_appimage_path(plan)
+  let output = linux_appimage_path(plan, arch)
   remove_tree(staging)
-  // ARCH is how appimagetool decides the runtime to embed; it has no other
-  // way to learn the target architecture from an AppDir.
   let (code, _) = @process.collect_output_merged(
     linux_appimage_tool,
     ["--no-appstream", appdir, staging],
-    extra_env={ "ARCH": "x86_64" },
+    extra_env={ "ARCH": arch },
   ) catch {
     error =>
       raise LinuxPackagingError::ToolFailure(
         stage="create AppImage",
-        detail="\{linux_appimage_tool} is not available; install it to build the appimage target: " +
-          @debug.render(Repr(error)),
+        detail="\{linux_appimage_tool} is not available; install it to build the appimage target: \{@debug.render(Repr(error))}",
       )
   }
   guard code == 0 else {
     raise LinuxPackagingError::ToolFailure(
       stage="create AppImage",
-      detail="exit code " + code.to_string(),
+      detail="exit code \{code}",
     )
   }
   guard @fsutil.path_exists(staging) else {
     raise LinuxPackagingError::Verification(
-      detail="AppImage was not produced: " + staging,
+      detail="AppImage was not produced: \{staging}",
     )
   }
   @async_fs.chmod(staging, 0o755) catch {
@@ -265,8 +268,6 @@ async fn create_linux_appimage(
         detail=@debug.render(Repr(error)),
       )
   }
-  if announce {
-    println("Created AppImage: " + output)
-  }
+  println("Created AppImage: \{output}")
   ()
 }

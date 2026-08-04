@@ -199,9 +199,9 @@ pub fn WindowsPackagingError::message(self : WindowsPackagingError) -> String {
 pub fn LinuxPackagingError::message(self : LinuxPackagingError) -> String {
   match self {
     InvalidConfiguration(detail~) => detail
-    MissingTarget(path~) => "required Linux target is missing: " + path
-    ToolFailure(stage~, detail~) => stage + " failed: " + detail
-    Verification(detail~) => "Linux package verification failed: " + detail
+    MissingTarget(path~) => "required Linux target is missing: \{path}"
+    ToolFailure(stage~, detail~) => "\{stage} failed: \{detail}"
+    Verification(detail~) => "Linux package verification failed: \{detail}"
   }
 }
 

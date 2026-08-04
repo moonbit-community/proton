@@ -464,10 +464,13 @@ translocated location.
 
 **Windows.** The correct mechanism is to re-run the installer, which is what
 Tauri does. The `nsis` package target now produces one, so that mechanism is
-available: the installer closes the running application, replaces the
-installed tree, and records itself under the uninstall key. `/S` is NSIS's
-own switch, so the updater needs no cooperation from the generated script
-beyond its tolerance for being re-run over a live installation.
+available — but the apply path that would invoke it is not written yet, and
+`proton_update_install` still reports `PROTON_ERR_UNSUPPORTED` on Windows. What
+exists is the other half: the installer closes the running application,
+replaces the installed tree, and records itself under the uninstall key. `/S`
+is NSIS's own switch, so that apply path will need no cooperation from the
+generated script beyond its tolerance for being re-run over a live
+installation.
 
 The portable ZIP remains a separate target and is not an update channel.
 Updating it in place would mean renaming the running directory and moving a
@@ -612,9 +615,15 @@ design.
 `proton_cli package` gains the ability to emit update metadata alongside the
 artifacts it already produces:
 
-- the artifact (existing `app`, `zip`, `dmg` outputs),
+- the artifact — whichever single file the host builds: `zip` or `dmg` on
+  macOS, `nsis` or `zip` on Windows, `appimage` on Linux. A staged `app`
+  directory is never a candidate, because an update is fetched as one file,
 - a detached `.sig`,
 - a `latest.json` manifest fragment for the built platform.
+
+Where a host builds more than one candidate the tie goes to what the apply path
+wants: on Windows the installer, because applying an update re-runs it; on
+macOS the zip, which is smaller than the dmg and needs no mounting to expand.
 
 Signing runs where the private key lives — a maintainer machine or CI with the
 key held as a secret — never as part of an ordinary build, and never through
@@ -622,9 +631,15 @@ Proton. `proton_cli package` emits the artifact and the digest to be signed;
 producing the signature is an OpenSSL invocation the developer controls.
 
 `--updater-revision` is required with `--updater-base-url`. The same value is
-written to `ProtonUpdateRevision` in the app's signed `Info.plist` and to the
-manifest fragment, so native apply can prove it is committing the artifact the
-manifest ordered.
+written to the manifest fragment and to the installation itself, so native
+apply can prove it is committing the artifact the manifest ordered. Where it
+lands depends on what the platform can protect: macOS uses
+`ProtonUpdateRevision` in the app's signed `Info.plist`, while Windows and
+Linux have no signature to carry it and instead get a `proton-update-revision`
+file beside the staged `moon.proton`. That file is still awkward to forge in
+place — an AppImage's squashfs is read-only, and a Windows install tree sits
+under Program Files — but it is not signed, and the design should not pretend
+otherwise.
 
 Merging per-platform fragments into one manifest is a separate step because the
 three platforms are built on three machines, which is already true of
