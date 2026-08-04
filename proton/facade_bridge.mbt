@@ -312,7 +312,6 @@ async fn dispatch_bridge_request(
   permissions : WindowPermissionPolicy,
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
-  policy : BridgePagePolicy,
   wake_signal : @core.RuntimeWakeSignal,
 ) -> @native.BridgeResponse {
   let grant = match
@@ -329,7 +328,7 @@ async fn dispatch_bridge_request(
   @async.with_task_group(command_tasks => {
     result.val = Some(
       dispatch_bridge_request_in_command_scope(
-        window, window_id, grant, host, request, policy, wake_signal, command_tasks,
+        window, window_id, grant, host, request, wake_signal, command_tasks,
       ),
     )
     command_tasks.return_immediately(())
@@ -344,7 +343,6 @@ async fn dispatch_bridge_request_in_command_scope(
   grant : ResolvedPermissionGrant,
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
-  policy : BridgePagePolicy,
   wake_signal : @core.RuntimeWakeSignal,
   command_tasks : @async.TaskGroup[Unit],
 ) -> @native.BridgeResponse {
@@ -354,30 +352,20 @@ async fn dispatch_bridge_request_in_command_scope(
     command_tasks,
     window_id~,
     source_origin=request.source_origin(),
+    page_instance=request.page_instance(),
     permission_extension=grant.extension_id,
     permission_scope=grant.scope,
     wake_signal~,
     emit_event=typed_event_sender(window, request.page_instance()),
   )
-  let response = match
-    @async.with_timeout_opt(policy.request_timeout_ms, () => {
-      host.dispatch_ipc_with_context(
-        request_context,
-        @ipc.IpcOpRequest::new(
-          request_id.to_string(),
-          request.op(),
-          request.payload(),
-        ),
-      )
-    }) {
-    Some(response) => response
-    None =>
-      return @native.BridgeResponse::Err(
-        request_id~,
-        code="request_timeout",
-        message="bridge request timed out",
-      )
-  }
+  let response = host.dispatch_ipc_with_context(
+    request_context,
+    @ipc.IpcOpRequest::new(
+      request_id.to_string(),
+      request.op(),
+      request.payload(),
+    ),
+  )
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
   } else {
@@ -391,7 +379,7 @@ async fn dispatch_bridge_request_in_command_scope(
 
 ///|
 fn default_bridge_page_policy() -> BridgePagePolicy {
-  BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 }
+  BridgePagePolicy::{ entry_origin: None }
 }
 
 ///|
@@ -400,10 +388,7 @@ fn bridge_page_policy_for_entry(
 ) -> BridgePagePolicy raise AppConfigurationError {
   match entry {
     @manifest.AppEntry::Url(url) =>
-      BridgePagePolicy::{
-        entry_origin: Some(url_origin(url)),
-        request_timeout_ms: 30000,
-      }
+      BridgePagePolicy::{ entry_origin: Some(url_origin(url)) }
     _ => default_bridge_page_policy()
   }
 }

@@ -177,8 +177,7 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       valid = proton_json_read_string(doc, value, text, sizeof(text));
     } else if (strcmp(key, "grants") == 0) {
       valid = proton_json_is_array(doc, value);
-    } else if (strcmp(key, "max_payload_bytes") == 0 ||
-               strcmp(key, "request_timeout_ms") == 0) {
+    } else if (strcmp(key, "max_payload_bytes") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
     }
   } else if (strcmp(config_name, "bridge response") == 0) {
@@ -373,7 +372,6 @@ static const char *const proton_bridge_config_keys[] = {
     "namespace",
     "grants",
     "max_payload_bytes",
-    "request_timeout_ms",
 };
 
 static const char *const proton_bridge_response_keys[] = {
@@ -1302,15 +1300,6 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
       proton_json_dispose(&doc);
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                               "bridge max_payload_bytes is invalid");
-    }
-  }
-
-  if (proton_json_object_get(&doc, root, "request_timeout_ms", &value)) {
-    int32_t timeout_ms = 0;
-    if (!proton_json_read_int32(&doc, value, &timeout_ms) || timeout_ms <= 0) {
-      proton_json_dispose(&doc);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "bridge request_timeout_ms is invalid");
     }
   }
 

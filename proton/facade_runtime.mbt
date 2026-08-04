@@ -47,6 +47,8 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     certificate_handler=self.certificate_handler,
     media_handler=self.media_handler,
     download_event_handlers=self.download_event_handlers,
+    update_channel=resolved.update_channel,
+    update_handlers=self.update_handlers,
   ) catch {
     error => {
       match app_instance {
@@ -95,6 +97,8 @@ async fn run_manifest(
   download_event_handlers? : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ] = [],
+  update_channel? : ResolvedUpdateChannel? = None,
+  update_handlers? : Array[async (PendingUpdate) -> Unit noraise] = [],
 ) -> Unit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
@@ -252,14 +256,13 @@ async fn run_manifest(
           error => raise ConfigurationError(error)
         }
         ensure_entry_bridge_grant(grants, policies[index])
-        Some(native_bridge_config(grants, policies[index]))
+        Some(native_bridge_config(grants))
       } else {
         None
       }
       definitions.push(PreparedWindow::{
         plan,
         bridge,
-        policy: policies[index],
         permissions: permission_policies[index],
         browser_policy,
       })
@@ -289,6 +292,7 @@ async fn run_manifest(
           allow_failure=true,
         )
         session.drive_until_complete(application_start)
+        active_update_channel.val = update_channel
         for definition in definitions {
           if definition.plan.open_on_start &&
             session.find_active_window(definition.plan.id) is None {
@@ -306,6 +310,8 @@ async fn run_manifest(
           }
         }
         lifecycle.begin_running()
+        cleanup_previous_update()
+        start_update_check(update_channel, update_handlers, application_tasks)
         session.run() catch {
           error => raise normalize_async_run_error(error)
         }
@@ -427,12 +433,8 @@ fn native_window_config(
 ///|
 fn native_bridge_config(
   grants : Array[@native.BridgeGrantConfig],
-  policy : BridgePagePolicy,
 ) -> @native.BridgeConfig {
-  @native.BridgeConfig::new(
-    grants~,
-    request_timeout_ms=policy.request_timeout_ms,
-  )
+  @native.BridgeConfig::new(grants~)
 }
 
 ///|
@@ -657,10 +659,11 @@ async fn show_runtime_failure_dialog(
     _ => return
   }
   while true {
+    let revision = wakeup.revision()
     let completed = runtime.poll_message_dialog(dialog) catch { _ => return }
     match completed {
       true => return
-      false => wakeup.wait() catch { _ => return }
+      false => wakeup.wait_after(revision) catch { _ => return }
     }
   }
 }
@@ -679,17 +682,15 @@ async fn show_window_failure_dialog(
     _ => return
   }
   while true {
-    let revision = wakeup.signal.revision()
+    let revision = wakeup.revision()
     let result = window.poll_dialog_result(dialog) catch { _ => return }
     match result {
       @native.DialogPollResult::Ready(_) => return
       @native.DialogPollResult::Pending =>
         // The main pump is no longer running on this error path, so this
         // waiter must consume the native pipe itself.
-        if wakeup.signal.revision() == revision {
-          wakeup.wait() catch {
-            _ => return
-          }
+        wakeup.wait_after(revision) catch {
+          _ => return
         }
     }
   }

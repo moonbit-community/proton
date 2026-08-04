@@ -318,6 +318,119 @@ test "project config rebases file entry and frontend paths from config directory
 }
 
 ///|
+fn project_config_for_path_test(entry : String, extra : String) -> String {
+  "window = { title: \"App\", width: 900, height: 700 }\nentry = " +
+  entry +
+  "\n" +
+  extra
+}
+
+///|
+test "project config rejects absolute project paths with field-specific errors" {
+  let html_entry = "{ kind: \"html\", value: \"<main>App</main>\" }"
+  let cases = [
+    (
+      "entry.value",
+      project_config_for_path_test(
+        "{ kind: \"asset\", value: \"/frontend/index.html\" }", "",
+      ),
+    ),
+    (
+      "windows[0].entry.value",
+      project_config_for_path_test(
+        html_entry, "windows = [{ id: \"settings\", window: { title: \"Settings\", width: 600, height: 400 }, entry: { kind: \"file\", value: \"C:/app/settings.html\" } }]",
+      ),
+    ),
+    (
+      "backend.path",
+      project_config_for_path_test(
+        html_entry, "backend = { path: \"/backend\", package: \"app\" }",
+      ),
+    ),
+    (
+      "frontend.path",
+      project_config_for_path_test(
+        html_entry, "frontend = { path: \"C:/frontend\" }",
+      ),
+    ),
+    (
+      "frontend.dist",
+      project_config_for_path_test(
+        html_entry, "frontend = { path: \"frontend\", dist: \"/dist\" }",
+      ),
+    ),
+    (
+      "bundle.icon[0]",
+      project_config_for_path_test(
+        html_entry, "bundle = { icon: [\"/icons/app.icns\"] }",
+      ),
+    ),
+    (
+      "bundle.resources[0]",
+      project_config_for_path_test(
+        html_entry, "bundle = { resources: [\"C:/resources/**\"] }",
+      ),
+    ),
+    (
+      "bundle.output",
+      project_config_for_path_test(
+        html_entry, "bundle = { output: \"/target/proton-dist\" }",
+      ),
+    ),
+  ]
+  for _, item in cases {
+    let (label, source) = item
+    let error = expect_project_config_error(() => {
+      load_project_config_from_text(source, "target/proton-config")
+    })
+    assert_eq(
+      error.message(),
+      "moon.proton." +
+      label +
+      " must be a relative path; absolute paths and drive prefixes are not allowed",
+    )
+  }
+}
+
+///|
+test "project config rejects backslashes in portable project paths" {
+  let source =
+    #|window = { title: "App", width: 900, height: 700 }
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "frontend\\dist\\index.html",
+    #|}
+    #|
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_eq(
+    error.message(),
+    "moon.proton.entry.value must use '/' separators; backslashes are not allowed in portable project paths",
+  )
+}
+
+///|
+test "project config rebases portable paths into host path components" {
+  let source =
+    #|window = { title: "App", width: 900, height: 700 }
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "frontend/dist/index.html",
+    #|}
+    #|
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  match config.entry() {
+    Asset(path) => {
+      let entry : @mbpath.Path = path
+      assert_eq(entry.basename().to_owned(), "index.html")
+      assert_eq(entry.dirname().basename().to_owned(), "dist")
+    }
+    _ => abort("expected asset entry")
+  }
+}
+
+///|
 test "project config reads module metadata from configured backend" {
   let project_dir = "target/project-config-backend-metadata"
   let backend_dir = project_dir + "/backend"
@@ -654,4 +767,88 @@ test "project config rejects reserved window ids and invalid document extensions
 ///|
 fn normalize_test_path(path : String) -> String {
   path.replace(old="\\", new="/")
+}
+
+///|
+test "decodes an updater block" {
+  let text =
+    #|window = { title: "App", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<html></html>" }
+    #|
+    #|updater = {
+    #|  endpoint: "https://example.com/latest.json",
+    #|  public_keys: ["rsa-sha256:aa:010001"],
+    #|}
+  let config = load_project_config_from_text(text, ".", name="moon.proton").config()
+  let updater = config.updater().unwrap()
+  assert_true(updater.is_active())
+  assert_eq(updater.endpoint(), "https://example.com/latest.json")
+  assert_eq(updater.public_keys(), ["rsa-sha256:aa:010001"])
+  // Checking on launch and a thirty day window are the documented defaults.
+  assert_true(updater.checks_on_launch())
+  assert_eq(updater.freshness_days(), 30)
+}
+
+///|
+test "an absent updater block leaves the channel unconfigured" {
+  let text =
+    #|window = { title: "App", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<html></html>" }
+  let config = load_project_config_from_text(text, ".", name="moon.proton").config()
+  assert_eq(config.updater(), None)
+}
+
+///|
+test "rejects an active updater that cannot be trusted or reached" {
+  let with_body = fn(body : String) {
+    (
+      $|window = { title: "App", width: 800, height: 600 }
+      $|entry = { kind: "html", value: "<html></html>" }
+      $|
+      $|updater = {\{body}}
+    )
+  }
+  let failure = fn(body : String) -> String {
+    let _ = load_project_config_from_text(
+      with_body(body),
+      ".",
+      name="moon.proton",
+    ) catch {
+      error => return error.message()
+    }
+    abort("expected \{body} to be rejected")
+  }
+  // An empty trusted list is a configuration error, not permission to skip
+  // verification.
+  assert_true(
+    failure("endpoint: \"https://example.com/latest.json\", public_keys: []").contains(
+      "public_keys",
+    ),
+  )
+  assert_true(
+    failure("public_keys: [\"rsa-sha256:aa:010001\"]").contains("endpoint"),
+  )
+  assert_true(
+    failure(
+      "endpoint: \"http://example.com/latest.json\", public_keys: [\"rsa-sha256:aa:010001\"]",
+    ).contains("endpoint"),
+  )
+  assert_true(
+    failure(
+      "endpoint: \"https://example.com/latest.json\", public_keys: [\"rsa-sha256:aa:010001\"], freshness_days: 0",
+    ).contains("freshness_days"),
+  )
+  assert_true(failure("unknown_field: true").contains("unknown_field"))
+}
+
+///|
+test "an inactive updater needs no endpoint or keys" {
+  let text =
+    #|window = { title: "App", width: 800, height: 600 }
+    #|entry = { kind: "html", value: "<html></html>" }
+    #|
+    #|updater = { active: false }
+  let config = load_project_config_from_text(text, ".", name="moon.proton").config()
+  let updater = config.updater().unwrap()
+  assert_false(updater.is_active())
 }

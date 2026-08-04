@@ -59,6 +59,7 @@ pub struct AppCommandRequestContext {
   window : Int64
   window_id : String
   source_origin : String
+  page_instance : String?
   permission_extension : String?
   permission_scope_value : Json?
   tasks : @async.TaskGroup[Unit]
@@ -66,6 +67,7 @@ pub struct AppCommandRequestContext {
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
 }
 pub async fn[Payload : ToJson] AppCommandRequestContext::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+pub fn AppCommandRequestContext::page_instance(Self) -> String?
 pub fn AppCommandRequestContext::permission_scope(Self, String) -> Json raise CommandPermissionError
 pub fn AppCommandRequestContext::source_origin(Self) -> String
 pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
@@ -99,4 +101,3 @@ type TemplateReplacement
 // Type aliases
 
 // Traits
-

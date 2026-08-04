@@ -8,6 +8,7 @@ import {
   "justjavac/proton/extension",
   "justjavac/proton/manifest",
   "justjavac/proton/native",
+  "justjavac/proton/updater",
   "justjavac/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
@@ -21,6 +22,8 @@ pub fn app() -> App
 pub fn app_data_dir(String) -> String raise AppPathError
 
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+
+pub async fn check_for_update() -> UpdateCheck
 
 pub fn config(String) -> App
 
@@ -159,6 +162,7 @@ pub fn App::on_launch_input(Self, async (@native.RuntimeLaunchInput) -> Unit nor
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
+pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::permission(Self, @manifest.PermissionGrant) -> Self
@@ -244,6 +248,21 @@ pub(all) struct NavigationRequest {
   redirect : Bool
 } derive(Eq, @debug.Debug)
 
+pub struct PendingUpdate {
+  version : String
+  revision : UInt64
+  notes_url : String?
+  size : Int64
+  channel : @updater.UpdateChannel
+  offer : @updater.AvailableUpdate
+}
+pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> UpdateInstallOutcome
+pub fn PendingUpdate::notes_url(Self) -> String?
+pub fn PendingUpdate::restart(Self) -> Unit raise
+pub fn PendingUpdate::revision(Self) -> UInt64
+pub fn PendingUpdate::size(Self) -> Int64
+pub fn PendingUpdate::version(Self) -> String
+
 pub(all) enum PopupDecision {
   Deny
   OpenInCurrent
@@ -254,6 +273,17 @@ pub(all) struct PopupRequest {
   url : String
   disposition : Int
   user_gesture : Bool
+} derive(Eq, @debug.Debug)
+
+pub enum UpdateCheck {
+  NotConfigured
+  UpToDate
+  Available(PendingUpdate)
+}
+
+pub enum UpdateInstallOutcome {
+  Installed
+  AlreadyInstalled
 } derive(Eq, @debug.Debug)
 
 pub(all) enum WindowCloseDecision {
@@ -379,4 +409,3 @@ pub using @native {type WindowSizeHint}
 pub using @native {type WindowState}
 
 // Traits
-

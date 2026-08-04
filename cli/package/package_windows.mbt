@@ -238,6 +238,10 @@ async fn prepare_windows_package_paths(plan : PackagePlan) -> Unit {
     recover_windows_backup(windows_archive_path(plan), "Windows zip")
     remove_tree(windows_archive_staging_path(plan))
   }
+  if plan.targets.contains("nsis") {
+    recover_windows_backup(windows_installer_path(plan), "Windows installer")
+    remove_tree(windows_installer_staging_path(plan))
+  }
   ()
 }
 
@@ -254,6 +258,12 @@ async fn cleanup_failed_windows_package(plan : PackagePlan) -> Unit {
     error => errors.push(error.to_string())
   }
   recover_windows_backup(windows_archive_path(plan), "Windows zip") catch {
+    error => errors.push(error.to_string())
+  }
+  remove_tree(windows_installer_staging_path(plan)) catch {
+    error => errors.push(error.to_string())
+  }
+  recover_windows_backup(windows_installer_path(plan), "Windows installer") catch {
     error => errors.push(error.to_string())
   }
   if errors.length() > 0 {
@@ -354,6 +364,7 @@ async fn stage_windows_portable_impl(
     @fsutil.resolve_path(staging, "moon.proton"),
   )
   stage_project_inputs(plan, staging)
+  stage_update_revision(plan, staging)
   write_package_manifest(plan, staging, "windows-portable")
   validate_windows_portable_layout(plan, staging)
   if plan.sign {
@@ -370,6 +381,9 @@ async fn stage_windows_portable_impl(
   }
   if plan.targets.contains("zip") {
     create_windows_zip(plan, output, announce)
+  }
+  if plan.targets.contains("nsis") {
+    create_windows_installer(plan, output, announce)
   }
   ()
 }

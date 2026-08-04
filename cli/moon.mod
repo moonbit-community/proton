@@ -4,6 +4,8 @@ version = "0.1.12"
 
 import {
   "justjavac/proton_config@0.1.8",
+  "justjavac/proton_rsa@0.1.0",
+  "justjavac/proton_updater@0.1.0",
   "moonbitlang/x@0.4.43",
   "moonbitlang/parser@0.3.2",
   "justjavac/case@0.2.0",

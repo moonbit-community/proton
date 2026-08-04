@@ -24,23 +24,26 @@ pub async fn[Request : ToJson, Response : @json.FromJson] invoke(
 ///
 /// Framework adapters use this callback boundary when their effect runtime
 /// owns scheduling. Application code should use `invoke`.
+/// The returned function idempotently cancels the request if it is still active.
 #doc(hidden)
 pub fn[Request : ToJson, Response : @json.FromJson] invoke_with_callbacks(
   command : @proton_contract.Command[Request, Response],
   request : Request,
   success : (Response) -> Unit,
   failure : (ClientFailure) -> Unit,
-) -> Unit {
+) -> () -> Unit {
   command.validate() catch {
     error => {
       failure(InvalidContract(message=error.message()))
-      return
+      return () => ()
     }
   }
   let request_json = ToJson::to_json(request).stringify()
+  let controller = @js_async.AbortController::new()
   invoke_json_with_callbacks(
     command.contract_route().operation_name(),
     request_json,
+    controller.signal(),
     response_json => {
       let response : Response = @json.from_json(@json.parse(response_json)) catch {
         error => {
@@ -52,6 +55,7 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke_with_callbacks(
     },
     raw => failure(decode_bridge_failure(raw)),
   )
+  () => controller.abort()
 }
 
 ///|

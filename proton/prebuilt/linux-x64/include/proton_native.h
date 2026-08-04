@@ -30,6 +30,7 @@ extern "C" {
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
 typedef int64_t proton_app_instance_id_t;
+typedef int64_t proton_update_stage_id_t;
 typedef void (*proton_app_entry_t)(void);
 
 enum {
@@ -50,7 +51,15 @@ enum {
   PROTON_ERR_BUFFER_TOO_SMALL = -11,
   PROTON_ERR_STALE_BRIDGE_RESPONSE = -12,
   PROTON_ERR_STALE_WINDOW_REQUEST = -13,
-  PROTON_ERR_STALE_BROWSER_REQUEST = -14
+  PROTON_ERR_STALE_BROWSER_REQUEST = -14,
+  PROTON_ERR_UPDATE_BUSY = -15,
+  PROTON_ERR_UPDATE_ROLLBACK = -16,
+  PROTON_ERR_UPDATE_REVISION_MISMATCH = -17
+};
+
+enum {
+  PROTON_UPDATE_INSTALLED = 0,
+  PROTON_UPDATE_ALREADY_INSTALLED = 1
 };
 
 PROTON_API int32_t proton_abi_version(void);
@@ -157,6 +166,10 @@ PROTON_API int32_t proton_window_load_url(proton_window_id_t window,
 PROTON_API int32_t proton_window_load_html(proton_window_id_t window,
                                            const char *html,
                                            const char *base_url);
+PROTON_API int32_t proton_window_load_asset(proton_window_id_t window,
+                                            const char *html,
+                                            const char *document_url,
+                                            const char *asset_root);
 PROTON_API int32_t proton_window_eval(proton_window_id_t window,
                                       const char *script);
 PROTON_API int32_t proton_window_browser_command_json(
@@ -194,6 +207,71 @@ PROTON_API int32_t proton_window_begin_choose_directory_dialog(
 PROTON_API int32_t proton_window_poll_dialog_result(
     proton_window_id_t window, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);
+
+/* Creates a private artifact staging transaction for a streaming update.
+
+   The archive path never crosses the ABI. Chunks written to the returned
+   handle are the exact bytes later expanded by proton_update_stage_install,
+   so authenticating those chunks does not introduce a path-based TOCTOU
+   window. The handle is owned by the calling thread.
+
+   Application updates should pass NULL or an empty parent_dir. Proton then
+   creates the stage beside the running .app, guaranteeing that final bundle
+   replacement stays on one filesystem. An explicit absolute parent is kept
+   for low-level hosts and tests, but is rejected unless it is on that same
+   filesystem. */
+PROTON_API int32_t proton_update_stage_begin(
+    const char *parent_dir, int64_t expected_size,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_begin_revision(
+    const char *parent_dir, int64_t expected_size, uint64_t target_revision,
+    proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_write(
+    proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
+    char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_install(
+    proton_update_stage_id_t stage, char *error, int32_t error_len);
+PROTON_API int32_t proton_update_stage_install_outcome(
+    proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
+    int32_t error_len);
+PROTON_API int32_t proton_update_stage_abort(
+    proton_update_stage_id_t stage, char *error, int32_t error_len);
+
+/* Reads the monotonic update revision embedded in the installed application.
+
+   This is an optimistic process-local check used to avoid downloading an
+   update another task already installed. The install transaction repeats the
+   comparison while holding the cross-process commit lock. */
+PROTON_API int32_t proton_update_current_revision(
+    uint64_t *out_revision, char *error, int32_t error_len);
+
+/* Removes older application bundles retained by successful update swaps.
+
+   Hosts call this only after the replacement has completed application
+   startup. Proton removes only its reserved sibling bundle names whose code
+   signing identity matches the running application and whose update revision
+   is older. A cleanup failure must not make an otherwise healthy application
+   fail to start. */
+PROTON_API int32_t proton_update_cleanup_previous(char *error,
+                                                  int32_t error_len);
+
+/* Installs an authenticated update archive over the running application.
+
+   Expansion, bundle signature validation, and replacement happen in one
+   native transaction. The expanded bundle path is never exposed between
+   validation and use. Implemented on macOS; other platforms report
+   PROTON_ERR_UNSUPPORTED rather than pretending to have installed anything. */
+PROTON_API int32_t proton_update_install(const char *archive,
+                                         int32_t archive_len,
+                                         const char *parent_dir, char *error,
+                                         int32_t error_len);
+
+/* Asks the system to start the replaced application. The caller exits
+   afterwards.
+
+   Success means the request was accepted, not that the application is running:
+   the platform decides that asynchronously and does not report back. */
+PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);

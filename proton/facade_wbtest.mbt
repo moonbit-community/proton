@@ -383,10 +383,6 @@ async test "startup dispatch retains an earlier window close" {
     RunningWindow::{
       id: "main",
       window: first,
-      policy: BridgePagePolicy::{
-        entry_origin: None,
-        request_timeout_ms: 30000,
-      },
       permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
       bridge_ready: true,
@@ -395,10 +391,6 @@ async test "startup dispatch retains an earlier window close" {
     RunningWindow::{
       id: "secondary",
       window: second,
-      policy: BridgePagePolicy::{
-        entry_origin: None,
-        request_timeout_ms: 30000,
-      },
       permissions: WindowPermissionPolicy::{ grants: [] },
       lifetime: WindowLifetime::new(),
       bridge_ready: false,
@@ -530,14 +522,14 @@ test "base tags escape HTML attributes" {
 }
 
 ///|
-test "asset urls resolve under the local file path" {
+test "asset urls expose a document root instead of the local file path" {
   let path = "46_asset_sidecar_resources/app/app.html"
-  let base = asset_base_url(path).replace_all(old="\\", new="/")
-  let document = asset_document_url(path).replace_all(old="\\", new="/")
-  assert_true(base.has_prefix("proton://app/"))
-  assert_true(base.has_suffix("/46_asset_sidecar_resources/app/"))
-  assert_true(document.has_prefix("proton://app/"))
-  assert_true(document.has_suffix("/46_asset_sidecar_resources/app/app.html"))
+  let file_path = resolve_entry_path(path)
+  let base = asset_base_url().replace_all(old="\\", new="/")
+  let document = asset_document_url(file_path).replace_all(old="\\", new="/")
+  inspect(base, content="https://proton.localhost/")
+  inspect(document, content="https://proton.localhost/app.html")
+  assert_eq(file_path.dirname().basename().to_owned(), "app")
 }
 
 ///|
@@ -628,24 +620,18 @@ test "dev bridge page policy parses exact http origins" {
 
 ///|
 test "native bridge config isolates each window entry origin" {
-  let first = native_bridge_config(
-    [@native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"])],
-    BridgePagePolicy::{
-      entry_origin: Some("http://localhost:3000"),
-      request_timeout_ms: 30000,
-    },
-  ).to_json_string()
-  let second = native_bridge_config(
-    [@native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"])],
-    BridgePagePolicy::{
-      entry_origin: Some("http://localhost:4000"),
-      request_timeout_ms: 30000,
-    },
-  ).to_json_string()
+  let first = native_bridge_config([
+    @native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"]),
+  ]).to_json_string()
+  let second = native_bridge_config([
+    @native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"]),
+  ]).to_json_string()
   assert_true(first.contains("http://localhost:3000"))
   assert_false(first.contains("http://localhost:4000"))
   assert_true(second.contains("http://localhost:4000"))
   assert_false(second.contains("http://localhost:3000"))
+  assert_false(first.contains("request_timeout_ms"))
+  assert_false(second.contains("request_timeout_ms"))
 }
 
 ///|
@@ -708,7 +694,7 @@ test "permission policy binds extension ops and scope to one trusted source" {
   let policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
       "main",
-      BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 },
+      BridgePagePolicy::{ entry_origin: None },
       manifest,
       "/trusted/project",
       specs,
@@ -803,7 +789,7 @@ test "extension permission scopes are validated before startup" {
       ignore(
         resolve_window_permission_policy(
           "main",
-          BridgePagePolicy::{ entry_origin: None, request_timeout_ms: 30000 },
+          BridgePagePolicy::{ entry_origin: None },
           manifest,
           "/trusted/project",
           specs,
@@ -1002,6 +988,23 @@ async test "application lifecycle hooks shut down in reverse order" {
     group.return_immediately(())
   })
   assert_eq(calls, ["start:first", "start:second", "stop:second", "stop:first"])
+}
+
+///|
+#cfg(not(platform="windows"))
+async test "runtime wakeup preserves notification before suspension" {
+  let (reader, writer) = @pipe.pipe()
+  let wakeup = RuntimeWakeup::{
+    reader: RuntimeWakeReader(reader),
+    writer: Some(writer),
+    signal: @core.RuntimeWakeSignal::new(),
+    closed: false,
+  }
+  defer wakeup.close()
+  let revision = wakeup.revision()
+  wakeup.signal.notify()
+  let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))
+  assert_true(completed is Some(_))
 }
 
 ///|
@@ -1205,6 +1208,18 @@ test "implicit config path honors PROTON_CONFIG_PATH" {
 }
 
 ///|
+test "packaged config takes precedence over environment and working directory" {
+  @debug.assert_eq(
+    choose_implicit_config_path(
+      bundled=Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
+      environment=Some("/tmp/override.moon.proton"),
+      cwd_has_default=true,
+    ),
+    Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
+  )
+}
+
+///|
 test "default config API honors PROTON_CONFIG_PATH" {
   let config_path = "target/proton-facade-dev/config-api-env.moon.proton"
   write_facade_dev_config(config_path)
@@ -1260,7 +1275,7 @@ test "config API overrides manifest fields and keeps base dir" {
   let manifest = resolved.manifest
   assert_eq(
     resolved.permission_base_path,
-    facade_path_parent(@mbpath.Path(config_path).resolve().to_string()),
+    facade_path_parent(resolve_entry_path(config_path).to_string()),
   )
   assert_eq(manifest.window.title, "Code Title")
   assert_eq(manifest.window.width, 640)
@@ -1435,4 +1450,57 @@ test "app data directory follows platform conventions" {
   } noraise {
     _ => fail("expected invalid identifier")
   }
+}
+
+///|
+fn updater_test_channel(
+  check_on_launch : Bool,
+  identifier? : String? = Some("com.example.app"),
+  version? : String? = Some("1.2.3"),
+) -> ResolvedUpdateChannel? {
+  let project = @bootstrap.ProtonProjectConfig::new(
+    @bootstrap.LoadedAppManifest::new(
+      @manifest.AppManifest::new(
+        @manifest.WindowManifest::new("Test", 800, 600),
+        @manifest.AppEntry::Url("https://example.com/"),
+      ),
+      base_dir=None,
+    ),
+    @bootstrap.ProtonAppMetadata::new("Test", identifier~, version~),
+    updater=Some(
+      @bootstrap.ProtonUpdaterConfig::new(
+        "https://updates.example.com/latest.json",
+        ["rsa-sha256:ab:010001"],
+        check_on_launch~,
+      ),
+    ),
+  )
+  resolved_update_channel(project)
+}
+
+///|
+/// Channel identity and release ordering come from the signed application
+/// bundle rather than optional project release metadata.
+test "an update channel does not require release metadata" {
+  assert_true(updater_test_channel(true) is Some(_))
+  assert_true(updater_test_channel(true, identifier=None) is Some(_))
+  assert_true(updater_test_channel(true, version=None) is Some(_))
+}
+
+///|
+/// Launching contacts the endpoint only when the application is prepared to
+/// act on the answer and has not turned the check off.
+test "the launch check is opt-in twice over" {
+  guard updater_test_channel(true) is Some(enabled) else {
+    fail("expected a channel")
+  }
+  guard updater_test_channel(false) is Some(disabled) else {
+    fail("expected a channel")
+  }
+  assert_true(checks_on_launch(enabled, 1))
+  // Declared but nothing registered to act on it: no request is made.
+  assert_false(checks_on_launch(enabled, 0))
+  // check_on_launch: false wins even when a handler is registered.
+  assert_false(checks_on_launch(disabled, 1))
+  assert_false(checks_on_launch(disabled, 0))
 }

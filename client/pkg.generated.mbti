@@ -16,7 +16,6 @@ pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Pay
 pub(all) suberror ClientFailure {
   BridgeUnavailable
   RequestCancelled
-  RequestTimedOut
   InvalidContract(message~ : String)
   RemoteFailure(code~ : String, message~ : String, detail~ : String?)
   TransportFailure(message~ : String)
@@ -35,4 +34,3 @@ pub fn Subscription::close(Self) -> Unit
 // Type aliases
 
 // Traits
-

@@ -1,5 +1,11 @@
+// The updater extension is deliberately not in either set. Even though
+// registration grants no renderer authority, installing the update backend is
+// an application decision rather than part of a general desktop capability set.
+
 ///|
 /// Returns every built-in Proton extension.
+///
+/// Not literally every one: see the note above about the updater.
 pub fn all() -> @proton_extension.Extensions {
   @proton_extension.extensions([
     @fs.extension(),

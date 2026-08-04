@@ -36,6 +36,18 @@ int main(void) {
   assert(!proton_engine_url_is_bridge_candidate("proton://app.evil/index.html"));
   assert(!proton_engine_url_is_bridge_candidate("proton://other/index.html"));
 
+  assert(proton_engine_url_is_bridge_candidate(
+      "https://proton.localhost/index.html"));
+  char *secure_app_origin =
+      proton_engine_bridge_source_origin("https://proton.localhost/index.html");
+  assert(secure_app_origin != NULL);
+  assert(strcmp(secure_app_origin, "app") == 0);
+  free(secure_app_origin);
+  assert(proton_engine_bridge_config_allows_page(
+      bridge_config, "https://proton.localhost/index.html"));
+  assert(!proton_engine_bridge_config_allows_page(
+      bridge_config, "https://proton.localhost.evil/index.html"));
+
   char *app_origin =
       proton_engine_bridge_source_origin("proton://app/index.html");
   assert(app_origin != NULL);

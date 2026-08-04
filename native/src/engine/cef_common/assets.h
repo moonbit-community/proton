@@ -1,9 +1,23 @@
 #ifndef PROTON_ENGINE_CEF_COMMON_ASSETS_H
 #define PROTON_ENGINE_CEF_COMMON_ASSETS_H
 
+#include "app_origin.h"
+
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* Every engine spells this the same way for a given platform, so the header
+   supplies it rather than making each includer define it first. Engines that
+   still declare their own keep it -- the definitions agree. */
+#ifndef PROTON_ENGINE_PATH_SEPARATOR
+#ifdef _WIN32
+#define PROTON_ENGINE_PATH_SEPARATOR '\\'
+#else
+#define PROTON_ENGINE_PATH_SEPARATOR '/'
+#endif
+#endif
 
 static int proton_engine_hex_value(char ch) {
   if (ch >= '0' && ch <= '9') {
@@ -29,7 +43,12 @@ static char *proton_engine_url_decode_path(const char *value, size_t len) {
       int hi = proton_engine_hex_value(value[i + 1]);
       int lo = proton_engine_hex_value(value[i + 2]);
       if (hi >= 0 && lo >= 0) {
-        decoded[out++] = (char)((hi << 4) | lo);
+        char decoded_byte = (char)((hi << 4) | lo);
+        if (decoded_byte == '\0') {
+          free(decoded);
+          return NULL;
+        }
+        decoded[out++] = decoded_byte;
         i += 2;
         continue;
       }
@@ -61,38 +80,19 @@ static int proton_engine_url_path_has_unsafe_segment(const char *path) {
   }
 }
 
-static char *proton_engine_url_to_asset_path(const char *url) {
-  static const char prefix[] = "proton://app/";
-  if (url == NULL || strncmp(url, prefix, sizeof(prefix) - 1) != 0) {
-    return NULL;
-  }
-  const char *path = url + sizeof(prefix) - 1;
-  size_t path_len = strcspn(path, "?#");
-  if (path_len == 0) {
-    return NULL;
-  }
-  char *decoded = proton_engine_url_decode_path(path, path_len);
-  if (decoded == NULL || proton_engine_url_path_has_unsafe_segment(decoded)) {
-    free(decoded);
-    return NULL;
-  }
-  return decoded;
+static int proton_engine_asset_path_separator(char ch) {
+  return ch == '/' || ch == '\\';
 }
 
-static char *proton_engine_asset_path_dirname(const char *path) {
-  if (path == NULL) {
+static char *proton_engine_asset_canonical_path(const char *path) {
+  if (path == NULL || path[0] == '\0') {
     return NULL;
   }
-  const char *slash = strrchr(path, '/');
-  const char *backslash = strrchr(path, '\\');
-  const char *separator = slash;
-  if (backslash != NULL && (separator == NULL || backslash > separator)) {
-    separator = backslash;
-  }
-  if (separator == NULL) {
-    return proton_engine_strdup("");
-  }
-  return proton_engine_strdup_len(path, (size_t)(separator - path + 1));
+#ifdef _WIN32
+  return _fullpath(NULL, path, 0);
+#else
+  return realpath(path, NULL);
+#endif
 }
 
 static int proton_engine_asset_path_is_under_root(const char *path,
@@ -101,7 +101,75 @@ static int proton_engine_asset_path_is_under_root(const char *path,
     return 0;
   }
   size_t root_len = strlen(root);
-  return strncmp(path, root, root_len) == 0;
+  while (root_len > 1 &&
+         proton_engine_asset_path_separator(root[root_len - 1])) {
+    root_len--;
+  }
+#ifdef _WIN32
+  if (_strnicmp(path, root, root_len) != 0) {
+#else
+  if (strncmp(path, root, root_len) != 0) {
+#endif
+    return 0;
+  }
+  return path[root_len] == '\0' ||
+         proton_engine_asset_path_separator(path[root_len]);
+}
+
+static char *proton_engine_url_to_rooted_asset_path(const char *url,
+                                                    const char *asset_root) {
+  static const char prefix[] = PROTON_ENGINE_APP_URL_PREFIX;
+  if (url == NULL || asset_root == NULL || asset_root[0] == '\0' ||
+      strncmp(url, prefix, sizeof(prefix) - 1) != 0) {
+    return NULL;
+  }
+  const char *path = url + sizeof(prefix) - 1;
+  size_t path_len = strcspn(path, "?#");
+  if (path_len == 0) {
+    return NULL;
+  }
+  char *decoded = proton_engine_url_decode_path(path, path_len);
+  if (decoded == NULL || proton_engine_asset_path_separator(decoded[0]) ||
+      proton_engine_url_path_has_unsafe_segment(decoded)
+#ifdef _WIN32
+      || strchr(decoded, ':') != NULL
+#endif
+  ) {
+    free(decoded);
+    return NULL;
+  }
+  size_t root_len = strlen(asset_root);
+  size_t decoded_len = strlen(decoded);
+  int needs_separator =
+      root_len > 0 && !proton_engine_asset_path_separator(asset_root[root_len - 1]);
+  if (root_len > SIZE_MAX - decoded_len - 2) {
+    free(decoded);
+    return NULL;
+  }
+  char *joined = (char *)malloc(root_len + (size_t)needs_separator +
+                                decoded_len + 1);
+  if (joined == NULL) {
+    free(decoded);
+    return NULL;
+  }
+  memcpy(joined, asset_root, root_len);
+  if (needs_separator) {
+    joined[root_len++] = PROTON_ENGINE_PATH_SEPARATOR;
+  }
+  memcpy(joined + root_len, decoded, decoded_len + 1);
+  free(decoded);
+
+  char *canonical_root = proton_engine_asset_canonical_path(asset_root);
+  char *canonical_path = proton_engine_asset_canonical_path(joined);
+  free(joined);
+  if (!proton_engine_asset_path_is_under_root(canonical_path,
+                                               canonical_root)) {
+    free(canonical_root);
+    free(canonical_path);
+    return NULL;
+  }
+  free(canonical_root);
+  return canonical_path;
 }
 
 static const char *proton_engine_asset_mime_type(const char *path) {

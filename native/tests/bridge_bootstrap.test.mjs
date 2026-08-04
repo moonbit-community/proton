@@ -11,32 +11,27 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-function createBridge(url = "proton://app/", requestTimeoutMs = 1000) {
+function createBridge(url = "proton://app/") {
   const calls = [];
   const location = new URL(url);
   const context = vm.createContext({
     URL,
     Promise,
-    clearTimeout,
     location,
-    setTimeout,
   });
   const install = vm.runInContext(source, context);
   const dispatcher = install(
     (action, id, name, payloadJson, pageInstance) =>
       calls.push({ action, id, name, payloadJson, pageInstance }),
     {
-      request_timeout_ms: requestTimeoutMs,
-      grants: [{
-        source_origin: location.protocol === "proton:" ? "app" : location.origin,
-        ops: [
-          { name: "ext:add/sum" },
-          { name: "app:ping" },
-          { name: "app:devtoys.fs.stat" },
-        ],
-        extensions: [{ namespace: "add", apis: ["sum"] }],
-        initialization_units: [],
-      }],
+      source_origin: location.protocol === "proton:" ? "app" : location.origin,
+      ops: [
+        { name: "ext:add/sum" },
+        { name: "app:ping" },
+        { name: "app:devtoys.fs.stat" },
+      ],
+      extensions: [{ namespace: "add", apis: ["sum"] }],
+      initialization_units: [],
     },
     "renderer-page-1",
   );
@@ -54,10 +49,16 @@ test("installs the public bridge synchronously", () => {
   assert.equal(context.__protonNativeInvokeOp, undefined);
 });
 
-test("does not treat other custom-scheme hosts as the trusted app origin", () => {
+test("rejects a missing native-selected grant", () => {
+  const context = vm.createContext({
+    URL,
+    Promise,
+    location: new URL("proton://app/"),
+  });
+  const install = vm.runInContext(source, context);
   assert.throws(
-    () => createBridge("proton://untrusted/"),
-    /no grant for this page source/,
+    () => install(() => {}, null, "renderer-page-1"),
+    /grant must be an object/,
   );
 });
 
@@ -136,6 +137,51 @@ test("cancels renderer pending state without settling late replies", async () =>
   );
 });
 
+test("rejects an invalid abort signal without poisoning disposal", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const resultPromise = context.__MoonBit__.core.invokeJson(
+    "app:invalid-signal",
+    "{}",
+    { signal: {} },
+  );
+  let failure;
+  try {
+    await resultPromise;
+  } catch (error) {
+    failure = error;
+  }
+  assert.equal(failure?.name, "TypeError");
+  assert.equal(
+    failure?.message,
+    "Proton bridge options.signal must be an AbortSignal",
+  );
+  assert.equal(calls.length, 0);
+  assert.doesNotThrow(() => dispatcher.dispose("test complete"));
+  assert.equal(calls.length, 0);
+});
+
+test("rolls back pending state when abort listener registration fails", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const signal = {
+    aborted: false,
+    addEventListener() {
+      throw new Error("registration failed");
+    },
+    removeEventListener() {},
+  };
+  await assert.rejects(
+    context.__MoonBit__.core.invokeJson(
+      "app:registration-failure",
+      "{}",
+      { signal },
+    ),
+    /registration failed/,
+  );
+  assert.equal(calls.length, 0);
+  assert.doesNotThrow(() => dispatcher.dispose("test complete"));
+  assert.equal(calls.length, 0);
+});
+
 test("delivers extension events and supports unsubscribe", () => {
   const { context, dispatcher } = createBridge();
   const received = [];
@@ -206,17 +252,31 @@ test("rejects pending requests when the context is disposed", async () => {
   );
 });
 
-test("notifies native when a bridge request times out", async () => {
-  const { calls, context, dispatcher } = createBridge(
-    "proton://app/",
-    1,
+test("keeps a request pending until an explicit response", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  let settled = false;
+  const resultPromise = context.__MoonBit__.core.invokeOp("app:wait", {});
+  resultPromise.then(
+    () => { settled = true; },
+    () => { settled = true; },
   );
-  const resultPromise = context.__MoonBit__.core.invokeJson(
-    "app:timeout",
-    "{}",
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(settled, false);
+  assert.equal(calls.length, 1);
+  dispatcher.dispatchResponse(calls[0].id, true, '{"done":true}', "");
+  assert.equal((await resultPromise).done, true);
+});
+
+test("forwards invokeOp cancellation to native", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const controller = new AbortController();
+  const resultPromise = context.__MoonBit__.add.sum(
+    {},
+    { signal: controller.signal },
   );
+  controller.abort();
   await assert.rejects(resultPromise, (error) => {
-    assert.equal(error.code, "request_timeout");
+    assert.equal(error.code, "request_cancelled");
     return true;
   });
   assert.equal(calls.length, 2);

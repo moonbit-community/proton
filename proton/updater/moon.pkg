@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/http",
+  "justjavac/proton_rsa" @rsa,
+  "justjavac/proton/native",
+  "justjavac/proton_updater" @manifest,
+  "moonbitlang/core/debug",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x/crypto",
+  "moonbitlang/x/encoding",
+  "moonbitlang/x/time",
+}
+
+supported_targets = "native"

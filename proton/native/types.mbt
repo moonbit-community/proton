@@ -44,6 +44,21 @@ pub fn NativeError::is_stale_browser_request(self : NativeError) -> Bool {
 }
 
 ///|
+pub fn NativeError::is_update_busy(self : NativeError) -> Bool {
+  self.status() == proton_err_update_busy
+}
+
+///|
+pub fn NativeError::is_update_rollback(self : NativeError) -> Bool {
+  self.status() == proton_err_update_rollback
+}
+
+///|
+pub fn NativeError::is_update_revision_mismatch(self : NativeError) -> Bool {
+  self.status() == proton_err_update_revision_mismatch
+}
+
+///|
 impl Show for NativeError with fn output(self, logger) {
   logger.write_string(self.message())
 }
@@ -60,6 +75,9 @@ pub(all) struct RuntimeInfo {
   runtime_available : Bool
   build_mode : String
   platform : String
+  /// The prebuilt identifier this library was built as, such as
+  /// `darwin-arm64`. Matches the platform keys in an update manifest.
+  platform_id : String
   features : Array[String]
 } derive(Debug, Eq, FromJson)
 
@@ -288,7 +306,6 @@ struct MenuItem {
 pub(all) struct BridgeConfig {
   raw_json : String?
   max_payload_bytes : Int
-  request_timeout_ms : Int
   grants : Array[BridgeGrantConfig]
 } derive(Debug, Eq)
 
@@ -842,24 +859,17 @@ pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
 pub fn BridgeConfig::new(
   grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
-  request_timeout_ms? : Int = 30000,
 ) -> BridgeConfig {
   {
     raw_json: None,
     max_payload_bytes,
-    request_timeout_ms,
     grants: grants.map(fn(grant) { grant.copy() }),
   }
 }
 
 ///|
 pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
-  {
-    raw_json: Some(raw_json),
-    max_payload_bytes: 1048576,
-    request_timeout_ms: 30000,
-    grants: [],
-  }
+  { raw_json: Some(raw_json), max_payload_bytes: 1048576, grants: [] }
 }
 
 ///|
@@ -1100,10 +1110,6 @@ fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
         "max_payload_bytes": Json::number(
           self.max_payload_bytes.to_double(),
           repr=self.max_payload_bytes.to_string(),
-        ),
-        "request_timeout_ms": Json::number(
-          self.request_timeout_ms.to_double(),
-          repr=self.request_timeout_ms.to_string(),
         ),
       }
       Json::object(fields)

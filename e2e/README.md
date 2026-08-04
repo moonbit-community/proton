@@ -5,6 +5,13 @@ CDP-based end-to-end tests for the native DLL bridge route.
 The module is part of the root `moon.work`. Do not mutate the workspace before
 running E2E tests.
 
+## Self-update
+
+`self_update/` installs a signed release of a signed application over itself and
+restarts into it, on macOS. It is a script rather than a `moon test` scenario
+because it needs `codesign`, `openssl` and a real installed bundle. See
+[self_update/README.md](self_update/README.md).
+
 ## Self-hosted MoonBit E2E
 
 `moon test` runs the complete self-hosted suite directly. Each scenario selects

@@ -21,6 +21,11 @@ against the repository.
 node ./scripts/verify_generated.mjs
 ```
 
+CI passes `--skip-prebuilt-abi` because each matrix runner verifies its own
+prebuilt in the following platform-specific step. The flag retains metadata
+validation and generated-file comparison; it skips only dynamic-library symbol
+inspection. Release validation should keep using the default command.
+
 Run this before publishing `proton` or `proton_ext`, and after changing any of:
 
 - extension `#proton.command` annotations or `moon.ext` metadata

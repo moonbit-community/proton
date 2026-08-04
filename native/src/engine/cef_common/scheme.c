@@ -1,31 +1,39 @@
 #include "scheme.h"
 
-#include "window.h"
-
 #include "include/internal/cef_string.h"
 
-#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTON_ENGINE_PATH_SEPARATOR '/'
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <stdatomic.h>
+#endif
 
-#include "../cef_common/strings.h"
-#include "../cef_common/assets.h"
+#include "strings.h"
+#include "assets.h"
 
+/* Each engine keeps its own reference-count primitives; this factory is a
+   separate translation unit, so it selects them here rather than inheriting
+   the includer's macros the way the engines do.
+
+   The four macros below are written for ref_count.h, which always names its
+   argument `refs`. That makes the `(refs)->refs` member access survive
+   parameter substitution — but only for that one spelling, so nothing else
+   may call them. Direct users take proton_engine_ref_release instead. */
+#ifdef _WIN32
+typedef struct {
+  volatile LONG refs;
+} proton_engine_ref_counted_t;
+#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
+#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
+#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
+#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
+#else
 typedef struct {
   atomic_int refs;
 } proton_engine_ref_counted_t;
-
-typedef struct {
-  cef_resource_handler_t handler;
-  proton_engine_ref_counted_t refs;
-  char *data;
-  size_t len;
-  char *mime_type;
-  size_t offset;
-} proton_engine_resource_handler_t;
-
 #define PROTON_ENGINE_REF_INCREMENT(refs) \
   atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
 #define PROTON_ENGINE_REF_DECREMENT(refs) \
@@ -33,11 +41,28 @@ typedef struct {
 #define PROTON_ENGINE_REF_LOAD(refs) \
   atomic_load_explicit(&(refs)->refs, memory_order_acquire)
 #define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#include "../cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
+#endif
+
+#include "ref_count.h"
+
+/* Returns the count after the release. */
+static int proton_engine_ref_release(proton_engine_ref_counted_t *refs) {
+#ifdef _WIN32
+  return (int)InterlockedDecrement(&refs->refs);
+#else
+  return atomic_fetch_sub_explicit(&refs->refs, 1, memory_order_acq_rel) - 1;
+#endif
+}
+
+typedef struct {
+  cef_resource_handler_t handler;
+  proton_engine_ref_counted_t refs;
+  char *data;
+  size_t len;
+  char *mime_type;
+  int status;
+  size_t offset;
+} proton_engine_resource_handler_t;
 
 static char *proton_engine_request_url(cef_request_t *request) {
   if (request == NULL) {
@@ -70,12 +95,19 @@ static void CEF_CALLBACK proton_engine_resource_get_response_headers(
       (proton_engine_resource_handler_t *)self;
   if (response != NULL) {
     cef_string_t mime = {0};
+    cef_string_t charset = {0};
     proton_engine_set_string(&mime, handler->mime_type != NULL
                                         ? handler->mime_type
                                         : "text/html");
-    response->set_status(response, 200);
+    /* Everything served here is produced by the framework as UTF-8. Saying so
+       keeps Chromium from falling back to a locale-dependent encoding for
+       documents that carry no <meta charset>. */
+    proton_engine_set_string(&charset, "utf-8");
+    response->set_status(response, handler->status);
     response->set_mime_type(response, &mime);
+    response->set_charset(response, &charset);
     cef_string_clear(&mime);
+    cef_string_clear(&charset);
   }
   if (response_length != NULL) {
     *response_length = (int64_t)handler->len;
@@ -122,9 +154,7 @@ static int CEF_CALLBACK proton_engine_resource_handler_release(
   }
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)base;
-  int value = atomic_fetch_sub_explicit(&handler->refs.refs, 1,
-                                        memory_order_acq_rel) -
-              1;
+  int value = proton_engine_ref_release(&handler->refs);
   if (value <= 0) {
     free(handler->data);
     free(handler->mime_type);
@@ -137,7 +167,8 @@ static int CEF_CALLBACK proton_engine_resource_handler_release(
 static cef_resource_handler_t *proton_engine_resource_handler_create(
     const char *data,
     size_t data_len,
-    const char *mime_type) {
+    const char *mime_type,
+    int status) {
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)calloc(1, sizeof(*handler));
   if (handler == NULL) {
@@ -155,6 +186,7 @@ static cef_resource_handler_t *proton_engine_resource_handler_create(
   memcpy(handler->data, data != NULL ? data : "", data_len);
   handler->data[data_len] = '\0';
   handler->len = data_len;
+  handler->status = status;
   handler->mime_type = proton_engine_strdup(mime_type != NULL ? mime_type
                                                               : "text/html");
   if (handler->mime_type == NULL) {
@@ -186,8 +218,13 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
   char *html_url = NULL;
+  char *asset_root = NULL;
   char *html_copy = NULL;
   size_t html_len = 0;
+  const char *root_value = proton_engine_runtime_asset_root(window);
+  if (root_value != NULL) {
+    asset_root = proton_engine_strdup(root_value);
+  }
   if (window != NULL) {
     const char *url_value = proton_engine_window_html_url(window);
     if (url_value != NULL) {
@@ -205,7 +242,7 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     }
   }
   proton_engine_window_unlock();
-  if (window == NULL) {
+  if (window == NULL && asset_root == NULL) {
     return NULL;
   }
 
@@ -214,28 +251,70 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
       html_copy != NULL) {
     handler = proton_engine_resource_handler_create(html_copy, html_len,
-                                                    "text/html");
+                                                    "text/html", 200);
   } else {
-    char *asset_path = proton_engine_url_to_asset_path(url);
+    char *asset_path =
+        proton_engine_url_to_rooted_asset_path(url, asset_root);
     if (asset_path != NULL) {
-      char *html_path = proton_engine_url_to_asset_path(html_url);
-      char *asset_root = proton_engine_asset_path_dirname(html_path);
-      if (proton_engine_asset_path_is_under_root(asset_path, asset_root)) {
-        char *data = NULL;
-        size_t data_len = 0;
-        if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
-          handler = proton_engine_resource_handler_create(
-              data, data_len, proton_engine_asset_mime_type(asset_path));
-          free(data);
-        }
+      char *data = NULL;
+      size_t data_len = 0;
+      if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
+        handler = proton_engine_resource_handler_create(
+            data, data_len, proton_engine_asset_mime_type(asset_path), 200);
+        free(data);
       }
-      free(asset_root);
-      free(html_path);
       free(asset_path);
     }
   }
-  free(url);
+  if (handler == NULL && proton_engine_url_is_app(url)) {
+    static const char not_found[] = "Not Found";
+    handler = proton_engine_resource_handler_create(
+        not_found, sizeof(not_found) - 1, "text/plain", 404);
+  }
   free(html_url);
+  free(asset_root);
   free(html_copy);
+  free(url);
   return handler;
+}
+
+void proton_engine_register_app_custom_schemes(
+    cef_scheme_registrar_t *registrar) {
+  if (registrar == NULL) {
+    return;
+  }
+  cef_string_t scheme = {0};
+  proton_engine_set_string(&scheme, "proton");
+  /* Give proton:// documents a real origin and allow CORS-mode same-origin
+     resources such as @font-face to reach the custom scheme handler. */
+  registrar->add_custom_scheme(
+      registrar, &scheme,
+      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
+          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
+  cef_string_clear(&scheme);
+}
+
+int proton_engine_register_app_scheme_factory(
+    cef_scheme_handler_factory_t *factory) {
+  if (factory == NULL) {
+    return 0;
+  }
+  cef_string_t scheme = {0};
+  proton_engine_set_string(&scheme, "proton");
+  int ok = cef_register_scheme_handler_factory(&scheme, NULL, factory);
+  cef_string_clear(&scheme);
+  if (!ok) {
+    return 0;
+  }
+  /* Scoping the https factory to the application domain leaves every other
+     https origin on the network stack. */
+  cef_string_t https_scheme = {0};
+  cef_string_t app_domain = {0};
+  proton_engine_set_string(&https_scheme, PROTON_ENGINE_APP_SCHEME);
+  proton_engine_set_string(&app_domain, PROTON_ENGINE_APP_DOMAIN);
+  ok = cef_register_scheme_handler_factory(&https_scheme, &app_domain,
+                                           factory);
+  cef_string_clear(&https_scheme);
+  cef_string_clear(&app_domain);
+  return ok;
 }

@@ -16,6 +16,8 @@ import {
   "justjavac/proton/ipc",
   "justjavac/proton/manifest",
   "justjavac/proton/native",
+  "justjavac/proton/updater",
+  "justjavac/proton_updater",
   "justjavac/proton_contract",
 }
 
@@ -45,6 +47,7 @@ options(
     "facade_runtime_wakeup.mbt": [ "native" ],
     "facade_runner.mbt": [ "native" ],
     "facade_types.mbt": [ "native" ],
+    "facade_updater.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
   },
 )

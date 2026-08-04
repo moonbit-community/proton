@@ -1,35 +1,19 @@
-(function installMoonBitBridge(nativeInvoke, rawConfig, pageInstance) {
+(function installMoonBitBridge(nativeInvoke, rawGrant, pageInstance) {
   "use strict";
 
   if (typeof nativeInvoke !== "function") {
     throw new TypeError("Proton bridge requires a native invoke function");
   }
 
-  const rootConfig = typeof rawConfig === "string" ? JSON.parse(rawConfig) : rawConfig;
-  if (!rootConfig || typeof rootConfig !== "object") {
-    throw new TypeError("Proton bridge config must be an object");
+  const config = typeof rawGrant === "string" ? JSON.parse(rawGrant) : rawGrant;
+  if (!config || typeof config !== "object") {
+    throw new TypeError("Proton bridge grant must be an object");
   }
-  const sourceOrigin = globalThis.location.protocol === "proton:" &&
-      globalThis.location.hostname === "app"
-    ? "app"
-    : globalThis.location.origin;
-  const grant = Array.isArray(rootConfig.grants)
-    ? rootConfig.grants.find((candidate) =>
-        candidate && candidate.source_origin === sourceOrigin)
-    : undefined;
-  if (!grant) {
-    throw new TypeError("Proton bridge has no grant for this page source");
-  }
-  const config = { ...rootConfig, ...grant };
 
   if (typeof pageInstance !== "string" || !pageInstance) {
     throw new TypeError("Proton bridge requires a native page instance");
   }
 
-  const requestTimeoutMs = Number.isInteger(config.request_timeout_ms) &&
-      config.request_timeout_ms > 0
-    ? config.request_timeout_ms
-    : 30000;
   const pending = new Map();
   const listeners = new Map();
   const jsonListeners = new Map();
@@ -121,6 +105,31 @@
     }
   }
 
+  function abortSignalFrom(options) {
+    let signal;
+    let aborted;
+    let addEventListener;
+    let removeEventListener;
+    try {
+      signal = options && options.signal;
+      if (signal == null) {
+        return null;
+      }
+      aborted = signal.aborted;
+      addEventListener = signal.addEventListener;
+      removeEventListener = signal.removeEventListener;
+    } catch (_) {
+      throw new TypeError("Proton bridge options.signal must be an AbortSignal");
+    }
+    if ((typeof signal !== "object" && typeof signal !== "function") ||
+        typeof aborted !== "boolean" ||
+        typeof addEventListener !== "function" ||
+        typeof removeEventListener !== "function") {
+      throw new TypeError("Proton bridge options.signal must be an AbortSignal");
+    }
+    return { signal, aborted, addEventListener, removeEventListener };
+  }
+
   function invokeJson(route, requestJson, options) {
     if (disposed) {
       return Promise.reject(new ProtonBridgeError(
@@ -134,55 +143,83 @@
         "Proton bridge request must be JSON text",
       ));
     }
+    let abortSignal;
+    try {
+      abortSignal = abortSignalFrom(options);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    if (abortSignal && abortSignal.aborted) {
+      return Promise.reject(new ProtonBridgeError(
+        "request_cancelled",
+        "Proton bridge request was cancelled",
+      ));
+    }
     return new Promise((resolve, reject) => {
       const id = nextRequestId++;
       if (nextRequestId > 2147483640) {
         nextRequestId = 1;
       }
-      const signal = options && options.signal;
       let abortListener;
+      let abortListenerRegistered = false;
+      let requestStarted = false;
+      let finished = false;
       const finish = () => {
-        if (abortListener && signal) {
-          signal.removeEventListener("abort", abortListener);
-        }
-      };
-      const timer = setTimeout(() => {
-        const entry = pending.get(id);
-        if (!entry) {
+        if (finished) {
           return;
         }
-        cancelNativeRequest(id);
-        pending.delete(id);
-        finish();
-        reject(new ProtonBridgeError(
-          "request_timeout",
-          "Proton bridge request timed out",
-        ));
-      }, requestTimeoutMs);
-      pending.set(id, { resolve, reject, timer, finish });
+        finished = true;
+        if (abortListenerRegistered && abortListener && abortSignal) {
+          abortListenerRegistered = false;
+          try {
+            abortSignal.removeEventListener.call(
+              abortSignal.signal,
+              "abort",
+              abortListener,
+            );
+          } catch (_) {
+            // User-provided cleanup must not poison bridge disposal.
+          }
+        }
+      };
+      pending.set(id, { resolve, reject, finish });
 
-      if (signal) {
+      if (abortSignal) {
         abortListener = () => {
           const entry = pending.get(id);
           if (!entry) {
             return;
           }
-          cancelNativeRequest(id);
           pending.delete(id);
-          clearTimeout(timer);
+          if (requestStarted) {
+            cancelNativeRequest(id);
+          }
           finish();
           reject(new ProtonBridgeError(
             "request_cancelled",
             "Proton bridge request was cancelled",
           ));
         };
-        if (signal.aborted) {
-          abortListener();
+        abortListenerRegistered = true;
+        try {
+          abortSignal.addEventListener.call(
+            abortSignal.signal,
+            "abort",
+            abortListener,
+            { once: true },
+          );
+        } catch (error) {
+          pending.delete(id);
+          finish();
+          reject(error);
           return;
         }
-        signal.addEventListener("abort", abortListener, { once: true });
+        if (!pending.has(id)) {
+          return;
+        }
       }
 
+      requestStarted = true;
       try {
         nativeInvoke(
           "request",
@@ -192,7 +229,6 @@
           pageInstance,
         );
       } catch (error) {
-        clearTimeout(timer);
         pending.delete(id);
         finish();
         reject(bridgeError(
@@ -204,7 +240,7 @@
     });
   }
 
-  function invokeOp(name, payload) {
+  function invokeOp(name, payload, options) {
     let payloadJson;
     try {
       payloadJson = JSON.stringify(payload === undefined ? null : payload);
@@ -215,7 +251,7 @@
         "Proton bridge request could not be encoded",
       ));
     }
-    return invokeJson(name, payloadJson).then((responseJson) => {
+    return invokeJson(name, payloadJson, options).then((responseJson) => {
       try {
         return JSON.parse(responseJson);
       } catch (error) {
@@ -290,8 +326,8 @@
     }
     const target = {
       name: namespace,
-      invoke(apiName, payload) {
-        return invokeOp(`ext:${namespace}/${String(apiName)}`, payload);
+      invoke(apiName, payload, options) {
+        return invokeOp(`ext:${namespace}/${String(apiName)}`, payload, options);
       },
       on(eventName, listener) {
         return events.on(`${namespace}.${String(eventName)}`, listener);
@@ -303,8 +339,8 @@
       if (!apiName || apiName === "then") {
         continue;
       }
-      target[apiName] = function invokeExtension(payload) {
-        return invokeOp(`ext:${namespace}/${apiName}`, payload);
+      target[apiName] = function invokeExtension(payload, options) {
+        return invokeOp(`ext:${namespace}/${apiName}`, payload, options);
       };
     }
     root[namespace] = target;
@@ -325,7 +361,6 @@
         return false;
       }
       pending.delete(id);
-      clearTimeout(entry.timer);
       entry.finish();
       if (ok) {
         entry.resolve(payloadJson);
@@ -397,8 +432,8 @@
       disposed = true;
       const error = new Error(reason || "Proton bridge context was released");
       for (const [id, entry] of pending.entries()) {
+        pending.delete(id);
         cancelNativeRequest(id);
-        clearTimeout(entry.timer);
         entry.finish();
         entry.reject(new ProtonBridgeError("bridge_disposed", error.message));
       }

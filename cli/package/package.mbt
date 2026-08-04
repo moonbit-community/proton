@@ -28,6 +28,7 @@ struct PackagePlan {
   version : String
   macos_version : String
   bundle_version : String
+  update_revision : UInt64
   targets : Array[String]
   output : String
   build : Bool
@@ -84,9 +85,22 @@ pub fn command() -> @argparse.Command {
       OptionArg(
         "target",
         action=Append,
-        about="Package target (app, zip, or macOS dmg); may be repeated",
+        about="Package target (app, zip, Windows nsis, macOS dmg, or Linux appimage); may be repeated",
       ),
       OptionArg("output", about="Output directory"),
+      OptionArg(
+        "updater-base-url",
+        about="Emit update metadata with artifacts served from this https base URL",
+      ),
+      OptionArg(
+        "updater-published-at",
+        about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
+      ),
+      OptionArg(
+        "updater-revision",
+        allow_hyphen_values=true,
+        about="Monotonic release sequence embedded in the app and signed manifest",
+      ),
     ],
   )
 }
@@ -119,12 +133,46 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
   let project = loaded.config()
-  let plan = build_package_plan(raw, config_path, project)
+  let updater_base_url = @cli_args.value(matches, "updater-base-url")
+  let update_revision = updater_revision_from_matches(matches, updater_base_url)
+  let plan = build_package_plan(raw, config_path, project, update_revision)
   print_package_plan(plan, raw.dry_run)
   if raw.dry_run {
     return
   }
   execute_package_plan(plan)
+  match updater_base_url {
+    Some(base_url) =>
+      write_updater_metadata(
+        plan,
+        base_url,
+        match @cli_args.value(matches, "updater-published-at") {
+          Some(published_at) => published_at
+          None => raise MissingPublishedAt
+        },
+      )
+    None => ()
+  }
+}
+
+///|
+fn updater_revision_from_matches(
+  matches : @argparse.Matches,
+  base_url : String?,
+) -> UInt64 raise UpdaterMetadataError {
+  match @cli_args.value(matches, "updater-revision") {
+    None => {
+      guard base_url is None else { raise MissingRevision }
+      0UL
+    }
+    Some(value) => {
+      let revision = @string.parse_uint64(value[:]) catch {
+        _ => raise InvalidRevision(value~)
+      }
+      guard revision > 0UL else { raise InvalidRevision(value~) }
+      revision
+    }
+  }
 }
 
 ///|
@@ -149,8 +197,68 @@ fn package_options_from_matches(
 }
 
 ///|
+/// The platform `package` is running on.
+///
+/// Packaging drives the host's own tooling -- codesign, makensis,
+/// appimagetool -- so the host decides both which targets can be built and
+/// which artifact an update downloads.
+pub(all) enum PackageHost {
+  Macos
+  Windows
+  Linux
+} derive(Eq)
+
+///|
+/// The host `package` is running on, which is the platform it can build for.
+async fn current_package_host() -> PackageHost {
+  if @path.sep == '\\' {
+    Windows
+  } else if is_macos_host() {
+    Macos
+  } else {
+    Linux
+  }
+}
+
+///|
+/// The host a platform id names. Used where the question is which platform's
+/// artifacts are being described rather than which one is running -- update
+/// metadata names the platform it was built for, and has the id in hand.
+fn package_host_of(platform : String) -> PackageHost? {
+  if platform.has_prefix("darwin-") {
+    Some(Macos)
+  } else if platform.has_prefix("win32-") {
+    Some(Windows)
+  } else if platform.has_prefix("linux-") {
+    Some(Linux)
+  } else {
+    None
+  }
+}
+
+///|
+/// Every target `package` accepts, and the hosts that can build it.
+///
+/// A target only builds on the platform it targets, because producing it runs
+/// that platform's own tooling. Absent from this table means not a target at
+/// all, so one table answers both "is this a target?" and "can this host build
+/// it?" -- previously separate checks that could disagree.
+fn package_target_hosts(target : String) -> Array[PackageHost]? {
+  match target {
+    // `app` names a macOS bundle and a Windows portable directory; on Linux
+    // the distributable unit is the AppImage itself.
+    "app" => Some([Macos, Windows])
+    "zip" => Some([Macos, Windows])
+    "dmg" => Some([Macos])
+    "nsis" => Some([Windows])
+    "appimage" => Some([Linux])
+    _ => None
+  }
+}
+
+///|
 fn validate_package_target(target : String) -> Unit raise PackageUsageError {
-  if target != "app" && target != "zip" && target != "dmg" {
+  guard package_target_hosts(target) is Some(_) else {
     raise UnsupportedTarget(target~)
   }
 }
@@ -160,6 +268,7 @@ async fn build_package_plan(
   raw : RawPackageOptions,
   config_path : String,
   project : @proton_config.ProjectConfig,
+  update_revision : UInt64,
 ) -> PackagePlan {
   let bundle = match project.bundle() {
     Some(bundle) if bundle.active() => bundle
@@ -187,18 +296,24 @@ async fn build_package_plan(
   } else {
     (version, version)
   }
+  let host = current_package_host()
   let targets = if raw.targets.length() > 0 {
     copy_strings(raw.targets)
   } else if bundle.targets.length() > 0 {
     copy_strings(bundle.targets)
   } else {
-    ["app", "zip"]
+    match host {
+      Linux => ["appimage"]
+      Macos | Windows => ["app", "zip"]
+    }
   }
-  if targets.contains("dmg") && !macos_host {
-    raise PackagePlanError::UnsupportedTargetForPlatform(
-      target="dmg",
-      platform=@cef.current_platform_id(),
-    )
+  for target in targets {
+    guard package_target_hosts(target) is Some(hosts) && hosts.contains(host) else {
+      raise PackagePlanError::UnsupportedTargetForPlatform(
+        target~,
+        platform=@cef.current_platform_id(),
+      )
+    }
   }
   let base_dir = @fsutil.resolve_path(project.base_dir(), ".")
   let backend = project.backend()
@@ -241,6 +356,7 @@ async fn build_package_plan(
     version,
     macos_version,
     bundle_version,
+    update_revision,
     targets,
     output,
     build: raw.build,
@@ -460,6 +576,7 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  product: " + plan.product_name)
   println("  identifier: " + plan.identifier)
   println("  version: " + plan.version)
+  println("  update revision: " + plan.update_revision.to_string())
   println("  targets: " + plan.targets.join(", "))
   println("  output: " + plan.output)
   println("  build target: " + plan.build_target_dir)
@@ -491,12 +608,10 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
     None =>
       raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
   }
-  if @path.sep == '\\' {
-    stage_windows_portable(plan, executable, runtime)
-  } else if is_macos_host() {
-    stage_macos_app(plan, executable, runtime)
-  } else {
-    raise PackagePlanError::UnsupportedPlatform
+  match current_package_host() {
+    Windows => stage_windows_portable(plan, executable, runtime)
+    Macos => stage_macos_app(plan, executable, runtime)
+    Linux => stage_linux_appdir(plan, executable, runtime)
   }
 }
 
@@ -509,7 +624,12 @@ async fn is_macos_host() -> Bool {
 async fn run_release_build(plan : PackagePlan) -> Unit {
   let moon_args = ["--release", "--target-dir", plan.build_target_dir]
   let old_rpath = @sys.get_env_var("PROTON_PACKAGE_RPATH")
-  if @path.sep != '\\' {
+  // Mach-O only. The link config reads this on darwin; the Linux branch
+  // ignores it and keeps the absolute runtime rpath, which is what a
+  // development run wants. Linux gets its relocatable rpath from patchelf
+  // during staging instead, so `$ORIGIN` never passes through the link
+  // config's quoting.
+  if is_macos_host() {
     @sys.set_env_var(
       "PROTON_PACKAGE_RPATH", "@executable_path/../Resources/proton/lib",
     )
@@ -1202,6 +1322,7 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
     #|<key>CFBundlePackageType</key><string>APPL</string>
     #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
     #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
+    #|<key>ProtonUpdateRevision</key><string>{{UPDATE_REVISION}}</string>
     #|<key>LSMinimumSystemVersion</key><string>12.0</string>
     #|<key>NSHighResolutionCapable</key><true/>
     #|</dict></plist>
@@ -1213,6 +1334,7 @@ fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
   .replace_all(old="{{VERSION}}", new=xml_escape(plan.version))
   .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
   .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
+  .replace_all(old="{{UPDATE_REVISION}}", new=plan.update_revision.to_string())
   .replace_all(old="{{ICON}}", new=macos_icon_plist_entry(plan.macos_icon))
   .replace_all(old="{{URL_TYPES}}", new=macos_url_types_plist_entry(plan))
   .replace_all(

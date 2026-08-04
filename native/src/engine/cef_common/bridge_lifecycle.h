@@ -11,6 +11,7 @@ typedef struct {
   char *url;
   char *failure_json;
   uint32_t additional_failure_count;
+  int has_been_ready;
 } proton_engine_bridge_lifecycle_t;
 
 int proton_engine_urls_same_document(const char *left, const char *right);

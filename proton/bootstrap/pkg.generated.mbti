@@ -75,11 +75,18 @@ pub fn ProtonProjectConfig::dev_manifest(Self) -> LoadedAppManifest
 pub fn ProtonProjectConfig::frontend(Self) -> ProtonFrontendConfig?
 pub fn ProtonProjectConfig::manifest(Self) -> LoadedAppManifest
 pub fn ProtonProjectConfig::metadata(Self) -> ProtonAppMetadata
-pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, single_instance? : Bool, backend? : ProtonBackendConfig?, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?) -> Self
+pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, single_instance? : Bool, backend? : ProtonBackendConfig?, frontend? : ProtonFrontendConfig?, bundle? : ProtonBundleConfig?, updater? : ProtonUpdaterConfig?) -> Self
 pub fn ProtonProjectConfig::single_instance(Self) -> Bool
 pub fn ProtonProjectConfig::to_summary_json(Self) -> Json
+pub fn ProtonProjectConfig::updater(Self) -> ProtonUpdaterConfig?
+
+type ProtonUpdaterConfig
+pub fn ProtonUpdaterConfig::checks_on_launch(Self) -> Bool
+pub fn ProtonUpdaterConfig::endpoint(Self) -> String
+pub fn ProtonUpdaterConfig::freshness_days(Self) -> Int
+pub fn ProtonUpdaterConfig::new(String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
+pub fn ProtonUpdaterConfig::public_keys(Self) -> Array[String]
 
 // Type aliases
 
 // Traits
-

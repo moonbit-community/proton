@@ -114,7 +114,7 @@ fn assert_event_scenario_probe(
   result : EventScenarioProbe,
   value : Json,
 ) -> Unit raise {
-  guard result.url == "proton://app/" &&
+  guard result.url == "https://proton.localhost/" &&
     result.title == "MoonBit Event Broadcast" else {
     fail("event broadcast page identity mismatch: " + value.stringify())
   }
@@ -189,7 +189,7 @@ async fn run_event_reload_scenario_probe(
   page.close()
   let reloaded_page = connect_page_matching_expression(
     target,
-    "proton://app/",
+    "https://proton.localhost/",
     false,
     (
       #|Boolean(
@@ -245,7 +245,7 @@ async fn run_event_reload_scenario_probe(
   let result : EventReloadScenarioProbe = decode_probe(
     value, "event broadcast reload",
   )
-  guard result.url == "proton://app/" &&
+  guard result.url == "https://proton.localhost/" &&
     result.title == "MoonBit Event Broadcast" &&
     result.navigation_type == "reload" else {
     fail("event reload page identity mismatch: " + value.stringify())

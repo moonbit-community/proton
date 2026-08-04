@@ -40,6 +40,7 @@ fn App::new(
     certificate_handler: None,
     media_handler: None,
     download_event_handlers: [],
+    update_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],
   }
@@ -92,12 +93,21 @@ fn App::resolved_config_manifest(
   let project = @bootstrap.load_proton_project_config_from_file(path) catch {
     error => raise Bootstrap(error)
   }
-  let loaded = if proton_dev_mode_enabled() {
+  let dev_mode = proton_dev_mode_enabled()
+  let loaded = if dev_mode {
     resolved_dev_manifest(project)
   } else {
     project.manifest()
   }
-  self.merge_config(loaded, project=Some(project))
+  self.merge_config(
+    loaded,
+    project=Some(project),
+    update_channel=if dev_mode {
+      None
+    } else {
+      resolved_update_channel(project)
+    },
+  )
 }
 
 ///|
@@ -133,19 +143,37 @@ fn manifest_with_entry(
 
 ///|
 fn implicit_config_path() -> String? {
-  match @env.get_env_var("PROTON_CONFIG_PATH") {
+  let environment = match @env.get_env_var("PROTON_CONFIG_PATH") {
     Some(value) => {
       let trimmed = value.trim().to_owned()
       if trimmed != "" {
-        return Some(trimmed)
+        Some(trimmed)
+      } else {
+        None
       }
     }
-    None => ()
+    None => None
   }
-  if @mbfs.path_exists(default_config_file) {
-    Some(default_config_file)
-  } else {
-    bundled_config_path()
+  choose_implicit_config_path(
+    bundled=bundled_config_path(),
+    environment~,
+    cwd_has_default=@mbfs.path_exists(default_config_file),
+  )
+}
+
+///|
+fn choose_implicit_config_path(
+  bundled~ : String?,
+  environment~ : String?,
+  cwd_has_default~ : Bool,
+) -> String? {
+  match bundled {
+    Some(path) => Some(path)
+    None =>
+      match environment {
+        Some(path) => Some(path)
+        None => if cwd_has_default { Some(default_config_file) } else { None }
+      }
   }
 }
 
@@ -247,7 +275,17 @@ fn App::inline_app_config(self : App) -> ResolvedAppConfig {
     instance_identifier: self.single_instance_identifier,
     url_schemes: [],
     document_extensions: [],
+    update_channel: None,
   }
+}
+
+///|
+/// Resolves the update channel from a loaded project configuration.
+fn resolved_update_channel(
+  project : @bootstrap.ProtonProjectConfig,
+) -> ResolvedUpdateChannel? {
+  guard project.updater() is Some(config) else { return None }
+  Some(ResolvedUpdateChannel::{ config, })
 }
 
 ///|
@@ -267,6 +305,7 @@ fn App::merge_config(
   self : App,
   loaded : @bootstrap.LoadedAppManifest,
   project? : @bootstrap.ProtonProjectConfig? = None,
+  update_channel? : ResolvedUpdateChannel? = None,
 ) -> ResolvedAppConfig {
   self.warn_config_overrides()
   let manifest = loaded.manifest()
@@ -316,6 +355,7 @@ fn App::merge_config(
     },
     url_schemes: resolved_url_schemes(project),
     document_extensions: resolved_document_extensions(project),
+    update_channel,
   }
 }
 

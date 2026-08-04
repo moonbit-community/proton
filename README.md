@@ -306,8 +306,9 @@ entry = {
 
 `backend` selects the MoonBit package that runs the Proton runtime. `entry`
 selects what the main window loads: `kind` is `"html"`, `"url"`, `"file"`, or
-`"asset"`, and `file`/`asset` values resolve relative to the config file. The
-`frontend` block drives development and build orchestration: `path` is the
+`"asset"`. Project file paths must be relative and use `/` separators;
+`file`/`asset` values resolve relative to the config file. The `frontend` block
+drives development and build orchestration: `path` is the
 frontend working directory, `before_dev`/`before_build` run there, `dev_url`
 is the development server to wait for, and `dist` is the build output to
 validate (resolved relative to `path`).
@@ -414,6 +415,17 @@ makes recursive removal fail with `Operation not permitted` without clearing
 the quarantine. Deleting the attribute from the top-level `.app` (or moving
 the app once in Finder) is sufficient. Apps signed and notarized with
 `--sign --notarize` skip this step entirely.
+
+When emitting updater metadata, provide a monotonically increasing release
+revision as well as the reproducible publication time. The revision is embedded
+in the signed app and emitted into the signed manifest fragment:
+
+```sh
+proton_cli package --target zip \
+  --updater-base-url https://example.com/releases \
+  --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --updater-revision 42
+```
 
 ## Diagnose a project
 

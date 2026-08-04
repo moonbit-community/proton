@@ -373,6 +373,9 @@ int proton_engine_bridge_lifecycle_update(
   lifecycle->outcome = next_outcome;
   lifecycle->page_instance = next_page_instance;
   lifecycle->url = next_url;
+  if (strcmp(outcome, "ready") == 0) {
+    lifecycle->has_been_ready = 1;
+  }
   lifecycle->revision++;
   if (lifecycle->revision == 0) {
     lifecycle->revision = 1;
@@ -442,6 +445,11 @@ int proton_engine_bridge_lifecycle_report_load_failure(
     const char *message, int navigation_cancelled) {
   // A cancelled navigation is normal browser control flow, not a bridge fault.
   if (navigation_cancelled) {
+    return 0;
+  }
+  // A broken navigation after startup is ordinary browser failure. Keep
+  // initial entry failures fatal so applications never start on an error page.
+  if (lifecycle != NULL && lifecycle->has_been_ready) {
     return 0;
   }
   return proton_engine_bridge_lifecycle_report_browser_failure(

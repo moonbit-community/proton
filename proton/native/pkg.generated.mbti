@@ -41,6 +41,18 @@ pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
 
+pub fn update_cleanup_previous() -> Unit raise NativeError
+
+pub fn update_current_revision() -> UInt64 raise NativeError
+
+pub fn update_install(Bytes, String) -> Unit raise NativeError
+
+pub fn update_relaunch() -> Unit raise NativeError
+
+pub fn update_stage_begin(String, Int64, UInt64) -> UpdateStage raise NativeError
+
+pub fn update_stage_begin_for_current_app(Int64, UInt64) -> UpdateStage raise NativeError
+
 // Errors
 pub(all) suberror NativeError {
   Status(status~ : Int, message~ : String)
@@ -50,6 +62,9 @@ pub(all) suberror NativeError {
 pub fn NativeError::is_stale_bridge_response(Self) -> Bool
 pub fn NativeError::is_stale_browser_request(Self) -> Bool
 pub fn NativeError::is_stale_window_request(Self) -> Bool
+pub fn NativeError::is_update_busy(Self) -> Bool
+pub fn NativeError::is_update_revision_mismatch(Self) -> Bool
+pub fn NativeError::is_update_rollback(Self) -> Bool
 pub fn NativeError::message(Self) -> String
 pub fn NativeError::status(Self) -> Int
 
@@ -75,10 +90,9 @@ pub enum AppInstanceAcquire {
 pub(all) struct BridgeConfig {
   raw_json : String?
   max_payload_bytes : Int
-  request_timeout_ms : Int
   grants : Array[BridgeGrantConfig]
 } derive(Eq, @debug.Debug)
-pub fn BridgeConfig::new(grants~ : Array[BridgeGrantConfig], max_payload_bytes? : Int, request_timeout_ms? : Int) -> Self
+pub fn BridgeConfig::new(grants~ : Array[BridgeGrantConfig], max_payload_bytes? : Int) -> Self
 pub fn BridgeConfig::to_json_string(Self) -> String
 pub fn BridgeConfig::unsafe_from_json(String) -> Self
 
@@ -268,6 +282,7 @@ pub(all) struct RuntimeInfo {
   runtime_available : Bool
   build_mode : String
   platform : String
+  platform_id : String
   features : Array[String]
 } derive(Eq, @debug.Debug, @json.FromJson)
 
@@ -291,6 +306,16 @@ pub(all) enum TitlebarStyle {
   Overlay
 } derive(Eq, @debug.Debug)
 
+pub enum UpdateInstallOutcome {
+  Installed
+  AlreadyInstalled
+} derive(Eq, @debug.Debug)
+
+type UpdateStage
+pub fn UpdateStage::abort(Self) -> Unit raise NativeError
+pub fn UpdateStage::install(Self) -> UpdateInstallOutcome raise NativeError
+pub fn UpdateStage::write(Self, Bytes) -> Unit raise NativeError
+
 type Window
 pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise NativeError
@@ -302,6 +327,7 @@ pub fn Window::eval(Self, String) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64
+pub fn Window::load_asset(Self, String, String, String) -> Unit raise NativeError
 pub fn Window::load_html(Self, String, String) -> Unit raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
@@ -373,4 +399,3 @@ pub(all) struct WindowState {
 // Type aliases
 
 // Traits
-

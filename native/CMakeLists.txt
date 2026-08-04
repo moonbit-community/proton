@@ -34,7 +34,6 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/proton_engine_cef_mac.m
       src/engine/cef_mac/dialog.m
       src/engine/cef_mac/menu.m
-      src/engine/cef_mac/scheme.m
     )
   elseif(UNIX)
     set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
@@ -49,6 +48,8 @@ if(PROTON_WITH_ENGINE)
     src/engine/cef_common/browser_session.c
     src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_renderer.c
+    src/engine/cef_common/document.c
+    src/engine/cef_common/scheme.c
   )
 endif()
 
@@ -63,6 +64,7 @@ add_library(proton SHARED
   src/proton_config.c
   src/proton_json.c
   src/proton_state.c
+  src/proton_update.c
   src/proton.c
   ${PROTON_APP_RUNNER_SOURCE}
   ${PROTON_NOTIFICATION_SOURCE}
@@ -81,6 +83,16 @@ target_compile_definitions(proton
   PRIVATE
     PROTON_BUILD
 )
+
+if(APPLE)
+  # The updater checks a staged bundle's code signature before replacing the
+  # installed application. That is the only check covering the expanded files
+  # on disk, so it is linked unconditionally rather than with the engine.
+  target_link_libraries(proton PRIVATE
+    "-framework CoreFoundation"
+    "-framework Security"
+  )
+endif()
 
 if(NOT WIN32)
   target_link_libraries(proton PRIVATE Threads::Threads)
@@ -152,6 +164,27 @@ if(PROTON_WITH_ENGINE)
     install(FILES ${PROTON_ENGINE_RUNTIME_DATA} DESTINATION bin)
     install(DIRECTORY "${PROTON_ENGINE_RESOURCES_DIR}/" DESTINATION Resources)
     install(TARGETS cef_process RUNTIME DESTINATION bin)
+
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../proton/moon.mod"
+         PROTON_MOON_VERSION_LINE REGEX "^version = ")
+    string(REGEX REPLACE "^version = \"([^\"]+)\".*$" "\\1"
+           PROTON_PREBUILT_VERSION "${PROTON_MOON_VERSION_LINE}")
+    set(PROTON_PREBUILT_MANIFEST
+        "${CMAKE_BINARY_DIR}/proton_prebuilt_manifest.json")
+    file(WRITE "${PROTON_PREBUILT_MANIFEST}"
+      "{\n"
+      "  \"platform\": \"win32-x64\",\n"
+      "  \"proton_version\": \"${PROTON_PREBUILT_VERSION}\",\n"
+      "  \"artifacts\": {\n"
+      "    \"dll\": \"bin/proton.dll\",\n"
+      "    \"helper\": \"bin/cef_process.exe\",\n"
+      "    \"import_lib\": \"lib/proton.lib\",\n"
+      "    \"header\": \"include/proton_native.h\"\n"
+      "  }\n"
+      "}\n"
+    )
+    install(FILES "${PROTON_PREBUILT_MANIFEST}" DESTINATION .
+            RENAME manifest.json)
   elseif(APPLE)
     if(NOT EXISTS "${PROTON_ENGINE_FRAMEWORK_BINARY}")
       message(FATAL_ERROR "Missing engine framework binary: ${PROTON_ENGINE_FRAMEWORK_BINARY}")
@@ -338,6 +371,15 @@ if(APPLE)
     "# libproton public ABI (see native/include/proton_native.h)\n_proton_*\n")
   target_link_options(proton PRIVATE
     "LINKER:-exported_symbols_list,${PROTON_DARWIN_EXPORTS}")
+elseif(UNIX)
+  # Visibility attributes do not hide linker-generated symbols such as
+  # _bss_start on every ELF toolchain. Enforce the public ABI at link time.
+  set(PROTON_ELF_VERSION_SCRIPT
+    "${CMAKE_CURRENT_BINARY_DIR}/proton_elf.map")
+  file(WRITE "${PROTON_ELF_VERSION_SCRIPT}"
+    "{\n  global:\n    proton_*;\n  local:\n    *;\n};\n")
+  target_link_options(proton PRIVATE
+    "LINKER:--version-script,${PROTON_ELF_VERSION_SCRIPT}")
 endif()
 
 if(WIN32)
@@ -378,6 +420,28 @@ if(BUILD_TESTING)
     tests/proton_state_smoke.c
     src/proton_state.c
   )
+  # TODO(windows): add a native updater test with the Windows apply path. The
+  # current suite constructs and inspects POSIX/macOS filesystem layouts.
+  if(NOT WIN32)
+    add_executable(proton_update_test
+      tests/proton_update_test.c
+      src/proton_update.c
+    )
+    target_include_directories(proton_update_test
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    # This test compiles the implementation rather than linking the library,
+    # so it defines the exported entry points itself.
+    target_compile_definitions(proton_update_test
+      PRIVATE PROTON_BUILD
+    )
+    if(APPLE)
+      target_link_libraries(proton_update_test PRIVATE
+        "-framework CoreFoundation"
+        "-framework Security"
+      )
+    endif()
+  endif()
 
   target_link_libraries(proton_smoke PRIVATE proton)
   target_include_directories(proton_state_smoke PRIVATE
@@ -405,6 +469,9 @@ if(BUILD_TESTING)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
+  if(NOT WIN32)
+    add_test(NAME proton_update_test COMMAND proton_update_test)
+  endif()
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)

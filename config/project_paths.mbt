@@ -1,25 +1,70 @@
 ///|
 fn config_base_dir(path : String) -> String {
-  let raw_dirname = dirname_string(path)
+  let raw_dirname = dirname_string(project_path_for_host(path))
   let config_dir : @mbpath.Path = raw_dirname
   config_dir.resolve().to_string()
 }
 
 ///|
-fn rebase_project_path(path : String, base_dir : String) -> String {
-  let candidate : @mbpath.Path = path
-  if candidate.is_absolute() {
-    path
+fn rebase_project_path(
+  path : String,
+  base_dir : String,
+  label : String,
+) -> String raise ProjectConfigError {
+  validate_relative_project_path(path, label)
+  let base : @mbpath.Path = project_path_for_host(base_dir)
+  base.join(project_path_for_host(path)).normalize().to_string()
+}
+
+///|
+/// Converts portable project separators before entering the host path API.
+fn project_path_for_host(path : String) -> String {
+  if @mbpath.sep == '\\' {
+    path.replace_all(old="/", new="\\")
   } else {
-    let base : @mbpath.Path = base_dir
-    base.join(path).normalize().to_string()
+    path
   }
 }
 
 ///|
+fn validate_relative_project_path(
+  path : String,
+  label : String,
+) -> Unit raise ProjectConfigError {
+  let field = if label.has_prefix("moon.proton.") {
+    label
+  } else {
+    "moon.proton." + label
+  }
+  guard !project_path_has_root(path) else {
+    raise InvalidField(
+      path=field,
+      expectation="must be a relative path; absolute paths and drive prefixes are not allowed",
+    )
+  }
+  guard !path.contains("\\") else {
+    raise InvalidField(
+      path=field,
+      expectation="must use '/' separators; backslashes are not allowed in portable project paths",
+    )
+  }
+}
+
+///|
+fn project_path_has_root(path : String) -> Bool {
+  if path.has_prefix("/") || path.has_prefix("\\") {
+    return true
+  }
+  guard path.length() >= 2 else { return false }
+  let drive = path[0]
+  ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) &&
+  path[1] == ':'
+}
+
+///|
 fn join_path_string(base : String, child : String) -> String {
-  let base_path : @mbpath.Path = base
-  base_path.join(child).normalize().to_string()
+  let base_path : @mbpath.Path = project_path_for_host(base)
+  base_path.join(project_path_for_host(child)).normalize().to_string()
 }
 
 ///|

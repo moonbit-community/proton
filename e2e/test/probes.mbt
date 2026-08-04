@@ -5,7 +5,7 @@ fn scenario_probe_expression(name : String) -> String raise {
       (
         #|;(async () => {
         #|  const invoke = window.__MoonBit__?.core?.invokeOp;
-        #|  if (location.href !== "proton://app/") return false;
+        #|  if (location.href !== "https://proton.localhost/") return false;
         #|  if (document.title !== "MoonBit App Commands") return false;
         #|  if (typeof invoke !== "function") return false;
         #|  const ping = await invoke("ext:appCommands/ping", { name: "proton" });
@@ -37,7 +37,7 @@ fn scenario_probe_expression(name : String) -> String raise {
     "38_async_extension_add" =>
       (
         #|;(async () => {
-        #|  if (location.href !== "proton://app/") return false;
+        #|  if (location.href !== "https://proton.localhost/") return false;
         #|  if (document.title !== "MoonBit Async Add Extension") return false;
         #|  if (typeof window.__MoonBit__?.core?.invokeOp !== "function") return false;
         #|  if (typeof window.__MoonBit__?.add?.slowAdd !== "function") return false;
@@ -48,7 +48,7 @@ fn scenario_probe_expression(name : String) -> String raise {
     "39_sync_async_extensions" =>
       (
         #|;(async () => {
-        #|  if (location.href !== "proton://app/") return false;
+        #|  if (location.href !== "https://proton.localhost/") return false;
         #|  if (document.title !== "MoonBit Sync + Async Extensions") return false;
         #|  if (typeof window.__MoonBit__?.core?.invokeOp !== "function") return false;
         #|  if (typeof window.__MoonBit__?.math?.double !== "function") return false;
@@ -66,7 +66,7 @@ fn scenario_probe_expression(name : String) -> String raise {
     "40_event_broadcast" =>
       (
         #|;(async () => {
-        #|  if (location.href !== "proton://app/") return false;
+        #|  if (location.href !== "https://proton.localhost/") return false;
         #|  if (document.title !== "MoonBit Event Broadcast") return false;
         #|  if (typeof window.__MoonBit__?.core?.invokeOp !== "function") return false;
         #|  if (typeof window.__MoonBit__?.ticker?.start !== "function") return false;
@@ -116,7 +116,7 @@ fn scenario_probe_expression(name : String) -> String raise {
     "46_asset_sidecar_resources" =>
       (
         #|;(async () => {
-        #|  if (!String(location.href).startsWith("proton://app/")) return false;
+        #|  if (!String(location.href).startsWith("https://proton.localhost/")) return false;
         #|  if (document.title !== "Asset Sidecar Resources") return false;
         #|  if (typeof window.__MoonBit__?.core?.invokeOp !== "function") return false;
         #|  if (typeof window.__MoonBit__?.add?.add !== "function") return false;
@@ -190,7 +190,7 @@ fn scenario_probe_expression(name : String) -> String raise {
     "42_attribute_codegen_commands" =>
       (
         #|;(async () => {
-        #|  if (location.href !== "proton://app/") return false;
+        #|  if (location.href !== "https://proton.localhost/") return false;
         #|  if (document.title !== "Proton Attribute Codegen") return false;
         #|  if (typeof window.__MoonBit__?.core?.invokeOp !== "function") return false;
         #|  if (typeof window.__MoonBit__?.add?.slowAdd !== "function") return false;

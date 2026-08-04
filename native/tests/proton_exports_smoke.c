@@ -88,6 +88,7 @@ static const char *const expected_exports[] = {
     "proton_window_respond_close_request",
     "proton_window_load_url",
     "proton_window_load_html",
+    "proton_window_load_asset",
     "proton_window_eval",
     "proton_window_browser_command_json",
     "proton_window_respond_browser_request_json",
@@ -100,6 +101,15 @@ static const char *const expected_exports[] = {
     "proton_window_begin_save_file_dialog",
     "proton_window_begin_choose_directory_dialog",
     "proton_window_poll_dialog_result",
+    "proton_update_stage_begin",
+    "proton_update_stage_begin_revision",
+    "proton_update_stage_write",
+    "proton_update_stage_install",
+    "proton_update_stage_install_outcome",
+    "proton_update_stage_abort",
+    "proton_update_install",
+    "proton_update_current_revision",
+    "proton_update_relaunch",
     "proton_last_error_message",
 };
 

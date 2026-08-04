@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/proton_ext/updater/contract"
+
+import {
+  "justjavac/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let check : @proton_contract.Command[Unit, UpdateStatus]
+
+pub let download : @proton_contract.Command[Unit, UpdateInstalled]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let progress : @proton_contract.Event[UpdateProgress]
+
+// Errors
+
+// Types and methods
+pub(all) struct UpdateInstalled {
+  version : String
+  changed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct UpdateProgress {
+  received : Int64
+  total : Int64
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct UpdateStatus {
+  state : String
+  version : String?
+  notes_url : String?
+  size : Int64?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

@@ -97,8 +97,18 @@ fn RuntimeWakeup::close(self : RuntimeWakeup) -> Unit {
 }
 
 ///|
-async fn RuntimeWakeup::wait(self : RuntimeWakeup) -> Unit raise AppRunError {
-  let revision = self.signal.revision()
+fn RuntimeWakeup::revision(self : RuntimeWakeup) -> Int64 {
+  self.signal.revision()
+}
+
+///|
+/// Waits for native work or a scheduler notification newer than `revision`.
+/// Capture the revision before checking the condition that may make waiting
+/// unnecessary, so a notification between the check and suspension is retained.
+async fn RuntimeWakeup::wait_after(
+  self : RuntimeWakeup,
+  revision : Int64,
+) -> Unit raise AppRunError {
   let RuntimeWakeReader(reader) = self.reader
   let ready = @async.any([
     () => {

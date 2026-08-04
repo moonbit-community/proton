@@ -38,11 +38,15 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke(
   failure : (@proton_client.ClientFailure) -> @cmd.Cmd,
 ) -> @cmd.Cmd {
   @cmd.custom_cmd(scheduler => {
-    @proton_client.invoke_with_callbacks(
-      command,
-      request,
-      response => @cmd.Scheduler::add(scheduler, success(response)),
-      error => @cmd.Scheduler::add(scheduler, failure(error)),
+    // TODO: Retain and cancel this handle when Rabbita supports cleanup for
+    // managed command effects. A plain Cmd has no runtime disposal hook.
+    ignore(
+      @proton_client.invoke_with_callbacks(
+        command,
+        request,
+        response => @cmd.Scheduler::add(scheduler, success(response)),
+        error => @cmd.Scheduler::add(scheduler, failure(error)),
+      ),
     )
   })
 }

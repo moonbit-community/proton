@@ -1,5 +1,7 @@
 #include "bridge_policy.h"
 
+#include "app_origin.h"
+
 #include "../../proton_json.h"
 
 #include <stdlib.h>
@@ -16,6 +18,9 @@ static char *proton_engine_bridge_copy_prefix(const char *value, size_t len) {
 }
 
 static int proton_engine_url_is_proton_app(const char *url) {
+  if (proton_engine_url_is_app(url)) {
+    return 1;
+  }
   if (url == NULL || strncmp(url, "proton://app", 12) != 0) {
     return 0;
   }

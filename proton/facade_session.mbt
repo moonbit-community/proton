@@ -287,7 +287,6 @@ fn RuntimeSession::create_window(
   let running = RunningWindow::{
     id: plan.id,
     window: created_window,
-    policy: definition.policy,
     permissions: definition.permissions,
     lifetime: WindowLifetime::new(),
     bridge_ready: !self.monitor_bridge,
@@ -790,10 +789,16 @@ async fn RuntimeSession::wait_for_bridge_startup(
 ) -> Unit raise AppRunError {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
     while true {
+      let revision = self.wakeup.revision()
       let did_work = self.pump_once(monitor_bridge=false)
       match refresh_bridge_startup_states(self.windows) {
         None => return
-        Some(_) => if did_work { @async.sleep(0) } else { self.wakeup.wait() }
+        Some(_) =>
+          if did_work {
+            @async.sleep(0)
+          } else {
+            self.wakeup.wait_after(revision)
+          }
       }
     }
   }) catch {
@@ -819,13 +824,14 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
   while !self.all_windows_closed() ||
         self.window_commands.length() > 0 ||
         self.pending_window_opens.length() > 0 {
+    let revision = self.wakeup.revision()
     let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
     if did_work {
       @async.sleep(0) catch {
         error => raise normalize_async_run_error(error)
       }
     } else {
-      self.wakeup.wait()
+      self.wakeup.wait_after(revision)
     }
   }
   self.cancel_all_bridge_tasks()
@@ -839,6 +845,7 @@ async fn RuntimeSession::drive_until_complete(
   task : @async.Task[Unit],
 ) -> Unit raise AppRunError {
   while true {
+    let revision = self.wakeup.revision()
     let completed = task.try_wait() catch {
       error => raise normalize_async_run_error(error)
     }
@@ -851,7 +858,7 @@ async fn RuntimeSession::drive_until_complete(
             error => raise normalize_async_run_error(error)
           }
         } else {
-          self.wakeup.wait()
+          self.wakeup.wait_after(revision)
         }
       }
     }
@@ -1432,7 +1439,6 @@ fn RuntimeSession::start_bridge_request(
             target.permissions,
             host,
             request,
-            target.policy,
             self.wakeup.signal,
           )
         },

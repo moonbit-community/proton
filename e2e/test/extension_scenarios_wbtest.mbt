@@ -124,7 +124,7 @@ async fn run_async_add_scenario_probe(page : @client.CdpClient) -> Unit {
     true,
   )
   let result : AsyncAddScenarioProbe = decode_probe(value, "async add")
-  guard result.url == "proton://app/" &&
+  guard result.url == "https://proton.localhost/" &&
     result.title == "MoonBit Async Add Extension" else {
     fail("async add page identity mismatch: " + value.stringify())
   }
@@ -160,7 +160,7 @@ async fn run_sync_async_scenario_probe(page : @client.CdpClient) -> Unit {
     true,
   )
   let result : SyncAsyncScenarioProbe = decode_probe(value, "sync/async")
-  guard result.url == "proton://app/" &&
+  guard result.url == "https://proton.localhost/" &&
     result.title == "MoonBit Sync + Async Extensions" else {
     fail("sync/async page identity mismatch: " + value.stringify())
   }
@@ -213,7 +213,7 @@ async fn run_attribute_scenario_probe(page : @client.CdpClient) -> Unit {
     true,
   )
   let result : AttributeScenarioProbe = decode_probe(value, "attribute codegen")
-  guard result.url == "proton://app/" &&
+  guard result.url == "https://proton.localhost/" &&
     result.title == "Proton Attribute Codegen" else {
     fail("attribute codegen page identity mismatch: " + value.stringify())
   }

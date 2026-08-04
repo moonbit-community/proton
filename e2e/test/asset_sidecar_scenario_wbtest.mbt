@@ -1,6 +1,7 @@
 ///|
 struct AssetSidecarScenarioProbe {
   url : String
+  pathname : String
   title : String
   has_bridge : Bool
   has_generated_proxy : Bool
@@ -11,6 +12,7 @@ struct AssetSidecarScenarioProbe {
   log_text : String
   css_loaded : Bool
   script_element_present : Bool
+  worker_reply : String
   command_reply : Int
   delayed_reply : Int
 } derive(FromJson, Eq, Debug)
@@ -46,6 +48,21 @@ async fn run_asset_sidecar_scenario_page_probe(
     "asset document navigation with bridge", timeout,
   )
   assert_asset_sidecar_native_log(app.native_log_path)
+  ignore(
+    page.send_cdp_command("Page.navigate", params={
+      "url": "https://proton.localhost/missing.html",
+    }),
+  )
+  wait_for_cdp_expression(
+    page, "location.pathname === '/missing.html' && document.body?.textContent === 'Not Found'",
+    "asset sidecar local 404", timeout,
+  )
+  guard app_exit_code(app.process) is None else {
+    fail(
+      "failed asset navigation terminated the application" +
+      app_diagnostic_suffix(app),
+    )
+  }
   println("MoonBit 46_asset_sidecar_resources probe passed")
 }
 
@@ -75,8 +92,27 @@ fn asset_sidecar_probe_expression() -> String {
     #|      source: "moonbit-e2e",
     #|    }),
     #|  });
+    #|  const workerReply = await new Promise((resolve) => {
+    #|    const worker = new Worker("/worker.js");
+    #|    const timeout = setTimeout(() => {
+    #|      worker.terminate();
+    #|      resolve("timeout");
+    #|    }, 3000);
+    #|    worker.addEventListener("message", (event) => {
+    #|      clearTimeout(timeout);
+    #|      worker.terminate();
+    #|      resolve(String(event.data));
+    #|    }, { once: true });
+    #|    worker.addEventListener("error", (event) => {
+    #|      clearTimeout(timeout);
+    #|      worker.terminate();
+    #|      resolve(`error:${event.message}`);
+    #|    }, { once: true });
+    #|    worker.postMessage("ready");
+    #|  });
     #|  return {
     #|    url: location.href,
+    #|    pathname: location.pathname,
     #|    title: document.title,
     #|    has_bridge: typeof window.__MoonBit__?.core?.invokeOp === "function",
     #|    has_generated_proxy: typeof window.__MoonBit__?.add?.add === "function",
@@ -88,7 +124,8 @@ fn asset_sidecar_probe_expression() -> String {
     #|    css_loaded: getComputedStyle(document.documentElement)
     #|      .getPropertyValue("--accent")
     #|      .trim() !== "",
-    #|    script_element_present: Boolean(document.querySelector('script[src="app.js"]')),
+    #|    script_element_present: Boolean(document.querySelector('script[src="/app.js"]')),
+    #|    worker_reply: workerReply,
     #|    command_reply: commandReply,
     #|    delayed_reply: delayedReply,
     #|  };
@@ -101,8 +138,8 @@ fn assert_asset_sidecar_probe(
   result : AssetSidecarScenarioProbe,
   value : Json,
 ) -> Unit raise {
-  guard result.url.has_prefix("proton://app/") &&
-    result.url.has_suffix("#startup-fragment") &&
+  guard result.url == "https://proton.localhost/app.html#startup-fragment" &&
+    result.pathname == "/app.html" &&
     result.title == "Asset Sidecar Resources" else {
     fail("asset sidecar page identity mismatch: " + value.stringify())
   }
@@ -117,6 +154,9 @@ fn assert_asset_sidecar_probe(
   }
   guard result.css_loaded && result.script_element_present else {
     fail("asset sidecar resources were not loaded: " + value.stringify())
+  }
+  guard result.worker_reply == "worker:ready" else {
+    fail("asset sidecar worker did not run: " + value.stringify())
   }
   guard result.command_reply == 42 && result.delayed_reply == 42 else {
     fail("asset sidecar command replies mismatch: " + value.stringify())

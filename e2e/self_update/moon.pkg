@@ -1,0 +1,18 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/core/debug",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs" @mbfs,
+  "justjavac/proton/updater",
+  "justjavac/proton/native",
+  "justjavac/proton_updater",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "main.mbt": [ "native" ] },
+)
