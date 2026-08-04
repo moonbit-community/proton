@@ -325,6 +325,60 @@ test "dev frontend does not inherit the injected CEF preload" {
 }
 
 ///|
+test "dev app spawn env applies overrides to the child environment" {
+  let previous_probe = @sys.get_env_var("PROTON_DEV_SPAWN_PROBE")
+  let previous_keep = @sys.get_env_var("PROTON_DEV_SPAWN_KEEP")
+  defer {
+    match previous_probe {
+      Some(value) => @sys.set_env_var("PROTON_DEV_SPAWN_PROBE", value)
+      None => @sys.unset_env_var("PROTON_DEV_SPAWN_PROBE")
+    }
+    match previous_keep {
+      Some(value) => @sys.set_env_var("PROTON_DEV_SPAWN_KEEP", value)
+      None => @sys.unset_env_var("PROTON_DEV_SPAWN_KEEP")
+    }
+  }
+  @sys.set_env_var("PROTON_DEV_SPAWN_PROBE", "parent-value")
+  @sys.set_env_var("PROTON_DEV_SPAWN_KEEP", "keep-value")
+  let overrides = {
+    "PROTON_DEV_SPAWN_PROBE": "override-value",
+    "PROTON_DEV_SPAWN_EXTRA": "extra-value",
+  }
+  let (env, inherit_env) = dev_app_spawn_env(overrides)
+  @debug.assert_eq(env.get("PROTON_DEV_SPAWN_PROBE"), Some("override-value"))
+  @debug.assert_eq(env.get("PROTON_DEV_SPAWN_EXTRA"), Some("extra-value"))
+  if @path.sep == '\\' {
+    // Windows spawns receive one complete environment so a rebuilt block
+    // cannot shadow overridden variables with inherited duplicates.
+    @debug.assert_eq(inherit_env, false)
+    @debug.assert_eq(env.get("PROTON_DEV_SPAWN_KEEP"), Some("keep-value"))
+  } else {
+    // Other platforms keep inheritance plus overrides untouched.
+    @debug.assert_eq(inherit_env, true)
+    @debug.assert_eq(env.get("PROTON_DEV_SPAWN_KEEP"), None)
+  }
+}
+
+///|
+test "dev app spawn env replaces inherited Windows variable spellings" {
+  if @path.sep == '\\' {
+    let previous = @sys.get_env_var("proton_dev_case_probe")
+    defer (match previous {
+      Some(value) => @sys.set_env_var("proton_dev_case_probe", value)
+      None => @sys.unset_env_var("proton_dev_case_probe")
+    })
+    @sys.set_env_var("proton_dev_case_probe", "parent-value")
+    let (env, _) = dev_app_spawn_env({ "PROTON_DEV_CASE_PROBE": "override" })
+    let spellings = env
+      .keys()
+      .filter(key => key.to_lower() == "proton_dev_case_probe")
+      .collect()
+    @debug.assert_eq(spellings, ["PROTON_DEV_CASE_PROBE"])
+    @debug.assert_eq(env.get("PROTON_DEV_CASE_PROBE"), Some("override"))
+  }
+}
+
+///|
 async test "read dev runtime honors PROTON_NATIVE_DIST override" {
   let root = "target/proton-dev-runtime-env"
   let runtime = create_fake_dev_runtime(root)
