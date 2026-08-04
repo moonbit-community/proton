@@ -1,0 +1,122 @@
+name: build Windows prebuilt
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - labeled
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-windows-prebuilt-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PROTON_NO_UPDATE_CHECK: 1
+  PROTON_PREBUILT_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-prebuilt' }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
+
+      - name: Cache MoonBit packages
+        uses: actions/cache@v4
+        with:
+          path: .mooncakes
+          key: Windows-prebuilt-mooncakes-${{ hashFiles('**/moon.mod') }}
+          restore-keys: Windows-prebuilt-mooncakes-
+
+      - name: Cache CEF downloads
+        uses: actions/cache@v4
+        with:
+          path: .proton/cache/cef
+          key: Windows-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
+
+      - name: Install MoonBit
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+          irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
+          "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Resolve dependencies
+        run: moon update
+
+      - name: Set up CEF runtime
+        run: moon -C cli run . -- -C .. cef setup
+
+      - name: Build and install Release runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $manifest = Get-Content .proton\runtime.json | ConvertFrom-Json
+          if ($manifest.platform -ne "win32-x64") {
+            throw "unexpected platform: $($manifest.platform)"
+          }
+          $runtime = Join-Path $PWD $manifest.dist
+          $cefRoot = Join-Path $PWD ".proton\cache\cef\$($manifest.platform)\$($manifest.cef_version)"
+          cmake -S native -B native\build-prebuilt `
+            "-DCMAKE_INSTALL_PREFIX=$runtime" `
+            -DPROTON_WITH_ENGINE=ON `
+            "-DPROTON_ENGINE_ROOT=$cefRoot"
+          cmake --build native\build-prebuilt --config Release --parallel
+          cmake --install native\build-prebuilt --config Release
+          "PROTON_PREBUILT_RUNTIME=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Test Release runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
+          ctest --test-dir native\build-prebuilt -C Release --output-on-failure
+          node native\scripts\verify_link_config.mjs $env:PROTON_PREBUILT_RUNTIME
+
+      - name: Stage package prebuilt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $destination = Join-Path $PWD "proton\prebuilt\win32-x64"
+          New-Item -ItemType Directory -Force `
+            "$destination\bin", "$destination\include", "$destination\lib" | Out-Null
+          Copy-Item "$env:PROTON_PREBUILT_RUNTIME\bin\cef_process.exe" `
+            "$destination\bin\cef_process.exe" -Force
+          Copy-Item "$env:PROTON_PREBUILT_RUNTIME\bin\proton.dll" `
+            "$destination\bin\proton.dll" -Force
+          Copy-Item "$env:PROTON_PREBUILT_RUNTIME\include\proton_native.h" `
+            "$destination\include\proton_native.h" -Force
+          Copy-Item "$env:PROTON_PREBUILT_RUNTIME\lib\proton.lib" `
+            "$destination\lib\proton.lib" -Force
+          Copy-Item "$env:PROTON_PREBUILT_RUNTIME\manifest.json" `
+            "$destination\manifest.json" -Force
+
+      - name: Verify package prebuilt ABI
+        run: node scripts/verify_prebuilt_abi.mjs win32-x64
+
+      - name: Archive Windows prebuilt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Compress-Archive -Path proton\prebuilt\win32-x64 `
+            -DestinationPath "$env:RUNNER_TEMP\proton-prebuilt-win32-x64-$env:PROTON_PREBUILT_SOURCE_SHA.zip"
+
+      - name: Upload Windows prebuilt
+        uses: actions/upload-artifact@v4
+        with:
+          name: proton-prebuilt-win32-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}
+          path: ${{ runner.temp }}/proton-prebuilt-win32-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

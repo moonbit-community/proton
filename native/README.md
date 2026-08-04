@@ -292,6 +292,18 @@ proton/prebuilt/darwin-arm64/manifest.json
 
 CEF runtime files are assembled later by `proton_cli cef setup` into `.proton/`.
 
+Maintainers without a local Linux or Windows build host can run the manual
+`build Linux prebuilt` or `build Windows prebuilt` GitHub Actions workflow for
+the branch and commit under review. Each workflow builds and tests a Release
+runtime on its native host, stages only the package artifacts listed above,
+verifies their exported ABI, and uploads an archive rooted at the platform
+directory. The workflows never commit or push binaries; download and inspect
+the archive before replacing the matching `proton/prebuilt/<platform>`
+directory. Before these workflows exist on the default branch, a maintainer can
+trigger both for a pull request by adding the `build-prebuilt` label. The
+label-triggered build checks out the pull request head commit, not GitHub's
+synthetic merge commit.
+
 MoonBit FFI consumers only link `proton.lib`/`proton.dll` on Windows or
 `libproton.so` on Linux or `libproton.dylib` on macOS. They do not link CEF
 directly; the runtime starts `bin/cef_process(.exe)` through the C ABI runtime

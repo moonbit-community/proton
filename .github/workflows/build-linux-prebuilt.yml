@@ -1,0 +1,112 @@
+name: build Linux prebuilt
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - labeled
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-linux-prebuilt-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PROTON_NO_UPDATE_CHECK: 1
+  PROTON_PREBUILT_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-prebuilt' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
+
+      - name: Cache MoonBit packages
+        uses: actions/cache@v4
+        with:
+          path: .mooncakes
+          key: Linux-prebuilt-mooncakes-${{ hashFiles('**/moon.mod') }}
+          restore-keys: Linux-prebuilt-mooncakes-
+
+      - name: Cache CEF downloads
+        uses: actions/cache@v4
+        with:
+          path: .proton/cache/cef
+          key: Linux-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
+
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev xvfb openbox
+
+      - name: Resolve dependencies
+        run: moon update
+
+      - name: Set up CEF runtime
+        run: moon -C cli run . -- -C .. cef setup
+
+      - name: Build and install Release runtime
+        run: |
+          runtime="$PWD/$(node -p "require('./.proton/runtime.json').dist")"
+          platform=$(node -p "require('./.proton/runtime.json').platform")
+          cef_name=$(node -p "require('./.proton/runtime.json').cef_version")
+          cef_root="$PWD/.proton/cache/cef/$platform/$cef_name"
+          test "$platform" = "linux-x64"
+          cmake -S native -B native/build-prebuilt \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$runtime" \
+            -DPROTON_WITH_ENGINE=ON \
+            -DPROTON_ENGINE_ROOT="$cef_root"
+          cmake --build native/build-prebuilt --parallel
+          cmake --install native/build-prebuilt --strip
+          echo "PROTON_PREBUILT_RUNTIME=$runtime" >> "$GITHUB_ENV"
+
+      - name: Test Release runtime
+        run: |
+          xvfb-run -a sh -c \
+            'openbox & sleep 1; ctest --test-dir native/build-prebuilt --output-on-failure'
+          node native/scripts/verify_link_config.mjs "$PROTON_PREBUILT_RUNTIME"
+
+      - name: Stage package prebuilt
+        run: |
+          destination="$PWD/proton/prebuilt/linux-x64"
+          install -d "$destination/bin" "$destination/include" "$destination/lib"
+          install -m 755 "$PROTON_PREBUILT_RUNTIME/bin/cef_process" \
+            "$destination/bin/cef_process"
+          install -m 644 "$PROTON_PREBUILT_RUNTIME/include/proton_native.h" \
+            "$destination/include/proton_native.h"
+          install -m 755 "$PROTON_PREBUILT_RUNTIME/lib/libproton.so" \
+            "$destination/lib/libproton.so"
+          install -m 644 "$PROTON_PREBUILT_RUNTIME/manifest.json" \
+            "$destination/manifest.json"
+
+      - name: Verify package prebuilt ABI
+        run: node scripts/verify_prebuilt_abi.mjs linux-x64
+
+      # upload-artifact does not preserve Unix executable modes. Keep the
+      # staged directory in a tar archive so cef_process remains executable.
+      - name: Archive Linux prebuilt
+        run: |
+          tar -C proton/prebuilt -czf \
+            "$RUNNER_TEMP/proton-prebuilt-linux-x64-${PROTON_PREBUILT_SOURCE_SHA}.tar.gz" \
+            linux-x64
+
+      - name: Upload Linux prebuilt
+        uses: actions/upload-artifact@v4
+        with:
+          name: proton-prebuilt-linux-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}
+          path: ${{ runner.temp }}/proton-prebuilt-linux-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
