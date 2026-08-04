@@ -18,11 +18,9 @@ static char *proton_engine_bridge_copy_prefix(const char *value, size_t len) {
 }
 
 static int proton_engine_url_is_proton_app(const char *url) {
-#ifdef __APPLE__
   if (proton_engine_url_is_app(url)) {
     return 1;
   }
-#endif
   if (url == NULL || strncmp(url, "proton://app", 12) != 0) {
     return 0;
   }

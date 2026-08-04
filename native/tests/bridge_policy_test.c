@@ -36,7 +36,6 @@ int main(void) {
   assert(!proton_engine_url_is_bridge_candidate("proton://app.evil/index.html"));
   assert(!proton_engine_url_is_bridge_candidate("proton://other/index.html"));
 
-#ifdef __APPLE__
   assert(proton_engine_url_is_bridge_candidate(
       "https://proton.localhost/index.html"));
   char *secure_app_origin =
@@ -48,7 +47,6 @@ int main(void) {
       bridge_config, "https://proton.localhost/index.html"));
   assert(!proton_engine_bridge_config_allows_page(
       bridge_config, "https://proton.localhost.evil/index.html"));
-#endif
 
   char *app_origin =
       proton_engine_bridge_source_origin("proton://app/index.html");
