@@ -77,15 +77,13 @@ async test "package plan accepts dmg only on macOS" {
       version=Some("1.0.0"),
     ),
     bundle=Some(
-      @proton_config.ProjectBundleConfig::new(active=true, targets=[
-        "app", "dmg",
-      ]),
+      @proton_config.ProjectBundleConfig::new(active=true, targets=["dmg"]),
     ),
   )
   let raw = parse_package_args([])
   if is_macos_host() {
     let plan = build_package_plan(raw, "moon.proton", project, 0UL)
-    @debug.assert_eq(plan.targets, ["app", "dmg"])
+    @debug.assert_eq(plan.targets, ["dmg"])
   } else {
     try build_package_plan(raw, "moon.proton", project, 0UL) catch {
       PackagePlanError::UnsupportedTargetForPlatform(target="dmg", platform~) =>
