@@ -1,26 +1,29 @@
 ///|
 /// An application that updates itself, used to run the whole chain for real.
 ///
-/// It has two roles. Launched with `PROTON_E2E_ROLE=update` it checks a
-/// channel, downloads, installs and relaunches. Launched with no role — which
-/// is how `relaunch` starts it, since `open` passes no environment on — it
-/// records that it ran and which version it is. The second role is the only
-/// evidence that the relaunch worked, because by then nothing is watching.
+/// It has two roles. Revision 1 launched with `PROTON_E2E_ROLE=update` checks a
+/// channel, downloads, installs and relaunches. `open` inherits that environment
+/// when starting revision 2, so the installed revision disambiguates the new
+/// process: it records the successful launch and cleans the retained bundle.
+/// That second role is the only evidence the relaunch worked, because by then
+/// nothing is watching.
 async fn main {
-  match @env.get_env_var("PROTON_E2E_ROLE") {
-    Some("update") =>
-      run_update() catch {
-        error => {
-          println("failed: \{error}")
-          panic()
-        }
+  if @env.get_env_var("PROTON_E2E_ROLE") == Some("update") &&
+    @native.update_current_revision() == 1UL {
+    run_update() catch {
+      error => {
+        println("failed: \{error}")
+        panic()
       }
-    _ => {
-      let bundle = running_bundle()
-      let version = @mbfs.read_file_to_string(
-        "\{bundle}/Contents/Resources/version",
-      )
-      report_launch(bundle, version)
+    }
+  } else {
+    let bundle = running_bundle()
+    let version = @mbfs.read_file_to_string(
+      "\{bundle}/Contents/Resources/version",
+    )
+    report_launch(bundle, version)
+    @native.update_cleanup_previous() catch {
+      error => report_launch(bundle, "cleanup failed: " + error.message())
     }
   }
 }

@@ -207,6 +207,20 @@ fn start_update_check(
 }
 
 ///|
+/// Confirms that this application reached its running state by removing older
+/// bundles retained for launch recovery.
+///
+/// Cleanup cannot be a startup precondition: the current application is
+/// already healthy, and a permissions or filesystem failure beside it should
+/// not turn that successful launch into a failure.
+fn cleanup_previous_update() -> Unit {
+  @native.update_cleanup_previous() catch {
+    error =>
+      println("proton: previous update cleanup failed: " + error.message())
+  }
+}
+
+///|
 /// Whether launching should contact the update endpoint.
 ///
 /// An application that registered no handler is not asked to, even when

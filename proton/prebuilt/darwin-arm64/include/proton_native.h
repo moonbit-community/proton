@@ -245,6 +245,16 @@ PROTON_API int32_t proton_update_stage_abort(
 PROTON_API int32_t proton_update_current_revision(
     uint64_t *out_revision, char *error, int32_t error_len);
 
+/* Removes older application bundles retained by successful update swaps.
+
+   Hosts call this only after the replacement has completed application
+   startup. Proton removes only its reserved sibling bundle names whose code
+   signing identity matches the running application and whose update revision
+   is older. A cleanup failure must not make an otherwise healthy application
+   fail to start. */
+PROTON_API int32_t proton_update_cleanup_previous(char *error,
+                                                  int32_t error_len);
+
 /* Installs an authenticated update archive over the running application.
 
    Expansion, bundle signature validation, and replacement happen in one

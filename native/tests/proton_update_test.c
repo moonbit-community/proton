@@ -381,9 +381,38 @@ int main(void) {
   snprintf(command, sizeof(command), "test -z \"$(ls -A '%s')\"", parent);
   REQUIRE(system(command) == 0);
 
+  /* Launch confirmation removes only Proton-retained bundles that are older
+     and belong to this application. It shares the commit lock with install,
+     so cleanup can never race a second process replacing the same bundle. */
+  char same_revision[1200];
+  char foreign_previous[1200];
+  snprintf(same_revision, sizeof(same_revision),
+           "%s.previous-SAME22", installed);
+  snprintf(foreign_previous, sizeof(foreign_previous),
+           "%s.previous-OTHER1", installed);
+  make_bundle(same_revision, kIdentifier, 2);
+  write_marker(same_revision, "same-revision");
+  sign_bundle(same_revision, kIdentifier);
+  make_bundle(foreign_previous, "com.example.somebody-else", 1);
+  write_marker(foreign_previous, "foreign");
+  sign_bundle(foreign_previous, "com.example.somebody-else");
+
+  lock_fd = open(lock_path, O_RDWR | O_CREAT | O_CLOEXEC, 0600);
+  REQUIRE(lock_fd >= 0);
+  REQUIRE(flock(lock_fd, LOCK_EX | LOCK_NB) == 0);
+  REQUIRE(proton_update_cleanup_previous(error, sizeof(error)) ==
+          PROTON_ERR_UPDATE_BUSY);
+  REQUIRE(exists(previous));
+  REQUIRE(close(lock_fd) == 0);
+
+  REQUIRE(proton_update_cleanup_previous(error, sizeof(error)) == PROTON_OK);
+  REQUIRE(!exists(previous));
+  REQUIRE(exists(same_revision));
+  REQUIRE(exists(foreign_previous));
+
   /* Reapplying the installed revision is idempotent. The authenticated stage
-     is consumed, but the current bundle and retained previous bundle do not
-     move again. */
+     is consumed, but the current bundle does not move again or create another
+     retained copy. */
   char equal_bundle[1100];
   char equal_archive[1200];
   snprintf(equal_bundle, sizeof(equal_bundle), "%s/Equal.app", root);
@@ -443,6 +472,7 @@ int main(void) {
   REQUIRE(stage == PROTON_INVALID_HANDLE);
   REQUIRE(proton_update_install("zip", 3, root, error, sizeof(error)) != 0);
   REQUIRE(proton_update_relaunch(error, sizeof(error)) != 0);
+  REQUIRE(proton_update_cleanup_previous(error, sizeof(error)) == PROTON_OK);
   REQUIRE(marker_is(installed, "old"));
 #endif
 

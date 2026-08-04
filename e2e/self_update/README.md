@@ -22,7 +22,9 @@ three things that only exist in a real installation:
   digests and a real manifest,
 - the replacement actually starts. The relaunched process writes its own line
   to `relaunched.txt`, and that line is the only evidence — by then the process
-  that started it has exited.
+  that started it has exited,
+- after recording that successful start, the replacement removes the older
+  bundle that the atomic swap retained for launch recovery.
 
 A passing run leaves `started 0.1.0` followed by `started 0.2.0`.
 

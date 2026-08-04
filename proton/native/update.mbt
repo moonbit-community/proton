@@ -47,6 +47,13 @@ extern "C" fn proton_update_current_revision_ffi(
 
 ///|
 #borrow(error)
+extern "C" fn proton_update_cleanup_previous_ffi(
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_cleanup_previous"
+
+///|
+#borrow(error)
 extern "C" fn proton_update_stage_abort_ffi(
   stage : Int64,
   error : FixedArray[Byte],
@@ -176,6 +183,20 @@ pub fn update_current_revision() -> UInt64 raise NativeError {
     message,
   )
   revision.val.reinterpret_as_uint64()
+}
+
+///|
+/// Removes older bundles retained by completed application updates.
+///
+/// Call this only after the replacement has completed application startup.
+/// Native code restricts deletion to Proton-reserved sibling names with the
+/// same signing identity and an older update revision.
+pub fn update_cleanup_previous() -> Unit raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  update_check(
+    proton_update_cleanup_previous_ffi(message, message.length()),
+    message,
+  )
 }
 
 ///|

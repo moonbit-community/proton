@@ -452,14 +452,14 @@ for `open` so that a missing or malformed bundle is reported rather than
 swallowed, and promises nothing beyond that. An application that needs to know
 the new version started has to learn it from the new version.
 
-The replaced bundle is kept beside the install location and **never removed**,
-so one copy of the application accumulates per update. Bounding that needs a
-policy decision — deleting the previous copy once the replacement has started
-successfully is the obvious one, and it needs the new version to do the
-deleting, because that is the first moment there is evidence worth acting on.
-It is not implemented. Two conditions must be reported
-clearly rather than worked around: an application installed somewhere the user
-cannot write, and an application still running from a quarantined or
+The replaced bundle is kept beside the install location until the replacement
+completes application startup. The new process then removes older retained
+bundles while holding the same commit lock used by installation. Cleanup only
+accepts Proton's reserved sibling name, a matching code-signing identity, and a
+strictly older revision; a cleanup failure is reported but cannot turn an
+otherwise successful launch into a startup failure. Two conditions must be
+reported clearly rather than worked around: an application installed somewhere
+the user cannot write, and an application still running from a quarantined or
 translocated location.
 
 **Windows.** The correct mechanism is to re-run the installer, which is what

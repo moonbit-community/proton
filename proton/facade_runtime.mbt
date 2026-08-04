@@ -310,6 +310,7 @@ async fn run_manifest(
           }
         }
         lifecycle.begin_running()
+        cleanup_previous_update()
         start_update_check(update_channel, update_handlers, application_tasks)
         session.run() catch {
           error => raise normalize_async_run_error(error)

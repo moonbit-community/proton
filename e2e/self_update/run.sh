@@ -56,7 +56,12 @@ make_bundle() {
     "$app/Contents/Frameworks"
   cp "$binary" "$app/Contents/MacOS/updatee"
   cp "$native_dist/lib/libproton.dylib" "$app/Contents/Frameworks/libproton.dylib"
-  install_name_tool -rpath "$native_dist/lib" '@executable_path/../Frameworks' \
+  otool -l "$app/Contents/MacOS/updatee" |
+    awk '/cmd LC_RPATH/{getline; getline; print $2}' |
+    while IFS= read -r rpath; do
+      install_name_tool -delete_rpath "$rpath" "$app/Contents/MacOS/updatee"
+    done
+  install_name_tool -add_rpath '@executable_path/../Frameworks' \
     "$app/Contents/MacOS/updatee"
   printf '%s' "$version" > "$app/Contents/Resources/version"
   cat > "$app/Contents/Info.plist" <<PLIST
@@ -122,7 +127,8 @@ PROTON_E2E_ROLE="update" \
 attempt=0
 while [ "$attempt" -lt 10 ]; do
   if [ -f "$work/install/relaunched.txt" ] &&
-    grep -q '0\.2\.0' "$work/install/relaunched.txt"; then
+    grep -q '0\.2\.0' "$work/install/relaunched.txt" &&
+    [ "$(find "$work/install" -maxdepth 1 -type d -name '*.app.previous-*' | wc -l | tr -d ' ')" = 0 ]; then
     break
   fi
   attempt=$((attempt + 1))
@@ -132,7 +138,9 @@ done
 echo "installed version after:  $(cat "$work/install/Updatee.app/Contents/Resources/version")"
 echo "launch log:"
 sed 's/^/  /' "$work/install/relaunched.txt"
-echo "kept previous bundles: $(ls -d "$work/install/"*.previous-* 2>/dev/null | wc -l | tr -d ' ')"
+previous_count=$(find "$work/install" -maxdepth 1 -type d -name '*.app.previous-*' | wc -l | tr -d ' ')
+echo "kept previous bundles: $previous_count"
+test "$previous_count" = 0
 echo "staging entries left:  $(find "$work/install" -maxdepth 1 -name '.proton-update-*' | wc -l | tr -d ' ')"
 codesign --verify --strict "$work/install/Updatee.app"
 echo "installed bundle signature: valid"

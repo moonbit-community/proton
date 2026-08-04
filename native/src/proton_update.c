@@ -16,6 +16,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
 #include <errno.h>
+#include <fts.h>
 #include <mach-o/dyld.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -241,6 +242,16 @@ PROTON_API int32_t proton_update_current_revision(
   return PROTON_ERR_UNSUPPORTED;
 }
 
+PROTON_API int32_t proton_update_cleanup_previous(char *error,
+                                                  int32_t error_len) {
+  (void)error;
+  (void)error_len;
+  /* Cleanup is tied to the macOS bundle-swap apply path. Until another
+     platform has an apply implementation, it has no retained artifact for
+     this operation to remove. */
+  return PROTON_OK;
+}
+
 PROTON_API int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   (void)stage;
@@ -391,13 +402,44 @@ static int proton_update_find_bundle(const char *directory, char *out,
   return found == 1;
 }
 
-/* Removes a directory tree this file created.
-
-   Only ever called on a path mkdtemp returned below, so what it deletes is
-   something this process made and owns exclusively. */
-static void proton_update_remove_tree(const char *directory) {
-  char *const argv[] = {"/bin/rm", "-rf", (char *)directory, NULL};
-  (void)proton_update_run(argv);
+/* Removes one physical directory tree without following symlinks or crossing
+   into another filesystem. Staging paths come directly from mkdtemp; retained
+   bundle paths pass the reserved-name, signature, and revision checks below
+   before reaching this function. */
+static int proton_update_remove_tree(const char *directory) {
+  char *paths[] = {(char *)directory, NULL};
+  FTS *tree = fts_open(paths, FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV, NULL);
+  if (tree == NULL) {
+    return 0;
+  }
+  int ok = 1;
+  FTSENT *entry = NULL;
+  while ((entry = fts_read(tree)) != NULL) {
+    switch (entry->fts_info) {
+    case FTS_D:
+      break;
+    case FTS_DP:
+      if (rmdir(entry->fts_accpath) != 0) {
+        ok = 0;
+      }
+      break;
+    case FTS_F:
+    case FTS_SL:
+    case FTS_SLNONE:
+    case FTS_DEFAULT:
+      if (unlink(entry->fts_accpath) != 0) {
+        ok = 0;
+      }
+      break;
+    default:
+      ok = 0;
+      break;
+    }
+  }
+  if (fts_close(tree) != 0) {
+    ok = 0;
+  }
+  return ok;
 }
 
 #define PROTON_UPDATE_MAX_STAGES 8
@@ -432,7 +474,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
     slot->fd = -1;
   }
   if (remove_staging && slot->staging[0] != '\0') {
-    proton_update_remove_tree(slot->staging);
+    (void)proton_update_remove_tree(slot->staging);
   }
   pthread_mutex_lock(&g_update_stage_mutex);
   slot->staging[0] = '\0';
@@ -1022,6 +1064,105 @@ static int proton_update_verify_bundle(const char *staged, const char *installed
     return 0;
   }
   return 1;
+}
+
+/* mkdtemp replaces exactly six trailing X characters with letters or digits.
+   Requiring that exact shape prevents a broad prefix scan from turning into a
+   deletion API for directories the updater did not reserve. */
+static int proton_update_is_previous_name(const char *name,
+                                          const char *bundle_name) {
+  size_t bundle_len = strlen(bundle_name);
+  static const char suffix[] = ".previous-";
+  size_t prefix_len = bundle_len + sizeof(suffix) - 1;
+  if (strlen(name) != prefix_len + 6 ||
+      strncmp(name, bundle_name, bundle_len) != 0 ||
+      strncmp(name + bundle_len, suffix, sizeof(suffix) - 1) != 0) {
+    return 0;
+  }
+  for (size_t index = prefix_len; index < prefix_len + 6; index++) {
+    char value = name[index];
+    if (!((value >= 'a' && value <= 'z') ||
+          (value >= 'A' && value <= 'Z') ||
+          (value >= '0' && value <= '9'))) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+PROTON_API int32_t proton_update_cleanup_previous(char *error,
+                                                  int32_t error_len) {
+  char current[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_bundle(current, sizeof(current))) {
+    /* Development executables do not run from an application bundle and have
+       no retained update artifact. Startup cleanup is intentionally a no-op
+       for them. */
+    return PROTON_OK;
+  }
+
+  uint64_t current_revision = 0;
+  if (!proton_update_bundle_revision(current, 1, &current_revision, error,
+                                     error_len)) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  int lock_fd = -1;
+  int32_t status = proton_update_acquire_commit_lock(
+      current, &lock_fd, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  char parent[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_parent_path(current, parent, sizeof(parent))) {
+    close(lock_fd);
+    proton_update_set_message(error, error_len,
+                              "the application parent path is invalid");
+    return PROTON_ERR_PLATFORM;
+  }
+  const char *bundle_name = strrchr(current, '/');
+  bundle_name = bundle_name == NULL ? current : bundle_name + 1;
+  struct dirent **entries = NULL;
+  int entry_count = scandir(parent, &entries, NULL, alphasort);
+  if (entry_count < 0) {
+    close(lock_fd);
+    proton_update_set_message(
+        error, error_len,
+        "the application directory cannot be scanned for previous versions");
+    return PROTON_ERR_PLATFORM;
+  }
+
+  int cleanup_failed = 0;
+  for (int index = 0; index < entry_count; index++) {
+    const char *name = entries[index]->d_name;
+    if (proton_update_is_previous_name(name, bundle_name)) {
+      char candidate[PROTON_UPDATE_MAX_PATH];
+      int written = snprintf(candidate, sizeof(candidate), "%s/%s", parent,
+                             name);
+      if (written >= 0 && (size_t)written < sizeof(candidate) &&
+          proton_update_is_directory(candidate)) {
+        char ignored[512];
+        uint64_t candidate_revision = 0;
+        if (proton_update_verify_bundle(candidate, current, ignored,
+                                        sizeof(ignored)) &&
+            proton_update_bundle_revision(candidate, 1, &candidate_revision,
+                                          ignored, sizeof(ignored)) &&
+            candidate_revision < current_revision &&
+            !proton_update_remove_tree(candidate)) {
+          cleanup_failed = 1;
+        }
+      }
+    }
+    free(entries[index]);
+  }
+  free(entries);
+  close(lock_fd);
+  if (cleanup_failed) {
+    proton_update_set_message(
+        error, error_len,
+        "an older application bundle could not be removed");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
 }
 
 static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
