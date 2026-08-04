@@ -25,6 +25,15 @@ to the corresponding CEF browser-host calls. Native titles, titlebar overlay,
 menus, and dialogs are unsupported in headless mode. The current Linux engine
 still initializes GTK/X11, so display-less Linux jobs should run under Xvfb.
 
+Engine builds on macOS report the `web_contents_view` feature. The
+`proton_view_*` ABI group hosts extra web contents views inside a window's
+content area, following the Electron WebContentsView model: each view owns an
+independent browser with explicit top-left bounds, visibility, z-order, and a
+load-url target, and always stacks above the window's main browser. View
+config JSON follows the same stable v1 schema rules as window config. View
+handles are window-scoped children and are destroyed with their owning window.
+Engines without view support return `PROTON_ERR_UNSUPPORTED`.
+
 `proton_runtime_wait` is a low-level primitive for hosts that own CEF's external
 message pump. It blocks until selected runtime work is ready, after which the
 caller still drains `proton_runtime_poll_*` until the queues are empty. Engine

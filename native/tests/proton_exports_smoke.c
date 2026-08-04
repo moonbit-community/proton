@@ -110,6 +110,13 @@ static const char *const expected_exports[] = {
     "proton_update_install",
     "proton_update_current_revision",
     "proton_update_relaunch",
+    "proton_view_create_json",
+    "proton_view_destroy",
+    "proton_view_set_bounds",
+    "proton_view_set_visible",
+    "proton_view_set_z_order",
+    "proton_view_load_url",
+    "proton_view_state_json",
     "proton_last_error_message",
 };
 

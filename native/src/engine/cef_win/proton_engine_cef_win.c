@@ -5364,3 +5364,83 @@ int32_t proton_engine_take_menu_command(
   *out_present = 0;
   return PROTON_OK;
 }
+
+int32_t proton_engine_view_create_json(proton_engine_window_t *window,
+                                       const char *config_json,
+                                       proton_engine_view_t **out_view,
+                                       char *error,
+                                       size_t error_len) {
+  (void)window;
+  (void)config_json;
+  if (out_view != NULL) {
+    *out_view = NULL;
+  }
+  proton_engine_set_message(
+      error, error_len,
+      "web contents views are not implemented on Windows yet");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_view_destroy(proton_engine_view_t *view,
+                                   char *error,
+                                   size_t error_len) {
+  (void)view;
+  proton_engine_set_message(
+      error, error_len,
+      "web contents views are not implemented on Windows yet");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
+                                      int32_t x,
+                                      int32_t y,
+                                      int32_t width,
+                                      int32_t height,
+                                      char *error,
+                                      size_t error_len) {
+  (void)view;
+  (void)x;
+  (void)y;
+  (void)width;
+  (void)height;
+  proton_engine_set_message(
+      error, error_len,
+      "web contents views are not implemented on Windows yet");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
+                                       int32_t visible,
+                                       char *error,
+                                       size_t error_len) {
+  (void)view;
+  (void)visible;
+  proton_engine_set_message(
+      error, error_len,
+      "web contents views are not implemented on Windows yet");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
+                                       int32_t z_order,
+                                       char *error,
+                                       size_t error_len) {
+  (void)view;
+  (void)z_order;
+  proton_engine_set_message(
+      error, error_len,
+      "web contents views are not implemented on Windows yet");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+int32_t proton_engine_view_load_url(proton_engine_view_t *view,
+                                    const char *url,
+                                    char *error,
+                                    size_t error_len) {
+  (void)view;
+  (void)url;
+  proton_engine_set_message(
+      error, error_len,
+      "web contents views are not implemented on Windows yet");
+  return PROTON_ERR_UNSUPPORTED;
+}

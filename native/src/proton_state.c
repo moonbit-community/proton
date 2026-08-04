@@ -9,8 +9,13 @@
 
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
+#define PROTON_MAX_VIEWS 256
+/* Type 3 is PROTON_HANDLE_TYPE_UPDATE_STAGE in proton_handle.h. */
+#define PROTON_HANDLE_TYPE_VIEW 4ULL
+
 static proton_runtime_slot_t g_runtimes[PROTON_MAX_RUNTIMES];
 static proton_window_slot_t g_windows[PROTON_MAX_WINDOWS];
+static proton_view_slot_t g_views[PROTON_MAX_VIEWS];
 
 static proton_thread_id_t proton_current_thread_id(void) {
 #ifdef _WIN32
@@ -39,6 +44,12 @@ static proton_window_id_t proton_make_window_handle(uint32_t generation,
                                                      uint32_t index) {
   return (proton_window_id_t)proton_make_handle(PROTON_HANDLE_TYPE_WINDOW,
                                                 generation, index);
+}
+
+static proton_view_id_t proton_make_view_handle(uint32_t generation,
+                                                uint32_t index) {
+  return (proton_view_id_t)proton_make_handle(PROTON_HANDLE_TYPE_VIEW,
+                                              generation, index);
 }
 
 static void proton_runtime_clear_events(proton_runtime_slot_t *slot) {
@@ -529,6 +540,9 @@ int32_t proton_destroy_windows_for_runtime(proton_runtime_id_t runtime) {
   for (uint32_t i = 0; i < PROTON_MAX_WINDOWS; i++) {
     proton_window_slot_t *window = &g_windows[i];
     if (window->occupied && !window->destroyed && window->runtime == runtime) {
+      proton_window_id_t window_handle =
+          proton_make_window_handle(window->generation, i);
+      proton_destroy_views_for_window(window_handle);
       if (window->engine_window != NULL) {
         char engine_error[512] = {0};
         int32_t status = proton_engine_window_destroy(
@@ -542,4 +556,89 @@ int32_t proton_destroy_windows_for_runtime(proton_runtime_id_t runtime) {
     }
   }
   return PROTON_OK;
+}
+
+int32_t proton_view_slot_create(proton_runtime_slot_t *runtime,
+                                proton_runtime_id_t runtime_handle,
+                                proton_window_id_t window_handle,
+                                proton_engine_view_t *engine_view, int32_t x,
+                                int32_t y, int32_t width, int32_t height,
+                                int32_t z_order, bool visible,
+                                proton_view_id_t *out_view,
+                                proton_view_slot_t **out_slot) {
+  (void)runtime;
+  for (uint32_t i = 0; i < PROTON_MAX_VIEWS; i++) {
+    proton_view_slot_t *slot = &g_views[i];
+    if (slot->occupied && !slot->destroyed) {
+      continue;
+    }
+    if (slot->generation == 0) {
+      slot->generation = 1;
+    } else if (slot->destroyed) {
+      slot->generation = proton_next_handle_generation(slot->generation);
+    }
+    slot->occupied = true;
+    slot->destroyed = false;
+    slot->runtime = runtime_handle;
+    slot->window = window_handle;
+    slot->engine_view = engine_view;
+    slot->x = x;
+    slot->y = y;
+    slot->width = width;
+    slot->height = height;
+    slot->z_order = z_order;
+    slot->visible = visible;
+    *out_view = proton_make_view_handle(slot->generation, i);
+    if (out_slot != NULL) {
+      *out_slot = slot;
+    }
+    return PROTON_OK;
+  }
+  return proton_set_error(PROTON_ERR_ENGINE, "view registry is full");
+}
+
+void proton_view_slot_destroy(proton_view_slot_t *slot) {
+  slot->destroyed = true;
+  slot->engine_view = NULL;
+}
+
+int32_t proton_get_view(proton_view_id_t handle,
+                        proton_view_slot_t **out_slot) {
+  uint64_t raw = (uint64_t)handle;
+  if (handle == PROTON_INVALID_HANDLE ||
+      proton_handle_type(raw) != PROTON_HANDLE_TYPE_VIEW) {
+    return proton_set_error(PROTON_ERR_INVALID_HANDLE, "invalid view handle");
+  }
+
+  uint32_t index = proton_handle_index(raw);
+  if (index >= PROTON_MAX_VIEWS) {
+    return proton_set_error(PROTON_ERR_INVALID_HANDLE,
+                            "view handle index is out of range");
+  }
+
+  proton_view_slot_t *slot = &g_views[index];
+  if (!slot->occupied || slot->generation != proton_handle_generation(raw)) {
+    return proton_set_error(PROTON_ERR_INVALID_HANDLE,
+                            "view handle generation is invalid");
+  }
+  if (slot->destroyed) {
+    return proton_set_error(PROTON_ERR_DESTROYED, "view is destroyed");
+  }
+  proton_runtime_slot_t *runtime = NULL;
+  int32_t status = proton_get_runtime(slot->runtime, &runtime);
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  *out_slot = slot;
+  return PROTON_OK;
+}
+
+void proton_destroy_views_for_window(proton_window_id_t window) {
+  for (uint32_t i = 0; i < PROTON_MAX_VIEWS; i++) {
+    proton_view_slot_t *view = &g_views[i];
+    if (view->occupied && !view->destroyed && view->window == window) {
+      proton_view_slot_destroy(view);
+    }
+  }
 }
