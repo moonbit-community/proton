@@ -8,6 +8,7 @@
 #include "include/capi/cef_scheme_capi.h"
 
 #include "../../proton_engine.h"
+#include "window_state.h"
 
 #include <stddef.h>
 
@@ -16,21 +17,10 @@
    HTTPS application origin. See app_origin.h for why the application itself
    lives on the HTTPS origin.
 
-   Each engine supplies the accessors below. The factory runs on CEF's IO
-   thread while the main thread may be replacing or freeing a window's html
-   state, so it snapshots everything under the engine's window lock and copies
-   it before doing any disk-bound work. The lock is therefore leaf-only: an
-   engine must never call back into CEF while holding it. */
-void proton_engine_window_lock(void);
-void proton_engine_window_unlock(void);
-
-/* All four are called with the window lock held. */
-proton_engine_window_t *proton_engine_window_lookup_browser(
-    cef_browser_t *browser);
-const char *proton_engine_window_html_url(proton_engine_window_t *window);
-const char *proton_engine_window_html(proton_engine_window_t *window,
-                                      size_t *len);
-const char *proton_engine_runtime_asset_root(proton_engine_window_t *window);
+   The factory runs on CEF's IO thread while the main thread may be replacing
+   or freeing a window's html state, so it snapshots everything through the
+   window_state.h accessors under the engine's window lock and copies it before
+   doing any disk-bound work. */
 
 cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     cef_scheme_handler_factory_t *self,

@@ -7,10 +7,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define PROTON_ENGINE_PATH_SEPARATOR '\\'
 #else
 #include <stdatomic.h>
-#define PROTON_ENGINE_PATH_SEPARATOR '/'
 #endif
 
 #include "strings.h"

@@ -8,6 +8,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Every engine spells this the same way for a given platform, so the header
+   supplies it rather than making each includer define it first. Engines that
+   still declare their own keep it -- the definitions agree. */
+#ifndef PROTON_ENGINE_PATH_SEPARATOR
+#ifdef _WIN32
+#define PROTON_ENGINE_PATH_SEPARATOR '\\'
+#else
+#define PROTON_ENGINE_PATH_SEPARATOR '/'
+#endif
+#endif
+
 static int proton_engine_hex_value(char ch) {
   if (ch >= '0' && ch <= '9') {
     return ch - '0';

@@ -48,6 +48,7 @@ if(PROTON_WITH_ENGINE)
     src/engine/cef_common/browser_session.c
     src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_renderer.c
+    src/engine/cef_common/document.c
     src/engine/cef_common/scheme.c
   )
 endif()

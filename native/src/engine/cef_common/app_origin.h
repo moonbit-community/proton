@@ -20,4 +20,11 @@ static int proton_engine_url_is_app(const char *url) {
   return suffix == '\0' || suffix == '/' || suffix == '?' || suffix == '#';
 }
 
+/* Both names the framework answers to: the application origin above, and the
+   proton scheme it still accepts for framework-internal transport. */
+static int proton_engine_url_is_proton(const char *url) {
+  return proton_engine_url_is_app(url) ||
+         (url != NULL && strncmp(url, "proton://", 9) == 0);
+}
+
 #endif

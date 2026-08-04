@@ -39,6 +39,8 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/bridge_response.h"
 #include "../cef_common/browser_session.h"
+#include "../cef_common/document.h"
+#include "../cef_common/message.h"
 #include "../cef_common/scheme.h"
 
 #include <ctype.h>
@@ -279,9 +281,6 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
     const void *buffer,
     int width,
     int height);
-
-static void proton_engine_set_message(char *error, size_t error_len,
-                                      const char *message);
 
 static void proton_engine_signal_wakeup_source(
     proton_engine_runtime_t *runtime, unsigned char wakeup_byte) {
@@ -659,14 +658,6 @@ static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
   }
 }
 
-static void proton_engine_set_message(char *error,
-                                      size_t error_len,
-                                      const char *message) {
-  if (error != NULL && error_len > 0) {
-    snprintf(error, error_len, "%s", message != NULL ? message : "");
-  }
-}
-
 static int32_t proton_engine_unsupported(char *error,
                                          size_t error_len,
                                          const char *message) {
@@ -984,11 +975,6 @@ static int proton_engine_runtime_remove_bridge_request(
   return removed;
 }
 
-static int proton_engine_url_is_proton(const char *url) {
-  return proton_engine_url_is_app(url) ||
-         (url != NULL && strncmp(url, "proton://", 9) == 0);
-}
-
 static int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
 }
@@ -1038,6 +1024,34 @@ const char *proton_engine_runtime_asset_root(proton_engine_window_t *window) {
     runtime = g_proton_engine_windows->runtime;
   }
   return runtime != NULL ? runtime->asset_root : NULL;
+}
+
+void proton_engine_window_replace_document(proton_engine_window_t *window,
+                                           char *url, char *html,
+                                           size_t html_len) {
+  if (window == NULL) {
+    free(url);
+    free(html);
+    return;
+  }
+  free(window->html_url);
+  free(window->html);
+  window->html_url = url;
+  window->html = html;
+  window->html_len = html_len;
+}
+
+void proton_engine_runtime_adopt_asset_root(proton_engine_window_t *window,
+                                            char *root) {
+  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
+  if (runtime == NULL && g_proton_engine_windows != NULL) {
+    runtime = g_proton_engine_windows->runtime;
+  }
+  if (runtime == NULL) {
+    free(root);
+    return;
+  }
+  runtime->asset_root = root;
 }
 
 static proton_engine_window_t *proton_engine_find_window_by_browser_id(
@@ -4879,77 +4893,33 @@ static int32_t proton_engine_window_load_document(
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  if (html == NULL) {
-    html = "";
-  }
-  const char *effective_document_url =
-      document_url != NULL && document_url[0] != '\0'
-          ? document_url
-          : PROTON_ENGINE_APP_URL_PREFIX;
-  if (!proton_engine_url_is_proton(effective_document_url)) {
-    proton_engine_set_message(
-        error, error_len,
-        "document_url must use a Proton application origin");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
+  /* Held across the install so a document is never published without a frame
+     to navigate with it. */
   cef_frame_t *frame = window->browser->get_main_frame(window->browser);
   if (frame == NULL) {
     proton_engine_set_message(error, error_len, "main frame is not available");
     return PROTON_ERR_ENGINE;
   }
-  char *url_copy = proton_engine_strdup(effective_document_url);
-  char *html_copy = proton_engine_strdup(html);
-  char *root_copy = asset_root != NULL
-                        ? proton_engine_asset_canonical_path(asset_root)
-                        : NULL;
-  if (url_copy == NULL || html_copy == NULL ||
-      (asset_root != NULL && root_copy == NULL)) {
-    free(url_copy);
-    free(html_copy);
-    free(root_copy);
-    proton_engine_set_message(error, error_len,
-                              "failed to prepare html document");
+  char *url = NULL;
+  size_t html_len = 0;
+  int32_t status = proton_engine_window_install_document(
+      window, html, document_url, asset_root, &url, &html_len, error,
+      error_len);
+  if (status != PROTON_OK) {
     frame->base.release((cef_base_ref_counted_t *)frame);
-    return PROTON_ERR_ENGINE;
+    return status;
   }
-
-  proton_engine_window_lock();
-  /* One origin cannot serve two roots: the factory has only the request URL
-     to go on, so a second root would make resolution ambiguous. */
-  if (root_copy != NULL && window->runtime->asset_root != NULL &&
-      strcmp(root_copy, window->runtime->asset_root) != 0) {
-    proton_engine_window_unlock();
-    free(url_copy);
-    free(html_copy);
-    free(root_copy);
-    proton_engine_set_message(
-        error, error_len,
-        "the Proton application origin already has a different asset root");
-    frame->base.release((cef_base_ref_counted_t *)frame);
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (root_copy != NULL && window->runtime->asset_root == NULL) {
-    window->runtime->asset_root = root_copy;
-    root_copy = NULL;
-  }
-  free(window->html_url);
-  free(window->html);
-  window->html_url = url_copy;
-  window->html = html_copy;
-  window->html_len = strlen(html_copy);
-  proton_engine_window_unlock();
-  free(root_copy);
 
   cef_string_t url_value = {0};
-  proton_engine_set_string(&url_value, effective_document_url);
+  proton_engine_set_string(&url_value, url);
   proton_engine_verbose_log(
       "load_document thread=%lu browser=%d document_url=%s bytes=%llu",
-      GetCurrentThreadId(), window->browser_id,
-      proton_engine_log_url(effective_document_url),
-      (unsigned long long)window->html_len);
+      GetCurrentThreadId(), window->browser_id, proton_engine_log_url(url),
+      (unsigned long long)html_len);
   frame->load_url(frame, &url_value);
   cef_string_clear(&url_value);
   frame->base.release((cef_base_ref_counted_t *)frame);
+  free(url);
   return PROTON_OK;
 }
 

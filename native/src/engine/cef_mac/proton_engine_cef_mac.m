@@ -8,6 +8,8 @@
 #include "menu.h"
 #include "window.h"
 
+#include "../cef_common/document.h"
+#include "../cef_common/message.h"
 #include "../cef_common/scheme.h"
 
 #include "include/cef_api_hash.h"
@@ -302,14 +304,6 @@ static CFRunLoopRef g_wait_run_loop = NULL;
 static CFRunLoopSourceRef g_wait_source = NULL;
 static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_wakeup_write_fd = -1;
-
-static void proton_engine_set_message(char *error,
-                                      size_t error_len,
-                                      const char *message) {
-  if (error != NULL && error_len > 0) {
-    snprintf(error, error_len, "%s", message != NULL ? message : "");
-  }
-}
 
 static void proton_engine_log_to_env(const char *env_name,
                                      const char *format,
@@ -780,11 +774,6 @@ static int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
 }
 
-static int proton_engine_url_is_proton(const char *url) {
-  return proton_engine_url_is_app(url) ||
-         (url != NULL && strncmp(url, "proton://", 9) == 0);
-}
-
 static proton_engine_client_t *proton_engine_client_from_base(
     cef_client_t *client) {
   return (proton_engine_client_t *)client;
@@ -921,6 +910,34 @@ const char *proton_engine_window_html(proton_engine_window_t *window,
     *len = window != NULL ? window->html_len : 0;
   }
   return window != NULL ? window->html : NULL;
+}
+
+void proton_engine_window_replace_document(proton_engine_window_t *window,
+                                           char *url, char *html,
+                                           size_t html_len) {
+  if (window == NULL) {
+    free(url);
+    free(html);
+    return;
+  }
+  free(window->html_url);
+  free(window->html);
+  window->html_url = url;
+  window->html = html;
+  window->html_len = html_len;
+}
+
+void proton_engine_runtime_adopt_asset_root(proton_engine_window_t *window,
+                                            char *root) {
+  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
+  if (runtime == NULL && g_windows != NULL) {
+    runtime = g_windows->runtime;
+  }
+  if (runtime == NULL) {
+    free(root);
+    return;
+  }
+  runtime->asset_root = root;
 }
 
 proton_window_id_t
@@ -4543,84 +4560,29 @@ static int32_t proton_engine_window_load_document(
     proton_engine_window_t *window, const char *html,
     const char *document_url, const char *asset_root, char *error,
     size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  char *url = NULL;
+  size_t html_len = 0;
+  int32_t status = proton_engine_window_install_document(
+      window, html, document_url, asset_root, &url, &html_len, error,
+      error_len);
+  if (status != PROTON_OK) {
+    return status;
   }
-  if (html == NULL) {
-    html = "";
-  }
-  const char *effective_document_url =
-      document_url != NULL && document_url[0] != '\0'
-          ? document_url
-          : PROTON_ENGINE_APP_URL_PREFIX;
-  if (!proton_engine_url_is_proton(effective_document_url)) {
-    proton_engine_set_message(error, error_len,
-                              "document_url must use a Proton application origin");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char *url_copy = proton_engine_strdup(effective_document_url);
-  char *html_copy = proton_engine_strdup(html);
-  char *root_copy =
-      asset_root != NULL ? realpath(asset_root, NULL) : NULL;
-  char *pending_url = NULL;
-  if (url_copy == NULL || html_copy == NULL ||
-      (asset_root != NULL && root_copy == NULL)) {
-    free(url_copy);
-    free(html_copy);
-    free(root_copy);
-    proton_engine_set_message(error, error_len,
-                              "failed to prepare html document");
-    return PROTON_ERR_ENGINE;
-  }
+  /* Before the browser exists there is nothing to navigate, so the create
+     path picks this url up as its initial navigation instead. */
   if ((window->browser == NULL &&
        (window->browser_create_pending || window->browser_create_scheduled)) ||
       window->initial_navigation_pending) {
-    pending_url = proton_engine_strdup(effective_document_url);
-    if (pending_url == NULL) {
-      free(url_copy);
-      free(html_copy);
-      free(root_copy);
-      proton_engine_set_message(error, error_len,
-                                "failed to copy pending browser url");
-      return PROTON_ERR_ENGINE;
-    }
-  }
-  proton_engine_window_lock();
-  if (root_copy != NULL && window->runtime->asset_root != NULL &&
-      strcmp(root_copy, window->runtime->asset_root) != 0) {
-    proton_engine_window_unlock();
-    free(url_copy);
-    free(html_copy);
-    free(root_copy);
-    free(pending_url);
-    proton_engine_set_message(
-        error, error_len,
-        "the Proton application origin already has a different asset root");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (root_copy != NULL && window->runtime->asset_root == NULL) {
-    window->runtime->asset_root = root_copy;
-    root_copy = NULL;
-  }
-  free(window->html_url);
-  free(window->html);
-  window->html_url = url_copy;
-  window->html = html_copy;
-  window->html_len = strlen(html_copy);
-  proton_engine_window_unlock();
-  free(root_copy);
-  if (pending_url != NULL) {
     free(window->initial_url);
-    window->initial_url = pending_url;
+    window->initial_url = url;
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
   proton_engine_debug_log("load_html browser=%d document_url=%s bytes=%llu",
-                          window->browser_id, effective_document_url,
-                          (unsigned long long)window->html_len);
-  int32_t status = proton_engine_window_load_url(
-      window, effective_document_url, error, error_len);
+                          window->browser_id, url,
+                          (unsigned long long)html_len);
+  status = proton_engine_window_load_url(window, url, error, error_len);
+  free(url);
   return status;
 }
 

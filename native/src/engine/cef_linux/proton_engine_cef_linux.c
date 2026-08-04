@@ -42,6 +42,8 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/bridge_response.h"
 #include "../cef_common/browser_session.h"
+#include "../cef_common/document.h"
+#include "../cef_common/message.h"
 #include "../cef_common/scheme.h"
 
 #include <gdk/gdkx.h>
@@ -298,14 +300,6 @@ static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
                                                        GdkEvent *event,
                                                        gpointer user_data);
 static void proton_engine_complete_managed_shutdown_if_ready(void);
-
-static void proton_engine_set_message(char *error,
-                                      size_t error_len,
-                                      const char *message) {
-  if (error != NULL && error_len > 0) {
-    snprintf(error, error_len, "%s", message != NULL ? message : "");
-  }
-}
 
 typedef enum {
   PROTON_ENGINE_UI_RUNTIME_CREATE = 0,
@@ -836,11 +830,6 @@ static int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
 }
 
-static int proton_engine_url_is_proton(const char *url) {
-  return proton_engine_url_is_app(url) ||
-         (url != NULL && strncmp(url, "proton://", 9) == 0);
-}
-
 static void proton_engine_window_list_add(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
@@ -1259,8 +1248,8 @@ static void proton_engine_bridge_pending_clear_all(void) {
                           (unsigned long long)removed);
 }
 
-/* The application resource factory lives in cef_common/scheme.c. These are
-   the accessors it reads windows through; see cef_common/scheme.h. */
+/* The window state shared engine code reaches this engine through; see
+   cef_common/window_state.h. */
 
 void proton_engine_window_lock(void) {
   pthread_mutex_lock(&g_window_lock);
@@ -1293,6 +1282,34 @@ const char *proton_engine_runtime_asset_root(proton_engine_window_t *window) {
     runtime = g_windows->runtime;
   }
   return runtime != NULL ? runtime->asset_root : NULL;
+}
+
+void proton_engine_window_replace_document(proton_engine_window_t *window,
+                                           char *url, char *html,
+                                           size_t html_len) {
+  if (window == NULL) {
+    free(url);
+    free(html);
+    return;
+  }
+  free(window->html_url);
+  free(window->html);
+  window->html_url = url;
+  window->html = html;
+  window->html_len = html_len;
+}
+
+void proton_engine_runtime_adopt_asset_root(proton_engine_window_t *window,
+                                            char *root) {
+  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
+  if (runtime == NULL && g_windows != NULL) {
+    runtime = g_windows->runtime;
+  }
+  if (runtime == NULL) {
+    free(root);
+    return;
+  }
+  runtime->asset_root = root;
 }
 
 static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
@@ -5237,74 +5254,24 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-/* Installs `html` as the document served for `document_url` and, when an
-   asset root is supplied, binds that root to the runtime's application
-   origin. The document is not handed to CEF inline: the scheme factory reads
-   it back out of the window when the navigation asks for it, which is what
-   lets relative URLs resolve against the same origin. */
 static int32_t proton_engine_window_load_document(
     proton_engine_window_t *window, const char *html,
     const char *document_url, const char *asset_root, char *error,
     size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  char *url = NULL;
+  size_t html_len = 0;
+  int32_t status = proton_engine_window_install_document(
+      window, html, document_url, asset_root, &url, &html_len, error,
+      error_len);
+  if (status != PROTON_OK) {
+    return status;
   }
-  if (html == NULL) {
-    html = "";
-  }
-  const char *effective_document_url =
-      document_url != NULL && document_url[0] != '\0'
-          ? document_url
-          : PROTON_ENGINE_APP_URL_PREFIX;
-  if (!proton_engine_url_is_proton(effective_document_url)) {
-    proton_engine_set_message(
-        error, error_len,
-        "document_url must use a Proton application origin");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char *url_copy = proton_engine_strdup(effective_document_url);
-  char *html_copy = proton_engine_strdup(html);
-  char *root_copy = asset_root != NULL ? realpath(asset_root, NULL) : NULL;
-  if (url_copy == NULL || html_copy == NULL ||
-      (asset_root != NULL && root_copy == NULL)) {
-    free(url_copy);
-    free(html_copy);
-    free(root_copy);
-    proton_engine_set_message(error, error_len,
-                              "failed to prepare html document");
-    return PROTON_ERR_ENGINE;
-  }
-  pthread_mutex_lock(&g_window_lock);
-  /* One origin cannot serve two roots: the factory has only the request URL
-     to go on, so a second root would make resolution ambiguous. */
-  if (root_copy != NULL && window->runtime->asset_root != NULL &&
-      strcmp(root_copy, window->runtime->asset_root) != 0) {
-    pthread_mutex_unlock(&g_window_lock);
-    free(url_copy);
-    free(html_copy);
-    free(root_copy);
-    proton_engine_set_message(
-        error, error_len,
-        "the Proton application origin already has a different asset root");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (root_copy != NULL && window->runtime->asset_root == NULL) {
-    window->runtime->asset_root = root_copy;
-    root_copy = NULL;
-  }
-  free(window->html_url);
-  free(window->html);
-  window->html_url = url_copy;
-  window->html = html_copy;
-  window->html_len = strlen(html_copy);
-  pthread_mutex_unlock(&g_window_lock);
-  free(root_copy);
   proton_engine_debug_log("load_document browser=%d document_url=%s bytes=%llu",
-                          window->browser_id, effective_document_url,
-                          (unsigned long long)window->html_len);
-  return proton_engine_window_load_url(window, effective_document_url, error,
-                                       error_len);
+                          window->browser_id, url,
+                          (unsigned long long)html_len);
+  status = proton_engine_window_load_url(window, url, error, error_len);
+  free(url);
+  return status;
 }
 
 int32_t proton_engine_window_load_html(proton_engine_window_t *window,
