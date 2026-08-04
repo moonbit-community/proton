@@ -111,7 +111,7 @@ jobs:
         run: node --test native/tests/bridge_bootstrap.test.mjs
 
       - name: Verify generated files
-        run: node scripts/verify_generated.mjs
+        run: node scripts/verify_generated.mjs --skip-prebuilt-abi
 
       - name: Verify Linux prebuilt ABI
         if: ${{ matrix.os == 'ubuntu-latest' }}

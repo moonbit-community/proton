@@ -12,6 +12,7 @@ const repoRoot = path.resolve(scriptDir, "..");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-generated-check-"));
 const failures = [];
 const abiFailures = [];
+const skipPrebuiltAbi = process.argv.includes("--skip-prebuilt-abi");
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -78,7 +79,7 @@ export function stagedPrebuiltPlatforms() {
 try {
   run("node", [path.join(repoRoot, "scripts", "verify_release_metadata.mjs")]);
   const platforms = stagedPrebuiltPlatforms();
-  if (platforms.length === 0) {
+  if (skipPrebuiltAbi || platforms.length === 0) {
     run("node", [
       path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
       "--metadata-only",
@@ -89,7 +90,7 @@ try {
   /// Platforms whose artifact format the host inspection tool cannot read
   /// (for example GNU nm on a Mach-O dylib) are skipped rather than reported
   /// as failures; every platform is still verified on its own host's CI leg.
-  for (const platform of platforms) {
+  for (const platform of skipPrebuiltAbi ? [] : platforms) {
     const probe = spawnSync(
       "node",
       [
