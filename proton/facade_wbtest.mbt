@@ -524,11 +524,12 @@ test "base tags escape HTML attributes" {
 ///|
 test "asset urls expose a document root instead of the local file path" {
   let path = "46_asset_sidecar_resources/app/app.html"
-  let file_path : @mbpath.Path = path
+  let file_path = resolve_entry_path(path)
   let base = asset_base_url().replace_all(old="\\", new="/")
   let document = asset_document_url(file_path).replace_all(old="\\", new="/")
   inspect(base, content="https://proton.localhost/")
   inspect(document, content="https://proton.localhost/app.html")
+  assert_eq(file_path.dirname().basename().to_owned(), "app")
 }
 
 ///|

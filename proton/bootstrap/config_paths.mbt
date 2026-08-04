@@ -41,14 +41,25 @@ fn rebase_relative_path(path : String, base_dir : String?) -> String {
   match base_dir {
     None => path
     Some(base_dir) => {
-      let candidate : @mbpath.Path = path
+      let native_path = runtime_path_for_host(path)
+      let candidate : @mbpath.Path = native_path
       if candidate.is_absolute() {
-        path
+        native_path
       } else {
-        let base : @mbpath.Path = base_dir
-        base.join(path).normalize().to_string()
+        let base : @mbpath.Path = runtime_path_for_host(base_dir)
+        base.join(native_path).normalize().to_string()
       }
     }
+  }
+}
+
+///|
+/// Converts portable config separators before entering the host path API.
+fn runtime_path_for_host(path : String) -> String {
+  if @mbpath.sep == '\\' {
+    path.replace_all(old="/", new="\\")
+  } else {
+    path
   }
 }
 

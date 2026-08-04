@@ -411,6 +411,26 @@ test "project config rejects backslashes in portable project paths" {
 }
 
 ///|
+test "project config rebases portable paths into host path components" {
+  let source =
+    #|window = { title: "App", width: 900, height: 700 }
+    #|entry = {
+    #|  kind: "asset",
+    #|  value: "frontend/dist/index.html",
+    #|}
+    #|
+  let config = load_project_config_from_text(source, "target/proton-config").config()
+  match config.entry() {
+    Asset(path) => {
+      let entry : @mbpath.Path = path
+      assert_eq(entry.basename().to_owned(), "index.html")
+      assert_eq(entry.dirname().basename().to_owned(), "dist")
+    }
+    _ => abort("expected asset entry")
+  }
+}
+
+///|
 test "project config reads module metadata from configured backend" {
   let project_dir = "target/project-config-backend-metadata"
   let backend_dir = project_dir + "/backend"

@@ -18,6 +18,7 @@ options(
     "config_build.mbt": [ "native" ],
     "config_decode.mbt": [ "native" ],
     "config_paths.mbt": [ "native" ],
+    "config_paths_wbtest.mbt": [ "native" ],
     "proton_config_load.mbt": [ "native" ],
     "proton_project_config.mbt": [ "native" ],
     "proton_project_summary.mbt": [ "native" ],

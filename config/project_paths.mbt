@@ -1,6 +1,6 @@
 ///|
 fn config_base_dir(path : String) -> String {
-  let raw_dirname = dirname_string(path)
+  let raw_dirname = dirname_string(project_path_for_host(path))
   let config_dir : @mbpath.Path = raw_dirname
   config_dir.resolve().to_string()
 }
@@ -12,8 +12,18 @@ fn rebase_project_path(
   label : String,
 ) -> String raise ProjectConfigError {
   validate_relative_project_path(path, label)
-  let base : @mbpath.Path = base_dir
-  base.join(path).normalize().to_string()
+  let base : @mbpath.Path = project_path_for_host(base_dir)
+  base.join(project_path_for_host(path)).normalize().to_string()
+}
+
+///|
+/// Converts portable project separators before entering the host path API.
+fn project_path_for_host(path : String) -> String {
+  if @mbpath.sep == '\\' {
+    path.replace_all(old="/", new="\\")
+  } else {
+    path
+  }
 }
 
 ///|
@@ -53,8 +63,8 @@ fn project_path_has_root(path : String) -> Bool {
 
 ///|
 fn join_path_string(base : String, child : String) -> String {
-  let base_path : @mbpath.Path = base
-  base_path.join(child).normalize().to_string()
+  let base_path : @mbpath.Path = project_path_for_host(base)
+  base_path.join(project_path_for_host(child)).normalize().to_string()
 }
 
 ///|

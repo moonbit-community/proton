@@ -25,8 +25,7 @@ fn load_file_entry_after_create(
   action : String,
   path : String,
 ) -> Unit raise AppEntryError {
-  let file_path : @mbpath.Path = path
-  let resolved = file_path.resolve()
+  let resolved = resolve_entry_path(path)
   let html = read_file_entry_html(resolved.to_string())
   window.load_asset(
     inject_html_bootstrap(html, base_tag(asset_base_url())),
@@ -35,6 +34,16 @@ fn load_file_entry_after_create(
   ) catch {
     error => raise NativeLoad(action~, error~)
   }
+}
+
+///|
+fn resolve_entry_path(path : String) -> @mbpath.Path {
+  let native_path = if @mbpath.sep == '\\' {
+    path.replace_all(old="/", new="\\")
+  } else {
+    path
+  }
+  @mbpath.Path(native_path).resolve()
 }
 
 ///|
