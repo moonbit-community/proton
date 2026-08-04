@@ -1,8 +1,8 @@
 ///|
-// A Codex-style built-in browser: the host page renders the application UI
-// (a sidebar with navigation controls, an address bar, and bookmarks) while
-// a web contents view fills the remaining content area as the embedded
-// browser. View lifecycle events keep the sidebar in sync with the page.
+// A Codex-style built-in browser: the host page (app/index.html with
+// sidebar.css/sidebar.js sidecars, loaded through @proton.asset) renders the
+// application UI while a web contents view fills the remaining content area
+// as the embedded browser. View lifecycle events keep the sidebar in sync.
 
 ///|
 struct NavigatePayload {
@@ -149,92 +149,16 @@ fn sync_sidebar(url~ : String?, title~ : String?, error~ : String?) -> Unit {
 let start_page_url = "data:text/html,<body style='margin:0;background:rgb(30,32,36);color:rgb(220,224,230);font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1>Built-in Browser</h1><p>Pick a bookmark or enter a URL in the sidebar.</p></div></body>"
 
 ///|
-let sidebar_page =
-  #|<!doctype html>
-  #|<html>
-  #|  <head>
-  #|    <meta charset="utf-8" />
-  #|    <title>Web Contents View Browser</title>
-  #|    <style>
-  #|      * { box-sizing: border-box; }
-  #|      body { margin: 0; font-family: -apple-system, sans-serif; background: #f5f5f7; }
-  #|      #sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 288px;
-  #|        padding: 36px 16px 16px; border-right: 1px solid #d8d8de; background: #f5f5f7;
-  #|        display: flex; flex-direction: column; gap: 10px;
-  #|        -webkit-app-region: drag; }
-  #|      #sidebar input, #sidebar button { -webkit-app-region: no-drag; }
-  #|      h1 { font-size: 15px; margin: 0 0 6px; color: #1d1d1f; }
-  #|      #nav { display: flex; gap: 6px; }
-  #|      #nav button { flex: 1; text-align: center; }
-  #|      #bar { display: flex; gap: 6px; }
-  #|      #url { flex: 1; padding: 6px 8px; border: 1px solid #c8c8cf; border-radius: 6px;
-  #|        font-size: 13px; min-width: 0; }
-  #|      button { padding: 6px 10px; border: 1px solid #c8c8cf; border-radius: 6px;
-  #|        background: #fff; font-size: 13px; cursor: pointer; text-align: left; }
-  #|      button:hover { background: #ececf0; }
-  #|      #go { text-align: center; }
-  #|      #status { font-size: 12px; color: #6e6e73; word-break: break-all; min-height: 16px; }
-  #|      .hint { margin-top: auto; font-size: 11px; color: #8e8e93; line-height: 1.5; }
-  #|    </style>
-  #|  </head>
-  #|  <body>
-  #|    <div id="sidebar">
-  #|      <h1>Built-in Browser</h1>
-  #|      <div id="nav">
-  #|        <button id="back" title="Back">&#8592;</button>
-  #|        <button id="forward" title="Forward">&#8594;</button>
-  #|        <button id="reload" title="Reload">&#10227;</button>
-  #|      </div>
-  #|      <div id="bar">
-  #|        <input id="url" placeholder="example.com" />
-  #|        <button id="go">Go</button>
-  #|      </div>
-  #|      <button data-url="https://example.com">Example</button>
-  #|      <button data-url="https://moonbitlang.com">MoonBit</button>
-  #|      <button data-url="https://developer.mozilla.org">MDN</button>
-  #|      <button data-url="https://www.wikipedia.org">Wikipedia</button>
-  #|      <div id="status"></div>
-  #|      <p class="hint">
-  #|        The area on the right is a web contents view: an independent native
-  #|        browser hosted inside this window. Navigation events flow back into
-  #|        the sidebar; back/forward/reload use per-view browser commands.
-  #|      </p>
-  #|    </div>
-  #|    <script>
-  #|      const status = document.querySelector("#status");
-  #|      async function navigate(url) {
-  #|        const reply = await window.__MoonBit__.browser.navigate({ url });
-  #|        status.textContent = reply.ok ? reply.url : "failed: " + reply.url;
-  #|      }
-  #|      document.querySelector("#go").onclick = () => {
-  #|        const input = document.querySelector("#url");
-  #|        if (input.value.trim() !== "") navigate(input.value.trim());
-  #|      };
-  #|      document.querySelector("#url").onkeydown = (event) => {
-  #|        if (event.key === "Enter") document.querySelector("#go").click();
-  #|      };
-  #|      for (const button of document.querySelectorAll("button[data-url]")) {
-  #|        button.onclick = () => navigate(button.dataset.url);
-  #|      }
-  #|      document.querySelector("#back").onclick = () => window.__MoonBit__.browser.back();
-  #|      document.querySelector("#forward").onclick = () => window.__MoonBit__.browser.forward();
-  #|      document.querySelector("#reload").onclick = () => window.__MoonBit__.browser.reload();
-  #|    </script>
-  #|  </body>
-  #|</html>
-  #|
-
-///|
 fn open_panel(window : @proton.WindowHandle) -> Unit {
   let state = window.state() catch { _ => return }
   let view = window.add_view(
     "browser",
-    @native.ViewConfig::new(
+    @proton.view(
+      start_page_url,
       width=state.width - sidebar_width,
       height=state.height,
       x=sidebar_width,
       y=0,
-      initial_url=start_page_url,
     ),
   ) catch {
     error => {
@@ -248,9 +172,9 @@ fn open_panel(window : @proton.WindowHandle) -> Unit {
 ///|
 fn main {
   @proton.run(() => {
-    @proton.html(
+    @proton.asset(
       "Web Contents View Browser",
-      sidebar_page,
+      "52_web_contents_view/app/index.html",
       width=1120,
       height=720,
       debug=true,

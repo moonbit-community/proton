@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Web Contents View Browser</title>
+    <link rel="stylesheet" href="sidebar.css" />
+  </head>
+  <body>
+    <div id="sidebar">
+      <h1>Built-in Browser</h1>
+      <div id="nav">
+        <button id="back" title="Back">&#8592;</button>
+        <button id="forward" title="Forward">&#8594;</button>
+        <button id="reload" title="Reload">&#10227;</button>
+      </div>
+      <div id="bar">
+        <input id="url" placeholder="example.com" />
+        <button id="go">Go</button>
+      </div>
+      <button data-url="https://example.com">Example</button>
+      <button data-url="https://moonbitlang.com">MoonBit</button>
+      <button data-url="https://developer.mozilla.org">MDN</button>
+      <button data-url="https://www.wikipedia.org">Wikipedia</button>
+      <div id="status"></div>
+      <p class="hint">
+        The area on the right is a web contents view: an independent native
+        browser hosted inside this window. Navigation events flow back into
+        the sidebar; back/forward/reload use per-view browser commands.
+      </p>
+    </div>
+    <script src="sidebar.js"></script>
+  </body>
+</html>

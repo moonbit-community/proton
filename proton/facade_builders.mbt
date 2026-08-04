@@ -79,6 +79,33 @@ pub fn asset(
 }
 
 ///|
+/// Creates a web contents view configuration for `WindowHandle::add_view`,
+/// following the Electron `new WebContentsView(options)` model: the view
+/// renders `url` inside its owning window's content area at explicit
+/// top-left bounds, stacked above the window's main page.
+pub fn view(
+  url : String,
+  width~ : Int,
+  height~ : Int,
+  x? : Int = 0,
+  y? : Int = 0,
+  visible? : Bool = true,
+  z_order? : Int = 0,
+  background_color? : String,
+) -> @native.ViewConfig {
+  @native.ViewConfig::new(
+    width~,
+    height~,
+    x~,
+    y~,
+    visible~,
+    z_order~,
+    initial_url=url,
+    background_color?,
+  )
+}
+
+///|
 /// Creates an application from `PROTON_CONFIG_PATH`, `moon.proton` in the
 /// current working directory, or code-only defaults.
 pub fn app() -> App {

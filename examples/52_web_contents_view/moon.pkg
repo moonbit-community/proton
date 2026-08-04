@@ -1,7 +1,6 @@
 import {
   "moonbitlang/core/json",
   "justjavac/proton",
-  "justjavac/proton/native",
   "justjavac/proton/extension" @proton_extension,
   "justjavac/proton_contract",
 }

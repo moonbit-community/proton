@@ -45,6 +45,8 @@ pub fn runtime_info_json() -> String raise @native.NativeError
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
+pub fn view(String, width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, background_color? : String) -> @native.ViewConfig
+
 // Errors
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)

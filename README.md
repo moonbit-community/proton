@@ -232,19 +232,19 @@ A window can also host additional web contents views, following the Electron
 `WebContentsView` model: each view is an independent browser layered above the
 window's main page with explicit top-left bounds, visibility, and z-order.
 Views are added and removed imperatively through the window handle; per-view
-navigation uses `ViewHandle::load_url`. Engine support is reported through the
-`web_contents_view` runtime feature (currently the macOS engine; other
-platforms raise the native unsupported error).
+navigation uses `ViewHandle::load_url`, and `App::on_view_event` reports
+navigations, loading state, titles, and load failures. Engine support is
+reported through the `web_contents_view` runtime feature.
 
 ```moonbit
 let panel = window.add_view(
   "panel",
-  @native.ViewConfig::new(
+  @proton.view(
+    "https://example.com/",
     width=320,
     height=240,
     x=16,
     y=16,
-    initial_url="https://example.com/",
   ),
 )
 panel.set_bounds(x=16, y=16, width=480, height=320)
