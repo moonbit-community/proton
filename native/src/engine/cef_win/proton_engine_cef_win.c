@@ -243,6 +243,7 @@ struct proton_engine_view {
   int finalize_after_browser_close;
   int finalized;
   int closed;
+  int osr_paint_seen;
   struct proton_engine_view *next;
 };
 
@@ -1897,6 +1898,13 @@ static void proton_engine_on_before_command_line_processing(
   // on the CPU in the browser process, so no GPU process is needed for
   // window display.
   proton_engine_append_switch(command_line, "disable-gpu-compositing");
+  // Recent CEF still spawns a GPU process even with both disable switches;
+  // when that process dies (display-limited, hook-injecting, or
+  // exclusive-fullscreen D3D hosts) the browser FATALs on "GPU process
+  // isn't usable". Hosting the GPU service in-process removes the separate
+  // process entirely, matching the Linux engine. GPU rendering stays
+  // disabled either way.
+  proton_engine_append_switch(command_line, "in-process-gpu");
   proton_engine_append_switch(command_line, "disable-background-networking");
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
@@ -2746,6 +2754,29 @@ static proton_engine_window_t *proton_engine_window_from_browser_client(
   return window;
 }
 
+// Resolves a view through the browser's client. Unlike the browser-id list
+// scan this also works while cef_browser_host_create_browser_sync is still
+// running, before the view records its browser id.
+static proton_engine_view_t *proton_engine_view_from_browser_client(
+    cef_browser_t *browser) {
+  if (browser == NULL) {
+    return NULL;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    return NULL;
+  }
+  cef_client_t *cef_client = host->get_client(host);
+  proton_engine_view_t *view = NULL;
+  if (cef_client != NULL) {
+    proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
+    view = client->view;
+    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+  return view;
+}
+
 static void CEF_CALLBACK proton_engine_osr_get_view_rect(
     cef_render_handler_t *self,
     cef_browser_t *browser,
@@ -2758,6 +2789,11 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   rect->y = 0;
   proton_engine_view_t *view =
       proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
+  if (view == NULL) {
+    // CEF can query the viewport while create_browser_sync is still running,
+    // before the view records its browser id; resolve via the client then.
+    view = proton_engine_view_from_browser_client(browser);
+  }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
     rect->height = view->height > 0 ? view->height : 1;
@@ -2827,8 +2863,20 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
   (void)buffer;
   proton_engine_window_t *window =
       proton_engine_window_from_browser_client(browser);
-  if (window == NULL || !window->headless || type != PET_VIEW || width <= 0 ||
-      height <= 0) {
+  if (window == NULL) {
+    // View browsers track paint separately from window OSR state; one log
+    // line per browser is enough for e2e to prove the view viewport size.
+    proton_engine_view_t *view = proton_engine_find_view_by_browser_id(
+        proton_engine_browser_id(browser));
+    if (view != NULL && type == PET_VIEW && width > 0 && height > 0 &&
+        !view->osr_paint_seen) {
+      view->osr_paint_seen = 1;
+      proton_engine_debug_log("view_osr_paint browser=%d size=%dx%d",
+                              view->browser_id, width, height);
+    }
+    return;
+  }
+  if (!window->headless || type != PET_VIEW || width <= 0 || height <= 0) {
     return;
   }
   window->osr_paint_width = width;
@@ -5788,8 +5836,11 @@ static int CEF_CALLBACK proton_engine_do_close(
   if (view->hwnd != NULL) {
     DestroyWindow(view->hwnd);
     view->hwnd = NULL;
+    return 1;
   }
-  return 1;
+  // Windowless (headless) rendering has no child window; returning false lets
+  // CEF destroy the browser object immediately.
+  return 0;
 }
 
 static void CEF_CALLBACK proton_engine_on_title_change(
@@ -5888,9 +5939,9 @@ static int32_t proton_engine_parse_view_config(
   proton_engine_parse_json_int_field(config_json, "x", &config->x);
   proton_engine_parse_json_int_field(config_json, "y", &config->y);
   proton_engine_parse_json_int_field(config_json, "z_order", &config->z_order);
-  int visible = 1;
+  bool visible = true;
   if (proton_engine_parse_json_bool_field(config_json, "visible", &visible)) {
-    config->visible = visible;
+    config->visible = visible ? 1 : 0;
   }
   proton_engine_parse_json_string_field(config_json, "initial_url",
                                         config->initial_url,
