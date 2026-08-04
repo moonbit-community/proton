@@ -79,8 +79,9 @@ moon -C examples run 01_run --target native
   media-permission, and download-progress browser policy handlers.
 - `51_child_process_close_repro`: long-lived child process and pending bridge
   request for macOS close-lifecycle regression testing.
-- `52_web_contents_view`: Electron-style web contents views hosted in one
-  window with explicit bounds, z-order, visibility, and per-view navigation.
+- `52_web_contents_view`: Codex-style built-in browser: a sidebar host page
+  drives an embedded web contents view through a command extension, with the
+  view following window resizes.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
