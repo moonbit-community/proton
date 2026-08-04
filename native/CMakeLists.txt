@@ -399,24 +399,27 @@ if(BUILD_TESTING)
     tests/proton_state_smoke.c
     src/proton_state.c
   )
-  add_executable(proton_update_test
-    tests/proton_update_test.c
-    src/proton_update.c
-  )
-  target_include_directories(proton_update_test
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-  )
-  # This test compiles the implementation rather than linking the library, so
-  # it defines the exported entry points itself. Without PROTON_BUILD they
-  # would be declared dllimport on Windows and the definitions would not build.
-  target_compile_definitions(proton_update_test
-    PRIVATE PROTON_BUILD
-  )
-  if(APPLE)
-    target_link_libraries(proton_update_test PRIVATE
-      "-framework CoreFoundation"
-      "-framework Security"
+  # TODO(windows): add a native updater test with the Windows apply path. The
+  # current suite constructs and inspects POSIX/macOS filesystem layouts.
+  if(NOT WIN32)
+    add_executable(proton_update_test
+      tests/proton_update_test.c
+      src/proton_update.c
     )
+    target_include_directories(proton_update_test
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    # This test compiles the implementation rather than linking the library,
+    # so it defines the exported entry points itself.
+    target_compile_definitions(proton_update_test
+      PRIVATE PROTON_BUILD
+    )
+    if(APPLE)
+      target_link_libraries(proton_update_test PRIVATE
+        "-framework CoreFoundation"
+        "-framework Security"
+      )
+    endif()
   endif()
 
   target_link_libraries(proton_smoke PRIVATE proton)
@@ -445,7 +448,9 @@ if(BUILD_TESTING)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
-  add_test(NAME proton_update_test COMMAND proton_update_test)
+  if(NOT WIN32)
+    add_test(NAME proton_update_test COMMAND proton_update_test)
+  endif()
   set_tests_properties(proton_smoke PROPERTIES TIMEOUT 90)
 
   if(WIN32)
