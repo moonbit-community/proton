@@ -1,21 +1,60 @@
 #include "scheme.h"
 
-#include "window.h"
-
 #include "include/internal/cef_string.h"
 
-#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define PROTON_ENGINE_PATH_SEPARATOR '\\'
+#else
+#include <stdatomic.h>
 #define PROTON_ENGINE_PATH_SEPARATOR '/'
+#endif
 
-#include "../cef_common/strings.h"
-#include "../cef_common/assets.h"
+#include "strings.h"
+#include "assets.h"
 
+/* Each engine keeps its own reference-count primitives; this factory is a
+   separate translation unit, so it selects them here rather than inheriting
+   the includer's macros the way the engines do.
+
+   The four macros below are written for ref_count.h, which always names its
+   argument `refs`. That makes the `(refs)->refs` member access survive
+   parameter substitution — but only for that one spelling, so nothing else
+   may call them. Direct users take proton_engine_ref_release instead. */
+#ifdef _WIN32
+typedef struct {
+  volatile LONG refs;
+} proton_engine_ref_counted_t;
+#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
+#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
+#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
+#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
+#else
 typedef struct {
   atomic_int refs;
 } proton_engine_ref_counted_t;
+#define PROTON_ENGINE_REF_INCREMENT(refs) \
+  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
+#define PROTON_ENGINE_REF_DECREMENT(refs) \
+  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
+#define PROTON_ENGINE_REF_LOAD(refs) \
+  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
+#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
+#endif
+
+#include "ref_count.h"
+
+/* Returns the count after the release. */
+static int proton_engine_ref_release(proton_engine_ref_counted_t *refs) {
+#ifdef _WIN32
+  return (int)InterlockedDecrement(&refs->refs);
+#else
+  return atomic_fetch_sub_explicit(&refs->refs, 1, memory_order_acq_rel) - 1;
+#endif
+}
 
 typedef struct {
   cef_resource_handler_t handler;
@@ -26,19 +65,6 @@ typedef struct {
   int status;
   size_t offset;
 } proton_engine_resource_handler_t;
-
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#include "../cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 
 static char *proton_engine_request_url(cef_request_t *request) {
   if (request == NULL) {
@@ -71,12 +97,19 @@ static void CEF_CALLBACK proton_engine_resource_get_response_headers(
       (proton_engine_resource_handler_t *)self;
   if (response != NULL) {
     cef_string_t mime = {0};
+    cef_string_t charset = {0};
     proton_engine_set_string(&mime, handler->mime_type != NULL
                                         ? handler->mime_type
                                         : "text/html");
+    /* Everything served here is produced by the framework as UTF-8. Saying so
+       keeps Chromium from falling back to a locale-dependent encoding for
+       documents that carry no <meta charset>. */
+    proton_engine_set_string(&charset, "utf-8");
     response->set_status(response, handler->status);
     response->set_mime_type(response, &mime);
+    response->set_charset(response, &charset);
     cef_string_clear(&mime);
+    cef_string_clear(&charset);
   }
   if (response_length != NULL) {
     *response_length = (int64_t)handler->len;
@@ -123,9 +156,7 @@ static int CEF_CALLBACK proton_engine_resource_handler_release(
   }
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)base;
-  int value = atomic_fetch_sub_explicit(&handler->refs.refs, 1,
-                                        memory_order_acq_rel) -
-              1;
+  int value = proton_engine_ref_release(&handler->refs);
   if (value <= 0) {
     free(handler->data);
     free(handler->mime_type);
@@ -247,4 +278,45 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   free(html_copy);
   free(url);
   return handler;
+}
+
+void proton_engine_register_app_custom_schemes(
+    cef_scheme_registrar_t *registrar) {
+  if (registrar == NULL) {
+    return;
+  }
+  cef_string_t scheme = {0};
+  proton_engine_set_string(&scheme, "proton");
+  /* Give proton:// documents a real origin and allow CORS-mode same-origin
+     resources such as @font-face to reach the custom scheme handler. */
+  registrar->add_custom_scheme(
+      registrar, &scheme,
+      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
+          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
+  cef_string_clear(&scheme);
+}
+
+int proton_engine_register_app_scheme_factory(
+    cef_scheme_handler_factory_t *factory) {
+  if (factory == NULL) {
+    return 0;
+  }
+  cef_string_t scheme = {0};
+  proton_engine_set_string(&scheme, "proton");
+  int ok = cef_register_scheme_handler_factory(&scheme, NULL, factory);
+  cef_string_clear(&scheme);
+  if (!ok) {
+    return 0;
+  }
+  /* Scoping the https factory to the application domain leaves every other
+     https origin on the network stack. */
+  cef_string_t https_scheme = {0};
+  cef_string_t app_domain = {0};
+  proton_engine_set_string(&https_scheme, PROTON_ENGINE_APP_SCHEME);
+  proton_engine_set_string(&app_domain, PROTON_ENGINE_APP_DOMAIN);
+  ok = cef_register_scheme_handler_factory(&https_scheme, &app_domain,
+                                           factory);
+  cef_string_clear(&https_scheme);
+  cef_string_clear(&app_domain);
+  return ok;
 }

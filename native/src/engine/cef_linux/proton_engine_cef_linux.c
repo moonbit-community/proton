@@ -42,6 +42,7 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/bridge_response.h"
 #include "../cef_common/browser_session.h"
+#include "../cef_common/scheme.h"
 
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
@@ -92,6 +93,9 @@ typedef struct proton_engine_client proton_engine_client_t;
 struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
+  /* Set once by the first asset document and never changed, so every window
+     in a runtime resolves application resources against the same root. */
+  char *asset_root;
   int64_t next_bridge_request_id;
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
@@ -226,15 +230,6 @@ typedef struct {
   proton_engine_ref_counted_t refs;
 } proton_engine_scheme_factory_t;
 
-typedef struct {
-  cef_resource_handler_t handler;
-  proton_engine_ref_counted_t refs;
-  char *data;
-  size_t len;
-  char *mime_type;
-  size_t offset;
-} proton_engine_resource_handler_t;
-
 typedef struct proton_engine_bridge_pending {
   int64_t request_id;
   int browser_id;
@@ -332,6 +327,7 @@ typedef enum {
   PROTON_ENGINE_UI_WINDOW_RESPOND_CLOSE_REQUEST,
   PROTON_ENGINE_UI_WINDOW_LOAD_URL,
   PROTON_ENGINE_UI_WINDOW_LOAD_HTML,
+  PROTON_ENGINE_UI_WINDOW_LOAD_ASSET,
   PROTON_ENGINE_UI_WINDOW_EVAL,
   PROTON_ENGINE_UI_WINDOW_BROWSER_COMMAND,
   PROTON_ENGINE_UI_WINDOW_RESPOND_BROWSER_REQUEST,
@@ -346,6 +342,7 @@ typedef struct {
   proton_engine_window_t *window;
   const char *text;
   const char *second_text;
+  const char *third_text;
   const proton_engine_window_action_t *window_action;
   void *output;
   int32_t first_int;
@@ -422,6 +419,10 @@ static int32_t proton_engine_execute_ui_call(void *raw_call) {
     return proton_engine_window_load_html(
         call->window, call->text, call->second_text, call->error,
         call->error_len);
+  case PROTON_ENGINE_UI_WINDOW_LOAD_ASSET:
+    return proton_engine_window_load_asset(
+        call->window, call->text, call->second_text, call->third_text,
+        call->error, call->error_len);
   case PROTON_ENGINE_UI_WINDOW_EVAL:
     return proton_engine_window_eval(call->window, call->text, call->error,
                                      call->error_len);
@@ -836,7 +837,8 @@ static int proton_engine_browser_id(cef_browser_t *browser) {
 }
 
 static int proton_engine_url_is_proton(const char *url) {
-  return url != NULL && strncmp(url, "proton://", 9) == 0;
+  return proton_engine_url_is_app(url) ||
+         (url != NULL && strncmp(url, "proton://", 9) == 0);
 }
 
 static void proton_engine_window_list_add(proton_engine_window_t *window) {
@@ -1257,218 +1259,47 @@ static void proton_engine_bridge_pending_clear_all(void) {
                           (unsigned long long)removed);
 }
 
-static char *proton_engine_request_url(cef_request_t *request) {
-  if (request == NULL) {
-    return NULL;
-  }
-  return proton_engine_userfree_to_utf8(request->get_url(request));
-}
+/* The application resource factory lives in cef_common/scheme.c. These are
+   the accessors it reads windows through; see cef_common/scheme.h. */
 
-static int CEF_CALLBACK proton_engine_resource_open(
-    cef_resource_handler_t *self,
-    cef_request_t *request,
-    int *handle_request,
-    cef_callback_t *callback) {
-  (void)request;
-  (void)callback;
-  if (self == NULL || handle_request == NULL) {
-    return 0;
-  }
-  *handle_request = 1;
-  return 1;
-}
-
-static void CEF_CALLBACK proton_engine_resource_get_response_headers(
-    cef_resource_handler_t *self,
-    cef_response_t *response,
-    int64_t *response_length,
-    cef_string_t *redirectUrl) {
-  (void)redirectUrl;
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)self;
-  if (response != NULL) {
-    cef_string_t mime = {0};
-    proton_engine_set_string(&mime, handler->mime_type != NULL
-                                        ? handler->mime_type
-                                        : "text/html");
-    response->set_status(response, 200);
-    response->set_mime_type(response, &mime);
-    cef_string_clear(&mime);
-  }
-  if (response_length != NULL) {
-    *response_length = (int64_t)handler->len;
-  }
-}
-
-static int CEF_CALLBACK proton_engine_resource_read(
-    cef_resource_handler_t *self,
-    void *data_out,
-    int bytes_to_read,
-    int *bytes_read,
-    cef_resource_read_callback_t *callback) {
-  (void)callback;
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)self;
-  if (handler == NULL || data_out == NULL || bytes_read == NULL ||
-      bytes_to_read <= 0) {
-    return 0;
-  }
-  size_t remaining = handler->offset < handler->len
-                         ? handler->len - handler->offset
-                         : 0;
-  if (remaining == 0) {
-    *bytes_read = 0;
-    return 0;
-  }
-  size_t to_copy = remaining < (size_t)bytes_to_read ? remaining
-                                                     : (size_t)bytes_to_read;
-  memcpy(data_out, handler->data + handler->offset, to_copy);
-  handler->offset += to_copy;
-  *bytes_read = (int)to_copy;
-  return 1;
-}
-
-static void CEF_CALLBACK proton_engine_resource_cancel(
-    cef_resource_handler_t *self) {
-  (void)self;
-}
-
-static int CEF_CALLBACK proton_engine_resource_handler_release(
-    cef_base_ref_counted_t *base) {
-  if (base == NULL) {
-    return 0;
-  }
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)base;
-  int value = atomic_fetch_sub_explicit(&handler->refs.refs, 1,
-                                        memory_order_acq_rel) -
-              1;
-  if (value <= 0) {
-    free(handler->data);
-    free(handler->mime_type);
-    free(handler);
-    return 1;
-  }
-  return 0;
-}
-
-static cef_resource_handler_t *proton_engine_resource_handler_create(
-    const char *data,
-    size_t data_len,
-    const char *mime_type) {
-  proton_engine_resource_handler_t *handler =
-      (proton_engine_resource_handler_t *)calloc(1, sizeof(*handler));
-  if (handler == NULL) {
-    return NULL;
-  }
-  proton_engine_init_ref_counted(
-      (cef_base_ref_counted_t *)&handler->handler.base,
-      sizeof(handler->handler), &handler->refs);
-  handler->handler.base.release = proton_engine_resource_handler_release;
-  handler->data = (char *)malloc(data_len + 1);
-  if (handler->data == NULL) {
-    free(handler);
-    return NULL;
-  }
-  memcpy(handler->data, data != NULL ? data : "", data_len);
-  handler->data[data_len] = '\0';
-  handler->len = data_len;
-  handler->mime_type = proton_engine_strdup(mime_type != NULL ? mime_type
-                                                              : "text/html");
-  if (handler->mime_type == NULL) {
-    free(handler->data);
-    free(handler);
-    return NULL;
-  }
-  handler->handler.open = proton_engine_resource_open;
-  handler->handler.get_response_headers =
-      proton_engine_resource_get_response_headers;
-  handler->handler.read = proton_engine_resource_read;
-  handler->handler.cancel = proton_engine_resource_cancel;
-  return &handler->handler;
-}
-
-static cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
-    cef_scheme_handler_factory_t *self,
-    cef_browser_t *browser,
-    cef_frame_t *frame,
-    const cef_string_t *scheme_name,
-    cef_request_t *request) {
-  (void)self;
-  (void)frame;
-  (void)scheme_name;
-  /* Runs on CEF's IO thread while the main thread may replace or free the
-     window's html state. Snapshot everything needed under the window lock,
-     then do the (possibly disk-bound) work unlocked. */
+void proton_engine_window_lock(void) {
   pthread_mutex_lock(&g_window_lock);
-  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
-  char *html_url = NULL;
-  char *html_copy = NULL;
-  size_t html_len = 0;
-  if (window != NULL) {
-    if (window->html_url != NULL) {
-      html_url = proton_engine_strdup(window->html_url);
-    }
-    if (window->html != NULL) {
-      html_copy = (char *)malloc(window->html_len + 1);
-      if (html_copy != NULL) {
-        memcpy(html_copy, window->html, window->html_len);
-        html_copy[window->html_len] = '\0';
-        html_len = window->html_len;
-      }
-    }
-  }
+}
+
+void proton_engine_window_unlock(void) {
   pthread_mutex_unlock(&g_window_lock);
-  if (window == NULL) {
-    return NULL;
+}
+
+proton_engine_window_t *proton_engine_window_lookup_browser(
+    cef_browser_t *browser) {
+  return proton_engine_window_from_browser(browser);
+}
+
+const char *proton_engine_window_html_url(proton_engine_window_t *window) {
+  return window != NULL ? window->html_url : NULL;
+}
+
+const char *proton_engine_window_html(proton_engine_window_t *window,
+                                      size_t *len) {
+  if (len != NULL) {
+    *len = window != NULL ? window->html_len : 0;
   }
-  char *url = proton_engine_request_url(request);
-  cef_resource_handler_t *handler = NULL;
-  if (url != NULL && html_url != NULL && strcmp(html_url, url) == 0 &&
-      html_copy != NULL) {
-    handler = proton_engine_resource_handler_create(html_copy, html_len,
-                                                    "text/html");
-  } else {
-    char *asset_path = proton_engine_url_to_asset_path(url);
-    if (asset_path != NULL) {
-      char *html_path = proton_engine_url_to_asset_path(html_url);
-      char *asset_root = proton_engine_asset_path_dirname(html_path);
-      if (proton_engine_asset_path_is_under_root(asset_path, asset_root)) {
-        char *data = NULL;
-        size_t data_len = 0;
-        if (proton_engine_read_asset_file(asset_path, &data, &data_len)) {
-          handler = proton_engine_resource_handler_create(
-              data, data_len, proton_engine_asset_mime_type(asset_path));
-          free(data);
-        }
-      }
-      free(asset_root);
-      free(html_path);
-      free(asset_path);
-    }
+  return window != NULL ? window->html : NULL;
+}
+
+const char *proton_engine_runtime_asset_root(proton_engine_window_t *window) {
+  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
+  if (runtime == NULL && g_windows != NULL) {
+    runtime = g_windows->runtime;
   }
-  free(url);
-  free(html_url);
-  free(html_copy);
-  return handler;
+  return runtime != NULL ? runtime->asset_root : NULL;
 }
 
 static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
     cef_scheme_registrar_t *registrar) {
   (void)self;
-  if (registrar == NULL) {
-    return;
-  }
-  cef_string_t scheme = {0};
-  proton_engine_set_string(&scheme, "proton");
-  // Give proton:// documents a real origin and allow CORS-mode same-origin
-  // resources such as ES modules to reach the custom scheme handler.
-  registrar->add_custom_scheme(
-      registrar, &scheme,
-      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
-          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
-  cef_string_clear(&scheme);
+  proton_engine_register_app_custom_schemes(registrar);
 }
 
 static int proton_engine_process_type_is_browser(
@@ -1922,16 +1753,6 @@ static void proton_engine_init_handlers(void) {
       sizeof(g_scheme_factory.factory), &g_scheme_factory.refs);
   g_scheme_factory.factory.create = proton_engine_scheme_create;
   initialized = 1;
-}
-
-static int proton_engine_register_scheme_factory(void) {
-  cef_string_t scheme = {0};
-  proton_engine_set_string(&scheme, "proton");
-  int ok =
-      cef_register_scheme_handler_factory(&scheme, NULL,
-                                          &g_scheme_factory.factory);
-  cef_string_clear(&scheme);
-  return ok;
 }
 
 static int proton_engine_send_bridge_response_to_frame(
@@ -3915,7 +3736,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
                           config.remote_debugging_port);
 
   g_proton_cef_runtime_active = 1;
-  if (!proton_engine_register_scheme_factory()) {
+  if (!proton_engine_register_app_scheme_factory(&g_scheme_factory.factory)) {
     proton_engine_cef_shutdown();
     proton_engine_close_wake_pipe(runtime);
     if (runtime->bridge_lock_initialized) {
@@ -4063,6 +3884,7 @@ static int32_t proton_engine_finish_managed_runtime_destroy(
   }
   g_proton_cef_runtime_active = 0;
   proton_engine_debug_log("managed_runtime_destroy_complete");
+  free(runtime->asset_root);
   free(runtime);
   return PROTON_OK;
 }
@@ -4148,6 +3970,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   g_proton_cef_runtime_active = 0;
   proton_engine_debug_log("runtime_destroy_done");
+  free(runtime->asset_root);
   free(runtime);
   return PROTON_OK;
 }
@@ -5414,6 +5237,76 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+/* Installs `html` as the document served for `document_url` and, when an
+   asset root is supplied, binds that root to the runtime's application
+   origin. The document is not handed to CEF inline: the scheme factory reads
+   it back out of the window when the navigation asks for it, which is what
+   lets relative URLs resolve against the same origin. */
+static int32_t proton_engine_window_load_document(
+    proton_engine_window_t *window, const char *html,
+    const char *document_url, const char *asset_root, char *error,
+    size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (html == NULL) {
+    html = "";
+  }
+  const char *effective_document_url =
+      document_url != NULL && document_url[0] != '\0'
+          ? document_url
+          : PROTON_ENGINE_APP_URL_PREFIX;
+  if (!proton_engine_url_is_proton(effective_document_url)) {
+    proton_engine_set_message(
+        error, error_len,
+        "document_url must use a Proton application origin");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  char *url_copy = proton_engine_strdup(effective_document_url);
+  char *html_copy = proton_engine_strdup(html);
+  char *root_copy = asset_root != NULL ? realpath(asset_root, NULL) : NULL;
+  if (url_copy == NULL || html_copy == NULL ||
+      (asset_root != NULL && root_copy == NULL)) {
+    free(url_copy);
+    free(html_copy);
+    free(root_copy);
+    proton_engine_set_message(error, error_len,
+                              "failed to prepare html document");
+    return PROTON_ERR_ENGINE;
+  }
+  pthread_mutex_lock(&g_window_lock);
+  /* One origin cannot serve two roots: the factory has only the request URL
+     to go on, so a second root would make resolution ambiguous. */
+  if (root_copy != NULL && window->runtime->asset_root != NULL &&
+      strcmp(root_copy, window->runtime->asset_root) != 0) {
+    pthread_mutex_unlock(&g_window_lock);
+    free(url_copy);
+    free(html_copy);
+    free(root_copy);
+    proton_engine_set_message(
+        error, error_len,
+        "the Proton application origin already has a different asset root");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (root_copy != NULL && window->runtime->asset_root == NULL) {
+    window->runtime->asset_root = root_copy;
+    root_copy = NULL;
+  }
+  free(window->html_url);
+  free(window->html);
+  window->html_url = url_copy;
+  window->html = html_copy;
+  window->html_len = strlen(html_copy);
+  pthread_mutex_unlock(&g_window_lock);
+  free(root_copy);
+  proton_engine_debug_log("load_document browser=%d document_url=%s bytes=%llu",
+                          window->browser_id, effective_document_url,
+                          (unsigned long long)window->html_len);
+  return proton_engine_window_load_url(window, effective_document_url, error,
+                                       error_len);
+}
+
 int32_t proton_engine_window_load_html(proton_engine_window_t *window,
                                        const char *html,
                                        const char *base_url,
@@ -5431,38 +5324,8 @@ int32_t proton_engine_window_load_html(proton_engine_window_t *window,
     };
     return proton_engine_dispatch_ui_call(&call);
   }
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_url_is_proton(base_url)) {
-    proton_engine_set_message(error, error_len,
-                              "base_url must use the proton:// scheme");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (html == NULL) {
-    html = "";
-  }
-  char *copy = proton_engine_strdup(html);
-  char *url_copy = proton_engine_strdup(base_url);
-  if (copy == NULL || url_copy == NULL) {
-    free(copy);
-    free(url_copy);
-    proton_engine_set_message(error, error_len, "failed to copy html");
-    return PROTON_ERR_ENGINE;
-  }
-  pthread_mutex_lock(&g_window_lock);
-  free(window->html_url);
-  free(window->html);
-  window->html_url = url_copy;
-  window->html = copy;
-  window->html_len = strlen(copy);
-  pthread_mutex_unlock(&g_window_lock);
-  int32_t status = proton_engine_window_load_url(
-      window, base_url != NULL && base_url[0] != '\0' ? base_url
-                                                      : "proton://app/",
-      error, error_len);
-  return status;
+  return proton_engine_window_load_document(window, html, base_url, NULL,
+                                            error, error_len);
 }
 
 int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
@@ -5471,14 +5334,25 @@ int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
                                         const char *asset_root,
                                         char *error,
                                         size_t error_len) {
-  (void)window;
-  (void)html;
-  (void)document_url;
-  (void)asset_root;
-  /* TODO: Port the host-scoped HTTPS asset origin from the macOS engine. */
-  proton_engine_set_message(error, error_len,
-                            "asset documents are not supported on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_WINDOW_LOAD_ASSET,
+        .window = window,
+        .text = html,
+        .second_text = document_url,
+        .third_text = asset_root,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (asset_root == NULL || asset_root[0] == '\0') {
+    proton_engine_set_message(error, error_len, "asset_root is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  return proton_engine_window_load_document(window, html, document_url,
+                                            asset_root, error, error_len);
 }
 
 int32_t proton_engine_window_eval(proton_engine_window_t *window,

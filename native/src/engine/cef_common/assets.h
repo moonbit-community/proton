@@ -105,45 +105,6 @@ static int proton_engine_asset_path_is_under_root(const char *path,
          proton_engine_asset_path_separator(path[root_len]);
 }
 
-static char *proton_engine_url_to_asset_path(const char *url) {
-  static const char prefix[] = "proton://app/";
-  if (url == NULL || strncmp(url, prefix, sizeof(prefix) - 1) != 0) {
-    return NULL;
-  }
-  const char *path = url + sizeof(prefix) - 1;
-  size_t path_len = strcspn(path, "?#");
-  if (path_len == 0) {
-    return NULL;
-  }
-  char *decoded = proton_engine_url_decode_path(path, path_len);
-  if (decoded == NULL || proton_engine_url_path_has_unsafe_segment(decoded)) {
-    free(decoded);
-    return NULL;
-  }
-  return decoded;
-}
-
-static char *proton_engine_asset_path_dirname(const char *path) {
-  if (path == NULL) {
-    return NULL;
-  }
-  const char *slash = strrchr(path, '/');
-  const char *backslash = strrchr(path, '\\');
-  const char *separator = slash;
-  if (backslash != NULL && (separator == NULL || backslash > separator)) {
-    separator = backslash;
-  }
-  size_t len =
-      separator != NULL ? (size_t)(separator - path + 1) : (size_t)0;
-  char *directory = (char *)malloc(len + 1);
-  if (directory == NULL) {
-    return NULL;
-  }
-  memcpy(directory, path, len);
-  directory[len] = '\0';
-  return directory;
-}
-
 static char *proton_engine_url_to_rooted_asset_path(const char *url,
                                                     const char *asset_root) {
   static const char prefix[] = PROTON_ENGINE_APP_URL_PREFIX;

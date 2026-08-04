@@ -34,7 +34,6 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/proton_engine_cef_mac.m
       src/engine/cef_mac/dialog.m
       src/engine/cef_mac/menu.m
-      src/engine/cef_mac/scheme.m
     )
   elseif(UNIX)
     set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
@@ -49,6 +48,7 @@ if(PROTON_WITH_ENGINE)
     src/engine/cef_common/browser_session.c
     src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_renderer.c
+    src/engine/cef_common/scheme.c
   )
 endif()
 

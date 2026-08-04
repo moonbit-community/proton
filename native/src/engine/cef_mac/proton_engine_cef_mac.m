@@ -6,8 +6,9 @@
 #include "launch_input.h"
 #include "platform_events.h"
 #include "menu.h"
-#include "scheme.h"
 #include "window.h"
+
+#include "../cef_common/scheme.h"
 
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"
@@ -1271,18 +1272,7 @@ static void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
     cef_scheme_registrar_t *registrar) {
   (void)self;
-  if (registrar == NULL) {
-    return;
-  }
-  cef_string_t scheme = {0};
-  proton_engine_set_string(&scheme, "proton");
-  // Give proton:// documents a real origin and allow CORS-mode same-origin
-  // resources such as @font-face to reach the custom scheme handler.
-  registrar->add_custom_scheme(
-      registrar, &scheme,
-      CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_SECURE |
-          CEF_SCHEME_OPTION_CORS_ENABLED | CEF_SCHEME_OPTION_FETCH_ENABLED);
-  cef_string_clear(&scheme);
+  proton_engine_register_app_custom_schemes(registrar);
 }
 
 static void proton_engine_on_before_command_line_processing(
@@ -1836,27 +1826,6 @@ static void proton_engine_init_handlers(void) {
   proton_engine_platform_event_set_signal_callback(
       proton_engine_signal_wait_source);
   initialized = 1;
-}
-
-static int proton_engine_register_scheme_factory(void) {
-  cef_string_t scheme = {0};
-  proton_engine_set_string(&scheme, "proton");
-  int ok =
-      cef_register_scheme_handler_factory(&scheme, NULL,
-                                          &g_scheme_factory.factory);
-  cef_string_clear(&scheme);
-  if (!ok) {
-    return 0;
-  }
-  cef_string_t https_scheme = {0};
-  cef_string_t app_domain = {0};
-  proton_engine_set_string(&https_scheme, PROTON_ENGINE_APP_SCHEME);
-  proton_engine_set_string(&app_domain, PROTON_ENGINE_APP_DOMAIN);
-  ok = cef_register_scheme_handler_factory(
-      &https_scheme, &app_domain, &g_scheme_factory.factory);
-  cef_string_clear(&https_scheme);
-  cef_string_clear(&app_domain);
-  return ok;
 }
 
 static int proton_engine_send_bridge_response_to_frame(
@@ -3074,7 +3043,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   }
   g_proton_cef_initialized = 1;
   g_proton_cef_runtime_active = 1;
-  if (!proton_engine_register_scheme_factory()) {
+  if (!proton_engine_register_app_scheme_factory(&g_scheme_factory.factory)) {
     proton_engine_cef_shutdown();
     proton_engine_reset_external_message_pump();
     g_proton_cef_runtime_active = 0;
