@@ -1275,7 +1275,7 @@ test "config API overrides manifest fields and keeps base dir" {
   let manifest = resolved.manifest
   assert_eq(
     resolved.permission_base_path,
-    facade_path_parent(@mbpath.Path(config_path).resolve().to_string()),
+    facade_path_parent(resolve_entry_path(config_path).to_string()),
   )
   assert_eq(manifest.window.title, "Code Title")
   assert_eq(manifest.window.width, 640)
