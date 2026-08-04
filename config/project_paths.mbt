@@ -6,14 +6,49 @@ fn config_base_dir(path : String) -> String {
 }
 
 ///|
-fn rebase_project_path(path : String, base_dir : String) -> String {
-  let candidate : @mbpath.Path = path
-  if candidate.is_absolute() {
-    path
+fn rebase_project_path(
+  path : String,
+  base_dir : String,
+  label : String,
+) -> String raise ProjectConfigError {
+  validate_relative_project_path(path, label)
+  let base : @mbpath.Path = base_dir
+  base.join(path).normalize().to_string()
+}
+
+///|
+fn validate_relative_project_path(
+  path : String,
+  label : String,
+) -> Unit raise ProjectConfigError {
+  let field = if label.has_prefix("moon.proton.") {
+    label
   } else {
-    let base : @mbpath.Path = base_dir
-    base.join(path).normalize().to_string()
+    "moon.proton." + label
   }
+  guard !project_path_has_root(path) else {
+    raise InvalidField(
+      path=field,
+      expectation="must be a relative path; absolute paths and drive prefixes are not allowed",
+    )
+  }
+  guard !path.contains("\\") else {
+    raise InvalidField(
+      path=field,
+      expectation="must use '/' separators; backslashes are not allowed in portable project paths",
+    )
+  }
+}
+
+///|
+fn project_path_has_root(path : String) -> Bool {
+  if path.has_prefix("/") || path.has_prefix("\\") {
+    return true
+  }
+  guard path.length() >= 2 else { return false }
+  let drive = path[0]
+  ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) &&
+  path[1] == ':'
 }
 
 ///|

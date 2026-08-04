@@ -306,8 +306,9 @@ entry = {
 
 `backend` selects the MoonBit package that runs the Proton runtime. `entry`
 selects what the main window loads: `kind` is `"html"`, `"url"`, `"file"`, or
-`"asset"`, and `file`/`asset` values resolve relative to the config file. The
-`frontend` block drives development and build orchestration: `path` is the
+`"asset"`. Project file paths must be relative and use `/` separators;
+`file`/`asset` values resolve relative to the config file. The `frontend` block
+drives development and build orchestration: `path` is the
 frontend working directory, `before_dev`/`before_build` run there, `dev_url`
 is the development server to wait for, and `dist` is the build output to
 validate (resolved relative to `path`).

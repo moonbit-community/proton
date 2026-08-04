@@ -256,7 +256,7 @@ fn build_project_entry_from_parts(
 ) -> ProjectEntry raise ProjectConfigError {
   let normalized_kind = normalize_keyword(kind)
   let rebased_value = match normalized_kind {
-    "file" | "asset" => rebase_project_path(value, base_dir)
+    "file" | "asset" => rebase_project_path(value, base_dir, label + ".value")
     _ => value
   }
   match normalized_kind {
@@ -513,6 +513,7 @@ fn optional_project_backend(
           rebase_project_path(
             required_string_config_field(backend_fields, "path", "backend.path"),
             base_dir,
+            "backend.path",
           ),
           required_string_config_field(
             backend_fields, "package", "backend.package",
@@ -589,10 +590,24 @@ fn optional_project_bundle(
       )
       let icon = optional_string_array_config_field(
         bundle_fields, "icon", "bundle.icon",
-      ).map(fn(path) { rebase_project_path(path, base_dir) })
+      )
+      for index, path in icon {
+        icon[index] = rebase_project_path(
+          path,
+          base_dir,
+          "bundle.icon[" + index.to_string() + "]",
+        )
+      }
       let resources = optional_string_array_config_field(
         bundle_fields, "resources", "bundle.resources",
-      ).map(fn(path) { rebase_project_path(path, base_dir) })
+      )
+      for index, path in resources {
+        resources[index] = rebase_project_path(
+          path,
+          base_dir,
+          "bundle.resources[" + index.to_string() + "]",
+        )
+      }
       let url_schemes = optional_string_array_config_field(
         bundle_fields, "url_schemes", "bundle.url_schemes",
       )
@@ -602,6 +617,7 @@ fn optional_project_bundle(
           "target/proton-dist",
         ),
         base_dir,
+        "bundle.output",
       )
       validate_project_bundle_targets(targets)
       validate_url_schemes(url_schemes)
@@ -934,7 +950,7 @@ fn optional_rebased_string_config_field(
 ) -> String? raise ProjectConfigError {
   match optional_string_config_field(fields, key, label) {
     None => None
-    Some(path) => Some(rebase_project_path(path, base_dir))
+    Some(path) => Some(rebase_project_path(path, base_dir, label))
   }
 }
 
