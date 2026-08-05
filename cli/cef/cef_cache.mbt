@@ -67,11 +67,13 @@ async fn install_cef_root(
 fn global_cef_cache_dir(platform : ProtonPlatform, name : String) -> String? {
   let root = match @env.get_env_var("PROTON_CEF_CACHE") {
     Some(value) if value.trim().to_owned() != "" => value.trim().to_owned()
-    _ =>
-      match home_directory() {
-        Some(home) => @fsutil.path_join(home, ".proton/cache/cef")
-        None => return None
-      }
+    _ => {
+      guard home_directory() is Some(home) else { return None }
+      @fsutil.path_join(
+        home,
+        @fsutil.path_join(".proton", @fsutil.path_join("cache", "cef")),
+      )
+    }
   }
   Some(@fsutil.path_join(@fsutil.path_join(root, platform.id), name))
 }
