@@ -10,7 +10,7 @@ readme = "README.mbt.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/sys/microphone"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [ "moonbit", "native", "microphone", "audio" ]
 

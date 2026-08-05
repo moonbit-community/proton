@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/ffi"
+
+// Values
+pub fn from_cstr(Bytes) -> String
+
+pub fn from_wstr_lossy(Bytes) -> String
+
+pub fn to_cstr(String) -> Bytes
+
+pub fn to_wstr(String) -> Bytes
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

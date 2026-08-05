@@ -88,4 +88,4 @@ moon run src/examples/disable --target native
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE).
