@@ -72,15 +72,15 @@ static char *mb_bytes_to_c_string(moonbit_bytes_t bytes) {
 
 #ifdef _WIN32
 static void mb_set_windows_error(DWORD code, const char *fallback) {
-  char message[512] = "";
+  wchar_t wide_message[512] = {0};
   DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-  DWORD len = FormatMessageA(
+  DWORD len = FormatMessageW(
     flags,
     NULL,
     code,
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-    message,
-    (DWORD)sizeof(message),
+    wide_message,
+    (DWORD)(sizeof(wide_message) / sizeof(wide_message[0])),
     NULL
   );
   if (len == 0) {
@@ -89,9 +89,16 @@ static void mb_set_windows_error(DWORD code, const char *fallback) {
   }
 
   while (len > 0 &&
-         (message[len - 1] == '\r' || message[len - 1] == '\n' || message[len - 1] == ' ')) {
-    message[len - 1] = '\0';
+         (wide_message[len - 1] == L'\r' || wide_message[len - 1] == L'\n' ||
+          wide_message[len - 1] == L' ')) {
+    wide_message[len - 1] = L'\0';
     len--;
+  }
+  char message[1024] = "";
+  if (WideCharToMultiByte(CP_UTF8, 0, wide_message, -1, message,
+                          (int)sizeof(message), NULL, NULL) <= 0) {
+    mb_set_error((int32_t)code, fallback);
+    return;
   }
   mb_set_error((int32_t)code, message);
 }
