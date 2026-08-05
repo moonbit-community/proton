@@ -29,6 +29,7 @@ extern "C" {
 
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
+typedef int64_t proton_view_id_t;
 typedef int64_t proton_app_instance_id_t;
 typedef int64_t proton_update_stage_id_t;
 typedef void (*proton_app_entry_t)(void);
@@ -272,6 +273,32 @@ PROTON_API int32_t proton_update_install(const char *archive,
    Success means the request was accepted, not that the application is running:
    the platform decides that asynchronously and does not report back. */
 PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len);
+/* Web contents views: child web views hosted inside a window's content area,
+   each backed by its own browser instance. Bounds use a top-left origin in
+   the window's content coordinate space, matching the Electron
+   WebContentsView model. Requires the "web_contents_view" runtime feature. */
+PROTON_API int32_t proton_view_create_json(proton_window_id_t window,
+                                           const char *config_json,
+                                           proton_view_id_t *out_view);
+PROTON_API int32_t proton_view_destroy(proton_view_id_t view);
+PROTON_API int32_t proton_view_set_bounds(proton_view_id_t view, int32_t x,
+                                          int32_t y, int32_t width,
+                                          int32_t height);
+PROTON_API int32_t proton_view_set_visible(proton_view_id_t view,
+                                           int32_t visible);
+PROTON_API int32_t proton_view_set_z_order(proton_view_id_t view,
+                                           int32_t z_order);
+PROTON_API int32_t proton_view_load_url(proton_view_id_t view,
+                                        const char *url);
+PROTON_API int32_t proton_view_load_html(proton_view_id_t view,
+                                         const char *html,
+                                         const char *base_url);
+PROTON_API int32_t proton_view_eval(proton_view_id_t view, const char *script);
+PROTON_API int32_t proton_view_browser_command_json(
+    proton_view_id_t view, const char *command_json);
+PROTON_API int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
+                                          int32_t buffer_len,
+                                          int32_t *out_required_len);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);
