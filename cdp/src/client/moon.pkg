@@ -1,0 +1,27 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/async/http",
+  "moonbitlang/async/process",
+  "moonbitlang/async/websocket",
+  "justjavac/cdp/protocol",
+}
+
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/async",
+  "moonbitlang/async/http",
+  "moonbitlang/async/socket",
+  "moonbitlang/async/websocket",
+  "moonbitlang/core/env",
+  "justjavac/cdp/protocol",
+  "justjavac/cdp/protocol/typed",
+} for "test"
+
+import {
+  "moonbitlang/async/socket",
+} for "wbtest"
+
+supported_targets = "+native"
