@@ -398,14 +398,18 @@ async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
-      run_pending_lifecycle_probe_once(root, timeout)
+      run_e2e_operation_with_timeout(
+        timeout,
+        "41_app_commands pending lifecycle",
+        () => run_pending_lifecycle_probe_once(root, timeout),
+      )
       true
     } catch {
       error => {
-        if attempt == 1 || !retryable_startup_error(error) {
+        if attempt == 1 || !retryable_scenario_error(error) {
           raise error
         }
-        println("MoonBit lifecycle startup attempt failed; retrying once")
+        println("MoonBit pending lifecycle attempt failed; retrying once")
         false
       }
     }
@@ -486,14 +490,18 @@ async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
-      run_event_lifecycle_probe_once(root, timeout)
+      run_e2e_operation_with_timeout(
+        timeout,
+        "40_event_broadcast event lifecycle",
+        () => run_event_lifecycle_probe_once(root, timeout),
+      )
       true
     } catch {
       error => {
-        if attempt == 1 || !retryable_startup_error(error) {
+        if attempt == 1 || !retryable_scenario_error(error) {
           raise error
         }
-        println("MoonBit event lifecycle startup attempt failed; retrying once")
+        println("MoonBit event lifecycle attempt failed; retrying once")
         false
       }
     }
@@ -523,9 +531,15 @@ async fn connect_spawned_page(
       None => ()
     }
     let page = Some(
-      @client.connect_cdp_page_target_with_timeout(
-        cdp_target_from(target),
-        timeout_ms=cdp_start_poll_timeout_ms,
+      run_e2e_operation_with_timeout(
+        cdp_start_poll_timeout_ms,
+        "CDP page connection probe",
+        () => {
+          @client.connect_cdp_page_target_with_timeout(
+            cdp_target_from(target),
+            timeout_ms=cdp_start_poll_timeout_ms,
+          )
+        },
       ),
     ) catch {
       _ => None

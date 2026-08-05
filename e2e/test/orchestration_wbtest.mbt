@@ -11,6 +11,23 @@ let app_child_test_selector = "scenario_app_wbtest.mbt:0-1"
 let scenario_run_mutex : @async.Mutex = @async.Mutex::Mutex()
 
 ///|
+priv suberror E2eOperationError {
+  TimedOut(description~ : String, timeout_ms~ : Int)
+} derive(Debug)
+
+///|
+async fn[X] run_e2e_operation_with_timeout(
+  timeout : Int,
+  description : String,
+  operation : async () -> X,
+) -> X {
+  match @async.with_timeout_opt(timeout, operation) {
+    Some(result) => result
+    None => raise E2eOperationError::TimedOut(description~, timeout_ms=timeout)
+  }
+}
+
+///|
 struct SpawnedScenarioApp {
   process : @process.Process
   output_path : String
@@ -385,9 +402,15 @@ async fn wait_for_spawned_app_cdp(
     }
     let endpoint_ready = try {
       ignore(
-        @client.wait_for_browser_endpoint(
-          endpoint,
-          timeout_ms=cdp_start_poll_timeout_ms,
+        run_e2e_operation_with_timeout(
+          cdp_start_poll_timeout_ms,
+          "CDP browser endpoint probe",
+          () => {
+            @client.wait_for_browser_endpoint(
+              endpoint,
+              timeout_ms=cdp_start_poll_timeout_ms,
+            )
+          },
         ),
       )
       true
@@ -396,10 +419,14 @@ async fn wait_for_spawned_app_cdp(
     }
     if endpoint_ready {
       browser_ready = true
-      let page_ready = try {
-        let targets = @client.discover_targets(cdp_target_from(endpoint))
-        targets.any(info => info.target_type == "page")
-      } catch {
+      let page_ready = run_e2e_operation_with_timeout(
+        cdp_start_poll_timeout_ms,
+        "CDP page discovery probe",
+        () => {
+          let targets = @client.discover_targets(cdp_target_from(endpoint))
+          targets.any(info => info.target_type == "page")
+        },
+      ) catch {
         _ => false
       }
       if page_ready {
@@ -624,7 +651,9 @@ async fn run_scenario_probe_with_retry(
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
-      run_scenario_probe_once(root, name, timeout)
+      run_e2e_operation_with_timeout(timeout, "E2E scenario " + name, () => {
+        run_scenario_probe_once(root, name, timeout)
+      })
       true
     } catch {
       error => {
@@ -646,6 +675,7 @@ async fn run_scenario_probe_with_retry(
 ///|
 fn retryable_scenario_error(error : Error) -> Bool {
   match error {
+    E2eOperationError::TimedOut(..) => true
     @io.ReaderClosed => true
     _ => retryable_startup_error(error)
   }

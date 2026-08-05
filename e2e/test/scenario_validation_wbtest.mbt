@@ -45,6 +45,14 @@ test "E2E paths resolve backslash relative runtime directories" {
 
 ///|
 test "scenario retries only startup and closed CDP transports" {
+  assert_true(
+    retryable_scenario_error(
+      E2eOperationError::TimedOut(
+        description="E2E scenario stalled",
+        timeout_ms=60000,
+      ),
+    ),
+  )
   assert_true(retryable_scenario_error(@io.ReaderClosed))
   assert_true(
     retryable_scenario_error(
@@ -76,4 +84,70 @@ test "scenario child command is platform-safe" {
     assert_true(args.contains(root))
     assert_true(args.contains(join_path(root, "target/proton-e2e-app-child")))
   }
+}
+
+///|
+async test "E2E operation timeout cancels stalled work" {
+  let cancelled = Ref(false)
+  let outcome = try {
+    run_e2e_operation_with_timeout(20, "stalled probe", () => {
+      defer {
+        cancelled.val = true
+      }
+      @async.sleep(10000)
+    })
+    None
+  } catch {
+    error => Some(error)
+  }
+  assert_true(cancelled.val)
+  match outcome {
+    Some(E2eOperationError::TimedOut(description~, timeout_ms~)) => {
+      assert_eq(description, "stalled probe")
+      assert_eq(timeout_ms, 20)
+    }
+    Some(error) =>
+      fail("unexpected timeout error: " + @debug.render(Repr(error)))
+    None => fail("expected stalled E2E operation to time out")
+  }
+}
+
+///|
+async test "E2E timeout interrupts stalled CDP discovery HTTP" {
+  @async.with_task_group(group => {
+    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+    defer server.close()
+    let accepted = Ref(false)
+    group.spawn_bg(no_wait=true, () => {
+      let (conn, _) = server.accept()
+      defer conn.close()
+      accepted.val = true
+      @async.sleep(10000)
+    })
+    let description = "stalled CDP discovery"
+    let timeout = 200
+    let outcome = try {
+      ignore(
+        run_e2e_operation_with_timeout(timeout, description, () => {
+          @client.wait_for_browser_endpoint(
+            "http://127.0.0.1:" + server.addr.port().to_string(),
+            timeout_ms=10000,
+          )
+        }),
+      )
+      None
+    } catch {
+      error => Some(error)
+    }
+    assert_true(accepted.val)
+    match outcome {
+      Some(E2eOperationError::TimedOut(description=actual, timeout_ms=elapsed)) => {
+        assert_eq(actual, description)
+        assert_eq(elapsed, timeout)
+      }
+      Some(error) =>
+        fail("unexpected discovery error: " + @debug.render(Repr(error)))
+      None => fail("expected stalled CDP discovery to time out")
+    }
+  })
 }

@@ -464,9 +464,17 @@ async fn run_dev_extension_scenario_once(root : String, timeout : Int) -> Unit {
   }
   ensure_dev_extension_frontend(root, timeout)
   let frontend_port = choose_cdp_port()
-  run_dev_extension_dev_probe_once(root, frontend_port, timeout)
+  run_e2e_operation_with_timeout(
+    timeout,
+    "47_dev_extension_js development probe",
+    () => run_dev_extension_dev_probe_once(root, frontend_port, timeout),
+  )
   build_dev_extension_frontend(root, timeout)
-  run_dev_extension_production_probe_once(root, timeout)
+  run_e2e_operation_with_timeout(
+    timeout,
+    "47_dev_extension_js production probe",
+    () => run_dev_extension_production_probe_once(root, timeout),
+  )
 }
 
 ///|

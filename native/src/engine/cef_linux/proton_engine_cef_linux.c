@@ -4699,7 +4699,6 @@ static int32_t proton_engine_window_create_browser(
     proton_engine_set_message(error, error_len, "browser creation failed");
     return PROTON_ERR_ENGINE;
   }
-  window->browser->base.add_ref((cef_base_ref_counted_t *)window->browser);
   window->browser_id = window->browser->get_identifier(window->browser);
   proton_engine_window_list_add(window);
   proton_engine_debug_log("create_browser id=%d initial_url=%s size=%dx%d",
@@ -6310,7 +6309,6 @@ static int32_t proton_engine_view_create_browser(
     proton_engine_set_message(error, error_len, "view browser creation failed");
     return PROTON_ERR_ENGINE;
   }
-  view->browser->base.add_ref((cef_base_ref_counted_t *)view->browser);
   view->browser_id = proton_engine_browser_id(view->browser);
   cef_browser_host_t *host = view->browser->get_host(view->browser);
   if (host != NULL) {
