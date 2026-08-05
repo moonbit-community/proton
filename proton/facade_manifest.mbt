@@ -31,6 +31,7 @@ fn App::new(
     command_extensions: Map([]),
     command_registrars: [],
     application_lifecycle_hooks: [],
+    planned_views: [],
     launch_input_handlers: [],
     window_event_handlers: [],
     view_event_handlers: [],

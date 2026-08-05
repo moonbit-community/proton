@@ -554,6 +554,27 @@ fn RuntimeSession::create_window(
   load_entry_after_create(created_window, plan.entry) catch {
     error => raise EntryLoadError(error)
   }
+  for view_plan in definition.views {
+    let (view_id, view_config) = view_plan
+    ignore(
+      self.add_window_view(
+        running.id,
+        created_window.id(),
+        view_id,
+        view_config,
+      ) catch {
+        error =>
+          raise native_run_error(
+            "add view " + view_id + " to " + plan.id,
+            match error {
+              OperationFailed(error~, ..) => error
+              other =>
+                @native.NativeError::InvalidArgument(message=other.message())
+            },
+          )
+      },
+    )
+  }
   running
 }
 

@@ -21,6 +21,7 @@ struct App {
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
+  planned_views : Array[(String, @native.ViewConfig)]
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -117,6 +118,7 @@ priv struct PreparedWindow {
   bridge : @native.BridgeConfig?
   permissions : WindowPermissionPolicy
   browser_policy : @native.BrowserPolicy
+  views : Array[(String, @native.ViewConfig)]
 }
 
 ///|

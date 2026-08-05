@@ -175,6 +175,7 @@ pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
+pub fn App::with_view(Self, String, @native.ViewConfig) -> Self
 
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]

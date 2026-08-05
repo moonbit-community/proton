@@ -82,6 +82,8 @@ moon -C examples run 01_run --target native
 - `52_web_contents_view`: Codex-style built-in browser: an asset-loaded
   sidebar host page drives an embedded web contents view through a command
   extension, with view events keeping the sidebar in sync.
+- `53_view_minimal`: the minimal declarative web contents view example:
+  `with_view` plus `@proton.view`, no lifecycle hooks required.
 
 All runnable examples should import `justjavac/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle

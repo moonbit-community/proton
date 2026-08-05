@@ -154,6 +154,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     command_extensions: Map([]),
     command_registrars: [],
     application_lifecycle_hooks: [],
+    planned_views: [],
     launch_input_handlers: [],
     window_event_handlers: [],
     view_event_handlers: [],
@@ -332,6 +333,33 @@ pub fn App::on_window_event(
   handler : async (WindowHandle, WindowEvent) -> Unit noraise,
 ) -> App {
   self.window_event_handlers.push(handler)
+  self
+}
+
+///|
+/// Attaches a web contents view to the primary window at startup, the
+/// declarative counterpart of `WindowHandle::add_view`: the view is created
+/// with the window and can later be found through `WindowHandle::view(id)`
+/// or observed through `App::on_view_event`. Use the imperative
+/// `WindowHandle::add_view` for views whose lifetime is dynamic.
+pub fn App::with_view(
+  self : App,
+  id : String,
+  config : @native.ViewConfig,
+) -> App {
+  if id.trim().is_empty() {
+    self.validation_errors.push(
+      InvalidSetting(name="views.id", message="must not be empty"),
+    )
+    return self
+  }
+  if self.planned_views.any(view => view.0 == id) {
+    self.validation_errors.push(
+      InvalidSetting(name="views.id", message="duplicate view id: " + id),
+    )
+    return self
+  }
+  self.planned_views.push((id, config))
   self
 }
 

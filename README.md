@@ -236,16 +236,24 @@ navigation uses `ViewHandle::load_url`, and `App::on_view_event` reports
 navigations, loading state, titles, and load failures. Engine support is
 reported through the `web_contents_view` runtime feature.
 
+The declarative path attaches a view to the primary window at startup:
+
+```moonbit
+@proton
+.html("App", sidebar, width=1120, height=720)
+.with_view(
+  "browser",
+  @proton.view("https://example.com/", width=832, height=720, x=288),
+)
+.run_or_abort()
+```
+
+Imperative control uses the window handle:
+
 ```moonbit
 let panel = window.add_view(
   "panel",
-  @proton.view(
-    "https://example.com/",
-    width=320,
-    height=240,
-    x=16,
-    y=16,
-  ),
+  @proton.view("https://example.com/", width=320, height=240, x=16, y=16),
 )
 panel.set_bounds(x=16, y=16, width=480, height=320)
 panel.set_z_order(1)

@@ -39,6 +39,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.resolved_headless(),
     app_instance~,
     launch_input_handlers=self.launch_input_handlers,
+    planned_views=self.planned_views,
     window_event_handlers=self.window_event_handlers,
     view_event_handlers=self.view_event_handlers,
     window_close_handler=self.window_close_handler,
@@ -85,6 +86,7 @@ async fn run_manifest(
   bridge_startup_timeout_ms : Int,
   headless : Bool,
   app_instance? : @native.AppInstance? = None,
+  planned_views? : Array[(String, @native.ViewConfig)] = [],
   launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
   window_event_handlers? : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -267,6 +269,11 @@ async fn run_manifest(
         bridge,
         permissions: permission_policies[index],
         browser_policy,
+        views: if plan.id == "main" {
+          planned_views
+        } else {
+          []
+        },
       })
     }
     @async.with_task_group(application_tasks => {

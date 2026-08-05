@@ -1561,3 +1561,18 @@ test "view handle routes operations through its closures" {
     ),
   )
 }
+
+///|
+test "with_view stores declarative views and rejects invalid ids" {
+  let app = html("Test", "<html></html>")
+  inspect(app.planned_views.length(), content="0")
+  let app = app.with_view(
+    "browser",
+    @native.ViewConfig::new(width=320, height=240, initial_url="about:blank"),
+  )
+  inspect(app.planned_views.length(), content="1")
+  let app = app.with_view("browser", @native.ViewConfig::new(width=1, height=1))
+  let app = app.with_view("  ", @native.ViewConfig::new(width=1, height=1))
+  inspect(app.planned_views.length(), content="1")
+  inspect(app.validation_errors.length(), content="2")
+}
