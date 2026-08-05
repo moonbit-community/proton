@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 /* Every engine spells this the same way for a given platform, so the header
    supplies it rather than making each includer define it first. Engines that
    still declare their own keep it -- the definitions agree. */
@@ -225,6 +229,21 @@ static const char *proton_engine_asset_mime_type(const char *path) {
   return "application/octet-stream";
 }
 
+static FILE *proton_engine_asset_fopen_read(const char *path) {
+#ifdef _WIN32
+  /* Asset paths are UTF-8; ANSI fopen() would mangle non-ASCII roots. */
+  wchar_t wide_path[4096];
+  if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide_path,
+                          (int)(sizeof(wide_path) /
+                                sizeof(wide_path[0]))) <= 0) {
+    return NULL;
+  }
+  return _wfopen(wide_path, L"rb");
+#else
+  return fopen(path, "rb");
+#endif
+}
+
 static int proton_engine_read_asset_file(const char *path,
                                          char **out_data,
                                          size_t *out_len) {
@@ -236,7 +255,7 @@ static int proton_engine_read_asset_file(const char *path,
   if (path == NULL || path[0] == '\0') {
     return 0;
   }
-  FILE *file = fopen(path, "rb");
+  FILE *file = proton_engine_asset_fopen_read(path);
   if (file == NULL) {
     return 0;
   }

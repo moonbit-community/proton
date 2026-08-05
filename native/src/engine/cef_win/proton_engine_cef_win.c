@@ -551,12 +551,21 @@ static int CEF_CALLBACK proton_engine_on_media_permission(
 static void proton_engine_log_to_env(const char *env_name,
                                      const char *format,
                                      va_list args) {
-  char path[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
-  DWORD written = GetEnvironmentVariableA(env_name, path, (DWORD)sizeof(path));
-  if (written == 0 || written >= sizeof(path)) {
+  wchar_t wide_env_name[128] = {0};
+  if (MultiByteToWideChar(CP_UTF8, 0, env_name, -1, wide_env_name,
+                          (int)(sizeof(wide_env_name) /
+                                sizeof(wide_env_name[0]))) <= 0) {
     return;
   }
-  FILE *file = fopen(path, "ab");
+  wchar_t wide_path[4096] = {0};
+  DWORD written = GetEnvironmentVariableW(
+      wide_env_name, wide_path,
+      (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
+  if (written == 0 ||
+      written >= sizeof(wide_path) / sizeof(wide_path[0])) {
+    return;
+  }
+  FILE *file = _wfopen(wide_path, L"ab");
   if (file == NULL) {
     return;
   }
@@ -719,14 +728,21 @@ static bool proton_engine_module_dir(char *out, size_t out_len) {
     return false;
   }
   HMODULE module = NULL;
-  if (!GetModuleHandleExA(
+  if (!GetModuleHandleExW(
           GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-          (LPCSTR)&proton_engine_module_dir, &module)) {
+          (LPCWSTR)&proton_engine_module_dir, &module)) {
     return false;
   }
-  DWORD written = GetModuleFileNameA(module, out, (DWORD)out_len);
-  if (written == 0 || written >= out_len) {
+  wchar_t wide_path[4096] = {0};
+  DWORD wide_written = GetModuleFileNameW(
+      module, wide_path, (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
+  if (wide_written == 0 ||
+      wide_written >= sizeof(wide_path) / sizeof(wide_path[0])) {
+    return false;
+  }
+  if (WideCharToMultiByte(CP_UTF8, 0, wide_path, -1, out, (int)out_len,
+                          NULL, NULL) <= 0) {
     return false;
   }
   return proton_engine_path_parent(out);

@@ -397,18 +397,42 @@ static const char *const proton_menu_config_keys[] = {
 };
 
 static bool proton_path_exists(const char *path) {
-  struct stat info;
-  return path != NULL && path[0] != '\0' && stat(path, &info) == 0;
-}
-
-static bool proton_dir_exists(const char *path) {
-  struct stat info;
-  if (path == NULL || path[0] == '\0' || stat(path, &info) != 0) {
+  if (path == NULL || path[0] == '\0') {
     return false;
   }
 #ifdef _WIN32
+  /* Paths are UTF-8; ANSI stat() would mangle non-ASCII locations. */
+  wchar_t wide_path[4096];
+  struct _stat64 info;
+  return MultiByteToWideChar(CP_UTF8, 0, path, -1, wide_path,
+                             (int)(sizeof(wide_path) /
+                                   sizeof(wide_path[0]))) > 0 &&
+         _wstat64(wide_path, &info) == 0;
+#else
+  struct stat info;
+  return stat(path, &info) == 0;
+#endif
+}
+
+static bool proton_dir_exists(const char *path) {
+  if (path == NULL || path[0] == '\0') {
+    return false;
+  }
+#ifdef _WIN32
+  wchar_t wide_path[4096];
+  struct _stat64 info;
+  if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide_path,
+                          (int)(sizeof(wide_path) /
+                                sizeof(wide_path[0]))) <= 0 ||
+      _wstat64(wide_path, &info) != 0) {
+    return false;
+  }
   return (info.st_mode & _S_IFDIR) != 0;
 #else
+  struct stat info;
+  if (stat(path, &info) != 0) {
+    return false;
+  }
   return S_ISDIR(info.st_mode);
 #endif
 }
@@ -471,14 +495,21 @@ static bool proton_module_dir(char *out, size_t out_len) {
     return false;
   }
   HMODULE module = NULL;
-  if (!GetModuleHandleExA(
+  if (!GetModuleHandleExW(
           GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-          (LPCSTR)&proton_module_dir, &module)) {
+          (LPCWSTR)&proton_module_dir, &module)) {
     return false;
   }
-  DWORD written = GetModuleFileNameA(module, out, (DWORD)out_len);
-  if (written == 0 || written >= out_len) {
+  wchar_t wide_path[4096] = {0};
+  DWORD wide_written = GetModuleFileNameW(
+      module, wide_path, (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
+  if (wide_written == 0 ||
+      wide_written >= sizeof(wide_path) / sizeof(wide_path[0])) {
+    return false;
+  }
+  if (WideCharToMultiByte(CP_UTF8, 0, wide_path, -1, out, (int)out_len,
+                          NULL, NULL) <= 0) {
     return false;
   }
   return proton_path_parent(out);

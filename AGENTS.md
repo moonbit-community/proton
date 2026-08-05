@@ -259,6 +259,13 @@ native checks before handing off larger refactors.
 - Keep the C ABI small, C-compatible, and MoonBit-friendly. Export only
   `proton_*` functions, plain integer status codes, fixed-width integer types,
   opaque `Int64` handles, UTF-8 strings, and caller-owned output buffers.
+- Treat every `char*` string as UTF-8 end to end. On Windows, never call the
+  ANSI (`...A`) Win32 variants: they reinterpret text through the process
+  codepage and mangle non-ASCII paths and messages. Call the `...W` variant
+  explicitly (do not rely on the `UNICODE` macro) and convert at the boundary
+  with `MultiByteToWideChar(CP_UTF8, ...)` / `WideCharToMultiByte(CP_UTF8,
+  ...)`. The same rule covers ANSI CRT file calls: use `_wfopen`, `_wstat64`,
+  and `_wremove` instead of `fopen`, `stat`, and `remove` for Windows paths.
 - Do not expose C++ types, CEF structs, Objective-C objects, Win32 handles, or
   owned pointers across the public ABI. Platform details belong behind
   `src/proton_engine.h` and the per-platform native implementation files.

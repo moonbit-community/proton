@@ -35,25 +35,66 @@ static const unsigned char moonbit_tray_test_bmp[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66,
     0xcc, 0xff};
 
+/* Paths crossing this boundary are UTF-8; on Windows the ANSI CRT calls
+   would mangle non-ASCII temp directories, so go through the wide CRT. */
+static FILE *moonbit_tray_test_fopen_write(const char *path) {
+#ifdef _WIN32
+  wchar_t wide_path[1024];
+  if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide_path,
+                          (int)(sizeof(wide_path) /
+                                sizeof(wide_path[0]))) <= 0) {
+    return NULL;
+  }
+  return _wfopen(wide_path, L"wb");
+#else
+  return fopen(path, "wb");
+#endif
+}
+
+static int moonbit_tray_test_remove(const char *path) {
+#ifdef _WIN32
+  wchar_t wide_path[1024];
+  if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide_path,
+                          (int)(sizeof(wide_path) /
+                                sizeof(wide_path[0]))) <= 0) {
+    return 0;
+  }
+  return _wremove(wide_path) == 0;
+#else
+  return remove(path) == 0;
+#endif
+}
+
 static int32_t moonbit_tray_test_icon_path_buffer(
     char *path,
     size_t path_size) {
 #ifdef _WIN32
-  DWORD len;
+  wchar_t wide_temp[1024];
+  DWORD wide_len;
+  int len;
   int written;
+  size_t temp_len;
   if (path_size == 0) {
     return 0;
   }
-  len = GetTempPathA((DWORD)path_size, path);
-  if (len == 0 || len >= path_size) {
+  wide_len = GetTempPathW(
+      (DWORD)(sizeof(wide_temp) / sizeof(wide_temp[0])), wide_temp);
+  if (wide_len == 0 ||
+      wide_len >= sizeof(wide_temp) / sizeof(wide_temp[0])) {
     return 0;
   }
+  len = WideCharToMultiByte(CP_UTF8, 0, wide_temp, -1, path, (int)path_size,
+                            NULL, NULL);
+  if (len <= 1) {
+    return 0;
+  }
+  temp_len = (size_t)(len - 1);
   written = snprintf(
-      path + len,
-      path_size - (size_t)len,
+      path + temp_len,
+      path_size - temp_len,
       "moonbit-tray-test-icon-%lu.bmp",
       (unsigned long)GetCurrentProcessId());
-  return written > 0 && (size_t)written < path_size - (size_t)len;
+  return written > 0 && (size_t)written < path_size - temp_len;
 #else
   const char *tmp = getenv("TMPDIR");
   if (tmp == NULL || tmp[0] == '\0') {
@@ -77,7 +118,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_test_icon_path(void) {
   if (!moonbit_tray_test_icon_path_buffer(path, sizeof(path))) {
     return moonbit_tray_copy_message("");
   }
-  file = fopen(path, "wb");
+  file = moonbit_tray_test_fopen_write(path);
   if (file == NULL) {
     return moonbit_tray_copy_message("");
   }
@@ -87,7 +128,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_test_icon_path(void) {
           sizeof(moonbit_tray_test_bmp),
           file) != sizeof(moonbit_tray_test_bmp)) {
     fclose(file);
-    remove(path);
+    moonbit_tray_test_remove(path);
     return moonbit_tray_copy_message("");
   }
   fclose(file);
@@ -100,6 +141,6 @@ MOONBIT_FFI_EXPORT int32_t moonbit_tray_test_remove_file(
   if (text == NULL || text[0] == '\0') {
     return 0;
   }
-  return remove(text) == 0;
+  return moonbit_tray_test_remove(text);
 }
 

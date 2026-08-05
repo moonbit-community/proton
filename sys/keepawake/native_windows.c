@@ -43,19 +43,41 @@ static void keepawake_set_windows_error(
   const char *prefix
 ) {
   DWORD error_code = GetLastError();
-  char *system_message = NULL;
-  DWORD message_len = FormatMessageA(
+  wchar_t *wide_message = NULL;
+  DWORD message_len = FormatMessageW(
     FORMAT_MESSAGE_ALLOCATE_BUFFER |
       FORMAT_MESSAGE_FROM_SYSTEM |
       FORMAT_MESSAGE_IGNORE_INSERTS,
     NULL,
     error_code,
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-    (LPSTR)&system_message,
+    (LPWSTR)&wide_message,
     0,
     NULL
   );
-  if (message_len == 0 || system_message == NULL) {
+  if (message_len == 0 || wide_message == NULL) {
+    keepawake_set_error(
+      guard,
+      status,
+      "%s (GetLastError=%lu)",
+      prefix,
+      (unsigned long)error_code
+    );
+    return;
+  }
+  char system_message[1024] = "";
+  int converted = WideCharToMultiByte(
+    CP_UTF8,
+    0,
+    wide_message,
+    -1,
+    system_message,
+    (int)sizeof(system_message),
+    NULL,
+    NULL
+  );
+  LocalFree(wide_message);
+  if (converted <= 0) {
     keepawake_set_error(
       guard,
       status,
@@ -72,7 +94,6 @@ static void keepawake_set_windows_error(
     prefix,
     system_message
   );
-  LocalFree(system_message);
 }
 
 static uint32_t keepawake_windows_state_for_scope(int32_t scope) {
