@@ -118,12 +118,33 @@ pub fn ProtonFrontendConfig::path(self : ProtonFrontendConfig) -> String? {
 }
 
 ///|
+/// Signing settings from `bundle.sign` in `moon.proton`.
+struct ProtonSignConfig {
+  binaries : Array[String]
+}
+
+///|
+/// Creates signing settings for packaged resource binaries.
+pub fn ProtonSignConfig::new(
+  binaries? : Array[String] = [],
+) -> ProtonSignConfig {
+  ProtonSignConfig::{ binaries: copy_strings(binaries) }
+}
+
+///|
+/// Returns the project paths whose packaged copies must be signed.
+pub fn ProtonSignConfig::binaries(self : ProtonSignConfig) -> Array[String] {
+  copy_strings(self.binaries)
+}
+
+///|
 /// Bundle input settings from `moon.proton`.
 struct ProtonBundleConfig {
   active : Bool
   targets : Array[String]
   icon : Array[String]
   resources : Array[String]
+  sign : ProtonSignConfig?
   url_schemes : Array[String]
   document_types : Array[@proton_config.ProjectDocumentType]
   output : String
@@ -135,6 +156,7 @@ pub fn ProtonBundleConfig::new(
   targets? : Array[String] = [],
   icon? : Array[String] = [],
   resources? : Array[String] = [],
+  sign? : ProtonSignConfig? = None,
   url_schemes? : Array[String] = [],
   document_types? : Array[@proton_config.ProjectDocumentType] = [],
   output? : String = "target/proton-dist",
@@ -144,6 +166,7 @@ pub fn ProtonBundleConfig::new(
     targets: copy_strings(targets),
     icon: copy_strings(icon),
     resources: copy_strings(resources),
+    sign,
     url_schemes: copy_strings(url_schemes),
     document_types: document_types.copy(),
     output,
@@ -170,6 +193,11 @@ pub fn ProtonBundleConfig::resources(
   self : ProtonBundleConfig,
 ) -> Array[String] {
   copy_strings(self.resources)
+}
+
+///|
+pub fn ProtonBundleConfig::sign(self : ProtonBundleConfig) -> ProtonSignConfig? {
+  self.sign
 }
 
 ///|

@@ -579,7 +579,7 @@ fn optional_project_bundle(
     None => None
     Some(Obj(bundle_fields, _)) => {
       validate_object_fields(bundle_fields, "bundle", [
-        "active", "targets", "icon", "resources", "url_schemes", "document_types",
+        "active", "targets", "icon", "resources", "sign", "url_schemes", "document_types",
         "output",
       ])
       let active = optional_bool_config_field(
@@ -608,6 +608,7 @@ fn optional_project_bundle(
           "bundle.resources[" + index.to_string() + "]",
         )
       }
+      let sign = optional_project_sign(bundle_fields, base_dir)
       let url_schemes = optional_string_array_config_field(
         bundle_fields, "url_schemes", "bundle.url_schemes",
       )
@@ -627,6 +628,7 @@ fn optional_project_bundle(
           targets~,
           icon~,
           resources~,
+          sign~,
           url_schemes~,
           document_types~,
           output~,
@@ -706,6 +708,41 @@ fn optional_project_updater(
     Some(_) =>
       raise InvalidField(
         path="moon.proton.updater",
+        expectation="must be an object",
+      )
+  }
+}
+
+///|
+fn optional_project_sign(
+  fields : Array[ConfigField],
+  base_dir : String,
+) -> ProjectSignConfig? raise ProjectConfigError {
+  match find_config_field(fields, "sign") {
+    None => None
+    Some(Obj(sign_fields, _)) => {
+      validate_object_fields(sign_fields, "bundle.sign", ["binaries"])
+      let binaries = optional_string_array_config_field(
+        sign_fields, "binaries", "bundle.sign.binaries",
+      )
+      for index, path in binaries {
+        if path.contains("*") {
+          raise InvalidField(
+            path="moon.proton.bundle.sign.binaries[" + index.to_string() + "]",
+            expectation="must name one file; glob patterns are not supported",
+          )
+        }
+        binaries[index] = rebase_project_path(
+          path,
+          base_dir,
+          "bundle.sign.binaries[" + index.to_string() + "]",
+        )
+      }
+      Some(ProjectSignConfig::new(binaries~))
+    }
+    Some(_) =>
+      raise InvalidField(
+        path="moon.proton.bundle.sign",
         expectation="must be an object",
       )
   }

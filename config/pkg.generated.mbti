@@ -78,12 +78,13 @@ pub(all) struct ProjectBundleConfig {
   targets : Array[String]
   icon : Array[String]
   resources : Array[String]
+  sign : ProjectSignConfig?
   url_schemes : Array[String]
   document_types : Array[ProjectDocumentType]
   output : String
 } derive(Eq, @debug.Debug)
 pub fn ProjectBundleConfig::active(Self) -> Bool
-pub fn ProjectBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
+pub fn ProjectBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
 pub fn ProjectBundleConfig::output(Self) -> String
 
 pub(all) struct ProjectConfig {
@@ -160,6 +161,12 @@ pub(all) struct ProjectPermissionGrant {
   scope : Json
 } derive(Eq, @debug.Debug)
 pub fn ProjectPermissionGrant::new(String, String, String, scope? : Json) -> Self
+
+pub(all) struct ProjectSignConfig {
+  binaries : Array[String]
+} derive(Eq, @debug.Debug)
+pub fn ProjectSignConfig::binaries(Self) -> Array[String]
+pub fn ProjectSignConfig::new(binaries? : Array[String]) -> Self
 
 pub(all) enum ProjectTitlebarStyle {
   TitlebarDefault

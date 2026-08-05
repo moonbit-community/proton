@@ -54,9 +54,10 @@ pub fn ProtonBundleConfig::active(Self) -> Bool
 pub fn ProtonBundleConfig::document_extensions(Self) -> Array[String]
 pub fn ProtonBundleConfig::document_types(Self) -> Array[@proton_config.ProjectDocumentType]
 pub fn ProtonBundleConfig::icon(Self) -> Array[String]
-pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], url_schemes? : Array[String], document_types? : Array[@proton_config.ProjectDocumentType], output? : String) -> Self
+pub fn ProtonBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], sign? : ProtonSignConfig?, url_schemes? : Array[String], document_types? : Array[@proton_config.ProjectDocumentType], output? : String) -> Self
 pub fn ProtonBundleConfig::output(Self) -> String
 pub fn ProtonBundleConfig::resources(Self) -> Array[String]
+pub fn ProtonBundleConfig::sign(Self) -> ProtonSignConfig?
 pub fn ProtonBundleConfig::targets(Self) -> Array[String]
 pub fn ProtonBundleConfig::url_schemes(Self) -> Array[String]
 
@@ -79,6 +80,10 @@ pub fn ProtonProjectConfig::new(LoadedAppManifest, ProtonAppMetadata, single_ins
 pub fn ProtonProjectConfig::single_instance(Self) -> Bool
 pub fn ProtonProjectConfig::to_summary_json(Self) -> Json
 pub fn ProtonProjectConfig::updater(Self) -> ProtonUpdaterConfig?
+
+type ProtonSignConfig
+pub fn ProtonSignConfig::binaries(Self) -> Array[String]
+pub fn ProtonSignConfig::new(binaries? : Array[String]) -> Self
 
 type ProtonUpdaterConfig
 pub fn ProtonUpdaterConfig::checks_on_launch(Self) -> Bool

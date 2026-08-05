@@ -22,6 +22,7 @@ fn windows_test_plan(
     base_dir: root,
     frontend_dist: Some(@fsutil.resolve_path(root, "frontend/dist")),
     entry_paths: [@fsutil.resolve_path(root, "frontend/dist/index.html")],
+    sign_binaries: [],
     resources: [@fsutil.resolve_path(root, "bundle resources/**")],
     icons: [],
     url_schemes: [],
@@ -151,6 +152,62 @@ test "Windows signtool args use SHA-256 and RFC3161 timestamp" {
 }
 
 ///|
+test "Windows signing includes configured resource binaries" {
+  let root = "target/proton-package-windows-configured-signing"
+  let plan = windows_test_plan(root, ["app"], true)
+  plan.sign_binaries.push(@fsutil.resolve_path(root, "helpers/worker.exe"))
+  let output = @fsutil.resolve_path(root, "portable")
+  assert_true(
+    windows_owned_sign_targets(plan, output).contains(
+      @fsutil.resolve_path(output, "helpers/worker.exe"),
+    ),
+  )
+}
+
+///|
+#cfg(platform="windows")
+async test "Windows signtool signs and verifies configured resource binaries" {
+  let root = "target/proton-package-windows-configured-signtool"
+  remove_tree(root)
+  let output = @fsutil.resolve_path(root, "portable")
+  let plan = windows_test_plan(root, ["app"], true)
+  let binary = @fsutil.resolve_path(root, "helpers/worker.exe")
+  plan.sign_binaries.push(binary)
+  for target in windows_owned_sign_targets(plan, output) {
+    write_windows_test_file(target, "binary")
+  }
+  for target in windows_upstream_signature_targets(output) {
+    write_windows_test_file(target, "upstream")
+  }
+  let certificate = @fsutil.resolve_path(root, "test certificate.pfx")
+  write_windows_test_file(certificate, "certificate")
+  let log = @fsutil.resolve_path(root, "signtool.log")
+  let old_log = @sys.get_env_var("PROTON_TEST_SIGNTOOL_LOG")
+  @sys.set_env_var("PROTON_TEST_SIGNTOOL_LOG", log)
+  defer restore_package_env("PROTON_TEST_SIGNTOOL_LOG", old_log)
+  sign_windows_portable_configured(
+    plan,
+    output,
+    windows_test_sign_tool(root, "success"),
+    WindowsSigningConfig::{ certificate, password: "", timestamp: None },
+  )
+  let text = @async_fs.read_file(log).text()
+  assert_true(
+    text.contains(
+      "sign|/fd|SHA256|/f|" +
+      certificate +
+      "|" +
+      @fsutil.resolve_path(output, "helpers/worker.exe"),
+    ),
+  )
+  assert_true(
+    text.contains(
+      "verify|/pa|/all|/v|" + @fsutil.resolve_path(output, "helpers/worker.exe"),
+    ),
+  )
+}
+
+///|
 async test "Windows icon selection accepts ico and rejects a missing source" {
   let root = "target/proton-package-windows-icon"
   remove_tree(root)
@@ -231,6 +288,30 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
   }
   assert_false(@mbfs.path_exists(windows_portable_staging(plan)))
   assert_false(@mbfs.path_exists(output + ".backup"))
+}
+
+///|
+async test "Windows portable stages a configured signing binary from resources" {
+  let root = "target/proton-package-windows-resource-signing"
+  let (executable, _) = prepare_windows_test_inputs(root)
+  let binary = @fsutil.resolve_path(root, "helpers/worker.exe")
+  write_windows_test_file(binary, "worker")
+  let runtime = prepare_windows_test_runtime(root)
+  let plan = windows_test_plan(root, ["app"], false)
+  plan.resources.push(binary)
+  plan.sign_binaries.push(binary)
+  stage_windows_portable_with_options(
+    plan,
+    executable,
+    runtime,
+    default_windows_sign_tool(),
+    None,
+    false,
+  )
+  let output = windows_portable_output(plan)
+  let staged_binary = @fsutil.resolve_path(output, "helpers/worker.exe")
+  assert_true(@fsutil.path_is_file(staged_binary))
+  assert_true(windows_owned_sign_targets(plan, output).contains(staged_binary))
 }
 
 ///|

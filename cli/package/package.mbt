@@ -36,6 +36,7 @@ struct PackagePlan {
   frontend_dist : String?
   entry_paths : Array[String]
   resources : Array[String]
+  sign_binaries : Array[String]
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[@proton_config.ProjectDocumentType]
@@ -364,6 +365,10 @@ async fn build_package_plan(
     frontend_dist,
     entry_paths,
     resources: copy_strings(bundle.resources),
+    sign_binaries: match bundle.sign {
+      Some(sign) => sign.binaries()
+      None => []
+    },
     icons: copy_strings(bundle.icon),
     url_schemes: copy_strings(bundle.url_schemes),
     document_types: bundle.document_types.copy(),
@@ -580,6 +585,12 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  targets: " + plan.targets.join(", "))
   println("  output: " + plan.output)
   println("  build target: " + plan.build_target_dir)
+  let sign_binaries = if plan.sign_binaries.length() == 0 {
+    "none"
+  } else {
+    plan.sign_binaries.join(", ")
+  }
+  println("  sign binaries: " + sign_binaries)
   let build = if plan.build { "yes" } else { "no" }
   println("  build: " + build)
   println("  sign: " + bool_text(plan.sign))
@@ -1054,6 +1065,25 @@ async fn stage_project_inputs(plan : PackagePlan, destination : String) -> Unit 
     }
     copy_tree(source, @fsutil.resolve_path(destination, relative))
   }
+}
+
+///|
+/// Resolves `bundle.sign.binaries` into the files copied below a package's
+/// resource root. Signing never copies a file; every target must already have
+/// been staged through `bundle.resources`.
+fn PackagePlan::sign_binary_targets(
+  self : PackagePlan,
+  resource_root : String,
+) -> Array[String] raise PackagePlanError {
+  let targets : Array[String] = []
+  for binary in self.sign_binaries {
+    let relative = match relative_to_base(self.base_dir, binary) {
+      Some(relative) => relative
+      None => raise PackagePlanError::InputOutsideProject(path=binary)
+    }
+    targets.push(@fsutil.resolve_path(resource_root, relative))
+  }
+  targets
 }
 
 ///|
@@ -1603,6 +1633,16 @@ async fn sign_macos_app_with_identity(
       deep: false,
     },
   ]
+  for
+    binary in plan.sign_binary_targets(
+      @fsutil.resolve_path(contents, "Resources"),
+    ) {
+    targets.push(MacosCodeSignTarget::{
+      path: binary,
+      runtime_options: true,
+      deep: false,
+    })
+  }
   for helper in macos_helper_specs(plan.product_name, plan.identifier) {
     targets.push(MacosCodeSignTarget::{
       path: @fsutil.resolve_path(

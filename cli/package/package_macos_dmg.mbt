@@ -110,7 +110,8 @@ async fn verify_macos_dmg(dmg : String) -> Unit {
 
 ///|
 async fn run_hdiutil(args : Array[String], stage~ : String) -> Unit {
-  let code = @process.run("/usr/bin/hdiutil", args) catch {
+  // MoonBit tests reserve stdout for structured events, so capture both streams.
+  let (code, stdout, stderr) = @process.collect_output("/usr/bin/hdiutil", args) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage~,
@@ -118,9 +119,20 @@ async fn run_hdiutil(args : Array[String], stage~ : String) -> Unit {
       )
   }
   guard code == 0 else {
+    let stdout = stdout.text() catch {
+      error => "failed to decode stdout: " + @debug.render(Repr(error))
+    }
+    let stderr = stderr.text() catch {
+      error => "failed to decode stderr: " + @debug.render(Repr(error))
+    }
     raise MacosSigningError::ToolFailure(
       stage~,
-      detail="exit code " + code.to_string(),
+      detail="exit code " +
+        code.to_string() +
+        "\nstdout:\n" +
+        stdout +
+        "\nstderr:\n" +
+        stderr,
     )
   }
 }

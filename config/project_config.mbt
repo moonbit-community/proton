@@ -175,11 +175,32 @@ pub fn ProjectFrontendConfig::path(self : ProjectFrontendConfig) -> String? {
 }
 
 ///|
+/// Signing settings for files copied through `bundle.resources`.
+pub(all) struct ProjectSignConfig {
+  binaries : Array[String]
+} derive(Eq, Debug)
+
+///|
+/// Creates signing settings for package-relative resource binaries.
+pub fn ProjectSignConfig::new(
+  binaries? : Array[String] = [],
+) -> ProjectSignConfig {
+  ProjectSignConfig::{ binaries: copy_strings(binaries) }
+}
+
+///|
+/// Returns the project paths whose packaged copies must be signed.
+pub fn ProjectSignConfig::binaries(self : ProjectSignConfig) -> Array[String] {
+  copy_strings(self.binaries)
+}
+
+///|
 pub(all) struct ProjectBundleConfig {
   active : Bool
   targets : Array[String]
   icon : Array[String]
   resources : Array[String]
+  sign : ProjectSignConfig?
   url_schemes : Array[String]
   document_types : Array[ProjectDocumentType]
   output : String
@@ -214,6 +235,7 @@ pub fn ProjectBundleConfig::new(
   targets? : Array[String] = [],
   icon? : Array[String] = [],
   resources? : Array[String] = [],
+  sign? : ProjectSignConfig? = None,
   url_schemes? : Array[String] = [],
   document_types? : Array[ProjectDocumentType] = [],
   output? : String = "target/proton-dist",
@@ -223,6 +245,7 @@ pub fn ProjectBundleConfig::new(
     targets: copy_strings(targets),
     icon: copy_strings(icon),
     resources: copy_strings(resources),
+    sign,
     url_schemes: copy_strings(url_schemes),
     document_types: document_types.copy(),
     output,

@@ -397,6 +397,10 @@ single_instance = true
 bundle = {
   active: true,
   targets: ["app", "zip"],
+  resources: ["helpers/worker"],
+  sign: {
+    binaries: ["helpers/worker"],
+  },
   url_schemes: ["my-app"],
   document_types: [
     {
@@ -408,6 +412,16 @@ bundle = {
   output: "target/proton-dist",
 }
 ```
+
+`bundle.resources` copies project files into the package. `bundle.sign.binaries`
+does not copy anything; it names resource files that `proton_cli` must sign.
+Both arrays use paths relative to the directory containing `moon.proton`. For
+the example above, the signing target is
+`My App.app/Contents/Resources/helpers/worker` on macOS and
+`My App/helpers/worker` in a Windows portable package. Use the platform's actual
+filename, such as `helpers/worker.exe`, for a Windows executable. Globs are
+allowed for `bundle.resources` only; every `bundle.sign.binaries` entry names
+one file.
 
 Inspect the resolved bundle plan before creating artifacts:
 

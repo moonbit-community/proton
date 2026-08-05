@@ -446,8 +446,8 @@ async fn validate_windows_portable_layout(
 fn windows_owned_sign_targets(
   plan : PackagePlan,
   output : String,
-) -> Array[String] {
-  [
+) -> Array[String] raise PackagePlanError {
+  let targets = [
     @fsutil.resolve_path(
       output,
       package_executable_name(plan.product_name) + ".exe",
@@ -455,6 +455,12 @@ fn windows_owned_sign_targets(
     @fsutil.resolve_path(output, "cef_process.exe"),
     @fsutil.resolve_path(output, "proton.dll"),
   ]
+  for target in plan.sign_binary_targets(output) {
+    if !targets.contains(target) {
+      targets.push(target)
+    }
+  }
+  targets
 }
 
 ///|

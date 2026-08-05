@@ -267,6 +267,9 @@ test "project config rebases file entry and frontend paths from config directory
     #|  targets: ["app", "zip", "dmg"],
     #|  icon: ["icons/icon.ico"],
     #|  resources: ["resources/**"],
+    #|  sign: {
+    #|    binaries: ["bin/worker"],
+    #|  },
     #|  output: "target/proton-dist",
     #|}
     #|
@@ -308,6 +311,12 @@ test "project config rebases file entry and frontend paths from config directory
   assert_true(
     normalize_test_path(bundle.resources[0]).has_suffix(
       "target/proton-config/subdir/resources/**",
+    ),
+  )
+  let sign = bundle.sign.unwrap()
+  assert_true(
+    normalize_test_path(sign.binaries()[0]).has_suffix(
+      "target/proton-config/subdir/bin/worker",
     ),
   )
   assert_true(
@@ -372,6 +381,12 @@ test "project config rejects absolute project paths with field-specific errors" 
       ),
     ),
     (
+      "bundle.sign.binaries[0]",
+      project_config_for_path_test(
+        html_entry, "bundle = { sign: { binaries: [\"/bin/worker\"] } }",
+      ),
+    ),
+    (
       "bundle.output",
       project_config_for_path_test(
         html_entry, "bundle = { output: \"/target/proton-dist\" }",
@@ -390,6 +405,20 @@ test "project config rejects absolute project paths with field-specific errors" 
       " must be a relative path; absolute paths and drive prefixes are not allowed",
     )
   }
+}
+
+///|
+test "project config rejects signing binary globs under the correct field" {
+  let source = project_config_for_path_test(
+    "{ kind: \"html\", value: \"<main>App</main>\" }", "bundle = { sign: { binaries: [\"bin/*.exe\"] } }",
+  )
+  let error = expect_project_config_error(() => {
+    load_project_config_from_text(source, "target/proton-config")
+  })
+  assert_eq(
+    error.message(),
+    "moon.proton.bundle.sign.binaries[0] must name one file; glob patterns are not supported",
+  )
 }
 
 ///|
