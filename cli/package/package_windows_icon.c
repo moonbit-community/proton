@@ -52,17 +52,21 @@ static void package_icon_windows_error(char *buffer, int32_t buffer_length,
   if (buffer == NULL || buffer_length <= 0) {
     return;
   }
-  char system_message[512] = {0};
-  DWORD length = FormatMessageA(
+  wchar_t wide_message[512] = {0};
+  DWORD length = FormatMessageW(
       FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-      error_code, 0, system_message, (DWORD)sizeof(system_message), NULL);
+      error_code, 0, wide_message,
+      (DWORD)(sizeof(wide_message) / sizeof(wide_message[0])), NULL);
   while (length > 0 &&
-         (system_message[length - 1] == '\r' ||
-          system_message[length - 1] == '\n' ||
-          system_message[length - 1] == ' ')) {
-    system_message[--length] = '\0';
+         (wide_message[length - 1] == L'\r' ||
+          wide_message[length - 1] == L'\n' ||
+          wide_message[length - 1] == L' ')) {
+    wide_message[--length] = L'\0';
   }
-  if (length > 0) {
+  char system_message[1024] = {0};
+  if (length > 0 &&
+      WideCharToMultiByte(CP_UTF8, 0, wide_message, -1, system_message,
+                          (int)sizeof(system_message), NULL, NULL) > 0) {
     snprintf(buffer, (size_t)buffer_length, "%s failed (Windows error %lu): %s",
              operation, (unsigned long)error_code, system_message);
   } else {
