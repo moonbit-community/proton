@@ -295,23 +295,52 @@ fn scenario_app_command(root : String) -> (String, Array[String]) raise {
     // valid for the current process but not a standalone execve target.  Ask
     // Moon to run exactly the child test in an isolated, serially reused build
     // directory on Unix instead of attempting to re-exec the parent binary.
-    (
-      "moon",
-      [
-        "--target-dir",
-        join_path(root, "target/proton-e2e-app-child"),
-        "-C",
-        root,
-        "test",
-        "e2e/test/scenario_app_wbtest.mbt",
-        "--target",
-        "native",
-        "--no-parallelize",
-        "--diagnostic-limit",
-        "80",
-      ],
-    )
+    isolated_app_command("moon", [
+      "--target-dir",
+      join_path(root, "target/proton-e2e-app-child"),
+      "-C",
+      root,
+      "test",
+      "e2e/test/scenario_app_wbtest.mbt",
+      "--target",
+      "native",
+      "--no-parallelize",
+      "--diagnostic-limit",
+      "80",
+    ])
   }
+}
+
+///|
+fn isolated_app_command(
+  program : String,
+  args : Array[String],
+) -> (String, Array[String]) {
+  if @path.sep == '\\' {
+    (program, args)
+  } else {
+    let command_args = [
+      "-c",
+      unix_app_session_script(),
+      "proton-e2e-session",
+      program,
+    ]
+    for arg in args {
+      command_args.push(arg)
+    }
+    ("sh", command_args)
+  }
+}
+
+///|
+fn unix_app_session_script() -> String {
+  (
+    #|if command -v setsid >/dev/null 2>&1; then
+    #|  exec setsid "$@"
+    #|else
+    #|  exec "$@"
+    #|fi
+  )
 }
 
 ///|
@@ -341,8 +370,6 @@ fn app_cancel_handler() -> @process.CancellationHandler {
     })
   } else {
     @process.CancellationHandler(async fn(pid) {
-      terminate_unix_app_tree(pid, "TERM")
-      @async.sleep(1000)
       terminate_unix_app_tree(pid, "KILL")
     })
   }
@@ -352,7 +379,7 @@ fn app_cancel_handler() -> @process.CancellationHandler {
 async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
   ignore(
     @process.run(
-      "sh",
+      "/bin/sh",
       [
         "-c",
         unix_app_tree_kill_script(),
@@ -360,6 +387,7 @@ async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
         pid.to_string(),
         signal,
       ],
+      inherit_env=false,
       no_console_window=true,
     ),
   )
@@ -368,6 +396,8 @@ async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
 ///|
 fn unix_app_tree_kill_script() -> String {
   (
+    #|PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    #|export PATH
     #|kill_tree() {
     #|  parent="$1"
     #|  signal="$2"
@@ -378,7 +408,15 @@ fn unix_app_tree_kill_script() -> String {
     #|  fi
     #|  kill "-$signal" "$parent" 2>/dev/null || true
     #|}
-    #|kill_tree "$1" "$2"
+    #|parent="$1"
+    #|signal="$2"
+    #|parent_group=$(ps -o pgid= -p "$parent" 2>/dev/null | tr -d '[:space:]')
+    #|caller_group=$(ps -o pgid= -p "$PPID" 2>/dev/null | tr -d '[:space:]')
+    #|if [ -n "$parent_group" ] && [ "$parent_group" != "$caller_group" ]; then
+    #|  kill "-$signal" -- "-$parent_group" 2>/dev/null || true
+    #|else
+    #|  kill_tree "$parent" "$signal"
+    #|fi
   )
 }
 

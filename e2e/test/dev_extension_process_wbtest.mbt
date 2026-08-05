@@ -139,6 +139,7 @@ async fn run_dev_extension_command(
       output_path,
       create_mode=@fs.CreateOrTruncate,
     )
+    let (program, args) = isolated_app_command(program, args)
     let process = @process.spawn(
       group,
       program,
@@ -269,9 +270,10 @@ async fn spawn_dev_extension_cli_app(
     "--timeout-ms",
     timeout_ms().to_string(),
   ]
+  let (program, args) = isolated_app_command("moon", args)
   let process = @process.spawn(
     group,
-    "moon",
+    program,
     args,
     cwd=root,
     extra_env=dev_extension_host_env(root, cdp_port),
@@ -301,21 +303,22 @@ async fn spawn_dev_extension_production_app(
     output_path,
     create_mode=@fs.CreateOrTruncate,
   )
+  let (program, args) = isolated_app_command("moon", [
+    "-C",
+    join_path(root, "examples"),
+    "--target-dir",
+    dev_extension_example_target_dir(root, cdp_port),
+    "run",
+    "47_dev_extension_js",
+    "--target",
+    "native",
+    "--diagnostic-limit",
+    "120",
+  ])
   let process = @process.spawn(
     group,
-    "moon",
-    [
-      "-C",
-      join_path(root, "examples"),
-      "--target-dir",
-      dev_extension_example_target_dir(root, cdp_port),
-      "run",
-      "47_dev_extension_js",
-      "--target",
-      "native",
-      "--diagnostic-limit",
-      "120",
-    ],
+    program,
+    args,
     cwd=root,
     extra_env=dev_extension_runtime_env(root, cdp_port),
     stdout=output,

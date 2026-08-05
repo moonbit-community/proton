@@ -79,10 +79,24 @@ test "scenario child command is platform-safe" {
     assert_eq(args, [app_child_test_selector])
     assert_true(@path.Path(program).is_absolute())
   } else {
-    assert_eq(program, "moon")
+    assert_eq(program, "sh")
+    assert_true(args.contains("moon"))
+    assert_true(args.contains(unix_app_session_script()))
     assert_true(args.contains("e2e/test/scenario_app_wbtest.mbt"))
     assert_true(args.contains(root))
     assert_true(args.contains(join_path(root, "target/proton-e2e-app-child")))
+  }
+}
+
+///|
+test "Unix E2E cancellation targets the isolated process group first" {
+  if @path.sep != '\\' {
+    assert_true(unix_app_session_script().contains("exec setsid \"$@\""))
+    assert_true(
+      unix_app_tree_kill_script().contains(
+        "kill \"-$signal\" -- \"-$parent_group\"",
+      ),
+    )
   }
 }
 
