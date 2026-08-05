@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 static int expect_status(const char *label, int32_t actual, int32_t expected) {
   if (actual == expected) {
@@ -109,9 +110,10 @@ static BOOL CALLBACK find_largest_visible_child(HWND child, LPARAM data) {
 }
 
 static BOOL CALLBACK find_renderer_child(HWND child, LPARAM data) {
-  char class_name[128];
-  if (GetClassNameA(child, class_name, (int)sizeof(class_name)) > 0 &&
-      strstr(class_name, "RenderWidgetHost") != NULL) {
+  wchar_t class_name[128];
+  if (GetClassNameW(child, class_name,
+                    (int)(sizeof(class_name) / sizeof(class_name[0]))) > 0 &&
+      wcsstr(class_name, L"RenderWidgetHost") != NULL) {
     ((renderer_child_t *)data)->hwnd = child;
     return FALSE;
   }
@@ -318,20 +320,27 @@ static int expect_web_draggable_regions(proton_runtime_id_t runtime,
       "document.querySelector('#bar').style.webkitAppRegion='drag';"
       "},0);"
       "</script></body></html>";
-  char temp_dir[MAX_PATH];
-  char html_path[MAX_PATH];
-  char html_url[MAX_PATH + 16];
-  DWORD temp_len = GetTempPathA((DWORD)sizeof(temp_dir), temp_dir);
-  if (temp_len == 0 || temp_len >= sizeof(temp_dir) ||
-      snprintf(html_path, sizeof(html_path), "%sproton-overlay-%lu.html",
-               temp_dir, (unsigned long)GetCurrentProcessId()) >=
-          (int)sizeof(html_path)) {
+  wchar_t wide_temp_dir[MAX_PATH];
+  wchar_t wide_html_path[MAX_PATH];
+  char html_path[MAX_PATH * 3];
+  char html_url[MAX_PATH * 3 + 16];
+  DWORD temp_len = GetTempPathW(
+      (DWORD)(sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0])),
+      wide_temp_dir);
+  if (temp_len == 0 ||
+      temp_len >= sizeof(wide_temp_dir) / sizeof(wide_temp_dir[0]) ||
+      swprintf(wide_html_path,
+               sizeof(wide_html_path) / sizeof(wide_html_path[0]),
+               L"%sproton-overlay-%lu.html", wide_temp_dir,
+               (unsigned long)GetCurrentProcessId()) < 0 ||
+      WideCharToMultiByte(CP_UTF8, 0, wide_html_path, -1, html_path,
+                          (int)sizeof(html_path), NULL, NULL) <= 0) {
     fprintf(stderr, "overlay draggable HTML temp file could not be created\n");
     return 1;
   }
-  FILE *file = fopen(html_path, "wb");
+  FILE *file = _wfopen(wide_html_path, L"wb");
   if (file == NULL) {
-    DeleteFileA(html_path);
+    DeleteFileW(wide_html_path);
     fprintf(stderr, "overlay draggable HTML temp file could not be written\n");
     return 1;
   }
@@ -339,7 +348,7 @@ static int expect_web_draggable_regions(proton_runtime_id_t runtime,
   const int write_failed = fwrite(html, 1, html_len, file) != html_len;
   const int close_failed = fclose(file) != 0;
   if (write_failed || close_failed) {
-    DeleteFileA(html_path);
+    DeleteFileW(wide_html_path);
     fprintf(stderr, "overlay draggable HTML temp file could not be written\n");
     return 1;
   }
@@ -351,7 +360,7 @@ static int expect_web_draggable_regions(proton_runtime_id_t runtime,
   snprintf(html_url, sizeof(html_url), "file:///%s", html_path);
   if (expect_status("overlay load draggable HTML",
                     proton_window_load_url(window, html_url), PROTON_OK)) {
-    DeleteFileA(html_path);
+    DeleteFileW(wide_html_path);
     return 1;
   }
 
@@ -386,7 +395,7 @@ static int expect_web_draggable_regions(proton_runtime_id_t runtime,
     }
     Sleep(10);
   }
-  DeleteFileA(html_path);
+  DeleteFileW(wide_html_path);
   if (passed) {
     return 0;
   }

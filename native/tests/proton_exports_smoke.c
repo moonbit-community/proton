@@ -9,13 +9,13 @@
 typedef HMODULE proton_library_t;
 #define PROTON_LIBRARY_NAME "proton.dll"
 static proton_library_t proton_open_library(void) {
-  return LoadLibraryA(PROTON_LIBRARY_NAME);
+  return LoadLibraryW(L"proton.dll");
 }
 static void *proton_find_symbol(proton_library_t library, const char *name) {
   return (void *)GetProcAddress(library, name);
 }
 static void proton_print_loader_error(void) {
-  fprintf(stderr, "LoadLibraryA(%s) failed with error %lu\n",
+  fprintf(stderr, "LoadLibraryW(%s) failed with error %lu\n",
           PROTON_LIBRARY_NAME, (unsigned long)GetLastError());
 }
 #else

@@ -89,19 +89,31 @@ static int run_app_instance_secondary(const char *executable,
                                       const char *identifier,
                                       const char *activation_kind) {
 #ifdef _WIN32
-  char executable_path[MAX_PATH];
-  if (GetModuleFileNameA(NULL, executable_path, MAX_PATH) == 0) {
+  wchar_t wide_executable_path[MAX_PATH];
+  if (GetModuleFileNameW(NULL, wide_executable_path, MAX_PATH) == 0) {
+    return fail("failed to locate app instance test executable");
+  }
+  char executable_path[MAX_PATH * 3];
+  if (WideCharToMultiByte(CP_UTF8, 0, wide_executable_path, -1,
+                          executable_path, (int)sizeof(executable_path), NULL,
+                          NULL) <= 0) {
     return fail("failed to locate app instance test executable");
   }
   char command[2048];
   snprintf(command, sizeof(command), "\"%s\" --app-instance-secondary %s %s",
            executable_path, identifier, activation_kind);
-  STARTUPINFOA startup;
+  wchar_t wide_command[2048];
+  if (MultiByteToWideChar(CP_UTF8, 0, command, -1, wide_command,
+                          (int)(sizeof(wide_command) /
+                                sizeof(wide_command[0]))) <= 0) {
+    return fail("failed to start secondary app instance process");
+  }
+  STARTUPINFOW startup;
   PROCESS_INFORMATION process;
   memset(&startup, 0, sizeof(startup));
   memset(&process, 0, sizeof(process));
   startup.cb = sizeof(startup);
-  if (!CreateProcessA(NULL, command, NULL, NULL, FALSE, 0, NULL, NULL,
+  if (!CreateProcessW(NULL, wide_command, NULL, NULL, FALSE, 0, NULL, NULL,
                       &startup, &process)) {
     return fail("failed to start secondary app instance process");
   }
@@ -526,11 +538,18 @@ static void smoke_app_entry(void) {
           runtime, wakeup_source, (int32_t)sizeof(wakeup_source), &required);
     }
     if (g_app_entry_wakeup_status == PROTON_OK) {
-      wakeup_reader =
-          CreateFileA(wakeup_source, GENERIC_READ, 0, NULL, OPEN_EXISTING,
-                      FILE_ATTRIBUTE_NORMAL, NULL);
-      if (wakeup_reader == INVALID_HANDLE_VALUE) {
+      wchar_t wide_wakeup_source[256];
+      if (MultiByteToWideChar(CP_UTF8, 0, wakeup_source, -1,
+                              wide_wakeup_source,
+                              (int)(sizeof(wide_wakeup_source) /
+                                    sizeof(wide_wakeup_source[0]))) <= 0) {
         g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
+      } else {
+        wakeup_reader = CreateFileW(wide_wakeup_source, GENERIC_READ, 0, NULL,
+                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (wakeup_reader == INVALID_HANDLE_VALUE) {
+          g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
+        }
       }
     }
     if (g_app_entry_wakeup_status == PROTON_OK) {
