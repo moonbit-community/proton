@@ -473,7 +473,7 @@ fn validate_macos_version(
     normalized.push("0")
   }
   let short_version = normalized.join(".")
-  let bundle_version = match @sys.get_env_var("PROTON_MACOS_BUILD_NUMBER") {
+  let bundle_version = match @env.get_env_var("PROTON_MACOS_BUILD_NUMBER") {
     Some(build) if build.trim().to_owned() != "" =>
       validate_bundle_version(build.trim().to_owned())
     _ => short_version
@@ -634,14 +634,14 @@ async fn is_macos_host() -> Bool {
 ///|
 async fn run_release_build(plan : PackagePlan) -> Unit {
   let moon_args = ["--release", "--target-dir", plan.build_target_dir]
-  let old_rpath = @sys.get_env_var("PROTON_PACKAGE_RPATH")
+  let old_rpath = @env.get_env_var("PROTON_PACKAGE_RPATH")
   // Mach-O only. The link config reads this on darwin; the Linux branch
   // ignores it and keeps the absolute runtime rpath, which is what a
   // development run wants. Linux gets its relocatable rpath from patchelf
   // during staging instead, so `$ORIGIN` never passes through the link
   // config's quoting.
   if is_macos_host() {
-    @sys.set_env_var(
+    @env.set_env_var(
       "PROTON_PACKAGE_RPATH", "@executable_path/../Resources/proton/lib",
     )
   }
@@ -652,8 +652,8 @@ async fn run_release_build(plan : PackagePlan) -> Unit {
 ///|
 fn restore_package_env(name : String, value : String?) -> Unit {
   match value {
-    Some(value) => @sys.set_env_var(name, value)
-    None => @sys.unset_env_var(name)
+    Some(value) => @env.set_env_var(name, value)
+    None => @env.unset_env_var(name)
   }
 }
 
@@ -689,7 +689,7 @@ async fn find_named_file(root : String, name : String) -> String? {
 
 ///|
 async fn read_active_runtime(root : String) -> String {
-  match @sys.get_env_var("PROTON_NATIVE_DIST") {
+  match @env.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim().to_owned() != "" =>
       return require_runtime(
         @fsutil.resolve_path(root, value.trim().to_owned()),
@@ -1535,7 +1535,7 @@ async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
 
 ///|
 fn required_macos_signing_identity() -> String raise MacosSigningError {
-  match @sys.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
+  match @env.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
     Some(identity) if identity.trim().to_owned() != "" =>
       identity.trim().to_owned()
     _ =>
@@ -1715,7 +1715,7 @@ fn validate_macos_signing_identity(
 
 ///|
 fn macos_adhoc_signing_allowed() -> Bool {
-  match @sys.get_env_var("PROTON_MACOS_ALLOW_ADHOC") {
+  match @env.get_env_var("PROTON_MACOS_ALLOW_ADHOC") {
     Some(value) =>
       match value.trim().to_owned().to_lower() {
         "1" | "true" | "yes" | "on" => true
@@ -1845,7 +1845,7 @@ async fn resolve_macos_entitlements(
   app : String,
   allow_untrusted_libraries~ : Bool,
 ) -> String {
-  match @sys.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
+  match @env.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
     Some(path) if path.trim().to_owned() != "" => {
       let path = @path.Path(path.trim().to_owned()).resolve().to_string()
       if @fsutil.path_is_file(path) {
@@ -1933,7 +1933,7 @@ async fn submit_macos_notarization(
 
 ///|
 fn required_macos_notary_profile() -> String raise MacosSigningError {
-  match @sys.get_env_var("PROTON_NOTARY_PROFILE") {
+  match @env.get_env_var("PROTON_NOTARY_PROFILE") {
     Some(profile) if profile.trim().to_owned() != "" =>
       profile.trim().to_owned()
     _ =>

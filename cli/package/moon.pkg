@@ -10,12 +10,12 @@ import {
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/crypto",
   "moonbitlang/x/path",
-  "moonbitlang/x/sys",
 }
 
 import {

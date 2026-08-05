@@ -287,12 +287,12 @@ async test "dev process preloads an indirect Linux CEF runtime" {
     "test runtime",
   )
   write_dev_test_file(@fsutil.path_join(runtime.bin_dir, "libcef.so"), "")
-  let previous = @sys.get_env_var("LD_PRELOAD")
+  let previous = @env.get_env_var("LD_PRELOAD")
   defer (match previous {
-    Some(value) => @sys.set_env_var("LD_PRELOAD", value)
-    None => @sys.unset_env_var("LD_PRELOAD")
+    Some(value) => @env.set_env_var("LD_PRELOAD", value)
+    None => @env.unset_env_var("LD_PRELOAD")
   })
-  @sys.set_env_var("LD_PRELOAD", "existing-preload.so")
+  @env.set_env_var("LD_PRELOAD", "existing-preload.so")
   let env = dev_process_env(runtime, None, None)
   if @path.sep == '\\' {
     @debug.assert_eq(env.get("LD_PRELOAD"), None)
@@ -326,20 +326,20 @@ test "dev frontend does not inherit the injected CEF preload" {
 
 ///|
 test "dev app spawn env applies overrides to the child environment" {
-  let previous_probe = @sys.get_env_var("PROTON_DEV_SPAWN_PROBE")
-  let previous_keep = @sys.get_env_var("PROTON_DEV_SPAWN_KEEP")
+  let previous_probe = @env.get_env_var("PROTON_DEV_SPAWN_PROBE")
+  let previous_keep = @env.get_env_var("PROTON_DEV_SPAWN_KEEP")
   defer {
     match previous_probe {
-      Some(value) => @sys.set_env_var("PROTON_DEV_SPAWN_PROBE", value)
-      None => @sys.unset_env_var("PROTON_DEV_SPAWN_PROBE")
+      Some(value) => @env.set_env_var("PROTON_DEV_SPAWN_PROBE", value)
+      None => @env.unset_env_var("PROTON_DEV_SPAWN_PROBE")
     }
     match previous_keep {
-      Some(value) => @sys.set_env_var("PROTON_DEV_SPAWN_KEEP", value)
-      None => @sys.unset_env_var("PROTON_DEV_SPAWN_KEEP")
+      Some(value) => @env.set_env_var("PROTON_DEV_SPAWN_KEEP", value)
+      None => @env.unset_env_var("PROTON_DEV_SPAWN_KEEP")
     }
   }
-  @sys.set_env_var("PROTON_DEV_SPAWN_PROBE", "parent-value")
-  @sys.set_env_var("PROTON_DEV_SPAWN_KEEP", "keep-value")
+  @env.set_env_var("PROTON_DEV_SPAWN_PROBE", "parent-value")
+  @env.set_env_var("PROTON_DEV_SPAWN_KEEP", "keep-value")
   let overrides = {
     "PROTON_DEV_SPAWN_PROBE": "override-value",
     "PROTON_DEV_SPAWN_EXTRA": "extra-value",
@@ -362,12 +362,12 @@ test "dev app spawn env applies overrides to the child environment" {
 ///|
 test "dev app spawn env replaces inherited Windows variable spellings" {
   if @path.sep == '\\' {
-    let previous = @sys.get_env_var("proton_dev_case_probe")
+    let previous = @env.get_env_var("proton_dev_case_probe")
     defer (match previous {
-      Some(value) => @sys.set_env_var("proton_dev_case_probe", value)
-      None => @sys.unset_env_var("proton_dev_case_probe")
+      Some(value) => @env.set_env_var("proton_dev_case_probe", value)
+      None => @env.unset_env_var("proton_dev_case_probe")
     })
-    @sys.set_env_var("proton_dev_case_probe", "parent-value")
+    @env.set_env_var("proton_dev_case_probe", "parent-value")
     let (env, _) = dev_app_spawn_env({ "PROTON_DEV_CASE_PROBE": "override" })
     let spellings = env
       .keys()
@@ -382,12 +382,12 @@ test "dev app spawn env replaces inherited Windows variable spellings" {
 async test "read dev runtime honors PROTON_NATIVE_DIST override" {
   let root = "target/proton-dev-runtime-env"
   let runtime = create_fake_dev_runtime(root)
-  let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
+  let previous = @env.get_env_var("PROTON_NATIVE_DIST")
   defer (match previous {
-    Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
-    None => @sys.unset_env_var("PROTON_NATIVE_DIST")
+    Some(value) => @env.set_env_var("PROTON_NATIVE_DIST", value)
+    None => @env.unset_env_var("PROTON_NATIVE_DIST")
   })
-  @sys.set_env_var("PROTON_NATIVE_DIST", "runtime")
+  @env.set_env_var("PROTON_NATIVE_DIST", "runtime")
   let loaded = read_dev_runtime(@fsutil.resolve_path(".", root))
   @debug.assert_eq(
     normalize_dev_test_slashes(loaded.root),
@@ -401,7 +401,7 @@ async test "read dev runtime honors PROTON_NATIVE_DIST override" {
   )
   let bad_root = "target/proton-dev-runtime-bad-env"
   ensure_dev_test_dir(bad_root)
-  @sys.set_env_var("PROTON_NATIVE_DIST", "missing-runtime")
+  @env.set_env_var("PROTON_NATIVE_DIST", "missing-runtime")
   try ensure_dev_runtime(@fsutil.resolve_path(".", bad_root), true) catch {
     DevRuntimeError::NativeDistOverride(detail~) => {
       assert_true(detail.contains("PROTON_NATIVE_DIST directory is missing"))

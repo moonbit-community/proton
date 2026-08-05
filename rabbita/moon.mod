@@ -5,7 +5,7 @@ version = "0.1.1"
 import {
   "justjavac/proton_client@0.1.1",
   "justjavac/proton_contract@0.1.1",
-  "moonbit-community/rabbita@0.14.0",
+  "moonbit-community/rabbita@0.14.1",
 }
 
 readme = "README.mbt.md"

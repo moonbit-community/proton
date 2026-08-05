@@ -368,8 +368,8 @@ test "macOS package metadata validation rejects unsafe values" {
 
 ///|
 test "macOS version normalizes semantic prerelease to plist versions" {
-  let old_build = @sys.get_env_var("PROTON_MACOS_BUILD_NUMBER")
-  @sys.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
+  let old_build = @env.get_env_var("PROTON_MACOS_BUILD_NUMBER")
+  @env.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
   defer restore_package_env("PROTON_MACOS_BUILD_NUMBER", old_build)
   let (short_version, bundle_version) = validate_macos_version("1.2.3-beta.1")
   assert_eq(short_version, "1.2.3")
@@ -379,11 +379,11 @@ test "macOS version normalizes semantic prerelease to plist versions" {
   )
   assert_eq(short_version, "1.2.3")
   assert_eq(bundle_version, "1.2.3")
-  @sys.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.7")
+  @env.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.7")
   let (short_version, bundle_version) = validate_macos_version("1.2.3")
   assert_eq(short_version, "1.2.3")
   assert_eq(bundle_version, "42.7")
-  @sys.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.beta")
+  @env.set_env_var("PROTON_MACOS_BUILD_NUMBER", "42.beta")
   try validate_macos_version("1.2.3") catch {
     PackagePlanError::InvalidVersion(reason~, ..) =>
       assert_true(reason.contains("PROTON_MACOS_BUILD_NUMBER"))
@@ -391,7 +391,7 @@ test "macOS version normalizes semantic prerelease to plist versions" {
   } noraise {
     _ => abort("expected invalid build number error")
   }
-  @sys.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
+  @env.unset_env_var("PROTON_MACOS_BUILD_NUMBER")
   try validate_macos_version("1.two.3") catch {
     PackagePlanError::InvalidVersion(reason~, ..) =>
       assert_true(reason.contains("must be numeric"))
@@ -437,9 +437,9 @@ test "macOS signing args apply hardened runtime entitlements to app code" {
 
 ///|
 test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
-  let old = @sys.get_env_var("PROTON_MACOS_ALLOW_ADHOC")
+  let old = @env.get_env_var("PROTON_MACOS_ALLOW_ADHOC")
   defer restore_package_env("PROTON_MACOS_ALLOW_ADHOC", old)
-  @sys.unset_env_var("PROTON_MACOS_ALLOW_ADHOC")
+  @env.unset_env_var("PROTON_MACOS_ALLOW_ADHOC")
   assert_false(macos_adhoc_signing_allowed())
   try validate_macos_signing_identity("-", notarize=false) catch {
     MacosSigningError::InvalidConfiguration(_) => ()
@@ -447,7 +447,7 @@ test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
   } noraise {
     _ => abort("expected ad-hoc signing rejection")
   }
-  @sys.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "yes")
+  @env.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "yes")
   assert_true(macos_adhoc_signing_allowed())
   assert_true(validate_macos_signing_identity("-", notarize=false))
   assert_false(
@@ -460,7 +460,7 @@ test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
   } noraise {
     _ => abort("expected ad-hoc notarization rejection")
   }
-  @sys.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "false")
+  @env.set_env_var("PROTON_MACOS_ALLOW_ADHOC", "false")
   assert_false(macos_adhoc_signing_allowed())
 }
 
@@ -949,12 +949,12 @@ async test "macOS notarization validates success and cleans failed upload" {
       error => abort(@debug.render(Repr(error)))
     }
   }
-  let old_path = @sys.get_env_var("PATH")
-  let old_profile = @sys.get_env_var("PROTON_NOTARY_PROFILE")
+  let old_path = @env.get_env_var("PATH")
+  let old_profile = @env.get_env_var("PROTON_NOTARY_PROFILE")
   defer restore_package_env("PATH", old_path)
   defer restore_package_env("PROTON_NOTARY_PROFILE", old_profile)
-  @sys.set_env_var("PATH", tools + ":" + old_path.unwrap_or(""))
-  @sys.set_env_var("PROTON_NOTARY_PROFILE", "test-profile")
+  @env.set_env_var("PATH", tools + ":" + old_path.unwrap_or(""))
+  @env.set_env_var("PROTON_NOTARY_PROFILE", "test-profile")
   let plan = PackagePlan::{
     root,
     workspace_root: root,
@@ -1082,8 +1082,8 @@ async test "active runtime rejects another platform" {
   let root = "target/proton-package-runtime-platform"
   remove_tree(root)
   ensure_dir(@fsutil.resolve_path(root, ".proton"))
-  let old_dist = @sys.get_env_var("PROTON_NATIVE_DIST")
-  @sys.unset_env_var("PROTON_NATIVE_DIST")
+  let old_dist = @env.get_env_var("PROTON_NATIVE_DIST")
+  @env.unset_env_var("PROTON_NATIVE_DIST")
   defer restore_package_env("PROTON_NATIVE_DIST", old_dist)
   let expected = @cef.current_platform_id()
   let other = if expected == "win32-x64" { "darwin-arm64" } else { "win32-x64" }

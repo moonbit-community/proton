@@ -8,9 +8,9 @@ import {
   "justjavac/proton_contract@0.1.1",
   "justjavac/proton_updater@0.1.0",
   "justjavac/proton_rsa@0.1.0",
-  "moonbitlang/async@0.19.4",
-  "moonbitlang/x@0.4.43",
-  "moonbitlang/lexer@0.3.4",
+  "moonbitlang/async@0.20.3",
+  "moonbitlang/x@0.4.48",
+  "moonbitlang/lexer@0.3.12",
 }
 
 readme = "README.md"

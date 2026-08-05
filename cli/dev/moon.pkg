@@ -10,10 +10,10 @@ import {
   "moonbitlang/async/socket",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/path",
-  "moonbitlang/x/sys",
 }
 
 import {

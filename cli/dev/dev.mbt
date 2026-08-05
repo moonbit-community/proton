@@ -161,7 +161,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let app_env = dev_process_env(runtime, frontend_url, config_path)
   let frontend_env = dev_frontend_process_env(
     app_env,
-    @sys.get_env_var("LD_PRELOAD"),
+    @env.get_env_var("LD_PRELOAD"),
   )
   @async.with_task_group(group => {
     // Announce the wait before the frontend child starts writing to the
@@ -402,7 +402,7 @@ async fn read_dev_runtime(root : String) -> DevRuntime {
 
 ///|
 fn dev_native_dist_override(root : String) -> String? {
-  match @sys.get_env_var("PROTON_NATIVE_DIST") {
+  match @env.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) => {
       let value = value.trim().to_owned()
       if value == "" {
@@ -582,7 +582,7 @@ extern "C" fn dev_windows_env_block() -> String = "proton_cli_dev_env_block"
 ///|
 /// Reads the parent process environment block with the original variable
 /// names and values preserved. The wide-character block is used instead of
-/// `@sys.get_env_vars` so non-ASCII values survive the round trip into the
+/// `@env.get_env_vars` so non-ASCII values survive the round trip into the
 /// child process environment.
 #cfg(platform="windows")
 fn dev_windows_parent_env() -> Map[String, String] {
@@ -604,7 +604,7 @@ fn dev_windows_parent_env() -> Map[String, String] {
 ///|
 fn path_env_key() -> String {
   if @path.sep == '\\' {
-    match @sys.get_env_var("Path") {
+    match @env.get_env_var("Path") {
       Some(_) => "Path"
       None => "PATH"
     }
@@ -615,7 +615,7 @@ fn path_env_key() -> String {
 
 ///|
 fn current_env_value(name : String) -> String {
-  @sys.get_env_var(name).unwrap_or("")
+  @env.get_env_var(name).unwrap_or("")
 }
 
 ///|

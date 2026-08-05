@@ -3,9 +3,9 @@ name = "justjavac/proton_config"
 version = "0.1.8"
 
 import {
-  "moonbitlang/lexer@0.3.4",
-  "moonbitlang/parser@0.3.2",
-  "moonbitlang/x@0.4.43",
+  "moonbitlang/lexer@0.3.12",
+  "moonbitlang/moon_config@0.3.11",
+  "moonbitlang/x@0.4.48",
 }
 
 repository = "https://github.com/moonbit-community/proton"

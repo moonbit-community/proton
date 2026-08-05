@@ -426,12 +426,12 @@ test "doctor options filter sections" {
 
 ///|
 async test "doctor reports invalid runtime manifests" {
-  let previous = @sys.get_env_var("PROTON_NATIVE_DIST")
+  let previous = @env.get_env_var("PROTON_NATIVE_DIST")
   defer (match previous {
-    Some(value) => @sys.set_env_var("PROTON_NATIVE_DIST", value)
-    None => @sys.unset_env_var("PROTON_NATIVE_DIST")
+    Some(value) => @env.set_env_var("PROTON_NATIVE_DIST", value)
+    None => @env.unset_env_var("PROTON_NATIVE_DIST")
   })
-  @sys.unset_env_var("PROTON_NATIVE_DIST")
+  @env.unset_env_var("PROTON_NATIVE_DIST")
   let dir = ensure_test_project_root("target/proton-doctor-invalid-runtime")
   let proton_dir = @fsutil.path_join(dir, ".proton")
   @mbfs.create_dir(proton_dir) catch {
