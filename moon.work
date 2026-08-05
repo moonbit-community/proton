@@ -1,4 +1,5 @@
 members = [
+  "./cdp",
   "./client",
   "./contract",
   "./rabbita",

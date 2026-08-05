@@ -1,0 +1,235 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/cdp/client"
+
+import {
+  "justjavac/cdp/protocol",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn cdp_response_result_json(@protocol.CdpResponseMessage) -> Json raise BrowserError
+
+pub fn chrome_executable_candidates() -> Array[String]
+
+pub fn chrome_launch_args(CdpLaunchOptions) -> Array[String]
+
+pub async fn connect_cdp_browser_target(CdpTarget) -> CdpClient
+
+pub async fn connect_cdp_browser_target_with_timeout(CdpTarget, timeout_ms? : Int) -> CdpClient
+
+pub async fn connect_cdp_page_target(CdpTarget, target_id? : String, url? : String, title? : String) -> CdpClient
+
+pub async fn connect_cdp_page_target_with_timeout(CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int) -> CdpClient
+
+pub async fn connect_cdp_target(CdpTarget) -> CdpClient
+
+pub async fn connect_cdp_target_with_timeout(CdpTarget, timeout_ms? : Int) -> CdpClient
+
+pub fn default_launch_options() -> CdpLaunchOptions
+
+pub fn devtools_frontend_url(String, String) -> String raise DiscoveryError
+
+pub async fn discover_browser_web_socket_url(CdpTarget) -> String
+
+pub async fn discover_page_web_socket_url(CdpTarget, target_id? : String, url? : String, title? : String) -> String
+
+pub async fn discover_protocol(CdpTarget) -> Json
+
+pub async fn discover_targets(CdpTarget) -> Array[CdpDiscoveredTarget]
+
+pub async fn discover_version(CdpTarget) -> CdpVersionInfo
+
+pub async fn discover_web_socket_url(CdpTarget) -> String
+
+pub async fn launch_browser(CdpLaunchOptions) -> CdpLaunchInfo
+
+pub fn parse_cdp_target(String) -> CdpTarget raise DiscoveryError
+
+pub async fn resolve_chrome_executable() -> String
+
+pub fn select_discovered_page_target(Array[CdpDiscoveredTarget], target_id? : String, url? : String, title? : String) -> CdpDiscoveredTarget raise DiscoveryError
+
+pub fn select_discovered_target(Array[CdpDiscoveredTarget], target_id? : String, target_type? : String, url? : String, title? : String) -> CdpDiscoveredTarget raise DiscoveryError
+
+pub async fn wait_for_browser_endpoint(String, timeout_ms~ : Int) -> String
+
+pub fn web_socket_url_from_version_json(Json) -> String raise DiscoveryError
+
+// Errors
+pub(all) suberror BrowserError {
+  CommandFailed(Int, String)
+  MissingField(String)
+  InvalidField(String)
+  WaitTimeout(String)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) suberror BrowserLaunchError {
+  BrowserNotFound
+  BrowserNotReady(Int)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) suberror CdpConnectionError {
+  ConnectionTimeout(String, Int)
+  WebSocketHandshakeFailed(String, String)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn CdpConnectionError::diagnostic(Self) -> CdpConnectionErrorDiagnostic
+pub fn CdpConnectionError::kind(Self) -> String
+pub fn CdpConnectionError::message(Self) -> String
+pub fn CdpConnectionError::path(Self) -> String
+pub fn CdpConnectionError::reason(Self) -> String?
+pub fn CdpConnectionError::timeout_ms(Self) -> Int?
+pub fn CdpConnectionError::web_socket_url(Self) -> String
+
+pub(all) suberror DiscoveryError {
+  InvalidTarget(String)
+  HttpStatus(Int, String)
+  MissingWebSocketDebuggerUrl
+  MissingTargetWebSocketDebuggerUrl(String)
+  NoMatchingTarget(String)
+  InvalidVersionResponse
+} derive(Eq, ToJson, @debug.Debug)
+pub fn DiscoveryError::diagnostic(Self) -> DiscoveryErrorDiagnostic
+pub fn DiscoveryError::http_status(Self) -> Int?
+pub fn DiscoveryError::kind(Self) -> String
+pub fn DiscoveryError::message(Self) -> String
+pub fn DiscoveryError::path(Self) -> String
+pub fn DiscoveryError::reason(Self) -> String?
+pub fn DiscoveryError::selector(Self) -> String?
+pub fn DiscoveryError::target(Self) -> String?
+pub fn DiscoveryError::target_id(Self) -> String?
+
+// Types and methods
+pub(all) struct CdpAttachedTarget {
+  session_id : String
+  target_id : String
+  target_type : String
+  title : String
+  url : String
+  attached : Bool
+  browser_context_id : String?
+  waiting_for_debugger : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub struct CdpClient {
+  // private fields
+}
+pub async fn CdpClient::attach_to_target(Self, String, flatten? : Bool) -> String
+pub fn CdpClient::attached_target(Self, String) -> CdpAttachedTarget?
+pub fn CdpClient::attached_targets(Self) -> Array[CdpAttachedTarget]
+pub fn CdpClient::cdp_events(Self, method_name? : String, session_id? : String) -> Array[@protocol.CdpEventMessage]
+pub fn CdpClient::clear_cdp_events(Self) -> Unit
+pub fn CdpClient::close(Self) -> Unit
+pub async fn CdpClient::connect(String) -> Self
+pub async fn CdpClient::connect_with_timeout(String, timeout_ms? : Int) -> Self
+pub async fn CdpClient::create_target(Self, url? : String, browser_context_id? : String, new_window? : Bool) -> String
+pub async fn CdpClient::get_targets(Self) -> Array[CdpTargetInfo]
+pub fn CdpClient::last_cdp_event(Self) -> @protocol.CdpEventMessage?
+pub fn CdpClient::last_cdp_request(Self) -> @protocol.CdpCommandMessage?
+pub fn CdpClient::last_cdp_response(Self) -> @protocol.CdpResponseMessage?
+pub fn CdpClient::last_command_failure(Self) -> CdpCommandFailure?
+pub fn CdpClient::on_cdp_event(Self, method_name? : String, session_id? : String, (@protocol.CdpEventMessage) -> Unit) -> Int
+pub async fn CdpClient::recv_cdp_event(Self, method_name? : String, session_id? : String) -> @protocol.CdpEventMessage
+pub async fn CdpClient::recv_cdp_response(Self, Int, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+pub fn CdpClient::remove_cdp_event_handler(Self, Int) -> Bool
+pub async fn CdpClient::send_cdp_command(Self, String, params? : Json, session_id? : String) -> Int
+pub async fn CdpClient::send_cdp_message(Self, @protocol.CdpCommandMessage, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+pub async fn CdpClient::send_command(Self, String, params? : Json, session_id? : String) -> @protocol.CdpResponseMessage
+pub async fn CdpClient::send_remote_schema_command(Self, Json, String, params? : Json, session_id? : String, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+pub async fn CdpClient::send_schema_command(Self, String, params? : Json, session_id? : String, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+
+type CdpCommandContext
+
+pub(all) struct CdpCommandFailure {
+  id : Int
+  method_name : String
+  session_id : String?
+  code : Int
+  message : String
+  data : Json?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpConnectionErrorDiagnostic {
+  kind : String
+  web_socket_url : String
+  timeout_ms : Int?
+  reason : String?
+  path : String
+  message : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpDiscoveredTarget {
+  target_id : String
+  target_type : String
+  title : String
+  url : String
+  description : String
+  devtools_frontend_url : String?
+  web_socket_debugger_url : String?
+  raw : Json
+} derive(Eq, ToJson, @debug.Debug)
+
+type CdpEventHandler
+
+pub(all) struct CdpLaunchInfo {
+  pid : Int
+  port : Int
+  endpoint : String
+  web_socket_url : String
+  user_data_dir : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpLaunchOptions {
+  browser_path : String?
+  port : Int
+  user_data_dir : String
+  headless : Bool
+  url : String?
+  timeout_ms : Int
+  extra_args : Array[String]
+  extensions : Array[String]
+  proxy_server : String?
+  proxy_bypass : String?
+  ignore_https_errors : Bool
+  allow_file_access : Bool
+  hide_scrollbars : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum CdpTarget {
+  WebSocket(String)
+  Http(String)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpTargetInfo {
+  target_id : String
+  target_type : String
+  title : String
+  url : String
+  attached : Bool
+  browser_context_id : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpVersionInfo {
+  browser : String
+  protocol_version : String
+  user_agent : String?
+  v8_version : String?
+  webkit_version : String?
+  web_socket_debugger_url : String
+  raw : Json
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct DiscoveryErrorDiagnostic {
+  kind : String
+  target : String?
+  http_status : Int?
+  reason : String?
+  target_id : String?
+  selector : String?
+  path : String
+  message : String
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

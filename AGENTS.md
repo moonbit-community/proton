@@ -47,6 +47,12 @@ developer must perform them.
   `justjavac/tray`) plus the shared FFI helper module `justjavac/ffi`
   (`sys/ffi/`). Each keeps its upstream module name and version lineage and
   is published from this repository under the Apache-2.0 license.
+- `cdp/`: `justjavac/cdp`; Chrome DevTools Protocol client and generated
+  protocol bindings used only by the `e2e/` DevTools test automation. It is
+  maintained here under the Apache-2.0 license as a workspace member and is
+  not part of the release publishing chain. The `src/protocol/` tree is
+  generated; regenerate it with the scripts under `cdp/tools/` instead of
+  editing it by hand.
 - `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
   aligned with the actual examples.
 - `proton/prebuilt/<platform>/`: shipped Proton-only native artifacts. Do not
