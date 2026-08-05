@@ -280,11 +280,11 @@ async fn wait_for_devtools_active_port(
   timeout_ms~ : Int,
 ) -> DevToolsActivePort {
   let path = devtools_active_port_path(user_data_dir)
-  let deadline = @async.now() + timeout_ms.to_int64()
+  let deadline = @env.now() + timeout_ms.to_uint64()
   for ;; {
     try parse_devtools_active_port(@fs.read_file(path).text()) catch {
       _ => {
-        if @async.now() >= deadline {
+        if @env.now() >= deadline {
           raise BrowserLaunchError::BrowserNotReady(timeout_ms)
         }
         @async.sleep(100)
@@ -293,7 +293,7 @@ async fn wait_for_devtools_active_port(
     } noraise {
       Some(info) => return info
       None => {
-        if @async.now() >= deadline {
+        if @env.now() >= deadline {
           raise BrowserLaunchError::BrowserNotReady(timeout_ms)
         }
         @async.sleep(100)
@@ -405,11 +405,11 @@ pub async fn wait_for_browser_endpoint(
   endpoint : String,
   timeout_ms~ : Int,
 ) -> String {
-  let deadline = @async.now() + timeout_ms.to_int64()
+  let deadline = @env.now() + timeout_ms.to_uint64()
   for ;; {
     try discover_web_socket_url(Http(endpoint)) catch {
       _ => {
-        if @async.now() >= deadline {
+        if @env.now() >= deadline {
           raise BrowserLaunchError::BrowserNotReady(timeout_ms)
         }
         @async.sleep(100)
