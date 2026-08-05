@@ -11,7 +11,7 @@ async fn run_web_contents_view_scenario_probe(
   target : String,
   timeout : Int,
 ) -> ShutdownProbeResult {
-  let (host, left, right) = wait_for_web_contents_view_targets(target, timeout)
+  let (host, left, right) = wait_for_web_contents_view_targets(app, target, timeout)
   let browser = @client.connect_cdp_browser_target_with_timeout(
     cdp_target_from(target),
     timeout_ms=timeout,
@@ -107,6 +107,7 @@ async fn run_web_contents_view_scenario_probe(
 
 ///|
 async fn wait_for_web_contents_view_targets(
+  app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> (
@@ -139,12 +140,21 @@ async fn wait_for_web_contents_view_targets(
         elapsed = elapsed + 250
       }
     }
+    if elapsed >= timeout {
+      let discovered = targets
+        .map(item => item.target_type + ":" + item.title)
+        .join(", ")
+      fail(
+        "CDP page targets did not become ready within " +
+        timeout.to_string() +
+        "ms: Web Contents View Host, WCV Left, WCV Right. discovered=[" +
+        discovered +
+        "]" +
+        app_diagnostic_suffix(app),
+      )
+    }
   }
-  fail(
-    "CDP page targets did not become ready within " +
-    timeout.to_string() +
-    "ms: Web Contents View Host, WCV Left, WCV Right",
-  )
+  abort("unreachable")
 }
 
 ///|
