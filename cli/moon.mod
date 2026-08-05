@@ -10,7 +10,7 @@ import {
   "moonbitlang/parser@0.3.2",
   "moonbitlang/moon_config@0.3.5",
   "moonbitlang/lexer@0.3.5",
-  "moonbitlang/async@0.20.1",
+  "moonbitlang/async@0.20.3",
   "justjavac/ffi@0.2.3",
 }
 
