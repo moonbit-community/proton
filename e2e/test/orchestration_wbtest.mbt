@@ -370,10 +370,15 @@ fn app_cancel_handler() -> @process.CancellationHandler {
     })
   } else {
     @process.CancellationHandler(async fn(pid) {
-      terminate_unix_app_tree(pid, "KILL")
+      if kill_isolated_unix_app_group(pid) != 0 {
+        terminate_unix_app_tree(pid, "KILL")
+      }
     })
   }
 }
+
+///|
+extern "C" fn kill_isolated_unix_app_group(pid : Int) -> Int = "proton_e2e_kill_isolated_process_group"
 
 ///|
 async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {

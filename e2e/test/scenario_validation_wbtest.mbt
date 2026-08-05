@@ -101,6 +101,69 @@ test "Unix E2E cancellation targets the isolated process group first" {
 }
 
 ///|
+#cfg(not(platform="windows"))
+async test "Unix E2E cancellation kills a real isolated process group" {
+  let root = repository_root()
+  let pid_path = join_path(
+    root,
+    "target/proton-e2e-cancel-child-" + choose_cdp_port().to_string() + ".pid",
+  )
+  @mbfs.remove_file(pid_path) catch {
+    _ => ()
+  }
+  defer (@mbfs.remove_file(pid_path) catch { _ => () })
+  @async.with_task_group(group => {
+    let (program, args) = isolated_app_command("/bin/sh", [
+      "-c", "sleep 30 & child=$!; printf '%s' \"$child\" > \"$1\"; wait", "proton-e2e-cancel-child",
+      pid_path,
+    ])
+    let process = @process.spawn(
+      group,
+      program,
+      args,
+      cwd=root,
+      cancel_handler=app_cancel_handler(),
+      no_wait=true,
+    )
+    let mut attempts = 0
+    while !@mbfs.path_exists(pid_path) && attempts < 100 {
+      @async.sleep(20)
+      attempts = attempts + 1
+    }
+    assert_true(@mbfs.path_exists(pid_path))
+    let child_pid = @mbfs.read_file_to_string(pid_path, encoding="utf8")
+      .trim()
+      .to_owned()
+    let started = @async.now()
+    app_cancel_handler()(process.pid)
+    let exit_code = run_e2e_operation_with_timeout(
+      2000,
+      "isolated process group exit",
+      () => process.wait(),
+    )
+    assert_eq(exit_code, -9)
+    assert_true(@async.now() - started < 2000)
+    let mut alive = true
+    let mut checks = 0
+    while alive && checks < 100 {
+      alive = @process.run(
+          "/bin/sh",
+          [
+            "-c", "kill -0 \"$1\" 2>/dev/null", "proton-e2e-child-check", child_pid,
+          ],
+          cancel_handler=@process.hard_cancel(),
+        ) ==
+        0
+      if alive {
+        @async.sleep(20)
+      }
+      checks = checks + 1
+    }
+    assert_false(alive)
+  })
+}
+
+///|
 async test "E2E operation timeout cancels stalled work" {
   let cancelled = Ref(false)
   let outcome = try {
