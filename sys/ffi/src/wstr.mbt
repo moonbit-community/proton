@@ -34,8 +34,12 @@ pub fn from_wstr_lossy(b : Bytes) -> String {
   if b.length() < 2 || b[b.length() - 2] != 0x00 || b[b.length() - 1] != 0x00 {
     abort("expected null-terminated wide strings")
   }
+  let mut end = 0
+  while end + 1 < b.length() && !(b[end] == 0x00 && b[end + 1] == 0x00) {
+    end = end + 2
+  }
   let decoder = @encoding.decoder(UTF16)
-  decoder.decode_lossy(b[0:b.length() - 2])
+  decoder.decode_lossy(b[0:end])
 }
 
 ///|

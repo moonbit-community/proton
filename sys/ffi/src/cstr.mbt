@@ -34,8 +34,12 @@ pub fn from_cstr(b : Bytes) -> String {
   if b.length() == 0 || b[b.length() - 1] != 0x00 {
     abort("expected null-terminated byte strings")
   }
+  let mut end = 0
+  while end < b.length() && b[end] != 0x00 {
+    end = end + 1
+  }
   let decoder = @encoding.decoder(UTF8)
-  decoder.decode_lossy(b[0:b.length() - 1])
+  decoder.decode_lossy(b[0:end])
 }
 
 ///|

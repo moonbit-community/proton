@@ -3,7 +3,7 @@ name = "justjavac/proton"
 version = "0.1.14"
 
 import {
-  "justjavac/ffi@0.2.3",
+  "justjavac/ffi@0.2.4",
   "justjavac/proton_config@0.1.8",
   "justjavac/proton_contract@0.1.1",
   "justjavac/proton_updater@0.1.0",
