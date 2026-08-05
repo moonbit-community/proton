@@ -63,7 +63,7 @@ static void package_icon_windows_error(char *buffer, int32_t buffer_length,
           wide_message[length - 1] == L' ')) {
     wide_message[--length] = L'\0';
   }
-  char system_message[1024] = {0};
+  char system_message[512 * 3] = {0};
   if (length > 0 &&
       WideCharToMultiByte(CP_UTF8, 0, wide_message, -1, system_message,
                           (int)sizeof(system_message), NULL, NULL) > 0) {
