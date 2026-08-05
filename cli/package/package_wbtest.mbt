@@ -209,6 +209,44 @@ async test "package plan stages every window file entry" {
 }
 
 ///|
+async test "configured signing binaries resolve through staged resources" {
+  let root = @fsutil.resolve_path("target", "proton-package-sign-binaries")
+  remove_tree(root)
+  let binary = @fsutil.resolve_path(root, "bin/worker")
+  ensure_dir(@fsutil.path_parent(binary))
+  write_text(binary, "binary")
+  let project = @proton_config.ProjectConfig::new(
+    root,
+    @proton_config.ProjectWindowConfig::new("Demo", 800, 600),
+    @proton_config.ProjectEntry::Html("<main>demo</main>"),
+    @proton_config.ProjectMetadata::new(
+      "Demo",
+      identifier=Some("dev.proton.sign-binaries"),
+      version=Some("1.0.0"),
+    ),
+    bundle=Some(
+      @proton_config.ProjectBundleConfig::new(
+        active=true,
+        resources=[binary],
+        sign=Some(@proton_config.ProjectSignConfig::new(binaries=[binary])),
+      ),
+    ),
+  )
+  let plan = build_package_plan(
+    parse_package_args([]),
+    @fsutil.resolve_path(root, "moon.proton"),
+    project,
+    0UL,
+  )
+  let resource_root = @fsutil.resolve_path(root, "staged resources")
+  ensure_dir(resource_root)
+  stage_project_inputs(plan, resource_root)
+  let staged_binary = @fsutil.resolve_path(resource_root, "bin/worker")
+  assert_true(@fsutil.path_is_file(staged_binary))
+  @debug.assert_eq(plan.sign_binary_targets(resource_root), [staged_binary])
+}
+
+///|
 async test "package plan uses configured backend module and package" {
   let base_dir = @fsutil.resolve_path("target", "proton package module paths")
   let backend_path = @fsutil.resolve_path(base_dir, "modules/backend app")
@@ -552,6 +590,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: ["icon.png", icon],
     url_schemes: [],
@@ -598,6 +637,7 @@ test "macOS plist contains bundle identity and executable" {
     base_dir: ".",
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: [],
     url_schemes: ["devtoys"],
@@ -650,6 +690,7 @@ async test "package manifest records launch metadata" {
     base_dir: ".",
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: [],
     url_schemes: ["devtoys"],
@@ -712,6 +753,7 @@ test "macOS helper plist matches its bundle identity" {
     base_dir: ".",
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: [],
     url_schemes: [],
@@ -757,6 +799,7 @@ async test "macOS ZIP uses the final app name without metadata entries" {
     build: false,
     base_dir: root,
     frontend_dist: None,
+    sign_binaries: [],
     entry_paths: [],
     resources: [],
     icons: [],
@@ -930,6 +973,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: [],
     url_schemes: [],
@@ -1011,6 +1055,7 @@ async test "release executable lookup stays inside package target dir" {
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: [],
     url_schemes: [],
@@ -1091,6 +1136,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
+    sign_binaries: [],
     resources: [],
     icons: [],
     url_schemes: [],

@@ -279,6 +279,9 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|  targets: ["app", "zip"],
       #|  icon: ["icons/icon.ico"],
       #|  resources: ["resources/**"],
+      #|  sign: {
+      #|    binaries: ["bin/worker"],
+      #|  },
       #|  url_schemes: ["desktop-app"],
       #|  document_types: [{
       #|    name: "Desktop document",
@@ -350,6 +353,15 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
           "target/proton-project-config/resources/**",
         ),
       )
+      match bundle.sign() {
+        Some(sign) =>
+          assert_true(
+            normalize_test_slashes(sign.binaries()[0]).has_suffix(
+              "target/proton-project-config/bin/worker",
+            ),
+          )
+        None => fail("expected bundle sign config")
+      }
       assert_true(
         normalize_test_slashes(bundle.output()).has_suffix(
           "target/proton-project-config/target/proton-dist",
@@ -424,6 +436,19 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
             bundle.get("url_schemes"),
             Some(Json::array([Json::string("desktop-app")])),
           )
+          match bundle.get("sign") {
+            Some(Object(sign)) =>
+              match sign.get("binaries") {
+                Some(Array([String(path)])) =>
+                  assert_true(
+                    normalize_test_slashes(path).has_suffix(
+                      "target/proton-project-config/bin/worker",
+                    ),
+                  )
+                _ => fail("expected bundle sign binaries summary")
+              }
+            _ => fail("expected bundle sign summary")
+          }
           match bundle.get("document_types") {
             Some(Array([Object(document_type)])) => {
               @debug.assert_eq(

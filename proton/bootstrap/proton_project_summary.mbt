@@ -76,6 +76,11 @@ fn bundle_summary_json(bundle : ProtonBundleConfig?) -> Json {
         "targets": string_array_json(bundle.targets()),
         "icon": string_array_json(bundle.icon()),
         "resources": string_array_json(bundle.resources()),
+        "sign": match bundle.sign() {
+          Some(sign) =>
+            Json::object({ "binaries": string_array_json(sign.binaries()) })
+          None => Json::null()
+        },
         "url_schemes": string_array_json(bundle.url_schemes()),
         "document_types": Json::array(
           bundle

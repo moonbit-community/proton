@@ -178,6 +178,9 @@ fn proton_bundle_from_project_bundle(
     targets=bundle.targets,
     icon=bundle.icon,
     resources=bundle.resources,
+    sign=bundle.sign.map(fn(sign) {
+      ProtonSignConfig::new(binaries=sign.binaries())
+    }),
     url_schemes=bundle.url_schemes,
     document_types=bundle.document_types,
     output=bundle.output(),
