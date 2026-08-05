@@ -202,20 +202,50 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
 fn dev_options_from_matches(
   matches : @argparse.Matches,
 ) -> RawDevOptions raise DevUsageError {
-  let timeout = @cli_args.required_value(matches, "timeout-ms")
+  guard! matches.values
+    is {
+      "timeout-ms": [timeout, ..],
+      "package"? : Some(app_package)
+      | (None with app_package = []),
+      "config"? : Some(config_path)
+      | (None with config_path = []),
+      "moon-target-dir"? : Some(moon_target_dir)
+      | (None with moon_target_dir = []),
+      "url"? : Some(url)
+      | (None with url = []),
+      "command"? : Some(command)
+      | (None with command = []),
+      "frontend-path"? : Some(frontend_path)
+      | (None with frontend_path = []),
+      "ready-path"? : Some(ready_path)
+      | (None with ready_path = []),
+      "app-args"? : Some(app_args)
+      | (None with app_args = []),
+      ..
+    }
+  guard matches.flags
+    is {
+      "no-dev-server-wait"? : Some(no_dev_server_wait)
+      | (None with no_dev_server_wait = false),
+      "no-frontend"? : Some(no_frontend)
+      | (None with no_frontend = false),
+      "setup"? : Some(setup_runtime)
+      | (None with setup_runtime = false),
+      ..
+    }
   RawDevOptions::{
-    app_package: @cli_args.value(matches, "package"),
-    config_path: @cli_args.value(matches, "config"),
-    moon_target_dir: @cli_args.value(matches, "moon-target-dir"),
-    url: @cli_args.value(matches, "url"),
-    command: @cli_args.value(matches, "command"),
-    frontend_path: @cli_args.value(matches, "frontend-path"),
+    app_package: app_package.get(0),
+    config_path: config_path.get(0),
+    moon_target_dir: moon_target_dir.get(0),
+    url: url.get(0),
+    command: command.get(0),
+    frontend_path: frontend_path.get(0),
     timeout_ms: parse_non_negative_int(timeout, "--timeout-ms"),
-    ready_path: @cli_args.value(matches, "ready-path"),
-    wait_for_dev_server: !@cli_args.flag(matches, "no-dev-server-wait"),
-    start_frontend: !@cli_args.flag(matches, "no-frontend"),
-    setup_runtime: @cli_args.flag(matches, "setup"),
-    app_args: @cli_args.values(matches, "app-args"),
+    ready_path: ready_path.get(0),
+    wait_for_dev_server: !no_dev_server_wait,
+    start_frontend: !no_frontend,
+    setup_runtime,
+    app_args,
   }
 }
 

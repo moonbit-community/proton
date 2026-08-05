@@ -1,5 +1,4 @@
 import {
-  "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/fsutil",
   "justjavac/proton_cli/output",
   "moonbitlang/async",

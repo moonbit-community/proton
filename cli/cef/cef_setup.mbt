@@ -56,12 +56,17 @@ pub async fn setup_default(cwd : String) -> Unit {
 
 ///|
 async fn setup_from_matches(cwd : String, matches : @argparse.Matches) -> Unit {
-  setup(
-    cwd,
-    @cli_args.value(matches, "name"),
-    @cli_args.value(matches, "url"),
-    @cli_args.value(matches, "sha256"),
-  )
+  guard matches.values
+    is {
+      "name"? : Some(name)
+      | (None with name = []),
+      "url"? : Some(url)
+      | (None with url = []),
+      "sha256"? : Some(sha256)
+      | (None with sha256 = []),
+      ..
+    }
+  setup(cwd, name.get(0), url.get(0), sha256.get(0))
 }
 
 ///|

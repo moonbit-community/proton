@@ -134,7 +134,10 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
   let project = loaded.config()
-  let updater_base_url = @cli_args.value(matches, "updater-base-url")
+  let updater_base_url = match matches.values {
+    { "updater-base-url": [base_url, ..], .. } => Some(base_url)
+    _ => None
+  }
   let update_revision = updater_revision_from_matches(matches, updater_base_url)
   let plan = build_package_plan(raw, config_path, project, update_revision)
   print_package_plan(plan, raw.dry_run)
@@ -147,9 +150,9 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       write_updater_metadata(
         plan,
         base_url,
-        match @cli_args.value(matches, "updater-published-at") {
-          Some(published_at) => published_at
-          None => raise MissingPublishedAt
+        match matches.values {
+          { "updater-published-at": [published_at, ..], .. } => published_at
+          _ => raise MissingPublishedAt
         },
       )
     None => ()
@@ -161,17 +164,17 @@ fn updater_revision_from_matches(
   matches : @argparse.Matches,
   base_url : String?,
 ) -> UInt64 raise UpdaterMetadataError {
-  match @cli_args.value(matches, "updater-revision") {
-    None => {
-      guard base_url is None else { raise MissingRevision }
-      0UL
-    }
-    Some(value) => {
+  match matches.values {
+    { "updater-revision": [value, ..], .. } => {
       let revision = @string.parse_uint64(value[:]) catch {
         _ => raise InvalidRevision(value~)
       }
       guard revision > 0UL else { raise InvalidRevision(value~) }
       revision
+    }
+    _ => {
+      guard base_url is None else { raise MissingRevision }
+      0UL
     }
   }
 }
@@ -180,19 +183,41 @@ fn updater_revision_from_matches(
 fn package_options_from_matches(
   matches : @argparse.Matches,
 ) -> RawPackageOptions raise PackageUsageError {
-  let targets = @cli_args.values(matches, "target")
+  guard matches.values
+    is {
+      "target"? : Some(targets)
+      | (None with targets = []),
+      "package"? : Some(app_package)
+      | (None with app_package = []),
+      "config"? : Some(config_path)
+      | (None with config_path = []),
+      "output"? : Some(output)
+      | (None with output = []),
+      ..
+    }
+  guard matches.flags
+    is {
+      "notarize"? : Some(notarize)
+      | (None with notarize = false),
+      "no-build"? : Some(no_build)
+      | (None with no_build = false),
+      "dry-run"? : Some(dry_run)
+      | (None with dry_run = false),
+      "sign"? : Some(sign)
+      | (None with sign = false),
+      ..
+    }
   for target in targets {
     validate_package_target(target)
   }
-  let notarize = @cli_args.flag(matches, "notarize")
   RawPackageOptions::{
-    app_package: @cli_args.value(matches, "package"),
-    config_path: @cli_args.value(matches, "config"),
+    app_package: app_package.get(0),
+    config_path: config_path.get(0),
     targets,
-    output: @cli_args.value(matches, "output"),
-    build: !@cli_args.flag(matches, "no-build"),
-    dry_run: @cli_args.flag(matches, "dry-run"),
-    sign: @cli_args.flag(matches, "sign") || notarize,
+    output: output.get(0),
+    build: !no_build,
+    dry_run,
+    sign: sign || notarize,
     notarize,
   }
 }

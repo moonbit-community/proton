@@ -190,13 +190,30 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
 fn build_options_from_matches(
   matches : @argparse.Matches,
 ) -> RawBuildOptions raise BuildUsageError {
-  let moon_args = @cli_args.values(matches, "moon-build-args")
+  guard matches.values
+    is {
+      "moon-build-args"? : Some(moon_args)
+      | (None with moon_args = []),
+      "package"? : Some(app_package)
+      | (None with app_package = []),
+      "config"? : Some(config_path)
+      | (None with config_path = []),
+      "moon-target-dir"? : Some(moon_target_dir)
+      | (None with moon_target_dir = []),
+      ..
+    }
+  guard matches.flags
+    is {
+      "no-frontend"? : Some(no_frontend)
+      | (None with no_frontend = false),
+      ..
+    }
   validate_moon_build_args(moon_args)
   RawBuildOptions::{
-    app_package: @cli_args.value(matches, "package"),
-    config_path: @cli_args.value(matches, "config"),
-    moon_target_dir: @cli_args.value(matches, "moon-target-dir"),
-    run_frontend_build: !@cli_args.flag(matches, "no-frontend"),
+    app_package: app_package.get(0),
+    config_path: config_path.get(0),
+    moon_target_dir: moon_target_dir.get(0),
+    run_frontend_build: !no_frontend,
     moon_args,
   }
 }
