@@ -1,6 +1,7 @@
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/async/http",
   "moonbitlang/async/process",
@@ -24,7 +25,3 @@ import {
 } for "wbtest"
 
 supported_targets = "+native"
-
-options(
-  warn_list: "-20",
-)

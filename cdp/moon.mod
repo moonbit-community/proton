@@ -1,12 +1,12 @@
 name = "justjavac/cdp"
 
-version = "0.1.7"
+version = "0.1.9"
 
 readme = "README.mbt.md"
 
 import {
-  "moonbitlang/async@0.19.2",
-  "moonbitlang/x@0.4.45",
+  "moonbitlang/async@0.20.3",
+  "moonbitlang/x@0.4.47",
 }
 
 repository = "https://github.com/moonbit-community/proton"
