@@ -1,0 +1,278 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "justjavac/cdp/protocol"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn cdp_command(id~ : Int, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage
+
+pub fn cdp_remote_schema_command(id~ : Int, method_name~ : String, remote_schema~ : Json, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+
+pub fn cdp_schema_command(id~ : Int, method_name~ : String, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+
+pub fn cdp_schema_event(method_name~ : String, params? : Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
+
+pub fn cdp_schema_response(method_name~ : String, CdpResponseMessage) -> CdpResponseMessage raise ProtocolSchemaError
+
+pub fn parse_cdp_incoming(Json) -> CdpIncomingMessage raise ProtocolDecodeError
+
+pub fn protocol_command(String) -> ProtocolCommand?
+
+pub fn protocol_commands() -> Array[ProtocolCommand]
+
+pub fn protocol_commands_for_domain(String) -> Array[ProtocolCommand]
+
+pub fn protocol_commands_matching(String) -> Array[ProtocolCommand]
+
+pub fn protocol_coverage() -> ProtocolCoverage
+
+pub fn protocol_event(String) -> ProtocolEvent?
+
+pub fn protocol_events() -> Array[ProtocolEvent]
+
+pub fn protocol_events_for_domain(String) -> Array[ProtocolEvent]
+
+pub fn protocol_events_matching(String) -> Array[ProtocolEvent]
+
+pub fn protocol_manifest() -> ProtocolManifest
+
+pub fn protocol_remote_has_command(Json, String) -> Bool
+
+pub fn protocol_remote_summary(Json) -> ProtocolRemoteSummary raise ProtocolSchemaDiffError
+
+pub fn protocol_schema_diff(Json) -> ProtocolSchemaDiffReport raise ProtocolSchemaDiffError
+
+pub fn protocol_type(String) -> ProtocolType?
+
+pub fn protocol_types() -> Array[ProtocolType]
+
+pub fn protocol_types_for_domain(String) -> Array[ProtocolType]
+
+pub fn protocol_types_matching(String) -> Array[ProtocolType]
+
+// Errors
+pub(all) suberror ProtocolDecodeError {
+  ExpectedObject
+  MissingField(String)
+  InvalidField(String)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) suberror ProtocolSchemaDiffError {
+  ExpectedObject(String)
+  MissingField(String)
+  InvalidField(String)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) suberror ProtocolSchemaError {
+  UnknownCommand(String)
+  UnsupportedRemoteCommand(String)
+  UnknownEvent(String)
+  ExpectedParamsObject(String)
+  MissingParameter(String, String)
+  UnknownParameter(String, String)
+  InvalidParameterType(String, String, String)
+  ExpectedResultObject(String)
+  MissingReturn(String, String)
+  UnknownReturn(String, String)
+  InvalidReturnType(String, String, String)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ProtocolSchemaError::diagnostic(Self) -> ProtocolSchemaErrorDiagnostic
+pub fn ProtocolSchemaError::expected_type(Self) -> String?
+pub fn ProtocolSchemaError::field_name(Self) -> String?
+pub fn ProtocolSchemaError::kind(Self) -> String
+pub fn ProtocolSchemaError::method_name(Self) -> String?
+pub fn ProtocolSchemaError::path(Self) -> String
+
+// Types and methods
+pub(all) struct CdpCommandMessage {
+  id : Int
+  method_name : String
+  params : Json?
+  session_id : String?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn CdpCommandMessage::stringify(Self) -> String
+pub fn CdpCommandMessage::to_wire_json(Self) -> Json
+
+pub(all) struct CdpError {
+  code : Int
+  message : String
+  data : Json?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpEventMessage {
+  method_name : String
+  params : Json?
+  session_id : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum CdpIncomingMessage {
+  Response(CdpResponseMessage)
+  Event(CdpEventMessage)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct CdpResponseMessage {
+  id : Int
+  result : Json?
+  error : CdpError?
+  session_id : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolCommand {
+  protocol : String
+  domain : String
+  name : String
+  cdp_method : String
+  parameter_count : Int
+  return_count : Int
+  parameters : Array[String]
+  returns : Array[String]
+  parameter_details : Array[ProtocolFieldSummary]
+  return_details : Array[ProtocolFieldSummary]
+  experimental : Bool
+  deprecated : Bool
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ProtocolCommand::build_command(Self, id~ : Int, params? : Json, session_id? : String) -> CdpCommandMessage raise ProtocolSchemaError
+pub fn ProtocolCommand::parameter_names(Self) -> Array[String]
+pub fn ProtocolCommand::required_parameters(Self) -> Array[String]
+pub fn ProtocolCommand::required_returns(Self) -> Array[String]
+pub fn ProtocolCommand::return_names(Self) -> Array[String]
+pub fn ProtocolCommand::validate_response(Self, CdpResponseMessage) -> Unit raise ProtocolSchemaError
+
+pub(all) struct ProtocolCoverage {
+  domain_count : Int
+  command_count : Int
+  event_count : Int
+  type_count : Int
+  command_registry_count : Int
+  event_registry_count : Int
+  type_registry_count : Int
+  complete : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolDomainSummary {
+  protocol : String
+  domain : String
+  command_count : Int
+  event_count : Int
+  type_count : Int
+  experimental : Bool
+  deprecated : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolEvent {
+  protocol : String
+  domain : String
+  name : String
+  cdp_method : String
+  parameter_count : Int
+  parameters : Array[String]
+  parameter_details : Array[ProtocolFieldSummary]
+  experimental : Bool
+  deprecated : Bool
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ProtocolEvent::build_event(Self, params? : Json, session_id? : String) -> CdpEventMessage raise ProtocolSchemaError
+pub fn ProtocolEvent::parameter_names(Self) -> Array[String]
+pub fn ProtocolEvent::required_parameters(Self) -> Array[String]
+
+pub(all) struct ProtocolFieldSummary {
+  name : String
+  kind : String
+  optional : Bool
+  experimental : Bool
+  deprecated : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolManifest {
+  version : ProtocolVersion
+  sources : Array[ProtocolSchemaSource]
+  domains : Array[ProtocolDomainSummary]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ProtocolManifest::command_count(Self) -> Int
+pub fn ProtocolManifest::domain_count(Self) -> Int
+pub fn ProtocolManifest::event_count(Self) -> Int
+pub fn ProtocolManifest::find_domain(Self, String) -> ProtocolDomainSummary?
+pub fn ProtocolManifest::type_count(Self) -> Int
+
+pub(all) struct ProtocolRemoteSummary {
+  version : ProtocolVersion
+  domain_count : Int
+  command_count : Int
+  event_count : Int
+  type_count : Int
+  domains : Array[ProtocolDomainSummary]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolSchemaDiffItem {
+  name : String
+  details : Array[String]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolSchemaDiffReport {
+  local_version : ProtocolVersion
+  remote_version : ProtocolVersion
+  local_domain_count : Int
+  remote_domain_count : Int
+  local_command_count : Int
+  remote_command_count : Int
+  local_event_count : Int
+  remote_event_count : Int
+  local_type_count : Int
+  remote_type_count : Int
+  remote_only_domains : Array[String]
+  local_only_domains : Array[String]
+  remote_only_commands : Array[String]
+  local_only_commands : Array[String]
+  changed_commands : Array[ProtocolSchemaDiffItem]
+  remote_only_events : Array[String]
+  local_only_events : Array[String]
+  changed_events : Array[ProtocolSchemaDiffItem]
+  remote_only_types : Array[String]
+  local_only_types : Array[String]
+  changed_types : Array[ProtocolSchemaDiffItem]
+  compatible : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolSchemaErrorDiagnostic {
+  kind : String
+  method_name : String?
+  field_name : String?
+  path : String
+  expected_type : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolSchemaSource {
+  protocol : String
+  path : String
+  sha256 : String
+  byte_count : Int
+  domain_count : Int
+  command_count : Int
+  event_count : Int
+  type_count : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolType {
+  protocol : String
+  domain : String
+  name : String
+  kind : String
+  property_count : Int
+  enum_count : Int
+  properties : Array[String]
+  property_details : Array[ProtocolFieldSummary]
+  enum_values : Array[String]
+  experimental : Bool
+  deprecated : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct ProtocolVersion {
+  major : String
+  minor : String
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
