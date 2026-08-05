@@ -9,3 +9,7 @@ import {
 import {
   "moonbitlang/core/json",
 } for "wbtest"
+
+options(
+  warn_list: "-33-82",
+)

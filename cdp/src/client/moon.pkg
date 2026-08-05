@@ -24,3 +24,7 @@ import {
 } for "wbtest"
 
 supported_targets = "+native"
+
+options(
+  warn_list: "-20",
+)

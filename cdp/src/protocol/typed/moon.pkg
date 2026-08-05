@@ -12,3 +12,7 @@ import {
   "moonbitlang/core/json",
   "justjavac/cdp/protocol",
 } for "wbtest"
+
+options(
+  warn_list: "-82",
+)
