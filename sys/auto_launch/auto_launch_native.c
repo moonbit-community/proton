@@ -94,7 +94,7 @@ static void mb_set_windows_error(DWORD code, const char *fallback) {
     wide_message[len - 1] = L'\0';
     len--;
   }
-  char message[1024] = "";
+  char message[512 * 3] = "";
   if (WideCharToMultiByte(CP_UTF8, 0, wide_message, -1, message,
                           (int)sizeof(message), NULL, NULL) <= 0) {
     mb_set_error((int32_t)code, fallback);
