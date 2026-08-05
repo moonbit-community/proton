@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/proton",
+  "moonbit-community/proton",
   "{{shared_module}}" @shared,
 }
 

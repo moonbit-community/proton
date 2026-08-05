@@ -4,8 +4,8 @@ import {
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
-  "justjavac/proton_config",
-  "justjavac/proton/manifest",
+  "moonbit-community/proton_config",
+  "moonbit-community/proton/manifest",
 }
 
 warnings = "-29"

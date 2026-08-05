@@ -22,7 +22,7 @@ verifies that the application, helper process tree, and CDP endpoint stop:
 ```sh
 PROTON_NATIVE_DIST="$PWD/native/dist" \
 PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e test -p justjavac/proton/e2e/test \
+moon -C e2e test -p moonbit-community/proton/e2e/test \
   --target native --no-parallelize --diagnostic-limit 200
 ```
 
@@ -65,6 +65,6 @@ virtual X server when no display is available:
 
 ```sh
 xvfb-run -a env PROTON_NATIVE_DIST=native/dist \
-  moon -C e2e test -p justjavac/proton/e2e/test \
+  moon -C e2e test -p moonbit-community/proton/e2e/test \
   --target native --no-parallelize --diagnostic-limit 200
 ```

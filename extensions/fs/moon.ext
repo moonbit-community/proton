@@ -1,6 +1,6 @@
-id = "justjavac/proton-fs"
+id = "moonbit-community/proton-fs"
 namespace = "fs"
-package = "@justjavac/proton-fs"
+package = "@moonbit-community/proton-fs"
 
 version = "0.1.0"
 display_name = "Filesystem"

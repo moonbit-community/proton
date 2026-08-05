@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/proton",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/microphone" @sys_microphone,
-  "justjavac/proton_contract",
-  "justjavac/proton_ext/microphone/contract" @microphone_contract,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/microphone" @sys_microphone,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/microphone/contract" @microphone_contract,
 }
 
 supported_targets = "native"

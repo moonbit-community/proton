@@ -25,7 +25,7 @@ test "auto launch descriptor validates payloads through package constructor" {
 
 ///|
 test "auto launch metadata constants match generated app command extension" {
-  assert_eq(extension().id(), "justjavac/proton-auto-launch")
+  assert_eq(extension().id(), "moonbit-community/proton-auto-launch")
   let command_spec = extension().command_spec() catch {
     error => abort(error.message())
   }

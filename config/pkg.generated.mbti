@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_config"
+package "moonbit-community/proton_config"
 
 import {
   "moonbitlang/core/debug",

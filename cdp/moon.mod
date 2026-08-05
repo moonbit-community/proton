@@ -1,4 +1,4 @@
-name = "justjavac/cdp"
+name = "moonbit-community/cdp"
 
 version = "0.1.9"
 

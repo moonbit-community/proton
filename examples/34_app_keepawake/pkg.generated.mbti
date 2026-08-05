@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/34_app_keepawake"
+package "moonbit-community/proton/examples/34_app_keepawake"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton/examples/34_app_keepawake"
 // Type aliases
 
 // Traits
-

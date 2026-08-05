@@ -65,7 +65,7 @@ pub fn run(matches : @argparse.Matches) -> Unit raise UpdaterUsageError {
 ///
 /// This command deliberately does not read a PEM file. Extracting the modulus
 /// from one means parsing ASN.1, and the verification path in
-/// `justjavac/proton_rsa` was written specifically to contain no ASN.1 parser
+/// `moonbit-community/proton_rsa` was written specifically to contain no ASN.1 parser
 /// at all. OpenSSL already prints the modulus directly, so adding a parser here
 /// would take on that risk to save one shell command.
 fn public_key(matches : @argparse.Matches) -> String raise UpdaterUsageError {

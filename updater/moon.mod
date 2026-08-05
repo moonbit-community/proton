@@ -1,4 +1,4 @@
-name = "justjavac/proton_updater"
+name = "moonbit-community/proton_updater"
 
 version = "0.1.0"
 

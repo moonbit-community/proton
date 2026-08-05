@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton/bootstrap",
-  "justjavac/proton/manifest",
+  "moonbit-community/proton/bootstrap",
+  "moonbit-community/proton/manifest",
   "moonbitlang/x/fs" @mbfs,
 }
 

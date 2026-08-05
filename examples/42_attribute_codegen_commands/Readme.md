@@ -16,6 +16,6 @@ moon -C examples build 42_attribute_codegen_commands --target native
 E2E:
 
 ```sh
-moon -C e2e test -p justjavac/proton/e2e/test --target native \
+moon -C e2e test -p moonbit-community/proton/e2e/test --target native \
   --no-parallelize --filter '*42_attribute_codegen_commands*'
 ```

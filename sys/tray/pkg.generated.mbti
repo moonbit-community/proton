@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/tray"
+package "moonbit-community/tray"
 
 import {
   "moonbitlang/core/debug",
@@ -77,4 +77,3 @@ pub(all) enum TrayMenuItemKind {
 // Type aliases
 
 // Traits
-

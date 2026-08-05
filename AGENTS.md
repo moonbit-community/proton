@@ -26,7 +26,7 @@ developer must perform them.
 - `native/`: standalone CMake project for the Proton native runtime. It builds
   `proton` as a dynamic library/import library, installs `proton_native.h`, and
   installs the helper executable when the engine build is enabled.
-- `proton/`: root `justjavac/proton` MoonBit module. The public facade owns the
+- `proton/`: root `moonbit-community/proton` MoonBit module. The public facade owns the
   app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
   wiring, and selected low-level native re-exports.
 - `proton/native/`: safe MoonBit binding over the `proton_*` C ABI. MoonBit code
@@ -36,18 +36,18 @@ developer must perform them.
   metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
   helpers. Do not reintroduce the old app runtime route without an explicit
   design decision.
-- `cli/`: `justjavac/proton_cli`; independent native developer CLI module plus
+- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module plus
   `cli/codegen/` and `cli/doctor/` helpers.
-- `extensions/`: `justjavac/proton_ext`; command extensions for examples and
+- `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
 - `sys/<pkg>/`: independently maintained native system capability binding
-  modules (`justjavac/auto_launch`, `justjavac/clipboard`,
-  `justjavac/global_hotkey`, `justjavac/keepawake`, `justjavac/microphone`,
-  `justjavac/tray`) plus the shared FFI helper module `justjavac/ffi`
+  modules (`moonbit-community/auto_launch`, `moonbit-community/clipboard`,
+  `moonbit-community/global_hotkey`, `moonbit-community/keepawake`, `moonbit-community/microphone`,
+  `moonbit-community/tray`) plus the shared FFI helper module `moonbit-community/ffi`
   (`sys/ffi/`). Each keeps its upstream module name and version lineage and
   is published from this repository under the Apache-2.0 license.
-- `cdp/`: `justjavac/cdp`; Chrome DevTools Protocol client and generated
+- `cdp/`: `moonbit-community/cdp`; Chrome DevTools Protocol client and generated
   protocol bindings used only by the `e2e/` DevTools test automation. It is
   maintained here under the Apache-2.0 license as a workspace member and is
   not part of the release publishing chain. The `src/protocol/` tree is
@@ -84,12 +84,12 @@ developer must perform them.
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/fsutil justjavac/proton_cli/new justjavac/proton_cli/output justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
+  `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
 - `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
-- `moon -C extensions test -p justjavac/proton_ext justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard justjavac/proton_ext/dialog justjavac/proton_ext/fs justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone justjavac/proton_ext/notification justjavac/proton_ext/path justjavac/proton_ext/shell justjavac/proton_ext/tray --target native`
-- `moon test -p justjavac/ffi justjavac/auto_launch justjavac/clipboard justjavac/global_hotkey justjavac/keepawake justjavac/microphone justjavac/tray --target native`
+- `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
+- `moon test -p moonbit-community/ffi moonbit-community/auto_launch moonbit-community/clipboard moonbit-community/global_hotkey moonbit-community/keepawake moonbit-community/microphone moonbit-community/tray --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`
@@ -112,28 +112,28 @@ native checks before handing off larger refactors.
 - Published `proton` and `proton_ext` packages must not require repository-local `dev_build` or `rule` commands. Generated `.mbt` files are committed and consumed directly by downstream users.
 - When changing extension command annotations, `moon.ext` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
 - Before publishing `proton` or `proton_ext`, run `node scripts/verify_generated.mjs`; it regenerates outputs in a temp directory and fails if committed generated files are stale.
-- Keep release validation for standalone users explicit: run `moon publish --dry-run` in each published module, and smoke-check an independent app with remote `justjavac/proton` and `justjavac/proton_ext` dependencies after publishing.
+- Keep release validation for standalone users explicit: run `moon publish --dry-run` in each published module, and smoke-check an independent app with remote `moonbit-community/proton` and `moonbit-community/proton_ext` dependencies after publishing.
 - Keep `examples/` and `e2e/` out of release publishing unless explicitly requested; they are validation/demo modules, not release packages.
 
 ### Release Checklist
 
-- Publish the dependency chain in this order: `justjavac/proton_config`,
-  `justjavac/proton_contract`, `justjavac/proton_client`,
-  `justjavac/proton_rabbita`, `justjavac/proton`, then
-  `justjavac/proton_cli`. For the currently prepared release, the chain is
+- Publish the dependency chain in this order: `moonbit-community/proton_config`,
+  `moonbit-community/proton_contract`, `moonbit-community/proton_client`,
+  `moonbit-community/proton_rabbita`, `moonbit-community/proton`, then
+  `moonbit-community/proton_cli`. For the currently prepared release, the chain is
   `proton_config 0.1.8` -> `proton_contract 0.1.1` ->
   `proton_client 0.1.1` -> `proton_rabbita 0.1.1` -> `proton 0.1.14` ->
   `proton_cli 0.1.12`.
-- The binding modules under `sys/` (including `justjavac/ffi`) keep their
+- The binding modules under `sys/` (including `moonbit-community/ffi`) keep their
   upstream module names and are republished from this repository when their
   sources change. Since the pinned versions already exist on Mooncakes, there
   is no hard publish-order requirement for them; publish a bumped `sys/<pkg>`
-  module before any `justjavac/proton_ext` release that raises its
-  requirement, and publish a bumped `justjavac/ffi` before any module whose
+  module before any `moonbit-community/proton_ext` release that raises its
+  requirement, and publish a bumped `moonbit-community/ffi` before any module whose
   requirement on it rises.
 - Before publishing, keep these values aligned:
   - `config/moon.mod` version;
-  - the `justjavac/proton_config@...` requirements in `proton/moon.mod` and
+  - the `moonbit-community/proton_config@...` requirements in `proton/moon.mod` and
     `cli/moon.mod`;
   - `contract/moon.mod`, `client/moon.mod`, and `rabbita/moon.mod`, including
     their dependency versions;
@@ -145,12 +145,12 @@ native checks before handing off larger refactors.
   ```sh
   moon fmt --check
   node scripts/verify_generated.mjs
-  moon -C cli test -p justjavac/proton_cli \
-    justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
-    justjavac/proton_cli/cef justjavac/proton_cli/codegen \
-    justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-    justjavac/proton_cli/fsutil justjavac/proton_cli/new \
-    justjavac/proton_cli/output justjavac/proton_cli/package \
+  moon -C cli test -p moonbit-community/proton_cli \
+    moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
+    moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen \
+    moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
+    moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
+    moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
     --target native --no-parallelize --diagnostic-limit 80
   moon -C proton check --target native --diagnostic-limit 80
   ```
@@ -190,7 +190,7 @@ native checks before handing off larger refactors.
   `moon.work`. Do not use symlinks, local module members, or source overrides:
 
   ```sh
-  moon install justjavac/proton_cli
+  moon install moonbit-community/proton_cli
   node ./scripts/e2e_scaffold_registry_smoke.mjs
   tmp_dir="$(mktemp -d)"
   proton_cli -C "$tmp_dir" new release-smoke --title "Release Smoke" \
@@ -216,7 +216,7 @@ native checks before handing off larger refactors.
 - Prefer the current public API shape:
   - facade: `@proton.Runtime::new(...)`, `@proton.RuntimeConfig::bundled(...)`,
     `@proton.Window::new(...)`
-  - low-level package: `justjavac/proton/native`
+  - low-level package: `moonbit-community/proton/native`
   - C ABI: `proton_*`
 - Do not add old low-level compatibility APIs.
 
@@ -332,7 +332,7 @@ native checks before handing off larger refactors.
 - Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
   native tests for the FFI binding. Engine or bridge changes should also run the
   relevant examples and the MoonBit `e2e/` self-hosted scenarios (`moon -C e2e
-  test -p justjavac/proton/e2e/test --target native --no-parallelize`).
+  test -p moonbit-community/proton/e2e/test --target native --no-parallelize`).
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

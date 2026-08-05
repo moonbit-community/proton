@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/keepawake/testsupport"
+package "moonbit-community/keepawake/testsupport"
 
 // Values
 pub fn stub_linked() -> Bool
@@ -11,4 +11,3 @@ pub fn stub_linked() -> Bool
 // Type aliases
 
 // Traits
-

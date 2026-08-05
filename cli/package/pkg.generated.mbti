@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/package"
+package "moonbit-community/proton_cli/package"
 
 import {
-  "justjavac/proton_config",
+  "moonbit-community/proton_config",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
@@ -15,6 +15,14 @@ pub async fn run(String, @argparse.Matches) -> Unit
 pub async fn write_updater_metadata(PackagePlan, String, String) -> Unit raise UpdaterMetadataError
 
 // Errors
+pub(all) suberror LinuxPackagingError {
+  InvalidConfiguration(detail~ : String)
+  MissingTarget(path~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+  Verification(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn LinuxPackagingError::message(Self) -> String
+
 pub(all) suberror MacosSigningError {
   InvalidConfiguration(detail~ : String)
   MissingTarget(path~ : String)
@@ -99,6 +107,12 @@ pub fn WindowsPackagingError::message(Self) -> String
 
 // Types and methods
 type MacosCodeSignTarget derive(Eq, @debug.Debug)
+
+pub(all) enum PackageHost {
+  Macos
+  Windows
+  Linux
+} derive(Eq)
 
 type PackagePlan derive(Eq, @debug.Debug)
 

@@ -183,7 +183,7 @@ async test "doctor discovers generated app package and derives dependencies" {
       #|version = "0.1.0"
       #|
       #|import {
-      #|  "justjavac/proton@0.1.10",
+      #|  "moonbit-community/proton@0.1.10",
       #|  "moonbitlang/async@0.19.4",
       #|  "example/tool@1.2.3",
       #|}
@@ -202,7 +202,7 @@ async test "doctor discovers generated app package and derives dependencies" {
     @fsutil.path_join(app_dir, "moon.pkg"),
     (
       #|import {
-      #|  "justjavac/proton",
+      #|  "moonbit-community/proton",
       #|  "moonbitlang/async",
       #|  "generated-app/extensions/counter",
       #|}
@@ -934,13 +934,13 @@ async test "moon_config adapter reads module deps and package imports" {
   @mbfs.write_string_to_file(
     moon_mod_path,
     (
-      #|name = "justjavac/proton-demo"
+      #|name = "moonbit-community/proton-demo"
       #|
       #|version = "0.1.0"
       #|
       #|import {
-      #|  "justjavac/proton@0.1.10",
-      #|  "justjavac/proton_ext@0.1.0",
+      #|  "moonbit-community/proton@0.1.10",
+      #|  "moonbit-community/proton_ext@0.1.0",
       #|  "moonbitlang/async@0.19.0",
       #|  "moonbitlang/x@0.4.43",
       #|}
@@ -961,8 +961,8 @@ async test "moon_config adapter reads module deps and package imports" {
     moon_pkg_path,
     (
       #|import {
-      #|  "justjavac/proton",
-      #|  "justjavac/proton_ext/fs" @fs,
+      #|  "moonbit-community/proton",
+      #|  "moonbit-community/proton_ext/fs" @fs,
       #|}
       #|
       #|pkgtype(kind: "executable")
@@ -973,23 +973,26 @@ async test "moon_config adapter reads module deps and package imports" {
     err => abort(@debug.render(Repr(err)))
   }
   let module_config = read_moon_mod(moon_mod_path)
-  @debug.assert_eq(module_config.name, Some("justjavac/proton-demo"))
+  @debug.assert_eq(module_config.name, Some("moonbit-community/proton-demo"))
   @debug.assert_eq(module_config.preferred_target, Some("native"))
   @debug.assert_eq(module_config.supported_targets, Some("+native"))
   @debug.assert_eq(
-    dependency_version(Some(module_config), "justjavac/proton"),
+    dependency_version(Some(module_config), "moonbit-community/proton"),
     Some("0.1.10"),
   )
   let package_config = read_moon_pkg(moon_pkg_path)
   @debug.assert_eq(package_config.is_main, Some(true))
   assert_true(
     package_config.imports.any(fn(item) {
-      item.package_path == "justjavac/proton"
+      item.package_path == "moonbit-community/proton"
     }),
   )
   @debug.assert_eq(
-    package_imports_with_prefix(Some(package_config), "justjavac/proton_ext/"),
-    ["justjavac/proton_ext/fs"],
+    package_imports_with_prefix(
+      Some(package_config),
+      "moonbit-community/proton_ext/",
+    ),
+    ["moonbit-community/proton_ext/fs"],
   )
 }
 
@@ -1214,9 +1217,9 @@ test "json renderer does not include utf8 status symbols" {
     [
       DoctorSection::new("packages", "Packages", Missing, [
         DoctorLine::coded(
-          "packages.dependency.justjavac/proton.missing",
+          "packages.dependency.moonbit-community/proton.missing",
           Missing,
-          "justjavac/proton: not declared",
+          "moonbit-community/proton: not declared",
         ),
       ]),
     ],

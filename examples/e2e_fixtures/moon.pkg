@@ -6,11 +6,11 @@ import {
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,
-  "justjavac/proton/core",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton/native",
-  "justjavac/proton",
+  "moonbit-community/proton/core",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton/native",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

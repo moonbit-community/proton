@@ -1,11 +1,11 @@
-# justjavac/global_hotkey
+# moonbit-community/global_hotkey
 
 [![CI](https://github.com/justjavac/moonbit-global-hotkey/actions/workflows/ci.yml/badge.svg)](https://github.com/justjavac/moonbit-global-hotkey/actions/workflows/ci.yml)
 [![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
 [![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
 [![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
 [![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
-[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/justjavac/global_hotkey)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/global_hotkey)
 
 Cross-platform native global hotkey helpers for MoonBit.
 
@@ -22,7 +22,7 @@ This package targets `native` and supports Windows, macOS, and Linux X11 session
 ## Install
 
 ```bash
-moon add justjavac/global_hotkey
+moon add moonbit-community/global_hotkey
 ```
 
 ## Quick start
@@ -110,7 +110,7 @@ Key commands:
 ```bash
 moon check --target native
 moon test --target native
-moon coverage analyze -p justjavac/global_hotkey -- -f summary
+moon coverage analyze -p moonbit-community/global_hotkey -- -f summary
 moon info
 moon fmt
 ```

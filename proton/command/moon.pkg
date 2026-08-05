@@ -1,8 +1,8 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/proton/core",
-  "justjavac/proton/ipc",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/core",
+  "moonbit-community/proton/ipc",
+  "moonbit-community/proton_contract",
 }
 
 import {

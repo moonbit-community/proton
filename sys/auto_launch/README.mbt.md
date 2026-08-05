@@ -1,4 +1,4 @@
-# justjavac/auto_launch
+# moonbit-community/auto_launch
 
 [![CI](https://github.com/justjavac/moonbit-auto-launch/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/justjavac/moonbit-auto-launch/actions/workflows/ci.yml)
 [![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-auto-launch/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-auto-launch)

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/output"
+package "moonbit-community/proton_cli/output"
 
 // Values
 pub async fn info(String) -> Unit noraise
@@ -13,4 +13,3 @@ pub async fn write_stderr_line(String) -> Unit noraise
 // Type aliases
 
 // Traits
-

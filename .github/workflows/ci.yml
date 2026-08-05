@@ -203,21 +203,21 @@ jobs:
               LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
               LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
               moon -C proton test native --target native --diagnostic-limit 80
-            xvfb-run -a moon -C cli test -p justjavac/proton_cli \
-              justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
-              justjavac/proton_cli/cef justjavac/proton_cli/codegen \
-              justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-              justjavac/proton_cli/fsutil justjavac/proton_cli/new \
-              justjavac/proton_cli/output justjavac/proton_cli/package \
+            xvfb-run -a moon -C cli test -p moonbit-community/proton_cli \
+              moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
+              moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen \
+              moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
+              moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
+              moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           else
             moon -C proton test native --target native --diagnostic-limit 80
-            moon -C cli test -p justjavac/proton_cli \
-              justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd \
-              justjavac/proton_cli/cef justjavac/proton_cli/codegen \
-              justjavac/proton_cli/dev justjavac/proton_cli/doctor \
-              justjavac/proton_cli/fsutil justjavac/proton_cli/new \
-              justjavac/proton_cli/output justjavac/proton_cli/package \
+            moon -C cli test -p moonbit-community/proton_cli \
+              moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
+              moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen \
+              moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
+              moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
+              moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           fi
           moon -C e2e build --target native --diagnostic-limit 80
@@ -231,36 +231,36 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
           moon -C proton test native --target native --diagnostic-limit 80
-          moon -C cli test -p justjavac/proton_cli justjavac/proton_cli/arguments justjavac/proton_cli/build_cmd justjavac/proton_cli/cef justjavac/proton_cli/codegen justjavac/proton_cli/dev justjavac/proton_cli/doctor justjavac/proton_cli/fsutil justjavac/proton_cli/new justjavac/proton_cli/output justjavac/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
+          moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Test extensions on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a moon -C extensions test -p justjavac/proton_ext \
-              justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard \
-              justjavac/proton_ext/dialog justjavac/proton_ext/fs \
-              justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake \
-              justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone \
-              justjavac/proton_ext/notification justjavac/proton_ext/path \
-              justjavac/proton_ext/shell justjavac/proton_ext/tray \
+            xvfb-run -a moon -C extensions test -p moonbit-community/proton_ext \
+              moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
+              moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
+              moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
+              moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone \
+              moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
+              moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
               --target native
-            xvfb-run -a moon test -p justjavac/auto_launch justjavac/clipboard \
-              justjavac/global_hotkey justjavac/keepawake justjavac/microphone \
-              justjavac/tray --target native
+            xvfb-run -a moon test -p moonbit-community/auto_launch moonbit-community/clipboard \
+              moonbit-community/global_hotkey moonbit-community/keepawake moonbit-community/microphone \
+              moonbit-community/tray --target native
           else
-            moon -C extensions test -p justjavac/proton_ext \
-              justjavac/proton_ext/auto_launch justjavac/proton_ext/clipboard \
-              justjavac/proton_ext/dialog justjavac/proton_ext/fs \
-              justjavac/proton_ext/global_hotkey justjavac/proton_ext/keepawake \
-              justjavac/proton_ext/metadata_check justjavac/proton_ext/microphone \
-              justjavac/proton_ext/notification justjavac/proton_ext/path \
-              justjavac/proton_ext/shell justjavac/proton_ext/tray \
+            moon -C extensions test -p moonbit-community/proton_ext \
+              moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
+              moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
+              moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
+              moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone \
+              moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
+              moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
               --target native
-            moon test -p justjavac/auto_launch justjavac/clipboard \
-              justjavac/global_hotkey justjavac/keepawake justjavac/microphone \
-              justjavac/tray --target native
+            moon test -p moonbit-community/auto_launch moonbit-community/clipboard \
+              moonbit-community/global_hotkey moonbit-community/keepawake moonbit-community/microphone \
+              moonbit-community/tray --target native
           fi
 
       - name: Test extensions on Windows
@@ -270,28 +270,28 @@ jobs:
           PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
         run: |
           $extensionPackages = @(
-            "justjavac/proton_ext"
-            "justjavac/proton_ext/auto_launch"
-            "justjavac/proton_ext/clipboard"
-            "justjavac/proton_ext/dialog"
-            "justjavac/proton_ext/fs"
-            "justjavac/proton_ext/global_hotkey"
-            "justjavac/proton_ext/keepawake"
-            "justjavac/proton_ext/metadata_check"
-            "justjavac/proton_ext/microphone"
-            "justjavac/proton_ext/notification"
-            "justjavac/proton_ext/path"
-            "justjavac/proton_ext/shell"
-            "justjavac/proton_ext/tray"
+            "moonbit-community/proton_ext"
+            "moonbit-community/proton_ext/auto_launch"
+            "moonbit-community/proton_ext/clipboard"
+            "moonbit-community/proton_ext/dialog"
+            "moonbit-community/proton_ext/fs"
+            "moonbit-community/proton_ext/global_hotkey"
+            "moonbit-community/proton_ext/keepawake"
+            "moonbit-community/proton_ext/metadata_check"
+            "moonbit-community/proton_ext/microphone"
+            "moonbit-community/proton_ext/notification"
+            "moonbit-community/proton_ext/path"
+            "moonbit-community/proton_ext/shell"
+            "moonbit-community/proton_ext/tray"
           )
           moon -C extensions test -p $extensionPackages --target native
           $sysPackages = @(
-            "justjavac/auto_launch"
-            "justjavac/clipboard"
-            "justjavac/global_hotkey"
-            "justjavac/keepawake"
-            "justjavac/microphone"
-            "justjavac/tray"
+            "moonbit-community/auto_launch"
+            "moonbit-community/clipboard"
+            "moonbit-community/global_hotkey"
+            "moonbit-community/keepawake"
+            "moonbit-community/microphone"
+            "moonbit-community/tray"
           )
           moon test -p $sysPackages --target native
 
@@ -319,7 +319,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon -C e2e test -p justjavac/proton/e2e/test --target native --no-parallelize --diagnostic-limit 200
+          moon -C e2e test -p moonbit-community/proton/e2e/test --target native --no-parallelize --diagnostic-limit 200
 
       - name: Run MoonBit CDP e2e on Unix
         if: ${{ matrix.os != 'windows-latest' }}
@@ -327,10 +327,10 @@ jobs:
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a moon -C e2e test -p justjavac/proton/e2e/test \
+            xvfb-run -a moon -C e2e test -p moonbit-community/proton/e2e/test \
               --target native --no-parallelize --diagnostic-limit 200
           else
-            moon -C e2e test -p justjavac/proton/e2e/test \
+            moon -C e2e test -p moonbit-community/proton/e2e/test \
               --target native --no-parallelize --diagnostic-limit 200
           fi
 

@@ -1,8 +1,8 @@
 import {
-  "justjavac/proton_ext/clipboard",
-  "justjavac/proton_ext/dialog",
-  "justjavac/proton_ext/fs",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/clipboard",
+  "moonbit-community/proton_ext/dialog",
+  "moonbit-community/proton_ext/fs",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

@@ -1,4 +1,4 @@
-// Vectors signed with the same OpenSSL key `justjavac/proton_rsa` uses. The
+// Vectors signed with the same OpenSSL key `moonbit-community/proton_rsa` uses. The
 // manifest signature covers the manifest bytes exactly as transmitted, and the
 // artifact signature covers the artifact bytes; both were produced by OpenSSL,
 // so a disagreement indicts this package rather than the vector.

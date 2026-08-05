@@ -11,15 +11,18 @@ test "application descriptors preserve typed stable names" {
 
 ///|
 test "extension descriptors share an opaque extension route" {
-  let ext = extension(id="justjavac/proton-dialog", js_namespace="dialog")
+  let ext = extension(
+    id="moonbit-community/proton-dialog",
+    js_namespace="dialog",
+  )
   let open_file : Command[String, String] = ext.command("open_file")
   let selected : Event[String] = ext.event("selected")
-  assert_eq(ext.id(), "justjavac/proton-dialog")
+  assert_eq(ext.id(), "moonbit-community/proton-dialog")
   assert_eq(ext.js_namespace(), "dialog")
   assert_false(open_file.contract_route().is_application())
   assert_eq(
     open_file.contract_route().extension_id(),
-    Some("justjavac/proton-dialog"),
+    Some("moonbit-community/proton-dialog"),
   )
   assert_eq(selected.contract_route().extension_namespace(), Some("dialog"))
   assert_eq(open_file.contract_route().operation_name(), "ext:dialog/open_file")

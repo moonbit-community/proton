@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/ipc"
+package "moonbit-community/proton/ipc"
 
 import {
   "moonbitlang/core/debug",
@@ -71,4 +71,3 @@ pub fn IpcOpResponse::validate(Self) -> Self raise IpcError
 // Type aliases
 
 // Traits
-

@@ -127,7 +127,7 @@ pub(all) struct ProtocolType {
 /// Use `protocol_manifest` from the generated manifest file to obtain the
 /// current value, then the count and lookup methods in this file to inspect it.
 /// The manifest intentionally stores summary metadata; full generated typed
-/// structs and builders live in `justjavac/cdp/protocol/typed`.
+/// structs and builders live in `moonbit-community/cdp/protocol/typed`.
 pub(all) struct ProtocolManifest {
   version : ProtocolVersion
   sources : Array[ProtocolSchemaSource]

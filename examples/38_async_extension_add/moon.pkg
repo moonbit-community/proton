@@ -1,9 +1,9 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/async",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

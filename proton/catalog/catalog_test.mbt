@@ -105,10 +105,10 @@ test "discover_extension_descriptor_files can target one extension package" {
     builtin_extension_root("path"),
   ])
 
-  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/proton-path"])
+  @debug.assert_eq(catalog.descriptor_ids(), ["moonbit-community/proton-path"])
   let ids = catalog.descriptor_ids()
   ids.push("mutated")
-  @debug.assert_eq(catalog.descriptor_ids(), ["justjavac/proton-path"])
+  @debug.assert_eq(catalog.descriptor_ids(), ["moonbit-community/proton-path"])
 }
 
 ///|
@@ -278,7 +278,9 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
 
   let ids = catalog.descriptor_ids()
   ids.sort()
-  @debug.assert_eq(ids, ["vendor/base", "vendor/echo", "justjavac/proton-path"])
+  @debug.assert_eq(ids, [
+    "vendor/base", "vendor/echo", "moonbit-community/proton-path",
+  ])
 
   match catalog.to_summary_json() {
     Object(summary) =>
@@ -298,15 +300,16 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
             }
             _ => abort("expected extension summary object")
           }
-          match find_extension_summary(extensions, "justjavac/proton-path") {
+          match
+            find_extension_summary(extensions, "moonbit-community/proton-path") {
             Some(extension) => {
               @debug.assert_eq(
                 extension.get("id"),
-                Some(Json::string("justjavac/proton-path")),
+                Some(Json::string("moonbit-community/proton-path")),
               )
               @debug.assert_eq(
                 extension.get("moonbit_import_path"),
-                Some(Json::string("justjavac/proton_ext/path")),
+                Some(Json::string("moonbit-community/proton_ext/path")),
               )
             }
             _ => abort("expected extension summary object")

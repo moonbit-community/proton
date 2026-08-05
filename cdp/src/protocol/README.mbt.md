@@ -1,4 +1,4 @@
-# justjavac/cdp/protocol
+# moonbit-community/cdp/protocol
 
 Core Chrome DevTools Protocol wire types and schema helpers.
 

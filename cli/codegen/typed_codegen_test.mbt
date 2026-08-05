@@ -133,7 +133,7 @@ test "typed codegen emits extension routes without duplicating identity" {
 ///|
 test "extension identity generation renders moon ext identity" {
   let generated = generate_extension_identity(
-    "justjavac/proton-clipboard",
+    "moonbit-community/proton-clipboard",
     "clipboard",
     binding_name="extension",
   )
@@ -142,7 +142,9 @@ test "extension identity generation renders moon ext identity" {
       "pub let extension : @proton_contract.ExtensionContract",
     ),
   )
-  assert_true(generated.source.contains("id=\"justjavac/proton-clipboard\""))
+  assert_true(
+    generated.source.contains("id=\"moonbit-community/proton-clipboard\""),
+  )
   assert_true(generated.source.contains("js_namespace=\"clipboard\""))
 }
 

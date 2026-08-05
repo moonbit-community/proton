@@ -1,4 +1,4 @@
-# justjavac/microphone
+# moonbit-community/microphone
 
 Native-only microphone device discovery helpers for MoonBit.
 

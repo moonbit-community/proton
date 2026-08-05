@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton_ext/tray",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/tray",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

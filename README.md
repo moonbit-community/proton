@@ -14,7 +14,7 @@ Supported prebuilt runtimes:
 Install the CLI and create a project:
 
 ```sh
-moon install justjavac/proton_cli
+moon install moonbit-community/proton_cli
 proton_cli new my-app \
   --title "My App" \
   --identifier "com.example.my-app"
@@ -374,7 +374,7 @@ processes, CDP connections, frontend servers, and cleanup:
 ```sh
 PROTON_NATIVE_DIST="$PWD/native/dist" \
 PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e test -p justjavac/proton/e2e/test \
+moon -C e2e test -p moonbit-community/proton/e2e/test \
   --target native --no-parallelize --diagnostic-limit 200
 ```
 

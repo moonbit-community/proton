@@ -8,7 +8,7 @@ import {
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/syntax",
-  "justjavac/proton_config",
+  "moonbit-community/proton_config",
 }
 
 warnings = "-29"

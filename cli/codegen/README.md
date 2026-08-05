@@ -1,6 +1,6 @@
 # proton_cli/codegen
 
-`justjavac/proton_cli/codegen` generates a typed command registrar from explicit
+`moonbit-community/proton_cli/codegen` generates a typed command registrar from explicit
 MoonBit source inputs.
 
 Each handler binds to a local typed descriptor:

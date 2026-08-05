@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton_ext/global_hotkey",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/global_hotkey",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

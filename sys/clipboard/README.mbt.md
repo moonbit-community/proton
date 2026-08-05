@@ -1,4 +1,4 @@
-# justjavac/clipboard
+# moonbit-community/clipboard
 
 Cross-platform native clipboard helpers for MoonBit `native` builds.
 

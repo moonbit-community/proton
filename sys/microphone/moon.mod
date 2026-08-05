@@ -1,9 +1,9 @@
-name = "justjavac/microphone"
+name = "moonbit-community/microphone"
 
 version = "0.1.3"
 
 import {
-  "justjavac/ffi@0.2.3",
+  "moonbit-community/ffi@0.2.3",
 }
 
 readme = "README.mbt.md"

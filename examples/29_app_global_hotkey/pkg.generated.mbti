@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/29_app_global_hotkey"
+package "moonbit-community/proton/examples/29_app_global_hotkey"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton/examples/29_app_global_hotkey"
 // Type aliases
 
 // Traits
-

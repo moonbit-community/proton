@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/27_app_notification"
+package "moonbit-community/proton/examples/27_app_notification"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton/examples/27_app_notification"
 // Type aliases
 
 // Traits
-

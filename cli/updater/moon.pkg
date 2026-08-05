@@ -1,5 +1,5 @@
 import {
-  "justjavac/proton_rsa" @rsa,
+  "moonbit-community/proton_rsa" @rsa,
   "moonbitlang/core/argparse",
 }
 

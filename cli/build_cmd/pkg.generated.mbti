@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/build_cmd"
+package "moonbit-community/proton_cli/build_cmd"
 
 import {
-  "justjavac/proton_config",
+  "moonbit-community/proton_config",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
@@ -45,4 +45,3 @@ type RawBuildOptions derive(Eq, @debug.Debug)
 // Type aliases
 
 // Traits
-

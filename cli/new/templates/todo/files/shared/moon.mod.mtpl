@@ -3,7 +3,7 @@ name = "{{shared_module}}"
 version = "0.1.0"
 
 import {
-  "justjavac/proton_contract@{{proton_contract_version}}",
+  "moonbit-community/proton_contract@{{proton_contract_version}}",
 }
 
 license = "Apache-2.0"

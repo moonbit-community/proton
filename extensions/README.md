@@ -1,13 +1,13 @@
 # Extensions
 
-`justjavac/proton_ext` contains Proton extension packages for the native DLL
+`moonbit-community/proton_ext` contains Proton extension packages for the native DLL
 route. Generated app-command extensions expose host capabilities through the
 Proton bridge and keep metadata for catalog/codegen validation.
 
 The current supported route is:
 
 ```text
-MoonBit app -> justjavac/proton -> proton dynamic library -> command bridge
+MoonBit app -> moonbit-community/proton -> proton dynamic library -> command bridge
 ```
 
 Applications register backend implementations with `.extension(...)` and grant
@@ -76,7 +76,7 @@ extension settings in `moon.proton` are not the active registration surface.
 
 ## Tray Notes
 
-The tray extension is backed by `justjavac/tray`, which owns the platform tray
+The tray extension is backed by `moonbit-community/tray`, which owns the platform tray
 native-stub. Proton native C stays limited to the CEF-backed runtime, windows,
 and bridge ABI. The v1 API exposes `support`, `show`, `hide`, `setIcon`,
 `setTooltip`, `setMenu`, and `destroy`.

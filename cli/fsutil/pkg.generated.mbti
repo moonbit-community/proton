@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/fsutil"
+package "moonbit-community/proton_cli/fsutil"
 
 // Values
 pub async fn find_project_root_from(String) -> String
@@ -25,4 +25,3 @@ pub fn resolve_path(String, String) -> String
 // Type aliases
 
 // Traits
-

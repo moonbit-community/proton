@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton_ext/auto_launch",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/auto_launch",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

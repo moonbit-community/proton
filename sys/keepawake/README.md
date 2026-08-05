@@ -18,17 +18,17 @@ maintain and easy to extend:
 
 ## Install
 
-Add the module to your project, then import `justjavac/keepawake`.
+Add the module to your project, then import `moonbit-community/keepawake`.
 
 ```bash
-moon add justjavac/keepawake
+moon add moonbit-community/keepawake
 ```
 
 Package configuration:
 
 ```moonbit
 import {
-  "justjavac/keepawake",
+  "moonbit-community/keepawake",
 }
 ```
 

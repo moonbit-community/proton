@@ -1,4 +1,4 @@
-name = "justjavac/proton_rsa"
+name = "moonbit-community/proton_rsa"
 
 version = "0.1.0"
 

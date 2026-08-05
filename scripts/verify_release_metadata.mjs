@@ -106,32 +106,32 @@ checkTemplateDefaults({
 });
 checkEqual(
   "proton/moon.mod proton_config dependency",
-  moduleImportVersion("proton/moon.mod", "justjavac/proton_config"),
+  moduleImportVersion("proton/moon.mod", "moonbit-community/proton_config"),
   configVersion,
 );
 checkEqual(
   "cli/moon.mod proton_config dependency",
-  moduleImportVersion("cli/moon.mod", "justjavac/proton_config"),
+  moduleImportVersion("cli/moon.mod", "moonbit-community/proton_config"),
   configVersion,
 );
 checkEqual(
   "proton/moon.mod proton_contract dependency",
-  moduleImportVersion("proton/moon.mod", "justjavac/proton_contract"),
+  moduleImportVersion("proton/moon.mod", "moonbit-community/proton_contract"),
   contractVersion,
 );
 checkEqual(
   "client/moon.mod proton_contract dependency",
-  moduleImportVersion("client/moon.mod", "justjavac/proton_contract"),
+  moduleImportVersion("client/moon.mod", "moonbit-community/proton_contract"),
   contractVersion,
 );
 checkEqual(
   "rabbita/moon.mod proton_contract dependency",
-  moduleImportVersion("rabbita/moon.mod", "justjavac/proton_contract"),
+  moduleImportVersion("rabbita/moon.mod", "moonbit-community/proton_contract"),
   contractVersion,
 );
 checkEqual(
   "rabbita/moon.mod proton_client dependency",
-  moduleImportVersion("rabbita/moon.mod", "justjavac/proton_client"),
+  moduleImportVersion("rabbita/moon.mod", "moonbit-community/proton_client"),
   clientVersion,
 );
 checkEqual("cli/main.mbt cli_current_version", cliEmbeddedVersion(), cliVersion);

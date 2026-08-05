@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/global_hotkey"
+package "moonbit-community/global_hotkey"
 
 import {
   "moonbitlang/core/debug",
@@ -40,4 +40,3 @@ type UnregisterPlan derive(Eq, @debug.Debug)
 // Type aliases
 
 // Traits
-

@@ -1927,8 +1927,8 @@ fn collect_packages(
   }
   match
     (
-      dependency_version(module_value, "justjavac/proton"),
-      dependency_version(module_value, "justjavac/proton_ext"),
+      dependency_version(module_value, "moonbit-community/proton"),
+      dependency_version(module_value, "moonbit-community/proton_ext"),
     ) {
     (Some(proton), Some(extension)) =>
       if version_major_minor(proton) != version_major_minor(extension) {
@@ -2047,7 +2047,7 @@ async fn collect_extensions(
 ) -> DoctorSection {
   let imported = match package_config {
     Some(Ok(config)) =>
-      package_imports_with_prefix(Some(config), "justjavac/proton_ext/")
+      package_imports_with_prefix(Some(config), "moonbit-community/proton_ext/")
     _ => []
   }
   let extension_root = extension_root_for_project(project)

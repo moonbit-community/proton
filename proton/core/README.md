@@ -1,6 +1,6 @@
 # proton/core
 
-`justjavac/proton/core` owns the bridge between native MoonBit code and page
+`moonbit-community/proton/core` owns the bridge between native MoonBit code and page
 JavaScript.
 
 It provides:

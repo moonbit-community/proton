@@ -1,9 +1,9 @@
-name = "justjavac/tray"
+name = "moonbit-community/tray"
 
 version = "0.1.7"
 
 import {
-  "justjavac/ffi@0.2.3",
+  "moonbit-community/ffi@0.2.3",
 }
 
 readme = "README.mbt.md"

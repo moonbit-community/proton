@@ -1,4 +1,4 @@
-name = "justjavac/clipboard"
+name = "moonbit-community/clipboard"
 
 version = "0.1.5"
 

@@ -1,4 +1,4 @@
-name = "justjavac/auto_launch"
+name = "moonbit-community/auto_launch"
 
 version = "0.1.3"
 

@@ -1,7 +1,7 @@
 import {
   "moonbitlang/async/js_async",
   "moonbitlang/core/json",
-  "justjavac/proton_contract",
+  "moonbit-community/proton_contract",
 }
 
 import {

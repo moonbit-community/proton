@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/51_child_process_close_repro"
+package "moonbit-community/proton/examples/51_child_process_close_repro"
 
 import {
   "moonbitlang/core/json",
@@ -17,4 +17,3 @@ type HoldResult derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

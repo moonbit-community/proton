@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/updater"
+package "moonbit-community/proton_ext/updater"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton/extension",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/extension",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
 }
 

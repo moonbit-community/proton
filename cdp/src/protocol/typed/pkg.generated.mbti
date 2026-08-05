@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/cdp/protocol/typed"
+package "moonbit-community/cdp/protocol/typed"
 
 import {
-  "justjavac/cdp/protocol",
+  "moonbit-community/cdp/protocol",
   "moonbitlang/core/debug",
 }
 

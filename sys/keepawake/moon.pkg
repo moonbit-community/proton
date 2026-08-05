@@ -1,10 +1,10 @@
 import {
-  "justjavac/ffi",
+  "moonbit-community/ffi",
   "moonbitlang/core/encoding/utf8",
 }
 
 import {
-  "justjavac/keepawake/testsupport",
+  "moonbit-community/keepawake/testsupport",
 } for "wbtest"
 
 supported_targets = "native"

@@ -1,4 +1,4 @@
-# justjavac/proton_rsa
+# moonbit-community/proton_rsa
 
 RSASSA-PKCS1-v1_5 signature verification over SHA-256, in pure MoonBit.
 

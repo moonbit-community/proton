@@ -1,4 +1,4 @@
-name = "justjavac/ffi"
+name = "moonbit-community/ffi"
 
 version = "0.2.4"
 

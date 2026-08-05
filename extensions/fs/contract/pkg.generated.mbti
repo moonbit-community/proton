@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/fs/contract"
+package "moonbit-community/proton_ext/fs/contract"
 
 import {
-  "justjavac/proton_contract",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -147,4 +147,3 @@ pub(all) struct WriteFileRequest {
 // Type aliases
 
 // Traits
-

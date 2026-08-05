@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/e2e/test"
+package "moonbit-community/proton/e2e/test"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton/e2e/test"
 // Type aliases
 
 // Traits
-

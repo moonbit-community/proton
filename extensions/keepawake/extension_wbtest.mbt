@@ -31,7 +31,7 @@ test "keep awake scope labels are stable" {
 
 ///|
 test "keep awake metadata constants match generated app command extension" {
-  assert_eq(extension().id(), "justjavac/proton-keepawake")
+  assert_eq(extension().id(), "moonbit-community/proton-keepawake")
   let command_spec = extension().command_spec() catch {
     error => abort(error.message())
   }

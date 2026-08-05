@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/cef"
+package "moonbit-community/proton_cli/cef"
 
 import {
   "moonbitlang/core/argparse",
@@ -81,4 +81,3 @@ pub fn CefUsageError::message(Self) -> String
 // Type aliases
 
 // Traits
-

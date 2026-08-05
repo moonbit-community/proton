@@ -1,4 +1,4 @@
-name = "justjavac/global_hotkey"
+name = "moonbit-community/global_hotkey"
 
 version = "0.1.4"
 

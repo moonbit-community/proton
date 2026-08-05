@@ -1,3 +1,3 @@
-id = "justjavac/proton-tray"
+id = "moonbit-community/proton-tray"
 namespace = "tray"
-package = "@justjavac/proton-tray"
+package = "@moonbit-community/proton-tray"

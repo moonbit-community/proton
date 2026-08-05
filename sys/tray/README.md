@@ -1,11 +1,11 @@
-# justjavac/tray
+# moonbit-community/tray
 
 [![CI](https://github.com/justjavac/moonbit-tray/actions/workflows/ci.yml/badge.svg)](https://github.com/justjavac/moonbit-tray/actions/workflows/ci.yml)
 [![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-tray)
 [![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-tray)
 [![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-tray)
 [![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-tray)
-[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/justjavac/tray)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/tray)
 
 Cross-platform native tray helpers for MoonBit.
 
@@ -17,7 +17,7 @@ needed, and destroy it cleanly.
 ## Install
 
 ```bash
-moon add justjavac/tray
+moon add moonbit-community/tray
 ```
 
 This package supports the `native` target only.
@@ -231,7 +231,7 @@ Windows-only.
 ```bash
 moon test --target native
 moon test --target native --enable-coverage
-moon coverage analyze -p justjavac/tray -- -f summary
+moon coverage analyze -p moonbit-community/tray -- -f summary
 ```
 
 Optional native integration checks can be enabled locally:

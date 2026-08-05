@@ -93,7 +93,7 @@ project without editing its `moon.work`, module manifests, or build rules. This
 is the release gate for registry dependency resolution:
 
 ```sh
-moon install justjavac/proton_cli
+moon install moonbit-community/proton_cli
 node ./scripts/e2e_scaffold_registry_smoke.mjs
 ```
 

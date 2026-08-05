@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext"
+package "moonbit-community/proton_ext"
 
 import {
-  "justjavac/proton/extension",
+  "moonbit-community/proton/extension",
 }
 
 // Values
@@ -17,4 +17,3 @@ pub fn desktop() -> @extension.Extensions
 // Type aliases
 
 // Traits
-

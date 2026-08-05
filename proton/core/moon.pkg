@@ -2,13 +2,13 @@ import {
   "moonbitlang/async",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "justjavac/proton/ipc",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/ipc",
+  "moonbit-community/proton_contract",
 }
 
 import {
   "moonbitlang/core/debug",
-  "justjavac/proton/ipc",
+  "moonbit-community/proton/ipc",
 } for "wbtest"
 
 supported_targets = "+native"

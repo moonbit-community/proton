@@ -9,7 +9,10 @@ async fn find_prebuilt_root(root : String, platform : ProtonPlatform) -> String 
   }
   let mooncakes_prebuilt = @fsutil.path_join(
     @fsutil.path_join(
-      @fsutil.path_join(@fsutil.path_join(root, ".mooncakes"), "justjavac"),
+      @fsutil.path_join(
+        @fsutil.path_join(root, ".mooncakes"),
+        "moonbit-community",
+      ),
       "proton",
     ),
     @fsutil.path_join("prebuilt", platform.id),

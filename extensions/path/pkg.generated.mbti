@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/path"
+package "moonbit-community/proton_ext/path"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton/extension",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/extension",
+  "moonbit-community/proton_contract",
 }
 
 // Values
@@ -21,4 +21,3 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 // Type aliases
 
 // Traits
-

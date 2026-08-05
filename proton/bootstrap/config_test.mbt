@@ -761,14 +761,14 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
       ),
     ],
     extensions={
-      "justjavac/proton-fs": @manifest.ExtensionSetting::enabled(),
-      "justjavac/proton-tray": @manifest.ExtensionSetting::disabled(),
+      "moonbit-community/proton-fs": @manifest.ExtensionSetting::enabled(),
+      "moonbit-community/proton-tray": @manifest.ExtensionSetting::disabled(),
     },
     permissions=[
       @manifest.PermissionGrant::new(
         "main",
         @manifest.PermissionOrigin::App,
-        "justjavac/proton-fs",
+        "moonbit-community/proton-fs",
         scope=Json::object({ "read": Json::array([Json::string("./data")]) }),
       ),
     ],
@@ -792,16 +792,16 @@ test "app_manifest_to_json roundtrips internal runtime manifest" {
     @manifest.WindowSizeHint::Fixed,
   )
   @debug.assert_eq(
-    roundtripped.extension_setting("justjavac/proton-fs"),
+    roundtripped.extension_setting("moonbit-community/proton-fs"),
     Some(@manifest.ExtensionSetting::enabled()),
   )
   @debug.assert_eq(
-    roundtripped.extension_setting("justjavac/proton-tray"),
+    roundtripped.extension_setting("moonbit-community/proton-tray"),
     Some(@manifest.ExtensionSetting::disabled()),
   )
   let grants = roundtripped.permission_grants()
   assert_eq(grants.length(), 1)
   assert_eq(grants[0].window(), "main")
   assert_eq(grants[0].origin(), @manifest.PermissionOrigin::App)
-  assert_eq(grants[0].extension(), "justjavac/proton-fs")
+  assert_eq(grants[0].extension(), "moonbit-community/proton-fs")
 }

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/18_extension_fs"
+package "moonbit-community/proton/examples/18_extension_fs"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton/examples/18_extension_fs"
 // Type aliases
 
 // Traits
-

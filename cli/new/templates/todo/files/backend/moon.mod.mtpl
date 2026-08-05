@@ -4,8 +4,8 @@ version = "0.1.0"
 
 import {
   "{{shared_module}}@0.1.0",
-  "justjavac/proton@{{proton_version}}",
-  "justjavac/proton_contract@{{proton_contract_version}}",
+  "moonbit-community/proton@{{proton_version}}",
+  "moonbit-community/proton_contract@{{proton_contract_version}}",
 }
 
 license = "Apache-2.0"
