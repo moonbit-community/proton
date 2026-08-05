@@ -71,7 +71,7 @@ pub fn run(matches : @argparse.Matches) -> Unit raise UpdaterUsageError {
 fn public_key(matches : @argparse.Matches) -> String raise UpdaterUsageError {
   guard matches.values
     is {
-      "modulus"? : Some([modulus, ..]),
+      "modulus": [modulus, ..],
       "exponent"? : Some([exponent, ..])
       | (_ with exponent = "010001"),
       ..

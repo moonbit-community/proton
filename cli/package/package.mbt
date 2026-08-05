@@ -134,7 +134,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   }
   let project = loaded.config()
   let updater_base_url = match matches.values {
-    { "updater-base-url"? : Some([base_url, ..]), .. } => Some(base_url)
+    { "updater-base-url": [base_url, ..], .. } => Some(base_url)
     _ => None
   }
   let update_revision = updater_revision_from_matches(matches, updater_base_url)
@@ -150,8 +150,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         plan,
         base_url,
         match matches.values {
-          { "updater-published-at"? : Some([published_at, ..]), .. } =>
-            published_at
+          { "updater-published-at": [published_at, ..], .. } => published_at
           _ => raise MissingPublishedAt
         },
       )
@@ -165,7 +164,7 @@ fn updater_revision_from_matches(
   base_url : String?,
 ) -> UInt64 raise UpdaterMetadataError {
   match matches.values {
-    { "updater-revision"? : Some([value, ..]), .. } => {
+    { "updater-revision": [value, ..], .. } => {
       let revision = @string.parse_uint64(value[:]) catch {
         _ => raise InvalidRevision(value~)
       }
