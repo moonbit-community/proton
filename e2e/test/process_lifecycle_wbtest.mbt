@@ -523,9 +523,15 @@ async fn connect_spawned_page(
       None => ()
     }
     let page = Some(
-      @client.connect_cdp_page_target_with_timeout(
-        cdp_target_from(target),
-        timeout_ms=cdp_start_poll_timeout_ms,
+      run_e2e_operation_with_timeout(
+        cdp_start_poll_timeout_ms,
+        "CDP page connection probe",
+        () => {
+          @client.connect_cdp_page_target_with_timeout(
+            cdp_target_from(target),
+            timeout_ms=cdp_start_poll_timeout_ms,
+          )
+        },
       ),
     ) catch {
       _ => None

@@ -313,6 +313,7 @@ jobs:
 
       - name: Run MoonBit CDP e2e on Windows
         if: ${{ matrix.os == 'windows-latest' }}
+        timeout-minutes: 10
         env:
           _CL_: /utf-8
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
@@ -323,6 +324,7 @@ jobs:
 
       - name: Run MoonBit CDP e2e on Unix
         if: ${{ matrix.os != 'windows-latest' }}
+        timeout-minutes: 10
         env:
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
         run: |
