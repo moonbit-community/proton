@@ -69,14 +69,17 @@ pub fn run(matches : @argparse.Matches) -> Unit raise UpdaterUsageError {
 /// at all. OpenSSL already prints the modulus directly, so adding a parser here
 /// would take on that risk to save one shell command.
 fn public_key(matches : @argparse.Matches) -> String raise UpdaterUsageError {
-  let modulus = match @cli_args.value(matches, "modulus") {
-    Some(value) => normalize_hex(value)
-    None => raise MissingModulus
+  guard matches.values
+    is {
+      "modulus"? : Some([modulus, ..]),
+      "exponent"? : Some([exponent, ..])
+      | (_ with exponent = "010001"),
+      ..
+    } else {
+    raise MissingModulus
   }
-  let exponent = match @cli_args.value(matches, "exponent") {
-    Some(value) => normalize_hex(value)
-    None => "010001"
-  }
+  let modulus = normalize_hex(modulus)
+  let exponent = normalize_hex(exponent)
   let text = "rsa-sha256:\{modulus}:\{exponent}"
   // Parsing is the validation. Every rule the runtime will apply to this key —
   // minimum modulus size, canonical encoding, a usable exponent — is enforced

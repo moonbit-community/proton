@@ -1,5 +1,4 @@
 import {
-  "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_rsa" @rsa,
   "moonbitlang/core/argparse",
 }

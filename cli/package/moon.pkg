@@ -1,7 +1,6 @@
 import {
   "justjavac/proton_config",
   "justjavac/proton_updater" @updater,
-  "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/build_cmd" @build,
   "justjavac/proton_cli/cef",
   "justjavac/proton_cli/fsutil",

@@ -279,19 +279,43 @@ fn cli_command() -> @argparse.Command {
 
 ///|
 async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
-  let dry_run = @cli_args.flag(matches, "dry-run")
-  let verbose = @cli_args.flag(matches, "verbose")
-  let deep = @cli_args.flag(matches, "deep")
-  let run_frontend = @cli_args.flag(matches, "run")
-  let fix = @cli_args.flag(matches, "fix")
-  let json = @cli_args.flag(matches, "json")
-  let json_lines = @cli_args.flag(matches, "json-lines")
-  let quiet = @cli_args.flag(matches, "quiet")
-  let sections = @cli_args.values(matches, "section")
-  if @cli_args.flag(matches, "frontend") && !sections.contains("frontend") {
+  guard matches.flags
+    is {
+      "dry-run"? : Some(dry_run)
+      | (None with dry_run = false),
+      "verbose"? : Some(verbose)
+      | (None with verbose = false),
+      "deep"? : Some(deep)
+      | (None with deep = false),
+      "run"? : Some(run_frontend)
+      | (None with run_frontend = false),
+      "fix"? : Some(fix)
+      | (None with fix = false),
+      "json"? : Some(json)
+      | (None with json = false),
+      "json-lines"? : Some(json_lines)
+      | (None with json_lines = false),
+      "quiet"? : Some(quiet)
+      | (None with quiet = false),
+      "frontend"? : Some(frontend)
+      | (None with frontend = false),
+      "release"? : Some(release)
+      | (None with release = false),
+      ..
+    }
+  guard matches.values
+    is {
+      "section"? : Some(section_args)
+      | (None with section_args = []),
+      "output"? : Some(output_args)
+      | (None with output_args = []),
+      ..
+    }
+  let sections = section_args.copy()
+  if frontend && !sections.contains("frontend") {
     sections.push("frontend")
   }
-  if @cli_args.flag(matches, "release") && !sections.contains("release") {
+  if release && !sections.contains("release") {
     sections.push("release")
   }
   if run_frontend && !sections.contains("frontend") {
@@ -311,9 +335,9 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
       raise CliUsageError::Invalid(message="unknown doctor section: " + section)
     }
   }
-  let output = match @cli_args.value(matches, "output") {
-    Some(path) => Some(@fsutil.resolve_path(cwd, path))
-    None => None
+  let output = match output_args {
+    [path, ..] => Some(@fsutil.resolve_path(cwd, path))
+    [] => None
   }
   @doctor.run(
     cwd~,
@@ -332,12 +356,24 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
 
 ///|
 async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
-  let inputs = @cli_args.values(matches, "input_files")
-  let output = @cli_args.required_value(matches, "output-file")
+  guard! matches.values
+    is {
+      "input_files"? : Some(inputs)
+      | (None with inputs = []),
+      "output-file": [output, ..],
+      "identity-name"? : Some(identity_args)
+      | (None with identity_args = []),
+      ..
+    }
+  guard matches.flags
+    is {
+      "extension-identity"? : Some(extension_identity)
+      | (None with extension_identity = false),
+      ..
+    }
   let resolved_inputs = inputs.map(input => @fsutil.resolve_path(cwd, input))
   let resolved_output = @fsutil.resolve_path(cwd, output)
-  let extension_identity = @cli_args.flag(matches, "extension-identity")
-  let identity_name = @cli_args.value(matches, "identity-name")
+  let identity_name = identity_args.get(0)
   if !extension_identity && identity_name is Some(_) {
     raise CliUsageError::Invalid(
       message="codegen --identity-name requires --extension-identity",
@@ -398,7 +434,7 @@ async fn run(args : ArrayView[String]) -> Int {
       return 2
     }
   }
-  let cwd = @cli_args.required_value(matches, "cwd")
+  guard! matches.values is { "cwd": [cwd, ..], .. }
   if !(matches.subcommand is Some(("version", _))) {
     check_cli_update()
   }

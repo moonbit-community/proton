@@ -118,17 +118,43 @@ pub fn command() -> @argparse.Command {
 fn new_options_from_matches(
   matches : @argparse.Matches,
 ) -> RawNewProjectOptions {
+  guard matches.values
+    is {
+      "path"? : Some(path)
+      | (None with path = []),
+      "title"? : Some(title)
+      | (None with title = []),
+      "author"? : Some(author)
+      | (None with author = []),
+      "identifier"? : Some(identifier)
+      | (None with identifier = []),
+      "width"? : Some(width)
+      | (None with width = []),
+      "height"? : Some(height)
+      | (None with height = []),
+      ..
+    }
+  guard matches.flags
+    is {
+      "check"? : check,
+      "yes"? : Some(yes)
+      | (None with yes = false),
+      "git"? : git,
+      "dry-run"? : Some(dry_run)
+      | (None with dry_run = false),
+      ..
+    }
   {
-    path: @cli_args.value(matches, "path"),
-    title: @cli_args.value(matches, "title"),
-    author: @cli_args.value(matches, "author"),
-    identifier: @cli_args.value(matches, "identifier"),
-    width: @cli_args.value(matches, "width"),
-    height: @cli_args.value(matches, "height"),
-    check: @cli_args.optional_flag(matches, "check"),
-    yes: @cli_args.flag(matches, "yes"),
-    git: @cli_args.optional_flag(matches, "git"),
-    dry_run: @cli_args.flag(matches, "dry-run"),
+    path: path.get(0),
+    title: title.get(0),
+    author: author.get(0),
+    identifier: identifier.get(0),
+    width: width.get(0),
+    height: height.get(0),
+    check,
+    yes,
+    git,
+    dry_run,
   }
 }
 
