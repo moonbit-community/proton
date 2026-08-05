@@ -11,7 +11,9 @@ async fn run_web_contents_view_scenario_probe(
   target : String,
   timeout : Int,
 ) -> ShutdownProbeResult {
-  let (host, left, right) = wait_for_web_contents_view_targets(app, target, timeout)
+  let (host, left, right) = wait_for_web_contents_view_targets(
+    app, target, timeout,
+  )
   let browser = @client.connect_cdp_browser_target_with_timeout(
     cdp_target_from(target),
     timeout_ms=timeout,
