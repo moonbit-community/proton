@@ -168,7 +168,7 @@ async fn resolve_native_dist(
 ) -> (String, DoctorRuntimeManifest?) {
   let native_dist_override = resolve_native_dist_override(
     project,
-    @sys.get_env_var("PROTON_NATIVE_DIST"),
+    @env.get_env_var("PROTON_NATIVE_DIST"),
   )
   match native_dist_override {
     Some(path) => (path, None)
@@ -372,10 +372,10 @@ async fn host_os_line() -> DoctorLine {
   } else {
     uname_value("-s")
   }
-  let arch = match @sys.get_env_var("PROCESSOR_ARCHITEW6432") {
+  let arch = match @env.get_env_var("PROCESSOR_ARCHITEW6432") {
     Some(value) => Some(value)
     None =>
-      match @sys.get_env_var("PROCESSOR_ARCHITECTURE") {
+      match @env.get_env_var("PROCESSOR_ARCHITECTURE") {
         Some(value) => Some(value)
         None => uname_value("-m")
       }
@@ -843,8 +843,8 @@ async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
       ),
     )
   } else if platform_id == "linux-x64" {
-    let display = @sys.get_env_var("DISPLAY")
-    let wayland = @sys.get_env_var("WAYLAND_DISPLAY")
+    let display = @env.get_env_var("DISPLAY")
+    let wayland = @env.get_env_var("WAYLAND_DISPLAY")
     if display is None && wayland is None {
       lines.push(
         DoctorLine::coded(
@@ -1678,7 +1678,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
 
   let platform_id = @cef.current_platform_id()
   if platform_id.has_prefix("darwin-") {
-    match @sys.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
+    match @env.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
       Some(_) =>
         lines.push(
           DoctorLine::coded(
@@ -1696,7 +1696,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
           ),
         )
     }
-    match @sys.get_env_var("PROTON_NOTARY_PROFILE") {
+    match @env.get_env_var("PROTON_NOTARY_PROFILE") {
       Some(_) =>
         lines.push(
           DoctorLine::coded(
@@ -1715,7 +1715,7 @@ async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
         )
     }
   } else if platform_id == "win32-x64" {
-    match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
+    match @env.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
       Some(_) =>
         lines.push(
           DoctorLine::coded(

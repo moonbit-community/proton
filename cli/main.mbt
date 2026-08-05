@@ -56,7 +56,7 @@ fn env_flag_is_enabled(value : String) -> Bool {
 
 ///|
 fn cli_update_check_disabled() -> Bool {
-  match @sys.get_env_var("PROTON_NO_UPDATE_CHECK") {
+  match @env.get_env_var("PROTON_NO_UPDATE_CHECK") {
     Some(value) => env_flag_is_enabled(value)
     None => false
   }

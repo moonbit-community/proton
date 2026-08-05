@@ -3,7 +3,7 @@ name = "justjavac/ffi"
 version = "0.2.3"
 
 import {
-  "moonbitlang/x@0.4.45",
+  "moonbitlang/x@0.4.48",
 }
 
 readme = "README.mbt.md"

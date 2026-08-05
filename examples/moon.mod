@@ -3,8 +3,8 @@ name = "justjavac/proton/examples"
 version = "0.1.0"
 
 import {
-  "moonbitlang/x@0.4.43",
-  "moonbitlang/async@0.19.0",
+  "moonbitlang/x@0.4.48",
+  "moonbitlang/async@0.20.3",
   "justjavac/proton_ext@0.1.3",
   "justjavac/proton_contract@0.1.0",
   "justjavac/proton@0.1.2",

@@ -182,8 +182,8 @@ async test "Windows signtool signs and verifies configured resource binaries" {
   let certificate = @fsutil.resolve_path(root, "test certificate.pfx")
   write_windows_test_file(certificate, "certificate")
   let log = @fsutil.resolve_path(root, "signtool.log")
-  let old_log = @sys.get_env_var("PROTON_TEST_SIGNTOOL_LOG")
-  @sys.set_env_var("PROTON_TEST_SIGNTOOL_LOG", log)
+  let old_log = @env.get_env_var("PROTON_TEST_SIGNTOOL_LOG")
+  @env.set_env_var("PROTON_TEST_SIGNTOOL_LOG", log)
   defer restore_package_env("PROTON_TEST_SIGNTOOL_LOG", old_log)
   sign_windows_portable_configured(
     plan,

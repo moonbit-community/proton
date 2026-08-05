@@ -575,7 +575,7 @@ async fn sign_windows_portable_with_tool(
 
 ///|
 async fn windows_signing_config_from_env() -> WindowsSigningConfig {
-  let certificate = match @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
+  let certificate = match @env.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
     Some(path) if path.trim().to_owned() != "" => path.trim().to_owned()
     _ =>
       raise WindowsPackagingError::InvalidConfiguration(
@@ -587,11 +587,11 @@ async fn windows_signing_config_from_env() -> WindowsSigningConfig {
       detail="Windows signing certificate is missing: " + certificate,
     )
   }
-  let password = @sys.get_env_var("PROTON_WINDOWS_CERTIFICATE_PASSWORD").unwrap_or(
+  let password = @env.get_env_var("PROTON_WINDOWS_CERTIFICATE_PASSWORD").unwrap_or(
     "",
   )
   let timestamp = windows_timestamp_url(
-    @sys.get_env_var("PROTON_WINDOWS_TIMESTAMP_URL"),
+    @env.get_env_var("PROTON_WINDOWS_TIMESTAMP_URL"),
   )
   WindowsSigningConfig::{ certificate, password, timestamp }
 }

@@ -9,11 +9,11 @@ import {
   "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/lexer/basic" @lexer_basic,
   "moonbitlang/x/path",
-  "moonbitlang/x/sys",
   "moonbitlang/moon_config",
 }
 

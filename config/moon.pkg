@@ -5,8 +5,7 @@ import {
   "moonbitlang/lexer",
   "moonbitlang/lexer/basic",
   "moonbitlang/lexer/tokens",
-  "moonbitlang/parser/basic" @parser_basic,
-  "moonbitlang/parser/moon_config",
+  "moonbitlang/moon_config",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
 }
