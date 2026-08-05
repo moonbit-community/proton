@@ -471,14 +471,21 @@ static bool proton_module_dir(char *out, size_t out_len) {
     return false;
   }
   HMODULE module = NULL;
-  if (!GetModuleHandleExA(
+  if (!GetModuleHandleExW(
           GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-          (LPCSTR)&proton_module_dir, &module)) {
+          (LPCWSTR)&proton_module_dir, &module)) {
     return false;
   }
-  DWORD written = GetModuleFileNameA(module, out, (DWORD)out_len);
-  if (written == 0 || written >= out_len) {
+  wchar_t wide_path[4096] = {0};
+  DWORD wide_written = GetModuleFileNameW(
+      module, wide_path, (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
+  if (wide_written == 0 ||
+      wide_written >= sizeof(wide_path) / sizeof(wide_path[0])) {
+    return false;
+  }
+  if (WideCharToMultiByte(CP_UTF8, 0, wide_path, -1, out, (int)out_len,
+                          NULL, NULL) <= 0) {
     return false;
   }
   return proton_path_parent(out);
