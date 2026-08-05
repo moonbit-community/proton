@@ -92,4 +92,4 @@ moon run src/examples/parse_listing --target native
 
 ## License
 
-MIT.
+Apache-2.0.

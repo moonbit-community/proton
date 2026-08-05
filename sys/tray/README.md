@@ -251,4 +251,4 @@ MOONBIT_TRAY_RUN_NATIVE_TESTS=1 moon test --target native --filter "native*"
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE).

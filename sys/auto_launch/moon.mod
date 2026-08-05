@@ -6,7 +6,7 @@ readme = "README.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/sys/auto_launch"
 
-license = "MIT"
+license = "Apache-2.0"
 
 keywords = [
   "desktop",

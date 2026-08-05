@@ -8,12 +8,9 @@ import {
   "justjavac/proton_updater@0.1.0",
   "moonbitlang/x@0.4.43",
   "moonbitlang/parser@0.3.2",
-  "justjavac/case@0.2.0",
   "moonbitlang/moon_config@0.3.5",
   "moonbitlang/lexer@0.3.5",
   "moonbitlang/async@0.20.1",
-  "justjavac/ci@0.1.1",
-  "justjavac/template@0.1.1",
   "justjavac/ffi@0.2.3",
 }
 

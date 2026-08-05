@@ -97,4 +97,4 @@ and then releases it.
 
 ## License
 
-MIT
+Apache-2.0

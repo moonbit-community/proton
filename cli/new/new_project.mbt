@@ -35,7 +35,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let cwd = @path.Path(cwd).resolve().to_string()
   let raw = new_options_from_matches(matches)
   let defaults = options_from_raw(cwd, raw)
-  let interactive = !raw.yes && !@ci.is_ci(cwd~)
+  let interactive = !raw.yes && !is_ci()
   let options = if interactive {
     let prompted = prompt_new_project_options(raw, defaults)
     if !confirm_create(prompted) {

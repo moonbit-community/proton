@@ -1,7 +1,4 @@
 import {
-  "justjavac/case",
-  "justjavac/ci",
-  "justjavac/template",
   "justjavac/proton_cli/arguments" @cli_args,
   "justjavac/proton_cli/codegen",
   "justjavac/proton_cli/fsutil",
@@ -13,6 +10,7 @@ import {
   "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
+  "moonbitlang/core/env",
   "moonbitlang/core/string",
   "moonbitlang/x/path",
 }

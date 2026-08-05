@@ -82,7 +82,7 @@ fn template_context(
   let module_prefix = author + "/" + project_name
   {
     title,
-    title_html: @template.escape_html(title),
+    title_html: escape_html(title),
     title_mbt: mbt_string(title),
     author,
     project_name,
@@ -113,8 +113,8 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "frontend_module", value: context.frontend_module },
     { name: "backend_module", value: context.backend_module },
     { name: "identifier_mbt", value: context.identifier_mbt },
-    { name: "width", value: @template.render_value(context.width) },
-    { name: "height", value: @template.render_value(context.height) },
+    { name: "width", value: context.width.to_string() },
+    { name: "height", value: context.height.to_string() },
     { name: "proton_version", value: context.proton_version },
     { name: "proton_cli_version", value: context.proton_cli_version },
     { name: "proton_contract_version", value: context.proton_contract_version },
@@ -151,11 +151,7 @@ fn render_template(
   validate_template_placeholders(spec, vars)
   let mut output = spec.template_source
   for item in vars {
-    output = @template.replace(
-      output,
-      old="{{" + item.name + "}}",
-      new=item.value,
-    )
+    output = output.replace_all(old="{{" + item.name + "}}", new=item.value)
   }
   { path: spec.output_path, content: output }
 }
@@ -167,7 +163,7 @@ fn validate_template_placeholders(
 ) -> Unit raise NewProjectTemplateError {
   let mut probe = spec.template_source
   for item in vars {
-    probe = @template.replace(probe, old="{{" + item.name + "}}", new="")
+    probe = probe.replace_all(old="{{" + item.name + "}}", new="")
   }
   if probe.contains("{{") {
     raise UnresolvedPlaceholder(template=spec.template_name)
