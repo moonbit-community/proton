@@ -1047,6 +1047,7 @@ void proton_engine_runtime_adopt_asset_root(proton_engine_window_t *window,
     return;
   }
   runtime->asset_root = root;
+}
 
 proton_engine_view_t *proton_engine_window_lookup_view_browser(
     cef_browser_t *browser) {

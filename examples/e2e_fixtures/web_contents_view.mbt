@@ -108,13 +108,7 @@ async fn run_web_contents_view_views(
     wcv_native_result("create left view", () => {
       @native.View::new(
         window,
-        @native.ViewConfig::new(
-          width=300,
-          height=220,
-          x=10,
-          y=10,
-          initial_url=wcv_left_url,
-        ),
+        @native.ViewConfig::new(width=300, height=220, x=10, y=10),
       )
     }) {
     Ok(view) => view
@@ -132,6 +126,16 @@ async fn run_web_contents_view_views(
       ignore(wcv_native_result("destroy left view", () => left.destroy()))
       return Err(message)
     }
+  }
+  // Navigate both views after their browsers exist; loading the left page as
+  // the initial URL races the initial about:blank and can drop its load
+  // events on loaded machines.
+  match wcv_native_result("load left view", () => left.load_url(wcv_left_url)) {
+    Err(message) => {
+      ignore(wcv_native_result("destroy left view", () => left.destroy()))
+      return Err(message)
+    }
+    Ok(_) => ()
   }
   match
     wcv_native_result("load right view html", () => {

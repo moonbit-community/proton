@@ -1509,6 +1509,8 @@ test "the launch check is opt-in twice over" {
   // check_on_launch: false wins even when a handler is registered.
   assert_false(checks_on_launch(disabled, 1))
   assert_false(checks_on_launch(disabled, 0))
+}
+
 ///|
 fn test_view_handle(
   id : String,

@@ -1142,7 +1142,8 @@ const char *proton_engine_window_html(proton_engine_window_t *window,
 }
 proton_engine_view_t *proton_engine_window_lookup_view_browser(
     cef_browser_t *browser) {
-  return proton_engine_view_from_browser(browser);
+  return proton_engine_find_view_by_browser_id(
+      proton_engine_browser_id(browser));
 }
 
 const char *proton_engine_view_html_url(proton_engine_view_t *view) {
