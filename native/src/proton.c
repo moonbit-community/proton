@@ -88,6 +88,13 @@
 #define PROTON_APP_SINGLE_INSTANCE_FEATURE ""
 #endif
 
+#if PROTON_WITH_ENGINE && \
+    (defined(__APPLE__) || defined(_WIN32) || defined(__linux__))
+#define PROTON_WEB_CONTENTS_VIEW_FEATURE ",\"web_contents_view\""
+#else
+#define PROTON_WEB_CONTENTS_VIEW_FEATURE ""
+#endif
+
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
 static PROTON_THREAD_LOCAL char g_last_error[512];
 
@@ -282,7 +289,8 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_APP_SINGLE_INSTANCE_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
-          PROTON_MANAGED_APP_RUNNER_FEATURE "]}",
+          PROTON_MANAGED_APP_RUNNER_FEATURE PROTON_WEB_CONTENTS_VIEW_FEATURE
+              "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,
       PROTON_PLATFORM_ID);
@@ -755,6 +763,10 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
     if (status != PROTON_OK) {
       return status;
     }
+    status = proton_runtime_sync_engine_view_events(runtime, slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
     status = proton_runtime_sync_engine_window_states(runtime, slot);
     if (status != PROTON_OK) {
       return status;
@@ -927,6 +939,7 @@ int32_t proton_window_destroy(proton_window_id_t window) {
     return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                             "failed to queue window_closed event");
   }
+  proton_destroy_views_for_window(window);
   if (slot->engine_window != NULL) {
     char engine_error[512] = {0};
     status = proton_engine_window_destroy(slot->engine_window, engine_error,
@@ -1896,6 +1909,277 @@ int32_t proton_window_poll_dialog_result(
   }
   g_last_error[0] = '\0';
   return status;
+}
+
+int32_t proton_view_create_json(proton_window_id_t window,
+                                const char *config_json,
+                                proton_view_id_t *out_view) {
+  proton_window_slot_t *window_slot = NULL;
+  int32_t status = proton_get_window(window, &window_slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (config_json == NULL || out_view == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "config_json and out_view are required");
+  }
+  proton_view_config_values_t values;
+  status = proton_config_validate_view(config_json, &values);
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  proton_runtime_slot_t *runtime_slot = NULL;
+  status = proton_get_runtime(window_slot->runtime, &runtime_slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  proton_engine_view_t *engine_view = NULL;
+  if (window_slot->engine_window != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_create_json(
+        window_slot->engine_window, config_json, &engine_view, engine_error,
+        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+    if (engine_view == NULL) {
+      return proton_set_error(PROTON_ERR_ENGINE,
+                              "native engine returned no view state");
+    }
+  }
+
+  status = proton_view_slot_create(
+      window_slot->runtime, window, engine_view, values.x,
+      values.y, values.width, values.height, values.z_order,
+      values.visible != 0, out_view, NULL);
+  if (status != PROTON_OK) {
+    if (engine_view != NULL) {
+      char engine_error[512] = {0};
+      (void)proton_engine_view_destroy(engine_view, engine_error,
+                                       sizeof(engine_error));
+    }
+    return status;
+  }
+  if (engine_view != NULL) {
+    proton_engine_view_bind_public_id(engine_view, *out_view);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_destroy(proton_view_id_t view) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status == PROTON_ERR_DESTROYED) {
+    return PROTON_OK;
+  }
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_destroy(slot->engine_view, engine_error,
+                                        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  proton_view_slot_destroy(slot);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_set_bounds(proton_view_id_t view, int32_t x, int32_t y,
+                               int32_t width, int32_t height) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (width <= 0 || height <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view width and height must be positive");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_set_bounds(slot->engine_view, x, y, width,
+                                           height, engine_error,
+                                           sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  slot->x = x;
+  slot->y = y;
+  slot->width = width;
+  slot->height = height;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_set_visible(proton_view_id_t view, int32_t visible) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_set_visible(slot->engine_view, visible,
+                                            engine_error,
+                                            sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  slot->visible = visible != 0;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_set_z_order(proton_view_id_t view, int32_t z_order) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_set_z_order(slot->engine_view, z_order,
+                                            engine_error,
+                                            sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  slot->z_order = z_order;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_load_url(proton_view_id_t view, const char *url) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (url == NULL || url[0] == '\0') {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "url is required");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_load_url(slot->engine_view, url, engine_error,
+                                         sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_load_html(proton_view_id_t view, const char *html,
+                              const char *base_url) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (html == NULL || base_url == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "html and base_url are required");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_load_html(slot->engine_view, html, base_url,
+                                          engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_eval(proton_view_id_t view, const char *script) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (script == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "script is required");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_eval(slot->engine_view, script, engine_error,
+                                     sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_browser_command_json(proton_view_id_t view,
+                                         const char *command_json) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (command_json == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "browser command JSON is required");
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser commands require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_browser_command_json(
+      slot->engine_view, command_json, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
+                               int32_t buffer_len,
+                               int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  char state[256];
+  int required = snprintf(
+      state, sizeof(state),
+      "{\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
+      "\"visible\":%s,\"z_order\":%d}",
+      slot->x, slot->y, slot->width, slot->height,
+      slot->visible ? "true" : "false", slot->z_order);
+  if (required < 0 || required >= (int)sizeof(state)) {
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "view state payload is too large");
+  }
+  *out_required_len = required;
+  if (buffer == NULL || buffer_len <= required) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "view state buffer is too small");
+  }
+  memcpy(buffer, state, (size_t)required + 1);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
 int32_t proton_last_error_message(char *buffer, int32_t buffer_len) {

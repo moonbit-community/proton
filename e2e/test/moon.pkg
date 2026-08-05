@@ -43,5 +43,6 @@ options(
     "ready.mbt": [ "native" ],
     "scenario_app_wbtest.mbt": [ "native" ],
     "scenario_validation_wbtest.mbt": [ "native" ],
+    "web_contents_view_scenario_wbtest.mbt": [ "native" ],
   },
 )

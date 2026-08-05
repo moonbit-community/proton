@@ -24,6 +24,8 @@ pub fn run_multi_window() -> Unit
 
 pub fn run_sync_async_extensions() -> Unit
 
+pub fn run_web_contents_view() -> Unit
+
 // Errors
 
 // Types and methods

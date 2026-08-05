@@ -289,7 +289,19 @@ native checks before handing off larger refactors.
   not raw pointers, must validate kind/generation/thread ownership, and must be
   invalidated on destroy/close paths. Dialog handles are the documented
   exception: sequential Int64 ids scoped to their owning runtime/window and
-  validated by list membership.
+  validated by list membership. View handles (`proton_view_*`) are
+  window-scoped children in the same registry: they validate against their
+  owning window's runtime thread and are destroyed when the owning window is
+  destroyed.
+- Web contents views follow the Electron `WebContentsView` model: child
+  browsers hosted in a window's content area with top-left bounds, visibility,
+  z-order, load-url/load-html/eval, browser commands, and lifecycle events,
+  layered above the window's main browser. All three engines implement them
+  behind the same `proton_view_*` ABI; availability is gated through the
+  `web_contents_view` feature in `proton_runtime_info_json`. A view browser
+  owns no top-level window, so each engine's `do_close` must cancel CEF's
+  default top-level close and complete the teardown by destroying the browser
+  host view (NSView/child HWND/X window) instead.
 - Respect the thread model. Runtime and window handles are owned by their
   creating thread; native callbacks or future pumps must marshal work to the
   owner thread instead of touching handles directly from arbitrary threads.

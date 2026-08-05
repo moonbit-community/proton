@@ -236,6 +236,18 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
     None => None
     Some(value) => Some(decode_int64_json(value, "runtime event window"))
   }
+  let view = match object.get("view") {
+    None => None
+    Some(value) => Some(decode_int64_json(value, "runtime event view"))
+  }
+  let title = match object.get("title") {
+    None => None
+    Some(value) => Some(decode_string_json(value, "runtime event title"))
+  }
+  let is_loading = match object.get("is_loading") {
+    None => None
+    Some(value) => Some(decode_bool_json(value, "runtime event is_loading"))
+  }
   let state = match object.get("state") {
     None => None
     Some(value) =>
@@ -348,6 +360,9 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   RuntimeEvent::{
     event_type,
     window,
+    view,
+    title,
+    is_loading,
     state,
     request_id,
     url,
@@ -1329,4 +1344,190 @@ pub fn WindowRef::poll_dialog_result(
     None => Pending
     Some(result) => Ready(result)
   }
+}
+
+///|
+fn validate_view_config(config : ViewConfig) -> Unit raise NativeError {
+  match config.raw_json {
+    Some(_) => ()
+    None =>
+      if config.width <= 0 || config.height <= 0 {
+        raise invalid_argument("view width and height must be positive")
+      }
+  }
+}
+
+///|
+/// Creates a web contents view inside `window`. The view renders above the
+/// window's main browser content; use `set_z_order` to stack multiple views.
+/// Requires the `web_contents_view` native runtime feature.
+pub fn View::new(
+  window : Window,
+  config : ViewConfig,
+) -> View raise NativeError {
+  validate_view_config(config)
+  let out_view = Ref(proton_invalid_handle)
+  let status = proton_view_create_json_ffi(
+    window.live_handle(),
+    @ffi.to_cstr(config.to_json_string()),
+    out_view,
+  )
+  if status < 0 {
+    raise native_error(status)
+  } else {
+    View::{ handle: out_view.val, lifecycle: ViewLive }
+  }
+}
+
+///|
+pub fn View::destroy(self : View) -> Unit raise NativeError {
+  match self.lifecycle {
+    ViewDestroyed => return
+    ViewLive | ViewDestroying => self.lifecycle = ViewDestroying
+  }
+  let status = proton_view_destroy_ffi(self.handle)
+  if status < 0 {
+    raise native_error(status)
+  } else {
+    self.handle = proton_invalid_handle
+    self.lifecycle = ViewDestroyed
+  }
+}
+
+///|
+fn View::live_handle(self : View) -> Int64 raise NativeError {
+  match self.lifecycle {
+    ViewLive => self.handle
+    ViewDestroying | ViewDestroyed =>
+      raise Status(status=proton_err_invalid_state, message="view is destroyed")
+  }
+}
+
+///|
+/// Borrows this view handle for APIs that must not destroy it.
+pub fn View::as_ref(self : View) -> ViewRef {
+  ViewRef::unsafe_from_handle(
+    match self.lifecycle {
+      ViewLive => self.handle
+      ViewDestroying | ViewDestroyed => proton_invalid_handle
+    },
+  )
+}
+
+///|
+/// Returns the stable native handle used to correlate native calls.
+pub fn View::id(self : View) -> Int64 {
+  match self.lifecycle {
+    ViewLive => self.handle
+    ViewDestroying | ViewDestroyed => proton_invalid_handle
+  }
+}
+
+///|
+/// Moves and resizes the view. `x`/`y` use a top-left origin in the owning
+/// window's content coordinate space, matching Electron's `setBounds`.
+pub fn View::set_bounds(
+  self : View,
+  x~ : Int,
+  y~ : Int,
+  width~ : Int,
+  height~ : Int,
+) -> Unit raise NativeError {
+  if width <= 0 || height <= 0 {
+    raise invalid_argument("view width and height must be positive")
+  }
+  check_status(
+    proton_view_set_bounds_ffi(self.live_handle(), x, y, width, height),
+  )
+}
+
+///|
+pub fn View::set_visible(self : View, visible : Bool) -> Unit raise NativeError {
+  check_status(
+    proton_view_set_visible_ffi(self.live_handle(), if visible { 1 } else { 0 }),
+  )
+}
+
+///|
+/// Stacks the view relative to the window's other views; higher `z_order`
+/// renders above lower values, and views always render above the window's
+/// main browser content.
+pub fn View::set_z_order(self : View, z_order : Int) -> Unit raise NativeError {
+  check_status(proton_view_set_z_order_ffi(self.live_handle(), z_order))
+}
+
+///|
+pub fn View::load_url(self : View, url : String) -> Unit raise NativeError {
+  if url.is_empty() {
+    raise invalid_argument("url must not be empty")
+  }
+  check_status(proton_view_load_url_ffi(self.live_handle(), @ffi.to_cstr(url)))
+}
+
+///|
+/// Reads the current view state from the native runtime.
+pub fn View::state(self : View) -> ViewState raise NativeError {
+  let handle = self.live_handle()
+  let text = match
+    read_native_text("view state", PayloadBytesExcludingTerminator, (
+      buffer,
+      buffer_len,
+      required,
+    ) => proton_view_state_json_ffi(handle, buffer, buffer_len, required)) {
+    Some(text) => text
+    None =>
+      raise InvalidPayload(context="view state", message="missing payload")
+  }
+  @json.from_json(decode_native_json(text, "view state")) catch {
+    error =>
+      raise InvalidPayload(context="view state", message=error.to_string())
+  }
+}
+
+///|
+/// Loads inline HTML into the view, served from `base_url` on the `proton://`
+/// scheme, mirroring `Window::load_html`.
+pub fn View::load_html(
+  self : View,
+  html : String,
+  base_url : String,
+) -> Unit raise NativeError {
+  check_status(
+    proton_view_load_html_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(html),
+      @ffi.to_cstr(base_url),
+    ),
+  )
+}
+
+///|
+/// Executes JavaScript in the view's main frame without awaiting a result.
+pub fn View::eval(self : View, script : String) -> Unit raise NativeError {
+  check_status(proton_view_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
+}
+
+///|
+/// Sends a browser control command to the view: `back`, `forward`, `reload`,
+/// `reload_ignore_cache`, `stop`, `open_devtools`, or `close_devtools`.
+pub fn View::browser_command(
+  self : View,
+  command : String,
+  download_id? : Int,
+) -> Unit raise NativeError {
+  let fields : Map[String, Json] = { "command": Json::string(command) }
+  match download_id {
+    Some(download_id) =>
+      fields["download_id"] = Json::number(
+        download_id.to_double(),
+        repr=download_id.to_string(),
+      )
+    None => ()
+  }
+  check_status(
+    proton_view_browser_command_json_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(Json::object(fields).stringify()),
+    ),
+  )
 }

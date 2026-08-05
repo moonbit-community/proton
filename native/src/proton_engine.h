@@ -8,6 +8,7 @@
 
 typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
+typedef struct proton_engine_view proton_engine_view_t;
 
 typedef enum {
   PROTON_ENGINE_WINDOW_MINIMIZE = 1,
@@ -305,5 +306,54 @@ int32_t proton_engine_take_platform_event(proton_engine_runtime_t *runtime,
                                           size_t buffer_len,
                                           int32_t *out_present);
 const char *proton_engine_name(void);
+
+int32_t proton_engine_view_create_json(proton_engine_window_t *window,
+                                       const char *config_json,
+                                       proton_engine_view_t **out_view,
+                                       char *error,
+                                       size_t error_len);
+int32_t proton_engine_view_destroy(proton_engine_view_t *view,
+                                   char *error,
+                                   size_t error_len);
+int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
+                                      int32_t x,
+                                      int32_t y,
+                                      int32_t width,
+                                      int32_t height,
+                                      char *error,
+                                      size_t error_len);
+int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
+                                       int32_t visible,
+                                       char *error,
+                                       size_t error_len);
+int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
+                                       int32_t z_order,
+                                       char *error,
+                                       size_t error_len);
+int32_t proton_engine_view_load_url(proton_engine_view_t *view,
+                                    const char *url,
+                                    char *error,
+                                    size_t error_len);
+int32_t proton_engine_view_eval(proton_engine_view_t *view,
+                                const char *script,
+                                char *error,
+                                size_t error_len);
+int32_t proton_engine_view_load_html(proton_engine_view_t *view,
+                                     const char *html,
+                                     const char *base_url,
+                                     char *error,
+                                     size_t error_len);
+int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
+                                                const char *command_json,
+                                                char *error,
+                                                size_t error_len);
+int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len,
+                                           char *error,
+                                           size_t error_len);
+void proton_engine_view_bind_public_id(proton_engine_view_t *view,
+                                       proton_view_id_t public_view);
 
 #endif

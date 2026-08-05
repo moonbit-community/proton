@@ -367,6 +367,12 @@ static const char *const proton_window_config_keys[] = {
     "browser",
 };
 
+static const char *const proton_view_config_keys[] = {
+    "abi_version", "x",                "y",           "width",
+    "height",      "visible",          "z_order",     "initial_url",
+    "background_color",
+};
+
 static const char *const proton_bridge_config_keys[] = {
     "abi_version",
     "namespace",
@@ -1498,5 +1504,40 @@ int32_t proton_config_validate_window(const char *config_json,
     return status;
   }
   proton_json_dispose(&doc);
+  return PROTON_OK;
+}
+
+int32_t proton_config_validate_view(const char *config_json,
+                                    proton_view_config_values_t *out_values) {
+  int32_t status = proton_validate_abi_config(
+      config_json, "view", proton_view_config_keys,
+      sizeof(proton_view_config_keys) / sizeof(proton_view_config_keys[0]),
+      PROTON_ABI_VERSION);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (out_values == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view config values output is required");
+  }
+
+  proton_view_config_values_t values = {0, 0, 0, 0, 1, 0};
+  if (!proton_parse_json_int_field(config_json, "width", &values.width) ||
+      !proton_parse_json_int_field(config_json, "height", &values.height)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view config requires numeric width and height");
+  }
+  if (values.width <= 0 || values.height <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view width and height must be positive");
+  }
+  proton_parse_json_int_field(config_json, "x", &values.x);
+  proton_parse_json_int_field(config_json, "y", &values.y);
+  proton_parse_json_int_field(config_json, "z_order", &values.z_order);
+  bool visible = true;
+  if (proton_parse_json_bool_field(config_json, "visible", &visible)) {
+    values.visible = visible ? 1 : 0;
+  }
+  *out_values = values;
   return PROTON_OK;
 }

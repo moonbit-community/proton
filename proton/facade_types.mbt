@@ -21,10 +21,12 @@ struct App {
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
+  planned_views : Array[(String, @native.ViewConfig)]
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
+  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
   mut popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
@@ -74,8 +76,15 @@ priv struct RunningWindow {
   window : @native.Window
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
+  views : Array[RunningView]
   mut bridge_ready : Bool
   mut state : SessionWindowState
+}
+
+///|
+priv struct RunningView {
+  id : String
+  view : @native.View
 }
 
 ///|
@@ -109,6 +118,7 @@ priv struct PreparedWindow {
   bridge : @native.BridgeConfig?
   permissions : WindowPermissionPolicy
   browser_policy : @native.BrowserPolicy
+  views : Array[(String, @native.ViewConfig)]
 }
 
 ///|
@@ -167,6 +177,7 @@ priv struct RuntimeSession {
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
+  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   window_tasks : @async.TaskGroup[Unit]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
@@ -244,6 +255,28 @@ pub struct BrowserHandle {
 }
 
 ///|
+/// A non-owning reference to one concrete web contents view instance.
+///
+/// Views follow the Electron `WebContentsView` model: each view is an
+/// independent web page hosted inside its owning window's content area with
+/// explicit top-left bounds, visibility, and z-order. The instance id
+/// prevents a stale handle from targeting a later view that reuses the same
+/// declarative id.
+pub struct ViewHandle {
+  id : String
+  native_id : Int64
+  set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
+  set_view_visible : (Bool) -> Unit raise WindowSessionError
+  set_view_z_order : (Int) -> Unit raise WindowSessionError
+  load_view_url : (String) -> Unit raise WindowSessionError
+  load_view_html : (String, String) -> Unit raise WindowSessionError
+  eval_view_script : (String) -> Unit raise WindowSessionError
+  send_view_command : (String, Int?) -> Unit raise WindowSessionError
+  read_view_state : () -> @native.ViewState raise WindowSessionError
+  close_view : () -> Unit raise WindowSessionError
+}
+
+///|
 /// A non-owning reference to one concrete window instance.
 ///
 /// The instance id prevents a stale handle from targeting a later window that
@@ -266,6 +299,10 @@ pub struct WindowHandle {
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_window_state : () -> @native.WindowState raise WindowSessionError
   browser : BrowserHandle
+  add_view : (String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
+  remove_view : (String) -> Unit raise WindowSessionError
+  list_views : () -> Array[ViewHandle]
+  find_view : (String) -> ViewHandle?
 }
 
 ///|
@@ -279,6 +316,16 @@ pub struct WindowManager {
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
   StateChanged(@native.WindowState)
+} derive(Debug, Eq)
+
+///|
+/// An observed change to a running web contents view, following the Electron
+/// `webContents` lifecycle events.
+pub(all) enum ViewEvent {
+  LoadingChanged(is_loading~ : Bool)
+  Navigated(url~ : String)
+  TitleUpdated(title~ : String)
+  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -363,6 +410,9 @@ pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
   StaleWindow(id~ : String)
+  UnknownView(id~ : String)
+  AlreadyExists(id~ : String)
+  StaleView(id~ : String)
   Cancelled
   OperationFailed(action~ : String, error~ : @native.NativeError)
   StartupFailed(id~ : String, error~ : AppRunError)

@@ -27,6 +27,12 @@ const char *proton_engine_window_html_url(proton_engine_window_t *window);
 const char *proton_engine_window_html(proton_engine_window_t *window,
                                       size_t *len);
 
+proton_engine_view_t *proton_engine_window_lookup_view_browser(
+    cef_browser_t *browser);
+
+const char *proton_engine_view_html_url(proton_engine_view_t *view);
+const char *proton_engine_view_html(proton_engine_view_t *view, size_t *len);
+
 /* Releases whatever document the window held and takes ownership of `url` and
    `html`, which must both be allocations that `free` accepts. */
 void proton_engine_window_replace_document(proton_engine_window_t *window,

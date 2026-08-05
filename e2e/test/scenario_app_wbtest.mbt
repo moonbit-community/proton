@@ -8,6 +8,7 @@ fn run_scenario_app_child() -> Unit raise {
       @e2e_fixtures.run_sync_async_extensions()
     Some("40_event_broadcast") => @e2e_fixtures.run_event_broadcast()
     Some("45_bridge_multi_window") => @e2e_fixtures.run_multi_window()
+    Some("52_web_contents_view") => @e2e_fixtures.run_web_contents_view()
     Some("46_asset_sidecar_resources") => @e2e_fixtures.run_asset_sidecar()
     Some("42_attribute_codegen_commands") =>
       @e2e_fixtures.run_attribute_codegen_commands()

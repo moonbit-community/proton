@@ -33,6 +33,8 @@ fn scenario_ready_expression(name : String) -> String raise {
       "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && document.querySelector('#bridge-status')?.dataset.ready === 'true')"
     "42_attribute_codegen_commands" =>
       "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.add?.slowAdd && window.__MoonBit__?.events?.on)"
+    "52_web_contents_view" =>
+      "['Web Contents View Host','WCV Left','WCV Right'].includes(document.title) && document.readyState === 'complete'"
     _ => fail("unsupported E2E scenario: " + name)
   }
 }

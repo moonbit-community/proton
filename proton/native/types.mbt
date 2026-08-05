@@ -112,6 +112,9 @@ struct AppInstance {
 struct RuntimeEvent {
   event_type : String
   window : Int64?
+  view : Int64?
+  title : String?
+  is_loading : Bool?
   state : WindowState?
   request_id : Int64?
   url : String?
@@ -348,6 +351,37 @@ pub fn RuntimeEvent::has_window(self : RuntimeEvent) -> Bool {
 /// menu command this is the focused window at click time.
 pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
   self.window
+}
+
+///|
+/// Returns the web contents view associated with this event when one exists.
+pub fn RuntimeEvent::view_id(self : RuntimeEvent) -> Int64? {
+  self.view
+}
+
+///|
+/// The payload of a web contents view lifecycle event.
+pub(all) struct ViewEventInfo {
+  url : String?
+  title : String?
+  is_loading : Bool?
+  error_code : Int?
+  error_text : String?
+} derive(Debug, Eq)
+
+///|
+/// Returns the view event payload when this event carries one.
+pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
+  if !self.event_type.has_prefix("view_") {
+    return None
+  }
+  Some({
+    url: self.url,
+    title: self.title,
+    is_loading: self.is_loading,
+    error_code: self.error_code,
+    error_text: self.message,
+  })
 }
 
 ///|
@@ -1149,4 +1183,139 @@ pub fn BridgeResponse::to_json_string(self : BridgeResponse) -> String {
         }),
       }).stringify()
   }
+}
+
+///|
+priv enum ViewLifecycleState {
+  ViewLive = 0
+  ViewDestroying = 1
+  ViewDestroyed = 2
+}
+
+///|
+/// An owned native web contents view hosted inside a window's content area.
+struct View {
+  mut handle : Int64
+  mut lifecycle : ViewLifecycleState
+}
+
+///|
+/// A borrowed view handle for APIs that must not destroy the view.
+struct ViewRef {
+  handle : Int64
+} derive(Debug, Eq)
+
+///|
+/// A point-in-time web contents view state snapshot. Bounds use a top-left
+/// origin in the owning window's content coordinate space.
+pub(all) struct ViewState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  visible : Bool
+  z_order : Int
+} derive(Debug, Eq, FromJson)
+
+///|
+/// Native configuration for one web contents view. `width` and `height` are
+/// required because the native browser needs an initial rectangle; `x`/`y`
+/// default to `0`, `visible` to `true`, `z_order` to `0`, and `initial_url`
+/// to `about:blank`. Views stack above the window's main browser, ordered by
+/// ascending `z_order`.
+struct ViewConfig {
+  raw_json : String?
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  visible : Bool
+  z_order : Int
+  initial_url : String
+  background_color : String?
+} derive(Debug, Eq)
+
+///|
+pub fn ViewConfig::new(
+  width~ : Int,
+  height~ : Int,
+  x? : Int = 0,
+  y? : Int = 0,
+  visible? : Bool = true,
+  z_order? : Int = 0,
+  initial_url? : String = "about:blank",
+  background_color? : String,
+) -> ViewConfig {
+  {
+    raw_json: None,
+    x,
+    y,
+    width,
+    height,
+    visible,
+    z_order,
+    initial_url,
+    background_color,
+  }
+}
+
+///|
+/// Creates a view config from unchecked native ABI JSON.
+pub fn ViewConfig::unsafe_from_json(raw_json : String) -> ViewConfig {
+  {
+    raw_json: Some(raw_json),
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    visible: true,
+    z_order: 0,
+    initial_url: "about:blank",
+    background_color: None,
+  }
+}
+
+///|
+pub fn ViewConfig::to_json_string(self : ViewConfig) -> String {
+  match self.raw_json {
+    Some(raw) => raw
+    None => {
+      let fields : Map[String, Json] = {
+        "abi_version": Json::number(1.0, repr="1"),
+        "x": Json::number(self.x.to_double(), repr=self.x.to_string()),
+        "y": Json::number(self.y.to_double(), repr=self.y.to_string()),
+        "width": Json::number(
+          self.width.to_double(),
+          repr=self.width.to_string(),
+        ),
+        "height": Json::number(
+          self.height.to_double(),
+          repr=self.height.to_string(),
+        ),
+        "visible": Json::boolean(self.visible),
+        "z_order": Json::number(
+          self.z_order.to_double(),
+          repr=self.z_order.to_string(),
+        ),
+        "initial_url": Json::string(self.initial_url),
+      }
+      match self.background_color {
+        Some(color) => fields.set("background_color", Json::string(color))
+        None => ()
+      }
+      Json::object(fields).stringify()
+    }
+  }
+}
+
+///|
+/// Returns true when the loaded native runtime supports web contents views.
+pub fn web_contents_view_supported() -> Bool {
+  let info = cached_runtime_info() catch { _ => return false }
+  info.features.contains("web_contents_view")
+}
+
+///|
+pub fn ViewRef::unsafe_from_handle(handle : Int64) -> ViewRef {
+  ViewRef::{ handle, }
 }

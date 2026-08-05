@@ -47,8 +47,21 @@
 
 #include "../src/engine/cef_common/assets.h"
 
+static char *read_log(const char *path);
+
 static int fail(const char *message) {
   fprintf(stderr, "%s\n", message);
+  const char *log_path = getenv("PROTON_TEST_NATIVE_LOG");
+  if (log_path != NULL) {
+    char *log = read_log(log_path);
+    if (log != NULL) {
+      long len = (long)strlen(log);
+      long start = len > 4000 ? len - 4000 : 0;
+      fprintf(stderr, "--- native log tail ---\n%.*s\n", (int)(len - start),
+              log + start);
+      free(log);
+    }
+  }
   return 1;
 }
 
@@ -370,6 +383,24 @@ static int g_app_entry_browser_ready = 0;
 static int g_app_entry_state_event_seen = 0;
 static int g_app_entry_window_closed = 0;
 static int32_t g_app_entry_destroy_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view_create_status = PROTON_ERR_NOT_INITIALIZED;
+static int g_app_entry_view_ready = 0;
+static int g_app_entry_view_unsupported = 0;
+static int32_t g_app_entry_view_set_bounds_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view_set_visible_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view_set_z_order_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view_load_url_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view_state_status = PROTON_ERR_NOT_INITIALIZED;
+static int g_app_entry_view_state_ok = 0;
+static int32_t g_app_entry_view2_create_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view_destroy_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view2_destroy_status = PROTON_ERR_NOT_INITIALIZED;
+static proton_view_id_t g_app_entry_view = PROTON_INVALID_HANDLE;
+static proton_view_id_t g_app_entry_view2 = PROTON_INVALID_HANDLE;
+static int32_t g_app_entry_view3_create_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view3_stale_state_status = PROTON_ERR_NOT_INITIALIZED;
+static int32_t g_app_entry_view3_destroy_status = PROTON_ERR_NOT_INITIALIZED;
+static proton_view_id_t g_app_entry_view3 = PROTON_INVALID_HANDLE;
 static char g_app_runtime_config[1024];
 static char g_app_entry_error[512];
 
@@ -455,6 +486,22 @@ static int log_contains_in_order(const char *path,
                 first_match < second_match;
   free(log);
   return ordered;
+}
+
+static int log_count_occurrences(const char *path, const char *needle) {
+  char *log = read_log(path);
+  if (log == NULL) {
+    return -1;
+  }
+  int count = 0;
+  size_t needle_len = strlen(needle);
+  const char *cursor = log;
+  while ((cursor = strstr(cursor, needle)) != NULL) {
+    count++;
+    cursor += needle_len;
+  }
+  free(log);
+  return count;
 }
 
 static int escape_json_string(const char *value,
@@ -605,6 +652,78 @@ static void smoke_app_entry(void) {
       }
 #endif
       if (g_app_entry_browser_ready) {
+        // Web contents views: create two child browsers inside the window,
+        fprintf(stderr, "smoke-step: create view1\n");
+        // drive bounds/visibility/z-order/navigation, then destroy them
+        // before the window close flow below.
+        g_app_entry_view_create_status = proton_view_create_json(
+            window,
+            "{\"abi_version\":1,\"x\":10,\"y\":20,\"width\":200,"
+            "\"height\":120,\"initial_url\":\"about:blank\"}",
+            &g_app_entry_view);
+        if (g_app_entry_view_create_status == PROTON_ERR_UNSUPPORTED) {
+          g_app_entry_view_unsupported = 1;
+        }
+        if (g_app_entry_view_create_status == PROTON_OK) {
+          for (int attempt = 0; attempt < 300; attempt++) {
+            const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
+            if (native_log_path != NULL &&
+                log_contains(native_log_path, "view_create_browser id=")) {
+              g_app_entry_view_ready = 1;
+              break;
+            }
+#ifdef _WIN32
+            Sleep(10);
+#else
+            usleep(10000);
+#endif
+          }
+          fprintf(stderr, "smoke-step: view1 ready=%d, drive bounds/visible/z/load\n",
+                  g_app_entry_view_ready);
+          g_app_entry_view_set_bounds_status =
+              proton_view_set_bounds(g_app_entry_view, 30, 40, 180, 100);
+          g_app_entry_view_set_visible_status =
+              proton_view_set_visible(g_app_entry_view, 1);
+          g_app_entry_view_set_z_order_status =
+              proton_view_set_z_order(g_app_entry_view, 2);
+          g_app_entry_view_load_url_status =
+              proton_view_load_url(g_app_entry_view, "about:blank");
+          char view_state[256];
+          int32_t view_state_required = 0;
+          g_app_entry_view_state_status = proton_view_state_json(
+              g_app_entry_view, view_state, (int32_t)sizeof(view_state),
+              &view_state_required);
+          g_app_entry_view_state_ok =
+              g_app_entry_view_state_status == PROTON_OK &&
+              strstr(view_state, "\"x\":30") != NULL &&
+              strstr(view_state, "\"y\":40") != NULL &&
+              strstr(view_state, "\"width\":180") != NULL &&
+              strstr(view_state, "\"height\":100") != NULL &&
+              strstr(view_state, "\"visible\":true") != NULL &&
+              strstr(view_state, "\"z_order\":2") != NULL;
+          g_app_entry_view2_create_status = proton_view_create_json(
+              window,
+              "{\"abi_version\":1,\"x\":50,\"y\":60,\"width\":100,"
+              "\"height\":80,\"visible\":false}",
+              &g_app_entry_view2);
+          fprintf(stderr, "smoke-step: destroy view1+view2\n");
+          g_app_entry_view_destroy_status =
+              proton_view_destroy(g_app_entry_view);
+          if (g_app_entry_view2_create_status == PROTON_OK) {
+            g_app_entry_view2_destroy_status =
+                proton_view_destroy(g_app_entry_view2);
+          }
+          // A third view stays attached through the AppKit window close flow
+          // below; the window teardown must close it safely.
+          g_app_entry_view3_create_status = proton_view_create_json(
+              window,
+              "{\"abi_version\":1,\"x\":5,\"y\":5,\"width\":80,"
+              "\"height\":60}",
+              &g_app_entry_view3);
+        }
+      }
+      fprintf(stderr, "smoke-step: window close interception flow\n");
+      if (g_app_entry_browser_ready) {
         g_app_entry_close_interception_status =
             proton_window_set_close_interception(window, 1);
         if (g_app_entry_close_interception_status == PROTON_OK) {
@@ -655,8 +774,18 @@ static void smoke_app_entry(void) {
 #endif
         }
       }
+      fprintf(stderr, "smoke-step: window destroy\n");
       g_app_entry_window_destroy_status = proton_window_destroy(window);
+      if (g_app_entry_view3_create_status == PROTON_OK) {
+        char stale_state[128];
+        int32_t stale_required = 0;
+        g_app_entry_view3_stale_state_status = proton_view_state_json(
+            g_app_entry_view3, stale_state, (int32_t)sizeof(stale_state),
+            &stale_required);
+        g_app_entry_view3_destroy_status = proton_view_destroy(g_app_entry_view3);
+      }
     }
+    fprintf(stderr, "smoke-step: runtime destroy\n");
     g_app_entry_destroy_status = proton_runtime_destroy(runtime);
 #ifdef _WIN32
     if (wakeup_reader != INVALID_HANDLE_VALUE) {
@@ -1919,6 +2048,59 @@ int main(int argc, char **argv) {
     if (expect_status("app_run runtime destroy", g_app_entry_destroy_status,
                       PROTON_OK)) {
       return 1;
+    }
+    if (g_app_entry_view_unsupported) {
+      if (expect_status("app_run view create is unsupported on this platform",
+                        g_app_entry_view_create_status,
+                        PROTON_ERR_UNSUPPORTED)) {
+        return 1;
+      }
+    } else {
+      if (expect_status("app_run view create", g_app_entry_view_create_status,
+                        PROTON_OK)) {
+        return 1;
+      }
+      if (!g_app_entry_view_ready) {
+        return fail("app_run view browser did not become ready");
+      }
+      if (expect_status("app_run view set_bounds",
+                        g_app_entry_view_set_bounds_status, PROTON_OK) ||
+          expect_status("app_run view set_visible",
+                        g_app_entry_view_set_visible_status, PROTON_OK) ||
+          expect_status("app_run view set_z_order",
+                        g_app_entry_view_set_z_order_status, PROTON_OK) ||
+          expect_status("app_run view load_url",
+                        g_app_entry_view_load_url_status, PROTON_OK) ||
+          expect_status("app_run view state", g_app_entry_view_state_status,
+                        PROTON_OK) ||
+          expect_status("app_run view2 create",
+                        g_app_entry_view2_create_status, PROTON_OK) ||
+          expect_status("app_run view destroy",
+                        g_app_entry_view_destroy_status, PROTON_OK) ||
+          expect_status("app_run view2 destroy",
+                        g_app_entry_view2_destroy_status, PROTON_OK)) {
+        return 1;
+      }
+      if (!g_app_entry_view_state_ok) {
+        return fail("app_run view state did not reflect applied bounds");
+      }
+      if (!log_contains_in_order(native_log_path, "view_create_browser id=",
+                                 "view_browser_before_close browser=")) {
+        return fail("view browser closed before its creation completed");
+      }
+      if (expect_status("app_run view3 create",
+                        g_app_entry_view3_create_status, PROTON_OK) ||
+          expect_status("app_run view3 state is stale after window destroy",
+                        g_app_entry_view3_stale_state_status,
+                        PROTON_ERR_DESTROYED) ||
+          expect_status("app_run view3 destroy is idempotent",
+                        g_app_entry_view3_destroy_status, PROTON_OK)) {
+        return 1;
+      }
+      if (log_count_occurrences(native_log_path,
+                                "view_browser_before_close browser=") != 3) {
+        return fail("attached views did not all close before shutdown");
+      }
     }
     if (!log_contains_in_order(native_log_path,
                                "browser_before_close browser=",

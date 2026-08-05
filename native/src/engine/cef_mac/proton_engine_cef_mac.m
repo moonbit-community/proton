@@ -19,6 +19,7 @@
 #include "include/capi/cef_client_capi.h"
 #include "include/capi/cef_command_line_capi.h"
 #include "include/capi/cef_download_handler_capi.h"
+#include "include/capi/cef_display_handler_capi.h"
 #include "include/capi/cef_frame_capi.h"
 #include "include/capi/cef_life_span_handler_capi.h"
 #include "include/capi/cef_load_handler_capi.h"
@@ -40,6 +41,7 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/bridge_response.h"
 #include "../cef_common/browser_session.h"
+#include "../cef_common/view_events.h"
 
 #import <Cocoa/Cocoa.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -154,6 +156,7 @@ struct proton_engine_window {
   cef_rect_t osr_popup_rect;
   int closed;
   int closing;
+  struct proton_engine_view *views;
   struct proton_engine_window *next;
 };
 
@@ -165,6 +168,47 @@ struct proton_engine_client {
   cef_client_t client;
   proton_engine_ref_counted_t refs;
   proton_engine_window_t *window;
+  proton_engine_view_t *view;
+};
+
+/* A web contents view: an extra browser hosted inside a window's content
+   view, positioned in top-left content coordinates. Views own a browser and
+   an NSView but no NSWindow; their teardown mirrors the window browser
+   close/finalize state machine and is gated on CEF's on_before_close. The
+   struct itself is owned by the window's view list and is only freed from
+   proton_engine_window_free, so native ABI slots can never hold a dangling
+   pointer regardless of how the view was closed. */
+struct proton_engine_view {
+  proton_engine_window_t *window;
+  proton_engine_client_t *client;
+  cef_browser_t *browser;
+  int browser_id;
+  NSView *browser_view;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t z_order;
+  int visible;
+  uint64_t native_id;
+  char *initial_url;
+  int initial_navigation_pending;
+  int browser_create_pending;
+  int browser_create_scheduled;
+  int browser_close_requested;
+  int browser_before_close_seen;
+  int finalize_after_browser_close;
+  int finalized;
+  int osr_paint_seen;
+  int closed;
+  char *html_url;
+  char *html;
+  size_t html_len;
+  proton_browser_session_t *browser_session;
+  proton_view_events_t *events;
+  int has_background_color;
+  uint32_t background_color;
+  struct proton_engine_view *next;
 };
 
 typedef struct {
@@ -216,6 +260,11 @@ typedef struct {
   cef_render_handler_t handler;
   proton_engine_ref_counted_t refs;
 } proton_engine_render_handler_t;
+
+typedef struct {
+  cef_display_handler_t handler;
+  proton_engine_ref_counted_t refs;
+} proton_engine_display_handler_t;
 
 typedef struct {
   cef_scheme_handler_factory_t factory;
@@ -273,6 +322,7 @@ static proton_engine_request_handler_t g_request_handler;
 static proton_engine_download_handler_t g_download_handler;
 static proton_engine_permission_handler_t g_permission_handler;
 static proton_engine_render_handler_t g_render_handler;
+static proton_engine_display_handler_t g_display_handler;
 static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
 static proton_engine_runtime_t *g_managed_shutdown_runtime = NULL;
@@ -294,6 +344,7 @@ void proton_engine_window_unlock(void) {
 static pthread_cond_t g_managed_shutdown_condition = PTHREAD_COND_INITIALIZER;
 static int g_managed_shutdown_complete = 0;
 static uint64_t g_next_window_native_id = 1;
+static uint64_t g_next_view_native_id = 1;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
 static atomic_bool g_external_message_pump_enabled = ATOMIC_VAR_INIT(false);
 static atomic_llong g_scheduled_pump_deadline_ms = ATOMIC_VAR_INIT(-1);
@@ -854,6 +905,64 @@ static proton_engine_window_t *proton_engine_window_from_native_id(
   return NULL;
 }
 
+static proton_engine_view_t *proton_engine_view_from_browser(
+    cef_browser_t *browser) {
+  if (browser == NULL) {
+    return NULL;
+  }
+  int browser_id = browser->get_identifier(browser);
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    for (proton_engine_view_t *view = window->views; view != NULL;
+         view = view->next) {
+      if (view->browser_id == browser_id) {
+        return view;
+      }
+    }
+  }
+  return NULL;
+}
+
+static proton_engine_view_t *proton_engine_view_from_native_id(
+    uint64_t native_id) {
+  if (native_id == 0) {
+    return NULL;
+  }
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    for (proton_engine_view_t *view = window->views; view != NULL;
+         view = view->next) {
+      if (view->native_id == native_id) {
+        return view;
+      }
+    }
+  }
+  return NULL;
+}
+
+// Resolves a view through the browser's client. Unlike the browser-id list
+// scan this also works while browser creation is still running, before the
+// view records its browser id.
+static proton_engine_view_t *proton_engine_view_from_browser_client(
+    cef_browser_t *browser) {
+  if (browser == NULL) {
+    return NULL;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    return NULL;
+  }
+  cef_client_t *cef_client = host->get_client(host);
+  proton_engine_view_t *view = NULL;
+  if (cef_client != NULL) {
+    proton_engine_client_t *client = proton_engine_client_from_base(cef_client);
+    view = client != NULL ? client->view : NULL;
+    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+  return view;
+}
+
 uint64_t proton_engine_window_native_id(proton_engine_window_t *window) {
   return window != NULL ? window->native_id : 0;
 }
@@ -938,6 +1047,22 @@ void proton_engine_runtime_adopt_asset_root(proton_engine_window_t *window,
     return;
   }
   runtime->asset_root = root;
+}
+
+proton_engine_view_t *proton_engine_window_lookup_view_browser(
+    cef_browser_t *browser) {
+  return proton_engine_view_from_browser(browser);
+}
+
+const char *proton_engine_view_html_url(proton_engine_view_t *view) {
+  return view != NULL ? view->html_url : NULL;
+}
+
+const char *proton_engine_view_html(proton_engine_view_t *view, size_t *len) {
+  if (len != NULL) {
+    *len = view != NULL ? view->html_len : 0;
+  }
+  return view != NULL ? view->html : NULL;
 }
 
 proton_window_id_t
@@ -1334,10 +1459,21 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   if (rect == NULL) {
     return;
   }
-  proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
   rect->x = 0;
   rect->y = 0;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view == NULL) {
+    // CEF can query the viewport while browser creation is still running,
+    // before the view records its browser id; resolve via the client then.
+    view = proton_engine_view_from_browser_client(browser);
+  }
+  if (view != NULL) {
+    rect->width = view->width > 0 ? view->width : 1;
+    rect->height = view->height > 0 ? view->height : 1;
+    return;
+  }
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
   rect->width = window != NULL && window->width > 0 ? window->width : 1;
   rect->height = window != NULL && window->height > 0 ? window->height : 1;
 }
@@ -1399,7 +1535,19 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
   (void)buffer;
   proton_engine_window_t *window =
       proton_engine_window_from_browser_client(browser);
-  if (window == NULL || !window->headless || type != PET_VIEW || width <= 0 ||
+  if (window == NULL) {
+    // View browsers track paint separately from window OSR state; one log
+    // line per browser is enough for e2e to prove the view viewport size.
+    proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+    if (view != NULL && type == PET_VIEW && width > 0 && height > 0 &&
+        !view->osr_paint_seen) {
+      view->osr_paint_seen = 1;
+      proton_engine_debug_log("view_osr_paint browser=%d size=%dx%d",
+                              view->browser_id, width, height);
+    }
+    return;
+  }
+  if (!window->headless || type != PET_VIEW || width <= 0 ||
       height <= 0) {
     return;
   }
@@ -1427,6 +1575,18 @@ static int32_t proton_engine_window_create_browser(proton_engine_window_t *windo
                                                    size_t error_len);
 static void proton_engine_drain_cef_close_work(void);
 static void proton_engine_free_deferred_finalizing_windows(void);
+static void proton_engine_view_on_after_created(proton_engine_view_t *view,
+                                                cef_browser_t *browser);
+static void proton_engine_view_on_before_close(proton_engine_view_t *view,
+                                               cef_browser_t *browser);
+static void proton_engine_window_close_views(
+    proton_engine_window_t *window);
+static void proton_engine_window_layout_views(
+    proton_engine_window_t *window);
+static void proton_engine_window_free_views(
+    proton_engine_window_t *window);
+static void proton_engine_view_release_browser(proton_engine_view_t *view);
+static void proton_engine_view_finalize_if_ready(proton_engine_view_t *view);
 
 static void proton_engine_window_load_initial_url(
     proton_engine_window_t *window) {
@@ -1537,6 +1697,13 @@ static void CEF_CALLBACK proton_engine_on_after_created(
   if (cef_client != NULL) {
     cef_client->base.release((cef_base_ref_counted_t *)cef_client);
   }
+  if (client != NULL && client->view != NULL) {
+    proton_engine_view_on_after_created(client->view, browser);
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    return;
+  }
   if (window == NULL) {
     if (host != NULL) {
       host->close_browser(host, 1);
@@ -1573,6 +1740,9 @@ static void CEF_CALLBACK proton_engine_on_after_created(
     [window->browser_view setAutoresizingMask:NSViewWidthSizable |
                                           NSViewHeightSizable];
   }
+  // The main browser view must stay below any web contents views, including
+  // views created before this browser finished loading.
+  proton_engine_window_layout_views(window);
   proton_engine_debug_log("create_browser id=%d size=%dx%d",
                           window->browser_id, window->width, window->height);
 
@@ -1598,11 +1768,17 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
   (void)self;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view != NULL) {
+    proton_engine_view_on_before_close(view, browser);
+    return;
+  }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   if (window != NULL) {
     proton_engine_debug_log("browser_before_close browser=%d",
                             window->browser_id);
     window->browser_before_close_seen = 1;
+    proton_engine_window_close_views(window);
     proton_engine_window_mark_closed(window);
     proton_engine_window_release_browser(window);
     if (window->window != nil && !window->appkit_closing) {
@@ -1615,6 +1791,25 @@ static void CEF_CALLBACK proton_engine_on_before_close(
 static int CEF_CALLBACK proton_engine_do_close(cef_life_span_handler_t *self,
                                                cef_browser_t *browser) {
   (void)self;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view != NULL) {
+    proton_engine_debug_log("view_browser_do_close browser=%d",
+                            view->browser_id);
+    if (view->browser_view != nil) {
+      // A view browser owns no top-level window, so the default behavior for
+      // windowed rendering (performClose: on the browser's top-level parent
+      // window) would target the owning NSWindow and be cancelled by its
+      // delegate, leaving the browser in a partially closed state. Take over
+      // the close: detach the browser host view so its dealloc completes the
+      // teardown via WindowDestroyed().
+      [view->browser_view removeFromSuperview];
+      view->browser_view = nil;
+      return 1;
+    }
+    // Windowless (headless) rendering has no host view; returning false lets
+    // CEF destroy the browser object immediately.
+    return 0;
+  }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   if (window != NULL) {
     proton_engine_debug_log("browser_do_close browser=%d",
@@ -1667,12 +1862,44 @@ proton_engine_client_get_permission_handler(cef_client_t *self) {
 static cef_render_handler_t *CEF_CALLBACK
 proton_engine_client_get_render_handler(cef_client_t *self) {
   proton_engine_client_t *client = proton_engine_client_from_base(self);
-  if (client == NULL || client->window == NULL || !client->window->headless) {
+  if (client == NULL) {
+    return NULL;
+  }
+  if (client->view != NULL) {
+    if (client->view->window == NULL || !client->view->window->headless) {
+      return NULL;
+    }
+  } else if (client->window == NULL || !client->window->headless) {
     return NULL;
   }
   g_render_handler.handler.base.add_ref(
       (cef_base_ref_counted_t *)&g_render_handler.handler);
   return &g_render_handler.handler;
+}
+
+static void CEF_CALLBACK proton_engine_on_title_change(
+    cef_display_handler_t *self,
+    cef_browser_t *browser,
+    const cef_string_t *title) {
+  (void)self;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view == NULL) {
+    return;
+  }
+  char *title_utf8 = proton_engine_cef_string_to_utf8(title);
+  proton_engine_debug_log("view_title browser=%d title=%s", view->browser_id,
+                          title_utf8 != NULL ? title_utf8 : "");
+  proton_view_events_title_updated(view->events, title_utf8);
+  free(title_utf8);
+  proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+}
+
+static cef_display_handler_t *CEF_CALLBACK
+proton_engine_client_get_display_handler(cef_client_t *self) {
+  (void)self;
+  g_display_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_display_handler.handler);
+  return &g_display_handler.handler;
 }
 
 static cef_render_process_handler_t *CEF_CALLBACK
@@ -1833,6 +2060,11 @@ static void proton_engine_init_handlers(void) {
   g_render_handler.handler.on_popup_show = proton_engine_osr_on_popup_show;
   g_render_handler.handler.on_popup_size = proton_engine_osr_on_popup_size;
   g_render_handler.handler.on_paint = proton_engine_osr_on_paint;
+
+  proton_engine_init_ref_counted(
+      (cef_base_ref_counted_t *)&g_display_handler.handler.base,
+      sizeof(g_display_handler.handler), &g_display_handler.refs);
+  g_display_handler.handler.on_title_change = proton_engine_on_title_change;
 
   proton_engine_init_ref_counted(
       (cef_base_ref_counted_t *)&g_scheme_factory.factory.base,
@@ -2276,6 +2508,17 @@ static void CEF_CALLBACK proton_engine_on_load_start(
   (void)transition_type;
   char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                             : NULL;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view != NULL) {
+    if (frame != NULL && frame->is_main(frame) && url != NULL &&
+        strcmp(url, "about:blank") != 0) {
+      proton_view_events_navigated(view->events, url);
+      proton_view_events_loading_changed(view->events, 1);
+      proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+    }
+    free(url);
+    return;
+  }
   proton_engine_debug_log("load_start browser=%d main=%d url=%s",
                           proton_engine_browser_id(browser),
                           frame != NULL ? frame->is_main(frame) : 0,
@@ -2291,6 +2534,15 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   (void)self;
   char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                             : NULL;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view != NULL) {
+    if (frame != NULL && frame->is_main(frame)) {
+      proton_view_events_loading_changed(view->events, 0);
+      proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+    }
+    free(url);
+    return;
+  }
   proton_engine_debug_log("load_end browser=%d main=%d status=%d url=%s",
                           proton_engine_browser_id(browser),
                           frame != NULL ? frame->is_main(frame) : 0,
@@ -2310,6 +2562,17 @@ static void CEF_CALLBACK proton_engine_on_load_error(
     const cef_string_t *failedUrl) {
   (void)self;
   if (frame == NULL || !frame->is_main(frame)) {
+    return;
+  }
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view != NULL) {
+    char *view_message = proton_engine_cef_string_to_utf8(errorText);
+    char *view_url = proton_engine_cef_string_to_utf8(failedUrl);
+    proton_view_events_load_failed(view->events, view_url, (int32_t)errorCode,
+                                   view_message);
+    free(view_message);
+    free(view_url);
+    proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
     return;
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
@@ -2665,6 +2928,7 @@ static int proton_engine_request_all_windows_close(void) {
       continue;
     }
     requested = 1;
+    proton_engine_window_close_views(window);
     if (window->browser != NULL) {
       cef_browser_host_t *host = window->browser->get_host(window->browser);
       if (host != NULL) {
@@ -2792,6 +3056,7 @@ static int proton_engine_request_all_windows_close(void) {
   }
   proton_engine_debug_log("window_will_close browser=%d", window->browser_id);
   window->appkit_closing = 1;
+  proton_engine_window_close_views(window);
   if (window->browser != NULL) {
     // AppKit has already closed the user-visible window. Publish that lifecycle
     // edge immediately; CEF on_before_close is only browser resource cleanup.
@@ -3362,6 +3627,13 @@ static void proton_engine_free_deferred_finalizing_windows(void) {
   while (window != NULL) {
     proton_engine_window_t *next = window->next;
     if (window->finalize_after_browser_close) {
+      for (proton_engine_view_t *view = window->views; view != NULL;
+           view = view->next) {
+        view->browser_before_close_seen = 1;
+        view->finalize_after_browser_close = 1;
+        proton_engine_view_release_browser(view);
+        proton_engine_view_finalize_if_ready(view);
+      }
       window->browser_before_close_seen = 1;
       proton_engine_window_release_browser(window);
       proton_engine_window_finalize_if_ready(window);
@@ -4020,6 +4292,7 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
     window->delegate = nil;
   }
   proton_engine_window_lock();
+  proton_engine_window_free_views(window);
   free(window->client);
   free(window->html_url);
   free(window->html);
@@ -4078,6 +4351,12 @@ static void proton_engine_window_finalize_if_ready(
   if (window->browser_id != 0 && !window->browser_before_close_seen) {
     return;
   }
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    if (!view->finalized) {
+      return;
+    }
+  }
   proton_engine_window_list_remove(window);
   if (window->client != NULL) {
     window->client->window = NULL;
@@ -4096,6 +4375,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  proton_engine_window_close_views(window);
   if (window->browser != NULL) {
     if (!proton_engine_window_request_browser_close(window, 1)) {
       proton_engine_set_message(error, error_len,
@@ -4748,4 +5028,928 @@ int32_t proton_engine_window_take_bridge_failure_json(
   }
   return proton_engine_bridge_lifecycle_take_failure_json(
       &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
+}
+
+
+// MARK: - Web contents views
+//
+// A view is an extra browser hosted inside a window's content view, following
+// the Electron WebContentsView model: explicit top-left bounds, visibility,
+// z-order, and an independent load_url target. Views reuse the window's
+// deferred browser-creation dance (CEF issue 3810) and mirror the window
+// browser close/finalize state machine: closing is gated on CEF's
+// on_before_close, and the owning window's finalize waits until every view
+// has left its view list.
+
+typedef struct {
+  char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t z_order;
+  int visible;
+  int has_background_color;
+  uint32_t background_color;
+} proton_engine_view_config_t;
+
+typedef struct {
+  cef_task_t task;
+  proton_engine_ref_counted_t refs;
+  uint64_t native_id;
+} proton_engine_view_navigation_task_t;
+
+static void proton_engine_view_list_add(proton_engine_window_t *window,
+                                        proton_engine_view_t *view) {
+  proton_engine_window_lock();
+  view->next = window->views;
+  window->views = view;
+  proton_engine_window_unlock();
+}
+
+// Converts the public top-left bounds into the content view's bottom-left
+// coordinate space and pins the view to the top edge so window resizes keep
+// the Electron-style top-left anchoring.
+static void proton_engine_view_apply_frame(proton_engine_view_t *view) {
+  if (view == NULL || view->window == NULL ||
+      view->window->content_view == nil || view->browser_view == nil) {
+    return;
+  }
+  CGFloat content_height = view->window->content_view.bounds.size.height;
+  NSRect frame = NSMakeRect((CGFloat)view->x,
+                            content_height - (CGFloat)view->y -
+                                (CGFloat)view->height,
+                            (CGFloat)view->width, (CGFloat)view->height);
+  [view->browser_view setFrame:frame];
+  [view->browser_view setAutoresizingMask:NSViewMinYMargin];
+  [view->browser_view setHidden:view->visible ? NO : YES];
+}
+
+// Re-orders view browser views above the window's main browser view by
+// ascending (z_order, native_id); the main browser view stays at the bottom
+// because it was added first and is never re-added here.
+static void proton_engine_window_layout_views(proton_engine_window_t *window) {
+  if (window == NULL || window->content_view == nil) {
+    return;
+  }
+  size_t count = 0;
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    if (view->browser_view != nil && !view->closed) {
+      count++;
+    }
+  }
+  if (count == 0) {
+    return;
+  }
+  proton_engine_view_t **order =
+      (proton_engine_view_t **)malloc(count * sizeof(*order));
+  if (order == NULL) {
+    return;
+  }
+  size_t index = 0;
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    if (view->browser_view != nil && !view->closed) {
+      order[index++] = view;
+    }
+  }
+  for (size_t i = 1; i < count; i++) {
+    proton_engine_view_t *current = order[i];
+    size_t j = i;
+    while (j > 0 &&
+           (order[j - 1]->z_order > current->z_order ||
+            (order[j - 1]->z_order == current->z_order &&
+             order[j - 1]->native_id > current->native_id))) {
+      order[j] = order[j - 1];
+      j--;
+    }
+    order[j] = current;
+  }
+  for (size_t i = 0; i < count; i++) {
+    [window->content_view addSubview:order[i]->browser_view
+                          positioned:NSWindowAbove
+                          relativeTo:nil];
+  }
+  free(order);
+}
+
+static void proton_engine_view_release_browser(proton_engine_view_t *view) {
+  if (view != NULL && view->browser != NULL) {
+    cef_browser_t *browser = view->browser;
+    view->browser = NULL;
+    proton_engine_browser_release(browser);
+  }
+}
+
+static int proton_engine_view_request_browser_close(proton_engine_view_t *view,
+                                                    int force_close) {
+  if (view == NULL || view->browser == NULL) {
+    return 0;
+  }
+  if (view->browser_close_requested && !force_close) {
+    return 1;
+  }
+  view->browser_close_requested = 1;
+  cef_browser_host_t *host = view->browser->get_host(view->browser);
+  if (host == NULL) {
+    return 0;
+  }
+  host->close_browser(host, force_close);
+  host->base.release((cef_base_ref_counted_t *)host);
+  // For windowed rendering the browser only dies once its host view leaves
+  // the view hierarchy (CefBrowserHostView dealloc -> WindowDestroyed).
+  // Detach it after the close request; do_close cancels CEF's default
+  // performClose: on the owning NSWindow.
+  if (view->browser_view != nil) {
+    [view->browser_view removeFromSuperview];
+    view->browser_view = nil;
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return 1;
+}
+
+static void proton_engine_view_mark_closed(proton_engine_view_t *view) {
+  if (view == NULL) {
+    return;
+  }
+  if (!view->closed) {
+    proton_engine_debug_log("view_closed browser=%d", view->browser_id);
+  }
+  view->closed = 1;
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static void proton_engine_view_defer_finalize(proton_engine_view_t *view) {
+  if (view == NULL) {
+    return;
+  }
+  if (!view->finalize_after_browser_close && view->browser_id != 0) {
+    proton_engine_debug_log("view_browser_close_deferred browser=%d",
+                            view->browser_id);
+  }
+  view->finalize_after_browser_close = 1;
+  view->browser_create_pending = 0;
+  if (view->client != NULL && !view->browser_create_scheduled) {
+    view->client->view = NULL;
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static void proton_engine_window_free_views(proton_engine_window_t *window) {
+  proton_engine_view_t *view = window->views;
+  window->views = NULL;
+  while (view != NULL) {
+    proton_engine_view_t *next = view->next;
+    proton_browser_session_destroy(view->browser_session);
+    proton_view_events_destroy(view->events);
+    free(view->html_url);
+    free(view->html);
+    free(view->client);
+    free(view->initial_url);
+    free(view);
+    view = next;
+  }
+}
+
+static void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
+  if (view == NULL || view->finalized ||
+      !view->finalize_after_browser_close) {
+    return;
+  }
+  if (view->browser_create_scheduled || view->initial_navigation_pending) {
+    return;
+  }
+  if (view->browser_id != 0 && !view->browser_before_close_seen) {
+    return;
+  }
+  // Resource cleanup only. The struct stays in the window's view list and is
+  // freed by proton_engine_window_free once every view has finalized, which
+  // keeps native ABI view slots valid for the whole window lifetime.
+  if (view->client != NULL) {
+    view->client->view = NULL;
+  }
+  if (view->browser_view != nil) {
+    [view->browser_view removeFromSuperview];
+    view->browser_view = nil;
+  }
+  view->finalized = 1;
+  // The window's own finalize is gated on every view being finalized; this
+  // call is a no-op unless the window is waiting on exactly this view.
+  proton_engine_window_finalize_if_ready(view->window);
+}
+
+static void proton_engine_window_close_views(proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    if (!view->closed) {
+      if (view->browser != NULL) {
+        proton_engine_view_request_browser_close(view, 1);
+        proton_engine_view_mark_closed(view);
+        proton_engine_view_defer_finalize(view);
+        proton_engine_view_release_browser(view);
+      } else {
+        proton_engine_view_mark_closed(view);
+        proton_engine_view_defer_finalize(view);
+      }
+    } else if (!view->finalize_after_browser_close) {
+      // Already closed by the page (JS window.close): allow its cleanup to
+      // complete so the window finalize gate can pass.
+      proton_engine_view_defer_finalize(view);
+    }
+    proton_engine_view_finalize_if_ready(view);
+  }
+}
+
+static int32_t proton_engine_view_create_browser(proton_engine_view_t *view,
+                                                 char *error,
+                                                 size_t error_len) {
+  proton_engine_window_t *window = view->window;
+  cef_window_info_t window_info;
+  cef_browser_settings_t browser_settings;
+  cef_string_t url = {0};
+  memset(&window_info, 0, sizeof(window_info));
+  memset(&browser_settings, 0, sizeof(browser_settings));
+  window_info.size = sizeof(window_info);
+  browser_settings.size = sizeof(browser_settings);
+  if (window->content_view != nil) {
+    window_info.parent_view = (__bridge void *)window->content_view;
+  }
+  if (window->headless) {
+    window_info.windowless_rendering_enabled = 1;
+    window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+  }
+  CGFloat content_height = window->content_view != nil
+                               ? window->content_view.bounds.size.height
+                               : (CGFloat)(view->y + view->height);
+  window_info.bounds.x = view->x;
+  window_info.bounds.y =
+      (int)(content_height - (CGFloat)view->y - (CGFloat)view->height);
+  window_info.bounds.width = view->width;
+  window_info.bounds.height = view->height;
+  if (view->has_background_color) {
+    browser_settings.background_color = view->background_color;
+  }
+  proton_engine_set_string(&window_info.window_name, "ProtonView");
+  proton_engine_set_string(&url, "about:blank");
+  int accepted = cef_browser_host_create_browser(
+      &window_info, &view->client->client, &url, &browser_settings, NULL,
+      NULL);
+  cef_string_clear(&window_info.window_name);
+  cef_string_clear(&url);
+  if (!accepted) {
+    proton_engine_set_message(error, error_len, "view browser creation failed");
+    return PROTON_ERR_ENGINE;
+  }
+  return PROTON_OK;
+}
+
+static void proton_engine_view_schedule_browser_create(
+    proton_engine_view_t *view) {
+  uint64_t native_id = view->native_id;
+  view->browser_create_scheduled = 1;
+  // Mirror the window path: create CEF browsers after the main run loop has
+  // started pumping (CEF issue 3810).
+  dispatch_async(dispatch_get_main_queue(), ^{
+    proton_engine_view_t *pending_view =
+        proton_engine_view_from_native_id(native_id);
+    if (pending_view == NULL) {
+      return;
+    }
+    if (pending_view->closed || !pending_view->browser_create_pending) {
+      pending_view->browser_create_scheduled = 0;
+      proton_engine_view_finalize_if_ready(pending_view);
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return;
+    }
+    pending_view->browser_create_pending = 0;
+    pending_view->initial_navigation_pending = 1;
+    char error[512] = {0};
+    int32_t status =
+        proton_engine_view_create_browser(pending_view, error, sizeof(error));
+    if (status != PROTON_OK) {
+      pending_view->initial_navigation_pending = 0;
+      pending_view->browser_create_scheduled = 0;
+      proton_engine_debug_log("view_create_browser_failed status=%d error=%s",
+                              status, error);
+      proton_engine_view_mark_closed(pending_view);
+      proton_engine_view_finalize_if_ready(pending_view);
+    }
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  });
+}
+
+static void CEF_CALLBACK proton_engine_view_navigation_task_execute(
+    cef_task_t *base) {
+  proton_engine_view_navigation_task_t *task =
+      (proton_engine_view_navigation_task_t *)base;
+  proton_engine_view_t *view = proton_engine_view_from_native_id(
+      task->native_id);
+  if (view == NULL) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      free(task);
+    });
+    return;
+  }
+  view->initial_navigation_pending = 0;
+  if (view->initial_url != NULL && view->initial_url[0] != '\0' &&
+      strcmp(view->initial_url, "about:blank") != 0) {
+    char error[512] = {0};
+    int32_t status = proton_engine_view_load_url(view, view->initial_url,
+                                                 error, sizeof(error));
+    if (status != PROTON_OK) {
+      proton_engine_debug_log("view_load_initial_url_failed status=%d error=%s",
+                              status, error);
+      proton_engine_view_mark_closed(view);
+      proton_engine_view_request_browser_close(view, 1);
+    }
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  uint64_t native_id = task->native_id;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    proton_engine_view_t *pending_view =
+        proton_engine_view_from_native_id(native_id);
+    if (pending_view != NULL) {
+      proton_engine_view_finalize_if_ready(pending_view);
+    }
+    free(task);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  });
+}
+
+static int proton_engine_view_schedule_initial_navigation(
+    proton_engine_view_t *view) {
+  proton_engine_view_navigation_task_t *task = calloc(1, sizeof(*task));
+  if (task == NULL) {
+    return 0;
+  }
+  proton_engine_init_ref_counted((cef_base_ref_counted_t *)&task->task,
+                                 sizeof(task->task), &task->refs);
+  task->task.execute = proton_engine_view_navigation_task_execute;
+  task->native_id = view->native_id;
+  int posted = cef_post_task(TID_UI, &task->task);
+  if (!posted) {
+    free(task);
+  }
+  return posted;
+}
+
+static void proton_engine_view_on_after_created(proton_engine_view_t *view,
+                                                cef_browser_t *browser) {
+  if (view == NULL || browser == NULL) {
+    return;
+  }
+  proton_engine_window_t *window = view->window;
+  cef_browser_host_t *host = browser->get_host(browser);
+  browser->base.add_ref((cef_base_ref_counted_t *)browser);
+  view->browser = browser;
+  view->browser_id = browser->get_identifier(browser);
+  view->browser_create_scheduled = 0;
+  if (host != NULL) {
+    if (window->headless) {
+      if (!view->visible && host->was_hidden != NULL) {
+        host->was_hidden(host, 1);
+      }
+    } else {
+      view->browser_view = (__bridge NSView *)host->get_window_handle(host);
+    }
+    host->base.release((cef_base_ref_counted_t *)host);
+  }
+  if (window->content_view != nil && view->browser_view != nil) {
+    if (view->browser_view.superview == nil) {
+      [window->content_view addSubview:view->browser_view];
+    }
+    proton_engine_view_apply_frame(view);
+    proton_engine_window_layout_views(window);
+  }
+  proton_engine_debug_log("view_create_browser id=%d rect=%d,%d %dx%d",
+                          view->browser_id, (int)view->x, (int)view->y,
+                          (int)view->width, (int)view->height);
+
+  if (view->closed || view->finalize_after_browser_close) {
+    view->initial_navigation_pending = 0;
+    proton_engine_view_request_browser_close(view, 1);
+    proton_engine_view_release_browser(view);
+    proton_engine_view_finalize_if_ready(view);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return;
+  }
+  if (!proton_engine_view_schedule_initial_navigation(view)) {
+    view->initial_navigation_pending = 0;
+    proton_engine_debug_log("view_initial_navigation_post_failed browser=%d",
+                            view->browser_id);
+    proton_engine_view_mark_closed(view);
+    proton_engine_view_request_browser_close(view, 1);
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static void proton_engine_view_on_before_close(proton_engine_view_t *view,
+                                               cef_browser_t *browser) {
+  (void)browser;
+  if (view == NULL) {
+    return;
+  }
+  proton_engine_debug_log("view_browser_before_close browser=%d",
+                          view->browser_id);
+  view->browser_before_close_seen = 1;
+  proton_engine_view_mark_closed(view);
+  proton_engine_view_release_browser(view);
+  if (view->browser_view != nil) {
+    [view->browser_view removeFromSuperview];
+    view->browser_view = nil;
+  }
+  // A page-initiated close (JS window.close) reaches here without a prior
+  // engine destroy; let the cleanup state machine finish so the struct can be
+  // reclaimed with its owning window.
+  view->finalize_after_browser_close = 1;
+  proton_engine_view_finalize_if_ready(view);
+}
+
+static proton_engine_client_t *proton_engine_view_client_create(
+    proton_engine_view_t *view) {
+  proton_engine_client_t *client =
+      (proton_engine_client_t *)calloc(1, sizeof(*client));
+  if (client == NULL) {
+    return NULL;
+  }
+  proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
+                                 sizeof(client->client), &client->refs);
+  client->view = view;
+  // Views wire the life span, load, display, and render handlers: life span
+  // drives the close state machine, load/display feed the view event stream,
+  // and the render handler gives headless (OSR) views a viewport. Navigation
+  // policy, bridge, downloads, and permissions stay window-scoped for now,
+  // and CEF defaults (cancel popups, no bridge bootstrap) apply to view
+  // browsers.
+  client->client.get_life_span_handler =
+      proton_engine_client_get_life_span_handler;
+  client->client.get_load_handler = proton_engine_client_get_load_handler;
+  client->client.get_display_handler = proton_engine_client_get_display_handler;
+  client->client.get_render_handler = proton_engine_client_get_render_handler;
+  return client;
+}
+
+// Parses "#RRGGBB" or "#AARRGGBB" into a cef_color_t (0xAARRGGBB).
+static int proton_engine_parse_color_argb(const char *text,
+                                          uint32_t *out_color) {
+  if (text == NULL || text[0] != '#') {
+    return 0;
+  }
+  size_t len = strlen(text);
+  if (len != 7 && len != 9) {
+    return 0;
+  }
+  for (size_t i = 1; i < len; i++) {
+    if (!isxdigit((unsigned char)text[i])) {
+      return 0;
+    }
+  }
+  unsigned long value = strtoul(text + 1, NULL, 16);
+  if (len == 7) {
+    value |= 0xFF000000UL;
+  }
+  *out_color = (uint32_t)value;
+  return 1;
+}
+
+static int32_t proton_engine_parse_view_config(
+    const char *config_json,
+    proton_engine_view_config_t *config,
+    char *error,
+    size_t error_len) {
+  if (config_json == NULL || config == NULL) {
+    proton_engine_set_message(error, error_len, "view config is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  memset(config, 0, sizeof(*config));
+  config->visible = 1;
+  if (!proton_engine_parse_json_int_field(config_json, "width",
+                                          &config->width) ||
+      !proton_engine_parse_json_int_field(config_json, "height",
+                                          &config->height)) {
+    proton_engine_set_message(error, error_len,
+                              "view config requires numeric width and height");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (config->width <= 0 || config->height <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "view width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_parse_json_int_field(config_json, "x", &config->x);
+  proton_engine_parse_json_int_field(config_json, "y", &config->y);
+  proton_engine_parse_json_int_field(config_json, "z_order", &config->z_order);
+  bool visible = true;
+  if (proton_engine_parse_json_bool_field(config_json, "visible", &visible)) {
+    config->visible = visible ? 1 : 0;
+  }
+  proton_engine_parse_json_string_field(config_json, "initial_url",
+                                        config->initial_url,
+                                        sizeof(config->initial_url));
+  char background_color[16] = {0};
+  if (proton_engine_parse_json_string_field(
+          config_json, "background_color", background_color,
+          sizeof(background_color))) {
+    if (!proton_engine_parse_color_argb(background_color,
+                                        &config->background_color)) {
+      proton_engine_set_message(
+          error, error_len,
+          "view background_color must be #RRGGBB or #AARRGGBB");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    config->has_background_color = 1;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_create_json(proton_engine_window_t *window,
+                                       const char *config_json,
+                                       proton_engine_view_t **out_view,
+                                       char *error,
+                                       size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_view_create_json(
+      window, config_json, out_view, error, error_len));
+  if (out_view == NULL) {
+    proton_engine_set_message(error, error_len, "out_view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_view = NULL;
+  if (window == NULL || config_json == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "window and view config are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->closed) {
+    proton_engine_set_message(error, error_len, "window is closed");
+    return PROTON_ERR_DESTROYED;
+  }
+  if (!g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  proton_engine_view_config_t config;
+  int32_t status =
+      proton_engine_parse_view_config(config_json, &config, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+
+  proton_engine_view_t *view =
+      (proton_engine_view_t *)calloc(1, sizeof(*view));
+  if (view == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate view state");
+    return PROTON_ERR_ENGINE;
+  }
+  view->window = window;
+  view->native_id = g_next_view_native_id++;
+  if (g_next_view_native_id == 0) {
+    g_next_view_native_id = 1;
+  }
+  view->x = config.x;
+  view->y = config.y;
+  view->width = config.width;
+  view->height = config.height;
+  view->z_order = config.z_order;
+  view->visible = config.visible;
+  view->client = proton_engine_view_client_create(view);
+  if (view->client == NULL) {
+    free(view);
+    proton_engine_set_message(error, error_len, "failed to allocate client");
+    return PROTON_ERR_ENGINE;
+  }
+  view->initial_url = proton_engine_strdup(
+      config.initial_url[0] != '\0' ? config.initial_url : "about:blank");
+  if (view->initial_url == NULL) {
+    free(view->client);
+    free(view);
+    proton_engine_set_message(error, error_len,
+                              "failed to copy initial browser url");
+    return PROTON_ERR_ENGINE;
+  }
+  // Views own a browser session with a fixed, non-interactive policy so the
+  // usual browser commands (back/forward/reload/stop/devtools) work per view;
+  // ASK flows are never used here.
+  proton_browser_policy_t view_policy = {PROTON_BROWSER_POLICY_ALLOW,
+                                         PROTON_BROWSER_POLICY_DENY,
+                                         PROTON_BROWSER_POLICY_DENY,
+                                         PROTON_BROWSER_POLICY_DENY,
+                                         PROTON_BROWSER_POLICY_DENY,
+                                         1};
+  view->browser_session = proton_browser_session_create(
+      &view_policy, proton_engine_browser_signal, NULL);
+  view->events = proton_view_events_create();
+  if (view->browser_session == NULL || view->events == NULL) {
+    proton_browser_session_destroy(view->browser_session);
+    proton_view_events_destroy(view->events);
+    free(view->initial_url);
+    free(view->client);
+    free(view);
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate view state");
+    return PROTON_ERR_ENGINE;
+  }
+  view->has_background_color = config.has_background_color;
+  view->background_color = config.background_color;
+  proton_engine_debug_log("view_create rect=%d,%d %dx%d visible=%d z=%d",
+                          (int)view->x, (int)view->y, (int)view->width,
+                          (int)view->height, view->visible,
+                          (int)view->z_order);
+  view->browser_create_pending = 1;
+  proton_engine_view_list_add(window, view);
+  proton_engine_view_schedule_browser_create(view);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  *out_view = view;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_destroy(proton_engine_view_t *view,
+                                   char *error,
+                                   size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_view_destroy(view, error, error_len));
+  if (view == NULL) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (view->closed) {
+    return PROTON_OK;
+  }
+  if (view->browser != NULL) {
+    if (!proton_engine_view_request_browser_close(view, 1)) {
+      proton_engine_set_message(error, error_len,
+                                "browser host is not available for close");
+      return PROTON_ERR_ENGINE;
+    }
+    proton_engine_view_mark_closed(view);
+    proton_engine_view_defer_finalize(view);
+    proton_engine_view_release_browser(view);
+    proton_engine_view_finalize_if_ready(view);
+    return PROTON_OK;
+  }
+  proton_engine_view_mark_closed(view);
+  proton_engine_view_defer_finalize(view);
+  proton_engine_view_finalize_if_ready(view);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
+                                      int32_t x,
+                                      int32_t y,
+                                      int32_t width,
+                                      int32_t height,
+                                      char *error,
+                                      size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_view_set_bounds(
+      view, x, y, width, height, error, error_len));
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "view width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  view->x = x;
+  view->y = y;
+  view->width = width;
+  view->height = height;
+  if (view->window != NULL && view->window->headless) {
+    if (view->browser != NULL) {
+      cef_browser_host_t *host = view->browser->get_host(view->browser);
+      if (host != NULL) {
+        host->was_resized(host);
+        host->base.release((cef_base_ref_counted_t *)host);
+      }
+    }
+  } else {
+    proton_engine_view_apply_frame(view);
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
+                                       int32_t visible,
+                                       char *error,
+                                       size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_view_set_visible(view, visible, error, error_len));
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  view->visible = visible ? 1 : 0;
+  if (view->window != NULL && view->window->headless) {
+    if (view->browser != NULL) {
+      cef_browser_host_t *host = view->browser->get_host(view->browser);
+      if (host != NULL && host->was_hidden != NULL) {
+        host->was_hidden(host, view->visible ? 0 : 1);
+        host->base.release((cef_base_ref_counted_t *)host);
+      }
+    }
+  } else if (view->browser_view != nil) {
+    [view->browser_view setHidden:view->visible ? NO : YES];
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
+                                       int32_t z_order,
+                                       char *error,
+                                       size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_view_set_z_order(view, z_order, error, error_len));
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  view->z_order = z_order;
+  proton_engine_window_layout_views(view->window);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_load_url(proton_engine_view_t *view,
+                                    const char *url,
+                                    char *error,
+                                    size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_view_load_url(view, url, error, error_len));
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if ((view->browser == NULL &&
+       (view->browser_create_pending || view->browser_create_scheduled)) ||
+      view->initial_navigation_pending) {
+    char *url_copy =
+        proton_engine_strdup(url != NULL && url[0] != '\0' ? url : "about:blank");
+    if (url_copy == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "failed to copy pending browser url");
+      return PROTON_ERR_ENGINE;
+    }
+    free(view->initial_url);
+    view->initial_url = url_copy;
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
+  }
+  if (view->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  cef_frame_t *frame = view->browser->get_main_frame(view->browser);
+  if (frame == NULL) {
+    proton_engine_set_message(error, error_len, "main frame is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_string_t cef_url = {0};
+  proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
+  proton_engine_debug_log("view_load_url browser=%d url=%s", view->browser_id,
+                          url != NULL ? url : "about:blank");
+  frame->load_url(frame, &cef_url);
+  cef_string_clear(&cef_url);
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_eval(proton_engine_view_t *view,
+                                const char *script,
+                                char *error,
+                                size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_view_eval(view, script, error, error_len));
+  if (view == NULL || view->closed || view->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  cef_frame_t *frame = view->browser->get_main_frame(view->browser);
+  if (frame == NULL) {
+    proton_engine_set_message(error, error_len, "main frame is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_string_t code = {0};
+  cef_string_t script_url = {0};
+  proton_engine_set_string(&code, script != NULL ? script : "");
+  proton_engine_set_string(&script_url, "proton://eval.js");
+  frame->execute_java_script(frame, &code, &script_url, 1);
+  cef_string_clear(&code);
+  cef_string_clear(&script_url);
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_load_html(proton_engine_view_t *view,
+                                     const char *html,
+                                     const char *base_url,
+                                     char *error,
+                                     size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_view_load_html(view, html,
+                                                            base_url, error,
+                                                            error_len));
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (html == NULL) {
+    html = "";
+  }
+  const char *effective_base_url =
+      base_url != NULL && base_url[0] != '\0' ? base_url : "proton://app/";
+  if (!proton_engine_url_is_proton(effective_base_url)) {
+    proton_engine_set_message(error, error_len,
+                              "base_url must use the proton:// scheme");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  char *url_copy = proton_engine_strdup(effective_base_url);
+  char *html_copy = proton_engine_strdup(html);
+  char *pending_url = NULL;
+  if (url_copy == NULL || html_copy == NULL) {
+    free(url_copy);
+    free(html_copy);
+    proton_engine_set_message(error, error_len, "failed to copy html");
+    return PROTON_ERR_ENGINE;
+  }
+  if ((view->browser == NULL &&
+       (view->browser_create_pending || view->browser_create_scheduled)) ||
+      view->initial_navigation_pending) {
+    pending_url = proton_engine_strdup(effective_base_url);
+    if (pending_url == NULL) {
+      free(url_copy);
+      free(html_copy);
+      proton_engine_set_message(error, error_len,
+                                "failed to copy pending browser url");
+      return PROTON_ERR_ENGINE;
+    }
+  }
+  proton_engine_window_lock();
+  free(view->html_url);
+  free(view->html);
+  view->html_url = url_copy;
+  view->html = html_copy;
+  view->html_len = strlen(html_copy);
+  proton_engine_window_unlock();
+  if (pending_url != NULL) {
+    free(view->initial_url);
+    view->initial_url = pending_url;
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
+  }
+  proton_engine_debug_log("view_load_html browser=%d base_url=%s bytes=%llu",
+                          view->browser_id, effective_base_url,
+                          (unsigned long long)view->html_len);
+  return proton_engine_view_load_url(view, effective_base_url, error,
+                                     error_len);
+}
+
+int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
+                                                const char *command_json,
+                                                char *error,
+                                                size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_view_browser_command_json(
+      view, command_json, error, error_len));
+  if (view == NULL || view->closed || view->browser_session == NULL ||
+      view->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_session_command_json(view->browser_session,
+                                             view->browser, command_json,
+                                             error, error_len);
+}
+
+int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len,
+                                           char *error,
+                                           size_t error_len) {
+  (void)error;
+  (void)error_len;
+  // The ABI event sweep calls this on the runtime owner thread; the event
+  // queue carries its own lock, so no main-thread marshal here.
+  if (view == NULL || view->events == NULL) {
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_view_events_poll_json(view->events, buffer, buffer_len,
+                                      out_required_len);
+}
+
+void proton_engine_view_bind_public_id(proton_engine_view_t *view,
+                                       proton_view_id_t public_view) {
+  PROTON_ENGINE_RUN_ON_MAIN(
+      proton_engine_view_bind_public_id(view, public_view));
+  if (view != NULL && view->window != NULL) {
+    proton_view_events_bind(view->events, public_view,
+                            proton_engine_window_public_id(view->window));
+  }
 }

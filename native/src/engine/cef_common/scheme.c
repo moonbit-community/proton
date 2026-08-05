@@ -217,6 +217,9 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   proton_engine_window_lock();
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
+  proton_engine_view_t *view =
+      window == NULL ? proton_engine_window_lookup_view_browser(browser)
+                     : NULL;
   char *html_url = NULL;
   char *asset_root = NULL;
   char *html_copy = NULL;
@@ -225,24 +228,29 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
   if (root_value != NULL) {
     asset_root = proton_engine_strdup(root_value);
   }
+  const char *url_value = NULL;
+  const char *html = NULL;
+  size_t len = 0;
   if (window != NULL) {
-    const char *url_value = proton_engine_window_html_url(window);
-    if (url_value != NULL) {
-      html_url = proton_engine_strdup(url_value);
-    }
-    size_t len = 0;
-    const char *html = proton_engine_window_html(window, &len);
-    if (html != NULL) {
-      html_copy = (char *)malloc(len + 1);
-      if (html_copy != NULL) {
-        memcpy(html_copy, html, len);
-        html_copy[len] = '\0';
-        html_len = len;
-      }
+    url_value = proton_engine_window_html_url(window);
+    html = proton_engine_window_html(window, &len);
+  } else if (view != NULL) {
+    url_value = proton_engine_view_html_url(view);
+    html = proton_engine_view_html(view, &len);
+  }
+  if (url_value != NULL) {
+    html_url = proton_engine_strdup(url_value);
+  }
+  if (html != NULL) {
+    html_copy = (char *)malloc(len + 1);
+    if (html_copy != NULL) {
+      memcpy(html_copy, html, len);
+      html_copy[len] = '\0';
+      html_len = len;
     }
   }
   proton_engine_window_unlock();
-  if (window == NULL && asset_root == NULL) {
+  if (window == NULL && asset_root == NULL && view == NULL) {
     return NULL;
   }
 

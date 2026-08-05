@@ -50,6 +50,7 @@ if(PROTON_WITH_ENGINE)
     src/engine/cef_common/bridge_renderer.c
     src/engine/cef_common/document.c
     src/engine/cef_common/scheme.c
+    src/engine/cef_common/view_events.c
   )
 endif()
 

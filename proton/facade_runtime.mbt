@@ -39,7 +39,9 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.resolved_headless(),
     app_instance~,
     launch_input_handlers=self.launch_input_handlers,
+    planned_views=self.planned_views,
     window_event_handlers=self.window_event_handlers,
+    view_event_handlers=self.view_event_handlers,
     window_close_handler=self.window_close_handler,
     navigation_handler=self.navigation_handler,
     popup_handler=self.popup_handler,
@@ -84,10 +86,12 @@ async fn run_manifest(
   bridge_startup_timeout_ms : Int,
   headless : Bool,
   app_instance? : @native.AppInstance? = None,
+  planned_views? : Array[(String, @native.ViewConfig)] = [],
   launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
   window_event_handlers? : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ] = [],
+  view_event_handlers? : Array[async (ViewHandle, ViewEvent) -> Unit noraise] = [],
   window_close_handler? : (async (WindowHandle) -> WindowCloseDecision noraise)? = None,
   navigation_handler? : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)? = None,
   popup_handler? : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)? = None,
@@ -265,6 +269,11 @@ async fn run_manifest(
         bridge,
         permissions: permission_policies[index],
         browser_policy,
+        views: if plan.id == "main" {
+          planned_views
+        } else {
+          []
+        },
       })
     }
     @async.with_task_group(application_tasks => {
@@ -272,9 +281,9 @@ async fn run_manifest(
         let session = RuntimeSession::new(
           runtime, definitions, windows, command_host, wakeup, forward_menu_events,
           bridge_enabled, launch_input_handlers, window_event_handlers, window_tasks,
-          window_close_handler, window_lifecycle_hooks, lifecycle_failures, bridge_startup_timeout_ms,
-          navigation_handler, popup_handler, download_handler, certificate_handler,
-          media_handler, download_event_handlers,
+          view_event_handlers, window_close_handler, window_lifecycle_hooks, lifecycle_failures,
+          bridge_startup_timeout_ms, navigation_handler, popup_handler, download_handler,
+          certificate_handler, media_handler, download_event_handlers,
         )
         let application_context = ApplicationContext::new(
           application_tasks,

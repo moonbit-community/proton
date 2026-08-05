@@ -31,6 +31,23 @@ uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
   return 0;
 }
 
+int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len,
+                                           char *error,
+                                           size_t error_len) {
+  (void)view;
+  (void)buffer;
+  (void)buffer_len;
+  (void)error;
+  (void)error_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return PROTON_EVENT_NONE;
+}
+
 int32_t proton_engine_window_get_state(
     proton_engine_window_t *window,
     proton_engine_window_state_t *out_state, char *error, size_t error_len) {
@@ -245,6 +262,79 @@ int main(void) {
   if (required != 0) {
     return fail("resync should leave the queue empty");
   }
+
+  // View slots: views resolve against their owning window, are destroyed with
+  // it, and recycle slots with a fresh generation.
+  proton_view_id_t view = PROTON_INVALID_HANDLE;
+  proton_view_slot_t *view_slot = NULL;
+  if (expect_status("view_slot_create",
+                    proton_view_slot_create(runtime, handles[1],
+                                            (proton_engine_view_t *)0x3, 10,
+                                            20, 320, 200, 1, true, &view,
+                                            &view_slot),
+                    PROTON_OK)) {
+    return 1;
+  }
+  proton_view_slot_t *resolved = NULL;
+  if (expect_status("proton_get_view resolves a live view",
+                    proton_get_view(view, &resolved), PROTON_OK)) {
+    return 1;
+  }
+  if (resolved != view_slot) {
+    return fail("proton_get_view must return the created slot");
+  }
+  if (expect_status("view slot keeps x", view_slot->x, 10) ||
+      expect_status("view slot keeps width", view_slot->width, 320) ||
+      expect_status("view slot keeps z_order", view_slot->z_order, 1)) {
+    return 1;
+  }
+  if (!view_slot->visible) {
+    return fail("view slot must keep the visible flag");
+  }
+  proton_view_id_t second_view = PROTON_INVALID_HANDLE;
+  if (expect_status("second view_slot_create",
+                    proton_view_slot_create(runtime, handles[1],
+                                            (proton_engine_view_t *)0x4, 0, 0,
+                                            100, 100, 0, false, &second_view,
+                                            NULL),
+                    PROTON_OK)) {
+    return 1;
+  }
+  proton_destroy_views_for_window(handles[1]);
+  if (expect_status("destroyed view reports PROTON_ERR_DESTROYED",
+                    proton_get_view(view, &resolved), PROTON_ERR_DESTROYED)) {
+    return 1;
+  }
+  if (expect_status("sibling view is destroyed with the window",
+                    proton_get_view(second_view, &resolved),
+                    PROTON_ERR_DESTROYED)) {
+    return 1;
+  }
+  if (expect_status("window handles are not view handles",
+                    proton_get_view(handles[1], &resolved),
+                    PROTON_ERR_INVALID_HANDLE)) {
+    return 1;
+  }
+  if (expect_status("views on other windows stay live",
+                    proton_view_slot_create(runtime, handles[2],
+                                            (proton_engine_view_t *)0x5, 0, 0,
+                                            50, 50, 0, true, &view, NULL),
+                    PROTON_OK)) {
+    return 1;
+  }
+  proton_view_id_t recycled = PROTON_INVALID_HANDLE;
+  if (expect_status("recycled view slot is recreated",
+                    proton_view_slot_create(runtime, handles[1],
+                                            (proton_engine_view_t *)0x6, 0, 0,
+                                            50, 50, 0, true, &recycled, NULL),
+                    PROTON_OK)) {
+    return 1;
+  }
+  if (recycled == second_view) {
+    return fail("recycled view slot must bump its generation");
+  }
+  proton_destroy_views_for_window(handles[1]);
+  proton_destroy_views_for_window(handles[2]);
 
   return 0;
 }

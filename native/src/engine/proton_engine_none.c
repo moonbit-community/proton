@@ -626,3 +626,125 @@ int32_t proton_engine_take_menu_command(
   *out_present = 0;
   return PROTON_OK;
 }
+
+int32_t proton_engine_view_create_json(proton_engine_window_t *window,
+                                       const char *config_json,
+                                       proton_engine_view_t **out_view,
+                                       char *error,
+                                       size_t error_len) {
+  (void)window;
+  (void)config_json;
+  if (out_view != NULL) {
+    *out_view = NULL;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_destroy(proton_engine_view_t *view,
+                                   char *error,
+                                   size_t error_len) {
+  (void)view;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
+                                      int32_t x,
+                                      int32_t y,
+                                      int32_t width,
+                                      int32_t height,
+                                      char *error,
+                                      size_t error_len) {
+  (void)view;
+  (void)x;
+  (void)y;
+  (void)width;
+  (void)height;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
+                                       int32_t visible,
+                                       char *error,
+                                       size_t error_len) {
+  (void)view;
+  (void)visible;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
+                                       int32_t z_order,
+                                       char *error,
+                                       size_t error_len) {
+  (void)view;
+  (void)z_order;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_load_url(proton_engine_view_t *view,
+                                    const char *url,
+                                    char *error,
+                                    size_t error_len) {
+  (void)view;
+  (void)url;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_eval(proton_engine_view_t *view,
+                                const char *script,
+                                char *error,
+                                size_t error_len) {
+  (void)view;
+  (void)script;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_load_html(proton_engine_view_t *view,
+                                     const char *html,
+                                     const char *base_url,
+                                     char *error,
+                                     size_t error_len) {
+  (void)view;
+  (void)html;
+  (void)base_url;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
+                                                const char *command_json,
+                                                char *error,
+                                                size_t error_len) {
+  (void)view;
+  (void)command_json;
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len,
+                                           char *error,
+                                           size_t error_len) {
+  (void)view;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 "web contents views require the CEF engine");
+}
+
+void proton_engine_view_bind_public_id(proton_engine_view_t *view,
+                                       proton_view_id_t public_view) {
+  (void)view;
+  (void)public_view;
+}
