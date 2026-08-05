@@ -11,6 +11,11 @@ test "to_cstr appends a trailing nul" {
 }
 
 ///|
+test "from_cstr stops at first nul" {
+  assert_eq(@ffi.from_cstr(b"ffi\x00ignored\x00"), "ffi")
+}
+
+///|
 test "panic from_cstr requires terminator" {
   @ffi.from_cstr(b"ffi") |> ignore
 }
@@ -25,6 +30,14 @@ test "wstr round trip unicode" {
 test "to_wstr appends a trailing wide nul" {
   assert_eq(@ffi.to_wstr("Hi"), b"\x48\x00\x69\x00\x00\x00")
   assert_eq(@ffi.to_wstr(""), b"\x00\x00")
+}
+
+///|
+test "from_wstr_lossy stops at first wide nul" {
+  assert_eq(
+    @ffi.from_wstr_lossy(b"\x48\x00\x69\x00\x00\x00\x78\x00\x00\x00"),
+    "Hi",
+  )
 }
 
 ///|
