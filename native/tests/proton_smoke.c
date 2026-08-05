@@ -47,8 +47,21 @@
 
 #include "../src/engine/cef_common/assets.h"
 
+static char *read_log(const char *path);
+
 static int fail(const char *message) {
   fprintf(stderr, "%s\n", message);
+  const char *log_path = getenv("PROTON_TEST_NATIVE_LOG");
+  if (log_path != NULL) {
+    char *log = read_log(log_path);
+    if (log != NULL) {
+      long len = (long)strlen(log);
+      long start = len > 4000 ? len - 4000 : 0;
+      fprintf(stderr, "--- native log tail ---\n%.*s\n", (int)(len - start),
+              log + start);
+      free(log);
+    }
+  }
   return 1;
 }
 
@@ -640,6 +653,7 @@ static void smoke_app_entry(void) {
 #endif
       if (g_app_entry_browser_ready) {
         // Web contents views: create two child browsers inside the window,
+        fprintf(stderr, "smoke-step: create view1\n");
         // drive bounds/visibility/z-order/navigation, then destroy them
         // before the window close flow below.
         g_app_entry_view_create_status = proton_view_create_json(
@@ -651,7 +665,7 @@ static void smoke_app_entry(void) {
           g_app_entry_view_unsupported = 1;
         }
         if (g_app_entry_view_create_status == PROTON_OK) {
-          for (int attempt = 0; attempt < 100; attempt++) {
+          for (int attempt = 0; attempt < 300; attempt++) {
             const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
             if (native_log_path != NULL &&
                 log_contains(native_log_path, "view_create_browser id=")) {
@@ -664,6 +678,8 @@ static void smoke_app_entry(void) {
             usleep(10000);
 #endif
           }
+          fprintf(stderr, "smoke-step: view1 ready=%d, drive bounds/visible/z/load\n",
+                  g_app_entry_view_ready);
           g_app_entry_view_set_bounds_status =
               proton_view_set_bounds(g_app_entry_view, 30, 40, 180, 100);
           g_app_entry_view_set_visible_status =
@@ -690,6 +706,7 @@ static void smoke_app_entry(void) {
               "{\"abi_version\":1,\"x\":50,\"y\":60,\"width\":100,"
               "\"height\":80,\"visible\":false}",
               &g_app_entry_view2);
+          fprintf(stderr, "smoke-step: destroy view1+view2\n");
           g_app_entry_view_destroy_status =
               proton_view_destroy(g_app_entry_view);
           if (g_app_entry_view2_create_status == PROTON_OK) {
@@ -705,6 +722,7 @@ static void smoke_app_entry(void) {
               &g_app_entry_view3);
         }
       }
+      fprintf(stderr, "smoke-step: window close interception flow\n");
       if (g_app_entry_browser_ready) {
         g_app_entry_close_interception_status =
             proton_window_set_close_interception(window, 1);
@@ -756,6 +774,7 @@ static void smoke_app_entry(void) {
 #endif
         }
       }
+      fprintf(stderr, "smoke-step: window destroy\n");
       g_app_entry_window_destroy_status = proton_window_destroy(window);
       if (g_app_entry_view3_create_status == PROTON_OK) {
         char stale_state[128];
@@ -766,6 +785,7 @@ static void smoke_app_entry(void) {
         g_app_entry_view3_destroy_status = proton_view_destroy(g_app_entry_view3);
       }
     }
+    fprintf(stderr, "smoke-step: runtime destroy\n");
     g_app_entry_destroy_status = proton_runtime_destroy(runtime);
 #ifdef _WIN32
     if (wakeup_reader != INVALID_HANDLE_VALUE) {
