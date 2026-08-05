@@ -51,7 +51,7 @@ fn trim_trailing_slashes(path : String) -> String {
 
 ///|
 fn slug_to_title(slug : String) -> String {
-  @case.title_case(slug)
+  title_case(slug)
 }
 
 ///|
