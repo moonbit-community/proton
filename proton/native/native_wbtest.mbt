@@ -213,6 +213,18 @@ test "runtime wait ready mask helpers" {
 }
 
 ///|
+test "runtime wait treats an elapsed deadline as no wait, not as an error" {
+  // A caller computing `deadline - now` arrives late routinely, and refusing
+  // to poll then would be worse than polling with no wait. The negative is
+  // clamped here so it can never reach the ABI, where only the documented
+  // infinite sentinel is accepted and any other negative is rejected.
+  let runtime = Runtime::new()
+  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=-5)
+  inspect(ready.is_timeout(), content="true")
+  runtime.destroy()
+}
+
+///|
 test "runtime wait reports queued native events without consuming them" {
   let runtime = Runtime::new()
   let empty_ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)

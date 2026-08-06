@@ -557,7 +557,7 @@ pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
 pub fn Runtime::wait(
   self : Runtime,
   interest_mask~ : Int,
-  timeout_ms~ : Int,
+  timeout_ms? : Int,
 ) -> RuntimeWaitReady raise NativeError {
   if interest_mask == runtime_wait_none {
     raise invalid_argument("interest_mask is required")
@@ -565,14 +565,18 @@ pub fn Runtime::wait(
   if interest_mask.land(runtime_wait_all.lnot()) != 0 {
     raise invalid_argument("interest_mask contains unsupported bits")
   }
-  if timeout_ms < 0 {
-    raise invalid_argument("timeout_ms must be non-negative")
+  // The sentinel lives here and nowhere else: callers say `None`, and a
+  // deadline that has already passed is a zero wait rather than an error,
+  // because arriving late is normal and is not a reason to refuse to poll.
+  let encoded_timeout = match timeout_ms {
+    None => runtime_wait_timeout_infinite
+    Some(timeout_ms) => if timeout_ms < 0 { 0 } else { timeout_ms }
   }
   let ready_mask = Ref(runtime_wait_none)
   let status = proton_runtime_wait_ffi(
     self.active_handle(),
     interest_mask,
-    timeout_ms,
+    encoded_timeout,
     ready_mask,
   )
   if status < 0 {
@@ -580,6 +584,18 @@ pub fn Runtime::wait(
   } else {
     RuntimeWaitReady::{ mask: ready_mask.val }
   }
+}
+
+///|
+/// Wakes a blocked `Runtime::wait`, or makes the next one return immediately
+/// when none is blocked yet. A lost wakeup deadlocks the host, so the two
+/// cases behave the same.
+///
+/// Takes no runtime and is safe from any thread, touching only atomics and the
+/// platform run loop. That is what lets a thread outside the runtime call it:
+/// handles validate thread ownership and such a thread owns none.
+pub fn signal_wakeup() -> Unit {
+  proton_runtime_signal_wakeup_ffi()
 }
 
 ///|

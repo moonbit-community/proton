@@ -27,6 +27,22 @@ extern "C" {
 #define PROTON_WAIT_ALL \
   (PROTON_WAIT_EVENT | PROTON_WAIT_BRIDGE | PROTON_WAIT_PLATFORM)
 
+/* Wait until an event arrives, however long that takes.
+ *
+ * A host with nothing scheduled has nothing to wake up for, and the runtime
+ * already shortens a wait of its own accord when the engine has timed work
+ * pending, so a finite ceiling here would only be a periodic wakeup with no
+ * work to do.
+ *
+ * `timeout_ms` is signed for this. A deadline computed as `deadline - now`
+ * goes negative once it has passed; in an unsigned type the same arithmetic
+ * wraps to roughly 49 days, which is indistinguishable from waiting forever
+ * and hangs with no diagnostic. Signed keeps the two apart, and only this
+ * constant asks to wait forever -- every other negative value is rejected as
+ * the arithmetic slip it almost certainly is. Callers that may compute an
+ * elapsed deadline should clamp it to zero themselves. */
+#define PROTON_WAIT_TIMEOUT_INFINITE (-1)
+
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
 typedef int64_t proton_view_id_t;
@@ -92,8 +108,17 @@ PROTON_API int32_t proton_runtime_do_message_loop_work(
     proton_runtime_id_t runtime);
 PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                                        uint32_t interest_mask,
-                                       uint32_t timeout_ms,
+                                       int32_t timeout_ms,
                                        uint32_t *out_ready_mask);
+
+/* Wakes a `proton_runtime_wait` blocked on any runtime, or makes the next one
+ * return immediately if none is blocked yet. Losing a wakeup deadlocks the
+ * host, so the two cases must behave the same.
+ *
+ * Takes no handle on purpose. It is called from a thread that owns none, and
+ * handles validate thread ownership. It touches only atomics and the platform
+ * run loop, so it is safe from any thread and from a foreign runtime. */
+PROTON_API void proton_runtime_signal_wakeup(void);
 PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
                                                 int32_t wakeup_fd);
 PROTON_API int32_t proton_runtime_prepare_wakeup_source(

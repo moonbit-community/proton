@@ -4298,7 +4298,7 @@ static uint32_t proton_engine_runtime_ready_mask(
 
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
-                                   uint32_t timeout_ms,
+                                   int32_t timeout_ms,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len) {
@@ -4327,12 +4327,20 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     return PROTON_OK;
   }
 
-  uint32_t wait_timeout = timeout_ms;
+  // Negative means PROTON_WAIT_TIMEOUT_INFINITE; the ABI rejects every other
+  // negative value first. Kept out of the arithmetic below so it is never
+  // mistaken for a duration -- assigning it into an unsigned local would turn
+  // "forever" into about 49 days without saying so.
+  int wait_forever = timeout_ms < 0;
+  int64_t wait_timeout = wait_forever ? 0 : (int64_t)timeout_ms;
   int waiting_for_scheduled_pump = 0;
   if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
     int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
-    if (scheduled_delay > 0 && scheduled_delay <= (int64_t)wait_timeout) {
-      wait_timeout = (uint32_t)scheduled_delay;
+    // An engine deadline always wins over waiting forever: the wait exists to
+    // hand the loop back when there is work, and scheduled work is work.
+    if (scheduled_delay > 0 && (wait_forever || scheduled_delay <= wait_timeout)) {
+      wait_timeout = scheduled_delay;
+      wait_forever = 0;
       waiting_for_scheduled_pump = 1;
     }
   }
@@ -4345,14 +4353,26 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     memset(&wake_fd, 0, sizeof(wake_fd));
     wake_fd.fd = runtime->wake_read_fd;
     wake_fd.events = POLLIN;
-    int poll_timeout =
-        wait_timeout > (uint32_t)INT_MAX ? INT_MAX : (int)wait_timeout;
+    // poll(2) spells "no timeout" as -1, which is the same convention the ABI
+    // uses, so waiting forever needs no special case here.
+    int poll_timeout = wait_forever ? -1
+                       : wait_timeout > (int64_t)INT_MAX
+                           ? INT_MAX
+                           : (int)wait_timeout;
     do {
       poll_result = poll(&wake_fd, 1, poll_timeout);
     } while (poll_result < 0 && errno == EINTR);
     if (poll_result > 0 && (wake_fd.revents & POLLIN) != 0) {
       proton_engine_drain_wake_pipe(runtime);
     }
+  } else if (wait_forever) {
+    // No wake descriptor means nothing can interrupt a sleep, so sleeping
+    // forever would strand the caller with no way back. Refuse instead of
+    // hanging: an infinite wait needs something that can wake it.
+    proton_engine_set_message(
+        error, error_len,
+        "an infinite runtime wait requires a wakeup descriptor");
+    return PROTON_ERR_UNSUPPORTED;
   } else if (wait_timeout > 0) {
     g_usleep((gulong)wait_timeout * 1000);
   }
