@@ -4398,6 +4398,29 @@ int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
   return PROTON_OK;
 }
 
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len) {
+  int32_t status = proton_engine_runtime_wait(
+      NULL, PROTON_WAIT_ALL, timeout_ms, out_ready_mask, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (!g_proton_cef_initialized) {
+    return PROTON_OK;
+  }
+  /* The wait above only blocks on descriptors; it dispatches nothing. This is
+     where GTK's pending sources run and the only caller of
+     cef_do_message_loop_work while the host loop owns the main thread. */
+  proton_engine_reset_scheduled_pump();
+  while (g_main_context_pending(NULL)) {
+    g_main_context_iteration(NULL, FALSE);
+  }
+  cef_do_message_loop_work();
+  return PROTON_OK;
+}
+
 void proton_engine_host_loop_end(void) {
   proton_engine_close_wake_pipe();
 }

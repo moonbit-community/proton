@@ -642,7 +642,7 @@ int32_t proton_host_loop_begin(void) {
   return PROTON_OK;
 }
 
-int32_t proton_host_loop_wait(int32_t timeout_ms, uint32_t *out_ready_mask) {
+int32_t proton_host_loop_poll(int32_t timeout_ms, uint32_t *out_ready_mask) {
   if (out_ready_mask == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_ready_mask is required");
@@ -653,13 +653,12 @@ int32_t proton_host_loop_wait(int32_t timeout_ms, uint32_t *out_ready_mask) {
         PROTON_ERR_INVALID_ARGUMENT,
         "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
   }
-  /* No runtime: the loop predates the first one, and the engine wait treats a
-     NULL runtime as "wait for host wakeups alone". */
+  /* No runtime handle: the loop predates the first one, and the engine walks
+     its own process-wide state to decide what to pump. */
   char engine_error[512] = {0};
   uint32_t ready_mask = PROTON_WAIT_NONE;
-  int32_t status = proton_engine_runtime_wait(
-      NULL, PROTON_WAIT_ALL, timeout_ms, &ready_mask, engine_error,
-      sizeof(engine_error));
+  int32_t status = proton_engine_host_loop_poll(
+      timeout_ms, &ready_mask, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

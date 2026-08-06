@@ -89,8 +89,14 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
 
 /* The main thread's event loop, which outlives any single engine runtime and
    exists before the first one is created. `begin` must run on the main thread
-   before any waiting; `wait` blocks there; `end` releases it. */
+   before any polling; `poll` runs one iteration there -- block, then advance
+   the platform toolkit, because nothing else does while this loop owns the
+   thread; `end` releases it. */
 int32_t proton_engine_host_loop_begin(char *error, size_t error_len);
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len);
 void proton_engine_host_loop_end(void);
 int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
                                             int32_t wakeup_fd,
