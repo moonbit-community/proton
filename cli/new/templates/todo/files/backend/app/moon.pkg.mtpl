@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbit-community/proton",
   "{{backend_module}}/todo",
 }

@@ -25,32 +25,31 @@ let page =
   #|
 
 ///|
-fn main {
-  @proton.run(() => {
-    @proton.html("Browser Control", page, debug=true)
-    .on_navigation_request(fn(_browser, request) {
-      println("navigation: \{request.http_method} \{request.url}")
-      @proton.NavigationDecision::Allow
-    })
-    .on_popup_request(fn(_browser, request) {
-      println("popup: \{request.url}")
-      @proton.PopupDecision::OpenInCurrent
-    })
-    .on_download_request(fn(_browser, request) {
-      println("download: \{request.suggested_name}")
-      @proton.DownloadDecision::ShowSaveDialog
-    })
-    .on_certificate_error(fn(_browser, request) {
-      println("certificate error: \{request.error_code} \{request.url}")
-      @proton.BrowserPermissionDecision::Deny
-    })
-    .on_media_permission_request(fn(_browser, request) {
-      println("media permission: \{request.origin}")
-      @proton.BrowserPermissionDecision::Deny
-    })
-    .on_download_event(fn(_browser, event) {
-      println("download \{event.id}: \{event.state} \{event.percent}%")
-    })
-    .run_or_abort()
+async fn main {
+  @proton.install_event_loop()
+  @proton.html("Browser Control", page, debug=true)
+  .on_navigation_request(fn(_browser, request) {
+    println("navigation: \{request.http_method} \{request.url}")
+    @proton.NavigationDecision::Allow
   })
+  .on_popup_request(fn(_browser, request) {
+    println("popup: \{request.url}")
+    @proton.PopupDecision::OpenInCurrent
+  })
+  .on_download_request(fn(_browser, request) {
+    println("download: \{request.suggested_name}")
+    @proton.DownloadDecision::ShowSaveDialog
+  })
+  .on_certificate_error(fn(_browser, request) {
+    println("certificate error: \{request.error_code} \{request.url}")
+    @proton.BrowserPermissionDecision::Deny
+  })
+  .on_media_permission_request(fn(_browser, request) {
+    println("media permission: \{request.origin}")
+    @proton.BrowserPermissionDecision::Deny
+  })
+  .on_download_event(fn(_browser, event) {
+    println("download \{event.id}: \{event.state} \{event.percent}%")
+  })
+  .run_or_abort()
 }

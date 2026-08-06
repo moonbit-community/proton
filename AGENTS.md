@@ -229,10 +229,12 @@ native checks before handing off larger refactors.
 - Do not reintroduce local WebSocket IPC as an app runtime path. DevTools test
   automation may use WebSocket to talk to Chromium, but Proton app IPC belongs
   to the native DLL bridge route.
-- Keep the root facade wake-driven through the managed application runner and
-  `proton_runtime_set_wakeup_fd`. Platforms without both capabilities are
-  unsupported until they provide an equivalent platform-owned UI runner; do
-  not add fixed-sleep polling as a fallback.
+- Keep the root facade wake-driven through Proton's external event loop.
+  `@proton.install_event_loop` hands it to `moonbitlang/async`, and
+  `proton_host_loop_poll` is the only thing that advances the platform while it
+  is running: every native notification reaches MoonBit as a scheduler wakeup
+  raised from that poll. Do not add fixed-sleep polling as a fallback, and do
+  not move application code back onto a thread of its own.
 - The `e2e/` module is a workspace member. Do not make scripts mutate
   `moon.work` at runtime to add it.
 
@@ -264,9 +266,10 @@ native checks before handing off larger refactors.
   paths, and MoonBit wrappers translate status codes into typed errors.
 - `proton_runtime_wait` is a low-level pump primitive, not a separate app API.
   It reports ready masks for event, bridge, and platform work; callers must
-  still drain via the existing poll APIs. Hosts using the managed application
-  runner must use `proton_runtime_set_wakeup_fd` instead; macOS rejects
-  `proton_runtime_wait` while that runner is active.
+  still drain via the existing poll APIs, and pump the platform themselves
+  through `proton_runtime_do_message_loop_work`. A host that does not hold a
+  runtime handle runs `proton_host_loop_begin`/`poll`/`end` instead, which does
+  both halves in one call; the facade is such a host.
 - Handle ownership must stay centralized in the native registry. Handles are
   not raw pointers, must validate kind/generation/thread ownership, and must be
   invalidated on destroy/close paths. Dialog handles are the documented

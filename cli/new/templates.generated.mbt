@@ -522,6 +522,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "{{shared_module}}@0.1.0",
+          #|  "moonbitlang/async@{{async_version}}",
           #|  "moonbit-community/proton@{{proton_version}}",
           #|  "moonbit-community/proton_contract@{{proton_contract_version}}",
           #|}
@@ -543,6 +544,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/app/moon.pkg.mtpl",
       template_source: (
           #|import {
+          #|  "moonbitlang/async",
           #|  "moonbit-community/proton",
           #|  "{{backend_module}}/todo",
           #|}
@@ -558,13 +560,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/app/main.mbt.mtpl",
       template_source: (
           #|///|
-          #|fn main {
-          #|  @proton.run(() => {
-          #|    let backend = @todo.Backend::new()
-          #|    @proton.config("proton.project.json")
-          #|    .commands(fn(registrar) raise { backend.register_commands(registrar) })
-          #|    .run_or_abort()
-          #|  })
+          #|async fn main {
+          #|  @proton.install_event_loop()
+          #|  let backend = @todo.Backend::new()
+          #|  @proton.config("proton.project.json")
+          #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+          #|  .run_or_abort()
           #|}
           #|
       ),

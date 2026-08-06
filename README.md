@@ -55,13 +55,12 @@ Generated projects explicitly load `proton.project.json` with `@proton.config(..
 and register their typed commands in `backend/app/main.mbt`:
 
 ```moonbit
-fn main {
-  @proton.run(() => {
-    let backend = @todo.Backend::new()
-    @proton.config("proton.project.json")
-    .commands(fn(registrar) raise { backend.register_commands(registrar) })
-    .run_or_abort()
-  })
+async fn main {
+  @proton.install_event_loop()
+  let backend = @todo.Backend::new()
+  @proton.config("proton.project.json")
+  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+  .run_or_abort()
 }
 ```
 
@@ -76,16 +75,15 @@ application is bundled. Non-default paths are used exactly as provided.
 For a small application, inline HTML can be opened directly:
 
 ```moonbit
-fn main {
-  @proton.run(() => {
-    @proton.html(
-      "Hello Proton",
-      "<h1>Hello from MoonBit</h1>",
-      width=900,
-      height=700,
-      debug=true,
-    ).run_or_abort()
-  })
+async fn main {
+  @proton.install_event_loop()
+  @proton.html(
+    "Hello Proton",
+    "<h1>Hello from MoonBit</h1>",
+    width=900,
+    height=700,
+    debug=true,
+  ).run_or_abort()
 }
 ```
 

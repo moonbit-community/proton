@@ -9,6 +9,7 @@
 /// thread of its own.
 priv struct ProtonEventLoop {
   signal : @core.RuntimeWakeSignal
+  mut installed : Bool
 }
 
 ///|
@@ -20,6 +21,7 @@ priv struct ProtonEventLoop {
 /// was supposed to wait on would never be woken.
 let host_event_loop : ProtonEventLoop = ProtonEventLoop::{
   signal: @core.RuntimeWakeSignal::new(),
+  installed: false,
 }
 
 ///|
@@ -43,6 +45,23 @@ pub fn install_event_loop() -> Unit raise AppRunError {
     error => raise native_run_error("start the host event loop", error)
   }
   @async.set_external_event_loop(host_event_loop)
+  host_event_loop.installed = true
+}
+
+///|
+/// Whether the application has installed Proton's event loop.
+///
+/// Everything the facade does with a native runtime depends on it: the loop is
+/// what drives the platform and what turns native work into a notification the
+/// scheduler can wait on.
+fn event_loop_is_installed() -> Bool {
+  host_event_loop.installed
+}
+
+///|
+/// The notification signal `poll` raises when native work arrives.
+fn host_event_loop_signal() -> @core.RuntimeWakeSignal {
+  host_event_loop.signal
 }
 
 ///|
