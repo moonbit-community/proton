@@ -115,7 +115,7 @@ async fn runtime_manifest_from_project(
   match json {
     Object(object) => {
       let allowed = [
-        "schema_version", "platform", "proton_version", "cef_version", "dist",
+        "schema_version", "platform", "proton_version", "cef_version", "cef", "dist",
       ]
       for key in object.keys() {
         if !allowed.contains(key) {
@@ -139,8 +139,20 @@ async fn runtime_manifest_from_project(
       let cef_version = runtime_manifest_string_field(
         object, "cef_version", manifest_path,
       )
+      let cef_cache = match object.get("cef") {
+        Some(_) =>
+          Some(runtime_manifest_string_field(object, "cef", manifest_path))
+        None => None
+      }
       let dist = runtime_manifest_string_field(object, "dist", manifest_path)
-      Some({ schema_version, platform, proton_version, cef_version, dist })
+      Some({
+        schema_version,
+        platform,
+        proton_version,
+        cef_version,
+        cef_cache,
+        dist,
+      })
     }
     _ => raise InvalidRoot(path=manifest_path)
   }
@@ -935,6 +947,17 @@ async fn collect_runtime(
           manifest.cef_version,
         ),
       )
+      match manifest.cef_cache {
+        Some(cef_cache) =>
+          lines.push(
+            DoctorLine::coded(
+              "runtime.manifest.cef",
+              Neutral,
+              "CEF cache: " + cef_cache,
+            ),
+          )
+        None => ()
+      }
     }
     None => ()
   }

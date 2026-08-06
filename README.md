@@ -43,8 +43,11 @@ desktop runtime. `.proton/` is a local runtime cache and should not be
 committed.
 
 `cef setup` stores downloaded CEF binaries in a shared user-level cache
-(`~/.proton/cache/cef`, overridable with `PROTON_CEF_CACHE`) so subsequent
-projects reuse the download instead of fetching it again.
+(`~/.proton/cache/cef/<platform>/<cef-name>`, with the cache root overridable
+through `PROTON_CEF_CACHE`) so subsequent projects reuse the download instead
+of fetching it again. The generated `.proton/runtime.json` records the resolved
+cache directory in `cef`. Relative `PROTON_CEF_CACHE` values are resolved from
+the project root.
 
 ## Application entry
 
