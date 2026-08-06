@@ -504,8 +504,13 @@ static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
   }
   atomic_store_explicit(&g_scheduled_pump_deadline_ms, (long long)deadline,
                         memory_order_release);
-  proton_engine_debug_log("schedule_message_pump delay_ms=%lld",
-                          (long long)delay_ms);
+  proton_engine_debug_log(
+      "schedule_message_pump delay_ms=%lld pump_active=%d enabled=%d source=%d",
+      (long long)delay_ms,
+      (int)atomic_load_explicit(&g_message_pump_active, memory_order_acquire),
+      (int)atomic_load_explicit(&g_external_message_pump_enabled,
+                                memory_order_acquire),
+      g_wait_source != NULL);
   // Every delay signals, not just an immediate one. A host blocked with no
   // deadline of its own has nothing else to bring it back, and it reads the
   // schedule only on its way into a wait -- one that arrives after that read
@@ -3870,6 +3875,8 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   // clearing first would throw them away; the exchange below is what consumes
   // them. Re-reporting a bit the host has already handled only costs it a
   // spurious poll, while dropping one costs it the notification entirely.
+  proton_engine_debug_log("wait_enter forever=%d timeout=%lld", wait_forever,
+                          (long long)wait_timeout);
   CFRunLoopRunResult run_result = kCFRunLoopRunTimedOut;
   CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
   if (wait_forever || wait_timeout > 0) {
@@ -3909,6 +3916,8 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   if (ready_mask != PROTON_WAIT_NONE) {
     proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
   }
+  proton_engine_debug_log("wait_exit run_result=%d signaled=%u ready=%u",
+                          (int)run_result, signaled_mask, ready_mask);
   *out_ready_mask = ready_mask;
   return PROTON_OK;
 }
