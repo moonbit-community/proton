@@ -119,6 +119,21 @@ PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
  * handles validate thread ownership. It touches only atomics and the platform
  * run loop, so it is safe from any thread and from a foreign runtime. */
 PROTON_API void proton_runtime_signal_wakeup(void);
+
+/* The main thread's event loop.
+ *
+ * It belongs to the thread, not to a runtime: it starts before the first
+ * runtime is created and outlives the last one, which is what lets a host run
+ * its own async work while it is still deciding what runtime to build.
+ *
+ * `begin` must run on the main thread. `wait` blocks there until work arrives
+ * or the timeout expires, taking PROTON_WAIT_TIMEOUT_INFINITE to wait until
+ * something happens, and reports which kinds of work are ready. Until a
+ * runtime exists it reports only wakeups. `end` releases the loop. */
+PROTON_API int32_t proton_host_loop_begin(void);
+PROTON_API int32_t proton_host_loop_wait(int32_t timeout_ms,
+                                         uint32_t *out_ready_mask);
+PROTON_API void proton_host_loop_end(void);
 PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
                                                 int32_t wakeup_fd);
 PROTON_API int32_t proton_runtime_prepare_wakeup_source(

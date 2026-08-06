@@ -631,6 +631,47 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   return PROTON_OK;
 }
 
+int32_t proton_host_loop_begin(void) {
+  char engine_error[512] = {0};
+  int32_t status =
+      proton_engine_host_loop_begin(engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_host_loop_wait(int32_t timeout_ms, uint32_t *out_ready_mask) {
+  if (out_ready_mask == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_ready_mask is required");
+  }
+  *out_ready_mask = PROTON_WAIT_NONE;
+  if (timeout_ms < 0 && timeout_ms != PROTON_WAIT_TIMEOUT_INFINITE) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
+  }
+  /* No runtime: the loop predates the first one, and the engine wait treats a
+     NULL runtime as "wait for host wakeups alone". */
+  char engine_error[512] = {0};
+  uint32_t ready_mask = PROTON_WAIT_NONE;
+  int32_t status = proton_engine_runtime_wait(
+      NULL, PROTON_WAIT_ALL, timeout_ms, &ready_mask, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  *out_ready_mask = ready_mask;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+void proton_host_loop_end(void) {
+  proton_engine_host_loop_end();
+}
+
 void proton_runtime_signal_wakeup(void) {
   /* No handle lookup, and no runtime pointer passed on: every engine ignores
      the argument for this signal, and the caller is a thread that owns no
