@@ -22,6 +22,29 @@ developer must perform them.
 - Never publish from an unverified dependency chain or use repository-local
   overrides for the final release smoke test.
 
+### Active local override: `moonbitlang/async`
+
+`moon.work` lists `../async` as a member, so every module resolves
+`moonbitlang/async` to a local checkout instead of the pinned registry version.
+That checkout is on the `external-loop-integration` branch, which adds
+`set_external_event_loop`. Proton needs it to stop running application code on a
+worker thread: AppKit owns the main thread, so `@proton.run` currently starts a
+pthread for the async scheduler. With an external event loop the scheduler stays
+on the main thread and only async's waiting half moves to a dedicated thread.
+
+It is a workspace member rather than a per-module `moon.mod` override on
+purpose. Seven modules depend on async, and overriding only some of them would
+link two copies into one process, and therefore two event loops.
+
+The branch still calls itself `0.20.3`, the same version published on mooncakes,
+so no version comparison can detect the substitution. `scripts/verify_release_metadata.mjs`
+therefore fails while any non-`./` member is present, and that script already
+runs in the publish workflow's validate step. Remove the member and re-pin to a
+published async before releasing.
+
+Note that `moon fmt` strips comments from `moon.work`, which is why this
+explanation lives here instead of beside the member.
+
 ## Project Structure
 - `native/`: standalone CMake project for the Proton native runtime. It builds
   `proton` as a dynamic library/import library, installs `proton_native.h`, and

@@ -1,4 +1,5 @@
 members = [
+  "../async",
   "./cdp",
   "./client",
   "./contract",

@@ -55,6 +55,22 @@ function checkEqual(label, actual, expected) {
   }
 }
 
+// A workspace member outside the repository is a local source override. Moon
+// resolves it ahead of the pinned registry version, so the published packages
+// would be built against sources nobody else can obtain -- and a local branch
+// may reuse the version number it forked from, which makes the substitution
+// invisible to every other check here.
+function checkNoLocalOverrides() {
+  for (const line of readText("moon.work").split("\n")) {
+    const member = line.match(/^\s*"([^"]+)"/);
+    if (member && !member[1].startsWith("./")) {
+      failures.push(
+        `moon.work has the local override "${member[1]}"; remove it before publishing`,
+      );
+    }
+  }
+}
+
 function checkPrebuiltManifests(expectedVersion) {
   const prebuiltRoot = path.join(repoRoot, "proton", "prebuilt");
   for (const platform of fs.readdirSync(prebuiltRoot).sort()) {
@@ -186,6 +202,7 @@ checkEqual(
   clientVersion,
 );
 checkEqual("cli/main.mbt cli_current_version", cliEmbeddedVersion(), cliVersion);
+checkNoLocalOverrides();
 
 if (failures.length > 0) {
   console.error("Release metadata is stale:");
