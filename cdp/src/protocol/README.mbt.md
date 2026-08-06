@@ -1,4 +1,4 @@
-# moonbit-community/cdp/protocol
+# moonbit-community/proton_cdp/protocol
 
 Core Chrome DevTools Protocol wire types and schema helpers.
 

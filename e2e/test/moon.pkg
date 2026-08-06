@@ -2,7 +2,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
-  "moonbit-community/cdp/client",
+  "moonbit-community/proton_cdp/client",
 }
 
 import {

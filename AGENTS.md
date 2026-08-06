@@ -41,13 +41,19 @@ developer must perform them.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
-- `sys/<pkg>/`: independently maintained native system capability binding
-  modules (`moonbit-community/auto_launch`, `moonbit-community/clipboard`,
-  `moonbit-community/global_hotkey`, `moonbit-community/keepawake`, `moonbit-community/microphone`,
-  `moonbit-community/tray`) plus the shared FFI helper module `moonbit-community/ffi`
-  (`sys/ffi/`). Each keeps its upstream module name and version lineage and
-  is published from this repository under the Apache-2.0 license.
-- `cdp/`: `moonbit-community/cdp`; Chrome DevTools Protocol client and generated
+- `sys/<pkg>/`: native system capability binding modules
+  (`moonbit-community/proton_auto_launch`, `moonbit-community/proton_clipboard`,
+  `moonbit-community/proton_global_hotkey`, `moonbit-community/proton_keepawake`,
+  `moonbit-community/proton_microphone`, `moonbit-community/proton_tray`) plus the
+  shared FFI helper module `moonbit-community/proton_ffi` (`sys/ffi/`). All are
+  published from this repository under the Apache-2.0 license, on the workspace
+  version shared by every module. They carry the `proton_` prefix because that
+  is what they are: components of Proton, released on Proton's cadence. A bare
+  name like `clipboard` or `ffi` under an organization namespace would promise a
+  standalone community library, which none of these is. Their upstream names
+  (`justjavac/moonbit-<pkg>`) and independent version lineages are history;
+  attribution stays in each module's README and LICENSE.
+- `cdp/`: `moonbit-community/proton_cdp`; Chrome DevTools Protocol client and generated
   protocol bindings used only by the `e2e/` DevTools test automation. It is
   maintained here under the Apache-2.0 license as a workspace member and is
   not part of the release publishing chain. The `src/protocol/` tree is
@@ -89,7 +95,7 @@ developer must perform them.
 - `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
 - `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
-- `moon test -p moonbit-community/ffi moonbit-community/auto_launch moonbit-community/clipboard moonbit-community/global_hotkey moonbit-community/keepawake moonbit-community/microphone moonbit-community/tray --target native`
+- `moon test -p moonbit-community/proton_ffi moonbit-community/proton_auto_launch moonbit-community/proton_clipboard moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone moonbit-community/proton_tray --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`
 - `moon fmt` or `moon fmt --check`

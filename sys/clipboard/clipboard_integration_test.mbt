@@ -14,8 +14,8 @@ fn integration_tests_enabled() -> Bool {
 /// Restores the clipboard text captured before an integration test ran.
 fn restore_clipboard_text(original : String?) -> Result[Unit, String] {
   match original {
-    Some(text) => @clipboard.write_text(text)
-    None => @clipboard.write_text("")
+    Some(text) => @proton_clipboard.write_text(text)
+    None => @proton_clipboard.write_text("")
   }
 }
 
@@ -23,23 +23,23 @@ fn restore_clipboard_text(original : String?) -> Result[Unit, String] {
 test "integration write and read roundtrip" {
   guard integration_tests_enabled() else { return }
 
-  guard @clipboard.is_supported() else {
+  guard @proton_clipboard.is_supported() else {
     fail("integration tests were enabled on an unsupported platform")
   }
 
-  let original = match @clipboard.read_text() {
+  let original = match @proton_clipboard.read_text() {
     Ok(value) => value
     Err(error) => fail("failed to read clipboard before test: " + error)
   }
 
-  let probe = "moonbit-community/clipboard integration probe"
+  let probe = "moonbit-community/proton_clipboard integration probe"
 
-  match @clipboard.write_text(probe) {
+  match @proton_clipboard.write_text(probe) {
     Ok(_) => ()
     Err(error) => fail("failed to write clipboard probe text: " + error)
   }
 
-  let roundtrip_result = @clipboard.read_text()
+  let roundtrip_result = @proton_clipboard.read_text()
 
   match restore_clipboard_text(original) {
     Ok(_) => ()

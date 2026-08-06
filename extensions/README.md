@@ -76,7 +76,7 @@ extension settings in `moon.proton` are not the active registration surface.
 
 ## Tray Notes
 
-The tray extension is backed by `moonbit-community/tray`, which owns the platform tray
+The tray extension is backed by `moonbit-community/proton_tray`, which owns the platform tray
 native-stub. Proton native C stays limited to the CEF-backed runtime, windows,
 and bridge ABI. The v1 API exposes `support`, `show`, `hide`, `setIcon`,
 `setTooltip`, `setMenu`, and `destroy`.

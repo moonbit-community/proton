@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/keepawake/testsupport"
+package "moonbit-community/proton_keepawake/testsupport"
 
 // Values
 pub fn stub_linked() -> Bool

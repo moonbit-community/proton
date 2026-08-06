@@ -1,9 +1,7 @@
-# moonbit-community/clipboard
+# moonbit-community/proton_clipboard
 
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-clipboard/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-clipboard)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-clipboard/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-clipboard)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-clipboard/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-clipboard)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-clipboard/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-clipboard)
+[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/proton_clipboard)
 
 Cross-platform native clipboard helpers for MoonBit `native` builds.
 
@@ -13,7 +11,7 @@ small synchronous API.
 ## Install
 
 ```bash
-moon add moonbit-community/clipboard
+moon add moonbit-community/proton_clipboard
 ```
 
 ## Quick Start
@@ -21,12 +19,12 @@ moon add moonbit-community/clipboard
 ```mbt check
 ///|
 test "probe clipboard support and read text" {
-  match @clipboard.ensure_supported() {
+  match @proton_clipboard.ensure_supported() {
     Ok(_) => ()
     Err(message) => assert_true(!message.is_empty())
   }
 
-  match @clipboard.read_text() {
+  match @proton_clipboard.read_text() {
     Ok(Some(_text)) => ()
     Ok(None) => ()
     Err(message) => assert_true(!message.is_empty())

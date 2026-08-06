@@ -1,4 +1,4 @@
-name = "moonbit-community/global_hotkey"
+name = "moonbit-community/proton_global_hotkey"
 
 version = "0.1.14"
 

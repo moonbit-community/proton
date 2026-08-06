@@ -1,7 +1,7 @@
 ///|
 /// Attempts candidate accelerators until one registers successfully.
 fn register_first_available(
-  manager : @global_hotkey.GlobalHotkeyManager,
+  manager : @proton_global_hotkey.GlobalHotkeyManager,
   candidates : Array[String],
 ) -> String? {
   for candidate in candidates {
@@ -15,13 +15,13 @@ fn register_first_available(
 
 ///|
 test "support checks are callable" {
-  ignore(@global_hotkey.is_supported())
-  ignore(@global_hotkey.ensure_supported())
+  ignore(@proton_global_hotkey.is_supported())
+  ignore(@proton_global_hotkey.ensure_supported())
 }
 
 ///|
 test "manager lifecycle can be exercised on the current machine" {
-  match @global_hotkey.create() {
+  match @proton_global_hotkey.create() {
     Err(_) => ()
     Ok(manager) => {
       assert_eq(manager.list().length(), 0)
@@ -41,7 +41,7 @@ test "manager lifecycle can be exercised on the current machine" {
 
 ///|
 test "native registration conflict surfaces as an error" {
-  match (@global_hotkey.create(), @global_hotkey.create()) {
+  match (@proton_global_hotkey.create(), @proton_global_hotkey.create()) {
     (Ok(first), Ok(second)) => {
       let candidates = ["Ctrl+Shift+F24", "Alt+Shift+F23"]
       match register_first_available(first, candidates) {
@@ -68,7 +68,7 @@ test "native registration conflict surfaces as an error" {
 
 ///|
 test "destroy makes future operations inert" {
-  match @global_hotkey.create() {
+  match @proton_global_hotkey.create() {
     Err(_) => ()
     Ok(manager) => {
       match manager.register("ctrl") {

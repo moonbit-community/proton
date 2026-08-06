@@ -1,4 +1,4 @@
-# moonbit-community/clipboard
+# moonbit-community/proton_clipboard
 
 Cross-platform native clipboard helpers for MoonBit `native` builds.
 
@@ -10,12 +10,12 @@ small synchronous API.
 ```mbt check
 ///|
 test "probe clipboard support and read text" {
-  match @clipboard.ensure_supported() {
+  match @proton_clipboard.ensure_supported() {
     Ok(_) => ()
     Err(message) => assert_true(!message.is_empty())
   }
 
-  match @clipboard.read_text() {
+  match @proton_clipboard.read_text() {
     Ok(Some(_text)) => ()
     Ok(None) => ()
     Err(message) => assert_true(!message.is_empty())

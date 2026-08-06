@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbit-community/ffi",
+  "moonbit-community/proton_ffi" @ffi,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",

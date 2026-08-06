@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbit-community/auto_launch" @sys_auto_launch,
+  "moonbit-community/proton_auto_launch" @sys_auto_launch,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",

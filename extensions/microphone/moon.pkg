@@ -2,7 +2,7 @@ import {
   "moonbitlang/core/json",
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
-  "moonbit-community/microphone" @sys_microphone,
+  "moonbit-community/proton_microphone" @sys_microphone,
   "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/microphone/contract" @microphone_contract,
 }

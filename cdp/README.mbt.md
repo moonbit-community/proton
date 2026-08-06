@@ -1,4 +1,4 @@
-# moonbit-community/cdp
+# moonbit-community/proton_cdp
 
 ![Non-generated library coverage](https://img.shields.io/badge/non--generated%20library%20coverage-100%25-brightgreen.svg)
 
@@ -6,11 +6,11 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 
 ## Packages
 
-- `moonbit-community/cdp/protocol`: CDP wire types, bundled manifest, schema
+- `moonbit-community/proton_cdp/protocol`: CDP wire types, bundled manifest, schema
   validation, remote schema diff.
-- `moonbit-community/cdp/protocol/typed`: generated params, command builders, event
+- `moonbit-community/proton_cdp/protocol/typed`: generated params, command builders, event
   builders, result decoders.
-- `moonbit-community/cdp/client`: discovery, WebSocket client, events, targets,
+- `moonbit-community/proton_cdp/client`: discovery, WebSocket client, events, targets,
   browser launch helpers.
 
 ## Minimal Use

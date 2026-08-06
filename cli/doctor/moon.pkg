@@ -3,7 +3,7 @@ import {
   "moonbit-community/proton_cli/cef",
   "moonbit-community/proton_cli/codegen",
   "moonbit-community/proton_cli/fsutil",
-  "moonbit-community/ffi",
+  "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/io",

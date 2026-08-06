@@ -27,8 +27,8 @@
 /// # Example
 ///
 /// ```moonbit nocheck
-/// let raw = @ffi.to_cstr("hello")
-/// inspect(@ffi.from_cstr(raw), content="hello")
+/// let raw = @proton_ffi.to_cstr("hello")
+/// inspect(@proton_ffi.from_cstr(raw), content="hello")
 /// ```
 pub fn from_cstr(b : Bytes) -> String {
   if b.length() == 0 || b[b.length() - 1] != 0x00 {
@@ -60,7 +60,7 @@ pub fn from_cstr(b : Bytes) -> String {
 /// # Example
 ///
 /// ```moonbit nocheck
-/// inspect(@ffi.to_cstr("ffi"), content=b"ffi\x00")
+/// inspect(@proton_ffi.to_cstr("ffi"), content=b"ffi\x00")
 /// ```
 pub fn to_cstr(s : String) -> Bytes {
   @encoding.encode(UTF8, s + "\u{0000}")

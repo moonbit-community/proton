@@ -1,14 +1,15 @@
 ///|
 test "public api symbols are exported" {
-  ignore(@clipboard.is_supported)
-  ignore(@clipboard.ensure_supported)
-  ignore(@clipboard.read_text)
-  ignore(@clipboard.write_text)
+  ignore(@proton_clipboard.is_supported)
+  ignore(@proton_clipboard.ensure_supported)
+  ignore(@proton_clipboard.read_text)
+  ignore(@proton_clipboard.write_text)
 }
 
 ///|
 test "ensure_supported matches platform probe" {
-  match (@clipboard.is_supported(), @clipboard.ensure_supported()) {
+  match
+    (@proton_clipboard.is_supported(), @proton_clipboard.ensure_supported()) {
     (true, Ok(_)) => ()
     (false, Err(_)) => ()
     _ => fail("ensure_supported should agree with is_supported")

@@ -1,4 +1,4 @@
-# moonbit-community/auto_launch
+# moonbit-community/proton_auto_launch
 
 Cross-platform auto-launch helpers for MoonBit.
 
@@ -15,7 +15,7 @@ This project is inspired by and references [Teamwork/node-auto-launch](https://g
 ## Install
 
 ```bash
-moon add moonbit-community/auto_launch
+moon add moonbit-community/proton_auto_launch
 ```
 
 This package currently supports the `native` target.
@@ -24,9 +24,9 @@ This package currently supports the `native` target.
 
 ```moonbit
 fn main {
-  let launcher = match @auto_launch.new(
+  let launcher = match @proton_auto_launch.new(
     "MoonBit Demo",
-    path=match @auto_launch.current_platform() {
+    path=match @proton_auto_launch.current_platform() {
       Windows => "C:\\Program Files\\MoonBit\\moonbit.exe"
       Macos => "/Applications/MoonBit.app/Contents/MacOS/MoonBit"
       Linux => "/usr/bin/moonbit"
@@ -48,9 +48,9 @@ fn main {
 
 ## API
 
-- `@auto_launch.current_platform() -> Platform`
-- `@auto_launch.is_supported() -> Bool`
-- `@auto_launch.new(...) -> Result[AutoLaunch, AutoLaunchError]`
+- `@proton_auto_launch.current_platform() -> Platform`
+- `@proton_auto_launch.is_supported() -> Bool`
+- `@proton_auto_launch.new(...) -> Result[AutoLaunch, AutoLaunchError]`
 - `AutoLaunch::name() -> String`
 - `AutoLaunch::path() -> String`
 - `AutoLaunch::identifier() -> String`
@@ -67,7 +67,7 @@ moon test --target native
 
 # Coverage for the main package only; excludes src/examples/*
 moon test --target native --enable-coverage
-moon coverage analyze -p moonbit-community/auto_launch -- -f summary
+moon coverage analyze -p moonbit-community/proton_auto_launch -- -f summary
 moon info --target native
 ```
 

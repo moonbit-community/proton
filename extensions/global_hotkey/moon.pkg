@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbit-community/global_hotkey" @sys_global_hotkey,
+  "moonbit-community/proton_global_hotkey" @sys_global_hotkey,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",

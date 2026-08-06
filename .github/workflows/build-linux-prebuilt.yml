@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
 
@@ -55,17 +55,13 @@ jobs:
         run: moon update
 
       - name: Set up CEF runtime
-        run: |
-          mkdir -p .proton-global-cache/linux-x64
-          mkdir -p .proton/cache/cef/linux-x64
-          moon -C cli run . -- -C .. cef setup
+        run: moon -C cli run . -- -C .. cef setup
 
       - name: Build and install Release runtime
         run: |
           runtime="$RUNNER_TEMP/proton-runtime"
           platform=$(node -p "require('./.proton/runtime.json').platform")
-          cef_name=$(node -p "require('./.proton/runtime.json').cef_version")
-          cef_root="$PWD/.proton/cache/cef/$platform/$cef_name"
+          cef_root=$(node -p "require('./.proton/runtime.json').cef")
           test "$platform" = "linux-x64"
           cmake -S native -B native/build-prebuilt \
             -DCMAKE_BUILD_TYPE=Release \

@@ -1,16 +1,16 @@
 import {
   "moonbitlang/core/json",
-  "moonbit-community/cdp/protocol",
+  "moonbit-community/proton_cdp/protocol",
 }
 
 import {
   "moonbitlang/core/json",
-  "moonbit-community/cdp/protocol",
+  "moonbit-community/proton_cdp/protocol",
 } for "test"
 
 import {
   "moonbitlang/core/json",
-  "moonbit-community/cdp/protocol",
+  "moonbit-community/proton_cdp/protocol",
 } for "wbtest"
 
 options(

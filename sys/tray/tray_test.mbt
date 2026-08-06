@@ -1,12 +1,12 @@
 ///|
 test "default identifier is stable" {
-  inspect(@tray.default_identifier(), content="moonbit-tray")
+  inspect(@proton_tray.default_identifier(), content="moonbit-tray")
 }
 
 ///|
 test "support probe stays consistent" {
-  let supported = @tray.is_supported()
-  let ensured = @tray.ensure_supported()
+  let supported = @proton_tray.is_supported()
+  let ensured = @proton_tray.ensure_supported()
   if supported {
     debug_inspect(ensured, content="Ok(())")
   } else {
@@ -19,17 +19,24 @@ test "support probe stays consistent" {
 ///|
 test "public menu constructors expose v1 item kinds" {
   debug_inspect(
-    @tray.TrayMenuItem::normal(id="show", label="Show").kind(),
+    @proton_tray.TrayMenuItem::normal(id="show", label="Show").kind(),
     content="Normal",
   )
   debug_inspect(
-    @tray.TrayMenuItem::checkbox(id="launch", label="Launch", checked=true).kind(),
+    @proton_tray.TrayMenuItem::checkbox(
+      id="launch",
+      label="Launch",
+      checked=true,
+    ).kind(),
     content="Checkbox",
   )
-  debug_inspect(@tray.TrayMenuItem::separator().kind(), content="Separator")
   debug_inspect(
-    @tray.TrayMenuItem::submenu(label="More", items=[
-      @tray.TrayMenuItem::normal(id="settings", label="Settings"),
+    @proton_tray.TrayMenuItem::separator().kind(),
+    content="Separator",
+  )
+  debug_inspect(
+    @proton_tray.TrayMenuItem::submenu(label="More", items=[
+      @proton_tray.TrayMenuItem::normal(id="settings", label="Settings"),
     ]).kind(),
     content="Submenu",
   )
@@ -37,10 +44,13 @@ test "public menu constructors expose v1 item kinds" {
 
 ///|
 test "public tray event helpers expose event names and item ids" {
-  inspect(@tray.TrayEvent::Click.event_name(), content="click")
-  inspect(@tray.TrayEvent::RightClick.event_name(), content="rightClick")
-  inspect(@tray.TrayEvent::DoubleClick.event_name(), content="doubleClick")
-  let event = @tray.TrayEvent::MenuItemClick("show")
+  inspect(@proton_tray.TrayEvent::Click.event_name(), content="click")
+  inspect(@proton_tray.TrayEvent::RightClick.event_name(), content="rightClick")
+  inspect(
+    @proton_tray.TrayEvent::DoubleClick.event_name(),
+    content="doubleClick",
+  )
+  let event = @proton_tray.TrayEvent::MenuItemClick("show")
   inspect(event.event_name(), content="menuItemClick")
   debug_inspect(event.item_id(), content="Some(\"show\")")
 }
@@ -51,7 +61,7 @@ test "native integration stays opt in" {
     inspect("skipped", content="skipped")
     return ()
   }
-  let tray = match @tray.create(tooltip="MoonBit tray integration") {
+  let tray = match @proton_tray.create(tooltip="MoonBit tray integration") {
     Ok(tray) => tray
     Err(error) => fail(error)
   }

@@ -1,6 +1,6 @@
-# moonbit-community/cdp documentation
+# moonbit-community/proton_cdp documentation
 
-`moonbit-community/cdp` is a MoonBit library for the Chrome DevTools Protocol
+`moonbit-community/proton_cdp` is a MoonBit library for the Chrome DevTools Protocol
 (CDP). It provides direct access to CDP messages with protocol metadata,
 schema-aware validation, generated typed command builders, remote debugging
 discovery, a WebSocket CDP client, target helpers, event buffering, and
@@ -8,16 +8,16 @@ optional local Chrome launch support.
 
 ## Packages
 
-- `moonbit-community/cdp/protocol`
+- `moonbit-community/proton_cdp/protocol`
   - CDP command, response, event, and error wire structs.
   - Bundled protocol manifest lookup.
   - Schema-aware command, event, and response validation.
   - Remote `/json/protocol` summary and diff helpers.
-- `moonbit-community/cdp/protocol/typed`
+- `moonbit-community/proton_cdp/protocol/typed`
   - Generated typed parameter structs.
   - Generated command builders for the bundled protocol.
   - Generated event builders and result decoders.
-- `moonbit-community/cdp/client`
+- `moonbit-community/proton_cdp/client`
   - Remote debugging discovery over `/json/version`, `/json/list`, and
     `/json/protocol`.
   - WebSocket CDP client.

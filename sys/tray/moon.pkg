@@ -1,12 +1,12 @@
 import {
-  "moonbit-community/ffi",
+  "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
 }
 
 import {
-  "moonbit-community/tray/testsupport",
+  "moonbit-community/proton_tray/testsupport",
 } for "wbtest"
 
 supported_targets = "native"

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/ffi"
+package "moonbit-community/proton_ffi"
 
 // Values
 pub fn from_cstr(Bytes) -> String

@@ -1,11 +1,7 @@
-# moonbit-community/tray
+# moonbit-community/proton_tray
 
-[![CI](https://github.com/justjavac/moonbit-tray/actions/workflows/ci.yml/badge.svg)](https://github.com/justjavac/moonbit-tray/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-tray)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-tray)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-tray)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-tray/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-tray)
-[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/tray)
+[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/proton_tray)
 
 Cross-platform native tray helpers for MoonBit.
 
@@ -17,7 +13,7 @@ needed, and destroy it cleanly.
 ## Install
 
 ```bash
-moon add moonbit-community/tray
+moon add moonbit-community/proton_tray
 ```
 
 This package supports the `native` target only.
@@ -36,12 +32,12 @@ This package supports the `native` target only.
 
 ```mbt nocheck
 fn run_tray_demo() -> Unit {
-  guard @tray.is_supported() else {
-    println("tray backend unavailable: \{@tray.ensure_supported()}")
+  guard @proton_tray.is_supported() else {
+    println("tray backend unavailable: \{@proton_tray.ensure_supported()}")
     return
   }
 
-  let tray = match @tray.create(
+  let tray = match @proton_tray.create(
     identifier="com.example.demo",
     tooltip="MoonBit tray demo",
   ) {
@@ -54,17 +50,17 @@ fn run_tray_demo() -> Unit {
 
   ignore(tray.set_icon(Some("assets/tray.png")))
   match tray.set_menu([
-    @tray.TrayMenuItem::normal(id="show", label="Show Window"),
-    @tray.TrayMenuItem::separator(),
-    @tray.TrayMenuItem::checkbox(
+    @proton_tray.TrayMenuItem::normal(id="show", label="Show Window"),
+    @proton_tray.TrayMenuItem::separator(),
+    @proton_tray.TrayMenuItem::checkbox(
       id="launch",
       label="Launch at Login",
       checked=true,
     ),
-    @tray.TrayMenuItem::submenu(
+    @proton_tray.TrayMenuItem::submenu(
       label="More",
       items=[
-        @tray.TrayMenuItem::normal(id="settings", label="Settings"),
+        @proton_tray.TrayMenuItem::normal(id="settings", label="Settings"),
       ],
     ),
   ]) {
@@ -231,7 +227,7 @@ Windows-only.
 ```bash
 moon test --target native
 moon test --target native --enable-coverage
-moon coverage analyze -p moonbit-community/tray -- -f summary
+moon coverage analyze -p moonbit-community/proton_tray -- -f summary
 ```
 
 Optional native integration checks can be enabled locally:

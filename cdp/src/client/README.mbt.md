@@ -1,4 +1,4 @@
-# moonbit-community/cdp/client
+# moonbit-community/proton_cdp/client
 
 High-level Chrome DevTools Protocol client helpers for discovery, WebSocket
 connections, command dispatch, event buffering, target management, and browser

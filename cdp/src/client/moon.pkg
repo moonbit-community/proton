@@ -6,7 +6,7 @@ import {
   "moonbitlang/async/http",
   "moonbitlang/async/process",
   "moonbitlang/async/websocket",
-  "moonbit-community/cdp/protocol",
+  "moonbit-community/proton_cdp/protocol",
 }
 
 import {
@@ -16,8 +16,8 @@ import {
   "moonbitlang/async/socket",
   "moonbitlang/async/websocket",
   "moonbitlang/core/env",
-  "moonbit-community/cdp/protocol",
-  "moonbit-community/cdp/protocol/typed",
+  "moonbit-community/proton_cdp/protocol",
+  "moonbit-community/proton_cdp/protocol/typed",
 } for "test"
 
 import {
