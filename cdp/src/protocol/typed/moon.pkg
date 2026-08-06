@@ -1,16 +1,16 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/cdp/protocol",
+  "moonbit-community/cdp/protocol",
 }
 
 import {
   "moonbitlang/core/json",
-  "justjavac/cdp/protocol",
+  "moonbit-community/cdp/protocol",
 } for "test"
 
 import {
   "moonbitlang/core/json",
-  "justjavac/cdp/protocol",
+  "moonbit-community/cdp/protocol",
 } for "wbtest"
 
 options(

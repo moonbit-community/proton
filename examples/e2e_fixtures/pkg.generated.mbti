@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/e2e_fixtures"
+package "moonbit-community/proton/examples/e2e_fixtures"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/json",
 }
 
@@ -62,4 +62,3 @@ type SyncDoubleReply derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

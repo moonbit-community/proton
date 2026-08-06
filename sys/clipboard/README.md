@@ -1,4 +1,4 @@
-# justjavac/clipboard
+# moonbit-community/clipboard
 
 [![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-clipboard/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-clipboard)
 [![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-clipboard/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-clipboard)
@@ -13,7 +13,7 @@ small synchronous API.
 ## Install
 
 ```bash
-moon add justjavac/clipboard
+moon add moonbit-community/clipboard
 ```
 
 ## Quick Start

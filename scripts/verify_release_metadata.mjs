@@ -21,6 +21,15 @@ function moduleVersion(relativePath) {
   return match[1];
 }
 
+function moduleName(relativePath) {
+  const text = readText(relativePath);
+  const match = text.match(/^name\s*=\s*"([^"]+)"/m);
+  if (!match) {
+    throw new Error(`${relativePath} is missing a name field`);
+  }
+  return match[1];
+}
+
 function moduleImportVersion(relativePath, moduleName) {
   const text = readText(relativePath);
   const escapedName = moduleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -90,12 +99,54 @@ function checkTemplateDefaults(expected) {
   }
 }
 
+const workspaceModuleManifests = [
+  "cdp/moon.mod",
+  "config/moon.mod",
+  "contract/moon.mod",
+  "rsa/moon.mod",
+  "updater/moon.mod",
+  "sys/auto_launch/moon.mod",
+  "sys/clipboard/moon.mod",
+  "sys/ffi/moon.mod",
+  "sys/global_hotkey/moon.mod",
+  "sys/keepawake/moon.mod",
+  "sys/microphone/moon.mod",
+  "sys/tray/moon.mod",
+  "client/moon.mod",
+  "rabbita/moon.mod",
+  "proton/moon.mod",
+  "extensions/moon.mod",
+  "cli/moon.mod",
+  "examples/moon.mod",
+  "e2e/moon.mod",
+];
+
+function checkLockstepVersions(expectedVersion) {
+  const workspaceModuleNames = new Set(
+    workspaceModuleManifests.map(moduleName),
+  );
+  for (const manifest of workspaceModuleManifests) {
+    checkEqual(`${manifest} version`, moduleVersion(manifest), expectedVersion);
+    for (const match of readText(manifest).matchAll(/"([^"]+)@([^"]+)"/g)) {
+      const [, dependency, version] = match;
+      if (workspaceModuleNames.has(dependency)) {
+        checkEqual(
+          `${manifest} ${dependency} dependency`,
+          version,
+          expectedVersion,
+        );
+      }
+    }
+  }
+}
+
 const protonVersion = moduleVersion("proton/moon.mod");
 const configVersion = moduleVersion("config/moon.mod");
 const contractVersion = moduleVersion("contract/moon.mod");
 const clientVersion = moduleVersion("client/moon.mod");
 const rabbitaVersion = moduleVersion("rabbita/moon.mod");
 const cliVersion = moduleVersion("cli/moon.mod");
+checkLockstepVersions(protonVersion);
 checkPrebuiltManifests(protonVersion);
 checkTemplateDefaults({
   default_proton_version: protonVersion,
@@ -106,32 +157,32 @@ checkTemplateDefaults({
 });
 checkEqual(
   "proton/moon.mod proton_config dependency",
-  moduleImportVersion("proton/moon.mod", "justjavac/proton_config"),
+  moduleImportVersion("proton/moon.mod", "moonbit-community/proton_config"),
   configVersion,
 );
 checkEqual(
   "cli/moon.mod proton_config dependency",
-  moduleImportVersion("cli/moon.mod", "justjavac/proton_config"),
+  moduleImportVersion("cli/moon.mod", "moonbit-community/proton_config"),
   configVersion,
 );
 checkEqual(
   "proton/moon.mod proton_contract dependency",
-  moduleImportVersion("proton/moon.mod", "justjavac/proton_contract"),
+  moduleImportVersion("proton/moon.mod", "moonbit-community/proton_contract"),
   contractVersion,
 );
 checkEqual(
   "client/moon.mod proton_contract dependency",
-  moduleImportVersion("client/moon.mod", "justjavac/proton_contract"),
+  moduleImportVersion("client/moon.mod", "moonbit-community/proton_contract"),
   contractVersion,
 );
 checkEqual(
   "rabbita/moon.mod proton_contract dependency",
-  moduleImportVersion("rabbita/moon.mod", "justjavac/proton_contract"),
+  moduleImportVersion("rabbita/moon.mod", "moonbit-community/proton_contract"),
   contractVersion,
 );
 checkEqual(
   "rabbita/moon.mod proton_client dependency",
-  moduleImportVersion("rabbita/moon.mod", "justjavac/proton_client"),
+  moduleImportVersion("rabbita/moon.mod", "moonbit-community/proton_client"),
   clientVersion,
 );
 checkEqual("cli/main.mbt cli_current_version", cliEmbeddedVersion(), cliVersion);
@@ -144,6 +195,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    `[OK] Release metadata matches config ${configVersion}, contract ${contractVersion}, client ${clientVersion}, Rabbita ${rabbitaVersion}, proton ${protonVersion}, and CLI ${cliVersion}.`,
+    `[OK] Release metadata and workspace modules match lockstep version ${protonVersion}.`,
   );
 }

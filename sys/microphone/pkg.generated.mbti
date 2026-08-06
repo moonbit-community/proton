@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/microphone"
+package "moonbit-community/microphone"
 
 import {
   "moonbitlang/core/debug",
@@ -56,4 +56,3 @@ pub impl Show for SampleFormat
 // Type aliases
 
 // Traits
-

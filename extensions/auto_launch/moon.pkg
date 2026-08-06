@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/auto_launch" @sys_auto_launch,
-  "justjavac/proton",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton_ext/auto_launch/contract" @auto_launch_contract,
+  "moonbit-community/auto_launch" @sys_auto_launch,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/auto_launch/contract" @auto_launch_contract,
 }
 
 supported_targets = "native"

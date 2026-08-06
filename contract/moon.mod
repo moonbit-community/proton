@@ -1,6 +1,6 @@
-name = "justjavac/proton_contract"
+name = "moonbit-community/proton_contract"
 
-version = "0.1.1"
+version = "0.1.14"
 
 readme = "README.mbt.md"
 

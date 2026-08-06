@@ -1,5 +1,5 @@
 import {
-  "justjavac/ffi",
+  "moonbit-community/ffi",
 }
 
 supported_targets = "native"

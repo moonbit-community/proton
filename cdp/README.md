@@ -1,4 +1,4 @@
-# justjavac/cdp
+# moonbit-community/cdp
 
 ![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 ![Non-generated library coverage](https://img.shields.io/badge/non--generated%20library%20coverage-100%25-brightgreen.svg)
@@ -20,9 +20,9 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 
 | Package | Purpose |
 | --- | --- |
-| `justjavac/cdp/protocol` | Wire types, bundled manifest, schema validation, remote schema diff. |
-| `justjavac/cdp/protocol/typed` | Generated params, command builders, event builders, result decoders. |
-| `justjavac/cdp/client` | Discovery, WebSocket client, event buffer, target helpers, launch helpers. |
+| `moonbit-community/cdp/protocol` | Wire types, bundled manifest, schema validation, remote schema diff. |
+| `moonbit-community/cdp/protocol/typed` | Generated params, command builders, event builders, result decoders. |
+| `moonbit-community/cdp/client` | Discovery, WebSocket client, event buffer, target helpers, launch helpers. |
 
 ## Docs
 
@@ -77,7 +77,7 @@ let response = page.send_schema_command(
 println(@client.cdp_response_result_json(response).stringify())
 ```
 
-Typed command builders live in `justjavac/cdp/protocol/typed`, for example
+Typed command builders live in `moonbit-community/cdp/protocol/typed`, for example
 `@typed.runtime_evaluate_command`.
 
 ## Command Modes

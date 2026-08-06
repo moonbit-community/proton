@@ -1,10 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/command"
+package "moonbit-community/proton/command"
 
 import {
-  "justjavac/proton/core",
-  "justjavac/proton/ipc",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/core",
+  "moonbit-community/proton/ipc",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/json",
 }
 
@@ -97,4 +97,3 @@ pub using @core {type AppCommandRequestContext}
 pub using @core {type AppCommandRequestContext as CommandContext}
 
 // Traits
-

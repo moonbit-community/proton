@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/dev"
+package "moonbit-community/proton_cli/dev"
 
 import {
-  "justjavac/proton_config",
+  "moonbit-community/proton_config",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
 }
@@ -71,4 +71,3 @@ type RawDevOptions derive(Eq, @debug.Debug)
 // Type aliases
 
 // Traits
-

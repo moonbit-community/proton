@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/ffi"
+package "moonbit-community/ffi"
 
 // Values
 pub fn from_cstr(Bytes) -> String
@@ -17,4 +17,3 @@ pub fn to_wstr(String) -> Bytes
 // Type aliases
 
 // Traits
-

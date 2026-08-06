@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/extension"
+package "moonbit-community/proton/extension"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
 }
 
@@ -30,4 +30,3 @@ pub fn Extensions::new(Array[Extension]) -> Self
 // Type aliases
 
 // Traits
-

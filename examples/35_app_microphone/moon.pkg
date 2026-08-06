@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton_ext/microphone",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/microphone",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

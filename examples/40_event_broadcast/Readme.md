@@ -16,6 +16,6 @@ moon -C examples build 40_event_broadcast --target native
 E2E:
 
 ```sh
-moon -C e2e test -p justjavac/proton/e2e/test --target native \
+moon -C e2e test -p moonbit-community/proton/e2e/test --target native \
   --no-parallelize --filter '*40_event_broadcast*'
 ```

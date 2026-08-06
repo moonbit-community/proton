@@ -1,4 +1,4 @@
-# justjavac/auto_launch
+# moonbit-community/auto_launch
 
 Cross-platform auto-launch helpers for MoonBit.
 
@@ -15,7 +15,7 @@ This project is inspired by and references [Teamwork/node-auto-launch](https://g
 ## Install
 
 ```bash
-moon add justjavac/auto_launch
+moon add moonbit-community/auto_launch
 ```
 
 This package currently supports the `native` target.
@@ -67,7 +67,7 @@ moon test --target native
 
 # Coverage for the main package only; excludes src/examples/*
 moon test --target native --enable-coverage
-moon coverage analyze -p justjavac/auto_launch -- -f summary
+moon coverage analyze -p moonbit-community/auto_launch -- -f summary
 moon info --target native
 ```
 

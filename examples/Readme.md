@@ -24,7 +24,7 @@ To create a fresh app project instead of working inside `examples/`, install
 the released CLI and scaffold a project:
 
 ```sh
-moon install justjavac/proton_cli
+moon install moonbit-community/proton_cli
 proton_cli new my-counter
 ```
 
@@ -42,7 +42,7 @@ moon -C examples run 01_run --target native
 
 ## Groups
 
-- `01_run`: minimal app-style startup through `justjavac/proton`
+- `01_run`: minimal app-style startup through `moonbit-community/proton`
 - `02_*` through `18_*`: root-facade examples that compile against the native
   DLL route (`02_local`, `03_remote`, `12_embed`, `17_extension`,
   `18_extension_fs`).
@@ -85,11 +85,11 @@ moon -C examples run 01_run --target native
 - `53_view_minimal`: the minimal declarative web contents view example:
   `with_view` plus `@proton.view`, no lifecycle hooks required.
 
-All runnable examples should import `justjavac/proton`. `moon.proton`
+All runnable examples should import `moonbit-community/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
 metadata.
 
-Tray v1 is implemented by the `tray` extension through `justjavac/tray`; Proton
+Tray v1 is implemented by the `tray` extension through `moonbit-community/tray`; Proton
 native C does not expose a tray ABI. Windows is the baseline for tray-icon
 click/right-click/double-click events. Menu item clicks are the portable event
 path across Windows, Linux, and macOS when the desktop backend supports menu

@@ -128,7 +128,7 @@ pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       platform +
       ".\nSearched:\n" +
       searched.map(path => "  - " + path).join("\n") +
-      "\nEnsure justjavac/proton is a resolved dependency" +
+      "\nEnsure moonbit-community/proton is a resolved dependency" +
       " (moon install / moon update), or run inside a Proton project."
     ManifestRead(path~, detail~) =>
       "Failed to read manifest " + path + ": " + detail

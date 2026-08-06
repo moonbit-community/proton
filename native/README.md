@@ -1,7 +1,7 @@
 # Proton Native
 
 This directory builds the standalone Proton native dynamic library used by
-`justjavac/proton/native`.
+`moonbit-community/proton/native`.
 
 The current implementation provides the stable `proton_*` C ABI, `Int64`
 handle ids, a default no-engine runtime/window registry for ABI tests, and
@@ -330,7 +330,7 @@ temporarily restore CEF logging while debugging; accepted values are `verbose`,
 
 ## MoonBit Validation
 
-`proton/native_link_config.mjs` points `justjavac/proton/native` at the installed
+`proton/native_link_config.mjs` points `moonbit-community/proton/native` at the installed
 library. On Windows, add the DLL directory to `PATH` before running linked
 tests:
 

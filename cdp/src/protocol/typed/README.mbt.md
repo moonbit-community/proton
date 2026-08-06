@@ -1,10 +1,10 @@
-# justjavac/cdp/protocol/typed
+# moonbit-community/cdp/protocol/typed
 
 Generated typed Chrome DevTools Protocol builders and JSON codecs.
 
 This package contains generated parameter/result structs, command builders,
 event builders, and result decoders for the bundled CDP schema. Builders return
-the wire message types from `justjavac/cdp/protocol`.
+the wire message types from `moonbit-community/cdp/protocol`.
 
 ## Use
 

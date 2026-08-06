@@ -58,78 +58,78 @@ test "built-in extension metadata stays aligned with built-in specs" {
   assert_metadata_matches_app_command_spec(
     load_descriptor("auto_launch"),
     @auto_launch.extension().command_spec(),
-    "justjavac/proton_ext/auto_launch",
-    "justjavac/proton-auto-launch",
+    "moonbit-community/proton_ext/auto_launch",
+    "moonbit-community/proton-auto-launch",
     "autoLaunch",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("clipboard"),
     @clipboard.extension().command_spec(),
-    "justjavac/proton_ext/clipboard",
-    "justjavac/proton-clipboard",
+    "moonbit-community/proton_ext/clipboard",
+    "moonbit-community/proton-clipboard",
     "clipboard",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("dialog"),
     @dialog.extension().command_spec(),
-    "justjavac/proton_ext/dialog",
-    "justjavac/proton-dialog",
+    "moonbit-community/proton_ext/dialog",
+    "moonbit-community/proton-dialog",
     "dialog",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("fs"),
     @fs.extension().command_spec(),
-    "justjavac/proton_ext/fs",
-    "justjavac/proton-fs",
+    "moonbit-community/proton_ext/fs",
+    "moonbit-community/proton-fs",
     "fs",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("global_hotkey"),
     @global_hotkey.extension().command_spec(),
-    "justjavac/proton_ext/global_hotkey",
-    "justjavac/proton-global-hotkey",
+    "moonbit-community/proton_ext/global_hotkey",
+    "moonbit-community/proton-global-hotkey",
     "globalHotkey",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("keepawake"),
     @keepawake.extension().command_spec(),
-    "justjavac/proton_ext/keepawake",
-    "justjavac/proton-keepawake",
+    "moonbit-community/proton_ext/keepawake",
+    "moonbit-community/proton-keepawake",
     "keepAwake",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("microphone"),
     @microphone.extension().command_spec(),
-    "justjavac/proton_ext/microphone",
-    "justjavac/proton-microphone",
+    "moonbit-community/proton_ext/microphone",
+    "moonbit-community/proton-microphone",
     "microphone",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("notification"),
     @notification.extension().command_spec(),
-    "justjavac/proton_ext/notification",
-    "justjavac/proton-notification",
+    "moonbit-community/proton_ext/notification",
+    "moonbit-community/proton-notification",
     "notification",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("path"),
     @path.extension().command_spec(),
-    "justjavac/proton_ext/path",
-    "justjavac/proton-path",
+    "moonbit-community/proton_ext/path",
+    "moonbit-community/proton-path",
     "path",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("shell"),
     @shell.extension().command_spec(),
-    "justjavac/proton_ext/shell",
-    "justjavac/proton-shell",
+    "moonbit-community/proton_ext/shell",
+    "moonbit-community/proton-shell",
     "shell",
   )
   assert_metadata_matches_app_command_spec(
     load_descriptor("tray"),
     @tray.extension().command_spec(),
-    "justjavac/proton_ext/tray",
-    "justjavac/proton-tray",
+    "moonbit-community/proton_ext/tray",
+    "moonbit-community/proton-tray",
     "tray",
   )
 }

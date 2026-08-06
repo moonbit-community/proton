@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/42_attribute_codegen_commands"
+package "moonbit-community/proton/examples/42_attribute_codegen_commands"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/json",
 }
 
@@ -26,4 +26,3 @@ type AddRequest derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/tray" @sys_tray,
-  "justjavac/proton",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton_ext/tray/contract" @tray_contract,
+  "moonbit-community/tray" @sys_tray,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/tray/contract" @tray_contract,
 }
 
 supported_targets = "native"

@@ -1,10 +1,10 @@
-name = "justjavac/proton_rabbita"
+name = "moonbit-community/proton_rabbita"
 
-version = "0.1.1"
+version = "0.1.14"
 
 import {
-  "justjavac/proton_client@0.1.1",
-  "justjavac/proton_contract@0.1.1",
+  "moonbit-community/proton_client@0.1.14",
+  "moonbit-community/proton_contract@0.1.14",
   "moonbit-community/rabbita@0.14.1",
 }
 

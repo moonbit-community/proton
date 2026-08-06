@@ -4,8 +4,8 @@ version = "0.1.0"
 
 import {
   "{{shared_module}}@0.1.0",
-  "justjavac/proton_client@{{proton_client_version}}",
-  "justjavac/proton_rabbita@{{proton_rabbita_version}}",
+  "moonbit-community/proton_client@{{proton_client_version}}",
+  "moonbit-community/proton_rabbita@{{proton_rabbita_version}}",
   "moonbit-community/rabbita@{{rabbita_version}}",
 }
 

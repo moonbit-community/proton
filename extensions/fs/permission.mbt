@@ -1,5 +1,5 @@
 ///|
-let fs_extension_id = "justjavac/proton-fs"
+let fs_extension_id = "moonbit-community/proton-fs"
 
 ///|
 let fs_permission_commands : ReadOnlyArray[String] = [

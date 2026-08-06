@@ -1,5 +1,5 @@
 ///|
-/// A real 2048-bit modulus, from the same OpenSSL key the `justjavac/proton_rsa`
+/// A real 2048-bit modulus, from the same OpenSSL key the `moonbit-community/proton_rsa`
 /// vectors use.
 let sample_modulus : String = "94c05429a8686a468bd96483217aaa1615c8785c43b42a6353e7b45ebbc847a5aab1cdb55493720ec1110d20c765bbf03f32a5c77da79c467f4763cec4b4ea8c0d589994a263955c3739994e34bf5d645ded04a75ad1ccbd64e9f686101d682744352d233e70a8674b1a8ffe0f940777ed6f43830c8758aa5cfaa185b44ef35f4bf0391999440e52f008aa58d4be711ddac72124b81303b6e5de80075300aeff22519559c32d29328622a8ac4498cc080bab09f3c15bed4b0c561f55720fd39157f37ece0f9250ecdf6e3049038770bb9f088e5f3cdeaf44de70e9808386c15cc76da86e6842aaeda8d39c0c8b36a4c2f972c00f62a7f559c6b22de5f602a45d"
 

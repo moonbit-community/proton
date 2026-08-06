@@ -1,6 +1,6 @@
 # Proton Client
 
-`justjavac/proton_client` invokes typed Proton contracts from the active
+`moonbit-community/proton_client` invokes typed Proton contracts from the active
 renderer page. It uses the bridge installed by Proton before application
 scripts run; applications do not construct a client or select a transport.
 

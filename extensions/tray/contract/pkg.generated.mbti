@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/tray/contract"
+package "moonbit-community/proton_ext/tray/contract"
 
 import {
-  "justjavac/proton_contract",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -113,4 +113,3 @@ pub(all) struct TraySupportReply {
 // Type aliases
 
 // Traits
-

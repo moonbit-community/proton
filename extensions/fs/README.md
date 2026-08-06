@@ -1,6 +1,6 @@
 # FS Extension
 
-`justjavac/proton_ext/fs` contains a thin command-extension wrapper around
+`moonbit-community/proton_ext/fs` contains a thin command-extension wrapper around
 `moonbitlang/async/fs`.
 
 It is exposed as an app command extension, so filesystem calls run through the

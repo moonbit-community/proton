@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/tray/testsupport"
+package "moonbit-community/tray/testsupport"
 
 // Values
 pub fn make_test_icon_path() -> Bytes
@@ -13,4 +13,3 @@ pub fn remove_test_file(String) -> Bool
 // Type aliases
 
 // Traits
-

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/45_bridge_multi_window"
+package "moonbit-community/proton/examples/45_bridge_multi_window"
 
 import {
   "moonbitlang/core/json",
@@ -17,4 +17,3 @@ type IdentifyReply derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

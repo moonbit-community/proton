@@ -2,12 +2,12 @@ import {
   "moonbitlang/async",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
-  "justjavac/cdp/client",
+  "moonbit-community/cdp/client",
 }
 
 import {
-  "justjavac/proton/examples/app_commands_fixture",
-  "justjavac/proton/examples/e2e_fixtures",
+  "moonbit-community/proton/examples/app_commands_fixture",
+  "moonbit-community/proton/examples/e2e_fixtures",
   "moonbitlang/async/fs",
   "moonbitlang/async/http",
   "moonbitlang/async/io",

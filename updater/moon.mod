@@ -1,6 +1,6 @@
-name = "justjavac/proton_updater"
+name = "moonbit-community/proton_updater"
 
-version = "0.1.0"
+version = "0.1.14"
 
 readme = "README.mbt.md"
 

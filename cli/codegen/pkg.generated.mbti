@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/codegen"
+package "moonbit-community/proton_cli/codegen"
 
 import {
   "moonbitlang/core/debug",
@@ -62,4 +62,3 @@ pub(all) struct ProtonCommandCodegenOutput {
 // Type aliases
 
 // Traits
-

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/cdp/protocol"
+package "moonbit-community/cdp/protocol"
 
 import {
   "moonbitlang/core/debug",
@@ -275,4 +275,3 @@ pub(all) struct ProtocolVersion {
 // Type aliases
 
 // Traits
-

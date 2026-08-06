@@ -44,7 +44,7 @@ test "cli version comparison detects newer releases" {
 ///|
 test "latest version is read from mooncakes manifest" {
   let text =
-    #|{"name":"justjavac/proton_cli","latest_version":"0.1.6","versions":[]}
+    #|{"name":"moonbit-community/proton_cli","latest_version":"0.1.6","versions":[]}
   match latest_version_from_manifest_text(text) {
     Some(version) => assert_eq(version, "0.1.6")
     None => fail("expected latest_version")

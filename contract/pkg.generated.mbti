@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_contract"
+package "moonbit-community/proton_contract"
 
 import {
   "moonbitlang/core/debug",
@@ -56,4 +56,3 @@ pub fn ExtensionContract::validate(Self) -> Unit raise ContractDefinitionError
 // Type aliases
 
 // Traits
-

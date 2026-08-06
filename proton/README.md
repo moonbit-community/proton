@@ -1,4 +1,4 @@
-# justjavac/proton
+# moonbit-community/proton
 
 MoonBit facade for building Proton desktop applications on the native runtime.
 This package is the public app surface: windows, entries, commands, events, and
@@ -55,7 +55,7 @@ const reply = await window.__MoonBit__.core.invokeOp("ext:app/ping", {
 window.__MoonBit__.events.on("app.tick", (event) => console.log(event.payload));
 ```
 
-Extensions built on `justjavac/proton_ext` additionally install namespaced
+Extensions built on `moonbit-community/proton_ext` additionally install namespaced
 proxies such as `window.__MoonBit__.ticker.start(...)`.
 
 ## Windows

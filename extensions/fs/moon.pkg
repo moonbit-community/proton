@@ -5,16 +5,16 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/x/path" @mbpath,
-  "justjavac/proton",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton_ext/fs/contract" @fs_contract,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/fs/contract" @fs_contract,
 }
 
 import {
   "moonbitlang/core/debug",
   "moonbitlang/async",
-  "justjavac/proton/core" @proton_core,
+  "moonbit-community/proton/core" @proton_core,
 } for "wbtest"
 
 supported_targets = "native"

@@ -1,4 +1,4 @@
-# justjavac/cdp
+# moonbit-community/cdp
 
 ![Non-generated library coverage](https://img.shields.io/badge/non--generated%20library%20coverage-100%25-brightgreen.svg)
 
@@ -6,11 +6,11 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 
 ## Packages
 
-- `justjavac/cdp/protocol`: CDP wire types, bundled manifest, schema
+- `moonbit-community/cdp/protocol`: CDP wire types, bundled manifest, schema
   validation, remote schema diff.
-- `justjavac/cdp/protocol/typed`: generated params, command builders, event
+- `moonbit-community/cdp/protocol/typed`: generated params, command builders, event
   builders, result decoders.
-- `justjavac/cdp/client`: discovery, WebSocket client, events, targets,
+- `moonbit-community/cdp/client`: discovery, WebSocket client, events, targets,
   browser launch helpers.
 
 ## Minimal Use

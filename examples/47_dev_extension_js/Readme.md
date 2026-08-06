@@ -39,7 +39,7 @@ The repository E2E suite runs the same route through the local CLI:
 
 ```powershell
 cd ..
-moon -C e2e test -p justjavac/proton/e2e/test --target native `
+moon -C e2e test -p moonbit-community/proton/e2e/test --target native `
   --no-parallelize --filter '*47_dev_extension_js*'
 ```
 

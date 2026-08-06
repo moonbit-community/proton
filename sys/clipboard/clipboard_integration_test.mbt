@@ -32,7 +32,7 @@ test "integration write and read roundtrip" {
     Err(error) => fail("failed to read clipboard before test: " + error)
   }
 
-  let probe = "justjavac/clipboard integration probe"
+  let probe = "moonbit-community/clipboard integration probe"
 
   match @clipboard.write_text(probe) {
     Ok(_) => ()

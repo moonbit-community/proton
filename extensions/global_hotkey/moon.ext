@@ -1,3 +1,3 @@
-id = "justjavac/proton-global-hotkey"
+id = "moonbit-community/proton-global-hotkey"
 namespace = "globalHotkey"
-package = "@justjavac/proton-global-hotkey"
+package = "@moonbit-community/proton-global-hotkey"

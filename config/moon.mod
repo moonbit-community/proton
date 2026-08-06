@@ -1,10 +1,10 @@
-name = "justjavac/proton_config"
+name = "moonbit-community/proton_config"
 
-version = "0.1.8"
+version = "0.1.14"
 
 import {
-  "moonbitlang/lexer@0.3.12",
-  "moonbitlang/moon_config@0.3.11",
+  "moonbitlang/lexer@0.3.5",
+  "moonbitlang/moon_config@0.3.5",
   "moonbitlang/x@0.4.48",
 }
 

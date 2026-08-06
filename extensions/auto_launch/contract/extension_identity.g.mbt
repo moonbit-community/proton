@@ -5,6 +5,6 @@
 ///|
 pub let extension : @proton_contract.ExtensionContract =
   @proton_contract.extension(
-    id="justjavac/proton-auto-launch",
+    id="moonbit-community/proton-auto-launch",
     js_namespace="autoLaunch",
   )

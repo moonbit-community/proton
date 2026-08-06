@@ -75,7 +75,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|version = "0.1.0"
           #|
           #|import {
-          #|  "justjavac/proton_contract@{{proton_contract_version}}",
+          #|  "moonbit-community/proton_contract@{{proton_contract_version}}",
           #|}
           #|
           #|license = "Apache-2.0"
@@ -95,7 +95,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|import {
           #|  "moonbitlang/core/json",
-          #|  "justjavac/proton_contract",
+          #|  "moonbit-community/proton_contract",
           #|}
           #|
       ),
@@ -171,8 +171,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "{{shared_module}}@0.1.0",
-          #|  "justjavac/proton_client@{{proton_client_version}}",
-          #|  "justjavac/proton_rabbita@{{proton_rabbita_version}}",
+          #|  "moonbit-community/proton_client@{{proton_client_version}}",
+          #|  "moonbit-community/proton_rabbita@{{proton_rabbita_version}}",
           #|  "moonbit-community/rabbita@{{rabbita_version}}",
           #|}
           #|
@@ -194,8 +194,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|import {
           #|  "{{shared_module}}" @shared,
-          #|  "justjavac/proton_client",
-          #|  "justjavac/proton_rabbita",
+          #|  "moonbit-community/proton_client",
+          #|  "moonbit-community/proton_rabbita",
           #|  "moonbit-community/rabbita",
           #|  "moonbit-community/rabbita/html",
           #|  "moonbit-community/rabbita/sub",
@@ -573,8 +573,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "{{shared_module}}@0.1.0",
-          #|  "justjavac/proton@{{proton_version}}",
-          #|  "justjavac/proton_contract@{{proton_contract_version}}",
+          #|  "moonbit-community/proton@{{proton_version}}",
+          #|  "moonbit-community/proton_contract@{{proton_contract_version}}",
           #|}
           #|
           #|license = "Apache-2.0"
@@ -594,7 +594,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/app/moon.pkg.mtpl",
       template_source: (
           #|import {
-          #|  "justjavac/proton",
+          #|  "moonbit-community/proton",
           #|  "{{backend_module}}/todo",
           #|}
           #|
@@ -626,7 +626,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|import {
           #|  "moonbitlang/core/json",
-          #|  "justjavac/proton",
+          #|  "moonbit-community/proton",
           #|  "{{shared_module}}" @shared,
           #|}
           #|

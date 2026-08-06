@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/json",
-  "justjavac/clipboard" @sys_clipboard,
-  "justjavac/proton",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton_ext/clipboard/contract" @clipboard_contract,
+  "moonbit-community/clipboard" @sys_clipboard,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/clipboard/contract" @clipboard_contract,
 }
 
 supported_targets = "native"

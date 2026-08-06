@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_rsa"
+package "moonbit-community/proton_rsa"
 
 import {
   "moonbitlang/core/bigint",
@@ -36,4 +36,3 @@ pub fn PublicKey::size(Self) -> Int
 // Type aliases
 
 // Traits
-

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/clipboard"
+package "moonbit-community/clipboard"
 
 // Values
 pub fn ensure_supported() -> Result[Unit, String]
@@ -17,4 +17,3 @@ pub fn write_text(String) -> Result[Unit, String]
 // Type aliases
 
 // Traits
-

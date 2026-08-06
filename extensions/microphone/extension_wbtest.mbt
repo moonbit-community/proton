@@ -44,7 +44,7 @@ test "microphone parsed listings become serializable device replies" {
 
 ///|
 test "microphone metadata constants match generated app command extension" {
-  assert_eq(extension().id(), "justjavac/proton-microphone")
+  assert_eq(extension().id(), "moonbit-community/proton-microphone")
   let command_spec = extension().command_spec() catch {
     error => abort(error.message())
   }

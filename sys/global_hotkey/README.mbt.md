@@ -1,4 +1,4 @@
-# justjavac/global_hotkey
+# moonbit-community/global_hotkey
 
 Cross-platform native global hotkey helpers for MoonBit.
 

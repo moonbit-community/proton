@@ -206,7 +206,7 @@ let resource : String =
   #|                        <div class="form">
   #|                            <label>
   #|                                Open target
-  #|                                <input id="target" value="https://github.com/justjavac/proton" />
+  #|                                <input id="target" value="https://github.com/moonbit-community/proton" />
   #|                            </label>
   #|                            <label>
   #|                                Reveal item path

@@ -1,8 +1,8 @@
 # Proton Rabbita
 
-`justjavac/proton_rabbita` maps typed Proton commands and events onto Rabbita
+`moonbit-community/proton_rabbita` maps typed Proton commands and events onto Rabbita
 `Cmd` and `Sub` values. Transport and JSON handling remain owned by
-`justjavac/proton_client`.
+`moonbit-community/proton_client`.
 
 ```mbt check
 ///|

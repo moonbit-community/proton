@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton_ext/keepawake",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/keepawake",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

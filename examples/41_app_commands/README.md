@@ -19,6 +19,6 @@ moon -C examples run 41_app_commands --target native
 Run its native CDP E2E probe:
 
 ```sh
-moon -C e2e test -p justjavac/proton/e2e/test --target native \
+moon -C e2e test -p moonbit-community/proton/e2e/test --target native \
   --no-parallelize --filter '*41_app_commands*'
 ```

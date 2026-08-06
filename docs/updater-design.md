@@ -108,7 +108,7 @@ Rules:
 ## Signature
 
 RSASSA-PKCS1-v1_5 over SHA-256, applied twice: once over the manifest and once
-over each artifact. Verification is implemented in `justjavac/proton_rsa`.
+over each artifact. Verification is implemented in `moonbit-community/proton_rsa`.
 
 ### Why RSA, and who verifies
 
@@ -334,7 +334,7 @@ one.
 
 Implemented in MoonBit, in a new `proton/updater/` package. `moonbitlang/async`
 provides `http` (`get`, `get_stream`), `tls`, and `gzip`; `moonbitlang/x/crypto`
-provides `sha256`, and `justjavac/proton_rsa` verifies the detached signatures.
+provides `sha256`, and `moonbit-community/proton_rsa` verifies the detached signatures.
 The platform-specific native check is for the expanded application's code
 signature, not for the updater manifest or artifact signature.
 
@@ -564,7 +564,7 @@ and is not something a framework should decide for every application.
 
 ## Renderer surface
 
-*Implemented* as the `justjavac/proton-updater` extension, in the `updater`
+*Implemented* as the `moonbit-community/proton-updater` extension, in the `updater`
 namespace. Update capability is exposed through the existing permission model.
 Registration alone grants nothing; a window needs an explicit grant.
 

@@ -1,8 +1,8 @@
 import {
-  "justjavac/proton_ext/global_hotkey",
-  "justjavac/proton_ext/notification",
-  "justjavac/proton_ext/tray",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/global_hotkey",
+  "moonbit-community/proton_ext/notification",
+  "moonbit-community/proton_ext/tray",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

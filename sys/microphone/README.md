@@ -1,11 +1,11 @@
-# justjavac/microphone
+# moonbit-community/microphone
 
 [![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-microphone)
 [![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-microphone)
 [![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-microphone)
 [![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-microphone)
 
-`justjavac/microphone` is a native-only MoonBit package for microphone
+`moonbit-community/microphone` is a native-only MoonBit package for microphone
 device discovery and capture-session metadata. It uses small C native stubs for host integration, and exposes a focused MoonBit API that works on Windows, Linux, and macOS.
 
 ## Platform Support

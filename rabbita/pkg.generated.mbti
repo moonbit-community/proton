@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_rabbita"
+package "moonbit-community/proton_rabbita"
 
 import {
-  "justjavac/proton_client",
-  "justjavac/proton_contract",
+  "moonbit-community/proton_client",
+  "moonbit-community/proton_contract",
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/sub",
   "moonbitlang/core/json",
@@ -21,4 +21,3 @@ pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Pay
 // Type aliases
 
 // Traits
-

@@ -20,8 +20,8 @@ test "app manifest stores windows and extension settings" {
     debug=2,
     windows=[settings_window],
     extensions={
-      "justjavac/proton-fs": ExtensionSetting::enabled(),
-      "justjavac/proton-dialog": ExtensionSetting::disabled(),
+      "moonbit-community/proton-fs": ExtensionSetting::enabled(),
+      "moonbit-community/proton-dialog": ExtensionSetting::disabled(),
     },
   )
 
@@ -32,14 +32,17 @@ test "app manifest stores windows and extension settings" {
   assert_eq(manifest.debug, 2)
   @debug.assert_eq(manifest.windows, [settings_window])
   @debug.assert_eq(
-    manifest.extension_setting("justjavac/proton-fs"),
+    manifest.extension_setting("moonbit-community/proton-fs"),
     Some(ExtensionSetting::enabled()),
   )
   @debug.assert_eq(
-    manifest.extension_setting("justjavac/proton-dialog"),
+    manifest.extension_setting("moonbit-community/proton-dialog"),
     Some(ExtensionSetting::disabled()),
   )
-  @debug.assert_eq(manifest.extension_setting("justjavac/proton-path"), None)
+  @debug.assert_eq(
+    manifest.extension_setting("moonbit-community/proton-path"),
+    None,
+  )
   assert_eq(manifest.extension_settings().length(), 2)
 }
 
@@ -52,7 +55,9 @@ test "app manifest constructor copies mutable inputs" {
       File("settings.html"),
     ),
   ]
-  let extensions = { "justjavac/proton-fs": ExtensionSetting::enabled() }
+  let extensions = {
+    "moonbit-community/proton-fs": ExtensionSetting::enabled(),
+  }
   let manifest = AppManifest::new(
     WindowManifest::new("Main", 960, 720),
     Html("<html></html>"),
@@ -67,10 +72,13 @@ test "app manifest constructor copies mutable inputs" {
       File("later.html"),
     ),
   )
-  extensions["justjavac/proton-dialog"] = ExtensionSetting::enabled()
+  extensions["moonbit-community/proton-dialog"] = ExtensionSetting::enabled()
 
   assert_eq(manifest.windows.length(), 1)
-  @debug.assert_eq(manifest.extension_setting("justjavac/proton-dialog"), None)
+  @debug.assert_eq(
+    manifest.extension_setting("moonbit-community/proton-dialog"),
+    None,
+  )
 }
 
 ///|

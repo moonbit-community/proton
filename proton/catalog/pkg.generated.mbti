@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/catalog"
+package "moonbit-community/proton/catalog"
 
 import {
   "moonbitlang/core/debug",
@@ -103,4 +103,3 @@ pub fn ExtensionDescriptor::version(Self) -> String
 // Type aliases
 
 // Traits
-

@@ -5,6 +5,6 @@
 ///|
 pub let extension : @proton_contract.ExtensionContract =
   @proton_contract.extension(
-    id="justjavac/proton-global-hotkey",
+    id="moonbit-community/proton-global-hotkey",
     js_namespace="globalHotkey",
   )

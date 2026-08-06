@@ -5,6 +5,6 @@
 ///|
 pub let extension : @proton_contract.ExtensionContract =
   @proton_contract.extension(
-    id="justjavac/proton-updater",
+    id="moonbit-community/proton-updater",
     js_namespace="updater",
   )

@@ -1,6 +1,6 @@
 import {
-  "justjavac/proton_ext/fs",
-  "justjavac/proton",
+  "moonbit-community/proton_ext/fs",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

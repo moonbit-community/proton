@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/manifest"
+package "moonbit-community/proton/manifest"
 
 import {
   "moonbitlang/core/debug",
@@ -93,4 +93,3 @@ pub impl Show for WindowSizeHint
 // Type aliases
 
 // Traits
-

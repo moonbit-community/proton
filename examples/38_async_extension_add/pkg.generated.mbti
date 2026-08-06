@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/38_async_extension_add"
+package "moonbit-community/proton/examples/38_async_extension_add"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/json",
 }
 
@@ -22,4 +22,3 @@ type SlowAddRequest derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/auto_launch/contract"
+package "moonbit-community/proton_ext/auto_launch/contract"
 
 import {
-  "justjavac/proton_contract",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -64,4 +64,3 @@ pub(all) struct SupportRequest {
 // Type aliases
 
 // Traits
-

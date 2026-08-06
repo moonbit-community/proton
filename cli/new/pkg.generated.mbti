@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/new"
+package "moonbit-community/proton_cli/new"
 
 import {
   "moonbitlang/core/argparse",
@@ -67,4 +67,3 @@ type RawNewProjectOptions derive(Eq, @debug.Debug)
 // Type aliases
 
 // Traits
-

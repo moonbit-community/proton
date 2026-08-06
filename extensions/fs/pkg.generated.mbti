@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/fs"
+package "moonbit-community/proton_ext/fs"
 
 import {
-  "justjavac/proton/command",
-  "justjavac/proton/extension",
-  "justjavac/proton/manifest",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/extension",
+  "moonbit-community/proton/manifest",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
 }
 
@@ -31,4 +31,3 @@ pub fn PermissionRoot::new(String, Array[String]) -> Self raise FsError
 // Type aliases
 
 // Traits
-

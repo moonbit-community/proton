@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/52_web_contents_view"
+package "moonbit-community/proton/examples/52_web_contents_view"
 
 import {
   "moonbitlang/core/json",
@@ -19,4 +19,3 @@ type SimpleReply derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

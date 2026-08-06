@@ -1,6 +1,6 @@
 # proton/bootstrap
 
-`justjavac/proton/bootstrap` loads Proton app configuration.
+`moonbit-community/proton/bootstrap` loads Proton app configuration.
 
 It decodes `moon.proton` into runtime manifests and project tooling metadata.
 It does not install extensions or create windows.

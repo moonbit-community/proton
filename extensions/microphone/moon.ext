@@ -1,3 +1,3 @@
-id = "justjavac/proton-microphone"
+id = "moonbit-community/proton-microphone"
 namespace = "microphone"
-package = "@justjavac/proton-microphone"
+package = "@moonbit-community/proton-microphone"

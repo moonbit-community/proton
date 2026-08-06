@@ -1,4 +1,4 @@
-# justjavac/proton_updater
+# moonbit-community/proton_updater
 
 The update manifest schema, shared by the Proton runtime and `proton_cli`.
 

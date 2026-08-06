@@ -2,31 +2,31 @@
 let default_proton_version = "0.1.14"
 
 ///|
-let default_proton_cli_version = "0.1.12"
+let default_proton_cli_version = "0.1.14"
 
 ///|
-let default_proton_contract_version = "0.1.1"
+let default_proton_contract_version = "0.1.14"
 
 ///|
-let default_proton_client_version = "0.1.1"
+let default_proton_client_version = "0.1.14"
 
 ///|
-let default_proton_rabbita_version = "0.1.1"
+let default_proton_rabbita_version = "0.1.14"
 
 ///|
 let default_rabbita_version = "0.14.1"
 
 ///|
 fn scaffold_release_chain() -> String {
-  "justjavac/proton_contract@" +
+  "moonbit-community/proton_contract@" +
   default_proton_contract_version +
-  "\n  justjavac/proton_client@" +
+  "\n  moonbit-community/proton_client@" +
   default_proton_client_version +
-  "\n  justjavac/proton_rabbita@" +
+  "\n  moonbit-community/proton_rabbita@" +
   default_proton_rabbita_version +
-  "\n  justjavac/proton@" +
+  "\n  moonbit-community/proton@" +
   default_proton_version +
-  "\n  justjavac/proton_cli@" +
+  "\n  moonbit-community/proton_cli@" +
   default_proton_cli_version
 }
 

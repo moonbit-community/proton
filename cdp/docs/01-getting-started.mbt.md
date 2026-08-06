@@ -1,6 +1,6 @@
 # Getting started
 
-This page covers the minimum setup needed to connect `justjavac/cdp` to a
+This page covers the minimum setup needed to connect `moonbit-community/cdp` to a
 Chrome-family browser with remote debugging enabled.
 
 ## Requirements
@@ -23,9 +23,9 @@ For an executable package that connects to CDP:
 ```moonbit
 import {
   "moonbitlang/async",
-  "justjavac/cdp/client",
-  "justjavac/cdp/protocol",
-  "justjavac/cdp/protocol/typed",
+  "moonbit-community/cdp/client",
+  "moonbit-community/cdp/protocol",
+  "moonbit-community/cdp/protocol/typed",
 }
 
 supported_targets = "+native"

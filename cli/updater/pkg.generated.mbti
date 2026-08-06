@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/updater"
+package "moonbit-community/proton_cli/updater"
 
 import {
   "moonbitlang/core/argparse",
@@ -23,4 +23,3 @@ pub fn UpdaterUsageError::message(Self) -> String
 // Type aliases
 
 // Traits
-

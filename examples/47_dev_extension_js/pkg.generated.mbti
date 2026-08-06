@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/47_dev_extension_js"
+package "moonbit-community/proton/examples/47_dev_extension_js"
 
 import {
   "moonbitlang/core/json",
@@ -21,4 +21,3 @@ type TickerResult derive(ToJson, @json.FromJson)
 // Type aliases
 
 // Traits
-

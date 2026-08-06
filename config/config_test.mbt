@@ -38,9 +38,9 @@ test "parse moon.proton minimal config" {
 ///|
 test "parse moon.ext package metadata" {
   let source =
-    #|id = "justjavac/proton-fs"
+    #|id = "moonbit-community/proton-fs"
     #|namespace = "fs"
-    #|package = "@justjavac/proton-fs"
+    #|package = "@moonbit-community/proton-fs"
     #|platforms = ["windows", "macos", "linux"]
     #|
   let (ast, reports) = parse_moon_ext(source)
@@ -581,7 +581,7 @@ test "project config decodes scoped permission grants" {
     #|  {
     #|    window: "main",
     #|    origin: "app",
-    #|    extension: "justjavac/proton-fs",
+    #|    extension: "moonbit-community/proton-fs",
     #|    scope: {
     #|      read: ["./data"],
     #|      write: false,
@@ -590,7 +590,7 @@ test "project config decodes scoped permission grants" {
     #|  {
     #|    window: "settings",
     #|    origin: "entry",
-    #|    extension: "justjavac/proton-dialog",
+    #|    extension: "moonbit-community/proton-dialog",
     #|  },
     #|]
     #|
@@ -599,7 +599,7 @@ test "project config decodes scoped permission grants" {
   assert_eq(grants.length(), 2)
   assert_eq(grants[0].window, "main")
   assert_eq(grants[0].origin, "app")
-  assert_eq(grants[0].extension, "justjavac/proton-fs")
+  assert_eq(grants[0].extension, "moonbit-community/proton-fs")
   match grants[0].scope {
     Object(scope) => {
       @debug.assert_eq(

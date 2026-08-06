@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli"
+package "moonbit-community/proton_cli"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton_cli"
 // Type aliases
 
 // Traits
-

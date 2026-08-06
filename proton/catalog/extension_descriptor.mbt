@@ -655,7 +655,7 @@ fn default_moonbit_import_path(path : String) -> String {
   guard parts.length() > 0 else { return "" }
   let name = parts[parts.length() - 1]
   guard name != "" && name != "." && name != ".." else { return "" }
-  "justjavac/proton_ext/" + name.to_owned()
+  "moonbit-community/proton_ext/" + name.to_owned()
 }
 
 ///|

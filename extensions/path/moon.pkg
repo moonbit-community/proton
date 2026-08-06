@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/json",
   "moonbitlang/x/path" @mbpath,
-  "justjavac/proton",
-  "justjavac/proton/extension" @proton_extension,
-  "justjavac/proton_contract",
-  "justjavac/proton_ext/path/contract" @path_contract,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/path/contract" @path_contract,
 }
 
 supported_targets = "native"

@@ -1,6 +1,6 @@
-id = "justjavac/proton-path"
+id = "moonbit-community/proton-path"
 namespace = "path"
-package = "@justjavac/proton-path"
+package = "@moonbit-community/proton-path"
 
 version = "0.1.0"
 display_name = "Path"

@@ -1,4 +1,4 @@
-# justjavac/tray
+# moonbit-community/tray
 
 Cross-platform native tray helpers for MoonBit.
 

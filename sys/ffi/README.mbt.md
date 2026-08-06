@@ -1,4 +1,4 @@
-# justjavac/ffi
+# moonbit-community/ffi
 
 Helpers for converting MoonBit `String` values to and from null-terminated
 UTF-8 and UTF-16LE buffers at FFI boundaries.

@@ -1,8 +1,8 @@
 ///|
-let cli_current_version : String = "0.1.12"
+let cli_current_version : String = "0.1.14"
 
 ///|
-let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/justjavac/proton_cli"
+let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
 
 ///|
 priv struct CliVersion {

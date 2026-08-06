@@ -1,6 +1,6 @@
-name = "justjavac/ffi"
+name = "moonbit-community/ffi"
 
-version = "0.2.4"
+version = "0.1.14"
 
 import {
   "moonbitlang/x@0.4.48",

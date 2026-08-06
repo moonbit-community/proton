@@ -1,12 +1,12 @@
 import {
-  "justjavac/ffi",
+  "moonbit-community/ffi",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
 }
 
 import {
-  "justjavac/tray/testsupport",
+  "moonbit-community/tray/testsupport",
 } for "wbtest"
 
 supported_targets = "native"

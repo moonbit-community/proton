@@ -66,27 +66,27 @@ function expectDependency(relativePath, moduleName, version) {
 function verifyGeneratedDependencies() {
   expectDependency(
     "shared/moon.mod",
-    "justjavac/proton_contract",
+    "moonbit-community/proton_contract",
     moduleVersion("contract/moon.mod"),
   );
   expectDependency(
     "frontend/moon.mod",
-    "justjavac/proton_client",
+    "moonbit-community/proton_client",
     moduleVersion("client/moon.mod"),
   );
   expectDependency(
     "frontend/moon.mod",
-    "justjavac/proton_rabbita",
+    "moonbit-community/proton_rabbita",
     moduleVersion("rabbita/moon.mod"),
   );
   expectDependency(
     "backend/moon.mod",
-    "justjavac/proton",
+    "moonbit-community/proton",
     moduleVersion("proton/moon.mod"),
   );
   expectDependency(
     "backend/moon.mod",
-    "justjavac/proton_contract",
+    "moonbit-community/proton_contract",
     moduleVersion("contract/moon.mod"),
   );
   const backend = fs.readFileSync(

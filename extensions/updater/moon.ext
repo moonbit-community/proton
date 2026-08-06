@@ -1,6 +1,6 @@
-id = "justjavac/proton-updater"
+id = "moonbit-community/proton-updater"
 namespace = "updater"
-package = "@justjavac/proton-updater"
+package = "@moonbit-community/proton-updater"
 
 version = "0.1.0"
 display_name = "Updater"

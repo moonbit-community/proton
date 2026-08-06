@@ -1,15 +1,15 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton"
+package "moonbit-community/proton"
 
 import {
-  "justjavac/proton/bootstrap",
-  "justjavac/proton/command",
-  "justjavac/proton/core",
-  "justjavac/proton/extension",
-  "justjavac/proton/manifest",
-  "justjavac/proton/native",
-  "justjavac/proton/updater",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/bootstrap",
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/core",
+  "moonbit-community/proton/extension",
+  "moonbit-community/proton/manifest",
+  "moonbit-community/proton/native",
+  "moonbit-community/proton/updater",
+  "moonbit-community/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
 }
@@ -461,4 +461,3 @@ pub using @native {type WindowSizeHint}
 pub using @native {type WindowState}
 
 // Traits
-

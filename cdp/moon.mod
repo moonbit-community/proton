@@ -1,6 +1,6 @@
-name = "justjavac/cdp"
+name = "moonbit-community/cdp"
 
-version = "0.1.9"
+version = "0.1.14"
 
 readme = "README.mbt.md"
 

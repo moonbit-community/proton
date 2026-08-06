@@ -1,6 +1,6 @@
 # Proton Contract
 
-`justjavac/proton_contract` defines target-neutral typed command and event
+`moonbit-community/proton_contract` defines target-neutral typed command and event
 descriptors shared by Proton frontends and backends.
 
 Application contracts use explicit stable identities:

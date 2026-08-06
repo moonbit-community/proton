@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_ext/metadata_check"
+package "moonbit-community/proton_ext/metadata_check"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton_ext/metadata_check"
 // Type aliases
 
 // Traits
-

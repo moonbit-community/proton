@@ -102,11 +102,12 @@ test "parent directory slug derives from cwd" {
 ///|
 test "explicit title author size and flags override defaults" {
   let options = must_options([
-    "demo", "--title", "Demo App", "--author", "justjavac", "--identifier", "com.justjavac.demo",
-    "--width", "1024", "--height", "720", "--no-check", "--dry-run", "-y",
+    "demo", "--title", "Demo App", "--author", "moonbit-community", "--identifier",
+    "com.justjavac.demo", "--width", "1024", "--height", "720", "--no-check", "--dry-run",
+    "-y",
   ])
   assert_eq(options.title, "Demo App")
-  assert_eq(options.author, "justjavac")
+  assert_eq(options.author, "moonbit-community")
   assert_eq(options.project_name, "demo")
   assert_eq(options.identifier, "com.justjavac.demo")
   assert_eq(options.width, 1024)
@@ -233,17 +234,19 @@ test "file plan contains the exact isomorphic scaffold" {
 test "templates receive final author title and size" {
   let files = must_plan(
     must_options([
-      "demo", "--title", "Demo App", "--author", "justjavac", "--identifier", "com.justjavac.demo",
-      "--width", "1000", "--height", "700",
+      "demo", "--title", "Demo App", "--author", "moonbit-community", "--identifier",
+      "com.justjavac.demo", "--width", "1000", "--height", "700",
     ]),
   )
   guard find_planned_file(files, "shared/moon.mod") is Some(shared_mod) else {
     abort("missing shared/moon.mod")
   }
-  assert_true(shared_mod.contains("name = \"justjavac/demo_shared\""))
+  assert_true(shared_mod.contains("name = \"moonbit-community/demo_shared\""))
   assert_true(
     shared_mod.contains(
-      "\"justjavac/proton_contract@" + default_proton_contract_version + "\"",
+      "\"moonbit-community/proton_contract@" +
+      default_proton_contract_version +
+      "\"",
     ),
   )
   assert_false(shared_mod.contains("supported_targets"))
@@ -254,28 +257,38 @@ test "templates receive final author title and size" {
   guard find_planned_file(files, "frontend/moon.mod") is Some(frontend_mod) else {
     abort("missing frontend/moon.mod")
   }
-  assert_true(frontend_mod.contains("name = \"justjavac/demo_frontend\""))
-  assert_true(frontend_mod.contains("\"justjavac/demo_shared@0.1.0\""))
+  assert_true(
+    frontend_mod.contains("name = \"moonbit-community/demo_frontend\""),
+  )
+  assert_true(frontend_mod.contains("\"moonbit-community/demo_shared@0.1.0\""))
   assert_true(
     frontend_mod.contains(
-      "\"justjavac/proton_client@" + default_proton_client_version + "\"",
+      "\"moonbit-community/proton_client@" +
+      default_proton_client_version +
+      "\"",
     ),
   )
   assert_true(
     frontend_mod.contains(
-      "\"justjavac/proton_rabbita@" + default_proton_rabbita_version + "\"",
+      "\"moonbit-community/proton_rabbita@" +
+      default_proton_rabbita_version +
+      "\"",
     ),
   )
   guard find_planned_file(files, "backend/moon.mod") is Some(backend_mod) else {
     abort("missing backend/moon.mod")
   }
-  assert_true(backend_mod.contains("name = \"justjavac/demo_backend\""))
+  assert_true(backend_mod.contains("name = \"moonbit-community/demo_backend\""))
   assert_true(
-    backend_mod.contains("\"justjavac/proton@" + default_proton_version + "\""),
+    backend_mod.contains(
+      "\"moonbit-community/proton@" + default_proton_version + "\"",
+    ),
   )
   assert_true(
     backend_mod.contains(
-      "\"justjavac/proton_contract@" + default_proton_contract_version + "\"",
+      "\"moonbit-community/proton_contract@" +
+      default_proton_contract_version +
+      "\"",
     ),
   )
   assert_false(backend_mod.contains("bin-deps"))
@@ -361,12 +374,12 @@ test "template render error names template" {
 test "registry dependency failures are classified separately" {
   assert_true(
     moon_check_has_registry_resolution_failure(
-      "Failed to resolve registry dependency `justjavac/proton_contract`",
+      "Failed to resolve registry dependency `moonbit-community/proton_contract`",
     ),
   )
   assert_true(
     moon_check_has_registry_resolution_failure(
-      "failed to resolve registry dependency `justjavac/proton_client`",
+      "failed to resolve registry dependency `moonbit-community/proton_client`",
     ),
   )
   assert_false(
@@ -377,12 +390,28 @@ test "registry dependency failures are classified separately" {
     project="todo",
   )
   let message = error.message()
-  assert_true(message.contains("justjavac/proton_contract@0.1.1"))
-  assert_true(message.contains("justjavac/proton_client@0.1.1"))
-  assert_true(message.contains("justjavac/proton_rabbita@0.1.1"))
-  assert_true(message.contains("justjavac/proton@0.1.14"))
   assert_true(
-    message.contains("justjavac/proton_cli@" + default_proton_cli_version),
+    message.contains(
+      "moonbit-community/proton_contract@" + default_proton_contract_version,
+    ),
+  )
+  assert_true(
+    message.contains(
+      "moonbit-community/proton_client@" + default_proton_client_version,
+    ),
+  )
+  assert_true(
+    message.contains(
+      "moonbit-community/proton_rabbita@" + default_proton_rabbita_version,
+    ),
+  )
+  assert_true(
+    message.contains("moonbit-community/proton@" + default_proton_version),
+  )
+  assert_true(
+    message.contains(
+      "moonbit-community/proton_cli@" + default_proton_cli_version,
+    ),
   )
   assert_true(message.contains("project was rolled back"))
 }

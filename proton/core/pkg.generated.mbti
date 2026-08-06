@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/core"
+package "moonbit-community/proton/core"
 
 import {
-  "justjavac/proton/ipc",
-  "justjavac/proton_contract",
+  "moonbit-community/proton/ipc",
+  "moonbit-community/proton_contract",
   "moonbitlang/async",
   "moonbitlang/async/cond_var",
   "moonbitlang/core/debug",

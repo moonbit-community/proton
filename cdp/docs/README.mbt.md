@@ -1,6 +1,6 @@
-# justjavac/cdp documentation
+# moonbit-community/cdp documentation
 
-`justjavac/cdp` is a MoonBit library for the Chrome DevTools Protocol
+`moonbit-community/cdp` is a MoonBit library for the Chrome DevTools Protocol
 (CDP). It provides direct access to CDP messages with protocol metadata,
 schema-aware validation, generated typed command builders, remote debugging
 discovery, a WebSocket CDP client, target helpers, event buffering, and
@@ -8,16 +8,16 @@ optional local Chrome launch support.
 
 ## Packages
 
-- `justjavac/cdp/protocol`
+- `moonbit-community/cdp/protocol`
   - CDP command, response, event, and error wire structs.
   - Bundled protocol manifest lookup.
   - Schema-aware command, event, and response validation.
   - Remote `/json/protocol` summary and diff helpers.
-- `justjavac/cdp/protocol/typed`
+- `moonbit-community/cdp/protocol/typed`
   - Generated typed parameter structs.
   - Generated command builders for the bundled protocol.
   - Generated event builders and result decoders.
-- `justjavac/cdp/client`
+- `moonbit-community/cdp/client`
   - Remote debugging discovery over `/json/version`, `/json/list`, and
     `/json/protocol`.
   - WebSocket CDP client.

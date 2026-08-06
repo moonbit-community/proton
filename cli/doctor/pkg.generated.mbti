@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton_cli/doctor"
+package "moonbit-community/proton_cli/doctor"
 
 import {
   "moonbitlang/core/debug",
@@ -21,4 +21,3 @@ pub fn DoctorError::message(Self) -> String
 // Type aliases
 
 // Traits
-

@@ -2,8 +2,8 @@ import {
   "moonbit-community/rabbita/cmd",
   "moonbit-community/rabbita/js" @rabbita_js,
   "moonbit-community/rabbita/sub",
-  "justjavac/proton_client",
-  "justjavac/proton_contract",
+  "moonbit-community/proton_client",
+  "moonbit-community/proton_contract",
   "moonbitlang/core/json",
 }
 

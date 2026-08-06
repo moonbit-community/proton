@@ -28,7 +28,7 @@ Darwin) ;;
   ;;
 esac
 
-binary="$repo/_build/native/debug/build/justjavac/proton/e2e/self_update/self_update.exe"
+binary="$repo/_build/native/debug/build/moonbit-community/proton/e2e/self_update/self_update.exe"
 native_dist="${PROTON_NATIVE_DIST:-$repo/native/dist}"
 if [ ! -x "$binary" ]; then
   echo "build it first: moon -C e2e build --target native" >&2

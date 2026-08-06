@@ -175,7 +175,7 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
       PROTON_HELPER_PATH: helperPath(binDir),
     },
     link_configs: [
-      linkConfig(dist, "justjavac/proton/native", cc, rpathOverride),
+      linkConfig(dist, "moonbit-community/proton/native", cc, rpathOverride),
     ],
   };
 }

@@ -1,5 +1,5 @@
 import {
-  "justjavac/proton",
+  "moonbit-community/proton",
   "{{backend_module}}/todo",
 }
 

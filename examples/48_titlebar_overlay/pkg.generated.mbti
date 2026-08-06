@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/examples/48_titlebar_overlay"
+package "moonbit-community/proton/examples/48_titlebar_overlay"
 
 // Values
 
@@ -10,4 +10,3 @@ package "justjavac/proton/examples/48_titlebar_overlay"
 // Type aliases
 
 // Traits
-

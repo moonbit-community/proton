@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "justjavac/proton/bootstrap"
+package "moonbit-community/proton/bootstrap"
 
 import {
-  "justjavac/proton/manifest",
-  "justjavac/proton_config",
+  "moonbit-community/proton/manifest",
+  "moonbit-community/proton_config",
   "moonbitlang/core/debug",
 }
 
