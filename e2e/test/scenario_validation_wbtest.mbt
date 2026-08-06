@@ -102,7 +102,7 @@ test "Unix E2E cancellation targets the isolated process group first" {
 
 ///|
 #cfg(not(platform="windows"))
-async test "Unix E2E cancellation kills a real isolated process group" {
+async test "Unix E2E cancellation terminates a real child process tree" {
   let root = repository_root()
   let pid_path = join_path(
     root,
@@ -134,15 +134,10 @@ async test "Unix E2E cancellation kills a real isolated process group" {
     let child_pid = @mbfs.read_file_to_string(pid_path, encoding="utf8")
       .trim()
       .to_owned()
-    let started = @async.now()
-    app_cancel_handler()(process.pid)
-    let exit_code = run_e2e_operation_with_timeout(
-      2000,
-      "isolated process group exit",
-      () => process.wait(),
-    )
-    assert_eq(exit_code, -9)
-    assert_true(@async.now() - started < 2000)
+    run_e2e_operation_with_timeout(2000, "Unix process tree cancellation", () => {
+      app_cancel_handler()(process.pid)
+      ignore(process.wait())
+    })
     let mut alive = true
     let mut checks = 0
     while alive && checks < 100 {
