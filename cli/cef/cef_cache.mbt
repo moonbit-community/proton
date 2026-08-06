@@ -156,19 +156,6 @@ async fn ensure_cef_cache(
     normalize_cef_runtime_layout(cache_dir)
     return cache_dir
   }
-  let legacy_cache = @fsutil.path_join(root, ".cef-cache")
-  if installed_version(legacy_cache) == name &&
-    installed_checksum(legacy_cache) == sha256 {
-    install_cef_root(
-      extracted_root=legacy_cache,
-      install_dir=cache_dir,
-      name~,
-      sha256~,
-      root~,
-      platform~,
-    )
-    return cache_dir
-  }
   if project_cache != cache_dir &&
     installed_version(project_cache) == name &&
     installed_checksum(project_cache) == sha256 {
