@@ -10,7 +10,7 @@ import {
   "moonbit-community/proton_rsa@0.1.14",
   "moonbitlang/async@0.20.3",
   "moonbitlang/x@0.4.48",
-  "moonbitlang/lexer@0.3.12",
+  "moonbitlang/lexer@0.3.5",
 }
 
 readme = "README.md"
