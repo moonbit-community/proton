@@ -348,6 +348,9 @@ static uint64_t g_next_window_native_id = 1;
 static uint64_t g_next_view_native_id = 1;
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
 static atomic_bool g_external_message_pump_enabled = ATOMIC_VAR_INIT(false);
+// Main-thread only, so a plain bool: set by proton_engine_host_loop_begin and
+// cleared by proton_engine_host_loop_end, both of which refuse other threads.
+static bool g_host_loop_active = false;
 static atomic_llong g_scheduled_pump_deadline_ms = ATOMIC_VAR_INIT(-1);
 static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
@@ -419,7 +422,14 @@ static void proton_engine_teardown_wait_source(void) {
   }
 }
 
+// The source outlives any one CEF lifetime once a host loop owns it, so an
+// existing source on this run loop is reused rather than rebuilt. Rebuilding
+// would drop a signal already latched on it, and a dropped wakeup deadlocks
+// the host.
 static int proton_engine_setup_wait_source(char *error, size_t error_len) {
+  if (g_wait_source != NULL && g_wait_run_loop == CFRunLoopGetCurrent()) {
+    return 1;
+  }
   proton_engine_teardown_wait_source();
   atomic_store_explicit(&g_wait_source_ready_mask, PROTON_WAIT_NONE,
                         memory_order_release);
@@ -513,10 +523,17 @@ static void proton_engine_reset_scheduled_pump(void) {
                         memory_order_release);
 }
 
+// Resets the pump state a CEF lifetime owns. The wait source is not part of
+// that when a host loop is running: it belongs to the thread, is created before
+// the first runtime, and has to survive the last one -- the host keeps polling
+// through its own shutdown, and a torn-down source turns every one of those
+// polls into an error.
 static void proton_engine_reset_external_message_pump(void) {
-  proton_engine_teardown_wait_source();
-  atomic_store_explicit(&g_external_message_pump_enabled, false,
-                        memory_order_release);
+  if (!g_host_loop_active) {
+    proton_engine_teardown_wait_source();
+    atomic_store_explicit(&g_external_message_pump_enabled, false,
+                          memory_order_release);
+  }
   atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
   atomic_store_explicit(&g_wait_source_ready_mask, PROTON_WAIT_NONE,
                         memory_order_release);
@@ -3748,7 +3765,7 @@ int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
                               "the host loop must start on the main thread");
     return PROTON_ERR_WRONG_THREAD;
   }
-  if (g_wait_source != NULL) {
+  if (g_host_loop_active) {
     return PROTON_OK;
   }
   // The wait source is plain CoreFoundation and needs no CEF, so it can exist
@@ -3763,6 +3780,7 @@ int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
                           memory_order_release);
     return PROTON_ERR_PLATFORM;
   }
+  g_host_loop_active = true;
   return PROTON_OK;
 }
 
@@ -3795,6 +3813,7 @@ void proton_engine_host_loop_end(void) {
   if (!pthread_main_np()) {
     return;
   }
+  g_host_loop_active = false;
   proton_engine_teardown_wait_source();
   atomic_store_explicit(&g_external_message_pump_enabled, false,
                         memory_order_release);

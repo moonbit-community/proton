@@ -298,6 +298,24 @@ static char g_proton_engine_locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static volatile LONG64 g_proton_engine_scheduled_pump_delay_ms = -1;
 static volatile LONG g_proton_engine_runtime_wait_log_count = 0;
 static HANDLE g_proton_engine_pump_event = NULL;
+/* Main-thread only, so a plain bool: set by proton_engine_host_loop_begin and
+   cleared by proton_engine_host_loop_end. */
+static bool g_proton_engine_host_loop_active = false;
+
+/* The pump event belongs to the host loop once one is running. It is created
+   before the first runtime and has to survive the last one, because the host
+   keeps polling through its own shutdown and a closed handle would turn every
+   one of those polls into an error. Only a CEF lifetime that created it may
+   close it. */
+static void proton_engine_release_pump_event(void) {
+  if (g_proton_engine_host_loop_active) {
+    return;
+  }
+  if (g_proton_engine_pump_event != NULL) {
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
+  }
+}
 static proton_engine_runtime_t *g_proton_engine_managed_shutdown_runtime = NULL;
 static HANDLE g_proton_engine_managed_shutdown_event = NULL;
 static proton_engine_runtime_t *g_proton_engine_active_runtime = NULL;
@@ -3669,8 +3687,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     cef_string_clear(&settings.resources_dir_path);
     cef_string_clear(&settings.locales_dir_path);
     cef_string_clear(&settings.root_cache_path);
-    CloseHandle(g_proton_engine_pump_event);
-    g_proton_engine_pump_event = NULL;
+    proton_engine_release_pump_event();
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
@@ -3684,8 +3701,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (!proton_engine_register_scheme_factory()) {
     proton_engine_cef_shutdown();
     g_proton_cef_runtime_active = 0;
-    CloseHandle(g_proton_engine_pump_event);
-    g_proton_engine_pump_event = NULL;
+    proton_engine_release_pump_event();
     proton_engine_set_message(error, error_len,
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
@@ -3700,8 +3716,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (runtime == NULL) {
     proton_engine_cef_shutdown();
     g_proton_cef_runtime_active = 0;
-    CloseHandle(g_proton_engine_pump_event);
-    g_proton_engine_pump_event = NULL;
+    proton_engine_release_pump_event();
     proton_engine_set_message(error, error_len,
                               "failed to allocate runtime state");
     return PROTON_ERR_ENGINE;
@@ -3722,8 +3737,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     free(runtime);
     proton_engine_cef_shutdown();
     g_proton_cef_runtime_active = 0;
-    CloseHandle(g_proton_engine_pump_event);
-    g_proton_engine_pump_event = NULL;
+    proton_engine_release_pump_event();
     proton_engine_set_message(error, error_len,
                               "failed to create bridge wake event");
     return PROTON_ERR_PLATFORM;
@@ -3767,10 +3781,7 @@ static void proton_engine_dispose_runtime_state(
     DeleteCriticalSection(&runtime->wakeup_lock);
     runtime->wakeup_lock_initialized = 0;
   }
-  if (g_proton_engine_pump_event != NULL) {
-    CloseHandle(g_proton_engine_pump_event);
-    g_proton_engine_pump_event = NULL;
-  }
+  proton_engine_release_pump_event();
   proton_engine_reset_scheduled_pump();
   if (g_proton_engine_active_runtime == runtime) {
     g_proton_engine_active_runtime = NULL;
@@ -4024,6 +4035,7 @@ int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
       return PROTON_ERR_PLATFORM;
     }
   }
+  g_proton_engine_host_loop_active = true;
   return PROTON_OK;
 }
 
@@ -4056,10 +4068,8 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
 }
 
 void proton_engine_host_loop_end(void) {
-  if (g_proton_engine_pump_event != NULL) {
-    CloseHandle(g_proton_engine_pump_event);
-    g_proton_engine_pump_event = NULL;
-  }
+  g_proton_engine_host_loop_active = false;
+  proton_engine_release_pump_event();
 }
 
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
