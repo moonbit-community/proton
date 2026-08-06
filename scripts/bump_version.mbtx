@@ -1,0 +1,169 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/moon_config@0.3.5",
+  "moonbitlang/x@0.4.43/sys",
+}
+
+// TODO: Upgrade moon_config after its latest lexer stops overflowing the
+// default WASM stack while parsing moon.work.
+
+struct ModuleDocument {
+  path : String
+  source : String
+  ast : @moon_config.Ast
+}
+
+fn fail(message : String) -> Unit {
+  println("error: " + message)
+  @sys.exit(2)
+}
+
+fn config_field(ast : @moon_config.Ast, name : String) -> @moon_config.Ast? {
+  guard ast is @moon_config.Ast::Obj(fields, ..) else { return None }
+  for field in fields {
+    let (key, value) = field
+    guard key == name else { continue }
+    return Some(value)
+  }
+  None
+}
+
+fn bump_version(version : String, kind : String) -> String? {
+  let parts : Array[StringView] = version.split(".").collect()
+  guard parts.length() == 3 else { return None }
+  let major = @string.parse_int(parts[0]) catch { _ => return None }
+  let minor = @string.parse_int(parts[1]) catch { _ => return None }
+  let patch = @string.parse_int(parts[2]) catch { _ => return None }
+  match kind {
+    "patch" => Some("\{major}.\{minor}.\{patch + 1}")
+    "minor" => Some("\{major}.\{minor + 1}.0")
+    "major" => Some("\{major + 1}.0.0")
+    _ => return None
+  }
+}
+
+fn rewrite_manifest(
+  document : ModuleDocument,
+  module_names : Array[String],
+  version : String,
+) -> String? {
+  guard document.ast is @moon_config.Ast::Obj(fields, ..) else { return None }
+  let edits : Array[(Int, Int, String)] = []
+  for field in fields {
+    let (key, value) = field
+    if key == "version" {
+      guard value is @moon_config.Ast::Str(_, loc~) else { return None }
+      edits.push((loc.start.cnum, loc.end.cnum, "\"" + version + "\""))
+      continue
+    }
+    guard key == "deps" else { continue }
+    guard value is @moon_config.Ast::Obj(dependencies, ..) else { return None }
+    for dependency in dependencies {
+      let (name, dependency_version) = dependency
+      guard module_names.contains(name) else { continue }
+      guard dependency_version is @moon_config.Ast::Str(_, loc~) else {
+        return None
+      }
+      edits.push((
+        loc.start.cnum,
+        loc.end.cnum,
+        "\"" + name + "@" + version + "\"",
+      ))
+    }
+  }
+  guard edits.length() > 0 else { return None }
+  let mut result = document.source
+  let mut index = edits.length()
+  while index > 0 {
+    index -= 1
+    let (start, end, replacement) = edits[index]
+    result = result.unsafe_substring(start=0, end=start) +
+      replacement +
+      result.unsafe_substring(start=end, end=result.length())
+  }
+  Some(result)
+}
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 2 && ["patch", "minor", "major"].contains(args[1]) else {
+    println("usage: moon run scripts/bump_version.mbtx -- <patch|minor|major>")
+    @sys.exit(2)
+    return
+  }
+
+  let work_source = @fs.read_file("moon.work").text()
+  let (work_ast, work_reports) = @moon_config.parse_moon_work(
+    work_source,
+    name="moon.work",
+  )
+  guard work_reports.length() == 0 else {
+    fail("invalid moon.work")
+    return
+  }
+  guard config_field(work_ast, "members") is Some(
+    @moon_config.Ast::Arr(members, ..),
+  ) else {
+    fail("moon.work is missing members")
+    return
+  }
+
+  let documents : Array[ModuleDocument] = []
+  let module_names : Array[String] = []
+  let mut current_version : String? = None
+  for item in members {
+    guard item is @moon_config.Ast::Str(member_path, ..) else {
+      fail("moon.work contains a non-string member")
+      return
+    }
+    let path = member_path + "/moon.mod"
+    let source = @fs.read_file(path).text()
+    let (ast, _) = @moon_config.parse_moon_mod(source, name=path)
+    guard config_field(ast, "name") is Some(@moon_config.Ast::Str(name, ..)) else {
+      fail(path + " is missing name")
+      return
+    }
+    guard config_field(ast, "version") is Some(
+      @moon_config.Ast::Str(version, ..),
+    ) else {
+      fail(path + " is missing version")
+      return
+    }
+    match current_version {
+      None => current_version = Some(version)
+      Some(expected) => {
+        guard version == expected else {
+          fail(path + " has version " + version + ", expected " + expected)
+          return
+        }
+      }
+    }
+    documents.push({ path, source, ast })
+    module_names.push(name)
+  }
+
+  guard current_version is Some(current_version) else {
+    fail("moon.work does not contain any modules")
+    return
+  }
+  guard bump_version(current_version, args[1]) is Some(new_version) else {
+    fail("invalid version " + current_version)
+    return
+  }
+  let writes : Array[(String, String)] = []
+  for document in documents {
+    guard rewrite_manifest(document, module_names, new_version) is Some(content) else {
+      fail("could not update " + document.path)
+      return
+    }
+    writes.push((document.path, content))
+  }
+  for write in writes {
+    let (path, content) = write
+    @fs.write_file(path, content, create_mode=CreateOrTruncate)
+  }
+  println("bumped workspace modules from " + current_version + " to " + new_version)
+}

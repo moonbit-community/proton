@@ -112,34 +112,27 @@ native checks before handing off larger refactors.
 - Published `proton` and `proton_ext` packages must not require repository-local `dev_build` or `rule` commands. Generated `.mbt` files are committed and consumed directly by downstream users.
 - When changing extension command annotations, `moon.ext` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
 - Before publishing `proton` or `proton_ext`, run `node scripts/verify_generated.mjs`; it regenerates outputs in a temp directory and fails if committed generated files are stale.
-- Keep release validation for standalone users explicit: run `moon publish --dry-run` in each published module, and smoke-check an independent app with remote `moonbit-community/proton` and `moonbit-community/proton_ext` dependencies after publishing.
+- Publish releases only through the manually dispatched
+  `.github/workflows/publish.yml` workflow on `main`. The workflow owns the
+  Mooncakes credentials and publishes modules in dependency order, refreshing
+  the registry with `moon update` after every successful publication.
+- Keep release validation for standalone users explicit: smoke-check an
+  independent app with remote `moonbit-community/proton` and
+  `moonbit-community/proton_ext` dependencies after publishing.
 - Keep `examples/` and `e2e/` out of release publishing unless explicitly requested; they are validation/demo modules, not release packages.
 
 ### Release Checklist
 
-- Publish the dependency chain in this order: `moonbit-community/proton_config`,
-  `moonbit-community/proton_contract`, `moonbit-community/proton_client`,
-  `moonbit-community/proton_rabbita`, `moonbit-community/proton`, then
-  `moonbit-community/proton_cli`. For the currently prepared release, the chain is
-  `proton_config 0.1.8` -> `proton_contract 0.1.1` ->
-  `proton_client 0.1.1` -> `proton_rabbita 0.1.1` -> `proton 0.1.14` ->
-  `proton_cli 0.1.12`.
-- The binding modules under `sys/` (including `moonbit-community/ffi`) keep their
-  upstream module names and are republished from this repository when their
-  sources change. Since the pinned versions already exist on Mooncakes, there
-  is no hard publish-order requirement for them; publish a bumped `sys/<pkg>`
-  module before any `moonbit-community/proton_ext` release that raises its
-  requirement, and publish a bumped `moonbit-community/ffi` before any module whose
-  requirement on it rises.
-- Before publishing, keep these values aligned:
-  - `config/moon.mod` version;
-  - the `moonbit-community/proton_config@...` requirements in `proton/moon.mod` and
-    `cli/moon.mod`;
-  - `contract/moon.mod`, `client/moon.mod`, and `rabbita/moon.mod`, including
-    their dependency versions;
-  - `proton/moon.mod`, `proton/prebuilt/*/manifest.json`, and every Proton
-    dependency version embedded in `cli/new/templates.mbt`;
-  - `cli/moon.mod` and `cli/main.mbt`'s `cli_current_version`.
+- `.github/workflows/publish.yml` publishes the dependency chain in this order:
+  `proton_config`, `proton_contract`, `proton_rsa`, `proton_updater`, the seven
+  `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
+  finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
+  published.
+- All modules in `moon.work` use one lockstep version. Prepare a release only
+  through `moon run scripts/bump_version.mbtx -- patch`, `minor`, or
+  `major`; do not edit individual module versions by hand. The script discovers
+  modules through `moon.work`, updates their versions and internal requirements,
+  and refuses to run if any workspace module has drifted from the shared version.
 - Run the release checks before the first publish:
 
   ```sh
@@ -155,36 +148,12 @@ native checks before handing off larger refactors.
   moon -C proton check --target native --diagnostic-limit 80
   ```
 
-- Dry-run and publish each module separately, waiting until the new version is
-  visible in the Mooncakes manifest before moving to its dependent module:
-
-  ```sh
-  moon -C config publish --dry-run
-  moon -C config publish
-
-  moon -C contract publish --dry-run
-  moon -C contract publish
-
-  moon -C client publish --dry-run
-  moon -C client publish
-
-  moon -C rabbita publish --dry-run
-  moon -C rabbita publish
-
-  moon -C proton publish --dry-run
-  moon -C proton publish
-
-  moon -C cli publish --dry-run
-  moon -C cli publish
-  ```
+- After the release commit reaches `main`, dispatch the `publish-packages`
+  workflow. Do not publish these modules from a contributor workstation.
 
 - Never publish `proton_cli` while the version referenced by the `proton new`
   template is absent from Mooncakes. A template dependency must be published
   and independently resolvable before the CLI release becomes visible.
-- Some Moon CLI versions print a final generic failure after a successful
-  dry-run response. Treat the dry run as accepted only when the server reports
-  `202 Accepted` and explicitly says no changes were made. Compilation,
-  dependency-resolution, validation, or non-202 server errors are failures.
 - After all packages are visible, install the registry CLI and run a smoke test
   from a temporary directory outside this repository and outside any parent
   `moon.work`. Do not use symlinks, local module members, or source overrides:

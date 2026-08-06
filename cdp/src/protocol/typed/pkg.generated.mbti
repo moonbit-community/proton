@@ -13373,4 +13373,3 @@ pub fn WebAuthnVirtualAuthenticatorOptions::to_json(Self) -> Json
 // Type aliases
 
 // Traits
-

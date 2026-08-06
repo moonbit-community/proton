@@ -2,16 +2,16 @@
 let default_proton_version = "0.1.14"
 
 ///|
-let default_proton_cli_version = "0.1.12"
+let default_proton_cli_version = "0.1.14"
 
 ///|
-let default_proton_contract_version = "0.1.1"
+let default_proton_contract_version = "0.1.14"
 
 ///|
-let default_proton_client_version = "0.1.1"
+let default_proton_client_version = "0.1.14"
 
 ///|
-let default_proton_rabbita_version = "0.1.1"
+let default_proton_rabbita_version = "0.1.14"
 
 ///|
 let default_rabbita_version = "0.14.1"

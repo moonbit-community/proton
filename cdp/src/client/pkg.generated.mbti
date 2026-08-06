@@ -232,4 +232,3 @@ pub(all) struct DiscoveryErrorDiagnostic {
 // Type aliases
 
 // Traits
-

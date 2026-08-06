@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_config"
 
-version = "0.1.8"
+version = "0.1.14"
 
 import {
   "moonbitlang/lexer@0.3.12",

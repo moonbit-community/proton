@@ -1,6 +1,6 @@
 name = "moonbit-community/clipboard"
 
-version = "0.1.5"
+version = "0.1.14"
 
 readme = "README.mbt.md"
 

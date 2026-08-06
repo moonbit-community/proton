@@ -1,9 +1,9 @@
 name = "moonbit-community/microphone"
 
-version = "0.1.3"
+version = "0.1.14"
 
 import {
-  "moonbit-community/ffi@0.2.3",
+  "moonbit-community/ffi@0.1.14",
 }
 
 readme = "README.mbt.md"

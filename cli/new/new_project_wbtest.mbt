@@ -390,10 +390,24 @@ test "registry dependency failures are classified separately" {
     project="todo",
   )
   let message = error.message()
-  assert_true(message.contains("moonbit-community/proton_contract@0.1.1"))
-  assert_true(message.contains("moonbit-community/proton_client@0.1.1"))
-  assert_true(message.contains("moonbit-community/proton_rabbita@0.1.1"))
-  assert_true(message.contains("moonbit-community/proton@0.1.14"))
+  assert_true(
+    message.contains(
+      "moonbit-community/proton_contract@" + default_proton_contract_version,
+    ),
+  )
+  assert_true(
+    message.contains(
+      "moonbit-community/proton_client@" + default_proton_client_version,
+    ),
+  )
+  assert_true(
+    message.contains(
+      "moonbit-community/proton_rabbita@" + default_proton_rabbita_version,
+    ),
+  )
+  assert_true(
+    message.contains("moonbit-community/proton@" + default_proton_version),
+  )
   assert_true(
     message.contains(
       "moonbit-community/proton_cli@" + default_proton_cli_version,

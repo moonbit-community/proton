@@ -47,6 +47,20 @@ CLI's embedded version string.
 node ./scripts/verify_release_metadata.mjs
 ```
 
+## `bump_version.mbtx`
+
+Bumps every module in `moon.work` to one lockstep release version. The script
+refuses to run when module versions have drifted and updates internal dependency
+requirements between workspace modules. It runs on MoonBit's default WASM
+target, uses `moonbitlang/async` for filesystem operations, and parses workspace
+manifests through `moonbitlang/moon_config`.
+
+```sh
+moon run scripts/bump_version.mbtx -- patch
+moon run scripts/bump_version.mbtx -- minor
+moon run scripts/bump_version.mbtx -- major
+```
+
 ## `verify_prebuilt_abi.mjs`
 
 Checks every shipped Proton prebuilt manifest, declared artifact, and public
