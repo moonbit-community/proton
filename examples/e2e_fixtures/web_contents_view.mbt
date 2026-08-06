@@ -165,6 +165,7 @@ async fn run_web_contents_view_pump(
   }
   defer wakeup.close(runtime)
   let view_events : Array[String] = []
+  let mut right_navigated = false
   let mut controls_sent = false
   let mut closed = false
   while !closed {
@@ -179,9 +180,17 @@ async fn run_web_contents_view_pump(
           }
           match event.view_event() {
             Some(info) => {
-              if !controls_sent && event.event_type() == "view_navigated" {
-                // The view browser is live by now; exercise eval and browser
-                // commands deterministically.
+              let is_right = event.view_id() == Some(right.id())
+              if is_right && event.event_type() == "view_navigated" {
+                right_navigated = true
+              }
+              if !controls_sent &&
+                right_navigated &&
+                is_right &&
+                event.event_type() == "view_loading_changed" &&
+                info.is_loading == Some(false) {
+                // Wait for the right view's own navigation to finish before
+                // exercising commands that can interrupt an active load.
                 controls_sent = true
                 ignore(
                   wcv_native_result("eval right view", () => {
