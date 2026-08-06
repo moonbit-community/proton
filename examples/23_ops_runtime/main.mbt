@@ -1,6 +1,5 @@
 ///|
 async fn main {
-  @proton.install_event_loop()
   let app = @proton.html(
       "MoonBit Ops Runtime",
       resource,

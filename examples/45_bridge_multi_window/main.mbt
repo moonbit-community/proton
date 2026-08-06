@@ -71,7 +71,6 @@ fn page_html(label : String) -> String {
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.html(
     "Bridge Multi A",
     page_html("A"),

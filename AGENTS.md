@@ -229,11 +229,13 @@ native checks before handing off larger refactors.
 - Do not reintroduce local WebSocket IPC as an app runtime path. DevTools test
   automation may use WebSocket to talk to Chromium, but Proton app IPC belongs
   to the native DLL bridge route.
-- Keep the root facade wake-driven through Proton's external event loop.
-  `@proton.install_event_loop` hands it to `moonbitlang/async`, and
-  `proton_host_loop_poll` is the only thing that advances the platform while it
-  is running: every native notification reaches MoonBit as a scheduler wakeup
-  raised from that poll. Do not add fixed-sleep polling as a fallback, and do
+- Keep the root facade wake-driven through Proton's external event loop. The
+  facade's `fn init` hands it to `moonbitlang/async` -- that is the only place
+  guaranteed to run before async starts its loop, and installing afterwards
+  aborts -- and `proton_host_loop_poll` is the only thing that advances the
+  platform while it is running: every native notification reaches MoonBit as a
+  scheduler wakeup raised from that poll. Do not require application code to
+  install the loop itself, do not add fixed-sleep polling as a fallback, and do
   not move application code back onto a thread of its own.
 - The `e2e/` module is a workspace member. Do not make scripts mutate
   `moon.work` at runtime to add it.

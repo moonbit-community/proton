@@ -33,8 +33,6 @@ pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
-pub fn install_event_loop() -> Unit raise AppRunError
-
 pub fn last_error_message() -> String
 
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError

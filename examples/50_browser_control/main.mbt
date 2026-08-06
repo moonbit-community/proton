@@ -26,7 +26,6 @@ let page =
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.html("Browser Control", page, debug=true)
   .on_navigation_request(fn(_browser, request) {
     println("navigation: \{request.http_method} \{request.url}")

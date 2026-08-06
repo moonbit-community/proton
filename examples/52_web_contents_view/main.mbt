@@ -171,7 +171,6 @@ fn open_panel(window : @proton.WindowHandle) -> Unit {
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.asset(
     "Web Contents View Browser",
     "52_web_contents_view/app/index.html",

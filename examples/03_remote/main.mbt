@@ -1,6 +1,5 @@
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.url(
     "Remote URL",
     "https://example.com/",

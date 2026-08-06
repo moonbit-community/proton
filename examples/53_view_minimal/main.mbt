@@ -17,7 +17,6 @@ let sidebar =
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.html("Minimal View", sidebar, width=1120, height=720, debug=true)
   .with_view(
     "browser",

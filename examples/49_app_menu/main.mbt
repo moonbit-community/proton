@@ -15,7 +15,6 @@ fn menu_bar() -> @proton.MenuBar {
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   let html =
     #|<!doctype html>
     #|<html>

@@ -237,17 +237,11 @@ test "app run errors retain typed bridge diagnostics" {
 }
 
 ///|
-async test "app run requires Proton's event loop" {
-  let mut rejected = false
-  html("Test", "<html></html>").run() catch {
-    RunnerError(message) => {
-      rejected = true
-      assert_true(message.contains("@proton.install_event_loop"))
-      assert_true(message.contains("async fn main"))
-    }
-    error => fail("expected runner error, got " + @debug.render(Repr(error)))
-  }
-  assert_true(rejected)
+/// `fn init` installing the loop is what lets an application be a plain
+/// `async fn main`. If it ever stops running, nothing else fails until
+/// `App::run` refuses to start, so assert it directly.
+test "the event loop is installed during process initialization" {
+  require_event_loop()
 }
 
 ///|
