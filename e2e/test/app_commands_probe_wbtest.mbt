@@ -499,9 +499,7 @@ async fn connect_page_matching_expression(
 ) -> @client.CdpClient {
   let mut elapsed = 0
   while elapsed <= timeout {
-    let targets = @client.discover_targets(cdp_target_from(target)) catch {
-      _ => []
-    }
+    let targets = discover_targets_for_poll(cdp_target_from(target))
     for info in targets {
       if info.target_type == "page" &&
         (

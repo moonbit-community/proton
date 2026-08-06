@@ -139,6 +139,7 @@ async fn run_dev_extension_command(
       output_path,
       create_mode=@fs.CreateOrTruncate,
     )
+    let (program, args) = isolated_app_command(program, args)
     let process = @process.spawn(
       group,
       program,
@@ -269,9 +270,10 @@ async fn spawn_dev_extension_cli_app(
     "--timeout-ms",
     timeout_ms().to_string(),
   ]
+  let (program, args) = isolated_app_command("moon", args)
   let process = @process.spawn(
     group,
-    "moon",
+    program,
     args,
     cwd=root,
     extra_env=dev_extension_host_env(root, cdp_port),
@@ -301,21 +303,22 @@ async fn spawn_dev_extension_production_app(
     output_path,
     create_mode=@fs.CreateOrTruncate,
   )
+  let (program, args) = isolated_app_command("moon", [
+    "-C",
+    join_path(root, "examples"),
+    "--target-dir",
+    dev_extension_example_target_dir(root, cdp_port),
+    "run",
+    "47_dev_extension_js",
+    "--target",
+    "native",
+    "--diagnostic-limit",
+    "120",
+  ])
   let process = @process.spawn(
     group,
-    "moon",
-    [
-      "-C",
-      join_path(root, "examples"),
-      "--target-dir",
-      dev_extension_example_target_dir(root, cdp_port),
-      "run",
-      "47_dev_extension_js",
-      "--target",
-      "native",
-      "--diagnostic-limit",
-      "120",
-    ],
+    program,
+    args,
     cwd=root,
     extra_env=dev_extension_runtime_env(root, cdp_port),
     stdout=output,
@@ -394,7 +397,9 @@ async fn run_dev_extension_dev_probe_once(
       remove_dev_extension_tree(cli_target_dir)
       remove_dev_extension_tree(app_target_dir)
     }
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    ignore(
+      wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
+    )
     run_dev_extension_page_probe(app, target, frontend_url, root, timeout)
     match app_exit_code(app.process) {
       Some(code) =>
@@ -431,7 +436,9 @@ async fn run_dev_extension_production_probe_once(
       }
       remove_dev_extension_tree(example_target_dir)
     }
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    ignore(
+      wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
+    )
     run_dev_extension_production_page_probe(app, target, timeout)
     match app_exit_code(app.process) {
       Some(code) =>
@@ -464,9 +471,17 @@ async fn run_dev_extension_scenario_once(root : String, timeout : Int) -> Unit {
   }
   ensure_dev_extension_frontend(root, timeout)
   let frontend_port = choose_cdp_port()
-  run_dev_extension_dev_probe_once(root, frontend_port, timeout)
+  run_e2e_operation_with_timeout(
+    timeout,
+    "47_dev_extension_js development probe",
+    () => run_dev_extension_dev_probe_once(root, frontend_port, timeout),
+  )
   build_dev_extension_frontend(root, timeout)
-  run_dev_extension_production_probe_once(root, timeout)
+  run_e2e_operation_with_timeout(
+    timeout,
+    "47_dev_extension_js production probe",
+    () => run_dev_extension_production_probe_once(root, timeout),
+  )
 }
 
 ///|

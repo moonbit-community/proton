@@ -1,7 +1,4 @@
 ///|
-let cdp_start_poll_timeout_ms = 250
-
-///|
 let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
 
 ///|
@@ -9,6 +6,23 @@ let app_child_test_selector = "scenario_app_wbtest.mbt:0-1"
 
 ///|
 let scenario_run_mutex : @async.Mutex = @async.Mutex::Mutex()
+
+///|
+priv suberror E2eOperationError {
+  TimedOut(description~ : String, timeout_ms~ : Int)
+} derive(Debug)
+
+///|
+async fn[X] run_e2e_operation_with_timeout(
+  timeout : Int,
+  description : String,
+  operation : async () -> X,
+) -> X {
+  match @async.with_timeout_opt(timeout, operation) {
+    Some(result) => result
+    None => raise E2eOperationError::TimedOut(description~, timeout_ms=timeout)
+  }
+}
 
 ///|
 struct SpawnedScenarioApp {
@@ -278,23 +292,52 @@ fn scenario_app_command(root : String) -> (String, Array[String]) raise {
     // valid for the current process but not a standalone execve target.  Ask
     // Moon to run exactly the child test in an isolated, serially reused build
     // directory on Unix instead of attempting to re-exec the parent binary.
-    (
-      "moon",
-      [
-        "--target-dir",
-        join_path(root, "target/proton-e2e-app-child"),
-        "-C",
-        root,
-        "test",
-        "e2e/test/scenario_app_wbtest.mbt",
-        "--target",
-        "native",
-        "--no-parallelize",
-        "--diagnostic-limit",
-        "80",
-      ],
-    )
+    isolated_app_command("moon", [
+      "--target-dir",
+      join_path(root, "target/proton-e2e-app-child"),
+      "-C",
+      root,
+      "test",
+      "e2e/test/scenario_app_wbtest.mbt",
+      "--target",
+      "native",
+      "--no-parallelize",
+      "--diagnostic-limit",
+      "80",
+    ])
   }
+}
+
+///|
+fn isolated_app_command(
+  program : String,
+  args : Array[String],
+) -> (String, Array[String]) {
+  if @path.sep == '\\' {
+    (program, args)
+  } else {
+    let command_args = [
+      "-c",
+      unix_app_session_script(),
+      "proton-e2e-session",
+      program,
+    ]
+    for arg in args {
+      command_args.push(arg)
+    }
+    ("sh", command_args)
+  }
+}
+
+///|
+fn unix_app_session_script() -> String {
+  (
+    #|if command -v setsid >/dev/null 2>&1; then
+    #|  exec setsid "$@"
+    #|else
+    #|  exec "$@"
+    #|fi
+  )
 }
 
 ///|
@@ -324,18 +367,21 @@ fn app_cancel_handler() -> @process.CancellationHandler {
     })
   } else {
     @process.CancellationHandler(async fn(pid) {
-      terminate_unix_app_tree(pid, "TERM")
-      @async.sleep(1000)
-      terminate_unix_app_tree(pid, "KILL")
+      if kill_isolated_unix_app_group(pid) != 0 {
+        terminate_unix_app_tree(pid, "KILL")
+      }
     })
   }
 }
 
 ///|
+extern "C" fn kill_isolated_unix_app_group(pid : Int) -> Int = "proton_e2e_kill_isolated_process_group"
+
+///|
 async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
   ignore(
     @process.run(
-      "sh",
+      "/bin/sh",
       [
         "-c",
         unix_app_tree_kill_script(),
@@ -343,6 +389,7 @@ async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
         pid.to_string(),
         signal,
       ],
+      inherit_env=false,
       no_console_window=true,
     ),
   )
@@ -351,6 +398,8 @@ async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
 ///|
 fn unix_app_tree_kill_script() -> String {
   (
+    #|PATH=/usr/bin:/bin:/usr/sbin:/sbin
+    #|export PATH
     #|kill_tree() {
     #|  parent="$1"
     #|  signal="$2"
@@ -361,7 +410,15 @@ fn unix_app_tree_kill_script() -> String {
     #|  fi
     #|  kill "-$signal" "$parent" 2>/dev/null || true
     #|}
-    #|kill_tree "$1" "$2"
+    #|parent="$1"
+    #|signal="$2"
+    #|parent_group=$(ps -o pgid= -p "$parent" 2>/dev/null | tr -d '[:space:]')
+    #|caller_group=$(ps -o pgid= -p "$PPID" 2>/dev/null | tr -d '[:space:]')
+    #|if [ -n "$parent_group" ] && [ "$parent_group" != "$caller_group" ]; then
+    #|  kill "-$signal" -- "-$parent_group" 2>/dev/null || true
+    #|else
+    #|  kill_tree "$parent" "$signal"
+    #|fi
   )
 }
 
@@ -370,7 +427,7 @@ async fn wait_for_spawned_app_cdp(
   app : SpawnedScenarioApp,
   endpoint : String,
   timeout : Int,
-) -> Unit {
+) -> String {
   let mut elapsed = 0
   let mut browser_ready = false
   while elapsed <= timeout {
@@ -383,32 +440,32 @@ async fn wait_for_spawned_app_cdp(
         )
       None => ()
     }
-    let endpoint_ready = try {
-      ignore(
-        @client.wait_for_browser_endpoint(
-          endpoint,
-          timeout_ms=cdp_start_poll_timeout_ms,
-        ),
-      )
-      true
-    } catch {
-      _ => false
+    let browser_web_socket_url = Some(
+      run_e2e_operation_with_timeout(
+        cdp_start_poll_timeout_ms,
+        "CDP browser endpoint probe",
+        () => {
+          @client.wait_for_browser_endpoint(
+            endpoint,
+            timeout_ms=cdp_start_poll_timeout_ms,
+          )
+        },
+      ),
+    ) catch {
+      _ => None
     }
-    if endpoint_ready {
-      browser_ready = true
-      let page_ready = try {
-        let targets = @client.discover_targets(cdp_target_from(endpoint))
-        targets.any(info => info.target_type == "page")
-      } catch {
-        _ => false
+    match browser_web_socket_url {
+      Some(browser_web_socket_url) => {
+        browser_ready = true
+        let targets = discover_targets_for_poll(cdp_target_from(endpoint))
+        let page_ready = targets.any(info => info.target_type == "page")
+        if page_ready {
+          return browser_web_socket_url
+        }
+        @async.sleep(100)
+        elapsed = elapsed + 100
       }
-      if page_ready {
-        return
-      }
-      @async.sleep(100)
-      elapsed = elapsed + 100
-    } else {
-      elapsed = elapsed + cdp_start_poll_timeout_ms
+      None => elapsed = elapsed + cdp_start_poll_timeout_ms
     }
   }
   if browser_ready {
@@ -573,11 +630,17 @@ async fn run_scenario_probe_once(
     let app = spawn_scenario_app(group, root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    let browser_web_socket_url = wait_for_spawned_app_cdp(
+      app,
+      cdp_http_endpoint_from(target),
+      timeout,
+    )
     let shutdown = if name == "45_bridge_multi_window" {
       run_multi_window_scenario_probe(app, target, timeout)
     } else if name == "52_web_contents_view" {
-      run_web_contents_view_scenario_probe(app, target, timeout)
+      run_web_contents_view_scenario_probe(
+        app, target, browser_web_socket_url, timeout,
+      )
     } else {
       if name == "41_app_commands" {
         run_app_commands_full_probe(root, target, timeout, app.native_log_path)
@@ -621,10 +684,15 @@ async fn run_scenario_probe_with_retry(
   name : String,
   timeout : Int,
 ) -> Unit {
+  let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
-      run_scenario_probe_once(root, name, timeout)
+      run_e2e_operation_with_timeout(
+        operation_timeout,
+        "E2E scenario " + name,
+        () => run_scenario_probe_once(root, name, timeout),
+      )
       true
     } catch {
       error => {
@@ -644,8 +712,20 @@ async fn run_scenario_probe_with_retry(
 }
 
 ///|
+fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
+  if name == "52_web_contents_view" {
+    // The view probe has separate startup, target, page, paint, and shutdown
+    // waits.  Its outer guard must cover more than one phase-sized budget.
+    timeout * 2
+  } else {
+    timeout
+  }
+}
+
+///|
 fn retryable_scenario_error(error : Error) -> Bool {
   match error {
+    E2eOperationError::TimedOut(..) => true
     @io.ReaderClosed => true
     _ => retryable_startup_error(error)
   }

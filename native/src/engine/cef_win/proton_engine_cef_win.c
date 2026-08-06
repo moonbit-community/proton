@@ -1899,13 +1899,9 @@ static void proton_engine_on_before_command_line_processing(
   // on the CPU in the browser process, so no GPU process is needed for
   // window display.
   proton_engine_append_switch(command_line, "disable-gpu-compositing");
-  // Recent CEF still spawns a GPU process even with both disable switches;
-  // when that process dies (display-limited, hook-injecting, or
-  // exclusive-fullscreen D3D hosts) the browser FATALs on "GPU process
-  // isn't usable". Hosting the GPU service in-process removes the separate
-  // process entirely, matching the Linux engine. GPU rendering stays
-  // disabled either way.
-  proton_engine_append_switch(command_line, "in-process-gpu");
+  // Keep the GPU service out of the browser process. With CEF 147,
+  // --in-process-gpu can intermittently block cef_shutdown; CI selects
+  // SwiftShader through ANGLE_DEFAULT_PLATFORM when hardware GPU is absent.
   proton_engine_append_switch(command_line, "disable-background-networking");
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
@@ -2152,12 +2148,6 @@ static int proton_engine_utf8_to_wide(const char *value,
     return 0;
   }
   return written;
-}
-
-static void proton_engine_browser_add_ref(cef_browser_t *browser) {
-  if (browser != NULL) {
-    browser->base.add_ref((cef_base_ref_counted_t *)browser);
-  }
 }
 
 static void proton_engine_browser_release(cef_browser_t *browser) {
@@ -3001,6 +2991,7 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   proton_engine_view_t *view =
       proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
   if (view != NULL) {
+    proton_engine_runtime_t *runtime = view->window->runtime;
     proton_engine_debug_log("view_browser_before_close browser=%d",
                             view->browser_id);
     view->browser_before_close_seen = 1;
@@ -3015,8 +3006,7 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     // be reclaimed with its owning window.
     view->finalize_after_browser_close = 1;
     proton_engine_view_finalize_if_ready(view);
-    proton_engine_signal_wait_source(view->window->runtime,
-                                     PROTON_WAIT_PLATFORM);
+    proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
     return;
   }
   proton_engine_window_t *window =
@@ -3446,7 +3436,6 @@ static int32_t proton_engine_window_create_browser(
     proton_engine_set_message(error, error_len, "browser creation failed");
     return PROTON_ERR_ENGINE;
   }
-  proton_engine_browser_add_ref(window->browser);
   window->browser_id = proton_engine_browser_id(window->browser);
   proton_engine_verbose_log(
       "create_browser thread=%lu id=%d initial_url=%s size=%dx%d",
@@ -6001,7 +5990,6 @@ static int32_t proton_engine_view_create_browser(
     proton_engine_set_message(error, error_len, "view browser creation failed");
     return PROTON_ERR_ENGINE;
   }
-  proton_engine_browser_add_ref(view->browser);
   view->browser_id = proton_engine_browser_id(view->browser);
   cef_browser_host_t *host = view->browser->get_host(view->browser);
   if (host != NULL) {

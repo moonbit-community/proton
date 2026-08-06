@@ -73,7 +73,7 @@ async fn wait_for_multi_window_targets(
   let cdp_target = cdp_target_from(target)
   let mut elapsed = 0
   while elapsed <= timeout {
-    let targets = @client.discover_targets(cdp_target) catch { _ => [] }
+    let targets = discover_targets_for_poll(cdp_target)
     let mut target_a : @client.CdpDiscoveredTarget? = None
     let mut target_b : @client.CdpDiscoveredTarget? = None
     for item in targets {

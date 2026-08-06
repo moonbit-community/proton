@@ -25,6 +25,7 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
+  "native-stub": [ "process_group.c" ],
   targets: {
     "cdp_eval.mbt": [ "native" ],
     "env.mbt": [ "native" ],

@@ -7,6 +7,24 @@ fn env_or(name : String, default : String) -> String {
 }
 
 ///|
+let cdp_start_poll_timeout_ms = 250
+
+///|
+async fn discover_targets_for_poll(
+  target : @client.CdpTarget,
+) -> Array[@client.CdpDiscoveredTarget] {
+  let result = @async.with_timeout_opt(cdp_start_poll_timeout_ms, () => {
+    @client.discover_targets(target)
+  }) catch {
+    _ => None
+  }
+  match result {
+    Some(targets) => targets
+    None => []
+  }
+}
+
+///|
 fn cdp_target_text() -> String {
   env_or("MBT_CDP_TARGET", "9222")
 }
