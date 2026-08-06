@@ -56,10 +56,7 @@ jobs:
 
       - name: Set up CEF runtime
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force .proton-global-cache\win32-x64 | Out-Null
-          New-Item -ItemType Directory -Force .proton\cache\cef\win32-x64 | Out-Null
-          moon -C cli run . -- -C .. cef setup
+        run: moon -C cli run . -- -C .. cef setup
 
       - name: Build and install Release runtime
         shell: pwsh
@@ -71,7 +68,7 @@ jobs:
             throw "unexpected platform: $($manifest.platform)"
           }
           $runtime = Join-Path $env:RUNNER_TEMP "proton-runtime"
-          $cefRoot = Join-Path $PWD ".proton\cache\cef\$($manifest.platform)\$($manifest.cef_version)"
+          $cefRoot = $manifest.cef
           cmake -S native -B native\build-prebuilt `
             "-DCMAKE_INSTALL_PREFIX=$runtime" `
             -DPROTON_WITH_ENGINE=ON `

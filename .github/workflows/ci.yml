@@ -8,6 +8,7 @@ on:
 
 env:
   PROTON_NO_UPDATE_CHECK: 1
+  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton-global-cache
 
 jobs:
   format:
@@ -52,8 +53,8 @@ jobs:
       - name: Cache CEF downloads
         uses: actions/cache@v4
         with:
-          path: .proton/cache/cef
-          key: ${{ runner.os }}-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
+          path: .proton-global-cache
+          key: ${{ runner.os }}-cef-global-${{ hashFiles('cli/cef/cef_platform.mbt') }}
 
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
@@ -130,9 +131,7 @@ jobs:
         run: |
           moon -C cli run . -- -C .. cef setup
           runtime="$PWD/$(node -p "require('./.proton/runtime.json').dist")"
-          platform=$(node -p "require('./.proton/runtime.json').platform")
-          cef_name=$(node -p "require('./.proton/runtime.json').cef_version")
-          cef_root="$PWD/.proton/cache/cef/$platform/$cef_name"
+          cef_root=$(node -p "require('./.proton/runtime.json').cef")
           cmake -S native -B native/build-engine \
             -DCMAKE_INSTALL_PREFIX="$runtime" \
             -DPROTON_WITH_ENGINE=ON \
@@ -164,7 +163,7 @@ jobs:
           }
           $manifest = Get-Content .proton\runtime.json | ConvertFrom-Json
           $runtime = Join-Path $PWD $manifest.dist
-          $cefRoot = Join-Path $PWD ".proton\cache\cef\$($manifest.platform)\$($manifest.cef_version)"
+          $cefRoot = $manifest.cef
           cmake -S native -B native\build-engine `
             "-DCMAKE_INSTALL_PREFIX=$runtime" `
             -DPROTON_WITH_ENGINE=ON `
