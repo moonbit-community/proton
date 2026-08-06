@@ -89,7 +89,7 @@ All runnable examples should import `moonbit-community/proton`. `moon.proton`
 configures app settings such as window, entry, debug, frontend, and bundle
 metadata.
 
-Tray v1 is implemented by the `tray` extension through `moonbit-community/tray`; Proton
+Tray v1 is implemented by the `tray` extension through `moonbit-community/proton_tray`; Proton
 native C does not expose a tray ABI. Windows is the baseline for tray-icon
 click/right-click/double-click events. Menu item clicks are the portable event
 path across Windows, Linux, and macOS when the desktop backend supports menu

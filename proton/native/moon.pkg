@@ -1,5 +1,5 @@
 import {
-  "moonbit-community/ffi",
+  "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }

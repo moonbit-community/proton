@@ -1,11 +1,11 @@
-# moonbit-community/microphone
+# moonbit-community/proton_microphone
 
 Native-only microphone device discovery helpers for MoonBit.
 
 ```mbt nocheck
 ///|
 fn main {
-  let devices = @microphone.MicrophoneDevice::list()
+  let devices = @proton_microphone.MicrophoneDevice::list()
   for device in devices {
     println(device.session_label())
   }
@@ -15,11 +15,11 @@ fn main {
 ```mbt nocheck
 ///|
 fn example_label {
-  let device = @microphone.MicrophoneDevice::{
+  let device = @proton_microphone.MicrophoneDevice::{
     id: "mic-1",
     name: "Built-in Mic",
     state: Idle,
-    default_config: @microphone.CaptureConfig::new(
+    default_config: @proton_microphone.CaptureConfig::new(
       echo_cancellation=true,
       noise_suppression=true,
     ),

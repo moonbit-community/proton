@@ -1,9 +1,7 @@
-# keepawake
+# moonbit-community/proton_keepawake
 
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-keepawake/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-keepawake)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-keepawake/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-keepawake)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-keepawake/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-keepawake)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-keepawake/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-keepawake)
+[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/proton_keepawake)
 
 `keepawake` is a native-only MoonBit module that exposes a small, readable API
 for keeping a machine awake while long-running work is in progress.
@@ -18,26 +16,26 @@ maintain and easy to extend:
 
 ## Install
 
-Add the module to your project, then import `moonbit-community/keepawake`.
+Add the module to your project, then import `moonbit-community/proton_keepawake`.
 
 ```bash
-moon add moonbit-community/keepawake
+moon add moonbit-community/proton_keepawake
 ```
 
 Package configuration:
 
 ```moonbit
 import {
-  "moonbit-community/keepawake",
+  "moonbit-community/proton_keepawake",
 }
 ```
 
 ## API Overview
 
 ```moonbit
-let guard = @keepawake.acquire(
+let guard = @proton_keepawake.acquire(
   reason="Rendering a long animation",
-  scope=@keepawake.Scope::PreventSystemAndDisplaySleep,
+  scope=@proton_keepawake.Scope::PreventSystemAndDisplaySleep,
 )
 
 // ... perform the long-running work ...
@@ -48,13 +46,13 @@ guard.release()
 Use the scoped helper when you want automatic cleanup:
 
 ```moonbit
-let result = @keepawake.with_keepawake(
+let result = @proton_keepawake.with_keepawake(
   () => {
     // ... perform the long-running work ...
     "done"
   },
   reason="Syncing a large local cache",
-  scope=@keepawake.Scope::PreventSystemSleep,
+  scope=@proton_keepawake.Scope::PreventSystemSleep,
 )
 ```
 

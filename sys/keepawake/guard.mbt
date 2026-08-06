@@ -37,9 +37,9 @@ pub let default_reason : String = "MoonBit keepawake request"
 ///
 /// # Example
 /// ```mbt nocheck
-/// let guard = @keepawake.acquire(
+/// let guard = @proton_keepawake.acquire(
 ///   reason="Encoding a large video",
-///   scope=@keepawake.Scope::PreventSystemAndDisplaySleep,
+///   scope=@proton_keepawake.Scope::PreventSystemAndDisplaySleep,
 /// )
 ///
 /// // ... perform the long-running work ...
@@ -80,11 +80,11 @@ pub fn acquire(
 ///
 /// # Example
 /// ```mbt nocheck
-/// let summary = @keepawake.with_keepawake(
+/// let summary = @proton_keepawake.with_keepawake(
 ///   () => "done",
 ///   reason="Syncing local cache",
 ///   // ... perform long-running work ...
-///   scope=@keepawake.Scope::PreventSystemSleep,
+///   scope=@proton_keepawake.Scope::PreventSystemSleep,
 /// )
 /// ```
 pub fn[T] with_keepawake(

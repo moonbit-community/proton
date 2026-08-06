@@ -27,8 +27,8 @@
 /// # Example
 ///
 /// ```moonbit nocheck
-/// let raw = @ffi.to_wstr("Hello")
-/// inspect(@ffi.from_wstr_lossy(raw), content="Hello")
+/// let raw = @proton_ffi.to_wstr("Hello")
+/// inspect(@proton_ffi.from_wstr_lossy(raw), content="Hello")
 /// ```
 pub fn from_wstr_lossy(b : Bytes) -> String {
   if b.length() < 2 || b[b.length() - 2] != 0x00 || b[b.length() - 1] != 0x00 {
@@ -59,7 +59,7 @@ pub fn from_wstr_lossy(b : Bytes) -> String {
 /// # Example
 ///
 /// ```moonbit nocheck
-/// inspect(@ffi.to_wstr("Hi"), content=b"\x48\x00\x69\x00\x00\x00")
+/// inspect(@proton_ffi.to_wstr("Hi"), content=b"\x48\x00\x69\x00\x00\x00")
 /// ```
 pub fn to_wstr(s : String) -> Bytes {
   @encoding.encode(UTF16, s + "\u{0000}")

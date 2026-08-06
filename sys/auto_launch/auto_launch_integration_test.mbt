@@ -32,8 +32,8 @@ fn stable_test_path(platform : Platform) -> String {
 ///|
 /// Builds the launcher instance shared by the integration roundtrip test.
 fn new_integration_test_launcher() -> Result[AutoLaunch, AutoLaunchError] {
-  let platform = @auto_launch.current_platform()
-  @auto_launch.new(
+  let platform = @proton_auto_launch.current_platform()
+  @proton_auto_launch.new(
     "MoonBit Auto Launch Integration Test",
     path=stable_test_path(platform),
     identifier="moonbit-auto-launch-integration-test",
@@ -44,7 +44,7 @@ fn new_integration_test_launcher() -> Result[AutoLaunch, AutoLaunchError] {
 /// Verifies the real backend can enable, query, and disable one launcher entry.
 test "integration enable disable roundtrip" {
   guard integration_tests_enabled() else { return }
-  guard @auto_launch.is_supported() else {
+  guard @proton_auto_launch.is_supported() else {
     fail("integration tests were enabled on an unsupported platform")
   }
 

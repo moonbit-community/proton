@@ -1,10 +1,6 @@
-# moonbit-community/auto_launch
+# moonbit-community/proton_auto_launch
 
-[![CI](https://github.com/justjavac/moonbit-auto-launch/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/justjavac/moonbit-auto-launch/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-auto-launch/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-auto-launch)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-auto-launch/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-auto-launch)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-auto-launch/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-auto-launch)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-auto-launch/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-auto-launch)
+[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
 
 Cross-platform auto-launch helpers for MoonBit.
 
@@ -13,12 +9,12 @@ Cross-platform auto-launch helpers for MoonBit.
 ```mbt check
 ///|
 test "public api can be called" {
-  ignore(@auto_launch.current_platform())
-  ignore(@auto_launch.is_supported())
+  ignore(@proton_auto_launch.current_platform())
+  ignore(@proton_auto_launch.is_supported())
 
-  let launcher = @auto_launch.new(
+  let launcher = @proton_auto_launch.new(
     "MoonBit Demo",
-    path=match @auto_launch.current_platform() {
+    path=match @proton_auto_launch.current_platform() {
       Windows => "C:\\Program Files\\MoonBit\\moonbit.exe"
       Macos => "/Applications/MoonBit.app/Contents/MacOS/MoonBit"
       Linux => "/usr/bin/moonbit"

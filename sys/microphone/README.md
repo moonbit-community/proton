@@ -1,11 +1,9 @@
-# moonbit-community/microphone
+# moonbit-community/proton_microphone
 
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-microphone)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-microphone)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-microphone)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-microphone/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-microphone)
+[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/proton_microphone)
 
-`moonbit-community/microphone` is a native-only MoonBit package for microphone
+`moonbit-community/proton_microphone` is a native-only MoonBit package for microphone
 device discovery and capture-session metadata. It uses small C native stubs for host integration, and exposes a focused MoonBit API that works on Windows, Linux, and macOS.
 
 ## Platform Support
@@ -33,7 +31,7 @@ List visible microphone-like devices:
 ```mbt
 ///|
 fn main {
-  let devices = @microphone.MicrophoneDevice::list()
+  let devices = @proton_microphone.MicrophoneDevice::list()
   if devices.length() == 0 {
     println("No microphones found.")
   } else {
@@ -48,7 +46,7 @@ Normalize capture settings before using them to size buffers:
 
 ```mbt
 ///|
-fn chunk_bytes(config : @microphone.CaptureConfig) -> Int {
+fn chunk_bytes(config : @proton_microphone.CaptureConfig) -> Int {
   let normalized = config.normalized()
   normalized.recommended_chunk_frames() *
   normalized.channels *
@@ -60,7 +58,7 @@ Create a configuration by overriding only the fields that matter:
 
 ```mbt
 ///|
-let config = @microphone.CaptureConfig::new(
+let config = @proton_microphone.CaptureConfig::new(
   channels=2,
   sample_rate_hz=48_000,
   echo_cancellation=true,
@@ -72,7 +70,7 @@ Parse a known listing in tests:
 ```mbt
 ///|
 test "parse listing" {
-  let devices = @microphone.MicrophoneDevice::parse_listing(
+  let devices = @proton_microphone.MicrophoneDevice::parse_listing(
     "Built-in Microphone\nmonitor-source\nUSB Studio Mic\n",
   )
   inspect(devices.length(), content="2")

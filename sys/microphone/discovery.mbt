@@ -71,7 +71,7 @@ pub fn MicrophoneDevice::parse_listing(
 ///
 /// # Example
 /// ```mbt nocheck
-/// for device in @microphone.MicrophoneDevice::list() {
+/// for device in @proton_microphone.MicrophoneDevice::list() {
 ///   println(device.session_label())
 /// }
 /// ```

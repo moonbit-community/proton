@@ -246,9 +246,9 @@ jobs:
               moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
               moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
               --target native
-            xvfb-run -a moon test -p moonbit-community/auto_launch moonbit-community/clipboard \
-              moonbit-community/global_hotkey moonbit-community/keepawake moonbit-community/microphone \
-              moonbit-community/tray --target native
+            xvfb-run -a moon test -p moonbit-community/proton_auto_launch moonbit-community/proton_clipboard \
+              moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone \
+              moonbit-community/proton_tray --target native
           else
             moon -C extensions test -p moonbit-community/proton_ext \
               moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
@@ -258,9 +258,9 @@ jobs:
               moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
               moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
               --target native
-            moon test -p moonbit-community/auto_launch moonbit-community/clipboard \
-              moonbit-community/global_hotkey moonbit-community/keepawake moonbit-community/microphone \
-              moonbit-community/tray --target native
+            moon test -p moonbit-community/proton_auto_launch moonbit-community/proton_clipboard \
+              moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone \
+              moonbit-community/proton_tray --target native
           fi
 
       - name: Test extensions on Windows
@@ -286,12 +286,12 @@ jobs:
           )
           moon -C extensions test -p $extensionPackages --target native
           $sysPackages = @(
-            "moonbit-community/auto_launch"
-            "moonbit-community/clipboard"
-            "moonbit-community/global_hotkey"
-            "moonbit-community/keepawake"
-            "moonbit-community/microphone"
-            "moonbit-community/tray"
+            "moonbit-community/proton_auto_launch"
+            "moonbit-community/proton_clipboard"
+            "moonbit-community/proton_global_hotkey"
+            "moonbit-community/proton_keepawake"
+            "moonbit-community/proton_microphone"
+            "moonbit-community/proton_tray"
           )
           moon test -p $sysPackages --target native
 

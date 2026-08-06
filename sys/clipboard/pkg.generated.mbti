@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/clipboard"
+package "moonbit-community/proton_clipboard"
 
 // Values
 pub fn ensure_supported() -> Result[Unit, String]

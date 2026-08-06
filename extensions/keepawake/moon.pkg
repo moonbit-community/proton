@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "moonbit-community/keepawake" @sys_keepawake,
+  "moonbit-community/proton_keepawake" @sys_keepawake,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",

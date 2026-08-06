@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/microphone"
+package "moonbit-community/proton_microphone"
 
 import {
   "moonbitlang/core/debug",

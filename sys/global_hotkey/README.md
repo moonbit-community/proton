@@ -1,11 +1,7 @@
-# moonbit-community/global_hotkey
+# moonbit-community/proton_global_hotkey
 
-[![CI](https://github.com/justjavac/moonbit-global-hotkey/actions/workflows/ci.yml/badge.svg)](https://github.com/justjavac/moonbit-global-hotkey/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
-[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
-[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
-[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-global-hotkey/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-global-hotkey)
-[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/global_hotkey)
+[![CI](https://github.com/moonbit-community/proton/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbit-community/proton/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mooncakes.io-green)](https://mooncakes.io/docs/moonbit-community/proton_global_hotkey)
 
 Cross-platform native global hotkey helpers for MoonBit.
 
@@ -22,7 +18,7 @@ This package targets `native` and supports Windows, macOS, and Linux X11 session
 ## Install
 
 ```bash
-moon add moonbit-community/global_hotkey
+moon add moonbit-community/proton_global_hotkey
 ```
 
 ## Quick start
@@ -31,15 +27,15 @@ Minimal checked example:
 
 ```mbt check
 test "global_hotkey support can be queried" {
-  ignore(@global_hotkey.is_supported())
-  ignore(@global_hotkey.ensure_supported())
+  ignore(@proton_global_hotkey.is_supported())
+  ignore(@proton_global_hotkey.ensure_supported())
 }
 ```
 
 Typical polling loop:
 
 ```mbt nocheck
-let manager = match @global_hotkey.create() {
+let manager = match @proton_global_hotkey.create() {
   Ok(manager) => manager
   Err(error) => fail(error)
 }
@@ -110,7 +106,7 @@ Key commands:
 ```bash
 moon check --target native
 moon test --target native
-moon coverage analyze -p moonbit-community/global_hotkey -- -f summary
+moon coverage analyze -p moonbit-community/proton_global_hotkey -- -f summary
 moon info
 moon fmt
 ```

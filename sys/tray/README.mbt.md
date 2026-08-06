@@ -1,4 +1,4 @@
-# moonbit-community/tray
+# moonbit-community/proton_tray
 
 Cross-platform native tray helpers for MoonBit.
 
@@ -8,11 +8,11 @@ call `pump()` and `drain_events()` regularly.
 ## Example
 
 ```mbt nocheck
-guard @tray.is_supported() else {
+guard @proton_tray.is_supported() else {
   return
 }
 
-let tray = @tray.create(
+let tray = @proton_tray.create(
   identifier="com.example.demo",
   tooltip="MoonBit tray demo",
 )
@@ -21,13 +21,13 @@ match tray {
   Ok(tray) => {
     match
       tray.set_menu([
-        @tray.TrayMenuItem::normal(id="show", label="Show"),
-        @tray.TrayMenuItem::separator(),
-        @tray.TrayMenuItem::checkbox(id="launch", label="Launch", checked=true),
-        @tray.TrayMenuItem::submenu(
+        @proton_tray.TrayMenuItem::normal(id="show", label="Show"),
+        @proton_tray.TrayMenuItem::separator(),
+        @proton_tray.TrayMenuItem::checkbox(id="launch", label="Launch", checked=true),
+        @proton_tray.TrayMenuItem::submenu(
           label="More",
           items=[
-            @tray.TrayMenuItem::normal(id="settings", label="Settings"),
+            @proton_tray.TrayMenuItem::normal(id="settings", label="Settings"),
           ],
         ),
       ]) {

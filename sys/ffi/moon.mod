@@ -1,4 +1,4 @@
-name = "moonbit-community/ffi"
+name = "moonbit-community/proton_ffi"
 
 version = "0.1.14"
 

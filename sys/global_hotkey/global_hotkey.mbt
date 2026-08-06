@@ -114,7 +114,7 @@ fn drain_with(take : () -> String?) -> Array[String] {
 ///
 /// ```mbt check
 /// test "support detection can be queried" {
-///   ignore(@global_hotkey.is_supported())
+///   ignore(@proton_global_hotkey.is_supported())
 /// }
 /// ```
 pub fn is_supported() -> Bool {
@@ -140,7 +140,7 @@ pub fn is_supported() -> Bool {
 ///
 /// ```mbt check
 /// test "support can be checked without registering anything" {
-///   ignore(@global_hotkey.ensure_supported())
+///   ignore(@proton_global_hotkey.ensure_supported())
 /// }
 /// ```
 pub fn ensure_supported() -> Result[Unit, String] {
@@ -173,7 +173,7 @@ pub fn ensure_supported() -> Result[Unit, String] {
 ///
 /// ```mbt check
 /// test "manager creation can be attempted safely" {
-///   match @global_hotkey.create() {
+///   match @proton_global_hotkey.create() {
 ///     Ok(manager) => manager.destroy()
 ///     Err(_) => ()
 ///   }
@@ -222,7 +222,7 @@ pub fn create() -> Result[GlobalHotkeyManager, String] {
 ///
 /// ```mbt check
 /// test "register may be attempted on a live manager" {
-///   match @global_hotkey.create() {
+///   match @proton_global_hotkey.create() {
 ///     Ok(manager) => {
 ///       ignore(manager.register("Ctrl+Shift+F24"))
 ///       ignore(manager.unregister("Ctrl+Shift+F24"))

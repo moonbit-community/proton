@@ -10,9 +10,9 @@ test {
 ```
 
 ```mbt nocheck
-let guard = @keepawake.acquire(
+let guard = @proton_keepawake.acquire(
   reason="Rendering a large animation",
-  scope=@keepawake.Scope::PreventSystemAndDisplaySleep,
+  scope=@proton_keepawake.Scope::PreventSystemAndDisplaySleep,
 )
 
 guard.release()

@@ -11,7 +11,7 @@ import {
   "moonbitlang/moon_config@0.3.5",
   "moonbitlang/lexer@0.3.5",
   "moonbitlang/async@0.20.3",
-  "moonbit-community/ffi@0.1.14",
+  "moonbit-community/proton_ffi@0.1.14",
 }
 
 readme = "codegen/README.md"

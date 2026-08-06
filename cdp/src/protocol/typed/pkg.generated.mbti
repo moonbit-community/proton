@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/cdp/protocol/typed"
+package "moonbit-community/proton_cdp/protocol/typed"
 
 import {
-  "moonbit-community/cdp/protocol",
+  "moonbit-community/proton_cdp/protocol",
   "moonbitlang/core/debug",
 }
 

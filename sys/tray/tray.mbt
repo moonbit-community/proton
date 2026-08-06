@@ -183,7 +183,7 @@ pub fn ensure_supported() -> Result[Unit, String] {
 ///
 /// # Example
 /// ```mbt nocheck
-/// let tray = @tray.create(icon=Some("/path/to/icon.png"), tooltip="My App").unwrap()
+/// let tray = @proton_tray.create(icon=Some("/path/to/icon.png"), tooltip="My App").unwrap()
 /// let _ = tray.show()
 /// // ... run the application event loop, calling `tray.pump()` as needed ...
 /// tray.destroy()

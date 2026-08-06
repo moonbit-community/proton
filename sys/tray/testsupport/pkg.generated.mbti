@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/tray/testsupport"
+package "moonbit-community/proton_tray/testsupport"
 
 // Values
 pub fn make_test_icon_path() -> Bytes

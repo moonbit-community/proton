@@ -111,7 +111,7 @@ fn new_with(
 ///
 /// # Example
 /// ```mbt nocheck
-/// let launcher = @auto_launch.new(
+/// let launcher = @proton_auto_launch.new(
 ///   "MoonBit Demo",
 ///   path="/usr/bin/moonbit",
 ///   launch_in_background=true,

@@ -1,4 +1,4 @@
-name = "moonbit-community/clipboard"
+name = "moonbit-community/proton_clipboard"
 
 version = "0.1.14"
 

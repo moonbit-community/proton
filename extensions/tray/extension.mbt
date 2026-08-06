@@ -68,7 +68,7 @@ fn tray_handle() -> @sys_tray.Tray raise TrayError {
   match app_command_tray_handle.val {
     Some(handle) => handle
     None =>
-      match @sys_tray.create(identifier="justjavac.proton.tray") {
+      match @sys_tray.create(identifier="moonbit-community.proton.tray") {
         Ok(handle) => {
           app_command_tray_handle.val = Some(handle)
           handle

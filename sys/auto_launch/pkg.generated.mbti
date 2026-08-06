@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/auto_launch"
+package "moonbit-community/proton_auto_launch"
 
 import {
   "moonbitlang/core/debug",
