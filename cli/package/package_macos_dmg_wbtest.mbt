@@ -16,6 +16,7 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
     targets: ["app", "dmg"],
     output: root,
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],

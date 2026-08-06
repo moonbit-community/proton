@@ -11,6 +11,7 @@ struct RawPackageOptions {
   targets : Array[String]
   output : String?
   build : Bool
+  release : Bool
   dry_run : Bool
   sign : Bool
   notarize : Bool
@@ -32,6 +33,7 @@ struct PackagePlan {
   targets : Array[String]
   output : String
   build : Bool
+  release : Bool
   base_dir : String
   frontend_dist : String?
   entry_paths : Array[String]
@@ -72,7 +74,8 @@ pub fn command() -> @argparse.Command {
     "package",
     about="Package a Proton application",
     flags=[
-      FlagArg("no-build", about="Reuse an existing release build"),
+      FlagArg("no-build", about="Reuse an existing package build"),
+      FlagArg("release", about="Build and package the release output"),
       FlagArg("dry-run", about="Print the resolved package plan"),
       FlagArg("sign", about="Sign the packaged application"),
       FlagArg(
@@ -201,6 +204,8 @@ fn package_options_from_matches(
       | (None with notarize = false),
       "no-build"? : Some(no_build)
       | (None with no_build = false),
+      "release"? : Some(release)
+      | (None with release = false),
       "dry-run"? : Some(dry_run)
       | (None with dry_run = false),
       "sign"? : Some(sign)
@@ -216,6 +221,7 @@ fn package_options_from_matches(
     targets,
     output: output.get(0),
     build: !no_build,
+    release,
     dry_run,
     sign: sign || notarize,
     notarize,
@@ -386,6 +392,7 @@ async fn build_package_plan(
     targets,
     output,
     build: raw.build,
+    release: raw.release,
     base_dir,
     frontend_dist,
     entry_paths,
@@ -618,6 +625,8 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  sign binaries: " + sign_binaries)
   let build = if plan.build { "yes" } else { "no" }
   println("  build: " + build)
+  let build_mode = if plan.release { "release" } else { "debug" }
+  println("  build mode: " + build_mode)
   println("  sign: " + bool_text(plan.sign))
   println("  notarize: " + bool_text(plan.notarize))
 }
@@ -634,12 +643,12 @@ fn bool_text(value : Bool) -> String {
 ///|
 async fn execute_package_plan(plan : PackagePlan) -> Unit {
   // Resolve the active runtime before any build work so a missing
-  // `proton_cli cef setup` fails fast instead of after a full release build.
+  // `proton_cli cef setup` fails fast instead of after a full application build.
   let runtime = read_active_runtime(plan.workspace_root)
   if plan.build {
-    run_release_build(plan)
+    run_package_build(plan)
   }
-  let executable = match find_release_executable(plan) {
+  let executable = match find_package_executable(plan) {
     Some(path) => path
     None =>
       raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
@@ -657,8 +666,15 @@ async fn is_macos_host() -> Bool {
 }
 
 ///|
-async fn run_release_build(plan : PackagePlan) -> Unit {
-  let moon_args = ["--release", "--target-dir", plan.build_target_dir]
+async fn run_package_build(plan : PackagePlan) -> Unit {
+  // Keep local packaging fast by default. Distribution builds opt into the
+  // Moon release mode explicitly through `proton_cli package --release`.
+  let moon_args : Array[String] = []
+  if plan.release {
+    moon_args.push("--release")
+  }
+  moon_args.push("--target-dir")
+  moon_args.push(plan.build_target_dir)
   let old_rpath = @env.get_env_var("PROTON_PACKAGE_RPATH")
   // Mach-O only. The link config reads this on darwin; the Linux branch
   // ignores it and keeps the absolute runtime rpath, which is what a
@@ -683,8 +699,13 @@ fn restore_package_env(name : String, value : String?) -> Unit {
 }
 
 ///|
-async fn find_release_executable(plan : PackagePlan) -> String? {
-  let root = @fsutil.resolve_path(plan.build_target_dir, "native/release/build")
+async fn find_package_executable(plan : PackagePlan) -> String? {
+  // `--no-build` must reuse the same build mode selected for this command.
+  let build_mode = if plan.release { "release" } else { "debug" }
+  let root = @fsutil.resolve_path(
+    plan.build_target_dir,
+    "native/" + build_mode + "/build",
+  )
   let package_name = path_basename(plan.app_package)
   find_named_file(root, package_name + ".exe")
 }

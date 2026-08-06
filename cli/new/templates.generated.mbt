@@ -844,7 +844,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|```sh
           #|proton_cli package --dry-run
-          #|proton_cli package
+          #|proton_cli package --release
           #|```
           #|
           #|## Layout

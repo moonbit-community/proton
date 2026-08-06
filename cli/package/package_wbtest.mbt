@@ -18,7 +18,15 @@ test "parse package args accepts repeated targets and overrides" {
   @debug.assert_eq(raw.targets, ["app", "zip", "dmg"])
   @debug.assert_eq(raw.output, Some("dist"))
   assert_false(raw.build)
+  assert_false(raw.release)
   assert_true(raw.dry_run)
+}
+
+///|
+test "parse package args enables release builds explicitly" {
+  let raw = parse_package_args(["--release"])
+  assert_true(raw.build)
+  assert_true(raw.release)
 }
 
 ///|
@@ -153,11 +161,19 @@ async test "package plan uses the host defaults" {
   @debug.assert_eq(plan.targets, expected_targets)
   assert_eq(plan.identifier, "dev.proton.demo")
   assert_eq(plan.version, "1.0.0")
+  assert_false(plan.release)
   assert_true(
     normalize_slashes(plan.build_target_dir).has_suffix(
       "/target/proton-package-build/dev-proton-demo",
     ),
   )
+  let release_plan = build_package_plan(
+    parse_package_args(["--release"]),
+    "moon.proton",
+    project,
+    0UL,
+  )
+  assert_true(release_plan.release)
 }
 
 ///|
@@ -587,6 +603,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     targets: ["app"],
     output: root,
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
@@ -634,6 +651,7 @@ test "macOS plist contains bundle identity and executable" {
     targets: ["app"],
     output: "target",
     build: false,
+    release: false,
     base_dir: ".",
     frontend_dist: None,
     entry_paths: [],
@@ -687,6 +705,7 @@ async test "package manifest records launch metadata" {
     targets: ["app"],
     output: "target",
     build: false,
+    release: false,
     base_dir: ".",
     frontend_dist: None,
     entry_paths: [],
@@ -750,6 +769,7 @@ test "macOS helper plist matches its bundle identity" {
     targets: ["app"],
     output: "target",
     build: false,
+    release: false,
     base_dir: ".",
     frontend_dist: None,
     entry_paths: [],
@@ -797,6 +817,7 @@ async test "macOS ZIP uses the final app name without metadata entries" {
     targets: ["app", "zip"],
     output: root,
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: None,
     sign_binaries: [],
@@ -970,6 +991,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     targets: ["app"],
     output: root,
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
@@ -1028,7 +1050,7 @@ async test "macOS notarization validates success and cleans failed upload" {
 }
 
 ///|
-async test "release executable lookup stays inside package target dir" {
+async test "debug executable lookup stays inside package target dir" {
   let root = "target/proton-package-executable-lookup"
   remove_tree(root)
   let package_target = @fsutil.resolve_path(root, "package-target")
@@ -1052,6 +1074,7 @@ async test "release executable lookup stays inside package target dir" {
     targets: ["app"],
     output: @fsutil.resolve_path(root, "output"),
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],
@@ -1064,16 +1087,16 @@ async test "release executable lookup stays inside package target dir" {
     sign: false,
     notarize: false,
   }
-  @debug.assert_eq(find_release_executable(plan), None)
+  @debug.assert_eq(find_package_executable(plan), None)
   let expected = @fsutil.resolve_path(
-    package_target, "native/release/build/vendor/app/app.exe",
+    package_target, "native/debug/build/vendor/app/app.exe",
   )
   ensure_dir(@fsutil.path_parent(expected))
   write_text(expected, "right")
-  match find_release_executable(plan) {
+  match find_package_executable(plan) {
     Some(actual) =>
       assert_eq(normalize_slashes(actual), normalize_slashes(expected))
-    None => abort("expected release executable")
+    None => abort("expected debug executable")
   }
 }
 
@@ -1133,6 +1156,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
     targets: ["app"],
     output,
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: None,
     entry_paths: [],

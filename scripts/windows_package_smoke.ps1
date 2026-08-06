@@ -297,7 +297,7 @@ try {
         "-C", "cli", "run", ".", "--", "-C", "../examples",
         "package", "--package", $ExampleName,
         "--config", "$ExampleName/moon.proton",
-        "--sign", "--target", "app", "--target", "zip"
+        "--release", "--sign", "--target", "app", "--target", "zip"
     )
 
     Require-Path $PortableDir "proton_cli package did not create the portable directory."
