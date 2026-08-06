@@ -92,7 +92,6 @@ async fn run_ticker(
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   let app = @proton.html(
     "MoonBit Event Broadcast",
     resource,

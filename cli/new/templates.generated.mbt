@@ -612,7 +612,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|///|
           #|async fn main {
-          #|  @proton.install_event_loop()
           #|  let backend = @todo.Backend::new()
           #|  @proton.config("moon.proton")
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })

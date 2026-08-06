@@ -1,20 +1,7 @@
 ///|
 /// Runs the configured app through the native Proton runtime.
 pub async fn App::run(self : App) -> Unit raise AppRunError {
-  guard event_loop_is_installed() else {
-    let message =
-      #|Proton applications must install Proton's event loop first:
-      #|
-      #|async fn main {
-      #|  @proton.install_event_loop()
-      #|  @proton.app().run_or_abort()
-      #|}
-      #|
-      #|install_event_loop must be the first statement of async fn main,
-      #|before any other async work.
-      #|
-    raise RunnerError(message)
-  }
+  require_event_loop()
   match self.validation_error() {
     Some(error) => raise ConfigurationError(error)
     None => ()

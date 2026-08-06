@@ -52,7 +52,6 @@ async fn hold_child_process(
 
 ///|
 async fn main {
-  @proton.install_event_loop()
   let app = @proton.html(
     "Child Process Close Repro",
     resource,

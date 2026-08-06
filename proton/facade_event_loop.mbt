@@ -10,6 +10,7 @@
 priv struct ProtonEventLoop {
   signal : @core.RuntimeWakeSignal
   mut installed : Bool
+  mut install_error : AppRunError?
 }
 
 ///|
@@ -22,22 +23,32 @@ priv struct ProtonEventLoop {
 let host_event_loop : ProtonEventLoop = ProtonEventLoop::{
   signal: @core.RuntimeWakeSignal::new(),
   installed: false,
+  install_error: None,
 }
 
 ///|
-/// Hands Proton's event loop to `moonbitlang/async`.
+/// Installs the loop before anything else in the process runs.
 ///
-/// Call this as the very first statement of `async fn main`, before any other
-/// async work: `async` has to know about the loop before it starts waiting, and
-/// installing it afterwards aborts the process.
+/// `fn init` is the one place guaranteed to run before `moonbitlang/async`
+/// starts its loop, which is the deadline `set_external_event_loop` imposes --
+/// installing afterwards aborts. Doing it here rather than asking every
+/// application to spell it out as the first line of `async fn main` means the
+/// requirement cannot be forgotten, and nothing in the language would have
+/// caught forgetting it.
 ///
-/// ```moonbit skip
-/// async fn main {
-///   @proton.install_event_loop()
-///   // ... the rest of the application
-/// }
-/// ```
-pub fn install_event_loop() -> Unit raise AppRunError {
+/// A failure is kept, not raised. `fn init` cannot raise, aborting would take
+/// down a process that may never open a window, and `App::run` is the place
+/// where a caller can be told properly.
+fn init {
+  install_event_loop() catch {
+    error => host_event_loop.install_error = Some(error)
+  }
+}
+
+///|
+/// Hands Proton's event loop to `moonbitlang/async`. Call once, from `fn init`:
+/// `async` aborts on a second install.
+fn install_event_loop() -> Unit raise AppRunError {
   // Begin first. A failure here leaves nothing installed, whereas installing
   // first would hand `async` a loop that never started and turn every later
   // `poll` into the same error.
@@ -49,13 +60,18 @@ pub fn install_event_loop() -> Unit raise AppRunError {
 }
 
 ///|
-/// Whether the application has installed Proton's event loop.
+/// Fails unless Proton's event loop is running.
 ///
 /// Everything the facade does with a native runtime depends on it: the loop is
 /// what drives the platform and what turns native work into a notification the
-/// scheduler can wait on.
-fn event_loop_is_installed() -> Bool {
-  host_event_loop.installed
+/// scheduler can wait on. The error is the one `fn init` hit, because that is
+/// the only way this can be reached.
+fn require_event_loop() -> Unit raise AppRunError {
+  guard !host_event_loop.installed else { return }
+  match host_event_loop.install_error {
+    Some(error) => raise error
+    None => raise RunnerError("Proton's event loop was never installed")
+  }
 }
 
 ///|

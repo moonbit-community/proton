@@ -1,6 +1,5 @@
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.file(
     "MoonBit Multi-Window",
     "24_app_multi_window/main_window.html",

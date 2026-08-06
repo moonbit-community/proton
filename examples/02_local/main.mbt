@@ -1,6 +1,5 @@
 ///|
 async fn main {
-  @proton.install_event_loop()
   @proton.file(
     "Local File",
     "02_local/app.html",
