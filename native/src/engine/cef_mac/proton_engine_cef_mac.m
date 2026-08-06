@@ -506,14 +506,14 @@ static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
                         memory_order_release);
   proton_engine_debug_log("schedule_message_pump delay_ms=%lld",
                           (long long)delay_ms);
-  if (delay_ms <= 0) {
-    if (!atomic_load_explicit(&g_message_pump_active, memory_order_acquire)) {
-      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-    }
-  } else {
-    if (!atomic_load_explicit(&g_message_pump_active, memory_order_acquire)) {
-      proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
-    }
+  // Every delay signals, not just an immediate one. A host blocked with no
+  // deadline of its own has nothing else to bring it back, and it reads the
+  // schedule only on its way into a wait -- one that arrives after that read
+  // would otherwise never be seen. This does not spin: the reschedule CEF makes
+  // while being pumped happens with g_message_pump_active set and stays silent,
+  // so the loop settles onto the deadline instead of the signal.
+  if (!atomic_load_explicit(&g_message_pump_active, memory_order_acquire)) {
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   }
 }
 
@@ -3862,8 +3862,11 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     }
   }
 
-  atomic_store_explicit(&g_wait_source_ready_mask, PROTON_WAIT_NONE,
-                        memory_order_release);
+  // Nothing is cleared before waiting. Bits set while the host was running its
+  // own code -- not inside this wait -- are the ones that matter most, and
+  // clearing first would throw them away; the exchange below is what consumes
+  // them. Re-reporting a bit the host has already handled only costs it a
+  // spurious poll, while dropping one costs it the notification entirely.
   CFRunLoopRunResult run_result = kCFRunLoopRunTimedOut;
   CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
   if (wait_forever || wait_timeout > 0) {

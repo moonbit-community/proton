@@ -296,6 +296,8 @@ static char g_proton_engine_resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static volatile LONG64 g_proton_engine_scheduled_pump_delay_ms = -1;
 static volatile LONG g_proton_engine_runtime_wait_log_count = 0;
+/* Set only while this process is inside cef_do_message_loop_work. */
+static volatile LONG g_proton_engine_message_pump_active = 0;
 static HANDLE g_proton_engine_pump_event = NULL;
 /* Main-thread only, so a plain bool: set by proton_engine_host_loop_begin and
    cleared by proton_engine_host_loop_end. */
@@ -770,7 +772,14 @@ static int64_t proton_engine_get_scheduled_pump_delay_ms(void) {
 static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
   InterlockedExchange64(&g_proton_engine_scheduled_pump_delay_ms,
                         (LONG64)delay_ms);
-  if (delay_ms <= 0) {
+  /* Every delay signals, not just an immediate one. A host blocked with no
+     deadline of its own has nothing else to bring it back, and it reads the
+     schedule only on its way into a wait -- one that arrives after that read
+     would otherwise never be seen. The pump-active guard is what keeps this
+     from spinning: the reschedule CEF makes while being pumped stays silent,
+     so the loop settles onto the delay instead of the signal. */
+  if (InterlockedCompareExchange(&g_proton_engine_message_pump_active, 0, 0) ==
+      0) {
     proton_engine_signal_wait_source(g_proton_engine_active_runtime,
                                      PROTON_WAIT_PLATFORM);
   }
@@ -3956,6 +3965,7 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
+  InterlockedExchange(&g_proton_engine_message_pump_active, 1);
   proton_engine_reset_scheduled_pump();
   MSG msg;
   while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -3971,6 +3981,7 @@ int32_t proton_engine_runtime_do_message_loop_work(
   if (!g_proton_engine_multi_threaded_message_loop) {
     cef_do_message_loop_work();
   }
+  InterlockedExchange(&g_proton_engine_message_pump_active, 0);
   return PROTON_OK;
 }
 
@@ -4006,6 +4017,7 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
      The reset comes before the CEF check because the pump event is
      manual-reset: a wakeup that arrived before the first runtime existed would
      otherwise leave every later wait returning immediately. */
+  InterlockedExchange(&g_proton_engine_message_pump_active, 1);
   proton_engine_reset_scheduled_pump();
   MSG msg;
   while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -4016,6 +4028,7 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
       !g_proton_engine_multi_threaded_message_loop) {
     cef_do_message_loop_work();
   }
+  InterlockedExchange(&g_proton_engine_message_pump_active, 0);
   return PROTON_OK;
 }
 

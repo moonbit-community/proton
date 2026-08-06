@@ -326,6 +326,8 @@ static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
 static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
+/* Set only while this process is inside cef_do_message_loop_work. */
+static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
 static proton_engine_runtime_t *g_active_runtime = NULL;
 
 /* The host loop's wake pipe. Process-wide rather than per-runtime: the
@@ -717,7 +719,13 @@ static int64_t proton_engine_get_scheduled_pump_delay_ms(void) {
 static void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms) {
   atomic_store_explicit(&g_scheduled_pump_delay_ms, (long long)delay_ms,
                         memory_order_release);
-  if (delay_ms <= 0) {
+  /* Every delay signals, not just an immediate one. A host blocked with no
+     deadline of its own has nothing else to bring it back, and it reads the
+     schedule only on its way into a wait -- one that arrives after that read
+     would otherwise never be seen. The pump-active guard is what keeps this
+     from spinning: the reschedule CEF makes while being pumped stays silent,
+     so the loop settles onto the delay instead of the signal. */
+  if (!atomic_load_explicit(&g_message_pump_active, memory_order_acquire)) {
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   }
 }
@@ -4259,11 +4267,13 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
+  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
   proton_engine_reset_scheduled_pump();
   while (g_main_context_pending(NULL)) {
     g_main_context_iteration(NULL, FALSE);
   }
   cef_do_message_loop_work();
+  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
   return PROTON_OK;
 }
 
@@ -4313,11 +4323,13 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
   /* The wait above only blocks on descriptors; it dispatches nothing. This is
      where GTK's pending sources run and the only caller of
      cef_do_message_loop_work while the host loop owns the main thread. */
+  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
   proton_engine_reset_scheduled_pump();
   while (g_main_context_pending(NULL)) {
     g_main_context_iteration(NULL, FALSE);
   }
   cef_do_message_loop_work();
+  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
   return PROTON_OK;
 }
 
@@ -4382,8 +4394,11 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     }
   }
 
-  atomic_store_explicit(&g_wait_source_ready_mask, PROTON_WAIT_NONE,
-                        memory_order_release);
+  /* Nothing is cleared before waiting. Bits set while the host was running its
+     own code -- not inside this wait -- are the ones that matter most, and
+     clearing first would throw them away; the exchange below is what consumes
+     them. Re-reporting a bit the host has already handled only costs it a
+     spurious poll, while dropping one costs it the notification entirely. */
   int poll_result = 0;
   if (g_host_wake_read_fd >= 0) {
     struct pollfd wake_fd;
