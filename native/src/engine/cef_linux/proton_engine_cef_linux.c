@@ -4296,6 +4296,21 @@ static uint32_t proton_engine_runtime_ready_mask(
   return ready_mask & interest_mask;
 }
 
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
+  /* NOT IMPLEMENTED. This engine's wake pipe lives on the runtime struct
+     (runtime->wake_read_fd), so there is nothing to block on before the first
+     runtime exists -- which is exactly the window the host loop must cover.
+     Supporting it means hoisting the pipe to a process-wide one, the way macOS
+     has a run-loop source and Windows a pump event. Refused rather than
+     silently returning a loop that cannot be woken. */
+  proton_engine_set_message(
+      error, error_len,
+      "the host event loop is not implemented for this platform");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
+void proton_engine_host_loop_end(void) {}
+
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
                                    int32_t timeout_ms,

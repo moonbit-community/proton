@@ -748,3 +748,11 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
   (void)view;
   (void)public_view;
 }
+
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
+  (void)error;
+  (void)error_len;
+  return PROTON_OK;
+}
+
+void proton_engine_host_loop_end(void) {}

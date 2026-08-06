@@ -3963,6 +3963,29 @@ int32_t proton_engine_runtime_do_message_loop_work(
   return PROTON_OK;
 }
 
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
+  /* The pump event is process-wide and needs no CEF, so the host loop can own
+     it before the first runtime exists. Manual-reset on purpose: a wakeup
+     delivered while nothing is waiting must leave the next wait returning
+     immediately, because the trait's contract makes a lost wakeup a deadlock. */
+  if (g_proton_engine_pump_event == NULL) {
+    g_proton_engine_pump_event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (g_proton_engine_pump_event == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "failed to create the host loop event");
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+  return PROTON_OK;
+}
+
+void proton_engine_host_loop_end(void) {
+  if (g_proton_engine_pump_event != NULL) {
+    CloseHandle(g_proton_engine_pump_event);
+    g_proton_engine_pump_event = NULL;
+  }
+}
+
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
                                    int32_t timeout_ms,

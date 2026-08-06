@@ -3720,6 +3720,39 @@ static uint32_t proton_engine_runtime_ready_mask(
   return ready_mask & interest_mask;
 }
 
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
+  if (!pthread_main_np()) {
+    proton_engine_set_message(error, error_len,
+                              "the host loop must start on the main thread");
+    return PROTON_ERR_WRONG_THREAD;
+  }
+  if (g_wait_source != NULL) {
+    return PROTON_OK;
+  }
+  // The wait source is plain CoreFoundation and needs no CEF, so it can exist
+  // long before a runtime does. It has to be a source rather than a bare
+  // CFRunLoopWakeUp: a source stays signalled until the loop next runs, while
+  // a wakeup delivered to a loop that is not running is simply lost, and the
+  // trait's contract says a lost wakeup deadlocks the program.
+  atomic_store_explicit(&g_external_message_pump_enabled, true,
+                        memory_order_release);
+  if (!proton_engine_setup_wait_source(error, error_len)) {
+    atomic_store_explicit(&g_external_message_pump_enabled, false,
+                          memory_order_release);
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
+void proton_engine_host_loop_end(void) {
+  if (!pthread_main_np()) {
+    return;
+  }
+  proton_engine_teardown_wait_source();
+  atomic_store_explicit(&g_external_message_pump_enabled, false,
+                        memory_order_release);
+}
+
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
                                    int32_t timeout_ms,
@@ -3737,8 +3770,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   if (out_ready_mask != NULL) {
     *out_ready_mask = PROTON_WAIT_NONE;
   }
-  if (runtime == NULL || !g_proton_cef_initialized) {
+  // A NULL runtime waits for host-loop wakeups alone. The host loop is running
+  // before the first engine runtime exists -- application code does file IO
+  // while it is still deciding what runtime to build -- and a wait that
+  // refused to block until then would leave those wakeups nowhere to land.
+  if (runtime != NULL && !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (g_wait_source == NULL) {
+    proton_engine_set_message(error, error_len, "host loop is not running");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   if (out_ready_mask == NULL) {

@@ -78,12 +78,20 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
     size_t error_len);
+/* `runtime` may be NULL, which waits for host-loop wakeups alone. That is what
+   the host loop uses before an engine runtime exists. */
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
                                    int32_t timeout_ms,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len);
+
+/* The main thread's event loop, which outlives any single engine runtime and
+   exists before the first one is created. `begin` must run on the main thread
+   before any waiting; `wait` blocks there; `end` releases it. */
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len);
+void proton_engine_host_loop_end(void);
 int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
                                             int32_t wakeup_fd,
                                             char *error,
