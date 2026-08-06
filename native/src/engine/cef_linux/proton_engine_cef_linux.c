@@ -109,8 +109,6 @@ struct proton_engine_runtime {
   size_t bridge_cancellation_count;
   pthread_mutex_t bridge_lock;
   int bridge_lock_initialized;
-  int wake_read_fd;
-  int wake_write_fd;
 };
 
 struct proton_engine_window {
@@ -329,6 +327,14 @@ static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
 static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static proton_engine_runtime_t *g_active_runtime = NULL;
+
+/* The host loop's wake pipe. Process-wide rather than per-runtime: the
+   loop runs before the first runtime exists and outlives the last, and a
+   wakeup arriving outside a runtime's lifetime must still land somewhere.
+   Nonblocking, and drained rather than counted -- it carries the fact that
+   something happened, never how much. */
+static int g_host_wake_read_fd = -1;
+static int g_host_wake_write_fd = -1;
 static proton_engine_window_t *g_closed_windows = NULL;
 static proton_engine_runtime_t *g_managed_shutdown_runtime = NULL;
 static pthread_mutex_t g_managed_shutdown_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -627,14 +633,14 @@ static int proton_engine_set_nonblocking(int fd) {
   return fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0;
 }
 
-static void proton_engine_drain_wake_pipe(proton_engine_runtime_t *runtime) {
-  if (runtime == NULL || runtime->wake_read_fd < 0) {
+static void proton_engine_drain_wake_pipe(void) {
+  if (g_host_wake_read_fd < 0) {
     return;
   }
   char buffer[64];
   for (;;) {
     ssize_t read_count =
-        read(runtime->wake_read_fd, buffer, sizeof(buffer));
+        read(g_host_wake_read_fd, buffer, sizeof(buffer));
     if (read_count > 0) {
       continue;
     }
@@ -646,29 +652,21 @@ static void proton_engine_drain_wake_pipe(proton_engine_runtime_t *runtime) {
   }
 }
 
-static void proton_engine_close_wake_pipe(proton_engine_runtime_t *runtime) {
-  if (runtime == NULL) {
-    return;
+static void proton_engine_close_wake_pipe(void) {
+  if (g_host_wake_read_fd >= 0) {
+    close(g_host_wake_read_fd);
+    g_host_wake_read_fd = -1;
   }
-  if (runtime->wake_read_fd >= 0) {
-    close(runtime->wake_read_fd);
-    runtime->wake_read_fd = -1;
-  }
-  if (runtime->wake_write_fd >= 0) {
-    close(runtime->wake_write_fd);
-    runtime->wake_write_fd = -1;
+  if (g_host_wake_write_fd >= 0) {
+    close(g_host_wake_write_fd);
+    g_host_wake_write_fd = -1;
   }
 }
 
-static int proton_engine_setup_wait_source(proton_engine_runtime_t *runtime,
-                                           char *error,
-                                           size_t error_len) {
-  if (runtime == NULL) {
-    proton_engine_set_message(error, error_len, "runtime is required");
-    return 0;
+static int proton_engine_setup_wait_source(char *error, size_t error_len) {
+  if (g_host_wake_read_fd >= 0) {
+    return 1;
   }
-  runtime->wake_read_fd = -1;
-  runtime->wake_write_fd = -1;
   int pipe_fds[2] = {-1, -1};
   if (pipe(pipe_fds) != 0 || !proton_engine_set_nonblocking(pipe_fds[0]) ||
       !proton_engine_set_nonblocking(pipe_fds[1])) {
@@ -682,8 +680,8 @@ static int proton_engine_setup_wait_source(proton_engine_runtime_t *runtime,
                               "failed to create runtime wait pipe");
     return 0;
   }
-  runtime->wake_read_fd = pipe_fds[0];
-  runtime->wake_write_fd = pipe_fds[1];
+  g_host_wake_read_fd = pipe_fds[0];
+  g_host_wake_write_fd = pipe_fds[1];
   atomic_store_explicit(&g_wait_source_ready_mask, PROTON_WAIT_NONE,
                         memory_order_release);
   return 1;
@@ -694,10 +692,9 @@ static void proton_engine_signal_wait_source(uint32_t ready_mask) {
     atomic_fetch_or_explicit(&g_wait_source_ready_mask, ready_mask,
                              memory_order_release);
   }
-  proton_engine_runtime_t *runtime = g_active_runtime;
-  if (runtime != NULL && runtime->wake_write_fd >= 0) {
+  if (g_host_wake_write_fd >= 0) {
     char byte = 1;
-    (void)proton_engine_write_no_sigpipe(runtime->wake_write_fd, &byte, 1);
+    (void)proton_engine_write_no_sigpipe(g_host_wake_write_fd, &byte, 1);
   }
   proton_engine_signal_wakeup_fd((unsigned char)ready_mask);
 }
@@ -3903,15 +3900,13 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
                               "failed to allocate runtime state");
     return PROTON_ERR_ENGINE;
   }
-  runtime->wake_read_fd = -1;
-  runtime->wake_write_fd = -1;
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
   if (pthread_mutex_init(&runtime->bridge_lock, NULL) == 0) {
     runtime->bridge_lock_initialized = 1;
   }
-  if (!proton_engine_setup_wait_source(runtime, error, error_len)) {
+  if (!proton_engine_setup_wait_source(error, error_len)) {
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
     }
@@ -3950,7 +3945,6 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   cef_string_clear(&settings.root_cache_path);
   proton_engine_free_main_args(&main_args);
   if (!cef_initialized) {
-    proton_engine_close_wake_pipe(runtime);
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
       runtime->bridge_lock_initialized = 0;
@@ -3968,7 +3962,6 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   proton_engine_debug_log("gtk_initialize_start");
   if (!proton_engine_ensure_gtk(error, error_len)) {
     proton_engine_cef_shutdown();
-    proton_engine_close_wake_pipe(runtime);
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
       runtime->bridge_lock_initialized = 0;
@@ -3984,7 +3977,6 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   g_proton_cef_runtime_active = 1;
   if (!proton_engine_register_app_scheme_factory(&g_scheme_factory.factory)) {
     proton_engine_cef_shutdown();
-    proton_engine_close_wake_pipe(runtime);
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
       runtime->bridge_lock_initialized = 0;
@@ -4119,7 +4111,6 @@ static int32_t proton_engine_finish_managed_runtime_destroy(
   }
   g_managed_shutdown_runtime = NULL;
   runtime->owns_cef_runtime = 0;
-  proton_engine_close_wake_pipe(runtime);
   if (runtime->bridge_lock_initialized) {
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
@@ -4203,7 +4194,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();
-    proton_engine_close_wake_pipe(runtime);
     proton_engine_clear_wakeup_fd();
     runtime->owns_cef_runtime = 0;
   }
@@ -4297,19 +4287,20 @@ static uint32_t proton_engine_runtime_ready_mask(
 }
 
 int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
-  /* NOT IMPLEMENTED. This engine's wake pipe lives on the runtime struct
-     (runtime->wake_read_fd), so there is nothing to block on before the first
-     runtime exists -- which is exactly the window the host loop must cover.
-     Supporting it means hoisting the pipe to a process-wide one, the way macOS
-     has a run-loop source and Windows a pump event. Refused rather than
-     silently returning a loop that cannot be woken. */
-  proton_engine_set_message(
-      error, error_len,
-      "the host event loop is not implemented for this platform");
-  return PROTON_ERR_UNSUPPORTED;
+  /* The wake pipe is plain POSIX and needs no CEF, so the loop can exist long
+     before a runtime does. A pipe rather than a bare condition variable
+     because poll(2) has to wait on it together with everything else, and
+     because a byte written while nothing is waiting stays readable -- a wakeup
+     that arrived early must still release the next wait. */
+  if (!proton_engine_setup_wait_source(error, error_len)) {
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
 }
 
-void proton_engine_host_loop_end(void) {}
+void proton_engine_host_loop_end(void) {
+  proton_engine_close_wake_pipe();
+}
 
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
@@ -4326,8 +4317,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
         "runtime_wait is unavailable under the application runner");
     return PROTON_ERR_UNSUPPORTED;
   }
-  if (runtime == NULL || !g_proton_cef_initialized) {
+  // A NULL runtime waits for host-loop wakeups alone. The host loop is running
+  // before the first engine runtime exists -- application code does file IO
+  // while it is still deciding what runtime to build -- and a wait that
+  // refused to block until then would leave those wakeups nowhere to land.
+  if (runtime != NULL && !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (g_host_wake_read_fd < 0) {
+    proton_engine_set_message(error, error_len, "host loop is not running");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   if (out_ready_mask == NULL) {
@@ -4363,10 +4362,10 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   atomic_store_explicit(&g_wait_source_ready_mask, PROTON_WAIT_NONE,
                         memory_order_release);
   int poll_result = 0;
-  if (runtime->wake_read_fd >= 0) {
+  if (g_host_wake_read_fd >= 0) {
     struct pollfd wake_fd;
     memset(&wake_fd, 0, sizeof(wake_fd));
-    wake_fd.fd = runtime->wake_read_fd;
+    wake_fd.fd = g_host_wake_read_fd;
     wake_fd.events = POLLIN;
     // poll(2) spells "no timeout" as -1, which is the same convention the ABI
     // uses, so waiting forever needs no special case here.
@@ -4378,7 +4377,7 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
       poll_result = poll(&wake_fd, 1, poll_timeout);
     } while (poll_result < 0 && errno == EINTR);
     if (poll_result > 0 && (wake_fd.revents & POLLIN) != 0) {
-      proton_engine_drain_wake_pipe(runtime);
+      proton_engine_drain_wake_pipe();
     }
   } else if (wait_forever) {
     // No wake descriptor means nothing can interrupt a sleep, so sleeping
