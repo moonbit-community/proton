@@ -1,7 +1,4 @@
 ///|
-let cdp_start_poll_timeout_ms = 250
-
-///|
 let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
 
 ///|
@@ -430,7 +427,7 @@ async fn wait_for_spawned_app_cdp(
   app : SpawnedScenarioApp,
   endpoint : String,
   timeout : Int,
-) -> Unit {
+) -> String {
   let mut elapsed = 0
   let mut browser_ready = false
   while elapsed <= timeout {
@@ -443,42 +440,32 @@ async fn wait_for_spawned_app_cdp(
         )
       None => ()
     }
-    let endpoint_ready = try {
-      ignore(
-        run_e2e_operation_with_timeout(
-          cdp_start_poll_timeout_ms,
-          "CDP browser endpoint probe",
-          () => {
-            @client.wait_for_browser_endpoint(
-              endpoint,
-              timeout_ms=cdp_start_poll_timeout_ms,
-            )
-          },
-        ),
-      )
-      true
-    } catch {
-      _ => false
-    }
-    if endpoint_ready {
-      browser_ready = true
-      let page_ready = run_e2e_operation_with_timeout(
+    let browser_web_socket_url = Some(
+      run_e2e_operation_with_timeout(
         cdp_start_poll_timeout_ms,
-        "CDP page discovery probe",
+        "CDP browser endpoint probe",
         () => {
-          let targets = @client.discover_targets(cdp_target_from(endpoint))
-          targets.any(info => info.target_type == "page")
+          @client.wait_for_browser_endpoint(
+            endpoint,
+            timeout_ms=cdp_start_poll_timeout_ms,
+          )
         },
-      ) catch {
-        _ => false
+      ),
+    ) catch {
+      _ => None
+    }
+    match browser_web_socket_url {
+      Some(browser_web_socket_url) => {
+        browser_ready = true
+        let targets = discover_targets_for_poll(cdp_target_from(endpoint))
+        let page_ready = targets.any(info => info.target_type == "page")
+        if page_ready {
+          return browser_web_socket_url
+        }
+        @async.sleep(100)
+        elapsed = elapsed + 100
       }
-      if page_ready {
-        return
-      }
-      @async.sleep(100)
-      elapsed = elapsed + 100
-    } else {
-      elapsed = elapsed + cdp_start_poll_timeout_ms
+      None => elapsed = elapsed + cdp_start_poll_timeout_ms
     }
   }
   if browser_ready {
@@ -643,11 +630,17 @@ async fn run_scenario_probe_once(
     let app = spawn_scenario_app(group, root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    let browser_web_socket_url = wait_for_spawned_app_cdp(
+      app,
+      cdp_http_endpoint_from(target),
+      timeout,
+    )
     let shutdown = if name == "45_bridge_multi_window" {
       run_multi_window_scenario_probe(app, target, timeout)
     } else if name == "52_web_contents_view" {
-      run_web_contents_view_scenario_probe(app, target, timeout)
+      run_web_contents_view_scenario_probe(
+        app, target, browser_web_socket_url, timeout,
+      )
     } else {
       if name == "41_app_commands" {
         run_app_commands_full_probe(root, target, timeout, app.native_log_path)
@@ -691,12 +684,15 @@ async fn run_scenario_probe_with_retry(
   name : String,
   timeout : Int,
 ) -> Unit {
+  let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
-      run_e2e_operation_with_timeout(timeout, "E2E scenario " + name, () => {
-        run_scenario_probe_once(root, name, timeout)
-      })
+      run_e2e_operation_with_timeout(
+        operation_timeout,
+        "E2E scenario " + name,
+        () => run_scenario_probe_once(root, name, timeout),
+      )
       true
     } catch {
       error => {
@@ -712,6 +708,17 @@ async fn run_scenario_probe_with_retry(
     }
     @async.sleep(1000)
     attempt = attempt + 1
+  }
+}
+
+///|
+fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
+  if name == "52_web_contents_view" {
+    // The view probe has separate startup, target, page, paint, and shutdown
+    // waits.  Its outer guard must cover more than one phase-sized budget.
+    timeout * 2
+  } else {
+    timeout
   }
 }
 

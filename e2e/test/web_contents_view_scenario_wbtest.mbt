@@ -9,25 +9,18 @@ struct WebContentsViewPageProbe {
 async fn run_web_contents_view_scenario_probe(
   app : SpawnedScenarioApp,
   target : String,
+  browser_web_socket_url : String,
   timeout : Int,
 ) -> ShutdownProbeResult {
   let (host, left, right) = wait_for_web_contents_view_targets(
     app, target, timeout,
   )
-  let browser = @client.connect_cdp_browser_target_with_timeout(
-    cdp_target_from(target),
+  let browser = @client.CdpClient::connect_with_timeout(
+    browser_web_socket_url,
     timeout_ms=timeout,
   )
-  let page_left = @client.connect_cdp_page_target_with_timeout(
-    cdp_target_from(target),
-    target_id=left.target_id,
-    timeout_ms=timeout,
-  )
-  let page_right = @client.connect_cdp_page_target_with_timeout(
-    cdp_target_from(target),
-    target_id=right.target_id,
-    timeout_ms=timeout,
-  )
+  let page_left = connect_web_contents_view_page(left, timeout)
+  let page_right = connect_web_contents_view_page(right, timeout)
   defer {
     browser.close()
     page_left.close()
@@ -108,6 +101,21 @@ async fn run_web_contents_view_scenario_probe(
 }
 
 ///|
+async fn connect_web_contents_view_page(
+  target : @client.CdpDiscoveredTarget,
+  timeout : Int,
+) -> @client.CdpClient {
+  match target.web_socket_debugger_url {
+    Some(web_socket_url) =>
+      @client.CdpClient::connect_with_timeout(
+        web_socket_url,
+        timeout_ms=timeout,
+      )
+    None => fail("CDP page target has no WebSocket URL: " + target.target_id)
+  }
+}
+
+///|
 async fn wait_for_web_contents_view_targets(
   app : SpawnedScenarioApp,
   target : String,
@@ -120,7 +128,7 @@ async fn wait_for_web_contents_view_targets(
   let cdp_target = cdp_target_from(target)
   let mut elapsed = 0
   while elapsed <= timeout {
-    let targets = @client.discover_targets(cdp_target) catch { _ => [] }
+    let targets = discover_targets_for_poll(cdp_target)
     let mut host : @client.CdpDiscoveredTarget? = None
     let mut left : @client.CdpDiscoveredTarget? = None
     let mut right : @client.CdpDiscoveredTarget? = None

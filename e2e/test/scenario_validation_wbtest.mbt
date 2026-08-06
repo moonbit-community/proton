@@ -45,6 +45,8 @@ test "E2E paths resolve backslash relative runtime directories" {
 
 ///|
 test "scenario retries only startup and closed CDP transports" {
+  assert_eq(scenario_operation_timeout("52_web_contents_view", 60000), 120000)
+  assert_eq(scenario_operation_timeout("41_app_commands", 60000), 60000)
   assert_true(
     retryable_scenario_error(
       E2eOperationError::TimedOut(
@@ -221,5 +223,27 @@ async test "E2E timeout interrupts stalled CDP discovery HTTP" {
         fail("unexpected discovery error: " + @debug.render(Repr(error)))
       None => fail("expected stalled CDP discovery to time out")
     }
+  })
+}
+
+///|
+async test "CDP target polling interrupts stalled discovery HTTP" {
+  @async.with_task_group(group => {
+    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+    defer server.close()
+    let accepted = Ref(false)
+    group.spawn_bg(no_wait=true, () => {
+      let (conn, _) = server.accept()
+      defer conn.close()
+      accepted.val = true
+      @async.sleep(10000)
+    })
+    let targets = discover_targets_for_poll(
+      @client.parse_cdp_target(
+        "http://127.0.0.1:" + server.addr.port().to_string(),
+      ),
+    )
+    assert_true(accepted.val)
+    assert_eq(targets, [])
   })
 }

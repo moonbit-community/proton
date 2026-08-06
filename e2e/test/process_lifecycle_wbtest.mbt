@@ -336,7 +336,9 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
     let app = spawn_scenario_app(group, root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    ignore(
+      wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
+    )
     let page = connect_spawned_page(app, target, timeout)
     let mut page_open = true
     defer (if page_open { page.close() })
@@ -430,7 +432,9 @@ async fn run_event_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
     let app = spawn_scenario_app(group, root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
-    wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout)
+    ignore(
+      wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
+    )
     let page = connect_spawned_page(app, target, timeout)
     let mut page_open = true
     defer (if page_open { page.close() })
