@@ -461,7 +461,7 @@ async test "doctor validates runtime manifest schema" {
   @mbfs.write_string_to_file(
     manifest_path,
     (
-      #|{"schema_version":1,"platform":"darwin-arm64","proton_version":"0.1.5","cef_version":"cef-test","dist":"runtime"}
+      #|{"schema_version":1,"platform":"darwin-arm64","proton_version":"0.1.5","cef_version":"cef-test","cef":"/Users/test/.proton/cache/cef/darwin-arm64/cef-test","dist":"runtime"}
     ),
     encoding="utf8",
   ) catch {
@@ -472,9 +472,26 @@ async test "doctor validates runtime manifest schema" {
     Some(manifest) => {
       assert_eq(manifest.schema_version, 1)
       assert_eq(manifest.platform, "darwin-arm64")
+      assert_eq(
+        manifest.cef_cache,
+        Some("/Users/test/.proton/cache/cef/darwin-arm64/cef-test"),
+      )
       assert_eq(manifest.dist, "runtime")
     }
     _ => abort("expected valid runtime manifest")
+  }
+  @mbfs.write_string_to_file(
+    manifest_path,
+    (
+      #|{"schema_version":1,"platform":"darwin-arm64","proton_version":"0.1.5","cef_version":"cef-test","dist":"runtime"}
+    ),
+    encoding="utf8",
+  ) catch {
+    err => abort(@debug.render(Repr(err)))
+  }
+  match runtime_manifest_from_project(project) {
+    Some(manifest) => assert_eq(manifest.cef_cache, None)
+    _ => abort("expected legacy runtime manifest to remain valid")
   }
   @mbfs.write_string_to_file(
     manifest_path,

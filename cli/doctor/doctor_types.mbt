@@ -193,6 +193,7 @@ priv struct DoctorRuntimeManifest {
   platform : String
   proton_version : String
   cef_version : String
+  cef_cache : String?
   dist : String
 }
 

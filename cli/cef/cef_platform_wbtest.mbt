@@ -29,11 +29,117 @@ test "public runtime layout lookup follows stable platform ids" {
 }
 
 ///|
-test "runtime manifests carry an explicit schema version" {
-  let manifest = runtime_manifest_json(
-    "0.1.5", "darwin-arm64", "cef-test", ".proton/runtime",
+test "runtime manifests separate portable and active metadata" {
+  let portable = runtime_manifest_json(
+    proton_version="0.1.5",
+    platform="darwin-arm64",
+    cef_name="cef-test",
+    cef_root=None,
+    dist=".proton/runtime",
   )
-  assert_true(manifest.contains("\"schema_version\":1"))
+  assert_true(portable.contains("\"schema_version\":1"))
+  let portable_json = @json.parse(portable) catch {
+    _ => abort("expected valid portable runtime manifest")
+  }
+  match portable_json {
+    Object(fields) => assert_eq(fields.get("cef"), None)
+    _ => abort("expected portable runtime manifest object")
+  }
+  let active = runtime_manifest_json(
+    proton_version="0.1.5",
+    platform="darwin-arm64",
+    cef_name="cef-test",
+    cef_root=Some("/Users/test/.proton/cache/cef/darwin-arm64/cef-test"),
+    dist=".proton/runtime",
+  )
+  let active_json = @json.parse(active) catch {
+    _ => abort("expected valid active runtime manifest")
+  }
+  assert_eq(
+    json_string_field(active_json, "cef", "active runtime manifest"),
+    "/Users/test/.proton/cache/cef/darwin-arm64/cef-test",
+  )
+}
+
+///|
+test "CEF cache paths are absolute and scoped by platform and archive" {
+  let project_root = @fsutil.resolve_path(".", "target/proton-cache-project")
+  let home = @fsutil.resolve_path(project_root, "../proton-cache-home")
+  let cache_root = resolve_global_cef_cache_root(
+    project_root~,
+    configured_root=None,
+    home=Some(home),
+  ).unwrap()
+  let platform = darwin_arm64_platform()
+  let actual = cef_cache_dir(cache_root~, platform~, name="cef-test")
+  let expected = @fsutil.path_join(
+    @fsutil.path_join(
+      @fsutil.resolve_path(home, ".proton/cache/cef"),
+      "darwin-arm64",
+    ),
+    "cef-test",
+  )
+  assert_true(@fsutil.path_is_absolute(actual))
+  assert_eq(actual, expected)
+}
+
+///|
+test "relative CEF cache overrides resolve from the project root" {
+  let project_root = @fsutil.resolve_path(".", "target/proton-cache-project")
+  let actual = resolve_global_cef_cache_root(
+    project_root~,
+    configured_root=Some("../shared-cef"),
+    home=Some("ignored-home"),
+  )
+  assert_eq(actual, Some(@fsutil.resolve_path(project_root, "../shared-cef")))
+  assert_eq(
+    resolve_global_cef_cache_root(
+      project_root~,
+      configured_root=None,
+      home=None,
+    ),
+    None,
+  )
+}
+
+///|
+async test "runtime metadata does not persist the active CEF cache path" {
+  let root = @fsutil.resolve_path(".", "target/proton-runtime-manifest")
+  let proton_dir = @fsutil.path_join(root, ".proton")
+  let runtime_dir = @fsutil.path_join(proton_dir, "runtime")
+  remove_tree(root)
+  ensure_dir(runtime_dir)
+  let cef_root = @fsutil.resolve_path(
+    root, "../shared-cef/darwin-arm64/cef-test",
+  )
+  write_runtime_metadata(
+    runtime_dir~,
+    proton_version="0.1.5",
+    platform="darwin-arm64",
+    cef_name="cef-test",
+    relative_dist=".proton/runtime",
+  )
+  write_active_runtime_manifest(
+    root~,
+    proton_version="0.1.5",
+    platform="darwin-arm64",
+    cef_name="cef-test",
+    cef_root~,
+    relative_dist=".proton/runtime",
+  )
+  let runtime_manifest_path = @fsutil.path_join(runtime_dir, "manifest.json")
+  let runtime_manifest = read_json_file(runtime_manifest_path)
+  match runtime_manifest {
+    Object(fields) => assert_eq(fields.get("cef"), None)
+    _ => abort("expected runtime metadata object")
+  }
+  let active_manifest_path = @fsutil.path_join(proton_dir, "runtime.json")
+  let active_manifest = read_json_file(active_manifest_path)
+  assert_eq(
+    json_string_field(active_manifest, "cef", active_manifest_path),
+    cef_root,
+  )
+  remove_tree(root)
 }
 
 ///|

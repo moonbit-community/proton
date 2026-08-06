@@ -91,14 +91,14 @@ async fn copy_cef_runtime(
 
 ///|
 async fn assemble_runtime(
-  root : String,
-  platform : ProtonPlatform,
-  proton_version : String,
-  cef_name : String,
-  cef_root : String,
-  prebuilt_root : String,
-  runtime_dir : String,
-  relative_dist : String,
+  root~ : String,
+  platform~ : ProtonPlatform,
+  proton_version~ : String,
+  cef_name~ : String,
+  cef_root~ : String,
+  prebuilt_root~ : String,
+  runtime_dir~ : String,
+  relative_dist~ : String,
 ) -> Unit {
   assert_safe_generated_dir(runtime_dir, root)
   remove_tree(runtime_dir)
@@ -111,18 +111,26 @@ async fn assemble_runtime(
   }
   copy_cef_runtime(platform, cef_root, runtime_dir)
   write_runtime_metadata(
-    root,
-    runtime_dir,
-    proton_version,
-    platform.id,
-    cef_name,
-    relative_dist,
+    runtime_dir~,
+    proton_version~,
+    platform=platform.id,
+    cef_name~,
+    relative_dist~,
   )
   validate_runtime_dist(runtime_dir, platform)
+  write_active_runtime_manifest(
+    root~,
+    proton_version~,
+    platform=platform.id,
+    cef_name~,
+    cef_root~,
+    relative_dist~,
+  )
   validate_active_runtime_manifest(
-    root,
-    platform.id,
-    proton_version,
-    relative_dist,
+    root~,
+    platform=platform.id,
+    proton_version~,
+    cef_root~,
+    relative_dist~,
   )
 }

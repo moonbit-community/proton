@@ -24,12 +24,12 @@ fn assert_safe_install_dir(
 
 ///|
 async fn install_cef_root(
-  extracted_root : String,
-  install_dir : String,
-  name : String,
-  sha256 : String,
-  root : String,
-  platform : ProtonPlatform,
+  extracted_root~ : String,
+  install_dir~ : String,
+  name~ : String,
+  sha256~ : String,
+  root~ : String,
+  platform~ : ProtonPlatform,
 ) -> Unit {
   assert_safe_install_dir(install_dir, root)
   remove_tree(install_dir)
@@ -60,22 +60,69 @@ async fn install_cef_root(
 }
 
 ///|
-/// Returns the shared user-level CEF cache directory for `name`, honoring the
-/// `PROTON_CEF_CACHE` override and otherwise defaulting to
-/// `~/.proton/cache/cef`. Returns `None` when no home directory is known, in
-/// which case caching stays project-local.
-fn global_cef_cache_dir(platform : ProtonPlatform, name : String) -> String? {
-  let root = match @env.get_env_var("PROTON_CEF_CACHE") {
-    Some(value) if value.trim().to_owned() != "" => value.trim().to_owned()
+fn cef_cache_dir(
+  cache_root~ : String,
+  platform~ : ProtonPlatform,
+  name~ : String,
+) -> String {
+  @fsutil.path_join(@fsutil.path_join(cache_root, platform.id), name)
+}
+
+///|
+fn resolve_global_cef_cache_root(
+  project_root~ : String,
+  configured_root~ : String?,
+  home~ : String?,
+) -> String? {
+  match configured_root {
+    Some(value) if value.trim().to_owned() != "" =>
+      Some(@fsutil.resolve_path(project_root, value.trim().to_owned()))
     _ => {
-      guard home_directory() is Some(home) else { return None }
-      @fsutil.path_join(
-        home,
-        @fsutil.path_join(".proton", @fsutil.path_join("cache", "cef")),
+      guard home is Some(home) && home.trim().to_owned() != "" else {
+        return None
+      }
+      let resolved_home = @fsutil.resolve_path(
+        project_root,
+        home.trim().to_owned(),
       )
+      Some(@fsutil.resolve_path(resolved_home, ".proton/cache/cef"))
     }
   }
-  Some(@fsutil.path_join(@fsutil.path_join(root, platform.id), name))
+}
+
+///|
+/// Returns the shared user-level CEF cache directory for `name`, honoring the
+/// `PROTON_CEF_CACHE` override and otherwise defaulting to
+/// `~/.proton/cache/cef`. Relative overrides are resolved from `project_root`.
+/// Returns `None` when no home directory is known, in which case caching stays
+/// project-local.
+fn global_cef_cache_dir(
+  project_root~ : String,
+  platform~ : ProtonPlatform,
+  name~ : String,
+) -> String? {
+  let cache_root = resolve_global_cef_cache_root(
+    project_root~,
+    configured_root=@env.get_env_var("PROTON_CEF_CACHE"),
+    home=home_directory(),
+  )
+  match cache_root {
+    Some(cache_root) => Some(cef_cache_dir(cache_root~, platform~, name~))
+    None => None
+  }
+}
+
+///|
+fn project_cef_cache_dir(
+  root~ : String,
+  platform~ : ProtonPlatform,
+  name~ : String,
+) -> String {
+  cef_cache_dir(
+    cache_root=@fsutil.resolve_path(root, ".proton/cache/cef"),
+    platform~,
+    name~,
+  )
 }
 
 ///|
@@ -94,36 +141,56 @@ fn home_directory() -> String? {
 
 ///|
 async fn ensure_cef_cache(
-  name : String,
-  url : String?,
-  sha256 : String,
-  root : String,
-  cache_dir : String,
-  platform : ProtonPlatform,
-) -> Unit {
+  root~ : String,
+  platform~ : ProtonPlatform,
+  name~ : String,
+  url~ : String?,
+  sha256~ : String,
+) -> String {
+  let project_cache = project_cef_cache_dir(root~, platform~, name~)
+  let cache_dir = global_cef_cache_dir(project_root=root, platform~, name~).unwrap_or(
+    project_cache,
+  )
   if installed_version(cache_dir) == name &&
     installed_checksum(cache_dir) == sha256 {
     normalize_cef_runtime_layout(cache_dir)
-    return
+    return cache_dir
   }
   let legacy_cache = @fsutil.path_join(root, ".cef-cache")
   if installed_version(legacy_cache) == name &&
     installed_checksum(legacy_cache) == sha256 {
-    install_cef_root(legacy_cache, cache_dir, name, sha256, root, platform)
-    return
+    install_cef_root(
+      extracted_root=legacy_cache,
+      install_dir=cache_dir,
+      name~,
+      sha256~,
+      root~,
+      platform~,
+    )
+    return cache_dir
   }
-  match global_cef_cache_dir(platform, name) {
-    Some(global_cache) if global_cache != cache_dir => {
-      if installed_version(global_cache) == name &&
-        installed_checksum(global_cache) == sha256 {
-        install_cef_root(global_cache, cache_dir, name, sha256, root, platform)
-        return
-      }
-      setup_downloaded_cef(name, url, sha256, root, global_cache, platform)
-      install_cef_root(global_cache, cache_dir, name, sha256, root, platform)
-    }
-    _ => setup_downloaded_cef(name, url, sha256, root, cache_dir, platform)
+  if project_cache != cache_dir &&
+    installed_version(project_cache) == name &&
+    installed_checksum(project_cache) == sha256 {
+    install_cef_root(
+      extracted_root=project_cache,
+      install_dir=cache_dir,
+      name~,
+      sha256~,
+      root~,
+      platform~,
+    )
+    return cache_dir
   }
+  setup_downloaded_cef(
+    name~,
+    url~,
+    sha256~,
+    root~,
+    install_dir=cache_dir,
+    platform~,
+  )
+  cache_dir
 }
 
 ///|
@@ -141,12 +208,12 @@ async fn ensure_download_tool(tool : String) -> Unit {
 
 ///|
 async fn setup_downloaded_cef(
-  name : String,
-  url : String?,
-  sha256 : String,
-  root : String,
-  install_dir : String,
-  platform : ProtonPlatform,
+  name~ : String,
+  url~ : String?,
+  sha256~ : String,
+  root~ : String,
+  install_dir~ : String,
+  platform~ : ProtonPlatform,
 ) -> Unit {
   ensure_download_tool("curl")
   ensure_download_tool("tar")
@@ -156,7 +223,14 @@ async fn setup_downloaded_cef(
     download_file(archive_url(name, url), archive_path, sha256)
     extract_tar_bz2(archive_path, temp_dir)
     let extracted_root = find_extracted_root(temp_dir, name, platform)
-    install_cef_root(extracted_root, install_dir, name, sha256, root, platform)
+    install_cef_root(
+      extracted_root~,
+      install_dir~,
+      name~,
+      sha256~,
+      root~,
+      platform~,
+    )
   } catch {
     error => {
       remove_tree(temp_dir) catch {
