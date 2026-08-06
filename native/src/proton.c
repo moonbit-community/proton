@@ -547,11 +547,19 @@ int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
 
 int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                             uint32_t interest_mask,
-                            uint32_t timeout_ms,
+                            int32_t timeout_ms,
                             uint32_t *out_ready_mask) {
   if (out_ready_mask == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_ready_mask is required");
+  }
+  /* Any negative value is an elapsed deadline rather than a request to wait
+     forever; only the documented constant means that. Collapsing the two here
+     would turn an arithmetic slip into a hang. */
+  if (timeout_ms < 0 && timeout_ms != PROTON_WAIT_TIMEOUT_INFINITE) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
   }
   *out_ready_mask = PROTON_WAIT_NONE;
   if (interest_mask == PROTON_WAIT_NONE) {
@@ -621,6 +629,15 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   *out_ready_mask = ready_mask;
   g_last_error[0] = '\0';
   return PROTON_OK;
+}
+
+void proton_runtime_signal_wakeup(void) {
+  /* No handle lookup, and no runtime pointer passed on: every engine ignores
+     the argument for this signal, and the caller is a thread that owns no
+     handle. Reaching the registry from here would mean taking its lock on a
+     foreign thread for a wakeup that only touches atomics and the platform
+     run loop. */
+  proton_engine_runtime_signal_external_event(NULL);
 }
 
 int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,

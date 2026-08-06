@@ -3738,7 +3738,7 @@ static uint32_t proton_engine_runtime_ready_mask(
 
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
-                                   uint32_t timeout_ms,
+                                   int32_t timeout_ms,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len) {
@@ -3770,12 +3770,19 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     return PROTON_OK;
   }
 
-  uint32_t wait_timeout = timeout_ms;
+  // Negative means PROTON_WAIT_TIMEOUT_INFINITE; the ABI rejects every other
+  // negative value before reaching here. -1 stays out of the arithmetic below
+  // so it cannot be mistaken for a duration.
+  int wait_forever = timeout_ms < 0;
+  int64_t wait_timeout = wait_forever ? 0 : (int64_t)timeout_ms;
   int waiting_for_scheduled_pump = 0;
   if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
     int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
-    if (scheduled_delay > 0 && scheduled_delay <= (int64_t)wait_timeout) {
-      wait_timeout = (uint32_t)scheduled_delay;
+    // An engine deadline always wins over waiting forever: the wait exists to
+    // hand the loop back when there is work, and scheduled work is work.
+    if (scheduled_delay > 0 && (wait_forever || scheduled_delay <= wait_timeout)) {
+      wait_timeout = scheduled_delay;
+      wait_forever = 0;
       waiting_for_scheduled_pump = 1;
     }
   }
@@ -3784,8 +3791,13 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                         memory_order_release);
   CFRunLoopRunResult run_result = kCFRunLoopRunTimedOut;
   CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
-  if (wait_timeout > 0) {
-    CFTimeInterval seconds = ((CFTimeInterval)wait_timeout) / 1000.0;
+  if (wait_forever || wait_timeout > 0) {
+    // CFRunLoopRunInMode has no "forever", so an interval far beyond any
+    // process lifetime stands in for it. Unlike a sentinel this one is only
+    // ever reached by a run loop with no sources left to signal it, which is
+    // a hung host either way.
+    CFTimeInterval seconds =
+        wait_forever ? 1.0e9 : ((CFTimeInterval)wait_timeout) / 1000.0;
     // Same reasoning as the pump: run-loop sources and timers autorelease,
     // and no outer pool exists on the host's main thread.
     @autoreleasepool {

@@ -4013,7 +4013,7 @@ int32_t proton_engine_runtime_do_message_loop_work(
 
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
-                                   uint32_t timeout_ms,
+                                   int32_t timeout_ms,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len) {
@@ -4070,15 +4070,25 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     handles[handle_count++] = g_proton_engine_pump_event;
   }
 
-  DWORD wait_timeout = timeout_ms;
+  // Negative means PROTON_WAIT_TIMEOUT_INFINITE; the ABI rejects every other
+  // negative value first. Assigning it straight into a DWORD would happen to
+  // produce Win32's INFINITE, which is the right answer for the wrong reason
+  // and would break the moment the sentinel changed, so it is spelled out.
+  int wait_forever = timeout_ms < 0;
+  int64_t requested_timeout = wait_forever ? 0 : (int64_t)timeout_ms;
   int waiting_for_scheduled_pump = 0;
   if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
     int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
-    if (scheduled_delay > 0 && scheduled_delay <= (int64_t)wait_timeout) {
-      wait_timeout = (DWORD)scheduled_delay;
+    // An engine deadline always wins over waiting forever: the wait exists to
+    // hand the loop back when there is work, and scheduled work is work.
+    if (scheduled_delay > 0 &&
+        (wait_forever || scheduled_delay <= requested_timeout)) {
+      requested_timeout = scheduled_delay;
+      wait_forever = 0;
       waiting_for_scheduled_pump = 1;
     }
   }
+  DWORD wait_timeout = wait_forever ? INFINITE : (DWORD)requested_timeout;
 
   DWORD wake_mask =
       (interest_mask & PROTON_WAIT_PLATFORM) != 0 ? QS_ALLINPUT : 0;
