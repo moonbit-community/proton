@@ -13,6 +13,12 @@ pub fn bridge_permission_grants_supported() -> Bool
 
 pub fn execute_process(config? : RuntimeConfig) -> ProcessResult raise NativeError
 
+pub fn host_loop_begin() -> Unit raise NativeError
+
+pub fn host_loop_end() -> Unit
+
+pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError
+
 pub fn last_error_message() -> String
 
 pub fn notification_cleanup() -> Unit raise NativeError
@@ -40,6 +46,8 @@ pub let runtime_wait_event : Int
 pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
+
+pub fn signal_wakeup() -> Unit
 
 pub fn update_cleanup_previous() -> Unit raise NativeError
 
@@ -254,7 +262,7 @@ pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise Nativ
 pub fn Runtime::run(Self) -> Unit raise NativeError
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
 pub fn Runtime::set_wakeup_fd(Self, Int) -> Unit raise NativeError
-pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms~ : Int) -> RuntimeWaitReady raise NativeError
+pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms? : Int) -> RuntimeWaitReady raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)
 pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, remote_debugging_port? : Int, headless? : Bool) -> Self

@@ -136,6 +136,20 @@ extern "C" fn proton_runtime_wait_ffi(
 extern "C" fn proton_runtime_signal_wakeup_ffi() -> Unit = "proton_runtime_signal_wakeup"
 
 ///|
+extern "C" fn proton_host_loop_begin_ffi() -> Int = "proton_host_loop_begin"
+
+///|
+/// `timeout_ms` follows the same encoding as `proton_runtime_wait_ffi`.
+#borrow(out_ready_mask)
+extern "C" fn proton_host_loop_poll_ffi(
+  timeout_ms : Int,
+  out_ready_mask : Ref[Int],
+) -> Int = "proton_host_loop_poll"
+
+///|
+extern "C" fn proton_host_loop_end_ffi() -> Unit = "proton_host_loop_end"
+
+///|
 extern "C" fn proton_runtime_set_wakeup_fd_ffi(
   runtime : Int64,
   wakeup_fd : Int,
