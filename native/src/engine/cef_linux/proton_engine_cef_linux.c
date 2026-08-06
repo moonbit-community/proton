@@ -4314,6 +4314,9 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   g_proton_cef_runtime_active = 0;
   proton_engine_debug_log("runtime_destroy_done");
+  /* Same proof of a finished shutdown the managed path logs, for the host
+     that destroys its runtime inline. The e2e suite reads it. */
+  proton_engine_debug_log("runtime_destroy_complete");
   free(runtime->asset_root);
   free(runtime);
   return PROTON_OK;

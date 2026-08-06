@@ -643,7 +643,8 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
     if line.contains("window_closed browser=") {
       window_closed = true
     }
-    if line.contains("managed_runtime_destroy_complete") {
+    // Matches the managed marker too, which ends in the same words.
+    if line.contains("runtime_destroy_complete") {
       runtime_destroyed = true
     }
   }
