@@ -2,7 +2,6 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/external_loop_integration" @extloop,
   "moonbitlang/async/fs",
-  "moonbitlang/async/pipe",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",

@@ -17,6 +17,11 @@ let default_proton_rabbita_version = "0.1.14"
 let default_rabbita_version = "0.14.1"
 
 ///|
+/// Scaffolded backends need this directly: `async fn main` is only available to
+/// a package that imports `moonbitlang/async`.
+let default_async_version = "0.20.3"
+
+///|
 fn scaffold_release_chain() -> String {
   "moonbit-community/proton_contract@" +
   default_proton_contract_version +
@@ -49,6 +54,7 @@ priv struct TemplateContext {
   proton_client_version : String
   proton_rabbita_version : String
   rabbita_version : String
+  async_version : String
 }
 
 ///|
@@ -98,6 +104,7 @@ fn template_context(
     proton_client_version: default_proton_client_version,
     proton_rabbita_version: default_proton_rabbita_version,
     rabbita_version: default_rabbita_version,
+    async_version: default_async_version,
   }
 }
 
@@ -121,6 +128,7 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "proton_client_version", value: context.proton_client_version },
     { name: "proton_rabbita_version", value: context.proton_rabbita_version },
     { name: "rabbita_version", value: context.rabbita_version },
+    { name: "async_version", value: context.async_version },
   ]
 }
 

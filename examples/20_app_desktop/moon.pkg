@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbit-community/proton_ext/clipboard",
   "moonbit-community/proton_ext/dialog",
   "moonbit-community/proton_ext/fs",

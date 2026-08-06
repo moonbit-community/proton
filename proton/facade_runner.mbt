@@ -1,58 +1,22 @@
 ///|
-let app_main : Ref[(async () -> Unit)?] = Ref(None)
-
-///|
-priv enum AppRunnerLifecycleState {
-  RunnerIdle = 0
-  RunnerInstalled = 1
-  RunnerRunning = 2
-  RunnerStopping = 3
-} derive(Eq)
-
-///|
-let app_runner_lifecycle : Ref[AppRunnerLifecycleState] = Ref(RunnerIdle)
-
-///|
-fn app_runner_is_active() -> Bool {
-  app_runner_lifecycle.val != RunnerIdle
-}
-
-///|
-fn app_thread_entry() -> Unit {
-  match (app_runner_lifecycle.val, app_main.val) {
-    (RunnerInstalled, Some(main)) => {
-      app_runner_lifecycle.val = RunnerRunning
-      @async.run_async_main(main)
-      app_runner_lifecycle.val = RunnerStopping
-    }
-    _ => abort("Proton application entry is not installed")
-  }
-}
-
-///|
-/// Runs a Proton application with the platform UI loop on the process main
-/// thread and MoonBit async work on Proton's application thread.
+/// Starts Proton's event loop and runs `main` on it.
 ///
-/// Call this once from a synchronous `main`.
+/// An application should not use this. Write a plain `async fn main` and call
+/// `install_event_loop` as its first statement instead:
+///
+/// ```moonbit skip
+/// async fn main {
+///   @proton.install_event_loop()
+///   @proton.app().run_or_abort()
+/// }
+/// ```
+///
+/// This exists for a host that does not own the process entry point -- a test
+/// harness, for one -- and so cannot make `main` async. Aborts on failure,
+/// because a caller in that position has nowhere to report to.
 pub fn run(main : async () -> Unit) -> Unit {
-  guard app_runner_lifecycle.val == RunnerIdle && app_main.val is None else {
-    abort("Proton application runner is already active")
+  install_event_loop() catch {
+    error => abort("Proton event loop failed to start: " + error.message())
   }
-  app_main.val = Some(main)
-  app_runner_lifecycle.val = RunnerInstalled
-  let entry : FuncRef[() -> Unit] = fn() { app_thread_entry() }
-  @native.run_app(entry) catch {
-    error => {
-      app_runner_lifecycle.val = RunnerIdle
-      app_main.val = None
-      abort(
-        "run Proton application failed: native error " +
-        error.status().to_string() +
-        ": " +
-        error.message(),
-      )
-    }
-  }
-  app_runner_lifecycle.val = RunnerIdle
-  app_main.val = None
+  @async.run_async_main(main)
 }

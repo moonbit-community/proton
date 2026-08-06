@@ -9,16 +9,18 @@ workflow — scaffolding, CEF runtime setup, dev mode, and packaging — see the
 ## Quick example
 
 ```moonbit
-fn main {
-  @proton.run(() => {
-    @proton.html("Hello", "<h1>Hello</h1>").run_or_abort()
-  })
+async fn main {
+  @proton.install_event_loop()
+  @proton.html("Hello", "<h1>Hello</h1>").run_or_abort()
 }
 ```
 
-`@proton.run` starts the managed application runner from a synchronous `main`;
-the closure builds the app and runs it. `@proton.html` accepts optional
-`width?`, `height?`, `debug?`, and `resizable?` arguments.
+`@proton.install_event_loop` hands Proton's event loop to `moonbitlang/async`,
+which then keeps every line of MoonBit on the main thread and moves only its own
+waiting to a thread of its own. It must be the first statement of `async fn
+main`, before any other async work, and the package must import
+`moonbitlang/async` for `async fn main` to be available at all. `@proton.html`
+accepts optional `width?`, `height?`, `debug?`, and `resizable?` arguments.
 
 ## Entry points
 

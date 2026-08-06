@@ -170,61 +170,60 @@ fn open_panel(window : @proton.WindowHandle) -> Unit {
 }
 
 ///|
-fn main {
-  @proton.run(() => {
-    @proton.asset(
-      "Web Contents View Browser",
-      "52_web_contents_view/app/index.html",
-      width=1120,
-      height=720,
-      debug=true,
-    )
-    .titlebar_style(@proton.TitlebarStyle::Overlay)
-    .expose(browser_extension())
-    .on_window_event(async fn(_window, event) noraise {
-      match event {
-        StateChanged(state) =>
-          // Keep the embedded browser pinned to the right of the sidebar.
-          match panel_slot.val {
-            Some(view) =>
-              view.set_bounds(
-                x=sidebar_width,
-                y=0,
-                width=state.width - sidebar_width,
-                height=state.height,
-              ) catch {
-                _ => ()
-              }
-            None => ()
-          }
-      }
-    })
-    .on_view_event(async fn(_view, event) noraise {
-      // Keep the sidebar address bar and status line in sync with the page.
-      match event {
-        Navigated(url~) => sync_sidebar(url=Some(url), title=None, error=None)
-        TitleUpdated(title~) =>
-          sync_sidebar(url=None, title=Some(title), error=None)
-        LoadFailed(url~, error_text~, ..) =>
-          sync_sidebar(
-            url=Some(url),
-            title=None,
-            error=Some("load failed: " + error_text),
-          )
-        LoadingChanged(..) => ()
-      }
-    })
-    .window_lifecycle(
-      on_ready=async fn(context) {
-        let window = context.handle()
-        host_slot.val = Some(window)
-        open_panel(window)
-      },
-      on_close=fn(_state) {
-        panel_slot.val = None
-        host_slot.val = None
-      },
-    )
-    .run_or_abort()
+async fn main {
+  @proton.install_event_loop()
+  @proton.asset(
+    "Web Contents View Browser",
+    "52_web_contents_view/app/index.html",
+    width=1120,
+    height=720,
+    debug=true,
+  )
+  .titlebar_style(@proton.TitlebarStyle::Overlay)
+  .expose(browser_extension())
+  .on_window_event(async fn(_window, event) noraise {
+    match event {
+      StateChanged(state) =>
+        // Keep the embedded browser pinned to the right of the sidebar.
+        match panel_slot.val {
+          Some(view) =>
+            view.set_bounds(
+              x=sidebar_width,
+              y=0,
+              width=state.width - sidebar_width,
+              height=state.height,
+            ) catch {
+              _ => ()
+            }
+          None => ()
+        }
+    }
   })
+  .on_view_event(async fn(_view, event) noraise {
+    // Keep the sidebar address bar and status line in sync with the page.
+    match event {
+      Navigated(url~) => sync_sidebar(url=Some(url), title=None, error=None)
+      TitleUpdated(title~) =>
+        sync_sidebar(url=None, title=Some(title), error=None)
+      LoadFailed(url~, error_text~, ..) =>
+        sync_sidebar(
+          url=Some(url),
+          title=None,
+          error=Some("load failed: " + error_text),
+        )
+      LoadingChanged(..) => ()
+    }
+  })
+  .window_lifecycle(
+    on_ready=async fn(context) {
+      let window = context.handle()
+      host_slot.val = Some(window)
+      open_panel(window)
+    },
+    on_close=fn(_state) {
+      panel_slot.val = None
+      host_slot.val = None
+    },
+  )
+  .run_or_abort()
 }
