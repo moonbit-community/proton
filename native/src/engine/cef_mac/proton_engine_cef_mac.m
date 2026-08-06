@@ -1084,11 +1084,13 @@ proton_engine_window_public_id_for_native_window(NSWindow *native_window) {
   return PROTON_INVALID_HANDLE;
 }
 
+// NULL means every window, so the host loop keeps driving browser creation for
+// runtimes whose handle it does not hold.
 static int proton_engine_runtime_has_pending_platform_work(
     proton_engine_runtime_t *runtime) {
   for (proton_engine_window_t *window = g_windows; window != NULL;
        window = window->next) {
-    if (window->runtime != runtime) {
+    if (runtime != NULL && window->runtime != runtime) {
       continue;
     }
     if (window->browser_create_pending || window->browser_create_scheduled ||
@@ -3486,12 +3488,16 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
+// A NULL runtime means every window in the process, the same rule the host
+// loop follows everywhere else: it owns the main thread on behalf of whatever
+// runtimes happen to exist, and holds a handle to none of them.
 static void proton_engine_runtime_create_pending_browsers(
     proton_engine_runtime_t *runtime) {
   for (proton_engine_window_t *window = g_windows; window != NULL;
        window = window->next) {
-    if (window->runtime != runtime || !window->browser_create_pending ||
-        window->browser_create_scheduled || window->closed) {
+    if ((runtime != NULL && window->runtime != runtime) ||
+        !window->browser_create_pending || window->browser_create_scheduled ||
+        window->closed) {
       continue;
     }
     uint64_t native_id = window->native_id;
@@ -3741,6 +3747,31 @@ int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
                           memory_order_release);
     return PROTON_ERR_PLATFORM;
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len) {
+  int32_t status = proton_engine_runtime_wait(
+      NULL, PROTON_WAIT_ALL, timeout_ms, out_ready_mask, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (!g_proton_cef_initialized) {
+    return PROTON_OK;
+  }
+  // The wait above only blocks; it does not dispatch. AppKit posts events to a
+  // run-loop source but sends them from its own loop, which nobody is running,
+  // so the events stay queued until this pump dequeues them -- and this is the
+  // only caller of cef_do_message_loop_work while the host loop owns the main
+  // thread. Skipping it on a timed-out wait would strand work that arrived
+  // through a path that does not signal the wait source.
+  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
+  proton_engine_reset_scheduled_pump();
+  proton_engine_pump_appkit_cef_once();
+  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
   return PROTON_OK;
 }
 

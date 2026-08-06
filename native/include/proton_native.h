@@ -126,12 +126,19 @@ PROTON_API void proton_runtime_signal_wakeup(void);
  * runtime is created and outlives the last one, which is what lets a host run
  * its own async work while it is still deciding what runtime to build.
  *
- * `begin` must run on the main thread. `wait` blocks there until work arrives
- * or the timeout expires, taking PROTON_WAIT_TIMEOUT_INFINITE to wait until
- * something happens, and reports which kinds of work are ready. Until a
- * runtime exists it reports only wakeups. `end` releases the loop. */
+ * `begin` must run on the main thread. `poll` runs one iteration of that loop
+ * there: it blocks until work arrives or the timeout expires, taking
+ * PROTON_WAIT_TIMEOUT_INFINITE to wait until something happens, then drives
+ * the platform's own pending work before reporting which kinds of work are
+ * ready for the host. Until a runtime exists it reports only wakeups. `end`
+ * releases the loop.
+ *
+ * `poll` is the only thing that advances the platform toolkit once the host
+ * loop is running, so the host must keep calling it. A host that owns a
+ * runtime handle uses `proton_runtime_do_message_loop_work` instead and does
+ * not run a host loop at all. */
 PROTON_API int32_t proton_host_loop_begin(void);
-PROTON_API int32_t proton_host_loop_wait(int32_t timeout_ms,
+PROTON_API int32_t proton_host_loop_poll(int32_t timeout_ms,
                                          uint32_t *out_ready_mask);
 PROTON_API void proton_host_loop_end(void);
 PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,

@@ -3979,6 +3979,34 @@ int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
   return PROTON_OK;
 }
 
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len) {
+  int32_t status = proton_engine_runtime_wait(
+      NULL, PROTON_WAIT_ALL, timeout_ms, out_ready_mask, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  /* The wait above only blocks on handles; it dispatches nothing. This is
+     where the thread's message queue drains and the only caller of
+     cef_do_message_loop_work while the host loop owns the main thread.
+     The reset comes before the CEF check because the pump event is
+     manual-reset: a wakeup that arrived before the first runtime existed would
+     otherwise leave every later wait returning immediately. */
+  proton_engine_reset_scheduled_pump();
+  MSG msg;
+  while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+    TranslateMessage(&msg);
+    DispatchMessageW(&msg);
+  }
+  if (g_proton_cef_initialized &&
+      !g_proton_engine_multi_threaded_message_loop) {
+    cef_do_message_loop_work();
+  }
+  return PROTON_OK;
+}
+
 void proton_engine_host_loop_end(void) {
   if (g_proton_engine_pump_event != NULL) {
     CloseHandle(g_proton_engine_pump_event);
@@ -4001,8 +4029,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   if (out_ready_mask != NULL) {
     *out_ready_mask = PROTON_WAIT_NONE;
   }
-  if (runtime == NULL || !g_proton_cef_initialized) {
+  /* A NULL runtime waits for host-loop wakeups alone. The host loop is running
+     before the first engine runtime exists -- application code does file IO
+     while it is still deciding what runtime to build -- and a wait that
+     refused to block until then would leave those wakeups nowhere to land. */
+  if (runtime != NULL && !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (g_proton_engine_pump_event == NULL) {
+    proton_engine_set_message(error, error_len, "host loop is not running");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   if (out_ready_mask == NULL) {
@@ -4034,7 +4070,7 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   DWORD handle_count = 0;
   DWORD bridge_handle_index = MAXDWORD;
   DWORD pump_handle_index = MAXDWORD;
-  if ((interest_mask & PROTON_WAIT_BRIDGE) != 0 &&
+  if ((interest_mask & PROTON_WAIT_BRIDGE) != 0 && runtime != NULL &&
       runtime->bridge_event != NULL) {
     bridge_handle_index = handle_count;
     handles[handle_count++] = runtime->bridge_event;

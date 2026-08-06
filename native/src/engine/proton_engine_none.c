@@ -749,10 +749,24 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
   (void)public_view;
 }
 
+/* Refused rather than accepted: a loop that started here would fail on every
+   poll instead, and a host that cannot get an engine should learn it while it
+   is still the one raising the error. */
 int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
-  (void)error;
-  (void)error_len;
-  return PROTON_OK;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len) {
+  (void)timeout_ms;
+  if (out_ready_mask != NULL) {
+    *out_ready_mask = PROTON_WAIT_NONE;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
 }
 
 void proton_engine_host_loop_end(void) {}

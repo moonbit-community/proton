@@ -56,7 +56,7 @@ static const char *const expected_exports[] = {
     "proton_runtime_wait",
     "proton_runtime_signal_wakeup",
     "proton_host_loop_begin",
-    "proton_host_loop_wait",
+    "proton_host_loop_poll",
     "proton_host_loop_end",
     "proton_runtime_set_wakeup_fd",
     "proton_runtime_prepare_wakeup_source",
