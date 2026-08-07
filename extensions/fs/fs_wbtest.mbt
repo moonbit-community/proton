@@ -287,7 +287,11 @@ test "fs permission resolution anchors relative paths to the trusted base" {
     root.get("path"),
     Some(
       Json::string(
-        @mbpath.Path(path_for_platform(base.join("workspace").to_string()))
+        @mbpath.Path(
+          path_for_platform(
+            @mbpath.Path(canonical_base).join("workspace").to_string(),
+          ),
+        )
         .normalize()
         .to_string(),
       ),

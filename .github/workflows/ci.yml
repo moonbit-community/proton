@@ -269,6 +269,8 @@ jobs:
           _CL_: /utf-8
           PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $extensionPackages = @(
             "moonbit-community/proton_ext"
             "moonbit-community/proton_ext/auto_launch"
@@ -305,6 +307,8 @@ jobs:
         env:
           _CL_: /utf-8
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           moon -C examples build --target native
 
       - name: List Windows example binaries
