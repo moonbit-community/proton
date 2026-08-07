@@ -245,7 +245,6 @@ pub(all) enum ProcessResult {
 } derive(Eq, @debug.Debug)
 
 type Runtime
-pub fn Runtime::activate_wakeup_source(Self) -> Unit raise NativeError
 pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
 pub fn Runtime::destroy(Self) -> Unit raise NativeError
 pub fn Runtime::do_message_loop_work(Self) -> Unit raise NativeError
@@ -256,12 +255,10 @@ pub fn Runtime::poll_bridge_request_json(Self) -> String? raise NativeError
 pub fn Runtime::poll_event(Self) -> RuntimeEvent? raise NativeError
 pub fn Runtime::poll_event_json(Self) -> String? raise NativeError
 pub fn Runtime::poll_message_dialog(Self, Int64) -> Bool raise NativeError
-pub fn Runtime::prepare_wakeup_source(Self) -> String raise NativeError
 pub fn Runtime::quit(Self) -> Unit raise NativeError
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise NativeError
 pub fn Runtime::run(Self) -> Unit raise NativeError
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
-pub fn Runtime::set_wakeup_fd(Self, Int) -> Unit raise NativeError
 pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms? : Int) -> RuntimeWaitReady raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)

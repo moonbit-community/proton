@@ -348,8 +348,6 @@ static int g_managed_shutdown_complete = 0;
    them on CEF's IO thread, so both sides must take this lock. Keep critical
    sections leaf-only: never call back into engine or CEF code while held. */
 static pthread_mutex_t g_window_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
-static int g_wakeup_write_fd = -1;
 
 static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
                                                        GdkEvent *event,
@@ -608,25 +606,6 @@ static ssize_t proton_engine_write_no_sigpipe(int fd,
   return written;
 }
 
-static void proton_engine_signal_wakeup_fd(unsigned char wakeup_byte) {
-  pthread_mutex_lock(&g_wakeup_fd_lock);
-  if (g_wakeup_write_fd >= 0) {
-    (void)proton_engine_write_no_sigpipe(
-        g_wakeup_write_fd, &wakeup_byte, sizeof(wakeup_byte));
-  }
-  pthread_mutex_unlock(&g_wakeup_fd_lock);
-}
-
-static void proton_engine_clear_wakeup_fd(void) {
-  pthread_mutex_lock(&g_wakeup_fd_lock);
-  int previous_fd = g_wakeup_write_fd;
-  g_wakeup_write_fd = -1;
-  pthread_mutex_unlock(&g_wakeup_fd_lock);
-  if (previous_fd >= 0) {
-    close(previous_fd);
-  }
-}
-
 static int proton_engine_set_nonblocking(int fd) {
   int flags = fcntl(fd, F_GETFL, 0);
   if (flags < 0) {
@@ -698,7 +677,6 @@ static void proton_engine_signal_wait_source(uint32_t ready_mask) {
     char byte = 1;
     (void)proton_engine_write_no_sigpipe(g_host_wake_write_fd, &byte, 1);
   }
-  proton_engine_signal_wakeup_fd((unsigned char)ready_mask);
 }
 
 void proton_engine_runtime_signal_external_event(
@@ -3724,7 +3702,6 @@ int32_t proton_engine_finish_app(char *error, size_t error_len) {
   }
   proton_engine_cef_shutdown();
   proton_engine_free_closed_windows();
-  proton_engine_clear_wakeup_fd();
   proton_engine_reset_scheduled_pump();
   g_proton_cef_runtime_active = 0;
   return PROTON_OK;
@@ -4123,7 +4100,6 @@ static int32_t proton_engine_finish_managed_runtime_destroy(
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
-  proton_engine_clear_wakeup_fd();
   if (g_active_runtime == runtime) {
     g_active_runtime = NULL;
   }
@@ -4202,7 +4178,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();
-    proton_engine_clear_wakeup_fd();
     runtime->owns_cef_runtime = 0;
   }
   if (runtime->bridge_lock_initialized) {
@@ -4450,83 +4425,6 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   }
   *out_ready_mask = ready_mask;
   return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
-                                            int32_t wakeup_fd,
-                                            char *error,
-                                            size_t error_len) {
-  if (proton_app_runner_is_active() &&
-      !proton_app_runner_is_ui_thread()) {
-    proton_engine_ui_call_t call = {
-        .operation = PROTON_ENGINE_UI_RUNTIME_SET_WAKEUP_FD,
-        .runtime = runtime,
-        .first_int = wakeup_fd,
-        .error = error,
-        .error_len = error_len,
-    };
-    return proton_engine_dispatch_ui_call(&call);
-  }
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-
-  int owned_fd = -1;
-  if (wakeup_fd >= 0) {
-    owned_fd = dup(wakeup_fd);
-    if (owned_fd < 0) {
-      proton_engine_set_message(error, error_len,
-                                "failed to duplicate runtime wakeup fd");
-      return PROTON_ERR_PLATFORM;
-    }
-    int status_flags = fcntl(owned_fd, F_GETFL, 0);
-    int descriptor_flags = fcntl(owned_fd, F_GETFD, 0);
-    if (status_flags < 0 || descriptor_flags < 0 ||
-        fcntl(owned_fd, F_SETFL, status_flags | O_NONBLOCK) < 0 ||
-        fcntl(owned_fd, F_SETFD, descriptor_flags | FD_CLOEXEC) < 0) {
-      close(owned_fd);
-      proton_engine_set_message(error, error_len,
-                                "failed to configure runtime wakeup fd");
-      return PROTON_ERR_PLATFORM;
-    }
-  }
-
-  pthread_mutex_lock(&g_wakeup_fd_lock);
-  int previous_fd = g_wakeup_write_fd;
-  g_wakeup_write_fd = owned_fd;
-  pthread_mutex_unlock(&g_wakeup_fd_lock);
-  if (previous_fd >= 0) {
-    close(previous_fd);
-  }
-  if (owned_fd >= 0) {
-    proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
-  }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_prepare_wakeup_source(
-    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
-  (void)runtime;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  proton_engine_set_message(
-      error, error_len,
-      "Linux uses proton_runtime_set_wakeup_fd for its wakeup source");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-int32_t proton_engine_runtime_activate_wakeup_source(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
-  (void)runtime;
-  proton_engine_set_message(
-      error, error_len,
-      "Linux uses proton_runtime_set_wakeup_fd for its wakeup source");
-  return PROTON_ERR_UNSUPPORTED;
 }
 
 // TODO: Expose scheduled pump deadlines for external-message-pump hosts.

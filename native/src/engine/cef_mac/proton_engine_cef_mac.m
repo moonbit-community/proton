@@ -356,8 +356,6 @@ static atomic_int g_runtime_wait_log_count = ATOMIC_VAR_INIT(0);
 static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
 static CFRunLoopRef g_wait_run_loop = NULL;
 static CFRunLoopSourceRef g_wait_source = NULL;
-static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
-static int g_wakeup_write_fd = -1;
 
 static void proton_engine_log_to_env(const char *env_name,
                                      const char *format,
@@ -384,26 +382,6 @@ static void proton_engine_debug_log(const char *format, ...) {
 
 static void proton_engine_wait_source_perform(void *info) {
   (void)info;
-}
-
-static void proton_engine_signal_wakeup_fd(unsigned char wakeup_byte) {
-  pthread_mutex_lock(&g_wakeup_fd_lock);
-  if (g_wakeup_write_fd >= 0) {
-    ssize_t written;
-    do {
-      written = write(g_wakeup_write_fd, &wakeup_byte, sizeof(wakeup_byte));
-    } while (written < 0 && errno == EINTR);
-  }
-  pthread_mutex_unlock(&g_wakeup_fd_lock);
-}
-
-static void proton_engine_clear_wakeup_fd(void) {
-  pthread_mutex_lock(&g_wakeup_fd_lock);
-  if (g_wakeup_write_fd >= 0) {
-    close(g_wakeup_write_fd);
-    g_wakeup_write_fd = -1;
-  }
-  pthread_mutex_unlock(&g_wakeup_fd_lock);
 }
 
 static void proton_engine_teardown_wait_source(void) {
@@ -461,7 +439,6 @@ static void proton_engine_signal_wait_source(uint32_t ready_mask) {
       CFRunLoopWakeUp(g_wait_run_loop);
     }
   }
-  proton_engine_signal_wakeup_fd((unsigned char)ready_mask);
 }
 
 void proton_engine_runtime_signal_external_event(
@@ -3445,7 +3422,6 @@ static int32_t proton_engine_finish_managed_runtime_destroy(
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
-  proton_engine_clear_wakeup_fd();
   g_proton_cef_runtime_active = 0;
   proton_engine_debug_log("managed_runtime_destroy_complete");
   free(runtime->asset_root);
@@ -3503,7 +3479,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
-  proton_engine_clear_wakeup_fd();
   g_proton_cef_runtime_active = 0;
   /* Same proof of a finished shutdown the managed path logs, for the host
      that destroys its runtime inline. The e2e suite reads it. */
@@ -3920,73 +3895,6 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                           (int)run_result, signaled_mask, ready_mask);
   *out_ready_mask = ready_mask;
   return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
-                                            int32_t wakeup_fd,
-                                            char *error,
-                                            size_t error_len) {
-  PROTON_ENGINE_RETURN_ON_MAIN(proton_engine_runtime_set_wakeup_fd(
-      runtime, wakeup_fd, error, error_len));
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-
-  int owned_fd = -1;
-  if (wakeup_fd >= 0) {
-    owned_fd = dup(wakeup_fd);
-    if (owned_fd < 0) {
-      proton_engine_set_message(error, error_len,
-                                "failed to duplicate runtime wakeup fd");
-      return PROTON_ERR_PLATFORM;
-    }
-    int flags = fcntl(owned_fd, F_GETFL);
-    if (flags < 0 || fcntl(owned_fd, F_SETFL, flags | O_NONBLOCK) < 0 ||
-        fcntl(owned_fd, F_SETFD, FD_CLOEXEC) < 0 ||
-        fcntl(owned_fd, F_SETNOSIGPIPE, 1) < 0) {
-      close(owned_fd);
-      proton_engine_set_message(error, error_len,
-                                "failed to configure runtime wakeup fd");
-      return PROTON_ERR_PLATFORM;
-    }
-  }
-
-  pthread_mutex_lock(&g_wakeup_fd_lock);
-  int previous_fd = g_wakeup_write_fd;
-  g_wakeup_write_fd = owned_fd;
-  pthread_mutex_unlock(&g_wakeup_fd_lock);
-  if (previous_fd >= 0) {
-    close(previous_fd);
-  }
-  if (owned_fd >= 0) {
-    proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
-  }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_prepare_wakeup_source(
-    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
-  (void)runtime;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  proton_engine_set_message(
-      error, error_len,
-      "macOS uses proton_runtime_set_wakeup_fd for its wakeup source");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-int32_t proton_engine_runtime_activate_wakeup_source(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
-  (void)runtime;
-  proton_engine_set_message(
-      error, error_len,
-      "macOS uses proton_runtime_set_wakeup_fd for its wakeup source");
-  return PROTON_ERR_UNSUPPORTED;
 }
 
 int32_t proton_engine_runtime_next_wakeup_delay_ms(

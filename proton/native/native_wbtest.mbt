@@ -183,14 +183,8 @@ test "runtime info reports ABI and Proton runtime metadata" {
   }
   if typed.runtime_available {
     match typed.platform {
-      "windows" => {
+      "windows" | "macos" | "linux" =>
         assert_true(typed.features.contains("managed_app_runner"))
-        assert_true(typed.features.contains("runtime_wakeup_source"))
-      }
-      "macos" | "linux" => {
-        assert_true(typed.features.contains("managed_app_runner"))
-        assert_true(typed.features.contains("runtime_wakeup_fd"))
-      }
       _ => ()
     }
   }

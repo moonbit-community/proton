@@ -642,49 +642,6 @@ pub fn signal_wakeup() -> Unit {
 }
 
 ///|
-/// Installs the write end of a non-blocking pipe used to wake the host async
-/// runtime. The native runtime duplicates the descriptor and does not borrow
-/// the caller's ownership.
-pub fn Runtime::set_wakeup_fd(
-  self : Runtime,
-  wakeup_fd : Int,
-) -> Unit raise NativeError {
-  if wakeup_fd < -1 {
-    raise invalid_argument("wakeup_fd must be -1 or a valid descriptor")
-  }
-  check_status(
-    proton_runtime_set_wakeup_fd_ffi(self.active_handle(), wakeup_fd),
-  )
-}
-
-///|
-/// Prepares a platform-owned wakeup source and returns its locator.
-///
-/// Call `activate_wakeup_source` after opening the locator for reading.
-pub fn Runtime::prepare_wakeup_source(
-  self : Runtime,
-) -> String raise NativeError {
-  let handle = self.active_handle()
-  require_native_text(
-    "runtime wakeup source",
-    PayloadBytesExcludingTerminator,
-    (buffer, buffer_len, required) => {
-      proton_runtime_prepare_wakeup_source_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    },
-  )
-}
-
-///|
-/// Activates a prepared wakeup source after its reader is connected.
-pub fn Runtime::activate_wakeup_source(
-  self : Runtime,
-) -> Unit raise NativeError {
-  check_status(proton_runtime_activate_wakeup_source_ffi(self.active_handle()))
-}
-
-///|
 /// Returns the delay until CEF next needs its external message pump serviced,
 /// or `None` when no delayed pump is scheduled.
 ///

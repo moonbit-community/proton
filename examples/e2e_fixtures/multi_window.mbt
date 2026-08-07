@@ -5,19 +5,6 @@ priv struct MultiWindowBridgeDispatchTask {
 }
 
 ///|
-#cfg(not(platform="windows"))
-priv struct MultiWindowBridgeWakeup {
-  reader : @pipe.PipeRead
-  writer : @pipe.PipeWrite
-}
-
-///|
-#cfg(platform="windows")
-priv struct MultiWindowBridgeWakeup {
-  reader : @fs.File
-}
-
-///|
 struct MultiWindowIdentifyPayload {
   label : String
   delay_ms : Int?
@@ -160,11 +147,6 @@ fn multi_window_page_html(label : String) -> String {
 async fn run_multi_window_pump(
   runtime : @native.Runtime,
 ) -> Result[Unit, String] {
-  let wakeup = match MultiWindowBridgeWakeup::new(runtime) {
-    Err(message) => return Err(message)
-    Ok(wakeup) => wakeup
-  }
-  defer wakeup.close(runtime)
   let wake_signal = @core.RuntimeWakeSignal::new()
   @async.with_task_group(group => {
     let mut closed = 0
@@ -245,7 +227,7 @@ async fn run_multi_window_pump(
       if did_work {
         @async.sleep(0)
       } else {
-        match wakeup.wait(wake_signal) {
+        match multi_window_wait_for_work(wake_signal) {
           Err(message) => return Err(message)
           Ok(_) => ()
         }
@@ -259,91 +241,18 @@ async fn run_multi_window_pump(
 }
 
 ///|
-#cfg(not(platform="windows"))
-fn MultiWindowBridgeWakeup::new(
-  runtime : @native.Runtime,
-) -> Result[MultiWindowBridgeWakeup, String] {
-  let (reader, writer) = @pipe.pipe() catch {
-    _ => return Err("create runtime wakeup pipe failed")
-  }
-  match
-    multi_window_native_result("install runtime wakeup fd", () => {
-      runtime.set_wakeup_fd(writer.fd())
-    }) {
-    Err(message) => {
-      reader.close()
-      writer.close()
-      return Err(message)
-    }
-    Ok(_) => ()
-  }
-  Ok(MultiWindowBridgeWakeup::{ reader, writer })
-}
-
-///|
-#cfg(platform="windows")
-async fn MultiWindowBridgeWakeup::new(
-  runtime : @native.Runtime,
-) -> Result[MultiWindowBridgeWakeup, String] {
-  let source = match
-    multi_window_native_result("prepare runtime wakeup source", () => {
-      runtime.prepare_wakeup_source()
-    }) {
-    Err(message) => return Err(message)
-    Ok(source) => source
-  }
-  let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
-    error =>
-      return Err("open runtime wakeup source failed: " + error.to_string())
-  }
-  match
-    multi_window_native_result("activate runtime wakeup source", () => {
-      runtime.activate_wakeup_source()
-    }) {
-    Err(message) => {
-      reader.close()
-      Err(message)
-    }
-    Ok(_) => Ok(MultiWindowBridgeWakeup::{ reader, })
-  }
-}
-
-///|
-#cfg(not(platform="windows"))
-fn MultiWindowBridgeWakeup::close(
-  self : MultiWindowBridgeWakeup,
-  runtime : @native.Runtime,
-) -> Unit {
-  ignore(
-    multi_window_native_result("remove runtime wakeup fd", () => {
-      runtime.set_wakeup_fd(-1)
-    }),
-  )
-  self.reader.close()
-  self.writer.close()
-}
-
-///|
-#cfg(platform="windows")
-fn MultiWindowBridgeWakeup::close(
-  self : MultiWindowBridgeWakeup,
-  _runtime : @native.Runtime,
-) -> Unit {
-  self.reader.close()
-}
-
-///|
-async fn MultiWindowBridgeWakeup::wait(
-  self : MultiWindowBridgeWakeup,
+/// Waits for native work or for a bridge task to report back. Native readiness
+/// arrives through Proton's event loop, which is already running this thread.
+async fn multi_window_wait_for_work(
   wake_signal : @core.RuntimeWakeSignal,
 ) -> Result[Unit, String] {
+  let host = @proton.host_wake_signal()
+  let host_revision = host.revision()
   let revision = wake_signal.revision()
-  let ready = @async.any([
+  let _ = @async.any([
     () => {
-      match self.reader.read_some(max_len=256) {
-        None => false
-        Some(_) => true
-      }
+      host.wait_for_change(host_revision)
+      true
     },
     () => {
       wake_signal.wait_for_change(revision)
@@ -352,11 +261,7 @@ async fn MultiWindowBridgeWakeup::wait(
   ]) catch {
     error => return Err("wait for bridge work failed: " + error.to_string())
   }
-  if ready {
-    Ok(())
-  } else {
-    Err("runtime wakeup pipe closed unexpectedly")
-  }
+  Ok(())
 }
 
 ///|

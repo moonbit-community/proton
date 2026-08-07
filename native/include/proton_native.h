@@ -141,13 +141,6 @@ PROTON_API int32_t proton_host_loop_begin(void);
 PROTON_API int32_t proton_host_loop_poll(int32_t timeout_ms,
                                          uint32_t *out_ready_mask);
 PROTON_API void proton_host_loop_end(void);
-PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
-                                                int32_t wakeup_fd);
-PROTON_API int32_t proton_runtime_prepare_wakeup_source(
-    proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
-PROTON_API int32_t
-proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime);
 PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
     proton_runtime_id_t runtime, int64_t *out_delay_ms);
 PROTON_API int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,

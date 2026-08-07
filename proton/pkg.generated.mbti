@@ -31,6 +31,8 @@ pub fn execute_process(config? : @native.RuntimeConfig) -> @native.ProcessResult
 
 pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
+pub fn host_wake_signal() -> @core.RuntimeWakeSignal
+
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn last_error_message() -> String

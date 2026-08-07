@@ -363,9 +363,6 @@ static int32_t g_app_entry_quit_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_loop_work_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_wait_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_wakeup_delay_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_wakeup_status = PROTON_ERR_NOT_INITIALIZED;
-static int g_app_entry_first_wakeup = 0;
-static int g_app_entry_second_wakeup = 0;
 static int32_t g_app_entry_window_create_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_window_show_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_close_interception_status =
@@ -408,34 +405,6 @@ static char g_app_entry_error[512];
 static DWORD g_app_ui_thread_id = 0;
 #elif defined(__linux__)
 static pthread_t g_app_ui_thread;
-#endif
-
-#ifdef _WIN32
-static int consume_wakeup_byte(HANDLE pipe) {
-  for (int attempt = 0; attempt < 100; attempt++) {
-    DWORD available = 0;
-    if (!PeekNamedPipe(pipe, NULL, 0, NULL, &available, NULL)) {
-      return 0;
-    }
-    if (available > 0) {
-      unsigned char byte = 0;
-      DWORD read = 0;
-      return ReadFile(pipe, &byte, sizeof(byte), &read, NULL) &&
-             read == (DWORD)sizeof(byte);
-    }
-    Sleep(10);
-  }
-  return 0;
-}
-#else
-static int consume_wakeup_byte(int fd) {
-  struct pollfd ready = {.fd = fd, .events = POLLIN, .revents = 0};
-  if (poll(&ready, 1, 1000) <= 0 || (ready.revents & POLLIN) == 0) {
-    return 0;
-  }
-  unsigned char byte = 0;
-  return read(fd, &byte, sizeof(byte)) == (ssize_t)sizeof(byte);
-}
 #endif
 
 static char *read_log(const char *path) {
@@ -573,63 +542,6 @@ static void smoke_app_entry(void) {
         proton_runtime_wait(runtime, PROTON_WAIT_PLATFORM, 0, &ready_mask);
     g_app_entry_wakeup_delay_status =
         proton_runtime_next_wakeup_delay_ms(runtime, &wakeup_delay_ms);
-#ifdef _WIN32
-    char wakeup_source[256] = {0};
-    int32_t required = 0;
-    g_app_entry_wakeup_status =
-        proton_runtime_prepare_wakeup_source(runtime, NULL, 0, &required);
-    HANDLE wakeup_reader = INVALID_HANDLE_VALUE;
-    if (g_app_entry_wakeup_status == PROTON_ERR_BUFFER_TOO_SMALL &&
-        required > 0 && required < (int32_t)sizeof(wakeup_source)) {
-      g_app_entry_wakeup_status = proton_runtime_prepare_wakeup_source(
-          runtime, wakeup_source, (int32_t)sizeof(wakeup_source), &required);
-    }
-    if (g_app_entry_wakeup_status == PROTON_OK) {
-      wchar_t wide_wakeup_source[256];
-      if (MultiByteToWideChar(CP_UTF8, 0, wakeup_source, -1,
-                              wide_wakeup_source,
-                              (int)(sizeof(wide_wakeup_source) /
-                                    sizeof(wide_wakeup_source[0]))) <= 0) {
-        g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
-      } else {
-        wakeup_reader = CreateFileW(wide_wakeup_source, GENERIC_READ, 0, NULL,
-                                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (wakeup_reader == INVALID_HANDLE_VALUE) {
-          g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
-        }
-      }
-    }
-    if (g_app_entry_wakeup_status == PROTON_OK) {
-      g_app_entry_wakeup_status =
-          proton_runtime_activate_wakeup_source(runtime);
-    }
-    if (g_app_entry_wakeup_status == PROTON_OK) {
-      g_app_entry_first_wakeup = consume_wakeup_byte(wakeup_reader);
-      g_app_entry_wakeup_status =
-          proton_runtime_activate_wakeup_source(runtime);
-      if (g_app_entry_wakeup_status == PROTON_OK) {
-        g_app_entry_second_wakeup = consume_wakeup_byte(wakeup_reader);
-      }
-    }
-#else
-    int wakeup_pipe[2] = {-1, -1};
-    if (pipe(wakeup_pipe) == 0) {
-      g_app_entry_wakeup_status =
-          proton_runtime_set_wakeup_fd(runtime, wakeup_pipe[1]);
-      if (g_app_entry_wakeup_status == PROTON_OK) {
-        g_app_entry_first_wakeup = consume_wakeup_byte(wakeup_pipe[0]);
-        g_app_entry_wakeup_status =
-            proton_runtime_set_wakeup_fd(runtime, wakeup_pipe[1]);
-        if (g_app_entry_wakeup_status == PROTON_OK) {
-          g_app_entry_second_wakeup = consume_wakeup_byte(wakeup_pipe[0]);
-        }
-      }
-      close(wakeup_pipe[0]);
-      close(wakeup_pipe[1]);
-    } else {
-      g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
-    }
-#endif
     proton_window_id_t window = PROTON_INVALID_HANDLE;
     g_app_entry_window_create_status = proton_window_create_json(
         runtime,
@@ -1436,9 +1348,6 @@ static int expect_runtime_info(void) {
   int has_window_session = strstr(buffer, "\"window_session\"") != NULL;
   int has_managed_app_runner =
       strstr(buffer, "\"managed_app_runner\"") != NULL;
-  int has_wakeup_source =
-      strstr(buffer, "\"runtime_wakeup_source\"") != NULL;
-  int has_wakeup_fd = strstr(buffer, "\"runtime_wakeup_fd\"") != NULL;
   if (strstr(buffer, "\"abi_version\":1") == NULL ||
       (!has_abi_only && !has_runtime) ||
       strstr(buffer, "\"base_abi\"") == NULL ||
@@ -1479,18 +1388,10 @@ static int expect_runtime_info(void) {
     return 1;
   }
 #endif
-#ifdef _WIN32
-  if (has_runtime &&
-      (!has_managed_app_runner || !has_wakeup_source)) {
-    fprintf(stderr, "missing Windows managed runner capability: %s\n", buffer);
+  if (has_runtime && !has_managed_app_runner) {
+    fprintf(stderr, "missing managed runner capability: %s\n", buffer);
     return 1;
   }
-#elif defined(__APPLE__) || defined(__linux__)
-  if (has_runtime && (!has_managed_app_runner || !has_wakeup_fd)) {
-    fprintf(stderr, "missing Unix managed runner capability: %s\n", buffer);
-    return 1;
-  }
-#endif
   g_runtime_available = has_runtime;
   return 0;
 }
@@ -2008,13 +1909,6 @@ int main(int argc, char **argv) {
                       PROTON_ERR_UNSUPPORTED)) {
       return 1;
     }
-    if (expect_status("app_run wakeup source", g_app_entry_wakeup_status,
-                      PROTON_OK)) {
-      return 1;
-    }
-    if (!g_app_entry_first_wakeup || !g_app_entry_second_wakeup) {
-      return fail("app_run wakeup source lost a consecutive notification");
-    }
     if (expect_status("app_run window create",
                       g_app_entry_window_create_status, PROTON_OK) ||
         expect_status("app_run window show", g_app_entry_window_show_status,
@@ -2191,16 +2085,6 @@ int main(int argc, char **argv) {
   status = proton_runtime_wait(runtime, PROTON_WAIT_NONE, 0, &ready_mask);
   if (expect_status("runtime_wait rejects empty interest", status,
                     PROTON_ERR_INVALID_ARGUMENT)) {
-    return 1;
-  }
-  status = proton_runtime_set_wakeup_fd(runtime, -2);
-  if (expect_status("runtime_set_wakeup_fd rejects invalid descriptor", status,
-                    PROTON_ERR_INVALID_ARGUMENT)) {
-    return 1;
-  }
-  status = proton_runtime_prepare_wakeup_source(runtime, NULL, 0, NULL);
-  if (expect_status("runtime_prepare_wakeup_source rejects null output",
-                    status, PROTON_ERR_INVALID_ARGUMENT)) {
     return 1;
   }
   status = proton_runtime_next_wakeup_delay_ms(runtime, NULL);

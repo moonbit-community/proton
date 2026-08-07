@@ -75,8 +75,13 @@ fn require_event_loop() -> Unit raise AppRunError {
 }
 
 ///|
-/// The notification signal `poll` raises when native work arrives.
-fn host_event_loop_signal() -> @core.RuntimeWakeSignal {
+/// The notification Proton's event loop raises when native work arrives.
+///
+/// A host that drives an `@native.Runtime` of its own waits on this rather
+/// than building a wakeup for it: `poll` runs on the main thread and reports
+/// readiness for the whole process, not only for the runtime the facade owns,
+/// so there is nothing left for a second wakeup to observe.
+pub fn host_wake_signal() -> @core.RuntimeWakeSignal {
   host_event_loop.signal
 }
 
