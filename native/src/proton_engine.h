@@ -51,11 +51,6 @@ typedef struct {
   int32_t theme;
 } proton_engine_window_state_t;
 
-int32_t proton_engine_prepare_app(char *error, size_t error_len);
-int32_t proton_engine_run_app_loop(char *error, size_t error_len);
-void proton_engine_quit_app_loop(void);
-int32_t proton_engine_finish_app(char *error, size_t error_len);
-
 int32_t proton_engine_execute_process_json(const char *config_json,
                                            int32_t *out_exit_code,
                                            char *error,

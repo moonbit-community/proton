@@ -468,14 +468,6 @@ pub fn execute_process(
 }
 
 ///|
-/// Runs `entry` on Proton's application thread while the caller owns the
-/// platform UI loop on runtimes that advertise `managed_app_runner`. Other
-/// platforms may execute `entry` inline.
-pub fn run_app(entry : FuncRef[() -> Unit]) -> Unit raise NativeError {
-  check_status(proton_app_run_ffi(entry))
-}
-
-///|
 pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Unit raise NativeError {

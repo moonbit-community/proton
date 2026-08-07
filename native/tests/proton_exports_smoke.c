@@ -45,7 +45,6 @@ static const char *const expected_exports[] = {
     "proton_app_instance_acquire",
     "proton_app_instance_attach_runtime",
     "proton_app_instance_destroy",
-    "proton_app_run",
     "proton_execute_process",
     "proton_runtime_probe_json",
     "proton_runtime_create_json",
@@ -125,6 +124,7 @@ static const char *const expected_exports[] = {
 };
 
 static const char *const removed_exports[] = {
+    "proton_app_run",
     "proton_runtime_set_wakeup_fd",
     "proton_runtime_prepare_wakeup_source",
     "proton_runtime_activate_wakeup_source",

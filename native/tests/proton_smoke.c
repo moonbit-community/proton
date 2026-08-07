@@ -47,7 +47,30 @@
 
 #include "../src/engine/cef_common/assets.h"
 
-static char *read_log(const char *path);
+static char *read_log(const char *path) {
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    return NULL;
+  }
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return NULL;
+  }
+  long size = ftell(file);
+  if (size < 0 || fseek(file, 0, SEEK_SET) != 0) {
+    fclose(file);
+    return NULL;
+  }
+  char *buffer = (char *)malloc((size_t)size + 1);
+  if (buffer == NULL) {
+    fclose(file);
+    return NULL;
+  }
+  size_t length = fread(buffer, 1, (size_t)size, file);
+  fclose(file);
+  buffer[length] = '\0';
+  return buffer;
+}
 
 static int fail(const char *message) {
   fprintf(stderr, "%s\n", message);
@@ -352,361 +375,6 @@ static int expect_app_instance_cross_process_forwarding(
                            primary, error, sizeof(error)),
                        PROTON_OK);
 }
-
-#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
-static int g_app_entry_called = 0;
-static int g_app_entry_on_main_thread = 0;
-static int32_t g_app_entry_invalid_create_status = PROTON_OK;
-static int32_t g_app_entry_create_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_run_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_quit_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_loop_work_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_wait_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_wakeup_delay_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_window_create_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_window_show_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_close_interception_status =
-    PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_window_close_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_close_denial_status =
-    PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_close_response_status =
-    PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_duplicate_close_response_status =
-    PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_window_destroy_status =
-    PROTON_ERR_NOT_INITIALIZED;
-static int g_app_entry_browser_ready = 0;
-static int g_app_entry_state_event_seen = 0;
-static int g_app_entry_window_closed = 0;
-static int32_t g_app_entry_destroy_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view_create_status = PROTON_ERR_NOT_INITIALIZED;
-static int g_app_entry_view_ready = 0;
-static int g_app_entry_view_unsupported = 0;
-static int32_t g_app_entry_view_set_bounds_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view_set_visible_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view_set_z_order_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view_load_url_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view_state_status = PROTON_ERR_NOT_INITIALIZED;
-static int g_app_entry_view_state_ok = 0;
-static int32_t g_app_entry_view2_create_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view_destroy_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view2_destroy_status = PROTON_ERR_NOT_INITIALIZED;
-static proton_view_id_t g_app_entry_view = PROTON_INVALID_HANDLE;
-static proton_view_id_t g_app_entry_view2 = PROTON_INVALID_HANDLE;
-static int32_t g_app_entry_view3_create_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view3_stale_state_status = PROTON_ERR_NOT_INITIALIZED;
-static int32_t g_app_entry_view3_destroy_status = PROTON_ERR_NOT_INITIALIZED;
-static proton_view_id_t g_app_entry_view3 = PROTON_INVALID_HANDLE;
-static char g_app_runtime_config[1024];
-static char g_app_entry_error[512];
-
-#ifdef _WIN32
-static DWORD g_app_ui_thread_id = 0;
-#elif defined(__linux__)
-static pthread_t g_app_ui_thread;
-#endif
-
-static char *read_log(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (file == NULL) {
-    return NULL;
-  }
-  if (fseek(file, 0, SEEK_END) != 0) {
-    fclose(file);
-    return NULL;
-  }
-  long size = ftell(file);
-  if (size < 0 || fseek(file, 0, SEEK_SET) != 0) {
-    fclose(file);
-    return NULL;
-  }
-  char *buffer = (char *)malloc((size_t)size + 1);
-  if (buffer == NULL) {
-    fclose(file);
-    return NULL;
-  }
-  size_t length = fread(buffer, 1, (size_t)size, file);
-  fclose(file);
-  buffer[length] = '\0';
-  return buffer;
-}
-
-static int log_contains(const char *path, const char *needle) {
-  char *log = read_log(path);
-  if (log == NULL) {
-    return 0;
-  }
-  int found = strstr(log, needle) != NULL;
-  free(log);
-  return found;
-}
-
-static int log_contains_in_order(const char *path,
-                                 const char *first,
-                                 const char *second) {
-  char *log = read_log(path);
-  if (log == NULL) {
-    return 0;
-  }
-  const char *first_match = strstr(log, first);
-  const char *second_match = strstr(log, second);
-  int ordered = first_match != NULL && second_match != NULL &&
-                first_match < second_match;
-  free(log);
-  return ordered;
-}
-
-static int log_count_occurrences(const char *path, const char *needle) {
-  char *log = read_log(path);
-  if (log == NULL) {
-    return -1;
-  }
-  int count = 0;
-  size_t needle_len = strlen(needle);
-  const char *cursor = log;
-  while ((cursor = strstr(cursor, needle)) != NULL) {
-    count++;
-    cursor += needle_len;
-  }
-  free(log);
-  return count;
-}
-
-static int escape_json_string(const char *value,
-                              char *buffer,
-                              size_t buffer_len) {
-  size_t written = 0;
-  for (const unsigned char *cursor = (const unsigned char *)value;
-       *cursor != '\0'; cursor++) {
-    const char *escaped = NULL;
-    if (*cursor == '\\') {
-      escaped = "\\\\";
-    } else if (*cursor == '"') {
-      escaped = "\\\"";
-    }
-    if (escaped != NULL) {
-      if (written + 2 >= buffer_len) {
-        return 0;
-      }
-      buffer[written++] = escaped[0];
-      buffer[written++] = escaped[1];
-    } else {
-      if (written + 1 >= buffer_len) {
-        return 0;
-      }
-      buffer[written++] = (char)*cursor;
-    }
-  }
-  buffer[written] = '\0';
-  return 1;
-}
-
-static int64_t close_request_id_from_event(const char *event_json) {
-  const char *field = strstr(event_json, "\"request_id\":\"");
-  if (field == NULL) {
-    return 0;
-  }
-  field += strlen("\"request_id\":\"");
-  return (int64_t)strtoll(field, NULL, 10);
-}
-
-static void smoke_app_entry(void) {
-  g_app_entry_called = 1;
-#ifdef _WIN32
-  g_app_entry_on_main_thread =
-      GetCurrentThreadId() == g_app_ui_thread_id;
-#elif defined(__APPLE__)
-  g_app_entry_on_main_thread = pthread_main_np() != 0;
-#else
-  g_app_entry_on_main_thread =
-      pthread_equal(pthread_self(), g_app_ui_thread) != 0;
-#endif
-  proton_runtime_id_t runtime = PROTON_INVALID_HANDLE;
-  g_app_entry_invalid_create_status =
-      proton_runtime_create_json("{\"abi_version\":0}", &runtime);
-  g_app_entry_create_status =
-      proton_runtime_create_json(g_app_runtime_config, &runtime);
-  if (g_app_entry_create_status != PROTON_OK) {
-    proton_last_error_message(g_app_entry_error,
-                              (int32_t)sizeof(g_app_entry_error));
-  }
-  if (g_app_entry_create_status == PROTON_OK) {
-    uint32_t ready_mask = PROTON_WAIT_NONE;
-    int64_t wakeup_delay_ms = -1;
-    g_app_entry_run_status = proton_runtime_run(runtime);
-    g_app_entry_quit_status = proton_runtime_quit(runtime);
-    g_app_entry_loop_work_status =
-        proton_runtime_do_message_loop_work(runtime);
-    g_app_entry_wait_status =
-        proton_runtime_wait(runtime, PROTON_WAIT_PLATFORM, 0, &ready_mask);
-    g_app_entry_wakeup_delay_status =
-        proton_runtime_next_wakeup_delay_ms(runtime, &wakeup_delay_ms);
-    proton_window_id_t window = PROTON_INVALID_HANDLE;
-    g_app_entry_window_create_status = proton_window_create_json(
-        runtime,
-        "{\"abi_version\":1,\"title\":\"Managed Destroy\","
-        "\"width\":320,\"height\":240,\"initial_url\":\"about:blank\"}",
-        &window);
-    if (g_app_entry_window_create_status == PROTON_OK) {
-      g_app_entry_window_show_status = proton_window_show(window);
-#ifdef _WIN32
-      g_app_entry_browser_ready = 1;
-#else
-      for (int attempt = 0; attempt < 100; attempt++) {
-        const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
-        if (native_log_path != NULL &&
-            log_contains(native_log_path, "create_browser id=")) {
-          g_app_entry_browser_ready = 1;
-          break;
-        }
-        usleep(10000);
-      }
-#endif
-      if (g_app_entry_browser_ready) {
-        // Web contents views: create two child browsers inside the window,
-        fprintf(stderr, "smoke-step: create view1\n");
-        // drive bounds/visibility/z-order/navigation, then destroy them
-        // before the window close flow below.
-        g_app_entry_view_create_status = proton_view_create_json(
-            window,
-            "{\"abi_version\":1,\"x\":10,\"y\":20,\"width\":200,"
-            "\"height\":120,\"initial_url\":\"about:blank\"}",
-            &g_app_entry_view);
-        if (g_app_entry_view_create_status == PROTON_ERR_UNSUPPORTED) {
-          g_app_entry_view_unsupported = 1;
-        }
-        if (g_app_entry_view_create_status == PROTON_OK) {
-          for (int attempt = 0; attempt < 300; attempt++) {
-            const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
-            if (native_log_path != NULL &&
-                log_contains(native_log_path, "view_create_browser id=")) {
-              g_app_entry_view_ready = 1;
-              break;
-            }
-#ifdef _WIN32
-            Sleep(10);
-#else
-            usleep(10000);
-#endif
-          }
-          fprintf(stderr, "smoke-step: view1 ready=%d, drive bounds/visible/z/load\n",
-                  g_app_entry_view_ready);
-          g_app_entry_view_set_bounds_status =
-              proton_view_set_bounds(g_app_entry_view, 30, 40, 180, 100);
-          g_app_entry_view_set_visible_status =
-              proton_view_set_visible(g_app_entry_view, 1);
-          g_app_entry_view_set_z_order_status =
-              proton_view_set_z_order(g_app_entry_view, 2);
-          g_app_entry_view_load_url_status =
-              proton_view_load_url(g_app_entry_view, "about:blank");
-          char view_state[256];
-          int32_t view_state_required = 0;
-          g_app_entry_view_state_status = proton_view_state_json(
-              g_app_entry_view, view_state, (int32_t)sizeof(view_state),
-              &view_state_required);
-          g_app_entry_view_state_ok =
-              g_app_entry_view_state_status == PROTON_OK &&
-              strstr(view_state, "\"x\":30") != NULL &&
-              strstr(view_state, "\"y\":40") != NULL &&
-              strstr(view_state, "\"width\":180") != NULL &&
-              strstr(view_state, "\"height\":100") != NULL &&
-              strstr(view_state, "\"visible\":true") != NULL &&
-              strstr(view_state, "\"z_order\":2") != NULL;
-          g_app_entry_view2_create_status = proton_view_create_json(
-              window,
-              "{\"abi_version\":1,\"x\":50,\"y\":60,\"width\":100,"
-              "\"height\":80,\"visible\":false}",
-              &g_app_entry_view2);
-          fprintf(stderr, "smoke-step: destroy view1+view2\n");
-          g_app_entry_view_destroy_status =
-              proton_view_destroy(g_app_entry_view);
-          if (g_app_entry_view2_create_status == PROTON_OK) {
-            g_app_entry_view2_destroy_status =
-                proton_view_destroy(g_app_entry_view2);
-          }
-          // A third view stays attached through the AppKit window close flow
-          // below; the window teardown must close it safely.
-          g_app_entry_view3_create_status = proton_view_create_json(
-              window,
-              "{\"abi_version\":1,\"x\":5,\"y\":5,\"width\":80,"
-              "\"height\":60}",
-              &g_app_entry_view3);
-        }
-      }
-      fprintf(stderr, "smoke-step: window close interception flow\n");
-      if (g_app_entry_browser_ready) {
-        g_app_entry_close_interception_status =
-            proton_window_set_close_interception(window, 1);
-        if (g_app_entry_close_interception_status == PROTON_OK) {
-          g_app_entry_window_close_status = proton_window_close(window);
-        }
-        int close_responded = 0;
-        int64_t denied_request_id = 0;
-        for (int attempt = 0; attempt < 300; attempt++) {
-          char event_json[2048] = {0};
-          int32_t event_required = 0;
-          int32_t event_status = proton_runtime_poll_event_json(
-              runtime, event_json, (int32_t)sizeof(event_json),
-              &event_required);
-          if (event_status == PROTON_OK) {
-            if (strstr(event_json,
-                       "\"type\":\"window_state_changed\"") != NULL) {
-              g_app_entry_state_event_seen = 1;
-            } else if (strstr(event_json,
-                       "\"type\":\"window_close_requested\"") != NULL) {
-              int64_t request_id = close_request_id_from_event(event_json);
-              if (denied_request_id == 0) {
-                denied_request_id = request_id;
-                g_app_entry_close_denial_status =
-                    proton_window_respond_close_request(window, request_id, 0);
-                if (g_app_entry_close_denial_status == PROTON_OK) {
-                  (void)proton_window_close(window);
-                }
-              } else if (request_id > denied_request_id) {
-                g_app_entry_close_response_status =
-                    proton_window_respond_close_request(window, request_id, 1);
-                close_responded =
-                    g_app_entry_close_response_status == PROTON_OK;
-                if (close_responded) {
-                  g_app_entry_duplicate_close_response_status =
-                      proton_window_respond_close_request(window, request_id, 1);
-                }
-              }
-            } else if (strstr(event_json,
-                              "\"type\":\"window_closed\"") != NULL) {
-              g_app_entry_window_closed = close_responded;
-              break;
-            }
-          }
-#ifdef _WIN32
-          Sleep(10);
-#else
-          usleep(10000);
-#endif
-        }
-      }
-      fprintf(stderr, "smoke-step: window destroy\n");
-      g_app_entry_window_destroy_status = proton_window_destroy(window);
-      if (g_app_entry_view3_create_status == PROTON_OK) {
-        char stale_state[128];
-        int32_t stale_required = 0;
-        g_app_entry_view3_stale_state_status = proton_view_state_json(
-            g_app_entry_view3, stale_state, (int32_t)sizeof(stale_state),
-            &stale_required);
-        g_app_entry_view3_destroy_status = proton_view_destroy(g_app_entry_view3);
-      }
-    }
-    fprintf(stderr, "smoke-step: runtime destroy\n");
-    g_app_entry_destroy_status = proton_runtime_destroy(runtime);
-#ifdef _WIN32
-    if (wakeup_reader != INVALID_HANDLE_VALUE) {
-      CloseHandle(wakeup_reader);
-    }
-#endif
-  }
-}
-#endif
 
 static int expect_valid_json(const char *label, const char *json) {
   proton_json_doc_t doc;
@@ -1388,8 +1056,10 @@ static int expect_runtime_info(void) {
     return 1;
   }
 #endif
-  if (has_runtime && !has_managed_app_runner) {
-    fprintf(stderr, "missing managed runner capability: %s\n", buffer);
+  if (has_managed_app_runner) {
+    fprintf(stderr, "removed managed runner capability is still advertised: "
+                    "%s\n",
+            buffer);
     return 1;
   }
   g_runtime_available = has_runtime;
@@ -1782,10 +1452,6 @@ int main(int argc, char **argv) {
   if (expect_app_instance_cross_process_forwarding(argv[0])) {
     return 1;
   }
-  if (expect_status("app_run rejects null entry", proton_app_run(NULL),
-                    PROTON_ERR_INVALID_ARGUMENT)) {
-    return 1;
-  }
   if (prepare_probe_layout(probe_config, sizeof(probe_config),
                            installed_probe_config,
                            sizeof(installed_probe_config),
@@ -1850,165 +1516,6 @@ int main(int argc, char **argv) {
   if (exit_code != 0) {
     return fail("execute_process returned unexpected exit code");
   }
-
-#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
-  if (g_runtime_available &&
-      getenv("PROTON_TEST_SKIP_MANAGED_APP_RUNNER") == NULL) {
-    const char *runtime_root = getenv("PROTON_TEST_RUNTIME_ROOT");
-    const char *helper_path = getenv("PROTON_TEST_HELPER_PATH");
-    char escaped_runtime_root[384];
-    char escaped_helper_path[384];
-    if (runtime_root == NULL || helper_path == NULL ||
-        !escape_json_string(runtime_root, escaped_runtime_root,
-                            sizeof(escaped_runtime_root)) ||
-        !escape_json_string(helper_path, escaped_helper_path,
-                            sizeof(escaped_helper_path)) ||
-        snprintf(g_app_runtime_config, sizeof(g_app_runtime_config),
-                 "{\"abi_version\":1,\"runtime_root\":\"%s\","
-                 "\"helper_path\":\"%s\"}",
-                 escaped_runtime_root, escaped_helper_path) >=
-            (int)sizeof(g_app_runtime_config)) {
-      return fail("missing managed app runner test runtime");
-    }
-    const char *native_log_path = getenv("PROTON_TEST_NATIVE_LOG");
-    if (native_log_path == NULL) {
-      return fail("missing managed app runner native log path");
-    }
-    remove(native_log_path);
-#ifdef _WIN32
-    g_app_ui_thread_id = GetCurrentThreadId();
-#elif defined(__linux__)
-    g_app_ui_thread = pthread_self();
-#endif
-    if (expect_status("app_run", proton_app_run(smoke_app_entry), PROTON_OK)) {
-      return 1;
-    }
-    if (!g_app_entry_called || g_app_entry_on_main_thread) {
-      return fail("app_run did not execute entry on its application thread");
-    }
-    if (expect_status("app_run failed runtime create",
-                      g_app_entry_invalid_create_status,
-                      PROTON_ERR_INVALID_ARGUMENT)) {
-      return 1;
-    }
-    if (expect_status("app_run runtime create", g_app_entry_create_status,
-                      PROTON_OK)) {
-      fprintf(stderr, "app_run runtime create error: %s\n", g_app_entry_error);
-      return 1;
-    }
-    if (expect_status("managed runtime_run", g_app_entry_run_status,
-                      PROTON_ERR_UNSUPPORTED) ||
-        expect_status("managed runtime_quit", g_app_entry_quit_status,
-                      PROTON_ERR_UNSUPPORTED) ||
-        expect_status("managed do_message_loop_work",
-                      g_app_entry_loop_work_status, PROTON_ERR_UNSUPPORTED) ||
-        expect_status("managed runtime_wait", g_app_entry_wait_status,
-                      PROTON_ERR_UNSUPPORTED) ||
-        expect_status("managed next_wakeup_delay_ms",
-                      g_app_entry_wakeup_delay_status,
-                      PROTON_ERR_UNSUPPORTED)) {
-      return 1;
-    }
-    if (expect_status("app_run window create",
-                      g_app_entry_window_create_status, PROTON_OK) ||
-        expect_status("app_run window show", g_app_entry_window_show_status,
-                      PROTON_OK)) {
-      return 1;
-    }
-    if (!g_app_entry_browser_ready) {
-      return fail("app_run browser did not become ready");
-    }
-    if (!g_app_entry_window_closed) {
-      return fail("app_run intercepted window close did not finish");
-    }
-    if (!g_app_entry_state_event_seen) {
-      return fail("app_run did not publish an initial window state event");
-    }
-    if (expect_status("app_run close interception",
-                      g_app_entry_close_interception_status, PROTON_OK) ||
-        expect_status("app_run window close", g_app_entry_window_close_status,
-                      PROTON_OK) ||
-        expect_status("app_run close denial",
-                      g_app_entry_close_denial_status, PROTON_OK) ||
-        expect_status("app_run close response",
-                      g_app_entry_close_response_status, PROTON_OK) ||
-        expect_status("app_run duplicate close response",
-                      g_app_entry_duplicate_close_response_status,
-                      PROTON_ERR_STALE_WINDOW_REQUEST) ||
-        expect_status("app_run window destroy",
-                      g_app_entry_window_destroy_status, PROTON_OK)) {
-      return 1;
-    }
-    if (expect_status("app_run runtime destroy", g_app_entry_destroy_status,
-                      PROTON_OK)) {
-      return 1;
-    }
-    if (g_app_entry_view_unsupported) {
-      if (expect_status("app_run view create is unsupported on this platform",
-                        g_app_entry_view_create_status,
-                        PROTON_ERR_UNSUPPORTED)) {
-        return 1;
-      }
-    } else {
-      if (expect_status("app_run view create", g_app_entry_view_create_status,
-                        PROTON_OK)) {
-        return 1;
-      }
-      if (!g_app_entry_view_ready) {
-        return fail("app_run view browser did not become ready");
-      }
-      if (expect_status("app_run view set_bounds",
-                        g_app_entry_view_set_bounds_status, PROTON_OK) ||
-          expect_status("app_run view set_visible",
-                        g_app_entry_view_set_visible_status, PROTON_OK) ||
-          expect_status("app_run view set_z_order",
-                        g_app_entry_view_set_z_order_status, PROTON_OK) ||
-          expect_status("app_run view load_url",
-                        g_app_entry_view_load_url_status, PROTON_OK) ||
-          expect_status("app_run view state", g_app_entry_view_state_status,
-                        PROTON_OK) ||
-          expect_status("app_run view2 create",
-                        g_app_entry_view2_create_status, PROTON_OK) ||
-          expect_status("app_run view destroy",
-                        g_app_entry_view_destroy_status, PROTON_OK) ||
-          expect_status("app_run view2 destroy",
-                        g_app_entry_view2_destroy_status, PROTON_OK)) {
-        return 1;
-      }
-      if (!g_app_entry_view_state_ok) {
-        return fail("app_run view state did not reflect applied bounds");
-      }
-      if (!log_contains_in_order(native_log_path, "view_create_browser id=",
-                                 "view_browser_before_close browser=")) {
-        return fail("view browser closed before its creation completed");
-      }
-      if (expect_status("app_run view3 create",
-                        g_app_entry_view3_create_status, PROTON_OK) ||
-          expect_status("app_run view3 state is stale after window destroy",
-                        g_app_entry_view3_stale_state_status,
-                        PROTON_ERR_DESTROYED) ||
-          expect_status("app_run view3 destroy is idempotent",
-                        g_app_entry_view3_destroy_status, PROTON_OK)) {
-        return 1;
-      }
-      if (log_count_occurrences(native_log_path,
-                                "view_browser_before_close browser=") != 3) {
-        return fail("attached views did not all close before shutdown");
-      }
-    }
-    if (!log_contains_in_order(native_log_path,
-                               "browser_before_close browser=",
-                               "managed_runtime_destroy_complete")) {
-      return fail(
-          "managed runtime destroy completed before browser_before_close");
-    }
-    if (!log_contains_in_order(native_log_path,
-                               "managed_runtime_destroy_complete",
-                               "cef_shutdown")) {
-      return fail("CEF shut down before managed runtime destroy completed");
-    }
-  }
-#endif
 
   int32_t notification_supported = -1;
   int32_t notification_required = -1;

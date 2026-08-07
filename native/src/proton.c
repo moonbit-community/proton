@@ -69,13 +69,6 @@
 
 #if PROTON_WITH_ENGINE && \
     (defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
-#else
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ""
-#endif
-
-#if PROTON_WITH_ENGINE && \
-    (defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
 #define PROTON_APP_SINGLE_INSTANCE_FEATURE ",\"app_single_instance\""
 #else
 #define PROTON_APP_SINGLE_INSTANCE_FEATURE ""
@@ -279,8 +272,7 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_WINDOW_SIZE_HINTS_FEATURE
           PROTON_WINDOW_SESSION_FEATURE
           PROTON_BROWSER_SESSION_FEATURE
-          PROTON_APP_SINGLE_INSTANCE_FEATURE
-          PROTON_MANAGED_APP_RUNNER_FEATURE PROTON_WEB_CONTENTS_VIEW_FEATURE
+          PROTON_APP_SINGLE_INSTANCE_FEATURE PROTON_WEB_CONTENTS_VIEW_FEATURE
               "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,

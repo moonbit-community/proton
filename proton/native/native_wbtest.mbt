@@ -181,13 +181,8 @@ test "runtime info reports ABI and Proton runtime metadata" {
     assert_false(typed.features.contains("headless_osr"))
     assert_false(typed.features.contains("window_session"))
   }
-  if typed.runtime_available {
-    match typed.platform {
-      "windows" | "macos" | "linux" =>
-        assert_true(typed.features.contains("managed_app_runner"))
-      _ => ()
-    }
-  }
+  // The host owns the main thread, so there is no managed runner to advertise.
+  assert_false(typed.features.contains("managed_app_runner"))
 }
 
 ///|

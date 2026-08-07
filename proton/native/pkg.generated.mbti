@@ -31,8 +31,6 @@ pub fn notification_supported() -> Bool raise NativeError
 
 pub fn probe_runtime(config? : RuntimeConfig) -> Unit raise NativeError
 
-pub fn run_app(FuncRef[() -> Unit]) -> Unit raise NativeError
-
 pub fn runtime_info() -> RuntimeInfo raise NativeError
 
 pub fn runtime_info_json() -> String raise NativeError

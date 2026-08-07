@@ -1,4 +1,3 @@
-#include "../../app_runner.h"
 #include "../../proton_engine.h"
 #include "platform_events.h"
 
@@ -149,12 +148,6 @@ static int32_t proton_notification_install_delegate(char *error,
 int32_t proton_engine_notification_is_supported(int32_t *out_supported,
                                                 char *error,
                                                 size_t error_len) {
-  if (!pthread_main_np()) {
-    return proton_app_dispatch_sync_int(^{
-      return proton_engine_notification_is_supported(out_supported, error,
-                                                     error_len);
-    });
-  }
   *out_supported = [[NSBundle mainBundle] bundleIdentifier] != nil ? 1 : 0;
   return PROTON_OK;
 }
@@ -165,13 +158,6 @@ int32_t proton_engine_notification_show(const char *title_utf8,
                                         int32_t has_payload,
                                         char *error,
                                         size_t error_len) {
-  if (!pthread_main_np()) {
-    return proton_app_dispatch_sync_int(^{
-      return proton_engine_notification_show(title_utf8, body_utf8,
-                                             payload_utf8, has_payload, error,
-                                             error_len);
-    });
-  }
   if ([[NSBundle mainBundle] bundleIdentifier] == nil) {
     proton_notification_set_message(
         error, error_len,
@@ -289,11 +275,6 @@ int32_t proton_engine_notification_poll_click(
 }
 
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
-  if (!pthread_main_np()) {
-    return proton_app_dispatch_sync_int(^{
-      return proton_engine_notification_cleanup(error, error_len);
-    });
-  }
   if (g_notification_delegate != nil) {
     UNUserNotificationCenter *center =
         [UNUserNotificationCenter currentNotificationCenter];
