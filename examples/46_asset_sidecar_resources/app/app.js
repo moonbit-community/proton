@@ -85,25 +85,47 @@ function enableControls() {
   });
 }
 
-function initialize() {
+function bridgeCommands() {
   const commands = window.__MoonBit__?.add;
   if (
     !window.__MoonBit__?.core?.invokeOp ||
     !commands?.add ||
     !commands?.addLater
   ) {
-    setLog("Bridge is unavailable.");
-    void reportProbe({
-      ok: false,
-      stage: "bridge-unavailable",
-      has_moonbit: !!window.__MoonBit__,
-      has_add: !!commands,
-    });
-    return;
+    return null;
   }
-  enableControls();
-  setLog("Bridge ready.");
-  void runProbe();
+  return commands;
+}
+
+// The bridge is installed asynchronously and may still be on its way when the
+// document finishes loading, so a single check at "load" is a race the page
+// loses at random. Keep looking until it appears, and only call it unavailable
+// once waiting has plainly gone on too long.
+const BRIDGE_WAIT_INTERVAL_MS = 25;
+const BRIDGE_WAIT_LIMIT_MS = 10000;
+
+function initialize() {
+  const startedAt = Date.now();
+  const attempt = () => {
+    if (bridgeCommands()) {
+      enableControls();
+      setLog("Bridge ready.");
+      void runProbe();
+      return;
+    }
+    if (Date.now() - startedAt >= BRIDGE_WAIT_LIMIT_MS) {
+      setLog("Bridge is unavailable.");
+      void reportProbe({
+        ok: false,
+        stage: "bridge-unavailable",
+        has_moonbit: !!window.__MoonBit__,
+        has_add: !!window.__MoonBit__?.add,
+      });
+      return;
+    }
+    setTimeout(attempt, BRIDGE_WAIT_INTERVAL_MS);
+  };
+  attempt();
 }
 
 instantForm.addEventListener("submit", (event) => {
