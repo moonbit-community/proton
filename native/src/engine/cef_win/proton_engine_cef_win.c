@@ -602,13 +602,6 @@ static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
   }
 }
 
-static int32_t proton_engine_unsupported(char *error,
-                                         size_t error_len,
-                                         const char *message) {
-  proton_engine_set_message(error, error_len, message);
-  return PROTON_ERR_UNSUPPORTED;
-}
-
 static bool proton_engine_join_path(char *out,
                                     size_t out_len,
                                     const char *base,
@@ -838,25 +831,6 @@ static int proton_engine_runtime_enqueue_bridge_cancellation(
     proton_engine_signal_wait_source(runtime, PROTON_WAIT_BRIDGE);
   }
   return ok;
-}
-
-static char *proton_engine_runtime_pop_bridge_request(
-    proton_engine_runtime_t *runtime) {
-  if (runtime == NULL) {
-    return NULL;
-  }
-  char *request_json = NULL;
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_count > 0) {
-    request_json = runtime->bridge_queue[runtime->bridge_head];
-    runtime->bridge_queue[runtime->bridge_head] = NULL;
-    runtime->bridge_head =
-        (runtime->bridge_head + 1) % PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_count--;
-    proton_engine_runtime_sync_bridge_event_locked(runtime);
-  }
-  proton_engine_runtime_bridge_unlock(runtime);
-  return request_json;
 }
 
 static size_t proton_engine_runtime_clear_bridge_queue(

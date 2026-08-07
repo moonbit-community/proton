@@ -3103,37 +3103,6 @@ static void proton_engine_ensure_appkit(void) {
   proton_engine_menu_install_default();
 }
 
-static char *proton_engine_data_url_for_html(const char *html) {
-  if (html == NULL) {
-    html = "";
-  }
-  const char *prefix = "data:text/html;charset=utf-8,";
-  size_t prefix_len = strlen(prefix);
-  size_t html_len = strlen(html);
-  size_t max_len = prefix_len + html_len * 3 + 1;
-  char *url = (char *)malloc(max_len);
-  if (url == NULL) {
-    return NULL;
-  }
-  memcpy(url, prefix, prefix_len);
-  char *out = url + prefix_len;
-  static const char hex[] = "0123456789ABCDEF";
-  for (size_t i = 0; i < html_len; i++) {
-    unsigned char c = (unsigned char)html[i];
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-        (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' ||
-        c == '~') {
-      *out++ = (char)c;
-    } else {
-      *out++ = '%';
-      *out++ = hex[c >> 4];
-      *out++ = hex[c & 15];
-    }
-  }
-  *out = '\0';
-  return url;
-}
-
 static void proton_engine_cef_shutdown(void) {
   if (g_proton_cef_initialized) {
     proton_engine_debug_log("cef_shutdown");
