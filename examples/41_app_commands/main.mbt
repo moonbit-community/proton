@@ -1,4 +1,4 @@
 ///|
-fn main {
+async fn main {
   @app_commands_fixture.run()
 }

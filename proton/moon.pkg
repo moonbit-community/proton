@@ -46,7 +46,6 @@ options(
     "facade_runtime.mbt": [ "native" ],
     "facade_session.mbt": [ "native" ],
     "facade_runtime_wakeup.mbt": [ "native" ],
-    "facade_runner.mbt": [ "native" ],
     "facade_types.mbt": [ "native" ],
     "facade_updater.mbt": [ "native" ],
     "facade_wbtest.mbt": [ "native" ],
