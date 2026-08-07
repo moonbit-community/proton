@@ -1,99 +1,20 @@
 ///|
-#cfg(not(platform="windows"))
-priv struct RuntimeWakeReader(@pipe.PipeRead)
-
-///|
-#cfg(platform="windows")
-priv struct RuntimeWakeReader(@fs.File)
-
-///|
+/// The facade's view of the host event loop's notifications.
+///
+/// `ProtonEventLoop::poll` runs on the main thread and signals whenever native
+/// work arrives, so waiting here is a plain scheduler wait -- there is no
+/// descriptor left to drain. Waiting stays race-free through the revision:
+/// capture it before checking the condition that may make waiting unnecessary,
+/// and a notification that lands in between is still seen.
 priv struct RuntimeWakeup {
-  reader : RuntimeWakeReader
-  writer : @pipe.PipeWrite?
   signal : @core.RuntimeWakeSignal
-  mut closed : Bool
 }
 
 ///|
-fn require_runtime_wakeup_feature(feature : String) -> Unit raise AppRunError {
-  let runtime_info = @native.runtime_info() catch {
-    error => raise native_run_error("read native runtime features", error)
-  }
-  if !runtime_info.features.contains("managed_app_runner") ||
-    !runtime_info.features.contains(feature) {
-    raise RuntimeWakeupError(UnsupportedFeature(feature~))
-  }
-}
-
-///|
-#cfg(not(platform="windows"))
-fn RuntimeWakeup::new(
-  runtime : @native.Runtime,
-) -> RuntimeWakeup raise AppRunError {
-  require_runtime_wakeup_feature("runtime_wakeup_fd")
-  let (reader, writer) = @pipe.pipe() catch {
-    error =>
-      raise RuntimeWakeupError(
-        PipeCreateFailed(detail=@debug.render(Repr(error))),
-      )
-  }
-  runtime.set_wakeup_fd(writer.fd()) catch {
-    error => {
-      reader.close()
-      writer.close()
-      raise native_run_error("install runtime wakeup fd", error)
-    }
-  }
-  RuntimeWakeup::{
-    reader: RuntimeWakeReader(reader),
-    writer: Some(writer),
-    signal: @core.RuntimeWakeSignal::new(),
-    closed: false,
-  }
-}
-
-///|
-// Windows async pipes use overlapped handles owned by MoonBit's IOCP loop.
-// Keep the native writer independent and open its named pipe as a normal
-// file so blocking reads are delegated by the async filesystem runtime.
-#cfg(platform="windows")
-async fn RuntimeWakeup::new(
-  runtime : @native.Runtime,
-) -> RuntimeWakeup raise AppRunError {
-  require_runtime_wakeup_feature("runtime_wakeup_source")
-  let source = runtime.prepare_wakeup_source() catch {
-    error => raise native_run_error("prepare runtime wakeup source", error)
-  }
-  let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
-    error =>
-      raise RuntimeWakeupError(
-        SourceOpenFailed(source~, detail=@debug.render(Repr(error))),
-      )
-  }
-  runtime.activate_wakeup_source() catch {
-    error => {
-      reader.close()
-      raise native_run_error("activate runtime wakeup source", error)
-    }
-  }
-  RuntimeWakeup::{
-    reader: RuntimeWakeReader(reader),
-    writer: None,
-    signal: @core.RuntimeWakeSignal::new(),
-    closed: false,
-  }
-}
-
-///|
-fn RuntimeWakeup::close(self : RuntimeWakeup) -> Unit {
-  guard !self.closed else { return }
-  self.closed = true
-  let RuntimeWakeReader(reader) = self.reader
-  reader.close()
-  match self.writer {
-    Some(writer) => writer.close()
-    None => ()
-  }
+/// Attaches to the running host loop. `App::run` has already refused to start
+/// without one, so there is nothing left to fail here.
+fn RuntimeWakeup::new() -> RuntimeWakeup {
+  RuntimeWakeup::{ signal: host_wake_signal() }
 }
 
 ///|
@@ -103,33 +24,11 @@ fn RuntimeWakeup::revision(self : RuntimeWakeup) -> Int64 {
 
 ///|
 /// Waits for native work or a scheduler notification newer than `revision`.
-/// Capture the revision before checking the condition that may make waiting
-/// unnecessary, so a notification between the check and suspension is retained.
 async fn RuntimeWakeup::wait_after(
   self : RuntimeWakeup,
   revision : Int64,
 ) -> Unit raise AppRunError {
-  let RuntimeWakeReader(reader) = self.reader
-  let ready = @async.any([
-    () => {
-      let bytes = reader.read_some(max_len=256)
-      match bytes {
-        None => raise RuntimeWakeupError(SourceClosed)
-        Some(_) => {
-          self.signal.notify()
-          true
-        }
-      }
-    },
-    () => {
-      self.signal.wait_for_change(revision)
-      true
-    },
-  ]) catch {
+  self.signal.wait_for_change(revision) catch {
     error => raise normalize_async_run_error(error)
   }
-  if ready {
-    return
-  }
-  raise RuntimeWakeupError(MissingNotification)
 }

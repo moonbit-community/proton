@@ -11,20 +11,17 @@ endif()
 option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" OFF)
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
 set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
-set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
 set(PROTON_NOTIFICATION_SOURCE src/engine/notification_stub.c)
 set(PROTON_PLATFORM_EVENT_SOURCES src/engine/platform_events_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner_win.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_win/proton_engine_cef_win.c
       src/engine/cef_win/proton_win_titlebar.c
     )
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner.m)
     set(PROTON_NOTIFICATION_SOURCE src/engine/cef_mac/notification.m)
     set(PROTON_PLATFORM_EVENT_SOURCES
       src/engine/cef_mac/launch_input.m
@@ -36,7 +33,6 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/menu.m
     )
   elseif(UNIX)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
       src/engine/cef_linux/proton_linux_titlebar.c
@@ -67,7 +63,6 @@ add_library(proton SHARED
   src/proton_state.c
   src/proton_update.c
   src/proton.c
-  ${PROTON_APP_RUNNER_SOURCE}
   ${PROTON_NOTIFICATION_SOURCE}
   ${PROTON_PLATFORM_EVENT_SOURCES}
   src/engine/cef_common/bridge_lifecycle.c

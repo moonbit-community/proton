@@ -36,17 +36,15 @@ fn async_add_extension() -> @proton_extension.Extension {
 }
 
 ///|
-pub fn run_async_extension_add() -> Unit {
-  @proton.run(() => {
-    let app = @proton.html(
-      "MoonBit Async Add Extension",
-      async_extension_add_resource,
-      width=840,
-      height=560,
-      debug=true,
-    ).expose(async_add_extension())
-    app.run_or_abort()
-  })
+pub async fn run_async_extension_add() -> Unit {
+  let app = @proton.html(
+    "MoonBit Async Add Extension",
+    async_extension_add_resource,
+    width=840,
+    height=560,
+    debug=true,
+  ).expose(async_add_extension())
+  app.run_or_abort()
 }
 
 ///|
@@ -139,19 +137,17 @@ fn async_add_fixture_extension() -> @proton_extension.Extension {
 }
 
 ///|
-pub fn run_sync_async_extensions() -> Unit {
-  @proton.run(() => {
-    let app = @proton.html(
-        "MoonBit Sync + Async Extensions",
-        sync_async_extensions_resource,
-        width=900,
-        height=620,
-        debug=true,
-      )
-      .expose(sync_math_fixture_extension())
-      .expose(async_add_fixture_extension())
-    app.run_or_abort()
-  })
+pub async fn run_sync_async_extensions() -> Unit {
+  let app = @proton.html(
+      "MoonBit Sync + Async Extensions",
+      sync_async_extensions_resource,
+      width=900,
+      height=620,
+      debug=true,
+    )
+    .expose(sync_math_fixture_extension())
+    .expose(async_add_fixture_extension())
+  app.run_or_abort()
 }
 
 ///|
@@ -161,17 +157,15 @@ let attribute_codegen_resource : String =
   #|<body><h1>Attribute Codegen</h1></body></html>
 
 ///|
-pub fn run_attribute_codegen_commands() -> Unit {
-  @proton.run(() => {
-    let app = @proton.html(
-      "Proton Attribute Codegen",
-      attribute_codegen_resource,
-      width=840,
-      height=560,
-      debug=true,
-    ).expose(extension())
-    app.run_or_abort()
-  })
+pub async fn run_attribute_codegen_commands() -> Unit {
+  let app = @proton.html(
+    "Proton Attribute Codegen",
+    attribute_codegen_resource,
+    width=840,
+    height=560,
+    debug=true,
+  ).expose(extension())
+  app.run_or_abort()
 }
 
 ///|
@@ -276,52 +270,44 @@ async fn run_event_ticker(
 }
 
 ///|
-pub fn run_event_broadcast() -> Unit {
-  @proton.run(() => {
-    let app = @proton.html(
-      "MoonBit Event Broadcast",
-      event_broadcast_resource,
-      width=900,
-      height=620,
-      debug=true,
-    ).expose(event_ticker_extension())
-    app.run_or_abort()
-  })
+pub async fn run_event_broadcast() -> Unit {
+  let app = @proton.html(
+    "MoonBit Event Broadcast",
+    event_broadcast_resource,
+    width=900,
+    height=620,
+    debug=true,
+  ).expose(event_ticker_extension())
+  app.run_or_abort()
 }
 
 ///|
-pub fn run_multi_window() -> Unit {
-  @proton.run(() => {
-    match run_multi_window_bridge() {
-      Ok(_) => ()
-      Err(message) => abort(message)
-    }
-  })
+pub async fn run_multi_window() -> Unit {
+  match run_multi_window_bridge() {
+    Ok(_) => ()
+    Err(message) => abort(message)
+  }
 }
 
 ///|
-pub fn run_web_contents_view() -> Unit {
-  @proton.run(() => {
-    match run_web_contents_view_app() {
-      Ok(_) => ()
-      Err(message) => abort(message)
-    }
-  })
+pub async fn run_web_contents_view() -> Unit {
+  match run_web_contents_view_app() {
+    Ok(_) => ()
+    Err(message) => abort(message)
+  }
 }
 
 ///|
-pub fn run_asset_sidecar() -> Unit {
-  @proton.run(() => {
-    let entry = @env.get_env_var("PROTON_E2E_ASSET_SIDECAR_ENTRY").unwrap_or(
-      "examples/46_asset_sidecar_resources/app/app.html",
-    )
-    let app = @proton.asset(
-      "Asset Sidecar Resources",
-      entry,
-      width=760,
-      height=500,
-      debug=true,
-    ).expose(asset_sidecar_extension())
-    app.run_or_abort()
-  })
+pub async fn run_asset_sidecar() -> Unit {
+  let entry = @env.get_env_var("PROTON_E2E_ASSET_SIDECAR_ENTRY").unwrap_or(
+    "examples/46_asset_sidecar_resources/app/app.html",
+  )
+  let app = @proton.asset(
+    "Asset Sidecar Resources",
+    entry,
+    width=760,
+    height=500,
+    debug=true,
+  ).expose(asset_sidecar_extension())
+  app.run_or_abort()
 }

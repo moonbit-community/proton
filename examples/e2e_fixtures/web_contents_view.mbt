@@ -3,19 +3,6 @@
 // with two web contents views rendered through OSR. The scenario drives the
 // app through CDP: it probes all three page targets, closes one view target,
 // then closes the host window and expects a clean shutdown.
-#cfg(not(platform="windows"))
-priv struct WebContentsViewWakeup {
-  reader : @pipe.PipeRead
-  writer : @pipe.PipeWrite
-}
-
-///|
-#cfg(platform="windows")
-priv struct WebContentsViewWakeup {
-  reader : @fs.File
-}
-
-///|
 let wcv_left_url = "data:text/html,<html><head><title>WCV Left</title></head><body><h1>left-marker</h1></body></html>"
 
 ///|
@@ -159,11 +146,6 @@ async fn run_web_contents_view_pump(
   runtime : @native.Runtime,
   right : @native.View,
 ) -> Result[Unit, String] {
-  let wakeup = match WebContentsViewWakeup::new(runtime) {
-    Err(message) => return Err(message)
-    Ok(wakeup) => wakeup
-  }
-  defer wakeup.close(runtime)
   let view_events : Array[String] = []
   let mut right_navigated = false
   let mut controls_sent = false
@@ -225,7 +207,7 @@ async fn run_web_contents_view_pump(
       }
     }
     if !closed {
-      ignore(wakeup.wait())
+      wcv_wait_for_work()
     }
   }
   let events_path = match @env.get_env_var("PROTON_NATIVE_LOG") {
@@ -239,87 +221,12 @@ async fn run_web_contents_view_pump(
 }
 
 ///|
-#cfg(not(platform="windows"))
-fn WebContentsViewWakeup::new(
-  runtime : @native.Runtime,
-) -> Result[WebContentsViewWakeup, String] {
-  let (reader, writer) = @pipe.pipe() catch {
-    _ => return Err("create runtime wakeup pipe failed")
-  }
-  match
-    wcv_native_result("install runtime wakeup fd", () => {
-      runtime.set_wakeup_fd(writer.fd())
-    }) {
-    Err(message) => {
-      reader.close()
-      writer.close()
-      return Err(message)
-    }
-    Ok(_) => ()
-  }
-  Ok(WebContentsViewWakeup::{ reader, writer })
-}
-
-///|
-#cfg(platform="windows")
-async fn WebContentsViewWakeup::new(
-  runtime : @native.Runtime,
-) -> Result[WebContentsViewWakeup, String] {
-  let source = match
-    wcv_native_result("prepare runtime wakeup source", () => {
-      runtime.prepare_wakeup_source()
-    }) {
-    Err(message) => return Err(message)
-    Ok(source) => source
-  }
-  let reader = @fs.open(source, mode=@fs.ReadOnly) catch {
-    error =>
-      return Err("open runtime wakeup source failed: " + error.to_string())
-  }
-  match
-    wcv_native_result("activate runtime wakeup source", () => {
-      runtime.activate_wakeup_source()
-    }) {
-    Err(message) => {
-      reader.close()
-      Err(message)
-    }
-    Ok(_) => Ok(WebContentsViewWakeup::{ reader, })
-  }
-}
-
-///|
-#cfg(not(platform="windows"))
-fn WebContentsViewWakeup::close(
-  self : WebContentsViewWakeup,
-  runtime : @native.Runtime,
-) -> Unit {
-  ignore(
-    wcv_native_result("remove runtime wakeup fd", () => {
-      runtime.set_wakeup_fd(-1)
-    }),
-  )
-  self.reader.close()
-  self.writer.close()
-}
-
-///|
-#cfg(platform="windows")
-fn WebContentsViewWakeup::close(
-  self : WebContentsViewWakeup,
-  _runtime : @native.Runtime,
-) -> Unit {
-  self.reader.close()
-}
-
-///|
-async fn WebContentsViewWakeup::wait(
-  self : WebContentsViewWakeup,
-) -> Result[Unit, String] {
-  match self.reader.read_some(max_len=256) {
-    None => Err("runtime wakeup pipe closed unexpectedly")
-    Some(_) => Ok(())
-  }
+/// Waits for native work. Readiness arrives through Proton's event loop,
+/// which is already running this thread.
+async fn wcv_wait_for_work() -> Unit {
+  let host = @proton.host_wake_signal()
+  let revision = host.revision()
+  host.wait_for_change(revision)
 }
 
 ///|

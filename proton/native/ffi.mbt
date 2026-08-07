@@ -46,14 +46,15 @@ pub let runtime_wait_all : Int = runtime_wait_event
   .lor(runtime_wait_platform)
 
 ///|
+/// `PROTON_WAIT_TIMEOUT_INFINITE`. Not `pub`: callers of `Runtime::wait` pass
+/// `None` and never see this encoding.
+let runtime_wait_timeout_infinite : Int = -1
+
+///|
 let proton_invalid_handle : Int64 = 0L
 
 ///|
 extern "C" fn proton_abi_version_ffi() -> Int = "proton_abi_version"
-
-///|
-#borrow(entry)
-extern "C" fn proton_app_run_ffi(entry : FuncRef[() -> Unit]) -> Int = "proton_app_run"
 
 ///|
 #borrow(buffer, out_required_len)
@@ -112,6 +113,8 @@ extern "C" fn proton_runtime_quit_ffi(runtime : Int64) -> Int = "proton_runtime_
 extern "C" fn proton_runtime_do_message_loop_work_ffi(runtime : Int64) -> Int = "proton_runtime_do_message_loop_work"
 
 ///|
+/// `timeout_ms` is `runtime_wait_timeout_infinite` to wait indefinitely; every
+/// other negative value is rejected by the native side.
 #borrow(out_ready_mask)
 extern "C" fn proton_runtime_wait_ffi(
   runtime : Int64,
@@ -121,22 +124,26 @@ extern "C" fn proton_runtime_wait_ffi(
 ) -> Int = "proton_runtime_wait"
 
 ///|
-extern "C" fn proton_runtime_set_wakeup_fd_ffi(
-  runtime : Int64,
-  wakeup_fd : Int,
-) -> Int = "proton_runtime_set_wakeup_fd"
+/// Wakes a blocked `Runtime::wait`, or makes the next one return immediately.
+///
+/// Safe to call from any thread and takes no handle, which is what lets a
+/// foreign thread use it: handles validate thread ownership and that thread
+/// owns none.
+extern "C" fn proton_runtime_signal_wakeup_ffi() -> Unit = "proton_runtime_signal_wakeup"
 
 ///|
-#borrow(buffer, out_required_len)
-extern "C" fn proton_runtime_prepare_wakeup_source_ffi(
-  runtime : Int64,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_runtime_prepare_wakeup_source"
+extern "C" fn proton_host_loop_begin_ffi() -> Int = "proton_host_loop_begin"
 
 ///|
-extern "C" fn proton_runtime_activate_wakeup_source_ffi(runtime : Int64) -> Int = "proton_runtime_activate_wakeup_source"
+/// `timeout_ms` follows the same encoding as `proton_runtime_wait_ffi`.
+#borrow(out_ready_mask)
+extern "C" fn proton_host_loop_poll_ffi(
+  timeout_ms : Int,
+  out_ready_mask : Ref[Int],
+) -> Int = "proton_host_loop_poll"
+
+///|
+extern "C" fn proton_host_loop_end_ffi() -> Unit = "proton_host_loop_end"
 
 ///|
 #borrow(out_delay_ms)

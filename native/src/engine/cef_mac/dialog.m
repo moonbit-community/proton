@@ -1,6 +1,5 @@
 #include "dialog.h"
 
-#include "../../app_runner.h"
 #include "window.h"
 #include "../../proton_engine.h"
 
@@ -13,13 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define PROTON_DIALOG_RETURN_ON_MAIN(call)                                 \
-  do {                                                                    \
-    if (!pthread_main_np()) {                                             \
-      return proton_app_dispatch_sync_int(^{ return (call); });           \
-    }                                                                     \
-  } while (0)
 
 typedef struct proton_engine_dialog_request {
   int64_t id;
@@ -499,9 +491,6 @@ int32_t proton_engine_runtime_begin_message_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_runtime_begin_message_dialog(
-      runtime, title_utf8, title_len, message_utf8, message_len, level,
-      out_dialog, error, error_len));
   if (proton_engine_runtime_is_headless(runtime)) {
     if (out_dialog != NULL) {
       *out_dialog = PROTON_INVALID_HANDLE;
@@ -546,9 +535,6 @@ int32_t proton_engine_runtime_poll_dialog_result(
     int32_t *out_required_len,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_runtime_poll_dialog_result(
-      runtime, dialog, buffer, buffer_len, out_required_len, error,
-      error_len));
   if (out_required_len != NULL) {
     *out_required_len = 0;
   }
@@ -676,9 +662,6 @@ int32_t proton_engine_window_begin_message_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_window_begin_message_dialog(
-      window, title_utf8, title_len, message_utf8, message_len, level,
-      out_dialog, error, error_len));
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create(
       window, &request, out_dialog, error, error_len);
@@ -727,9 +710,6 @@ int32_t proton_engine_window_begin_confirm_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_window_begin_confirm_dialog(
-      window, title_utf8, title_len, message_utf8, message_len, level,
-      out_dialog, error, error_len));
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create(
       window, &request, out_dialog, error, error_len);
@@ -825,9 +805,6 @@ int32_t proton_engine_window_begin_open_file_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_window_begin_open_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, out_dialog, error,
-      error_len));
   return proton_engine_window_begin_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
       PROTON_ENGINE_FILE_DIALOG_OPEN, out_dialog, error, error_len);
@@ -842,9 +819,6 @@ int32_t proton_engine_window_begin_save_file_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_window_begin_save_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, out_dialog, error,
-      error_len));
   return proton_engine_window_begin_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
       PROTON_ENGINE_FILE_DIALOG_SAVE, out_dialog, error, error_len);
@@ -859,10 +833,6 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(
-      proton_engine_window_begin_choose_directory_dialog(
-          window, title_utf8, title_len, path_utf8, path_len, out_dialog,
-          error, error_len));
   return proton_engine_window_begin_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
       PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
@@ -877,9 +847,6 @@ int32_t proton_engine_window_poll_dialog_result(
     int32_t *out_required_len,
     char *error,
     size_t error_len) {
-  PROTON_DIALOG_RETURN_ON_MAIN(proton_engine_window_poll_dialog_result(
-      window, dialog, buffer, buffer_len, out_required_len, error,
-      error_len));
   if (out_required_len != NULL) {
     *out_required_len = 0;
   }

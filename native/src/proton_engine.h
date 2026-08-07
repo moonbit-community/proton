@@ -51,11 +51,6 @@ typedef struct {
   int32_t theme;
 } proton_engine_window_state_t;
 
-int32_t proton_engine_prepare_app(char *error, size_t error_len);
-int32_t proton_engine_run_app_loop(char *error, size_t error_len);
-void proton_engine_quit_app_loop(void);
-int32_t proton_engine_finish_app(char *error, size_t error_len);
-
 int32_t proton_engine_execute_process_json(const char *config_json,
                                            int32_t *out_exit_code,
                                            char *error,
@@ -78,21 +73,26 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
     size_t error_len);
+/* `runtime` may be NULL, which waits for host-loop wakeups alone. That is what
+   the host loop uses before an engine runtime exists. */
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
-                                   uint32_t timeout_ms,
+                                   int32_t timeout_ms,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len);
-int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
-                                            int32_t wakeup_fd,
-                                            char *error,
-                                            size_t error_len);
-int32_t proton_engine_runtime_prepare_wakeup_source(
-    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
-int32_t proton_engine_runtime_activate_wakeup_source(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len);
+
+/* The main thread's event loop, which outlives any single engine runtime and
+   exists before the first one is created. `begin` must run on the main thread
+   before any polling; `poll` runs one iteration there -- block, then advance
+   the platform toolkit, because nothing else does while this loop owns the
+   thread; `end` releases it. */
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len);
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len);
+void proton_engine_host_loop_end(void);
 int32_t proton_engine_runtime_next_wakeup_delay_ms(
     proton_engine_runtime_t *runtime,
     int64_t *out_delay_ms,

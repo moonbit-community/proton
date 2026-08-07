@@ -67,20 +67,6 @@
 #define PROTON_BROWSER_SESSION_FEATURE ""
 #endif
 
-#if PROTON_WITH_ENGINE && (defined(__APPLE__) || defined(__linux__))
-#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
-#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
-#elif PROTON_WITH_ENGINE && defined(_WIN32)
-#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
-#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ",\"runtime_wakeup_source\""
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
-#else
-#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
-#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ""
-#endif
-
 #if PROTON_WITH_ENGINE && \
     (defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
 #define PROTON_APP_SINGLE_INSTANCE_FEATURE ",\"app_single_instance\""
@@ -286,10 +272,7 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_WINDOW_SIZE_HINTS_FEATURE
           PROTON_WINDOW_SESSION_FEATURE
           PROTON_BROWSER_SESSION_FEATURE
-          PROTON_APP_SINGLE_INSTANCE_FEATURE
-          PROTON_RUNTIME_WAKEUP_FD_FEATURE
-          PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
-          PROTON_MANAGED_APP_RUNNER_FEATURE PROTON_WEB_CONTENTS_VIEW_FEATURE
+          PROTON_APP_SINGLE_INSTANCE_FEATURE PROTON_WEB_CONTENTS_VIEW_FEATURE
               "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,
@@ -547,11 +530,19 @@ int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
 
 int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                             uint32_t interest_mask,
-                            uint32_t timeout_ms,
+                            int32_t timeout_ms,
                             uint32_t *out_ready_mask) {
   if (out_ready_mask == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_ready_mask is required");
+  }
+  /* Any negative value is an elapsed deadline rather than a request to wait
+     forever; only the documented constant means that. Collapsing the two here
+     would turn an arithmetic slip into a hang. */
+  if (timeout_ms < 0 && timeout_ms != PROTON_WAIT_TIMEOUT_INFINITE) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
   }
   *out_ready_mask = PROTON_WAIT_NONE;
   if (interest_mask == PROTON_WAIT_NONE) {
@@ -623,70 +614,53 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   return PROTON_OK;
 }
 
-int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
-                                     int32_t wakeup_fd) {
-  if (wakeup_fd < -1) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "wakeup_fd must be -1 or a valid descriptor");
-  }
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_require_runtime_owner_thread(slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup fd requires native engine");
-  }
+int32_t proton_host_loop_begin(void) {
   char engine_error[512] = {0};
-  status = proton_engine_runtime_set_wakeup_fd(
-      slot->engine_runtime, wakeup_fd, engine_error, sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
+  int32_t status =
+      proton_engine_host_loop_begin(engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
-int32_t proton_runtime_prepare_wakeup_source(
-    proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len) {
-  if (out_required_len == NULL) {
+int32_t proton_host_loop_poll(int32_t timeout_ms, uint32_t *out_ready_mask) {
+  if (out_ready_mask == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
+                            "out_ready_mask is required");
   }
-  *out_required_len = 0;
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
+  *out_ready_mask = PROTON_WAIT_NONE;
+  if (timeout_ms < 0 && timeout_ms != PROTON_WAIT_TIMEOUT_INFINITE) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
   }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup source requires native engine");
-  }
+  /* No runtime handle: the loop predates the first one, and the engine walks
+     its own process-wide state to decide what to pump. */
   char engine_error[512] = {0};
-  status = proton_engine_runtime_prepare_wakeup_source(
-      slot->engine_runtime, buffer, buffer_len, out_required_len, engine_error,
-      sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
+  uint32_t ready_mask = PROTON_WAIT_NONE;
+  int32_t status = proton_engine_host_loop_poll(
+      timeout_ms, &ready_mask, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  *out_ready_mask = ready_mask;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
-int32_t
-proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime) {
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup source requires native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_activate_wakeup_source(
-      slot->engine_runtime, engine_error, sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
+void proton_host_loop_end(void) {
+  proton_engine_host_loop_end();
+}
+
+void proton_runtime_signal_wakeup(void) {
+  /* No handle lookup, and no runtime pointer passed on: every engine ignores
+     the argument for this signal, and the caller is a thread that owns no
+     handle. Reaching the registry from here would mean taking its lock on a
+     foreign thread for a wakeup that only touches atomics and the platform
+     run loop. */
+  proton_engine_runtime_signal_external_event(NULL);
 }
 
 int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_id_t runtime,

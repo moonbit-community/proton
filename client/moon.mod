@@ -3,7 +3,7 @@ name = "moonbit-community/proton_client"
 version = "0.1.14"
 
 import {
-  "moonbitlang/async@0.20.3",
+  "moonbitlang/async@0.20.4",
   "moonbit-community/proton_contract@0.1.14",
 }
 

@@ -468,14 +468,6 @@ pub fn execute_process(
 }
 
 ///|
-/// Runs `entry` on Proton's application thread while the caller owns the
-/// platform UI loop on runtimes that advertise `managed_app_runner`. Other
-/// platforms may execute `entry` inline.
-pub fn run_app(entry : FuncRef[() -> Unit]) -> Unit raise NativeError {
-  check_status(proton_app_run_ffi(entry))
-}
-
-///|
 pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Unit raise NativeError {
@@ -557,7 +549,7 @@ pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
 pub fn Runtime::wait(
   self : Runtime,
   interest_mask~ : Int,
-  timeout_ms~ : Int,
+  timeout_ms? : Int,
 ) -> RuntimeWaitReady raise NativeError {
   if interest_mask == runtime_wait_none {
     raise invalid_argument("interest_mask is required")
@@ -565,14 +557,11 @@ pub fn Runtime::wait(
   if interest_mask.land(runtime_wait_all.lnot()) != 0 {
     raise invalid_argument("interest_mask contains unsupported bits")
   }
-  if timeout_ms < 0 {
-    raise invalid_argument("timeout_ms must be non-negative")
-  }
   let ready_mask = Ref(runtime_wait_none)
   let status = proton_runtime_wait_ffi(
     self.active_handle(),
     interest_mask,
-    timeout_ms,
+    encode_wait_timeout(timeout_ms),
     ready_mask,
   )
   if status < 0 {
@@ -583,46 +572,65 @@ pub fn Runtime::wait(
 }
 
 ///|
-/// Installs the write end of a non-blocking pipe used to wake the host async
-/// runtime. The native runtime duplicates the descriptor and does not borrow
-/// the caller's ownership.
-pub fn Runtime::set_wakeup_fd(
-  self : Runtime,
-  wakeup_fd : Int,
-) -> Unit raise NativeError {
-  if wakeup_fd < -1 {
-    raise invalid_argument("wakeup_fd must be -1 or a valid descriptor")
+/// Encodes an optional wait timeout for the ABI. The sentinel lives here and
+/// nowhere else: callers say `None` to wait indefinitely. A deadline that has
+/// already passed is a zero wait rather than an error, because arriving late is
+/// normal and is not a reason to refuse to poll.
+fn encode_wait_timeout(timeout_ms : Int?) -> Int {
+  match timeout_ms {
+    None => runtime_wait_timeout_infinite
+    Some(timeout_ms) => if timeout_ms < 0 { 0 } else { timeout_ms }
   }
-  check_status(
-    proton_runtime_set_wakeup_fd_ffi(self.active_handle(), wakeup_fd),
-  )
 }
 
 ///|
-/// Prepares a platform-owned wakeup source and returns its locator.
+/// Takes over the calling thread's event loop. The loop belongs to the thread
+/// rather than to a runtime: it starts before the first runtime exists and
+/// outlives the last one, so a host can run async work while it is still
+/// deciding what runtime to build.
 ///
-/// Call `activate_wakeup_source` after opening the locator for reading.
-pub fn Runtime::prepare_wakeup_source(
-  self : Runtime,
-) -> String raise NativeError {
-  let handle = self.active_handle()
-  require_native_text(
-    "runtime wakeup source",
-    PayloadBytesExcludingTerminator,
-    (buffer, buffer_len, required) => {
-      proton_runtime_prepare_wakeup_source_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    },
-  )
+/// Must be called on the process's main thread.
+pub fn host_loop_begin() -> Unit raise NativeError {
+  check_status(proton_host_loop_begin_ffi())
 }
 
 ///|
-/// Activates a prepared wakeup source after its reader is connected.
-pub fn Runtime::activate_wakeup_source(
-  self : Runtime,
-) -> Unit raise NativeError {
-  check_status(proton_runtime_activate_wakeup_source_ffi(self.active_handle()))
+/// Runs one iteration of the host loop: block until work arrives or the
+/// timeout expires, then advance the platform toolkit. Pass no `timeout_ms` to
+/// wait indefinitely.
+///
+/// This is the only thing that drives the platform while the host loop owns the
+/// thread, so a host must keep calling it. The returned mask says which kinds
+/// of work became ready; it is empty when nothing happened.
+pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError {
+  let ready_mask = Ref(runtime_wait_none)
+  let status = proton_host_loop_poll_ffi(
+    encode_wait_timeout(timeout_ms),
+    ready_mask,
+  )
+  if status < 0 {
+    raise native_error(status)
+  } else {
+    RuntimeWaitReady::{ mask: ready_mask.val }
+  }
+}
+
+///|
+/// Releases the host loop. Safe to call when no loop is running.
+pub fn host_loop_end() -> Unit {
+  proton_host_loop_end_ffi()
+}
+
+///|
+/// Wakes a blocked `Runtime::wait` or `host_loop_poll`, or makes the next one
+/// return immediately when none is blocked yet. A lost wakeup deadlocks the
+/// host, so the two cases behave the same.
+///
+/// Takes no runtime and is safe from any thread, touching only atomics and the
+/// platform run loop. That is what lets a thread outside the runtime call it:
+/// handles validate thread ownership and such a thread owns none.
+pub fn signal_wakeup() -> Unit {
+  proton_runtime_signal_wakeup_ffi()
 }
 
 ///|

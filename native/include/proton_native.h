@@ -27,12 +27,27 @@ extern "C" {
 #define PROTON_WAIT_ALL \
   (PROTON_WAIT_EVENT | PROTON_WAIT_BRIDGE | PROTON_WAIT_PLATFORM)
 
+/* Wait until an event arrives, however long that takes.
+ *
+ * A host with nothing scheduled has nothing to wake up for, and the runtime
+ * already shortens a wait of its own accord when the engine has timed work
+ * pending, so a finite ceiling here would only be a periodic wakeup with no
+ * work to do.
+ *
+ * `timeout_ms` is signed for this. A deadline computed as `deadline - now`
+ * goes negative once it has passed; in an unsigned type the same arithmetic
+ * wraps to roughly 49 days, which is indistinguishable from waiting forever
+ * and hangs with no diagnostic. Signed keeps the two apart, and only this
+ * constant asks to wait forever -- every other negative value is rejected as
+ * the arithmetic slip it almost certainly is. Callers that may compute an
+ * elapsed deadline should clamp it to zero themselves. */
+#define PROTON_WAIT_TIMEOUT_INFINITE (-1)
+
 typedef int64_t proton_runtime_id_t;
 typedef int64_t proton_window_id_t;
 typedef int64_t proton_view_id_t;
 typedef int64_t proton_app_instance_id_t;
 typedef int64_t proton_update_stage_id_t;
-typedef void (*proton_app_entry_t)(void);
 
 enum {
   PROTON_OK = 0,
@@ -75,8 +90,6 @@ PROTON_API int32_t proton_app_instance_attach_runtime(
 PROTON_API int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
-PROTON_API int32_t proton_app_run(proton_app_entry_t entry);
-
 PROTON_API int32_t proton_execute_process(const char *config_json,
                                           int32_t *out_exit_code);
 
@@ -92,15 +105,39 @@ PROTON_API int32_t proton_runtime_do_message_loop_work(
     proton_runtime_id_t runtime);
 PROTON_API int32_t proton_runtime_wait(proton_runtime_id_t runtime,
                                        uint32_t interest_mask,
-                                       uint32_t timeout_ms,
+                                       int32_t timeout_ms,
                                        uint32_t *out_ready_mask);
-PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
-                                                int32_t wakeup_fd);
-PROTON_API int32_t proton_runtime_prepare_wakeup_source(
-    proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
-PROTON_API int32_t
-proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime);
+
+/* Wakes a `proton_runtime_wait` blocked on any runtime, or makes the next one
+ * return immediately if none is blocked yet. Losing a wakeup deadlocks the
+ * host, so the two cases must behave the same.
+ *
+ * Takes no handle on purpose. It is called from a thread that owns none, and
+ * handles validate thread ownership. It touches only atomics and the platform
+ * run loop, so it is safe from any thread and from a foreign runtime. */
+PROTON_API void proton_runtime_signal_wakeup(void);
+
+/* The main thread's event loop.
+ *
+ * It belongs to the thread, not to a runtime: it starts before the first
+ * runtime is created and outlives the last one, which is what lets a host run
+ * its own async work while it is still deciding what runtime to build.
+ *
+ * `begin` must run on the main thread. `poll` runs one iteration of that loop
+ * there: it blocks until work arrives or the timeout expires, taking
+ * PROTON_WAIT_TIMEOUT_INFINITE to wait until something happens, then drives
+ * the platform's own pending work before reporting which kinds of work are
+ * ready for the host. Until a runtime exists it reports only wakeups. `end`
+ * releases the loop.
+ *
+ * `poll` is the only thing that advances the platform toolkit once the host
+ * loop is running, so the host must keep calling it. A host that owns a
+ * runtime handle uses `proton_runtime_do_message_loop_work` instead and does
+ * not run a host loop at all. */
+PROTON_API int32_t proton_host_loop_begin(void);
+PROTON_API int32_t proton_host_loop_poll(int32_t timeout_ms,
+                                         uint32_t *out_ready_mask);
+PROTON_API void proton_host_loop_end(void);
 PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
     proton_runtime_id_t runtime, int64_t *out_delay_ms);
 PROTON_API int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,

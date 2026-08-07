@@ -181,19 +181,8 @@ test "runtime info reports ABI and Proton runtime metadata" {
     assert_false(typed.features.contains("headless_osr"))
     assert_false(typed.features.contains("window_session"))
   }
-  if typed.runtime_available {
-    match typed.platform {
-      "windows" => {
-        assert_true(typed.features.contains("managed_app_runner"))
-        assert_true(typed.features.contains("runtime_wakeup_source"))
-      }
-      "macos" | "linux" => {
-        assert_true(typed.features.contains("managed_app_runner"))
-        assert_true(typed.features.contains("runtime_wakeup_fd"))
-      }
-      _ => ()
-    }
-  }
+  // The host owns the main thread, so there is no managed runner to advertise.
+  assert_false(typed.features.contains("managed_app_runner"))
 }
 
 ///|
@@ -210,6 +199,18 @@ test "runtime wait ready mask helpers" {
     RuntimeWaitReady::{ mask: runtime_wait_none }.is_timeout(),
     content="true",
   )
+}
+
+///|
+test "runtime wait treats an elapsed deadline as no wait, not as an error" {
+  // A caller computing `deadline - now` arrives late routinely, and refusing
+  // to poll then would be worse than polling with no wait. The negative is
+  // clamped here so it can never reach the ABI, where only the documented
+  // infinite sentinel is accepted and any other negative is rejected.
+  let runtime = Runtime::new()
+  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=-5)
+  inspect(ready.is_timeout(), content="true")
+  runtime.destroy()
 }
 
 ///|
