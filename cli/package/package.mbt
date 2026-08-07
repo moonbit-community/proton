@@ -850,7 +850,19 @@ async fn stage_macos_app_impl(
   for dir in [macos, resources, frameworks] {
     ensure_dir(dir)
   }
-  copy_file(executable, @fsutil.resolve_path(macos, executable_name))
+  let staged_executable = @fsutil.resolve_path(macos, executable_name)
+  copy_file(executable, staged_executable)
+  // An app bundle's CFBundleExecutable must remain directly launchable even
+  // when the source was staged by a filesystem API that drops Unix modes.
+  @async_fs.chmod(staged_executable, 0o755) catch {
+    error =>
+      raise PackageFileSystemError::Copy(
+        source=executable,
+        destination=staged_executable,
+        detail="failed to make staged app executable: " +
+          @debug.render(Repr(error)),
+      )
+  }
   copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
@@ -874,6 +886,16 @@ async fn stage_macos_app_impl(
     )
     ensure_dir(helper_macos)
     copy_file(helper_source, helper_executable)
+    // Each CEF subprocess is the declared executable of its own helper app.
+    @async_fs.chmod(helper_executable, 0o755) catch {
+      error =>
+        raise PackageFileSystemError::Copy(
+          source=helper_source,
+          destination=helper_executable,
+          detail="failed to make staged helper executable: " +
+            @debug.render(Repr(error)),
+        )
+    }
     write_text(
       @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
       helper_info_plist(plan, helper),
