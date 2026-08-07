@@ -473,6 +473,7 @@ async function main() {
       exampleName,
       "--config",
       `${exampleName}/moon.proton`,
+      "--release",
       "--sign",
       "--target",
       "app",

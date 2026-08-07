@@ -431,18 +431,21 @@ Inspect the resolved bundle plan before creating artifacts:
 ```sh
 proton_cli package --dry-run
 proton_cli package
+proton_cli package --release
 ```
 
-The package command performs a release build unless `--no-build` is supplied.
-Package output is written to `target/proton-dist` by default. Icons, resources,
-output targets, signing, notarization, custom URL schemes, and macOS document
-types are configured through `moon.proton` and package command options.
+The package command performs a debug build by default. Pass `--release` to use
+MoonBit's release build mode, or `--no-build` to reuse an existing build from
+the selected mode. Package output is written to `target/proton-dist` by default.
+Icons, resources, output targets, signing, notarization, custom URL schemes, and
+macOS document types are configured through `moon.proton` and package command
+options.
 
 The `dmg` target is available on macOS. It creates a compressed disk image
 containing the app and an `/Applications` shortcut for drag-to-install:
 
 ```sh
-proton_cli package --target app --target dmg
+proton_cli package --release --target app --target dmg
 ```
 
 With `--notarize`, Proton submits the DMG when that target is enabled, then
@@ -473,7 +476,7 @@ revision as well as the reproducible publication time. The revision is embedded
 in the signed app and emitted into the signed manifest fragment:
 
 ```sh
-proton_cli package --target zip \
+proton_cli package --release --target zip \
   --updater-base-url https://example.com/releases \
   --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --updater-revision 42

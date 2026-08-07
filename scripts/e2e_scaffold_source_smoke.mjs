@@ -735,7 +735,7 @@ async function main() {
     { cwd: projectDir, env: runtimeEnv() },
   );
   setFrontendPackageRevision("first");
-  localCli(["-C", projectDir, "package", "--target", "app", "--sign"], {
+  localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
       PROTON_MACOS_SIGNING_IDENTITY: "-",
@@ -745,7 +745,7 @@ async function main() {
   let packaged = verifyPackagedApp();
   await runPackagedAppSmoke(packaged.executable, "first");
   setFrontendPackageRevision("second");
-  localCli(["-C", projectDir, "package", "--target", "app", "--sign"], {
+  localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
       PROTON_MACOS_SIGNING_IDENTITY: "-",

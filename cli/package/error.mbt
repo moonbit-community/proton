@@ -110,7 +110,7 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "unsupported bundle.resources glob: " + path
     MissingInput(path~) => "package input is missing: " + path
     MissingExecutable(path~) =>
-      "package release executable not found under " +
+      "package executable not found under " +
       path +
       "; run proton package without --no-build first"
     InputOutsideProject(path~) =>

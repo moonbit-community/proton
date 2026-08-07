@@ -19,6 +19,7 @@ fn windows_test_plan(
     targets,
     output: @fsutil.resolve_path(root, "output with spaces"),
     build: false,
+    release: false,
     base_dir: root,
     frontend_dist: Some(@fsutil.resolve_path(root, "frontend/dist")),
     entry_paths: [@fsutil.resolve_path(root, "frontend/dist/index.html")],

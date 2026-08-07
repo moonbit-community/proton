@@ -172,8 +172,8 @@ native checks before handing off larger refactors.
     --identifier "com.example.proton-release-smoke" -y --no-git
   proton_cli -C "$tmp_dir/release-smoke" cef setup
   proton_cli -C "$tmp_dir/release-smoke" build
-  proton_cli -C "$tmp_dir/release-smoke" package --target app --dry-run
-  proton_cli -C "$tmp_dir/release-smoke" package --target app
+  proton_cli -C "$tmp_dir/release-smoke" package --release --target app --dry-run
+  proton_cli -C "$tmp_dir/release-smoke" package --release --target app
   ```
 
 - The release is not complete until the independent scaffold passes
