@@ -87,6 +87,7 @@ async fn sign_macos_dmg(plan : PackagePlan, dmg : String) -> Unit {
     runtime_options=false,
     deep=false,
     entitlements=None,
+    identifier=None,
   )
   verify_macos_codesign_target(dmg, deep=false)
 }
