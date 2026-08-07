@@ -57,6 +57,8 @@ priv struct StagedArtifact {
 struct MacosCodeSignTarget {
   path : String
   runtime_options : Bool
+  entitlements : Bool
+  identifier : String?
   deep : Bool
 } derive(Debug, Eq)
 
@@ -1647,35 +1649,88 @@ async fn sign_macos_app_with_identity(
     contents, "Resources/proton/lib/libproton.dylib",
   )
   let runtime_bin = @fsutil.resolve_path(contents, "Resources/proton/bin")
+  let cef_framework_libraries = @fsutil.resolve_path(cef_framework, "Libraries")
   let targets = [
+    // Sign the CEF framework inside-out. `codesign --deep` does not reliably
+    // replace CEF's existing ad-hoc signatures on these nested dylibs, so
+    // notarization otherwise sees neither Developer ID nor secure timestamps.
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(cef_framework_libraries, "libEGL.dylib"),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(cef_framework_libraries, "libGLESv2.dylib"),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(
+        cef_framework_libraries, "libcef_sandbox.dylib",
+      ),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(
+        cef_framework_libraries, "libvk_swiftshader.dylib",
+      ),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
     MacosCodeSignTarget::{
       path: cef_framework,
-      runtime_options: false,
-      deep: true,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      // The nested dylibs above are already signed. Seal the framework without
+      // asking codesign to rediscover or rewrite nested code.
+      deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "libEGL.dylib"),
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "libGLESv2.dylib"),
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "cef_process"),
-      runtime_options: false,
+      // This is a standalone executable, not passive library code. Apple
+      // requires its signature to carry the hardened runtime option, while CEF
+      // requires the stable identifier used by its subprocess bootstrap.
+      runtime_options: true,
+      entitlements: false,
+      identifier: Some("cef_process"),
       deep: false,
     },
     MacosCodeSignTarget::{
       path: libproton,
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
   ]
@@ -1686,6 +1741,8 @@ async fn sign_macos_app_with_identity(
     targets.push(MacosCodeSignTarget::{
       path: binary,
       runtime_options: true,
+      entitlements: true,
+      identifier: None,
       deep: false,
     })
   }
@@ -1696,18 +1753,26 @@ async fn sign_macos_app_with_identity(
         "Frameworks/" + helper.bundle_name + ".app",
       ),
       runtime_options: true,
+      entitlements: true,
+      identifier: None,
       deep: false,
     })
   }
   targets.push(MacosCodeSignTarget::{
     path: main,
     runtime_options: true,
+    entitlements: true,
+    identifier: None,
     deep: false,
   })
   targets.push(MacosCodeSignTarget::{
     path: app,
     runtime_options: true,
-    deep: true,
+    entitlements: true,
+    identifier: None,
+    // Every nested target is signed above. Sign the outer bundle without
+    // deprecated deep traversal so it cannot rewrite inner identities.
+    deep: false,
   })
   require_macos_codesign_targets(targets)
   for target in targets {
@@ -1716,12 +1781,16 @@ async fn sign_macos_app_with_identity(
       target.path,
       runtime_options=target.runtime_options,
       deep=target.deep,
-      entitlements=Some(entitlements),
+      entitlements=if target.entitlements { Some(entitlements) } else { None },
+      identifier=target.identifier,
     )
   }
   for target in targets {
     verify_macos_codesign_target(target.path, deep=target.deep)
   }
+  // Deep verification is useful and non-mutating after every nested target has
+  // been signed explicitly.
+  verify_macos_codesign_target(app, deep=true)
   if verify_developer_id {
     verify_macos_developer_id(app)
   }
@@ -1808,6 +1877,7 @@ async fn codesign_target(
   runtime_options~ : Bool,
   deep~ : Bool,
   entitlements~ : String?,
+  identifier~ : String?,
 ) -> Unit {
   let args = macos_codesign_args(
     identity,
@@ -1815,6 +1885,7 @@ async fn codesign_target(
     runtime_options~,
     deep~,
     entitlements~,
+    identifier~,
   )
   let code = @process.run("codesign", args) catch {
     error =>
@@ -1866,8 +1937,9 @@ fn macos_codesign_args(
   runtime_options~ : Bool,
   deep~ : Bool,
   entitlements~ : String?,
+  identifier~ : String?,
 ) -> Array[String] {
-  let args : Array[String] = ["--force", "--timestamp", "--sign", identity]
+  let args : Array[String] = ["--force", "--timestamp"]
   if deep {
     args.push("--deep")
   }
@@ -1882,7 +1954,11 @@ fn macos_codesign_args(
     }
     _ => ()
   }
-  args.push(target)
+  match identifier {
+    Some(identifier) => args.append(["-i", identifier])
+    None => ()
+  }
+  args.append(["--sign", identity, target])
   args
 }
 

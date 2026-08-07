@@ -441,6 +441,7 @@ test "macOS signing args apply hardened runtime entitlements to app code" {
     runtime_options=true,
     deep=false,
     entitlements=Some("proton.entitlements"),
+    identifier=None,
   )
   assert_true(args.contains("--timestamp"))
   assert_true(args.contains("--options"))
@@ -481,16 +482,21 @@ test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
 }
 
 ///|
-test "macOS framework signing uses deep sealing without app entitlements" {
+test "macOS CEF process signing preserves hardened runtime and identifier" {
   let args = macos_codesign_args(
     "Developer ID Application: Example",
-    "Chromium Embedded Framework.framework",
-    runtime_options=false,
-    deep=true,
-    entitlements=Some("proton.entitlements"),
+    "cef_process",
+    runtime_options=true,
+    deep=false,
+    entitlements=None,
+    identifier=Some("cef_process"),
   )
-  assert_true(args.contains("--deep"))
-  assert_false(args.contains("--options"))
+  assert_true(args.contains("--timestamp"))
+  assert_true(args.contains("--options"))
+  assert_true(args.contains("runtime"))
+  assert_true(args.contains("-i"))
+  assert_true(args.contains("cef_process"))
+  assert_false(args.contains("--deep"))
   assert_false(args.contains("--entitlements"))
 }
 
@@ -505,6 +511,8 @@ async test "macOS signing rejects a missing required target" {
       MacosCodeSignTarget::{
         path: missing,
         runtime_options: false,
+        entitlements: false,
+        identifier: None,
         deep: false,
       },
     ])
