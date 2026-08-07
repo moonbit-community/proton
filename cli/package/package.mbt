@@ -718,6 +718,11 @@ async fn find_named_file(root : String, name : String) -> String? {
   if @fsutil.path_is_file(root) {
     return if path_basename(root) == name { Some(root) } else { None }
   }
+  // A dSYM bundle mirrors the executable basename under Resources/DWARF, but
+  // that file contains debug symbols rather than runnable Mach-O code.
+  if path_basename(root).has_suffix(".dSYM") {
+    return None
+  }
   let entries = @async_fs.readdir(
     root,
     include_hidden=true,

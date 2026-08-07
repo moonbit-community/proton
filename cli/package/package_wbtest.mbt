@@ -1058,7 +1058,7 @@ async test "macOS notarization validates success and cleans failed upload" {
 }
 
 ///|
-async test "debug executable lookup stays inside package target dir" {
+async test "package executable lookup ignores the dSYM mirror" {
   let root = "target/proton-package-executable-lookup"
   remove_tree(root)
   let package_target = @fsutil.resolve_path(root, "package-target")
@@ -1095,17 +1095,22 @@ async test "debug executable lookup stays inside package target dir" {
     sign: false,
     notarize: false,
   }
-  @debug.assert_eq(find_package_executable(plan), None)
   let expected = @fsutil.resolve_path(
     package_target, "native/debug/build/vendor/app/app.exe",
   )
+  @debug.assert_eq(find_package_executable(plan), None)
+  let dsym = @fsutil.resolve_path(
+    package_target, "native/debug/build/vendor/app/app.exe.dSYM/Contents/Resources/DWARF/app.exe",
+  )
+  ensure_dir(@fsutil.path_parent(dsym))
+  write_text(dsym, "debug symbols")
+  @debug.assert_eq(find_package_executable(plan), None)
   ensure_dir(@fsutil.path_parent(expected))
   write_text(expected, "right")
-  match find_package_executable(plan) {
-    Some(actual) =>
-      assert_eq(normalize_slashes(actual), normalize_slashes(expected))
-    None => abort("expected debug executable")
+  guard find_package_executable(plan) is Some(actual) else {
+    fail("expected debug executable")
   }
+  assert_eq(normalize_slashes(actual), normalize_slashes(expected))
 }
 
 ///|
