@@ -6,10 +6,10 @@ import {
   "moonbit-community/proton_config@0.1.14",
   "moonbit-community/proton_rsa@0.1.14",
   "moonbit-community/proton_updater@0.1.14",
-  "moonbitlang/x@0.4.48",
-  "moonbitlang/parser@0.3.2",
+  "moonbitlang/x@0.4.49",
+  "moonbitlang/parser@0.3.13",
   "moonbitlang/moon_config@0.3.5",
-  "moonbitlang/lexer@0.3.5",
+  "moonbitlang/lexer@0.3.13",
   "moonbitlang/async@0.20.3",
   "moonbit-community/proton_ffi@0.1.14",
 }

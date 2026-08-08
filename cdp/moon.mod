@@ -6,7 +6,7 @@ readme = "README.mbt.md"
 
 import {
   "moonbitlang/async@0.20.3",
-  "moonbitlang/x@0.4.48",
+  "moonbitlang/x@0.4.49",
 }
 
 repository = "https://github.com/moonbit-community/proton"

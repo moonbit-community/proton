@@ -3,9 +3,9 @@ name = "moonbit-community/proton_config"
 version = "0.1.14"
 
 import {
-  "moonbitlang/lexer@0.3.5",
+  "moonbitlang/lexer@0.3.13",
   "moonbitlang/moon_config@0.3.5",
-  "moonbitlang/x@0.4.48",
+  "moonbitlang/x@0.4.49",
 }
 
 repository = "https://github.com/moonbit-community/proton"
