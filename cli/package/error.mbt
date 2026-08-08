@@ -22,6 +22,7 @@ pub(all) suberror PackagePlanError {
   UnsupportedResourceGlob(path~ : String)
   MissingInput(path~ : String)
   MissingExecutable(path~ : String)
+  NotLaunchableMachO(path~ : String, filetype~ : Int)
   InputOutsideProject(path~ : String)
   MissingIcon(path~ : String)
 } derive(Debug, Eq)
@@ -113,6 +114,12 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "package executable not found under " +
       path +
       "; run proton package without --no-build first"
+    NotLaunchableMachO(path~, filetype~) =>
+      "staged bundle executable " +
+      path +
+      " is a Mach-O of type " +
+      macho_filetype_name(filetype) +
+      ", not MH_EXECUTE; the kernel refuses to spawn it"
     InputOutsideProject(path~) =>
       "package input must stay inside the project: " + path
     MissingIcon(path~) => "package icon is missing: " + path

@@ -441,6 +441,7 @@ test "macOS signing args apply hardened runtime entitlements to app code" {
     runtime_options=true,
     deep=false,
     entitlements=Some("proton.entitlements"),
+    identifier=None,
   )
   assert_true(args.contains("--timestamp"))
   assert_true(args.contains("--options"))
@@ -481,16 +482,21 @@ test "ad-hoc macOS signing requires an explicit diagnostic opt-in" {
 }
 
 ///|
-test "macOS framework signing uses deep sealing without app entitlements" {
+test "macOS CEF process signing preserves hardened runtime and identifier" {
   let args = macos_codesign_args(
     "Developer ID Application: Example",
-    "Chromium Embedded Framework.framework",
-    runtime_options=false,
-    deep=true,
-    entitlements=Some("proton.entitlements"),
+    "cef_process",
+    runtime_options=true,
+    deep=false,
+    entitlements=None,
+    identifier=Some("cef_process"),
   )
-  assert_true(args.contains("--deep"))
-  assert_false(args.contains("--options"))
+  assert_true(args.contains("--timestamp"))
+  assert_true(args.contains("--options"))
+  assert_true(args.contains("runtime"))
+  assert_true(args.contains("-i"))
+  assert_true(args.contains("cef_process"))
+  assert_false(args.contains("--deep"))
   assert_false(args.contains("--entitlements"))
 }
 
@@ -505,6 +511,8 @@ async test "macOS signing rejects a missing required target" {
       MacosCodeSignTarget::{
         path: missing,
         runtime_options: false,
+        entitlements: false,
+        identifier: None,
         deep: false,
       },
     ])
@@ -1050,7 +1058,7 @@ async test "macOS notarization validates success and cleans failed upload" {
 }
 
 ///|
-async test "debug executable lookup stays inside package target dir" {
+async test "package executable lookup ignores the dSYM mirror" {
   let root = "target/proton-package-executable-lookup"
   remove_tree(root)
   let package_target = @fsutil.resolve_path(root, "package-target")
@@ -1087,17 +1095,22 @@ async test "debug executable lookup stays inside package target dir" {
     sign: false,
     notarize: false,
   }
-  @debug.assert_eq(find_package_executable(plan), None)
   let expected = @fsutil.resolve_path(
     package_target, "native/debug/build/vendor/app/app.exe",
   )
+  @debug.assert_eq(find_package_executable(plan), None)
+  let dsym = @fsutil.resolve_path(
+    package_target, "native/debug/build/vendor/app/app.exe.dSYM/Contents/Resources/DWARF/app.exe",
+  )
+  ensure_dir(@fsutil.path_parent(dsym))
+  write_text(dsym, "debug symbols")
+  @debug.assert_eq(find_package_executable(plan), None)
   ensure_dir(@fsutil.path_parent(expected))
   write_text(expected, "right")
-  match find_package_executable(plan) {
-    Some(actual) =>
-      assert_eq(normalize_slashes(actual), normalize_slashes(expected))
-    None => abort("expected debug executable")
+  guard find_package_executable(plan) is Some(actual) else {
+    fail("expected debug executable")
   }
+  assert_eq(normalize_slashes(actual), normalize_slashes(expected))
 }
 
 ///|
@@ -1189,5 +1202,43 @@ async test "Windows portable staging flattens runtime bin beside app executable"
   )
   assert_false(
     @mbfs.path_exists(@fsutil.resolve_path(portable, "bin/proton.dll")),
+  )
+}
+
+///|
+test "a thin Mach-O header yields its filetype" {
+  // An arm64 executable and its dSYM mirror: identical for twelve bytes, then
+  // MH_EXECUTE (2) against MH_DSYM (10). Nothing cheaper tells them apart —
+  // not the magic, not the size, not codesign.
+  let executable = b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00"
+  let dsym = b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01\x00\x00\x00\x00\x0a\x00\x00\x00"
+  assert_eq(macho_thin_filetype(executable), Some(0x2))
+  assert_eq(macho_thin_filetype(dsym), Some(0xa))
+  // 32-bit thin headers agree up to `filetype`, so one offset reads both.
+  let thin32 = b"\xce\xfa\xed\xfe\x0c\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00"
+  assert_eq(macho_thin_filetype(thin32), Some(0x6))
+}
+
+///|
+test "unjudgeable inputs are left alone rather than failed" {
+  // The caller rejects only what it can prove wrong, so a universal binary, a
+  // script, and a truncated file all read as None. A format this reader does
+  // not understand must never become a packaging failure.
+  let fat = b"\xca\xfe\xba\xbe\x00\x00\x00\x02\x01\x00\x00\x0c\x00\x00\x00\x00"
+  assert_eq(macho_thin_filetype(fat), None)
+  assert_eq(macho_thin_filetype(b"#!/bin/sh\necho hi\n"), None)
+  assert_eq(macho_thin_filetype(b"\xcf\xfa\xed\xfe"), None)
+}
+
+///|
+test "the rejection names the filetype it found" {
+  inspect(macho_filetype_name(0x2), content="MH_EXECUTE")
+  inspect(macho_filetype_name(0xa), content="MH_DSYM")
+  inspect(
+    PackagePlanError::NotLaunchableMachO(
+      path="SeekMoon.app/Contents/MacOS/seekmoon",
+      filetype=0xa,
+    ).message(),
+    content="staged bundle executable SeekMoon.app/Contents/MacOS/seekmoon is a Mach-O of type MH_DSYM, not MH_EXECUTE; the kernel refuses to spawn it",
   )
 }

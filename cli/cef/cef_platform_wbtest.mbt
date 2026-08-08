@@ -1,16 +1,28 @@
 ///|
-test "darwin arm64 platform has proton and runtime artifact lists" {
+test "darwin arm64 platform has complete CEF and Proton runtime artifact lists" {
   let platform = darwin_arm64_platform()
   let prebuilt = proton_prebuilt_relative_files(platform)
   assert_true(prebuilt.contains("bin/cef_process"))
   assert_true(prebuilt.contains("lib/libproton.dylib"))
   assert_true(prebuilt.contains("include/proton_native.h"))
+  let cef = installed_cef_relative_files(platform)
+  // The artifact list uses the current host's separator even when this test
+  // inspects the macOS platform description from Windows.
+  let sandbox_library = @fsutil.path_join(
+    "Release/Chromium Embedded Framework.framework/Libraries", "libcef_sandbox.dylib",
+  )
+  assert_true(cef.contains(sandbox_library))
   let runtime = runtime_required_relative_files(platform)
   assert_true(runtime.contains("bin/cef_process"))
   assert_true(runtime.contains("lib/libproton.dylib"))
   assert_true(
     runtime.contains(
       "Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework",
+    ),
+  )
+  assert_true(
+    runtime.contains(
+      "Frameworks/Chromium Embedded Framework.framework/Libraries/libcef_sandbox.dylib",
     ),
   )
   assert_true(runtime.contains("Resources/icudtl.dat"))
