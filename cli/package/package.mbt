@@ -839,6 +839,72 @@ async fn stage_macos_app(
 }
 
 ///|
+/// Mach-O `filetype` values this packager can name. Only `MH_EXECUTE` is
+/// spawnable; `MH_DSYM` is the one that actually shows up here, because a
+/// debug build mirrors the executable's basename inside
+/// `<name>.dSYM/Contents/Resources/DWARF/`.
+const MachoExecute : Int = 0x2
+
+///|
+fn macho_filetype_name(filetype : Int) -> String {
+  match filetype {
+    0x1 => "MH_OBJECT"
+    0x2 => "MH_EXECUTE"
+    0x6 => "MH_DYLIB"
+    0x8 => "MH_BUNDLE"
+    0xa => "MH_DSYM"
+    _ => "0x" + filetype.to_string()
+  }
+}
+
+///|
+fn macho_u32_le(data : Bytes, offset : Int) -> Int {
+  data[offset].to_int() |
+  (data[offset + 1].to_int() << 8) |
+  (data[offset + 2].to_int() << 16) |
+  (data[offset + 3].to_int() << 24)
+}
+
+///|
+/// The `filetype` of a thin little-endian Mach-O, or `None` for anything this
+/// reader will not judge.
+///
+/// 64- and 32-bit thin headers agree up to `filetype`, so one offset serves
+/// both. Universal binaries (`FAT_MAGIC`) and non-Mach-O files return `None`
+/// on purpose: the caller rejects only what it can prove wrong, so a format
+/// this function does not understand is never turned into a build failure.
+/// Extending to fat archives means walking the arch table and judging each
+/// contained header.
+fn macho_thin_filetype(data : Bytes) -> Int? {
+  guard data.length() >= 16 else { return None }
+  let magic = macho_u32_le(data, 0)
+  guard magic == 0xfeedfacf || magic == 0xfeedface else { return None }
+  Some(macho_u32_le(data, 12))
+}
+
+///|
+/// Refuse to ship a bundle executable the kernel will not spawn.
+///
+/// `codesign` cannot stand in for this: a dSYM companion is a legitimate
+/// Mach-O and signs and verifies exactly like the real binary, differing
+/// only in the header's `filetype`. Nor can the executable bit, which this
+/// packager sets on whatever it staged. So a bundle carrying symbols where
+/// its binary belongs passes every other check and then fails at launch with
+/// `Launchd job spawn failed` — this is the only place that catches it.
+async fn require_launchable_macho(path : String) -> Unit {
+  let data = @async_fs.read_file(path) catch {
+    error =>
+      raise PackageFileSystemError::Read(
+        path~,
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  guard macho_thin_filetype(data.binary()) is Some(filetype) else { return }
+  guard filetype != MachoExecute else { return }
+  raise PackagePlanError::NotLaunchableMachO(path~, filetype~)
+}
+
+///|
 async fn stage_macos_app_impl(
   plan : PackagePlan,
   executable : String,
@@ -868,6 +934,7 @@ async fn stage_macos_app_impl(
           @debug.render(Repr(error)),
       )
   }
+  require_launchable_macho(staged_executable)
   copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
@@ -901,6 +968,7 @@ async fn stage_macos_app_impl(
             @debug.render(Repr(error)),
         )
     }
+    require_launchable_macho(helper_executable)
     write_text(
       @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
       helper_info_plist(plan, helper),
