@@ -902,6 +902,20 @@ static void proton_engine_append_switch(cef_command_line_t *command_line,
   cef_string_clear(&switch_name);
 }
 
+static void proton_engine_append_switch_with_value(
+    cef_command_line_t *command_line,
+    const char *name,
+    const char *value) {
+  cef_string_t switch_name = {0};
+  cef_string_t switch_value = {0};
+  proton_engine_set_string(&switch_name, name);
+  proton_engine_set_string(&switch_value, value);
+  command_line->append_switch_with_value(command_line, &switch_name,
+                                         &switch_value);
+  cef_string_clear(&switch_name);
+  cef_string_clear(&switch_value);
+}
+
 #define PROTON_ENGINE_REF_INCREMENT(refs) \
   atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
 #define PROTON_ENGINE_REF_DECREMENT(refs) \
@@ -1486,6 +1500,11 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
     proton_engine_append_switch(command_line, "no-zygote");
     proton_engine_debug_log("managed_browser_no_zygote");
   }
+  /* The Linux window host embeds CEF into GTK/X11. Keep Chromium's Ozone
+   * backend on X11 as well; selecting Wayland here initializes GDK before
+   * proton_engine_ensure_gtk can apply its X11-only constraint. */
+  proton_engine_append_switch_with_value(command_line, "ozone-platform",
+                                         "x11");
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
   // On Xvfb-based CI displays Chromium's occlusion tracking can mark the
