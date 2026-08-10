@@ -26,25 +26,6 @@ async fn show_notification(
 }
 
 ///|
-fn notification_click_poller_script() -> String {
-  (
-    #|(() => {
-    #|  const root = window.__MoonBit__;
-    #|  const notification = root && root.notification;
-    #|  if (!notification || typeof notification.drainClicks !== "function") {
-    #|    return;
-    #|  }
-    #|  if (notification.__protonClickPoller) {
-    #|    return;
-    #|  }
-    #|  notification.__protonClickPoller = window.setInterval(() => {
-    #|    notification.drainClicks({}).catch(() => {});
-    #|  }, 100);
-    #|})();
-  )
-}
-
-///|
 fn cleanup_notification() -> Unit raise NotificationError {
   notification_native_cleanup()
 }
@@ -70,7 +51,7 @@ async fn show(
 #proton.command(contract=drain_clicks_command)
 async fn drain_clicks(
   context : @proton.CommandContext,
-  _request : @notification_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @notification_contract.NotificationDrainReply {
   let mut count = 0
   while true {
@@ -93,7 +74,13 @@ pub fn extension() -> @proton_extension.Extension {
     @notification_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
-    scripts=[notification_click_poller_script()],
+    scripts=[
+      @proton_extension.poller_script(
+        js_namespace="notification",
+        drain_method="drainClicks",
+        poller_field="__protonClickPoller",
+      ),
+    ],
     on_destroy=fn() raise { cleanup_notification() },
   )
 }

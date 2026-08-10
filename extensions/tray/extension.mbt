@@ -219,25 +219,6 @@ fn destroy_tray(tray_handle : @sys_tray.Tray?) -> Unit {
 }
 
 ///|
-fn tray_event_poller_script() -> String {
-  (
-    #|(() => {
-    #|  const root = window.__MoonBit__;
-    #|  const tray = root && root.tray;
-    #|  if (!tray || typeof tray.drainEvents !== "function") {
-    #|    return;
-    #|  }
-    #|  if (tray.__protonEventPoller) {
-    #|    return;
-    #|  }
-    #|  tray.__protonEventPoller = window.setInterval(() => {
-    #|    tray.drainEvents({}).catch(() => {});
-    #|  }, 100);
-    #|})();
-  )
-}
-
-///|
 fn cleanup_tray() -> Unit {
   destroy_tray(app_command_tray_handle.val)
 }
@@ -246,7 +227,7 @@ fn cleanup_tray() -> Unit {
 /// Returns platform support details for JavaScript callers.
 #proton.command(contract=support_command)
 fn support(
-  _request : @tray_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @tray_contract.TraySupportReply {
   tray_support()
 }
@@ -288,7 +269,7 @@ async fn show(
 #proton.command(contract=hide_command)
 async fn hide(
   context : @proton.CommandContext,
-  _request : @tray_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @tray_contract.TrayReply {
   match app_command_tray_handle.val {
     None => {
@@ -360,7 +341,7 @@ async fn set_menu(
 #proton.command(contract=drain_events_command)
 async fn drain_events(
   context : @proton.CommandContext,
-  _request : @tray_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @tray_contract.TrayEventReply {
   match app_command_tray_handle.val {
     None => @tray_contract.TrayEventReply::{ count: 0 }
@@ -383,7 +364,7 @@ async fn drain_events(
 #proton.command(contract=destroy_command)
 async fn destroy(
   context : @proton.CommandContext,
-  _request : @tray_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @tray_contract.TrayReply {
   destroy_tray(app_command_tray_handle.val)
   emit_command_activity(context, "destroy", None, None)
@@ -396,7 +377,13 @@ pub fn extension() -> @proton_extension.Extension {
     @tray_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
-    scripts=[tray_event_poller_script()],
+    scripts=[
+      @proton_extension.poller_script(
+        js_namespace="tray",
+        drain_method="drainEvents",
+        poller_field="__protonEventPoller",
+      ),
+    ],
     on_destroy=fn() { cleanup_tray() },
   )
 }

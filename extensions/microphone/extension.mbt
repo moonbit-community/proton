@@ -94,7 +94,7 @@ fn microphone_devices_reply(
 #proton.command(contract=list_devices_command)
 async fn list_devices(
   context : @proton.CommandContext,
-  _request : @microphone_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @microphone_contract.MicrophoneDevicesReply {
   let devices = @sys_microphone.MicrophoneDevice::list()
   context.emit(@microphone_contract.activity, @microphone_contract.MicrophoneActivity::{

@@ -12,15 +12,15 @@ pub let activity : @proton_contract.Event[TrayActivity]
 
 pub let click : @proton_contract.Event[TrayClick]
 
-pub let destroy : @proton_contract.Command[EmptyRequest, TrayReply]
+pub let destroy : @proton_contract.Command[@proton_contract.EmptyRequest, TrayReply]
 
 pub let double_click : @proton_contract.Event[TrayDoubleClick]
 
-pub let drain_events : @proton_contract.Command[EmptyRequest, TrayEventReply]
+pub let drain_events : @proton_contract.Command[@proton_contract.EmptyRequest, TrayEventReply]
 
 pub let extension : @proton_contract.ExtensionContract
 
-pub let hide : @proton_contract.Command[EmptyRequest, TrayReply]
+pub let hide : @proton_contract.Command[@proton_contract.EmptyRequest, TrayReply]
 
 pub let menu_item_click : @proton_contract.Event[TrayMenuItemClick]
 
@@ -34,14 +34,11 @@ pub let set_tooltip : @proton_contract.Command[SetTooltipRequest, TrayReply]
 
 pub let show : @proton_contract.Command[ShowRequest, TrayReply]
 
-pub let support : @proton_contract.Command[EmptyRequest, TraySupportReply]
+pub let support : @proton_contract.Command[@proton_contract.EmptyRequest, TraySupportReply]
 
 // Errors
 
 // Types and methods
-pub(all) struct EmptyRequest {
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
 pub(all) struct SetIconRequest {
   icon : Json?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)

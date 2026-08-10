@@ -3,6 +3,7 @@ package "moonbit-community/proton_contract"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -34,6 +35,9 @@ pub struct ContractRoute {
   scope : ContractScope
   name : String
 }
+
+pub(all) struct EmptyRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct Event[Payload] {
   route : ContractRoute

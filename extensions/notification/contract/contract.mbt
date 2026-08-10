@@ -1,7 +1,4 @@
 ///|
-pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 /// `level` is a reserved severity hint: today it is only echoed back in the
 /// activity event and is not forwarded to the native backend.
 pub(all) struct NotificationRequest {
@@ -40,7 +37,7 @@ pub let show : @proton_contract.Command[NotificationRequest, NotificationReply] 
 
 ///|
 pub let drain_clicks : @proton_contract.Command[
-  EmptyRequest,
+  @proton_contract.EmptyRequest,
   NotificationDrainReply,
 ] = extension.command("drainClicks")
 

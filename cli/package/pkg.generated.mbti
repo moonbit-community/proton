@@ -59,6 +59,7 @@ pub(all) suberror PackagePlanError {
   UnsupportedResourceGlob(path~ : String)
   MissingInput(path~ : String)
   MissingExecutable(path~ : String)
+  NotLaunchableMachO(path~ : String, filetype~ : Int)
   InputOutsideProject(path~ : String)
   MissingIcon(path~ : String)
 } derive(Eq, @debug.Debug)

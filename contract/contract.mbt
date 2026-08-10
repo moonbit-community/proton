@@ -7,6 +7,10 @@ pub enum ContractScope {
 }
 
 ///|
+/// A request payload with no fields, shared by commands that take no input.
+pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
+
+///|
 /// An opaque application or extension route carried by a typed descriptor.
 ///
 /// Application code does not construct routes or assemble transport names

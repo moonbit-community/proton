@@ -34,25 +34,6 @@ async fn[Reply] emit_command_result(
 }
 
 ///|
-fn trigger_poller_script() -> String {
-  (
-    #|(() => {
-    #|  const root = window.__MoonBit__;
-    #|  const globalHotkey = root && root.globalHotkey;
-    #|  if (!globalHotkey || typeof globalHotkey.drainTriggered !== "function") {
-    #|    return;
-    #|  }
-    #|  if (globalHotkey.__protonTriggerPoller) {
-    #|    return;
-    #|  }
-    #|  globalHotkey.__protonTriggerPoller = window.setInterval(() => {
-    #|    globalHotkey.drainTriggered({}).catch(() => {});
-    #|  }, 100);
-    #|})();
-  )
-}
-
-///|
 /// Registers one global hotkey from a generated app-command extension.
 #proton.command(contract=register_command)
 async fn register(
@@ -86,7 +67,7 @@ async fn unregister(
 /// Lists registered global hotkeys from a generated app-command extension.
 #proton.command(contract=list_command)
 fn list(
-  _request : @global_hotkey_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @global_hotkey_contract.GlobalHotkeyListReply raise GlobalHotkeyError {
   list_hotkeys(app_command_manager_handle())
 }
@@ -96,7 +77,7 @@ fn list(
 #proton.command(contract=drain_triggered_command)
 async fn drain_triggered(
   context : @proton.CommandContext,
-  _request : @global_hotkey_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @global_hotkey_contract.GlobalHotkeyListReply {
   let reply = drain_triggered_hotkeys(app_command_manager_handle())
   for accelerator in reply.accelerators {
@@ -113,6 +94,12 @@ pub fn extension() -> @proton_extension.Extension {
     @global_hotkey_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
-    scripts=[trigger_poller_script()],
+    scripts=[
+      @proton_extension.poller_script(
+        js_namespace="globalHotkey",
+        drain_method="drainTriggered",
+        poller_field="__protonTriggerPoller",
+      ),
+    ],
   )
 }

@@ -1,7 +1,4 @@
 ///|
-pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct ParseListingRequest {
   listing : String
 } derive(ToJson, FromJson, Debug, Eq)
@@ -51,7 +48,7 @@ pub(all) struct MicrophoneActivity {
 
 ///|
 pub let list_devices : @proton_contract.Command[
-  EmptyRequest,
+  @proton_contract.EmptyRequest,
   MicrophoneDevicesReply,
 ] = extension.command("listDevices")
 
