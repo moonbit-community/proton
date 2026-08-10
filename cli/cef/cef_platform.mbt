@@ -236,6 +236,9 @@ fn installed_cef_relative_files(platform : ProtonPlatform) -> Array[String] {
     let libraries_root = "Release/Chromium Embedded Framework.framework/Libraries"
     files.push(@fsutil.path_join(libraries_root, "libEGL.dylib"))
     files.push(@fsutil.path_join(libraries_root, "libGLESv2.dylib"))
+    // Packaging signs every nested CEF Mach-O before sealing the framework.
+    // Reject incomplete archives during setup instead of failing at signing.
+    files.push(@fsutil.path_join(libraries_root, "libcef_sandbox.dylib"))
     files.push(@fsutil.path_join(libraries_root, "libvk_swiftshader.dylib"))
   }
   files
@@ -281,6 +284,7 @@ fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
     [
       "bin/cef_process", "lib/libproton.dylib", "bin/libEGL.dylib", "bin/libGLESv2.dylib",
       "bin/libvk_swiftshader.dylib", "Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework",
+      "Frameworks/Chromium Embedded Framework.framework/Libraries/libcef_sandbox.dylib",
       "Resources/icudtl.dat",
     ]
   } else {

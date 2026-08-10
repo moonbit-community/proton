@@ -308,7 +308,12 @@ function verifyBundle() {
     if (declaredExecutable !== helperNames[index]) {
       fail(`unexpected helper executable: ${declaredExecutable}`);
     }
+    fs.accessSync(executable, fs.constants.X_OK);
   }
+  fs.accessSync(
+    path.join(contents, "MacOS", executableName),
+    fs.constants.X_OK,
+  );
   const infoPlist = path.join(contents, "Info.plist");
   const plistExpectations = new Map([
     ["CFBundleIdentifier", "com.justjavac.proton.dev-extension-js"],

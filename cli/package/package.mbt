@@ -57,6 +57,8 @@ priv struct StagedArtifact {
 struct MacosCodeSignTarget {
   path : String
   runtime_options : Bool
+  entitlements : Bool
+  identifier : String?
   deep : Bool
 } derive(Debug, Eq)
 
@@ -716,6 +718,11 @@ async fn find_named_file(root : String, name : String) -> String? {
   if @fsutil.path_is_file(root) {
     return if path_basename(root) == name { Some(root) } else { None }
   }
+  // A dSYM bundle mirrors the executable basename under Resources/DWARF, but
+  // that file contains debug symbols rather than runnable Mach-O code.
+  if path_basename(root).has_suffix(".dSYM") {
+    return None
+  }
   let entries = @async_fs.readdir(
     root,
     include_hidden=true,
@@ -832,6 +839,72 @@ async fn stage_macos_app(
 }
 
 ///|
+/// Mach-O `filetype` values this packager can name. Only `MH_EXECUTE` is
+/// spawnable; `MH_DSYM` is the one that actually shows up here, because a
+/// debug build mirrors the executable's basename inside
+/// `<name>.dSYM/Contents/Resources/DWARF/`.
+const MachoExecute : Int = 0x2
+
+///|
+fn macho_filetype_name(filetype : Int) -> String {
+  match filetype {
+    0x1 => "MH_OBJECT"
+    0x2 => "MH_EXECUTE"
+    0x6 => "MH_DYLIB"
+    0x8 => "MH_BUNDLE"
+    0xa => "MH_DSYM"
+    _ => "0x" + filetype.to_string()
+  }
+}
+
+///|
+fn macho_u32_le(data : Bytes, offset : Int) -> Int {
+  data[offset].to_int() |
+  (data[offset + 1].to_int() << 8) |
+  (data[offset + 2].to_int() << 16) |
+  (data[offset + 3].to_int() << 24)
+}
+
+///|
+/// The `filetype` of a thin little-endian Mach-O, or `None` for anything this
+/// reader will not judge.
+///
+/// 64- and 32-bit thin headers agree up to `filetype`, so one offset serves
+/// both. Universal binaries (`FAT_MAGIC`) and non-Mach-O files return `None`
+/// on purpose: the caller rejects only what it can prove wrong, so a format
+/// this function does not understand is never turned into a build failure.
+/// Extending to fat archives means walking the arch table and judging each
+/// contained header.
+fn macho_thin_filetype(data : Bytes) -> Int? {
+  guard data.length() >= 16 else { return None }
+  let magic = macho_u32_le(data, 0)
+  guard magic == 0xfeedfacf || magic == 0xfeedface else { return None }
+  Some(macho_u32_le(data, 12))
+}
+
+///|
+/// Refuse to ship a bundle executable the kernel will not spawn.
+///
+/// `codesign` cannot stand in for this: a dSYM companion is a legitimate
+/// Mach-O and signs and verifies exactly like the real binary, differing
+/// only in the header's `filetype`. Nor can the executable bit, which this
+/// packager sets on whatever it staged. So a bundle carrying symbols where
+/// its binary belongs passes every other check and then fails at launch with
+/// `Launchd job spawn failed` — this is the only place that catches it.
+async fn require_launchable_macho(path : String) -> Unit {
+  let data = @async_fs.read_file(path) catch {
+    error =>
+      raise PackageFileSystemError::Read(
+        path~,
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  guard macho_thin_filetype(data.binary()) is Some(filetype) else { return }
+  guard filetype != MachoExecute else { return }
+  raise PackagePlanError::NotLaunchableMachO(path~, filetype~)
+}
+
+///|
 async fn stage_macos_app_impl(
   plan : PackagePlan,
   executable : String,
@@ -848,7 +921,20 @@ async fn stage_macos_app_impl(
   for dir in [macos, resources, frameworks] {
     ensure_dir(dir)
   }
-  copy_file(executable, @fsutil.resolve_path(macos, executable_name))
+  let staged_executable = @fsutil.resolve_path(macos, executable_name)
+  copy_file(executable, staged_executable)
+  // An app bundle's CFBundleExecutable must remain directly launchable even
+  // when the source was staged by a filesystem API that drops Unix modes.
+  @async_fs.chmod(staged_executable, 0o755) catch {
+    error =>
+      raise PackageFileSystemError::Copy(
+        source=executable,
+        destination=staged_executable,
+        detail="failed to make staged app executable: " +
+          @debug.render(Repr(error)),
+      )
+  }
+  require_launchable_macho(staged_executable)
   copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
@@ -872,6 +958,17 @@ async fn stage_macos_app_impl(
     )
     ensure_dir(helper_macos)
     copy_file(helper_source, helper_executable)
+    // Each CEF subprocess is the declared executable of its own helper app.
+    @async_fs.chmod(helper_executable, 0o755) catch {
+      error =>
+        raise PackageFileSystemError::Copy(
+          source=helper_source,
+          destination=helper_executable,
+          detail="failed to make staged helper executable: " +
+            @debug.render(Repr(error)),
+        )
+    }
+    require_launchable_macho(helper_executable)
     write_text(
       @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
       helper_info_plist(plan, helper),
@@ -1647,35 +1744,88 @@ async fn sign_macos_app_with_identity(
     contents, "Resources/proton/lib/libproton.dylib",
   )
   let runtime_bin = @fsutil.resolve_path(contents, "Resources/proton/bin")
+  let cef_framework_libraries = @fsutil.resolve_path(cef_framework, "Libraries")
   let targets = [
+    // Sign the CEF framework inside-out. `codesign --deep` does not reliably
+    // replace CEF's existing ad-hoc signatures on these nested dylibs, so
+    // notarization otherwise sees neither Developer ID nor secure timestamps.
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(cef_framework_libraries, "libEGL.dylib"),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(cef_framework_libraries, "libGLESv2.dylib"),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(
+        cef_framework_libraries, "libcef_sandbox.dylib",
+      ),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
+    MacosCodeSignTarget::{
+      path: @fsutil.resolve_path(
+        cef_framework_libraries, "libvk_swiftshader.dylib",
+      ),
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      deep: false,
+    },
     MacosCodeSignTarget::{
       path: cef_framework,
-      runtime_options: false,
-      deep: true,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
+      // The nested dylibs above are already signed. Seal the framework without
+      // asking codesign to rediscover or rewrite nested code.
+      deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "libEGL.dylib"),
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "libGLESv2.dylib"),
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
     MacosCodeSignTarget::{
       path: @fsutil.resolve_path(runtime_bin, "cef_process"),
-      runtime_options: false,
+      // This is a standalone executable, not passive library code. Apple
+      // requires its signature to carry the hardened runtime option, while CEF
+      // requires the stable identifier used by its subprocess bootstrap.
+      runtime_options: true,
+      entitlements: false,
+      identifier: Some("cef_process"),
       deep: false,
     },
     MacosCodeSignTarget::{
       path: libproton,
-      runtime_options: false,
+      runtime_options: true,
+      entitlements: false,
+      identifier: None,
       deep: false,
     },
   ]
@@ -1686,6 +1836,8 @@ async fn sign_macos_app_with_identity(
     targets.push(MacosCodeSignTarget::{
       path: binary,
       runtime_options: true,
+      entitlements: true,
+      identifier: None,
       deep: false,
     })
   }
@@ -1696,18 +1848,26 @@ async fn sign_macos_app_with_identity(
         "Frameworks/" + helper.bundle_name + ".app",
       ),
       runtime_options: true,
+      entitlements: true,
+      identifier: None,
       deep: false,
     })
   }
   targets.push(MacosCodeSignTarget::{
     path: main,
     runtime_options: true,
+    entitlements: true,
+    identifier: None,
     deep: false,
   })
   targets.push(MacosCodeSignTarget::{
     path: app,
     runtime_options: true,
-    deep: true,
+    entitlements: true,
+    identifier: None,
+    // Every nested target is signed above. Sign the outer bundle without
+    // deprecated deep traversal so it cannot rewrite inner identities.
+    deep: false,
   })
   require_macos_codesign_targets(targets)
   for target in targets {
@@ -1716,12 +1876,16 @@ async fn sign_macos_app_with_identity(
       target.path,
       runtime_options=target.runtime_options,
       deep=target.deep,
-      entitlements=Some(entitlements),
+      entitlements=if target.entitlements { Some(entitlements) } else { None },
+      identifier=target.identifier,
     )
   }
   for target in targets {
     verify_macos_codesign_target(target.path, deep=target.deep)
   }
+  // Deep verification is useful and non-mutating after every nested target has
+  // been signed explicitly.
+  verify_macos_codesign_target(app, deep=true)
   if verify_developer_id {
     verify_macos_developer_id(app)
   }
@@ -1808,6 +1972,7 @@ async fn codesign_target(
   runtime_options~ : Bool,
   deep~ : Bool,
   entitlements~ : String?,
+  identifier~ : String?,
 ) -> Unit {
   let args = macos_codesign_args(
     identity,
@@ -1815,6 +1980,7 @@ async fn codesign_target(
     runtime_options~,
     deep~,
     entitlements~,
+    identifier~,
   )
   let code = @process.run("codesign", args) catch {
     error =>
@@ -1866,8 +2032,9 @@ fn macos_codesign_args(
   runtime_options~ : Bool,
   deep~ : Bool,
   entitlements~ : String?,
+  identifier~ : String?,
 ) -> Array[String] {
-  let args : Array[String] = ["--force", "--timestamp", "--sign", identity]
+  let args : Array[String] = ["--force", "--timestamp"]
   if deep {
     args.push("--deep")
   }
@@ -1882,7 +2049,11 @@ fn macos_codesign_args(
     }
     _ => ()
   }
-  args.push(target)
+  match identifier {
+    Some(identifier) => args.append(["-i", identifier])
+    None => ()
+  }
+  args.append(["--sign", identity, target])
   args
 }
 
