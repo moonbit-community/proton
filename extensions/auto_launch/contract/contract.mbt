@@ -1,7 +1,4 @@
 ///|
-pub(all) struct SupportRequest {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct AutoLaunchRequest {
   name : String
   path : String?
@@ -9,12 +6,6 @@ pub(all) struct AutoLaunchRequest {
   background_arg : String?
   extra_arguments : Array[String]?
   identifier : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-pub(all) struct SupportReply {
-  supported : Bool
-  platform : String
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -41,9 +32,10 @@ pub(all) struct AutoLaunchActivity {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let support : @proton_contract.Command[SupportRequest, SupportReply] = extension.command(
-  "support",
-)
+pub let support : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  @proton_contract.SupportReply,
+] = extension.command("support")
 
 ///|
 pub let describe : @proton_contract.Command[AutoLaunchRequest, AutoLaunchReply] = extension.command(

@@ -45,17 +45,13 @@ fn platform_label(platform : @sys_tray.Platform) -> String {
 }
 
 ///|
-fn tray_support() -> @tray_contract.TraySupportReply {
+fn tray_support() -> @proton_contract.SupportReply {
   let platform = platform_label(@sys_tray.current_platform())
   match @sys_tray.ensure_supported() {
     Ok(_) =>
-      @tray_contract.TraySupportReply::{
-        supported: true,
-        platform,
-        reason: None,
-      }
+      @proton_contract.SupportReply::{ supported: true, platform, reason: None }
     Err(error) =>
-      @tray_contract.TraySupportReply::{
+      @proton_contract.SupportReply::{
         supported: false,
         platform,
         reason: Some(error),
@@ -228,7 +224,7 @@ fn cleanup_tray() -> Unit {
 #proton.command(contract=support_command)
 fn support(
   _request : @proton_contract.EmptyRequest,
-) -> @tray_contract.TraySupportReply {
+) -> @proton_contract.SupportReply {
   tray_support()
 }
 

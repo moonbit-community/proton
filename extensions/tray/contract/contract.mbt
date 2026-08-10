@@ -40,13 +40,6 @@ pub(all) struct TrayReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub(all) struct TraySupportReply {
-  supported : Bool
-  platform : String
-  reason : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct TrayEventReply {
   count : Int
 } derive(ToJson, FromJson, Debug, Eq)
@@ -83,7 +76,7 @@ pub(all) struct TrayMenuItemClick {
 ///|
 pub let support : @proton_contract.Command[
   @proton_contract.EmptyRequest,
-  TraySupportReply,
+  @proton_contract.SupportReply,
 ] = extension.command("support")
 
 ///|

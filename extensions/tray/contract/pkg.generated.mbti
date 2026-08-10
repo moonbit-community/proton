@@ -34,7 +34,7 @@ pub let set_tooltip : @proton_contract.Command[SetTooltipRequest, TrayReply]
 
 pub let show : @proton_contract.Command[ShowRequest, TrayReply]
 
-pub let support : @proton_contract.Command[@proton_contract.EmptyRequest, TraySupportReply]
+pub let support : @proton_contract.Command[@proton_contract.EmptyRequest, @proton_contract.SupportReply]
 
 // Errors
 
@@ -99,12 +99,6 @@ pub(all) struct TrayReply {
 
 pub(all) struct TrayRightClick {
   visible : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-pub(all) struct TraySupportReply {
-  supported : Bool
-  platform : String
-  reason : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases

@@ -57,6 +57,12 @@ pub fn ExtensionContract::id(Self) -> String
 pub fn ExtensionContract::js_namespace(Self) -> String
 pub fn ExtensionContract::validate(Self) -> Unit raise ContractDefinitionError
 
+pub(all) struct SupportReply {
+  supported : Bool
+  platform : String
+  reason : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 // Type aliases
 
 // Traits

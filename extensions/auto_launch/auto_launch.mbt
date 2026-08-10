@@ -79,10 +79,11 @@ fn launcher_reply(
 }
 
 ///|
-fn auto_launch_support() -> @auto_launch_contract.SupportReply {
-  @auto_launch_contract.SupportReply::{
+fn auto_launch_support() -> @proton_contract.SupportReply {
+  @proton_contract.SupportReply::{
     supported: @sys_auto_launch.is_supported(),
     platform: platform_label(@sys_auto_launch.current_platform()),
+    reason: None,
   }
 }
 
