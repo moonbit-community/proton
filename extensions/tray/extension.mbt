@@ -39,7 +39,7 @@ fn platform_label(platform : @sys_tray.Platform) -> String {
   match platform {
     Windows => "windows"
     Linux => "linux"
-    MacOS => "macos"
+    Macos => "macos"
     Unknown => "unknown"
   }
 }

@@ -22,7 +22,7 @@ pub fn is_supported() -> Bool
 pub enum Platform {
   Windows
   Linux
-  MacOS
+  Macos
   Unknown
 } derive(Eq, ToJson, @debug.Debug)
 pub impl Show for Platform

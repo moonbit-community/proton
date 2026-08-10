@@ -58,7 +58,7 @@ test "simulated tray lifecycle updates visible state" {
 
 ///|
 test "show can replace the tooltip inline" {
-  let tray = create_simulated_tray(tooltip="before", platform=MacOS)
+  let tray = create_simulated_tray(tooltip="before", platform=Macos)
   debug_inspect(tray.show(tooltip=Some("after")), content="Ok(true)")
   debug_inspect((tray.tooltip, tray.visible), content="(\"after\", true)")
 }
@@ -210,7 +210,7 @@ test "native hidden operations stay usable when backend is available" {
     match tray.set_menu([TrayMenuItem::normal(id="show", label="Show")]) {
       Ok(visible) => {
         match current_platform() {
-          Windows | Linux | MacOS => ()
+          Windows | Linux | Macos => ()
           Unknown => fail("expected known native tray platform")
         }
         inspect(visible, content="false")
@@ -249,7 +249,7 @@ test "native stale handles are rejected after destroy" {
 ///|
 test "native macos trays destroy out of order" {
   guard @env.get_env_var("MOONBIT_TRAY_RUN_NATIVE_TESTS") is Some("1") &&
-    current_platform() is MacOS else {
+    current_platform() is Macos else {
     inspect("skipped", content="skipped")
     return ()
   }
@@ -282,7 +282,7 @@ test "native macos trays destroy out of order" {
 ///|
 test "native macos custom icon path stays usable" {
   guard @env.get_env_var("MOONBIT_TRAY_RUN_NATIVE_TESTS") is Some("1") &&
-    current_platform() is MacOS else {
+    current_platform() is Macos else {
     inspect("skipped", content="skipped")
     return ()
   }

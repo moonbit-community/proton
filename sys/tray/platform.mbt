@@ -1,7 +1,7 @@
 ///|
 /// Desktop platform reported by the native tray backend.
 ///
-/// `Windows`, `Linux`, and `MacOS` identify a backend this package knows how to
+/// `Windows`, `Linux`, and `Macos` identify a backend this package knows how to
 /// drive. `Unknown` is returned when the native stub cannot map the host
 /// operating system to a supported variant, which typically also means tray
 /// creation will fail. Use this to branch platform-specific setup or to enrich
@@ -9,7 +9,7 @@
 pub enum Platform {
   Windows
   Linux
-  MacOS
+  Macos
   Unknown
 } derive(Debug, Eq, ToJson)
 
@@ -20,7 +20,7 @@ pub impl Show for Platform with fn output(self, logger) {
     match self {
       Windows => "Windows"
       Linux => "Linux"
-      MacOS => "MacOS"
+      Macos => "Macos"
       Unknown => "Unknown"
     },
   )
@@ -63,7 +63,7 @@ fn platform_from_tag(tag : Int) -> Platform {
   match tag {
     1 => Windows
     2 => Linux
-    3 => MacOS
+    3 => Macos
     _ => Unknown
   }
 }
