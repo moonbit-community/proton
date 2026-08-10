@@ -18,6 +18,8 @@ pub fn run_async_extension_add() -> Unit
 
 pub fn run_attribute_codegen_commands() -> Unit
 
+pub fn run_devtools() -> Unit
+
 pub fn run_event_broadcast() -> Unit
 
 pub fn run_multi_window() -> Unit

@@ -29,10 +29,18 @@ async fn run_connected_scenario_probe(
     run_multi_window_driver_probe(target, timeout)
     return
   }
-  let page = @client.connect_cdp_page_target_with_timeout(
-    cdp_target_from(target),
-    timeout_ms=timeout,
-  )
+  let page = if name == "54_devtools" {
+    @client.connect_cdp_page_target_with_timeout(
+      cdp_target_from(target),
+      title="Proton DevTools API",
+      timeout_ms=timeout,
+    )
+  } else {
+    @client.connect_cdp_page_target_with_timeout(
+      cdp_target_from(target),
+      timeout_ms=timeout,
+    )
+  }
   defer page.close()
   ignore(page.send_schema_command("Runtime.enable"))
   wait_for_ready(page, scenario_ready_expression(name), timeout)

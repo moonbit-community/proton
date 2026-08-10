@@ -641,6 +641,18 @@ async fn run_scenario_probe_once(
       run_web_contents_view_scenario_probe(
         app, target, browser_web_socket_url, timeout,
       )
+    } else if name == "54_devtools" {
+      run_devtools_scenario_page_probe(app, target, timeout)
+      match app_exit_code(app.process) {
+        Some(code) =>
+          fail(
+            "scenario app exited before the probe completed: code=" +
+            code.to_string() +
+            app_output_suffix(app.output_path),
+          )
+        None => ()
+      }
+      finish_scenario_app(app, target)
     } else {
       if name == "41_app_commands" {
         run_app_commands_full_probe(root, target, timeout, app.native_log_path)
@@ -804,6 +816,13 @@ async test "headless 52_web_contents_view runs as a self-hosted e2e" {
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "52_web_contents_view", timeout)
+}
+
+///|
+async test "headless 54_devtools preserves the page bridge" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
+  run_scenario_probe_with_retry(repository_root(), "54_devtools", timeout_ms())
 }
 
 ///|

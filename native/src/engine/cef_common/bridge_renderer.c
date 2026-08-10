@@ -142,6 +142,28 @@ static char *proton_engine_bridge_frame_url(cef_frame_t *frame) {
              : NULL;
 }
 
+static int proton_engine_bridge_is_default_context(
+    cef_frame_t *frame,
+    cef_v8_context_t *context) {
+  if (frame == NULL || context == NULL || !frame->is_main(frame)) {
+    return 0;
+  }
+  cef_v8_context_t *default_context = frame->get_v8_context(frame);
+  int is_default = 0;
+  if (default_context != NULL && context->is_same != NULL) {
+    /* CEF's C API consumes refptr parameters. Keep the getter reference while
+       transferring a temporary reference to is_same. */
+    default_context->base.add_ref(
+        (cef_base_ref_counted_t *)default_context);
+    is_default = context->is_same(context, default_context);
+  }
+  if (default_context != NULL) {
+    default_context->base.release(
+        (cef_base_ref_counted_t *)default_context);
+  }
+  return is_default;
+}
+
 static char *proton_engine_bridge_new_page_instance(void) {
   char value[96];
   uint64_t sequence = g_next_page_instance++;
@@ -868,7 +890,8 @@ void proton_engine_bridge_renderer_on_context_created(
     cef_v8_context_t *context,
     cef_v8_handler_t *native_invoke_handler) {
   if (browser == NULL || frame == NULL || context == NULL ||
-      native_invoke_handler == NULL || !frame->is_main(frame)) {
+      native_invoke_handler == NULL ||
+      !proton_engine_bridge_is_default_context(frame, context)) {
     return;
   }
   proton_engine_bridge_browser_config_t *browser_config =

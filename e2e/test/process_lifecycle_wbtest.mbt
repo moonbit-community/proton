@@ -522,6 +522,7 @@ async fn connect_spawned_page(
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
+  title? : String,
 ) -> @client.CdpClient {
   let mut elapsed = 0
   while elapsed <= timeout {
@@ -541,6 +542,7 @@ async fn connect_spawned_page(
         () => {
           @client.connect_cdp_page_target_with_timeout(
             cdp_target_from(target),
+            title?,
             timeout_ms=cdp_start_poll_timeout_ms,
           )
         },

@@ -325,3 +325,31 @@ pub fn run_asset_sidecar() -> Unit {
     app.run_or_abort()
   })
 }
+
+///|
+let devtools_resource : String =
+  #|<!doctype html>
+  #|<html><head><meta charset="utf-8"><title>Proton DevTools API</title></head>
+  #|<body><h1>DevTools Bridge Lifecycle</h1></body></html>
+
+///|
+pub fn run_devtools() -> Unit {
+  @proton.run(() => {
+    @proton.html(
+      "Proton DevTools API",
+      devtools_resource,
+      width=900,
+      height=700,
+      debug=true,
+    )
+    .window_lifecycle(
+      on_ready=context => {
+        let browser = context.handle().browser()
+        browser.open_devtools()
+        browser
+      },
+      on_close=fn(browser) { browser.close_devtools() catch { _ => () } },
+    )
+    .run_or_abort()
+  })
+}
