@@ -1,7 +1,4 @@
 ///|
-pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct GlobalHotkeyRequest {
   accelerator : String
 } derive(ToJson, FromJson, Debug, Eq)
@@ -40,13 +37,14 @@ pub let unregister : @proton_contract.Command[
 ] = extension.command("unregister")
 
 ///|
-pub let list : @proton_contract.Command[EmptyRequest, GlobalHotkeyListReply] = extension.command(
-  "list",
-)
+pub let list : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  GlobalHotkeyListReply,
+] = extension.command("list")
 
 ///|
 pub let drain_triggered : @proton_contract.Command[
-  EmptyRequest,
+  @proton_contract.EmptyRequest,
   GlobalHotkeyListReply,
 ] = extension.command("drainTriggered")
 

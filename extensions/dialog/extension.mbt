@@ -33,6 +33,9 @@ async fn message(
   context : @proton.CommandContext,
   request : @dialog_contract.MessageRequest,
 ) -> @dialog_contract.MessageReply {
+  // The handle is sourced from `window.id()` in the dispatch path, which
+  // checks the window lifecycle and returns `proton_invalid_handle` for
+  // destroying/destroyed windows.
   let window = @native.WindowRef::unsafe_from_handle(context.window())
   emit_command_result(
     context,

@@ -3,6 +3,7 @@ package "moonbit-community/proton_contract"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -35,6 +36,9 @@ pub struct ContractRoute {
   name : String
 }
 
+pub(all) struct EmptyRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
 pub struct Event[Payload] {
   route : ContractRoute
   type_marker : ((Payload) -> Unit)?
@@ -52,6 +56,12 @@ pub fn[Payload] ExtensionContract::event(Self, String) -> Event[Payload]
 pub fn ExtensionContract::id(Self) -> String
 pub fn ExtensionContract::js_namespace(Self) -> String
 pub fn ExtensionContract::validate(Self) -> Unit raise ContractDefinitionError
+
+pub(all) struct SupportReply {
+  supported : Bool
+  platform : String
+  reason : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases
 

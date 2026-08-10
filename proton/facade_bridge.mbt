@@ -348,7 +348,7 @@ async fn dispatch_bridge_request_in_command_scope(
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(
-    request.window(),
+    window.id(),
     command_tasks,
     window_id~,
     source_origin=request.source_origin(),

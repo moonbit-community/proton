@@ -17,8 +17,8 @@ let disable_command = @auto_launch_contract.disable
 /// Returns platform support details for JavaScript callers.
 #proton.command(contract=support_command)
 fn support(
-  _request : @auto_launch_contract.SupportRequest,
-) -> @auto_launch_contract.SupportReply {
+  _request : @proton_contract.EmptyRequest,
+) -> @proton_contract.SupportReply {
   auto_launch_support()
 }
 

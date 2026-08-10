@@ -1,7 +1,4 @@
 ///|
-pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct AcquireRequest {
   reason : String?
   scope : String?
@@ -25,14 +22,16 @@ pub let acquire : @proton_contract.Command[AcquireRequest, KeepAwakeReply] = ext
 )
 
 ///|
-pub let release : @proton_contract.Command[EmptyRequest, KeepAwakeReply] = extension.command(
-  "release",
-)
+pub let release : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  KeepAwakeReply,
+] = extension.command("release")
 
 ///|
-pub let status : @proton_contract.Command[EmptyRequest, KeepAwakeReply] = extension.command(
-  "status",
-)
+pub let status : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  KeepAwakeReply,
+] = extension.command("status")
 
 ///|
 pub let activity : @proton_contract.Event[KeepAwakeActivity] = extension.event(

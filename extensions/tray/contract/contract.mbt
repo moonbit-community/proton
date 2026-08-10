@@ -1,7 +1,4 @@
 ///|
-pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct TrayMenuItem {
   id : String?
   label : String?
@@ -43,13 +40,6 @@ pub(all) struct TrayReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub(all) struct TraySupportReply {
-  supported : Bool
-  platform : String
-  reason : String?
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
 pub(all) struct TrayEventReply {
   count : Int
 } derive(ToJson, FromJson, Debug, Eq)
@@ -84,9 +74,10 @@ pub(all) struct TrayMenuItemClick {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub let support : @proton_contract.Command[EmptyRequest, TraySupportReply] = extension.command(
-  "support",
-)
+pub let support : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  @proton_contract.SupportReply,
+] = extension.command("support")
 
 ///|
 pub let show : @proton_contract.Command[ShowRequest, TrayReply] = extension.command(
@@ -94,9 +85,10 @@ pub let show : @proton_contract.Command[ShowRequest, TrayReply] = extension.comm
 )
 
 ///|
-pub let hide : @proton_contract.Command[EmptyRequest, TrayReply] = extension.command(
-  "hide",
-)
+pub let hide : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  TrayReply,
+] = extension.command("hide")
 
 ///|
 pub let set_icon : @proton_contract.Command[SetIconRequest, TrayReply] = extension.command(
@@ -114,14 +106,16 @@ pub let set_menu : @proton_contract.Command[SetMenuRequest, TrayReply] = extensi
 )
 
 ///|
-pub let drain_events : @proton_contract.Command[EmptyRequest, TrayEventReply] = extension.command(
-  "drainEvents",
-)
+pub let drain_events : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  TrayEventReply,
+] = extension.command("drainEvents")
 
 ///|
-pub let destroy : @proton_contract.Command[EmptyRequest, TrayReply] = extension.command(
-  "destroy",
-)
+pub let destroy : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  TrayReply,
+] = extension.command("destroy")
 
 ///|
 pub let activity : @proton_contract.Event[TrayActivity] = extension.event(

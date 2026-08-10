@@ -118,7 +118,7 @@ async fn acquire_next_guard(
 #proton.command(contract=release_command)
 async fn release(
   context : @proton.CommandContext,
-  _request : @keepawake_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @keepawake_contract.KeepAwakeReply {
   match active_guard_ref.val {
     Some(active_guard) => {
@@ -138,7 +138,7 @@ async fn release(
 /// Returns the active keep-awake guard status from a generated app-command extension.
 #proton.command(contract=status_command)
 fn status(
-  _request : @keepawake_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @keepawake_contract.KeepAwakeReply {
   match active_guard_ref.val {
     Some(active_guard) =>

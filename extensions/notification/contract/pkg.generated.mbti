@@ -12,7 +12,7 @@ pub let activity : @proton_contract.Event[NotificationActivity]
 
 pub let click : @proton_contract.Event[NotificationClick]
 
-pub let drain_clicks : @proton_contract.Command[EmptyRequest, NotificationDrainReply]
+pub let drain_clicks : @proton_contract.Command[@proton_contract.EmptyRequest, NotificationDrainReply]
 
 pub let extension : @proton_contract.ExtensionContract
 
@@ -21,9 +21,6 @@ pub let show : @proton_contract.Command[NotificationRequest, NotificationReply]
 // Errors
 
 // Types and methods
-pub(all) struct EmptyRequest {
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
 pub(all) struct NotificationActivity {
   operation : String
   title : String?

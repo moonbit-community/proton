@@ -1,11 +1,11 @@
 ///|
 /// Invalid microphone capture configuration supplied by JavaScript.
-suberror MicrophoneConfigError {
+suberror MicrophoneError {
   UnknownSampleFormat(format~ : String)
 } derive(Debug, Eq)
 
 ///|
-fn MicrophoneConfigError::message(self : MicrophoneConfigError) -> String {
+fn MicrophoneError::message(self : MicrophoneError) -> String {
   match self {
     UnknownSampleFormat(format~) =>
       "unknown microphone sample format: " + format
@@ -13,6 +13,6 @@ fn MicrophoneConfigError::message(self : MicrophoneConfigError) -> String {
 }
 
 ///|
-impl Show for MicrophoneConfigError with fn output(self, logger) {
+impl Show for MicrophoneError with fn output(self, logger) {
   logger.write_string(self.message())
 }

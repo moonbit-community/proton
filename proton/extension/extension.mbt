@@ -103,3 +103,53 @@ pub fn Extensions::items(self : Extensions) -> Array[Extension] {
 fn copy_extensions(items : Array[Extension]) -> Array[Extension] {
   items.map(fn(item) { item })
 }
+
+///|
+/// Builds the standard JavaScript event-poller script for an extension namespace.
+///
+/// Extensions that pump native events through a `drain*` command install this
+/// script so the renderer polls the host on a fixed interval. The script is
+/// idempotent: it exits early if the namespace or its drain method is missing,
+/// or if a poller is already registered.
+pub fn poller_script(
+  js_namespace~ : String,
+  drain_method~ : String,
+  poller_field~ : String,
+) -> String {
+  let ns = js_namespace
+  "(() => {\n" +
+  "  const root = window.__MoonBit__;\n" +
+  "  const " +
+  ns +
+  " = root && root." +
+  ns +
+  ";\n" +
+  "  if (!" +
+  ns +
+  " || typeof " +
+  ns +
+  "." +
+  drain_method +
+  " !== \"function\") {\n" +
+  "    return;\n" +
+  "  }\n" +
+  "  if (" +
+  ns +
+  "." +
+  poller_field +
+  ") {\n" +
+  "    return;\n" +
+  "  }\n" +
+  "  " +
+  ns +
+  "." +
+  poller_field +
+  " = window.setInterval(() => {\n" +
+  "    " +
+  ns +
+  "." +
+  drain_method +
+  "({}).catch(() => {});\n" +
+  "  }, 100);\n" +
+  "})();"
+}

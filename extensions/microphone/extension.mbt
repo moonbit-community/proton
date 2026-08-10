@@ -11,7 +11,7 @@ let config_command = @microphone_contract.config
 /// Converts a sample format label from JavaScript into the package enum.
 fn parse_sample_format(
   sample_format : String?,
-) -> @sys_microphone.SampleFormat? raise MicrophoneConfigError {
+) -> @sys_microphone.SampleFormat? raise MicrophoneError {
   match sample_format {
     Some("i16") => Some(I16)
     Some("u16") => Some(U16)
@@ -35,7 +35,7 @@ fn sample_format_label(format : @sys_microphone.SampleFormat) -> String {
 /// Builds and normalizes one capture config from JavaScript payload data.
 fn build_capture_config(
   payload : @microphone_contract.CaptureConfigRequest,
-) -> @sys_microphone.CaptureConfig raise MicrophoneConfigError {
+) -> @sys_microphone.CaptureConfig raise MicrophoneError {
   let sample_format = parse_sample_format(payload.sample_format).unwrap_or(F32)
   @sys_microphone.CaptureConfig::new(
     channels=payload.channels.unwrap_or(1),
@@ -94,7 +94,7 @@ fn microphone_devices_reply(
 #proton.command(contract=list_devices_command)
 async fn list_devices(
   context : @proton.CommandContext,
-  _request : @microphone_contract.EmptyRequest,
+  _request : @proton_contract.EmptyRequest,
 ) -> @microphone_contract.MicrophoneDevicesReply {
   let devices = @sys_microphone.MicrophoneDevice::list()
   context.emit(@microphone_contract.activity, @microphone_contract.MicrophoneActivity::{
@@ -119,7 +119,7 @@ fn parse_listing(
 #proton.command(contract=config_command)
 fn config(
   request : @microphone_contract.CaptureConfigRequest,
-) -> @microphone_contract.CaptureConfigReply raise MicrophoneConfigError {
+) -> @microphone_contract.CaptureConfigReply raise MicrophoneError {
   capture_config_reply(build_capture_config(request))
 }
 

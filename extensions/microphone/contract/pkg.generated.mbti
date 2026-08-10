@@ -14,7 +14,7 @@ pub let config : @proton_contract.Command[CaptureConfigRequest, CaptureConfigRep
 
 pub let extension : @proton_contract.ExtensionContract
 
-pub let list_devices : @proton_contract.Command[EmptyRequest, MicrophoneDevicesReply]
+pub let list_devices : @proton_contract.Command[@proton_contract.EmptyRequest, MicrophoneDevicesReply]
 
 pub let parse_listing : @proton_contract.Command[ParseListingRequest, MicrophoneDevicesReply]
 
@@ -38,9 +38,6 @@ pub(all) struct CaptureConfigRequest {
   sample_format : String?
   echo_cancellation : Bool?
   noise_suppression : Bool?
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-pub(all) struct EmptyRequest {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub(all) struct MicrophoneActivity {

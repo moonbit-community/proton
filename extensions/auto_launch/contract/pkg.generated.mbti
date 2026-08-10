@@ -20,7 +20,7 @@ pub let extension : @proton_contract.ExtensionContract
 
 pub let is_enabled : @proton_contract.Command[AutoLaunchRequest, EnabledReply]
 
-pub let support : @proton_contract.Command[SupportRequest, SupportReply]
+pub let support : @proton_contract.Command[@proton_contract.EmptyRequest, @proton_contract.SupportReply]
 
 // Errors
 
@@ -51,14 +51,6 @@ pub(all) struct EnabledReply {
 
 pub(all) struct MutationReply {
   changed : Bool
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-pub(all) struct SupportReply {
-  supported : Bool
-  platform : String
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-
-pub(all) struct SupportRequest {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 // Type aliases

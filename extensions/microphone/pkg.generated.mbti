@@ -16,7 +16,7 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
-type MicrophoneConfigError derive(Eq, @debug.Debug)
+type MicrophoneError derive(Eq, @debug.Debug)
 
 // Types and methods
 
