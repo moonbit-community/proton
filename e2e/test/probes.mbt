@@ -214,6 +214,23 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|  return document.body?.textContent.includes('marker') ?? false;
         #|})()
       )
+    "54_devtools" =>
+      (
+        #|;(async () => {
+        #|  if (location.href !== "https://proton.localhost/") return false;
+        #|  if (document.title !== "Proton DevTools API") return false;
+        #|  const invoke = window.__MoonBit__?.core?.invokeOp;
+        #|  if (typeof invoke !== "function") return false;
+        #|  try {
+        #|    await invoke("app:devtoolsBridgeProbe", {});
+        #|    return false;
+        #|  } catch (error) {
+        #|    const message = String(error?.message || error);
+        #|    return error?.code === "remote_failure" &&
+        #|      message.includes("bridge op is not registered");
+        #|  }
+        #|})()
+      )
     _ => fail("unsupported E2E scenario: " + name)
   }
 }

@@ -255,6 +255,26 @@ if(PROTON_WITH_ENGINE)
       DESTINATION bin
     )
     install(TARGETS cef_process RUNTIME DESTINATION bin)
+
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../proton/moon.mod"
+         PROTON_MOON_VERSION_LINE REGEX "^version = ")
+    string(REGEX REPLACE "^version = \"([^\"]+)\".*$" "\\1"
+           PROTON_PREBUILT_VERSION "${PROTON_MOON_VERSION_LINE}")
+    set(PROTON_PREBUILT_MANIFEST
+        "${CMAKE_BINARY_DIR}/proton_prebuilt_manifest.json")
+    file(WRITE "${PROTON_PREBUILT_MANIFEST}"
+      "{\n"
+      "  \"platform\": \"darwin-arm64\",\n"
+      "  \"proton_version\": \"${PROTON_PREBUILT_VERSION}\",\n"
+      "  \"artifacts\": {\n"
+      "    \"shared_lib\": \"lib/libproton.dylib\",\n"
+      "    \"helper\": \"bin/cef_process\",\n"
+      "    \"header\": \"include/proton_native.h\"\n"
+      "  }\n"
+      "}\n"
+    )
+    install(FILES "${PROTON_PREBUILT_MANIFEST}" DESTINATION .
+            RENAME manifest.json)
   elseif(UNIX)
     set(PROTON_ENGINE_SHARED_LIB "${PROTON_ENGINE_ROOT}/Release/libcef.so")
     if(NOT EXISTS "${PROTON_ENGINE_SHARED_LIB}")
