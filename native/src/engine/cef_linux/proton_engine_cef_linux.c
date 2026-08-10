@@ -5,6 +5,7 @@
 #include "../../app_runner.h"
 #include "../../proton_engine.h"
 #include "../../proton_json.h"
+#include "proton_linux_menu.h"
 #include "proton_linux_titlebar.h"
 
 #ifndef OS_LINUX
@@ -79,6 +80,8 @@
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 #define PROTON_ENGINE_CLOSE_DRAIN_LIMIT 5000
+#define PROTON_ENGINE_MAX_MENU_COMMANDS 32
+#define PROTON_ENGINE_MAX_MENU_COMMAND_BYTES 256
 
 enum {
   PROTON_X11_MOVERESIZE_SIZE_TOP_LEFT = 0,
@@ -93,6 +96,11 @@ enum {
 };
 
 typedef struct proton_engine_client proton_engine_client_t;
+
+typedef struct {
+  char command_id[PROTON_ENGINE_MAX_MENU_COMMAND_BYTES];
+  proton_window_id_t focused_window;
+} proton_engine_menu_command_t;
 
 struct proton_engine_runtime {
   int owns_cef_runtime;
@@ -109,6 +117,12 @@ struct proton_engine_runtime {
   size_t bridge_cancellation_count;
   pthread_mutex_t bridge_lock;
   int bridge_lock_initialized;
+  proton_linux_menu_bar_t *menu_definition;
+  proton_engine_menu_command_t menu_commands[PROTON_ENGINE_MAX_MENU_COMMANDS];
+  size_t menu_command_head;
+  size_t menu_command_count;
+  pthread_mutex_t menu_lock;
+  int menu_lock_initialized;
   int wake_read_fd;
   int wake_write_fd;
 };
@@ -116,6 +130,9 @@ struct proton_engine_runtime {
 struct proton_engine_window {
   proton_engine_runtime_t *runtime;
   GtkWidget *window;
+  GtkWidget *root_box;
+  GtkWidget *menu_bar;
+  GtkAccelGroup *menu_accel_group;
   GtkWidget *overlay;
   GtkWidget *browser_host;
   GtkWidget *overlay_controls;
@@ -347,11 +364,17 @@ static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
                                                        GdkEvent *event,
                                                        gpointer user_data);
 static void proton_engine_complete_managed_shutdown_if_ready(void);
+static int32_t proton_engine_window_install_menu(
+    proton_engine_window_t *window,
+    const proton_linux_menu_bar_t *menu_definition,
+    char *error,
+    size_t error_len);
 
 typedef enum {
   PROTON_ENGINE_UI_RUNTIME_CREATE = 0,
   PROTON_ENGINE_UI_RUNTIME_RESPOND_BRIDGE,
   PROTON_ENGINE_UI_RUNTIME_SET_WAKEUP_FD,
+  PROTON_ENGINE_UI_RUNTIME_SET_MENU,
   PROTON_ENGINE_UI_WINDOW_CREATE,
   PROTON_ENGINE_UI_WINDOW_DESTROY,
   PROTON_ENGINE_UI_WINDOW_SHOW,
@@ -419,6 +442,9 @@ static int32_t proton_engine_execute_ui_call(void *raw_call) {
   case PROTON_ENGINE_UI_RUNTIME_SET_WAKEUP_FD:
     return proton_engine_runtime_set_wakeup_fd(
         call->runtime, call->first_int, call->error, call->error_len);
+  case PROTON_ENGINE_UI_RUNTIME_SET_MENU:
+    return proton_engine_runtime_set_menu_json(
+        call->runtime, call->text, call->error, call->error_len);
   case PROTON_ENGINE_UI_WINDOW_CREATE:
     return proton_engine_window_create_json(
         call->runtime, call->text, (proton_engine_window_t **)call->output,
@@ -1003,6 +1029,10 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
     return;
   }
   pthread_mutex_lock(&g_window_lock);
+  if (window->menu_accel_group != NULL) {
+    g_object_unref(window->menu_accel_group);
+    window->menu_accel_group = NULL;
+  }
   proton_engine_window_free_views(window);
   free(window->client);
   free(window->html_url);
@@ -1095,6 +1125,19 @@ static void proton_engine_runtime_bridge_unlock(
     proton_engine_runtime_t *runtime) {
   if (runtime != NULL && runtime->bridge_lock_initialized) {
     pthread_mutex_unlock(&runtime->bridge_lock);
+  }
+}
+
+static void proton_engine_runtime_dispose_menu(
+    proton_engine_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return;
+  }
+  proton_linux_menu_bar_destroy(runtime->menu_definition);
+  runtime->menu_definition = NULL;
+  if (runtime->menu_lock_initialized) {
+    pthread_mutex_destroy(&runtime->menu_lock);
+    runtime->menu_lock_initialized = 0;
   }
 }
 
@@ -2840,8 +2883,14 @@ static void proton_engine_on_window_destroy(GtkWidget *widget,
   proton_engine_window_t *window = (proton_engine_window_t *)user_data;
   if (window != NULL) {
     window->window = NULL;
+    window->root_box = NULL;
+    window->menu_bar = NULL;
     window->browser_host = NULL;
     window->overlay_controls = NULL;
+    if (window->menu_accel_group != NULL) {
+      g_object_unref(window->menu_accel_group);
+      window->menu_accel_group = NULL;
+    }
     proton_engine_overlay_release_input_windows(window);
   }
   if (window != NULL && !window->closed) {
@@ -3930,10 +3979,14 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (pthread_mutex_init(&runtime->bridge_lock, NULL) == 0) {
     runtime->bridge_lock_initialized = 1;
   }
+  if (pthread_mutex_init(&runtime->menu_lock, NULL) == 0) {
+    runtime->menu_lock_initialized = 1;
+  }
   if (!proton_engine_setup_wait_source(runtime, error, error_len)) {
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
     }
+    proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     return PROTON_ERR_PLATFORM;
   }
@@ -3974,6 +4027,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
       pthread_mutex_destroy(&runtime->bridge_lock);
       runtime->bridge_lock_initialized = 0;
     }
+    proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     g_active_runtime = NULL;
     proton_engine_set_message(error, error_len, "cef_initialize failed");
@@ -3992,6 +4046,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
       pthread_mutex_destroy(&runtime->bridge_lock);
       runtime->bridge_lock_initialized = 0;
     }
+    proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     g_active_runtime = NULL;
     return PROTON_ERR_PLATFORM;
@@ -4008,6 +4063,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
       pthread_mutex_destroy(&runtime->bridge_lock);
       runtime->bridge_lock_initialized = 0;
     }
+    proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     g_active_runtime = NULL;
     g_proton_cef_runtime_active = 0;
@@ -4143,6 +4199,7 @@ static int32_t proton_engine_finish_managed_runtime_destroy(
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
+  proton_engine_runtime_dispose_menu(runtime);
   proton_engine_clear_wakeup_fd();
   if (g_active_runtime == runtime) {
     g_active_runtime = NULL;
@@ -4230,6 +4287,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     pthread_mutex_destroy(&runtime->bridge_lock);
     runtime->bridge_lock_initialized = 0;
   }
+  proton_engine_runtime_dispose_menu(runtime);
   if (g_active_runtime == runtime) {
     g_active_runtime = NULL;
   }
@@ -4494,16 +4552,225 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
   return PROTON_ERR_UNSUPPORTED;
 }
 
-// TODO: Implement app menu rendering and command events on Linux.
+static void proton_engine_menu_reset_commands(
+    proton_engine_runtime_t *runtime) {
+  if (runtime == NULL || !runtime->menu_lock_initialized) {
+    return;
+  }
+  pthread_mutex_lock(&runtime->menu_lock);
+  runtime->menu_command_head = 0;
+  runtime->menu_command_count = 0;
+  pthread_mutex_unlock(&runtime->menu_lock);
+}
+
+static void proton_engine_menu_enqueue_command(
+    proton_engine_runtime_t *runtime,
+    const char *command_id,
+    proton_window_id_t focused_window) {
+  if (runtime == NULL || !runtime->menu_lock_initialized ||
+      command_id == NULL ||
+      strlen(command_id) >= PROTON_ENGINE_MAX_MENU_COMMAND_BYTES) {
+    return;
+  }
+  int inserted = 0;
+  pthread_mutex_lock(&runtime->menu_lock);
+  if (runtime->menu_command_count < PROTON_ENGINE_MAX_MENU_COMMANDS) {
+    const size_t index =
+        (runtime->menu_command_head + runtime->menu_command_count) %
+        PROTON_ENGINE_MAX_MENU_COMMANDS;
+    snprintf(runtime->menu_commands[index].command_id,
+             sizeof(runtime->menu_commands[index].command_id), "%s",
+             command_id);
+    runtime->menu_commands[index].focused_window = focused_window;
+    runtime->menu_command_count++;
+    inserted = 1;
+  }
+  pthread_mutex_unlock(&runtime->menu_lock);
+  if (inserted) {
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  }
+}
+
+static void proton_engine_menu_command_activated(const char *command_id,
+                                                 void *user_data) {
+  proton_engine_window_t *window = (proton_engine_window_t *)user_data;
+  if (window == NULL || window->runtime == NULL) {
+    return;
+  }
+  proton_engine_menu_enqueue_command(window->runtime, command_id,
+                                     window->public_window_id);
+}
+
+static void proton_engine_menu_apply_edit_role(
+    proton_engine_window_t *window,
+    const char *role) {
+  if (window == NULL || window->browser == NULL || role == NULL) {
+    return;
+  }
+  cef_frame_t *frame =
+      window->browser->get_focused_frame != NULL
+          ? window->browser->get_focused_frame(window->browser)
+          : NULL;
+  if (frame == NULL) {
+    frame = window->browser->get_main_frame(window->browser);
+  }
+  if (frame == NULL) {
+    return;
+  }
+  if (strcmp(role, "undo") == 0) {
+    frame->undo(frame);
+  } else if (strcmp(role, "redo") == 0) {
+    frame->redo(frame);
+  } else if (strcmp(role, "cut") == 0) {
+    frame->cut(frame);
+  } else if (strcmp(role, "copy") == 0) {
+    frame->copy(frame);
+  } else if (strcmp(role, "paste") == 0) {
+    frame->paste(frame);
+  } else if (strcmp(role, "select_all") == 0) {
+    frame->select_all(frame);
+  }
+  frame->base.release((cef_base_ref_counted_t *)frame);
+}
+
+static void proton_engine_menu_role_activated(const char *role,
+                                              void *user_data) {
+  proton_engine_window_t *window = (proton_engine_window_t *)user_data;
+  if (window == NULL || window->runtime == NULL || role == NULL) {
+    return;
+  }
+  if (strcmp(role, "quit") == 0) {
+    for (proton_engine_window_t *candidate = g_windows; candidate != NULL;
+         candidate = candidate->next) {
+      if (candidate->runtime == window->runtime &&
+          candidate->window != NULL) {
+        gtk_window_close(GTK_WINDOW(candidate->window));
+      }
+    }
+  } else if (strcmp(role, "hide") == 0) {
+    if (window->window != NULL) {
+      gtk_widget_hide(window->window);
+    }
+  } else if (strcmp(role, "hide_others") == 0) {
+    for (proton_engine_window_t *candidate = g_windows; candidate != NULL;
+         candidate = candidate->next) {
+      if (candidate != window && candidate->runtime == window->runtime &&
+          candidate->window != NULL) {
+        gtk_widget_hide(candidate->window);
+      }
+    }
+  } else if (strcmp(role, "show_all") == 0) {
+    for (proton_engine_window_t *candidate = g_windows; candidate != NULL;
+         candidate = candidate->next) {
+      if (candidate->runtime == window->runtime &&
+          candidate->window != NULL) {
+        gtk_widget_show_all(candidate->window);
+      }
+    }
+  } else if (strcmp(role, "close") == 0) {
+    if (window->window != NULL) {
+      gtk_window_close(GTK_WINDOW(window->window));
+    }
+  } else if (strcmp(role, "minimize") == 0) {
+    if (window->window != NULL) {
+      gtk_window_iconify(GTK_WINDOW(window->window));
+    }
+  } else if (strcmp(role, "zoom") == 0) {
+    proton_engine_overlay_toggle_maximize(window);
+  } else {
+    proton_engine_menu_apply_edit_role(window, role);
+  }
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static int32_t proton_engine_window_install_menu(
+    proton_engine_window_t *window,
+    const proton_linux_menu_bar_t *menu_definition,
+    char *error,
+    size_t error_len) {
+  if (window == NULL || window->window == NULL || window->root_box == NULL ||
+      menu_definition == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "window and menu definition are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  GtkAccelGroup *accelerators = gtk_accel_group_new();
+  if (accelerators == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create menu accelerators");
+    return PROTON_ERR_PLATFORM;
+  }
+  GtkWidget *menu_bar = proton_linux_menu_bar_create_widget(
+      menu_definition, accelerators, proton_engine_menu_command_activated,
+      proton_engine_menu_role_activated, window, error, error_len);
+  if (menu_bar == NULL) {
+    g_object_unref(accelerators);
+    return PROTON_ERR_PLATFORM;
+  }
+
+  if (window->menu_accel_group != NULL) {
+    gtk_window_remove_accel_group(GTK_WINDOW(window->window),
+                                  window->menu_accel_group);
+    g_object_unref(window->menu_accel_group);
+  }
+  if (window->menu_bar != NULL) {
+    gtk_widget_destroy(window->menu_bar);
+  }
+  window->menu_bar = menu_bar;
+  window->menu_accel_group = accelerators;
+  gtk_window_add_accel_group(GTK_WINDOW(window->window), accelerators);
+  gtk_box_pack_start(GTK_BOX(window->root_box), menu_bar, FALSE, FALSE, 0);
+  gtk_box_reorder_child(GTK_BOX(window->root_box), menu_bar, 0);
+  gtk_widget_show_all(menu_bar);
+  proton_engine_sync_browser_bounds(window);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                                             const char *menu_json,
                                             char *error,
                                             size_t error_len) {
-  (void)runtime;
-  (void)menu_json;
-  proton_engine_set_message(error, error_len,
-                            "native app menus are not implemented on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  if (proton_app_runner_is_active() &&
+      !proton_app_runner_is_ui_thread()) {
+    proton_engine_ui_call_t call = {
+        .operation = PROTON_ENGINE_UI_RUNTIME_SET_MENU,
+        .runtime = runtime,
+        .text = menu_json,
+        .error = error,
+        .error_len = error_len,
+    };
+    return proton_engine_dispatch_ui_call(&call);
+  }
+  if (runtime == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (runtime->headless) {
+    proton_engine_set_message(error, error_len,
+                              "native menus are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  proton_linux_menu_bar_t *menu_definition =
+      proton_linux_menu_bar_parse(menu_json, error, error_len);
+  if (menu_definition == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    if (window->runtime != runtime || window->window == NULL) {
+      continue;
+    }
+    const int32_t status = proton_engine_window_install_menu(
+        window, menu_definition, error, error_len);
+    if (status != PROTON_OK) {
+      proton_linux_menu_bar_destroy(menu_definition);
+      return status;
+    }
+  }
+  proton_linux_menu_bar_destroy(runtime->menu_definition);
+  runtime->menu_definition = menu_definition;
+  proton_engine_menu_reset_commands(runtime);
+  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_poll_bridge_request_json(
@@ -4816,6 +5083,17 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
       proton_engine_set_message(error, error_len, "window creation failed");
       return PROTON_ERR_PLATFORM;
     }
+    window->root_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    if (window->root_box == NULL) {
+      gtk_widget_destroy(window->window);
+      free(window->client);
+      proton_browser_session_destroy(window->browser_session);
+      free(window->bridge_config_json);
+      free(window);
+      proton_engine_set_message(error, error_len,
+                                "window root container creation failed");
+      return PROTON_ERR_PLATFORM;
+    }
     proton_engine_use_default_x11_visual(window->window);
     gtk_window_set_title(GTK_WINDOW(window->window),
                          config.title[0] != '\0' ? config.title : "Proton");
@@ -4875,9 +5153,24 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
                                   "overlay window controls creation failed");
         return PROTON_ERR_PLATFORM;
       }
-      gtk_container_add(GTK_CONTAINER(window->window), window->overlay);
+      gtk_box_pack_end(GTK_BOX(window->root_box), window->overlay, TRUE, TRUE,
+                       0);
     } else {
-      gtk_container_add(GTK_CONTAINER(window->window), window->browser_host);
+      gtk_box_pack_end(GTK_BOX(window->root_box), window->browser_host, TRUE,
+                       TRUE, 0);
+    }
+    gtk_container_add(GTK_CONTAINER(window->window), window->root_box);
+    if (runtime->menu_definition != NULL) {
+      status = proton_engine_window_install_menu(
+          window, runtime->menu_definition, error, error_len);
+      if (status != PROTON_OK) {
+        gtk_widget_destroy(window->window);
+        free(window->client);
+        proton_browser_session_destroy(window->browser_session);
+        free(window->bridge_config_json);
+        free(window);
+        return status;
+      }
     }
     g_signal_connect(window->window, "delete-event",
                      G_CALLBACK(proton_engine_on_window_delete), window);
@@ -5941,21 +6234,37 @@ int32_t proton_engine_window_poll_dialog_result(
                             "async native dialog extension is not implemented on Linux");
   return PROTON_ERR_UNSUPPORTED;
 }
-// TODO: Drain Linux menu commands once the native menu backend is implemented.
 int32_t proton_engine_take_menu_command(
     proton_engine_runtime_t *runtime,
     char *buffer,
     size_t buffer_len,
     proton_window_id_t *out_focused_window,
     int32_t *out_present) {
-  (void)runtime;
-  (void)buffer;
-  (void)buffer_len;
   if (out_focused_window == NULL || out_present == NULL) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   *out_focused_window = PROTON_INVALID_HANDLE;
   *out_present = 0;
+  if (runtime == NULL || !runtime->menu_lock_initialized) {
+    return PROTON_OK;
+  }
+  pthread_mutex_lock(&runtime->menu_lock);
+  if (runtime->menu_command_count > 0) {
+    const proton_engine_menu_command_t *command =
+        &runtime->menu_commands[runtime->menu_command_head];
+    const size_t command_len = strlen(command->command_id);
+    if (buffer == NULL || buffer_len <= command_len) {
+      pthread_mutex_unlock(&runtime->menu_lock);
+      return PROTON_ERR_BUFFER_TOO_SMALL;
+    }
+    memcpy(buffer, command->command_id, command_len + 1);
+    *out_focused_window = command->focused_window;
+    runtime->menu_command_head =
+        (runtime->menu_command_head + 1) % PROTON_ENGINE_MAX_MENU_COMMANDS;
+    runtime->menu_command_count--;
+    *out_present = 1;
+  }
+  pthread_mutex_unlock(&runtime->menu_lock);
   return PROTON_OK;
 }
 

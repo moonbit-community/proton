@@ -39,6 +39,7 @@ if(PROTON_WITH_ENGINE)
     set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
+      src/engine/cef_linux/proton_linux_menu.c
       src/engine/cef_linux/proton_linux_titlebar.c
     )
   else()
@@ -511,6 +512,25 @@ if(BUILD_TESTING)
   endif()
 
   if(UNIX AND NOT APPLE)
+    if(PROTON_WITH_ENGINE)
+      add_executable(proton_linux_menu_test
+        tests/proton_linux_menu_test.c
+        src/engine/cef_linux/proton_linux_menu.c
+        src/proton_json.c
+      )
+      target_include_directories(proton_linux_menu_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/cef_linux
+      )
+      target_link_libraries(proton_linux_menu_test PRIVATE
+        PkgConfig::PROTON_GTK3
+      )
+      set_target_properties(proton_linux_menu_test PROPERTIES
+        C_STANDARD 11
+        C_STANDARD_REQUIRED ON
+      )
+      add_test(NAME proton_linux_menu_test COMMAND proton_linux_menu_test)
+    endif()
+
     add_executable(proton_linux_titlebar_test
       tests/proton_linux_titlebar_test.c
       src/engine/cef_linux/proton_linux_titlebar.c

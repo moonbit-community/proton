@@ -200,6 +200,14 @@ CEF GTK/X11 embedding path, and manually keeps the CEF X11 child sized to the
 GTK content allocation. The current Linux engine intentionally forces X11, so
 WSLg uses this behavior through XWayland; native Wayland is not yet supported.
 
+Linux application menu definitions are rendered as a GTK menu bar in every
+runtime window. Command items enqueue the same `menu_command` runtime events as
+macOS, including the window that owns the activated menu. Role items map to GTK
+window actions or the focused CEF frame's edit commands, and menu key
+equivalents are installed as GTK accelerators. The standard application menu is
+always present; Edit and Window menus are supplied when the definition does not
+replace them.
+
 `proton_cli cef setup` runtime assembly is wired for Windows, macOS Apple
 Silicon, and Linux. The setup command verifies the pinned SHA-256 of the
 default CEF archive; custom `--name` or `--url` downloads require a matching
