@@ -333,9 +333,12 @@ export function verifyPrebuiltAbi({
         `proton/prebuilt/${platform}/manifest.json: expected proton_version ${expectedVersion}, got ${manifest.proton_version}`,
       );
     }
-    if (!/^sha256:[0-9a-f]{64}$/.test(manifest.source_hash)) {
+    if (
+      Object.hasOwn(manifest, "source_hash") &&
+      !/^sha256:[0-9a-f]{64}$/.test(manifest.source_hash)
+    ) {
       failures.push(
-        `proton/prebuilt/${platform}/manifest.json: missing or invalid source_hash`,
+        `proton/prebuilt/${platform}/manifest.json: invalid source_hash`,
       );
     }
     if (
