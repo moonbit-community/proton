@@ -79,6 +79,21 @@ symbols by default, while `PROTON_API` remains the public ABI export marker.
 Any extra `proton_*` export fails; platform-specific exceptions are not part of
 the shipped ABI.
 
+## `prebuilt_source_hash.mjs`
+
+Records and verifies a SHA-256 hash of every repository input used to build
+each platform's prebuilt runtime. The native-host build workflows record the
+hash after staging their artifacts. Ordinary CI verifies all three hashes, so
+a source or build-input change cannot leave an older prebuilt library behind:
+
+```sh
+node ./scripts/prebuilt_source_hash.mjs --record darwin-arm64
+node ./scripts/prebuilt_source_hash.mjs --verify
+```
+
+Do not record a hash without rebuilding and testing that platform's staged
+runtime first.
+
 Bridge E2E coverage lives in the `e2e/` MoonBit module. Run the complete
 self-hosted suite with `moon -C e2e test`; no JavaScript bridge-smoke wrapper is
 required.

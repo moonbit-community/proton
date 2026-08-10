@@ -166,6 +166,11 @@ test("metadata validation requires every shipped platform", () => {
     assert(failures.includes("proton/prebuilt/win32-x64: missing"));
     assert(
       failures.includes(
+        "proton/prebuilt/linux-x64/manifest.json: missing or invalid source_hash",
+      ),
+    );
+    assert(
+      failures.includes(
         "proton/prebuilt/linux-x64/lib/libproton.so: not a regular file",
       ),
     );
