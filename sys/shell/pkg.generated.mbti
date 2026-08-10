@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_shell"
+
+// Values
+pub fn ensure_supported() -> Result[Unit, String]
+
+pub fn is_supported() -> Bool
+
+pub fn open(String) -> Result[Unit, String]
+
+pub fn reveal_item(String) -> Result[Unit, String]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
