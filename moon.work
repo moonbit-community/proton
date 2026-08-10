@@ -17,5 +17,6 @@ members = [
   "./sys/global_hotkey",
   "./sys/keepawake",
   "./sys/microphone",
+  "./sys/shell",
   "./sys/tray",
 ]

@@ -1,0 +1,10 @@
+import {
+  "moonbit-community/proton_ffi" @ffi,
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "shell_native.c" ],
+  targets: { "shell.mbt": [ "native" ] },
+)

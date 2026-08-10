@@ -14,6 +14,7 @@ import {
   "moonbit-community/proton_microphone@0.1.14",
   "moonbit-community/proton_auto_launch@0.1.14",
   "moonbit-community/proton_keepawake@0.1.14",
+  "moonbit-community/proton_shell@0.1.14",
 }
 
 readme = "README.md"
