@@ -44,13 +44,15 @@ async test "doctor discovers moon.proton from a nested directory" {
 }
 
 ///|
-async test "doctor reports a missing Proton project directly" {
+async test "doctor skips project checks outside a Proton project" {
   let root = @path.Path("target/proton-doctor-empty").resolve().to_string()
   ensure_test_dir(root)
   let report = build_doctor_report(root, verbose=false)
-  assert_eq(report.sections.length(), 1)
-  assert_true(report.has_errors())
-  assert_eq(report.sections[0].lines[0].code, "project.not_found")
+  assert_eq(report.sections.length(), 2)
+  assert_false(report.has_errors())
+  assert_true(report.sections[0].status() == Neutral)
+  assert_eq(report.sections[0].lines[0].code, "project.skipped")
+  assert_eq(report.sections[1].id, "environment")
 }
 
 ///|

@@ -206,7 +206,7 @@ fn codegen_command() -> @argparse.Command {
 fn doctor_command() -> @argparse.Command {
   @argparse.Command(
     "doctor",
-    about="Inspect and diagnose a Proton project",
+    about="Inspect the Proton environment and current project",
     flags=[
       FlagArg("verbose", about="Include detailed project diagnostics"),
       FlagArg("json", about="Render one JSON document", conflicts_with=["quiet"]),

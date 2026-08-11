@@ -66,8 +66,10 @@ fn DoctorSection::status(self : DoctorSection) -> DoctorStatus {
     Error
   } else if self.lines.any(fn(line) { line.status == Warn }) {
     Warn
-  } else {
+  } else if self.lines.any(fn(line) { line.status == Ok }) {
     Ok
+  } else {
+    Neutral
   }
 }
 

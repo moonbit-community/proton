@@ -16,10 +16,9 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
     None =>
       lines.push(
         DoctorLine::new(
-          "project.not_found",
-          Error,
-          "no Proton project found",
-          hint="run this command from a directory containing moon.proton",
+          "project.skipped",
+          Neutral,
+          "not inside a Proton project; project checks skipped",
         ),
       )
     Some(project) => {

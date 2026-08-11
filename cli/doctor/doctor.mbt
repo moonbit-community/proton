@@ -1,12 +1,9 @@
 ///|
 async fn build_doctor_report(cwd : String, verbose~ : Bool) -> DoctorReport {
   let project = discover_project(cwd)
-  let sections = [collect_project(project)]
+  let sections = [collect_project(project), collect_environment()]
   match project {
-    Some(project) => {
-      sections.push(collect_environment())
-      sections.push(collect_runtime(project, verbose~))
-    }
+    Some(project) => sections.push(collect_runtime(project, verbose~))
     None => ()
   }
   { sections, }
