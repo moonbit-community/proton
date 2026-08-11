@@ -25,6 +25,6 @@ description = "Developer CLI and code generation tools for Proton."
 
 options(
   warn_list: "",
-  preferred_target: "native",
+  preferred_target: "wasm",
   supported_targets: "native+wasm",
 )
