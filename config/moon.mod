@@ -17,5 +17,5 @@ description = "Typed config parser for Proton moon.proton and moon.ext files."
 options(
   warn_list: "",
   preferred_target: "native",
-  supported_targets: "+native",
+  supported_targets: "native+wasm",
 )

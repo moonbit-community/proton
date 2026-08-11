@@ -576,7 +576,7 @@ fn dev_frontend_process_env(
 /// Returning a complete environment with the overrides applied and spawning
 /// with `inherit_env=false` keeps exactly one entry per variable, so the
 /// runtime `bin` directory survives the handoff.
-#cfg(platform="windows")
+#cfg(all(platform="windows", target="native"))
 fn dev_app_spawn_env(
   overrides : Map[String, String],
 ) -> (Map[String, String], Bool) {
@@ -598,7 +598,7 @@ fn dev_app_spawn_env(
 /// Non-Windows platforms keep the existing behavior: the child inherits the
 /// parent environment and `extra_env` carries the overrides, leaving the
 /// established rpath and loader-variable handling untouched.
-#cfg(not(platform="windows"))
+#cfg(any(not(platform="windows"), target="wasm"))
 fn dev_app_spawn_env(
   overrides : Map[String, String],
 ) -> (Map[String, String], Bool) {
@@ -606,7 +606,7 @@ fn dev_app_spawn_env(
 }
 
 ///|
-#cfg(platform="windows")
+#cfg(all(platform="windows", target="native"))
 extern "C" fn dev_windows_env_block() -> String = "proton_cli_dev_env_block"
 
 ///|
@@ -614,7 +614,7 @@ extern "C" fn dev_windows_env_block() -> String = "proton_cli_dev_env_block"
 /// names and values preserved. The wide-character block is used instead of
 /// `@env.get_env_vars` so non-ASCII values survive the round trip into the
 /// child process environment.
-#cfg(platform="windows")
+#cfg(all(platform="windows", target="native"))
 fn dev_windows_parent_env() -> Map[String, String] {
   let env : Map[String, String] = Map([])
   for entry in dev_windows_env_block().split("\u{0}") {
