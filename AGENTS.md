@@ -44,7 +44,8 @@ developer must perform them.
 - `sys/<pkg>/`: native system capability binding modules
   (`moonbit-community/proton_auto_launch`, `moonbit-community/proton_clipboard`,
   `moonbit-community/proton_global_hotkey`, `moonbit-community/proton_keepawake`,
-  `moonbit-community/proton_microphone`, `moonbit-community/proton_tray`) plus the
+  `moonbit-community/proton_microphone`, `moonbit-community/proton_shell`,
+  `moonbit-community/proton_tray`) plus the
   shared FFI helper module `moonbit-community/proton_ffi` (`sys/ffi/`). All are
   published from this repository under the Apache-2.0 license, on the workspace
   version shared by every module. They carry the `proton_` prefix because that
@@ -130,7 +131,7 @@ native checks before handing off larger refactors.
 ### Release Checklist
 
 - `.github/workflows/publish.yml` publishes the dependency chain in this order:
-  `proton_config`, `proton_contract`, `proton_rsa`, `proton_updater`, the seven
+  `proton_config`, `proton_contract`, `proton_rsa`, `proton_updater`, the eight
   `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
   finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
   published.
