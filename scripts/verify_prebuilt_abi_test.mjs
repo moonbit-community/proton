@@ -6,11 +6,21 @@ import test from "node:test";
 
 import {
   compareSymbolSets,
+  embeddedWindowsSourceHash,
   exportedAllSymbols,
   exportedProtonSymbols,
   publicAbiSymbols,
   verifyPrebuiltAbi,
 } from "./verify_prebuilt_abi.mjs";
+
+test("reads the source hash embedded in a Windows resource", () => {
+  const sourceHash = `sha256:${"a".repeat(64)}`;
+  const binary = Buffer.from(
+    `prefix\0PROTON_PREBUILT_SOURCE_HASH=${sourceHash}\0suffix`,
+    "utf16le",
+  );
+  assert.equal(embeddedWindowsSourceHash(binary), sourceHash);
+});
 
 test("extracts multiline public ABI declarations from the header", () => {
   const header = `

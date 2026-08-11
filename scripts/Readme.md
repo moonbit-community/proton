@@ -77,16 +77,19 @@ node ./scripts/verify_prebuilt_abi.mjs win32-x64
 CI runs the matching symbol check on each platform. Unix builds hide internal
 symbols by default, while `PROTON_API` remains the public ABI export marker.
 Any extra `proton_*` export fails; platform-specific exceptions are not part of
-the shipped ABI.
+the shipped ABI. The Windows check also requires the DLL and helper's embedded
+source hashes to match their current build inputs.
 
 ## `prebuilt_source_hash.mjs`
 
-Records and verifies a SHA-256 hash of every repository input used to build
-each platform's prebuilt runtime. The native-host build workflows record the
-hash after staging their artifacts. Ordinary CI verifies all three hashes, so
-a source or build-input change cannot leave an older prebuilt library behind:
+Computes, records, and verifies a SHA-256 hash of every repository input used
+to build each platform's prebuilt runtime. The native-host build workflows
+record the hash after staging their artifacts. Ordinary CI verifies all three
+manifest hashes, and the Windows ABI check verifies the hash embedded in its
+shipped binaries:
 
 ```sh
+node ./scripts/prebuilt_source_hash.mjs --print win32-x64
 node ./scripts/prebuilt_source_hash.mjs --record darwin-arm64
 node ./scripts/prebuilt_source_hash.mjs --verify
 ```
