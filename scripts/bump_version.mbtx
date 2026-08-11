@@ -3,12 +3,9 @@ import {
   "moonbitlang/async/fs",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
-  "moonbitlang/moon_config@0.3.5",
+  "moonbitlang/moon_config",
   "moonbitlang/x@0.4.43/sys",
 }
-
-// TODO: Upgrade moon_config after its latest lexer stops overflowing the
-// default WASM stack while parsing moon.work.
 
 struct ModuleDocument {
   path : String

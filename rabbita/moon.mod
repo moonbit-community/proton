@@ -1,10 +1,10 @@
 name = "moonbit-community/proton_rabbita"
 
-version = "0.1.14"
+version = "0.1.15"
 
 import {
-  "moonbit-community/proton_client@0.1.14",
-  "moonbit-community/proton_contract@0.1.14",
+  "moonbit-community/proton_client@0.1.15",
+  "moonbit-community/proton_contract@0.1.15",
   "moonbit-community/rabbita@0.14.1",
 }
 
