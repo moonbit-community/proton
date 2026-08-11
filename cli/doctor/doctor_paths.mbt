@@ -22,22 +22,3 @@ async fn discover_project(cwd : String) -> ProjectDoctorInfo? {
     None => None
   }
 }
-
-///|
-fn runtime_library_relative_path(platform_id : String) -> String? {
-  match platform_id {
-    "win32-x64" => Some("bin\\proton.dll")
-    "darwin-arm64" | "darwin-x64" => Some("lib/libproton.dylib")
-    "linux-x64" => Some("lib/libproton.so")
-    _ => None
-  }
-}
-
-///|
-fn runtime_helper_relative_path(platform_id : String) -> String {
-  if platform_id == "win32-x64" {
-    "bin\\cef_process.exe"
-  } else {
-    "bin/cef_process"
-  }
-}

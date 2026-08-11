@@ -209,7 +209,6 @@ fn doctor_command() -> @argparse.Command {
     about="Inspect and diagnose a Proton project",
     flags=[
       FlagArg("verbose", about="Include detailed project diagnostics"),
-      FlagArg("deep", about="Run deeper runtime checks"),
       FlagArg("json", about="Render one JSON document", conflicts_with=["quiet"]),
       FlagArg("quiet", about="Render only failing diagnostics", conflicts_with=[
         "json",
@@ -262,8 +261,6 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
     is {
       "verbose"? : Some(verbose)
       | (None with verbose = false),
-      "deep"? : Some(deep)
-      | (None with deep = false),
       "json"? : Some(json)
       | (None with json = false),
       "quiet"? : Some(quiet)
@@ -276,7 +273,7 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
     [path, ..] => Some(@fsutil.resolve_path(cwd, path))
     [] => None
   }
-  @doctor.run(cwd~, verbose~, deep~, json~, quiet~, output~)
+  @doctor.run(cwd~, verbose~, json~, quiet~, output~)
 }
 
 ///|

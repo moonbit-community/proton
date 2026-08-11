@@ -104,16 +104,16 @@ test "doctor output modes are declaratively exclusive" {
 
 ///|
 test "doctor exposes only readonly diagnostics" {
-  let matches = cli_command().parse(
-    argv=["doctor", "--deep", "--verbose"],
-    env=Map([]),
-  )
+  let matches = cli_command().parse(argv=["doctor", "--verbose"], env=Map([]))
   match matches.subcommand {
-    Some(("doctor", doctor_matches)) => {
-      @debug.assert_eq(doctor_matches.flags.get("deep"), Some(true))
+    Some(("doctor", doctor_matches)) =>
       @debug.assert_eq(doctor_matches.flags.get("verbose"), Some(true))
-    }
     _ => fail("expected doctor subcommand")
+  }
+  try cli_command().parse(argv=["doctor", "--deep"], env=Map([])) catch {
+    _ => ()
+  } noraise {
+    _ => fail("doctor must not expose deep runtime checks")
   }
   try cli_command().parse(argv=["doctor", "--run"], env=Map([])) catch {
     _ => ()

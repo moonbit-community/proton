@@ -209,188 +209,8 @@ async fn resolve_native_dist(
 }
 
 ///|
-fn doctor_native_runtime_info_from_text(
-  text : String,
-) -> Result[DoctorNativeRuntimeInfo, String] {
-  let json = @json.parse(text) catch {
-    error => return Err("invalid runtime info JSON: " + error.to_string())
-  }
-  let info : DoctorNativeRuntimeInfo = @json.from_json(json) catch {
-    error => return Err("invalid runtime info: " + error.to_string())
-  }
-  if info.abi_version != doctor_native_expected_abi_version {
-    Err(
-      "runtime ABI mismatch: expected " +
-      doctor_native_expected_abi_version.to_string() +
-      ", got " +
-      info.abi_version.to_string(),
-    )
-  } else if !info.runtime_available {
-    Err("Proton library does not include the native engine")
-  } else {
-    Ok(info)
-  }
-}
-
-///|
-fn push_deep_runtime_probe_result(
-  lines : Array[DoctorLine],
-  result : DoctorNativeProbeResult,
-) -> Unit {
-  match result.info {
-    Ok(text) =>
-      match doctor_native_runtime_info_from_text(text) {
-        Ok(info) =>
-          lines.push(
-            DoctorLine::new(
-              "runtime.deep.abi",
-              Ok,
-              "native engine loaded: " +
-              info.platform +
-              " (" +
-              info.build_mode +
-              ")",
-            ),
-          )
-        Err(message) =>
-          lines.push(
-            DoctorLine::new(
-              "runtime.deep.abi",
-              Error,
-              "native engine reported invalid runtime information",
-              hint=message,
-            ),
-          )
-      }
-    Err(error) =>
-      lines.push(
-        DoctorLine::new(
-          "runtime.deep.info",
-          Error,
-          "runtime info call failed",
-          hint=error.hint("runtime info call failed"),
-        ),
-      )
-  }
-  match result.probe {
-    Ok(_) =>
-      lines.push(
-        DoctorLine::new(
-          "runtime.deep.layout",
-          Ok,
-          "native runtime layout probe succeeded",
-        ),
-      )
-    Err(error) =>
-      lines.push(
-        DoctorLine::new(
-          "runtime.deep.layout",
-          Error,
-          "native runtime layout probe failed",
-          hint=error.hint("native runtime layout probe failed"),
-        ),
-      )
-  }
-  match result.smoke {
-    Succeeded =>
-      lines.push(
-        DoctorLine::new(
-          "runtime.deep.smoke",
-          Ok,
-          "runtime create/destroy smoke test succeeded",
-        ),
-      )
-    Skipped | SkippedUnsafeHost =>
-      lines.push(
-        DoctorLine::new(
-          "runtime.deep.smoke",
-          Neutral,
-          "runtime create/destroy smoke test was skipped",
-        ),
-      )
-    CreateFailed(error) | DestroyFailed(error) =>
-      lines.push(
-        DoctorLine::new(
-          "runtime.deep.smoke",
-          Error,
-          "runtime create/destroy smoke test failed",
-          hint=error.hint("runtime create/destroy smoke test failed"),
-        ),
-      )
-  }
-}
-
-///|
-fn push_deep_runtime_probe_error(
-  lines : Array[DoctorLine],
-  error : DoctorNativeProbeError,
-) -> Unit {
-  let message = match error {
-    LoadFailed(message) => message
-    SymbolsMissing(message) => message
-    AbiMismatch(version) =>
-      "expected ABI " +
-      doctor_native_expected_abi_version.to_string() +
-      ", got " +
-      version.to_string()
-    OpenFailed(status, message) =>
-      if message == "" {
-        "native probe failed with status " + status.to_string()
-      } else {
-        message
-      }
-  }
-  lines.push(
-    DoctorLine::new(
-      "runtime.deep.load",
-      Error,
-      "failed to load the Proton native engine",
-      hint=message,
-    ),
-  )
-}
-
-///|
-fn push_deep_runtime_probe(
-  lines : Array[DoctorLine],
-  native_dist : String,
-  platform_id : String,
-) -> Unit {
-  guard runtime_library_relative_path(platform_id) is Some(relative) else {
-    lines.push(
-      DoctorLine::new(
-        "runtime.deep.unsupported",
-        Error,
-        "deep runtime checks are not supported on " + platform_id,
-      ),
-    )
-    return
-  }
-  let config : Json = {
-    "abi_version": Json::number(
-      doctor_native_expected_abi_version.to_double(),
-      repr=doctor_native_expected_abi_version.to_string(),
-    ),
-    "runtime_root": native_dist,
-    "helper_path": @fsutil.path_join(
-      native_dist,
-      runtime_helper_relative_path(platform_id),
-    ),
-  }
-  match
-    doctor_native_probe(
-      @fsutil.path_join(native_dist, relative),
-      config.stringify(),
-    ) {
-    Ok(result) => push_deep_runtime_probe_result(lines, result)
-    Err(error) => push_deep_runtime_probe_error(lines, error)
-  }
-}
-
-///|
 async fn collect_runtime(
   project : ProjectDoctorInfo,
-  deep~ : Bool,
   verbose~ : Bool,
 ) -> DoctorSection {
   let lines : Array[DoctorLine] = []
@@ -410,11 +230,9 @@ async fn collect_runtime(
   } noraise {
     value => value
   }
-  let mut platform_matches = true
   match manifest {
     Some(manifest) => {
       if manifest.platform != platform_id {
-        platform_matches = false
         lines.push(
           DoctorLine::new(
             "runtime.platform",
@@ -486,9 +304,6 @@ async fn collect_runtime(
     lines.push(
       DoctorLine::new("runtime.layout", Ok, "runtime layout is complete"),
     )
-  }
-  if deep && platform_matches && missing.length() == 0 {
-    push_deep_runtime_probe(lines, native_dist, platform_id)
   }
   DoctorSection::new("runtime", "Runtime", lines)
 }

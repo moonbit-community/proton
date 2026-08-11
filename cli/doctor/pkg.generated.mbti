@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub async fn run(cwd~ : String, verbose~ : Bool, deep~ : Bool, json~ : Bool, quiet~ : Bool, output~ : String?) -> Bool
+pub async fn run(cwd~ : String, verbose~ : Bool, json~ : Bool, quiet~ : Bool, output~ : String?) -> Bool
 
 // Errors
 pub(all) suberror DoctorError {

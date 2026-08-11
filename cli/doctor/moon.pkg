@@ -2,7 +2,6 @@ import {
   "moonbit-community/proton_config",
   "moonbit-community/proton_cli/cef",
   "moonbit-community/proton_cli/fsutil",
-  "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
@@ -18,7 +17,3 @@ import {
 } for "wbtest"
 
 supported_targets = "native"
-
-options(
-  "native-stub": [ "doctor_native_probe.c" ],
-)

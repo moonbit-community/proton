@@ -124,11 +124,3 @@ priv struct DoctorRuntimeManifest {
   cef_version : String
   dist : String
 }
-
-///|
-priv struct DoctorNativeRuntimeInfo {
-  abi_version : Int
-  runtime_available : Bool
-  build_mode : String
-  platform : String
-} derive(FromJson)

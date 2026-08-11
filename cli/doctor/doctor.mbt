@@ -1,15 +1,11 @@
 ///|
-async fn build_doctor_report(
-  cwd : String,
-  verbose~ : Bool,
-  deep~ : Bool,
-) -> DoctorReport {
+async fn build_doctor_report(cwd : String, verbose~ : Bool) -> DoctorReport {
   let project = discover_project(cwd)
   let sections = [collect_project(project)]
   match project {
     Some(project) => {
       sections.push(collect_environment())
-      sections.push(collect_runtime(project, deep~, verbose~))
+      sections.push(collect_runtime(project, verbose~))
     }
     None => ()
   }
@@ -20,7 +16,6 @@ async fn build_doctor_report(
 pub async fn run(
   cwd~ : String,
   verbose~ : Bool,
-  deep~ : Bool,
   json~ : Bool,
   quiet~ : Bool,
   output~ : String?,
@@ -31,7 +26,7 @@ pub async fn run(
   if !@fsutil.path_is_dir(cwd) {
     raise WorkingDirectoryNotDirectory(path=cwd)
   }
-  let report = build_doctor_report(cwd, verbose~, deep~)
+  let report = build_doctor_report(cwd, verbose~)
   let rendered = if json {
     render_doctor_json(report) + "\n"
   } else if quiet {
