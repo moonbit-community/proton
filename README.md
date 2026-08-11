@@ -487,8 +487,11 @@ proton_cli package --release --target zip \
 ```sh
 proton_cli doctor
 proton_cli doctor --deep
-proton_cli doctor --frontend
 ```
+
+Doctor checks the project configuration, MoonBit toolchain, active platform,
+and Proton runtime layout without changing the project. Pass `--deep` to load
+the native library, verify its ABI, and run a runtime create/destroy smoke test.
 
 Run `proton_cli cef setup` again when the active runtime is missing or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.
