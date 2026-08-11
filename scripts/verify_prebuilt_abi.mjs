@@ -5,6 +5,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { prebuiltSourceHash } from "./prebuilt_source_hash.mjs";
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = path.resolve(scriptDir, "..");
 
@@ -108,6 +110,13 @@ export function compareSymbolSets(
     }
   }
   return failures;
+}
+
+export function embeddedWindowsSourceHash(binary) {
+  const match = binary
+    .toString("utf16le")
+    .match(/PROTON_PREBUILT_SOURCE_HASH=(sha256:[0-9a-f]{64})/);
+  return match?.[1] ?? null;
 }
 
 function relativeArtifactPath(platformRoot, value, label, failures) {
@@ -402,6 +411,21 @@ export function verifyPrebuiltAbi({
             inspectExports(platform, libraryPath, failures),
           ),
         );
+      }
+      if (platform === "win32-x64") {
+        const expectedSourceHash = prebuiltSourceHash({ repoRoot, platform });
+        for (const key of ["dll", "helper"]) {
+          const artifactPath = resolvedArtifacts[key];
+          if (
+            artifactPath &&
+            embeddedWindowsSourceHash(fs.readFileSync(artifactPath)) !==
+              expectedSourceHash
+          ) {
+            failures.push(
+              `proton/prebuilt/${platform}/${manifest.artifacts[key]}: source hash does not match current build inputs`,
+            );
+          }
+        }
       }
       if (layout.importLibraryKey) {
         const importLibraryPath = resolvedArtifacts[layout.importLibraryKey];

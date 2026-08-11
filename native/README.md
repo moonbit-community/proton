@@ -320,13 +320,15 @@ manual `build macOS prebuilt`, `build Linux prebuilt`, or
 review. Each workflow builds and tests a Release runtime on its native host,
 stages only the package artifacts listed above, verifies their exported ABI,
 records the build-input hash in `manifest.json`, and uploads an archive rooted
-at the platform directory. Ordinary CI recomputes those hashes and rejects a
-prebuilt package after any of its source or build inputs changes. The workflows
-never commit or push binaries; download and inspect the archive before replacing
-the matching `proton/prebuilt/<platform>` directory. Before these workflows
-exist on the default branch, a maintainer can trigger all three for a pull
-request by adding the `build-prebuilt` label. The label-triggered build checks
-out the pull request head commit, not GitHub's synthetic merge commit.
+at the platform directory. Ordinary CI recomputes those manifest hashes. The
+Windows build additionally embeds the hash in its DLL and helper, verifies that
+both binaries reproduce across a clean rebuild, and checks the embedded values
+on the Windows CI leg. The workflows never commit or push binaries; download
+and inspect the archive before replacing the matching
+`proton/prebuilt/<platform>` directory. Before these workflows exist on the
+default branch, a maintainer can trigger all three for a pull request by adding
+the `build-prebuilt` label. The label-triggered build checks out the pull request
+head commit, not GitHub's synthetic merge commit.
 
 MoonBit FFI consumers only link `proton.lib`/`proton.dll` on Windows or
 `libproton.so` on Linux or `libproton.dylib` on macOS. They do not link CEF

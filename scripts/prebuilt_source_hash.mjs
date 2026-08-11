@@ -175,12 +175,21 @@ export function verifyPrebuiltSourceHashes({
 
 function usage() {
   console.error(
-    "Usage: node scripts/prebuilt_source_hash.mjs [--verify | --record <platform>]",
+    "Usage: node scripts/prebuilt_source_hash.mjs [--verify | --print <platform> | --record <platform>]",
   );
 }
 
 function main() {
   const args = process.argv.slice(2);
+  if (args.length === 2 && args[0] === "--print") {
+    try {
+      console.log(prebuiltSourceHash({ platform: args[1] }));
+    } catch (error) {
+      console.error(`Unable to hash Proton prebuilt sources: ${error.message}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
   if (args.length === 2 && args[0] === "--record") {
     try {
       const hash = recordPrebuiltSourceHash({ platform: args[1] });

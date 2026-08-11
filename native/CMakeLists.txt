@@ -10,6 +10,8 @@ endif()
 
 option(PROTON_WITH_ENGINE "Build Proton with the native browser engine linked" OFF)
 set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
+set(PROTON_PREBUILT_SOURCE_HASH "" CACHE STRING
+    "Source hash embedded in shipped Windows binaries")
 set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
 set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
 set(PROTON_NOTIFICATION_SOURCE src/engine/notification_stub.c)
@@ -61,6 +63,17 @@ if(PROTON_WITH_ENGINE AND UNIX AND NOT APPLE)
   pkg_check_modules(PROTON_X11 REQUIRED IMPORTED_TARGET x11)
 endif()
 
+set(PROTON_BUILD_METADATA_SOURCE)
+if(WIN32 AND NOT PROTON_PREBUILT_SOURCE_HASH STREQUAL "")
+  set(PROTON_BUILD_METADATA_SOURCE
+      "${CMAKE_CURRENT_BINARY_DIR}/proton_build_metadata.rc")
+  file(WRITE "${PROTON_BUILD_METADATA_SOURCE}"
+    "STRINGTABLE\n"
+    "BEGIN\n"
+    "  1 \"PROTON_PREBUILT_SOURCE_HASH=${PROTON_PREBUILT_SOURCE_HASH}\"\n"
+    "END\n")
+endif()
+
 add_library(proton SHARED
   src/proton_app_instance.c
   src/proton_config.c
@@ -74,6 +87,7 @@ add_library(proton SHARED
   src/engine/cef_common/bridge_lifecycle.c
   src/engine/cef_common/bridge_response.c
   ${PROTON_ENGINE_SOURCES}
+  ${PROTON_BUILD_METADATA_SOURCE}
 )
 
 target_include_directories(proton
@@ -151,6 +165,7 @@ if(PROTON_WITH_ENGINE)
     target_link_libraries(proton PRIVATE "${PROTON_ENGINE_IMPORT_LIB}")
     add_executable(cef_process
       src/cef_process.c
+      ${PROTON_BUILD_METADATA_SOURCE}
     )
     target_link_libraries(cef_process PRIVATE proton)
     target_include_directories(cef_process
@@ -410,6 +425,12 @@ if(WIN32)
     WINVER=0x0A00
   )
   target_link_libraries(proton PRIVATE advapi32 comctl32 dwmapi)
+  if(MSVC)
+    target_link_options(proton PRIVATE /Brepro)
+    if(TARGET cef_process)
+      target_link_options(cef_process PRIVATE /Brepro)
+    endif()
+  endif()
   set_target_properties(proton PROPERTIES PREFIX "")
 endif()
 
