@@ -307,7 +307,12 @@ export function verifyPrebuiltAbi({
     if (!manifest) {
       continue;
     }
-    const allowedManifestFields = ["platform", "proton_version", "artifacts"];
+    const allowedManifestFields = [
+      "platform",
+      "proton_version",
+      "source_hash",
+      "artifacts",
+    ];
     for (const key of Object.keys(manifest)) {
       if (!allowedManifestFields.includes(key)) {
         failures.push(
@@ -326,6 +331,14 @@ export function verifyPrebuiltAbi({
     ) {
       failures.push(
         `proton/prebuilt/${platform}/manifest.json: expected proton_version ${expectedVersion}, got ${manifest.proton_version}`,
+      );
+    }
+    if (
+      Object.hasOwn(manifest, "source_hash") &&
+      !/^sha256:[0-9a-f]{64}$/.test(manifest.source_hash)
+    ) {
+      failures.push(
+        `proton/prebuilt/${platform}/manifest.json: invalid source_hash`,
       );
     }
     if (

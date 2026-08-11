@@ -17,6 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Test prebuilt source hash verifier
+        run: node --test scripts/prebuilt_source_hash_test.mjs
+
+      - name: Verify prebuilt source hashes
+        run: node scripts/prebuilt_source_hash.mjs --verify
+
       - name: Install MoonBit
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest

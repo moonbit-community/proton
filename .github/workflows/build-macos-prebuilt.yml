@@ -87,6 +87,9 @@ jobs:
           install -m 644 "$PROTON_PREBUILT_RUNTIME/manifest.json" \
             "$destination/manifest.json"
 
+      - name: Record prebuilt source hash
+        run: node scripts/prebuilt_source_hash.mjs --record darwin-arm64
+
       - name: Verify package prebuilt ABI
         run: node scripts/verify_prebuilt_abi.mjs darwin-arm64
 

@@ -154,6 +154,7 @@ test("metadata validation requires every shipped platform", () => {
       JSON.stringify({
         platform: "linux-x64",
         proton_version: "0.1.0",
+        source_hash: "not-a-source-hash",
         artifacts: {
           shared_lib: "lib/libproton.so",
           helper: "bin/cef_process",
@@ -164,6 +165,11 @@ test("metadata validation requires every shipped platform", () => {
     const failures = verifyPrebuiltAbi({ repoRoot });
     assert(failures.includes("proton/prebuilt/darwin-arm64: missing"));
     assert(failures.includes("proton/prebuilt/win32-x64: missing"));
+    assert(
+      failures.includes(
+        "proton/prebuilt/linux-x64/manifest.json: invalid source_hash",
+      ),
+    );
     assert(
       failures.includes(
         "proton/prebuilt/linux-x64/lib/libproton.so: not a regular file",
