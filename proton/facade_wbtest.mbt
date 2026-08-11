@@ -407,7 +407,7 @@ async test "startup dispatch retains an earlier window close" {
     let task = group.spawn(
       () => {
         @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=42L, payload=Json::null())
+        @native.BridgeResponse::Ok(request_id=42L, payload=null)
       },
       no_wait=true,
       allow_failure=true,
@@ -443,7 +443,7 @@ async test "bridge cancellation targets only the matching handler task" {
     let first_task = group.spawn(
       () => {
         @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=41L, payload=Json::null())
+        @native.BridgeResponse::Ok(request_id=41L, payload=null)
       },
       no_wait=true,
       allow_failure=true,
@@ -451,7 +451,7 @@ async test "bridge cancellation targets only the matching handler task" {
     let second_task = group.spawn(
       () => {
         @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=42L, payload=Json::null())
+        @native.BridgeResponse::Ok(request_id=42L, payload=null)
       },
       no_wait=true,
       allow_failure=true,
@@ -480,14 +480,10 @@ async test "bridge cancellation targets only the matching handler task" {
 
 ///|
 test "extension events use structured bridge transport JSON" {
-  let event = @ipc.IpcExtensionEvent::new(
-    "ticker",
-    "tick",
-    Json::object({
-      "text": Json::string("</script><p>escaped</p>"),
-      "index": Json::number(1),
-    }),
-  )
+  let event = @ipc.IpcExtensionEvent::new("ticker", "tick", {
+    "text": "</script><p>escaped</p>",
+    "index": 1,
+  })
   let event_json = bridge_event_json(
     "extension",
     event.event_name,
@@ -548,7 +544,7 @@ test "asset url path encoding escapes browser url delimiters" {
 
 ///|
 test "extension event transport can target a page instance" {
-  let event = @ipc.IpcExtensionEvent::new("ticker", "done", Json::null())
+  let event = @ipc.IpcExtensionEvent::new("ticker", "done", null)
   let event_json = bridge_event_json(
     "extension",
     event.event_name,
@@ -564,10 +560,7 @@ test "frontend menu event transport preserves focused window" {
   let event_json = bridge_event_json(
     "frontend",
     "menu.command",
-    Json::object({
-      "command_id": Json::string("demo.refresh"),
-      "window": Json::string("17"),
-    }),
+    { "command_id": "demo.refresh", "window": "17" },
     None,
     None,
   )
@@ -686,7 +679,7 @@ test "permission policy binds extension ops and scope to one trusted source" {
         "main",
         @manifest.PermissionOrigin::Entry,
         extension_id,
-        scope=Json::object({ "root": Json::string("./data") }),
+        scope={ "root": "./data" },
       ),
     ],
   )
@@ -695,7 +688,7 @@ test "permission policy binds extension ops and scope to one trusted source" {
     scope,
     base_path,
   ) {
-    Json::object({ "base_path": Json::string(base_path), "scope": scope })
+    { "base_path": base_path, "scope": scope }
   })
   let policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
@@ -784,7 +777,7 @@ test "extension permission scopes are validated before startup" {
         "main",
         @manifest.PermissionOrigin::Entry,
         extension_id,
-        scope=Json::object({ "unexpected": Json::boolean(true) }),
+        scope={ "unexpected": true },
       ),
     ],
   )

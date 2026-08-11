@@ -120,11 +120,7 @@ fn cli_version_is_newer(candidate : String, current : String) -> Bool {
 fn latest_version_from_manifest_text(text : String) -> String? {
   let manifest = @json.parse(text) catch { _ => return None }
   match manifest {
-    Object(fields) =>
-      match fields.get("latest_version") {
-        Some(String(version)) => Some(version)
-        _ => None
-      }
+    { "latest_version": String(version), .. } => Some(version)
     _ => None
   }
 }

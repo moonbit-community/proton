@@ -376,14 +376,11 @@ async fn dispatch_multi_window_request(
       @native.BridgeResponse::Err(request_id~, code="invalid_payload", message~)
     Ok(payload) => {
       @async.sleep(payload.delay_ms.unwrap_or(0))
-      @native.BridgeResponse::Ok(
-        request_id~,
-        payload=Json::object({
-          "label": Json::string(payload.label),
-          "request_id": Json::string(request_id.to_string()),
-          "window": Json::string(request.window().to_string()),
-        }),
-      )
+      @native.BridgeResponse::Ok(request_id~, payload={
+        "label": payload.label,
+        "request_id": request_id.to_string(),
+        "window": request.window().to_string(),
+      })
     }
   }
 }

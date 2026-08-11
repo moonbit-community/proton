@@ -149,7 +149,9 @@ pub fn Manifest::from_json(json : Json) -> Manifest raise ManifestError {
         expectation="must be YYYY-MM-DDTHH:MM:SSZ",
       )
   }
-  let notes_url = match fields.get("notes_url") {
+  guard fields
+    is { "notes_url"? : notes_url_json, "platforms"? : platforms_json, .. }
+  let notes_url = match notes_url_json {
     None => None
     Some(String(value)) => Some(value)
     Some(_) =>
@@ -163,7 +165,7 @@ pub fn Manifest::from_json(json : Json) -> Manifest raise ManifestError {
     revision,
     published_at,
     notes_url,
-    platforms: parse_platforms(fields.get("platforms")),
+    platforms: parse_platforms(platforms_json),
   }
 }
 

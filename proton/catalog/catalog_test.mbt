@@ -40,11 +40,8 @@ fn find_extension_summary(
 ) -> Map[String, Json]? {
   for extension_json in extensions {
     match extension_json {
-      Object(extension) =>
-        match extension.get("id") {
-          Some(String(found)) if found == id => return Some(extension)
-          _ => ()
-        }
+      Object(extension) if extension is { "id": String(found), .. } &&
+        found == id => return Some(extension)
       _ => ()
     }
   }
@@ -282,42 +279,23 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
     "vendor/base", "vendor/echo", "moonbit-community/proton-path",
   ])
 
-  match catalog.to_summary_json() {
-    Object(summary) =>
-      match summary.get("extensions") {
-        Some(Array(extensions)) => {
-          assert_eq(extensions.length(), 3)
-          match find_extension_summary(extensions, "vendor/base") {
-            Some(extension) => {
-              @debug.assert_eq(
-                extension.get("id"),
-                Some(Json::string("vendor/base")),
-              )
-              @debug.assert_eq(
-                extension.get("metadata_format"),
-                Some(Json::string("moon.ext")),
-              )
-            }
-            _ => abort("expected extension summary object")
-          }
-          match
-            find_extension_summary(extensions, "moonbit-community/proton-path") {
-            Some(extension) => {
-              @debug.assert_eq(
-                extension.get("id"),
-                Some(Json::string("moonbit-community/proton-path")),
-              )
-              @debug.assert_eq(
-                extension.get("moonbit_import_path"),
-                Some(Json::string("moonbit-community/proton_ext/path")),
-              )
-            }
-            _ => abort("expected extension summary object")
-          }
-        }
-        _ => abort("expected extensions summary array")
-      }
-    _ => abort("expected catalog summary object")
+  guard catalog.to_summary_json() is { "extensions": Array(extensions), .. } else {
+    abort("expected extensions summary array")
+  }
+  assert_eq(extensions.length(), 3)
+  guard find_extension_summary(extensions, "vendor/base") is Some(base) &&
+    base is { "id": "vendor/base", "metadata_format": "moon.ext", .. } else {
+    abort("expected base extension summary")
+  }
+  guard find_extension_summary(extensions, "moonbit-community/proton-path")
+    is Some(path) &&
+    path
+    is {
+      "id": "moonbit-community/proton-path",
+      "moonbit_import_path": "moonbit-community/proton_ext/path",
+      ..
+    } else {
+    abort("expected path extension summary")
   }
 
   let summary_from_roots = load_extension_catalog_summary_from_search_roots([

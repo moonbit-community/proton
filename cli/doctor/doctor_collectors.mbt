@@ -135,15 +135,12 @@ async fn runtime_manifest_from_project(
   guard json is Object(object) else {
     raise Invalid("runtime manifest must be a JSON object: " + path)
   }
-  let schema_version : Int = match object.get("schema_version") {
-    Some(value) =>
-      @json.from_json(value) catch {
-        _ =>
-          raise Invalid(
-            "runtime manifest has an invalid schema_version: " + path,
-          )
-      }
-    None => raise Invalid("runtime manifest has no schema_version: " + path)
+  guard object is { "schema_version": schema_version_json, .. } else {
+    raise Invalid("runtime manifest has no schema_version: " + path)
+  }
+  let schema_version : Int = @json.from_json(schema_version_json) catch {
+    _ =>
+      raise Invalid("runtime manifest has an invalid schema_version: " + path)
   }
   guard schema_version == 1 else {
     raise Invalid("runtime manifest schema_version must be 1: " + path)
@@ -369,17 +366,22 @@ fn push_deep_runtime_probe(
     )
     return
   }
-  let config = Json::object({
+  let config : Json = {
     "abi_version": Json::number(
       doctor_native_expected_abi_version.to_double(),
       repr=doctor_native_expected_abi_version.to_string(),
     ),
-    "runtime_root": Json::string(native_dist),
-    "helper_path": Json::string(
-      @fsutil.path_join(native_dist, runtime_helper_relative_path(platform_id)),
+    "runtime_root": native_dist,
+    "helper_path": @fsutil.path_join(
+      native_dist,
+      runtime_helper_relative_path(platform_id),
     ),
-  }).stringify()
-  match doctor_native_probe(@fsutil.path_join(native_dist, relative), config) {
+  }
+  match
+    doctor_native_probe(
+      @fsutil.path_join(native_dist, relative),
+      config.stringify(),
+    ) {
     Ok(result) => push_deep_runtime_probe_result(lines, result)
     Err(error) => push_deep_runtime_probe_error(lines, error)
   }

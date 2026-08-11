@@ -53,23 +53,11 @@ pub fn permission(
   guard roots.length() > 0 else {
     raise InvalidPermissionScope("at least one filesystem root is required")
   }
-  @proton.PermissionGrant::new(
-    window,
-    origin,
-    fs_extension_id,
-    scope=Json::object({
-      "roots": Json::array(
-        roots.map(fn(root) {
-          Json::object({
-            "path": Json::string(root.path),
-            "commands": Json::array(
-              root.commands.map(command => Json::string(command)),
-            ),
-          })
-        }),
-      ),
+  @proton.PermissionGrant::new(window, origin, fs_extension_id, scope={
+    "roots": roots.map(fn(root) -> Json {
+      { "path": root.path, "commands": root.commands }
     }),
-  )
+  })
 }
 
 ///|
@@ -107,7 +95,7 @@ fn resolved_permission_scope(
       raise InvalidPermissionScope("unknown resolved scope field: " + key)
     }
   }
-  guard fields.get("base_path") is Some(String(base_path)) else {
+  guard fields is { "base_path": String(base_path), "roots"? : roots, .. } else {
     raise InvalidPermissionScope("resolved scope.base_path must be a string")
   }
   guard @mbpath.Path(path_for_platform(base_path)).is_absolute() else {
@@ -115,7 +103,7 @@ fn resolved_permission_scope(
   }
   ResolvedPermissionScope::{
     base_path,
-    roots: permission_roots_from_json(fields.get("roots")),
+    roots: permission_roots_from_json(roots),
   }
 }
 
@@ -131,7 +119,8 @@ fn permission_scope_roots_from_json(
       raise InvalidPermissionScope("unknown scope field: " + key)
     }
   }
-  permission_roots_from_json(scope_fields.get("roots"))
+  guard scope_fields is { "roots"? : roots, .. }
+  permission_roots_from_json(roots)
 }
 
 ///|
@@ -153,10 +142,10 @@ fn permission_roots_from_json(
         raise InvalidPermissionScope("unknown scope root field: " + key)
       }
     }
-    guard fields.get("path") is Some(String(path)) else {
+    guard fields is { "path": String(path), .. } else {
       raise InvalidPermissionScope("scope root path must be a string")
     }
-    guard fields.get("commands") is Some(Array(command_values)) else {
+    guard fields is { "commands": Array(command_values), .. } else {
       raise InvalidPermissionScope("scope root commands must be an array")
     }
     let commands = command_values.map(command => {
@@ -184,21 +173,15 @@ fn resolve_fs_permission_scope(
     .resolve()
     .normalize()
     .to_string()
-  Json::object({
-    "base_path": Json::string(resolved_base_path),
-    "roots": Json::array(
-      roots.map(root => {
-        Json::object({
-          "path": Json::string(
-            resolve_path_against_base(root.path, resolved_base_path),
-          ),
-          "commands": Json::array(
-            root.commands.map(command => Json::string(command)),
-          ),
-        })
-      }),
-    ),
-  })
+  {
+    "base_path": resolved_base_path,
+    "roots": roots.map(fn(root) -> Json {
+      {
+        "path": resolve_path_against_base(root.path, resolved_base_path),
+        "commands": root.commands,
+      }
+    }),
+  }
 }
 
 ///|

@@ -264,41 +264,28 @@ test "fs permission resolution anchors relative paths to the trusted base" {
     .normalize()
     .to_string()
   let resolved = resolve_fs_permission_scope(
-    Json::object({
-      "roots": Json::array([
-        Json::object({
-          "path": Json::string("./workspace"),
-          "commands": Json::array([Json::string("read_file")]),
-        }),
-      ]),
-    }),
+    { "roots": [{ "path": "./workspace", "commands": ["read_file"] }] },
     base.to_string(),
   ) catch {
     error => abort(error.message())
   }
-  guard resolved is Object(fields) else {
-    fail("expected resolved scope object")
+  guard resolved
+    is {
+      "base_path": String(found_base),
+      "roots": [{ "path": String(found_path), "commands": ["read_file"], .. }],
+      ..
+    } else {
+    fail("unexpected resolved permission scope")
   }
-  assert_eq(fields.get("base_path"), Some(Json::string(canonical_base)))
-  guard fields.get("roots") is Some(Array([Object(root)])) else {
-    fail("expected one resolved permission root")
-  }
+  assert_eq(found_base, canonical_base)
   assert_eq(
-    root.get("path"),
-    Some(
-      Json::string(
-        @mbpath.Path(
-          path_for_platform(
-            @mbpath.Path(canonical_base).join("workspace").to_string(),
-          ),
-        )
-        .normalize()
-        .to_string(),
+    found_path,
+    @mbpath.Path(
+      path_for_platform(
+        @mbpath.Path(canonical_base).join("workspace").to_string(),
       ),
-    ),
-  )
-  assert_eq(
-    root.get("commands"),
-    Some(Json::array([Json::string("read_file")])),
+    )
+    .normalize()
+    .to_string(),
   )
 }

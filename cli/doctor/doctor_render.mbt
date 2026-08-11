@@ -25,12 +25,12 @@ fn render_doctor_text(report : DoctorReport) -> String {
 ///|
 fn doctor_line_to_json(line : DoctorLine) -> Json {
   let object : Map[String, Json] = {
-    "code": Json::string(line.code),
-    "status": Json::string(line.status.json_name()),
-    "text": Json::string(line.text),
+    "code": line.code,
+    "status": line.status.json_name(),
+    "text": line.text,
   }
   match line.hint {
-    Some(hint) => object["hint"] = Json::string(hint)
+    Some(hint) => object["hint"] = Json(hint)
     None => ()
   }
   Json::object(object)
@@ -38,33 +38,30 @@ fn doctor_line_to_json(line : DoctorLine) -> Json {
 
 ///|
 fn doctor_summary_to_json(summary : DoctorSummary) -> Json {
-  Json::object({
-    "total": Json::number(summary.total.to_double()),
-    "passed": Json::number(summary.passed.to_double()),
-    "warnings": Json::number(summary.warnings.to_double()),
-    "errors": Json::number(summary.errors.to_double()),
-    "neutral": Json::number(summary.neutral.to_double()),
-  })
+  {
+    "total": summary.total,
+    "passed": summary.passed,
+    "warnings": summary.warnings,
+    "errors": summary.errors,
+    "neutral": summary.neutral,
+  }
 }
 
 ///|
 fn render_doctor_json(report : DoctorReport) -> String {
-  Json::object({
-    "schema_version": Json::number(1),
+  let json : Json = {
+    "schema_version": 1,
     "summary": doctor_summary_to_json(report.summary()),
-    "sections": Json::array(
-      report.sections.map(fn(section) {
-        Json::object({
-          "id": Json::string(section.id),
-          "title": Json::string(section.title),
-          "status": Json::string(section.status().json_name()),
-          "lines": Json::array(
-            section.lines.map(fn(line) { doctor_line_to_json(line) }),
-          ),
-        })
-      }),
-    ),
-  }).stringify(indent=2)
+    "sections": report.sections.map(fn(section) -> Json {
+      {
+        "id": section.id,
+        "title": section.title,
+        "status": section.status().json_name(),
+        "lines": section.lines.map(doctor_line_to_json),
+      }
+    }),
+  }
+  json.stringify(indent=2)
 }
 
 ///|

@@ -92,12 +92,12 @@ pub async fn CdpClient::create_target(
   browser_context_id? : String,
   new_window? : Bool = false,
 ) -> String {
-  let params : Map[String, Json] = { "url": Json::string(url) }
+  let params : Map[String, Json] = { "url": url }
   if browser_context_id is Some(browser_context_id) {
-    params["browserContextId"] = Json::string(browser_context_id)
+    params["browserContextId"] = Json(browser_context_id)
   }
   if new_window {
-    params["newWindow"] = Json::boolean(true)
+    params["newWindow"] = Json(true)
   }
   let response = self.send_schema_command(
     "Target.createTarget",
@@ -187,7 +187,7 @@ pub fn cdp_response_result_json(
   }
   match response.result {
     Some(result) => result
-    None => Json::object({})
+    None => {}
   }
 }
 

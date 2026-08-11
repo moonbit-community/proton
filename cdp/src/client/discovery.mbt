@@ -416,10 +416,10 @@ pub fn web_socket_url_from_version_json(
   json : Json,
 ) -> String raise DiscoveryError {
   guard json is Object(fields) else { raise InvalidVersionResponse }
-  match fields.get("webSocketDebuggerUrl") {
-    Some(String(url)) => url
-    Some(_) => raise InvalidVersionResponse
-    None => raise MissingWebSocketDebuggerUrl
+  match fields {
+    { "webSocketDebuggerUrl": String(url), .. } => url
+    { "webSocketDebuggerUrl"? : None, .. } => raise MissingWebSocketDebuggerUrl
+    _ => raise InvalidVersionResponse
   }
 }
 

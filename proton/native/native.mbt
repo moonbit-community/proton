@@ -209,11 +209,11 @@ fn decode_optional_abi_version(
   object : Map[String, Json],
   context : String,
 ) -> Unit raise NativeError {
-  match object.get("abi_version") {
-    None => ()
-    Some(Number(version, ..)) => expect_abi_version(version.to_int(), context)
-    Some(_) =>
-      raise InvalidPayload(context~, message="expected number abi_version")
+  match object {
+    { "abi_version"? : None, .. } => ()
+    { "abi_version": Number(version, ..), .. } =>
+      expect_abi_version(version.to_int(), context)
+    _ => raise InvalidPayload(context~, message="expected number abi_version")
   }
 }
 
@@ -226,29 +226,51 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
       raise InvalidPayload(context="runtime event", message="expected object")
   }
   decode_optional_abi_version(object, "runtime event")
-  let event_type_json = match object.get("type") {
-    Some(value) => value
-    None =>
-      raise InvalidPayload(context="runtime event", message="missing type")
+  guard object
+    is {
+      "type": event_type_json,
+      "window"? : window_json,
+      "view"? : view_json,
+      "title"? : title_json,
+      "is_loading"? : is_loading_json,
+      "state"? : state_json,
+      "request_id"? : request_id_json,
+      "url"? : url_json,
+      "method"? : method_json,
+      "user_gesture"? : user_gesture_json,
+      "redirect"? : redirect_json,
+      "disposition"? : disposition_json,
+      "download_id"? : download_id_json,
+      "suggested_name"? : suggested_name_json,
+      "download_state"? : download_state_json,
+      "received_bytes"? : received_bytes_json,
+      "total_bytes"? : total_bytes_json,
+      "percent"? : percent_json,
+      "error"? : error_json,
+      "permissions"? : permissions_json,
+      "command_id"? : command_id_json,
+      "revision"? : revision_json,
+      "items"? : items_json,
+      "ok"? : ok_json,
+      "message"? : message_json,
+      ..
+    } else {
+    raise InvalidPayload(context="runtime event", message="missing type")
   }
   let event_type = decode_string_json(event_type_json, "runtime event type")
-  let window = match object.get("window") {
-    None => None
-    Some(value) => Some(decode_int64_json(value, "runtime event window"))
-  }
-  let view = match object.get("view") {
-    None => None
-    Some(value) => Some(decode_int64_json(value, "runtime event view"))
-  }
-  let title = match object.get("title") {
-    None => None
-    Some(value) => Some(decode_string_json(value, "runtime event title"))
-  }
-  let is_loading = match object.get("is_loading") {
-    None => None
-    Some(value) => Some(decode_bool_json(value, "runtime event is_loading"))
-  }
-  let state = match object.get("state") {
+  let window = window_json.map(value => {
+    decode_int64_json(value, "runtime event window")
+  })
+  let view = view_json.map(value => {
+    decode_int64_json(value, "runtime event view")
+  })
+  let title = title_json.map(value => {
+    decode_string_json(value, "runtime event title")
+  })
+  let is_loading = is_loading_json.map(value => {
+    decode_bool_json(value, "runtime event is_loading")
+  })
+  let state = match state_json {
     None => None
     Some(value) =>
       Some(
@@ -261,74 +283,53 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
         },
       )
   }
-  let request_id = match object.get("request_id") {
-    None => None
-    Some(value) => Some(decode_int64_json(value, "runtime event request id"))
-  }
-  let url = match object.get("url") {
-    None => None
-    Some(value) => Some(decode_string_json(value, "runtime event URL"))
-  }
-  let http_method = match object.get("method") {
-    None => None
-    Some(value) => Some(decode_string_json(value, "runtime event method"))
-  }
-  let user_gesture = match object.get("user_gesture") {
-    None => None
-    Some(value) => Some(decode_bool_json(value, "runtime event user gesture"))
-  }
-  let redirect = match object.get("redirect") {
-    None => None
-    Some(value) => Some(decode_bool_json(value, "runtime event redirect"))
-  }
-  let disposition = match object.get("disposition") {
-    None => None
-    Some(value) => Some(decode_int_json(value, "runtime event disposition"))
-  }
-  let download_id = match object.get("download_id") {
-    None => None
-    Some(value) => Some(decode_int_json(value, "runtime event download id"))
-  }
-  let suggested_name = match object.get("suggested_name") {
-    None => None
-    Some(value) =>
-      Some(decode_string_json(value, "runtime event suggested name"))
-  }
-  let download_state = match object.get("download_state") {
-    None => None
-    Some(value) =>
-      Some(decode_string_json(value, "runtime event download state"))
-  }
-  let received_bytes = match object.get("received_bytes") {
-    None => None
-    Some(value) =>
-      Some(decode_int64_json(value, "runtime event received bytes"))
-  }
-  let total_bytes = match object.get("total_bytes") {
-    None => None
-    Some(value) => Some(decode_int64_json(value, "runtime event total bytes"))
-  }
-  let percent = match object.get("percent") {
-    None => None
-    Some(value) => Some(decode_int_json(value, "runtime event percent"))
-  }
-  let error_code = match object.get("error") {
-    None => None
-    Some(value) => Some(decode_int_json(value, "runtime event error code"))
-  }
-  let permissions = match object.get("permissions") {
-    None => None
-    Some(value) => Some(decode_int_json(value, "runtime event permissions"))
-  }
-  let menu_command_id = match object.get("command_id") {
-    None => None
-    Some(value) => Some(decode_string_json(value, "runtime event command id"))
-  }
-  let revision = match object.get("revision") {
-    None => None
-    Some(value) => Some(decode_int64_json(value, "runtime event revision"))
-  }
-  let items = match object.get("items") {
+  let request_id = request_id_json.map(value => {
+    decode_int64_json(value, "runtime event request id")
+  })
+  let url = url_json.map(value => decode_string_json(value, "runtime event URL"))
+  let http_method = method_json.map(value => {
+    decode_string_json(value, "runtime event method")
+  })
+  let user_gesture = user_gesture_json.map(value => {
+    decode_bool_json(value, "runtime event user gesture")
+  })
+  let redirect = redirect_json.map(value => {
+    decode_bool_json(value, "runtime event redirect")
+  })
+  let disposition = disposition_json.map(value => {
+    decode_int_json(value, "runtime event disposition")
+  })
+  let download_id = download_id_json.map(value => {
+    decode_int_json(value, "runtime event download id")
+  })
+  let suggested_name = suggested_name_json.map(value => {
+    decode_string_json(value, "runtime event suggested name")
+  })
+  let download_state = download_state_json.map(value => {
+    decode_string_json(value, "runtime event download state")
+  })
+  let received_bytes = received_bytes_json.map(value => {
+    decode_int64_json(value, "runtime event received bytes")
+  })
+  let total_bytes = total_bytes_json.map(value => {
+    decode_int64_json(value, "runtime event total bytes")
+  })
+  let percent = percent_json.map(value => {
+    decode_int_json(value, "runtime event percent")
+  })
+  let error_code = error_json.map(value => {
+    decode_int_json(value, "runtime event error code")
+  })
+  let permissions = permissions_json.map(value => {
+    decode_int_json(value, "runtime event permissions")
+  })
+  let menu_command_id = command_id_json.map(value => {
+    decode_string_json(value, "runtime event command id")
+  })
+  let revision = revision_json.map(value => {
+    decode_int64_json(value, "runtime event revision")
+  })
+  let items = match items_json {
     None => []
     Some(Array(values)) => {
       let items : Array[String] = []
@@ -343,7 +344,7 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
         message="expected string array",
       )
   }
-  let ok = match object.get("ok") {
+  let ok = match ok_json {
     None => None
     Some(True) => Some(true)
     Some(False) => Some(false)
@@ -353,10 +354,9 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
         message="expected boolean",
       )
   }
-  let message = match object.get("message") {
-    None => None
-    Some(value) => Some(decode_string_json(value, "runtime event message"))
-  }
+  let message = message_json.map(value => {
+    decode_string_json(value, "runtime event message")
+  })
   RuntimeEvent::{
     event_type,
     window,
@@ -406,29 +406,28 @@ fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError 
       raise InvalidPayload(context="bridge request", message="expected object")
   }
   decode_optional_abi_version(object, "bridge request")
-  let request_id_json = match object.get("request_id") {
-    Some(value) => value
-    None =>
-      raise InvalidPayload(
-        context="bridge request",
-        message="missing request_id",
-      )
+  guard object is { "request_id": request_id_json, .. } else {
+    raise InvalidPayload(context="bridge request", message="missing request_id")
   }
-  let window_json = match object.get("window") {
-    Some(value) => value
-    None =>
-      raise InvalidPayload(context="bridge request", message="missing window")
+  guard object is { "window": window_json, .. } else {
+    raise InvalidPayload(context="bridge request", message="missing window")
   }
-  let op_json = match object.get("op") {
-    Some(value) => value
-    None => raise InvalidPayload(context="bridge request", message="missing op")
+  guard object is { "op": op_json, .. } else {
+    raise InvalidPayload(context="bridge request", message="missing op")
   }
-  let payload = object.get("payload").unwrap_or(Json::empty_object())
-  let page_instance = match object.get("page_instance") {
+  guard object
+    is {
+      "payload"? : payload_json,
+      "page_instance"? : page_instance_json,
+      "source_origin"? : source_origin_json,
+      ..
+    }
+  let payload = payload_json.unwrap_or(Json::empty_object())
+  let page_instance = match page_instance_json {
     Some(String(value)) => Some(value)
     _ => None
   }
-  let source_origin = match object.get("source_origin") {
+  let source_origin = match source_origin_json {
     Some(value) => decode_string_json(value, "bridge request source_origin")
     None =>
       raise InvalidPayload(
@@ -1024,7 +1023,7 @@ pub fn Window::browser_command(
   command : String,
   download_id? : Int,
 ) -> Unit raise NativeError {
-  let fields : Map[String, Json] = { "command": Json::string(command) }
+  let fields : Map[String, Json] = { "command": command }
   match download_id {
     Some(download_id) =>
       fields["download_id"] = Json::number(
@@ -1049,11 +1048,11 @@ pub fn Window::respond_browser_request(
   path? : String,
 ) -> Unit raise NativeError {
   let fields : Map[String, Json] = {
-    "request_id": Json::string(request_id.to_string()),
-    "action": Json::string(action),
+    "request_id": request_id.to_string(),
+    "action": action,
   }
   match path {
-    Some(path) => fields["path"] = Json::string(path)
+    Some(path) => fields["path"] = Json(path)
     None => ()
   }
   check_status(
@@ -1515,7 +1514,7 @@ pub fn View::browser_command(
   command : String,
   download_id? : Int,
 ) -> Unit raise NativeError {
-  let fields : Map[String, Json] = { "command": Json::string(command) }
+  let fields : Map[String, Json] = { "command": command }
   match download_id {
     Some(download_id) =>
       fields["download_id"] = Json::number(

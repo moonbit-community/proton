@@ -235,9 +235,9 @@ fn forward_menu_command(
   command_id : String,
   focused_window : Int64?,
 ) -> Unit raise AppRunError {
-  let fields : Map[String, Json] = { "command_id": Json::string(command_id) }
+  let fields : Map[String, Json] = { "command_id": command_id }
   match focused_window {
-    Some(window) => fields["window"] = Json::string(window.to_string())
+    Some(window) => fields["window"] = Json(window.to_string())
     None => ()
   }
   window.emit_bridge_event_json(
@@ -263,16 +263,16 @@ fn bridge_event_json(
 ) -> String {
   let fields : Map[String, Json] = {
     "abi_version": Json::number(1),
-    "kind": Json::string(kind),
-    "name": Json::string(name),
+    "kind": kind,
+    "name": name,
     "payload": payload,
   }
   match extension {
-    Some(value) => fields["extension"] = Json::string(value)
+    Some(value) => fields["extension"] = Json(value)
     None => ()
   }
   match page_instance {
-    Some(value) => fields["page_instance"] = Json::string(value)
+    Some(value) => fields["page_instance"] = Json(value)
     None => ()
   }
   Json::object(fields).stringify()
