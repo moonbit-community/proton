@@ -366,6 +366,7 @@ static int32_t g_app_entry_wakeup_delay_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_wakeup_status = PROTON_ERR_NOT_INITIALIZED;
 static int g_app_entry_first_wakeup = 0;
 static int g_app_entry_second_wakeup = 0;
+static int32_t g_app_entry_menu_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_window_create_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_window_show_status = PROTON_ERR_NOT_INITIALIZED;
 static int32_t g_app_entry_close_interception_status =
@@ -629,6 +630,13 @@ static void smoke_app_entry(void) {
     } else {
       g_app_entry_wakeup_status = PROTON_ERR_PLATFORM;
     }
+#endif
+#if defined(__linux__)
+    g_app_entry_menu_status = proton_runtime_set_menu_json(
+        runtime,
+        "{\"abi_version\":1,\"menus\":[{\"label\":\"Smoke\","
+        "\"items\":[{\"kind\":\"command\",\"id\":\"smoke.command\","
+        "\"label\":\"Smoke Command\",\"key\":\"s\"}]}]}");
 #endif
     proton_window_id_t window = PROTON_INVALID_HANDLE;
     g_app_entry_window_create_status = proton_window_create_json(
@@ -2015,6 +2023,12 @@ int main(int argc, char **argv) {
     if (!g_app_entry_first_wakeup || !g_app_entry_second_wakeup) {
       return fail("app_run wakeup source lost a consecutive notification");
     }
+#if defined(__linux__)
+    if (expect_status("app_run native menu", g_app_entry_menu_status,
+                      PROTON_OK)) {
+      return 1;
+    }
+#endif
     if (expect_status("app_run window create",
                       g_app_entry_window_create_status, PROTON_OK) ||
         expect_status("app_run window show", g_app_entry_window_show_status,
