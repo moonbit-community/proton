@@ -13,12 +13,20 @@ fn write_test_project(path : String) -> String {
   let root = @path.Path(path).resolve().to_string()
   ensure_test_dir(root)
   @mbfs.write_string_to_file(
-    @fsutil.path_join(root, "moon.proton"),
+    @fsutil.path_join(root, "proton.project.json"),
     (
-      #|product_name = "Doctor Test"
-      #|window = { title: "Doctor Test", width: 800, height: 600 }
-      #|entry = { kind: "html", value: "<h1>Doctor Test</h1>" }
-      #|
+      #|{
+      #|  "product_name": "Doctor Test",
+      #|  "window": {
+      #|    "title": "Doctor Test",
+      #|    "width": 800,
+      #|    "height": 600
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<h1>Doctor Test</h1>"
+      #|  }
+      #|}
     ),
     encoding="utf8",
   ) catch {
@@ -28,7 +36,7 @@ fn write_test_project(path : String) -> String {
 }
 
 ///|
-async test "doctor discovers moon.proton from a nested directory" {
+async test "doctor discovers proton.project.json from a nested directory" {
   let root = write_test_project("target/proton-doctor-project")
   let nested = @fsutil.path_join(root, "nested")
   @mbfs.create_dir(nested) catch {
@@ -37,7 +45,10 @@ async test "doctor discovers moon.proton from a nested directory" {
   match discover_project(nested) {
     Some(project) => {
       assert_eq(project.root, root)
-      assert_eq(project.config_path, @fsutil.path_join(root, "moon.proton"))
+      assert_eq(
+        project.config_path,
+        @fsutil.path_join(root, "proton.project.json"),
+      )
     }
     None => fail("expected a Proton project")
   }

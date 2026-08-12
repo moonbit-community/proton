@@ -9,7 +9,7 @@ fn windows_test_plan(
     workspace_root: root,
     build_target_dir: @fsutil.resolve_path(root, "package-build"),
     app_package: "app",
-    config_path: @fsutil.resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -54,7 +54,7 @@ async fn write_windows_test_file(path : String, text : String) -> Unit {
 async fn prepare_windows_test_inputs(root : String) -> (String, String) {
   remove_tree(root)
   let executable = @fsutil.resolve_path(root, "build output/demo.exe")
-  let config = @fsutil.resolve_path(root, "moon.proton")
+  let config = @fsutil.resolve_path(root, "proton.project.json")
   for
     item in [
       (executable, "exe"),
@@ -290,8 +290,8 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
   for
     required in [
       "demo-app.exe", "proton.dll", "cef_process.exe", "libcef.dll", "icudtl.dat",
-      "Resources/icudtl.dat", "Resources/locales/en-US.pak", "moon.proton", "frontend/dist/index.html",
-      "bundle resources/data.txt", "proton-package.json",
+      "Resources/icudtl.dat", "Resources/locales/en-US.pak", "proton.project.json",
+      "frontend/dist/index.html", "bundle resources/data.txt", "proton-package.json",
     ] {
     assert_true(@mbfs.path_exists(@fsutil.resolve_path(output, required)))
   }

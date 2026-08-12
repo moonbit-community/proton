@@ -95,7 +95,7 @@ pub fn[Payload] event(name : String) -> Event[Payload] {
 ///|
 /// Creates the identity shared by an extension's command and event descriptors.
 ///
-/// Extension packages normally expose a value generated from `moon.ext`
+/// Extension packages normally expose a value generated from `proton.ext.json`
 /// instead of calling this constructor by hand.
 pub fn extension(id~ : String, js_namespace~ : String) -> ExtensionContract {
   ExtensionContract::{ id, js_namespace }

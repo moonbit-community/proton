@@ -51,14 +51,14 @@ the project root.
 
 ## Application entry
 
-Generated projects explicitly load `moon.proton` with `@proton.config(...)`
+Generated projects explicitly load `proton.project.json` with `@proton.config(...)`
 and register their typed commands in `backend/app/main.mbt`:
 
 ```moonbit
 fn main {
   @proton.run(() => {
     let backend = @todo.Backend::new()
-    @proton.config("moon.proton")
+    @proton.config("proton.project.json")
     .commands(fn(registrar) raise { backend.register_commands(registrar) })
     .run_or_abort()
   })
@@ -99,16 +99,18 @@ renderer capability requires a grant for one window, one trusted source, and
 one extension. Missing grants are denied.
 
 Commands registered directly with `.commands(...)` belong to the `app`
-permission id. Generated projects declare that grant in `moon.proton`:
+permission id. Generated projects declare that grant in `proton.project.json`:
 
-```moonbit
-permissions = [
-  {
-    window: "main",
-    origin: "entry",
-    extension: "app",
-  },
-]
+```json
+{
+  "permissions": [
+    {
+      "window": "main",
+      "origin": "entry",
+      "extension": "app"
+    }
+  ]
+}
 ```
 
 `origin: "app"` names bundled `proton://app` content. `origin: "entry"` follows
@@ -138,18 +140,20 @@ The renderer cannot select or widen these roots. Proton matches the trusted
 frame origin in native code, rechecks the grant during MoonBit dispatch, and
 the filesystem extension validates the canonical target before each operation.
 Relative filesystem roots and request paths are anchored to the directory
-containing `moon.proton`; apps configured entirely in MoonBit use the working
+containing `proton.project.json`; apps configured entirely in MoonBit use the working
 directory captured during startup.
 
 On macOS and Windows, web content can extend beneath the native titlebar while
-retaining the system window controls. Set `titlebar_style` in `moon.proton`:
+retaining the system window controls. Set `titlebar_style` in `proton.project.json`:
 
-```moonbit
-window = {
-  title: "My App",
-  width: 900,
-  height: 700,
-  titlebar_style: "overlay",
+```json
+{
+  "window": {
+    "title": "My App",
+    "width": 900,
+    "height": 700,
+    "titlebar_style": "overlay"
+  }
 }
 ```
 
@@ -269,9 +273,11 @@ See `examples/52_web_contents_view`.
 Enable operating-system single-instance routing with a stable application
 identifier:
 
-```moonbit
-identifier = "com.example.my-app"
-single_instance = true
+```json
+{
+  "identifier": "com.example.my-app",
+  "single_instance": true
+}
 ```
 
 When another process starts, Proton forwards its protocol URLs and document
@@ -280,7 +286,7 @@ process restores and focuses its application window before delivering the typed
 activation:
 
 ```moonbit
-@proton.config("moon.proton")
+@proton.config("proton.project.json")
 .on_launch_input(async fn(input) noraise {
   match input {
     OpenUrls(urls) => ...
@@ -307,7 +313,7 @@ Code-driven applications can run with CEF off-screen rendering and no native
 top-level window:
 
 ```moonbit
-@proton.config("moon.proton")
+@proton.config("proton.project.json")
 .headless()
 .run_or_abort()
 ```
@@ -320,25 +326,25 @@ X11 display; use Xvfb in display-less CI jobs.
 
 ## Frontend projects
 
-Generated projects describe their toolchain in `moon.proton`:
+Generated projects describe their toolchain in `proton.project.json`:
 
-```moonbit
-backend = {
-  path: "backend",
-  package: "app",
-}
-
-frontend = {
-  path: "frontend",
-  dev_url: "http://127.0.0.1:4300",
-  before_dev: "warren dev --port 4300",
-  before_build: "warren build",
-  dist: "dist",
-}
-
-entry = {
-  kind: "asset",
-  value: "frontend/dist/index.html",
+```json
+{
+  "backend": {
+    "path": "backend",
+    "package": "app"
+  },
+  "frontend": {
+    "path": "frontend",
+    "dev_url": "http://127.0.0.1:4300",
+    "before_dev": "warren dev --port 4300",
+    "before_build": "warren build",
+    "dist": "dist"
+  },
+  "entry": {
+    "kind": "asset",
+    "value": "frontend/dist/index.html"
+  }
 }
 ```
 
@@ -391,34 +397,35 @@ MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 
 ## Bundle and package
 
-The `bundle` block in `moon.proton` enables package creation and selects its
+The `bundle` block in `proton.project.json` enables package creation and selects its
 default targets and output directory:
 
-```moonbit
-single_instance = true
-
-bundle = {
-  active: true,
-  targets: ["app", "zip"],
-  resources: ["helpers/worker"],
-  sign: {
-    binaries: ["helpers/worker"],
-  },
-  url_schemes: ["my-app"],
-  document_types: [
-    {
-      name: "Text document",
-      extensions: ["txt", "md"],
-      role: "Editor",
+```json
+{
+  "single_instance": true,
+  "bundle": {
+    "active": true,
+    "targets": ["app", "zip"],
+    "resources": ["helpers/worker"],
+    "sign": {
+      "binaries": ["helpers/worker"]
     },
-  ],
-  output: "target/proton-dist",
+    "url_schemes": ["my-app"],
+    "document_types": [
+      {
+        "name": "Text document",
+        "extensions": ["txt", "md"],
+        "role": "Editor"
+      }
+    ],
+    "output": "target/proton-dist"
+  }
 }
 ```
 
 `bundle.resources` copies project files into the package. `bundle.sign.binaries`
 does not copy anything; it names resource files that `proton_cli` must sign.
-Both arrays use paths relative to the directory containing `moon.proton`. For
+Both arrays use paths relative to the directory containing `proton.project.json`. For
 the example above, the signing target is
 `My App.app/Contents/Resources/helpers/worker` on macOS and
 `My App/helpers/worker` in a Windows portable package. Use the platform's actual
@@ -438,7 +445,7 @@ The package command performs a debug build by default. Pass `--release` to use
 MoonBit's release build mode, or `--no-build` to reuse an existing build from
 the selected mode. Package output is written to `target/proton-dist` by default.
 Icons, resources, output targets, signing, notarization, custom URL schemes, and
-macOS document types are configured through `moon.proton` and package command
+macOS document types are configured through `proton.project.json` and package command
 options.
 
 The `dmg` target is available on macOS. It creates a compressed disk image

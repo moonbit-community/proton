@@ -16,57 +16,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       ),
     },
     {
-      output_path: "moon.proton",
-      template_name: "moon.proton.mtpl",
-      template_source: (
-          #|product_name = {{title_mbt}}
-          #|identifier = {{identifier_mbt}}
-          #|single_instance = true
-          #|
-          #|window = {
-          #|  title: {{title_mbt}},
-          #|  width: {{width}},
-          #|  height: {{height}},
-          #|  size_hint: "none",
-          #|}
-          #|
-          #|backend = {
-          #|  path: "backend",
-          #|  package: "app",
-          #|}
-          #|
-          #|frontend = {
-          #|  path: "frontend",
-          #|  dev_url: "http://127.0.0.1:4300",
-          #|  before_dev: "warren dev --port 4300",
-          #|  before_build: "warren build",
-          #|  dist: "dist",
-          #|}
-          #|
-          #|entry = {
-          #|  kind: "asset",
-          #|  value: "frontend/dist/index.html",
-          #|}
-          #|
-          #|permissions = [
-          #|  {
-          #|    window: "main",
-          #|    origin: "entry",
-          #|    extension: "app",
-          #|  },
-          #|]
-          #|
-          #|debug = true
-          #|
-          #|bundle = {
-          #|  active: true,
-          #|  targets: ["app", "zip"],
-          #|  output: "target/proton-dist",
-          #|}
-          #|
-      ),
-    },
-    {
       output_path: "shared/moon.mod",
       template_name: "shared/moon.mod.mtpl",
       template_source: (
@@ -612,7 +561,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|fn main {
           #|  @proton.run(() => {
           #|    let backend = @todo.Backend::new()
-          #|    @proton.config("moon.proton")
+          #|    @proton.config("proton.project.json")
           #|    .commands(fn(registrar) raise { backend.register_commands(registrar) })
           #|    .run_or_abort()
           #|  })
@@ -830,13 +779,15 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|## Bundle
           #|
-          #|The `bundle` block in `moon.proton` controls package creation:
+          #|The `bundle` block in `proton.project.json` controls package creation:
           #|
-          #|```moonbit
-          #|bundle = {
-          #|  active: true,
-          #|  targets: ["app", "zip"],
-          #|  output: "target/proton-dist",
+          #|```json
+          #|{
+          #|  "bundle": {
+          #|    "active": true,
+          #|    "targets": ["app", "zip"],
+          #|    "output": "target/proton-dist"
+          #|  }
           #|}
           #|```
           #|

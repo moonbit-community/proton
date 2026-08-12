@@ -218,11 +218,12 @@ test "file plan contains the exact isomorphic scaffold" {
   assert_eq(files.length(), 20)
   for
     path in [
-      "AGENTS.md", "README.md", ".gitignore", "moon.work", "moon.proton", "shared/moon.mod",
-      "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod", "frontend/main/moon.pkg",
-      "frontend/main/main.mbt", "frontend/public/index.html", "frontend/public/styles.css",
-      "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt", "backend/todo/moon.pkg",
-      "backend/todo/backend.mbt", "backend/todo/commands.mbt", "backend/todo/commands.g.mbt",
+      "AGENTS.md", "README.md", ".gitignore", "moon.work", "proton.project.json",
+      "shared/moon.mod", "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod",
+      "frontend/main/moon.pkg", "frontend/main/main.mbt", "frontend/public/index.html",
+      "frontend/public/styles.css", "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt",
+      "backend/todo/moon.pkg", "backend/todo/backend.mbt", "backend/todo/commands.mbt",
+      "backend/todo/commands.g.mbt",
     ] {
     guard find_planned_file(files, path) is Some(_) else {
       abort("missing planned file: " + path)
@@ -300,25 +301,36 @@ test "templates receive final author title and size" {
   guard find_planned_file(files, "backend/app/main.mbt") is Some(main_mbt) else {
     abort("missing backend/app/main.mbt")
   }
-  assert_true(main_mbt.contains("@proton.config(\"moon.proton\")"))
+  assert_true(main_mbt.contains("@proton.config(\"proton.project.json\")"))
   assert_true(main_mbt.contains("backend.register_commands(registrar)"))
-  guard find_planned_file(files, "moon.proton") is Some(config) else {
-    abort("missing moon.proton")
+  guard find_planned_file(files, "proton.project.json") is Some(config) else {
+    abort("missing proton.project.json")
   }
-  assert_true(config.contains("product_name = \"Demo App\""))
-  assert_true(config.contains("identifier = \"com.justjavac.demo\""))
-  assert_true(config.contains("title: \"Demo App\""))
-  assert_true(config.contains("width: 1000"))
-  assert_true(config.contains("height: 700"))
-  assert_true(config.contains("path: \"backend\""))
-  assert_true(config.contains("package: \"app\""))
-  assert_true(config.contains("path: \"frontend\""))
-  assert_true(config.contains("before_dev: \"warren dev --port 4300\""))
-  assert_true(config.contains("value: \"frontend/dist/index.html\""))
-  assert_true(config.contains("bundle = {"))
-  assert_true(config.contains("active: true"))
-  assert_true(config.contains("targets: [\"app\", \"zip\"]"))
-  assert_true(config.contains("output: \"target/proton-dist\""))
+  let config_json = @json.parse(config) catch {
+    error => abort(error.to_string())
+  }
+  guard config_json
+    is {
+      "product_name": "Demo App",
+      "identifier": "com.justjavac.demo",
+      "window": { "title": "Demo App", "width": 1000, "height": 700, .. },
+      "backend": { "path": "backend", "package": "app", .. },
+      "frontend": {
+        "path": "frontend",
+        "before_dev": "warren dev --port 4300",
+        ..
+      },
+      "entry": { "value": "frontend/dist/index.html", .. },
+      "bundle": {
+        "active": true,
+        "targets": ["app", "zip"],
+        "output": "target/proton-dist",
+        ..
+      },
+      ..
+    } else {
+    abort("unexpected generated proton.project.json")
+  }
   guard find_planned_file(files, "README.md") is Some(readme) else {
     abort("missing README.md")
   }
@@ -342,10 +354,15 @@ test "user title can contain template braces" {
   let files = must_plan(
     must_options(["demo", "--title", "A {{ Demo }}", "--author", "braces"]),
   )
-  guard find_planned_file(files, "moon.proton") is Some(config) else {
-    abort("missing moon.proton")
+  guard find_planned_file(files, "proton.project.json") is Some(config) else {
+    abort("missing proton.project.json")
   }
-  assert_true(config.contains("product_name = \"A {{ Demo }}\""))
+  let config_json = @json.parse(config) catch {
+    error => abort(error.to_string())
+  }
+  guard config_json is { "product_name": "A {{ Demo }}", .. } else {
+    abort("generated title did not preserve template braces")
+  }
 }
 
 ///|

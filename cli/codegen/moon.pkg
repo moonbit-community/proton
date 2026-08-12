@@ -4,11 +4,9 @@ import {
   "moonbitlang/core/list",
   "moonbitlang/core/string",
   "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/lexer/basic",
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/syntax",
-  "moonbit-community/proton_config",
 }
 
 warnings = "-29"

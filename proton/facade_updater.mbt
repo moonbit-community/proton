@@ -16,7 +16,7 @@ let update_check_delay_ms : Int = 20 * 1000
 let update_check_jitter_ms : Int = 40 * 1000
 
 ///|
-/// The channel this process resolved from `moon.proton`, once it is running.
+/// The channel this process resolved from `proton.project.json`, once it is running.
 ///
 /// Process-global because the update channel is a property of the installed
 /// application, not of a window or a request. The renderer-facing extension
@@ -138,7 +138,7 @@ pub fn PendingUpdate::restart(_self : PendingUpdate) -> Unit raise {
 }
 
 ///|
-/// Builds the channel described by `moon.proton`.
+/// Builds the channel described by `proton.project.json`.
 fn ResolvedUpdateChannel::open(
   self : ResolvedUpdateChannel,
 ) -> @updater.UpdateChannel raise {
@@ -224,7 +224,7 @@ fn cleanup_previous_update() -> Unit {
 /// Whether launching should contact the update endpoint.
 ///
 /// An application that registered no handler is not asked to, even when
-/// `moon.proton` declares a channel. Contacting a server on every launch is a
+/// `proton.project.json` declares a channel. Contacting a server on every launch is a
 /// privacy decision, and one that nothing in the application is prepared to act
 /// on is a request made on a user's behalf for no reason.
 fn checks_on_launch(channel : ResolvedUpdateChannel, handlers : Int) -> Bool {

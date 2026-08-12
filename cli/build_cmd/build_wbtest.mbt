@@ -42,17 +42,29 @@ fn write_build_test_file(path : String, text : String) -> Unit {
 
 ///|
 let valid_build_config =
-  #|window = {
-  #|  title: "Build Test",
-  #|  width: 320,
-  #|  height: 240,
+  #|{
+  #|  "window": {
+  #|    "title": "Build Test",
+  #|    "width": 320,
+  #|    "height": 240
+  #|  },
+  #|  "entry": {
+  #|    "kind": "asset",
+  #|    "value": "frontend/dist/index.html"
+  #|  }
   #|}
-  #|
-  #|entry = {
-  #|  kind: "asset",
-  #|  value: "frontend/dist/index.html",
-  #|}
-  #|
+
+///|
+fn build_config_with(key : String, value : Json) -> String {
+  let config = @json.parse(valid_build_config) catch {
+    error => abort(error.to_string())
+  }
+  guard config is Object(fields) else {
+    abort("expected project config object")
+  }
+  fields[key] = value
+  Json::object(fields).stringify(indent=2) + "\n"
+}
 
 ///|
 test "parse build args defaults and moon args" {
@@ -79,10 +91,10 @@ test "moon build options require the separator" {
 ///|
 test "parse build args package and config" {
   let raw = parse_build_args([
-    "--package", "desktop", "--config", "config/moon.proton", "--no-frontend",
+    "--package", "desktop", "--config", "config/proton.project.json", "--no-frontend",
   ])
   @debug.assert_eq(raw.app_package, Some("desktop"))
-  @debug.assert_eq(raw.config_path, Some("config/moon.proton"))
+  @debug.assert_eq(raw.config_path, Some("config/proton.project.json"))
   @debug.assert_eq(raw.run_frontend_build, false)
 }
 
@@ -169,20 +181,20 @@ async test "backend path supports nested directories with spaces" {
 }
 
 ///|
-async test "build config discovery prefers package-local moon.proton" {
+async test "build config discovery prefers package-local proton.project.json" {
   let root = "target/proton-build-package-config"
   ensure_build_test_dir(root)
   ensure_build_test_dir(@fsutil.path_join(root, "desktop"))
   let package_config = @fsutil.path_join(
     @fsutil.path_join(root, "desktop"),
-    "moon.proton",
+    "proton.project.json",
   )
   write_build_test_file(package_config, "")
   let raw = parse_build_args(["--package", "desktop"])
   let resolved = resolve_build_config_path(root, root, raw)
   @debug.assert_eq(
     resolved,
-    Some(@fsutil.resolve_path(root, "desktop/moon.proton")),
+    Some(@fsutil.resolve_path(root, "desktop/proton.project.json")),
   )
 }
 
@@ -203,15 +215,15 @@ async test "resolve path accepts Windows backslash relative input" {
 async test "project config validation rejects unknown top-level fields" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "unknown.moon.proton")
-  write_build_test_file(path, valid_build_config + "\nlegacy_runtime = true\n")
+  let path = @fsutil.path_join(dir, "unknown.proton.project.json")
+  write_build_test_file(path, build_config_with("legacy_runtime", true))
   let error = expect_build_config_error(() => read_project_config(path))
   assert_eq(
     error,
     BuildConfigError::Invalid(
       path~,
       error=@proton_config.ProjectConfigError::UnknownField(
-        path="moon.proton.legacy_runtime",
+        path="proton.project.json.legacy_runtime",
       ),
     ),
   )
@@ -221,15 +233,16 @@ async test "project config validation rejects unknown top-level fields" {
 async test "project config validation requires window" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "missing-window.moon.proton")
+  let path = @fsutil.path_join(dir, "missing-window.proton.project.json")
   write_build_test_file(
     path,
     (
-      #|entry = {
-      #|  kind: "asset",
-      #|  value: "frontend/dist/index.html",
+      #|{
+      #|  "entry": {
+      #|    "kind": "asset",
+      #|    "value": "frontend/dist/index.html"
+      #|  }
       #|}
-      #|
     ),
   )
   let error = expect_build_config_error(() => read_project_config(path))
@@ -238,7 +251,7 @@ async test "project config validation requires window" {
     BuildConfigError::Invalid(
       path~,
       error=@proton_config.ProjectConfigError::MissingField(
-        path="moon.proton.window",
+        path="proton.project.json.window",
       ),
     ),
   )
@@ -248,22 +261,22 @@ async test "project config validation requires window" {
 async test "project config validation rejects unsupported size_hint" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "bad-size-hint.moon.proton")
+  let path = @fsutil.path_join(dir, "bad-size-hint.proton.project.json")
   write_build_test_file(
     path,
     (
-      #|window = {
-      #|  title: "Build Test",
-      #|  width: 320,
-      #|  height: 240,
-      #|  size_hint: "stretch",
+      #|{
+      #|  "window": {
+      #|    "title": "Build Test",
+      #|    "width": 320,
+      #|    "height": 240,
+      #|    "size_hint": "stretch"
+      #|  },
+      #|  "entry": {
+      #|    "kind": "asset",
+      #|    "value": "frontend/dist/index.html"
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "asset",
-      #|  value: "frontend/dist/index.html",
-      #|}
-      #|
     ),
   )
   let error = expect_build_config_error(() => read_project_config(path))
@@ -283,18 +296,8 @@ async test "project config validation rejects unsupported size_hint" {
 async test "project config parsing keeps active bundle metadata out of build validation" {
   let dir = "target/proton-build-config"
   ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "active-bundle.moon.proton")
-  write_build_test_file(
-    path,
-    valid_build_config +
-    (
-      #|
-      #|bundle = {
-      #|  active: true,
-      #|}
-      #|
-    ),
-  )
+  let path = @fsutil.path_join(dir, "active-bundle.proton.project.json")
+  write_build_test_file(path, build_config_with("bundle", { "active": true }))
   ignore(read_project_config(path))
 }
 

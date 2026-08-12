@@ -119,7 +119,7 @@ function verifyGeneratedTree() {
     "frontend/moon.mod",
     "frontend/public/index.html",
     "frontend/public/styles.css",
-    "moon.proton",
+    "proton.project.json",
     "moon.work",
     "shared/moon.mod",
     "shared/moon.pkg",

@@ -130,7 +130,7 @@ pub fn ExtensionDescriptor::moonbit_import_path(
 }
 
 ///|
-/// Returns the npm-style package name declared by `moon.ext.package`, if any.
+/// Returns the npm-style package name declared by `proton.ext.json.package`, if any.
 pub fn ExtensionDescriptor::publish_package(
   self : ExtensionDescriptor,
 ) -> String? {
@@ -171,7 +171,7 @@ pub fn ExtensionDescriptor::metadata_path(self : ExtensionDescriptor) -> String 
     Some(path) => return path
     None => ()
   }
-  path_join(self.root_dir, "moon.ext")
+  path_join(self.root_dir, "proton.ext.json")
 }
 
 ///|
@@ -182,10 +182,10 @@ pub fn load_extension_descriptor_from_file(
   path : String,
 ) -> ExtensionDescriptor raise ExtensionDescriptorError {
   let normalized_path = normalize_path_string(path)
-  guard normalized_path.has_suffix("moon.ext") else {
+  guard normalized_path.has_suffix("proton.ext.json") else {
     raise InvalidMetadataFile(path=normalized_path)
   }
-  decode_moon_ext_descriptor(read_text_file(normalized_path), normalized_path)
+  decode_proton_ext_descriptor(read_text_file(normalized_path), normalized_path)
 }
 
 ///|
@@ -197,18 +197,17 @@ fn read_text_file(path : String) -> String raise ExtensionDescriptorError {
 }
 
 ///|
-/// Converts one `moon.ext` text document into the typed descriptor.
-fn decode_moon_ext_descriptor(
+/// Converts one `proton.ext.json` document into the typed descriptor.
+fn decode_proton_ext_descriptor(
   text : String,
   path : String,
 ) -> ExtensionDescriptor raise ExtensionDescriptorError {
-  let (ast, reports) = @proton_config.parse_moon_ext(name=path, text)
-  if reports.length() > 0 {
-    raise Syntax(path~, diagnostics=render_config_reports(reports))
+  let json = @json.parse(text) catch {
+    error => raise Syntax(path~, diagnostics=error.to_string())
   }
-  match ast {
-    Obj(fields, _) =>
-      decode_moon_ext_fields(fields, path) catch {
+  match json {
+    Object(fields) =>
+      decode_proton_ext_fields(fields, path) catch {
         error => raise InvalidMetadata(path~, error~)
       }
     _ => raise InvalidRoot(path~)
@@ -216,59 +215,61 @@ fn decode_moon_ext_descriptor(
 }
 
 ///|
-fn decode_moon_ext_fields(
-  fields : Array[@proton_config.ConfigField],
+fn decode_proton_ext_fields(
+  fields : Map[String, Json],
   path : String,
 ) -> ExtensionDescriptor raise ExtensionMetadataError {
-  validate_moon_ext_fields(fields)
-  let id = moon_ext_required_string(fields, "id")
-  let js_namespace = moon_ext_required_string(fields, "namespace")
+  validate_proton_ext_fields(fields)
+  let id = proton_ext_required_string(fields, "id")
+  let js_namespace = proton_ext_required_string(fields, "namespace")
   let root_dir = path_dirname(path)
-  validate_moon_ext_namespace(js_namespace)
-  let moon_mod_metadata = read_nearest_moon_mod_metadata(root_dir)
-  let version = moon_ext_optional_string(
+  validate_proton_ext_namespace(js_namespace)
+  let moon_mod_metadata = @proton_config.read_nearest_moon_mod_metadata(
+    root_dir,
+  )
+  let version = proton_ext_optional_string(
     fields,
     "version",
     moon_mod_metadata.version.unwrap_or("0.1.0"),
   )
-  let display_name = moon_ext_optional_string(fields, "display_name", id)
-  let description = moon_ext_optional_string(
+  let display_name = proton_ext_optional_string(fields, "display_name", id)
+  let description = proton_ext_optional_string(
     fields,
     "description",
     moon_mod_metadata.description.unwrap_or(""),
   )
-  let license = moon_ext_optional_string_option(
+  let license = proton_ext_optional_string_option(
     fields,
     "license",
     moon_mod_metadata.license,
   )
-  let repository = moon_ext_optional_string_option(
+  let repository = proton_ext_optional_string_option(
     fields,
     "repository",
     moon_mod_metadata.repository,
   )
-  let readme = moon_ext_optional_string_option(
+  let readme = proton_ext_optional_string_option(
     fields,
     "readme",
     moon_mod_metadata.readme,
   )
-  let keywords = moon_ext_optional_string_array(
+  let keywords = proton_ext_optional_string_array(
     fields,
     "keywords",
     moon_mod_metadata.keywords,
   )
-  validate_moon_ext_keywords(keywords)
+  validate_proton_ext_keywords(keywords)
   let moonbit_import_path = infer_moonbit_import_path(path)
-  let publish_package = moon_ext_optional_string_value(fields, "package")
+  let publish_package = proton_ext_optional_string_value(fields, "package")
   match publish_package {
     Some(package_name) => validate_npm_package_name(package_name)
     None => ()
   }
   validate_moonbit_import_path(moonbit_import_path)
-  let platforms = moon_ext_optional_string_array(fields, "platforms", [])
-  validate_moon_ext_platforms(platforms)
-  let dependencies = moon_ext_optional_string_array(fields, "dependencies", [])
-  validate_moon_ext_dependencies(id, dependencies)
+  let platforms = proton_ext_optional_string_array(fields, "platforms", [])
+  validate_proton_ext_platforms(platforms)
+  let dependencies = proton_ext_optional_string_array(fields, "dependencies", [])
+  validate_proton_ext_dependencies(id, dependencies)
   ExtensionDescriptor::new(
     id,
     version,
@@ -289,16 +290,11 @@ fn decode_moon_ext_fields(
 }
 
 ///|
-fn validate_moon_ext_fields(
-  fields : Array[@proton_config.ConfigField],
+fn validate_proton_ext_fields(
+  fields : Map[String, Json],
 ) -> Unit raise ExtensionMetadataError {
-  let seen : Map[String, Unit] = Map([])
-  for field in fields {
-    if seen.contains(field.key) {
-      raise DuplicateField(field=field.key)
-    }
-    seen[field.key] = ()
-    match field.key {
+  for key, _ in fields {
+    match key {
       "id"
       | "namespace"
       | "package"
@@ -317,96 +313,76 @@ fn validate_moon_ext_fields(
 }
 
 ///|
-fn moon_ext_required_string(
-  fields : Array[@proton_config.ConfigField],
+fn proton_ext_required_string(
+  fields : Map[String, Json],
   key : String,
 ) -> String raise ExtensionMetadataError {
-  match moon_ext_optional_string_value(fields, key) {
+  match proton_ext_optional_string_value(fields, key) {
     Some(value) => if value == "" { raise EmptyField(field=key) } else { value }
     None => raise MissingField(field=key)
   }
 }
 
 ///|
-fn moon_ext_optional_string(
-  fields : Array[@proton_config.ConfigField],
+fn proton_ext_optional_string(
+  fields : Map[String, Json],
   key : String,
   default : String,
 ) -> String raise ExtensionMetadataError {
-  match moon_ext_optional_string_value(fields, key) {
+  match proton_ext_optional_string_value(fields, key) {
     Some(value) => value
     None => default
   }
 }
 
 ///|
-fn moon_ext_optional_string_option(
-  fields : Array[@proton_config.ConfigField],
+fn proton_ext_optional_string_option(
+  fields : Map[String, Json],
   key : String,
   default : String?,
 ) -> String? raise ExtensionMetadataError {
-  match moon_ext_optional_string_value(fields, key) {
+  match proton_ext_optional_string_value(fields, key) {
     Some(value) => Some(value)
     None => default
   }
 }
 
 ///|
-fn moon_ext_optional_string_value(
-  fields : Array[@proton_config.ConfigField],
+fn proton_ext_optional_string_value(
+  fields : Map[String, Json],
   key : String,
 ) -> String? raise ExtensionMetadataError {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Str(value, _) => return Some(value)
-        _ => raise InvalidType(field=key, expected="a string")
-      }
-    }
+  match fields.get(key) {
+    None => None
+    Some(String(value)) => Some(value)
+    Some(_) => raise InvalidType(field=key, expected="a string")
   }
-  None
 }
 
 ///|
-fn moon_ext_optional_string_array(
-  fields : Array[@proton_config.ConfigField],
+fn proton_ext_optional_string_array(
+  fields : Map[String, Json],
   key : String,
   default : Array[String],
 ) -> Array[String] raise ExtensionMetadataError {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Arr(items, _) => {
-          let values : Array[String] = []
-          for item in items {
-            match item {
-              Str(value, _) => values.push(value)
-              _ => raise InvalidType(field=key, expected="a string array")
-            }
-          }
-          return values
+  match fields.get(key) {
+    None => copy_strings(default)
+    Some(Array(items)) => {
+      let values : Array[String] = []
+      for item in items {
+        match item {
+          String(value) => values.push(value)
+          _ => raise InvalidType(field=key, expected="a string array")
         }
-        _ => raise InvalidType(field=key, expected="a string array")
       }
+      values
     }
+    Some(_) => raise InvalidType(field=key, expected="a string array")
   }
-  copy_strings(default)
 }
 
 ///|
-fn render_config_reports(reports : Array[@basic.Report]) -> String {
-  let builder = StringBuilder::new()
-  for index, report in reports {
-    if index > 0 {
-      builder.write_string("\n")
-    }
-    builder.write_string(report.to_string())
-  }
-  builder.to_string()
-}
-
-///|
-fn validate_moon_ext_platforms(
+fn validate_proton_ext_platforms(
   platforms : Array[String],
 ) -> Unit raise ExtensionMetadataError {
   let seen : Map[String, Unit] = Map([])
@@ -422,7 +398,7 @@ fn validate_moon_ext_platforms(
 }
 
 ///|
-fn validate_moon_ext_dependencies(
+fn validate_proton_ext_dependencies(
   id : String,
   dependencies : Array[String],
 ) -> Unit raise ExtensionMetadataError {
@@ -438,7 +414,7 @@ fn validate_moon_ext_dependencies(
 }
 
 ///|
-fn validate_moon_ext_namespace(
+fn validate_proton_ext_namespace(
   js_namespace : String,
 ) -> Unit raise ExtensionMetadataError {
   guard js_namespace.trim().to_owned() != "" else {
@@ -461,7 +437,7 @@ fn validate_moon_ext_namespace(
 }
 
 ///|
-fn validate_moon_ext_keywords(
+fn validate_proton_ext_keywords(
   keywords : Array[String],
 ) -> Unit raise ExtensionMetadataError {
   for keyword in keywords {
@@ -661,8 +637,9 @@ fn default_moonbit_import_path(path : String) -> String {
 ///|
 fn infer_moonbit_import_path(path : String) -> String {
   let package_dir = path_dirname(path)
-  match find_nearest_moon_mod(package_dir) {
-    Some((module_dir, module_name)) => {
+  let metadata = @proton_config.read_nearest_moon_mod_metadata(package_dir)
+  match (metadata.root_dir, metadata.name) {
+    (Some(module_dir), Some(module_name)) => {
       let relative = relative_package_dir(module_dir, package_dir)
       if relative == "" {
         module_name
@@ -670,163 +647,22 @@ fn infer_moonbit_import_path(path : String) -> String {
         module_name + "/" + relative
       }
     }
-    None => default_moonbit_import_path(path)
+    _ => default_moonbit_import_path(path)
   }
-}
-
-///|
-fn find_nearest_moon_mod(start_dir : String) -> (String, String)? {
-  for current = start_dir, depth = 0; depth < 16; {
-    let moon_mod_path = path_join(current, "moon.mod")
-    if is_file_no_raise(moon_mod_path) {
-      match read_moon_mod_name(moon_mod_path) {
-        Some(name) => return Some((current, name))
-        None => return None
-      }
-    }
-    let parent = path_dirname(current)
-    if parent == current || parent == "" {
-      return None
-    }
-    continue parent, depth + 1
-  } nobreak {
-    None
-  }
-}
-
-///|
-fn is_file_no_raise(path : String) -> Bool {
-  @mbfs.is_file(path) catch {
-    _ => false
-  }
-}
-
-///|
-fn read_moon_mod_name(path : String) -> String? {
-  let text = @mbfs.read_file_to_string(path) catch { _ => return None }
-  let (ast, _reports) = @proton_config.parse_moon_mod(name=path, text)
-  match ast {
-    Obj(fields, _) => moon_mod_string_field(fields, "name")
-    _ => None
-  }
-}
-
-///|
-priv struct MoonExtMoonModMetadata {
-  mut version : String?
-  mut description : String?
-  mut license : String?
-  mut repository : String?
-  mut readme : String?
-  mut keywords : Array[String]
-}
-
-///|
-fn MoonExtMoonModMetadata::new() -> MoonExtMoonModMetadata {
-  MoonExtMoonModMetadata::{
-    version: None,
-    description: None,
-    license: None,
-    repository: None,
-    readme: None,
-    keywords: [],
-  }
-}
-
-///|
-fn read_nearest_moon_mod_metadata(start_dir : String) -> MoonExtMoonModMetadata {
-  match find_nearest_moon_mod_path(start_dir) {
-    Some(path) => read_moon_mod_metadata(path)
-    None => MoonExtMoonModMetadata::new()
-  }
-}
-
-///|
-fn find_nearest_moon_mod_path(start_dir : String) -> String? {
-  for current = start_dir, depth = 0; depth < 16; {
-    let moon_mod_path = path_join(current, "moon.mod")
-    if is_file_no_raise(moon_mod_path) {
-      return Some(moon_mod_path)
-    }
-    let parent = path_dirname(current)
-    if parent == current || parent == "" {
-      return None
-    }
-    continue parent, depth + 1
-  } nobreak {
-    None
-  }
-}
-
-///|
-fn read_moon_mod_metadata(path : String) -> MoonExtMoonModMetadata {
-  let text = @mbfs.read_file_to_string(path) catch {
-    _ => return MoonExtMoonModMetadata::new()
-  }
-  let metadata = MoonExtMoonModMetadata::new()
-  let (ast, _reports) = @proton_config.parse_moon_mod(name=path, text)
-  match ast {
-    Obj(fields, _) => {
-      metadata.version = moon_mod_string_field(fields, "version")
-      metadata.description = moon_mod_string_field(fields, "description")
-      metadata.license = moon_mod_string_field(fields, "license")
-      metadata.repository = moon_mod_string_field(fields, "repository")
-      metadata.readme = moon_mod_string_field(fields, "readme")
-      match moon_mod_string_array_field(fields, "keywords") {
-        Some(value) => metadata.keywords = value
-        None => ()
-      }
-    }
-    _ => ()
-  }
-  metadata
-}
-
-///|
-fn moon_mod_string_field(
-  fields : Array[@proton_config.ConfigField],
-  key : String,
-) -> String? {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Str(value, _) => return Some(value)
-        _ => return None
-      }
-    }
-  }
-  None
-}
-
-///|
-fn moon_mod_string_array_field(
-  fields : Array[@proton_config.ConfigField],
-  key : String,
-) -> Array[String]? {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Arr(items, _) => {
-          let values : Array[String] = []
-          for item in items {
-            match item {
-              Str(value, _) => values.push(value)
-              _ => ()
-            }
-          }
-          return Some(values)
-        }
-        _ => return None
-      }
-    }
-  }
-  None
 }
 
 ///|
 fn relative_package_dir(module_dir : String, package_dir : String) -> String {
-  let module_path = module_dir.replace(old="\\", new="/")
-  let package_path = package_dir.replace(old="\\", new="/")
+  let module_path_value : @mbpath.Path = module_dir
+  let package_path_value : @mbpath.Path = package_dir
+  let module_path = module_path_value
+    .resolve()
+    .to_string()
+    .replace(old="\\", new="/")
+  let package_path = package_path_value
+    .resolve()
+    .to_string()
+    .replace(old="\\", new="/")
   if package_path == module_path {
     return ""
   }

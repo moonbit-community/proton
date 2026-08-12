@@ -31,10 +31,10 @@ fn validate_relative_project_path(
   path : String,
   label : String,
 ) -> Unit raise ProjectConfigError {
-  let field = if label.has_prefix("moon.proton.") {
+  let field = if label.has_prefix("proton.project.json.") {
     label
   } else {
-    "moon.proton." + label
+    "proton.project.json." + label
   }
   guard !project_path_has_root(path) else {
     raise InvalidField(

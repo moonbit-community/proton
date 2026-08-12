@@ -28,7 +28,7 @@ inspection. Release validation should keep using the default command.
 
 Run this before publishing `proton` or `proton_ext`, and after changing any of:
 
-- extension `#proton.command` annotations or `moon.ext` metadata
+- extension `#proton.command` annotations or `proton.ext.json` metadata
 - `extensions/fs/assets/*.js`
 - `extensions/path/assets/*.js`
 

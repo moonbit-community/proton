@@ -2,7 +2,7 @@
 let default_package = "app"
 
 ///|
-let default_config_file = "moon.proton"
+let default_config_file = "proton.project.json"
 
 ///|
 pub(all) suberror BuildUsageError {
@@ -41,7 +41,7 @@ pub fn BuildConfigError::message(self : BuildConfigError) -> String {
     NotFound(path~) =>
       match path {
         Some(path) => "proton build config not found: " + path
-        None => "proton build config not found: moon.proton"
+        None => "proton build config not found: proton.project.json"
       }
     Invalid(path~, error~) =>
       "invalid proton build config " + path + ": " + error.message()

@@ -1,5 +1,5 @@
 ///|
-let default_config_file = "moon.proton"
+let default_config_file = "proton.project.json"
 
 ///|
 fn App::new(
@@ -194,7 +194,7 @@ fn bundled_config_path() -> String? {
     return Some(adjacent)
   }
   let resources = @mbpath.Path(executable_dir)
-    .join("../Resources/moon.proton")
+    .join("../Resources/proton.project.json")
     .normalize()
     .to_string()
   if @mbfs.path_exists(resources) {
@@ -403,24 +403,28 @@ fn current_permission_base_path() -> String {
 ///|
 fn App::warn_config_overrides(self : App) -> Unit {
   if self.title_overridden {
-    println("warning: Proton API App::title overrides moon.proton window.title")
+    println(
+      "warning: Proton API App::title overrides proton.project.json window.title",
+    )
   }
   if self.size_overridden {
     println(
-      "warning: Proton API App::size overrides moon.proton window.width/window.height",
+      "warning: Proton API App::size overrides proton.project.json window.width/window.height",
     )
   }
   if self.titlebar_style_overridden {
     println(
-      "warning: Proton API App::titlebar_style overrides moon.proton window.titlebar_style",
+      "warning: Proton API App::titlebar_style overrides proton.project.json window.titlebar_style",
     )
   }
   if self.entry_overridden {
-    println("warning: Proton API App::entry_* overrides moon.proton entry")
+    println(
+      "warning: Proton API App::entry_* overrides proton.project.json entry",
+    )
   }
   if self.debug_overridden {
     println(
-      "warning: Proton API App::debug/debug_level overrides moon.proton debug",
+      "warning: Proton API App::debug/debug_level overrides proton.project.json debug",
     )
   }
 }

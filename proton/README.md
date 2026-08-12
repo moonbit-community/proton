@@ -26,8 +26,8 @@ the closure builds the app and runs it. `@proton.html` accepts optional
 - `@proton.url(title, url, ...)` — a remote or local URL.
 - `@proton.file(title, path, ...)` — an HTML file on disk.
 - `@proton.asset(title, path, ...)` — an HTML asset shipped with the app.
-- `@proton.config("moon.proton")` — an app described by a `moon.proton` file.
-- `@proton.app()` — config from `PROTON_CONFIG_PATH`, `moon.proton` in the
+- `@proton.config("proton.project.json")` — an app described by a `proton.project.json` file.
+- `@proton.app()` — config from `PROTON_CONFIG_PATH`, `proton.project.json` in the
   current working directory, or code-only defaults.
 
 ## Commands and events
@@ -35,7 +35,7 @@ the closure builds the app and runs it. `@proton.html` accepts optional
 Register typed commands on the app builder:
 
 ```moonbit
-@proton.config("moon.proton")
+@proton.config("proton.project.json")
 .commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
 .run_or_abort()
 ```

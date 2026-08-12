@@ -17,7 +17,7 @@ dev_build(
 
 dev_build(
   rule: "proton_extension_identity_codegen",
-  input: "moon.ext",
+  input: "proton.ext.json",
   output: "extension_identity.g.mbt",
 )
 

@@ -162,7 +162,7 @@ try {
       "--",
       "codegen",
       "--extension-identity",
-      path.join(repoRoot, "extensions", extension, "moon.ext"),
+      path.join(repoRoot, "extensions", extension, "proton.ext.json"),
       "--identity-name",
       "extension",
       "-o",
@@ -219,7 +219,7 @@ try {
       "--",
       "codegen",
       "--extension-identity",
-      path.join(exampleDir, "moon.ext"),
+      path.join(exampleDir, "proton.ext.json"),
       "-o",
       identityOutputPath,
     ]);

@@ -14,7 +14,6 @@ const outputPath = process.argv[2]
 
 const preferredOrder = [
   "moon.work.mtpl",
-  "moon.proton.mtpl",
   "shared/moon.mod.mtpl",
   "shared/moon.pkg.mtpl",
   "shared/todo_contract.mbt.mtpl",

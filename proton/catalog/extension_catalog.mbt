@@ -110,7 +110,7 @@ pub fn load_extension_catalog_from_descriptor_files(
 /// Each search root may be:
 /// - one directory that contains many extension package directories
 /// - one specific extension package directory
-/// - one explicit `moon.ext` file path
+/// - one explicit `proton.ext.json` file path
 pub fn discover_extension_descriptor_files(
   search_roots : Array[String],
 ) -> Array[String] raise ExtensionCatalogError {
@@ -168,8 +168,8 @@ fn collect_extension_descriptor_files_from_directory(
   let entries = read_extension_search_directory(directory)
   entries.sort()
 
-  if entries.contains("moon.ext") {
-    descriptor_paths.push(path_join(directory, "moon.ext"))
+  if entries.contains("proton.ext.json") {
+    descriptor_paths.push(path_join(directory, "proton.ext.json"))
     return
   }
   for entry in entries {
@@ -219,7 +219,7 @@ fn should_skip_extension_search_entry(entry : String) -> Bool {
 
 ///|
 fn is_extension_metadata_file(path : String) -> Bool {
-  path.has_suffix("moon.ext")
+  path.has_suffix("proton.ext.json")
 }
 
 ///|

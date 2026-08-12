@@ -87,7 +87,9 @@ fn public_key(matches : @argparse.Matches) -> String raise UpdaterUsageError {
   let key = @rsa.PublicKey::parse(text) catch {
     error => raise RejectedKey(detail=error.message())
   }
-  println("# \{key.bits()}-bit RSA, add to moon.proton updater.public_keys")
+  println(
+    "# \{key.bits()}-bit RSA, add to proton.project.json updater.public_keys",
+  )
   text
 }
 

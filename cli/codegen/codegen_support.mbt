@@ -1,5 +1,5 @@
 ///|
-async fn read_moon_ext_codegen_config_file(path : String) -> (String, String) {
+async fn read_proton_ext_codegen_config_file(path : String) -> (String, String) {
   let text = @async_fs.read_file(path).text() catch {
     error =>
       raise CodegenInputError::InputRead(
@@ -7,29 +7,29 @@ async fn read_moon_ext_codegen_config_file(path : String) -> (String, String) {
         detail=@debug.render(Repr(error)),
       )
   }
-  read_moon_ext_codegen_config(path, text)
+  read_proton_ext_codegen_config(path, text)
 }
 
 ///|
-pub async fn read_moon_ext_identity(path : String) -> (String, String) {
-  read_moon_ext_codegen_config_file(path)
+pub async fn read_proton_ext_identity(path : String) -> (String, String) {
+  read_proton_ext_codegen_config_file(path)
 }
 
 ///|
-fn read_moon_ext_codegen_config(
+fn read_proton_ext_codegen_config(
   path : String,
   text : String,
 ) -> (String, String) raise {
-  let (ast, reports) = @proton_config.parse_moon_ext(name=path, text)
-  if reports.length() > 0 {
-    raise CodegenMetadataFileError::Syntax(
-      path~,
-      diagnostics=render_moon_ext_config_reports(reports),
-    )
+  let json = @json.parse(text) catch {
+    error =>
+      raise CodegenMetadataFileError::Syntax(
+        path~,
+        diagnostics=error.to_string(),
+      )
   }
   try {
-    match ast {
-      Obj(fields, _) => read_moon_ext_codegen_fields(fields)
+    match json {
+      Object(fields) => read_proton_ext_codegen_fields(fields)
       _ => raise CodegenMetadataError::InvalidRoot
     }
   } catch {
@@ -38,27 +38,22 @@ fn read_moon_ext_codegen_config(
 }
 
 ///|
-fn read_moon_ext_codegen_fields(
-  fields : Array[@proton_config.ConfigField],
+fn read_proton_ext_codegen_fields(
+  fields : Map[String, Json],
 ) -> (String, String) raise CodegenMetadataError {
-  validate_moon_ext_codegen_fields(fields)
+  validate_proton_ext_codegen_fields(fields)
   (
-    moon_ext_codegen_required_string(fields, "id"),
-    moon_ext_codegen_required_string(fields, "namespace"),
+    proton_ext_codegen_required_string(fields, "id"),
+    proton_ext_codegen_required_string(fields, "namespace"),
   )
 }
 
 ///|
-fn validate_moon_ext_codegen_fields(
-  fields : Array[@proton_config.ConfigField],
+fn validate_proton_ext_codegen_fields(
+  fields : Map[String, Json],
 ) -> Unit raise CodegenMetadataError {
-  let seen : Map[String, Bool] = Map([])
-  for field in fields {
-    guard !seen.contains(field.key) else {
-      raise DuplicateField(field=field.key)
-    }
-    seen[field.key] = true
-    match field.key {
+  for key, value in fields {
+    match key {
       "id"
       | "namespace"
       | "version"
@@ -67,19 +62,19 @@ fn validate_moon_ext_codegen_fields(
       | "license"
       | "repository"
       | "readme" =>
-        match field.value {
-          Str(_, _) => ()
-          _ => raise InvalidType(field=field.key, expected="a string")
+        match value {
+          String(_) => ()
+          _ => raise InvalidType(field=key, expected="a string")
         }
       "package" =>
-        match field.value {
-          Str(value, _) => validate_npm_package_name(value)
+        match value {
+          String(value) => validate_npm_package_name(value)
           _ => raise InvalidType(field="package", expected="a string")
         }
       "keywords" | "platforms" | "dependencies" =>
-        match field.value {
-          Arr(_, _) => ()
-          _ => raise InvalidType(field=field.key, expected="an array")
+        match value {
+          Array(_) => ()
+          _ => raise InvalidType(field=key, expected="an array")
         }
       other => raise UnknownField(field=other)
     }
@@ -87,31 +82,15 @@ fn validate_moon_ext_codegen_fields(
 }
 
 ///|
-fn moon_ext_codegen_required_string(
-  fields : Array[@proton_config.ConfigField],
+fn proton_ext_codegen_required_string(
+  fields : Map[String, Json],
   key : String,
 ) -> String raise CodegenMetadataError {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Str(value, _) => return value
-        _ => raise InvalidType(field=key, expected="a string")
-      }
-    }
+  match fields.get(key) {
+    Some(String(value)) => value
+    Some(_) => raise InvalidType(field=key, expected="a string")
+    None => raise MissingField(field=key)
   }
-  raise MissingField(field=key)
-}
-
-///|
-fn render_moon_ext_config_reports(reports : Array[@basic.Report]) -> String {
-  let builder = StringBuilder::new()
-  for index, report in reports {
-    if index > 0 {
-      builder.write_string("\n")
-    }
-    builder.write_string(report.to_string())
-  }
-  builder.to_string()
 }
 
 ///|

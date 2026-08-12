@@ -96,7 +96,7 @@ test "discover_extension_descriptor_files can target one extension package" {
   ])
 
   assert_eq(descriptor_paths.length(), 1)
-  assert_true(descriptor_paths[0].has_suffix("moon.ext"))
+  assert_true(descriptor_paths[0].has_suffix("proton.ext.json"))
 
   let catalog = load_extension_catalog_from_search_roots([
     builtin_extension_root("path"),
@@ -109,7 +109,7 @@ test "discover_extension_descriptor_files can target one extension package" {
 }
 
 ///|
-test "load_extension_descriptor_from_file requires moon.ext" {
+test "load_extension_descriptor_from_file requires proton.ext.json" {
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file("target/rejected/extension.json")
   })
@@ -122,7 +122,7 @@ test "load_extension_descriptor_from_file requires moon.ext" {
 }
 
 ///|
-test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
+test "decode proton.ext.json infers MoonBit import path from nearest moon.mod" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -148,15 +148,18 @@ test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let metadata_path = "target/moon-ext-module/fs/moon.ext"
+  let metadata_path = "target/moon-ext-module/fs/proton.ext.json"
   @mbfs.write_string_to_file(
     metadata_path,
     (
-      #|id = "vendor/fs"
-      #|namespace = "fs"
-      #|package = "@vendor/proton-fs"
-      #|dependencies = ["vendor/path"]
-      #|
+      #|{
+      #|  "id": "vendor/fs",
+      #|  "namespace": "fs",
+      #|  "package": "@vendor/proton-fs",
+      #|  "dependencies": [
+      #|    "vendor/path"
+      #|  ]
+      #|}
     ),
     encoding="utf8",
   ) catch {
@@ -181,11 +184,11 @@ test "decode moon.ext infers MoonBit import path from nearest moon.mod" {
     "target/moon-ext-module/fs",
   ])
   assert_eq(descriptor_paths.length(), 1)
-  assert_true(descriptor_paths[0].has_suffix("moon.ext"))
+  assert_true(descriptor_paths[0].has_suffix("proton.ext.json"))
 }
 
 ///|
-test "decode moon.ext rejects invalid metadata" {
+test "decode proton.ext.json rejects invalid metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
@@ -193,14 +196,18 @@ test "decode moon.ext rejects invalid metadata" {
     _ => ()
   }
 
-  let unsupported_platform = "target/moon-ext-invalid/unsupported-platform.moon.ext"
+  let unsupported_platform = "target/moon-ext-invalid/unsupported-platform.proton.ext.json"
   @mbfs.write_string_to_file(
     unsupported_platform,
     (
-      #|id = "vendor/fs"
-      #|namespace = "fs"
-      #|platforms = ["windows", "ios"]
-      #|
+      #|{
+      #|  "id": "vendor/fs",
+      #|  "namespace": "fs",
+      #|  "platforms": [
+      #|    "windows",
+      #|    "ios"
+      #|  ]
+      #|}
     ),
     encoding="utf8",
   ) catch {
@@ -217,14 +224,17 @@ test "decode moon.ext rejects invalid metadata" {
     ),
   )
 
-  let self_dependency = "target/moon-ext-invalid/self-dependency.moon.ext"
+  let self_dependency = "target/moon-ext-invalid/self-dependency.proton.ext.json"
   @mbfs.write_string_to_file(
     self_dependency,
     (
-      #|id = "vendor/fs"
-      #|namespace = "fs"
-      #|dependencies = ["vendor/fs"]
-      #|
+      #|{
+      #|  "id": "vendor/fs",
+      #|  "namespace": "fs",
+      #|  "dependencies": [
+      #|    "vendor/fs"
+      #|  ]
+      #|}
     ),
     encoding="utf8",
   ) catch {
@@ -241,14 +251,15 @@ test "decode moon.ext rejects invalid metadata" {
     ),
   )
 
-  let removed_field = "target/moon-ext-invalid/removed-field.moon.ext"
+  let removed_field = "target/moon-ext-invalid/removed-field.proton.ext.json"
   @mbfs.write_string_to_file(
     removed_field,
     (
-      #|id = "vendor/fs"
-      #|namespace = "fs"
-      #|spec_symbol = "extension"
-      #|
+      #|{
+      #|  "id": "vendor/fs",
+      #|  "namespace": "fs",
+      #|  "spec_symbol": "extension"
+      #|}
     ),
     encoding="utf8",
   ) catch {
@@ -284,7 +295,7 @@ test "load_extension_catalog_from_search_roots treats built-in and external root
   }
   assert_eq(extensions.length(), 3)
   guard find_extension_summary(extensions, "vendor/base") is Some(base) &&
-    base is { "id": "vendor/base", "metadata_format": "moon.ext", .. } else {
+    base is { "id": "vendor/base", "metadata_format": "proton.ext.json", .. } else {
     abort("expected base extension summary")
   }
   guard find_extension_summary(extensions, "moonbit-community/proton-path")

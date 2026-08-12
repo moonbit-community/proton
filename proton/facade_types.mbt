@@ -51,7 +51,7 @@ priv struct ResolvedAppConfig {
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]
-  /// The update channel and the identity it updates, when `moon.proton`
+  /// The update channel and the identity it updates, when `proton.project.json`
   /// declares one. Absent for an application configured inline: there is no
   /// file to declare an endpoint in, and inventing one would be worse.
   update_channel : ResolvedUpdateChannel?
