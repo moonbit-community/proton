@@ -533,10 +533,7 @@ test "bridge request keeps transport metadata outside the payload" {
   inspect(request.request_id(), content="7")
   inspect(request.window(), content="11")
   inspect(request.op(), content="ext:add/sum")
-  assert_eq(
-    request.payload(),
-    Json::object({ "left": Json::number(20), "right": Json::number(22) }),
-  )
+  assert_eq(request.payload(), ({ "left": 20, "right": 22 } : Json))
   assert_eq(request.page_instance(), Some("page-1"))
   assert_eq(request.source_origin(), "app")
 }

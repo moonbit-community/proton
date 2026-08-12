@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_config"
 
-version = "0.1.14"
+version = "0.1.15"
 
 import {
   "moonbitlang/lexer@0.3.13",
@@ -16,6 +16,6 @@ description = "Typed config parser for Proton moon.proton and moon.ext files."
 
 options(
   warn_list: "",
-  preferred_target: "native",
-  supported_targets: "+native",
+  preferred_target: "wasm",
+  supported_targets: "native+wasm",
 )

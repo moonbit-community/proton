@@ -31,7 +31,7 @@ async test "production command errors hide backend diagnostics" {
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
       AppCommandRequestContext::new(7L, group),
-      @ipc.IpcOpRequest::new("request-1", "app:fail", Json::null()),
+      @ipc.IpcOpRequest::new("request-1", "app:fail", null),
     )
     assert_false(response.is_ok())
     assert_eq(response_error_message(response), "op app:fail failed")
@@ -40,7 +40,7 @@ async test "production command errors hide backend diagnostics" {
     version: @ipc.protocol_version() + 1,
     id: "request-invalid",
     name: "app:fail",
-    payload: Json::null(),
+    payload: null,
   })
   assert_false(invalid_response.is_ok())
   assert_eq(response_error_message(invalid_response), "invalid command request")
@@ -56,7 +56,7 @@ async test "development command errors retain backend diagnostics" {
     )
   })
   let response = host.dispatch_ipc(
-    @ipc.IpcOpRequest::new("request-2", "app:fail", Json::null()),
+    @ipc.IpcOpRequest::new("request-2", "app:fail", null),
   )
   let message = response_error_message(response)
   assert_false(response.is_ok())
@@ -108,7 +108,7 @@ async test "request context observes its shared runtime wake signal" {
 
 ///|
 async test "request context exposes only its owning extension scope" {
-  let original : Map[String, Json] = { "root": Json::string("./data") }
+  let original : Map[String, Json] = { "root": "./data" }
   @async.with_task_group(group => {
     let context = AppCommandRequestContext::new(
       7L,
@@ -118,7 +118,7 @@ async test "request context exposes only its owning extension scope" {
       permission_extension="examples/fs",
       permission_scope=Json::object(original),
     )
-    original["root"] = Json::string("./mutated")
+    original["root"] = Json("./mutated")
     assert_eq(context.window_id(), "secondary")
     assert_eq(context.source_origin(), "https://example.test")
     inspect(
@@ -146,7 +146,7 @@ async test "request context exposes only its owning extension scope" {
 async test "request context emits through its page-scoped destination" {
   let emitted_route = Ref("")
   let emitted_name = Ref("")
-  let emitted_payload = Ref(Json::null())
+  let emitted_payload : Ref[Json] = Ref(null)
   let changed : @proton_contract.Event[String] = @proton_contract.event(
     "changed",
   )

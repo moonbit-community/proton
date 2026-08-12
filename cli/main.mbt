@@ -1,5 +1,5 @@
 ///|
-let cli_current_version : String = "0.1.14"
+let cli_current_version : String = "0.1.15"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
@@ -120,11 +120,7 @@ fn cli_version_is_newer(candidate : String, current : String) -> Bool {
 fn latest_version_from_manifest_text(text : String) -> String? {
   let manifest = @json.parse(text) catch { _ => return None }
   match manifest {
-    Object(fields) =>
-      match fields.get("latest_version") {
-        Some(String(version)) => Some(version)
-        _ => None
-      }
+    { "latest_version": String(version), .. } => Some(version)
     _ => None
   }
 }
@@ -210,33 +206,15 @@ fn codegen_command() -> @argparse.Command {
 fn doctor_command() -> @argparse.Command {
   @argparse.Command(
     "doctor",
-    about="Inspect and diagnose a Proton project",
+    about="Inspect the Proton environment and current project",
     flags=[
-      FlagArg("dry-run", about="Report changes without applying them"),
       FlagArg("verbose", about="Include detailed project diagnostics"),
-      FlagArg("deep", about="Run deeper runtime checks"),
-      FlagArg("run", about="Select and run frontend diagnostics"),
-      FlagArg("fix", about="Select and apply safe automatic fixes"),
-      FlagArg("frontend", about="Select the frontend section"),
-      FlagArg("release", about="Select the release section"),
-      FlagArg("json", about="Render one JSON document", conflicts_with=[
-        "json-lines", "quiet",
-      ]),
-      FlagArg("json-lines", about="Render newline-delimited JSON", conflicts_with=[
-        "json", "quiet",
-      ]),
+      FlagArg("json", about="Render one JSON document", conflicts_with=["quiet"]),
       FlagArg("quiet", about="Render only failing diagnostics", conflicts_with=[
-        "json", "json-lines",
+        "json",
       ]),
     ],
-    options=[
-      OptionArg(
-        "section",
-        action=Append,
-        about="Section to inspect; may be repeated",
-      ),
-      OptionArg("output", about="Write the report to a file"),
-    ],
+    options=[OptionArg("output", about="Write the report to a file")],
   )
 }
 
@@ -281,77 +259,21 @@ fn cli_command() -> @argparse.Command {
 async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
   guard matches.flags
     is {
-      "dry-run"? : Some(dry_run)
-      | (None with dry_run = false),
       "verbose"? : Some(verbose)
       | (None with verbose = false),
-      "deep"? : Some(deep)
-      | (None with deep = false),
-      "run"? : Some(run_frontend)
-      | (None with run_frontend = false),
-      "fix"? : Some(fix)
-      | (None with fix = false),
       "json"? : Some(json)
       | (None with json = false),
-      "json-lines"? : Some(json_lines)
-      | (None with json_lines = false),
       "quiet"? : Some(quiet)
       | (None with quiet = false),
-      "frontend"? : Some(frontend)
-      | (None with frontend = false),
-      "release"? : Some(release)
-      | (None with release = false),
       ..
     }
   guard matches.values
-    is {
-      "section"? : Some(section_args)
-      | (None with section_args = []),
-      "output"? : Some(output_args)
-      | (None with output_args = []),
-      ..
-    }
-  let sections = section_args.copy()
-  if frontend && !sections.contains("frontend") {
-    sections.push("frontend")
-  }
-  if release && !sections.contains("release") {
-    sections.push("release")
-  }
-  if run_frontend && !sections.contains("frontend") {
-    sections.push("frontend")
-  }
-  if fix && !sections.contains("fixes") {
-    sections.push("fixes")
-  }
-  if sections.contains("fixes") && !fix {
-    raise CliUsageError::Invalid(message="the fixes section requires --fix")
-  }
-  for section in sections {
-    if ![
-        "project", "environment", "runtime", "platform", "packages", "extensions",
-        "app", "frontend", "release", "fixes",
-      ].contains(section) {
-      raise CliUsageError::Invalid(message="unknown doctor section: " + section)
-    }
-  }
+    is { "output"? : Some(output_args) | (None with output_args = []), .. }
   let output = match output_args {
     [path, ..] => Some(@fsutil.resolve_path(cwd, path))
     [] => None
   }
-  @doctor.run(
-    cwd~,
-    dry_run~,
-    verbose~,
-    deep~,
-    run_frontend~,
-    fix~,
-    json~,
-    json_lines~,
-    quiet~,
-    sections~,
-    output~,
-  )
+  @doctor.run(cwd~, verbose~, json~, quiet~, output~)
 }
 
 ///|

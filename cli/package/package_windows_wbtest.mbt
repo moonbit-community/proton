@@ -229,6 +229,20 @@ async test "Windows icon selection accepts ico and rejects a missing source" {
 }
 
 ///|
+#cfg(target="wasm")
+test "Windows icon embedding requires the native CLI backend" {
+  try embed_windows_icon("demo.exe", "demo.ico") catch {
+    WindowsPackagingError::ToolFailure(stage~, detail~) => {
+      assert_eq(stage, "embed Windows application icon")
+      assert_true(detail.contains("native proton_cli backend"))
+    }
+    _ => abort("expected unsupported Windows icon embedding")
+  } noraise {
+    _ => abort("expected unsupported Windows icon embedding")
+  }
+}
+
+///|
 test "Windows path resolution keeps dotted relative children under the base" {
   let path = normalize_slashes(
     @fsutil.resolve_path("target/proton-path-base", ".proton/runtime.json"),

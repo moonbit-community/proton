@@ -20,17 +20,32 @@ async fn notification_native_show(
   let result = match payload {
     Some(payload) =>
       @proton.notification_show_and_wait(title, body, payload~) catch {
-        error => raise NativeShow(error~)
+        error => raise map_delivery_error(error)
       }
     None =>
       @proton.notification_show_and_wait(title, body) catch {
-        error => raise NativeShow(error~)
+        error => raise map_delivery_error(error)
       }
   }
   match result {
     @proton_native.NativeNotificationResult::Delivered => ()
     @proton_native.NativeNotificationResult::Failed(message) =>
       raise DeliveryFailed(message~)
+  }
+}
+
+///|
+/// Translates the facade-level `NotificationDeliveryError` into the
+/// extension's `NotificationError` so callers see a single native error type
+/// (`@proton_native.NativeError`) instead of a mix of facade and native errors.
+fn map_delivery_error(
+  error : @proton.NotificationDeliveryError,
+) -> NotificationError {
+  match error {
+    @proton.NotificationDeliveryError::Native(native_error) =>
+      NativeShow(error=native_error)
+    @proton.NotificationDeliveryError::WaitInterrupted(detail~) =>
+      ShowWaitInterrupted(detail~)
   }
 }
 

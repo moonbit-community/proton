@@ -117,8 +117,7 @@ async fn dev_extension_ready_diagnostic_suffix(
     dev_extension_ready_diagnostic_expression(),
     false,
   ) catch {
-    error =>
-      Json::string("failed to collect page diagnostics: " + error.to_string())
+    error => Json("failed to collect page diagnostics: " + error.to_string())
   }
   "\nProduction page diagnostics:\n" +
   page_diagnostic.stringify() +

@@ -49,12 +49,12 @@ test "tray menu payload maps v1 items" {
 ///|
 test "tray optional icon payload accepts string null and missing" {
   debug_inspect(
-    optional_json_text(Some(Json::string("icons/app.ico")), "icon"),
+    optional_json_text(Some(Json("icons/app.ico")), "icon"),
     content="Some(\"icons/app.ico\")",
   )
-  debug_inspect(optional_json_text(Some(Json::null()), "icon"), content="None")
+  debug_inspect(optional_json_text(Some(null), "icon"), content="None")
   debug_inspect(optional_json_text(None, "icon"), content="None")
-  let error = try optional_json_text(Some(Json::boolean(true)), "icon") catch {
+  let error = try optional_json_text(Some(Json(true)), "icon") catch {
     error => error
   } noraise {
     _ => abort("expected invalid icon payload")

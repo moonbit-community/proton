@@ -980,7 +980,7 @@ fn set_optional_string_field(
   value : String?,
 ) -> Unit {
   match value {
-    Some(text) => fields.set(name, Json::string(text))
+    Some(text) => fields.set(name, Json(text))
     None => ()
   }
 }
@@ -998,10 +998,10 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
         ),
       }
       if self.use_bundled {
-        fields.set("use_bundled", Json::boolean(true))
+        fields.set("use_bundled", Json(true))
       }
       if self.headless {
-        fields.set("headless", Json::boolean(true))
+        fields.set("headless", Json(true))
       }
       fields.set(
         "persist_session_cookies",
@@ -1028,14 +1028,14 @@ fn BrowserPolicyMode::to_json_string(self : BrowserPolicyMode) -> String {
 
 ///|
 fn BrowserPolicy::to_json(self : BrowserPolicy) -> Json {
-  Json::object({
-    "navigation": Json::string(self.navigation.to_json_string()),
-    "popup": Json::string(self.popup.to_json_string()),
-    "download": Json::string(self.download.to_json_string()),
-    "certificate": Json::string(self.certificate.to_json_string()),
-    "media": Json::string(self.media.to_json_string()),
-    "devtools": Json::boolean(self.devtools),
-  })
+  {
+    "navigation": self.navigation.to_json_string(),
+    "popup": self.popup.to_json_string(),
+    "download": self.download.to_json_string(),
+    "certificate": self.certificate.to_json_string(),
+    "media": self.media.to_json_string(),
+    "devtools": self.devtools,
+  }
 }
 
 ///|
@@ -1045,7 +1045,7 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
     None => {
       let fields : Map[String, Json] = {
         "abi_version": Json::number(1.0, repr="1"),
-        "title": Json::string(self.title),
+        "title": self.title,
         "width": Json::number(
           self.width.to_double(),
           repr=self.width.to_string(),
@@ -1054,21 +1054,21 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
           self.height.to_double(),
           repr=self.height.to_string(),
         ),
-        "initial_url": Json::string(self.initial_url),
+        "initial_url": self.initial_url,
       }
       match self.titlebar_style {
         TitlebarStyle::Default => ()
         TitlebarStyle::Overlay =>
           if titlebar_overlay_config_supported() {
-            fields["titlebar_style"] = Json::string("overlay")
+            fields["titlebar_style"] = Json("overlay")
           }
       }
       if window_size_hint_config_supported() {
         match self.size_hint {
           WindowSizeHint::Unconstrained => ()
-          WindowSizeHint::Fixed => fields["size_hint"] = Json::string("fixed")
-          WindowSizeHint::Min => fields["size_hint"] = Json::string("min")
-          WindowSizeHint::Max => fields["size_hint"] = Json::string("max")
+          WindowSizeHint::Fixed => fields["size_hint"] = Json("fixed")
+          WindowSizeHint::Min => fields["size_hint"] = Json("min")
+          WindowSizeHint::Max => fields["size_hint"] = Json("max")
         }
       }
       match self.bridge {
@@ -1083,7 +1083,7 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
 
 ///|
 fn MenuItem::to_json(self : MenuItem) -> Json {
-  let fields : Map[String, Json] = { "kind": Json::string(self.kind) }
+  let fields : Map[String, Json] = { "kind": self.kind }
   set_optional_string_field(fields, "id", self.id)
   set_optional_string_field(fields, "label", self.label)
   set_optional_string_field(fields, "key", self.key)
@@ -1093,10 +1093,7 @@ fn MenuItem::to_json(self : MenuItem) -> Json {
 
 ///|
 fn Menu::to_json(self : Menu) -> Json {
-  Json::object({
-    "label": Json::string(self.label),
-    "items": Json::array(self.items.map(fn(item) { item.to_json() })),
-  })
+  { "label": self.label, "items": self.items.map(fn(item) { item.to_json() }) }
 }
 
 ///|
@@ -1104,53 +1101,38 @@ fn Menu::to_json(self : Menu) -> Json {
 pub fn MenuBar::to_json_string(self : MenuBar) -> String {
   match self.raw_json {
     Some(raw) => raw
-    None =>
-      Json::object({
+    None => {
+      let json : Json = {
         "abi_version": Json::number(1.0, repr="1"),
-        "menus": Json::array(self.menus.map(fn(menu) { menu.to_json() })),
-      }).stringify()
+        "menus": self.menus.map(fn(menu) { menu.to_json() }),
+      }
+      json.stringify()
+    }
   }
 }
 
 ///|
 fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
   match self.raw_json {
-    Some(raw) => @json.parse(raw) catch { _ => Json::null() }
+    Some(raw) => @json.parse(raw) catch { _ => null }
     None => {
       let fields : Map[String, Json] = {
         "abi_version": Json::number(2.0, repr="2"),
-        "namespace": Json::string("__MoonBit__"),
-        "grants": Json::array(
-          self.grants.map(fn(grant) {
-            Json::object({
-              "source_origin": Json::string(grant.source_origin),
-              "ops": Json::array(
-                grant.ops.map(fn(name) {
-                  Json::object({ "name": Json::string(name) })
-                }),
-              ),
-              "extensions": Json::array(
-                grant.extensions.map(fn(extension) {
-                  Json::object({
-                    "namespace": Json::string(extension.js_namespace),
-                    "apis": Json::array(
-                      extension.apis.map(fn(api) { Json::string(api) }),
-                    ),
-                  })
-                }),
-              ),
-              "initialization_units": Json::array(
-                grant.initialization_units.map(fn(unit) {
-                  Json::object({
-                    "owner": Json::string(unit.owner),
-                    "name": Json::string(unit.name),
-                    "source": Json::string(unit.source),
-                  })
-                }),
-              ),
-            })
-          }),
-        ),
+        "namespace": "__MoonBit__",
+        "grants": self.grants.map(fn(grant) -> Json {
+          {
+            "source_origin": grant.source_origin,
+            "ops": grant.ops.map(fn(name) -> Json { { "name": name } }),
+            "extensions": grant.extensions.map(fn(extension) -> Json {
+              { "namespace": extension.js_namespace, "apis": extension.apis }
+            }),
+            "initialization_units": grant.initialization_units.map(fn(
+              unit,
+            ) -> Json {
+              { "owner": unit.owner, "name": unit.name, "source": unit.source }
+            }),
+          }
+        }),
         "max_payload_bytes": Json::number(
           self.max_payload_bytes.to_double(),
           repr=self.max_payload_bytes.to_string(),
@@ -1169,29 +1151,30 @@ pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
 ///|
 pub fn BridgeResponse::to_json_string(self : BridgeResponse) -> String {
   match self {
-    Ok(request_id~, payload~) =>
-      Json::object({
+    Ok(request_id~, payload~) => {
+      let response : Json = {
         "abi_version": Json::number(1.0, repr="1"),
         "request_id": Json::number(
           request_id.to_double(),
           repr=request_id.to_string(),
         ),
-        "ok": Json::boolean(true),
+        "ok": true,
         "payload": payload,
-      }).stringify()
-    Err(request_id~, code~, message~) =>
-      Json::object({
+      }
+      response.stringify()
+    }
+    Err(request_id~, code~, message~) => {
+      let response : Json = {
         "abi_version": Json::number(1.0, repr="1"),
         "request_id": Json::number(
           request_id.to_double(),
           repr=request_id.to_string(),
         ),
-        "ok": Json::boolean(false),
-        "error": Json::object({
-          "code": Json::string(code),
-          "message": Json::string(message),
-        }),
-      }).stringify()
+        "ok": false,
+        "error": { "code": code, "message": message },
+      }
+      response.stringify()
+    }
   }
 }
 
@@ -1302,15 +1285,15 @@ pub fn ViewConfig::to_json_string(self : ViewConfig) -> String {
           self.height.to_double(),
           repr=self.height.to_string(),
         ),
-        "visible": Json::boolean(self.visible),
+        "visible": self.visible,
         "z_order": Json::number(
           self.z_order.to_double(),
           repr=self.z_order.to_string(),
         ),
-        "initial_url": Json::string(self.initial_url),
+        "initial_url": self.initial_url,
       }
       match self.background_color {
-        Some(color) => fields.set("background_color", Json::string(color))
+        Some(color) => fields.set("background_color", Json(color))
         None => ()
       }
       Json::object(fields).stringify()

@@ -1,257 +1,4 @@
 ///|
-fn dependency_version(config : MoonModuleConfig?, name : String) -> String? {
-  match config {
-    Some(config) => {
-      for dep in config.imports {
-        if dep.module_name == name {
-          return dep.version
-        }
-      }
-      None
-    }
-    None => None
-  }
-}
-
-///|
-fn package_imports_with_prefix(
-  config : MoonPackageConfig?,
-  prefix : String,
-) -> Array[String] {
-  match config {
-    Some(config) => {
-      let results : Array[String] = []
-      for item in config.imports {
-        if item.package_path.has_prefix(prefix) {
-          results.push(item.package_path)
-        }
-      }
-      results
-    }
-    None => []
-  }
-}
-
-///|
-fn module_name_from_package(package_path : String) -> String? {
-  match package_path.split("/").collect() {
-    [owner, module_name, ..] =>
-      Some(owner.to_owned() + "/" + module_name.to_owned())
-    _ => None
-  }
-}
-
-///|
-fn module_has_dependency(
-  config : MoonModuleConfig?,
-  module_name : String,
-) -> Bool {
-  match config {
-    Some(config) =>
-      config.imports.any(fn(dep) { dep.module_name == module_name })
-    None => false
-  }
-}
-
-///|
-fn option_string_or(value : String?, fallback : String) -> String {
-  match value {
-    Some(value) => value
-    None => fallback
-  }
-}
-
-///|
-fn diagnostic_component(value : String) -> String {
-  value.replace_all(old="/", new=".").replace_all(old="\\", new=".")
-}
-
-///|
-fn version_major_minor(version : String) -> String? {
-  match version.split(".").collect() {
-    [major, minor, ..] => Some(major.to_owned() + "." + minor.to_owned())
-    _ => None
-  }
-}
-
-///|
-fn runtime_manifest_string_field(
-  object : Map[String, Json],
-  field : String,
-  manifest_path : String,
-) -> String raise DoctorRuntimeManifestError {
-  match object.get(field) {
-    Some(String(value)) => value
-    _ => raise MissingField(path=manifest_path, field~)
-  }
-}
-
-///|
-fn doctor_runtime_error_message(error : Error) -> String {
-  match error {
-    DoctorRuntimeManifestError::Read(..) as error => error.message()
-    DoctorRuntimeManifestError::Syntax(..) as error => error.message()
-    DoctorRuntimeManifestError::UnknownField(..) as error => error.message()
-    DoctorRuntimeManifestError::MissingField(..) as error => error.message()
-    DoctorRuntimeManifestError::InvalidSchema(..) as error => error.message()
-    DoctorRuntimeManifestError::InvalidRoot(..) as error => error.message()
-    error => @debug.render(Repr(error))
-  }
-}
-
-///|
-async fn runtime_manifest_from_project(
-  project : ProjectDoctorInfo,
-) -> DoctorRuntimeManifest? {
-  let manifest_path = @fsutil.path_join(
-    @fsutil.path_join(project.root, ".proton"),
-    "runtime.json",
-  )
-  guard @fsutil.path_exists(manifest_path) else { return None }
-  let text = @async_fs.read_file(manifest_path).text() catch {
-    _ => raise Read(path=manifest_path)
-  }
-  let json = @json.parse(text) catch { _ => raise Syntax(path=manifest_path) }
-  match json {
-    Object(object) => {
-      let allowed = [
-        "schema_version", "platform", "proton_version", "cef_version", "cef", "dist",
-      ]
-      for key in object.keys() {
-        if !allowed.contains(key) {
-          raise UnknownField(path=manifest_path, field=key)
-        }
-      }
-      let schema_version : Int = match object.get("schema_version") {
-        Some(value) =>
-          @json.from_json(value) catch {
-            _ => raise InvalidSchema(path=manifest_path)
-          }
-        None => raise MissingField(path=manifest_path, field="schema_version")
-      }
-      guard schema_version == 1 else { raise InvalidSchema(path=manifest_path) }
-      let platform = runtime_manifest_string_field(
-        object, "platform", manifest_path,
-      )
-      let proton_version = runtime_manifest_string_field(
-        object, "proton_version", manifest_path,
-      )
-      let cef_version = runtime_manifest_string_field(
-        object, "cef_version", manifest_path,
-      )
-      let cef_cache = match object.get("cef") {
-        Some(_) =>
-          Some(runtime_manifest_string_field(object, "cef", manifest_path))
-        None => None
-      }
-      let dist = runtime_manifest_string_field(object, "dist", manifest_path)
-      Some({
-        schema_version,
-        platform,
-        proton_version,
-        cef_version,
-        cef_cache,
-        dist,
-      })
-    }
-    _ => raise InvalidRoot(path=manifest_path)
-  }
-}
-
-///|
-async fn development_native_dist(project : ProjectDoctorInfo) -> String {
-  let project_dist = @fsutil.path_join(
-    @fsutil.path_join(project.root, "native"),
-    "dist",
-  )
-  if @fsutil.path_exists(project_dist) {
-    project_dist
-  } else {
-    match find_up(project.root, "native") {
-      Some(path) => @fsutil.path_join(path, "dist")
-      None => project_dist
-    }
-  }
-}
-
-///|
-async fn resolve_native_dist(
-  project : ProjectDoctorInfo,
-) -> (String, DoctorRuntimeManifest?) {
-  let native_dist_override = resolve_native_dist_override(
-    project,
-    @env.get_env_var("PROTON_NATIVE_DIST"),
-  )
-  match native_dist_override {
-    Some(path) => (path, None)
-    None =>
-      match runtime_manifest_from_project(project) {
-        Some(manifest) => {
-          let path = if @fsutil.path_is_absolute(manifest.dist) {
-            manifest.dist
-          } else {
-            @fsutil.path_join(project.root, manifest.dist)
-          }
-          (@path.Path(path).resolve().to_string(), Some(manifest))
-        }
-        None => (development_native_dist(project), None)
-      }
-  }
-}
-
-///|
-fn resolve_native_dist_override(
-  project : ProjectDoctorInfo,
-  configured_dist : String?,
-) -> String? {
-  match configured_dist {
-    Some(root) => {
-      let root = root.trim().to_owned()
-      if root == "" {
-        None
-      } else {
-        let path = if @fsutil.path_is_absolute(root) {
-          root
-        } else {
-          @fsutil.path_join(project.root, root)
-        }
-        Some(@path.Path(path).resolve().to_string())
-      }
-    }
-    None => None
-  }
-}
-
-///|
-fn moon_config_error_line(
-  label : String,
-  error : MoonConfigReadError,
-) -> DoctorLine {
-  match error {
-    MissingFile(path) =>
-      DoctorLine::coded(
-        "packages.config." + diagnostic_component(label) + ".missing",
-        Missing,
-        "\{label}: missing \{path}",
-      )
-    ReadFailed(path, message) =>
-      DoctorLine::coded(
-        "packages.config." + diagnostic_component(label) + ".read_failed",
-        Error,
-        "\{label}: failed to read \{path}",
-        hint=message,
-      )
-    ParseFailed(path, message) =>
-      DoctorLine::coded(
-        "packages.config." + diagnostic_component(label) + ".parse_failed",
-        Error,
-        "\{label}: failed to parse \{path}",
-        hint=message,
-      )
-  }
-}
-
-///|
 fn first_non_empty_line(text : String) -> String? {
   for raw in text.replace(old="\r\n", new="\n").split("\n") {
     let line = raw.trim().to_owned()
@@ -263,2470 +10,299 @@ fn first_non_empty_line(text : String) -> String? {
 }
 
 ///|
-fn last_non_empty_line(text : String) -> String? {
-  let mut result : String? = None
-  for raw in text.replace(old="\r\n", new="\n").split("\n") {
-    let line = raw.trim().to_owned()
-    if line != "" {
-      result = Some(line)
-    }
-  }
-  result
-}
-
-///|
-async fn tool_version_line(
-  label : String,
-  commands : Array[String],
-  args : Array[String],
-) -> DoctorLine {
-  for command in commands {
-    let (code, output) = @process.collect_output_merged(command, args) catch {
-      _ => continue
-    }
-    let text = output.text() catch { _ => "" }
-    match first_non_empty_line(text) {
-      Some(line) =>
-        if code == 0 {
-          return DoctorLine::coded(
-            "environment.tool." + label,
-            Ok,
-            label + ": " + line,
-          )
-        } else {
-          return DoctorLine::coded(
-            "environment.tool." + label + ".failed",
-            Warn,
-            label + ": version command exited with code " + code.to_string(),
-            hint=line,
-          )
-        }
-      None =>
-        if code == 0 {
-          return DoctorLine::coded(
-            "environment.tool." + label + ".empty",
-            Unknown,
-            label + ": version output is empty",
-          )
-        } else {
-          return DoctorLine::coded(
-            "environment.tool." + label + ".failed",
-            Warn,
-            label + ": version command exited with code " + code.to_string(),
-          )
-        }
-    }
-  }
-  DoctorLine::coded(
-    "environment.tool." + label + ".missing",
-    Missing,
-    label + ": not found",
-    hint="make sure one of `" +
-      commands.join("`, `") +
-      "` is installed and available on PATH",
-  )
-}
-
-///|
-async fn npm_version_line() -> DoctorLine {
-  let direct = tool_version_line("npm", ["npm", "npm.cmd"], ["--version"])
-  if direct.status != Missing {
-    return direct
-  }
-  tool_version_line("npm", ["cmd"], ["/c", "npm", "--version"])
-}
-
-///|
-fn host_os_label(system : String?, arch : String?) -> String {
-  let os = match system {
-    Some(value) =>
-      match value.trim().to_lower() {
-        "darwin" => "macOS"
-        "linux" => "Linux"
-        "windows" | "windows_nt" => "Windows"
-        other if other != "" => other.to_owned()
-        _ => "unknown"
-      }
-    None => if @path.sep == '\\' { "Windows" } else { "unknown" }
-  }
-  let cpu = match arch {
-    Some(value) =>
-      match value.trim().to_lower() {
-        "aarch64" => "arm64"
-        "amd64" | "x64" => "x86_64"
-        other if other != "" => other.to_owned()
-        _ => "unknown"
-      }
-    None => "unknown"
-  }
-  os + " " + cpu
-}
-
-///|
-async fn uname_value(option : String) -> String? {
-  let (code, output) = @process.collect_output_merged("uname", [option]) catch {
-    _ => return None
-  }
-  guard code == 0 else { return None }
-  let value = output.text() catch { _ => return None }
-  let value = value.trim().to_owned()
-  if value == "" {
-    None
-  } else {
-    Some(value)
-  }
-}
-
-///|
-async fn host_os_line() -> DoctorLine {
-  let system = if @path.sep == '\\' {
-    Some("Windows")
-  } else {
-    uname_value("-s")
-  }
-  let arch = match @env.get_env_var("PROCESSOR_ARCHITEW6432") {
-    Some(value) => Some(value)
+async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
+  let lines : Array[DoctorLine] = []
+  match project {
     None =>
-      match @env.get_env_var("PROCESSOR_ARCHITECTURE") {
-        Some(value) => Some(value)
-        None => uname_value("-m")
+      lines.push(
+        DoctorLine::new(
+          "project.skipped",
+          Neutral,
+          "not inside a Proton project; project checks skipped",
+        ),
+      )
+    Some(project) => {
+      let source = @async_fs.read_file(project.config_path).text() catch {
+        error => {
+          lines.push(
+            DoctorLine::new(
+              "project.config.read_failed",
+              Error,
+              "failed to read moon.proton",
+              hint=@debug.render(Repr(error)),
+            ),
+          )
+          return DoctorSection::new("project", "Project", lines)
+        }
       }
+      try
+        @proton_config.load_project_config_from_text(
+          source,
+          project.root,
+          name=project.config_path,
+        )
+      catch {
+        error =>
+          lines.push(
+            DoctorLine::new(
+              "project.config.invalid",
+              Error,
+              "moon.proton is invalid",
+              hint=error.message(),
+            ),
+          )
+      } noraise {
+        loaded => {
+          lines.push(
+            DoctorLine::new("project.config", Ok, "moon.proton is valid"),
+          )
+          for warning in loaded.warnings() {
+            lines.push(DoctorLine::new("project.config.warning", Warn, warning))
+          }
+        }
+      }
+    }
   }
-  DoctorLine::coded("environment.os", Ok, "OS: " + host_os_label(system, arch))
+  DoctorSection::new("project", "Project", lines)
 }
 
 ///|
-fn runtime_library_relative_path(platform_id : String) -> String? {
-  match platform_id {
-    "win32-x64" => Some("bin\\proton.dll")
-    "darwin-arm64" | "darwin-x64" => Some("lib/libproton.dylib")
-    "linux-x64" => Some("lib/libproton.so")
+async fn collect_environment() -> DoctorSection {
+  let lines : Array[DoctorLine] = [
+    DoctorLine::new(
+      "environment.platform",
+      Ok,
+      "platform: " + @cef.current_platform_id(),
+    ),
+  ]
+  let (status, output) = @process.collect_output_merged("moon", ["version"]) catch {
+    _ => {
+      lines.push(
+        DoctorLine::new(
+          "environment.moon.missing",
+          Error,
+          "MoonBit toolchain is not available",
+          hint="install moon and make it available on PATH",
+        ),
+      )
+      return DoctorSection::new("environment", "Environment", lines)
+    }
+  }
+  let version = first_non_empty_line(output.text() catch { _ => "" })
+  if status == 0 && version is Some(version) {
+    lines.push(DoctorLine::new("environment.moon", Ok, "moon: " + version))
+  } else {
+    lines.push(
+      DoctorLine::new(
+        "environment.moon.failed",
+        Error,
+        "failed to query the MoonBit toolchain",
+      ),
+    )
+  }
+  DoctorSection::new("environment", "Environment", lines)
+}
+
+///|
+fn runtime_manifest_string(
+  object : Map[String, Json],
+  field : String,
+  path : String,
+) -> String raise DoctorRuntimeManifestError {
+  match object.get(field) {
+    Some(String(value)) => value
+    _ =>
+      raise Invalid("runtime manifest has no string `" + field + "`: " + path)
+  }
+}
+
+///|
+async fn runtime_manifest_from_project(
+  project : ProjectDoctorInfo,
+) -> DoctorRuntimeManifest? {
+  let path = @fsutil.path_join(
+    @fsutil.path_join(project.root, ".proton"),
+    "runtime.json",
+  )
+  guard @fsutil.path_exists(path) else { return None }
+  let text = @async_fs.read_file(path).text() catch {
+    _ => raise Invalid("failed to read runtime manifest: " + path)
+  }
+  let json = @json.parse(text) catch {
+    _ => raise Invalid("failed to parse runtime manifest: " + path)
+  }
+  guard json is Object(object) else {
+    raise Invalid("runtime manifest must be a JSON object: " + path)
+  }
+  guard object is { "schema_version": schema_version_json, .. } else {
+    raise Invalid("runtime manifest has no schema_version: " + path)
+  }
+  let schema_version : Int = @json.from_json(schema_version_json) catch {
+    _ =>
+      raise Invalid("runtime manifest has an invalid schema_version: " + path)
+  }
+  guard schema_version == 1 else {
+    raise Invalid("runtime manifest schema_version must be 1: " + path)
+  }
+  Some({
+    platform: runtime_manifest_string(object, "platform", path),
+    proton_version: runtime_manifest_string(object, "proton_version", path),
+    cef_version: runtime_manifest_string(object, "cef_version", path),
+    dist: runtime_manifest_string(object, "dist", path),
+  })
+}
+
+///|
+fn resolve_native_dist_override(
+  project : ProjectDoctorInfo,
+  configured : String?,
+) -> String? {
+  match configured {
+    Some(value) if value.trim() != "" => {
+      let value = value.trim().to_owned()
+      let path = if @fsutil.path_is_absolute(value) {
+        value
+      } else {
+        @fsutil.path_join(project.root, value)
+      }
+      Some(@path.Path(path).resolve().to_string())
+    }
     _ => None
   }
 }
 
 ///|
-fn runtime_helper_relative_path(platform_id : String) -> String {
-  if platform_id == "win32-x64" {
-    "bin\\cef_process.exe"
-  } else {
-    "bin/cef_process"
-  }
-}
-
-///|
-priv struct DoctorNativeRuntimeInfo {
-  abi_version : Int
-  runtime_available : Bool
-  build_mode : String
-  platform : String
-  features : Array[String]
-} derive(FromJson)
-
-///|
-fn doctor_native_runtime_info_from_text(
-  text : String,
-) -> Result[DoctorNativeRuntimeInfo, String] {
-  let json = @json.parse(text) catch {
-    error => return Err("invalid runtime info JSON: " + error.to_string())
-  }
-  let info : DoctorNativeRuntimeInfo = @json.from_json(json) catch {
-    error => return Err("invalid runtime info schema: " + error.to_string())
-  }
-  if info.abi_version != doctor_native_expected_abi_version {
-    Err(
-      "runtime info ABI version mismatch: expected " +
-      doctor_native_expected_abi_version.to_string() +
-      ", got " +
-      info.abi_version.to_string(),
-    )
-  } else if info.build_mode != "runtime" && info.build_mode != "abi-only" {
-    Err("runtime info build_mode must be `runtime` or `abi-only`")
-  } else if info.runtime_available != (info.build_mode == "runtime") {
-    Err("runtime info runtime_available is inconsistent with build_mode")
-  } else if info.platform == "" {
-    Err("runtime info platform must not be empty")
-  } else if info.features.any(fn(feature) { feature == "" }) {
-    Err("runtime info features must not contain empty strings")
-  } else {
-    Ok(info)
-  }
-}
-
-///|
-fn push_deep_runtime_probe_result(
-  lines : Array[DoctorLine],
-  result : DoctorNativeProbeResult,
-) -> Unit {
-  lines.push(
-    DoctorLine::coded(
-      "runtime.deep.abi",
-      Ok,
-      "Proton ABI version: " + doctor_native_expected_abi_version.to_string(),
-    ),
-  )
-  match result.info {
-    Ok(text) => {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.info",
-          Ok,
-          "runtime info ABI call succeeded",
-        ),
-      )
-      match doctor_native_runtime_info_from_text(text) {
-        Ok(info) =>
-          if info.runtime_available {
-            lines.push(
-              DoctorLine::coded(
-                "runtime.deep.engine",
-                Ok,
-                "native engine available: build_mode=" +
-                info.build_mode +
-                ", platform=" +
-                info.platform,
-              ),
-            )
+async fn resolve_native_dist(
+  project : ProjectDoctorInfo,
+) -> (String, DoctorRuntimeManifest?) {
+  match
+    resolve_native_dist_override(
+      project,
+      @env.get_env_var("PROTON_NATIVE_DIST"),
+    ) {
+    Some(path) => (path, None)
+    None =>
+      match runtime_manifest_from_project(project) {
+        Some(manifest) => {
+          let path = if @fsutil.path_is_absolute(manifest.dist) {
+            manifest.dist
           } else {
-            lines.push(
-              DoctorLine::coded(
-                "runtime.deep.engine_unavailable",
-                Error,
-                "Proton library does not include the native engine",
+            @fsutil.path_join(project.root, manifest.dist)
+          }
+          (@path.Path(path).resolve().to_string(), Some(manifest))
+        }
+        None =>
+          (
+            @path.Path(
+              @fsutil.path_join(
+                @fsutil.path_join(project.root, "native"),
+                "dist",
               ),
             )
-          }
-        Err(message) =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.deep.info_invalid",
-              Error,
-              "runtime info ABI returned an invalid payload",
-              hint=message,
-            ),
+            .resolve()
+            .to_string(),
+            None,
           )
       }
-    }
-    Err(error) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.info_failed",
-          Error,
-          "runtime info ABI call failed",
-          hint=error.hint("runtime info ABI call failed"),
-        ),
-      )
   }
-  match result.probe {
-    Ok(_) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.probe",
-          Ok,
-          "runtime layout probe succeeded",
-        ),
-      )
-    Err(error) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.probe_failed",
-          Error,
-          "runtime layout probe failed",
-          hint=error.hint("native probe failed"),
-        ),
-      )
-  }
-  match result.smoke {
-    Succeeded =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.smoke",
-          Ok,
-          "runtime create/destroy smoke test succeeded",
-        ),
-      )
-    Skipped =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.smoke_skipped",
-          Neutral,
-          "runtime create/destroy smoke test skipped because the layout probe failed",
-        ),
-      )
-    SkippedUnsafeHost =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.smoke_skipped",
-          Neutral,
-          "runtime create/destroy smoke test skipped: in-process engine probing is unsafe on this host",
-        ),
-      )
-    CreateFailed(error) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.smoke_failed",
-          Error,
-          "runtime creation smoke test failed",
-          hint=error.hint("runtime creation smoke test failed"),
-        ),
-      )
-    DestroyFailed(error) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.smoke_failed",
-          Error,
-          "runtime destruction smoke test failed",
-          hint=error.hint("runtime destruction smoke test failed"),
-        ),
-      )
-  }
-}
-
-///|
-fn push_deep_runtime_probe_error(
-  lines : Array[DoctorLine],
-  error : DoctorNativeProbeError,
-) -> Unit {
-  match error {
-    LoadFailed(message) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.load_failed",
-          Error,
-          "failed to load Proton dynamic library",
-          hint=message,
-        ),
-      )
-    SymbolsMissing(message) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.symbol_missing",
-          Error,
-          "Proton dynamic library is missing required ABI symbols",
-          hint=message,
-        ),
-      )
-    AbiMismatch(version) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.abi_mismatch",
-          Error,
-          "Proton ABI version mismatch: expected " +
-          doctor_native_expected_abi_version.to_string() +
-          ", got " +
-          version.to_string(),
-        ),
-      )
-    OpenFailed(status, message) =>
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.invalid_result",
-          Error,
-          "native deep probe could not open the Proton library",
-          hint=if message == "" {
-            "native probe bridge failed with status " + status.to_string()
-          } else {
-            message
-          },
-        ),
-      )
-  }
-}
-
-///|
-fn push_deep_runtime_probe(
-  lines : Array[DoctorLine],
-  native_dist : String,
-  platform_id : String,
-) -> Unit {
-  let library_relative = match runtime_library_relative_path(platform_id) {
-    Some(path) => path
-    None => {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.unsupported_platform",
-          Warn,
-          "deep runtime probe is unavailable for " + platform_id,
-        ),
-      )
-      return
-    }
-  }
-  let library_path = @fsutil.path_join(native_dist, library_relative)
-  let config = Json::object({
-    "abi_version": Json::number(
-      doctor_native_expected_abi_version.to_double(),
-      repr=doctor_native_expected_abi_version.to_string(),
-    ),
-    "runtime_root": Json::string(native_dist),
-    "helper_path": Json::string(
-      @fsutil.path_join(native_dist, runtime_helper_relative_path(platform_id)),
-    ),
-  }).stringify()
-  match doctor_native_probe(library_path, config) {
-    Ok(result) => push_deep_runtime_probe_result(lines, result)
-    Err(error) => push_deep_runtime_probe_error(lines, error)
-  }
-}
-
-///|
-async fn collect_environment() -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  lines.push(host_os_line())
-  lines.push(tool_version_line("moon", ["moon"], ["version"]))
-  lines.push(tool_version_line("node", ["node"], ["--version"]))
-  lines.push(npm_version_line())
-  DoctorSection::new("environment", "Environment", section_status(lines), lines)
-}
-
-///|
-async fn platform_command_line(
-  code : String,
-  label : String,
-  command : String,
-  args : Array[String],
-  failure_status : DoctorStatus,
-) -> DoctorLine {
-  let (status, output) = @process.collect_output_merged(command, args) catch {
-    _ =>
-      return DoctorLine::coded(
-        code + ".missing",
-        Unknown,
-        label + ": command not available",
-        hint=command,
-      )
-  }
-  let text = output.text() catch { _ => "" }
-  match first_non_empty_line(text) {
-    Some(line) if status == 0 =>
-      DoctorLine::coded(code, Ok, label + ": " + line)
-    Some(line) =>
-      DoctorLine::coded(
-        code + ".failed",
-        failure_status,
-        label + ": command exited with code " + status.to_string(),
-        hint=line,
-      )
-    None if status == 0 => DoctorLine::coded(code, Ok, label + ": succeeded")
-    None =>
-      DoctorLine::coded(
-        code + ".failed",
-        failure_status,
-        label + ": command exited with code " + status.to_string(),
-      )
-  }
-}
-
-///|
-async fn collect_command_status(
-  command : String,
-  args : Array[String],
-  cwd : String?,
-) -> (Int, String) {
-  let result = match cwd {
-    Some(cwd) =>
-      @process.collect_output_merged(command, args, cwd~) catch {
-        _ => return (-1, "")
-      }
-    None =>
-      @process.collect_output_merged(command, args) catch {
-        _ => return (-1, "")
-      }
-  }
-  let (status, output) = result
-  (status, output.text() catch { _ => "" })
-}
-
-///|
-async fn collect_platform(project : ProjectDoctorInfo) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  let platform_id = @cef.current_platform_id()
-  lines.push(DoctorLine::coded("platform.id", Ok, "platform: " + platform_id))
-  try resolve_native_dist(project) catch {
-    error =>
-      lines.push(
-        DoctorLine::coded(
-          "platform.runtime_manifest",
-          Error,
-          "platform runtime unavailable",
-          hint=doctor_runtime_error_message(error),
-        ),
-      )
-  } noraise {
-    (native_dist, _) => {
-      match runtime_library_relative_path(platform_id) {
-        Some(relative) => {
-          let library_path = @fsutil.path_join(native_dist, relative)
-          if @fsutil.path_exists(library_path) {
-            lines.push(
-              platform_command_line(
-                "platform.library.file",
-                "native library",
-                "file",
-                [library_path],
-                Warn,
-              ),
-            )
-            if platform_id == "linux-x64" {
-              lines.push(
-                platform_command_line(
-                  "platform.library.ldd",
-                  "native library dependencies",
-                  "ldd",
-                  [library_path],
-                  Error,
-                ),
-              )
-            } else if platform_id == "darwin-arm64" ||
-              platform_id == "darwin-x64" {
-              lines.push(
-                platform_command_line(
-                  "platform.library.codesign",
-                  "native library signature",
-                  "codesign",
-                  ["--verify", "--deep", "--strict", library_path],
-                  Warn,
-                ),
-              )
-              lines.push(
-                platform_command_line(
-                  "platform.library.quarantine",
-                  "native library quarantine",
-                  "xattr",
-                  ["-p", "com.apple.quarantine", library_path],
-                  Neutral,
-                ),
-              )
-            }
-          } else {
-            lines.push(
-              DoctorLine::coded(
-                "platform.library.missing",
-                Unknown,
-                "native library not found: " + library_path,
-              ),
-            )
-          }
-        }
-        None => ()
-      }
-      let helper_path = @fsutil.path_join(
-        native_dist,
-        runtime_helper_relative_path(platform_id),
-      )
-      if @fsutil.path_exists(helper_path) {
-        lines.push(
-          platform_command_line(
-            "platform.helper.file",
-            "runtime helper",
-            "file",
-            [helper_path],
-            Warn,
-          ),
-        )
-      } else {
-        lines.push(
-          DoctorLine::coded(
-            "platform.helper.missing",
-            Unknown,
-            "runtime helper not found: " + helper_path,
-          ),
-        )
-      }
-    }
-  }
-  if platform_id == "win32-x64" {
-    lines.push(
-      platform_command_line(
-        "platform.msvc",
-        "MSVC compiler",
-        "where",
-        ["cl"],
-        Warn,
-      ),
-    )
-    lines.push(
-      platform_command_line(
-        "platform.dumpbin",
-        "dumpbin",
-        "where",
-        ["dumpbin"],
-        Unknown,
-      ),
-    )
-  } else if platform_id == "linux-x64" {
-    let display = @env.get_env_var("DISPLAY")
-    let wayland = @env.get_env_var("WAYLAND_DISPLAY")
-    if display is None && wayland is None {
-      lines.push(
-        DoctorLine::coded(
-          "platform.display.headless",
-          Warn,
-          "no DISPLAY or WAYLAND_DISPLAY is set; GUI launch may require a headless setup",
-        ),
-      )
-    } else {
-      lines.push(
-        DoctorLine::coded(
-          "platform.display",
-          Ok,
-          "display environment is configured",
-        ),
-      )
-    }
-  }
-  DoctorSection::new("platform", "Platform", section_status(lines), lines)
 }
 
 ///|
 async fn collect_runtime(
   project : ProjectDoctorInfo,
-  deep~ : Bool,
+  verbose~ : Bool,
 ) -> DoctorSection {
   let lines : Array[DoctorLine] = []
+  let platform_id = @cef.current_platform_id()
   let (native_dist, manifest) = try resolve_native_dist(project) catch {
     error => {
       lines.push(
-        DoctorLine::coded(
-          "runtime.manifest.invalid",
+        DoctorLine::new(
+          "runtime.manifest",
           Error,
-          "Proton runtime manifest is invalid",
-          hint=doctor_runtime_error_message(error),
+          "runtime manifest is invalid",
+          hint=error.to_string(),
         ),
       )
-      return DoctorSection::new(
-        "runtime",
-        "Runtime",
-        section_status(lines),
-        lines,
-      )
+      return DoctorSection::new("runtime", "Runtime", lines)
     }
   } noraise {
     value => value
   }
-  let platform_id = @cef.current_platform_id()
-  let mut platform_matches = true
   match manifest {
     Some(manifest) => {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.manifest.schema",
-          Ok,
-          "runtime manifest schema: \{manifest.schema_version}",
-        ),
-      )
-      if manifest.platform == platform_id {
+      if manifest.platform != platform_id {
         lines.push(
-          DoctorLine::coded(
-            "runtime.manifest.platform",
-            Ok,
-            "runtime manifest platform: " + manifest.platform,
-          ),
-        )
-      } else {
-        platform_matches = false
-        lines.push(
-          DoctorLine::coded(
-            "runtime.manifest.platform_mismatch",
+          DoctorLine::new(
+            "runtime.platform",
             Error,
             "runtime platform mismatch: expected " +
             platform_id +
             ", got " +
             manifest.platform,
-            hint="run `proton_cli cef setup` for the current platform",
+            hint="run `proton_cli cef setup` for this platform",
           ),
         )
       }
-      lines.push(
-        DoctorLine::coded(
-          "runtime.manifest.versions",
-          Neutral,
-          "runtime versions: proton=" +
-          manifest.proton_version +
-          ", cef=" +
-          manifest.cef_version,
-        ),
-      )
-      match manifest.cef_cache {
-        Some(cef_cache) =>
-          lines.push(
-            DoctorLine::coded(
-              "runtime.manifest.cef",
-              Neutral,
-              "CEF cache: " + cef_cache,
-            ),
-          )
-        None => ()
+      if verbose {
+        lines.push(
+          DoctorLine::new(
+            "runtime.versions",
+            Neutral,
+            "Proton " +
+            manifest.proton_version +
+            ", CEF " +
+            manifest.cef_version,
+          ),
+        )
       }
     }
     None => ()
   }
-  if @fsutil.path_exists(native_dist) {
+  guard @fsutil.path_is_dir(native_dist) else {
     lines.push(
-      DoctorLine::coded(
-        "runtime.dist",
-        Ok,
-        "Proton native dist: " + native_dist,
-      ),
-    )
-    let version_path = @fsutil.path_join(native_dist, "version.txt")
-    if @fsutil.path_exists(version_path) {
-      let version = @async_fs.read_file(version_path).text() catch {
-        _ => "unknown"
-      }
-      lines.push(
-        DoctorLine::coded(
-          "runtime.version",
-          Ok,
-          "runtime version: " + version.trim().to_owned(),
-        ),
-      )
-    } else {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.version.missing",
-          Unknown,
-          "runtime version: version.txt missing",
-        ),
-      )
-    }
-    let missing : Array[String] = []
-    let required_files = @cef.runtime_required_relative_files_for_platform(
-      platform_id,
-    )
-    for required in required_files {
-      if !@fsutil.path_exists(@fsutil.path_join(native_dist, required)) {
-        missing.push(required)
-      }
-    }
-    if missing.length() == 0 {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.layout",
-          Ok,
-          "native layout: required files found (" + platform_id + ")",
-        ),
-      )
-    } else {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.layout.missing",
-          Error,
-          "native layout: missing " + missing.join(", "),
-        ),
-      )
-    }
-    if deep && platform_matches {
-      push_deep_runtime_probe(lines, native_dist, platform_id)
-    } else if deep {
-      lines.push(
-        DoctorLine::coded(
-          "runtime.deep.skipped_platform_mismatch",
-          Warn,
-          "deep runtime probe skipped because the manifest platform does not match the host",
-        ),
-      )
-    }
-  } else {
-    lines.push(
-      DoctorLine::coded(
-        "runtime.dist.missing",
-        Missing,
-        "Proton native dist: not found",
+      DoctorLine::new(
+        "runtime.missing",
+        Error,
+        "Proton runtime is not installed",
         hint="run `proton_cli cef setup`, or set PROTON_NATIVE_DIST",
       ),
     )
-  }
-  DoctorSection::new("runtime", "Runtime", section_status(lines), lines)
-}
-
-///|
-fn frontend_script_name(command : String) -> String? {
-  let trimmed = command.trim()
-  let rest = if trimmed.has_prefix("npm run ") {
-    Some(trimmed[8:])
-  } else if trimmed.has_prefix("yarn ") {
-    Some(trimmed[5:])
-  } else if trimmed.has_prefix("pnpm ") {
-    Some(trimmed[5:])
-  } else if trimmed.has_prefix("bun run ") {
-    Some(trimmed[8:])
-  } else {
-    None
-  }
-  match rest {
-    Some(rest) =>
-      match rest.trim().split(" ").collect() {
-        [name, ..] if name != "" => Some(name.to_owned())
-        _ => None
-      }
-    None => None
-  }
-}
-
-///|
-async fn push_frontend_dist_diagnostics(
-  lines : Array[DoctorLine],
-  project : ProjectDoctorInfo,
-  dist : String?,
-) -> Unit {
-  push_app_path_check(
-    lines,
-    project,
-    "frontend.dist",
-    "frontend dist",
-    dist,
-    required=false,
-  )
-  match dist {
-    Some(dist) => {
-      let exists = @fsutil.path_is_dir(dist)
-      if exists {
-        let entries = @async_fs.readdir(
-          dist,
-          include_hidden=true,
-          include_special=false,
-        ) catch {
-          _ => []
-        }
-        if entries.length() > 0 {
-          lines.push(
-            DoctorLine::coded(
-              "frontend.dist.nonempty",
-              Ok,
-              "frontend dist is non-empty",
-            ),
-          )
-        } else {
-          lines.push(
-            DoctorLine::coded(
-              "frontend.dist.empty",
-              Warn,
-              "frontend dist is empty",
-            ),
-          )
-        }
-      }
-    }
-    None => ()
-  }
-}
-
-///|
-async fn collect_frontend(
-  project : ProjectDoctorInfo,
-  run~ : Bool,
-) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  let config = match project.moon_proton_path {
-    Some(path) =>
-      try read_proton_project_config(path) catch {
-        error => {
-          lines.push(
-            DoctorLine::coded(
-              "frontend.config.invalid",
-              Error,
-              "moon.proton failed to load",
-              hint=error.message(),
-            ),
-          )
-          return DoctorSection::new(
-            "frontend",
-            "Frontend",
-            section_status(lines),
-            lines,
-          )
-        }
-      } noraise {
-        config => config
-      }
-    None => {
-      lines.push(
-        DoctorLine::coded(
-          "frontend.config.missing",
-          Neutral,
-          "moon.proton has no frontend configuration",
-        ),
-      )
-      return DoctorSection::new(
-        "frontend",
-        "Frontend",
-        section_status(lines),
-        lines,
-      )
-    }
-  }
-  let frontend = match config.frontend {
-    Some(frontend) => frontend
-    None => {
-      lines.push(
-        DoctorLine::coded(
-          "frontend.not_configured",
-          Neutral,
-          "frontend is not configured",
-        ),
-      )
-      return DoctorSection::new(
-        "frontend",
-        "Frontend",
-        section_status(lines),
-        lines,
-      )
-    }
-  }
-  let frontend_root = frontend.path.unwrap_or(config.base_dir)
-  if !path_is_within_project(project, frontend_root) {
-    lines.push(
-      DoctorLine::coded(
-        "frontend.path.outside_project",
-        Error,
-        "frontend path is outside the project root: " + frontend_root,
-      ),
-    )
-    return DoctorSection::new(
-      "frontend",
-      "Frontend",
-      section_status(lines),
-      lines,
-    )
-  }
-  if !@fsutil.path_is_dir(frontend_root) {
-    lines.push(
-      DoctorLine::coded(
-        "frontend.path.missing",
-        Error,
-        "frontend path is missing: " + frontend_root,
-      ),
-    )
-    return DoctorSection::new(
-      "frontend",
-      "Frontend",
-      section_status(lines),
-      lines,
-    )
-  }
-  lines.push(
-    DoctorLine::coded("frontend.path", Ok, "frontend path: " + frontend_root),
-  )
-  let package_path = @fsutil.path_join(frontend_root, "package.json")
-  let package_json = if @fsutil.path_exists(package_path) {
-    let text = @async_fs.read_file(package_path).text() catch { _ => "" }
-    let parsed = @json.parse(text) catch { _ => Json::null() }
-    match parsed {
-      Object(object) => {
-        lines.push(
-          DoctorLine::coded("frontend.package_json", Ok, "package.json found"),
-        )
-        Some(object)
-      }
-      _ => {
-        lines.push(
-          DoctorLine::coded(
-            "frontend.package_json.invalid",
-            Error,
-            "package.json is invalid",
-          ),
-        )
-        None
-      }
-    }
-  } else {
-    lines.push(
-      DoctorLine::coded(
-        "frontend.package_json.missing",
-        Warn,
-        "package.json is missing",
-      ),
-    )
-    None
-  }
-  let lock_candidates = [
-    ("package-lock.json", "npm"),
-    ("pnpm-lock.yaml", "pnpm"),
-    ("yarn.lock", "yarn"),
-    ("bun.lockb", "bun"),
-  ]
-  let mut manager : String? = None
-  let mut lock_count = 0
-  for item in lock_candidates {
-    let (lock_name, candidate) = item
-    if @fsutil.path_exists(@fsutil.path_join(frontend_root, lock_name)) {
-      lock_count += 1
-      if manager is None {
-        manager = Some(candidate)
-      }
-      lines.push(
-        DoctorLine::coded(
-          "frontend.lockfile",
-          Ok,
-          "lockfile: " + lock_name + " (" + candidate + ")",
-        ),
-      )
-    }
-  }
-  if lock_count > 1 {
-    lines.push(
-      DoctorLine::coded(
-        "frontend.lockfile.multiple",
-        Warn,
-        "multiple package-manager lockfiles were found",
-      ),
-    )
-  }
-  match manager {
-    Some(manager) =>
-      lines.push(
-        platform_command_line(
-          "frontend.manager",
-          manager,
-          manager,
-          ["--version"],
-          Warn,
-        ),
-      )
-    None =>
-      lines.push(
-        DoctorLine::coded(
-          "frontend.lockfile.missing",
-          Unknown,
-          "no supported package-manager lockfile found",
-        ),
-      )
-  }
-  match package_json {
-    Some(object) =>
-      match object.get("scripts") {
-        Some(Object(scripts)) =>
-          for
-            item in [
-              ("dev", frontend.before_dev),
-              ("build", frontend.before_build),
-            ] {
-            let (label, command) = item
-            match (command, frontend_script_name(command.unwrap_or(""))) {
-              (Some(_), Some(script_name)) if !scripts.contains(script_name) =>
-                lines.push(
-                  DoctorLine::coded(
-                    "frontend.script.missing",
-                    Error,
-                    "package.json is missing script `" +
-                    script_name +
-                    "` for " +
-                    label,
-                  ),
-                )
-              (Some(_), Some(script_name)) =>
-                lines.push(
-                  DoctorLine::coded(
-                    "frontend.script",
-                    Ok,
-                    "package.json script exists: " + script_name,
-                  ),
-                )
-              _ => ()
-            }
-          }
-        _ =>
-          lines.push(
-            DoctorLine::coded(
-              "frontend.scripts.missing",
-              Warn,
-              "package.json has no scripts object",
-            ),
-          )
-      }
-    None => ()
-  }
-  if !run {
-    push_frontend_dist_diagnostics(lines, project, frontend.dist)
-  }
-  if run {
-    match frontend.before_build {
-      Some(command) => {
-        let (shell, args) = if @path.sep == '\\' {
-          ("cmd", ["/c", command])
-        } else {
-          ("sh", ["-c", command])
-        }
-        let (status, output) = collect_command_status(
-          shell,
-          args,
-          Some(frontend_root),
-        )
-        if status == 0 {
-          lines.push(
-            DoctorLine::coded(
-              "frontend.before_build.run",
-              Ok,
-              "before_build completed",
-            ),
-          )
-        } else {
-          lines.push(
-            DoctorLine::coded(
-              "frontend.before_build.failed",
-              Error,
-              "before_build failed with code " + status.to_string(),
-              hint=first_non_empty_line(output).unwrap_or(
-                "build command failed",
-              ),
-            ),
-          )
-        }
-      }
-      None =>
-        lines.push(
-          DoctorLine::coded(
-            "frontend.before_build.not_configured",
-            Neutral,
-            "before_build is not configured",
-          ),
-        )
-    }
-    match frontend.dev_url {
-      Some(url) => {
-        let (status, body) = collect_command_status(
-          "curl",
-          ["-fsS", "--max-time", "2", url],
-          None,
-        )
-        if status == 0 {
-          let normalized = body.to_lower()
-          if normalized.contains("<html") || normalized.contains("<!doctype") {
-            lines.push(
-              DoctorLine::coded(
-                "frontend.dev_url.html",
-                Ok,
-                "dev_url is reachable and returned HTML",
-              ),
-            )
-          } else {
-            lines.push(
-              DoctorLine::coded(
-                "frontend.dev_url.non_html",
-                Warn,
-                "dev_url is reachable but did not return HTML",
-              ),
-            )
-          }
-        } else {
-          lines.push(
-            DoctorLine::coded(
-              "frontend.dev_url.unreachable",
-              Warn,
-              "dev_url is not reachable",
-            ),
-          )
-        }
-      }
-      None => ()
-    }
-    push_frontend_dist_diagnostics(lines, project, frontend.dist)
-  } else {
-    lines.push(
-      DoctorLine::coded(
-        "frontend.run.skipped",
-        Neutral,
-        "frontend commands and URL probes skipped; use --run",
-      ),
-    )
-  }
-  DoctorSection::new("frontend", "Frontend", section_status(lines), lines)
-}
-
-///|
-async fn collect_relative_files(
-  root : String,
-  relative : String,
-  depth : Int,
-) -> Array[String] {
-  guard depth >= 0 else { return [] }
-  let directory = if relative == "" {
-    root
-  } else {
-    @fsutil.path_join(root, relative)
-  }
-  let entries = @async_fs.readdir(
-    directory,
-    include_hidden=true,
-    include_special=false,
-  ) catch {
-    _ => []
-  }
-  let files : Array[String] = []
-  for entry in entries {
-    let child_relative = if relative == "" {
-      entry
-    } else {
-      relative + "/" + entry
-    }
-    let child = @fsutil.path_join(root, child_relative)
-    let is_file = @fsutil.path_is_file(child)
-    let is_dir = @fsutil.path_is_dir(child)
-    if is_file {
-      files.push(child_relative.replace_all(old="\\", new="/"))
-    } else if is_dir {
-      for nested in collect_relative_files(root, child_relative, depth - 1) {
-        files.push(nested)
-      }
-    }
-  }
-  files
-}
-
-///|
-fn push_release_metadata_line(
-  lines : Array[DoctorLine],
-  field : String,
-  value : String?,
-) -> Unit {
-  match value {
-    Some(value) if value.trim() != "" =>
-      lines.push(
-        DoctorLine::coded("release.metadata." + field, Ok, field + ": " + value),
-      )
-    _ =>
-      lines.push(
-        DoctorLine::coded(
-          "release.metadata." + field + ".missing",
-          Error,
-          "release metadata is missing `" + field + "`",
-        ),
-      )
-  }
-}
-
-///|
-async fn collect_release(project : ProjectDoctorInfo) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  let module_config = match read_project_moon_mod(project) {
-    Some(Ok(config)) => config
-    Some(Err(error)) => {
-      lines.push(moon_config_error_line("moon.mod", error))
-      return DoctorSection::new(
-        "release",
-        "Release",
-        section_status(lines),
-        lines,
-      )
-    }
-    None => {
-      lines.push(
-        DoctorLine::coded(
-          "release.moon_mod.missing",
-          Error,
-          "release preflight requires moon.mod",
-        ),
-      )
-      return DoctorSection::new(
-        "release",
-        "Release",
-        section_status(lines),
-        lines,
-      )
-    }
-  }
-  push_release_metadata_line(lines, "name", module_config.name)
-  push_release_metadata_line(lines, "version", module_config.version)
-  push_release_metadata_line(lines, "readme", module_config.readme)
-  push_release_metadata_line(lines, "repository", module_config.repository)
-  push_release_metadata_line(lines, "license", module_config.license)
-  push_release_metadata_line(lines, "description", module_config.description)
-  match module_config.readme {
-    Some(readme) => {
-      let readme_path = if @fsutil.path_is_absolute(readme) {
-        readme
-      } else {
-        @fsutil.path_join(project.root, readme)
-      }
-      if !@fsutil.path_exists(readme_path) {
-        lines.push(
-          DoctorLine::coded(
-            "release.metadata.readme_file_missing",
-            Error,
-            "release readme file is missing: " + readme_path,
-          ),
-        )
-      }
-    }
-    None => ()
-  }
-  match module_config.repository {
-    Some(repository) if !(repository.has_prefix("https://") ||
-      repository.has_prefix("http://")) =>
-      lines.push(
-        DoctorLine::coded(
-          "release.metadata.repository_invalid",
-          Error,
-          "repository must be an http or https URL: " + repository,
-        ),
-      )
-    _ => ()
-  }
-
-  let module_name = module_config.name.unwrap_or("")
-  let excluded = module_name.has_suffix("/examples") ||
-    module_name.has_suffix("/e2e")
-  if excluded {
-    lines.push(
-      DoctorLine::coded(
-        "release.publish.excluded",
-        Neutral,
-        "module is intentionally excluded from publishing: " + module_name,
-      ),
-    )
-  } else {
-    let (status, output) = collect_command_status(
-      "moon",
-      ["publish", "--dry-run"],
-      Some(project.root),
-    )
-    if status == 0 {
-      lines.push(
-        DoctorLine::coded(
-          "release.publish.dry_run",
-          Ok,
-          "moon publish --dry-run succeeded",
-        ),
-      )
-    } else {
-      lines.push(
-        DoctorLine::coded(
-          "release.publish.dry_run_failed",
-          Error,
-          "moon publish --dry-run failed",
-          hint=last_non_empty_line(output).unwrap_or("publish dry-run failed"),
-        ),
-      )
-    }
-  }
-
-  match find_up(project.root, "scripts") {
-    Some(scripts_dir) => {
-      let verifier = @path.Path(
-          @fsutil.path_join(scripts_dir, "verify_generated.mjs"),
-        )
-        .resolve()
-        .to_string()
-      if @fsutil.path_exists(verifier) {
-        let scripts_parent = @fsutil.path_parent(scripts_dir)
-        let repository_root = @path.Path(
-            if scripts_parent == scripts_dir {
-              project.root
-            } else {
-              scripts_parent
-            },
-          )
-          .resolve()
-          .to_string()
-        let (status, output) = collect_command_status(
-          "node",
-          [verifier],
-          Some(repository_root),
-        )
-        if status == 0 {
-          lines.push(
-            DoctorLine::coded(
-              "release.generated",
-              Ok,
-              "generated files are current",
-            ),
-          )
-        } else {
-          lines.push(
-            DoctorLine::coded(
-              "release.generated.stale",
-              Error,
-              "generated file verification failed",
-              hint=last_non_empty_line(output).unwrap_or(
-                "generated files are stale",
-              ),
-            ),
-          )
-        }
-      }
-    }
-    None => ()
-  }
-
-  let prebuilt_candidates = [
-    @fsutil.path_join(project.root, "prebuilt"),
-    @fsutil.path_join(@fsutil.path_join(project.root, "proton"), "prebuilt"),
-  ]
-  for prebuilt_root in prebuilt_candidates {
-    let prebuilt_exists = @fsutil.path_is_dir(prebuilt_root)
-    if prebuilt_exists {
-      let mut forbidden_count = 0
-      for platform_id in ["win32-x64", "darwin-arm64", "linux-x64"] {
-        let platform_root = @fsutil.path_join(prebuilt_root, platform_id)
-        let platform_exists = @fsutil.path_is_dir(platform_root)
-        if platform_exists {
-          let allowed = @cef.proton_prebuilt_relative_files_for_platform(
-            platform_id,
-          )
-          let normalized_allowed = allowed.map(fn(file) {
-            file.replace_all(old="\\", new="/")
-          })
-          normalized_allowed.push("include/proton_native.h")
-          normalized_allowed.push("manifest.json")
-          for file in collect_relative_files(platform_root, "", 5) {
-            if !normalized_allowed.contains(file) {
-              forbidden_count += 1
-              lines.push(
-                DoctorLine::coded(
-                  "release.prebuilt.forbidden",
-                  Error,
-                  "forbidden file in Proton prebuilt artifacts: " +
-                  platform_id +
-                  "/" +
-                  file,
-                ),
-              )
-            }
-          }
-        }
-      }
-      if forbidden_count == 0 {
-        lines.push(
-          DoctorLine::coded(
-            "release.prebuilt.checked",
-            Ok,
-            "Proton prebuilt directories contain only allowed artifacts",
-          ),
-        )
-      }
-      break
-    }
-  }
-
-  let platform_id = @cef.current_platform_id()
-  if platform_id.has_prefix("darwin-") {
-    match @env.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
-      Some(_) =>
-        lines.push(
-          DoctorLine::coded(
-            "release.signing.macos",
-            Ok,
-            "macOS signing identity is configured",
-          ),
-        )
-      None =>
-        lines.push(
-          DoctorLine::coded(
-            "release.signing.macos_missing",
-            Warn,
-            "PROTON_MACOS_SIGNING_IDENTITY is not configured",
-          ),
-        )
-    }
-    match @env.get_env_var("PROTON_NOTARY_PROFILE") {
-      Some(_) =>
-        lines.push(
-          DoctorLine::coded(
-            "release.notary",
-            Ok,
-            "notary profile is configured",
-          ),
-        )
-      None =>
-        lines.push(
-          DoctorLine::coded(
-            "release.notary.missing",
-            Warn,
-            "PROTON_NOTARY_PROFILE is not configured",
-          ),
-        )
-    }
-  } else if platform_id == "win32-x64" {
-    match @env.get_env_var("PROTON_WINDOWS_CERTIFICATE") {
-      Some(_) =>
-        lines.push(
-          DoctorLine::coded(
-            "release.signing.windows",
-            Ok,
-            "Windows certificate is configured",
-          ),
-        )
-      None =>
-        lines.push(
-          DoctorLine::coded(
-            "release.signing.windows_missing",
-            Warn,
-            "PROTON_WINDOWS_CERTIFICATE is not configured",
-          ),
-        )
-    }
-  }
-  DoctorSection::new("release", "Release", section_status(lines), lines)
-}
-
-///|
-fn option_path_or_missing(value : String?) -> String {
-  match value {
-    Some(path) => path
-    None => "missing"
-  }
-}
-
-///|
-fn collect_project(project : ProjectDoctorInfo) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  lines.push(
-    DoctorLine::coded("project.root", Neutral, "root: " + project.root),
-  )
-  lines.push(
-    DoctorLine::coded(
-      "project.package_dir",
-      Neutral,
-      "package_dir: " + project.package_dir,
-    ),
-  )
-  lines.push(
-    DoctorLine::coded(
-      "project.moon_mod",
-      Neutral,
-      "moon.mod: " + option_path_or_missing(project.moon_mod_path),
-    ),
-  )
-  lines.push(
-    DoctorLine::coded(
-      "project.moon_pkg",
-      Neutral,
-      "moon.pkg: " + option_path_or_missing(project.moon_pkg_path),
-    ),
-  )
-  lines.push(
-    DoctorLine::coded(
-      "project.moon_proton",
-      Neutral,
-      "moon.proton: " + option_path_or_missing(project.moon_proton_path),
-    ),
-  )
-  match project.app_json_path {
-    Some(path) =>
-      lines.push(
-        DoctorLine::coded(
-          "project.legacy_app_json",
-          Neutral,
-          "legacy app.json: " + path,
-        ),
-      )
-    None => ()
-  }
-  DoctorSection::new("project", "Project", Neutral, lines)
-}
-
-///|
-fn collect_packages(
-  project : ProjectDoctorInfo,
-  module_config : Result[MoonModuleConfig, MoonConfigReadError]?,
-  package_config : Result[MoonPackageConfig, MoonConfigReadError]?,
-  verbose~ : Bool,
-) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  let module_value = match module_config {
-    Some(Ok(config)) => Some(config)
-    Some(Err(error)) => {
-      lines.push(moon_config_error_line("moon.mod", error))
-      None
-    }
-    None => {
-      if project.mode != PlainDirectory {
-        lines.push(
-          DoctorLine::coded(
-            "packages.moon_mod.missing",
-            Missing,
-            "moon.mod: missing",
-          ),
-        )
-      }
-      None
-    }
-  }
-  let package_value = match package_config {
-    Some(Ok(config)) => Some(config)
-    Some(Err(error)) => {
-      lines.push(moon_config_error_line("moon.pkg", error))
-      None
-    }
-    None => {
-      if project.mode == AppProject {
-        lines.push(
-          DoctorLine::coded(
-            "packages.moon_pkg.missing",
-            Warn,
-            "moon.pkg: missing",
-          ),
-        )
-      }
-      None
-    }
-  }
-  match module_value {
-    Some(config) => {
-      lines.push(
-        DoctorLine::coded(
-          "packages.module",
-          Neutral,
-          "module: " + option_string_or(config.name, "unknown"),
-        ),
-      )
-      if verbose {
-        lines.push(
-          DoctorLine::coded(
-            "packages.moon_mod.path",
-            Neutral,
-            "moon.mod path: " + config.path,
-          ),
-        )
-        match config.version {
-          Some(version) =>
-            lines.push(
-              DoctorLine::coded(
-                "packages.module.version",
-                Neutral,
-                "module version: " + version,
-              ),
-            )
-          None => ()
-        }
-      }
-      match config.preferred_target {
-        Some("native") =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.target.preferred",
-              Ok,
-              "preferred target: native",
-            ),
-          )
-        Some(target) =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.target.preferred_non_native",
-              Warn,
-              "preferred target is " +
-              target +
-              "; Proton apps require native builds",
-            ),
-          )
-        None =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.target.preferred_missing",
-              Unknown,
-              "preferred target is not declared",
-            ),
-          )
-      }
-      match config.supported_targets {
-        Some(targets) if targets.contains("native") =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.target.native",
-              Ok,
-              "native target is supported",
-            ),
-          )
-        Some(targets) =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.target.native_missing",
-              Error,
-              "supported targets do not include native: " + targets,
-            ),
-          )
-        None =>
-          lines.push(
-            DoctorLine::coded(
-              "packages.target.unspecified",
-              Unknown,
-              "supported targets are not explicitly declared",
-            ),
-          )
-      }
-    }
-    None => ()
-  }
-  match
-    (
-      dependency_version(module_value, "moonbit-community/proton"),
-      dependency_version(module_value, "moonbit-community/proton_ext"),
-    ) {
-    (Some(proton), Some(extension)) =>
-      if version_major_minor(proton) != version_major_minor(extension) {
-        lines.push(
-          DoctorLine::coded(
-            "packages.version.proton_extension_mismatch",
-            Warn,
-            "proton and proton_ext should use the same major/minor version: " +
-            proton +
-            " vs " +
-            extension,
-          ),
-        )
-      }
-    _ => ()
-  }
-  match module_value {
-    Some(config) =>
-      for dep in config.imports {
-        let version = match dep.version {
-          Some(version) => version
-          None => "declared without a pinned version"
-        }
-        lines.push(
-          DoctorLine::coded(
-            "packages.dependency." + diagnostic_component(dep.module_name),
-            Neutral,
-            dep.module_name + ": " + version,
-          ),
-        )
-      }
-    None => ()
-  }
-  match package_value {
-    Some(config) =>
-      for item in config.imports {
-        match module_name_from_package(item.package_path) {
-          Some(module_name) => {
-            let is_current_module = match module_value {
-              Some(module_config_value) =>
-                match module_config_value.name {
-                  Some(current_module) =>
-                    item.package_path == current_module ||
-                    item.package_path.has_prefix(current_module + "/")
-                  None => false
-                }
-              None => false
-            }
-            let is_core = module_name == "moonbitlang/core"
-            if !is_current_module &&
-              !is_core &&
-              !module_has_dependency(module_value, module_name) {
-              lines.push(
-                DoctorLine::coded(
-                  "packages.import.missing_dependency",
-                  Error,
-                  "package import `" +
-                  item.package_path +
-                  "` requires module dependency `" +
-                  module_name +
-                  "`",
-                ),
-              )
-            }
-          }
-          None => ()
-        }
-      }
-    None => ()
+    return DoctorSection::new("runtime", "Runtime", lines)
   }
   if verbose {
-    match package_value {
-      Some(config) => {
-        lines.push(
-          DoctorLine::coded(
-            "packages.moon_pkg.path",
-            Neutral,
-            "moon.pkg path: " + config.path,
-          ),
-        )
-        match config.is_main {
-          Some(value) =>
-            lines.push(
-              DoctorLine::coded(
-                "packages.is_main",
-                Neutral,
-                "is-main: \{value}",
-              ),
-            )
-          None => ()
-        }
-        for item in config.imports {
-          match item.package_alias {
-            Some(package_alias) =>
-              lines.push(
-                DoctorLine::coded(
-                  "packages.import.alias",
-                  Neutral,
-                  "import alias: " + item.package_path + " as " + package_alias,
-                ),
-              )
-            None => ()
-          }
-        }
-      }
-      None => ()
-    }
+    lines.push(DoctorLine::new("runtime.path", Neutral, native_dist))
   }
-  DoctorSection::new("packages", "Packages", section_status(lines), lines)
-}
-
-///|
-async fn collect_extensions(
-  project : ProjectDoctorInfo,
-  package_config : Result[MoonPackageConfig, MoonConfigReadError]?,
-) -> DoctorSection {
-  let imported = match package_config {
-    Some(Ok(config)) =>
-      package_imports_with_prefix(Some(config), "moonbit-community/proton_ext/")
-    _ => []
-  }
-  let extension_root = extension_root_for_project(project)
-  let lines : Array[DoctorLine] = []
-  let namespaces : Map[String, String] = Map([])
-  let discovered = if @fsutil.path_exists(extension_root) {
-    let entries = @async_fs.readdir(
-      extension_root,
-      include_hidden=true,
-      include_special=false,
-    ) catch {
-      _ => []
-    }
-    let mut count = 0
-    for entry in entries {
-      let extension_dir = @fsutil.path_join(extension_root, entry)
-      if !@fsutil.path_is_dir(extension_dir) {
-        continue
-      }
-      let ext_path = @fsutil.path_join(extension_dir, "moon.ext")
-      if @fsutil.path_is_file(ext_path) {
-        count += 1
-        let identity = try @codegen.read_moon_ext_identity(ext_path) catch {
-          error => Err(error.to_string())
-        } noraise {
-          value => Ok(value)
-        }
-        match identity {
-          Ok((id, js_namespace)) => {
-            lines.push(
-              DoctorLine::coded(
-                "extensions.metadata",
-                Ok,
-                "extension metadata valid: " +
-                id +
-                " (namespace " +
-                js_namespace +
-                ")",
-              ),
-            )
-            match namespaces.get(js_namespace) {
-              Some(previous) =>
-                lines.push(
-                  DoctorLine::coded(
-                    "extensions.namespace.duplicate",
-                    Error,
-                    "duplicate extension namespace `" +
-                    js_namespace +
-                    "`: " +
-                    previous +
-                    " and " +
-                    ext_path,
-                  ),
-                )
-              None => namespaces[js_namespace] = ext_path
-            }
-          }
-          Err(error) =>
-            lines.push(
-              DoctorLine::coded(
-                "extensions.metadata.invalid",
-                Error,
-                "invalid extension metadata: " + ext_path,
-                hint=error,
-              ),
-            )
-        }
-        let moon_pkg_path = @fsutil.path_join(extension_dir, "moon.pkg")
-        if !@fsutil.path_exists(moon_pkg_path) {
-          lines.push(
-            DoctorLine::coded(
-              "extensions.moon_pkg.missing",
-              Error,
-              "extension package is missing moon.pkg: " + extension_dir,
-            ),
-          )
-        }
-        let source_path = @fsutil.path_join(extension_dir, "extension.mbt")
-        if !@fsutil.path_exists(source_path) {
-          lines.push(
-            DoctorLine::coded(
-              "extensions.source.missing",
-              Error,
-              "extension metadata has no extension.mbt: " + extension_dir,
-            ),
-          )
-        } else {
-          let source = @async_fs.read_file(source_path).text() catch { _ => "" }
-          let generated_path = @fsutil.path_join(
-            extension_dir, "extension.g.mbt",
-          )
-          if source.contains("#proton.command") {
-            let generated_result = try
-              @codegen.generate_typed_commands_from_files([source_path])
-            catch {
-              error => Err(error.to_string())
-            } noraise {
-              generated => Ok(generated)
-            }
-            match generated_result {
-              Ok(generated) =>
-                if !@fsutil.path_exists(generated_path) {
-                  lines.push(
-                    DoctorLine::coded(
-                      "extensions.generated.missing",
-                      Error,
-                      "generated extension file is missing: " + generated_path,
-                    ),
-                  )
-                } else {
-                  let committed = @async_fs.read_file(generated_path).text() catch {
-                    _ => ""
-                  }
-                  if committed == generated.source {
-                    lines.push(
-                      DoctorLine::coded(
-                        "extensions.generated.current",
-                        Ok,
-                        "generated extension file is current: " + generated_path,
-                      ),
-                    )
-                  } else {
-                    lines.push(
-                      DoctorLine::coded(
-                        "extensions.generated.stale",
-                        Error,
-                        "generated extension file is stale: " + generated_path,
-                        hint="regenerate it with `proton_cli codegen`",
-                      ),
-                    )
-                  }
-                }
-              Err(error) =>
-                lines.push(
-                  DoctorLine::coded(
-                    "extensions.codegen.invalid",
-                    Error,
-                    "extension command generation failed: " + source_path,
-                    hint=error,
-                  ),
-                )
-            }
-          } else if @fsutil.path_exists(generated_path) {
-            lines.push(
-              DoctorLine::coded(
-                "extensions.generated.unexpected",
-                Warn,
-                "generated extension file exists without #proton attributes: " +
-                generated_path,
-              ),
-            )
-          }
-        }
-      }
-    }
-    count
-  } else {
-    0
-  }
-  lines.push(
-    DoctorLine::coded(
-      "extensions.discovered",
-      Neutral,
-      "discovered: \{discovered}",
-    ),
-  )
-  if imported.length() > 0 {
+  let required = @cef.runtime_required_relative_files_for_platform(platform_id)
+  guard required.length() > 0 else {
     lines.push(
-      DoctorLine::coded(
-        "extensions.imported",
-        Neutral,
-        "imported packages: " + imported.join(", "),
-      ),
-    )
-  } else {
-    lines.push(
-      DoctorLine::coded(
-        "extensions.imported",
-        Neutral,
-        "imported packages: none",
-      ),
-    )
-  }
-  DoctorSection::new("extensions", "Extensions", section_status(lines), lines)
-}
-
-///|
-async fn extension_root_for_project(project : ProjectDoctorInfo) -> String {
-  let nested_extension_root = @fsutil.path_join(project.root, "extensions")
-  if @fsutil.path_exists(nested_extension_root) {
-    nested_extension_root
-  } else {
-    project.root
-  }
-}
-
-///|
-async fn write_doctor_fix(path : String, text : String) -> Bool {
-  try @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
-    error if @async.is_being_cancelled() => raise error
-    _ => return false
-  } noraise {
-    _ => true
-  }
-}
-
-///|
-async fn apply_doctor_fixes(
-  project : ProjectDoctorInfo,
-  dry_run~ : Bool,
-) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  let extension_root = extension_root_for_project(project)
-  let entries = @async_fs.readdir(
-    extension_root,
-    include_hidden=true,
-    include_special=false,
-  ) catch {
-    _ => []
-  }
-  let mut changed = 0
-  for entry in entries {
-    let extension_dir = @fsutil.path_join(extension_root, entry)
-    if !@fsutil.path_is_dir(extension_dir) {
-      continue
-    }
-    let source_path = @fsutil.path_join(extension_dir, "extension.mbt")
-    let metadata_path = @fsutil.path_join(extension_dir, "moon.ext")
-    if !@fsutil.path_is_file(source_path) ||
-      !@fsutil.path_is_file(metadata_path) {
-      continue
-    }
-    let source = @async_fs.read_file(source_path).text() catch { _ => "" }
-    if !source.contains("#proton.command") {
-      continue
-    }
-    let generated_path = @fsutil.path_join(extension_dir, "extension.g.mbt")
-    let generated_result = try
-      @codegen.generate_typed_commands_from_files([source_path])
-    catch {
-      error => Err(error.to_string())
-    } noraise {
-      generated => Ok(generated)
-    }
-    match generated_result {
-      Ok(generated) => {
-        let current = @async_fs.read_file(generated_path).text() catch {
-          _ => ""
-        }
-        if current != generated.source {
-          changed += 1
-          if dry_run {
-            lines.push(
-              DoctorLine::coded(
-                "fix.generated.plan",
-                Neutral,
-                "would regenerate " + generated_path,
-              ),
-            )
-          } else if write_doctor_fix(generated_path, generated.source) {
-            lines.push(
-              DoctorLine::coded(
-                "fix.generated.applied",
-                Ok,
-                "regenerated " + generated_path,
-              ),
-            )
-          } else {
-            lines.push(
-              DoctorLine::coded(
-                "fix.generated.failed",
-                Error,
-                "failed to regenerate " + generated_path,
-              ),
-            )
-          }
-        }
-      }
-      Err(error) =>
-        lines.push(
-          DoctorLine::coded(
-            "fix.generated.invalid",
-            Error,
-            "cannot regenerate " + source_path,
-            hint=error,
-          ),
-        )
-    }
-  }
-  if changed == 0 && lines.length() == 0 {
-    lines.push(
-      DoctorLine::coded(
-        "fix.none",
-        Neutral,
-        "no safe automatic fixes are available",
-      ),
-    )
-  }
-  DoctorSection::new("fixes", "Fixes", section_status(lines), lines)
-}
-
-///|
-fn project_relative_path(project : ProjectDoctorInfo, path : String) -> String {
-  let windows_prefix = project.root + "\\"
-  let unix_prefix = project.root + "/"
-  if path.has_prefix(windows_prefix) {
-    path
-    .unsafe_substring(start=windows_prefix.length(), end=path.length())
-    .to_string()
-  } else if path.has_prefix(unix_prefix) {
-    path
-    .unsafe_substring(start=unix_prefix.length(), end=path.length())
-    .to_string()
-  } else {
-    path
-  }
-}
-
-///|
-fn path_is_within_project(project : ProjectDoctorInfo, path : String) -> Bool {
-  path_is_within_root(project.root, path)
-}
-
-///|
-fn entry_path(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
-  if entry.kind == "file" || entry.kind == "asset" {
-    if @fsutil.path_is_absolute(entry.value) {
-      entry.value
-    } else {
-      @fsutil.path_join(project.root, entry.value)
-    }
-  } else {
-    entry.value
-  }
-}
-
-///|
-fn entry_text(project : ProjectDoctorInfo, entry : DoctorAppEntry) -> String {
-  match entry.kind {
-    "html" => "html inline"
-    "url" => "url " + entry.value
-    "file" =>
-      "file " + project_relative_path(project, entry_path(project, entry))
-    "asset" =>
-      "asset " + project_relative_path(project, entry_path(project, entry))
-    _ => entry.kind + " " + entry.value
-  }
-}
-
-///|
-async fn push_entry_existence(
-  lines : Array[DoctorLine],
-  project : ProjectDoctorInfo,
-  entry : DoctorAppEntry,
-) -> Unit {
-  let path = entry_path(project, entry)
-  if (entry.kind == "file" || entry.kind == "asset") &&
-    !path_is_within_project(project, path) {
-    lines.push(
-      DoctorLine::coded(
-        "app.entry.outside_project",
+      DoctorLine::new(
+        "runtime.unsupported",
         Error,
-        "entry path is outside the project root: " + path,
+        "unsupported platform: " + platform_id,
       ),
     )
-    return
+    return DoctorSection::new("runtime", "Runtime", lines)
   }
-  match entry.kind {
-    "file" =>
-      if @fsutil.path_exists(path) {
-        lines.push(DoctorLine::coded("app.entry.file", Ok, "entry file exists"))
-      } else {
-        lines.push(
-          DoctorLine::coded(
-            "app.entry.file.missing",
-            Error,
-            "entry file missing: " + project_relative_path(project, path),
-          ),
-        )
-      }
-    "asset" =>
-      if @fsutil.path_exists(path) {
-        lines.push(
-          DoctorLine::coded("app.entry.asset", Ok, "entry asset exists"),
-        )
-      } else {
-        lines.push(
-          DoctorLine::coded(
-            "app.entry.asset.missing",
-            Warn,
-            "entry asset missing: " + project_relative_path(project, path),
-            hint="run frontend.before_build before release builds",
-          ),
-        )
-      }
-    _ => ()
-  }
-}
-
-///|
-fn push_optional_app_line(
-  lines : Array[DoctorLine],
-  label : String,
-  value : String?,
-) -> Unit {
-  match value {
-    Some(value) =>
-      lines.push(
-        DoctorLine::coded("app." + label, Neutral, label + ": " + value),
-      )
-    None => ()
-  }
-}
-
-///|
-async fn push_app_path_check(
-  lines : Array[DoctorLine],
-  project : ProjectDoctorInfo,
-  code : String,
-  label : String,
-  value : String?,
-  required~ : Bool,
-) -> Unit {
-  match value {
-    Some(path) => {
-      let exists = @fsutil.path_is_dir(path)
-      if !path_is_within_project(project, path) {
-        lines.push(
-          DoctorLine::coded(
-            code + ".outside_project",
-            Error,
-            label + " is outside the project root: " + path,
-          ),
-        )
-      } else if exists {
-        lines.push(DoctorLine::coded(code, Ok, label + " exists: " + path))
-      } else if required {
-        lines.push(
-          DoctorLine::coded(
-            code + ".missing",
-            Error,
-            label + " is missing: " + path,
-          ),
-        )
-      } else {
-        lines.push(
-          DoctorLine::coded(
-            code + ".missing",
-            Warn,
-            label + " is missing: " + path,
-          ),
-        )
-      }
+  let missing : Array[String] = []
+  for relative in required {
+    if !@fsutil.path_exists(@fsutil.path_join(native_dist, relative)) {
+      missing.push(relative)
     }
-    None => ()
   }
-}
-
-///|
-async fn push_loaded_app(
-  lines : Array[DoctorLine],
-  project : ProjectDoctorInfo,
-  config : DoctorAppConfig,
-) -> Unit {
-  let window = config.window
-  if window.title.trim() == "" {
+  if missing.length() > 0 {
     lines.push(
-      DoctorLine::coded("app.window.title_empty", Warn, "window title is empty"),
-    )
-  }
-  if window.width <= 0 || window.height <= 0 {
-    lines.push(
-      DoctorLine::coded(
-        "app.window.invalid_size",
+      DoctorLine::new(
+        "runtime.layout",
         Error,
-        "window width and height must be positive",
+        "runtime is incomplete: missing " + missing.join(", "),
+        hint="run `proton_cli cef setup` again",
       ),
     )
+  } else {
+    lines.push(
+      DoctorLine::new("runtime.layout", Ok, "runtime layout is complete"),
+    )
   }
-  lines.push(
-    DoctorLine::coded(
-      "app.window",
-      Neutral,
-      "window: \"" +
-      window.title +
-      "\" " +
-      window.width.to_string() +
-      "x" +
-      window.height.to_string() +
-      " size_hint=" +
-      window.size_hint +
-      " titlebar_style=" +
-      window.titlebar_style,
-    ),
-  )
-  lines.push(
-    DoctorLine::coded(
-      "app.entry",
-      Neutral,
-      "entry: " + entry_text(project, config.entry),
-    ),
-  )
-  push_entry_existence(lines, project, config.entry)
-  lines.push(DoctorLine::coded("app.debug", Neutral, "debug: \{config.debug}"))
-  match config.backend {
-    Some(backend) => {
-      push_optional_app_line(lines, "backend_path", Some(backend.path))
-      push_optional_app_line(
-        lines,
-        "backend_package",
-        Some(backend.app_package),
-      )
-      push_app_path_check(
-        lines,
-        project,
-        "app.backend.path",
-        "backend path",
-        Some(backend.path),
-        required=true,
-      )
-    }
-    None => ()
-  }
-  match config.frontend {
-    Some(frontend) => {
-      push_optional_app_line(lines, "before_dev_command", frontend.before_dev)
-      push_optional_app_line(
-        lines,
-        "before_build_command",
-        frontend.before_build,
-      )
-      push_optional_app_line(lines, "frontend_dist", frontend.dist)
-      push_optional_app_line(lines, "dev_url", frontend.dev_url)
-      push_optional_app_line(lines, "frontend_path", frontend.path)
-      push_app_path_check(
-        lines,
-        project,
-        "app.frontend.path",
-        "frontend path",
-        frontend.path,
-        required=true,
-      )
-      push_app_path_check(
-        lines,
-        project,
-        "app.frontend.dist",
-        "frontend dist",
-        frontend.dist,
-        required=false,
-      )
-      match frontend.dev_url {
-        Some(url) if !(url.has_prefix("http://") || url.has_prefix("https://")) =>
-          lines.push(
-            DoctorLine::coded(
-              "app.frontend.dev_url_invalid",
-              Error,
-              "frontend dev_url must use http or https: " + url,
-            ),
-          )
-        _ => ()
-      }
-      match frontend.before_dev {
-        Some(command) if command.trim() == "" =>
-          lines.push(
-            DoctorLine::coded(
-              "app.frontend.before_dev_empty",
-              Warn,
-              "frontend before_dev command is empty",
-            ),
-          )
-        _ => ()
-      }
-      match frontend.before_build {
-        Some(command) if command.trim() == "" =>
-          lines.push(
-            DoctorLine::coded(
-              "app.frontend.before_build_empty",
-              Warn,
-              "frontend before_build command is empty",
-            ),
-          )
-        _ => ()
-      }
-    }
-    None => ()
-  }
-}
-
-///|
-async fn collect_app(project : ProjectDoctorInfo) -> DoctorSection {
-  let lines : Array[DoctorLine] = []
-  match project.moon_proton_path {
-    Some(path) =>
-      try read_proton_project_config(path) catch {
-        error =>
-          lines.push(
-            DoctorLine::coded(
-              "app.config.invalid",
-              Error,
-              "moon.proton: failed to load",
-              hint=error.message(),
-            ),
-          )
-      } noraise {
-        config => {
-          push_loaded_app(lines, project, config)
-          for warning in config.warnings {
-            lines.push(DoctorLine::coded("app.config.warning", Warn, warning))
-          }
-          match project.app_json_path {
-            Some(legacy) =>
-              lines.push(
-                DoctorLine::coded(
-                  "app.config.conflict",
-                  Warn,
-                  "moon.proton and legacy app.json both exist: " + legacy,
-                ),
-              )
-            None => ()
-          }
-        }
-      }
-    None =>
-      match project.app_json_path {
-        Some(path) =>
-          lines.push(
-            DoctorLine::coded(
-              "app.config.legacy",
-              Warn,
-              "app.json: legacy runtime manifest found at " + path,
-              hint="create moon.proton; app.json is no longer the user-facing Proton config",
-            ),
-          )
-        None =>
-          lines.push(
-            DoctorLine::coded(
-              "app.config.missing",
-              Warn,
-              "moon.proton: not found",
-            ),
-          )
-      }
-  }
-  DoctorSection::new("app", "App", section_status(lines), lines)
-}
-
-///|
-fn section_status(lines : Array[DoctorLine]) -> DoctorStatus {
-  let mut status = Ok
-  for line in lines {
-    match line.status {
-      Error | Missing => return Error
-      Warn => status = Warn
-      Unknown if status == Ok => status = Unknown
-      _ => ()
-    }
-  }
-  status
+  DoctorSection::new("runtime", "Runtime", lines)
 }

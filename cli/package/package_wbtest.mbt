@@ -1123,11 +1123,11 @@ async test "active runtime rejects another platform" {
   defer restore_package_env("PROTON_NATIVE_DIST", old_dist)
   let expected = @cef.current_platform_id()
   let other = if expected == "win32-x64" { "darwin-arm64" } else { "win32-x64" }
-  let manifest = Json::object({
-    "platform": Json::string(other),
-    "dist": Json::string("runtime"),
-  }).stringify()
-  write_text(@fsutil.resolve_path(root, ".proton/runtime.json"), manifest)
+  let manifest : Json = { "platform": other, "dist": "runtime" }
+  write_text(
+    @fsutil.resolve_path(root, ".proton/runtime.json"),
+    manifest.stringify(),
+  )
   try read_active_runtime(@fsutil.resolve_path(root, ".")) catch {
     PackageRuntimeError::PlatformMismatch(
       expected=actual_expected,

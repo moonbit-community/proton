@@ -21,7 +21,7 @@ import {
   "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 
-supported_targets = "native"
+supported_targets = "native+wasm"
 
 options(
   "native-stub": [ "package_windows_icon.c" ],

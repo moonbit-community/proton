@@ -103,6 +103,26 @@ test "doctor output modes are declaratively exclusive" {
 }
 
 ///|
+test "doctor exposes only readonly diagnostics" {
+  let matches = cli_command().parse(argv=["doctor", "--verbose"], env=Map([]))
+  match matches.subcommand {
+    Some(("doctor", doctor_matches)) =>
+      @debug.assert_eq(doctor_matches.flags.get("verbose"), Some(true))
+    _ => fail("expected doctor subcommand")
+  }
+  try cli_command().parse(argv=["doctor", "--deep"], env=Map([])) catch {
+    _ => ()
+  } noraise {
+    _ => fail("doctor must not expose deep runtime checks")
+  }
+  try cli_command().parse(argv=["doctor", "--run"], env=Map([])) catch {
+    _ => ()
+  } noraise {
+    _ => fail("doctor must not execute project commands")
+  }
+}
+
+///|
 fn moon_mod_version_from_source(path : String, source : String) -> String? {
   let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
   guard reports.length() == 0 else { return None }

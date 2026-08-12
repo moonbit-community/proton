@@ -8,13 +8,13 @@ fn runtime_manifest_json(
 ) -> String {
   let fields : Map[String, Json] = {
     "schema_version": Json::number(1.0, repr="1"),
-    "platform": Json::string(platform),
-    "proton_version": Json::string(proton_version),
-    "cef_version": Json::string(cef_name),
-    "dist": Json::string(dist),
+    "platform": platform,
+    "proton_version": proton_version,
+    "cef_version": cef_name,
+    "dist": dist,
   }
   match cef_root {
-    Some(cef_root) => fields["cef"] = Json::string(cef_root)
+    Some(cef_root) => fields["cef"] = Json(cef_root)
     None => ()
   }
   Json::object(fields).stringify()
