@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
 
@@ -55,14 +55,14 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Cache MoonBit packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mooncakes
           key: ${{ runner.os }}-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: ${{ runner.os }}-mooncakes-
 
       - name: Cache CEF downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .proton-global-cache
           key: ${{ runner.os }}-cef-global-${{ hashFiles('cli/cef/cef_platform.mbt') }}
@@ -100,7 +100,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
 

@@ -29,14 +29,14 @@ jobs:
           ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
 
       - name: Cache MoonBit packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mooncakes
           key: Linux-prebuilt-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: Linux-prebuilt-mooncakes-
 
       - name: Cache CEF downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .proton-global-cache
           key: Linux-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
@@ -106,7 +106,7 @@ jobs:
             linux-x64
 
       - name: Upload Linux prebuilt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: proton-prebuilt-linux-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}
           path: ${{ runner.temp }}/proton-prebuilt-linux-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}.tar.gz

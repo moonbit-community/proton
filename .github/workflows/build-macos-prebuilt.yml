@@ -29,14 +29,14 @@ jobs:
           ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
 
       - name: Cache MoonBit packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mooncakes
           key: macOS-prebuilt-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: macOS-prebuilt-mooncakes-
 
       - name: Cache CEF downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .proton-global-cache
           key: macOS-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
@@ -102,7 +102,7 @@ jobs:
             darwin-arm64
 
       - name: Upload macOS prebuilt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: proton-prebuilt-darwin-arm64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}
           path: ${{ runner.temp }}/proton-prebuilt-darwin-arm64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}.tar.gz
