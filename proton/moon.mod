@@ -11,6 +11,7 @@ import {
   "moonbitlang/async@0.20.5",
   "moonbitlang/x@0.4.49",
   "moonbitlang/lexer@0.3.13",
+  "tonyfettes/xlog@0.4.0",
 }
 
 readme = "README.md"

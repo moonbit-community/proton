@@ -4,6 +4,7 @@ import {
   "moonbitlang/core/json",
   "moonbit-community/proton/ipc",
   "moonbit-community/proton_contract",
+  "tonyfettes/xlog",
 }
 
 import {

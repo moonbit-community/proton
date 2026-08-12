@@ -403,25 +403,30 @@ fn current_permission_base_path() -> String {
 ///|
 fn App::warn_config_overrides(self : App) -> Unit {
   if self.title_overridden {
-    println("warning: Proton API App::title overrides moon.proton window.title")
+    @xlog.warn(category="config") <?
+      { "message": "Proton API App::title overrides moon.proton window.title" }
   }
   if self.size_overridden {
-    println(
-      "warning: Proton API App::size overrides moon.proton window.width/window.height",
-    )
+    @xlog.warn(category="config") <?
+      {
+        "message": "Proton API App::size overrides moon.proton window.width/window.height",
+      }
   }
   if self.titlebar_style_overridden {
-    println(
-      "warning: Proton API App::titlebar_style overrides moon.proton window.titlebar_style",
-    )
+    @xlog.warn(category="config") <?
+      {
+        "message": "Proton API App::titlebar_style overrides moon.proton window.titlebar_style",
+      }
   }
   if self.entry_overridden {
-    println("warning: Proton API App::entry_* overrides moon.proton entry")
+    @xlog.warn(category="config") <?
+      { "message": "Proton API App::entry_* overrides moon.proton entry" }
   }
   if self.debug_overridden {
-    println(
-      "warning: Proton API App::debug/debug_level overrides moon.proton debug",
-    )
+    @xlog.warn(category="config") <?
+      {
+        "message": "Proton API App::debug/debug_level overrides moon.proton debug",
+      }
   }
 }
 

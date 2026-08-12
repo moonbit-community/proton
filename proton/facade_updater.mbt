@@ -194,7 +194,8 @@ fn start_update_check(
     @async.sleep(update_check_delay_ms + update_check_jitter())
     let offered = channel.poll() catch {
       error => {
-        println("proton: update check failed: \{error}")
+        @xlog.error(category="update") <?
+          { "message": "update check failed", "error": "\{error}" }
         return
       }
     }
@@ -216,7 +217,11 @@ fn start_update_check(
 fn cleanup_previous_update() -> Unit {
   @native.update_cleanup_previous() catch {
     error =>
-      println("proton: previous update cleanup failed: " + error.message())
+      @xlog.error(category="update") <?
+        {
+          "message": "previous update cleanup failed",
+          "error": error.message(),
+        }
   }
 }
 

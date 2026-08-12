@@ -18,7 +18,11 @@ fn CommandErrorPolicy::response_message(
   if self.expose_details {
     diagnostic
   } else {
-    println("[proton] command dispatch failed: " + diagnostic)
+    // xlog keeps hidden backend details behind the process-wide handler. An
+    // application can point that handler at persistent storage without
+    // leaking the details into the renderer's deliberately generic response.
+    @xlog.error(category="command") <?
+      { "message": "command dispatch failed", "error": diagnostic }
     safe_message
   }
 }
