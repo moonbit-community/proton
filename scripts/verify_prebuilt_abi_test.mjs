@@ -190,6 +190,40 @@ test("metadata validation requires every shipped platform", () => {
   }
 });
 
+test("platform validation ignores unstaged sibling platforms", () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-abi-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, "native", "include"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, "native", "include", "proton_native.h"),
+      "PROTON_API int32_t proton_abi_version(void);\n",
+    );
+    fs.mkdirSync(path.join(repoRoot, "proton", "prebuilt", "linux-x64"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(repoRoot, "proton", "moon.mod"),
+      'version = "0.1.0"\n',
+    );
+
+    const platformFailures = verifyPrebuiltAbi({
+      repoRoot,
+      symbolPlatform: "linux-x64",
+    });
+    assert(
+      !platformFailures.some(failure => failure.includes("darwin-arm64")),
+    );
+    assert(
+      !platformFailures.some(failure => failure.includes("win32-x64")),
+    );
+    const globalFailures = verifyPrebuiltAbi({ repoRoot });
+    assert(globalFailures.includes("proton/prebuilt/darwin-arm64: missing"));
+    assert(globalFailures.includes("proton/prebuilt/win32-x64: missing"));
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("rejects non-object manifests", () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-abi-test-"));
   try {

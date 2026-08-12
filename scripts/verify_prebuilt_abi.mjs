@@ -281,23 +281,30 @@ export function verifyPrebuiltAbi({
   if (!fs.existsSync(prebuiltRoot)) {
     return [...failures, "proton/prebuilt: missing"];
   }
-  const platforms = fs
+  const stagedPlatforms = fs
     .readdirSync(prebuiltRoot)
     .filter(name => fs.statSync(path.join(prebuiltRoot, name)).isDirectory())
     .sort();
 
-  for (const platform of requiredPlatforms) {
-    if (!platforms.includes(platform)) {
-      failures.push(`proton/prebuilt/${platform}: missing`);
+  if (symbolPlatform === null) {
+    for (const platform of requiredPlatforms) {
+      if (!stagedPlatforms.includes(platform)) {
+        failures.push(`proton/prebuilt/${platform}: missing`);
+      }
     }
-  }
-
-  if (symbolPlatform !== null && !platforms.includes(symbolPlatform)) {
+  } else {
     if (!requiredPlatforms.includes(symbolPlatform)) {
       failures.push(`unsupported prebuilt platform: ${symbolPlatform}`);
+      return failures;
+    }
+    if (!stagedPlatforms.includes(symbolPlatform)) {
+      failures.push(`proton/prebuilt/${symbolPlatform}: missing`);
+      return failures;
     }
   }
 
+  const platforms =
+    symbolPlatform === null ? stagedPlatforms : [symbolPlatform];
   for (const platform of platforms) {
     const layout = platformLayouts[platform];
     if (!layout) {

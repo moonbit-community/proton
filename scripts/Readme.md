@@ -63,9 +63,10 @@ moon run scripts/bump_version.mbtx -- major
 
 ## `verify_prebuilt_abi.mjs`
 
-Checks every shipped Proton prebuilt manifest, declared artifact, and public
-header. Pass a platform id to also inspect that platform's dynamic-library
-exports against the `PROTON_API` declarations in `native/include/proton_native.h`:
+With `--metadata-only`, checks every shipped Proton prebuilt manifest, declared
+artifact, and public header. Pass a platform id to validate only that platform's
+staged artifacts and inspect its dynamic-library exports against the
+`PROTON_API` declarations in `native/include/proton_native.h`:
 
 ```sh
 node ./scripts/verify_prebuilt_abi.mjs --metadata-only
