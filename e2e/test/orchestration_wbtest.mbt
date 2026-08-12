@@ -265,7 +265,7 @@ async fn[X] spawn_scenario_app(
 ///|
 async fn build_scenario_app_executable(root : String) -> Unit {
   if @path.sep != '\\' {
-    let code = @process.run(
+    let (code, _) = @process.collect_output_merged(
       "moon",
       [
         "--target-dir",
