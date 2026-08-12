@@ -317,7 +317,7 @@ test "templates receive final author title and size" {
       "backend": { "path": "backend", "package": "app", .. },
       "frontend": {
         "path": "frontend",
-        "before_dev": "warren dev --port 4300",
+        "before_dev": "warren dev --direct --port 4300",
         ..
       },
       "entry": { "value": "frontend/dist/index.html", .. },

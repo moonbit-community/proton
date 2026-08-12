@@ -337,7 +337,7 @@ Generated projects describe their toolchain in `proton.project.json`:
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "warren dev --port 4300",
+    "before_dev": "warren dev --direct --port 4300",
     "before_build": "warren build",
     "dist": "dist"
   },
