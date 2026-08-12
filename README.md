@@ -486,9 +486,11 @@ proton_cli package --release --target zip \
 
 ```sh
 proton_cli doctor
-proton_cli doctor --deep
-proton_cli doctor --frontend
 ```
+
+Doctor checks the project configuration, MoonBit toolchain, active platform,
+and Proton runtime layout without changing the project. Outside a Proton
+project, it reports environment information and skips project-specific checks.
 
 Run `proton_cli cef setup` again when the active runtime is missing or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.

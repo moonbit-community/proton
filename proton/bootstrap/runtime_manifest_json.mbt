@@ -22,8 +22,8 @@ fn clone_json_object(object : Map[String, Json]) -> Map[String, Json] {
 /// Converts one normalized extension setting back into its JSON representation.
 fn extension_setting_to_json(setting : @manifest.ExtensionSetting) -> Json {
   match setting {
-    Disabled => Json::boolean(false)
-    Enabled => Json::boolean(true)
+    Disabled => false
+    Enabled => true
   }
 }
 
@@ -31,21 +31,20 @@ fn extension_setting_to_json(setting : @manifest.ExtensionSetting) -> Json {
 /// Converts one manifest window into its internal runtime JSON object form.
 fn window_manifest_to_json(window : @manifest.WindowManifest) -> Json {
   let object : Map[String, Json] = {
-    "title": Json::string(window.title),
-    "width": ToJson::to_json(window.width),
-    "height": ToJson::to_json(window.height),
+    "title": window.title,
+    "width": window.width,
+    "height": window.height,
   }
   match window.size_hint {
     @manifest.WindowSizeHint::None => ()
-    @manifest.WindowSizeHint::Fixed =>
-      object["size_hint"] = Json::string("fixed")
-    @manifest.WindowSizeHint::Min => object["size_hint"] = Json::string("min")
-    @manifest.WindowSizeHint::Max => object["size_hint"] = Json::string("max")
+    @manifest.WindowSizeHint::Fixed => object["size_hint"] = Json("fixed")
+    @manifest.WindowSizeHint::Min => object["size_hint"] = Json("min")
+    @manifest.WindowSizeHint::Max => object["size_hint"] = Json("max")
   }
   match window.titlebar_style {
     @manifest.TitlebarStyle::Default => ()
     @manifest.TitlebarStyle::Overlay =>
-      object["titlebar_style"] = Json::string("overlay")
+      object["titlebar_style"] = Json("overlay")
   }
   Json::object(object)
 }
@@ -53,52 +52,36 @@ fn window_manifest_to_json(window : @manifest.WindowManifest) -> Json {
 ///|
 /// Converts one manifest entry into its internal runtime JSON object form.
 fn app_entry_to_json(entry : @manifest.AppEntry) -> Json {
-  let object : Map[String, Json] = Map([])
   match entry {
-    Html(value) => {
-      object["kind"] = Json::string("html")
-      object["value"] = Json::string(value)
-    }
-    Url(value) => {
-      object["kind"] = Json::string("url")
-      object["value"] = Json::string(value)
-    }
-    File(value) => {
-      object["kind"] = Json::string("file")
-      object["value"] = Json::string(value)
-    }
-    Asset(value) => {
-      object["kind"] = Json::string("asset")
-      object["value"] = Json::string(value)
-    }
+    Html(value) => { "kind": "html", "value": value }
+    Url(value) => { "kind": "url", "value": value }
+    File(value) => { "kind": "file", "value": value }
+    Asset(value) => { "kind": "asset", "value": value }
   }
-  Json::object(object)
 }
 
 ///|
 /// Converts one secondary window manifest into internal runtime JSON.
 fn app_window_manifest_to_json(window : @manifest.AppWindowManifest) -> Json {
-  Json::object({
-    "id": Json::string(window.id),
+  {
+    "id": window.id,
     "window": window_manifest_to_json(window.window),
     "entry": app_entry_to_json(window.entry),
-    "open_on_start": Json::boolean(window.open_on_start),
-  })
+    "open_on_start": window.open_on_start,
+  }
 }
 
 ///|
 fn permission_grant_to_json(grant : @manifest.PermissionGrant) -> Json {
-  Json::object({
-    "window": Json::string(grant.window()),
-    "origin": Json::string(
-      match grant.origin() {
-        App => "app"
-        Entry => "entry"
-      },
-    ),
-    "extension": Json::string(grant.extension()),
+  {
+    "window": grant.window(),
+    "origin": match grant.origin() {
+      App => "app"
+      Entry => "entry"
+    },
+    "extension": grant.extension(),
     "scope": grant.scope(),
-  })
+  }
 }
 
 ///|

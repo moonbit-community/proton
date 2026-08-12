@@ -381,102 +381,43 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     _ => abort("expected dev manifest to use frontend.dev_url")
   }
 
-  match project.to_summary_json() {
-    Object(summary) => {
-      match summary.get("runtime") {
-        Some(Object(runtime)) => {
-          @debug.assert_eq(runtime.get("debug"), Some(Json::boolean(true)))
-          match runtime.get("entry") {
-            Some(Object(entry)) => {
-              @debug.assert_eq(entry.get("kind"), Some(Json::string("asset")))
-              match entry.get("value") {
-                Some(String(path)) =>
-                  assert_true(
-                    normalize_test_slashes(path).has_suffix(
-                      "target/proton-project-config/frontend/dist/index.html",
-                    ),
-                  )
-                _ => abort("expected runtime.entry value")
-              }
-            }
-            _ => abort("expected runtime.entry summary")
-          }
-          match runtime.get("dev_entry") {
-            Some(Object(entry)) => {
-              @debug.assert_eq(entry.get("kind"), Some(Json::string("url")))
-              @debug.assert_eq(
-                entry.get("value"),
-                Some(Json::string("http://localhost:5173")),
-              )
-            }
-            _ => abort("expected runtime.dev_entry summary")
-          }
-          match runtime.get("windows") {
-            Some(Array([Object(window)])) =>
-              @debug.assert_eq(window.get("id"), Some(Json::string("settings")))
-            _ => abort("expected runtime.windows summary")
-          }
-        }
-        _ => abort("expected runtime summary")
-      }
-      match summary.get("metadata") {
-        Some(Object(metadata)) => {
-          @debug.assert_eq(
-            metadata.get("product_name"),
-            Some(Json::string("Desktop App")),
-          )
-          @debug.assert_eq(metadata.get("version"), Some(Json::string("1.2.3")))
-        }
-        _ => abort("expected metadata summary")
-      }
-      match summary.get("bundle") {
-        Some(Object(bundle)) => {
-          @debug.assert_eq(bundle.get("active"), Some(Json::boolean(true)))
-          @debug.assert_eq(
-            bundle.get("url_schemes"),
-            Some(Json::array([Json::string("desktop-app")])),
-          )
-          match bundle.get("sign") {
-            Some(Object(sign)) =>
-              match sign.get("binaries") {
-                Some(Array([String(path)])) =>
-                  assert_true(
-                    normalize_test_slashes(path).has_suffix(
-                      "target/proton-project-config/bin/worker",
-                    ),
-                  )
-                _ => fail("expected bundle sign binaries summary")
-              }
-            _ => fail("expected bundle sign summary")
-          }
-          match bundle.get("document_types") {
-            Some(Array([Object(document_type)])) => {
-              @debug.assert_eq(
-                document_type.get("name"),
-                Some(Json::string("Desktop document")),
-              )
-              @debug.assert_eq(
-                document_type.get("role"),
-                Some(Json::string("Editor")),
-              )
-            }
-            _ => abort("expected bundle document types summary")
-          }
-          match bundle.get("output") {
-            Some(String(output)) =>
-              assert_true(
-                normalize_test_slashes(output).has_suffix(
-                  "target/proton-project-config/target/proton-dist",
-                ),
-              )
-            _ => abort("expected bundle output summary")
-          }
-        }
-        _ => abort("expected bundle summary")
-      }
-    }
-    _ => abort("expected object summary")
+  guard project.to_summary_json()
+    is {
+      "runtime": {
+        "debug": true,
+        "entry": { "kind": "asset", "value": String(entry_path), .. },
+        "dev_entry": { "kind": "url", "value": "http://localhost:5173", .. },
+        "windows": [{ "id": "settings", .. }],
+        ..
+      },
+      "metadata": { "product_name": "Desktop App", "version": "1.2.3", .. },
+      "bundle": {
+        "active": true,
+        "url_schemes": ["desktop-app"],
+        "sign": { "binaries": [String(binary_path)], .. },
+        "document_types": [{ "name": "Desktop document", "role": "Editor", .. }],
+        "output": String(output),
+        ..
+      },
+      ..
+    } else {
+    abort("unexpected project summary JSON")
   }
+  assert_true(
+    normalize_test_slashes(entry_path).has_suffix(
+      "target/proton-project-config/frontend/dist/index.html",
+    ),
+  )
+  assert_true(
+    normalize_test_slashes(binary_path).has_suffix(
+      "target/proton-project-config/bin/worker",
+    ),
+  )
+  assert_true(
+    normalize_test_slashes(output).has_suffix(
+      "target/proton-project-config/target/proton-dist",
+    ),
+  )
 
   let loaded_summary = load_proton_project_summary_from_file(config_path)
   @debug.assert_eq(loaded_summary, project.to_summary_json())

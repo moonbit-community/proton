@@ -895,7 +895,7 @@ fn CdpClient::record_cdp_event(
 /// Updates the attached-target cache from `Target.attachedToTarget`.
 fn CdpClient::record_target_attached(self : CdpClient, params : Json?) -> Unit {
   guard params is Some(Object(fields)) else { return }
-  guard fields.get("targetInfo") is Some(Object(target)) else { return }
+  guard fields is { "targetInfo": Object(target), .. } else { return }
   let session_id = optional_json_string(fields, "sessionId").unwrap_or("")
   if session_id == "" {
     return

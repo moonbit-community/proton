@@ -762,13 +762,11 @@ async fn read_active_runtime(root : String) -> String {
   }
   match json {
     Object(fields) => {
-      let platform = match fields.get("platform") {
-        Some(String(platform)) => platform
-        _ =>
-          raise PackageRuntimeError::ManifestField(
-            path=manifest_path,
-            field="platform",
-          )
+      guard fields is { "platform": String(platform), .. } else {
+        raise PackageRuntimeError::ManifestField(
+          path=manifest_path,
+          field="platform",
+        )
       }
       let expected_platform = @cef.current_platform_id()
       guard platform == expected_platform else {
@@ -777,8 +775,9 @@ async fn read_active_runtime(root : String) -> String {
           actual=platform,
         )
       }
-      match fields.get("dist") {
-        Some(String(dist)) => require_runtime(@fsutil.resolve_path(root, dist))
+      match fields {
+        { "dist": String(dist), .. } =>
+          require_runtime(@fsutil.resolve_path(root, dist))
         _ =>
           raise PackageRuntimeError::ManifestField(
             path=manifest_path,
@@ -1629,36 +1628,26 @@ async fn write_package_manifest(
   destination : String,
   kind : String,
 ) -> Unit raise PackageFileSystemError {
-  let json = Json::object({
-    "schema_version": Json::number(1),
-    "kind": Json::string(kind),
-    "product_name": Json::string(plan.product_name),
-    "identifier": Json::string(plan.identifier),
-    "version": Json::string(plan.version),
-    "bundle_version": Json::string(plan.bundle_version),
-    "targets": Json::array(
-      plan.targets.map(fn(target) { Json::string(target) }),
-    ),
-    "url_schemes": Json::array(
-      plan.url_schemes.map(fn(scheme) { Json::string(scheme) }),
-    ),
-    "document_types": Json::array(
-      plan.document_types.map(fn(document_type) {
-        Json::object({
-          "name": Json::string(document_type.name),
-          "extensions": Json::array(
-            document_type.extensions.map(fn(extension) {
-              Json::string(extension)
-            }),
-          ),
-          "role": Json::string(document_type.role),
-        })
-      }),
-    ),
-  }).stringify()
+  let manifest : Json = {
+    "schema_version": 1,
+    "kind": kind,
+    "product_name": plan.product_name,
+    "identifier": plan.identifier,
+    "version": plan.version,
+    "bundle_version": plan.bundle_version,
+    "targets": plan.targets,
+    "url_schemes": plan.url_schemes,
+    "document_types": plan.document_types.map(fn(document_type) -> Json {
+      {
+        "name": document_type.name,
+        "extensions": document_type.extensions,
+        "role": document_type.role,
+      }
+    }),
+  }
   write_text(
     @fsutil.resolve_path(destination, "proton-package.json"),
-    json + "\n",
+    manifest.stringify() + "\n",
   )
 }
 

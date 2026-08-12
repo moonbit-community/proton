@@ -11,7 +11,6 @@ import {
   "moonbitlang/moon_config@0.3.5",
   "moonbitlang/lexer@0.3.13",
   "moonbitlang/async@0.20.3",
-  "moonbit-community/proton_ffi@0.1.15",
 }
 
 readme = "codegen/README.md"
@@ -26,6 +25,6 @@ description = "Developer CLI and code generation tools for Proton."
 
 options(
   warn_list: "",
-  preferred_target: "native",
-  supported_targets: "+native",
+  preferred_target: "wasm",
+  supported_targets: "native+wasm",
 )

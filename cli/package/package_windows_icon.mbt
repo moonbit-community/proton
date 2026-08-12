@@ -1,10 +1,13 @@
 ///|
+#cfg(target="native")
 let windows_icon_error_buffer_length = 1024
 
 ///|
+#cfg(target="native")
 let windows_icon_ok = 0
 
 ///|
+#cfg(target="native")
 #borrow(executable, icon, error_buffer)
 extern "C" fn set_windows_executable_icon_ffi(
   executable : Bytes,
@@ -31,6 +34,15 @@ async fn stage_windows_icon(plan : PackagePlan, executable : String) -> Unit {
   guard @fsutil.path_is_file(icon) else {
     raise PackagePlanError::MissingIcon(path=icon)
   }
+  embed_windows_icon(executable, icon)
+}
+
+///|
+#cfg(target="native")
+fn embed_windows_icon(
+  executable : String,
+  icon : String,
+) -> Unit raise WindowsPackagingError {
   let executable_bytes = @utf8.encode(executable)
   let icon_bytes = @utf8.encode(icon)
   let error_buffer = FixedArray::make(windows_icon_error_buffer_length, b'\x00')
@@ -51,6 +63,19 @@ async fn stage_windows_icon(plan : PackagePlan, executable : String) -> Unit {
 }
 
 ///|
+#cfg(target="wasm")
+fn embed_windows_icon(
+  _executable : String,
+  _icon : String,
+) -> Unit raise WindowsPackagingError {
+  raise WindowsPackagingError::ToolFailure(
+    stage="embed Windows application icon",
+    detail="custom Windows icons require the native proton_cli backend",
+  )
+}
+
+///|
+#cfg(target="native")
 fn windows_icon_error_text(buffer : FixedArray[Byte], status : Int) -> String {
   let bytes = Bytes::from_array(buffer)
   let end = bytes.find(b"\x00").unwrap_or(bytes.length())

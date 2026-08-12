@@ -14,6 +14,6 @@ import {
   "moonbitlang/x/path",
 }
 
-supported_targets = "native"
+supported_targets = "native+wasm"
 
 formatter(ignore: [ "templates.generated.mbt" ])

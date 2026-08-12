@@ -600,17 +600,10 @@ test "project config decodes scoped permission grants" {
   assert_eq(grants[0].window, "main")
   assert_eq(grants[0].origin, "app")
   assert_eq(grants[0].extension, "moonbit-community/proton-fs")
-  match grants[0].scope {
-    Object(scope) => {
-      @debug.assert_eq(
-        scope.get("read"),
-        Some(Json::array([Json::string("./data")])),
-      )
-      @debug.assert_eq(scope.get("write"), Some(Json::boolean(false)))
-    }
-    _ => abort("expected permission scope object")
+  guard grants[0].scope is { "read": ["./data"], "write": false, .. } else {
+    abort("unexpected permission scope")
   }
-  @debug.assert_eq(grants[1].scope, Json::empty_object())
+  @json.json_inspect(grants[1].scope, content={})
 }
 
 ///|

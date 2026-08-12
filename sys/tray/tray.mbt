@@ -758,18 +758,11 @@ fn decode_event(raw : String) -> TrayEvent? {
   } noraise {
     json =>
       match json {
-        Object(object) =>
-          match object.get("type") {
-            Some(String("click")) => Some(Click)
-            Some(String("rightClick")) => Some(RightClick)
-            Some(String("doubleClick")) => Some(DoubleClick)
-            Some(String("menuItemClick")) =>
-              match object.get("item_id") {
-                Some(String(item_id)) => Some(MenuItemClick(item_id))
-                _ => None
-              }
-            _ => None
-          }
+        { "type": "click", .. } => Some(Click)
+        { "type": "rightClick", .. } => Some(RightClick)
+        { "type": "doubleClick", .. } => Some(DoubleClick)
+        { "type": "menuItemClick", "item_id": String(item_id), .. } =>
+          Some(MenuItemClick(item_id))
         _ => None
       }
   }

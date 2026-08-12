@@ -1,28 +1,19 @@
 import {
   "moonbit-community/proton_config",
   "moonbit-community/proton_cli/cef",
-  "moonbit-community/proton_cli/codegen",
   "moonbit-community/proton_cli/fsutil",
-  "moonbit-community/proton_ffi" @ffi,
-  "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/io",
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
-  "moonbitlang/lexer/basic" @lexer_basic,
   "moonbitlang/x/path",
-  "moonbitlang/moon_config",
 }
 
 import {
+  "moonbitlang/async",
   "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 
-supported_targets = "native"
-
-options(
-  "native-stub": [ "doctor_native_probe.c" ],
-)
+supported_targets = "native+wasm"

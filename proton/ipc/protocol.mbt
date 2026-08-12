@@ -75,7 +75,7 @@ pub fn IpcOpResponse::err(id : String, message : String) -> IpcOpResponse {
     version: ipc_protocol_version,
     id,
     status: 1,
-    body: Json::string(message),
+    body: Json(message),
   }
 }
 

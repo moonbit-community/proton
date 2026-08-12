@@ -120,15 +120,12 @@ fn read_runtime_dist(manifest_path : String) -> Result[String, String] {
     _ => return Err("invalid runtime manifest JSON: " + manifest_path)
   }
   match json {
-    Object(object) =>
-      match object.get("dist") {
-        Some(String(dist)) if dist != "" => Ok(dist)
-        _ =>
-          Err(
-            "runtime manifest is missing a non-empty string dist field: " +
-            manifest_path,
-          )
-      }
+    { "dist": String(dist), .. } if dist != "" => Ok(dist)
+    Object(_) =>
+      Err(
+        "runtime manifest is missing a non-empty string dist field: " +
+        manifest_path,
+      )
     _ => Err("runtime manifest must be a JSON object: " + manifest_path)
   }
 }
@@ -553,10 +550,9 @@ async fn close_page_target(
   browser : @client.CdpClient,
   target_id : String,
 ) -> Unit {
-  let response = browser.send_command(
-    "Target.closeTarget",
-    params=Json::object({ "targetId": Json::string(target_id) }),
-  )
+  let response = browser.send_command("Target.closeTarget", params={
+    "targetId": target_id,
+  })
   match response.error {
     None => ()
     Some(error) if error.message.to_lower().contains("no target") => ()
