@@ -63,9 +63,20 @@ test "resolve_path keeps Windows parent traversal tail" {
 }
 
 ///|
+#cfg(not(platform="windows"))
 test "path_parent follows host dirname semantics" {
   assert_eq(path_parent("/a/b"), "/a")
   assert_eq(path_parent("/a"), "/")
+  assert_eq(path_parent("a"), ".")
+  assert_eq(path_parent("a\\b/c"), "a\\b")
+  assert_eq(path_parent("a/b/"), "a")
+}
+
+///|
+#cfg(platform="windows")
+test "path_parent follows Windows dirname semantics" {
+  assert_eq(path_parent("C:\\a\\b"), "C:\\a")
+  assert_eq(path_parent("C:\\a"), "C:\\")
   assert_eq(path_parent("a"), ".")
   assert_eq(path_parent("a\\b/c"), "a\\b")
   assert_eq(path_parent("a/b/"), "a")
@@ -88,13 +99,13 @@ test "relative_path and containment use path components" {
 test "path_join joins with the platform separator" {
   assert_eq(path_join("", "a"), "a")
   assert_eq(path_join("a", ""), "a")
-  assert_eq(path_join("a/", "b"), "a/b")
+  assert_eq(path_join("a/", "b"), "a" + @path.sep.to_string() + "b")
   assert_eq(path_join("a", "b"), "a" + @path.sep.to_string() + "b")
 }
 
 ///|
 async test "find_project_root_from walks up to marker" {
-  let root = "target/proton-fsutil-project-root"
+  let root = path_join("target", "proton-fsutil-project-root")
   ensure_fsutil_test_dir(root)
   ensure_fsutil_test_dir(path_join(root, "nested"))
   ensure_fsutil_test_dir(path_join(root, "nested/child"))
