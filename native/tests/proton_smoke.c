@@ -35,7 +35,6 @@
 #define EXPECTED_PLATFORM "\"platform\":\"macos\""
 #else
 #include <pthread.h>
-#include <poll.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -407,11 +406,7 @@ static char g_app_entry_error[512];
 
 #ifdef _WIN32
 static DWORD g_app_ui_thread_id = 0;
-#elif defined(__linux__)
-static pthread_t g_app_ui_thread;
-#endif
 
-#ifdef _WIN32
 static int consume_wakeup_byte(HANDLE pipe) {
   for (int attempt = 0; attempt < 100; attempt++) {
     DWORD available = 0;
@@ -548,11 +543,8 @@ static void smoke_app_entry(void) {
 #ifdef _WIN32
   g_app_entry_on_main_thread =
       GetCurrentThreadId() == g_app_ui_thread_id;
-#elif defined(__APPLE__)
-  g_app_entry_on_main_thread = pthread_main_np() != 0;
 #else
-  g_app_entry_on_main_thread =
-      pthread_equal(pthread_self(), g_app_ui_thread) != 0;
+  g_app_entry_on_main_thread = pthread_main_np() != 0;
 #endif
   proton_runtime_id_t runtime = PROTON_INVALID_HANDLE;
   g_app_entry_invalid_create_status =
@@ -1446,7 +1438,6 @@ static int expect_runtime_info(void) {
       strstr(buffer, "\"managed_app_runner\"") != NULL;
   int has_wakeup_source =
       strstr(buffer, "\"runtime_wakeup_source\"") != NULL;
-  int has_wakeup_fd = strstr(buffer, "\"runtime_wakeup_fd\"") != NULL;
   if (strstr(buffer, "\"abi_version\":1") == NULL ||
       (!has_abi_only && !has_runtime) ||
       strstr(buffer, "\"base_abi\"") == NULL ||
@@ -1491,11 +1482,6 @@ static int expect_runtime_info(void) {
   if (has_runtime &&
       (!has_managed_app_runner || !has_wakeup_source)) {
     fprintf(stderr, "missing Windows managed runner capability: %s\n", buffer);
-    return 1;
-  }
-#elif defined(__APPLE__) || defined(__linux__)
-  if (has_runtime && (!has_managed_app_runner || !has_wakeup_fd)) {
-    fprintf(stderr, "missing Unix managed runner capability: %s\n", buffer);
     return 1;
   }
 #endif
@@ -1958,7 +1944,7 @@ int main(int argc, char **argv) {
     return fail("execute_process returned unexpected exit code");
   }
 
-#if defined(__APPLE__) || defined(_WIN32) || defined(__linux__)
+#if defined(__APPLE__) || defined(_WIN32)
   if (g_runtime_available &&
       getenv("PROTON_TEST_SKIP_MANAGED_APP_RUNNER") == NULL) {
     const char *runtime_root = getenv("PROTON_TEST_RUNTIME_ROOT");
@@ -1984,8 +1970,6 @@ int main(int argc, char **argv) {
     remove(native_log_path);
 #ifdef _WIN32
     g_app_ui_thread_id = GetCurrentThreadId();
-#elif defined(__linux__)
-    g_app_ui_thread = pthread_self();
 #endif
     if (expect_status("app_run", proton_app_run(smoke_app_entry), PROTON_OK)) {
       return 1;

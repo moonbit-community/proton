@@ -9,7 +9,7 @@
 PROTON_INTERNAL bool proton_app_runner_is_active(void);
 PROTON_INTERNAL bool proton_app_runner_engine_loop_is_running(void);
 
-#if defined(_WIN32) || defined(__linux__)
+#ifdef _WIN32
 typedef int32_t (*proton_app_main_int_work_t)(void *context);
 typedef uint64_t (*proton_app_main_u64_work_t)(void *context);
 typedef void (*proton_app_main_void_work_t)(void *context);

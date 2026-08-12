@@ -38,7 +38,6 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/menu.m
     )
   elseif(UNIX)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
       src/engine/cef_linux/proton_linux_menu.c

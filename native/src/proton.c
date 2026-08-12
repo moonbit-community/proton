@@ -67,7 +67,7 @@
 #define PROTON_BROWSER_SESSION_FEATURE ""
 #endif
 
-#if PROTON_WITH_ENGINE && (defined(__APPLE__) || defined(__linux__))
+#if PROTON_WITH_ENGINE && defined(__APPLE__)
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
 #define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
 #define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
