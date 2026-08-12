@@ -16,7 +16,7 @@ pub async fn generate_typed_commands_from_files(Array[String]) -> ProtonCommandC
 
 pub fn generate_typed_commands_from_sources(Array[(String, String)], extension_package? : Bool) -> ProtonCommandCodegenOutput raise
 
-pub async fn read_moon_ext_identity(String) -> (String, String)
+pub async fn read_proton_ext_identity(String) -> (String, String)
 
 // Errors
 pub(all) suberror CodegenInputError {
@@ -28,7 +28,6 @@ pub fn CodegenInputError::message(Self) -> String
 
 pub(all) suberror CodegenMetadataError {
   InvalidRoot
-  DuplicateField(field~ : String)
   UnknownField(field~ : String)
   MissingField(field~ : String)
   InvalidType(field~ : String, expected~ : String)

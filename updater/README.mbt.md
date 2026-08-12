@@ -29,7 +29,7 @@ match manifest.platform("darwin-arm64") {
 ```
 
 `schema_version` must be exactly `2`, and unknown fields are an error rather
-than something to skip — the same discipline `moon.proton` and the native
+than something to skip — the same discipline `proton.project.json` and the native
 runtime configs already follow, so that a typo in a release manifest fails
 loudly instead of silently omitting whatever it was meant to say.
 

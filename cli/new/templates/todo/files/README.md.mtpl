@@ -44,13 +44,15 @@ proton_cli build -- --release
 
 ## Bundle
 
-The `bundle` block in `moon.proton` controls package creation:
+The `bundle` block in `proton.project.json` controls package creation:
 
-```moonbit
-bundle = {
-  active: true,
-  targets: ["app", "zip"],
-  output: "target/proton-dist",
+```json
+{
+  "bundle": {
+    "active": true,
+    "targets": ["app", "zip"],
+    "output": "target/proton-dist"
+  }
 }
 ```
 

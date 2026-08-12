@@ -196,7 +196,7 @@ fn dev_extension_runtime_env(
   env["FORCE_COLOR"] = "0"
   env["PROTON_NO_UPDATE_CHECK"] = "1"
   env["PROTON_CONFIG_PATH"] = join_path(
-    root, "examples/47_dev_extension_js/moon.proton",
+    root, "examples/47_dev_extension_js/proton.project.json",
   )
   env
 }
@@ -256,7 +256,7 @@ async fn spawn_dev_extension_cli_app(
     root,
     "dev",
     "--config",
-    "examples/47_dev_extension_js/moon.proton",
+    "examples/47_dev_extension_js/proton.project.json",
     "--package",
     ".",
     "--moon-target-dir",
@@ -364,7 +364,7 @@ async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
       root,
       "build",
       "--config",
-      "examples/47_dev_extension_js/moon.proton",
+      "examples/47_dev_extension_js/proton.project.json",
       "--package",
       ".",
       "--moon-target-dir",

@@ -1,9 +1,9 @@
 ///|
 fn config_path() -> String {
-  if @mbfs.path_exists("44_project_config/moon.proton") {
-    "44_project_config/moon.proton"
+  if @mbfs.path_exists("44_project_config/proton.project.json") {
+    "44_project_config/proton.project.json"
   } else {
-    "examples/44_project_config/moon.proton"
+    "examples/44_project_config/proton.project.json"
   }
 }
 

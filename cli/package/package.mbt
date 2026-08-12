@@ -2,7 +2,7 @@
 let default_package = "app"
 
 ///|
-let default_config_file = "moon.proton"
+let default_config_file = "proton.project.json"
 
 ///|
 struct RawPackageOptions {
@@ -119,7 +119,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let root = @fsutil.find_project_root_from(cwd)
   let config_path = match resolve_package_config_path(cwd, root, raw) {
     Some(path) => path
-    None => raise PackageConfigError::NotFound(path="moon.proton")
+    None => raise PackageConfigError::NotFound(path="proton.project.json")
   }
   let config_text = @async_fs.read_file(config_path).text() catch {
     error =>
@@ -555,52 +555,15 @@ fn first_macos_icon(icons : Array[String]) -> String? {
 
 ///|
 fn release_project_config_text(source : String) -> String {
-  let (ast, reports) = @proton_config.parse_moon_proton(source)
-  guard reports.length() == 0 else { return source }
-  match ast {
-    Obj(fields, _) =>
-      for field in fields {
-        if field.key == "debug" {
-          match field.value {
-            Bool(false, _) => return source
-            Bool(true, loc) =>
-              return replace_string_range(
-                source,
-                loc.start.cnum,
-                loc.end.cnum,
-                "false",
-              )
-            _ => return source
-          }
-        }
-      }
-    _ => ()
-  }
-  source
-}
-
-///|
-fn replace_string_range(
-  source : String,
-  start : Int,
-  end : Int,
-  replacement : String,
-) -> String {
-  let output = StringBuilder::new(
-    size_hint=source.length() - (end - start) + replacement.length(),
-  )
-  for index, char in source {
-    if index == start {
-      output.write_string(replacement)
+  let json = @json.parse(source) catch { _ => return source }
+  guard json is Object(fields) else { return source }
+  match fields.get("debug") {
+    Some(True) => {
+      fields["debug"] = Json::boolean(false)
+      Json::object(fields).stringify(indent=2) + "\n"
     }
-    if index < start || index >= end {
-      output.write_char(char)
-    }
+    _ => source
   }
-  if start == source.length() {
-    output.write_string(replacement)
-  }
-  output.to_string()
 }
 
 ///|
@@ -937,7 +900,7 @@ async fn stage_macos_app_impl(
   copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
-    @fsutil.resolve_path(resources, "moon.proton"),
+    @fsutil.resolve_path(resources, "proton.project.json"),
   )
   stage_project_inputs(plan, resources)
   stage_macos_icon(plan, resources)
@@ -1252,19 +1215,16 @@ async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
 
 ///|
 fn relative_to_base(base : String, path : String) -> String? {
-  let base = normalize_slashes(@fsutil.resolve_path(base, "."))
-  let path = normalize_slashes(@fsutil.resolve_path(base, path))
-  let prefix = if base.has_suffix("/") { base } else { base + "/" }
-  if path == base {
+  let root = @fsutil.resolve_path(base, ".")
+  let candidate = @fsutil.resolve_path(base, path)
+  guard @fsutil.path_is_within(root, candidate) else { return None }
+  let relative = normalize_slashes(@fsutil.relative_path(root, candidate))
+  if relative == "" {
     Some(".")
-  } else if path.has_prefix(prefix) {
-    Some(
-      path
-      .unsafe_substring(start=prefix.length(), end=path.length())
-      .to_string(),
-    )
-  } else {
+  } else if relative == ".." || relative.has_prefix("../") {
     None
+  } else {
+    Some(relative)
   }
 }
 
@@ -1275,14 +1235,8 @@ fn normalize_slashes(path : String) -> String {
 
 ///|
 fn path_basename(path : String) -> String {
-  let normalized = normalize_slashes(path)
-  match normalized.rev_find("/") {
-    Some(index) =>
-      normalized
-      .unsafe_substring(start=index + 1, end=normalized.length())
-      .to_string()
-    None => normalized
-  }
+  let native_path : @path.Path = path
+  native_path.basename().to_owned()
 }
 
 ///|

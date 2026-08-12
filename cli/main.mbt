@@ -177,7 +177,7 @@ fn codegen_command() -> @argparse.Command {
     flags=[
       FlagArg(
         "extension-identity",
-        about="Generate a contract identity from one moon.ext input",
+        about="Generate a contract identity from one proton.ext.json input",
       ),
     ],
     options=[
@@ -304,7 +304,7 @@ async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
   let result = if extension_identity {
     guard resolved_inputs is [metadata_path] else {
       raise CliUsageError::Invalid(
-        message="codegen --extension-identity requires exactly one moon.ext input",
+        message="codegen --extension-identity requires exactly one proton.ext.json input",
       )
     }
     @codegen.generate_extension_identity_from_file(

@@ -71,8 +71,8 @@ calling page is rejected with `bridge op is not allowed`.
 Extension metadata is used by code generation, catalog checks, dependency
 planning, and generated command bridge packages. Applications should register
 extensions in top-level Proton code. Renderer permissions may be declared with
-typed builders in code or through the `permissions` array in `moon.proton`;
-extension settings in `moon.proton` are not the active registration surface.
+typed builders in code or through the `permissions` array in `proton.project.json`;
+extension settings in `proton.project.json` are not the active registration surface.
 
 ## Tray Notes
 

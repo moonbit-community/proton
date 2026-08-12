@@ -29,14 +29,14 @@ jobs:
           ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
 
       - name: Cache MoonBit packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mooncakes
           key: Windows-prebuilt-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: Windows-prebuilt-mooncakes-
 
       - name: Cache CEF downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .proton-global-cache
           key: Windows-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
@@ -142,7 +142,7 @@ jobs:
             -DestinationPath "$env:RUNNER_TEMP\proton-prebuilt-win32-x64-$env:PROTON_PREBUILT_SOURCE_SHA.zip"
 
       - name: Upload Windows prebuilt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: proton-prebuilt-win32-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}
           path: ${{ runner.temp }}/proton-prebuilt-win32-x64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}.zip

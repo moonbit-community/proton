@@ -60,7 +60,7 @@ pub fn generate_extension_identity(
   let builder = StringBuilder::new()
   builder <+
     $|///|
-    $|/// Generated from `moon.ext` by `proton codegen --extension-identity`.
+    $|/// Generated from `proton.ext.json` by `proton codegen --extension-identity`.
     $|/// Do not edit by hand.
     $|
     $|///|

@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   PrebuiltSourceHasher,
+  platformSourceInputs,
   recordPrebuiltSourceHash,
   verifyPrebuiltSourceHashes,
 } from "./prebuilt_source_hash.mjs";
@@ -67,6 +68,15 @@ test("hashes directory contents in stable path order", () => {
     );
   } finally {
     fixture.dispose();
+  }
+});
+
+test("excludes CI orchestration from prebuilt source inputs", () => {
+  for (const inputs of Object.values(platformSourceInputs)) {
+    assert.equal(
+      inputs.some(input => input.startsWith(".github/workflows/")),
+      false,
+    );
   }
 });
 

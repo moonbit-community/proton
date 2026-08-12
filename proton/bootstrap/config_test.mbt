@@ -49,9 +49,10 @@ fn[T] expect_bootstrap_error(
 }
 
 ///|
-/// Writes a minimal moon.proton with one extra top-level field and checks the error.
-fn expect_moon_proton_extra_field_error(
-  extra : String,
+/// Writes a minimal proton.project.json with one extra top-level field and checks the error.
+fn expect_project_extra_field_error(
+  key : String,
+  value : Json,
   expected : String,
 ) -> Unit {
   @mbfs.create_dir("target") catch {
@@ -60,24 +61,18 @@ fn expect_moon_proton_extra_field_error(
   @mbfs.create_dir("target/proton-extra-field") catch {
     _ => ()
   }
-  let config_path = "target/proton-extra-field/moon.proton"
+  let config_path = "target/proton-extra-field/proton.project.json"
+  let config : Json = {
+    "window": { "title": "Invalid", "width": 900, "height": 700 },
+    "entry": { "kind": "html", "value": "<html></html>" },
+  }
+  guard config is Object(fields) else {
+    abort("expected project config object")
+  }
+  fields[key] = value
   @mbfs.write_string_to_file(
     config_path,
-    (
-      #|window = {
-      #|  title: "Invalid",
-      #|  width: 900,
-      #|  height: 700,
-      #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-    ) +
-    extra +
-    "\n",
+    Json::object(fields).stringify(indent=2) + "\n",
     encoding="utf8",
   ) catch {
     err => abort(@debug.render(Repr(err)))
@@ -92,7 +87,9 @@ fn expect_moon_proton_extra_field_error(
 
 ///|
 test "load_config_manifest_from_file rebases file entry and bool debug" {
-  let loaded = load_config_manifest_from_file(manifest_test_path("moon.proton"))
+  let loaded = load_config_manifest_from_file(
+    manifest_test_path("proton.project.json"),
+  )
   let manifest = loaded.manifest()
   assert_eq(manifest.window.title, "Proton Runtime")
   assert_eq(manifest.window.width, 840)
@@ -108,7 +105,9 @@ test "load_config_manifest_from_file rebases file entry and bool debug" {
 
 ///|
 test "load_config_manifest_from_file accepts explicit config filenames" {
-  let loaded = load_config_manifest_from_file(manifest_test_path("moon.proton"))
+  let loaded = load_config_manifest_from_file(
+    manifest_test_path("proton.project.json"),
+  )
   assert_eq(loaded.manifest().debug, 1)
 
   @mbfs.create_dir("target") catch {
@@ -121,19 +120,18 @@ test "load_config_manifest_from_file accepts explicit config filenames" {
   @mbfs.write_string_to_file(
     config_path,
     (
-      #|window = {
-      #|  title: "Alt Config",
-      #|  width: 720,
-      #|  height: 480,
+      #|{
+      #|  "window": {
+      #|    "title": "Alt Config",
+      #|    "width": 720,
+      #|    "height": 480
+      #|  },
+      #|  "entry": {
+      #|    "kind": "url",
+      #|    "value": "http://localhost:5173"
+      #|  },
+      #|  "debug": true
       #|}
-      #|
-      #|entry = {
-      #|  kind: "url",
-      #|  value: "http://localhost:5173",
-      #|}
-      #|
-      #|debug = true
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -157,23 +155,22 @@ test "load_config_manifest_from_file rejects extension settings" {
   @mbfs.create_dir("target/proton-unsupported") catch {
     _ => ()
   }
-  let config_path = "target/proton-unsupported/moon.proton"
+  let config_path = "target/proton-unsupported/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
-      #|window = {
-      #|  title: "Invalid",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Invalid",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "extensions": {}
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|extensions = {}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -184,26 +181,28 @@ test "load_config_manifest_from_file rejects extension settings" {
   })
   assert_eq(
     error.message(),
-    "moon.proton field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
+    "proton.project.json field `extensions` is not supported; declare extensions in MoonBit code with .extension(...).",
   )
 }
 
 ///|
 test "load_config_manifest_from_file rejects unsupported top-level fields" {
-  expect_moon_proton_extra_field_error(
-    "version = \"1.0.0\"", "Unexpected key 'version' found in moon.proton.",
+  expect_project_extra_field_error(
+    "version", "1.0.0", "Unexpected key 'version' found in proton.project.json.",
   )
-  expect_moon_proton_extra_field_error(
-    "license = \"MIT\"", "Unexpected key 'license' found in moon.proton.",
+  expect_project_extra_field_error(
+    "license", "MIT", "Unexpected key 'license' found in proton.project.json.",
   )
-  expect_moon_proton_extra_field_error(
-    "description = \"App\"", "Unexpected key 'description' found in moon.proton.",
+  expect_project_extra_field_error(
+    "description", "App", "Unexpected key 'description' found in proton.project.json.",
   )
-  expect_moon_proton_extra_field_error(
-    "permissions = {}", "moon.proton.permissions must be an array",
+  expect_project_extra_field_error(
+    "permissions",
+    {},
+    "proton.project.json.permissions must be an array",
   )
-  expect_moon_proton_extra_field_error(
-    "debug = 1", "moon.proton.debug must be a bool",
+  expect_project_extra_field_error(
+    "debug", 1, "proton.project.json.debug must be a bool",
   )
 }
 
@@ -215,8 +214,11 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
   @mbfs.create_dir("target/proton-project-config") catch {
     _ => ()
   }
+  @mbfs.create_dir("target/proton-project-config/backend") catch {
+    _ => ()
+  }
   @mbfs.write_string_to_file(
-    "target/proton-project-config/moon.mod",
+    "target/proton-project-config/backend/moon.mod",
     (
       #|name = "vendor/app"
       #|version = "1.2.3"
@@ -228,69 +230,80 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let config_path = "target/proton-project-config/moon.proton"
+  let config_path = "target/proton-project-config/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
-      #|product_name = "Desktop App"
-      #|identifier = "com.vendor.app"
-      #|
-      #|window = {
-      #|  title: "Runtime Title",
-      #|  width: 900,
-      #|  height: 700,
-      #|}
-      #|
-      #|entry = {
-      #|  kind: "asset",
-      #|  value: "frontend/dist/index.html",
-      #|}
-      #|
-      #|windows = [{
-      #|  id: "settings",
-      #|  window: {
-      #|    title: "Settings",
-      #|    width: 480,
-      #|    height: 360,
+      #|{
+      #|  "product_name": "Desktop App",
+      #|  "identifier": "com.vendor.app",
+      #|  "window": {
+      #|    "title": "Runtime Title",
+      #|    "width": 900,
+      #|    "height": 700
       #|  },
-      #|  entry: {
-      #|    kind: "html",
-      #|    value: "<main>Settings</main>",
+      #|  "entry": {
+      #|    "kind": "asset",
+      #|    "value": "frontend/dist/index.html"
       #|  },
-      #|}]
-      #|
-      #|debug = true
-      #|
-      #|backend = {
-      #|  path: "backend",
-      #|  package: "app",
-      #|}
-      #|
-      #|frontend = {
-      #|  dev_url: "http://localhost:5173",
-      #|  dist: "dist",
-      #|  path: "frontend",
-      #|  before_dev: "npm run dev",
-      #|  before_build: "npm run build",
-      #|}
-      #|
-      #|bundle = {
-      #|  active: true,
-      #|  targets: ["app", "zip"],
-      #|  icon: ["icons/icon.ico"],
-      #|  resources: ["resources/**"],
-      #|  sign: {
-      #|    binaries: ["bin/worker"],
+      #|  "windows": [
+      #|    {
+      #|      "id": "settings",
+      #|      "window": {
+      #|        "title": "Settings",
+      #|        "width": 480,
+      #|        "height": 360
+      #|      },
+      #|      "entry": {
+      #|        "kind": "html",
+      #|        "value": "<main>Settings</main>"
+      #|      }
+      #|    }
+      #|  ],
+      #|  "debug": true,
+      #|  "backend": {
+      #|    "path": "backend",
+      #|    "package": "app"
       #|  },
-      #|  url_schemes: ["desktop-app"],
-      #|  document_types: [{
-      #|    name: "Desktop document",
-      #|    extensions: ["desktop"],
-      #|    role: "Editor",
-      #|  }],
-      #|  output: "target/proton-dist",
+      #|  "frontend": {
+      #|    "dev_url": "http://localhost:5173",
+      #|    "dist": "dist",
+      #|    "path": "frontend",
+      #|    "before_dev": "npm run dev",
+      #|    "before_build": "npm run build"
+      #|  },
+      #|  "bundle": {
+      #|    "active": true,
+      #|    "targets": [
+      #|      "app",
+      #|      "zip"
+      #|    ],
+      #|    "icon": [
+      #|      "icons/icon.ico"
+      #|    ],
+      #|    "resources": [
+      #|      "resources/**"
+      #|    ],
+      #|    "sign": {
+      #|      "binaries": [
+      #|        "bin/worker"
+      #|      ]
+      #|    },
+      #|    "url_schemes": [
+      #|      "desktop-app"
+      #|    ],
+      #|    "document_types": [
+      #|      {
+      #|        "name": "Desktop document",
+      #|        "extensions": [
+      #|          "desktop"
+      #|        ],
+      #|        "role": "Editor"
+      #|      }
+      #|    ],
+      #|    "output": "target/proton-dist"
+      #|  }
       #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -456,25 +469,24 @@ test "load_proton_project_config_from_file validates tooling blocks" {
   @mbfs.create_dir("target/proton-project-invalid") catch {
     _ => ()
   }
-  let config_path = "target/proton-project-invalid/moon.proton"
+  let config_path = "target/proton-project-invalid/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
-      #|window = {
-      #|  title: "Invalid",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Invalid",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "frontend": {
+      #|    "unknown": "value"
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|frontend = {
-      #|  unknown: "value",
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -486,7 +498,7 @@ test "load_proton_project_config_from_file validates tooling blocks" {
   })
   assert_eq(
     error.message(),
-    "Unexpected key 'unknown' found in moon.proton field `frontend`.",
+    "Unexpected key 'unknown' found in proton.project.json field `frontend`.",
   )
 }
 
@@ -498,25 +510,24 @@ test "load_config_manifest_from_file validates project tooling blocks" {
   @mbfs.create_dir("target/proton-config-manifest-invalid") catch {
     _ => ()
   }
-  let config_path = "target/proton-config-manifest-invalid/moon.proton"
+  let config_path = "target/proton-config-manifest-invalid/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
-      #|window = {
-      #|  title: "Invalid",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Invalid",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "frontend": {
+      #|    "before_buid": "npm run build"
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|frontend = {
-      #|  before_buid: "npm run build",
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -528,7 +539,7 @@ test "load_config_manifest_from_file validates project tooling blocks" {
   })
   assert_eq(
     error.message(),
-    "Unexpected key 'before_buid' found in moon.proton field `frontend`.",
+    "Unexpected key 'before_buid' found in proton.project.json field `frontend`.",
   )
 }
 
@@ -552,25 +563,24 @@ test "load_proton_project_config_from_file preserves active bundle without relea
     err => abort(@debug.render(Repr(err)))
   }
 
-  let missing_identifier = "target/proton-project-bundle-metadata/missing-identifier.moon.proton"
+  let missing_identifier = "target/proton-project-bundle-metadata/missing-identifier.proton.project.json"
   @mbfs.write_string_to_file(
     missing_identifier,
     (
-      #|window = {
-      #|  title: "Bundle App",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Bundle App",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "bundle": {
+      #|    "active": true
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|bundle = {
-      #|  active: true,
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -591,25 +601,28 @@ test "load_proton_project_config_from_file validates bundle targets" {
   @mbfs.create_dir("target/proton-project-bundle-targets") catch {
     _ => ()
   }
-  let supported_target = "target/proton-project-bundle-targets/supported.moon.proton"
+  let supported_target = "target/proton-project-bundle-targets/supported.proton.project.json"
   @mbfs.write_string_to_file(
     supported_target,
     (
-      #|window = {
-      #|  title: "Bundle App",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Bundle App",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "bundle": {
+      #|    "targets": [
+      #|      "app",
+      #|      "zip",
+      #|      "dmg"
+      #|    ]
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|bundle = {
-      #|  targets: ["app", "zip", "dmg"],
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -618,25 +631,26 @@ test "load_proton_project_config_from_file validates bundle targets" {
   let supported = load_proton_project_config_from_file(supported_target)
   assert_eq(supported.bundle().unwrap().targets(), ["app", "zip", "dmg"])
 
-  let unsupported_target = "target/proton-project-bundle-targets/unsupported.moon.proton"
+  let unsupported_target = "target/proton-project-bundle-targets/unsupported.proton.project.json"
   @mbfs.write_string_to_file(
     unsupported_target,
     (
-      #|window = {
-      #|  title: "Bundle App",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Bundle App",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "bundle": {
+      #|    "targets": [
+      #|      "msi"
+      #|    ]
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|bundle = {
-      #|  targets: ["msi"],
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -647,25 +661,27 @@ test "load_proton_project_config_from_file validates bundle targets" {
   })
   assert_eq(error.message(), "unsupported bundle.targets: msi")
 
-  let duplicate_target = "target/proton-project-bundle-targets/duplicate.moon.proton"
+  let duplicate_target = "target/proton-project-bundle-targets/duplicate.proton.project.json"
   @mbfs.write_string_to_file(
     duplicate_target,
     (
-      #|window = {
-      #|  title: "Bundle App",
-      #|  width: 900,
-      #|  height: 700,
+      #|{
+      #|  "window": {
+      #|    "title": "Bundle App",
+      #|    "width": 900,
+      #|    "height": 700
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<html></html>"
+      #|  },
+      #|  "bundle": {
+      #|    "targets": [
+      #|      "app",
+      #|      "app"
+      #|    ]
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "html",
-      #|  value: "<html></html>",
-      #|}
-      #|
-      #|bundle = {
-      #|  targets: ["app", "app"],
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {

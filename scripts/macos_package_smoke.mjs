@@ -477,7 +477,7 @@ async function main() {
       "--package",
       exampleName,
       "--config",
-      `${exampleName}/moon.proton`,
+      `${exampleName}/proton.project.json`,
       "--release",
       "--sign",
       "--target",

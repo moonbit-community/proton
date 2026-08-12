@@ -11,16 +11,27 @@ pub fn load_project_config_from_file(
 }
 
 ///|
+/// Parses project JSON text at an I/O boundary, then validates the resulting
+/// native `Json` value.
 pub fn load_project_config_from_text(
   source : String,
   base_dir : String,
-  name? : String = "moon.proton",
+  name? : String = "proton.project.json",
 ) -> LoadedProjectConfig raise ProjectConfigError {
-  let (ast, reports) = parse_moon_proton(name~, source)
-  if reports.length() > 0 {
-    raise Syntax(name~, diagnostics=render_config_reports(reports))
+  let json = @json.parse(source) catch {
+    error => raise Syntax(name~, diagnostics=error.to_string())
   }
-  LoadedProjectConfig::new(decode_project_config(ast, base_dir))
+  load_project_config_from_json(json, base_dir)
+}
+
+///|
+/// Validates an already parsed Proton project JSON document without
+/// serializing it through an intermediate string.
+pub fn load_project_config_from_json(
+  json : Json,
+  base_dir : String,
+) -> LoadedProjectConfig raise ProjectConfigError {
+  LoadedProjectConfig::new(decode_project_config(json, base_dir))
 }
 
 ///|
@@ -32,11 +43,11 @@ fn read_project_config_text(path : String) -> String raise ProjectConfigError {
 
 ///|
 fn decode_project_config(
-  ast : Ast,
+  json : Json,
   base_dir : String,
 ) -> ProjectConfig raise ProjectConfigError {
-  match ast {
-    Obj(fields, _) => {
+  match json {
+    Object(fields) => {
       validate_project_top_level_fields(fields)
       let window = required_project_window(fields)
       let entry = required_project_entry(fields, base_dir)
@@ -54,7 +65,7 @@ fn decode_project_config(
       let metadata = decode_project_metadata(fields, metadata_base_dir)
       if single_instance && metadata.identifier is None {
         raise InvalidField(
-          path="moon.proton.identifier",
+          path="proton.project.json.identifier",
           expectation="is required when single_instance is true",
         )
       }
@@ -82,17 +93,11 @@ fn decode_project_config(
 
 ///|
 fn validate_project_top_level_fields(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
 ) -> Unit raise ProjectConfigError {
-  let seen : Map[String, Unit] = Map([])
   let errors : Array[ProjectConfigError] = []
-  for field in fields {
-    if seen.contains(field.key) {
-      errors.push(DuplicateField(path="moon.proton." + field.key))
-      continue
-    }
-    seen[field.key] = ()
-    match field.key {
+  for key, value in fields {
+    match key {
       "window"
       | "entry"
       | "windows"
@@ -100,21 +105,21 @@ fn validate_project_top_level_fields(
       | "debug"
       | "single_instance" => ()
       "product_name" | "identifier" =>
-        validate_optional_non_empty_string(field.value, field.key) catch {
+        validate_optional_non_empty_string(value, key) catch {
           error => errors.push(error)
         }
       "backend" | "frontend" | "bundle" | "updater" =>
-        validate_optional_object(field.value, field.key) catch {
+        validate_optional_object(value, key) catch {
           error => errors.push(error)
         }
       "extensions" =>
         errors.push(
           UnsupportedField(
-            path="moon.proton.extensions",
+            path="proton.project.json.extensions",
             reason="is not supported; declare extensions in MoonBit code with .extension(...).",
           ),
         )
-      other => errors.push(UnknownField(path="moon.proton." + other))
+      other => errors.push(UnknownField(path="proton.project.json." + other))
     }
   }
   if errors.length() > 0 {
@@ -127,19 +132,19 @@ fn validate_project_top_level_fields(
 
 ///|
 fn required_project_window(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
 ) -> ProjectWindowConfig raise ProjectConfigError {
   decode_project_window(required_config_field(fields, "window"), "window")
 }
 
 ///|
 fn decode_project_window(
-  value : Ast,
+  value : Json,
   label : String,
 ) -> ProjectWindowConfig raise ProjectConfigError {
-  guard value is Obj(window_fields, _) else {
+  guard value is Object(window_fields) else {
     raise InvalidField(
-      path="moon.proton." + label,
+      path="proton.project.json." + label,
       expectation="must be an object",
     )
   }
@@ -216,7 +221,7 @@ fn parse_project_size_hint(
 
 ///|
 fn required_project_entry(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> ProjectEntry raise ProjectConfigError {
   decode_project_entry(
@@ -228,13 +233,13 @@ fn required_project_entry(
 
 ///|
 fn decode_project_entry(
-  value : Ast,
+  value : Json,
   base_dir : String,
   label : String,
 ) -> ProjectEntry raise ProjectConfigError {
-  guard value is Obj(entry_fields, _) else {
+  guard value is Object(entry_fields) else {
     raise InvalidField(
-      path="moon.proton." + label,
+      path="proton.project.json." + label,
       expectation="must be an object",
     )
   }
@@ -270,15 +275,15 @@ fn build_project_entry_from_parts(
 
 ///|
 fn optional_project_windows(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> Array[ProjectAppWindowConfig] raise ProjectConfigError {
   let values = match find_config_field(fields, "windows") {
     None => return []
-    Some(Arr(values, _)) => values
+    Some(Array(values)) => values
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.windows",
+        path="proton.project.json.windows",
         expectation="must be an array",
       )
   }
@@ -286,9 +291,9 @@ fn optional_project_windows(
   let ids : Map[String, Unit] = Map([])
   for index, value in values {
     let label = "windows[" + index.to_string() + "]"
-    guard value is Obj(window_fields, _) else {
+    guard value is Object(window_fields) else {
       raise InvalidField(
-        path="moon.proton." + label,
+        path="proton.project.json." + label,
         expectation="must be an object",
       )
     }
@@ -330,15 +335,15 @@ fn optional_project_windows(
 
 ///|
 fn optional_project_permissions(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   windows : Array[ProjectAppWindowConfig],
 ) -> Array[ProjectPermissionGrant] raise ProjectConfigError {
   let values = match find_config_field(fields, "permissions") {
     None => return []
-    Some(Arr(values, _)) => values
+    Some(Array(values)) => values
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.permissions",
+        path="proton.project.json.permissions",
         expectation="must be an array",
       )
   }
@@ -350,9 +355,9 @@ fn optional_project_permissions(
   let identities : Map[String, Unit] = Map([])
   for index, value in values {
     let label = "permissions[" + index.to_string() + "]"
-    guard value is Obj(grant_fields, _) else {
+    guard value is Object(grant_fields) else {
       raise InvalidField(
-        path="moon.proton." + label,
+        path="proton.project.json." + label,
         expectation="must be an object",
       )
     }
@@ -402,11 +407,10 @@ fn optional_project_permissions(
     identities[identity] = ()
     let scope = match find_config_field(grant_fields, "scope") {
       None => Json::empty_object()
-      Some(Obj(scope_fields, _)) =>
-        permission_object_to_json(scope_fields, label + ".scope")
+      Some(Object(_) as scope) => scope
       Some(_) =>
         raise InvalidField(
-          path="moon.proton." + label + ".scope",
+          path="proton.project.json." + label + ".scope",
           expectation="must be an object",
         )
     }
@@ -416,70 +420,24 @@ fn optional_project_permissions(
 }
 
 ///|
-fn permission_object_to_json(
-  fields : Array[ConfigField],
-  label : String,
-) -> Json raise ProjectConfigError {
-  let object : Map[String, Json] = Map([])
-  for field in fields {
-    guard !object.contains(field.key) else {
-      raise DuplicateField(path=label + "." + field.key)
-    }
-    object[field.key] = permission_value_to_json(
-      field.value,
-      label + "." + field.key,
-    )
-  }
-  Json::object(object)
-}
-
-///|
-fn permission_value_to_json(
-  value : Ast,
-  label : String,
-) -> Json raise ProjectConfigError {
-  match value {
-    Bool(value, _) => Json::boolean(value)
-    Str(value, _) => Json::string(value)
-    Int(value, _) =>
-      @json.parse(value) catch {
-        _ =>
-          raise InvalidField(path=label, expectation="must be a valid number")
-      }
-    Arr(values, _) => {
-      let items : Array[Json] = []
-      for index, item in values {
-        items.push(
-          permission_value_to_json(item, label + "[" + index.to_string() + "]"),
-        )
-      }
-      Json::array(items)
-    }
-    Obj(fields, _) => permission_object_to_json(fields, label)
-  }
-}
-
-///|
 fn optional_project_debug(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
 ) -> Int raise ProjectConfigError {
   match find_config_field(fields, "debug") {
     None => 0
-    Some(value) =>
-      match value {
-        Bool(enabled, _) => debug_int_from_bool(enabled)
-        _ =>
-          raise InvalidField(
-            path="moon.proton.debug",
-            expectation="must be a bool",
-          )
-      }
+    Some(True) => 1
+    Some(False) => 0
+    Some(_) =>
+      raise InvalidField(
+        path="proton.project.json.debug",
+        expectation="must be a bool",
+      )
   }
 }
 
 ///|
 fn decode_project_metadata(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> ProjectMetadata raise ProjectConfigError {
   let product_name = optional_string_config_field(
@@ -488,7 +446,7 @@ fn decode_project_metadata(
   let identifier = optional_string_config_field(
     fields, "identifier", "identifier",
   )
-  let moon_mod = read_nearest_moon_mod_metadata(base_dir)
+  let moon_mod = read_moon_mod_metadata(base_dir)
   let fallback_product_name = required_project_window(fields).title
   ProjectMetadata::new(
     product_name.unwrap_or(fallback_product_name),
@@ -501,12 +459,12 @@ fn decode_project_metadata(
 
 ///|
 fn optional_project_backend(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> ProjectBackendConfig? raise ProjectConfigError {
   match find_config_field(fields, "backend") {
     None => None
-    Some(Obj(backend_fields, _)) => {
+    Some(Object(backend_fields)) => {
       validate_object_fields(backend_fields, "backend", ["path", "package"])
       Some(
         ProjectBackendConfig::new(
@@ -523,7 +481,7 @@ fn optional_project_backend(
     }
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.backend",
+        path="proton.project.json.backend",
         expectation="must be an object",
       )
   }
@@ -531,12 +489,12 @@ fn optional_project_backend(
 
 ///|
 fn optional_project_frontend(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> ProjectFrontendConfig? raise ProjectConfigError {
   match find_config_field(fields, "frontend") {
     None => None
-    Some(Obj(frontend_fields, _)) => {
+    Some(Object(frontend_fields)) => {
       validate_object_fields(frontend_fields, "frontend", [
         "dev_url", "dist", "before_dev", "before_build", "path",
       ])
@@ -564,7 +522,7 @@ fn optional_project_frontend(
     }
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.frontend",
+        path="proton.project.json.frontend",
         expectation="must be an object",
       )
   }
@@ -572,12 +530,12 @@ fn optional_project_frontend(
 
 ///|
 fn optional_project_bundle(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> ProjectBundleConfig? raise ProjectConfigError {
   match find_config_field(fields, "bundle") {
     None => None
-    Some(Obj(bundle_fields, _)) => {
+    Some(Object(bundle_fields)) => {
       validate_object_fields(bundle_fields, "bundle", [
         "active", "targets", "icon", "resources", "sign", "url_schemes", "document_types",
         "output",
@@ -637,7 +595,7 @@ fn optional_project_bundle(
     }
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.bundle",
+        path="proton.project.json.bundle",
         expectation="must be an object",
       )
   }
@@ -651,11 +609,11 @@ fn optional_project_bundle(
 /// signing key be abandoned without a transition release, and a transition
 /// release is exactly what a lost key makes impossible to produce.
 fn optional_project_updater(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
 ) -> ProjectUpdaterConfig? raise ProjectConfigError {
   match find_config_field(fields, "updater") {
     None => None
-    Some(Obj(updater_fields, _)) => {
+    Some(Object(updater_fields)) => {
       validate_object_fields(updater_fields, "updater", [
         "active", "endpoint", "public_keys", "check_on_launch", "freshness_days",
       ])
@@ -682,7 +640,7 @@ fn optional_project_updater(
       if active {
         guard endpoint.has_prefix("https://") else {
           raise InvalidField(
-            path="moon.proton.updater.endpoint",
+            path="proton.project.json.updater.endpoint",
             expectation="must be an https URL",
           )
         }
@@ -690,7 +648,7 @@ fn optional_project_updater(
         // to skip verification.
         guard public_keys.length() > 0 else {
           raise InvalidField(
-            path="moon.proton.updater.public_keys",
+            path="proton.project.json.updater.public_keys",
             expectation="must list at least one trusted key",
           )
         }
@@ -707,7 +665,7 @@ fn optional_project_updater(
     }
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.updater",
+        path="proton.project.json.updater",
         expectation="must be an object",
       )
   }
@@ -715,12 +673,12 @@ fn optional_project_updater(
 
 ///|
 fn optional_project_sign(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   base_dir : String,
 ) -> ProjectSignConfig? raise ProjectConfigError {
   match find_config_field(fields, "sign") {
     None => None
-    Some(Obj(sign_fields, _)) => {
+    Some(Object(sign_fields)) => {
       validate_object_fields(sign_fields, "bundle.sign", ["binaries"])
       let binaries = optional_string_array_config_field(
         sign_fields, "binaries", "bundle.sign.binaries",
@@ -728,7 +686,9 @@ fn optional_project_sign(
       for index, path in binaries {
         if path.contains("*") {
           raise InvalidField(
-            path="moon.proton.bundle.sign.binaries[" + index.to_string() + "]",
+            path="proton.project.json.bundle.sign.binaries[" +
+              index.to_string() +
+              "]",
             expectation="must name one file; glob patterns are not supported",
           )
         }
@@ -742,7 +702,7 @@ fn optional_project_sign(
     }
     Some(_) =>
       raise InvalidField(
-        path="moon.proton.bundle.sign",
+        path="proton.project.json.bundle.sign",
         expectation="must be an object",
       )
   }
@@ -750,11 +710,11 @@ fn optional_project_sign(
 
 ///|
 fn optional_project_document_types(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
 ) -> Array[ProjectDocumentType] raise ProjectConfigError {
   let values = match find_config_field(fields, "document_types") {
     None => return []
-    Some(Arr(values, _)) => values
+    Some(Array(values)) => values
     Some(_) =>
       raise InvalidField(
         path="bundle.document_types",
@@ -764,7 +724,7 @@ fn optional_project_document_types(
   let document_types : Array[ProjectDocumentType] = []
   for index, value in values {
     let label = "bundle.document_types[" + index.to_string() + "]"
-    guard value is Obj(document_fields, _) else {
+    guard value is Object(document_fields) else {
       raise InvalidField(path=label, expectation="must be an object")
     }
     validate_object_fields(document_fields, label, [
@@ -871,20 +831,20 @@ fn validate_project_bundle_targets(
 
 ///|
 fn validate_optional_non_empty_string(
-  value : Ast,
+  value : Json,
   key : String,
 ) -> Unit raise ProjectConfigError {
   match value {
-    Str(text, _) =>
+    String(text) =>
       if text == "" {
         raise InvalidField(
-          path="moon.proton." + key,
+          path="proton.project.json." + key,
           expectation="must not be empty",
         )
       }
     _ =>
       raise InvalidField(
-        path="moon.proton." + key,
+        path="proton.project.json." + key,
         expectation="must be a string",
       )
   }
@@ -892,14 +852,14 @@ fn validate_optional_non_empty_string(
 
 ///|
 fn validate_optional_object(
-  value : Ast,
+  value : Json,
   key : String,
 ) -> Unit raise ProjectConfigError {
   match value {
-    Obj(_, _) => ()
+    Object(_) => ()
     _ =>
       raise InvalidField(
-        path="moon.proton." + key,
+        path="proton.project.json." + key,
         expectation="must be an object",
       )
   }
@@ -907,20 +867,14 @@ fn validate_optional_object(
 
 ///|
 fn validate_object_fields(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   label : String,
   allowed : Array[String],
 ) -> Unit raise ProjectConfigError {
-  let seen : Map[String, Unit] = Map([])
   let errors : Array[ProjectConfigError] = []
-  for field in fields {
-    if seen.contains(field.key) {
-      errors.push(DuplicateField(path=label + "." + field.key))
-      continue
-    }
-    seen[field.key] = ()
-    if !allowed.contains(field.key) {
-      errors.push(UnknownField(path=label + "." + field.key))
+  for key, _ in fields {
+    if !allowed.contains(key) {
+      errors.push(UnknownField(path=label + "." + key))
     }
   }
   if errors.length() > 0 {
@@ -933,23 +887,23 @@ fn validate_object_fields(
 
 ///|
 fn required_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
-) -> Ast raise ProjectConfigError {
+) -> Json raise ProjectConfigError {
   match find_config_field(fields, key) {
     Some(value) => value
-    None => raise MissingField(path="moon.proton." + key)
+    None => raise MissingField(path="proton.project.json." + key)
   }
 }
 
 ///|
 fn required_string_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
   label : String,
 ) -> String raise ProjectConfigError {
   match find_config_field(fields, key) {
-    Some(Str(value, _)) =>
+    Some(String(value)) =>
       if value == "" {
         raise InvalidField(path=label, expectation="must not be empty")
       } else {
@@ -962,13 +916,13 @@ fn required_string_config_field(
 
 ///|
 fn optional_string_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
   label : String,
 ) -> String? raise ProjectConfigError {
   match find_config_field(fields, key) {
     None => None
-    Some(Str(value, _)) =>
+    Some(String(value)) =>
       if value == "" {
         raise InvalidField(path=label, expectation="must not be empty")
       } else {
@@ -980,7 +934,7 @@ fn optional_string_config_field(
 
 ///|
 fn optional_rebased_string_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
   label : String,
   base_dir : String,
@@ -993,31 +947,32 @@ fn optional_rebased_string_config_field(
 
 ///|
 fn optional_bool_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
   label : String,
   default : Bool,
 ) -> Bool raise ProjectConfigError {
   match find_config_field(fields, key) {
     None => default
-    Some(Bool(value, _)) => value
+    Some(True) => true
+    Some(False) => false
     Some(_) => raise InvalidField(path=label, expectation="must be a bool")
   }
 }
 
 ///|
 fn optional_string_array_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
   label : String,
 ) -> Array[String] raise ProjectConfigError {
   match find_config_field(fields, key) {
     None => []
-    Some(Arr(items, _)) => {
+    Some(Array(items)) => {
       let values : Array[String] = []
       for item in items {
         match item {
-          Str(value, _) =>
+          String(value) =>
             if value == "" {
               raise InvalidField(
                 path=label,
@@ -1039,13 +994,13 @@ fn optional_string_array_config_field(
 
 ///|
 fn required_positive_int_config_field(
-  fields : Array[ConfigField],
+  fields : Map[String, Json],
   key : String,
   label : String,
 ) -> Int raise ProjectConfigError {
   match find_config_field(fields, key) {
-    Some(Int(text, _)) => {
-      let value = @string.parse_int(text) catch {
+    Some(json) => {
+      let value : Int = @json.from_json(json) catch {
         _ => raise InvalidField(path=label, expectation="must be an int")
       }
       if value <= 0 {
@@ -1053,106 +1008,13 @@ fn required_positive_int_config_field(
       }
       value
     }
-    Some(_) => raise InvalidField(path=label, expectation="must be an int")
     None => raise MissingField(path=label)
   }
 }
 
 ///|
-fn find_config_field(fields : Array[ConfigField], key : String) -> Ast? {
-  for field in fields {
-    if field.key == key {
-      return Some(field.value)
-    }
-  }
-  None
+fn find_config_field(fields : Map[String, Json], key : String) -> Json? {
+  fields.get(key)
 }
 
 ///|
-priv struct MoonModMetadata {
-  mut version : String?
-  mut description : String?
-  mut license : String?
-}
-
-///|
-fn MoonModMetadata::new() -> MoonModMetadata {
-  MoonModMetadata::{ version: None, description: None, license: None }
-}
-
-///|
-fn read_nearest_moon_mod_metadata(start_dir : String) -> MoonModMetadata {
-  match find_nearest_moon_mod(start_dir) {
-    None => MoonModMetadata::new()
-    Some(path) => read_moon_mod_metadata(path)
-  }
-}
-
-///|
-fn find_nearest_moon_mod(start_dir : String) -> String? {
-  for current = start_dir, depth = 0; depth < 16; {
-    let candidate = join_path_string(current, "moon.mod")
-    if (@mbfs.is_file(candidate) catch { _ => false }) {
-      return Some(candidate)
-    }
-    let parent = dirname_string(current)
-    if parent == current || parent == "" {
-      return None
-    }
-    continue parent, depth + 1
-  } nobreak {
-    None
-  }
-}
-
-///|
-fn read_moon_mod_metadata(path : String) -> MoonModMetadata {
-  let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    _ => return MoonModMetadata::new()
-  }
-  let metadata = MoonModMetadata::new()
-  let (ast, _reports) = parse_moon_mod(name=path, text)
-  match ast {
-    Obj(fields, _) => {
-      metadata.version = moon_mod_string_field(fields, "version")
-      metadata.description = moon_mod_string_field(fields, "description")
-      metadata.license = moon_mod_string_field(fields, "license")
-    }
-    _ => ()
-  }
-  metadata
-}
-
-///|
-fn moon_mod_string_field(fields : Array[ConfigField], key : String) -> String? {
-  for field in fields {
-    if field.key == key {
-      match field.value {
-        Str(value, _) => return Some(value)
-        _ => return None
-      }
-    }
-  }
-  None
-}
-
-///|
-fn render_config_reports(reports : Array[@basic.Report]) -> String {
-  let builder = StringBuilder::new()
-  for index, report in reports {
-    if index > 0 {
-      builder.write_string("\n")
-    }
-    builder.write_string(report.to_string())
-  }
-  builder.to_string()
-}
-
-///|
-fn debug_int_from_bool(enabled : Bool) -> Int {
-  if enabled {
-    1
-  } else {
-    0
-  }
-}

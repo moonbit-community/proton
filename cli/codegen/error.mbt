@@ -1,8 +1,7 @@
 ///|
-/// Schema failures in the `moon.ext` identity consumed by command codegen.
+/// Schema failures in the `proton.ext.json` identity consumed by command codegen.
 pub(all) suberror CodegenMetadataError {
   InvalidRoot
-  DuplicateField(field~ : String)
   UnknownField(field~ : String)
   MissingField(field~ : String)
   InvalidType(field~ : String, expected~ : String)
@@ -12,14 +11,14 @@ pub(all) suberror CodegenMetadataError {
 ///|
 pub fn CodegenMetadataError::message(self : CodegenMetadataError) -> String {
   match self {
-    InvalidRoot => "expected field list for moon.ext"
-    DuplicateField(field~) => "duplicate moon.ext field: " + field
-    UnknownField(field~) => "unknown moon.ext field: " + field
-    MissingField(field~) => "moon.ext must contain string field `" + field + "`"
+    InvalidRoot => "expected a JSON object for proton.ext.json"
+    UnknownField(field~) => "unknown proton.ext.json field: " + field
+    MissingField(field~) =>
+      "proton.ext.json must contain string field `" + field + "`"
     InvalidType(field~, expected~) =>
-      "moon.ext field `" + field + "` must be " + expected
+      "proton.ext.json field `" + field + "` must be " + expected
     InvalidPackageName(value~, reason~) =>
-      "invalid moon.ext package `" + value + "`: " + reason
+      "invalid proton.ext.json package `" + value + "`: " + reason
   }
 }
 
@@ -37,7 +36,7 @@ pub(all) suberror CodegenInputError {
 } derive(Debug, Eq)
 
 ///|
-/// Failures while loading the `moon.ext` file associated with command codegen.
+/// Failures while loading the `proton.ext.json` file associated with command codegen.
 pub(all) suberror CodegenMetadataFileError {
   MissingMetadata(path~ : String)
   Syntax(path~ : String, diagnostics~ : String)
@@ -71,7 +70,8 @@ pub fn CodegenMetadataFileError::message(
   self : CodegenMetadataFileError,
 ) -> String {
   match self {
-    MissingMetadata(path~) => "missing moon.ext next to input file: " + path
+    MissingMetadata(path~) =>
+      "missing proton.ext.json next to input file: " + path
     Syntax(path~, diagnostics~) => path + ": " + diagnostics
     Invalid(path~, error~) => path + ": " + error.message()
   }

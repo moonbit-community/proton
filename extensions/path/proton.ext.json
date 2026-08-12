@@ -1,0 +1,14 @@
+{
+  "id": "moonbit-community/proton-path",
+  "namespace": "path",
+  "package": "@moonbit-community/proton-path",
+  "version": "0.1.0",
+  "display_name": "Path",
+  "description": "MoonBit-style portable path helpers wrapping moonbitlang/x/path operations.",
+  "platforms": [
+    "windows",
+    "macos",
+    "linux"
+  ],
+  "dependencies": []
+}

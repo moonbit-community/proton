@@ -22,12 +22,12 @@ moonfmt -w <output.g.mbt>
 ```
 
 All input files must belong to one MoonBit package. When that package contains
-`moon.ext`, the generated registrar also exposes its command routes.
+`proton.ext.json`, the generated registrar also exposes its command routes.
 
 Generate the target-neutral contract identity separately from the same metadata:
 
 ```sh
-proton_cli codegen --extension-identity moon.ext \
+proton_cli codegen --extension-identity proton.ext.json \
   --identity-name extension \
   -o contract/extension_identity.g.mbt
 ```

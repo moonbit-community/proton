@@ -1,5 +1,5 @@
 ///|
-/// Release metadata resolved from `moon.proton` and the nearest `moon.mod`.
+/// Release metadata resolved from `proton.project.json` and the nearest `moon.mod`.
 struct ProtonAppMetadata {
   product_name : String
   identifier : String?
@@ -45,7 +45,7 @@ pub fn ProtonAppMetadata::license(self : ProtonAppMetadata) -> String? {
 }
 
 ///|
-/// Backend module settings from `moon.proton`.
+/// Backend module settings from `proton.project.json`.
 struct ProtonBackendConfig {
   path : String
   app_package : String
@@ -70,7 +70,7 @@ pub fn ProtonBackendConfig::app_package(self : ProtonBackendConfig) -> String {
 }
 
 ///|
-/// Frontend dev/build settings from `moon.proton`.
+/// Frontend dev/build settings from `proton.project.json`.
 struct ProtonFrontendConfig {
   dev_url : String?
   dist : String?
@@ -118,7 +118,7 @@ pub fn ProtonFrontendConfig::path(self : ProtonFrontendConfig) -> String? {
 }
 
 ///|
-/// Signing settings from `bundle.sign` in `moon.proton`.
+/// Signing settings from `bundle.sign` in `proton.project.json`.
 struct ProtonSignConfig {
   binaries : Array[String]
 }
@@ -138,7 +138,7 @@ pub fn ProtonSignConfig::binaries(self : ProtonSignConfig) -> Array[String] {
 }
 
 ///|
-/// Bundle input settings from `moon.proton`.
+/// Bundle input settings from `proton.project.json`.
 struct ProtonBundleConfig {
   active : Bool
   targets : Array[String]
@@ -233,8 +233,8 @@ pub fn ProtonBundleConfig::output(self : ProtonBundleConfig) -> String {
 }
 
 ///|
-/// Complete `moon.proton` document for developer tooling.
-/// The application's update channel, as declared in `moon.proton`.
+/// Complete `proton.project.json` document for developer tooling.
+/// The application's update channel, as declared in `proton.project.json`.
 ///
 /// Only what the runtime needs to decide whether to check, and whom to trust
 /// when it does. No private key material reaches here, because none of it is
@@ -373,7 +373,7 @@ pub fn ProtonProjectConfig::updater(
 /// Returns the runtime manifest that `proton dev` should start.
 ///
 /// When `frontend.dev_url` is present, the entry is replaced in memory with
-/// that URL. The source `moon.proton` file is not rewritten.
+/// that URL. The source `proton.project.json` file is not rewritten.
 pub fn ProtonProjectConfig::dev_manifest(
   self : ProtonProjectConfig,
 ) -> LoadedAppManifest {

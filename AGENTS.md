@@ -117,7 +117,7 @@ native checks before handing off larger refactors.
 
 ## Generated Files And Release Flow
 - Published `proton` and `proton_ext` packages must not require repository-local `dev_build` or `rule` commands. Generated `.mbt` files are committed and consumed directly by downstream users.
-- When changing extension command annotations, `moon.ext` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
+- When changing extension command annotations, `proton.ext.json` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
 - Before publishing `proton` or `proton_ext`, run `node scripts/verify_generated.mjs`; it regenerates outputs in a temp directory and fails if committed generated files are stale.
 - Publish releases only through the manually dispatched
   `.github/workflows/publish.yml` workflow on `main`. The workflow owns the

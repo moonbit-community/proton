@@ -1,12 +1,11 @@
 ///|
-/// Failures produced while loading and validating `moon.proton`.
+/// Failures produced while loading and validating `proton.project.json`.
 pub(all) suberror ProjectConfigError {
   FileRead(path~ : String, detail~ : String)
   Syntax(name~ : String, diagnostics~ : String)
   InvalidRoot
   Validation(errors~ : Array[ProjectConfigError])
   MissingField(path~ : String)
-  DuplicateField(path~ : String)
   DuplicateValue(path~ : String, value~ : String)
   UnknownField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
@@ -18,13 +17,12 @@ pub(all) suberror ProjectConfigError {
 pub fn ProjectConfigError::message(self : ProjectConfigError) -> String {
   match self {
     FileRead(path~, detail~) => "failed to read " + path + ": " + detail
-    Syntax(diagnostics~, ..) => diagnostics
-    InvalidRoot => "moon.proton root must be a field list"
+    Syntax(name~, diagnostics~) => name + ": " + diagnostics
+    InvalidRoot => "proton.project.json root must be a JSON object"
     Validation(errors~) => errors.map(fn(error) { error.message() }).join("\n")
     MissingField(path~) => "missing required field: " + path
-    DuplicateField(path~) => render_field_key_error(path, true)
     DuplicateValue(path~, value~) => "duplicate value in " + path + ": " + value
-    UnknownField(path~) => render_field_key_error(path, false)
+    UnknownField(path~) => render_field_key_error(path)
     InvalidField(path~, expectation~) => path + " " + expectation
     UnsupportedField(path~, reason~) =>
       render_unsupported_field_error(path, reason)
@@ -34,40 +32,38 @@ pub fn ProjectConfigError::message(self : ProjectConfigError) -> String {
 
 ///|
 fn render_unsupported_field_error(path : String, reason : String) -> String {
-  let prefix = "moon.proton."
+  let prefix = "proton.project.json."
   if path.has_prefix(prefix) {
-    "moon.proton field `" + path[prefix.length():].to_owned() + "` " + reason
+    "proton.project.json field `" +
+    path[prefix.length():].to_owned() +
+    "` " +
+    reason
   } else {
     path + " " + reason
   }
 }
 
 ///|
-fn render_field_key_error(path : String, duplicate : Bool) -> String {
-  let prefix = "moon.proton."
-  let verb = if duplicate { "Duplicate" } else { "Unexpected" }
+fn render_field_key_error(path : String) -> String {
+  let prefix = "proton.project.json."
   if path.has_prefix(prefix) {
-    verb +
+    "Unexpected" +
     " key '" +
     path[prefix.length():].to_owned() +
-    "' found in moon.proton."
+    "' found in proton.project.json."
   } else {
     for scope in ["window", "entry", "frontend", "bundle"] {
       let scope_prefix = scope + "."
       if path.has_prefix(scope_prefix) {
-        return verb +
+        return "Unexpected" +
           " key '" +
           path[scope_prefix.length():].to_owned() +
-          "' found in moon.proton field `" +
+          "' found in proton.project.json field `" +
           scope +
           "`."
       }
     }
-    if duplicate {
-      "duplicate field: " + path
-    } else {
-      "unknown field: " + path
-    }
+    "unknown field: " + path
   }
 }
 

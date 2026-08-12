@@ -361,7 +361,7 @@ async fn stage_windows_portable_impl(
   stage_windows_icon(plan, staged_executable)
   stage_release_project_config(
     plan.config_path,
-    @fsutil.resolve_path(staging, "moon.proton"),
+    @fsutil.resolve_path(staging, "proton.project.json"),
   )
   stage_project_inputs(plan, staging)
   stage_update_revision(plan, staging)
@@ -398,7 +398,7 @@ async fn validate_windows_portable_layout(
       output,
       package_executable_name(plan.product_name) + ".exe",
     ),
-    @fsutil.resolve_path(output, "moon.proton"),
+    @fsutil.resolve_path(output, "proton.project.json"),
     @fsutil.resolve_path(output, "proton-package.json"),
   ]
   for name in windows_runtime_binary_files() {

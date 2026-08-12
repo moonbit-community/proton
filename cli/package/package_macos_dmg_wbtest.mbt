@@ -6,7 +6,7 @@ fn macos_dmg_test_plan(root : String) -> PackagePlan {
     workspace_root: root,
     build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: @fsutil.resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",

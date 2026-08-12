@@ -42,7 +42,7 @@ async fn choose_cdp_port() -> Int {
 fn current_working_directory() -> String raise {
   let cwd = @env.current_dir().unwrap_or("")
   guard cwd != "" else { fail("could not determine current directory") }
-  let cwd = @path.Path(normalize_platform_path(cwd)).normalize()
+  let cwd = e2e_host_path(cwd).normalize()
   guard cwd.is_absolute() else {
     fail("current directory is not absolute: " + cwd.to_string())
   }
@@ -66,29 +66,11 @@ fn repository_root() -> String raise {
 }
 
 ///|
-fn normalize_platform_path(path : String) -> String {
+fn e2e_host_path(path : String) -> @path.Path {
   if @path.sep == '\\' {
     path.replace_all(old="/", new="\\")
   } else {
     path.replace_all(old="\\", new="/")
-  }
-}
-
-///|
-fn is_absolute_path_for_separator(path : String, separator : Char) -> Bool {
-  if path == "" {
-    false
-  } else if separator == '\\' {
-    let drive = path[0]
-    path[0] == '\\' ||
-    (
-      path.length() >= 3 &&
-      ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) &&
-      path[1] == ':' &&
-      path[2] == '\\'
-    )
-  } else {
-    path[0] == '/'
   }
 }
 
@@ -341,7 +323,7 @@ fn unix_app_session_script() -> String {
 fn current_test_executable() -> String raise {
   let args = @env.args()
   guard args.length() > 0 else { fail("test executable path is unavailable") }
-  let executable = normalize_platform_path(args[0])
+  let executable = e2e_host_path(args[0]).normalize().to_string()
   let path = @path.Path(executable)
   if path.is_absolute() {
     executable
@@ -593,24 +575,18 @@ async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
 
 ///|
 fn resolve_path(base : String, child : String) -> String {
-  let base = normalize_platform_path(base)
-  let child = normalize_platform_path(child)
-  if is_absolute_path_for_separator(child, @path.sep) {
-    child
+  let child_path = e2e_host_path(child)
+  if child_path.is_absolute() {
+    child_path.normalize().to_string()
   } else if base == "" {
-    child
-  } else if base.has_suffix(@path.sep.to_string()) {
-    base + child
+    child_path.normalize().to_string()
   } else {
-    base + @path.sep.to_string() + child
+    e2e_host_path(base).join(child_path).to_string()
   }
 }
 
 ///|
 fn join_path(base : String, child : String) -> String {
-  // The path facade can drop a Windows drive prefix while joining an
-  // absolute base. E2E paths are simple relative children, so keep the
-  // platform prefix with the controlled resolver above.
   resolve_path(base, child)
 }
 

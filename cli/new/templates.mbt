@@ -40,6 +40,7 @@ priv struct TemplateContext {
   shared_module : String
   frontend_module : String
   backend_module : String
+  identifier : String
   identifier_mbt : String
   width : Int
   height : Int
@@ -89,6 +90,7 @@ fn template_context(
     shared_module: module_prefix + "_shared",
     frontend_module: module_prefix + "_frontend",
     backend_module: module_prefix + "_backend",
+    identifier,
     identifier_mbt: mbt_string(identifier),
     width,
     height,
@@ -186,8 +188,41 @@ fn plan_project_files(
   for spec in template_specs() {
     files.push(render_template(spec, context))
   }
+  files.push(project_config_file(context))
   files.push(generate_scaffold_commands(files))
   files
+}
+
+///|
+fn project_config_file(context : TemplateContext) -> PlannedFile {
+  let config : Json = {
+    "product_name": context.title,
+    "identifier": context.identifier,
+    "single_instance": true,
+    "window": {
+      "title": context.title,
+      "width": context.width,
+      "height": context.height,
+      "size_hint": "none",
+    },
+    "backend": { "path": "backend", "package": "app" },
+    "frontend": {
+      "path": "frontend",
+      "dev_url": "http://127.0.0.1:4300",
+      "before_dev": "warren dev --direct --port 4300",
+      "before_build": "warren build",
+      "dist": "dist",
+    },
+    "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
+    "permissions": [{ "window": "main", "origin": "entry", "extension": "app" }],
+    "debug": true,
+    "bundle": {
+      "active": true,
+      "targets": ["app", "zip"],
+      "output": "target/proton-dist",
+    },
+  }
+  { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
 }
 
 ///|

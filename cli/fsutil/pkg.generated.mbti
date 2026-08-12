@@ -12,9 +12,13 @@ pub async fn path_is_dir(String) -> Bool
 
 pub async fn path_is_file(String) -> Bool
 
+pub fn path_is_within(String, String) -> Bool
+
 pub fn path_join(String, String) -> String
 
 pub fn path_parent(String) -> String
+
+pub fn relative_path(String, String) -> String
 
 pub fn resolve_path(String, String) -> String
 

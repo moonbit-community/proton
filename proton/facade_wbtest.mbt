@@ -1164,25 +1164,23 @@ fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
   @mbfs.create_dir("target/proton-facade-dev") catch {
     _ => ()
   }
-  let frontend = match dev_url {
-    Some(url) => "\nfrontend = {\n  dev_url: \"" + url + "\",\n}\n"
-    None => ""
+  let config : Json = {
+    "window": { "title": "Dev Test", "width": 320, "height": 240 },
+    "entry": { "kind": "asset", "value": "app.html" },
+    "debug": true,
   }
-  let base =
-    #|window = {
-    #|  title: "Dev Test",
-    #|  width: 320,
-    #|  height: 240,
-    #|}
-    #|
-    #|entry = {
-    #|  kind: "asset",
-    #|  value: "app.html",
-    #|}
-    #|
-    #|debug = true
-    #|
-  @mbfs.write_string_to_file(path, base + frontend, encoding="utf8") catch {
+  guard config is Object(fields) else {
+    abort("expected project config object")
+  }
+  match dev_url {
+    Some(url) => fields["frontend"] = { "dev_url": url }
+    None => ()
+  }
+  @mbfs.write_string_to_file(
+    path,
+    Json::object(fields).stringify(indent=2) + "\n",
+    encoding="utf8",
+  ) catch {
     err => abort(@debug.render(Repr(err)))
   }
 }
@@ -1197,7 +1195,7 @@ fn restore_env_var(name : String, value : String?) -> Unit {
 
 ///|
 test "implicit config path honors PROTON_CONFIG_PATH" {
-  let config_path = "target/proton-facade-dev/implicit-env.moon.proton"
+  let config_path = "target/proton-facade-dev/implicit-env.proton.project.json"
   write_facade_dev_config(config_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
   defer restore_env_var("PROTON_CONFIG_PATH", old_config)
@@ -1210,17 +1208,19 @@ test "implicit config path honors PROTON_CONFIG_PATH" {
 test "packaged config takes precedence over environment and working directory" {
   @debug.assert_eq(
     choose_implicit_config_path(
-      bundled=Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
-      environment=Some("/tmp/override.moon.proton"),
+      bundled=Some(
+        "/Applications/Todo.app/Contents/Resources/proton.project.json",
+      ),
+      environment=Some("/tmp/override.proton.project.json"),
       cwd_has_default=true,
     ),
-    Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
+    Some("/Applications/Todo.app/Contents/Resources/proton.project.json"),
   )
 }
 
 ///|
 test "default config API honors PROTON_CONFIG_PATH" {
-  let config_path = "target/proton-facade-dev/config-api-env.moon.proton"
+  let config_path = "target/proton-facade-dev/config-api-env.proton.project.json"
   write_facade_dev_config(config_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
   let old_dev = @env.get_env_var("PROTON_DEV")
@@ -1232,7 +1232,7 @@ test "default config API honors PROTON_CONFIG_PATH" {
   @env.set_env_var("PROTON_CONFIG_PATH", config_path)
   @env.unset_env_var("PROTON_DEV")
   @env.unset_env_var("PROTON_MODE")
-  let app = config("moon.proton")
+  let app = config("proton.project.json")
   @debug.assert_eq(app.file_path, Some(config_path))
   let resolved = unwrap_configuration(() => app.resolved_app_config())
   assert_eq(resolved.manifest.window.title, "Dev Test")
@@ -1240,8 +1240,8 @@ test "default config API honors PROTON_CONFIG_PATH" {
 
 ///|
 test "config API keeps non-default paths explicit" {
-  let config_path = "target/proton-facade-dev/explicit.moon.proton"
-  let env_path = "target/proton-facade-dev/explicit-env.moon.proton"
+  let config_path = "target/proton-facade-dev/explicit.proton.project.json"
+  let env_path = "target/proton-facade-dev/explicit-env.proton.project.json"
   write_facade_dev_config(config_path)
   write_facade_dev_config(env_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
@@ -1253,7 +1253,7 @@ test "config API keeps non-default paths explicit" {
 
 ///|
 test "config API overrides manifest fields and keeps base dir" {
-  let config_path = "target/proton-facade-dev/api-overrides.moon.proton"
+  let config_path = "target/proton-facade-dev/api-overrides.proton.project.json"
   write_facade_dev_config(config_path)
   let old_dev = @env.get_env_var("PROTON_DEV")
   let old_mode = @env.get_env_var("PROTON_MODE")
@@ -1289,7 +1289,7 @@ test "config API overrides manifest fields and keeps base dir" {
 
 ///|
 test "dev manifest uses env override or frontend dev_url" {
-  let override_path = "target/proton-facade-dev/env-override.moon.proton"
+  let override_path = "target/proton-facade-dev/env-override.proton.project.json"
   write_facade_dev_config(override_path, dev_url="http://localhost:5173")
   let old_dev = @env.get_env_var("PROTON_DEV")
   let old_url = @env.get_env_var("PROTON_FRONTEND_URL")
@@ -1307,7 +1307,7 @@ test "dev manifest uses env override or frontend dev_url" {
     _ => fail("expected dev URL entry")
   }
 
-  let config_path = "target/proton-facade-dev/config-dev-url.moon.proton"
+  let config_path = "target/proton-facade-dev/config-dev-url.proton.project.json"
   write_facade_dev_config(config_path, dev_url="http://localhost:5173")
   @env.unset_env_var("PROTON_FRONTEND_URL")
   let config_manifest = unwrap_configuration(() => {

@@ -38,7 +38,7 @@ pub(all) struct ProjectAppWindowConfig {
 } derive(Eq, Debug)
 
 ///|
-/// One renderer capability grant from `moon.proton`.
+/// One renderer capability grant from `proton.project.json`.
 ///
 /// `window` is `main` or a declared secondary window id. `origin` is `app`
 /// for bundled Proton pages or `entry` for the configured window entry.
@@ -420,7 +420,7 @@ pub fn LoadedProjectConfig::warnings(
 }
 
 ///|
-/// The application's update channel, as declared in `moon.proton`.
+/// The application's update channel, as declared in `proton.project.json`.
 ///
 /// This carries only what the runtime needs in order to decide whether to
 /// check, and whom to trust when it does. No private key material appears

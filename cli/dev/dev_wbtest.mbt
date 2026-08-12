@@ -88,32 +88,30 @@ test "parse dev args accepts an isolated Moon target directory" {
 async test "read dev project config extracts module paths" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
-  let path = @fsutil.path_join(dir, "moon.proton")
+  let path = @fsutil.path_join(dir, "proton.project.json")
   @mbfs.write_string_to_file(
     path,
     (
-      #|window = {
-      #|  title: "Dev Test",
-      #|  width: 320,
-      #|  height: 240,
+      #|{
+      #|  "window": {
+      #|    "title": "Dev Test",
+      #|    "width": 320,
+      #|    "height": 240
+      #|  },
+      #|  "entry": {
+      #|    "kind": "url",
+      #|    "value": "http://localhost:5173"
+      #|  },
+      #|  "backend": {
+      #|    "path": "backend",
+      #|    "package": "desktop"
+      #|  },
+      #|  "frontend": {
+      #|    "dev_url": "http://localhost:5173",
+      #|    "before_dev": "npm run dev",
+      #|    "path": "frontend"
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "url",
-      #|  value: "http://localhost:5173",
-      #|}
-      #|
-      #|backend = {
-      #|  path: "backend",
-      #|  package: "desktop",
-      #|}
-      #|
-      #|frontend = {
-      #|  dev_url: "http://localhost:5173",
-      #|  before_dev: "npm run dev",
-      #|  path: "frontend",
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -133,26 +131,25 @@ async test "read dev project config extracts module paths" {
 async test "read dev frontend config validates full project config" {
   let dir = "target/proton-dev-config"
   ensure_dev_test_dir(dir)
-  let path = @fsutil.path_join(dir, "bad-size-hint.moon.proton")
+  let path = @fsutil.path_join(dir, "bad-size-hint.proton.project.json")
   @mbfs.write_string_to_file(
     path,
     (
-      #|window = {
-      #|  title: "Dev Test",
-      #|  width: 320,
-      #|  height: 240,
-      #|  size_hint: "stretch",
+      #|{
+      #|  "window": {
+      #|    "title": "Dev Test",
+      #|    "width": 320,
+      #|    "height": 240,
+      #|    "size_hint": "stretch"
+      #|  },
+      #|  "entry": {
+      #|    "kind": "url",
+      #|    "value": "http://localhost:5173"
+      #|  },
+      #|  "frontend": {
+      #|    "dev_url": "http://localhost:5173"
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "url",
-      #|  value: "http://localhost:5173",
-      #|}
-      #|
-      #|frontend = {
-      #|  dev_url: "http://localhost:5173",
-      #|}
-      #|
     ),
     encoding="utf8",
   ) catch {
@@ -208,13 +205,13 @@ async test "frontend path is validated only when frontend starts" {
 }
 
 ///|
-async test "dev config discovery prefers package-local moon.proton" {
+async test "dev config discovery prefers package-local proton.project.json" {
   let root = "target/proton-dev-package-config"
   ensure_dev_test_dir(root)
   ensure_dev_test_dir(@fsutil.path_join(root, "desktop"))
   let package_config = @fsutil.path_join(
     @fsutil.path_join(root, "desktop"),
-    "moon.proton",
+    "proton.project.json",
   )
   @mbfs.write_string_to_file(package_config, "", encoding="utf8") catch {
     err => abort(@debug.render(Repr(err)))
@@ -223,7 +220,7 @@ async test "dev config discovery prefers package-local moon.proton" {
   let resolved = resolve_dev_config_path(root, root, raw)
   @debug.assert_eq(
     resolved,
-    Some(@fsutil.resolve_path(root, "desktop/moon.proton")),
+    Some(@fsutil.resolve_path(root, "desktop/proton.project.json")),
   )
 }
 

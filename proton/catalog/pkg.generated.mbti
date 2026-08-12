@@ -39,7 +39,6 @@ pub(all) suberror ExtensionDescriptorError {
 pub fn ExtensionDescriptorError::message(Self) -> String
 
 pub(all) suberror ExtensionMetadataError {
-  DuplicateField(field~ : String)
   UnknownField(field~ : String)
   MissingField(field~ : String)
   InvalidType(field~ : String, expected~ : String)

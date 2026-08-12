@@ -252,7 +252,7 @@ try {
     $SignTool = Require-Command "signtool.exe"
     $CertUtil = Require-Command "certutil.exe"
     Require-Path (Join-Path $RepoRoot ".proton\runtime.json") "Run 'moon -C cli run . -- -C .. cef setup' first."
-    Require-Path (Join-Path $ExampleDir "moon.proton") "Package smoke example is missing."
+    Require-Path (Join-Path $ExampleDir "proton.project.json") "Package smoke example is missing."
 
     $nodeModules = Join-Path $ExampleDir "frontend\node_modules"
     if (-not (Test-Path -LiteralPath $nodeModules)) {
@@ -296,7 +296,7 @@ try {
     Invoke-External $Moon @(
         "-C", "cli", "run", ".", "--", "-C", "../examples",
         "package", "--package", $ExampleName,
-        "--config", "$ExampleName/moon.proton",
+        "--config", "$ExampleName/proton.project.json",
         "--release", "--sign", "--target", "app", "--target", "zip"
     )
 
@@ -327,7 +327,7 @@ try {
         "Resources\icudtl.dat",
         "Resources\resources.pak",
         "Resources\locales\en-US.pak",
-        "moon.proton",
+        "proton.project.json",
         "frontend\dist\index.html",
         "proton-package.json"
     )

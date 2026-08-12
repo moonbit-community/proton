@@ -90,10 +90,10 @@ async test "package plan accepts dmg only on macOS" {
   )
   let raw = parse_package_args([])
   if is_macos_host() {
-    let plan = build_package_plan(raw, "moon.proton", project, 0UL)
+    let plan = build_package_plan(raw, "proton.project.json", project, 0UL)
     @debug.assert_eq(plan.targets, ["dmg"])
   } else {
-    try build_package_plan(raw, "moon.proton", project, 0UL) catch {
+    try build_package_plan(raw, "proton.project.json", project, 0UL) catch {
       PackagePlanError::UnsupportedTargetForPlatform(target="dmg", platform~) =>
         assert_true(platform != "")
       _ => abort("expected platform-specific target error")
@@ -131,7 +131,7 @@ async test "package plan requires active bundle" {
     ),
   )
   let raw = parse_package_args([])
-  try build_package_plan(raw, "moon.proton", project, 0UL) catch {
+  try build_package_plan(raw, "proton.project.json", project, 0UL) catch {
     PackageConfigError::BundleMissing => ()
     _ => abort("expected missing bundle error")
   } noraise {
@@ -153,7 +153,7 @@ async test "package plan uses the host defaults" {
     bundle=Some(@proton_config.ProjectBundleConfig::new(active=true)),
   )
   let raw = parse_package_args([])
-  let plan = build_package_plan(raw, "moon.proton", project, 0UL)
+  let plan = build_package_plan(raw, "proton.project.json", project, 0UL)
   let expected_targets = match current_package_host() {
     Linux => ["appimage"]
     Macos | Windows => ["app", "zip"]
@@ -169,7 +169,7 @@ async test "package plan uses the host defaults" {
   )
   let release_plan = build_package_plan(
     parse_package_args(["--release"]),
-    "moon.proton",
+    "proton.project.json",
     project,
     0UL,
   )
@@ -206,7 +206,7 @@ async test "package plan stages every window file entry" {
   )
   let plan = build_package_plan(
     parse_package_args([]),
-    @fsutil.resolve_path(root, "moon.proton"),
+    @fsutil.resolve_path(root, "proton.project.json"),
     project,
     0UL,
   )
@@ -250,7 +250,7 @@ async test "configured signing binaries resolve through staged resources" {
   )
   let plan = build_package_plan(
     parse_package_args([]),
-    @fsutil.resolve_path(root, "moon.proton"),
+    @fsutil.resolve_path(root, "proton.project.json"),
     project,
     0UL,
   )
@@ -282,7 +282,7 @@ async test "package plan uses configured backend module and package" {
   )
   let configured = build_package_plan(
     parse_package_args([]),
-    @fsutil.resolve_path(base_dir, "moon.proton"),
+    @fsutil.resolve_path(base_dir, "proton.project.json"),
     project,
     0UL,
   )
@@ -290,7 +290,7 @@ async test "package plan uses configured backend module and package" {
   assert_eq(configured.app_package, "desktop")
   let overridden = build_package_plan(
     parse_package_args(["--package", "custom"]),
-    @fsutil.resolve_path(base_dir, "moon.proton"),
+    @fsutil.resolve_path(base_dir, "proton.project.json"),
     project,
     0UL,
   )
@@ -545,42 +545,36 @@ test "macOS icon plist entry is conditional" {
 ///|
 test "release project config disables only the top-level debug field" {
   let source =
-    #|product_name = "MoonBit 桌面应用"
-    #|window = { title: "debug = true", width: 800, height: 600 }
-    #|entry = { kind: "html", value: "<p>debug = true</p>" }
-    #|debug = true
-    #|bundle = { active: true }
-    #|
+    #|{
+    #|  "product_name": "MoonBit 桌面应用",
+    #|  "window": {
+    #|    "title": "debug = true",
+    #|    "width": 800,
+    #|    "height": 600
+    #|  },
+    #|  "entry": {
+    #|    "kind": "html",
+    #|    "value": "<p>debug = true</p>"
+    #|  },
+    #|  "debug": true,
+    #|  "bundle": {
+    #|    "active": true
+    #|  }
+    #|}
   let release = release_project_config_text(source)
-  assert_true(release.contains("title: \"debug = true\""))
-  assert_true(release.contains("value: \"<p>debug = true</p>\""))
-  assert_true(release.contains("debug = false"))
-  assert_false(release.contains("\ndebug = true\n"))
-  let (ast, reports) = @proton_config.parse_moon_proton(release)
-  assert_eq(reports.length(), 0)
-  match ast {
-    Obj(fields, _) => {
-      let debug_values = fields.filter_map(fn(field) {
-        if field.key == "debug" {
-          Some(field.value)
-        } else {
-          None
-        }
-      })
-      match debug_values {
-        [Bool(false, _)] => ()
-        _ => abort("expected one disabled top-level debug field")
-      }
-    }
-    _ => abort("expected release config object")
+  assert_true(release.contains("\"title\": \"debug = true\""))
+  assert_true(release.contains("\"value\": \"<p>debug = true</p>\""))
+  let json = @json.parse(release) catch { error => abort(error.to_string()) }
+  guard json is { "debug": false, .. } else {
+    abort("expected disabled top-level debug field")
   }
 }
 
 ///|
 test "release project config preserves an already disabled or absent debug field" {
-  let disabled = "window = { title: \"Demo\" }\ndebug = false\n"
+  let disabled = "{\"window\":{\"title\":\"Demo\"},\"debug\":false}\n"
   assert_eq(release_project_config_text(disabled), disabled)
-  let absent = "window = { title: \"Demo\" }\n"
+  let absent = "{\"window\":{\"title\":\"Demo\"}}\n"
   assert_eq(release_project_config_text(absent), absent)
 }
 
@@ -601,7 +595,7 @@ async test "macOS icon selection stages icns and rejects a missing source" {
     workspace_root: root,
     build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: @fsutil.resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -649,7 +643,7 @@ test "macOS plist contains bundle identity and executable" {
     workspace_root: ".",
     build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
-    config_path: "moon.proton",
+    config_path: "proton.project.json",
     product_name: "Demo & App",
     identifier: "dev.proton.demo",
     version: "1.2.3",
@@ -703,7 +697,7 @@ async test "package manifest records launch metadata" {
     workspace_root: ".",
     build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
-    config_path: "moon.proton",
+    config_path: "proton.project.json",
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.2.3",
@@ -767,7 +761,7 @@ test "macOS helper plist matches its bundle identity" {
     workspace_root: ".",
     build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
-    config_path: "moon.proton",
+    config_path: "proton.project.json",
     product_name: "Demo & App",
     identifier: "dev.proton.demo",
     version: "1.2.3",
@@ -815,7 +809,7 @@ async test "macOS ZIP uses the final app name without metadata entries" {
     workspace_root: root,
     build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: @fsutil.resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo App",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -989,7 +983,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     workspace_root: root,
     build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
-    config_path: @fsutil.resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -1072,7 +1066,7 @@ async test "package executable lookup ignores the dSYM mirror" {
     workspace_root: @fsutil.resolve_path(root, "workspace"),
     build_target_dir: package_target,
     app_package: "app",
-    config_path: @fsutil.resolve_path(root, "moon.proton"),
+    config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo",
     identifier: "dev.proton.demo",
     version: "1.0.0",
@@ -1149,7 +1143,7 @@ async test "Windows portable staging flattens runtime bin beside app executable"
   remove_tree(root)
   let runtime = prepare_windows_test_runtime(root)
   let executable = @fsutil.resolve_path(root, "demo.exe")
-  let config = @fsutil.resolve_path(root, "moon.proton")
+  let config = @fsutil.resolve_path(root, "proton.project.json")
   for item in [(executable, "exe"), (config, "config")] {
     let (path, text) = item
     write_windows_test_file(path, text)
