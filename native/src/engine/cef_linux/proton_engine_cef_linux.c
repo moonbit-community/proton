@@ -2724,13 +2724,27 @@ static int32_t proton_engine_parse_runtime_config(
                                         config->cache_dir,
                                         sizeof(config->cache_dir));
   if (config->cache_dir[0] == '\0') {
-    const char *tmp_dir = getenv("TMPDIR");
-    if (tmp_dir == NULL || tmp_dir[0] == '\0') {
-      tmp_dir = "/tmp";
-    }
-    int written = snprintf(config->cache_dir, sizeof(config->cache_dir),
+    const char *cache_home = getenv("XDG_CACHE_HOME");
+    int written;
+    if (cache_home != NULL && cache_home[0] != '\0') {
+      written = snprintf(config->cache_dir, sizeof(config->cache_dir),
+                         "%s%sproton-cef", cache_home,
+                         cache_home[strlen(cache_home) - 1] == '/' ? "" : "/");
+    } else {
+      const char *home = getenv("HOME");
+      if (home != NULL && home[0] != '\0') {
+        written = snprintf(config->cache_dir, sizeof(config->cache_dir),
+                           "%s/.cache/proton-cef", home);
+      } else {
+        const char *tmp_dir = getenv("TMPDIR");
+        if (tmp_dir == NULL || tmp_dir[0] == '\0') {
+          tmp_dir = "/tmp";
+        }
+        written = snprintf(config->cache_dir, sizeof(config->cache_dir),
                            "%s%sproton-cef", tmp_dir,
                            tmp_dir[strlen(tmp_dir) - 1] == '/' ? "" : "/");
+      }
+    }
     if (written < 0 || (size_t)written >= sizeof(config->cache_dir)) {
       proton_engine_set_message(error, error_len,
                                 "runtime cache_dir path is too long");

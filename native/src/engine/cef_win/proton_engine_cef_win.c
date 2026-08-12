@@ -2130,20 +2130,30 @@ static int32_t proton_engine_parse_runtime_config(
                                         config->cache_dir,
                                         sizeof(config->cache_dir));
   if (config->cache_dir[0] == '\0') {
-    wchar_t wide_temp[PROTON_ENGINE_MAX_PATH_BYTES];
-    DWORD temp_len = GetTempPathW(
-        (DWORD)(sizeof(wide_temp) / sizeof(wide_temp[0])), wide_temp);
-    if (temp_len > 0 &&
-        temp_len < sizeof(wide_temp) / sizeof(wide_temp[0])) {
-      if (wide_temp[temp_len - 1] != L'\\' &&
-          wide_temp[temp_len - 1] != L'/') {
-        wide_temp[temp_len++] = L'\\';
-        wide_temp[temp_len] = L'\0';
+    wchar_t wide_base[PROTON_ENGINE_MAX_PATH_BYTES];
+    DWORD base_len = 0;
+    // Try LOCALAPPDATA first (persistent user directory, matching Electron)
+    DWORD local_len = GetEnvironmentVariableW(L"LOCALAPPDATA",
+        wide_base, (DWORD)(sizeof(wide_base) / sizeof(wide_base[0])));
+    if (local_len > 0 && local_len < sizeof(wide_base) / sizeof(wide_base[0])) {
+      base_len = local_len;
+    }
+    // Fallback to temp path
+    if (base_len == 0) {
+      base_len = GetTempPathW(
+          (DWORD)(sizeof(wide_base) / sizeof(wide_base[0])), wide_base);
+    }
+    if (base_len > 0 &&
+        base_len < sizeof(wide_base) / sizeof(wide_base[0])) {
+      if (wide_base[base_len - 1] != L'\\' &&
+          wide_base[base_len - 1] != L'/') {
+        wide_base[base_len++] = L'\\';
+        wide_base[base_len] = L'\0';
       }
       wchar_t wide_cache[PROTON_ENGINE_MAX_PATH_BYTES];
       int written = _snwprintf(wide_cache,
           (int)(sizeof(wide_cache) / sizeof(wide_cache[0])),
-          L"%sproton-cef", wide_temp);
+          L"%sproton-cef", wide_base);
       if (written > 0) {
         CreateDirectoryW(wide_cache, NULL);
         WideCharToMultiByte(CP_UTF8, 0, wide_cache, -1,
