@@ -7,6 +7,7 @@ import {
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/syntax",
+  "moonbitlang/x/path" @mbpath,
 }
 
 warnings = "-29"

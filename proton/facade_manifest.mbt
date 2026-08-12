@@ -206,19 +206,8 @@ fn bundled_config_path() -> String? {
 
 ///|
 fn facade_path_parent(path : String) -> String {
-  let slash = path.rev_find("/")
-  let backslash = path.rev_find("\\")
-  let index = match (slash, backslash) {
-    (Some(a), Some(b)) => Some(if a > b { a } else { b })
-    (Some(a), None) => Some(a)
-    (None, Some(b)) => Some(b)
-    (None, None) => None
-  }
-  match index {
-    Some(index) if index > 0 =>
-      path.unsafe_substring(start=0, end=index).to_string()
-    _ => "."
-  }
+  let native_path : @mbpath.Path = path
+  native_path.dirname().to_string()
 }
 
 ///|

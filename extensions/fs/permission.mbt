@@ -197,41 +197,13 @@ fn path_for_platform(path : String) -> String {
 }
 
 ///|
-fn normalized_path_key(path : String) -> String {
-  let normalized = @mbpath.Path(path_for_platform(path)).normalize().to_string()
-  let separator = if @mbpath.sep == '\\' { "\\\\" } else { "/" }
-  let trimmed = normalized.trim_end(chars=separator).to_owned()
-  if trimmed == "" {
-    normalized
-  } else {
-    trimmed
-  }
-}
-
-///|
-#cfg(platform="windows")
-fn path_key(path : String) -> String {
-  normalized_path_key(path).to_lower()
-}
-
-///|
-#cfg(not(platform="windows"))
-fn path_key(path : String) -> String {
-  normalized_path_key(path)
-}
-
-///|
 fn path_is_within(root : String, candidate : String) -> Bool {
-  let root = path_key(root)
-  let candidate = path_key(candidate)
-  let separator = if @mbpath.sep == '\\' { "\\" } else { "/" }
-  if candidate == root {
-    true
-  } else if root == separator {
-    candidate.has_prefix(separator)
-  } else {
-    candidate.has_prefix(root + separator)
-  }
+  let root_path = @mbpath.Path(path_for_platform(root)).normalize()
+  let candidate_path = @mbpath.Path(path_for_platform(candidate)).normalize()
+  let relative_path = candidate_path.relative(base=root_path)
+  guard !relative_path.is_absolute() else { return false }
+  let relative = relative_path.to_string().replace(old="\\", new="/")
+  relative != ".." && !relative.has_prefix("../")
 }
 
 ///|

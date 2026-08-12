@@ -11,11 +11,12 @@ fn assert_safe_install_dir(
   install_dir : String,
   root : String,
 ) -> Unit raise CefRuntimeError {
-  let normalized_install = install_dir.replace_all(old="/", new="\\")
-  let normalized_root = root.replace_all(old="/", new="\\")
+  let normalized_install = @fsutil.resolve_path(".", install_dir)
+  let normalized_root = @fsutil.resolve_path(".", root)
   let parent = @fsutil.path_parent(normalized_root)
-  if normalized_install == "" ||
-    normalized_install.has_suffix(":\\") ||
+  let install_parent = @fsutil.path_parent(normalized_install)
+  if install_dir == "" ||
+    normalized_install == install_parent ||
     normalized_install == normalized_root ||
     normalized_install == parent {
     raise UnsafeInstallDirectory(path=install_dir)

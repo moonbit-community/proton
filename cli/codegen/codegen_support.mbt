@@ -174,28 +174,14 @@ fn recover_attr_raw(
 
 ///|
 fn path_dirname(path : String) -> String {
-  let mut cut : Int? = None
-  for i, ch in path {
-    if ch == '/' || ch == '\\' {
-      cut = Some(i)
-    }
-  }
-  match cut {
-    Some(0) => path.unsafe_substring(start=0, end=1)
-    Some(i) => path.unsafe_substring(start=0, end=i)
-    None => "."
-  }
+  let native_path : @mbpath.Path = path
+  native_path.dirname().to_string()
 }
 
 ///|
 fn path_join(dir : String, name : String) -> String {
-  if dir == "." || dir == "" {
-    name
-  } else if dir.has_suffix("/") || dir.has_suffix("\\") {
-    dir + name
-  } else {
-    dir + "/" + name
-  }
+  let native_dir : @mbpath.Path = dir
+  native_dir.join(name).to_string()
 }
 
 ///|

@@ -3,19 +3,11 @@ fn assert_safe_generated_dir(
   generated_dir : String,
   root : String,
 ) -> Unit raise CefRuntimeError {
-  let normalized_generated = generated_dir.replace_all(old="/", new="\\")
-  let normalized_root = root.replace_all(old="/", new="\\")
-  let trimmed_root = if normalized_root.has_suffix("\\") {
-    normalized_root.unsafe_substring(start=0, end=normalized_root.length() - 1)
-  } else {
-    normalized_root
-  }
-  let parent = @fsutil.path_parent(normalized_root)
-  if normalized_generated == "" ||
-    normalized_generated.has_suffix("\\") ||
-    normalized_generated == trimmed_root ||
-    normalized_generated == parent ||
-    !normalized_generated.has_prefix(trimmed_root + "\\") {
+  let normalized_generated = @fsutil.resolve_path(".", generated_dir)
+  let normalized_root = @fsutil.resolve_path(".", root)
+  if generated_dir == "" ||
+    normalized_generated == normalized_root ||
+    !@fsutil.path_is_within(normalized_root, normalized_generated) {
     raise UnsafeGeneratedDirectory(path=generated_dir)
   }
 }

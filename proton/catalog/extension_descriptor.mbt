@@ -579,33 +579,15 @@ fn normalize_path_string(path : String) -> String {
 ///|
 /// Joins two path segments and normalizes the result.
 fn path_join(base : String, child : String) -> String {
-  let parts : Array[String] = []
-  for part in base.replace(old="\\", new="/").split("/") {
-    if part != "" && part != "." {
-      parts.push(part.to_owned())
-    }
-  }
-  for part in child.replace(old="\\", new="/").split("/") {
-    if part != "" && part != "." {
-      parts.push(part.to_owned())
-    }
-  }
-  parts.join("/")
+  let base_path : @mbpath.Path = base
+  base_path.join(child).to_string()
 }
 
 ///|
 /// Returns the normalized parent directory of one filesystem path.
 fn path_dirname(path : String) -> String {
-  let normalized = path.replace(old="\\", new="/")
-  let parts = normalized.split("/").collect()
-  guard parts.length() > 1 else { return "" }
-  let parent : Array[String] = []
-  for index, part in parts {
-    if index < parts.length() - 1 {
-      parent.push(part.to_owned())
-    }
-  }
-  parent.join("/")
+  let native_path : @mbpath.Path = path
+  native_path.dirname().to_string()
 }
 
 ///|
@@ -655,21 +637,12 @@ fn infer_moonbit_import_path(path : String) -> String {
 fn relative_package_dir(module_dir : String, package_dir : String) -> String {
   let module_path_value : @mbpath.Path = module_dir
   let package_path_value : @mbpath.Path = package_dir
-  let module_path = module_path_value
-    .resolve()
-    .to_string()
-    .replace(old="\\", new="/")
-  let package_path = package_path_value
-    .resolve()
-    .to_string()
-    .replace(old="\\", new="/")
-  if package_path == module_path {
+  let relative_path = package_path_value.relative(base=module_path_value)
+  guard !relative_path.is_absolute() else { return "" }
+  let relative = relative_path.to_string().replace(old="\\", new="/")
+  if relative == "." {
     return ""
   }
-  let prefix = module_path + "/"
-  if package_path.has_prefix(prefix) {
-    package_path[prefix.length():].to_owned()
-  } else {
-    ""
-  }
+  guard relative != ".." && !relative.has_prefix("../") else { return "" }
+  relative
 }

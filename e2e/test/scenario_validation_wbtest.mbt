@@ -12,20 +12,21 @@ test "CDP E2E scenario names are explicitly supported" {
 }
 
 ///|
-test "E2E absolute path detection is platform exact" {
-  assert_true(is_absolute_path_for_separator("C:\\runtime", '\\'))
-  assert_true(is_absolute_path_for_separator("\\\\server\\share", '\\'))
-  assert_true(is_absolute_path_for_separator("\\runtime", '\\'))
-  assert_false(is_absolute_path_for_separator("C:runtime", '\\'))
-  assert_false(is_absolute_path_for_separator(".proton\\runtimes\\test", '\\'))
-  assert_true(is_absolute_path_for_separator("/runtime", '/'))
-  assert_false(is_absolute_path_for_separator("runtime", '/'))
+test "E2E paths use host absolute path rules" {
+  if @path.sep == '\\' {
+    assert_true(e2e_host_path("C:\\runtime").is_absolute())
+    assert_true(e2e_host_path("\\\\server\\share").is_absolute())
+    assert_false(e2e_host_path("C:runtime").is_absolute())
+  } else {
+    assert_true(e2e_host_path("/runtime").is_absolute())
+    assert_false(e2e_host_path("runtime").is_absolute())
+  }
 }
 
 ///|
 test "E2E paths resolve backslash relative runtime directories" {
   let root = repository_root()
-  let normalized_root = normalize_platform_path(root)
+  let normalized_root = e2e_host_path(root).normalize().to_string()
   let root_prefix = if normalized_root.has_suffix(@path.sep.to_string()) {
     normalized_root
   } else {

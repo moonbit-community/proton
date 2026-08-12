@@ -303,3 +303,27 @@ test "generated runtime directories must stay under the project root" {
     }
   }
 }
+
+///|
+test "CEF installation never removes a project boundary or filesystem root" {
+  let root = @fsutil.resolve_path(".", "target/proton-cef-project")
+  let cache = @fsutil.resolve_path(".", "target/proton-cef-cache/runtime")
+  assert_safe_install_dir(cache, root)
+  let parent = @fsutil.path_parent(root)
+  let mut filesystem_root = root
+  for ;; {
+    let next = @fsutil.path_parent(filesystem_root)
+    if next == filesystem_root {
+      break
+    }
+    filesystem_root = next
+  }
+  for dir in ["", root, parent, filesystem_root] {
+    try assert_safe_install_dir(dir, root) catch {
+      CefRuntimeError::UnsafeInstallDirectory(..) => ()
+      _ => abort("expected unsafe install directory: " + dir)
+    } noraise {
+      _ => abort("expected unsafe install directory to fail: " + dir)
+    }
+  }
+}

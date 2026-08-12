@@ -1215,19 +1215,16 @@ async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
 
 ///|
 fn relative_to_base(base : String, path : String) -> String? {
-  let base = normalize_slashes(@fsutil.resolve_path(base, "."))
-  let path = normalize_slashes(@fsutil.resolve_path(base, path))
-  let prefix = if base.has_suffix("/") { base } else { base + "/" }
-  if path == base {
+  let root = @fsutil.resolve_path(base, ".")
+  let candidate = @fsutil.resolve_path(base, path)
+  guard @fsutil.path_is_within(root, candidate) else { return None }
+  let relative = normalize_slashes(@fsutil.relative_path(root, candidate))
+  if relative == "" {
     Some(".")
-  } else if path.has_prefix(prefix) {
-    Some(
-      path
-      .unsafe_substring(start=prefix.length(), end=path.length())
-      .to_string(),
-    )
-  } else {
+  } else if relative == ".." || relative.has_prefix("../") {
     None
+  } else {
+    Some(relative)
   }
 }
 
@@ -1238,14 +1235,8 @@ fn normalize_slashes(path : String) -> String {
 
 ///|
 fn path_basename(path : String) -> String {
-  let normalized = normalize_slashes(path)
-  match normalized.rev_find("/") {
-    Some(index) =>
-      normalized
-      .unsafe_substring(start=index + 1, end=normalized.length())
-      .to_string()
-    None => normalized
-  }
+  let native_path : @path.Path = path
+  native_path.basename().to_owned()
 }
 
 ///|
