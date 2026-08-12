@@ -43,6 +43,8 @@ jobs:
 
       - name: Install MoonBit
         shell: pwsh
+        env:
+          MOONBIT_INSTALL_VERSION: nightly
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
           irm https://cli.moonbitlang.com/install/powershell.ps1 | iex

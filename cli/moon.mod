@@ -10,7 +10,7 @@ import {
   "moonbitlang/parser@0.3.13",
   "moonbitlang/moon_config@0.3.5",
   "moonbitlang/lexer@0.3.13",
-  "moonbitlang/async@0.20.3",
+  "moonbitlang/async@0.20.5",
 }
 
 readme = "codegen/README.md"
