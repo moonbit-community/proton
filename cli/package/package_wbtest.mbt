@@ -972,12 +972,10 @@ async test "macOS notarization validates success and cleans failed upload" {
       error => abort(@debug.render(Repr(error)))
     }
   }
-  let old_path = @env.get_env_var("PATH")
   let old_profile = @env.get_env_var("PROTON_NOTARY_PROFILE")
-  defer restore_package_env("PATH", old_path)
   defer restore_package_env("PROTON_NOTARY_PROFILE", old_profile)
-  @env.set_env_var("PATH", tools + ":" + old_path.unwrap_or(""))
   @env.set_env_var("PROTON_NOTARY_PROFILE", "test-profile")
+  let notary_tools = MacosNotaryTools::{ xcrun, spctl }
   let plan = PackagePlan::{
     root,
     workspace_root: root,
@@ -1006,7 +1004,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     sign: true,
     notarize: true,
   }
-  notarize_macos_app(plan, app)
+  notarize_macos_app_with_tools(plan, app, notary_tools)
   let commands = @mbfs.read_file_to_string(log, encoding="utf8") catch {
     error => abort(@debug.render(Repr(error)))
   }
@@ -1032,7 +1030,7 @@ async test "macOS notarization validates success and cleans failed upload" {
     log +
     "\"\nif [ \"$1\" = \"notarytool\" ]; then exit 42; fi\nexit 0\n"
   write_text(xcrun, failing_script)
-  try notarize_macos_app(plan, app) catch {
+  try notarize_macos_app_with_tools(plan, app, notary_tools) catch {
     MacosSigningError::ToolFailure(stage~, detail~) => {
       assert_true(stage.contains("notarytool submit"))
       assert_true(detail.contains("42"))

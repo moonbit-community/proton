@@ -2047,13 +2047,33 @@ fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
 
 ///|
 async fn notarize_macos_app(plan : PackagePlan, app : String) -> Unit {
+  notarize_macos_app_with_tools(plan, app, default_macos_notary_tools())
+}
+
+///|
+priv struct MacosNotaryTools {
+  xcrun : String
+  spctl : String
+}
+
+///|
+fn default_macos_notary_tools() -> MacosNotaryTools {
+  MacosNotaryTools::{ xcrun: "xcrun", spctl: "spctl" }
+}
+
+///|
+async fn notarize_macos_app_with_tools(
+  plan : PackagePlan,
+  app : String,
+  tools : MacosNotaryTools,
+) -> Unit {
   let profile = required_macos_notary_profile()
   let archive = @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".notary.zip",
   )
   remove_tree(archive)
-  submit_macos_notarization(app, archive, profile) catch {
+  submit_macos_notarization(app, archive, profile, tools) catch {
     error => {
       remove_tree(archive) catch {
         _ => ()
@@ -2069,6 +2089,7 @@ async fn submit_macos_notarization(
   app : String,
   archive : String,
   profile : String,
+  tools : MacosNotaryTools,
 ) -> Unit {
   let zip_code = @process.run("ditto", [
     "-c", "-k", "--keepParent", app, archive,
@@ -2085,10 +2106,10 @@ async fn submit_macos_notarization(
       detail="exit code " + zip_code.to_string(),
     )
   }
-  submit_macos_notarization_artifact(archive, profile)
-  staple_macos_artifact(app)
-  validate_macos_staple(app)
-  assess_macos_app(app)
+  submit_macos_notarization_artifact(archive, profile, xcrun=tools.xcrun)
+  staple_macos_artifact(app, xcrun=tools.xcrun)
+  validate_macos_staple(app, xcrun=tools.xcrun)
+  assess_macos_app(app, spctl=tools.spctl)
 }
 
 ///|
@@ -2107,8 +2128,9 @@ fn required_macos_notary_profile() -> String raise MacosSigningError {
 async fn submit_macos_notarization_artifact(
   artifact : String,
   profile : String,
+  xcrun? : String = "xcrun",
 ) -> Unit {
-  let code = @process.run("xcrun", [
+  let code = @process.run(xcrun, [
     "notarytool", "submit", artifact, "--keychain-profile", profile, "--wait",
   ]) catch {
     error =>
@@ -2126,8 +2148,11 @@ async fn submit_macos_notarization_artifact(
 }
 
 ///|
-async fn staple_macos_artifact(artifact : String) -> Unit {
-  let code = @process.run("xcrun", ["stapler", "staple", artifact]) catch {
+async fn staple_macos_artifact(
+  artifact : String,
+  xcrun? : String = "xcrun",
+) -> Unit {
+  let code = @process.run(xcrun, ["stapler", "staple", artifact]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage="staple notarization ticket",
@@ -2143,8 +2168,11 @@ async fn staple_macos_artifact(artifact : String) -> Unit {
 }
 
 ///|
-async fn validate_macos_staple(artifact : String) -> Unit {
-  let code = @process.run("xcrun", ["stapler", "validate", artifact]) catch {
+async fn validate_macos_staple(
+  artifact : String,
+  xcrun? : String = "xcrun",
+) -> Unit {
+  let code = @process.run(xcrun, ["stapler", "validate", artifact]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage="validate notarization ticket",
@@ -2160,8 +2188,8 @@ async fn validate_macos_staple(artifact : String) -> Unit {
 }
 
 ///|
-async fn assess_macos_app(app : String) -> Unit {
-  let code = @process.run("spctl", [
+async fn assess_macos_app(app : String, spctl? : String = "spctl") -> Unit {
+  let code = @process.run(spctl, [
     "--assess", "--type", "execute", "--verbose=4", app,
   ]) catch {
     error =>
