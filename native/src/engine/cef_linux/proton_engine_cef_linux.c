@@ -311,6 +311,7 @@ typedef struct {
   char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   int32_t remote_debugging_port;
   int headless;
+  int persist_session_cookies;
 } proton_engine_runtime_config_t;
 
 typedef struct {
@@ -2728,15 +2729,22 @@ static int32_t proton_engine_parse_runtime_config(
       tmp_dir = "/tmp";
     }
     int written = snprintf(config->cache_dir, sizeof(config->cache_dir),
-                           "%s%sproton-cef-%ld", tmp_dir,
-                           tmp_dir[strlen(tmp_dir) - 1] == '/' ? "" : "/",
-                           (long)getpid());
+                           "%s%sproton-cef", tmp_dir,
+                           tmp_dir[strlen(tmp_dir) - 1] == '/' ? "" : "/");
     if (written < 0 || (size_t)written >= sizeof(config->cache_dir)) {
       proton_engine_set_message(error, error_len,
                                 "runtime cache_dir path is too long");
       return PROTON_ERR_INVALID_ARGUMENT;
     }
     mkdir(config->cache_dir, 0700);
+  }
+  bool persist_session_cookies = false;
+  if (proton_engine_parse_json_bool_field(config_json,
+                                          "persist_session_cookies",
+                                          &persist_session_cookies)) {
+    config->persist_session_cookies = persist_session_cookies ? 1 : 0;
+  } else {
+    config->persist_session_cookies = 1;
   }
   proton_engine_parse_json_int_field(config_json, "remote_debugging_port",
                                      &config->remote_debugging_port);
@@ -4004,6 +4012,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.windowless_rendering_enabled = config.headless;
   settings.log_severity = proton_engine_cef_log_severity_from_env();
   settings.remote_debugging_port = config.remote_debugging_port;
+  settings.persist_session_cookies = config.persist_session_cookies;
   proton_engine_set_string(&settings.browser_subprocess_path,
                            config.helper_path);
   proton_engine_set_string(&settings.resources_dir_path, config.resources_dir);
