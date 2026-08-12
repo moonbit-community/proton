@@ -126,14 +126,14 @@ test "decode proton.ext.json infers MoonBit import path from nearest moon.mod" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/moon-ext-module") catch {
+  @mbfs.create_dir("target/proton-ext-module") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/moon-ext-module/fs") catch {
+  @mbfs.create_dir("target/proton-ext-module/fs") catch {
     _ => ()
   }
   @mbfs.write_string_to_file(
-    "target/moon-ext-module/moon.mod",
+    "target/proton-ext-module/moon.mod",
     (
       #|name = "vendor/exts"
       #|version = "2.3.4"
@@ -148,7 +148,7 @@ test "decode proton.ext.json infers MoonBit import path from nearest moon.mod" {
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let metadata_path = "target/moon-ext-module/fs/proton.ext.json"
+  let metadata_path = "target/proton-ext-module/fs/proton.ext.json"
   @mbfs.write_string_to_file(
     metadata_path,
     (
@@ -181,7 +181,7 @@ test "decode proton.ext.json infers MoonBit import path from nearest moon.mod" {
   @debug.assert_eq(descriptor.dependencies(), ["vendor/path"])
 
   let descriptor_paths = discover_extension_descriptor_files([
-    "target/moon-ext-module/fs",
+    "target/proton-ext-module/fs",
   ])
   assert_eq(descriptor_paths.length(), 1)
   assert_true(descriptor_paths[0].has_suffix("proton.ext.json"))
@@ -192,11 +192,11 @@ test "decode proton.ext.json rejects invalid metadata" {
   @mbfs.create_dir("target") catch {
     _ => ()
   }
-  @mbfs.create_dir("target/moon-ext-invalid") catch {
+  @mbfs.create_dir("target/proton-ext-invalid") catch {
     _ => ()
   }
 
-  let unsupported_platform = "target/moon-ext-invalid/unsupported-platform.proton.ext.json"
+  let unsupported_platform = "target/proton-ext-invalid/unsupported-platform.proton.ext.json"
   @mbfs.write_string_to_file(
     unsupported_platform,
     (
@@ -224,7 +224,7 @@ test "decode proton.ext.json rejects invalid metadata" {
     ),
   )
 
-  let self_dependency = "target/moon-ext-invalid/self-dependency.proton.ext.json"
+  let self_dependency = "target/proton-ext-invalid/self-dependency.proton.ext.json"
   @mbfs.write_string_to_file(
     self_dependency,
     (
@@ -251,7 +251,7 @@ test "decode proton.ext.json rejects invalid metadata" {
     ),
   )
 
-  let removed_field = "target/moon-ext-invalid/removed-field.proton.ext.json"
+  let removed_field = "target/proton-ext-invalid/removed-field.proton.ext.json"
   @mbfs.write_string_to_file(
     removed_field,
     (
