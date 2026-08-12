@@ -365,13 +365,17 @@ test "typed configs generate stable JSON for native ABI" {
   assert_true(runtime_json.contains("\"helper_path\":\"cef_process.exe\""))
   assert_true(runtime_json.contains("\"cache_dir\":\"cache\""))
   assert_true(runtime_json.contains("\"headless\":true"))
+  assert_true(runtime_json.contains("\"persist_session_cookies\":true"))
   let bundled_json = RuntimeConfig::bundled(cache_dir="cache").to_json_string()
   assert_true(bundled_json.contains("\"use_bundled\":true"))
   assert_true(!bundled_json.contains("\"runtime_root\""))
   assert_true(!bundled_json.contains("\"helper_path\""))
   assert_true(!bundled_json.contains("\"headless\""))
+  assert_true(bundled_json.contains("\"persist_session_cookies\":true"))
   let headless_bundled_json = RuntimeConfig::bundled(headless=true).to_json_string()
   assert_true(headless_bundled_json.contains("\"headless\":true"))
+  let no_persist_json = RuntimeConfig::new(persist_session_cookies=false).to_json_string()
+  assert_true(no_persist_json.contains("\"persist_session_cookies\":false"))
   let window_config = WindowConfig::new(
     title="Typed",
     width=320,

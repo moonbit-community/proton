@@ -711,6 +711,7 @@ struct RuntimeConfig {
   raw_json : String?
   use_bundled : Bool
   headless : Bool
+  persist_session_cookies : Bool
   runtime_root : String?
   helper_path : String?
   resources_dir : String?
@@ -745,11 +746,13 @@ pub fn RuntimeConfig::new(
   cache_dir? : String,
   remote_debugging_port? : Int = 0,
   headless? : Bool = false,
+  persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
   {
     raw_json: None,
     use_bundled: false,
     headless,
+    persist_session_cookies,
     runtime_root,
     helper_path,
     resources_dir,
@@ -765,6 +768,7 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
     raw_json: Some(raw_json),
     use_bundled: false,
     headless: false,
+    persist_session_cookies: true,
     runtime_root: None,
     helper_path: None,
     resources_dir: None,
@@ -787,11 +791,13 @@ pub fn RuntimeConfig::bundled(
   cache_dir? : String,
   remote_debugging_port? : Int = 0,
   headless? : Bool = false,
+  persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
   {
     raw_json: None,
     use_bundled: true,
     headless,
+    persist_session_cookies,
     runtime_root: None,
     helper_path,
     resources_dir: None,
@@ -997,6 +1003,10 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
       if self.headless {
         fields.set("headless", Json(true))
       }
+      fields.set(
+        "persist_session_cookies",
+        Json::boolean(self.persist_session_cookies),
+      )
       set_optional_string_field(fields, "runtime_root", self.runtime_root)
       set_optional_string_field(fields, "helper_path", self.helper_path)
       set_optional_string_field(fields, "resources_dir", self.resources_dir)

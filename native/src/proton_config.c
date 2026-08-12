@@ -141,6 +141,8 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
     } else if (strcmp(key, "remote_debugging_port") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer >= 0 &&
               integer <= 65535;
+    } else if (strcmp(key, "persist_session_cookies") == 0) {
+      valid = proton_json_read_bool(doc, value, &boolean);
     } else if (strcmp(key, "runtime_root") == 0 ||
                strcmp(key, "helper_path") == 0 ||
                strcmp(key, "subprocess_path") == 0 ||
@@ -353,6 +355,7 @@ static const char *const proton_runtime_config_keys[] = {
     "cache_dir",
     "remote_debugging_port",
     "headless",
+    "persist_session_cookies",
 };
 
 static const char *const proton_window_config_keys[] = {

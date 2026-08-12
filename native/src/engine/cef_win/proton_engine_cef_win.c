@@ -264,6 +264,7 @@ typedef struct {
   char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   int32_t remote_debugging_port;
   int headless;
+  int persist_session_cookies;
 } proton_engine_runtime_config_t;
 
 static int g_proton_cef_initialized = 0;
@@ -2128,6 +2129,42 @@ static int32_t proton_engine_parse_runtime_config(
   proton_engine_parse_json_string_field(config_json, "cache_dir",
                                         config->cache_dir,
                                         sizeof(config->cache_dir));
+  if (config->cache_dir[0] == '\0') {
+    wchar_t wide_temp[PROTON_ENGINE_MAX_PATH_BYTES];
+    DWORD temp_len = GetTempPathW(
+        (DWORD)(sizeof(wide_temp) / sizeof(wide_temp[0])), wide_temp);
+    if (temp_len > 0 &&
+        temp_len < sizeof(wide_temp) / sizeof(wide_temp[0])) {
+      if (wide_temp[temp_len - 1] != L'\\' &&
+          wide_temp[temp_len - 1] != L'/') {
+        wide_temp[temp_len++] = L'\\';
+        wide_temp[temp_len] = L'\0';
+      }
+      wchar_t wide_cache[PROTON_ENGINE_MAX_PATH_BYTES];
+      int written = _snwprintf(wide_cache,
+          (int)(sizeof(wide_cache) / sizeof(wide_cache[0])),
+          L"%sproton-cef", wide_temp);
+      if (written > 0) {
+        CreateDirectoryW(wide_cache, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, wide_cache, -1,
+            config->cache_dir, (int)sizeof(config->cache_dir),
+            NULL, NULL);
+      }
+    }
+    if (config->cache_dir[0] == '\0') {
+      proton_engine_set_message(error, error_len,
+                                "runtime cache_dir path is too long");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+  }
+  bool persist_session_cookies = false;
+  if (proton_engine_parse_json_bool_field(config_json,
+                                          "persist_session_cookies",
+                                          &persist_session_cookies)) {
+    config->persist_session_cookies = persist_session_cookies ? 1 : 0;
+  } else {
+    config->persist_session_cookies = 1;
+  }
   proton_engine_parse_json_int_field(config_json, "remote_debugging_port",
                                      &config->remote_debugging_port);
   return PROTON_OK;
@@ -3596,6 +3633,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   settings.log_severity = proton_engine_cef_log_severity_from_env();
   g_proton_engine_multi_threaded_message_loop = 0;
   settings.remote_debugging_port = config.remote_debugging_port;
+  settings.persist_session_cookies = config.persist_session_cookies;
 
   if (settings.external_message_pump &&
       g_proton_engine_pump_event == NULL) {
