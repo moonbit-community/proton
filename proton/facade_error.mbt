@@ -151,7 +151,7 @@ fn cleanup_failure_message(
 ///|
 pub fn AppRunError::message(self : AppRunError) -> String {
   match self {
-    RunnerError(message) => "application runner is not active: " + message
+    EventLoopError(message) => "application event loop failed: " + message
     ConfigurationError(error) =>
       "application configuration failed: " + error.message()
     UnsupportedNativeFeature(feature~) =>

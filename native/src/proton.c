@@ -70,15 +70,12 @@
 #if PROTON_WITH_ENGINE && defined(__APPLE__)
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
 #define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
 #elif PROTON_WITH_ENGINE && defined(_WIN32)
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
 #define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ",\"runtime_wakeup_source\""
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ",\"managed_app_runner\""
 #else
 #define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
 #define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
-#define PROTON_MANAGED_APP_RUNNER_FEATURE ""
 #endif
 
 #if PROTON_WITH_ENGINE && \
@@ -289,8 +286,7 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_APP_SINGLE_INSTANCE_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
-          PROTON_MANAGED_APP_RUNNER_FEATURE PROTON_WEB_CONTENTS_VIEW_FEATURE
-              "]}",
+          PROTON_WEB_CONTENTS_VIEW_FEATURE "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,
       PROTON_PLATFORM_ID);
@@ -474,51 +470,6 @@ int32_t proton_runtime_destroy(proton_runtime_id_t runtime) {
   return PROTON_OK;
 }
 
-int32_t proton_runtime_run(proton_runtime_id_t runtime) {
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime != NULL) {
-    char engine_error[512] = {0};
-    slot->running = true;
-    slot->quit_requested = false;
-    status = proton_engine_runtime_run(slot->engine_runtime, engine_error,
-                                       sizeof(engine_error));
-    slot->running = false;
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-    g_last_error[0] = '\0';
-    return PROTON_OK;
-  }
-  slot->running = true;
-  slot->quit_requested = false;
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_runtime_quit(proton_runtime_id_t runtime) {
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime != NULL) {
-    char engine_error[512] = {0};
-    status = proton_engine_runtime_quit(slot->engine_runtime, engine_error,
-                                        sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-  }
-  slot->quit_requested = true;
-  slot->running = false;
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
 int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
@@ -528,10 +479,6 @@ int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
   status = proton_require_runtime_owner_thread(slot);
   if (status != PROTON_OK) {
     return status;
-  }
-  if (slot->running) {
-    return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
-                            "runtime run loop is already active");
   }
   if (slot->engine_runtime != NULL) {
     char engine_error[512] = {0};
@@ -580,11 +527,6 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   if (status != PROTON_OK) {
     return status;
   }
-  if (slot->running) {
-    return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
-                            "runtime run loop is already active");
-  }
-
   uint32_t ready_mask = PROTON_WAIT_NONE;
   if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
     proton_runtime_sync_engine_closed_windows(runtime, slot);

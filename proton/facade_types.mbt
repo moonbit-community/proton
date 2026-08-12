@@ -502,7 +502,7 @@ pub(all) suberror AppCleanupError {
 ///|
 /// Failures produced while configuring, starting, or running an application.
 pub(all) suberror AppRunError {
-  RunnerError(String)
+  EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)

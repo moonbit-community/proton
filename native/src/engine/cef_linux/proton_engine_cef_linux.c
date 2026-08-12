@@ -358,8 +358,6 @@ static proton_engine_window_t *g_closed_windows = NULL;
    them on CEF's IO thread, so both sides must take this lock. Keep critical
    sections leaf-only: never call back into engine or CEF code while held. */
 static pthread_mutex_t g_window_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
-static int g_wakeup_write_fd = -1;
 
 static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
                                                        GdkEvent *event,
@@ -370,13 +368,6 @@ static int32_t proton_engine_window_install_menu(
     char *error,
     size_t error_len);
 
-static void proton_engine_set_message(char *error,
-                                      size_t error_len,
-                                      const char *message) {
-  if (error != NULL && error_len > 0) {
-    snprintf(error, error_len, "%s", message != NULL ? message : "");
-  }
-}
 static void proton_engine_log_to_env(const char *env_name,
                                      const char *format,
                                      va_list args) {
@@ -398,6 +389,44 @@ static void proton_engine_debug_log(const char *format, ...) {
   va_start(args, format);
   proton_engine_log_to_env("PROTON_NATIVE_LOG", format, args);
   va_end(args);
+}
+
+static ssize_t proton_engine_write_no_sigpipe(int fd,
+                                              const void *buffer,
+                                              size_t length) {
+  sigset_t sigpipe_mask;
+  sigset_t previous_mask;
+  sigset_t pending_mask;
+  sigemptyset(&sigpipe_mask);
+  sigaddset(&sigpipe_mask, SIGPIPE);
+  int mask_status = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &previous_mask);
+  if (mask_status != 0) {
+    errno = mask_status;
+    return -1;
+  }
+  if (sigpending(&pending_mask) != 0) {
+    int pending_error = errno;
+    (void)pthread_sigmask(SIG_SETMASK, &previous_mask, NULL);
+    errno = pending_error;
+    return -1;
+  }
+  int sigpipe_was_pending = sigismember(&pending_mask, SIGPIPE) == 1;
+
+  ssize_t written;
+  do {
+    written = write(fd, buffer, length);
+  } while (written < 0 && errno == EINTR);
+  int write_error = written < 0 ? errno : 0;
+  if (written < 0 && write_error == EPIPE && !sigpipe_was_pending) {
+    struct timespec timeout = {.tv_sec = 0, .tv_nsec = 0};
+    while (sigtimedwait(&sigpipe_mask, NULL, &timeout) < 0 && errno == EINTR) {
+    }
+  }
+  (void)pthread_sigmask(SIG_SETMASK, &previous_mask, NULL);
+  if (written < 0) {
+    errno = write_error;
+  }
+  return written;
 }
 
 static int proton_engine_set_nonblocking(int fd) {
@@ -3833,7 +3862,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();
-    proton_engine_clear_wakeup_fd();
     runtime->owns_cef_runtime = 0;
   }
   if (runtime->bridge_lock_initialized) {
@@ -3846,33 +3874,10 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   g_proton_cef_runtime_active = 0;
   proton_engine_debug_log("runtime_destroy_done");
-  /* Same proof of a finished shutdown the managed path logs, for the host
-     that destroys its runtime inline. The e2e suite reads it. */
+  /* The e2e suite uses this as proof that native shutdown completed. */
   proton_engine_debug_log("runtime_destroy_complete");
   free(runtime->asset_root);
   free(runtime);
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_run(proton_engine_runtime_t *runtime,
-                                  char *error,
-                                  size_t error_len) {
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  cef_run_message_loop();
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_quit(proton_engine_runtime_t *runtime,
-                                   char *error,
-                                   size_t error_len) {
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  cef_quit_message_loop();
   return PROTON_OK;
 }
 
@@ -4073,7 +4078,7 @@ int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
   return PROTON_ERR_UNSUPPORTED;
 }
 
-// TODO: Provide a Linux platform-owned application runner and wakeup source.
+// TODO: Provide a Linux platform-owned wakeup source.
 int32_t proton_engine_runtime_prepare_wakeup_source(
     proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
@@ -4088,7 +4093,6 @@ int32_t proton_engine_runtime_prepare_wakeup_source(
   return PROTON_ERR_UNSUPPORTED;
 }
 
-// TODO: Activate the Linux wakeup source once its managed runner exists.
 int32_t proton_engine_runtime_activate_wakeup_source(
     proton_engine_runtime_t *runtime, char *error, size_t error_len) {
   (void)runtime;

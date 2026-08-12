@@ -446,7 +446,7 @@ fn native_run_error(
 ///|
 fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
-    RunnerError(message) => RunnerError(message)
+    EventLoopError(message) => EventLoopError(message)
     ConfigurationError(error) => ConfigurationError(error)
     NativeRuntimeError(action~, error~) => NativeRuntimeError(action~, error~)
     CommandExtensionLifecycleError(error) =>
@@ -605,7 +605,7 @@ fn bridge_startup_timeout_diagnostic(
 ///|
 fn app_run_error_dialog_text(error : AppRunError) -> String {
   match error {
-    RunnerError(message) => message
+    EventLoopError(message) => message
     BridgeStartupError(diagnostic) =>
       "The application could not finish starting its native bridge.\n\nError code: " +
       diagnostic.code

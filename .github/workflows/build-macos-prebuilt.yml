@@ -70,8 +70,7 @@ jobs:
 
       - name: Test Release runtime
         run: |
-          PROTON_TEST_SKIP_MANAGED_APP_RUNNER=1 \
-            ctest --test-dir native/build-prebuilt --output-on-failure
+          ctest --test-dir native/build-prebuilt --output-on-failure
           node native/scripts/verify_link_config.mjs "$PROTON_PREBUILT_RUNTIME"
 
       - name: Stage package prebuilt

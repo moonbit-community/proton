@@ -83,7 +83,7 @@ pub(all) suberror AppPathError {
 pub fn AppPathError::message(Self) -> String
 
 pub(all) suberror AppRunError {
-  RunnerError(String)
+  EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)

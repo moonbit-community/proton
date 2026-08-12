@@ -467,14 +467,6 @@ pub fn execute_process(
 }
 
 ///|
-/// Runs `entry` on Proton's application thread while the caller owns the
-/// platform UI loop on runtimes that advertise `managed_app_runner`. Other
-/// platforms may execute `entry` inline.
-pub fn run_app(entry : FuncRef[() -> Unit]) -> Unit raise NativeError {
-  check_status(proton_app_run_ffi(entry))
-}
-
-///|
 pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Unit raise NativeError {
@@ -532,27 +524,13 @@ fn Runtime::active_handle(self : Runtime) -> Int64 raise NativeError {
 }
 
 ///|
-/// Runs CEF's message loop for a low-level host.
-///
-/// Managed application runners own this loop and reject this operation.
-pub fn Runtime::run(self : Runtime) -> Unit raise NativeError {
-  check_status(proton_runtime_run_ffi(self.active_handle()))
-}
-
-///|
 /// Advances one external-message-pump iteration for a low-level host.
-///
-/// Managed application runners own the native message loop and reject this
-/// operation.
 pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
   check_status(proton_runtime_do_message_loop_work_ffi(self.active_handle()))
 }
 
 ///|
 /// Waits for low-level external-pump work.
-///
-/// Managed application runners use `set_wakeup_fd` instead and reject this
-/// operation.
 pub fn Runtime::wait(
   self : Runtime,
   interest_mask~ : Int,
@@ -686,9 +664,6 @@ pub fn Runtime::activate_wakeup_source(
 ///|
 /// Returns the delay until CEF next needs its external message pump serviced,
 /// or `None` when no delayed pump is scheduled.
-///
-/// Managed application runners own the native message loop and reject this
-/// operation.
 pub fn Runtime::next_wakeup_delay_ms(self : Runtime) -> Int? raise NativeError {
   let delay = Ref(-1L)
   let status = proton_runtime_next_wakeup_delay_ms_ffi(
@@ -718,15 +693,6 @@ pub fn Runtime::set_menu(
       @ffi.to_cstr(menu.to_json_string()),
     ),
   )
-}
-
-///|
-/// Requests that a low-level host's CEF message loop stop.
-///
-/// Managed application runners own the native message loop and reject this
-/// operation. Destroy the runtime to finish a managed application.
-pub fn Runtime::quit(self : Runtime) -> Unit raise NativeError {
-  check_status(proton_runtime_quit_ffi(self.active_handle()))
 }
 
 ///|

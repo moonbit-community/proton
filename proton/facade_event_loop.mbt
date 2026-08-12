@@ -70,7 +70,7 @@ fn require_event_loop() -> Unit raise AppRunError {
   guard !host_event_loop.installed else { return }
   match host_event_loop.install_error {
     Some(error) => raise error
-    None => raise RunnerError("Proton's event loop was never installed")
+    None => raise EventLoopError("Proton's event loop was never installed")
   }
 }
 

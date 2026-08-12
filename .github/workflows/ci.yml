@@ -142,10 +142,7 @@ jobs:
             # deliver draggable regions; Xvfb alone has none.
             xvfb-run -a sh -c 'openbox & sleep 1; ctest --test-dir native/build-engine --output-on-failure'
           else
-            # The raw C smoke is not an app bundle. Exercise the managed macOS
-            # GUI lifecycle in the bounded example e2e step below instead.
-            PROTON_TEST_SKIP_MANAGED_APP_RUNNER=1 \
-              ctest --test-dir native/build-engine --output-on-failure
+            ctest --test-dir native/build-engine --output-on-failure
           fi
           node native/scripts/verify_link_config.mjs "$runtime"
           echo "PROTON_NATIVE_DIST=$runtime" >> "$GITHUB_ENV"

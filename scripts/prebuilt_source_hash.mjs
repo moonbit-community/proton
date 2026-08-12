@@ -12,7 +12,6 @@ const commonSourceInputs = [
   "cli/cef/cef_platform.mbt",
   "native/CMakeLists.txt",
   "native/include",
-  "native/src/app_runner.h",
   "native/src/cef_process.c",
   "native/src/engine/cef_common",
   "native/src/proton.c",
@@ -37,19 +36,16 @@ const commonSourceInputs = [
 export const platformSourceInputs = Object.freeze({
   "darwin-arm64": [
     ...commonSourceInputs,
-    "native/src/app_runner.m",
     "native/src/engine/cef_mac",
   ],
   "linux-x64": [
     ...commonSourceInputs,
-    "native/src/app_runner_linux.c",
     "native/src/engine/cef_linux",
     "native/src/engine/notification_stub.c",
     "native/src/engine/platform_events_stub.c",
   ],
   "win32-x64": [
     ...commonSourceInputs,
-    "native/src/app_runner_win.c",
     "native/src/engine/cef_win",
     "native/src/engine/notification_stub.c",
     "native/src/engine/platform_events_stub.c",
