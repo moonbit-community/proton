@@ -83,11 +83,9 @@ test "scenario child command is platform-safe" {
     assert_true(@path.Path(program).is_absolute())
   } else {
     assert_eq(program, "sh")
-    assert_true(args.contains("moon"))
+    assert_true(args.contains(scenario_app_executable(root)))
     assert_true(args.contains(unix_app_session_script()))
-    assert_true(args.contains("e2e/test/scenario_app_wbtest.mbt"))
-    assert_true(args.contains(root))
-    assert_true(args.contains(join_path(root, "target/proton-e2e-app-child")))
+    assert_true(args.contains(app_child_test_selector))
   }
 }
 
@@ -117,8 +115,8 @@ async test "Unix E2E cancellation terminates a real child process tree" {
   defer (@mbfs.remove_file(pid_path) catch { _ => () })
   @async.with_task_group(group => {
     let (program, args) = isolated_app_command("/bin/sh", [
-      "-c", "sleep 30 & child=$!; printf '%s' \"$child\" > \"$1\"; wait", "proton-e2e-cancel-child",
-      pid_path,
+      "-c", "sleep 30 & child=$!; printf '%s' \"$child\" > \"$1\"; while :; do sleep 30; done",
+      "proton-e2e-cancel-child", pid_path,
     ])
     let process = @process.spawn(
       group,
