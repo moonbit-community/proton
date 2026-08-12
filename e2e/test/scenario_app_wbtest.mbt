@@ -1,5 +1,5 @@
 ///|
-fn run_scenario_app_child() -> Unit raise {
+async fn run_scenario_app_child() -> Unit {
   match @env.get_env_var(app_child_scenario_env) {
     None => ()
     Some("41_app_commands") => @app_commands_fixture.run()
@@ -18,6 +18,6 @@ fn run_scenario_app_child() -> Unit raise {
 }
 
 ///|
-test "scenario app child entry" {
+async test "scenario app child entry" {
   run_scenario_app_child()
 }

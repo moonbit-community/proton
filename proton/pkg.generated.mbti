@@ -37,8 +37,6 @@ pub fn last_error_message() -> String
 
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError
 
-pub fn run(async () -> Unit) -> Unit
-
 pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 
 pub fn runtime_info_json() -> String raise @native.NativeError
