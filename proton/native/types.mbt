@@ -780,12 +780,9 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
 
 ///|
 /// `helper_path`, when set, overrides the subprocess executable the bundled
-/// runtime launches. On macOS the helper must run from a nested `.app` so
-/// Chromium's outer-bundle walk yields the same base bundle id as the browser;
-/// otherwise the MachPort rendezvous service names mismatch and every child
-/// process terminates. Framework and resource discovery still run relative to
-/// the loaded `libproton`, so only the helper needs an explicit path. Set
-/// `headless` to enable CEF off-screen rendering for every window.
+/// runtime discovers. Packaged macOS applications automatically use their
+/// nested base Helper app. Set `headless` to enable CEF off-screen rendering
+/// for every window.
 pub fn RuntimeConfig::bundled(
   helper_path? : String,
   cache_dir? : String,

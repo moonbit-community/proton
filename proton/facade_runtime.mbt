@@ -117,10 +117,8 @@ async fn run_manifest(
   let lifecycle = AppLifecycle::new()
   lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
-  let helper_path = bundled_runtime_helper_path()
   let runtime = @native.Runtime::new(
     config=@native.RuntimeConfig::bundled(
-      helper_path?,
       remote_debugging_port=debug_port(manifest.debug),
       headless~,
     ),

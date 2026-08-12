@@ -4,11 +4,18 @@
 #include "proton_internal.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 
 PROTON_INTERNAL int32_t
 proton_config_validate_runtime(const char *config_json);
 PROTON_INTERNAL int32_t
 proton_config_probe_runtime_layout(const char *config_json);
+PROTON_INTERNAL bool
+proton_config_default_helper_path(char *out, size_t out_len);
+#ifdef __APPLE__
+PROTON_INTERNAL bool proton_config_macos_bundle_helper_path(
+    const char *executable_path, char *out, size_t out_len);
+#endif
 PROTON_INTERNAL bool
 proton_config_runtime_requests_engine(const char *config_json);
 PROTON_INTERNAL int32_t proton_config_validate_window(

@@ -565,12 +565,101 @@ static bool proton_default_runtime_root(char *out, size_t out_len) {
   return true;
 }
 
-static bool proton_default_helper_path(char *out, size_t out_len) {
+#ifdef __APPLE__
+bool proton_config_macos_bundle_helper_path(const char *executable_path,
+                                            char *out,
+                                            size_t out_len) {
+  if (executable_path == NULL || executable_path[0] == '\0' || out == NULL ||
+      out_len == 0) {
+    return false;
+  }
+  char macos_dir[PROTON_MAX_PATH_BYTES] = {0};
+  int written = snprintf(macos_dir, sizeof(macos_dir), "%s", executable_path);
+  if (written < 0 || (size_t)written >= sizeof(macos_dir) ||
+      !proton_path_parent(macos_dir) ||
+      !proton_path_basename_equals(macos_dir, "MacOS")) {
+    return false;
+  }
+  char contents_dir[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(contents_dir, sizeof(contents_dir), "%s", macos_dir);
+  if (written < 0 || (size_t)written >= sizeof(contents_dir) ||
+      !proton_path_parent(contents_dir) ||
+      !proton_path_basename_equals(contents_dir, "Contents")) {
+    return false;
+  }
+  char app_dir[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(app_dir, sizeof(app_dir), "%s", contents_dir);
+  if (written < 0 || (size_t)written >= sizeof(app_dir) ||
+      !proton_path_parent(app_dir)) {
+    return false;
+  }
+  const char *app_name = strrchr(app_dir, '/');
+  app_name = app_name == NULL ? app_dir : app_name + 1;
+  size_t app_name_len = strlen(app_name);
+  if (app_name_len <= 4 || strcmp(app_name + app_name_len - 4, ".app") != 0) {
+    return false;
+  }
+  size_t product_name_len = app_name_len - 4;
+  char helper_name[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(helper_name, sizeof(helper_name), "%.*s Helper",
+                     (int)product_name_len, app_name);
+  if (written < 0 || (size_t)written >= sizeof(helper_name)) {
+    return false;
+  }
+  char frameworks_dir[PROTON_MAX_PATH_BYTES] = {0};
+  char helper_bundle_name[PROTON_MAX_PATH_BYTES] = {0};
+  char helper_app[PROTON_MAX_PATH_BYTES] = {0};
+  char helper_contents[PROTON_MAX_PATH_BYTES] = {0};
+  char helper_macos[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(helper_bundle_name, sizeof(helper_bundle_name), "%s.app",
+                     helper_name);
+  if (written < 0 || (size_t)written >= sizeof(helper_bundle_name) ||
+      !proton_join_path(frameworks_dir, sizeof(frameworks_dir), contents_dir,
+                        "Frameworks") ||
+      !proton_join_path(helper_app, sizeof(helper_app), frameworks_dir,
+                        helper_bundle_name) ||
+      !proton_join_path(helper_contents, sizeof(helper_contents), helper_app,
+                        "Contents") ||
+      !proton_join_path(helper_macos, sizeof(helper_macos), helper_contents,
+                        "MacOS") ||
+      !proton_join_path(out, out_len, helper_macos, helper_name)) {
+    return false;
+  }
+  return true;
+}
+
+static bool proton_macos_current_executable_path(char *out, size_t out_len) {
+  if (out == NULL || out_len == 0 || out_len > UINT32_MAX) {
+    return false;
+  }
+  uint32_t size = (uint32_t)out_len;
+  if (_NSGetExecutablePath(out, &size) != 0) {
+    return false;
+  }
+  char resolved[PROTON_MAX_PATH_BYTES] = {0};
+  if (realpath(out, resolved) == NULL) {
+    return true;
+  }
+  int written = snprintf(out, out_len, "%s", resolved);
+  return written >= 0 && (size_t)written < out_len;
+}
+#endif
+
+bool proton_config_default_helper_path(char *out, size_t out_len) {
   const char *env_helper = getenv("PROTON_HELPER_PATH");
   if (env_helper != NULL && env_helper[0] != '\0') {
     int written = snprintf(out, out_len, "%s", env_helper);
     return written > 0 && (size_t)written < out_len;
   }
+#ifdef __APPLE__
+  char executable_path[PROTON_MAX_PATH_BYTES] = {0};
+  if (proton_macos_current_executable_path(executable_path,
+                                           sizeof(executable_path)) &&
+      proton_config_macos_bundle_helper_path(executable_path, out, out_len) &&
+      proton_path_exists(out)) {
+    return true;
+  }
+#endif
   char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
   if (!proton_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
@@ -697,7 +786,7 @@ int32_t proton_config_probe_runtime_layout(const char *config_json) {
       !proton_parse_json_string_field(config_json, "subprocess_path",
                                       helper_path, sizeof(helper_path)) &&
       !(use_bundled &&
-        proton_default_helper_path(helper_path, sizeof(helper_path)))) {
+        proton_config_default_helper_path(helper_path, sizeof(helper_path)))) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config requires helper_path");
   }

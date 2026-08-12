@@ -458,6 +458,16 @@ if(BUILD_TESTING)
     tests/proton_state_smoke.c
     src/proton_state.c
   )
+  if(APPLE)
+    add_executable(proton_config_test
+      tests/proton_config_test.c
+      src/proton_config.c
+      src/proton_json.c
+    )
+    target_include_directories(proton_config_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+  endif()
   # TODO(windows): add a native updater test with the Windows apply path. The
   # current suite constructs and inspects POSIX/macOS filesystem layouts.
   if(NOT WIN32)
@@ -507,6 +517,9 @@ if(BUILD_TESTING)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
+  if(APPLE)
+    add_test(NAME proton_config_test COMMAND proton_config_test)
+  endif()
   if(NOT WIN32)
     add_test(NAME proton_update_test COMMAND proton_update_test)
   endif()
