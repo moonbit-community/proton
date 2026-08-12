@@ -10,6 +10,10 @@ typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
 typedef struct proton_engine_view proton_engine_view_t;
 
+/* CEF's external pump is not fully wake-driven. Match cefclient's maximum
+   interval so browser work that emits no schedule callback cannot starve. */
+enum { PROTON_ENGINE_MAX_MESSAGE_PUMP_DELAY_MS = 1000 / 30 };
+
 typedef enum {
   PROTON_ENGINE_WINDOW_MINIMIZE = 1,
   PROTON_ENGINE_WINDOW_MAXIMIZE = 2,

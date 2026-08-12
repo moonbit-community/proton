@@ -3718,16 +3718,19 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   // and would break the moment the sentinel changed, so it is spelled out.
   int wait_forever = timeout_ms < 0;
   int64_t requested_timeout = wait_forever ? 0 : (int64_t)timeout_ms;
-  int waiting_for_scheduled_pump = 0;
-  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
+  int waiting_for_platform_pump = 0;
+  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
+      g_proton_cef_initialized &&
+      !g_proton_engine_multi_threaded_message_loop) {
+    int64_t pump_delay = PROTON_ENGINE_MAX_MESSAGE_PUMP_DELAY_MS;
     int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
-    // An engine deadline always wins over waiting forever: the wait exists to
-    // hand the loop back when there is work, and scheduled work is work.
-    if (scheduled_delay > 0 &&
-        (wait_forever || scheduled_delay <= requested_timeout)) {
-      requested_timeout = scheduled_delay;
+    if (scheduled_delay >= 0 && scheduled_delay < pump_delay) {
+      pump_delay = scheduled_delay;
+    }
+    if (wait_forever || pump_delay <= requested_timeout) {
+      requested_timeout = pump_delay;
       wait_forever = 0;
-      waiting_for_scheduled_pump = 1;
+      waiting_for_platform_pump = 1;
     }
   }
   DWORD wait_timeout = wait_forever ? INFINITE : (DWORD)requested_timeout;
@@ -3760,7 +3763,7 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
       ready_mask |= PROTON_WAIT_PLATFORM;
     }
   } else if (wait_result == WAIT_TIMEOUT) {
-    if (waiting_for_scheduled_pump) {
+    if (waiting_for_platform_pump) {
       ready_mask |= PROTON_WAIT_PLATFORM;
     }
   } else {

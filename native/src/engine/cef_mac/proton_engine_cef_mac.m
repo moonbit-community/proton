@@ -3600,15 +3600,18 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   // so it cannot be mistaken for a duration.
   int wait_forever = timeout_ms < 0;
   int64_t wait_timeout = wait_forever ? 0 : (int64_t)timeout_ms;
-  int waiting_for_scheduled_pump = 0;
-  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
+  int waiting_for_platform_pump = 0;
+  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
+      g_proton_cef_initialized) {
+    int64_t pump_delay = PROTON_ENGINE_MAX_MESSAGE_PUMP_DELAY_MS;
     int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
-    // An engine deadline always wins over waiting forever: the wait exists to
-    // hand the loop back when there is work, and scheduled work is work.
-    if (scheduled_delay > 0 && (wait_forever || scheduled_delay <= wait_timeout)) {
-      wait_timeout = scheduled_delay;
+    if (scheduled_delay >= 0 && scheduled_delay < pump_delay) {
+      pump_delay = scheduled_delay;
+    }
+    if (wait_forever || pump_delay <= wait_timeout) {
+      wait_timeout = pump_delay;
       wait_forever = 0;
-      waiting_for_scheduled_pump = 1;
+      waiting_for_platform_pump = 1;
     }
   }
 
@@ -3646,7 +3649,7 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
       if (!bridge_only_source) {
         ready_mask |= PROTON_WAIT_PLATFORM;
       }
-    } else if (waiting_for_scheduled_pump &&
+    } else if (waiting_for_platform_pump &&
                elapsed * 1000.0 >= (CFAbsoluteTime)wait_timeout) {
       ready_mask |= PROTON_WAIT_PLATFORM;
     }
