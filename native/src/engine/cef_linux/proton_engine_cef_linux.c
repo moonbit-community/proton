@@ -358,6 +358,8 @@ static proton_engine_window_t *g_closed_windows = NULL;
    them on CEF's IO thread, so both sides must take this lock. Keep critical
    sections leaf-only: never call back into engine or CEF code while held. */
 static pthread_mutex_t g_window_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t g_wakeup_fd_lock = PTHREAD_MUTEX_INITIALIZER;
+static int g_wakeup_write_fd = -1;
 
 static GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
                                                        GdkEvent *event,
@@ -427,6 +429,25 @@ static ssize_t proton_engine_write_no_sigpipe(int fd,
     errno = write_error;
   }
   return written;
+}
+
+static void proton_engine_signal_wakeup_fd(unsigned char wakeup_byte) {
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  if (g_wakeup_write_fd >= 0) {
+    (void)proton_engine_write_no_sigpipe(
+        g_wakeup_write_fd, &wakeup_byte, sizeof(wakeup_byte));
+  }
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+}
+
+static void proton_engine_clear_wakeup_fd(void) {
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  int previous_fd = g_wakeup_write_fd;
+  g_wakeup_write_fd = -1;
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+  if (previous_fd >= 0) {
+    close(previous_fd);
+  }
 }
 
 static int proton_engine_set_nonblocking(int fd) {
@@ -500,6 +521,7 @@ static void proton_engine_signal_wait_source(uint32_t ready_mask) {
     char byte = 1;
     (void)proton_engine_write_no_sigpipe(g_host_wake_write_fd, &byte, 1);
   }
+  proton_engine_signal_wakeup_fd((unsigned char)ready_mask);
 }
 
 void proton_engine_runtime_signal_external_event(
@@ -3869,6 +3891,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     runtime->bridge_lock_initialized = 0;
   }
   proton_engine_runtime_dispose_menu(runtime);
+  proton_engine_clear_wakeup_fd();
   if (g_active_runtime == runtime) {
     g_active_runtime = NULL;
   }
@@ -4068,17 +4091,46 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   return PROTON_OK;
 }
 
-// TODO: Route the existing Linux engine wake pipe through the public async
-// event-source contract.
 int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
                                             int32_t wakeup_fd,
                                             char *error,
                                             size_t error_len) {
-  (void)runtime;
-  (void)wakeup_fd;
-  proton_engine_set_message(error, error_len,
-                            "runtime wakeup fd is not supported on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  if (runtime == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+
+  int owned_fd = -1;
+  if (wakeup_fd >= 0) {
+    owned_fd = dup(wakeup_fd);
+    if (owned_fd < 0) {
+      proton_engine_set_message(error, error_len,
+                                "failed to duplicate runtime wakeup fd");
+      return PROTON_ERR_PLATFORM;
+    }
+    int status_flags = fcntl(owned_fd, F_GETFL, 0);
+    int descriptor_flags = fcntl(owned_fd, F_GETFD, 0);
+    if (status_flags < 0 || descriptor_flags < 0 ||
+        fcntl(owned_fd, F_SETFL, status_flags | O_NONBLOCK) < 0 ||
+        fcntl(owned_fd, F_SETFD, descriptor_flags | FD_CLOEXEC) < 0) {
+      close(owned_fd);
+      proton_engine_set_message(error, error_len,
+                                "failed to configure runtime wakeup fd");
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+
+  pthread_mutex_lock(&g_wakeup_fd_lock);
+  int previous_fd = g_wakeup_write_fd;
+  g_wakeup_write_fd = owned_fd;
+  pthread_mutex_unlock(&g_wakeup_fd_lock);
+  if (previous_fd >= 0) {
+    close(previous_fd);
+  }
+  if (owned_fd >= 0) {
+    proton_engine_signal_wakeup_fd(PROTON_WAIT_PLATFORM);
+  }
+  return PROTON_OK;
 }
 
 // TODO: Provide a Linux platform-owned wakeup source.
