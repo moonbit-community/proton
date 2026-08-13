@@ -41,6 +41,7 @@
 #include "../cef_common/browser_session.h"
 #include "../cef_common/document.h"
 #include "../cef_common/message.h"
+#include "../cef_common/profile_storage.h"
 #include "../cef_common/scheme.h"
 #include "../cef_common/view_events.h"
 
@@ -269,6 +270,7 @@ typedef struct {
 static int g_proton_cef_initialized = 0;
 static int g_proton_cef_shutdown_registered = 0;
 static int g_proton_cef_runtime_active = 0;
+static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static int g_proton_engine_multi_threaded_message_loop = 0;
 static int g_proton_engine_app_initialized = 0;
 static int g_proton_engine_factory_initialized = 0;
@@ -1961,51 +1963,14 @@ static int32_t proton_engine_parse_runtime_config(
   proton_engine_parse_json_string_field(config_json, "cache_dir",
                                         config->cache_dir,
                                         sizeof(config->cache_dir));
-  if (config->cache_dir[0] == '\0') {
-    wchar_t wide_base[PROTON_ENGINE_MAX_PATH_BYTES];
-    DWORD base_len = 0;
-    // Try LOCALAPPDATA first (persistent user directory, matching Electron)
-    DWORD local_len = GetEnvironmentVariableW(L"LOCALAPPDATA",
-        wide_base, (DWORD)(sizeof(wide_base) / sizeof(wide_base[0])));
-    if (local_len > 0 && local_len < sizeof(wide_base) / sizeof(wide_base[0])) {
-      base_len = local_len;
-    }
-    // Fallback to temp path
-    if (base_len == 0) {
-      base_len = GetTempPathW(
-          (DWORD)(sizeof(wide_base) / sizeof(wide_base[0])), wide_base);
-    }
-    if (base_len > 0 &&
-        base_len < sizeof(wide_base) / sizeof(wide_base[0])) {
-      if (wide_base[base_len - 1] != L'\\' &&
-          wide_base[base_len - 1] != L'/') {
-        wide_base[base_len++] = L'\\';
-        wide_base[base_len] = L'\0';
-      }
-    }
-    wchar_t wide_cache[PROTON_ENGINE_MAX_PATH_BYTES];
-    int written = _snwprintf(wide_cache,
-        (int)(sizeof(wide_cache) / sizeof(wide_cache[0])),
-        L"%sproton-cef", wide_base);
-    if (written > 0) {
-      CreateDirectoryW(wide_cache, NULL);
-      WideCharToMultiByte(CP_UTF8, 0, wide_cache, -1,
-          config->cache_dir, (int)sizeof(config->cache_dir),
-          NULL, NULL);
-    }
-    if (config->cache_dir[0] == '\0') {
-      proton_engine_set_message(error, error_len,
-                                "runtime cache_dir path is too long");
-      return PROTON_ERR_INVALID_ARGUMENT;
-    }
-  }
   bool persist_session_cookies = false;
   if (proton_engine_parse_json_bool_field(config_json,
                                           "persist_session_cookies",
                                           &persist_session_cookies)) {
-    config->persist_session_cookies = persist_session_cookies ? 1 : 0;
+    config->persist_session_cookies =
+        config->cache_dir[0] != '\0' && persist_session_cookies ? 1 : 0;
   } else {
-    config->persist_session_cookies = 1;
+    config->persist_session_cookies = config->cache_dir[0] != '\0' ? 1 : 0;
   }
   proton_engine_parse_json_int_field(config_json, "remote_debugging_port",
                                      &config->remote_debugging_port);
@@ -3322,11 +3287,19 @@ static int32_t proton_engine_window_create_browser(
   return PROTON_OK;
 }
 
+static void proton_engine_remove_temporary_profile(void) {
+  if (g_proton_temporary_profile_path[0] != '\0') {
+    proton_profile_storage_remove_temporary(g_proton_temporary_profile_path);
+    g_proton_temporary_profile_path[0] = '\0';
+  }
+}
+
 static void proton_engine_cef_shutdown(void) {
   if (g_proton_cef_initialized) {
     cef_shutdown();
     g_proton_cef_initialized = 0;
   }
+  proton_engine_remove_temporary_profile();
 }
 
 const char *proton_engine_name(void) {
@@ -3378,6 +3351,16 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (status != PROTON_OK) {
     return status;
   }
+  int temporary_profile = config.cache_dir[0] == '\0';
+  if (temporary_profile) {
+    if (!proton_profile_storage_create_temporary(
+            config.cache_dir, sizeof(config.cache_dir), error, error_len)) {
+      return PROTON_ERR_ENGINE;
+    }
+    snprintf(g_proton_temporary_profile_path,
+             sizeof(g_proton_temporary_profile_path), "%s", config.cache_dir);
+    config.persist_session_cookies = 0;
+  }
   proton_engine_set_command_line_paths(&config);
   proton_engine_init_app();
   proton_engine_check_cef_api_hash();
@@ -3403,6 +3386,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     if (g_proton_engine_pump_event == NULL) {
       proton_engine_set_message(error, error_len,
                                 "failed to create CEF pump wake event");
+      proton_engine_remove_temporary_profile();
       return PROTON_ERR_PLATFORM;
     }
   }
@@ -3412,16 +3396,19 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
                            config.helper_path);
   proton_engine_set_string(&settings.resources_dir_path, config.resources_dir);
   proton_engine_set_string(&settings.locales_dir_path, config.locales_dir);
-  if (config.cache_dir[0] != '\0') {
-    proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
+  proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
+  if (!temporary_profile) {
+    proton_engine_set_string(&settings.cache_path, config.cache_dir);
   }
 
   if (!cef_initialize(&args, &settings, &g_proton_engine_app.app, NULL)) {
     cef_string_clear(&settings.browser_subprocess_path);
     cef_string_clear(&settings.resources_dir_path);
     cef_string_clear(&settings.locales_dir_path);
+    cef_string_clear(&settings.cache_path);
     cef_string_clear(&settings.root_cache_path);
     proton_engine_release_pump_event();
+    proton_engine_remove_temporary_profile();
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
@@ -3429,6 +3416,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   cef_string_clear(&settings.browser_subprocess_path);
   cef_string_clear(&settings.resources_dir_path);
   cef_string_clear(&settings.locales_dir_path);
+  cef_string_clear(&settings.cache_path);
   cef_string_clear(&settings.root_cache_path);
   g_proton_cef_initialized = 1;
   g_proton_cef_runtime_active = 1;

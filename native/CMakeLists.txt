@@ -52,6 +52,7 @@ if(PROTON_WITH_ENGINE)
     src/engine/cef_common/cookie_cache.c
     src/engine/cef_common/document.c
     src/engine/cef_common/image.c
+    src/engine/cef_common/profile_storage.c
     src/engine/cef_common/scheme.c
     src/engine/cef_common/view_events.c
   )
