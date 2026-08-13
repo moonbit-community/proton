@@ -65,8 +65,8 @@ developer must perform them.
   aligned with the actual examples.
 - `proton/prebuilt/<platform>/`: shipped Proton-only native artifacts. Do not
   put CEF runtime files here.
-- `lib/`, `build/`, `_build/`, `target/`, `native/build*`, `native/dist/`:
-  generated or vendored artifacts.
+- `lib/`, `build/`, `_build/`, `native/build*`, `native/dist/`: generated or
+  vendored artifacts. Packaged application artifacts are written to `dist/`.
 - `.proton/`: generated project runtime cache created by `proton_cli cef setup`.
 
 ## Build And Test

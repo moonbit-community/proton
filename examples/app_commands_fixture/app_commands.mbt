@@ -99,12 +99,6 @@ fn fail(payload : FailPayload) -> String raise AppCommandError {
 ///|
 fn report_probe(payload : ReportProbePayload) -> ReportProbeReply {
   println("[app-commands] " + payload.report)
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.write_string_to_file("target/app-commands.probe.json", payload.report) catch {
-    _ => ()
-  }
   ReportProbeReply::{ ok: true }
 }
 

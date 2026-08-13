@@ -41,12 +41,6 @@ async fn add_later(request : AddRequest) -> Int {
 #proton.command(contract=report_probe_command)
 fn report_probe(request : ReportProbeRequest) -> Unit {
   println("[asset-sidecar] " + request.report)
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.write_string_to_file("target/asset-sidecar.probe.json", request.report) catch {
-    _ => ()
-  }
 }
 
 ///|

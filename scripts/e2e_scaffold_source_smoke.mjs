@@ -241,8 +241,7 @@ function connectLocalSourceModules() {
 function verifyPackagedApp() {
   const appDir = path.join(
     projectDir,
-    "target",
-    "proton-dist",
+    "dist",
     "Todo E2E.app",
   );
   assert(fs.existsSync(appDir), `packaged app is missing: ${appDir}`);

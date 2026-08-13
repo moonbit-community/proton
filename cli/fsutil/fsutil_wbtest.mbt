@@ -1,8 +1,5 @@
 ///|
 fn ensure_fsutil_test_dir(path : String) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
   @mbfs.create_dir(path) catch {
     _ => ()
   }
@@ -84,7 +81,7 @@ test "path_parent follows Windows dirname semantics" {
 
 ///|
 test "relative_path and containment use path components" {
-  let root = resolve_path(".", "target/proton-fsutil-containment")
+  let root = resolve_path("/fixture", "proton-fsutil-containment")
   assert_eq(
     relative_path(root, path_join(root, "nested/file")),
     path_join("nested", "file"),
@@ -105,8 +102,7 @@ test "path_join joins with the platform separator" {
 
 ///|
 async test "find_project_root_from walks up to marker" {
-  let root = path_join("target", "proton-fsutil-project-root")
-  ensure_fsutil_test_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-fsutil-project-root-")
   ensure_fsutil_test_dir(path_join(root, "nested"))
   ensure_fsutil_test_dir(path_join(root, "nested/child"))
   write_fsutil_test_file(path_join(root, "moon.work"), "")

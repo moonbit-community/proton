@@ -228,12 +228,15 @@ async fn run_web_contents_view_pump(
       ignore(wakeup.wait())
     }
   }
-  let events_path = match @env.get_env_var("PROTON_NATIVE_LOG") {
-    Some(native_log) => native_log + ".view-events"
-    None => "target/proton-e2e-view-events.json"
-  }
-  @mbfs.write_string_to_file(events_path, view_events.join("\n")) catch {
-    _ => ()
+  match @env.get_env_var("PROTON_NATIVE_LOG") {
+    Some(native_log) =>
+      @mbfs.write_string_to_file(
+        native_log + ".view-events",
+        view_events.join("\n"),
+      ) catch {
+        _ => ()
+      }
+    None => ()
   }
   Ok(())
 }

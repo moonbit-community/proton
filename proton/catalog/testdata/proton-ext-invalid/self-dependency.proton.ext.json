@@ -1,0 +1,7 @@
+{
+  "id": "vendor/fs",
+  "namespace": "fs",
+  "dependencies": [
+    "vendor/fs"
+  ]
+}

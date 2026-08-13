@@ -75,7 +75,7 @@ test "runtime manifests separate portable and active metadata" {
 
 ///|
 test "CEF cache paths are absolute and scoped by platform and archive" {
-  let project_root = @fsutil.resolve_path(".", "target/proton-cache-project")
+  let project_root = @fsutil.resolve_path(".", "fixtures/proton-cache-project")
   let home = @fsutil.resolve_path(project_root, "../proton-cache-home")
   let cache_root = resolve_global_cef_cache_root(
     project_root~,
@@ -97,7 +97,7 @@ test "CEF cache paths are absolute and scoped by platform and archive" {
 
 ///|
 test "relative CEF cache overrides resolve from the project root" {
-  let project_root = @fsutil.resolve_path(".", "target/proton-cache-project")
+  let project_root = @fsutil.resolve_path(".", "fixtures/proton-cache-project")
   let actual = resolve_global_cef_cache_root(
     project_root~,
     configured_root=Some("../shared-cef"),
@@ -116,10 +116,9 @@ test "relative CEF cache overrides resolve from the project root" {
 
 ///|
 async test "runtime metadata does not persist the active CEF cache path" {
-  let root = @fsutil.resolve_path(".", "target/proton-runtime-manifest")
+  let root = @async_fs.tmpdir(prefix="proton-runtime-manifest-")
   let proton_dir = @fsutil.path_join(root, ".proton")
   let runtime_dir = @fsutil.path_join(proton_dir, "runtime")
-  remove_tree(root)
   ensure_dir(runtime_dir)
   let cef_root = @fsutil.resolve_path(
     root, "../shared-cef/darwin-arm64/cef-test",
@@ -306,8 +305,8 @@ test "generated runtime directories must stay under the project root" {
 
 ///|
 test "CEF installation never removes a project boundary or filesystem root" {
-  let root = @fsutil.resolve_path(".", "target/proton-cef-project")
-  let cache = @fsutil.resolve_path(".", "target/proton-cef-cache/runtime")
+  let root = @fsutil.resolve_path(".", "fixtures/proton-cef-project")
+  let cache = @fsutil.resolve_path(".", "fixtures/proton-cef-cache/runtime")
   assert_safe_install_dir(cache, root)
   let parent = @fsutil.path_parent(root)
   let mut filesystem_root = root

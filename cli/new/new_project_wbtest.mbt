@@ -329,7 +329,7 @@ test "templates receive final author title and size" {
       "bundle": {
         "active": true,
         "targets": ["app", "zip"],
-        "output": "target/proton-dist",
+        "output": "dist",
         ..
       },
       ..
@@ -445,8 +445,9 @@ test "registry dependency failures are classified separately" {
 
 ///|
 async test "project generation commits a complete staged tree" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-success-")
   let options = transaction_test_options(
-    "target/proton-new-transaction-success",
+    @fsutil.path_join(workspace, "project"),
   )
   remove_new_test_tree(options.resolved_target_dir)
   let files = must_plan(options)
@@ -471,7 +472,10 @@ async test "project generation commits a complete staged tree" {
 
 ///|
 async test "failed project writes leave no target or staging tree" {
-  let options = transaction_test_options("target/proton-new-transaction-failed")
+  let workspace = @async_fs.tmpdir(prefix="proton-new-failed-")
+  let options = transaction_test_options(
+    @fsutil.path_join(workspace, "project"),
+  )
   remove_new_test_tree(options.resolved_target_dir)
   let files = [
     PlannedFile::{ path: "blocked", content: "file" },
@@ -493,8 +497,9 @@ async test "failed project writes leave no target or staging tree" {
 
 ///|
 async test "failed project writes restore an existing empty target" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-empty-")
   let options = transaction_test_options(
-    "target/proton-new-transaction-empty-target",
+    @fsutil.path_join(workspace, "project"),
   )
   remove_new_test_tree(options.resolved_target_dir)
   ensure_dir_recursive(options.resolved_target_dir)
@@ -515,8 +520,9 @@ async test "failed project writes restore an existing empty target" {
 
 ///|
 async test "cancelled project generation removes its staging tree" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-cancelled-")
   let options = transaction_test_options(
-    "target/proton-new-transaction-cancelled",
+    @fsutil.path_join(workspace, "project"),
   )
   remove_new_test_tree(options.resolved_target_dir)
   let outcome = @async.with_timeout_opt(0, () => {
@@ -533,8 +539,11 @@ async test "cancelled project generation removes its staging tree" {
 
 ///|
 async test "moon check failure is rolled back before publication" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-check-failed-")
   let raw = must_parse([
-    "target/proton-new-transaction-check-failed", "--check", "--no-git",
+    @fsutil.path_join(workspace, "project"),
+    "--check",
+    "--no-git",
   ])
   let options = options_from_raw(".", raw)
   remove_new_test_tree(options.resolved_target_dir)

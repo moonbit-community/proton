@@ -58,7 +58,7 @@ async fn run_dev_extension_page_probe(
   app : SpawnedScenarioApp,
   target : String,
   frontend_url : String,
-  root : String,
+  output_root : String,
   timeout : Int,
 ) -> Unit {
   let page = connect_spawned_page(app, target, timeout)
@@ -71,7 +71,7 @@ async fn run_dev_extension_page_probe(
   assert_dev_extension_probe(result, frontend_url, value)
   run_dev_extension_reload_probe(page, target, frontend_url, timeout)
   page_open = false
-  run_dev_extension_non_proton_probe(target, root, timeout)
+  run_dev_extension_non_proton_probe(target, output_root, timeout)
   assert_dev_extension_native_log(app.native_log_path)
   println("MoonBit 47_dev_extension_js dev probe passed")
 }
@@ -337,10 +337,10 @@ fn dev_extension_reload_probe_expression() -> String {
 ///|
 async fn run_dev_extension_non_proton_probe(
   target : String,
-  root : String,
+  output_root : String,
   timeout : Int,
 ) -> Unit {
-  let file_path = join_path(root, "target/non-proton-dev-extension-probe.html")
+  let file_path = join_path(output_root, "non-proton-dev-extension-probe.html")
   @mbfs.write_string_to_file(
     file_path, "<!doctype html><title>Non Proton File Probe</title><h1>file probe</h1>",
   ) catch {

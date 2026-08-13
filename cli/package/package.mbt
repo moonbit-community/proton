@@ -21,7 +21,6 @@ struct RawPackageOptions {
 struct PackagePlan {
   root : String
   workspace_root : String
-  build_target_dir : String
   app_package : String
   config_path : String
   product_name : String
@@ -382,7 +381,6 @@ async fn build_package_plan(
   PackagePlan::{
     root: backend_root,
     workspace_root,
-    build_target_dir: package_build_target_dir(workspace_root, identifier),
     app_package,
     config_path,
     product_name,
@@ -581,7 +579,6 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  update revision: " + plan.update_revision.to_string())
   println("  targets: " + plan.targets.join(", "))
   println("  output: " + plan.output)
-  println("  build target: " + plan.build_target_dir)
   let sign_binaries = if plan.sign_binaries.length() == 0 {
     "none"
   } else {
@@ -616,7 +613,7 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
   let executable = match find_package_executable(plan) {
     Some(path) => path
     None =>
-      raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
+      raise PackagePlanError::MissingExecutable(path=package_build_root(plan))
   }
   match current_package_host() {
     Windows => stage_windows_portable(plan, executable, runtime)
@@ -638,29 +635,12 @@ async fn run_package_build(plan : PackagePlan) -> Unit {
   if plan.release {
     moon_args.push("--release")
   }
-  moon_args.push("--target-dir")
-  moon_args.push(plan.build_target_dir)
-  let old_rpath = @env.get_env_var("PROTON_PACKAGE_RPATH")
-  // Mach-O only. The link config reads this on darwin; the Linux branch
-  // ignores it and keeps the absolute runtime rpath, which is what a
-  // development run wants. Linux gets its relocatable rpath from patchelf
-  // during staging instead, so `$ORIGIN` never passes through the link
-  // config's quoting.
-  if is_macos_host() {
-    @env.set_env_var(
-      "PROTON_PACKAGE_RPATH", "@executable_path/../Resources/proton/lib",
-    )
-  }
-  defer restore_package_env("PROTON_PACKAGE_RPATH", old_rpath)
   @build.run_release(plan.root, plan.app_package, plan.config_path, moon_args)
 }
 
 ///|
-fn restore_package_env(name : String, value : String?) -> Unit {
-  match value {
-    Some(value) => @env.set_env_var(name, value)
-    None => @env.unset_env_var(name)
-  }
+fn package_build_root(plan : PackagePlan) -> String {
+  @fsutil.resolve_path(plan.workspace_root, "_build")
 }
 
 ///|
@@ -668,7 +648,7 @@ async fn find_package_executable(plan : PackagePlan) -> String? {
   // `--no-build` must reuse the same build mode selected for this command.
   let build_mode = if plan.release { "release" } else { "debug" }
   let root = @fsutil.resolve_path(
-    plan.build_target_dir,
+    package_build_root(plan),
     "native/" + build_mode + "/build",
   )
   let package_name = path_basename(plan.app_package)
@@ -754,17 +734,6 @@ async fn read_active_runtime(root : String) -> String {
         detail="root must be an object",
       )
   }
-}
-
-///|
-fn package_build_target_dir(
-  workspace_root : String,
-  identifier : String,
-) -> String {
-  @fsutil.resolve_path(
-    workspace_root,
-    "target/proton-package-build/" + package_executable_name(identifier),
-  )
 }
 
 ///|
@@ -897,6 +866,11 @@ async fn stage_macos_app_impl(
       )
   }
   require_launchable_macho(staged_executable)
+  replace_macos_rpath(
+    staged_executable,
+    @fsutil.resolve_path(runtime, "lib"),
+    "@executable_path/../Resources/proton/lib",
+  )
   copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
@@ -1608,6 +1582,26 @@ async fn write_package_manifest(
 ///|
 async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
   let code = @process.run("install_name_tool", ["-add_rpath", rpath, binary]) catch {
+    error =>
+      raise PackageToolError::Start(
+        tool="install_name_tool",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  if code != 0 {
+    raise PackageToolError::Exit(tool="install_name_tool", code~, detail=binary)
+  }
+}
+
+///|
+async fn replace_macos_rpath(
+  binary : String,
+  current : String,
+  replacement : String,
+) -> Unit {
+  let code = @process.run("install_name_tool", [
+    "-rpath", current, replacement, binary,
+  ]) catch {
     error =>
       raise PackageToolError::Start(
         tool="install_name_tool",

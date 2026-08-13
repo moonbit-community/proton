@@ -159,7 +159,7 @@ pub fn ProtonBundleConfig::new(
   sign? : ProtonSignConfig? = None,
   url_schemes? : Array[String] = [],
   document_types? : Array[@proton_config.ProjectDocumentType] = [],
-  output? : String = "target/proton-dist",
+  output? : String = "dist",
 ) -> ProtonBundleConfig {
   ProtonBundleConfig::{
     active,

@@ -22,7 +22,11 @@ fn dev_extension_frontend_state(root : String) -> DevExtensionFrontendState {
 }
 
 ///|
-async fn ensure_dev_extension_frontend(root : String, timeout : Int) -> Unit {
+async fn ensure_dev_extension_frontend(
+  root : String,
+  output_root : String,
+  timeout : Int,
+) -> Unit {
   let frontend_dir = join_path(root, "examples/47_dev_extension_js/frontend")
   let vite = dev_extension_vite_binary(frontend_dir)
   if !@mbfs.path_exists(vite) {
@@ -30,7 +34,7 @@ async fn ensure_dev_extension_frontend(root : String, timeout : Int) -> Unit {
       "ci", "--no-audit", "--no-fund",
     ])
     run_dev_extension_command(
-      root,
+      output_root,
       "47-npm-ci",
       program,
       args,
@@ -99,30 +103,30 @@ fn process_snapshot_suffix(snapshot : ProcessSnapshot) -> String {
 
 ///|
 fn dev_extension_cli_target_dir(
-  root : String,
+  output_root : String,
   phase : String,
   port : Int,
 ) -> String {
-  join_path(root, "target/proton-e2e-cli-" + phase + "-" + port.to_string())
+  join_path(output_root, "cli-" + phase + "-" + port.to_string())
 }
 
 ///|
 fn dev_extension_app_target_dir(
-  root : String,
+  output_root : String,
   phase : String,
   port : Int,
 ) -> String {
-  join_path(root, "target/proton-e2e-app-" + phase + "-" + port.to_string())
+  join_path(output_root, "app-" + phase + "-" + port.to_string())
 }
 
 ///|
-fn dev_extension_example_target_dir(root : String, port : Int) -> String {
-  join_path(root, "target/proton-e2e-example-" + port.to_string())
+fn dev_extension_example_target_dir(output_root : String, port : Int) -> String {
+  join_path(output_root, "example-" + port.to_string())
 }
 
 ///|
 async fn run_dev_extension_command(
-  root : String,
+  output_root : String,
   name : String,
   program : String,
   args : Array[String],
@@ -130,10 +134,7 @@ async fn run_dev_extension_command(
   env : Map[String, String],
   timeout : Int,
 ) -> Unit {
-  @mbfs.create_dir(join_path(root, "target")) catch {
-    _ => ()
-  }
-  let output_path = join_path(root, "target/proton-e2e-" + name + ".log")
+  let output_path = join_path(output_root, name + ".log")
   @async.with_task_group(group => {
     let output = @process.redirect_to_file(
       output_path,
@@ -189,9 +190,10 @@ async fn run_dev_extension_command(
 ///|
 fn dev_extension_runtime_env(
   root : String,
+  output_root : String,
   cdp_port : Int,
 ) -> Map[String, String] raise {
-  let env = app_process_env(root, "47_dev_extension_js", cdp_port)
+  let env = app_process_env(root, output_root, "47_dev_extension_js", cdp_port)
   env["NO_COLOR"] = "1"
   env["FORCE_COLOR"] = "0"
   env["PROTON_NO_UPDATE_CHECK"] = "1"
@@ -215,9 +217,10 @@ fn restore_dev_extension_parent_preload(
 ///|
 fn dev_extension_host_env(
   root : String,
+  output_root : String,
   cdp_port : Int,
 ) -> Map[String, String] raise {
-  let env = dev_extension_runtime_env(root, cdp_port)
+  let env = dev_extension_runtime_env(root, output_root, cdp_port)
   // app_process_env injects libcef.so for Linux application children. The
   // CLI/build hosts launch Moon or Node rather than CEF, so restore the
   // caller's preload instead of leaking the injected CEF wrapper into them.
@@ -229,12 +232,13 @@ fn dev_extension_host_env(
 async fn spawn_dev_extension_cli_app(
   group : @async.TaskGroup[Unit],
   root : String,
+  output_root : String,
   cdp_port : Int,
   frontend_port : Int,
 ) -> SpawnedScenarioApp {
   let output_path = join_path(
-    root,
-    "target/proton-e2e-child-" + cdp_port.to_string() + ".log",
+    output_root,
+    "child-" + cdp_port.to_string() + ".log",
   )
   let output = @process.redirect_to_file(
     output_path,
@@ -248,7 +252,7 @@ async fn spawn_dev_extension_cli_app(
     "-C",
     join_path(root, "cli"),
     "--target-dir",
-    dev_extension_cli_target_dir(root, "dev", cdp_port),
+    dev_extension_cli_target_dir(output_root, "dev", cdp_port),
     "run",
     ".",
     "--",
@@ -260,7 +264,7 @@ async fn spawn_dev_extension_cli_app(
     "--package",
     ".",
     "--moon-target-dir",
-    dev_extension_app_target_dir(root, "dev", cdp_port),
+    dev_extension_app_target_dir(output_root, "dev", cdp_port),
     "--url",
     frontend_url,
     "--command",
@@ -276,7 +280,7 @@ async fn spawn_dev_extension_cli_app(
     program,
     args,
     cwd=root,
-    extra_env=dev_extension_host_env(root, cdp_port),
+    extra_env=dev_extension_host_env(root, output_root, cdp_port),
     stdout=output,
     stderr=output,
     cancel_handler=app_cancel_handler(),
@@ -285,7 +289,7 @@ async fn spawn_dev_extension_cli_app(
   SpawnedScenarioApp::{
     process,
     output_path,
-    native_log_path: scenario_native_log_path(root, cdp_port),
+    native_log_path: scenario_native_log_path(output_root, cdp_port),
   }
 }
 
@@ -293,11 +297,12 @@ async fn spawn_dev_extension_cli_app(
 async fn spawn_dev_extension_production_app(
   group : @async.TaskGroup[Unit],
   root : String,
+  output_root : String,
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
   let output_path = join_path(
-    root,
-    "target/proton-e2e-child-" + cdp_port.to_string() + ".log",
+    output_root,
+    "child-" + cdp_port.to_string() + ".log",
   )
   let output = @process.redirect_to_file(
     output_path,
@@ -307,7 +312,7 @@ async fn spawn_dev_extension_production_app(
     "-C",
     join_path(root, "examples"),
     "--target-dir",
-    dev_extension_example_target_dir(root, cdp_port),
+    dev_extension_example_target_dir(output_root, cdp_port),
     "run",
     "47_dev_extension_js",
     "--target",
@@ -320,7 +325,7 @@ async fn spawn_dev_extension_production_app(
     program,
     args,
     cwd=root,
-    extra_env=dev_extension_runtime_env(root, cdp_port),
+    extra_env=dev_extension_runtime_env(root, output_root, cdp_port),
     stdout=output,
     stderr=output,
     cancel_handler=app_cancel_handler(),
@@ -329,27 +334,31 @@ async fn spawn_dev_extension_production_app(
   SpawnedScenarioApp::{
     process,
     output_path,
-    native_log_path: scenario_native_log_path(root, cdp_port),
+    native_log_path: scenario_native_log_path(output_root, cdp_port),
   }
 }
 
 ///|
-async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
+async fn build_dev_extension_frontend(
+  root : String,
+  output_root : String,
+  timeout : Int,
+) -> Unit {
   let runtime_dist = active_runtime_dist(root)
   let has_linux_cef = @mbfs.path_exists(
     join_path(runtime_dist, "bin/libcef.so"),
   )
   let timeout = dev_extension_build_timeout(timeout, has_linux_cef)
   let port = choose_cdp_port()
-  let env = dev_extension_host_env(root, port)
-  let cli_target_dir = dev_extension_cli_target_dir(root, "build", port)
-  let app_target_dir = dev_extension_app_target_dir(root, "build", port)
+  let env = dev_extension_host_env(root, output_root, port)
+  let cli_target_dir = dev_extension_cli_target_dir(output_root, "build", port)
+  let app_target_dir = dev_extension_app_target_dir(output_root, "build", port)
   defer {
     remove_dev_extension_tree(cli_target_dir)
     remove_dev_extension_tree(app_target_dir)
   }
   run_dev_extension_command(
-    root,
+    output_root,
     "47-proton-build",
     "moon",
     [
@@ -379,16 +388,23 @@ async fn build_dev_extension_frontend(root : String, timeout : Int) -> Unit {
 ///|
 async fn run_dev_extension_dev_probe_once(
   root : String,
+  output_root : String,
   frontend_port : Int,
   timeout : Int,
 ) -> Unit {
   let cdp_port = choose_cdp_port()
   let target = cdp_port.to_string()
   let frontend_url = "http://127.0.0.1:" + frontend_port.to_string()
-  let cli_target_dir = dev_extension_cli_target_dir(root, "dev", cdp_port)
-  let app_target_dir = dev_extension_app_target_dir(root, "dev", cdp_port)
+  let cli_target_dir = dev_extension_cli_target_dir(
+    output_root, "dev", cdp_port,
+  )
+  let app_target_dir = dev_extension_app_target_dir(
+    output_root, "dev", cdp_port,
+  )
   @async.with_task_group(group => {
-    let app = spawn_dev_extension_cli_app(group, root, cdp_port, frontend_port)
+    let app = spawn_dev_extension_cli_app(
+      group, root, output_root, cdp_port, frontend_port,
+    )
     let mut stopped = false
     defer {
       if !stopped {
@@ -400,7 +416,9 @@ async fn run_dev_extension_dev_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    run_dev_extension_page_probe(app, target, frontend_url, root, timeout)
+    run_dev_extension_page_probe(
+      app, target, frontend_url, output_root, timeout,
+    )
     match app_exit_code(app.process) {
       Some(code) =>
         fail(
@@ -422,13 +440,18 @@ async fn run_dev_extension_dev_probe_once(
 ///|
 async fn run_dev_extension_production_probe_once(
   root : String,
+  output_root : String,
   timeout : Int,
 ) -> Unit {
   let cdp_port = choose_cdp_port()
   let target = cdp_port.to_string()
-  let example_target_dir = dev_extension_example_target_dir(root, cdp_port)
+  let example_target_dir = dev_extension_example_target_dir(
+    output_root, cdp_port,
+  )
   @async.with_task_group(group => {
-    let app = spawn_dev_extension_production_app(group, root, cdp_port)
+    let app = spawn_dev_extension_production_app(
+      group, root, output_root, cdp_port,
+    )
     let mut stopped = false
     defer {
       if !stopped {
@@ -459,7 +482,11 @@ async fn run_dev_extension_production_probe_once(
 }
 
 ///|
-async fn run_dev_extension_scenario_once(root : String, timeout : Int) -> Unit {
+async fn run_dev_extension_scenario_once(
+  root : String,
+  output_root : String,
+  timeout : Int,
+) -> Unit {
   let frontend = dev_extension_frontend_state(root)
   defer {
     if !frontend.had_node_modules {
@@ -469,18 +496,22 @@ async fn run_dev_extension_scenario_once(root : String, timeout : Int) -> Unit {
       remove_dev_extension_tree(frontend.dist_dir)
     }
   }
-  ensure_dev_extension_frontend(root, timeout)
+  ensure_dev_extension_frontend(root, output_root, timeout)
   let frontend_port = choose_cdp_port()
   run_e2e_operation_with_timeout(
     timeout,
     "47_dev_extension_js development probe",
-    () => run_dev_extension_dev_probe_once(root, frontend_port, timeout),
+    () => {
+      run_dev_extension_dev_probe_once(
+        root, output_root, frontend_port, timeout,
+      )
+    },
   )
-  build_dev_extension_frontend(root, timeout)
+  build_dev_extension_frontend(root, output_root, timeout)
   run_e2e_operation_with_timeout(
     timeout,
     "47_dev_extension_js production probe",
-    () => run_dev_extension_production_probe_once(root, timeout),
+    () => run_dev_extension_production_probe_once(root, output_root, timeout),
   )
 }
 
@@ -489,10 +520,12 @@ async fn run_dev_extension_scenario_with_retry(
   root : String,
   timeout : Int,
 ) -> Unit {
+  let output_root = @fs.tmpdir(prefix="proton-e2e-dev-extension-")
+  defer remove_dev_extension_tree(output_root)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
-      run_dev_extension_scenario_once(root, timeout)
+      run_dev_extension_scenario_once(root, output_root, timeout)
       true
     } catch {
       error => {

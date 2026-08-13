@@ -105,14 +105,9 @@ test "Unix E2E cancellation targets the isolated process group first" {
 #cfg(not(platform="windows"))
 async test "Unix E2E cancellation terminates a real child process tree" {
   let root = repository_root()
-  let pid_path = join_path(
-    root,
-    "target/proton-e2e-cancel-child-" + choose_cdp_port().to_string() + ".pid",
-  )
-  @mbfs.remove_file(pid_path) catch {
-    _ => ()
-  }
-  defer (@mbfs.remove_file(pid_path) catch { _ => () })
+  let output_root = @fs.tmpdir(prefix="proton-e2e-cancel-")
+  defer remove_dev_extension_tree(output_root)
+  let pid_path = join_path(output_root, "child.pid")
   @async.with_task_group(group => {
     let (program, args) = isolated_app_command("/bin/sh", [
       "-c", "sleep 30 & child=$!; printf '%s' \"$child\" > \"$1\"; while :; do sleep 30; done",
