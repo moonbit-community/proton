@@ -13,6 +13,11 @@ license = "Apache-2.0"
 
 description = "Proton backend for {{title}}."
 
+rule(
+  name: "proton_codegen",
+  command: "moonx moonbit-community/proton_codegen@{{proton_codegen_version}} -C \"$mod_dir\" \"$input\" -o \"$output\"",
+)
+
 options(
   warn_list: "",
   preferred_target: "native",

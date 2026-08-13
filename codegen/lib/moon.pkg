@@ -1,9 +1,9 @@
 import {
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/core/list",
   "moonbitlang/core/string",
-  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/syntax",

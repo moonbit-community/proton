@@ -6,4 +6,10 @@ import {
 
 supported_targets = "native"
 
+dev_build(
+  rule: "proton_codegen",
+  input: "commands.mbt",
+  output: "commands.g.mbt",
+)
+
 formatter(ignore: [ "commands.g.mbt" ])

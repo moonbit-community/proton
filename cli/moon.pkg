@@ -1,6 +1,5 @@
 import {
   "moonbitlang/async",
-  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
@@ -10,7 +9,6 @@ import {
   "moonbitlang/x/sys",
   "moonbit-community/proton_cli/cef",
   "moonbit-community/proton_cli/build_cmd" @build,
-  "moonbit-community/proton_cli/codegen",
   "moonbit-community/proton_cli/dev",
   "moonbit-community/proton_cli/doctor",
   "moonbit-community/proton_cli/fsutil",

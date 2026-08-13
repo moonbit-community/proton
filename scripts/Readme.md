@@ -14,8 +14,9 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 
 Checks release metadata and prebuilt ABI metadata, checks the host platform's
 prebuilt exports, then checks that committed generated MoonBit files match
-their sources. It writes fresh outputs to a temp directory and compares them
-against the repository.
+their sources. It builds the standalone `proton_codegen` WASM executable,
+writes fresh outputs to a temp directory, and compares them against the
+repository.
 
 ```sh
 node ./scripts/verify_generated.mjs

@@ -2,6 +2,9 @@
 let default_proton_version = "0.1.15"
 
 ///|
+let default_proton_codegen_version = "0.1.15"
+
+///|
 let default_proton_cli_version = "0.1.15"
 
 ///|
@@ -25,6 +28,8 @@ let default_async_version = "0.20.3"
 fn scaffold_release_chain() -> String {
   "moonbit-community/proton_contract@" +
   default_proton_contract_version +
+  "\n  moonbit-community/proton_codegen@" +
+  default_proton_codegen_version +
   "\n  moonbit-community/proton_client@" +
   default_proton_client_version +
   "\n  moonbit-community/proton_rabbita@" +
@@ -50,6 +55,7 @@ priv struct TemplateContext {
   width : Int
   height : Int
   proton_version : String
+  proton_codegen_version : String
   proton_cli_version : String
   proton_contract_version : String
   proton_client_version : String
@@ -101,6 +107,7 @@ fn template_context(
     width,
     height,
     proton_version: default_proton_version,
+    proton_codegen_version: default_proton_codegen_version,
     proton_cli_version: default_proton_cli_version,
     proton_contract_version: default_proton_contract_version,
     proton_client_version: default_proton_client_version,
@@ -125,6 +132,7 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "width", value: context.width.to_string() },
     { name: "height", value: context.height.to_string() },
     { name: "proton_version", value: context.proton_version },
+    { name: "proton_codegen_version", value: context.proton_codegen_version },
     { name: "proton_cli_version", value: context.proton_cli_version },
     { name: "proton_contract_version", value: context.proton_contract_version },
     { name: "proton_client_version", value: context.proton_client_version },
@@ -197,7 +205,6 @@ fn plan_project_files(
     files.push(render_template(spec, context))
   }
   files.push(project_config_file(context))
-  files.push(generate_scaffold_commands(files))
   files
 }
 
@@ -231,39 +238,6 @@ fn project_config_file(context : TemplateContext) -> PlannedFile {
     },
   }
   { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
-}
-
-///|
-/// The scaffold commits its typed bridge as a plain generated file so
-/// `moon check` and `moon build` never depend on a CLI binary shim.
-let scaffold_commands_input = "backend/todo/commands.mbt"
-
-///|
-let scaffold_commands_output = "backend/todo/commands.g.mbt"
-
-///|
-fn generate_scaffold_commands(
-  files : Array[PlannedFile],
-) -> PlannedFile raise NewProjectTemplateError {
-  for file in files {
-    if file.path == scaffold_commands_input {
-      let output = @codegen.generate_typed_commands_from_sources(
-        [(file.path, file.content)],
-        extension_package=false,
-      ) catch {
-        error =>
-          raise CommandCodegen(
-            path=scaffold_commands_input,
-            detail=@debug.render(Repr(error)),
-          )
-      }
-      return { path: scaffold_commands_output, content: output.source }
-    }
-  }
-  raise CommandCodegen(
-    path=scaffold_commands_input,
-    detail="template is missing the scaffold commands source",
-  )
 }
 
 ///|

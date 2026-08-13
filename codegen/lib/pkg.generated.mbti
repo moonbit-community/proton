@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/proton_cli/codegen"
+package "moonbit-community/proton_codegen/lib"
 
 import {
   "moonbitlang/core/debug",
