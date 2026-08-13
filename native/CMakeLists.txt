@@ -168,11 +168,19 @@ if(PROTON_WITH_ENGINE)
       PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
+    # The helper is spawned repeatedly by the GUI-subsystem host; a console
+    # helper would open a visible conhost window per CEF child process, and
+    # closing any of those windows kills the renderer attached to it.
     set_target_properties(cef_process PROPERTIES
       C_STANDARD 11
       C_STANDARD_REQUIRED ON
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+      WIN32_EXECUTABLE ON
     )
+    if(MSVC)
+      # Keep the plain main() entry point under /SUBSYSTEM:WINDOWS.
+      target_link_options(cef_process PRIVATE "/ENTRY:mainCRTStartup")
+    endif()
     install(FILES ${PROTON_ENGINE_RUNTIME_DLLS} DESTINATION bin)
     install(FILES ${PROTON_ENGINE_RUNTIME_DATA} DESTINATION bin)
     install(DIRECTORY "${PROTON_ENGINE_RESOURCES_DIR}/" DESTINATION Resources)
