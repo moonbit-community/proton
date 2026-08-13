@@ -126,6 +126,13 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "powerMonitor",
   )
   assert_metadata_matches_app_command_spec(
+    load_descriptor("process"),
+    @process.extension().command_spec(),
+    "moonbit-community/proton_ext/process",
+    "moonbit-community/proton-process",
+    "process",
+  )
+  assert_metadata_matches_app_command_spec(
     load_descriptor("shell"),
     @shell.extension().command_spec(),
     "moonbit-community/proton_ext/shell",

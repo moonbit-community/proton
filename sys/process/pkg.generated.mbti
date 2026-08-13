@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_process"
+
+// Values
+
+// Errors
+pub(all) suberror ProcessError {
+  SpawnFailed(detail~ : String)
+  WaitFailed(detail~ : String)
+  KillFailed(detail~ : String)
+} derive(Eq)
+pub impl Show for ProcessError
+
+// Types and methods
+pub struct Process {
+  // private fields
+}
+pub fn Process::close(Self) -> Unit
+pub fn Process::kill(Self) -> Unit raise ProcessError
+pub fn Process::pid(Self) -> Int
+pub fn Process::spawn(String, args? : Array[String], cwd? : String?, capture_output? : Bool) -> Self raise ProcessError
+pub fn Process::try_wait(Self) -> Int? raise ProcessError
+pub fn Process::wait(Self) -> Int raise ProcessError
+
+pub type State
+
+// Type aliases
+
+// Traits

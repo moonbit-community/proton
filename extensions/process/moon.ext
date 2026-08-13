@@ -1,0 +1,3 @@
+id = "moonbit-community/proton-process"
+namespace = "process"
+package = "@moonbit-community/proton-process"
