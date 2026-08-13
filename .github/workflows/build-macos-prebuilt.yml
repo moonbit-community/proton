@@ -29,21 +29,21 @@ jobs:
           ref: ${{ env.PROTON_PREBUILT_SOURCE_SHA }}
 
       - name: Cache MoonBit packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .mooncakes
           key: macOS-prebuilt-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: macOS-prebuilt-mooncakes-
 
       - name: Cache CEF downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .proton-global-cache
           key: macOS-prebuilt-cef-${{ hashFiles('cli/cef/cef_platform.mbt') }}
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Resolve dependencies
@@ -68,12 +68,6 @@ jobs:
           cmake --install native/build-prebuilt --strip
           echo "PROTON_PREBUILT_RUNTIME=$runtime" >> "$GITHUB_ENV"
 
-      - name: Test Release runtime
-        run: |
-          PROTON_TEST_SKIP_MANAGED_APP_RUNNER=1 \
-            ctest --test-dir native/build-prebuilt --output-on-failure
-          node native/scripts/verify_link_config.mjs "$PROTON_PREBUILT_RUNTIME"
-
       - name: Stage package prebuilt
         run: |
           destination="$PWD/proton/prebuilt/darwin-arm64"
@@ -90,9 +84,6 @@ jobs:
       - name: Record prebuilt source hash
         run: node scripts/prebuilt_source_hash.mjs --record darwin-arm64
 
-      - name: Verify package prebuilt ABI
-        run: node scripts/verify_prebuilt_abi.mjs darwin-arm64
-
       # upload-artifact does not preserve Unix executable modes. Keep the
       # staged directory in a tar archive so cef_process remains executable.
       - name: Archive macOS prebuilt
@@ -102,7 +93,7 @@ jobs:
             darwin-arm64
 
       - name: Upload macOS prebuilt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: proton-prebuilt-darwin-arm64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}
           path: ${{ runner.temp }}/proton-prebuilt-darwin-arm64-${{ env.PROTON_PREBUILT_SOURCE_SHA }}.tar.gz

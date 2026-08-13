@@ -84,7 +84,7 @@ async fn artifact_digest_and_size(
 }
 
 ///|
-/// The updater's anti-rollback anchor. Written beside the staged `moon.proton`
+/// The updater's anti-rollback anchor. Written beside the staged `proton.project.json`
 /// so the two always travel together, and read back by the native updater to
 /// decide whether an offered revision moves forward.
 ///

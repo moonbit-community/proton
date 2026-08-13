@@ -12,6 +12,7 @@ import {
 
 import {
   "moonbitlang/async",
+  "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
 } for "wbtest"
 

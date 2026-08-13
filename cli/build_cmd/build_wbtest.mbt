@@ -25,9 +25,6 @@ async fn[T] expect_build_config_error(
 
 ///|
 fn ensure_build_test_dir(path : String) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
   @mbfs.create_dir(path) catch {
     _ => ()
   }
@@ -42,17 +39,29 @@ fn write_build_test_file(path : String, text : String) -> Unit {
 
 ///|
 let valid_build_config =
-  #|window = {
-  #|  title: "Build Test",
-  #|  width: 320,
-  #|  height: 240,
+  #|{
+  #|  "window": {
+  #|    "title": "Build Test",
+  #|    "width": 320,
+  #|    "height": 240
+  #|  },
+  #|  "entry": {
+  #|    "kind": "asset",
+  #|    "value": "frontend/dist/index.html"
+  #|  }
   #|}
-  #|
-  #|entry = {
-  #|  kind: "asset",
-  #|  value: "frontend/dist/index.html",
-  #|}
-  #|
+
+///|
+fn build_config_with(key : String, value : Json) -> String {
+  let config = @json.parse(valid_build_config) catch {
+    error => abort(error.to_string())
+  }
+  guard config is Object(fields) else {
+    abort("expected project config object")
+  }
+  fields[key] = value
+  Json::object(fields).stringify(indent=2) + "\n"
+}
 
 ///|
 test "parse build args defaults and moon args" {
@@ -79,19 +88,19 @@ test "moon build options require the separator" {
 ///|
 test "parse build args package and config" {
   let raw = parse_build_args([
-    "--package", "desktop", "--config", "config/moon.proton", "--no-frontend",
+    "--package", "desktop", "--config", "config/proton.project.json", "--no-frontend",
   ])
   @debug.assert_eq(raw.app_package, Some("desktop"))
-  @debug.assert_eq(raw.config_path, Some("config/moon.proton"))
+  @debug.assert_eq(raw.config_path, Some("config/proton.project.json"))
   @debug.assert_eq(raw.run_frontend_build, false)
 }
 
 ///|
 test "parse build args accepts an isolated Moon target directory" {
   let raw = parse_build_args([
-    "--package", "app", "--moon-target-dir", "target/build-app",
+    "--package", "app", "--moon-target-dir", "custom-build",
   ])
-  @debug.assert_eq(raw.moon_target_dir, Some("target/build-app"))
+  @debug.assert_eq(raw.moon_target_dir, Some("custom-build"))
 }
 
 ///|
@@ -134,10 +143,10 @@ test "moon build args prepend an isolated target directory" {
     moon_build_args_with_target_dir(
       "app",
       ["--diagnostic-limit", "80"],
-      Some("target/build-app"),
+      Some("custom-build"),
     ),
     [
-      "--target-dir", "target/build-app", "build", "app", "--diagnostic-limit", "80",
+      "--target-dir", "custom-build", "build", "app", "--diagnostic-limit", "80",
       "--target", "native",
     ],
   )
@@ -145,8 +154,7 @@ test "moon build args prepend an isolated target directory" {
 
 ///|
 async test "frontend path validation reports missing directory" {
-  let root = "target/proton-build-cwd"
-  ensure_build_test_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-build-cwd-")
   let error = try
     resolve_frontend_path(root, Some("missing"), "npm run build")
   catch {
@@ -160,8 +168,7 @@ async test "frontend path validation reports missing directory" {
 
 ///|
 async test "backend path supports nested directories with spaces" {
-  let root = "target/proton build backend"
-  ensure_build_test_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-build-backend-")
   ensure_build_test_dir(@fsutil.path_join(root, "nested"))
   ensure_build_test_dir(@fsutil.path_join(root, "nested/backend app"))
   let path = resolve_backend_path(root, Some("nested/backend app"))
@@ -169,29 +176,27 @@ async test "backend path supports nested directories with spaces" {
 }
 
 ///|
-async test "build config discovery prefers package-local moon.proton" {
-  let root = "target/proton-build-package-config"
-  ensure_build_test_dir(root)
+async test "build config discovery prefers package-local proton.project.json" {
+  let root = @async_fs.tmpdir(prefix="proton-build-config-")
   ensure_build_test_dir(@fsutil.path_join(root, "desktop"))
   let package_config = @fsutil.path_join(
     @fsutil.path_join(root, "desktop"),
-    "moon.proton",
+    "proton.project.json",
   )
   write_build_test_file(package_config, "")
   let raw = parse_build_args(["--package", "desktop"])
   let resolved = resolve_build_config_path(root, root, raw)
   @debug.assert_eq(
     resolved,
-    Some(@fsutil.resolve_path(root, "desktop/moon.proton")),
+    Some(@fsutil.resolve_path(root, "desktop/proton.project.json")),
   )
 }
 
 ///|
 async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
-    let dir = "target/proton-build-path"
-    ensure_build_test_dir(dir)
-    let resolved = @fsutil.resolve_path(".", "target\\proton-build-path")
+    let dir = @async_fs.tmpdir(prefix="proton-build-path-")
+    let resolved = @fsutil.resolve_path(".", dir.replace_all(old="/", new="\\"))
     assert_true(resolved.contains(":/") || resolved.contains(":\\"))
     assert_true(@fsutil.path_exists(resolved))
     let absolute = resolved.replace_all(old="/", new="\\")
@@ -201,17 +206,16 @@ async test "resolve path accepts Windows backslash relative input" {
 
 ///|
 async test "project config validation rejects unknown top-level fields" {
-  let dir = "target/proton-build-config"
-  ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "unknown.moon.proton")
-  write_build_test_file(path, valid_build_config + "\nlegacy_runtime = true\n")
+  let dir = @async_fs.tmpdir(prefix="proton-build-config-")
+  let path = @fsutil.path_join(dir, "unknown.proton.project.json")
+  write_build_test_file(path, build_config_with("legacy_runtime", true))
   let error = expect_build_config_error(() => read_project_config(path))
   assert_eq(
     error,
     BuildConfigError::Invalid(
       path~,
       error=@proton_config.ProjectConfigError::UnknownField(
-        path="moon.proton.legacy_runtime",
+        path="proton.project.json.legacy_runtime",
       ),
     ),
   )
@@ -219,17 +223,17 @@ async test "project config validation rejects unknown top-level fields" {
 
 ///|
 async test "project config validation requires window" {
-  let dir = "target/proton-build-config"
-  ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "missing-window.moon.proton")
+  let dir = @async_fs.tmpdir(prefix="proton-build-config-")
+  let path = @fsutil.path_join(dir, "missing-window.proton.project.json")
   write_build_test_file(
     path,
     (
-      #|entry = {
-      #|  kind: "asset",
-      #|  value: "frontend/dist/index.html",
+      #|{
+      #|  "entry": {
+      #|    "kind": "asset",
+      #|    "value": "frontend/dist/index.html"
+      #|  }
       #|}
-      #|
     ),
   )
   let error = expect_build_config_error(() => read_project_config(path))
@@ -238,7 +242,7 @@ async test "project config validation requires window" {
     BuildConfigError::Invalid(
       path~,
       error=@proton_config.ProjectConfigError::MissingField(
-        path="moon.proton.window",
+        path="proton.project.json.window",
       ),
     ),
   )
@@ -246,24 +250,23 @@ async test "project config validation requires window" {
 
 ///|
 async test "project config validation rejects unsupported size_hint" {
-  let dir = "target/proton-build-config"
-  ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "bad-size-hint.moon.proton")
+  let dir = @async_fs.tmpdir(prefix="proton-build-config-")
+  let path = @fsutil.path_join(dir, "bad-size-hint.proton.project.json")
   write_build_test_file(
     path,
     (
-      #|window = {
-      #|  title: "Build Test",
-      #|  width: 320,
-      #|  height: 240,
-      #|  size_hint: "stretch",
+      #|{
+      #|  "window": {
+      #|    "title": "Build Test",
+      #|    "width": 320,
+      #|    "height": 240,
+      #|    "size_hint": "stretch"
+      #|  },
+      #|  "entry": {
+      #|    "kind": "asset",
+      #|    "value": "frontend/dist/index.html"
+      #|  }
       #|}
-      #|
-      #|entry = {
-      #|  kind: "asset",
-      #|  value: "frontend/dist/index.html",
-      #|}
-      #|
     ),
   )
   let error = expect_build_config_error(() => read_project_config(path))
@@ -281,28 +284,18 @@ async test "project config validation rejects unsupported size_hint" {
 
 ///|
 async test "project config parsing keeps active bundle metadata out of build validation" {
-  let dir = "target/proton-build-config"
-  ensure_build_test_dir(dir)
-  let path = @fsutil.path_join(dir, "active-bundle.moon.proton")
-  write_build_test_file(
-    path,
-    valid_build_config +
-    (
-      #|
-      #|bundle = {
-      #|  active: true,
-      #|}
-      #|
-    ),
-  )
+  let dir = @async_fs.tmpdir(prefix="proton-build-config-")
+  let path = @fsutil.path_join(dir, "active-bundle.proton.project.json")
+  write_build_test_file(path, build_config_with("bundle", { "active": true }))
   ignore(read_project_config(path))
 }
 
 ///|
 async test "production entry validation requires file-backed entry" {
+  let dir = @async_fs.tmpdir(prefix="proton-build-entry-")
   let error = try
     validate_production_entry_file(
-      @proton_config.ProjectEntry::Asset("target/proton-build-missing.html"),
+      @proton_config.ProjectEntry::Asset(@fsutil.path_join(dir, "missing.html")),
     )
   catch {
     BuildPathError::Missing(..) as error => error.message()
@@ -311,8 +304,6 @@ async test "production entry validation requires file-backed entry" {
     _ => fail("expected build error")
   }
   assert_true(error.contains("production entry does not exist"))
-  let dir = "target/proton-build-entry"
-  ensure_build_test_dir(dir)
   let file = @fsutil.path_join(dir, "index.html")
   @mbfs.write_string_to_file(file, "<!doctype html>", encoding="utf8") catch {
     err => abort(@debug.render(Repr(err)))
@@ -322,8 +313,7 @@ async test "production entry validation requires file-backed entry" {
 
 ///|
 async test "release validation checks secondary window entry files" {
-  let dir = "target/proton-build-secondary-entry"
-  ensure_build_test_dir(dir)
+  let dir = @async_fs.tmpdir(prefix="proton-build-secondary-")
   let main = @fsutil.path_join(dir, "main.html")
   let missing = @fsutil.path_join(dir, "secondary/missing.html")
   write_build_test_file(main, "<!doctype html>")
@@ -351,7 +341,7 @@ async test "release validation checks secondary window entry files" {
 test "frontend release rejects url production entry" {
   let frontend = Some(
     @proton_config.ProjectFrontendConfig::new(
-      dist=Some("target/proton-build-entry"),
+      dist=Some("fixtures/frontend-dist"),
     ),
   )
   let error = expect_build_error_message(() => {
@@ -371,7 +361,7 @@ test "frontend release config preflight rejects url entry" {
     backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
-        dist=Some("target/proton-build-entry"),
+        dist=Some("fixtures/frontend-dist"),
       ),
     ),
   }
@@ -384,7 +374,7 @@ test "frontend release requires dist" {
   let config = BuildProjectConfig::{
     base_dir: ".",
     entries: [
-      @proton_config.ProjectEntry::Asset("target/proton-build-entry/index.html"),
+      @proton_config.ProjectEntry::Asset("fixtures/frontend-dist/index.html"),
     ],
     backend: None,
     frontend: Some(
@@ -399,8 +389,7 @@ test "frontend release requires dist" {
 
 ///|
 async test "production entry validation rejects directories" {
-  let dir = "target/proton-build-entry-dir"
-  ensure_build_test_dir(dir)
+  let dir = @async_fs.tmpdir(prefix="proton-build-entry-dir-")
   let error = try
     validate_production_entry_file(@proton_config.ProjectEntry::Asset(dir))
   catch {

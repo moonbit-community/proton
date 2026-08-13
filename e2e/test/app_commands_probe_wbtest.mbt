@@ -75,7 +75,7 @@ async fn evaluate_json(
 
 ///|
 async fn run_app_commands_full_probe(
-  root : String,
+  output_root : String,
   target : String,
   timeout : Int,
   native_log_path : String,
@@ -94,7 +94,7 @@ async fn run_app_commands_full_probe(
   let queue = run_queue_full_probe(page)
   run_reload_probe(page, target, timeout)
   page_open = false
-  run_non_proton_probe(target, root, timeout)
+  run_non_proton_probe(target, output_root, timeout)
   assert_native_bridge_guards(native_log_path)
   println(
     "MoonBit 41_app_commands full probe passed: screenshot=" +
@@ -386,10 +386,10 @@ async fn run_reload_probe(
 ///|
 async fn run_non_proton_probe(
   target : String,
-  root : String,
+  output_root : String,
   timeout : Int,
 ) -> Unit {
-  let file_path = join_path(root, "target/non-proton-moonbit-probe.html")
+  let file_path = join_path(output_root, "non-proton-moonbit-probe.html")
   @mbfs.write_string_to_file(
     file_path, "<!doctype html><title>Non Proton File Probe</title><h1>file probe</h1>",
   ) catch {

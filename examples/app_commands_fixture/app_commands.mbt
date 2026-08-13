@@ -99,12 +99,6 @@ fn fail(payload : FailPayload) -> String raise AppCommandError {
 ///|
 fn report_probe(payload : ReportProbePayload) -> ReportProbeReply {
   println("[app-commands] " + payload.report)
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.write_string_to_file("target/app-commands.probe.json", payload.report) catch {
-    _ => ()
-  }
   ReportProbeReply::{ ok: true }
 }
 
@@ -134,15 +128,13 @@ fn app_commands_extension() -> @proton_extension.Extension {
 
 ///|
 /// Run the shared app-command fixture used by the example and E2E suite.
-pub fn run() -> Unit {
-  @proton.run(() => {
-    let app = @proton.html(
-      "MoonBit App Commands",
-      resource,
-      width=920,
-      height=680,
-      debug=true,
-    ).expose(app_commands_extension())
-    app.run_or_abort()
-  })
+pub async fn run() -> Unit {
+  let app = @proton.html(
+    "MoonBit App Commands",
+    resource,
+    width=920,
+    height=680,
+    debug=true,
+  ).expose(app_commands_extension())
+  app.run_or_abort()
 }

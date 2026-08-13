@@ -2,7 +2,7 @@
 let default_package = "app"
 
 ///|
-let default_config_file = "moon.proton"
+let default_config_file = "proton.project.json"
 
 ///|
 let default_timeout_ms = 30000

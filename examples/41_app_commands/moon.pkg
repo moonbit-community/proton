@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbit-community/proton/examples/app_commands_fixture",
 }
 

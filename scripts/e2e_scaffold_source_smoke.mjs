@@ -19,6 +19,15 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
+const codegenWasm = path.join(
+  repoRoot,
+  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
+);
+const codegenVersion = fs
+  .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
+  .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
+assert(codegenVersion, "codegen/moon.mod is missing its version");
+const codegenCoordinate = `moonbit-community/proton_codegen@${codegenVersion}`;
 let appProcess = null;
 let staticServer = null;
 let succeeded = false;
@@ -119,12 +128,12 @@ function verifyGeneratedTree() {
     "frontend/moon.mod",
     "frontend/public/index.html",
     "frontend/public/styles.css",
-    "moon.proton",
+    "proton.project.json",
     "moon.work",
     "shared/moon.mod",
     "shared/moon.pkg",
     "shared/todo_contract.mbt",
-  ];
+  ].sort();
   const actual = walkFiles(projectDir);
   assert(
     JSON.stringify(actual) === JSON.stringify(expected),
@@ -149,7 +158,31 @@ function verifyGeneratedTree() {
   );
 }
 
-function materializeSourceSmokeCodegen() {
+function installLocalMoonxShim() {
+  run("moon", ["build", "codegen", "--target", "wasm"]);
+  const binDir = path.join(tempRoot, "bin");
+  fs.mkdirSync(binDir);
+  const shim = path.join(binDir, "moonx");
+  fs.writeFileSync(
+    shim,
+    `#!/usr/bin/env node
+const { spawnSync } = require("node:child_process");
+const expected = ${JSON.stringify(codegenCoordinate)};
+if (process.argv[2] !== expected) {
+  console.error(\`unexpected source-smoke moonx package: \${process.argv[2]}\`);
+  process.exit(2);
+}
+const result = spawnSync("moonrun", [${JSON.stringify(codegenWasm)}, ...process.argv.slice(3)], {
+  stdio: "inherit",
+});
+process.exit(result.status ?? 1);
+`,
+  );
+  fs.chmodSync(shim, 0o755);
+  process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH ?? ""}`;
+}
+
+function verifySourceSmokeCodegen() {
   const generated = path.join(
     projectDir,
     "backend",
@@ -157,21 +190,31 @@ function materializeSourceSmokeCodegen() {
     "commands.g.mbt",
   );
   const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  localCli([
-    "codegen",
-    path.join(projectDir, "backend", "todo", "commands.mbt"),
-    "-o",
-    generated,
-  ]);
-  localCli([
-    "codegen",
+  run("moonrun", [
+    codegenWasm,
     path.join(projectDir, "backend", "todo", "commands.mbt"),
     "-o",
     fresh,
   ]);
   assert(
     fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
-    "source-smoke commands.g.mbt is not reproducible",
+    "Moon prebuild output differs from direct WASM codegen",
+  );
+}
+
+function makeSourceSmokeCodegenStale() {
+  fs.writeFileSync(
+    path.join(projectDir, "backend", "todo", "commands.g.mbt"),
+    "stale registrar\n",
+  );
+}
+
+function verifySourceSmokeCodegenRefreshed() {
+  const generated = path.join(projectDir, "backend", "todo", "commands.g.mbt");
+  const fresh = path.join(tempRoot, "commands.fresh.mbt");
+  assert(
+    fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
+    "Moon package build did not refresh commands.g.mbt",
   );
 }
 
@@ -198,8 +241,7 @@ function connectLocalSourceModules() {
 function verifyPackagedApp() {
   const appDir = path.join(
     projectDir,
-    "target",
-    "proton-dist",
+    "dist",
     "Todo E2E.app",
   );
   assert(fs.existsSync(appDir), `packaged app is missing: ${appDir}`);
@@ -505,6 +547,9 @@ function contentType(file) {
 }
 
 async function startStaticFrontend() {
+  if (staticServer) {
+    return `http://127.0.0.1:${staticServer.address().port}/`;
+  }
   staticServer = http.createServer((request, response) => {
     const requestPath = new URL(request.url, "http://127.0.0.1").pathname;
     const relative = requestPath === "/"
@@ -657,7 +702,7 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
   delete packagedEnv.PROTON_RUNTIME_ROOT;
   delete packagedEnv.PROTON_DEV;
   delete packagedEnv.PROTON_MODE;
-  appProcess = spawn(executable, [], {
+  appProcess = spawn(executable, [`--remote-debugging-port=${cdpPort}`], {
     cwd: projectDir,
     env: packagedEnv,
     stdio: ["ignore", "pipe", "pipe"],
@@ -723,10 +768,11 @@ async function main() {
   ]);
   verifyGeneratedTree();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
-  materializeSourceSmokeCodegen();
+  installLocalMoonxShim();
   connectLocalSourceModules();
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
+  verifySourceSmokeCodegen();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run("warren", ["build"], { cwd: frontendDir });
   run(
@@ -734,6 +780,7 @@ async function main() {
     ["-C", "backend", "build", "app", "--target", "native", "--diagnostic-limit", "80"],
     { cwd: projectDir, env: runtimeEnv() },
   );
+  makeSourceSmokeCodegenStale();
   setFrontendPackageRevision("first");
   localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
     env: runtimeEnv({
@@ -742,6 +789,7 @@ async function main() {
     }),
     timeout: 600000,
   });
+  verifySourceSmokeCodegenRefreshed();
   let packaged = verifyPackagedApp();
   await runPackagedAppSmoke(packaged.executable, "first");
   setFrontendPackageRevision("second");

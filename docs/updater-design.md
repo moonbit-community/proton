@@ -87,7 +87,7 @@ release asset, or plain HTTP host can serve it.
 Rules:
 
 - `schema_version` is rejected when unknown. This follows the discipline already
-  applied to `moon.proton` and the native runtime and window configs: unknown
+  applied to `proton.project.json` and the native runtime and window configs: unknown
   top-level fields are an error, never silently ignored.
 - `revision` is a positive unsigned 64-bit release sequence. It is independent
   of the display `version`, increases for every release, and never resets.
@@ -217,7 +217,7 @@ Three parties, and only the first has any key material:
 
 | Party | Provides |
 | --- | --- |
-| Application developer | Owns the key pair, signs releases, writes the public keys into their `moon.proton` |
+| Application developer | Owns the key pair, signs releases, writes the public keys into their `proton.project.json` |
 | Proton | Nothing. It verifies with the public keys the developer configured |
 | End user | Nothing |
 
@@ -260,7 +260,7 @@ Key handling:
 - Signing is performed by OpenSSL, not by any code in this project. Key
   generation and signing are where the operations that must not be improvised
   live, and both stay outside the framework.
-- Trusted public keys are declared in `moon.proton` as a **list**. A signature
+- Trusted public keys are declared in `proton.project.json` as a **list**. A signature
   verifies if it matches any key in that list. See [Key rotation](#key-rotation)
   for why this is a list from the first release rather than a single value.
 - Public keys are never read from the manifest, because a key supplied by the
@@ -290,12 +290,14 @@ section exists:
 
 Trusting a list instead of a single key removes both:
 
-```moonbit
-updater = {
-  public_keys: [
-    "rsa-sha256:94c05429a8686a46...:010001",  // active signer
-    "rsa-sha256:b71fe3a20c4d8815...:010001",  // reserve, held offline
-  ],
+```json
+{
+  "updater": {
+    "public_keys": [
+      "rsa-sha256:94c05429a8686a46...:010001",
+      "rsa-sha256:b71fe3a20c4d8815...:010001"
+    ]
+  }
 }
 ```
 
@@ -511,16 +513,18 @@ themselves.
 
 ## Configuration
 
-```moonbit
-updater = {
-  active: true,
-  endpoint: "https://example.com/updates/latest.json",
-  public_keys: [
-    "rsa-sha256:94c05429a8686a46...:010001",
-    "rsa-sha256:b71fe3a20c4d8815...:010001",
-  ],
-  check_on_launch: true,
-  freshness_days: 30,
+```json
+{
+  "updater": {
+    "active": true,
+    "endpoint": "https://example.com/updates/latest.json",
+    "public_keys": [
+      "rsa-sha256:94c05429a8686a46...:010001",
+      "rsa-sha256:b71fe3a20c4d8815...:010001"
+    ],
+    "check_on_launch": true,
+    "freshness_days": 30
+  }
 }
 ```
 
@@ -600,7 +604,7 @@ remote code execution primitive over the host. `download` installs whatever the
 host already authenticated for that same native window and renderer page
 instance, or refuses. A check performed by one window or by a page before
 navigation cannot be consumed by another page. Everything it acts on comes
-from `moon.proton` and the signed manifest.
+from `proton.project.json` and the signed manifest.
 
 The extension is not in `@ext.all()` or `@ext.desktop()`. An application asking
 for "the built-in extensions" should not thereby hand its pages the ability to
@@ -636,7 +640,7 @@ apply can prove it is committing the artifact the manifest ordered. Where it
 lands depends on what the platform can protect: macOS uses
 `ProtonUpdateRevision` in the app's signed `Info.plist`, while Windows and
 Linux have no signature to carry it and instead get a `proton-update-revision`
-file beside the staged `moon.proton`. That file is still awkward to forge in
+file beside the staged `proton.project.json`. That file is still awkward to forge in
 place — an AppImage's squashfs is read-only, and a Windows install tree sits
 under Program Files — but it is not signed, and the design should not pretend
 otherwise.
@@ -665,7 +669,7 @@ three platforms are built on three machines, which is already true of
   pull-based updater can fix that; the client can only surface prolonged
   unreachability to the application.
 - **Trusted key integrity on Windows and Linux.** The trusted key list lives in
-  `moon.proton`, which is protected by the code-signed bundle on macOS and by
+  `proton.project.json`, which is protected by the code-signed bundle on macOS and by
   nothing on the current portable Windows and Linux layouts. Those platforms
   also lack the second trust anchor that makes key loss recoverable on macOS.
 - **Staging disk space.** The archive and expanded application coexist briefly

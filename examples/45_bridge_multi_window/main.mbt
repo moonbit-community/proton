@@ -70,42 +70,40 @@ fn page_html(label : String) -> String {
 }
 
 ///|
-fn main {
-  @proton.run(() => {
-    @proton.html(
-      "Bridge Multi A",
-      page_html("A"),
-      width=520,
-      height=420,
-      debug=true,
-    )
-    .add_window(
+async fn main {
+  @proton.html(
+    "Bridge Multi A",
+    page_html("A"),
+    width=520,
+    height=420,
+    debug=true,
+  )
+  .add_window(
+    "secondary",
+    "Bridge Multi B",
+    @proton.AppEntry::Html(page_html("B")),
+    width=520,
+    height=420,
+    open_on_start=false,
+  )
+  .extension(multi_window_extension())
+  .permission(
+    @proton.PermissionGrant::new(
+      "main",
+      @proton.PermissionOrigin::Entry,
+      "examples/multi-window",
+    ),
+  )
+  .permission(
+    @proton.PermissionGrant::new(
       "secondary",
-      "Bridge Multi B",
-      @proton.AppEntry::Html(page_html("B")),
-      width=520,
-      height=420,
-      open_on_start=false,
-    )
-    .extension(multi_window_extension())
-    .permission(
-      @proton.PermissionGrant::new(
-        "main",
-        @proton.PermissionOrigin::Entry,
-        "examples/multi-window",
-      ),
-    )
-    .permission(
-      @proton.PermissionGrant::new(
-        "secondary",
-        @proton.PermissionOrigin::Entry,
-        "examples/multi-window",
-      ),
-    )
-    .app_lifecycle(
-      on_start=async fn(context) { ignore(context.windows().open("secondary")) },
-      on_shutdown=fn(_state) {  },
-    )
-    .run_or_abort()
-  })
+      @proton.PermissionOrigin::Entry,
+      "examples/multi-window",
+    ),
+  )
+  .app_lifecycle(
+    on_start=async fn(context) { ignore(context.windows().open("secondary")) },
+    on_shutdown=fn(_state) {  },
+  )
+  .run_or_abort()
 }

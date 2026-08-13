@@ -20,9 +20,9 @@ fn resolve_fixture_path(candidates : Array[String]) -> String {
 /// Resolves the metadata file path for one built-in extension fixture.
 fn extension_metadata_path(name : String) -> String {
   resolve_fixture_path([
-    "../" + name + "/moon.ext",
-    name + "/moon.ext",
-    "extensions/" + name + "/moon.ext",
+    "../" + name + "/proton.ext.json",
+    name + "/proton.ext.json",
+    "extensions/" + name + "/proton.ext.json",
   ])
 }
 
@@ -32,7 +32,7 @@ fn load_descriptor(name : String) -> @catalog.ExtensionDescriptor raise {
   let descriptor = @catalog.load_extension_descriptor_from_file(
     extension_metadata_path(name),
   )
-  assert_true(descriptor.metadata_path().has_suffix("moon.ext"))
+  assert_true(descriptor.metadata_path().has_suffix("proton.ext.json"))
   descriptor
 }
 

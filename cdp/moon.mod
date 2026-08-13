@@ -1,11 +1,11 @@
 name = "moonbit-community/proton_cdp"
 
-version = "0.1.15"
+version = "0.1.16"
 
 readme = "README.mbt.md"
 
 import {
-  "moonbitlang/async@0.20.3",
+  "moonbitlang/async@0.20.5",
   "moonbitlang/x@0.4.49",
 }
 

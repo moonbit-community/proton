@@ -2,7 +2,7 @@
 let default_package = "app"
 
 ///|
-let default_config_file = "moon.proton"
+let default_config_file = "proton.project.json"
 
 ///|
 struct RawPackageOptions {
@@ -21,7 +21,6 @@ struct RawPackageOptions {
 struct PackagePlan {
   root : String
   workspace_root : String
-  build_target_dir : String
   app_package : String
   config_path : String
   product_name : String
@@ -119,7 +118,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let root = @fsutil.find_project_root_from(cwd)
   let config_path = match resolve_package_config_path(cwd, root, raw) {
     Some(path) => path
-    None => raise PackageConfigError::NotFound(path="moon.proton")
+    None => raise PackageConfigError::NotFound(path="proton.project.json")
   }
   let config_text = @async_fs.read_file(config_path).text() catch {
     error =>
@@ -382,7 +381,6 @@ async fn build_package_plan(
   PackagePlan::{
     root: backend_root,
     workspace_root,
-    build_target_dir: package_build_target_dir(workspace_root, identifier),
     app_package,
     config_path,
     product_name,
@@ -555,52 +553,15 @@ fn first_macos_icon(icons : Array[String]) -> String? {
 
 ///|
 fn release_project_config_text(source : String) -> String {
-  let (ast, reports) = @proton_config.parse_moon_proton(source)
-  guard reports.length() == 0 else { return source }
-  match ast {
-    Obj(fields, _) =>
-      for field in fields {
-        if field.key == "debug" {
-          match field.value {
-            Bool(false, _) => return source
-            Bool(true, loc) =>
-              return replace_string_range(
-                source,
-                loc.start.cnum,
-                loc.end.cnum,
-                "false",
-              )
-            _ => return source
-          }
-        }
-      }
-    _ => ()
-  }
-  source
-}
-
-///|
-fn replace_string_range(
-  source : String,
-  start : Int,
-  end : Int,
-  replacement : String,
-) -> String {
-  let output = StringBuilder::new(
-    size_hint=source.length() - (end - start) + replacement.length(),
-  )
-  for index, char in source {
-    if index == start {
-      output.write_string(replacement)
+  let json = @json.parse(source) catch { _ => return source }
+  guard json is Object(fields) else { return source }
+  match fields.get("debug") {
+    Some(True) => {
+      fields["debug"] = Json::boolean(false)
+      Json::object(fields).stringify(indent=2) + "\n"
     }
-    if index < start || index >= end {
-      output.write_char(char)
-    }
+    _ => source
   }
-  if start == source.length() {
-    output.write_string(replacement)
-  }
-  output.to_string()
 }
 
 ///|
@@ -618,7 +579,6 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  update revision: " + plan.update_revision.to_string())
   println("  targets: " + plan.targets.join(", "))
   println("  output: " + plan.output)
-  println("  build target: " + plan.build_target_dir)
   let sign_binaries = if plan.sign_binaries.length() == 0 {
     "none"
   } else {
@@ -653,7 +613,7 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
   let executable = match find_package_executable(plan) {
     Some(path) => path
     None =>
-      raise PackagePlanError::MissingExecutable(path=plan.build_target_dir)
+      raise PackagePlanError::MissingExecutable(path=package_build_root(plan))
   }
   match current_package_host() {
     Windows => stage_windows_portable(plan, executable, runtime)
@@ -675,29 +635,12 @@ async fn run_package_build(plan : PackagePlan) -> Unit {
   if plan.release {
     moon_args.push("--release")
   }
-  moon_args.push("--target-dir")
-  moon_args.push(plan.build_target_dir)
-  let old_rpath = @env.get_env_var("PROTON_PACKAGE_RPATH")
-  // Mach-O only. The link config reads this on darwin; the Linux branch
-  // ignores it and keeps the absolute runtime rpath, which is what a
-  // development run wants. Linux gets its relocatable rpath from patchelf
-  // during staging instead, so `$ORIGIN` never passes through the link
-  // config's quoting.
-  if is_macos_host() {
-    @env.set_env_var(
-      "PROTON_PACKAGE_RPATH", "@executable_path/../Resources/proton/lib",
-    )
-  }
-  defer restore_package_env("PROTON_PACKAGE_RPATH", old_rpath)
   @build.run_release(plan.root, plan.app_package, plan.config_path, moon_args)
 }
 
 ///|
-fn restore_package_env(name : String, value : String?) -> Unit {
-  match value {
-    Some(value) => @env.set_env_var(name, value)
-    None => @env.unset_env_var(name)
-  }
+fn package_build_root(plan : PackagePlan) -> String {
+  @fsutil.resolve_path(plan.workspace_root, "_build")
 }
 
 ///|
@@ -705,7 +648,7 @@ async fn find_package_executable(plan : PackagePlan) -> String? {
   // `--no-build` must reuse the same build mode selected for this command.
   let build_mode = if plan.release { "release" } else { "debug" }
   let root = @fsutil.resolve_path(
-    plan.build_target_dir,
+    package_build_root(plan),
     "native/" + build_mode + "/build",
   )
   let package_name = path_basename(plan.app_package)
@@ -791,17 +734,6 @@ async fn read_active_runtime(root : String) -> String {
         detail="root must be an object",
       )
   }
-}
-
-///|
-fn package_build_target_dir(
-  workspace_root : String,
-  identifier : String,
-) -> String {
-  @fsutil.resolve_path(
-    workspace_root,
-    "target/proton-package-build/" + package_executable_name(identifier),
-  )
 }
 
 ///|
@@ -934,10 +866,15 @@ async fn stage_macos_app_impl(
       )
   }
   require_launchable_macho(staged_executable)
+  replace_macos_rpath(
+    staged_executable,
+    @fsutil.resolve_path(runtime, "lib"),
+    "@executable_path/../Resources/proton/lib",
+  )
   copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
   stage_release_project_config(
     plan.config_path,
-    @fsutil.resolve_path(resources, "moon.proton"),
+    @fsutil.resolve_path(resources, "proton.project.json"),
   )
   stage_project_inputs(plan, resources)
   stage_macos_icon(plan, resources)
@@ -1252,19 +1189,16 @@ async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
 
 ///|
 fn relative_to_base(base : String, path : String) -> String? {
-  let base = normalize_slashes(@fsutil.resolve_path(base, "."))
-  let path = normalize_slashes(@fsutil.resolve_path(base, path))
-  let prefix = if base.has_suffix("/") { base } else { base + "/" }
-  if path == base {
+  let root = @fsutil.resolve_path(base, ".")
+  let candidate = @fsutil.resolve_path(base, path)
+  guard @fsutil.path_is_within(root, candidate) else { return None }
+  let relative = normalize_slashes(@fsutil.relative_path(root, candidate))
+  if relative == "" {
     Some(".")
-  } else if path.has_prefix(prefix) {
-    Some(
-      path
-      .unsafe_substring(start=prefix.length(), end=path.length())
-      .to_string(),
-    )
-  } else {
+  } else if relative == ".." || relative.has_prefix("../") {
     None
+  } else {
+    Some(relative)
   }
 }
 
@@ -1275,14 +1209,8 @@ fn normalize_slashes(path : String) -> String {
 
 ///|
 fn path_basename(path : String) -> String {
-  let normalized = normalize_slashes(path)
-  match normalized.rev_find("/") {
-    Some(index) =>
-      normalized
-      .unsafe_substring(start=index + 1, end=normalized.length())
-      .to_string()
-    None => normalized
-  }
+  let native_path : @path.Path = path
+  native_path.basename().to_owned()
 }
 
 ///|
@@ -1654,6 +1582,26 @@ async fn write_package_manifest(
 ///|
 async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
   let code = @process.run("install_name_tool", ["-add_rpath", rpath, binary]) catch {
+    error =>
+      raise PackageToolError::Start(
+        tool="install_name_tool",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  if code != 0 {
+    raise PackageToolError::Exit(tool="install_name_tool", code~, detail=binary)
+  }
+}
+
+///|
+async fn replace_macos_rpath(
+  binary : String,
+  current : String,
+  replacement : String,
+) -> Unit {
+  let code = @process.run("install_name_tool", [
+    "-rpath", current, replacement, binary,
+  ]) catch {
     error =>
       raise PackageToolError::Start(
         tool="install_name_tool",
@@ -2093,13 +2041,33 @@ fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
 
 ///|
 async fn notarize_macos_app(plan : PackagePlan, app : String) -> Unit {
+  notarize_macos_app_with_tools(plan, app, default_macos_notary_tools())
+}
+
+///|
+priv struct MacosNotaryTools {
+  xcrun : String
+  spctl : String
+}
+
+///|
+fn default_macos_notary_tools() -> MacosNotaryTools {
+  MacosNotaryTools::{ xcrun: "xcrun", spctl: "spctl" }
+}
+
+///|
+async fn notarize_macos_app_with_tools(
+  plan : PackagePlan,
+  app : String,
+  tools : MacosNotaryTools,
+) -> Unit {
   let profile = required_macos_notary_profile()
   let archive = @fsutil.resolve_path(
     plan.output,
     "." + package_executable_name(plan.product_name) + ".notary.zip",
   )
   remove_tree(archive)
-  submit_macos_notarization(app, archive, profile) catch {
+  submit_macos_notarization(app, archive, profile, tools) catch {
     error => {
       remove_tree(archive) catch {
         _ => ()
@@ -2115,6 +2083,7 @@ async fn submit_macos_notarization(
   app : String,
   archive : String,
   profile : String,
+  tools : MacosNotaryTools,
 ) -> Unit {
   let zip_code = @process.run("ditto", [
     "-c", "-k", "--keepParent", app, archive,
@@ -2131,10 +2100,10 @@ async fn submit_macos_notarization(
       detail="exit code " + zip_code.to_string(),
     )
   }
-  submit_macos_notarization_artifact(archive, profile)
-  staple_macos_artifact(app)
-  validate_macos_staple(app)
-  assess_macos_app(app)
+  submit_macos_notarization_artifact(archive, profile, xcrun=tools.xcrun)
+  staple_macos_artifact(app, xcrun=tools.xcrun)
+  validate_macos_staple(app, xcrun=tools.xcrun)
+  assess_macos_app(app, spctl=tools.spctl)
 }
 
 ///|
@@ -2153,8 +2122,9 @@ fn required_macos_notary_profile() -> String raise MacosSigningError {
 async fn submit_macos_notarization_artifact(
   artifact : String,
   profile : String,
+  xcrun? : String = "xcrun",
 ) -> Unit {
-  let code = @process.run("xcrun", [
+  let code = @process.run(xcrun, [
     "notarytool", "submit", artifact, "--keychain-profile", profile, "--wait",
   ]) catch {
     error =>
@@ -2172,8 +2142,11 @@ async fn submit_macos_notarization_artifact(
 }
 
 ///|
-async fn staple_macos_artifact(artifact : String) -> Unit {
-  let code = @process.run("xcrun", ["stapler", "staple", artifact]) catch {
+async fn staple_macos_artifact(
+  artifact : String,
+  xcrun? : String = "xcrun",
+) -> Unit {
+  let code = @process.run(xcrun, ["stapler", "staple", artifact]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage="staple notarization ticket",
@@ -2189,8 +2162,11 @@ async fn staple_macos_artifact(artifact : String) -> Unit {
 }
 
 ///|
-async fn validate_macos_staple(artifact : String) -> Unit {
-  let code = @process.run("xcrun", ["stapler", "validate", artifact]) catch {
+async fn validate_macos_staple(
+  artifact : String,
+  xcrun? : String = "xcrun",
+) -> Unit {
+  let code = @process.run(xcrun, ["stapler", "validate", artifact]) catch {
     error =>
       raise MacosSigningError::ToolFailure(
         stage="validate notarization ticket",
@@ -2206,8 +2182,8 @@ async fn validate_macos_staple(artifact : String) -> Unit {
 }
 
 ///|
-async fn assess_macos_app(app : String) -> Unit {
-  let code = @process.run("spctl", [
+async fn assess_macos_app(app : String, spctl? : String = "spctl") -> Unit {
+  let code = @process.run(spctl, [
     "--assess", "--type", "execute", "--verbose=4", app,
   ]) catch {
     error =>

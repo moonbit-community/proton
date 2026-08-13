@@ -1,5 +1,5 @@
 ///|
-let cli_current_version : String = "0.1.15"
+let cli_current_version : String = "0.1.16"
 
 ///|
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
@@ -9,41 +9,6 @@ priv struct CliVersion {
   major : Int
   minor : Int
   patch : Int
-}
-
-///|
-priv suberror CliUsageError {
-  Invalid(message~ : String)
-} derive(Debug)
-
-///|
-priv suberror CliCodegenOutputError {
-  WriteFailed(path~ : String, detail~ : String)
-} derive(Debug)
-
-///|
-fn CliUsageError::message(self : CliUsageError) -> String {
-  match self {
-    Invalid(message~) => message
-  }
-}
-
-///|
-fn CliCodegenOutputError::message(self : CliCodegenOutputError) -> String {
-  match self {
-    WriteFailed(path~, detail~) =>
-      "failed to write generated source " + path + ": " + detail
-  }
-}
-
-///|
-impl Show for CliUsageError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for CliCodegenOutputError with fn output(self, logger) {
-  logger.write_string(self.message())
 }
 
 ///|
@@ -170,39 +135,6 @@ async fn print_error_message(message : String) -> Unit {
 }
 
 ///|
-fn codegen_command() -> @argparse.Command {
-  @argparse.Command(
-    "codegen",
-    about="Generate typed Proton command registrars from #proton attributes",
-    flags=[
-      FlagArg(
-        "extension-identity",
-        about="Generate a contract identity from one moon.ext input",
-      ),
-    ],
-    options=[
-      OptionArg(
-        "output-file",
-        short='o',
-        about="Output .g.mbt file",
-        required=true,
-      ),
-      OptionArg(
-        "identity-name",
-        about="Generated binding name for --extension-identity",
-      ),
-    ],
-    positionals=[
-      PositionArg(
-        "input_files",
-        about="Input MoonBit source files",
-        num_args=@argparse.ValueRange(lower=1),
-      ),
-    ],
-  )
-}
-
-///|
 fn doctor_command() -> @argparse.Command {
   @argparse.Command(
     "doctor",
@@ -246,7 +178,6 @@ fn cli_command() -> @argparse.Command {
       @build.command(),
       @package.command(),
       doctor_command(),
-      codegen_command(),
       @cef.command(),
       @updater.command(),
     ],
@@ -277,61 +208,6 @@ async fn run_doctor(cwd : String, matches : @argparse.Matches) -> Bool {
 }
 
 ///|
-async fn run_codegen(cwd : String, matches : @argparse.Matches) -> Unit {
-  guard! matches.values
-    is {
-      "input_files"? : Some(inputs)
-      | (None with inputs = []),
-      "output-file": [output, ..],
-      "identity-name"? : Some(identity_args)
-      | (None with identity_args = []),
-      ..
-    }
-  guard matches.flags
-    is {
-      "extension-identity"? : Some(extension_identity)
-      | (None with extension_identity = false),
-      ..
-    }
-  let resolved_inputs = inputs.map(input => @fsutil.resolve_path(cwd, input))
-  let resolved_output = @fsutil.resolve_path(cwd, output)
-  let identity_name = identity_args.get(0)
-  if !extension_identity && identity_name is Some(_) {
-    raise CliUsageError::Invalid(
-      message="codegen --identity-name requires --extension-identity",
-    )
-  }
-  let result = if extension_identity {
-    guard resolved_inputs is [metadata_path] else {
-      raise CliUsageError::Invalid(
-        message="codegen --extension-identity requires exactly one moon.ext input",
-      )
-    }
-    @codegen.generate_extension_identity_from_file(
-      metadata_path,
-      binding_name=identity_name.unwrap_or("generated_extension_contract"),
-    )
-  } else {
-    @codegen.generate_commands_from_files(resolved_inputs)
-  }
-  @async_fs.write_file(
-    resolved_output,
-    result.source,
-    create_mode=CreateOrTruncate,
-  ) catch {
-    error =>
-      raise CliCodegenOutputError::WriteFailed(
-        path=resolved_output,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  println("wrote " + resolved_output)
-  for warning in result.warnings {
-    @output.write_stderr_line("warning: " + warning)
-  }
-}
-
-///|
 async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
   match matches.subcommand {
     Some(("version", _)) => println(cli_version_text())
@@ -340,7 +216,6 @@ async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
     Some(("dev", dev_matches)) => @dev.run(cwd, dev_matches)
     Some(("build", build_matches)) => @build.run(cwd, build_matches)
     Some(("package", package_matches)) => @package.run(cwd, package_matches)
-    Some(("codegen", codegen_matches)) => run_codegen(cwd, codegen_matches)
     Some(("cef", cef_matches)) => @cef.run(cwd, cef_matches)
     Some(("updater", updater_matches)) => @updater.run(updater_matches)
     _ => abort("argparse invariant violated: missing subcommand")

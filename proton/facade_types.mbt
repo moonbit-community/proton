@@ -51,7 +51,7 @@ priv struct ResolvedAppConfig {
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]
-  /// The update channel and the identity it updates, when `moon.proton`
+  /// The update channel and the identity it updates, when `proton.project.json`
   /// declares one. Absent for an application configured inline: there is no
   /// file to declare an endpoint in, and inventing one would be worse.
   update_channel : ResolvedUpdateChannel?
@@ -474,16 +474,6 @@ pub(all) suberror AppEntryError {
 } derive(Debug)
 
 ///|
-/// Failures in the MoonBit-side runtime wakeup source.
-pub(all) suberror RuntimeWakeupError {
-  UnsupportedFeature(feature~ : String)
-  PipeCreateFailed(detail~ : String)
-  SourceOpenFailed(source~ : String, detail~ : String)
-  SourceClosed
-  MissingNotification
-} derive(Debug)
-
-///|
 /// Failures while starting or stopping command extensions.
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
@@ -512,11 +502,10 @@ pub(all) suberror AppCleanupError {
 ///|
 /// Failures produced while configuring, starting, or running an application.
 pub(all) suberror AppRunError {
-  RunnerError(String)
+  EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
-  RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)

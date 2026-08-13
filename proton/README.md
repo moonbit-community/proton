@@ -9,15 +9,16 @@ workflow — scaffolding, CEF runtime setup, dev mode, and packaging — see the
 ## Quick example
 
 ```moonbit
-fn main {
-  @proton.run(() => {
-    @proton.html("Hello", "<h1>Hello</h1>").run_or_abort()
-  })
+async fn main {
+  @proton.html("Hello", "<h1>Hello</h1>").run_or_abort()
 }
 ```
 
-`@proton.run` starts the managed application runner from a synchronous `main`;
-the closure builds the app and runs it. `@proton.html` accepts optional
+`main` is async because Proton hands its own event loop to `moonbitlang/async`
+during process initialization; from then on every line of MoonBit runs on the
+main thread and only async's waiting half moves to a thread of its own. Nothing
+has to be installed by hand, but the package must import `moonbitlang/async` for
+`async fn main` to be available at all. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
 
 ## Entry points
@@ -26,8 +27,8 @@ the closure builds the app and runs it. `@proton.html` accepts optional
 - `@proton.url(title, url, ...)` — a remote or local URL.
 - `@proton.file(title, path, ...)` — an HTML file on disk.
 - `@proton.asset(title, path, ...)` — an HTML asset shipped with the app.
-- `@proton.config("moon.proton")` — an app described by a `moon.proton` file.
-- `@proton.app()` — config from `PROTON_CONFIG_PATH`, `moon.proton` in the
+- `@proton.config("proton.project.json")` — an app described by a `proton.project.json` file.
+- `@proton.app()` — config from `PROTON_CONFIG_PATH`, `proton.project.json` in the
   current working directory, or code-only defaults.
 
 ## Commands and events
@@ -35,7 +36,7 @@ the closure builds the app and runs it. `@proton.html` accepts optional
 Register typed commands on the app builder:
 
 ```moonbit
-@proton.config("moon.proton")
+@proton.config("proton.project.json")
 .commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
 .run_or_abort()
 ```

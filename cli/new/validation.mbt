@@ -12,41 +12,30 @@ let default_height = 640
 
 ///|
 fn path_basename(path : String) -> String {
-  let normalized = normalize_slashes(path)
-  let trimmed = trim_trailing_slashes(normalized)
-  if trimmed == "" {
+  let native_path : @path.Path = path.replace_all(old="\\", new="/")
+  let basename = native_path.basename().to_owned()
+  if basename == "" {
     default_project_path
   } else {
-    let slash = trimmed.rev_find("/")
-    match slash {
-      Some(index) =>
-        trimmed.unsafe_substring(start=index + 1, end=trimmed.length())
-      None => trimmed
-    }
+    basename
   }
 }
 
 ///|
 fn project_slug(cwd : String, target : String) -> String {
-  match path_basename(target) {
+  match target {
     "." => path_basename(cwd)
-    ".." => path_basename(@fsutil.path_parent(cwd))
-    slug => slug
+    ".." => {
+      let cwd_path : @path.Path = cwd.replace_all(old="\\", new="/")
+      let parent = cwd_path.dirname().to_string()
+      if parent == "." {
+        path_basename(cwd)
+      } else {
+        path_basename(parent)
+      }
+    }
+    _ => path_basename(target)
   }
-}
-
-///|
-fn normalize_slashes(path : String) -> String {
-  path.replace_all(old="\\", new="/")
-}
-
-///|
-fn trim_trailing_slashes(path : String) -> String {
-  let mut end = path.length()
-  while end > 0 && (path[end - 1] == '/' || path[end - 1] == '\\') {
-    end = end - 1
-  }
-  path.unsafe_substring(start=0, end~)
 }
 
 ///|

@@ -2,7 +2,7 @@
 
 `moonbit-community/proton/bootstrap` loads Proton app configuration.
 
-It decodes `moon.proton` into runtime manifests and project tooling metadata.
+It decodes `proton.project.json` into runtime manifests and project tooling metadata.
 It does not install extensions or create windows.
 
 Primary entry points:

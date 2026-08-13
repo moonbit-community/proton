@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbit-community/proton_ext/global_hotkey",
   "moonbit-community/proton_ext/notification",
   "moonbit-community/proton_ext/tray",

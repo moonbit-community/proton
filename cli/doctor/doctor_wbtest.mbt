@@ -1,24 +1,21 @@
 ///|
-fn ensure_test_dir(path : String) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir(path) catch {
-    _ => ()
-  }
-}
-
-///|
 fn write_test_project(path : String) -> String {
   let root = @path.Path(path).resolve().to_string()
-  ensure_test_dir(root)
   @mbfs.write_string_to_file(
-    @fsutil.path_join(root, "moon.proton"),
+    @fsutil.path_join(root, "proton.project.json"),
     (
-      #|product_name = "Doctor Test"
-      #|window = { title: "Doctor Test", width: 800, height: 600 }
-      #|entry = { kind: "html", value: "<h1>Doctor Test</h1>" }
-      #|
+      #|{
+      #|  "product_name": "Doctor Test",
+      #|  "window": {
+      #|    "title": "Doctor Test",
+      #|    "width": 800,
+      #|    "height": 600
+      #|  },
+      #|  "entry": {
+      #|    "kind": "html",
+      #|    "value": "<h1>Doctor Test</h1>"
+      #|  }
+      #|}
     ),
     encoding="utf8",
   ) catch {
@@ -28,8 +25,9 @@ fn write_test_project(path : String) -> String {
 }
 
 ///|
-async test "doctor discovers moon.proton from a nested directory" {
-  let root = write_test_project("target/proton-doctor-project")
+async test "doctor discovers proton.project.json from a nested directory" {
+  let root = @async_fs.tmpdir(prefix="proton-doctor-project-")
+  ignore(write_test_project(root))
   let nested = @fsutil.path_join(root, "nested")
   @mbfs.create_dir(nested) catch {
     _ => ()
@@ -37,7 +35,10 @@ async test "doctor discovers moon.proton from a nested directory" {
   match discover_project(nested) {
     Some(project) => {
       assert_eq(project.root, root)
-      assert_eq(project.config_path, @fsutil.path_join(root, "moon.proton"))
+      assert_eq(
+        project.config_path,
+        @fsutil.path_join(root, "proton.project.json"),
+      )
     }
     None => fail("expected a Proton project")
   }
@@ -45,8 +46,7 @@ async test "doctor discovers moon.proton from a nested directory" {
 
 ///|
 async test "doctor skips project checks outside a Proton project" {
-  let root = @path.Path("target/proton-doctor-empty").resolve().to_string()
-  ensure_test_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-doctor-empty-")
   let report = build_doctor_report(root, verbose=false)
   assert_eq(report.sections.length(), 2)
   assert_false(report.has_errors())
@@ -57,7 +57,8 @@ async test "doctor skips project checks outside a Proton project" {
 
 ///|
 async test "doctor accepts the generated project configuration shape" {
-  let root = write_test_project("target/proton-doctor-valid-config")
+  let root = @async_fs.tmpdir(prefix="proton-doctor-valid-")
+  ignore(write_test_project(root))
   let section = collect_project(discover_project(root))
   assert_true(
     section.lines.any(fn(line) {

@@ -28,7 +28,7 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
             DoctorLine::new(
               "project.config.read_failed",
               Error,
-              "failed to read moon.proton",
+              "failed to read proton.project.json",
               hint=@debug.render(Repr(error)),
             ),
           )
@@ -47,14 +47,18 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
             DoctorLine::new(
               "project.config.invalid",
               Error,
-              "moon.proton is invalid",
+              "proton.project.json is invalid",
               hint=error.message(),
             ),
           )
       } noraise {
         loaded => {
           lines.push(
-            DoctorLine::new("project.config", Ok, "moon.proton is valid"),
+            DoctorLine::new(
+              "project.config",
+              Ok,
+              "proton.project.json is valid",
+            ),
           )
           for warning in loaded.warnings() {
             lines.push(DoctorLine::new("project.config.warning", Warn, warning))

@@ -16,57 +16,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       ),
     },
     {
-      output_path: "moon.proton",
-      template_name: "moon.proton.mtpl",
-      template_source: (
-          #|product_name = {{title_mbt}}
-          #|identifier = {{identifier_mbt}}
-          #|single_instance = true
-          #|
-          #|window = {
-          #|  title: {{title_mbt}},
-          #|  width: {{width}},
-          #|  height: {{height}},
-          #|  size_hint: "none",
-          #|}
-          #|
-          #|backend = {
-          #|  path: "backend",
-          #|  package: "app",
-          #|}
-          #|
-          #|frontend = {
-          #|  path: "frontend",
-          #|  dev_url: "http://127.0.0.1:4300",
-          #|  before_dev: "warren dev --port 4300",
-          #|  before_build: "warren build",
-          #|  dist: "dist",
-          #|}
-          #|
-          #|entry = {
-          #|  kind: "asset",
-          #|  value: "frontend/dist/index.html",
-          #|}
-          #|
-          #|permissions = [
-          #|  {
-          #|    window: "main",
-          #|    origin: "entry",
-          #|    extension: "app",
-          #|  },
-          #|]
-          #|
-          #|debug = true
-          #|
-          #|bundle = {
-          #|  active: true,
-          #|  targets: ["app", "zip"],
-          #|  output: "target/proton-dist",
-          #|}
-          #|
-      ),
-    },
-    {
       output_path: "shared/moon.mod",
       template_name: "shared/moon.mod.mtpl",
       template_source: (
@@ -573,6 +522,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "{{shared_module}}@0.1.0",
+          #|  "moonbitlang/async@{{async_version}}",
           #|  "moonbit-community/proton@{{proton_version}}",
           #|  "moonbit-community/proton_contract@{{proton_contract_version}}",
           #|}
@@ -580,6 +530,11 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|license = "Apache-2.0"
           #|
           #|description = "Proton backend for {{title}}."
+          #|
+          #|rule(
+          #|  name: "proton_codegen",
+          #|  command: "moonx moonbit-community/proton_codegen@{{proton_codegen_version}} -C \"$mod_dir\" \"$input\" -o \"$output\"",
+          #|)
           #|
           #|options(
           #|  warn_list: "",
@@ -594,6 +549,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/app/moon.pkg.mtpl",
       template_source: (
           #|import {
+          #|  "moonbitlang/async",
           #|  "moonbit-community/proton",
           #|  "{{backend_module}}/todo",
           #|}
@@ -609,13 +565,11 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_name: "backend/app/main.mbt.mtpl",
       template_source: (
           #|///|
-          #|fn main {
-          #|  @proton.run(() => {
-          #|    let backend = @todo.Backend::new()
-          #|    @proton.config("moon.proton")
-          #|    .commands(fn(registrar) raise { backend.register_commands(registrar) })
-          #|    .run_or_abort()
-          #|  })
+          #|async fn main {
+          #|  let backend = @todo.Backend::new()
+          #|  @proton.config("proton.project.json")
+          #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+          #|  .run_or_abort()
           #|}
           #|
       ),
@@ -631,6 +585,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|supported_targets = "native"
+          #|
+          #|dev_build(
+          #|  rule: "proton_codegen",
+          #|  input: "commands.mbt",
+          #|  output: "commands.g.mbt",
+          #|)
           #|
           #|formatter(ignore: [ "commands.g.mbt" ])
           #|
@@ -774,8 +734,9 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- `frontend/` is a JavaScript Rabbita module owned by Warren.
           #|- `backend/` is a native Proton module.
           #|- Keep command and event names in `shared/todo_contract.mbt`.
-          #|- After editing `backend/todo/commands.mbt`, regenerate the typed bridge with
-          #|  `proton_cli codegen backend/todo/commands.mbt -o backend/todo/commands.g.mbt`.
+          #|- The Moon prebuild rule regenerates the typed bridge through
+          #|  `moonx moonbit-community/proton_codegen`; do not invoke codegen from application
+          #|  runtime code.
           #|- Do not reintroduce the old WebSocket app runtime route.
           #|
       ),
@@ -830,13 +791,15 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|## Bundle
           #|
-          #|The `bundle` block in `moon.proton` controls package creation:
+          #|The `bundle` block in `proton.project.json` controls package creation:
           #|
-          #|```moonbit
-          #|bundle = {
-          #|  active: true,
-          #|  targets: ["app", "zip"],
-          #|  output: "target/proton-dist",
+          #|```json
+          #|{
+          #|  "bundle": {
+          #|    "active": true,
+          #|    "targets": ["app", "zip"],
+          #|    "output": "dist"
+          #|  }
           #|}
           #|```
           #|
@@ -852,11 +815,11 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- `shared/todo_contract.mbt` is the cross-target contract source of truth.
           #|- `frontend/main/main.mbt` handles Rabbita state, commands, and live events.
           #|- `backend/todo/` owns state and typed command handlers.
-          #|- `backend/todo/commands.g.mbt` is generated by `proton_cli new`; after editing
-          #|  `commands.mbt`, regenerate it with
-          #|  `proton_cli codegen backend/todo/commands.mbt -o backend/todo/commands.g.mbt`.
+          #|- `backend/todo/commands.g.mbt` is generated from `commands.mbt` by the Moon
+          #|  prebuild rule. Ordinary `moon check`, `build`, and `run` commands keep it
+          #|  current through `moonx moonbit-community/proton_codegen`.
           #|- `backend/app/main.mbt` assembles and runs the application.
-          #|- `target/proton-dist/` contains packaged application artifacts.
+          #|- `dist/` contains packaged application artifacts.
           #|
       ),
     },
@@ -866,11 +829,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|.DS_Store
           #|_build/
-          #|target
+          #|dist/
           #|.mooncakes/
           #|.moonagent/
           #|.proton/
           #|frontend/dist/
+          #|backend/todo/commands.g.mbt
           #|
       ),
     },

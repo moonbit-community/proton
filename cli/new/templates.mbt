@@ -1,25 +1,35 @@
 ///|
-let default_proton_version = "0.1.15"
+let default_proton_version = "0.1.16"
 
 ///|
-let default_proton_cli_version = "0.1.15"
+let default_proton_codegen_version = "0.1.16"
 
 ///|
-let default_proton_contract_version = "0.1.15"
+let default_proton_cli_version = "0.1.16"
 
 ///|
-let default_proton_client_version = "0.1.15"
+let default_proton_contract_version = "0.1.16"
 
 ///|
-let default_proton_rabbita_version = "0.1.15"
+let default_proton_client_version = "0.1.16"
+
+///|
+let default_proton_rabbita_version = "0.1.16"
 
 ///|
 let default_rabbita_version = "0.14.1"
 
 ///|
+/// Scaffolded backends need this directly: `async fn main` is only available to
+/// a package that imports `moonbitlang/async`.
+let default_async_version = "0.20.3"
+
+///|
 fn scaffold_release_chain() -> String {
   "moonbit-community/proton_contract@" +
   default_proton_contract_version +
+  "\n  moonbit-community/proton_codegen@" +
+  default_proton_codegen_version +
   "\n  moonbit-community/proton_client@" +
   default_proton_client_version +
   "\n  moonbit-community/proton_rabbita@" +
@@ -40,15 +50,18 @@ priv struct TemplateContext {
   shared_module : String
   frontend_module : String
   backend_module : String
+  identifier : String
   identifier_mbt : String
   width : Int
   height : Int
   proton_version : String
+  proton_codegen_version : String
   proton_cli_version : String
   proton_contract_version : String
   proton_client_version : String
   proton_rabbita_version : String
   rabbita_version : String
+  async_version : String
 }
 
 ///|
@@ -89,15 +102,18 @@ fn template_context(
     shared_module: module_prefix + "_shared",
     frontend_module: module_prefix + "_frontend",
     backend_module: module_prefix + "_backend",
+    identifier,
     identifier_mbt: mbt_string(identifier),
     width,
     height,
     proton_version: default_proton_version,
+    proton_codegen_version: default_proton_codegen_version,
     proton_cli_version: default_proton_cli_version,
     proton_contract_version: default_proton_contract_version,
     proton_client_version: default_proton_client_version,
     proton_rabbita_version: default_proton_rabbita_version,
     rabbita_version: default_rabbita_version,
+    async_version: default_async_version,
   }
 }
 
@@ -116,11 +132,13 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "width", value: context.width.to_string() },
     { name: "height", value: context.height.to_string() },
     { name: "proton_version", value: context.proton_version },
+    { name: "proton_codegen_version", value: context.proton_codegen_version },
     { name: "proton_cli_version", value: context.proton_cli_version },
     { name: "proton_contract_version", value: context.proton_contract_version },
     { name: "proton_client_version", value: context.proton_client_version },
     { name: "proton_rabbita_version", value: context.proton_rabbita_version },
     { name: "rabbita_version", value: context.rabbita_version },
+    { name: "async_version", value: context.async_version },
   ]
 }
 
@@ -186,41 +204,36 @@ fn plan_project_files(
   for spec in template_specs() {
     files.push(render_template(spec, context))
   }
-  files.push(generate_scaffold_commands(files))
+  files.push(project_config_file(context))
   files
 }
 
 ///|
-/// The scaffold commits its typed bridge as a plain generated file so
-/// `moon check` and `moon build` never depend on a CLI binary shim.
-let scaffold_commands_input = "backend/todo/commands.mbt"
-
-///|
-let scaffold_commands_output = "backend/todo/commands.g.mbt"
-
-///|
-fn generate_scaffold_commands(
-  files : Array[PlannedFile],
-) -> PlannedFile raise NewProjectTemplateError {
-  for file in files {
-    if file.path == scaffold_commands_input {
-      let output = @codegen.generate_typed_commands_from_sources(
-        [(file.path, file.content)],
-        extension_package=false,
-      ) catch {
-        error =>
-          raise CommandCodegen(
-            path=scaffold_commands_input,
-            detail=@debug.render(Repr(error)),
-          )
-      }
-      return { path: scaffold_commands_output, content: output.source }
-    }
+fn project_config_file(context : TemplateContext) -> PlannedFile {
+  let config : Json = {
+    "product_name": context.title,
+    "identifier": context.identifier,
+    "single_instance": true,
+    "window": {
+      "title": context.title,
+      "width": context.width,
+      "height": context.height,
+      "size_hint": "none",
+    },
+    "backend": { "path": "backend", "package": "app" },
+    "frontend": {
+      "path": "frontend",
+      "dev_url": "http://127.0.0.1:4300",
+      "before_dev": "warren dev --direct --port 4300",
+      "before_build": "warren build",
+      "dist": "dist",
+    },
+    "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
+    "permissions": [{ "window": "main", "origin": "entry", "extension": "app" }],
+    "debug": true,
+    "bundle": { "active": true, "targets": ["app", "zip"], "output": "dist" },
   }
-  raise CommandCodegen(
-    path=scaffold_commands_input,
-    detail="template is missing the scaffold commands source",
-  )
+  { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
 }
 
 ///|

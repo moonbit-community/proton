@@ -215,14 +215,14 @@ test "invalid identifier fails" {
 ///|
 test "file plan contains the exact isomorphic scaffold" {
   let files = must_plan(must_options(["my-counter"]))
-  assert_eq(files.length(), 20)
+  assert_eq(files.length(), 19)
   for
     path in [
-      "AGENTS.md", "README.md", ".gitignore", "moon.work", "moon.proton", "shared/moon.mod",
-      "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod", "frontend/main/moon.pkg",
-      "frontend/main/main.mbt", "frontend/public/index.html", "frontend/public/styles.css",
-      "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt", "backend/todo/moon.pkg",
-      "backend/todo/backend.mbt", "backend/todo/commands.mbt", "backend/todo/commands.g.mbt",
+      "AGENTS.md", "README.md", ".gitignore", "moon.work", "proton.project.json",
+      "shared/moon.mod", "shared/moon.pkg", "shared/todo_contract.mbt", "frontend/moon.mod",
+      "frontend/main/moon.pkg", "frontend/main/main.mbt", "frontend/public/index.html",
+      "frontend/public/styles.css", "backend/moon.mod", "backend/app/moon.pkg", "backend/app/main.mbt",
+      "backend/todo/moon.pkg", "backend/todo/backend.mbt", "backend/todo/commands.mbt",
     ] {
     guard find_planned_file(files, path) is Some(_) else {
       abort("missing planned file: " + path)
@@ -292,33 +292,50 @@ test "templates receive final author title and size" {
     ),
   )
   assert_false(backend_mod.contains("bin-deps"))
-  guard find_planned_file(files, "backend/todo/commands.g.mbt")
-    is Some(commands_g) else {
-    abort("missing backend/todo/commands.g.mbt")
+  assert_true(
+    backend_mod.contains(
+      "moonx moonbit-community/proton_codegen@" + default_proton_codegen_version,
+    ),
+  )
+  guard find_planned_file(files, "backend/todo/moon.pkg") is Some(todo_pkg) else {
+    abort("missing backend/todo/moon.pkg")
   }
-  assert_true(commands_g.contains("register_commands"))
+  assert_true(todo_pkg.contains("rule: \"proton_codegen\""))
+  assert_true(todo_pkg.contains("input: \"commands.mbt\""))
+  assert_true(todo_pkg.contains("output: \"commands.g.mbt\""))
   guard find_planned_file(files, "backend/app/main.mbt") is Some(main_mbt) else {
     abort("missing backend/app/main.mbt")
   }
-  assert_true(main_mbt.contains("@proton.config(\"moon.proton\")"))
+  assert_true(main_mbt.contains("@proton.config(\"proton.project.json\")"))
   assert_true(main_mbt.contains("backend.register_commands(registrar)"))
-  guard find_planned_file(files, "moon.proton") is Some(config) else {
-    abort("missing moon.proton")
+  guard find_planned_file(files, "proton.project.json") is Some(config) else {
+    abort("missing proton.project.json")
   }
-  assert_true(config.contains("product_name = \"Demo App\""))
-  assert_true(config.contains("identifier = \"com.justjavac.demo\""))
-  assert_true(config.contains("title: \"Demo App\""))
-  assert_true(config.contains("width: 1000"))
-  assert_true(config.contains("height: 700"))
-  assert_true(config.contains("path: \"backend\""))
-  assert_true(config.contains("package: \"app\""))
-  assert_true(config.contains("path: \"frontend\""))
-  assert_true(config.contains("before_dev: \"warren dev --port 4300\""))
-  assert_true(config.contains("value: \"frontend/dist/index.html\""))
-  assert_true(config.contains("bundle = {"))
-  assert_true(config.contains("active: true"))
-  assert_true(config.contains("targets: [\"app\", \"zip\"]"))
-  assert_true(config.contains("output: \"target/proton-dist\""))
+  let config_json = @json.parse(config) catch {
+    error => abort(error.to_string())
+  }
+  guard config_json
+    is {
+      "product_name": "Demo App",
+      "identifier": "com.justjavac.demo",
+      "window": { "title": "Demo App", "width": 1000, "height": 700, .. },
+      "backend": { "path": "backend", "package": "app", .. },
+      "frontend": {
+        "path": "frontend",
+        "before_dev": "warren dev --direct --port 4300",
+        ..
+      },
+      "entry": { "value": "frontend/dist/index.html", .. },
+      "bundle": {
+        "active": true,
+        "targets": ["app", "zip"],
+        "output": "dist",
+        ..
+      },
+      ..
+    } else {
+    abort("unexpected generated proton.project.json")
+  }
   guard find_planned_file(files, "README.md") is Some(readme) else {
     abort("missing README.md")
   }
@@ -342,10 +359,15 @@ test "user title can contain template braces" {
   let files = must_plan(
     must_options(["demo", "--title", "A {{ Demo }}", "--author", "braces"]),
   )
-  guard find_planned_file(files, "moon.proton") is Some(config) else {
-    abort("missing moon.proton")
+  guard find_planned_file(files, "proton.project.json") is Some(config) else {
+    abort("missing proton.project.json")
   }
-  assert_true(config.contains("product_name = \"A {{ Demo }}\""))
+  let config_json = @json.parse(config) catch {
+    error => abort(error.to_string())
+  }
+  guard config_json is { "product_name": "A {{ Demo }}", .. } else {
+    abort("generated title did not preserve template braces")
+  }
 }
 
 ///|
@@ -397,6 +419,11 @@ test "registry dependency failures are classified separately" {
   )
   assert_true(
     message.contains(
+      "moonbit-community/proton_codegen@" + default_proton_codegen_version,
+    ),
+  )
+  assert_true(
+    message.contains(
       "moonbit-community/proton_client@" + default_proton_client_version,
     ),
   )
@@ -418,8 +445,9 @@ test "registry dependency failures are classified separately" {
 
 ///|
 async test "project generation commits a complete staged tree" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-success-")
   let options = transaction_test_options(
-    "target/proton-new-transaction-success",
+    @fsutil.path_join(workspace, "project"),
   )
   remove_new_test_tree(options.resolved_target_dir)
   let files = must_plan(options)
@@ -444,7 +472,10 @@ async test "project generation commits a complete staged tree" {
 
 ///|
 async test "failed project writes leave no target or staging tree" {
-  let options = transaction_test_options("target/proton-new-transaction-failed")
+  let workspace = @async_fs.tmpdir(prefix="proton-new-failed-")
+  let options = transaction_test_options(
+    @fsutil.path_join(workspace, "project"),
+  )
   remove_new_test_tree(options.resolved_target_dir)
   let files = [
     PlannedFile::{ path: "blocked", content: "file" },
@@ -466,8 +497,9 @@ async test "failed project writes leave no target or staging tree" {
 
 ///|
 async test "failed project writes restore an existing empty target" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-empty-")
   let options = transaction_test_options(
-    "target/proton-new-transaction-empty-target",
+    @fsutil.path_join(workspace, "project"),
   )
   remove_new_test_tree(options.resolved_target_dir)
   ensure_dir_recursive(options.resolved_target_dir)
@@ -488,8 +520,9 @@ async test "failed project writes restore an existing empty target" {
 
 ///|
 async test "cancelled project generation removes its staging tree" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-cancelled-")
   let options = transaction_test_options(
-    "target/proton-new-transaction-cancelled",
+    @fsutil.path_join(workspace, "project"),
   )
   remove_new_test_tree(options.resolved_target_dir)
   let outcome = @async.with_timeout_opt(0, () => {
@@ -506,8 +539,11 @@ async test "cancelled project generation removes its staging tree" {
 
 ///|
 async test "moon check failure is rolled back before publication" {
+  let workspace = @async_fs.tmpdir(prefix="proton-new-check-failed-")
   let raw = must_parse([
-    "target/proton-new-transaction-check-failed", "--check", "--no-git",
+    @fsutil.path_join(workspace, "project"),
+    "--check",
+    "--no-git",
   ])
   let options = options_from_raw(".", raw)
   remove_new_test_tree(options.resolved_target_dir)

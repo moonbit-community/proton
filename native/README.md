@@ -45,20 +45,13 @@ caller still drains `proton_runtime_poll_*` until the queues are empty. Engine
 builds on Windows, macOS, and Linux expose the `runtime_wait` feature. ABI-only
 builds return `PROTON_ERR_UNSUPPORTED`.
 
-On macOS, Windows, and Linux, `proton_app_run` owns the calling UI thread and
-runs the platform UI loop plus CEF's native message loop there. It creates one
-application thread for the MoonBit async scheduler and joins that thread only
-after the application entry has returned. Public runtime and window handles
-are created and owned by the application thread; native engine operations
-marshal to the UI thread. Native callbacks never enter MoonBit. They enqueue
-work and signal the facade's wakeup source so the MoonBit scheduler can resume
-the waiting task. macOS and Linux use a non-blocking pipe descriptor supplied
-by MoonBit. Windows exposes a platform-owned named pipe that MoonBit opens
-before activating it. Linux dispatches UI work through the GLib main context
-owned by the runner. Under this managed runner, `proton_runtime_run`,
-`proton_runtime_quit`, `proton_runtime_do_message_loop_work`,
-`proton_runtime_wait`, and `proton_runtime_next_wakeup_delay_ms` return
-`PROTON_ERR_UNSUPPORTED`.
+`proton_host_loop_begin`, `proton_host_loop_poll`, and `proton_host_loop_end`
+integrate the platform toolkit and CEF external message pump with the host's
+event loop. The host loop owns the process main thread, while application code
+runs as ordinary async work on that same thread. Native callbacks never enter
+MoonBit; they enqueue work and signal the host loop so the scheduler can resume
+the waiting task. There is no separate Proton application runner or blocking
+CEF-owned message-loop API.
 
 It also exposes `proton_runtime_probe_json`, which validates the configured
 runtime layout before initialization. The probe checks `runtime_root`,
@@ -177,14 +170,6 @@ directory on `LD_LIBRARY_PATH` and prepend the basename `libcef.so` to
 `LD_PRELOAD`. `proton_cli dev`, the self-hosted E2E runner, and native CTest do
 this automatically. Using the basename keeps runtime paths containing spaces
 valid.
-
-The managed Linux application runner creates the MoonBit application worker
-before the worker requests runtime initialization on the UI thread. Proton
-therefore adds `--no-zygote` only to that browser process; Chromium otherwise
-forks its zygote after a thread already exists. The existing `no_sandbox`
-setting is retained, as Chromium requires `--no-zygote` and `--no-sandbox`
-together. External message-pump hosts and CEF helper processes keep their
-normal command lines.
 
 Linux `titlebar_style: "overlay"` uses GTK client chrome on the existing X11
 engine path. The CEF child fills the complete client area, while GTK-native

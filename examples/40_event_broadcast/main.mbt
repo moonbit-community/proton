@@ -91,15 +91,13 @@ async fn run_ticker(
 }
 
 ///|
-fn main {
-  @proton.run(() => {
-    let app = @proton.html(
-      "MoonBit Event Broadcast",
-      resource,
-      width=900,
-      height=620,
-      debug=true,
-    ).expose(ticker_extension())
-    app.run_or_abort()
-  })
+async fn main {
+  let app = @proton.html(
+    "MoonBit Event Broadcast",
+    resource,
+    width=900,
+    height=620,
+    debug=true,
+  ).expose(ticker_extension())
+  app.run_or_abort()
 }

@@ -1,13 +1,13 @@
 name = "moonbit-community/proton/examples"
 
-version = "0.1.15"
+version = "0.1.16"
 
 import {
   "moonbitlang/x@0.4.49",
-  "moonbitlang/async@0.20.3",
-  "moonbit-community/proton_ext@0.1.15",
-  "moonbit-community/proton_contract@0.1.15",
-  "moonbit-community/proton@0.1.15",
+  "moonbitlang/async@0.20.5",
+  "moonbit-community/proton_ext@0.1.16",
+  "moonbit-community/proton_contract@0.1.16",
+  "moonbit-community/proton@0.1.16",
 }
 
 readme = "README.md"
@@ -24,12 +24,12 @@ rule(name: "embed", command: ":embed -i $input -o $output")
 
 rule(
   name: "proton_codegen",
-  command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen $input -o $output",
+  command: "moon -C \"$mod_dir/../codegen\" run --target-dir \"$mod_dir/../codegen/_build\" --target wasm . -- -C \"$mod_dir\" \"$input\" -o \"$output\"",
 )
 
 rule(
   name: "proton_extension_identity_codegen",
-  command: "moon -C $mod_dir/../cli run --target-dir ../target/proton-codegen-moon . -- -C $mod_dir codegen --extension-identity $input -o $output",
+  command: "moon -C \"$mod_dir/../codegen\" run --target-dir \"$mod_dir/../codegen/_build\" --target wasm . -- -C \"$mod_dir\" --extension-identity \"$input\" -o \"$output\"",
 )
 
 source = ""

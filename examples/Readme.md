@@ -16,9 +16,9 @@ runtime="$PWD/$(node -p "JSON.parse(require('fs').readFileSync('.proton/runtime.
 export PATH="$runtime/bin:$PATH"
 ```
 
-Generated-command examples run the repository CLI through
-`moon -C ../cli run ... codegen` build rules; no separate CLI install is
-needed when working inside this repository.
+Generated-command examples build and run the repository's standalone
+`proton_codegen` WASM executable through Moon prebuild rules. Released
+applications use the same executable through `moonx`.
 
 To create a fresh app project instead of working inside `examples/`, install
 the released CLI and scaffold a project:
@@ -66,7 +66,7 @@ moon -C examples run 01_run --target native
   MoonBit E2E suite (`e2e/`).
 - `42_attribute_codegen_commands`: generated command metadata plus generated
   event helper over the native DLL bridge.
-- `44_project_config`: `moon.proton` project config decoding
+- `44_project_config`: `proton.project.json` project config decoding
 - `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Vite dev-server injection smoke for extension
@@ -87,7 +87,7 @@ moon -C examples run 01_run --target native
 - `54_devtools`: opens CEF DevTools programmatically through
   `BrowserHandle::open_devtools` and closes it with the window lifecycle.
 
-All runnable examples should import `moonbit-community/proton`. `moon.proton`
+All runnable examples should import `moonbit-community/proton`. `proton.project.json`
 configures app settings such as window, entry, debug, frontend, and bundle
 metadata.
 

@@ -1,20 +1,7 @@
 ///|
 /// Runs the configured app through the native Proton runtime.
 pub async fn App::run(self : App) -> Unit raise AppRunError {
-  guard app_runner_is_active() else {
-    let message =
-      #|Proton applications must be started with @proton.run from a synchronous main:
-      #|
-      #|fn main {
-      #|  @proton.run(() => {
-      #|    @proton.app().run_or_abort()
-      #|  })
-      #|}
-      #|
-      #|Do not call App::run directly from async fn main.
-      #|
-    raise RunnerError(message)
-  }
+  require_event_loop()
   match self.validation_error() {
     Some(error) => raise ConfigurationError(error)
     None => ()
@@ -130,10 +117,8 @@ async fn run_manifest(
   let lifecycle = AppLifecycle::new()
   lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
-  let helper_path = bundled_runtime_helper_path()
   let runtime = @native.Runtime::new(
     config=@native.RuntimeConfig::bundled(
-      helper_path?,
       remote_debugging_port=debug_port(manifest.debug),
       headless~,
     ),
@@ -160,19 +145,7 @@ async fn run_manifest(
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
-  let wakeup = RuntimeWakeup::new(runtime) catch {
-    error => {
-      let failure = cleanup_run_error(
-        Some(error),
-        app_cleanup(lifecycle, runtime, windows, None),
-      )
-      match failure {
-        Some(cleanup_error) => raise cleanup_error
-        None => raise error
-      }
-    }
-  }
-  defer wakeup.close()
+  let wakeup = RuntimeWakeup::new()
   try {
     match menu {
       Some(menu) =>
@@ -471,10 +444,9 @@ fn native_run_error(
 ///|
 fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
-    RunnerError(message) => RunnerError(message)
+    EventLoopError(message) => EventLoopError(message)
     ConfigurationError(error) => ConfigurationError(error)
     NativeRuntimeError(action~, error~) => NativeRuntimeError(action~, error~)
-    RuntimeWakeupError(error) => RuntimeWakeupError(error)
     CommandExtensionLifecycleError(error) =>
       CommandExtensionLifecycleError(error)
     LifecycleHookError(error) => LifecycleHookError(error)
@@ -631,7 +603,7 @@ fn bridge_startup_timeout_diagnostic(
 ///|
 fn app_run_error_dialog_text(error : AppRunError) -> String {
   match error {
-    RunnerError(message) => message
+    EventLoopError(message) => message
     BridgeStartupError(diagnostic) =>
       "The application could not finish starting its native bridge.\n\nError code: " +
       diagnostic.code
@@ -647,7 +619,6 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
       feature
     NativeRuntimeError(action~, error~) =>
       action + " failed: " + error.message()
-    RuntimeWakeupError(error) => error.message()
     CommandExtensionLifecycleError(error) => error.message()
     LifecycleHookError(error) => error.message()
     UnexpectedTaskFailure(detail~) => detail
@@ -696,8 +667,6 @@ async fn show_window_failure_dialog(
     match result {
       @native.DialogPollResult::Ready(_) => return
       @native.DialogPollResult::Pending =>
-        // The main pump is no longer running on this error path, so this
-        // waiter must consume the native pipe itself.
         wakeup.wait_after(revision) catch {
           _ => return
         }

@@ -14,8 +14,9 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 
 Checks release metadata and prebuilt ABI metadata, checks the host platform's
 prebuilt exports, then checks that committed generated MoonBit files match
-their sources. It writes fresh outputs to a temp directory and compares them
-against the repository.
+their sources. It builds the standalone `proton_codegen` WASM executable,
+writes fresh outputs to a temp directory, and compares them against the
+repository.
 
 ```sh
 node ./scripts/verify_generated.mjs
@@ -28,7 +29,7 @@ inspection. Release validation should keep using the default command.
 
 Run this before publishing `proton` or `proton_ext`, and after changing any of:
 
-- extension `#proton.command` annotations or `moon.ext` metadata
+- extension `#proton.command` annotations or `proton.ext.json` metadata
 - `extensions/fs/assets/*.js`
 - `extensions/path/assets/*.js`
 
@@ -63,9 +64,10 @@ moon run scripts/bump_version.mbtx -- major
 
 ## `verify_prebuilt_abi.mjs`
 
-Checks every shipped Proton prebuilt manifest, declared artifact, and public
-header. Pass a platform id to also inspect that platform's dynamic-library
-exports against the `PROTON_API` declarations in `native/include/proton_native.h`:
+With `--metadata-only`, checks every shipped Proton prebuilt manifest, declared
+artifact, and public header. Pass a platform id to validate only that platform's
+staged artifacts and inspect its dynamic-library exports against the
+`PROTON_API` declarations in `native/include/proton_native.h`:
 
 ```sh
 node ./scripts/verify_prebuilt_abi.mjs --metadata-only

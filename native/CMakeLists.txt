@@ -13,13 +13,11 @@ set(PROTON_ENGINE_ROOT "" CACHE PATH "Native browser engine runtime/SDK root")
 set(PROTON_PREBUILT_SOURCE_HASH "" CACHE STRING
     "Source hash embedded in shipped Windows binaries")
 set(PROTON_ENGINE_SOURCES src/engine/proton_engine_none.c)
-set(PROTON_APP_RUNNER_SOURCE src/app_runner_stub.c)
 set(PROTON_NOTIFICATION_SOURCE src/engine/notification_stub.c)
 set(PROTON_PLATFORM_EVENT_SOURCES src/engine/platform_events_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner_win.c)
     set(PROTON_NOTIFICATION_SOURCE src/engine/cef_win/notification.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_win/proton_engine_cef_win.c
@@ -27,7 +25,6 @@ if(PROTON_WITH_ENGINE)
     )
   elseif(APPLE)
     enable_language(OBJC CXX OBJCXX)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner.m)
     set(PROTON_NOTIFICATION_SOURCE src/engine/cef_mac/notification.m)
     set(PROTON_PLATFORM_EVENT_SOURCES
       src/engine/cef_mac/launch_input.m
@@ -39,7 +36,6 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/menu.m
     )
   elseif(UNIX)
-    set(PROTON_APP_RUNNER_SOURCE src/app_runner_linux.c)
     set(PROTON_NOTIFICATION_SOURCE src/engine/cef_linux/notification.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
@@ -85,7 +81,6 @@ add_library(proton SHARED
   src/proton_state.c
   src/proton_update.c
   src/proton.c
-  ${PROTON_APP_RUNNER_SOURCE}
   ${PROTON_NOTIFICATION_SOURCE}
   ${PROTON_PLATFORM_EVENT_SOURCES}
   src/engine/cef_common/bridge_lifecycle.c
@@ -467,6 +462,16 @@ if(BUILD_TESTING)
     tests/proton_state_smoke.c
     src/proton_state.c
   )
+  if(APPLE)
+    add_executable(proton_config_test
+      tests/proton_config_test.c
+      src/proton_config.c
+      src/proton_json.c
+    )
+    target_include_directories(proton_config_test PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+  endif()
   # TODO(windows): add a native updater test with the Windows apply path. The
   # current suite constructs and inspects POSIX/macOS filesystem layouts.
   if(NOT WIN32)
@@ -516,6 +521,9 @@ if(BUILD_TESTING)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
+  if(APPLE)
+    add_test(NAME proton_config_test COMMAND proton_config_test)
+  endif()
   if(NOT WIN32)
     add_test(NAME proton_update_test COMMAND proton_update_test)
   endif()

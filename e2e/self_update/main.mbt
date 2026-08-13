@@ -130,16 +130,6 @@ fn require_env(name : String) -> String raise {
 
 ///|
 fn parent(path : String) -> String {
-  let characters = path.to_array()
-  let mut cut = -1
-  for index in 0..<characters.length() {
-    if characters[index] == '/' {
-      cut = index
-    }
-  }
-  if cut <= 0 {
-    "."
-  } else {
-    path[0:cut].to_owned()
-  }
+  let native_path : @mbpath.Path = path
+  native_path.dirname().to_string()
 }

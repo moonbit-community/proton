@@ -3,7 +3,7 @@ test "runtime config rebases portable paths into host path components" {
   let entry = build_app_entry_from_parts(
     "asset",
     "frontend/dist/index.html",
-    Some("target/proton-runtime-config"),
+    Some("fixtures/proton-runtime-config"),
   )
   match entry {
     Asset(path) => {

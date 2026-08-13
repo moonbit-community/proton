@@ -237,18 +237,11 @@ test "app run errors retain typed bridge diagnostics" {
 }
 
 ///|
-async test "app run requires the Proton application runner" {
-  let mut rejected = false
-  html("Test", "<html></html>").run() catch {
-    RunnerError(message) => {
-      rejected = true
-      assert_true(message.contains("@proton.run"))
-      assert_true(message.contains("synchronous main"))
-      assert_true(message.contains("async fn main"))
-    }
-    error => fail("expected runner error, got " + @debug.render(Repr(error)))
-  }
-  assert_true(rejected)
+/// `fn init` installing the loop is what lets an application be a plain
+/// `async fn main`. If it ever stops running, nothing else fails until
+/// `App::run` refuses to start, so assert it directly.
+test "the event loop is installed during process initialization" {
+  require_event_loop()
 }
 
 ///|
@@ -990,16 +983,8 @@ async test "application lifecycle hooks shut down in reverse order" {
 }
 
 ///|
-#cfg(not(platform="windows"))
 async test "runtime wakeup preserves notification before suspension" {
-  let (reader, writer) = @pipe.pipe()
-  let wakeup = RuntimeWakeup::{
-    reader: RuntimeWakeReader(reader),
-    writer: Some(writer),
-    signal: @core.RuntimeWakeSignal::new(),
-    closed: false,
-  }
-  defer wakeup.close()
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal::new() }
   let revision = wakeup.revision()
   wakeup.signal.notify()
   let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))
@@ -1158,31 +1143,23 @@ test "entry HTML injection does not install the bridge" {
 
 ///|
 fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
+  let config : Json = {
+    "window": { "title": "Dev Test", "width": 320, "height": 240 },
+    "entry": { "kind": "asset", "value": "app.html" },
+    "debug": true,
   }
-  @mbfs.create_dir("target/proton-facade-dev") catch {
-    _ => ()
+  guard config is Object(fields) else {
+    abort("expected project config object")
   }
-  let frontend = match dev_url {
-    Some(url) => "\nfrontend = {\n  dev_url: \"" + url + "\",\n}\n"
-    None => ""
+  match dev_url {
+    Some(url) => fields["frontend"] = { "dev_url": url }
+    None => ()
   }
-  let base =
-    #|window = {
-    #|  title: "Dev Test",
-    #|  width: 320,
-    #|  height: 240,
-    #|}
-    #|
-    #|entry = {
-    #|  kind: "asset",
-    #|  value: "app.html",
-    #|}
-    #|
-    #|debug = true
-    #|
-  @mbfs.write_string_to_file(path, base + frontend, encoding="utf8") catch {
+  @mbfs.write_string_to_file(
+    path,
+    Json::object(fields).stringify(indent=2) + "\n",
+    encoding="utf8",
+  ) catch {
     err => abort(@debug.render(Repr(err)))
   }
 }
@@ -1196,8 +1173,9 @@ fn restore_env_var(name : String, value : String?) -> Unit {
 }
 
 ///|
-test "implicit config path honors PROTON_CONFIG_PATH" {
-  let config_path = "target/proton-facade-dev/implicit-env.moon.proton"
+async test "implicit config path honors PROTON_CONFIG_PATH" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/implicit-env.proton.project.json"
   write_facade_dev_config(config_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
   defer restore_env_var("PROTON_CONFIG_PATH", old_config)
@@ -1210,17 +1188,20 @@ test "implicit config path honors PROTON_CONFIG_PATH" {
 test "packaged config takes precedence over environment and working directory" {
   @debug.assert_eq(
     choose_implicit_config_path(
-      bundled=Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
-      environment=Some("/tmp/override.moon.proton"),
+      bundled=Some(
+        "/Applications/Todo.app/Contents/Resources/proton.project.json",
+      ),
+      environment=Some("/tmp/override.proton.project.json"),
       cwd_has_default=true,
     ),
-    Some("/Applications/Todo.app/Contents/Resources/moon.proton"),
+    Some("/Applications/Todo.app/Contents/Resources/proton.project.json"),
   )
 }
 
 ///|
-test "default config API honors PROTON_CONFIG_PATH" {
-  let config_path = "target/proton-facade-dev/config-api-env.moon.proton"
+async test "default config API honors PROTON_CONFIG_PATH" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/config-api-env.proton.project.json"
   write_facade_dev_config(config_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
   let old_dev = @env.get_env_var("PROTON_DEV")
@@ -1232,16 +1213,17 @@ test "default config API honors PROTON_CONFIG_PATH" {
   @env.set_env_var("PROTON_CONFIG_PATH", config_path)
   @env.unset_env_var("PROTON_DEV")
   @env.unset_env_var("PROTON_MODE")
-  let app = config("moon.proton")
+  let app = config("proton.project.json")
   @debug.assert_eq(app.file_path, Some(config_path))
   let resolved = unwrap_configuration(() => app.resolved_app_config())
   assert_eq(resolved.manifest.window.title, "Dev Test")
 }
 
 ///|
-test "config API keeps non-default paths explicit" {
-  let config_path = "target/proton-facade-dev/explicit.moon.proton"
-  let env_path = "target/proton-facade-dev/explicit-env.moon.proton"
+async test "config API keeps non-default paths explicit" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/explicit.proton.project.json"
+  let env_path = root + "/explicit-env.proton.project.json"
   write_facade_dev_config(config_path)
   write_facade_dev_config(env_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
@@ -1252,8 +1234,9 @@ test "config API keeps non-default paths explicit" {
 }
 
 ///|
-test "config API overrides manifest fields and keeps base dir" {
-  let config_path = "target/proton-facade-dev/api-overrides.moon.proton"
+async test "config API overrides manifest fields and keeps base dir" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/api-overrides.proton.project.json"
   write_facade_dev_config(config_path)
   let old_dev = @env.get_env_var("PROTON_DEV")
   let old_mode = @env.get_env_var("PROTON_MODE")
@@ -1288,8 +1271,9 @@ test "config API overrides manifest fields and keeps base dir" {
 }
 
 ///|
-test "dev manifest uses env override or frontend dev_url" {
-  let override_path = "target/proton-facade-dev/env-override.moon.proton"
+async test "dev manifest uses env override or frontend dev_url" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let override_path = root + "/env-override.proton.project.json"
   write_facade_dev_config(override_path, dev_url="http://localhost:5173")
   let old_dev = @env.get_env_var("PROTON_DEV")
   let old_url = @env.get_env_var("PROTON_FRONTEND_URL")
@@ -1307,7 +1291,7 @@ test "dev manifest uses env override or frontend dev_url" {
     _ => fail("expected dev URL entry")
   }
 
-  let config_path = "target/proton-facade-dev/config-dev-url.moon.proton"
+  let config_path = root + "/config-dev-url.proton.project.json"
   write_facade_dev_config(config_path, dev_url="http://localhost:5173")
   @env.unset_env_var("PROTON_FRONTEND_URL")
   let config_manifest = unwrap_configuration(() => {
@@ -1355,11 +1339,9 @@ test "single instance builder validates and resolves an inline identity" {
 }
 
 ///|
-test "launch activation classifies URLs and existing documents" {
-  let document = "target/proton-facade-activation.txt"
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
+async test "launch activation classifies URLs and existing documents" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-activation-")
+  let document = root + "/activation.txt"
   @mbfs.write_string_to_file(document, "activation", encoding="utf8") catch {
     error => abort(@debug.render(Repr(error)))
   }
@@ -1368,11 +1350,7 @@ test "launch activation classifies URLs and existing documents" {
   assert_false(launch_argument_is_url("custom:value", ["other"]))
   assert_true(launch_argument_is_document(document, ["txt"]))
   assert_false(launch_argument_is_document(document, ["md"]))
-  assert_false(
-    launch_argument_is_document("target/proton-facade-activation-missing.txt", [
-      "txt",
-    ]),
-  )
+  assert_false(launch_argument_is_document(root + "/missing.txt", ["txt"]))
 }
 
 ///|

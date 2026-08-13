@@ -1,10 +1,6 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "moonbitlang/core/string",
-  "moonbitlang/lexer",
-  "moonbitlang/lexer/basic",
-  "moonbitlang/lexer/tokens",
   "moonbitlang/moon_config",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,

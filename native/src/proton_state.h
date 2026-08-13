@@ -24,8 +24,6 @@ typedef struct {
   bool occupied;
   bool destroyed;
   bool engine_backed;
-  bool running;
-  bool quit_requested;
   proton_engine_runtime_t *engine_runtime;
   int64_t app_instance;
   bool owner_thread_set;

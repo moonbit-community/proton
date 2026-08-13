@@ -1,9 +1,9 @@
 ///|
 fn config_path() -> String {
-  if @mbfs.path_exists("44_project_config/moon.proton") {
-    "44_project_config/moon.proton"
+  if @mbfs.path_exists("44_project_config/proton.project.json") {
+    "44_project_config/proton.project.json"
   } else {
-    "examples/44_project_config/moon.proton"
+    "examples/44_project_config/proton.project.json"
   }
 }
 
@@ -85,11 +85,7 @@ fn main {
   let bundle = require_some(config.bundle(), "bundle")
   assert_bool(bundle.active(), true, "bundle.active")
   assert_strings(bundle.targets(), ["app", "zip"], "bundle.targets")
-  assert_path_suffix(
-    bundle.output(),
-    "44_project_config/target/proton-dist",
-    "bundle.output",
-  )
+  assert_path_suffix(bundle.output(), "44_project_config/dist", "bundle.output")
 
   match config.dev_manifest().manifest().entry {
     @manifest.AppEntry::Url(url) =>

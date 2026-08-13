@@ -4,7 +4,7 @@
 // `bin` directory with the whole runtime under a sibling `Resources/proton`.
 // That shape is not cosmetic — it is what lets two existing mechanisms work
 // unchanged. `bundled_config_path` in the facade already looks for
-// `../Resources/moon.proton` relative to the executable, and
+// `../Resources/proton.project.json` relative to the executable, and
 // `proton_default_runtime_root` in the native library derives the runtime root
 // by walking up from the directory holding libproton when that directory is
 // named `lib`. Keeping the layouts parallel means neither needs a Linux case.
@@ -188,7 +188,7 @@ async fn stage_linux_appdir_impl(
   set_linux_rpath(staged_executable, linux_package_rpath)
   stage_release_project_config(
     plan.config_path,
-    @fsutil.resolve_path(resources, "moon.proton"),
+    @fsutil.resolve_path(resources, "proton.project.json"),
   )
   stage_project_inputs(plan, resources)
 

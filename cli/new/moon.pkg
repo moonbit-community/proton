@@ -1,5 +1,4 @@
 import {
-  "moonbit-community/proton_cli/codegen",
   "moonbit-community/proton_cli/fsutil",
   "moonbit-community/proton_cli/output",
   "moonbitlang/async",
@@ -10,6 +9,7 @@ import {
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/path",
 }

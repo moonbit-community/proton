@@ -1,9 +1,7 @@
 ///|
-fn main {
-  @proton.run(() => {
-    let backend = @todo.Backend::new()
-    @proton.config("moon.proton")
-    .commands(fn(registrar) raise { backend.register_commands(registrar) })
-    .run_or_abort()
-  })
+async fn main {
+  let backend = @todo.Backend::new()
+  @proton.config("proton.project.json")
+  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+  .run_or_abort()
 }

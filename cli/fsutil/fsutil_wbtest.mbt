@@ -1,8 +1,5 @@
 ///|
 fn ensure_fsutil_test_dir(path : String) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
   @mbfs.create_dir(path) catch {
     _ => ()
   }
@@ -63,26 +60,49 @@ test "resolve_path keeps Windows parent traversal tail" {
 }
 
 ///|
-test "path_parent returns parent or self sentinel" {
+#cfg(not(platform="windows"))
+test "path_parent follows host dirname semantics" {
   assert_eq(path_parent("/a/b"), "/a")
-  assert_eq(path_parent("/a"), "/a")
-  assert_eq(path_parent("a"), "a")
+  assert_eq(path_parent("/a"), "/")
+  assert_eq(path_parent("a"), ".")
   assert_eq(path_parent("a\\b/c"), "a\\b")
   assert_eq(path_parent("a/b/"), "a")
+}
+
+///|
+#cfg(platform="windows")
+test "path_parent follows Windows dirname semantics" {
+  assert_eq(path_parent("C:\\a\\b"), "C:\\a")
+  assert_eq(path_parent("C:\\a"), "C:\\")
+  assert_eq(path_parent("a"), ".")
+  assert_eq(path_parent("a\\b/c"), "a\\b")
+  assert_eq(path_parent("a/b/"), "a")
+}
+
+///|
+test "relative_path and containment use path components" {
+  let root = resolve_path("/fixture", "proton-fsutil-containment")
+  assert_eq(
+    relative_path(root, path_join(root, "nested/file")),
+    path_join("nested", "file"),
+  )
+  assert_true(path_is_within(root, root))
+  assert_true(path_is_within(root, path_join(root, "nested/file")))
+  assert_false(path_is_within(root, root + "-sibling/file"))
+  assert_false(path_is_within(root, resolve_path(root, "../outside")))
 }
 
 ///|
 test "path_join joins with the platform separator" {
   assert_eq(path_join("", "a"), "a")
   assert_eq(path_join("a", ""), "a")
-  assert_eq(path_join("a/", "b"), "a/b")
+  assert_eq(path_join("a/", "b"), "a" + @path.sep.to_string() + "b")
   assert_eq(path_join("a", "b"), "a" + @path.sep.to_string() + "b")
 }
 
 ///|
 async test "find_project_root_from walks up to marker" {
-  let root = "target/proton-fsutil-project-root"
-  ensure_fsutil_test_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-fsutil-project-root-")
   ensure_fsutil_test_dir(path_join(root, "nested"))
   ensure_fsutil_test_dir(path_join(root, "nested/child"))
   write_fsutil_test_file(path_join(root, "moon.work"), "")
@@ -91,11 +111,10 @@ async test "find_project_root_from walks up to marker" {
 
 ///|
 async test "find_project_root_from returns start without marker" {
-  let root = "target/proton-fsutil-no-marker"
-  ensure_fsutil_test_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-fsutil-no-marker-")
   ensure_fsutil_test_dir(path_join(root, "nested"))
-  assert_eq(
-    find_project_root_from(path_join(root, "nested")),
-    path_join(root, "nested"),
-  )
+  let start = path_join(root, "nested")
+  let actual = find_project_root_from(start)
+  @async_fs.rmdir(root, recursive=true)
+  assert_eq(actual, start)
 }

@@ -101,6 +101,7 @@ function checkTemplateDefaults(expected) {
 
 const workspaceModuleManifests = [
   "cdp/moon.mod",
+  "codegen/moon.mod",
   "config/moon.mod",
   "contract/moon.mod",
   "rsa/moon.mod",
@@ -141,6 +142,7 @@ function checkLockstepVersions(expectedVersion) {
 }
 
 const protonVersion = moduleVersion("proton/moon.mod");
+const codegenVersion = moduleVersion("codegen/moon.mod");
 const configVersion = moduleVersion("config/moon.mod");
 const contractVersion = moduleVersion("contract/moon.mod");
 const clientVersion = moduleVersion("client/moon.mod");
@@ -150,6 +152,7 @@ checkLockstepVersions(protonVersion);
 checkPrebuiltManifests(protonVersion);
 checkTemplateDefaults({
   default_proton_version: protonVersion,
+  default_proton_codegen_version: codegenVersion,
   default_proton_cli_version: cliVersion,
   default_proton_contract_version: contractVersion,
   default_proton_client_version: clientVersion,

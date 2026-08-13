@@ -106,16 +106,16 @@ pub fn view(
 }
 
 ///|
-/// Creates an application from `PROTON_CONFIG_PATH`, `moon.proton` in the
+/// Creates an application from `PROTON_CONFIG_PATH`, `proton.project.json` in the
 /// current working directory, or code-only defaults.
 pub fn app() -> App {
   config_app(None, auto_config=true)
 }
 
 ///|
-/// Creates an application backed by a `moon.proton` config file.
+/// Creates an application backed by a `proton.project.json` config file.
 ///
-/// The default `moon.proton` path honors `PROTON_CONFIG_PATH` and packaged
+/// The default `proton.project.json` path honors `PROTON_CONFIG_PATH` and packaged
 /// config discovery. Other paths are used exactly as provided.
 pub fn config(path : String) -> App {
   let path = if path == default_config_file {

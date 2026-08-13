@@ -37,8 +37,6 @@ pub fn last_error_message() -> String
 
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError
 
-pub fn run(async () -> Unit) -> Unit
-
 pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 
 pub fn runtime_info_json() -> String raise @native.NativeError
@@ -87,11 +85,10 @@ pub(all) suberror AppPathError {
 pub fn AppPathError::message(Self) -> String
 
 pub(all) suberror AppRunError {
-  RunnerError(String)
+  EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
-  RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
@@ -122,15 +119,6 @@ pub(all) suberror NotificationDeliveryError {
   WaitInterrupted(detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NotificationDeliveryError::message(Self) -> String
-
-pub(all) suberror RuntimeWakeupError {
-  UnsupportedFeature(feature~ : String)
-  PipeCreateFailed(detail~ : String)
-  SourceOpenFailed(source~ : String, detail~ : String)
-  SourceClosed
-  MissingNotification
-} derive(@debug.Debug)
-pub fn RuntimeWakeupError::message(Self) -> String
 
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)

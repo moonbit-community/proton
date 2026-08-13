@@ -1,7 +1,6 @@
 ///|
-/// Schema and semantic failures inside one parsed `moon.ext` document.
+/// Schema and semantic failures inside one parsed `proton.ext.json` document.
 pub(all) suberror ExtensionMetadataError {
-  DuplicateField(field~ : String)
   UnknownField(field~ : String)
   MissingField(field~ : String)
   InvalidType(field~ : String, expected~ : String)
@@ -17,24 +16,24 @@ pub(all) suberror ExtensionMetadataError {
 ///|
 pub fn ExtensionMetadataError::message(self : ExtensionMetadataError) -> String {
   match self {
-    DuplicateField(field~) => "duplicate moon.ext field: " + field
-    UnknownField(field~) => "unknown moon.ext field: " + field
-    MissingField(field~) => "missing required moon.ext field: " + field
+    UnknownField(field~) => "unknown proton.ext.json field: " + field
+    MissingField(field~) => "missing required proton.ext.json field: " + field
     InvalidType(field~, expected~) =>
-      "moon.ext field `" + field + "` must be " + expected
-    EmptyField(field~) => "moon.ext field `" + field + "` must not be empty"
+      "proton.ext.json field `" + field + "` must be " + expected
+    EmptyField(field~) =>
+      "proton.ext.json field `" + field + "` must not be empty"
     UnsupportedPlatform(platform~) =>
-      "moon.ext platforms contains unsupported platform: " + platform
+      "proton.ext.json platforms contains unsupported platform: " + platform
     DuplicateValue(field~, value~) =>
-      "moon.ext " + field + " contains duplicate value: " + value
+      "proton.ext.json " + field + " contains duplicate value: " + value
     SelfDependency(id~) =>
-      "moon.ext dependencies must not include itself: " + id
+      "proton.ext.json dependencies must not include itself: " + id
     InvalidNamespace(value~, reason~) =>
-      "invalid moon.ext namespace `" + value + "`: " + reason
+      "invalid proton.ext.json namespace `" + value + "`: " + reason
     InvalidImportPath(value~, reason~) =>
       "invalid MoonBit import path `" + value + "`: " + reason
     InvalidPackageName(value~, reason~) =>
-      "invalid moon.ext package `" + value + "`: " + reason
+      "invalid proton.ext.json package `" + value + "`: " + reason
   }
 }
 
@@ -58,11 +57,12 @@ pub fn ExtensionDescriptorError::message(
   self : ExtensionDescriptorError,
 ) -> String {
   match self {
-    InvalidMetadataFile(path~) => path + ": extension metadata must be moon.ext"
+    InvalidMetadataFile(path~) =>
+      path + ": extension metadata must be proton.ext.json"
     ReadFailed(path~, detail~) =>
       path + ": failed to read metadata file: " + detail
     Syntax(path~, diagnostics~) => path + ": " + diagnostics
-    InvalidRoot(path~) => path + ": expected field list for moon.ext"
+    InvalidRoot(path~) => path + ": expected a JSON object for proton.ext.json"
     InvalidMetadata(path~, error~) => path + ": " + error.message()
   }
 }

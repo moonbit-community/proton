@@ -51,15 +51,13 @@ async fn hold_child_process(
 }
 
 ///|
-fn main {
-  @proton.run(() => {
-    let app = @proton.html(
-      "Child Process Close Repro",
-      resource,
-      width=760,
-      height=520,
-      debug=true,
-    ).expose(child_process_extension())
-    app.run_or_abort()
-  })
+async fn main {
+  let app = @proton.html(
+    "Child Process Close Repro",
+    resource,
+    width=760,
+    height=520,
+    debug=true,
+  ).expose(child_process_extension())
+  app.run_or_abort()
 }

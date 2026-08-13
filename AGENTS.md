@@ -36,8 +36,9 @@ developer must perform them.
   metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
   helpers. Do not reintroduce the old app runtime route without an explicit
   design decision.
-- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module plus
-  `cli/codegen/` and `cli/doctor/` helpers.
+- `codegen/`: `moonbit-community/proton_codegen`; WASM executable invoked through
+  `moonx` by application prebuild rules, plus its reusable parser/renderer library.
+- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
@@ -64,8 +65,8 @@ developer must perform them.
   aligned with the actual examples.
 - `proton/prebuilt/<platform>/`: shipped Proton-only native artifacts. Do not
   put CEF runtime files here.
-- `lib/`, `build/`, `_build/`, `target/`, `native/build*`, `native/dist/`:
-  generated or vendored artifacts.
+- `lib/`, `build/`, `_build/`, `native/build*`, `native/dist/`: generated or
+  vendored artifacts. Packaged application artifacts are written to `dist/`.
 - `.proton/`: generated project runtime cache created by `proton_cli cef setup`.
 
 ## Build And Test
@@ -91,9 +92,10 @@ developer must perform them.
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
+  `moon -C codegen test lib --target wasm`
+- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+  `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
-- `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
 - `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
 - `moon test -p moonbit-community/proton_ffi moonbit-community/proton_auto_launch moonbit-community/proton_clipboard moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone moonbit-community/proton_tray --target native`
@@ -117,7 +119,7 @@ native checks before handing off larger refactors.
 
 ## Generated Files And Release Flow
 - Published `proton` and `proton_ext` packages must not require repository-local `dev_build` or `rule` commands. Generated `.mbt` files are committed and consumed directly by downstream users.
-- When changing extension command annotations, `moon.ext` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
+- When changing extension command annotations, `proton.ext.json` metadata, helper JavaScript assets, or the Proton core JS bridge templates, regenerate and commit the matching generated files before publishing.
 - Before publishing `proton` or `proton_ext`, run `node scripts/verify_generated.mjs`; it regenerates outputs in a temp directory and fails if committed generated files are stale.
 - Publish releases only through the manually dispatched
   `.github/workflows/publish.yml` workflow on `main`. The workflow owns the
@@ -131,7 +133,7 @@ native checks before handing off larger refactors.
 ### Release Checklist
 
 - `.github/workflows/publish.yml` publishes the dependency chain in this order:
-  `proton_config`, `proton_contract`, `proton_rsa`, `proton_updater`, the eight
+  `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`, `proton_updater`, the eight
   `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
   finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
   published.
@@ -147,7 +149,7 @@ native checks before handing off larger refactors.
   node scripts/verify_generated.mjs
   moon -C cli test -p moonbit-community/proton_cli \
     moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
-    moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen \
+    moonbit-community/proton_cli/cef \
     moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
     moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
     moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
@@ -229,10 +231,14 @@ native checks before handing off larger refactors.
 - Do not reintroduce local WebSocket IPC as an app runtime path. DevTools test
   automation may use WebSocket to talk to Chromium, but Proton app IPC belongs
   to the native DLL bridge route.
-- Keep the root facade wake-driven through the managed application runner and
-  `proton_runtime_set_wakeup_fd`. Platforms without both capabilities are
-  unsupported until they provide an equivalent platform-owned UI runner; do
-  not add fixed-sleep polling as a fallback.
+- Keep the root facade wake-driven through Proton's external event loop. The
+  facade's `fn init` hands it to `moonbitlang/async` -- that is the only place
+  guaranteed to run before async starts its loop, and installing afterwards
+  aborts -- and `proton_host_loop_poll` is the only thing that advances the
+  platform while it is running: every native notification reaches MoonBit as a
+  scheduler wakeup raised from that poll. Do not require application code to
+  install the loop itself, do not add fixed-sleep polling as a fallback, and do
+  not move application code back onto a thread of its own.
 - The `e2e/` module is a workspace member. Do not make scripts mutate
   `moon.work` at runtime to add it.
 
@@ -264,9 +270,10 @@ native checks before handing off larger refactors.
   paths, and MoonBit wrappers translate status codes into typed errors.
 - `proton_runtime_wait` is a low-level pump primitive, not a separate app API.
   It reports ready masks for event, bridge, and platform work; callers must
-  still drain via the existing poll APIs. Hosts using the managed application
-  runner must use `proton_runtime_set_wakeup_fd` instead; macOS rejects
-  `proton_runtime_wait` while that runner is active.
+  still drain via the existing poll APIs, and pump the platform themselves
+  through `proton_runtime_do_message_loop_work`. A host that does not hold a
+  runtime handle runs `proton_host_loop_begin`/`poll`/`end` instead, which does
+  both halves in one call; the facade is such a host.
 - Handle ownership must stay centralized in the native registry. Handles are
   not raw pointers, must validate kind/generation/thread ownership, and must be
   invalidated on destroy/close paths. Dialog handles are the documented

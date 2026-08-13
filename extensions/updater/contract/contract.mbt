@@ -34,7 +34,7 @@ pub(all) struct UpdateProgress {
 ///
 /// Takes no arguments, and this is the point. A page that could name an
 /// endpoint, a version or a path would hold a remote code execution primitive
-/// over the host; every one of those comes from `moon.proton` and the signed
+/// over the host; every one of those comes from `proton.project.json` and the signed
 /// manifest instead.
 pub let check : @proton_contract.Command[Unit, UpdateStatus] = extension.command(
   "check",

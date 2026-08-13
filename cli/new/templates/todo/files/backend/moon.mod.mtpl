@@ -4,6 +4,7 @@ version = "0.1.0"
 
 import {
   "{{shared_module}}@0.1.0",
+  "moonbitlang/async@{{async_version}}",
   "moonbit-community/proton@{{proton_version}}",
   "moonbit-community/proton_contract@{{proton_contract_version}}",
 }
@@ -11,6 +12,11 @@ import {
 license = "Apache-2.0"
 
 description = "Proton backend for {{title}}."
+
+rule(
+  name: "proton_codegen",
+  command: "moonx moonbit-community/proton_codegen@{{proton_codegen_version}} -C \"$mod_dir\" \"$input\" -o \"$output\"",
+)
 
 options(
   warn_list: "",

@@ -12,7 +12,6 @@ const commonSourceInputs = [
   "cli/cef/cef_platform.mbt",
   "native/CMakeLists.txt",
   "native/include",
-  "native/src/app_runner.h",
   "native/src/cef_process.c",
   "native/src/engine/cef_common",
   "native/src/proton.c",
@@ -32,28 +31,21 @@ const commonSourceInputs = [
   "proton/moon.mod",
 ];
 
-// Each list describes everything in this repository that can affect the
-// corresponding staged runtime. Platform-only sources stay separate so a
-// Windows titlebar change does not unnecessarily invalidate macOS and Linux.
+// Each list describes source and build inputs that affect the corresponding
+// staged runtime. CI orchestration is deliberately excluded.
 export const platformSourceInputs = Object.freeze({
   "darwin-arm64": [
     ...commonSourceInputs,
-    ".github/workflows/build-macos-prebuilt.yml",
-    "native/src/app_runner.m",
     "native/src/engine/cef_mac",
   ],
   "linux-x64": [
     ...commonSourceInputs,
-    ".github/workflows/build-linux-prebuilt.yml",
-    "native/src/app_runner_linux.c",
     "native/src/engine/cef_linux",
     "native/src/engine/notification_stub.c",
     "native/src/engine/platform_events_stub.c",
   ],
   "win32-x64": [
     ...commonSourceInputs,
-    ".github/workflows/build-windows-prebuilt.yml",
-    "native/src/app_runner_win.c",
     "native/src/engine/cef_win",
     "native/src/engine/notification_stub.c",
     "native/src/engine/platform_events_stub.c",

@@ -12,20 +12,21 @@ test "CDP E2E scenario names are explicitly supported" {
 }
 
 ///|
-test "E2E absolute path detection is platform exact" {
-  assert_true(is_absolute_path_for_separator("C:\\runtime", '\\'))
-  assert_true(is_absolute_path_for_separator("\\\\server\\share", '\\'))
-  assert_true(is_absolute_path_for_separator("\\runtime", '\\'))
-  assert_false(is_absolute_path_for_separator("C:runtime", '\\'))
-  assert_false(is_absolute_path_for_separator(".proton\\runtimes\\test", '\\'))
-  assert_true(is_absolute_path_for_separator("/runtime", '/'))
-  assert_false(is_absolute_path_for_separator("runtime", '/'))
+test "E2E paths use host absolute path rules" {
+  if @path.sep == '\\' {
+    assert_true(e2e_host_path("C:\\runtime").is_absolute())
+    assert_true(e2e_host_path("\\\\server\\share").is_absolute())
+    assert_false(e2e_host_path("C:runtime").is_absolute())
+  } else {
+    assert_true(e2e_host_path("/runtime").is_absolute())
+    assert_false(e2e_host_path("runtime").is_absolute())
+  }
 }
 
 ///|
 test "E2E paths resolve backslash relative runtime directories" {
   let root = repository_root()
-  let normalized_root = normalize_platform_path(root)
+  let normalized_root = e2e_host_path(root).normalize().to_string()
   let root_prefix = if normalized_root.has_suffix(@path.sep.to_string()) {
     normalized_root
   } else {
@@ -82,11 +83,9 @@ test "scenario child command is platform-safe" {
     assert_true(@path.Path(program).is_absolute())
   } else {
     assert_eq(program, "sh")
-    assert_true(args.contains("moon"))
+    assert_true(args.contains(scenario_app_executable(root)))
     assert_true(args.contains(unix_app_session_script()))
-    assert_true(args.contains("e2e/test/scenario_app_wbtest.mbt"))
-    assert_true(args.contains(root))
-    assert_true(args.contains(join_path(root, "target/proton-e2e-app-child")))
+    assert_true(args.contains(app_child_test_selector))
   }
 }
 
@@ -106,18 +105,13 @@ test "Unix E2E cancellation targets the isolated process group first" {
 #cfg(not(platform="windows"))
 async test "Unix E2E cancellation terminates a real child process tree" {
   let root = repository_root()
-  let pid_path = join_path(
-    root,
-    "target/proton-e2e-cancel-child-" + choose_cdp_port().to_string() + ".pid",
-  )
-  @mbfs.remove_file(pid_path) catch {
-    _ => ()
-  }
-  defer (@mbfs.remove_file(pid_path) catch { _ => () })
+  let output_root = @fs.tmpdir(prefix="proton-e2e-cancel-")
+  defer remove_dev_extension_tree(output_root)
+  let pid_path = join_path(output_root, "child.pid")
   @async.with_task_group(group => {
     let (program, args) = isolated_app_command("/bin/sh", [
-      "-c", "sleep 30 & child=$!; printf '%s' \"$child\" > \"$1\"; wait", "proton-e2e-cancel-child",
-      pid_path,
+      "-c", "sleep 30 & child=$!; printf '%s' \"$child\" > \"$1\"; while :; do sleep 30; done",
+      "proton-e2e-cancel-child", pid_path,
     ])
     let process = @process.spawn(
       group,

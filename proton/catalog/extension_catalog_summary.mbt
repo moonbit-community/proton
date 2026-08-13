@@ -32,7 +32,7 @@ fn extension_descriptor_summary_json(descriptor : ExtensionDescriptor) -> Json {
     "platforms": string_array_json(descriptor.platforms()),
     "dependencies": string_array_json(descriptor.dependencies()),
     "metadata_path": descriptor.metadata_path(),
-    "metadata_format": "moon.ext",
+    "metadata_format": "proton.ext.json",
   }
 }
 

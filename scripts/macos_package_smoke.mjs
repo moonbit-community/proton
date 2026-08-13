@@ -12,7 +12,15 @@ const exampleName = "47_dev_extension_js";
 const productName = "Proton Dev Extension JS";
 const executableName = "proton-dev-extension-js";
 const exampleDir = path.join(repoRoot, "examples", exampleName);
-const distDir = path.join(exampleDir, "target", "proton-dist");
+const exampleModule = fs.readFileSync(
+  path.join(repoRoot, "examples", "moon.mod"),
+  "utf8",
+);
+const exampleVersion = exampleModule.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
+if (!exampleVersion) {
+  throw new Error("examples/moon.mod is missing version");
+}
+const distDir = path.join(exampleDir, "dist");
 const appPath = path.join(distDir, `${productName}.app`);
 const archivePath = `${appPath}.zip`;
 const helperNames = [
@@ -317,8 +325,8 @@ function verifyBundle() {
   const infoPlist = path.join(contents, "Info.plist");
   const plistExpectations = new Map([
     ["CFBundleIdentifier", "com.justjavac.proton.dev-extension-js"],
-    ["CFBundleShortVersionString", "0.1.0"],
-    ["CFBundleVersion", "0.1.0"],
+    ["CFBundleShortVersionString", exampleVersion],
+    ["CFBundleVersion", exampleVersion],
   ]);
   for (const [key, expected] of plistExpectations) {
     const actual = run(
@@ -477,7 +485,7 @@ async function main() {
       "--package",
       exampleName,
       "--config",
-      `${exampleName}/moon.proton`,
+      `${exampleName}/proton.project.json`,
       "--release",
       "--sign",
       "--target",
