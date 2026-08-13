@@ -3,7 +3,7 @@ name = "moonbit-community/proton_config"
 version = "0.1.16"
 
 import {
-  "moonbitlang/moon_config@0.3.5",
+  "moonbitlang/moon_config@0.3.13",
   "moonbitlang/x@0.4.49",
 }
 
