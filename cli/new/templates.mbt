@@ -231,11 +231,7 @@ fn project_config_file(context : TemplateContext) -> PlannedFile {
     "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
     "permissions": [{ "window": "main", "origin": "entry", "extension": "app" }],
     "debug": true,
-    "bundle": {
-      "active": true,
-      "targets": ["app", "zip"],
-      "output": "target/proton-dist",
-    },
+    "bundle": { "active": true, "targets": ["app", "zip"], "output": "dist" },
   }
   { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
 }

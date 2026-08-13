@@ -32,6 +32,6 @@
     "resources": [
       "resources/**"
     ],
-    "output": "target/proton-dist"
+    "output": "dist"
   }
 }

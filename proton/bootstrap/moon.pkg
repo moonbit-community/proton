@@ -8,6 +8,11 @@ import {
   "moonbit-community/proton/manifest",
 }
 
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
+} for "test"
+
 warnings = "-29"
 
 supported_targets = "native"

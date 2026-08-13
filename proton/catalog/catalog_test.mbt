@@ -110,61 +110,17 @@ test "discover_extension_descriptor_files can target one extension package" {
 
 ///|
 test "load_extension_descriptor_from_file requires proton.ext.json" {
+  let path = "fixtures/rejected/extension.json"
   let error = expect_descriptor_error(() => {
-    load_extension_descriptor_from_file("target/rejected/extension.json")
+    load_extension_descriptor_from_file(path)
   })
-  assert_eq(
-    error,
-    ExtensionDescriptorError::InvalidMetadataFile(
-      path="target/rejected/extension.json",
-    ),
-  )
+  assert_eq(error, ExtensionDescriptorError::InvalidMetadataFile(path~))
 }
 
 ///|
 test "decode proton.ext.json infers MoonBit import path from nearest moon.mod" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-ext-module") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-ext-module/fs") catch {
-    _ => ()
-  }
-  @mbfs.write_string_to_file(
-    "target/proton-ext-module/moon.mod",
-    (
-      #|name = "vendor/exts"
-      #|version = "2.3.4"
-      #|description = "Vendor extension pack"
-      #|license = "MIT"
-      #|repository = "https://example.com/vendor/exts"
-      #|readme = "README.md"
-      #|keywords = [ "desktop", "extension" ]
-      #|
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
-  let metadata_path = "target/proton-ext-module/fs/proton.ext.json"
-  @mbfs.write_string_to_file(
-    metadata_path,
-    (
-      #|{
-      #|  "id": "vendor/fs",
-      #|  "namespace": "fs",
-      #|  "package": "@vendor/proton-fs",
-      #|  "dependencies": [
-      #|    "vendor/path"
-      #|  ]
-      #|}
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
+  let root = catalog_test_path("testdata/proton-ext-module")
+  let metadata_path = root + "/fs/proton.ext.json"
   let descriptor = load_extension_descriptor_from_file(metadata_path)
   assert_eq(descriptor.id(), "vendor/fs")
   assert_eq(descriptor.version(), "2.3.4")
@@ -180,39 +136,15 @@ test "decode proton.ext.json infers MoonBit import path from nearest moon.mod" {
   @debug.assert_eq(descriptor.publish_package(), Some("@vendor/proton-fs"))
   @debug.assert_eq(descriptor.dependencies(), ["vendor/path"])
 
-  let descriptor_paths = discover_extension_descriptor_files([
-    "target/proton-ext-module/fs",
-  ])
+  let descriptor_paths = discover_extension_descriptor_files([root + "/fs"])
   assert_eq(descriptor_paths.length(), 1)
   assert_true(descriptor_paths[0].has_suffix("proton.ext.json"))
 }
 
 ///|
 test "decode proton.ext.json rejects invalid metadata" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-ext-invalid") catch {
-    _ => ()
-  }
-
-  let unsupported_platform = "target/proton-ext-invalid/unsupported-platform.proton.ext.json"
-  @mbfs.write_string_to_file(
-    unsupported_platform,
-    (
-      #|{
-      #|  "id": "vendor/fs",
-      #|  "namespace": "fs",
-      #|  "platforms": [
-      #|    "windows",
-      #|    "ios"
-      #|  ]
-      #|}
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
+  let root = catalog_test_path("testdata/proton-ext-invalid")
+  let unsupported_platform = root + "/unsupported-platform.proton.ext.json"
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file(unsupported_platform)
   })
@@ -224,22 +156,7 @@ test "decode proton.ext.json rejects invalid metadata" {
     ),
   )
 
-  let self_dependency = "target/proton-ext-invalid/self-dependency.proton.ext.json"
-  @mbfs.write_string_to_file(
-    self_dependency,
-    (
-      #|{
-      #|  "id": "vendor/fs",
-      #|  "namespace": "fs",
-      #|  "dependencies": [
-      #|    "vendor/fs"
-      #|  ]
-      #|}
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
+  let self_dependency = root + "/self-dependency.proton.ext.json"
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file(self_dependency)
   })
@@ -251,20 +168,7 @@ test "decode proton.ext.json rejects invalid metadata" {
     ),
   )
 
-  let removed_field = "target/proton-ext-invalid/removed-field.proton.ext.json"
-  @mbfs.write_string_to_file(
-    removed_field,
-    (
-      #|{
-      #|  "id": "vendor/fs",
-      #|  "namespace": "fs",
-      #|  "spec_symbol": "extension"
-      #|}
-    ),
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
+  let removed_field = root + "/removed-field.proton.ext.json"
   let error = expect_descriptor_error(() => {
     load_extension_descriptor_from_file(removed_field)
   })

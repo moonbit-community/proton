@@ -1,0 +1,8 @@
+{
+  "id": "vendor/fs",
+  "namespace": "fs",
+  "package": "@vendor/proton-fs",
+  "dependencies": [
+    "vendor/path"
+  ]
+}

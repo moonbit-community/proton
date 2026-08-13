@@ -9,6 +9,14 @@ fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
 }
 
 ///|
+fn restore_package_env(name : String, value : String?) -> Unit {
+  match value {
+    Some(value) => @env.set_env_var(name, value)
+    None => @env.unset_env_var(name)
+  }
+}
+
+///|
 test "parse package args accepts repeated targets and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
@@ -162,11 +170,6 @@ async test "package plan uses the host defaults" {
   assert_eq(plan.identifier, "dev.proton.demo")
   assert_eq(plan.version, "1.0.0")
   assert_false(plan.release)
-  assert_true(
-    normalize_slashes(plan.build_target_dir).has_suffix(
-      "/target/proton-package-build/dev-proton-demo",
-    ),
-  )
   let release_plan = build_package_plan(
     parse_package_args(["--release"]),
     "proton.project.json",
@@ -178,8 +181,7 @@ async test "package plan uses the host defaults" {
 
 ///|
 async test "package plan stages every window file entry" {
-  let root = @fsutil.resolve_path("target", "proton-package-window-entries")
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-window-entries-")
   let main = @fsutil.resolve_path(root, "pages/main.html")
   let secondary = @fsutil.resolve_path(root, "standalone/settings.html")
   ensure_dir(@fsutil.path_parent(main))
@@ -226,8 +228,7 @@ async test "package plan stages every window file entry" {
 
 ///|
 async test "configured signing binaries resolve through staged resources" {
-  let root = @fsutil.resolve_path("target", "proton-package-sign-binaries")
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-sign-binaries-")
   let binary = @fsutil.resolve_path(root, "bin/worker")
   ensure_dir(@fsutil.path_parent(binary))
   write_text(binary, "binary")
@@ -264,7 +265,7 @@ async test "configured signing binaries resolve through staged resources" {
 
 ///|
 async test "package plan uses configured backend module and package" {
-  let base_dir = @fsutil.resolve_path("target", "proton package module paths")
+  let base_dir = @async_fs.tmpdir(prefix="proton-package-module-paths-")
   let backend_path = @fsutil.resolve_path(base_dir, "modules/backend app")
   let project = @proton_config.ProjectConfig::new(
     base_dir,
@@ -300,7 +301,7 @@ async test "package plan uses configured backend module and package" {
 ///|
 #cfg(not(platform="windows"))
 test "macOS package paths normalize absolute and relative inputs" {
-  let base = @fsutil.resolve_path("target", "proton package path base")
+  let base = @fsutil.resolve_path("fixtures", "proton package path base")
   assert_eq(@fsutil.resolve_path(base, "/"), "/")
   assert_eq(
     @fsutil.resolve_path(base, "/tmp/proton absolute path"),
@@ -335,8 +336,7 @@ test "macOS package paths normalize absolute and relative inputs" {
 ///|
 #cfg(not(platform="windows"))
 async test "macOS ensure_dir recursively creates absolute paths with spaces" {
-  let root = @fsutil.resolve_path("target", "proton package ensure dir")
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-ensure-dir-")
   let nested = @fsutil.resolve_path(root, "parent with spaces/child/grandchild")
   ensure_dir(nested)
   assert_true(@fsutil.path_is_dir(nested))
@@ -502,9 +502,8 @@ test "macOS CEF process signing preserves hardened runtime and identifier" {
 
 ///|
 async test "macOS signing rejects a missing required target" {
-  let missing = @fsutil.resolve_path(
-    "target", "proton-package-missing-signing-target",
-  )
+  let root = @async_fs.tmpdir(prefix="proton-package-signing-target-")
+  let missing = @fsutil.resolve_path(root, "missing")
   remove_tree(missing)
   try
     require_macos_codesign_targets([
@@ -580,8 +579,7 @@ test "release project config preserves an already disabled or absent debug field
 
 ///|
 async test "macOS icon selection stages icns and rejects a missing source" {
-  let root = @fsutil.resolve_path("target", "proton-package-macos-icon")
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-macos-icon-")
   let resources = @fsutil.resolve_path(root, "Resources")
   let icon = @fsutil.resolve_path(root, "Demo.ICNS")
   ensure_dir(resources)
@@ -593,7 +591,6 @@ async test "macOS icon selection stages icns and rejects a missing source" {
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
     config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo",
@@ -641,7 +638,6 @@ test "macOS plist contains bundle identity and executable" {
   let plan = PackagePlan::{
     root: ".",
     workspace_root: ".",
-    build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
     config_path: "proton.project.json",
     product_name: "Demo & App",
@@ -651,7 +647,7 @@ test "macOS plist contains bundle identity and executable" {
     bundle_version: "1.2.3",
     update_revision: 42UL,
     targets: ["app"],
-    output: "target",
+    output: "dist",
     build: false,
     release: false,
     base_dir: ".",
@@ -690,12 +686,10 @@ test "macOS plist contains bundle identity and executable" {
 
 ///|
 async test "package manifest records launch metadata" {
-  let root = "target/proton-package-launch-metadata"
-  ensure_dir(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-launch-metadata-")
   let plan = PackagePlan::{
     root: ".",
     workspace_root: ".",
-    build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
     config_path: "proton.project.json",
     product_name: "Demo",
@@ -705,7 +699,7 @@ async test "package manifest records launch metadata" {
     bundle_version: "1.2.3",
     update_revision: 0UL,
     targets: ["app"],
-    output: "target",
+    output: "dist",
     build: false,
     release: false,
     base_dir: ".",
@@ -759,7 +753,6 @@ test "macOS helper plist matches its bundle identity" {
   let plan = PackagePlan::{
     root: ".",
     workspace_root: ".",
-    build_target_dir: "target/proton-package-build/dev-proton-demo",
     app_package: "app",
     config_path: "proton.project.json",
     product_name: "Demo & App",
@@ -769,7 +762,7 @@ test "macOS helper plist matches its bundle identity" {
     bundle_version: "42",
     update_revision: 42UL,
     targets: ["app"],
-    output: "target",
+    output: "dist",
     build: false,
     release: false,
     base_dir: ".",
@@ -802,12 +795,10 @@ test "macOS helper plist matches its bundle identity" {
 ///|
 async test "macOS ZIP uses the final app name without metadata entries" {
   guard is_macos_host() else { return }
-  let root = @fsutil.resolve_path("target", "proton-package-macos-zip-layout")
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-macos-zip-")
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
     config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo App",
@@ -861,8 +852,7 @@ async test "macOS ZIP uses the final app name without metadata entries" {
 
 ///|
 async test "macOS staged app promotion rolls back when staging is missing" {
-  let root = "target/proton-package-macos-promotion"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-promotion-")
   let destination = @fsutil.resolve_path(root, "Demo.app")
   let marker = @fsutil.resolve_path(destination, "Contents/old.txt")
   ensure_dir(@fsutil.path_parent(marker))
@@ -885,8 +875,7 @@ async test "macOS staged app promotion rolls back when staging is missing" {
 
 ///|
 async test "macOS staged app promotion recovers an interrupted backup" {
-  let root = "target/proton-package-macos-stale-backup"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-stale-backup-")
   let destination = @fsutil.resolve_path(root, "Demo.app")
   let backup = destination + ".backup"
   let marker = @fsutil.resolve_path(backup, "Contents/old.txt")
@@ -912,8 +901,7 @@ async test "macOS staged app promotion recovers an interrupted backup" {
 
 ///|
 async test "macOS artifact promotion rolls back the complete output set" {
-  let root = "target/proton-package-macos-transaction"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-transaction-")
   let app = @fsutil.resolve_path(root, "Demo.app")
   let app_backup = app + ".backup"
   let staged_app = @fsutil.resolve_path(root, ".demo.staging.app")
@@ -955,8 +943,7 @@ async test "macOS artifact promotion rolls back the complete output set" {
 ///|
 async test "macOS notarization validates success and cleans failed upload" {
   guard is_macos_host() else { return }
-  let root = @fsutil.resolve_path("target", "proton-package-notarization-flow")
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-notarization-")
   let tools = @fsutil.resolve_path(root, "tools")
   let app = @fsutil.resolve_path(root, "Demo.app")
   let log = @fsutil.resolve_path(root, "commands.log")
@@ -979,7 +966,6 @@ async test "macOS notarization validates success and cleans failed upload" {
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: @fsutil.resolve_path(root, "build"),
     app_package: "app",
     config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo",
@@ -1051,9 +1037,8 @@ async test "macOS notarization validates success and cleans failed upload" {
 
 ///|
 async test "package executable lookup ignores the dSYM mirror" {
-  let root = "target/proton-package-executable-lookup"
-  remove_tree(root)
-  let package_target = @fsutil.resolve_path(root, "package-target")
+  let root = @async_fs.tmpdir(prefix="proton-package-executable-")
+  let package_target = @fsutil.resolve_path(root, "workspace/_build")
   let unrelated = @fsutil.resolve_path(
     root, "workspace/native/release/build/other/app.exe",
   )
@@ -1062,7 +1047,6 @@ async test "package executable lookup ignores the dSYM mirror" {
   let plan = PackagePlan::{
     root,
     workspace_root: @fsutil.resolve_path(root, "workspace"),
-    build_target_dir: package_target,
     app_package: "app",
     config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo",
@@ -1107,8 +1091,7 @@ async test "package executable lookup ignores the dSYM mirror" {
 
 ///|
 async test "active runtime rejects another platform" {
-  let root = "target/proton-package-runtime-platform"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-runtime-")
   ensure_dir(@fsutil.resolve_path(root, ".proton"))
   let old_dist = @env.get_env_var("PROTON_NATIVE_DIST")
   @env.unset_env_var("PROTON_NATIVE_DIST")
@@ -1136,7 +1119,7 @@ async test "active runtime rejects another platform" {
 
 ///|
 async test "Windows portable staging flattens runtime bin beside app executable" {
-  let root = "target/proton-package-windows-layout"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-")
   let output = @fsutil.resolve_path(root, "output")
   remove_tree(root)
   let runtime = prepare_windows_test_runtime(root)
@@ -1149,7 +1132,6 @@ async test "Windows portable staging flattens runtime bin beside app executable"
   let plan = PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: @fsutil.resolve_path(root, "package-build"),
     app_package: "app",
     config_path: config,
     product_name: "Demo App",

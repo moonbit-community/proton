@@ -7,7 +7,6 @@ fn windows_test_plan(
   PackagePlan::{
     root,
     workspace_root: root,
-    build_target_dir: @fsutil.resolve_path(root, "package-build"),
     app_package: "app",
     config_path: @fsutil.resolve_path(root, "proton.project.json"),
     product_name: "Demo App",
@@ -154,7 +153,7 @@ test "Windows signtool args use SHA-256 and RFC3161 timestamp" {
 
 ///|
 test "Windows signing includes configured resource binaries" {
-  let root = "target/proton-package-windows-configured-signing"
+  let root = "fixtures/proton-package-windows-configured-signing"
   let plan = windows_test_plan(root, ["app"], true)
   plan.sign_binaries.push(@fsutil.resolve_path(root, "helpers/worker.exe"))
   let output = @fsutil.resolve_path(root, "portable")
@@ -168,8 +167,7 @@ test "Windows signing includes configured resource binaries" {
 ///|
 #cfg(platform="windows")
 async test "Windows signtool signs and verifies configured resource binaries" {
-  let root = "target/proton-package-windows-configured-signtool"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-signing-")
   let output = @fsutil.resolve_path(root, "portable")
   let plan = windows_test_plan(root, ["app"], true)
   let binary = @fsutil.resolve_path(root, "helpers/worker.exe")
@@ -210,8 +208,7 @@ async test "Windows signtool signs and verifies configured resource binaries" {
 
 ///|
 async test "Windows icon selection accepts ico and rejects a missing source" {
-  let root = "target/proton-package-windows-icon"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-icon-")
   let selected = @fsutil.resolve_path(root, "Demo.ICO")
   assert_eq(
     first_windows_icon(["icons/icon.png", selected, "icons/fallback.ico"]),
@@ -245,14 +242,16 @@ test "Windows icon embedding requires the native CLI backend" {
 ///|
 test "Windows path resolution keeps dotted relative children under the base" {
   let path = normalize_slashes(
-    @fsutil.resolve_path("target/proton-path-base", ".proton/runtime.json"),
+    @fsutil.resolve_path("fixtures/proton-path-base", ".proton/runtime.json"),
   )
-  assert_true(path.has_suffix("/target/proton-path-base/.proton/runtime.json"))
+  assert_true(
+    path.has_suffix("/fixtures/proton-path-base/.proton/runtime.json"),
+  )
 }
 
 ///|
 async test "Windows runtime validation rejects a missing required file" {
-  let root = "target/proton-package-windows-missing-runtime"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-runtime-")
   ignore(prepare_windows_test_inputs(root))
   let runtime = prepare_windows_test_runtime(root)
   let missing = @fsutil.resolve_path(runtime, "bin/chrome_elf.dll")
@@ -272,7 +271,7 @@ async test "Windows runtime validation rejects a missing required file" {
 
 ///|
 async test "Windows portable staging is atomic and excludes build artifacts" {
-  let root = "target/proton package windows layout with spaces"
+  let root = @async_fs.tmpdir(prefix="proton package windows layout ")
   let (executable, _) = prepare_windows_test_inputs(root)
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app"], false)
@@ -307,7 +306,7 @@ async test "Windows portable staging is atomic and excludes build artifacts" {
 
 ///|
 async test "Windows portable stages a configured signing binary from resources" {
-  let root = "target/proton-package-windows-resource-signing"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-resource-")
   let (executable, _) = prepare_windows_test_inputs(root)
   let binary = @fsutil.resolve_path(root, "helpers/worker.exe")
   write_windows_test_file(binary, "worker")
@@ -332,7 +331,7 @@ async test "Windows portable stages a configured signing binary from resources" 
 ///|
 #cfg(platform="windows")
 async test "Windows portable zip is atomic and extracts from paths with spaces" {
-  let root = "target/proton-package-windows-zip with spaces"
+  let root = @async_fs.tmpdir(prefix="proton package windows zip ")
   let (executable, _) = prepare_windows_test_inputs(root)
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app", "zip"], false)
@@ -372,8 +371,7 @@ async test "Windows portable zip is atomic and extracts from paths with spaces" 
 
 ///|
 async test "Windows promotion rolls back when staging is missing" {
-  let root = "target/proton-package-windows-rollback"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-rollback-")
   let destination = @fsutil.resolve_path(root, "Demo App")
   let marker = @fsutil.resolve_path(destination, "old.txt")
   write_windows_test_file(marker, "old")
@@ -396,8 +394,7 @@ async test "Windows promotion rolls back when staging is missing" {
 
 ///|
 async test "Windows promotion restores a stale backup before continuing" {
-  let root = "target/proton-package-windows-stale-backup"
-  remove_tree(root)
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-backup-")
   let destination = @fsutil.resolve_path(root, "Demo App")
   let backup = destination + ".backup"
   let marker = @fsutil.resolve_path(backup, "old.txt")
@@ -421,7 +418,7 @@ async test "Windows promotion restores a stale backup before continuing" {
 
 ///|
 async test "Windows signing rejects a missing target before invoking signtool" {
-  let root = "target/proton-package-windows-missing-sign-target"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-sign-target-")
   let (_, _) = prepare_windows_test_inputs(root)
   let output = @fsutil.resolve_path(root, "portable")
   for
@@ -457,7 +454,7 @@ async test "Windows signing rejects a missing target before invoking signtool" {
 ///|
 #cfg(platform="windows")
 async test "Windows signing failure does not leak the certificate password" {
-  let root = "target/proton-package-windows-sign-failure"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-sign-failure-")
   let (_, _) = prepare_windows_test_inputs(root)
   let output = @fsutil.resolve_path(root, "portable")
   let plan = windows_test_plan(root, ["app"], true)
@@ -492,7 +489,7 @@ async test "Windows signing failure does not leak the certificate password" {
 ///|
 #cfg(platform="windows")
 async test "Windows signing failure blocks promotion" {
-  let root = "target/proton-package-windows-sign-promotion-failure"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-promotion-")
   let (executable, _) = prepare_windows_test_inputs(root)
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app"], true)
@@ -527,7 +524,7 @@ async test "Windows signing failure blocks promotion" {
 ///|
 #cfg(platform="windows")
 async test "Windows signature verification failure blocks promotion" {
-  let root = "target/proton-package-windows-verify-failure"
+  let root = @async_fs.tmpdir(prefix="proton-package-windows-verify-")
   let (executable, _) = prepare_windows_test_inputs(root)
   let runtime = prepare_windows_test_runtime(root)
   let plan = windows_test_plan(root, ["app"], true)

@@ -51,17 +51,12 @@ fn[T] expect_bootstrap_error(
 ///|
 /// Writes a minimal proton.project.json with one extra top-level field and checks the error.
 fn expect_project_extra_field_error(
+  root : String,
   key : String,
   value : Json,
   expected : String,
 ) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-extra-field") catch {
-    _ => ()
-  }
-  let config_path = "target/proton-extra-field/proton.project.json"
+  let config_path = root + "/proton.project.json"
   let config : Json = {
     "window": { "title": "Invalid", "width": 900, "height": 700 },
     "entry": { "kind": "html", "value": "<html></html>" },
@@ -104,19 +99,14 @@ test "load_config_manifest_from_file rebases file entry and bool debug" {
 }
 
 ///|
-test "load_config_manifest_from_file accepts explicit config filenames" {
+async test "load_config_manifest_from_file accepts explicit config filenames" {
   let loaded = load_config_manifest_from_file(
     manifest_test_path("proton.project.json"),
   )
   assert_eq(loaded.manifest().debug, 1)
 
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-alt-config") catch {
-    _ => ()
-  }
-  let config_path = "target/proton-alt-config/proton.dev"
+  let root = @async_fs.tmpdir(prefix="proton-alt-config-")
+  let config_path = root + "/proton.dev"
   @mbfs.write_string_to_file(
     config_path,
     (
@@ -148,14 +138,9 @@ test "load_config_manifest_from_file accepts explicit config filenames" {
 }
 
 ///|
-test "load_config_manifest_from_file rejects extension settings" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-unsupported") catch {
-    _ => ()
-  }
-  let config_path = "target/proton-unsupported/proton.project.json"
+async test "load_config_manifest_from_file rejects extension settings" {
+  let root = @async_fs.tmpdir(prefix="proton-unsupported-config-")
+  let config_path = root + "/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
@@ -186,39 +171,37 @@ test "load_config_manifest_from_file rejects extension settings" {
 }
 
 ///|
-test "load_config_manifest_from_file rejects unsupported top-level fields" {
+async test "load_config_manifest_from_file rejects unsupported top-level fields" {
+  let root = @async_fs.tmpdir(prefix="proton-extra-field-")
   expect_project_extra_field_error(
-    "version", "1.0.0", "Unexpected key 'version' found in proton.project.json.",
+    root, "version", "1.0.0", "Unexpected key 'version' found in proton.project.json.",
   )
   expect_project_extra_field_error(
-    "license", "MIT", "Unexpected key 'license' found in proton.project.json.",
+    root, "license", "MIT", "Unexpected key 'license' found in proton.project.json.",
   )
   expect_project_extra_field_error(
-    "description", "App", "Unexpected key 'description' found in proton.project.json.",
+    root, "description", "App", "Unexpected key 'description' found in proton.project.json.",
   )
   expect_project_extra_field_error(
+    root,
     "permissions",
     {},
     "proton.project.json.permissions must be an array",
   )
   expect_project_extra_field_error(
-    "debug", 1, "proton.project.json.debug must be a bool",
+    root, "debug", 1, "proton.project.json.debug must be a bool",
   )
 }
 
 ///|
-test "load_proton_project_config_from_file decodes tooling blocks and moon.mod metadata" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-project-config") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-project-config/backend") catch {
+async test "load_proton_project_config_from_file decodes tooling blocks and moon.mod metadata" {
+  let root = @async_fs.tmpdir(prefix="proton-project-config-")
+  let backend = root + "/backend"
+  @mbfs.create_dir(backend) catch {
     _ => ()
   }
   @mbfs.write_string_to_file(
-    "target/proton-project-config/backend/moon.mod",
+    backend + "/moon.mod",
     (
       #|name = "vendor/app"
       #|version = "1.2.3"
@@ -230,7 +213,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
   ) catch {
     err => abort(@debug.render(Repr(err)))
   }
-  let config_path = "target/proton-project-config/proton.project.json"
+  let config_path = root + "/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
@@ -301,7 +284,7 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
       #|        "role": "Editor"
       #|      }
       #|    ],
-      #|    "output": "target/proton-dist"
+      #|    "output": "custom-dist"
       #|  }
       #|}
     ),
@@ -323,10 +306,9 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
   match project.backend() {
     None => abort("expected backend config")
     Some(backend) => {
-      assert_true(
-        normalize_test_slashes(backend.path()).has_suffix(
-          "target/proton-project-config/backend",
-        ),
+      assert_eq(
+        normalize_test_slashes(backend.path()),
+        normalize_test_slashes(root + "/backend"),
       )
       assert_eq(backend.app_package(), "app")
     }
@@ -336,15 +318,13 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     None => abort("expected frontend config")
     Some(frontend) => {
       @debug.assert_eq(frontend.dev_url(), Some("http://localhost:5173"))
-      assert_true(
-        normalize_test_slashes(frontend.dist().unwrap()).has_suffix(
-          "target/proton-project-config/frontend/dist",
-        ),
+      assert_eq(
+        normalize_test_slashes(frontend.dist().unwrap()),
+        normalize_test_slashes(root + "/frontend/dist"),
       )
-      assert_true(
-        normalize_test_slashes(frontend.path().unwrap()).has_suffix(
-          "target/proton-project-config/frontend",
-        ),
+      assert_eq(
+        normalize_test_slashes(frontend.path().unwrap()),
+        normalize_test_slashes(root + "/frontend"),
       )
       @debug.assert_eq(frontend.before_dev(), Some("npm run dev"))
       @debug.assert_eq(frontend.before_build(), Some("npm run build"))
@@ -356,29 +336,25 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     Some(bundle) => {
       assert_true(bundle.active())
       @debug.assert_eq(bundle.targets(), ["app", "zip"])
-      assert_true(
-        normalize_test_slashes(bundle.icon()[0]).has_suffix(
-          "target/proton-project-config/icons/icon.ico",
-        ),
+      assert_eq(
+        normalize_test_slashes(bundle.icon()[0]),
+        normalize_test_slashes(root + "/icons/icon.ico"),
       )
-      assert_true(
-        normalize_test_slashes(bundle.resources()[0]).has_suffix(
-          "target/proton-project-config/resources/**",
-        ),
+      assert_eq(
+        normalize_test_slashes(bundle.resources()[0]),
+        normalize_test_slashes(root + "/resources/**"),
       )
       match bundle.sign() {
         Some(sign) =>
-          assert_true(
-            normalize_test_slashes(sign.binaries()[0]).has_suffix(
-              "target/proton-project-config/bin/worker",
-            ),
+          assert_eq(
+            normalize_test_slashes(sign.binaries()[0]),
+            normalize_test_slashes(root + "/bin/worker"),
           )
         None => fail("expected bundle sign config")
       }
-      assert_true(
-        normalize_test_slashes(bundle.output()).has_suffix(
-          "target/proton-project-config/target/proton-dist",
-        ),
+      assert_eq(
+        normalize_test_slashes(bundle.output()),
+        normalize_test_slashes(root + "/custom-dist"),
       )
 
       let targets = bundle.targets()
@@ -416,20 +392,17 @@ test "load_proton_project_config_from_file decodes tooling blocks and moon.mod m
     } else {
     abort("unexpected project summary JSON")
   }
-  assert_true(
-    normalize_test_slashes(entry_path).has_suffix(
-      "target/proton-project-config/frontend/dist/index.html",
-    ),
+  assert_eq(
+    normalize_test_slashes(entry_path),
+    normalize_test_slashes(root + "/frontend/dist/index.html"),
   )
-  assert_true(
-    normalize_test_slashes(binary_path).has_suffix(
-      "target/proton-project-config/bin/worker",
-    ),
+  assert_eq(
+    normalize_test_slashes(binary_path),
+    normalize_test_slashes(root + "/bin/worker"),
   )
-  assert_true(
-    normalize_test_slashes(output).has_suffix(
-      "target/proton-project-config/target/proton-dist",
-    ),
+  assert_eq(
+    normalize_test_slashes(output),
+    normalize_test_slashes(root + "/custom-dist"),
   )
 
   let loaded_summary = load_proton_project_summary_from_file(config_path)
@@ -462,14 +435,9 @@ test "proton project dev_manifest keeps entry when dev_url is absent" {
 }
 
 ///|
-test "load_proton_project_config_from_file validates tooling blocks" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-project-invalid") catch {
-    _ => ()
-  }
-  let config_path = "target/proton-project-invalid/proton.project.json"
+async test "load_proton_project_config_from_file validates tooling blocks" {
+  let root = @async_fs.tmpdir(prefix="proton-project-invalid-")
+  let config_path = root + "/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
@@ -503,14 +471,9 @@ test "load_proton_project_config_from_file validates tooling blocks" {
 }
 
 ///|
-test "load_config_manifest_from_file validates project tooling blocks" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-config-manifest-invalid") catch {
-    _ => ()
-  }
-  let config_path = "target/proton-config-manifest-invalid/proton.project.json"
+async test "load_config_manifest_from_file validates project tooling blocks" {
+  let root = @async_fs.tmpdir(prefix="proton-manifest-invalid-")
+  let config_path = root + "/proton.project.json"
   @mbfs.write_string_to_file(
     config_path,
     (
@@ -544,15 +507,10 @@ test "load_config_manifest_from_file validates project tooling blocks" {
 }
 
 ///|
-test "load_proton_project_config_from_file preserves active bundle without release metadata" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-project-bundle-metadata") catch {
-    _ => ()
-  }
+async test "load_proton_project_config_from_file preserves active bundle without release metadata" {
+  let root = @async_fs.tmpdir(prefix="proton-bundle-metadata-")
   @mbfs.write_string_to_file(
-    "target/proton-project-bundle-metadata/moon.mod",
+    root + "/moon.mod",
     (
       #|name = "vendor/app"
       #|version = "1.0.0"
@@ -563,7 +521,7 @@ test "load_proton_project_config_from_file preserves active bundle without relea
     err => abort(@debug.render(Repr(err)))
   }
 
-  let missing_identifier = "target/proton-project-bundle-metadata/missing-identifier.proton.project.json"
+  let missing_identifier = root + "/missing-identifier.proton.project.json"
   @mbfs.write_string_to_file(
     missing_identifier,
     (
@@ -594,14 +552,9 @@ test "load_proton_project_config_from_file preserves active bundle without relea
 }
 
 ///|
-test "load_proton_project_config_from_file validates bundle targets" {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-project-bundle-targets") catch {
-    _ => ()
-  }
-  let supported_target = "target/proton-project-bundle-targets/supported.proton.project.json"
+async test "load_proton_project_config_from_file validates bundle targets" {
+  let root = @async_fs.tmpdir(prefix="proton-bundle-targets-")
+  let supported_target = root + "/supported.proton.project.json"
   @mbfs.write_string_to_file(
     supported_target,
     (
@@ -631,7 +584,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
   let supported = load_proton_project_config_from_file(supported_target)
   assert_eq(supported.bundle().unwrap().targets(), ["app", "zip", "dmg"])
 
-  let unsupported_target = "target/proton-project-bundle-targets/unsupported.proton.project.json"
+  let unsupported_target = root + "/unsupported.proton.project.json"
   @mbfs.write_string_to_file(
     unsupported_target,
     (
@@ -661,7 +614,7 @@ test "load_proton_project_config_from_file validates bundle targets" {
   })
   assert_eq(error.message(), "unsupported bundle.targets: msi")
 
-  let duplicate_target = "target/proton-project-bundle-targets/duplicate.proton.project.json"
+  let duplicate_target = root + "/duplicate.proton.project.json"
   @mbfs.write_string_to_file(
     duplicate_target,
     (

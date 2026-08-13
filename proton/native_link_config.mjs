@@ -110,16 +110,15 @@ function linuxRpathLinkFlag(binDir, cc) {
   return cc.length > 0 ? `-Wl,-rpath-link,${quote(binDir)}` : "";
 }
 
-function linkFlags(dist, cc, rpathOverride) {
+function linkFlags(dist, cc) {
   const libDir = path.join(dist, "lib");
   const binDir = path.join(dist, "bin");
   if (process.platform === "win32") {
     return quote(path.join(libDir, "proton.lib"));
   }
   if (process.platform === "darwin") {
-    const rpath = rpathOverride.length > 0 ? rpathOverride : libDir;
     return appendFlags(
-      `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(rpath)}`,
+      `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`,
       darwinWarningFlags(cc),
     );
   }
@@ -129,7 +128,7 @@ function linkFlags(dist, cc, rpathOverride) {
   );
 }
 
-function linkConfig(dist, packageName, cc, rpathOverride) {
+function linkConfig(dist, packageName, cc) {
   const libDir = path.join(dist, "lib");
   const binDir = path.join(dist, "bin");
   if (process.platform === "win32") {
@@ -144,7 +143,7 @@ function linkConfig(dist, packageName, cc, rpathOverride) {
     link_flags:
       process.platform === "darwin"
         ? appendFlags(
-          `-L${quote(libDir)} -Wl,-rpath,${quote(rpathOverride.length > 0 ? rpathOverride : libDir)}`,
+          `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
           darwinWarningFlags(cc),
         )
         : appendFlags(
@@ -163,19 +162,18 @@ function helperPath(binDir) {
 export function createNativeLinkConfig(env = readPayloadEnv()) {
   const rawDist = envValue(env, "PROTON_NATIVE_DIST").trim();
   const cc = envValue(env, "MOON_CC").trim();
-  const rpathOverride = envValue(env, "PROTON_PACKAGE_RPATH").trim();
   const dist = path.resolve(rawDist.length === 0 ? defaultDist() : rawDist);
   const binDir = path.join(dist, "bin");
   return {
     vars: {
-      PROTON_NATIVE_LINK_FLAGS: linkFlags(dist, cc, rpathOverride),
+      PROTON_NATIVE_LINK_FLAGS: linkFlags(dist, cc),
       PROTON_NATIVE_STUB_CC_FLAGS: "",
       PROTON_NATIVE_RUNTIME_DIR: nativeLinkPath(binDir),
       PROTON_RUNTIME_ROOT: nativeLinkPath(dist),
       PROTON_HELPER_PATH: helperPath(binDir),
     },
     link_configs: [
-      linkConfig(dist, "moonbit-community/proton/native", cc, rpathOverride),
+      linkConfig(dist, "moonbit-community/proton/native", cc),
     ],
   };
 }

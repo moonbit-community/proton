@@ -51,7 +51,7 @@ The `bundle` block in `proton.project.json` controls package creation:
   "bundle": {
     "active": true,
     "targets": ["app", "zip"],
-    "output": "target/proton-dist"
+    "output": "dist"
   }
 }
 ```
@@ -72,4 +72,4 @@ proton_cli package --release
   prebuild rule. Ordinary `moon check`, `build`, and `run` commands keep it
   current through `moonx moonbit-community/proton_codegen`.
 - `backend/app/main.mbt` assembles and runs the application.
-- `target/proton-dist/` contains packaged application artifacts.
+- `dist/` contains packaged application artifacts.

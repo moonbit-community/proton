@@ -798,7 +798,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  "bundle": {
           #|    "active": true,
           #|    "targets": ["app", "zip"],
-          #|    "output": "target/proton-dist"
+          #|    "output": "dist"
           #|  }
           #|}
           #|```
@@ -819,7 +819,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  prebuild rule. Ordinary `moon check`, `build`, and `run` commands keep it
           #|  current through `moonx moonbit-community/proton_codegen`.
           #|- `backend/app/main.mbt` assembles and runs the application.
-          #|- `target/proton-dist/` contains packaged application artifacts.
+          #|- `dist/` contains packaged application artifacts.
           #|
       ),
     },
@@ -829,7 +829,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|.DS_Store
           #|_build/
-          #|target
+          #|dist/
           #|.mooncakes/
           #|.moonagent/
           #|.proton/

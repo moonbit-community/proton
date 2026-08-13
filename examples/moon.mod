@@ -24,12 +24,12 @@ rule(name: "embed", command: ":embed -i $input -o $output")
 
 rule(
   name: "proton_codegen",
-  command: "moon -C \"$mod_dir/../codegen\" run --target-dir \"$mod_dir/target/proton-codegen-moon\" --target wasm . -- -C \"$mod_dir\" \"$input\" -o \"$output\"",
+  command: "moon -C \"$mod_dir/../codegen\" run --target-dir \"$mod_dir/../codegen/_build\" --target wasm . -- -C \"$mod_dir\" \"$input\" -o \"$output\"",
 )
 
 rule(
   name: "proton_extension_identity_codegen",
-  command: "moon -C \"$mod_dir/../codegen\" run --target-dir \"$mod_dir/target/proton-codegen-moon\" --target wasm . -- -C \"$mod_dir\" --extension-identity \"$input\" -o \"$output\"",
+  command: "moon -C \"$mod_dir/../codegen\" run --target-dir \"$mod_dir/../codegen/_build\" --target wasm . -- -C \"$mod_dir\" --extension-identity \"$input\" -o \"$output\"",
 )
 
 source = ""

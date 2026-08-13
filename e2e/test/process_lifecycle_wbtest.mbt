@@ -328,12 +328,16 @@ async fn wait_for_cdp_endpoint_stop(endpoint : String, timeout : Int) -> Unit {
 }
 
 ///|
-async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
+async fn run_pending_lifecycle_probe_once(
+  root : String,
+  output_root : String,
+  timeout : Int,
+) -> Unit {
   let name = "41_app_commands"
   let port = choose_cdp_port()
   let target = port.to_string()
   @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, name, port)
+    let app = spawn_scenario_app(group, root, output_root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     ignore(
@@ -397,13 +401,16 @@ async fn run_pending_lifecycle_probe_once(root : String, timeout : Int) -> Unit 
 
 ///|
 async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
+  let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
+  defer remove_dev_extension_tree(output_root)
+  build_scenario_app_executable(root, output_root)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
       run_e2e_operation_with_timeout(
         timeout,
         "41_app_commands pending lifecycle",
-        () => run_pending_lifecycle_probe_once(root, timeout),
+        () => run_pending_lifecycle_probe_once(root, output_root, timeout),
       )
       true
     } catch {
@@ -424,12 +431,16 @@ async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
 }
 
 ///|
-async fn run_event_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
+async fn run_event_lifecycle_probe_once(
+  root : String,
+  output_root : String,
+  timeout : Int,
+) -> Unit {
   let name = "40_event_broadcast"
   let port = choose_cdp_port()
   let target = port.to_string()
   @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, name, port)
+    let app = spawn_scenario_app(group, root, output_root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     ignore(
@@ -491,13 +502,16 @@ async fn run_event_lifecycle_probe_once(root : String, timeout : Int) -> Unit {
 
 ///|
 async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
+  let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
+  defer remove_dev_extension_tree(output_root)
+  build_scenario_app_executable(root, output_root)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
       run_e2e_operation_with_timeout(
         timeout,
         "40_event_broadcast event lifecycle",
-        () => run_event_lifecycle_probe_once(root, timeout),
+        () => run_event_lifecycle_probe_once(root, output_root, timeout),
       )
       true
     } catch {

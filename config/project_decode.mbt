@@ -573,7 +573,7 @@ fn optional_project_bundle(
       let document_types = optional_project_document_types(bundle_fields)
       let output = rebase_project_path(
         optional_string_config_field(bundle_fields, "output", "bundle.output").unwrap_or(
-          "target/proton-dist",
+          "dist",
         ),
         base_dir,
         "bundle.output",

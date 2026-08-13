@@ -52,15 +52,6 @@ fn asset_sidecar_extension() -> @proton_extension.Extension {
       })
       registrar.bind(asset_sidecar_report_command, (_context, payload) => {
         println("[asset-sidecar-e2e] " + payload.report)
-        @mbfs.create_dir("target") catch {
-          _ => ()
-        }
-        @mbfs.write_string_to_file(
-          "target/asset-sidecar-e2e.probe.json",
-          payload.report,
-        ) catch {
-          _ => ()
-        }
       })
     },
   )

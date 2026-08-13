@@ -1,0 +1,8 @@
+{
+  "id": "vendor/fs",
+  "namespace": "fs",
+  "platforms": [
+    "windows",
+    "ios"
+  ]
+}

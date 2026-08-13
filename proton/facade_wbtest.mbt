@@ -1143,12 +1143,6 @@ test "entry HTML injection does not install the bridge" {
 
 ///|
 fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir("target/proton-facade-dev") catch {
-    _ => ()
-  }
   let config : Json = {
     "window": { "title": "Dev Test", "width": 320, "height": 240 },
     "entry": { "kind": "asset", "value": "app.html" },
@@ -1179,8 +1173,9 @@ fn restore_env_var(name : String, value : String?) -> Unit {
 }
 
 ///|
-test "implicit config path honors PROTON_CONFIG_PATH" {
-  let config_path = "target/proton-facade-dev/implicit-env.proton.project.json"
+async test "implicit config path honors PROTON_CONFIG_PATH" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/implicit-env.proton.project.json"
   write_facade_dev_config(config_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
   defer restore_env_var("PROTON_CONFIG_PATH", old_config)
@@ -1204,8 +1199,9 @@ test "packaged config takes precedence over environment and working directory" {
 }
 
 ///|
-test "default config API honors PROTON_CONFIG_PATH" {
-  let config_path = "target/proton-facade-dev/config-api-env.proton.project.json"
+async test "default config API honors PROTON_CONFIG_PATH" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/config-api-env.proton.project.json"
   write_facade_dev_config(config_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
   let old_dev = @env.get_env_var("PROTON_DEV")
@@ -1224,9 +1220,10 @@ test "default config API honors PROTON_CONFIG_PATH" {
 }
 
 ///|
-test "config API keeps non-default paths explicit" {
-  let config_path = "target/proton-facade-dev/explicit.proton.project.json"
-  let env_path = "target/proton-facade-dev/explicit-env.proton.project.json"
+async test "config API keeps non-default paths explicit" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/explicit.proton.project.json"
+  let env_path = root + "/explicit-env.proton.project.json"
   write_facade_dev_config(config_path)
   write_facade_dev_config(env_path)
   let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
@@ -1237,8 +1234,9 @@ test "config API keeps non-default paths explicit" {
 }
 
 ///|
-test "config API overrides manifest fields and keeps base dir" {
-  let config_path = "target/proton-facade-dev/api-overrides.proton.project.json"
+async test "config API overrides manifest fields and keeps base dir" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let config_path = root + "/api-overrides.proton.project.json"
   write_facade_dev_config(config_path)
   let old_dev = @env.get_env_var("PROTON_DEV")
   let old_mode = @env.get_env_var("PROTON_MODE")
@@ -1273,8 +1271,9 @@ test "config API overrides manifest fields and keeps base dir" {
 }
 
 ///|
-test "dev manifest uses env override or frontend dev_url" {
-  let override_path = "target/proton-facade-dev/env-override.proton.project.json"
+async test "dev manifest uses env override or frontend dev_url" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
+  let override_path = root + "/env-override.proton.project.json"
   write_facade_dev_config(override_path, dev_url="http://localhost:5173")
   let old_dev = @env.get_env_var("PROTON_DEV")
   let old_url = @env.get_env_var("PROTON_FRONTEND_URL")
@@ -1292,7 +1291,7 @@ test "dev manifest uses env override or frontend dev_url" {
     _ => fail("expected dev URL entry")
   }
 
-  let config_path = "target/proton-facade-dev/config-dev-url.proton.project.json"
+  let config_path = root + "/config-dev-url.proton.project.json"
   write_facade_dev_config(config_path, dev_url="http://localhost:5173")
   @env.unset_env_var("PROTON_FRONTEND_URL")
   let config_manifest = unwrap_configuration(() => {
@@ -1340,11 +1339,9 @@ test "single instance builder validates and resolves an inline identity" {
 }
 
 ///|
-test "launch activation classifies URLs and existing documents" {
-  let document = "target/proton-facade-activation.txt"
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
+async test "launch activation classifies URLs and existing documents" {
+  let root = @async_fs.tmpdir(prefix="proton-facade-activation-")
+  let document = root + "/activation.txt"
   @mbfs.write_string_to_file(document, "activation", encoding="utf8") catch {
     error => abort(@debug.render(Repr(error)))
   }
@@ -1353,11 +1350,7 @@ test "launch activation classifies URLs and existing documents" {
   assert_false(launch_argument_is_url("custom:value", ["other"]))
   assert_true(launch_argument_is_document(document, ["txt"]))
   assert_false(launch_argument_is_document(document, ["md"]))
-  assert_false(
-    launch_argument_is_document("target/proton-facade-activation-missing.txt", [
-      "txt",
-    ]),
-  )
+  assert_false(launch_argument_is_document(root + "/missing.txt", ["txt"]))
 }
 
 ///|

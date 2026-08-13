@@ -115,6 +115,7 @@ fn read_runtime_dist(manifest_path : String) -> Result[String, String] {
 ///|
 fn app_process_env(
   root : String,
+  output_root : String,
   scenario : String,
   cdp_port : Int,
 ) -> Map[String, String] raise {
@@ -138,7 +139,7 @@ fn app_process_env(
     "PROTON_NATIVE_DIST": runtime_dist,
     "PROTON_RUNTIME_ROOT": runtime_dist,
     "PROTON_HELPER_PATH": helper_path,
-    "PROTON_NATIVE_LOG": scenario_native_log_path(root, cdp_port),
+    "PROTON_NATIVE_LOG": scenario_native_log_path(output_root, cdp_port),
     "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
     "PROTON_HEADLESS": "1",
     "PROTON_E2E_ASSET_SIDECAR_ENTRY": join_path(
@@ -191,8 +192,8 @@ fn helper_executable_name() -> String {
 }
 
 ///|
-fn scenario_native_log_path(root : String, cdp_port : Int) -> String {
-  join_path(root, "target/proton-e2e-" + cdp_port.to_string() + ".log")
+fn scenario_native_log_path(output_root : String, cdp_port : Int) -> String {
+  join_path(output_root, "native-" + cdp_port.to_string() + ".log")
 }
 
 ///|
@@ -229,17 +230,14 @@ fn path_list_separator() -> String {
 async fn[X] spawn_scenario_app(
   group : @async.TaskGroup[X],
   root : String,
+  output_root : String,
   scenario : String,
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
-  let (program, args) = scenario_app_command(root)
-  let output_dir = join_path(root, "target")
-  if !@mbfs.path_exists(output_dir) {
-    @mbfs.create_dir(output_dir)
-  }
+  let (program, args) = scenario_app_command(output_root)
   let output_path = join_path(
-    root,
-    "target/proton-e2e-child-" + cdp_port.to_string() + ".log",
+    output_root,
+    "child-" + cdp_port.to_string() + ".log",
   )
   let output = @process.redirect_to_file(
     output_path,
@@ -250,7 +248,7 @@ async fn[X] spawn_scenario_app(
     program,
     args,
     cwd=root,
-    extra_env=app_process_env(root, scenario, cdp_port),
+    extra_env=app_process_env(root, output_root, scenario, cdp_port),
     stdout=output,
     stderr=output,
     cancel_handler=app_cancel_handler(),
@@ -259,18 +257,21 @@ async fn[X] spawn_scenario_app(
   SpawnedScenarioApp::{
     process,
     output_path,
-    native_log_path: scenario_native_log_path(root, cdp_port),
+    native_log_path: scenario_native_log_path(output_root, cdp_port),
   }
 }
 
 ///|
-async fn build_scenario_app_executable(root : String) -> Unit {
+async fn build_scenario_app_executable(
+  root : String,
+  output_root : String,
+) -> Unit {
   if @path.sep != '\\' {
     let (code, _) = @process.collect_output_merged(
       "moon",
       [
         "--target-dir",
-        scenario_app_target_dir(root),
+        scenario_app_target_dir(output_root),
         "-C",
         root,
         "test",
@@ -290,25 +291,25 @@ async fn build_scenario_app_executable(root : String) -> Unit {
 }
 
 ///|
-fn scenario_app_command(root : String) -> (String, Array[String]) raise {
+fn scenario_app_command(output_root : String) -> (String, Array[String]) raise {
   if @path.sep == '\\' {
     (current_test_executable(), [app_child_test_selector])
   } else {
-    isolated_app_command(scenario_app_executable(root), [
+    isolated_app_command(scenario_app_executable(output_root), [
       app_child_test_selector,
     ])
   }
 }
 
 ///|
-fn scenario_app_target_dir(root : String) -> String {
-  join_path(root, "target/proton-e2e-app-child")
+fn scenario_app_target_dir(output_root : String) -> String {
+  join_path(output_root, "app-build")
 }
 
 ///|
-fn scenario_app_executable(root : String) -> String {
+fn scenario_app_executable(output_root : String) -> String {
   join_path(
-    scenario_app_target_dir(root),
+    scenario_app_target_dir(output_root),
     "native/debug/test/moonbit-community/proton/e2e/test/test.whitebox_test.exe",
   )
 }
@@ -617,13 +618,14 @@ fn join_path(base : String, child : String) -> String {
 ///|
 async fn run_scenario_probe_once(
   root : String,
+  output_root : String,
   name : String,
   timeout : Int,
 ) -> Unit {
   let port = choose_cdp_port()
   let target = port.to_string()
   @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, name, port)
+    let app = spawn_scenario_app(group, root, output_root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     let browser_web_socket_url = wait_for_spawned_app_cdp(
@@ -651,7 +653,12 @@ async fn run_scenario_probe_once(
       finish_scenario_app(app, target)
     } else {
       if name == "41_app_commands" {
-        run_app_commands_full_probe(root, target, timeout, app.native_log_path)
+        run_app_commands_full_probe(
+          output_root,
+          target,
+          timeout,
+          app.native_log_path,
+        )
       } else if name == "40_event_broadcast" {
         run_event_scenario_page_probe(app, target, timeout)
       } else if name == "46_asset_sidecar_resources" {
@@ -692,7 +699,9 @@ async fn run_scenario_probe_with_retry(
   name : String,
   timeout : Int,
 ) -> Unit {
-  build_scenario_app_executable(root)
+  let output_root = @fs.tmpdir(prefix="proton-e2e-")
+  defer remove_dev_extension_tree(output_root)
+  build_scenario_app_executable(root, output_root)
   let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
   while attempt < 2 {
@@ -700,7 +709,7 @@ async fn run_scenario_probe_with_retry(
       run_e2e_operation_with_timeout(
         operation_timeout,
         "E2E scenario " + name,
-        () => run_scenario_probe_once(root, name, timeout),
+        () => run_scenario_probe_once(root, output_root, name, timeout),
       )
       true
     } catch {

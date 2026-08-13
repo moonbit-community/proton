@@ -14,14 +14,14 @@ test "project config reports malformed JSON at the text boundary" {
   let error = expect_project_config_error(() => {
     load_project_config_from_text(
       "{\"window\":",
-      "target/proton-config",
-      name="target/proton-config/proton.project.json",
+      "fixtures/proton-config",
+      name="fixtures/proton-config/proton.project.json",
     )
   })
   guard error is ProjectConfigError::Syntax(name~, diagnostics~) else {
     abort("expected project config JSON syntax error")
   }
-  assert_eq(name, "target/proton-config/proton.project.json")
+  assert_eq(name, "fixtures/proton-config/proton.project.json")
   assert_true(diagnostics != "")
   assert_true(error.message().has_prefix(name + ": "))
 }
@@ -38,7 +38,7 @@ test "project config rejects unsupported window size_hint" {
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_true(error.message().contains("unsupported window.size_hint"))
 }
@@ -54,7 +54,7 @@ test "project config parses default titlebar style" {
     },
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
-  let config = load_project_config_from_json(source, "target/proton-config").config()
+  let config = load_project_config_from_json(source, "fixtures/proton-config").config()
   assert_true(config.window.titlebar_style == TitlebarDefault)
 }
 
@@ -69,7 +69,7 @@ test "project config parses overlay titlebar style" {
     },
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
-  let config = load_project_config_from_json(source, "target/proton-config").config()
+  let config = load_project_config_from_json(source, "fixtures/proton-config").config()
   assert_true(config.window.titlebar_style == TitlebarOverlay)
 }
 
@@ -81,7 +81,7 @@ test "project config requires an identifier for single instance mode" {
     "entry": { "kind": "html", "value": "<main>App</main>" },
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_true(error.message().contains("identifier"))
   assert_true(error.message().contains("single_instance"))
@@ -95,7 +95,7 @@ test "project config decodes single instance mode" {
     "window": { "title": "App", "width": 900, "height": 700 },
     "entry": { "kind": "html", "value": "<main>App</main>" },
   }
-  let config = load_project_config_from_json(source, "target/proton-config").config()
+  let config = load_project_config_from_json(source, "fixtures/proton-config").config()
   assert_true(config.single_instance())
   assert_eq(config.metadata().identifier, Some("dev.proton.single-instance"))
 }
@@ -112,14 +112,14 @@ test "project config rejects unsupported titlebar style" {
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_true(error.message().contains("unsupported window.titlebar_style"))
 }
 
 ///|
 test "project config rebases file entry and frontend paths from config directory" {
-  let base_dir = "target/proton-config/subdir"
+  let base_dir = "fixtures/proton-config/subdir"
   let source : Json = {
     "window": { "title": "App", "width": 900, "height": 700 },
     "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
@@ -134,7 +134,7 @@ test "project config rebases file entry and frontend paths from config directory
       "icon": ["icons/icon.ico"],
       "resources": ["resources/**"],
       "sign": { "binaries": ["bin/worker"] },
-      "output": "target/proton-dist",
+      "output": "custom-dist",
     },
   }
   let config = load_project_config_from_json(source, base_dir).config()
@@ -142,7 +142,7 @@ test "project config rebases file entry and frontend paths from config directory
     Asset(path) =>
       assert_true(
         normalize_test_path(path).has_suffix(
-          "target/proton-config/subdir/frontend/dist/index.html",
+          "fixtures/proton-config/subdir/frontend/dist/index.html",
         ),
       )
     _ => abort("expected asset entry")
@@ -151,41 +151,41 @@ test "project config rebases file entry and frontend paths from config directory
   assert_eq(backend.app_package(), "app")
   assert_true(
     normalize_test_path(backend.path()).has_suffix(
-      "target/proton-config/subdir/backend module",
+      "fixtures/proton-config/subdir/backend module",
     ),
   )
   let frontend = config.frontend().unwrap()
   assert_true(
     normalize_test_path(frontend.dist().unwrap()).has_suffix(
-      "target/proton-config/subdir/frontend module/dist",
+      "fixtures/proton-config/subdir/frontend module/dist",
     ),
   )
   assert_true(
     normalize_test_path(frontend.path().unwrap()).has_suffix(
-      "target/proton-config/subdir/frontend module",
+      "fixtures/proton-config/subdir/frontend module",
     ),
   )
   let bundle = config.bundle().unwrap()
   assert_eq(bundle.targets, ["app", "zip", "dmg"])
   assert_true(
     normalize_test_path(bundle.icon[0]).has_suffix(
-      "target/proton-config/subdir/icons/icon.ico",
+      "fixtures/proton-config/subdir/icons/icon.ico",
     ),
   )
   assert_true(
     normalize_test_path(bundle.resources[0]).has_suffix(
-      "target/proton-config/subdir/resources/**",
+      "fixtures/proton-config/subdir/resources/**",
     ),
   )
   let sign = bundle.sign.unwrap()
   assert_true(
     normalize_test_path(sign.binaries()[0]).has_suffix(
-      "target/proton-config/subdir/bin/worker",
+      "fixtures/proton-config/subdir/bin/worker",
     ),
   )
   assert_true(
     normalize_test_path(bundle.output()).has_suffix(
-      "target/proton-config/subdir/target/proton-dist",
+      "fixtures/proton-config/subdir/custom-dist",
     ),
   )
 }
@@ -279,14 +279,14 @@ test "project config rejects absolute project paths with field-specific errors" 
       "bundle.output",
       project_config_for_path_test(
         html_entry,
-        extra=("bundle", { "output": "/target/proton-dist" }),
+        extra=("bundle", { "output": "/custom-dist" }),
       ),
     ),
   ]
   for _, item in cases {
     let (label, source) = item
     let error = expect_project_config_error(() => {
-      load_project_config_from_json(source, "target/proton-config")
+      load_project_config_from_json(source, "fixtures/proton-config")
     })
     assert_eq(
       error.message(),
@@ -304,7 +304,7 @@ test "project config rejects signing binary globs under the correct field" {
     extra=("bundle", { "sign": { "binaries": ["bin/*.exe"] } }),
   )
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_eq(
     error.message(),
@@ -319,7 +319,7 @@ test "project config rejects backslashes in portable project paths" {
     "entry": { "kind": "asset", "value": "frontend\\dist\\index.html" },
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_eq(
     error.message(),
@@ -333,7 +333,7 @@ test "project config rebases portable paths into host path components" {
     "window": { "title": "App", "width": 900, "height": 700 },
     "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
   }
-  let config = load_project_config_from_json(source, "target/proton-config").config()
+  let config = load_project_config_from_json(source, "fixtures/proton-config").config()
   match config.entry() {
     Asset(path) => {
       let entry : @mbpath.Path = path
@@ -346,37 +346,7 @@ test "project config rebases portable paths into host path components" {
 
 ///|
 test "project config reads module metadata from configured backend" {
-  let project_dir = "target/project-config-backend-metadata"
-  let backend_dir = project_dir + "/backend"
-  @mbfs.create_dir("target") catch {
-    _ => ()
-  }
-  @mbfs.create_dir(project_dir) catch {
-    _ => ()
-  }
-  @mbfs.create_dir(backend_dir) catch {
-    _ => ()
-  }
-  @mbfs.write_string_to_file(
-    project_dir + "/moon.mod",
-    "name = \"example/parent\"\nversion = \"9.9.9\"\n",
-    encoding="utf8",
-  ) catch {
-    error => abort(@debug.render(Repr(error)))
-  }
-  @mbfs.write_string_to_file(
-    backend_dir + "/moon.mod",
-    (
-      #|name = "example/backend"
-      #|version = "1.2.3"
-      #|description = "Backend module metadata"
-      #|license = "Apache-2.0"
-      #|
-    ),
-    encoding="utf8",
-  ) catch {
-    error => abort(@debug.render(Repr(error)))
-  }
+  let project_dir = "testdata/project-config-backend-metadata"
   let source : Json = {
     "window": { "title": "App", "width": 900, "height": 700 },
     "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
@@ -388,11 +358,13 @@ test "project config reads module metadata from configured backend" {
   assert_eq(metadata.version, Some("1.2.3"))
   assert_eq(metadata.description, Some("Backend module metadata"))
   assert_eq(metadata.license, Some("Apache-2.0"))
-  @mbfs.remove_file(backend_dir + "/moon.mod") catch {
-    error => abort(@debug.render(Repr(error)))
+  let source_without_backend_manifest : Json = {
+    "window": { "title": "App", "width": 900, "height": 700 },
+    "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
+    "backend": { "path": "missing-backend", "package": "app" },
   }
   let metadata_without_backend_manifest = load_project_config_from_json(
-      source, project_dir,
+      source_without_backend_manifest, project_dir,
     )
     .config()
     .metadata()
@@ -407,7 +379,7 @@ test "project config rejects legacy frontend cwd" {
     "frontend": { "cwd": "frontend" },
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_eq(
     error.message(),
@@ -426,7 +398,7 @@ test "project config aggregates unknown top-level fields" {
     "debug": false,
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_eq(
     error.message(),
@@ -496,7 +468,7 @@ test "project config rejects unknown object fields" {
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
   let error = expect_project_config_error(() => {
-    load_project_config_from_json(source, "target/proton-config")
+    load_project_config_from_json(source, "fixtures/proton-config")
   })
   assert_eq(
     error.message(),
@@ -510,7 +482,7 @@ test "project config load reports no warnings by default" {
     "window": { "title": "App", "width": 900, "height": 700 },
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
-  let loaded = load_project_config_from_json(source, "target/proton-config")
+  let loaded = load_project_config_from_json(source, "fixtures/proton-config")
   assert_eq(loaded.warnings(), [])
 }
 
@@ -520,7 +492,7 @@ test "loaded project config carries warnings" {
     "window": { "title": "App", "width": 900, "height": 700 },
     "entry": { "kind": "url", "value": "http://localhost:5173" },
   }
-  let loaded = load_project_config_from_json(source, "target/proton-config")
+  let loaded = load_project_config_from_json(source, "fixtures/proton-config")
   let with_warnings = LoadedProjectConfig::new(loaded.config(), warnings=[
     "proton.project.json field `legacy` is deprecated",
   ])
@@ -555,7 +527,7 @@ test "project config decodes secondary windows and macOS launch metadata" {
       ],
     },
   }
-  let config = load_project_config_from_json(source, "target/proton-config").config()
+  let config = load_project_config_from_json(source, "fixtures/proton-config").config()
   assert_eq(config.windows().length(), 1)
   assert_eq(config.windows()[0].id, "settings")
   assert_true(config.windows()[0].open_on_start)
@@ -566,7 +538,7 @@ test "project config decodes secondary windows and macOS launch metadata" {
     ProjectEntry::File(path) =>
       assert_true(
         normalize_test_path(path).has_suffix(
-          "target/proton-config/settings.html",
+          "fixtures/proton-config/settings.html",
         ),
       )
     _ => abort("expected secondary file entry")

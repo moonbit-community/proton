@@ -238,7 +238,7 @@ pub fn ProjectBundleConfig::new(
   sign? : ProjectSignConfig? = None,
   url_schemes? : Array[String] = [],
   document_types? : Array[ProjectDocumentType] = [],
-  output? : String = "target/proton-dist",
+  output? : String = "dist",
 ) -> ProjectBundleConfig {
   ProjectBundleConfig::{
     active,
