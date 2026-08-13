@@ -1970,6 +1970,20 @@ int main(int argc, char **argv) {
   }
 
   runtime = PROTON_INVALID_HANDLE;
+  status = proton_runtime_create_json(
+      "{\"abi_version\":1,\"cache_dir\":\"relative-cache\"}", &runtime);
+  if (expect_status("runtime_create rejects relative cache_dir", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (runtime != PROTON_INVALID_HANDLE) {
+    return fail("relative cache_dir should leave runtime handle invalid");
+  }
+  if (expect_last_error_contains("cache_dir must be an absolute path")) {
+    return 1;
+  }
+
+  runtime = PROTON_INVALID_HANDLE;
   if (expect_status("runtime_create valid",
                     proton_runtime_create_json("{\"abi_version\":1}", &runtime),
                     PROTON_OK)) {

@@ -263,6 +263,7 @@ fn App::inline_app_config(self : App) -> ResolvedAppConfig {
   ResolvedAppConfig::{
     manifest: self.inline_manifest(),
     permission_base_path: current_permission_base_path(),
+    application_identifier: self.single_instance_identifier,
     instance_identifier: self.single_instance_identifier,
     url_schemes: [],
     document_extensions: [],
@@ -334,6 +335,14 @@ fn App::merge_config(
         base.resolve().to_string()
       }
       None => current_permission_base_path()
+    },
+    application_identifier: match self.single_instance_identifier {
+      Some(identifier) => Some(identifier)
+      None =>
+        match project {
+          Some(project) => project.metadata().identifier()
+          None => None
+        }
     },
     instance_identifier: match self.single_instance_identifier {
       Some(identifier) => Some(identifier)
