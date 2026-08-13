@@ -32,17 +32,15 @@ let page =
   #|
 
 ///|
-fn main {
-  @proton.run(() => {
-    @proton.html("DevTools API", page, width=900, height=700, debug=true)
-    .window_lifecycle(
-      on_ready=context => {
-        let browser = context.handle().browser()
-        browser.open_devtools()
-        browser
-      },
-      on_close=fn(browser) { browser.close_devtools() catch { _ => () } },
-    )
-    .run_or_abort()
-  })
+async fn main {
+  @proton.html("DevTools API", page, width=900, height=700, debug=true)
+  .window_lifecycle(
+    on_ready=context => {
+      let browser = context.handle().browser()
+      browser.open_devtools()
+      browser
+    },
+    on_close=fn(browser) { browser.close_devtools() catch { _ => () } },
+  )
+  .run_or_abort()
 }

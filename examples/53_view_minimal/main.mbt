@@ -16,13 +16,11 @@ let sidebar =
   #|
 
 ///|
-fn main {
-  @proton.run(() => {
-    @proton.html("Minimal View", sidebar, width=1120, height=720, debug=true)
-    .with_view(
-      "browser",
-      @proton.view("https://example.com/", width=832, height=720, x=288),
-    )
-    .run_or_abort()
-  })
+async fn main {
+  @proton.html("Minimal View", sidebar, width=1120, height=720, debug=true)
+  .with_view(
+    "browser",
+    @proton.view("https://example.com/", width=832, height=720, x=288),
+  )
+  .run_or_abort()
 }

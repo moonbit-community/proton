@@ -263,28 +263,53 @@ async fn[X] spawn_scenario_app(
 }
 
 ///|
+async fn build_scenario_app_executable(root : String) -> Unit {
+  if @path.sep != '\\' {
+    let (code, _) = @process.collect_output_merged(
+      "moon",
+      [
+        "--target-dir",
+        scenario_app_target_dir(root),
+        "-C",
+        root,
+        "test",
+        "e2e/test/scenario_app_wbtest.mbt",
+        "--target",
+        "native",
+        "--no-parallelize",
+        "--diagnostic-limit",
+        "80",
+        "--build-only",
+      ],
+      cwd=root,
+      extra_env={ "MOON_CC": "cc" },
+    )
+    guard code == 0 else { fail("failed to build the E2E scenario app") }
+  }
+}
+
+///|
 fn scenario_app_command(root : String) -> (String, Array[String]) raise {
   if @path.sep == '\\' {
     (current_test_executable(), [app_child_test_selector])
   } else {
-    // The Linux native test runner may execute a TCC-owned artifact that is
-    // valid for the current process but not a standalone execve target.  Ask
-    // Moon to run exactly the child test in an isolated, serially reused build
-    // directory on Unix instead of attempting to re-exec the parent binary.
-    isolated_app_command("moon", [
-      "--target-dir",
-      join_path(root, "target/proton-e2e-app-child"),
-      "-C",
-      root,
-      "test",
-      "e2e/test/scenario_app_wbtest.mbt",
-      "--target",
-      "native",
-      "--no-parallelize",
-      "--diagnostic-limit",
-      "80",
+    isolated_app_command(scenario_app_executable(root), [
+      app_child_test_selector,
     ])
   }
+}
+
+///|
+fn scenario_app_target_dir(root : String) -> String {
+  join_path(root, "target/proton-e2e-app-child")
+}
+
+///|
+fn scenario_app_executable(root : String) -> String {
+  join_path(
+    scenario_app_target_dir(root),
+    "native/debug/test/moonbit-community/proton/e2e/test/test.whitebox_test.exe",
+  )
 }
 
 ///|
@@ -380,14 +405,12 @@ fn unix_app_tree_kill_script() -> String {
     #|PATH=/usr/bin:/bin:/usr/sbin:/sbin
     #|export PATH
     #|kill_tree() {
-    #|  parent="$1"
-    #|  signal="$2"
     #|  if command -v pgrep >/dev/null 2>&1; then
-    #|    for child in $(pgrep -P "$parent" 2>/dev/null); do
-    #|      kill_tree "$child" "$signal"
+    #|    for child in $(pgrep -P "$1" 2>/dev/null); do
+    #|      kill_tree "$child" "$2"
     #|    done
     #|  fi
-    #|  kill "-$signal" "$parent" 2>/dev/null || true
+    #|  kill "-$2" "$1" 2>/dev/null || true
     #|}
     #|parent="$1"
     #|signal="$2"
@@ -668,6 +691,7 @@ async fn run_scenario_probe_with_retry(
   name : String,
   timeout : Int,
 ) -> Unit {
+  build_scenario_app_executable(root)
   let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
   while attempt < 2 {

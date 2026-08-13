@@ -237,18 +237,11 @@ test "app run errors retain typed bridge diagnostics" {
 }
 
 ///|
-async test "app run requires the Proton application runner" {
-  let mut rejected = false
-  html("Test", "<html></html>").run() catch {
-    RunnerError(message) => {
-      rejected = true
-      assert_true(message.contains("@proton.run"))
-      assert_true(message.contains("synchronous main"))
-      assert_true(message.contains("async fn main"))
-    }
-    error => fail("expected runner error, got " + @debug.render(Repr(error)))
-  }
-  assert_true(rejected)
+/// `fn init` installing the loop is what lets an application be a plain
+/// `async fn main`. If it ever stops running, nothing else fails until
+/// `App::run` refuses to start, so assert it directly.
+test "the event loop is installed during process initialization" {
+  require_event_loop()
 }
 
 ///|
@@ -990,16 +983,8 @@ async test "application lifecycle hooks shut down in reverse order" {
 }
 
 ///|
-#cfg(not(platform="windows"))
 async test "runtime wakeup preserves notification before suspension" {
-  let (reader, writer) = @pipe.pipe()
-  let wakeup = RuntimeWakeup::{
-    reader: RuntimeWakeReader(reader),
-    writer: Some(writer),
-    signal: @core.RuntimeWakeSignal::new(),
-    closed: false,
-  }
-  defer wakeup.close()
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal::new() }
   let revision = wakeup.revision()
   wakeup.signal.notify()
   let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))

@@ -54,27 +54,6 @@ impl Show for AppEntryError with fn output(self, logger) {
 }
 
 ///|
-pub fn RuntimeWakeupError::message(self : RuntimeWakeupError) -> String {
-  match self {
-    UnsupportedFeature(feature~) =>
-      "the native runtime does not provide the required wakeup feature: " +
-      feature
-    PipeCreateFailed(detail~) =>
-      "failed to create the runtime wakeup pipe: " + detail
-    SourceOpenFailed(source~, detail~) =>
-      "failed to open runtime wakeup source " + source + ": " + detail
-    SourceClosed => "runtime wakeup source closed unexpectedly"
-    MissingNotification =>
-      "runtime wakeup wait completed without a notification"
-  }
-}
-
-///|
-impl Show for RuntimeWakeupError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
 pub fn CommandExtensionLifecycleError::message(
   self : CommandExtensionLifecycleError,
 ) -> String {
@@ -172,7 +151,7 @@ fn cleanup_failure_message(
 ///|
 pub fn AppRunError::message(self : AppRunError) -> String {
   match self {
-    RunnerError(message) => "application runner is not active: " + message
+    EventLoopError(message) => "application event loop failed: " + message
     ConfigurationError(error) =>
       "application configuration failed: " + error.message()
     UnsupportedNativeFeature(feature~) =>
@@ -180,7 +159,6 @@ pub fn AppRunError::message(self : AppRunError) -> String {
       feature
     NativeRuntimeError(action~, error~) =>
       "native runtime failed during " + action + ": " + error.message()
-    RuntimeWakeupError(error) => "runtime wakeup failed: " + error.message()
     CommandExtensionLifecycleError(error) =>
       "command extension lifecycle failed: " + error.message()
     LifecycleHookError(error) =>

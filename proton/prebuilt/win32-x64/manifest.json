@@ -1,7 +1,7 @@
 {
   "platform": "win32-x64",
   "proton_version": "0.1.15",
-  "source_hash": "sha256:258eab74ca742e157be10f359be656d6b142d76e6c0dce96749ae2c903b3113a",
+  "source_hash": "sha256:446468f6e799d9c49a4bd534884b382fcbe2f996c0b092a89df488d0e5401300",
   "artifacts": {
     "dll": "bin/proton.dll",
     "helper": "bin/cef_process.exe",

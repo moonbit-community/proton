@@ -88,8 +88,6 @@ int32_t proton_runtime_slot_create(bool engine_backed,
     slot->occupied = true;
     slot->destroyed = false;
     slot->engine_backed = engine_backed;
-    slot->running = false;
-    slot->quit_requested = false;
     slot->engine_runtime = engine_runtime;
     slot->app_instance = PROTON_INVALID_HANDLE;
     slot->owner_thread_set = true;
@@ -109,8 +107,6 @@ void proton_runtime_slot_destroy(proton_runtime_slot_t *slot) {
   proton_runtime_clear_events(slot);
   slot->destroyed = true;
   slot->engine_backed = false;
-  slot->running = false;
-  slot->quit_requested = true;
   slot->app_instance = PROTON_INVALID_HANDLE;
   slot->owner_thread_set = false;
 }

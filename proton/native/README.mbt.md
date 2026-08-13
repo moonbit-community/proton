@@ -88,9 +88,9 @@ test "runtime and window lifecycle" {
 
 `Runtime::wait` is a low-level primitive for hosts that own the external
 message pump. It reports which kinds of work may be ready, and the caller still
-drains events or bridge requests through the poll APIs. The root facade does
-not use it on macOS: `run_app` owns CEF's native message loop and wakes the
-MoonBit application thread through `Runtime::set_wakeup_fd`.
+drains events or bridge requests through the poll APIs. The root facade uses
+the process-wide host loop instead, which installs directly into the MoonBit
+async scheduler before application code starts.
 
 ```mbt check
 ///|

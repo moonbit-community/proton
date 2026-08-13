@@ -12,21 +12,21 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
 
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
-pub fn run_asset_sidecar() -> Unit
+pub async fn run_asset_sidecar() -> Unit
 
-pub fn run_async_extension_add() -> Unit
+pub async fn run_async_extension_add() -> Unit
 
-pub fn run_attribute_codegen_commands() -> Unit
+pub async fn run_attribute_codegen_commands() -> Unit
 
-pub fn run_devtools() -> Unit
+pub async fn run_devtools() -> Unit
 
-pub fn run_event_broadcast() -> Unit
+pub async fn run_event_broadcast() -> Unit
 
-pub fn run_multi_window() -> Unit
+pub async fn run_multi_window() -> Unit
 
-pub fn run_sync_async_extensions() -> Unit
+pub async fn run_sync_async_extensions() -> Unit
 
-pub fn run_web_contents_view() -> Unit
+pub async fn run_web_contents_view() -> Unit
 
 // Errors
 

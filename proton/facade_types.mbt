@@ -474,16 +474,6 @@ pub(all) suberror AppEntryError {
 } derive(Debug)
 
 ///|
-/// Failures in the MoonBit-side runtime wakeup source.
-pub(all) suberror RuntimeWakeupError {
-  UnsupportedFeature(feature~ : String)
-  PipeCreateFailed(detail~ : String)
-  SourceOpenFailed(source~ : String, detail~ : String)
-  SourceClosed
-  MissingNotification
-} derive(Debug)
-
-///|
 /// Failures while starting or stopping command extensions.
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
@@ -512,11 +502,10 @@ pub(all) suberror AppCleanupError {
 ///|
 /// Failures produced while configuring, starting, or running an application.
 pub(all) suberror AppRunError {
-  RunnerError(String)
+  EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
   NativeRuntimeError(action~ : String, error~ : @native.NativeError)
-  RuntimeWakeupError(RuntimeWakeupError)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)

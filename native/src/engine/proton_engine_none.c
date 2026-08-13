@@ -23,23 +23,6 @@ static const char *proton_engine_unavailable_message(void) {
 #endif
 }
 
-int32_t proton_engine_prepare_app(char *error, size_t error_len) {
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
-int32_t proton_engine_run_app_loop(char *error, size_t error_len) {
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
-void proton_engine_quit_app_loop(void) {}
-
-int32_t proton_engine_finish_app(char *error, size_t error_len) {
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
 int32_t proton_engine_execute_process_json(const char *config_json,
                                            int32_t *out_exit_code,
                                            char *error,
@@ -72,22 +55,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                  proton_engine_unavailable_message());
 }
 
-int32_t proton_engine_runtime_run(proton_engine_runtime_t *runtime,
-                                  char *error,
-                                  size_t error_len) {
-  (void)runtime;
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
-int32_t proton_engine_runtime_quit(proton_engine_runtime_t *runtime,
-                                   char *error,
-                                   size_t error_len) {
-  (void)runtime;
-  return proton_engine_set_error(error, error_len,
-                                 proton_engine_unavailable_message());
-}
-
 int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
@@ -99,7 +66,7 @@ int32_t proton_engine_runtime_do_message_loop_work(
 
 int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t interest_mask,
-                                   uint32_t timeout_ms,
+                                   int32_t timeout_ms,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len) {
@@ -748,3 +715,25 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
   (void)view;
   (void)public_view;
 }
+
+/* Refused rather than accepted: a loop that started here would fail on every
+   poll instead, and a host that cannot get an engine should learn it while it
+   is still the one raising the error. */
+int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
+                                     uint32_t *out_ready_mask,
+                                     char *error,
+                                     size_t error_len) {
+  (void)timeout_ms;
+  if (out_ready_mask != NULL) {
+    *out_ready_mask = PROTON_WAIT_NONE;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+void proton_engine_host_loop_end(void) {}

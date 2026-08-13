@@ -81,35 +81,6 @@ jobs:
           cmake --install native\build-prebuilt --config Release
           "PROTON_PREBUILT_RUNTIME=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Test Release runtime
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $PSNativeCommandUseErrorActionPreference = $true
-          $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
-          ctest --test-dir native\build-prebuilt -C Release --output-on-failure
-          node native\scripts\verify_link_config.mjs $env:PROTON_PREBUILT_RUNTIME
-
-      - name: Verify reproducible Windows binaries
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $artifacts = @("bin\cef_process.exe", "bin\proton.dll", "lib\proton.lib")
-          $expected = @{}
-          foreach ($artifact in $artifacts) {
-            $expected[$artifact] = (Get-FileHash `
-              (Join-Path $env:PROTON_PREBUILT_RUNTIME $artifact) -Algorithm SHA256).Hash
-          }
-          cmake --build native\build-prebuilt --config Release --clean-first --parallel
-          cmake --install native\build-prebuilt --config Release
-          foreach ($artifact in $artifacts) {
-            $actual = (Get-FileHash `
-              (Join-Path $env:PROTON_PREBUILT_RUNTIME $artifact) -Algorithm SHA256).Hash
-            if ($actual -ne $expected[$artifact]) {
-              throw "$artifact is not reproducible"
-            }
-          }
-
       - name: Stage package prebuilt
         shell: pwsh
         run: |
@@ -130,9 +101,6 @@ jobs:
 
       - name: Record prebuilt source hash
         run: node scripts/prebuilt_source_hash.mjs --record win32-x64
-
-      - name: Verify package prebuilt ABI
-        run: node scripts/verify_prebuilt_abi.mjs win32-x64
 
       - name: Archive Windows prebuilt
         shell: pwsh

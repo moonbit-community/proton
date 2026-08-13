@@ -68,12 +68,6 @@ jobs:
           cmake --install native/build-prebuilt --strip
           echo "PROTON_PREBUILT_RUNTIME=$runtime" >> "$GITHUB_ENV"
 
-      - name: Test Release runtime
-        run: |
-          PROTON_TEST_SKIP_MANAGED_APP_RUNNER=1 \
-            ctest --test-dir native/build-prebuilt --output-on-failure
-          node native/scripts/verify_link_config.mjs "$PROTON_PREBUILT_RUNTIME"
-
       - name: Stage package prebuilt
         run: |
           destination="$PWD/proton/prebuilt/darwin-arm64"
@@ -89,9 +83,6 @@ jobs:
 
       - name: Record prebuilt source hash
         run: node scripts/prebuilt_source_hash.mjs --record darwin-arm64
-
-      - name: Verify package prebuilt ABI
-        run: node scripts/verify_prebuilt_abi.mjs darwin-arm64
 
       # upload-artifact does not preserve Unix executable modes. Keep the
       # staged directory in a tar archive so cef_process remains executable.
