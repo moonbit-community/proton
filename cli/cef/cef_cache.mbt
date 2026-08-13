@@ -92,6 +92,28 @@ fn resolve_global_cef_cache_root(
 }
 
 ///|
+fn resolve_global_runtime_cache_root(
+  project_root~ : String,
+  configured_root~ : String?,
+  home~ : String?,
+) -> String? {
+  match configured_root {
+    Some(value) if value.trim().to_owned() != "" =>
+      Some(@fsutil.resolve_path(project_root, value.trim().to_owned()))
+    _ => {
+      guard home is Some(home) && home.trim().to_owned() != "" else {
+        return None
+      }
+      let resolved_home = @fsutil.resolve_path(
+        project_root,
+        home.trim().to_owned(),
+      )
+      Some(@fsutil.resolve_path(resolved_home, ".proton/runtimes"))
+    }
+  }
+}
+
+///|
 /// Returns the shared user-level CEF cache directory for `name`, honoring the
 /// `PROTON_CEF_CACHE` override and otherwise defaulting to
 /// `~/.proton/cache/cef`. Relative overrides are resolved from `project_root`.

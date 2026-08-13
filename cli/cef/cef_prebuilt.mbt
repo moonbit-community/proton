@@ -30,6 +30,12 @@ async fn find_prebuilt_root(root : String, platform : ProtonPlatform) -> String 
 }
 
 ///|
+priv struct ProtonPrebuiltIdentity {
+  version : String
+  source_hash : String
+}
+
+///|
 /// Validates a `proton_version` read from a prebuilt manifest before it is
 /// embedded in generated runtime paths. The value comes from a downloaded
 /// package, so it must never contribute path separators or traversal.
@@ -58,7 +64,9 @@ fn validate_proton_version(
 }
 
 ///|
-async fn prebuilt_manifest_version(prebuilt_root : String) -> String {
+async fn prebuilt_manifest_identity(
+  prebuilt_root : String,
+) -> ProtonPrebuiltIdentity {
   let manifest_path = @fsutil.path_join(prebuilt_root, "manifest.json")
   guard @fsutil.path_is_file(manifest_path) else {
     raise ManifestRead(path=manifest_path, detail="file is missing")
@@ -66,5 +74,6 @@ async fn prebuilt_manifest_version(prebuilt_root : String) -> String {
   let json = read_json_file(manifest_path)
   let version = json_string_field(json, "proton_version", manifest_path)
   validate_proton_version(version, manifest_path)
-  version
+  let source_hash = json_string_field(json, "source_hash", manifest_path)
+  { version, source_hash }
 }

@@ -42,12 +42,16 @@ test "public runtime layout lookup follows stable platform ids" {
 
 ///|
 test "runtime manifests separate portable and active metadata" {
+  let source_hash = "sha256:" + "a".repeat(64)
+  let cef_sha256 = "b".repeat(64)
   let portable = runtime_manifest_json(
     proton_version="0.1.5",
+    proton_source_hash=source_hash,
     platform="darwin-arm64",
     cef_name="cef-test",
+    cef_sha256~,
     cef_root=None,
-    dist=".proton/runtime",
+    dist=".",
   )
   assert_true(portable.contains("\"schema_version\":1"))
   let portable_json = @json.parse(portable) catch {
@@ -59,10 +63,12 @@ test "runtime manifests separate portable and active metadata" {
   }
   let active = runtime_manifest_json(
     proton_version="0.1.5",
+    proton_source_hash=source_hash,
     platform="darwin-arm64",
     cef_name="cef-test",
+    cef_sha256~,
     cef_root=Some("/Users/test/.proton/cache/cef/darwin-arm64/cef-test"),
-    dist=".proton/runtime",
+    dist="/Users/test/.proton/runtimes/darwin-arm64/runtime-test",
   )
   let active_json = @json.parse(active) catch {
     _ => abort("expected valid active runtime manifest")
@@ -71,6 +77,41 @@ test "runtime manifests separate portable and active metadata" {
     json_string_field(active_json, "cef", "active runtime manifest"),
     "/Users/test/.proton/cache/cef/darwin-arm64/cef-test",
   )
+}
+
+///|
+test "runtime cache paths are absolute and user-level by default" {
+  let project_root = @fsutil.resolve_path(".", "fixtures/proton-cache-project")
+  let home = @fsutil.resolve_path(project_root, "../proton-cache-home")
+  assert_eq(
+    resolve_global_runtime_cache_root(
+      project_root~,
+      configured_root=None,
+      home=Some(home),
+    ),
+    Some(@fsutil.resolve_path(home, ".proton/runtimes")),
+  )
+  assert_eq(
+    resolve_global_runtime_cache_root(
+      project_root~,
+      configured_root=Some("../shared-runtimes"),
+      home=Some("ignored-home"),
+    ),
+    Some(@fsutil.resolve_path(project_root, "../shared-runtimes")),
+  )
+}
+
+///|
+test "runtime cache identity includes Proton and CEF content" {
+  let proton_a = "sha256:" + "a".repeat(64)
+  let proton_b = "sha256:" + "b".repeat(64)
+  let cef_a = "c".repeat(64)
+  let cef_b = "d".repeat(64)
+  let base = proton_runtime_id("0.1.16", proton_a, cef_a)
+  assert_eq(base, proton_runtime_id("0.1.16", proton_a, cef_a))
+  assert_true(base.has_prefix("proton-0.1.16-"))
+  assert_false(base == proton_runtime_id("0.1.16", proton_b, cef_a))
+  assert_false(base == proton_runtime_id("0.1.16", proton_a, cef_b))
 }
 
 ///|
@@ -123,20 +164,25 @@ async test "runtime metadata does not persist the active CEF cache path" {
   let cef_root = @fsutil.resolve_path(
     root, "../shared-cef/darwin-arm64/cef-test",
   )
+  let source_hash = "sha256:" + "a".repeat(64)
+  let cef_sha256 = "b".repeat(64)
   write_runtime_metadata(
     runtime_dir~,
     proton_version="0.1.5",
+    proton_source_hash=source_hash,
     platform="darwin-arm64",
     cef_name="cef-test",
-    relative_dist=".proton/runtime",
+    cef_sha256~,
   )
   write_active_runtime_manifest(
     root~,
     proton_version="0.1.5",
+    proton_source_hash=source_hash,
     platform="darwin-arm64",
     cef_name="cef-test",
+    cef_sha256~,
     cef_root~,
-    relative_dist=".proton/runtime",
+    runtime_dir~,
   )
   let runtime_manifest_path = @fsutil.path_join(runtime_dir, "manifest.json")
   let runtime_manifest = read_json_file(runtime_manifest_path)
@@ -150,6 +196,10 @@ async test "runtime metadata does not persist the active CEF cache path" {
     json_string_field(active_manifest, "cef", active_manifest_path),
     cef_root,
   )
+  assert_eq(
+    json_string_field(active_manifest, "dist", active_manifest_path),
+    runtime_dir,
+  )
   remove_tree(root)
 }
 
@@ -161,7 +211,6 @@ test "host platform detection keeps macOS CPU architecture" {
   let x64 = platform_from_host(windows=false, macos=true, arch=Some("x86_64"))
   assert_eq(x64.id, "darwin-x64")
   assert_false(x64.supported)
-  assert_eq(x64.cef_suffix, "_macosx64_minimal")
 }
 
 ///|
@@ -284,15 +333,19 @@ test "manifest proton versions cannot escape generated directories" {
 }
 
 ///|
-test "generated runtime directories must stay under the project root" {
-  let root = "/work/project"
+test "generated runtime directories must stay under the cache root" {
+  let root = "/Users/test/.proton/runtimes"
   assert_safe_generated_dir(
-    "/work/project/.proton/runtimes/darwin-arm64/proton-0.1.12_cef-x", root,
+    "/Users/test/.proton/runtimes/darwin-arm64/proton-0.1.12-x", root,
   )
   for
     dir in [
-      "/work/project", "/work", "/.proton/runtimes/darwin-arm64/x", "/work/project.evil/x",
-      "", "/work/project/",
+      root,
+      "/Users/test/.proton",
+      "/.proton/runtimes/darwin-arm64/x",
+      "/Users/test/.proton/runtimes.evil/x",
+      "",
+      root + "/",
     ] {
     try assert_safe_generated_dir(dir, root) catch {
       CefRuntimeError::UnsafeGeneratedDirectory(..) => ()

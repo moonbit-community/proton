@@ -12,7 +12,7 @@ $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 
 ```sh
 moon -C cli run . -- -C .. cef setup
-runtime="$PWD/$(node -p "JSON.parse(require('fs').readFileSync('.proton/runtime.json', 'utf8')).dist")"
+runtime="$(node -e "const path=require('path');const value=JSON.parse(require('fs').readFileSync('.proton/runtime.json','utf8')).dist;process.stdout.write(path.resolve(value))")"
 export PATH="$runtime/bin:$PATH"
 ```
 

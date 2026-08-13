@@ -38,15 +38,16 @@ proton_cli dev
 The generated project is a three-module workspace: `shared/` holds the typed
 command and event contracts used on both sides, `frontend/` is a Rabbita
 application built and served by Warren, and `backend/` runs the Proton
-desktop runtime. `.proton/` is a local runtime cache and should not be
-committed.
+desktop runtime. `.proton/` stores the selected runtime metadata and should not
+be committed.
 
-`cef setup` stores downloaded CEF binaries in a shared user-level cache
-(`~/.proton/cache/cef/<platform>/<cef-name>`, with the cache root overridable
-through `PROTON_CEF_CACHE`) so subsequent projects reuse the download instead
-of fetching it again. The generated `.proton/runtime.json` records the resolved
-cache directory in `cef`. Relative `PROTON_CEF_CACHE` values are resolved from
-the project root.
+`cef setup` stores downloaded CEF binaries in
+`~/.proton/cache/cef/<platform>/<cef-name>` and assembled Proton runtimes in
+`~/.proton/runtimes/<platform>/<runtime-id>`. Subsequent projects reference the
+same immutable runtime through their small `.proton/runtime.json` instead of
+copying hundreds of megabytes into every project. Override the cache roots with
+`PROTON_CEF_CACHE` and `PROTON_RUNTIME_CACHE`; relative overrides are resolved
+from the project root.
 
 ## Application entry
 
