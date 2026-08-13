@@ -1335,7 +1335,27 @@ test "single instance builder validates and resolves an inline identity" {
   let resolved = html("App", "<main>App</main>")
     .single_instance("dev.proton.inline")
     .inline_app_config()
+  assert_eq(resolved.application_identifier, Some("dev.proton.inline"))
   assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
+}
+
+///|
+test "project identity is independent from single instance routing" {
+  let app = html("App", "<main>App</main>")
+  let loaded = @bootstrap.LoadedAppManifest::new(
+    app.inline_manifest(),
+    base_dir=None,
+  )
+  let project = @bootstrap.ProtonProjectConfig::new(
+    loaded,
+    @bootstrap.ProtonAppMetadata::new(
+      "App",
+      identifier=Some("dev.proton.project"),
+    ),
+  )
+  let resolved = app.merge_config(loaded, project=Some(project))
+  assert_eq(resolved.application_identifier, Some("dev.proton.project"))
+  assert_eq(resolved.instance_identifier, None)
 }
 
 ///|
