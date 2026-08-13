@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/power_monitor/contract"
+
+import {
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[PowerMonitorActivity]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let get_idle_time : @proton_contract.Command[@proton_contract.EmptyRequest, IdleTimeReply]
+
+pub let get_power_source : @proton_contract.Command[@proton_contract.EmptyRequest, PowerSourceReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct IdleTimeReply {
+  idle_seconds : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PowerMonitorActivity {
+  operation : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct PowerSourceReply {
+  source : String
+  battery_percent : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

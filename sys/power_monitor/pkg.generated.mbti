@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_power_monitor"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror PowerMonitorError {
+  BackendUnavailable(detail~ : String)
+  OperationFailed(operation~ : String, detail~ : String)
+} derive(Eq)
+pub impl Show for PowerMonitorError
+
+// Types and methods
+pub struct PowerMonitor {
+  // private fields
+}
+pub fn PowerMonitor::destroy(Self) -> Unit
+pub fn PowerMonitor::idle_seconds(Self) -> Int raise PowerMonitorError
+pub fn PowerMonitor::new() -> Self raise PowerMonitorError
+pub fn PowerMonitor::power_source(Self) -> PowerSourceInfo raise PowerMonitorError
+
+pub(all) enum PowerSource {
+  Unknown
+  AC
+  Battery
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PowerSourceInfo {
+  source : PowerSource
+  battery_percent : Int?
+} derive(Eq, @debug.Debug)
+
+pub type State
+
+// Type aliases
+
+// Traits

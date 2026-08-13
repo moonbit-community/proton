@@ -1,0 +1,3 @@
+id = "moonbit-community/proton-power-monitor"
+namespace = "powerMonitor"
+package = "@moonbit-community/proton-power-monitor"

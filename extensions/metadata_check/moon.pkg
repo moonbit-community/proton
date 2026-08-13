@@ -12,6 +12,7 @@ import {
   "moonbit-community/proton_ext/microphone",
   "moonbit-community/proton_ext/notification",
   "moonbit-community/proton_ext/path",
+  "moonbit-community/proton_ext/power_monitor",
   "moonbit-community/proton_ext/shell",
   "moonbit-community/proton_ext/tray",
 }

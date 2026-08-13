@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/core/json",
+  "moonbit-community/proton_power_monitor" @sys_power_monitor,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/power_monitor/contract" @power_monitor_contract,
+}
+
+supported_targets = "native"
+
+formatter(ignore: [ "extension.g.mbt" ])
+
+options(
+  targets: {
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
+)
