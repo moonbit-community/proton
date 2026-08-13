@@ -36,8 +36,9 @@ developer must perform them.
   metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
   helpers. Do not reintroduce the old app runtime route without an explicit
   design decision.
-- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module plus
-  `cli/codegen/` and `cli/doctor/` helpers.
+- `codegen/`: `moonbit-community/proton_codegen`; WASM executable invoked through
+  `moonx` by application prebuild rules, plus its reusable parser/renderer library.
+- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
@@ -91,9 +92,10 @@ developer must perform them.
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C examples build --target native --diagnostic-limit 80`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
+  `moon -C codegen test lib --target wasm`
+- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+  `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
-- `moon -C cli test codegen --target native`
 - `node scripts/verify_generated.mjs`
 - `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
 - `moon test -p moonbit-community/proton_ffi moonbit-community/proton_auto_launch moonbit-community/proton_clipboard moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone moonbit-community/proton_tray --target native`
@@ -131,7 +133,7 @@ native checks before handing off larger refactors.
 ### Release Checklist
 
 - `.github/workflows/publish.yml` publishes the dependency chain in this order:
-  `proton_config`, `proton_contract`, `proton_rsa`, `proton_updater`, the eight
+  `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`, `proton_updater`, the eight
   `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
   finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
   published.
@@ -147,7 +149,7 @@ native checks before handing off larger refactors.
   node scripts/verify_generated.mjs
   moon -C cli test -p moonbit-community/proton_cli \
     moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
-    moonbit-community/proton_cli/cef moonbit-community/proton_cli/codegen \
+    moonbit-community/proton_cli/cef \
     moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
     moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
     moonbit-community/proton_cli/output moonbit-community/proton_cli/package \

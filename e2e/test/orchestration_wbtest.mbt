@@ -132,9 +132,6 @@ fn app_process_env(
   guard @mbfs.path_exists(helper_path) else {
     fail("native runtime helper does not exist: " + helper_path)
   }
-  @mbfs.create_dir(join_path(root, "target")) catch {
-    _ => ()
-  }
   let path_key = path_env_key()
   let current_path = @env.get_env_var(path_key).unwrap_or("")
   let result : Map[String, String] = {
@@ -236,6 +233,10 @@ async fn[X] spawn_scenario_app(
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
   let (program, args) = scenario_app_command(root)
+  let output_dir = join_path(root, "target")
+  if !@mbfs.path_exists(output_dir) {
+    @mbfs.create_dir(output_dir)
+  }
   let output_path = join_path(
     root,
     "target/proton-e2e-child-" + cdp_port.to_string() + ".log",

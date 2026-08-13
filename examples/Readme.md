@@ -16,9 +16,9 @@ runtime="$PWD/$(node -p "JSON.parse(require('fs').readFileSync('.proton/runtime.
 export PATH="$runtime/bin:$PATH"
 ```
 
-Generated-command examples run the repository CLI through
-`moon -C ../cli run ... codegen` build rules; no separate CLI install is
-needed when working inside this repository.
+Generated-command examples build and run the repository's standalone
+`proton_codegen` WASM executable through Moon prebuild rules. Released
+applications use the same executable through `moonx`.
 
 To create a fresh app project instead of working inside `examples/`, install
 the released CLI and scaffold a project:

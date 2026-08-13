@@ -27,7 +27,6 @@ pub(all) suberror NewProjectTargetError {
 /// Internal failures while rendering the built-in project templates.
 pub(all) suberror NewProjectTemplateError {
   UnresolvedPlaceholder(template~ : String)
-  CommandCodegen(path~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -93,8 +92,6 @@ pub fn NewProjectTemplateError::message(
   match self {
     UnresolvedPlaceholder(template~) =>
       "template render failed for " + template + ": unresolved placeholder"
-    CommandCodegen(path~, detail~) =>
-      "scaffold command codegen failed for " + path + ": " + detail
   }
 }
 
