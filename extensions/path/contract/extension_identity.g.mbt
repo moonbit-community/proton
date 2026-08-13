@@ -1,5 +1,5 @@
 ///|
-/// Generated from `proton.ext.json` by `proton codegen --extension-identity`.
+/// Generated from `proton.ext.json` by `proton_codegen --extension-identity`.
 /// Do not edit by hand.
 
 ///|

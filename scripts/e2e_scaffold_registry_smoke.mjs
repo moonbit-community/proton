@@ -96,12 +96,16 @@ function verifyGeneratedDependencies() {
   if (backend.includes("bin-deps")) {
     throw new Error("backend/moon.mod must not depend on a CLI binary shim");
   }
+  const codegen = `moonx moonbit-community/proton_codegen@${moduleVersion("codegen/moon.mod")}`;
+  if (!backend.includes(codegen)) {
+    throw new Error(`backend/moon.mod is missing ${codegen}`);
+  }
   const generatedCommands = path.join(
     projectDir,
     "backend/todo/commands.g.mbt",
   );
   if (!fs.existsSync(generatedCommands)) {
-    throw new Error("new did not commit backend/todo/commands.g.mbt");
+    throw new Error("Moon prebuild did not generate backend/todo/commands.g.mbt");
   }
 }
 

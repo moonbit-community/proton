@@ -1,6 +1,7 @@
 members = [
   "./cdp",
   "./client",
+  "./codegen",
   "./contract",
   "./rabbita",
   "./rsa",

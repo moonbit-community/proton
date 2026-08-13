@@ -13,6 +13,10 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-generated-check-"
 const failures = [];
 const abiFailures = [];
 const skipPrebuiltAbi = process.argv.includes("--skip-prebuilt-abi");
+const codegenWasm = path.join(
+  repoRoot,
+  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
+);
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -28,6 +32,10 @@ function runAllowFailure(command, args) {
   return (
     spawnSync(command, args, { cwd: repoRoot, stdio: "inherit" }).status === 0
   );
+}
+
+function runCodegen(args) {
+  run("moonrun", [codegenWasm, ...args]);
 }
 
 function sha256(filePath) {
@@ -129,20 +137,15 @@ try {
     "path",
     "shell",
     "tray",
+    "updater",
   ];
+
+  run("moon", ["build", "codegen", "--target", "wasm"]);
 
   for (const extension of codegenExtensions) {
     const inputPath = path.join(repoRoot, "extensions", extension, "extension.mbt");
     const outputPath = tempOutputPath(`${extension}.extension.g.mbt`);
-    run("moon", [
-      "-C",
-      path.join(repoRoot, "cli"),
-      "run",
-      "--target",
-      "native",
-      ".",
-      "--",
-      "codegen",
+    runCodegen([
       inputPath,
       "-o",
       outputPath,
@@ -152,15 +155,7 @@ try {
     const identityOutputPath = tempOutputPath(
       `${extension}.extension_identity.g.mbt`,
     );
-    run("moon", [
-      "-C",
-      path.join(repoRoot, "cli"),
-      "run",
-      "--target",
-      "native",
-      ".",
-      "--",
-      "codegen",
+    runCodegen([
       "--extension-identity",
       path.join(repoRoot, "extensions", extension, "proton.ext.json"),
       "--identity-name",
@@ -183,20 +178,13 @@ try {
     "38_async_extension_add",
     "42_attribute_codegen_commands",
     "46_asset_sidecar_resources",
+    "e2e_fixtures",
   ];
 
   for (const example of codegenExamples) {
     const exampleDir = path.join(repoRoot, "examples", example);
     const registrarOutputPath = tempOutputPath(`${example}.commands.g.mbt`);
-    run("moon", [
-      "-C",
-      path.join(repoRoot, "cli"),
-      "run",
-      "--target",
-      "native",
-      ".",
-      "--",
-      "codegen",
+    runCodegen([
       path.join(exampleDir, "commands.mbt"),
       "-o",
       registrarOutputPath,
@@ -206,27 +194,21 @@ try {
       registrarOutputPath,
     );
 
-    const identityOutputPath = tempOutputPath(
-      `${example}.extension_identity.g.mbt`,
-    );
-    run("moon", [
-      "-C",
-      path.join(repoRoot, "cli"),
-      "run",
-      "--target",
-      "native",
-      ".",
-      "--",
-      "codegen",
-      "--extension-identity",
-      path.join(exampleDir, "proton.ext.json"),
-      "-o",
-      identityOutputPath,
-    ]);
-    compareGeneratedFile(
-      path.join("examples", example, "extension_identity.g.mbt"),
-      identityOutputPath,
-    );
+    if (example !== "e2e_fixtures") {
+      const identityOutputPath = tempOutputPath(
+        `${example}.extension_identity.g.mbt`,
+      );
+      runCodegen([
+        "--extension-identity",
+        path.join(exampleDir, "proton.ext.json"),
+        "-o",
+        identityOutputPath,
+      ]);
+      compareGeneratedFile(
+        path.join("examples", example, "extension_identity.g.mbt"),
+        identityOutputPath,
+      );
+    }
   }
 
   const newTemplatesOutput = tempOutputPath("templates.generated.mbt");
