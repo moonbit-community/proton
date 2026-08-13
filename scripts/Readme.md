@@ -113,10 +113,10 @@ process shutdown. This is a source-integration test: it replaces unpublished
 registry dependencies in the temporary project with modules from this checkout.
 It does not prove that the generated registry dependencies are published.
 
-Build and install the native runtime first, and install Warren:
+Build and install the native runtime first. Warren is resolved by `moonx` from
+the generated project configuration:
 
 ```sh
-moon install moonbit-community/warren
 PROTON_NATIVE_DIST="$PWD/native/dist" node ./scripts/e2e_scaffold_source_smoke.mjs
 ```
 

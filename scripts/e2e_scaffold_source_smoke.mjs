@@ -28,6 +28,7 @@ const codegenVersion = fs
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 assert(codegenVersion, "codegen/moon.mod is missing its version");
 const codegenCoordinate = `moonbit-community/proton_codegen@${codegenVersion}`;
+const warrenCoordinate = "moonbit-community/warren@0.2.4";
 let appProcess = null;
 let staticServer = null;
 let succeeded = false;
@@ -163,16 +164,19 @@ function installLocalMoonxShim() {
   const binDir = path.join(tempRoot, "bin");
   fs.mkdirSync(binDir);
   const shim = path.join(binDir, "moonx");
+  const realMoonx = run("which", ["moonx"], { capture: true }).trim();
   fs.writeFileSync(
     shim,
     `#!/usr/bin/env node
 const { spawnSync } = require("node:child_process");
 const expected = ${JSON.stringify(codegenCoordinate)};
-if (process.argv[2] !== expected) {
-  console.error(\`unexpected source-smoke moonx package: \${process.argv[2]}\`);
-  process.exit(2);
+if (process.argv[2] === expected) {
+  const result = spawnSync("moonrun", [${JSON.stringify(codegenWasm)}, ...process.argv.slice(3)], {
+    stdio: "inherit",
+  });
+  process.exit(result.status ?? 1);
 }
-const result = spawnSync("moonrun", [${JSON.stringify(codegenWasm)}, ...process.argv.slice(3)], {
+const result = spawnSync(${JSON.stringify(realMoonx)}, process.argv.slice(2), {
   stdio: "inherit",
 });
 process.exit(result.status ?? 1);
@@ -224,6 +228,9 @@ function connectLocalSourceModules() {
     "client",
     "rabbita",
     "config",
+    "rsa",
+    "updater",
+    "sys/ffi",
     "proton",
   ].map((name) => path.join(repoRoot, name));
   const work = [
@@ -749,7 +756,9 @@ async function main() {
   }
   assert(isDirectory(nativeBin), `native runtime is missing: ${nativeBin}`);
   run("moon", ["--version"], { capture: true });
-  run("warren", ["--help"], { capture: true });
+  run("moonx", ["--target", "native", warrenCoordinate, "--help"], {
+    capture: true,
+  });
 
   localCli([
     "-C",
@@ -774,7 +783,11 @@ async function main() {
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
   verifySourceSmokeCodegen();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
-  run("warren", ["build"], { cwd: frontendDir });
+  run(
+    "moonx",
+    ["--target", "native", warrenCoordinate, "build"],
+    { cwd: frontendDir },
+  );
   run(
     "moon",
     ["-C", "backend", "build", "app", "--target", "native", "--diagnostic-limit", "80"],
