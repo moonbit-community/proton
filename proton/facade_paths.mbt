@@ -38,11 +38,6 @@ pub fn app_data_dir(identifier : String) -> String raise AppPathError {
 }
 
 ///|
-fn browser_data_dir(identifier : String) -> String raise AppPathError {
-  @mbpath.Path(app_data_dir(identifier)).join("browser").normalize().to_string()
-}
-
-///|
 fn app_data_dir_for_platform(
   platform : String,
   identifier : String,

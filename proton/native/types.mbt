@@ -737,9 +737,7 @@ struct WindowConfig {
 /// Builds an explicit native runtime configuration.
 ///
 /// Set `headless` to enable CEF off-screen rendering for every window created
-/// by this runtime. Remote debugging remains independently configurable. Omit
-/// `cache_dir` for an isolated temporary browser profile, or provide an
-/// absolute, process-exclusive path for persistent browser state.
+/// by this runtime. Remote debugging remains independently configurable.
 pub fn RuntimeConfig::new(
   runtime_root? : String,
   helper_path? : String,
@@ -784,8 +782,7 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
 /// `helper_path`, when set, overrides the subprocess executable the bundled
 /// runtime discovers. Packaged macOS applications automatically use their
 /// nested base Helper app. Set `headless` to enable CEF off-screen rendering
-/// for every window. Omit `cache_dir` for an isolated temporary browser
-/// profile, or provide an absolute, process-exclusive path for persistence.
+/// for every window.
 pub fn RuntimeConfig::bundled(
   helper_path? : String,
   cache_dir? : String,

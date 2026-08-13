@@ -20,9 +20,6 @@ let default_proton_rabbita_version = "0.1.16"
 let default_rabbita_version = "0.14.1"
 
 ///|
-let default_warren_version = "0.2.4"
-
-///|
 /// Scaffolded backends need this directly: `async fn main` is only available to
 /// a package that imports `moonbitlang/async`.
 let default_async_version = "0.20.3"
@@ -64,7 +61,6 @@ priv struct TemplateContext {
   proton_client_version : String
   proton_rabbita_version : String
   rabbita_version : String
-  warren_version : String
   async_version : String
 }
 
@@ -117,7 +113,6 @@ fn template_context(
     proton_client_version: default_proton_client_version,
     proton_rabbita_version: default_proton_rabbita_version,
     rabbita_version: default_rabbita_version,
-    warren_version: default_warren_version,
     async_version: default_async_version,
   }
 }
@@ -143,7 +138,6 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "proton_client_version", value: context.proton_client_version },
     { name: "proton_rabbita_version", value: context.proton_rabbita_version },
     { name: "rabbita_version", value: context.rabbita_version },
-    { name: "warren_version", value: context.warren_version },
     { name: "async_version", value: context.async_version },
   ]
 }
@@ -230,12 +224,8 @@ fn project_config_file(context : TemplateContext) -> PlannedFile {
     "frontend": {
       "path": "frontend",
       "dev_url": "http://127.0.0.1:4300",
-      "before_dev": "moonx --target native moonbit-community/warren@" +
-      context.warren_version +
-      " dev --direct --port 4300",
-      "before_build": "moonx --target native moonbit-community/warren@" +
-      context.warren_version +
-      " build",
+      "before_dev": "warren dev --direct --port 4300",
+      "before_build": "warren build",
       "dist": "dist",
     },
     "entry": { "kind": "asset", "value": "frontend/dist/index.html" },

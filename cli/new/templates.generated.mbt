@@ -757,6 +757,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|
           #|```sh
           #|moon update
+          #|moon install moonbit-community/warren
           #|proton_cli cef setup
           #|```
           #|
@@ -781,8 +782,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli build
           #|```
           #|
-          #|`build` runs Warren {{warren_version}} through `moonx` in `frontend/`, validates
-          #|`frontend/dist`, and builds `backend/app` for the native target.
+          #|`build` runs `warren build` in `frontend/`, validates `frontend/dist`, and
+          #|builds `backend/app` for the native target.
           #|
           #|```sh
           #|proton_cli build -- --release

@@ -28,22 +28,21 @@ test "typed runtime config JSON" {
   let config = RuntimeConfig::new(
     runtime_root="app-runtime",
     helper_path="cef_process.exe",
-    cache_dir="/absolute/path/to/cache",
+    cache_dir="cache",
   )
   let json = config.to_json_string()
   assert_true(json.contains("\"abi_version\":1"))
   assert_true(json.contains("\"runtime_root\":\"app-runtime\""))
   assert_true(json.contains("\"helper_path\":\"cef_process.exe\""))
-  assert_true(json.contains("\"cache_dir\":\"/absolute/path/to/cache\""))
+  assert_true(json.contains("\"cache_dir\":\"cache\""))
   assert_true(json.contains("\"persist_session_cookies\":true"))
 }
 ```
 
-Omitting `cache_dir` creates an isolated temporary browser profile that is
-removed after native runtime shutdown. A non-empty `cache_dir` must be an
-absolute path owned by one running process; it enables persistent browser state.
-For persistent profiles, `persist_session_cookies` defaults to `true`, so
-session cookies without an expiry are stored alongside permanent cookies.
+`persist_session_cookies` defaults to `true`, matching Electron's persistent
+default session. When enabled, session cookies (no expiry) are written to disk
+alongside permanent cookies, so login state survives app restarts. Set it to
+`false` for an incognito-like runtime.
 
 For packaged Proton runtimes, prefer `RuntimeConfig::bundled()`. It asks
 `proton.dll` to use the install layout beside the loaded DLL, including
@@ -52,9 +51,9 @@ For packaged Proton runtimes, prefer `RuntimeConfig::bundled()`. It asks
 ```mbt check
 ///|
 test "bundled runtime config JSON" {
-  let json = RuntimeConfig::bundled(cache_dir="/absolute/path/to/cache").to_json_string()
+  let json = RuntimeConfig::bundled(cache_dir="cache").to_json_string()
   assert_true(json.contains("\"use_bundled\":true"))
-  assert_true(json.contains("\"cache_dir\":\"/absolute/path/to/cache\""))
+  assert_true(json.contains("\"cache_dir\":\"cache\""))
   assert_true(json.contains("\"persist_session_cookies\":true"))
 }
 ```

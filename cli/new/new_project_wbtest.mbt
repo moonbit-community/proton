@@ -322,8 +322,7 @@ test "templates receive final author title and size" {
       "backend": { "path": "backend", "package": "app", .. },
       "frontend": {
         "path": "frontend",
-        "before_dev": before_dev,
-        "before_build": before_build,
+        "before_dev": "warren dev --direct --port 4300",
         ..
       },
       "entry": { "value": "frontend/dist/index.html", .. },
@@ -337,22 +336,6 @@ test "templates receive final author title and size" {
     } else {
     abort("unexpected generated proton.project.json")
   }
-  assert_eq(
-    before_dev,
-    ToJson::to_json(
-      "moonx --target native moonbit-community/warren@" +
-      default_warren_version +
-      " dev --direct --port 4300",
-    ),
-  )
-  assert_eq(
-    before_build,
-    ToJson::to_json(
-      "moonx --target native moonbit-community/warren@" +
-      default_warren_version +
-      " build",
-    ),
-  )
   guard find_planned_file(files, "README.md") is Some(readme) else {
     abort("missing README.md")
   }
@@ -363,10 +346,6 @@ test "templates receive final author title and size" {
   assert_true(app_html.contains("href=\"./styles.css\""))
   assert_false(app_html.contains("href=\"/styles.css\""))
   assert_true(readme.contains("## Dev"))
-  assert_false(readme.contains("moon install moonbit-community/warren"))
-  assert_true(
-    readme.contains("Warren " + default_warren_version + " through `moonx`"),
-  )
   assert_true(readme.contains("proton_cli dev"))
   assert_true(readme.contains("## Build"))
   assert_true(readme.contains("proton_cli build"))

@@ -10,18 +10,6 @@ fn[T] expect_native_error(
 }
 
 ///|
-#cfg(platform="windows")
-fn test_absolute_cache_dir() -> String {
-  "C:\\proton-cache"
-}
-
-///|
-#cfg(not(platform="windows"))
-fn test_absolute_cache_dir() -> String {
-  "/tmp/proton-cache"
-}
-
-///|
 fn native_text_test_copy(
   text : String,
   length : NativeTextLength,
@@ -366,21 +354,18 @@ test "window close rejects further use and remains destroyable" {
 
 ///|
 test "typed configs generate stable JSON for native ABI" {
-  let cache_dir = test_absolute_cache_dir()
   let runtime_config = RuntimeConfig::new(
     helper_path="cef_process.exe",
-    cache_dir~,
+    cache_dir="cache",
     headless=true,
   )
   let runtime_json = runtime_config.to_json_string()
   assert_true(runtime_json.contains("\"abi_version\":1"))
   assert_true(runtime_json.contains("\"helper_path\":\"cef_process.exe\""))
-  assert_true(
-    runtime_json.contains("\"cache_dir\":" + cache_dir.to_json().stringify()),
-  )
+  assert_true(runtime_json.contains("\"cache_dir\":\"cache\""))
   assert_true(runtime_json.contains("\"headless\":true"))
   assert_true(runtime_json.contains("\"persist_session_cookies\":true"))
-  let bundled_json = RuntimeConfig::bundled(cache_dir~).to_json_string()
+  let bundled_json = RuntimeConfig::bundled(cache_dir="cache").to_json_string()
   assert_true(bundled_json.contains("\"use_bundled\":true"))
   assert_true(!bundled_json.contains("\"runtime_root\""))
   assert_true(!bundled_json.contains("\"helper_path\""))
@@ -788,19 +773,6 @@ test "runtime config requires top-level abi_version" {
     error.message(),
     content="runtime field has invalid type or range: cache_dir",
   )
-}
-
-///|
-test "runtime config rejects a relative cache directory" {
-  let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"cache_dir\":\"relative-cache\"}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  inspect(error.message(), content="runtime cache_dir must be an absolute path")
 }
 
 ///|

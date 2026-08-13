@@ -42,23 +42,6 @@
 #define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
 
-static bool proton_path_is_absolute(const char *path) {
-  if (path == NULL || path[0] == '\0') {
-    return false;
-  }
-#ifdef _WIN32
-  bool drive_absolute =
-      ((path[0] >= 'A' && path[0] <= 'Z') ||
-       (path[0] >= 'a' && path[0] <= 'z')) &&
-      path[1] == ':' && (path[2] == '/' || path[2] == '\\');
-  bool unc_absolute = (path[0] == '/' && path[1] == '/') ||
-                      (path[0] == '\\' && path[1] == '\\');
-  return drive_absolute || unc_absolute;
-#else
-  return path[0] == '/';
-#endif
-}
-
 static bool proton_json_key_allowed(const char *key,
                                     const char *const *allowed_keys,
                                     size_t allowed_key_count) {
@@ -160,18 +143,12 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
               integer <= 65535;
     } else if (strcmp(key, "persist_session_cookies") == 0) {
       valid = proton_json_read_bool(doc, value, &boolean);
-    } else if (strcmp(key, "cache_dir") == 0) {
-      valid = proton_json_read_string(doc, value, text, sizeof(text));
-      if (valid && !proton_path_is_absolute(text)) {
-        proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                         "runtime cache_dir must be an absolute path");
-        return false;
-      }
     } else if (strcmp(key, "runtime_root") == 0 ||
                strcmp(key, "helper_path") == 0 ||
                strcmp(key, "subprocess_path") == 0 ||
                strcmp(key, "resources_dir") == 0 ||
-               strcmp(key, "locales_dir") == 0) {
+               strcmp(key, "locales_dir") == 0 ||
+               strcmp(key, "cache_dir") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
     }
   } else if (strcmp(config_name, "window") == 0) {

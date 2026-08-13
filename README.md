@@ -21,11 +21,12 @@ proton_cli new my-app \
 cd my-app
 ```
 
-Fetch the MoonBit dependencies and set up the native runtime. The generated
-project runs its pinned Warren frontend toolchain through `moonx`:
+Fetch the MoonBit dependencies, install the Warren frontend toolchain, and
+set up the native runtime:
 
 ```sh
 moon update
+moon install moonbit-community/warren
 proton_cli cef setup
 ```
 
@@ -332,8 +333,8 @@ Generated projects describe their toolchain in `proton.project.json`:
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "moonx --target native moonbit-community/warren@0.2.4 dev --direct --port 4300",
-    "before_build": "moonx --target native moonbit-community/warren@0.2.4 build",
+    "before_dev": "warren dev --direct --port 4300",
+    "before_build": "warren build",
     "dist": "dist"
   },
   "entry": {
