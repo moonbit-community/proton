@@ -1130,6 +1130,10 @@ proton_engine_window_t *proton_engine_window_lookup_browser(
   return NULL;
 }
 
+cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window) {
+  return window != NULL ? window->browser : NULL;
+}
+
 const char *proton_engine_window_html_url(proton_engine_window_t *window) {
   return window != NULL ? window->html_url : NULL;
 }
@@ -6498,4 +6502,87 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
     proton_view_events_bind(view->events, public_view,
                             view->window->public_window_id);
   }
+}
+
+typedef struct {
+  proton_engine_screen_info_t *screens;
+  int32_t max_screens;
+  int32_t count;
+} proton_screen_enum_context_t;
+
+static BOOL CALLBACK proton_screen_enum_callback(HMONITOR monitor, HDC hdc,
+                                                  LPRECT clip_rect,
+                                                  LPARAM param) {
+  (void)hdc;
+  (void)clip_rect;
+  proton_screen_enum_context_t *ctx = (proton_screen_enum_context_t *)param;
+  if (ctx->count >= ctx->max_screens) {
+    return FALSE;
+  }
+  MONITORINFO info = {.cbSize = sizeof(MONITORINFO)};
+  if (!GetMonitorInfoW(monitor, &info)) {
+    return TRUE;
+  }
+  proton_engine_screen_info_t *screen = &ctx->screens[ctx->count];
+  screen->id = ctx->count;
+  screen->x = info.rcMonitor.left;
+  screen->y = info.rcMonitor.top;
+  screen->width = info.rcMonitor.right - info.rcMonitor.left;
+  screen->height = info.rcMonitor.bottom - info.rcMonitor.top;
+  screen->work_x = info.rcWork.left;
+  screen->work_y = info.rcWork.top;
+  screen->work_width = info.rcWork.right - info.rcWork.left;
+  screen->work_height = info.rcWork.bottom - info.rcWork.top;
+  screen->is_primary = (info.dwFlags & MONITORINFOF_PRIMARY) ? 1 : 0;
+
+  /* GetDpiForMonitor lives in shcore.dll; load it dynamically so the build
+     does not require linking shcore.lib and stays compatible with older
+     Windows where the export may be absent. */
+  UINT dpi_x = 96;
+  UINT dpi_y = 96;
+  HMODULE shcore = LoadLibraryW(L"shcore.dll");
+  if (shcore != NULL) {
+    typedef HRESULT(WINAPI *proton_get_dpi_for_monitor_proc)(HMONITOR, int,
+                                                              UINT *, UINT *);
+    proton_get_dpi_for_monitor_proc get_dpi =
+        (proton_get_dpi_for_monitor_proc)GetProcAddress(shcore,
+                                                        "GetDpiForMonitor");
+    if (get_dpi != NULL) {
+      get_dpi(monitor, 0, &dpi_x, &dpi_y);
+    }
+    FreeLibrary(shcore);
+  }
+  screen->scale_factor_percent = (int32_t)((dpi_x * 100 + 48) / 96);
+
+  ctx->count++;
+  return TRUE;
+}
+
+int32_t proton_engine_screen_enumerate(
+    proton_engine_screen_info_t *out_screens,
+    int32_t max_screens,
+    int32_t *out_count,
+    char *error,
+    size_t error_len) {
+  if (out_screens == NULL || out_count == NULL || max_screens <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "out_screens, out_count are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_count = 0;
+  proton_screen_enum_context_t ctx = {
+      .screens = out_screens,
+      .max_screens = max_screens,
+      .count = 0,
+  };
+  /* EnumDisplayMonitors is safe to call from any thread; it snapshots the
+     current monitor configuration without entering the UI message loop. */
+  if (!EnumDisplayMonitors(NULL, NULL, proton_screen_enum_callback,
+                           (LPARAM)&ctx)) {
+    proton_engine_set_message(error, error_len,
+                              "EnumDisplayMonitors failed");
+    return PROTON_ERR_PLATFORM;
+  }
+  *out_count = ctx.count;
+  return PROTON_OK;
 }

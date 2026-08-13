@@ -23,6 +23,12 @@ void proton_engine_window_unlock(void);
 proton_engine_window_t *proton_engine_window_lookup_browser(
     cef_browser_t *browser);
 
+/* Returns the CEF browser bound to this window, or NULL if the browser has not
+   been created yet or has already been released. The returned browser has its
+   refcount unchanged; callers that need to hold it across a message loop
+   iteration must call base.add_ref and base.release. */
+cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window);
+
 const char *proton_engine_window_html_url(proton_engine_window_t *window);
 const char *proton_engine_window_html(proton_engine_window_t *window,
                                       size_t *len);

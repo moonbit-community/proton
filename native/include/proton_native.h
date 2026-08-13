@@ -32,6 +32,7 @@ typedef int64_t proton_window_id_t;
 typedef int64_t proton_view_id_t;
 typedef int64_t proton_app_instance_id_t;
 typedef int64_t proton_update_stage_id_t;
+typedef int64_t proton_image_id_t;
 typedef void (*proton_app_entry_t)(void);
 
 enum {
@@ -55,7 +56,9 @@ enum {
   PROTON_ERR_STALE_BROWSER_REQUEST = -14,
   PROTON_ERR_UPDATE_BUSY = -15,
   PROTON_ERR_UPDATE_ROLLBACK = -16,
-  PROTON_ERR_UPDATE_REVISION_MISMATCH = -17
+  PROTON_ERR_UPDATE_REVISION_MISMATCH = -17,
+  PROTON_ERR_PENDING = -18,
+  PROTON_ERR_BUSY = -19
 };
 
 enum {
@@ -209,6 +212,64 @@ PROTON_API int32_t proton_window_poll_dialog_result(
     proton_window_id_t window, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);
 
+/* Session cookie and cache management.
+
+   Cookie get uses a begin/poll pattern because the CEF cookie visitor fires
+   on the UI thread: call proton_window_cookie_begin_get_json to start the
+   visit, then call proton_window_cookie_poll_get_json on each message loop
+   iteration until it returns PROTON_OK. Cookie set, delete, flush, and cache
+   clear are fire-and-forget: they return once the request has been accepted
+   by the cookie manager or request context.
+
+   All functions require a native engine window and return
+   PROTON_ERR_UNSUPPORTED otherwise. */
+
+/* Begin retrieving cookies. If url_utf8 is NULL or empty, all cookies are
+   retrieved; otherwise only cookies matching the URL are returned. If
+   include_http_only is 1, HTTP-only cookies are included. Returns
+   PROTON_ERR_BUSY if a cookie get is already in progress for this window. */
+PROTON_API int32_t proton_window_cookie_begin_get_json(
+    proton_window_id_t window, const char *url_utf8,
+    int32_t include_http_only);
+
+/* Poll for the result of a cookie get operation. Writes a JSON array of
+   cookie objects to buffer. Each cookie object has: name, value, domain,
+   path, secure, http_only, same_site, has_expires, expires (optional),
+   creation, last_access.
+   Returns PROTON_OK when the result is ready, PROTON_ERR_PENDING if the
+   operation is still in progress. */
+PROTON_API int32_t proton_window_cookie_poll_get_json(
+    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+
+/* Set a cookie from a JSON object. The JSON must contain "url", "name",
+   and "value", and may contain "domain", "path", "secure", "http_only",
+   "same_site", "expires". Fire-and-forget. */
+PROTON_API int32_t proton_window_cookie_set_json(
+    proton_window_id_t window, const char *cookie_json);
+
+/* Delete cookies. If url_utf8 is NULL or empty, all cookies are deleted.
+   If name_utf8 is non-NULL, only cookies with that name matching the URL
+   are deleted. Fire-and-forget. */
+PROTON_API int32_t proton_window_cookie_delete(
+    proton_window_id_t window, const char *url_utf8,
+    const char *name_utf8);
+
+/* Flush the cookie store to disk. Fire-and-forget. */
+PROTON_API int32_t proton_window_cookie_flush(proton_window_id_t window);
+
+/* Clear the HTTP cache for the window's request context. Fire-and-forget. */
+PROTON_API int32_t proton_window_clear_cache(proton_window_id_t window);
+
+/* Enumerates all connected displays.
+   Returns a JSON array of screen objects. Each screen has:
+   id, x, y, width, height, work_x, work_y, work_width, work_height,
+   scale_factor_percent, is_primary.
+   Returns PROTON_ERR_UNSUPPORTED if the native engine is not available. */
+PROTON_API int32_t proton_screen_enumerate_json(char *buffer,
+                                                int32_t buffer_len,
+                                                int32_t *out_required_len);
+
 /* Creates a private artifact staging transaction for a streaming update.
 
    The archive path never crosses the ABI. Chunks written to the returned
@@ -299,6 +360,57 @@ PROTON_API int32_t proton_view_browser_command_json(
 PROTON_API int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
                                           int32_t buffer_len,
                                           int32_t *out_required_len);
+
+/* Native image management. Images are standalone objects backed by CEF's
+   cef_image_t. They are not tied to a runtime or window and can be created
+   on any thread. Use proton_image_create_empty to get a handle, add
+   representations with add_png/add_jpeg/add_bitmap, query with is_empty and
+   get_size_json, export with to_png/to_jpeg/to_bitmap, and release with
+   proton_image_destroy. All functions return PROTON_ERR_UNSUPPORTED when
+   the native engine is not available. */
+
+PROTON_API int32_t proton_image_create_empty(proton_image_id_t *out_image);
+PROTON_API int32_t proton_image_destroy(proton_image_id_t image);
+PROTON_API int32_t proton_image_add_png(proton_image_id_t image,
+                                        const uint8_t *data,
+                                        int32_t data_len,
+                                        float scale_factor);
+PROTON_API int32_t proton_image_add_jpeg(proton_image_id_t image,
+                                         const uint8_t *data,
+                                         int32_t data_len,
+                                         float scale_factor);
+PROTON_API int32_t proton_image_add_bitmap(proton_image_id_t image,
+                                           const uint8_t *data,
+                                           int32_t data_len,
+                                           int32_t width, int32_t height,
+                                           float scale_factor);
+PROTON_API int32_t proton_image_is_empty(proton_image_id_t image);
+PROTON_API int32_t proton_image_get_size_json(proton_image_id_t image,
+                                              char *buffer,
+                                              int32_t buffer_len,
+                                              int32_t *out_required_len);
+PROTON_API int32_t proton_image_to_png(proton_image_id_t image,
+                                       float scale_factor,
+                                       int32_t with_transparency,
+                                       uint8_t *buffer,
+                                       int32_t buffer_len,
+                                       int32_t *out_required_len,
+                                       int32_t *out_width,
+                                       int32_t *out_height);
+PROTON_API int32_t proton_image_to_jpeg(proton_image_id_t image,
+                                        float scale_factor,
+                                        int32_t quality, uint8_t *buffer,
+                                        int32_t buffer_len,
+                                        int32_t *out_required_len,
+                                        int32_t *out_width,
+                                        int32_t *out_height);
+PROTON_API int32_t proton_image_to_bitmap(proton_image_id_t image,
+                                          float scale_factor,
+                                          uint8_t *buffer,
+                                          int32_t buffer_len,
+                                          int32_t *out_required_len,
+                                          int32_t *out_width,
+                                          int32_t *out_height);
 
 PROTON_API int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);

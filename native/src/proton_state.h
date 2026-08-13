@@ -67,6 +67,13 @@ typedef struct {
   bool visible;
 } proton_view_slot_t;
 
+typedef struct {
+  uint32_t generation;
+  bool occupied;
+  bool destroyed;
+  proton_engine_image_t *engine_image;
+} proton_image_slot_t;
+
 PROTON_INTERNAL int32_t proton_runtime_slot_create(
     bool engine_backed, proton_engine_runtime_t *engine_runtime,
     proton_runtime_id_t *out_runtime, proton_runtime_slot_t **out_slot);
@@ -122,6 +129,9 @@ PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
 PROTON_INTERNAL int32_t proton_format_window_state_json(
     const proton_engine_window_state_t *state, char *buffer,
     size_t buffer_len);
+PROTON_INTERNAL int32_t proton_format_screen_array_json(
+    const proton_engine_screen_info_t *screens, int32_t count, char *buffer,
+    size_t buffer_len);
 PROTON_INTERNAL int32_t
 proton_destroy_windows_for_runtime(proton_runtime_id_t runtime);
 
@@ -135,5 +145,12 @@ PROTON_INTERNAL int32_t
 proton_get_view(proton_view_id_t handle, proton_view_slot_t **out_slot);
 PROTON_INTERNAL void
 proton_destroy_views_for_window(proton_window_id_t window);
+
+PROTON_INTERNAL int32_t proton_image_slot_create(
+    proton_engine_image_t *engine_image, proton_image_id_t *out_image,
+    proton_image_slot_t **out_slot);
+PROTON_INTERNAL void proton_image_slot_destroy(proton_image_slot_t *slot);
+PROTON_INTERNAL int32_t proton_get_image(proton_image_id_t handle,
+                                         proton_image_slot_t **out_slot);
 
 #endif

@@ -6,5 +6,5 @@ version = "0.1.0"
 display_name = "Updater"
 description = "Lets a page ask whether an update exists and ask for it to be taken."
 
-platforms = ["macos"]
+platforms = ["macos", "windows", "linux"]
 dependencies = []
