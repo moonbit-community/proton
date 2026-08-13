@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_rsa"
 
-version = "0.1.15"
+version = "0.1.16"
 
 readme = "README.mbt.md"
 
