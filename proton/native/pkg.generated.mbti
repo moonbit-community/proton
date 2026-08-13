@@ -41,6 +41,8 @@ pub let runtime_wait_none : Int
 
 pub let runtime_wait_platform : Int
 
+pub fn screens() -> Array[ScreenInfo] raise NativeError
+
 pub fn update_cleanup_previous() -> Unit raise NativeError
 
 pub fn update_current_revision() -> UInt64 raise NativeError
@@ -304,6 +306,20 @@ pub fn RuntimeWaitReady::has_event(Self) -> Bool
 pub fn RuntimeWaitReady::has_platform(Self) -> Bool
 pub fn RuntimeWaitReady::is_timeout(Self) -> Bool
 pub fn RuntimeWaitReady::mask(Self) -> Int
+
+pub(all) struct ScreenInfo {
+  id : Int
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+  is_primary : Bool
+} derive(Eq, @debug.Debug, @json.FromJson)
 
 pub(all) enum TitlebarStyle {
   Default

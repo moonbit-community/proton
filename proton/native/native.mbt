@@ -35,6 +35,31 @@ pub fn runtime_info() -> RuntimeInfo raise NativeError {
 }
 
 ///|
+/// Enumerates all connected displays.
+///
+/// Returns an array of `ScreenInfo` describing each monitor's bounds, work
+/// area, scale factor, and primary flag. The first entry is always the
+/// primary display. Raises `UnsupportedNativeFeature` when the native
+/// engine is not available.
+pub fn screens() -> Array[ScreenInfo] raise NativeError {
+  let text = require_native_text(
+    "screen enumeration",
+    PayloadBytesExcludingTerminator,
+    (buffer, buffer_len, required) => {
+      proton_screen_enumerate_json_ffi(buffer, buffer_len, required)
+    },
+  )
+  let json = decode_native_json(text, "screen enumeration")
+  @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(
+        context="screen enumeration",
+        message=error.to_string(),
+      )
+  }
+}
+
+///|
 pub fn AppActivation::new(
   urls? : Array[String] = [],
   files? : Array[String] = [],
@@ -1151,6 +1176,298 @@ pub fn Window::take_bridge_failure(
     None => None
     Some(text) => Some(decode_bridge_diagnostic(text))
   }
+}
+
+///|
+/// Begins retrieving cookies for the window's session. If `url` is `None`,
+/// all cookies are retrieved; otherwise only cookies matching the URL are
+/// returned. When `include_http_only` is `true`, HTTP-only cookies are
+/// included. Returns immediately; call `cookie_poll_get` on each message
+/// loop iteration until it returns `Some(json)`.
+pub fn Window::cookie_begin_get(
+  self : Window,
+  url : String?,
+  include_http_only : Bool,
+) -> Unit raise NativeError {
+  let url_bytes = match url {
+    Some(u) => @ffi.to_cstr(u)
+    None => @ffi.to_cstr("")
+  }
+  check_status(
+    proton_window_cookie_begin_get_json_ffi(
+      self.live_handle(),
+      url_bytes,
+      if include_http_only {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+/// Polls for the result of a cookie get operation. Returns `None` if the
+/// operation is still in progress, or `Some(json)` with a JSON array of
+/// cookie objects when complete.
+pub fn Window::cookie_poll_get(self : Window) -> String? raise NativeError {
+  let handle = self.live_handle()
+  match
+    read_native_text("cookie get", BufferBytesIncludingTerminator, (
+      buffer,
+      buffer_len,
+      required,
+    ) => {
+      proton_window_cookie_poll_get_json_ffi(
+        handle, buffer, buffer_len, required,
+      )
+    }) {
+    None => None
+    Some(text) => Some(text)
+  }
+}
+
+///|
+/// Sets a cookie from a JSON object. The JSON must contain "url", "name",
+/// and "value", and may contain "domain", "path", "secure", "http_only",
+/// "same_site", "expires". Fire-and-forget.
+pub fn Window::cookie_set(
+  self : Window,
+  cookie_json : String,
+) -> Unit raise NativeError {
+  check_status(
+    proton_window_cookie_set_json_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(cookie_json),
+    ),
+  )
+}
+
+///|
+/// Deletes cookies. If `url` is `None`, all cookies are deleted. If `name`
+/// is `Some`, only cookies with that name matching the URL are deleted.
+/// Fire-and-forget.
+pub fn Window::cookie_delete(
+  self : Window,
+  url : String?,
+  name : String?,
+) -> Unit raise NativeError {
+  let url_bytes = match url {
+    Some(u) => @ffi.to_cstr(u)
+    None => @ffi.to_cstr("")
+  }
+  let name_bytes = match name {
+    Some(n) => @ffi.to_cstr(n)
+    None => @ffi.to_cstr("")
+  }
+  check_status(
+    proton_window_cookie_delete_ffi(self.live_handle(), url_bytes, name_bytes),
+  )
+}
+
+///|
+/// Flushes the cookie store to disk. Fire-and-forget.
+pub fn Window::cookie_flush(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_cookie_flush_ffi(self.live_handle()))
+}
+
+///|
+/// Clears the HTTP cache for the window's request context. Fire-and-forget.
+pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
+  check_status(proton_window_clear_cache_ffi(self.live_handle()))
+}
+
+///|
+/// Creates an empty native image. Use `add_png`, `add_jpeg`, or `add_bitmap`
+/// to add a representation at a given scale factor, then query with `is_empty`
+/// or `size`, and export with `to_png`, `to_jpeg`, or `to_bitmap`.
+///
+/// Raises `UnsupportedNativeFeature` when the native engine is not available.
+pub fn NativeImage::create_empty() -> NativeImage raise NativeError {
+  let out_image = Ref(proton_invalid_handle)
+  check_status(proton_image_create_empty_ffi(out_image))
+  NativeImage::{ handle: out_image.val, lifecycle: ImageLive }
+}
+
+///|
+fn NativeImage::live_handle(self : NativeImage) -> Int64 raise NativeError {
+  match self.lifecycle {
+    ImageLive => self.handle
+    ImageDestroyed =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="image is destroyed",
+      )
+  }
+}
+
+///|
+/// Releases the native image handle. Safe to call multiple times; subsequent
+/// calls are no-ops.
+pub fn NativeImage::destroy(self : NativeImage) -> Unit raise NativeError {
+  match self.lifecycle {
+    ImageDestroyed => return
+    ImageLive => self.lifecycle = ImageDestroyed
+  }
+  let status = proton_image_destroy_ffi(self.handle)
+  self.handle = proton_invalid_handle
+  check_status(status)
+}
+
+///|
+/// Adds a PNG representation at `scale_factor` (1.0 = 100%). PNG transparency
+/// is preserved.
+pub fn NativeImage::add_png(
+  self : NativeImage,
+  data : Bytes,
+  scale_factor? : Double = 1.0,
+) -> Unit raise NativeError {
+  check_status(
+    proton_image_add_png_ffi(
+      self.live_handle(),
+      data,
+      data.length(),
+      scale_factor,
+    ),
+  )
+}
+
+///|
+/// Adds a JPEG representation at `scale_factor` (1.0 = 100%). JPEG does not
+/// support transparency; the alpha channel is discarded.
+pub fn NativeImage::add_jpeg(
+  self : NativeImage,
+  data : Bytes,
+  scale_factor? : Double = 1.0,
+) -> Unit raise NativeError {
+  check_status(
+    proton_image_add_jpeg_ffi(
+      self.live_handle(),
+      data,
+      data.length(),
+      scale_factor,
+    ),
+  )
+}
+
+///|
+/// Adds a raw RGBA bitmap representation at `scale_factor` (1.0 = 100%).
+/// `data` must be at least `width * height * 4` bytes in 32-bit RGBA format.
+pub fn NativeImage::add_bitmap(
+  self : NativeImage,
+  data : Bytes,
+  width : Int,
+  height : Int,
+  scale_factor? : Double = 1.0,
+) -> Unit raise NativeError {
+  check_status(
+    proton_image_add_bitmap_ffi(
+      self.live_handle(),
+      data,
+      data.length(),
+      width,
+      height,
+      scale_factor,
+    ),
+  )
+}
+
+///|
+/// Returns `true` if the image has no representations.
+pub fn NativeImage::is_empty(self : NativeImage) -> Bool raise NativeError {
+  let status = proton_image_is_empty_ffi(self.live_handle())
+  if status < 0 {
+    raise native_error(status)
+  }
+  status == 1
+}
+
+///|
+/// Returns the image size in density-independent pixels as `(width, height)`.
+pub fn NativeImage::size(self : NativeImage) -> (Int, Int) raise NativeError {
+  let handle = self.live_handle()
+  let text = require_native_text(
+    "image size",
+    PayloadBytesExcludingTerminator,
+    (buffer, buffer_len, required) => {
+      proton_image_get_size_json_ffi(handle, buffer, buffer_len, required)
+    },
+  )
+  let json = decode_native_json(text, "image size")
+  let size : ImageSize = @json.from_json(json) catch {
+    error =>
+      raise InvalidPayload(context="image size", message=error.to_string())
+  }
+  (size.width, size.height)
+}
+
+///|
+/// Exports the representation closest to `scale_factor` as PNG bytes.
+/// When `with_transparency` is `true`, alpha transparency is preserved.
+/// Returns `(png_bytes, pixel_width, pixel_height)`.
+pub fn NativeImage::to_png(
+  self : NativeImage,
+  scale_factor? : Double = 1.0,
+  with_transparency? : Bool = true,
+) -> (Bytes, Int, Int) raise NativeError {
+  let handle = self.live_handle()
+  let out_width = Ref(0)
+  let out_height = Ref(0)
+  let data = read_native_bytes("image to_png", (buffer, buffer_len, req) => {
+    proton_image_to_png_ffi(
+      handle,
+      scale_factor,
+      if with_transparency {
+        1
+      } else {
+        0
+      },
+      buffer,
+      buffer_len,
+      req,
+      out_width,
+      out_height,
+    )
+  })
+  (data, out_width.val, out_height.val)
+}
+
+///|
+/// Exports the representation closest to `scale_factor` as JPEG bytes.
+/// `quality` is 0-100 (0=lowest, 100=highest). Returns
+/// `(jpeg_bytes, pixel_width, pixel_height)`.
+pub fn NativeImage::to_jpeg(
+  self : NativeImage,
+  scale_factor? : Double = 1.0,
+  quality? : Int = 80,
+) -> (Bytes, Int, Int) raise NativeError {
+  let handle = self.live_handle()
+  let out_width = Ref(0)
+  let out_height = Ref(0)
+  let data = read_native_bytes("image to_jpeg", (buffer, buffer_len, req) => {
+    proton_image_to_jpeg_ffi(
+      handle, scale_factor, quality, buffer, buffer_len, req, out_width, out_height,
+    )
+  })
+  (data, out_width.val, out_height.val)
+}
+
+///|
+/// Exports the representation closest to `scale_factor` as raw RGBA bitmap
+/// bytes (32-bit RGBA). Returns `(bitmap_bytes, pixel_width, pixel_height)`.
+pub fn NativeImage::to_bitmap(
+  self : NativeImage,
+  scale_factor? : Double = 1.0,
+) -> (Bytes, Int, Int) raise NativeError {
+  let handle = self.live_handle()
+  let out_width = Ref(0)
+  let out_height = Ref(0)
+  let data = read_native_bytes("image to_bitmap", (buffer, buffer_len, req) => {
+    proton_image_to_bitmap_ffi(
+      handle, scale_factor, buffer, buffer_len, req, out_width, out_height,
+    )
+  })
+  (data, out_width.val, out_height.val)
 }
 
 ///|

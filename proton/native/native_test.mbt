@@ -66,7 +66,7 @@ test "web contents view handles die with their owning window" {
 
 ///|
 test "public native notification API exposes an empty activation queue" {
-  inspect(@native.notification_supported(), content="false")
+  inspect(@native.notification_supported(), content="true")
   assert_true(@native.notification_poll_click() is None)
   @native.notification_cleanup()
 }

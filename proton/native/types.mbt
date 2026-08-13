@@ -275,6 +275,22 @@ pub(all) struct WindowState {
 } derive(Debug, Eq, FromJson)
 
 ///|
+/// Information about a single connected display.
+pub(all) struct ScreenInfo {
+  id : Int
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+  is_primary : Bool
+} derive(Debug, Eq, FromJson)
+
+///|
 /// A native notification activation, optionally carrying its application
 /// payload.
 pub(all) struct NativeNotificationClick {
@@ -622,6 +638,24 @@ struct Window {
 struct WindowRef {
   handle : Int64
 } derive(Debug, Eq)
+
+///|
+priv enum ImageLifecycleState {
+  ImageLive = 0
+  ImageDestroyed = 1
+}
+
+///|
+struct NativeImage {
+  mut handle : Int64
+  mut lifecycle : ImageLifecycleState
+}
+
+///|
+struct ImageSize {
+  width : Int
+  height : Int
+} derive(FromJson, ToJson)
 
 ///|
 pub(all) enum TitlebarStyle {
