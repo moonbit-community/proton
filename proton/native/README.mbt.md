@@ -28,13 +28,13 @@ test "typed runtime config JSON" {
   let config = RuntimeConfig::new(
     runtime_root="app-runtime",
     helper_path="cef_process.exe",
-    cache_dir="cache",
+    cache_dir="/absolute/path/to/cache",
   )
   let json = config.to_json_string()
   assert_true(json.contains("\"abi_version\":1"))
   assert_true(json.contains("\"runtime_root\":\"app-runtime\""))
   assert_true(json.contains("\"helper_path\":\"cef_process.exe\""))
-  assert_true(json.contains("\"cache_dir\":\"cache\""))
+  assert_true(json.contains("\"cache_dir\":\"/absolute/path/to/cache\""))
   assert_true(json.contains("\"persist_session_cookies\":true"))
 }
 ```
@@ -52,9 +52,9 @@ For packaged Proton runtimes, prefer `RuntimeConfig::bundled()`. It asks
 ```mbt check
 ///|
 test "bundled runtime config JSON" {
-  let json = RuntimeConfig::bundled(cache_dir="cache").to_json_string()
+  let json = RuntimeConfig::bundled(cache_dir="/absolute/path/to/cache").to_json_string()
   assert_true(json.contains("\"use_bundled\":true"))
-  assert_true(json.contains("\"cache_dir\":\"cache\""))
+  assert_true(json.contains("\"cache_dir\":\"/absolute/path/to/cache\""))
   assert_true(json.contains("\"persist_session_cookies\":true"))
 }
 ```
