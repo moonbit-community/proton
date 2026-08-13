@@ -21,6 +21,7 @@ pub fn all() -> @proton_extension.Extensions {
     @microphone.extension(),
     @power_monitor.extension(),
     @process.extension(),
+    @net.extension(),
   ])
 }
 
@@ -39,5 +40,6 @@ pub fn desktop() -> @proton_extension.Extensions {
     @microphone.extension(),
     @power_monitor.extension(),
     @process.extension(),
+    @net.extension(),
   ])
 }

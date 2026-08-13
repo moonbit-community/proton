@@ -105,6 +105,13 @@ test "built-in extension metadata stays aligned with built-in specs" {
     "microphone",
   )
   assert_metadata_matches_app_command_spec(
+    load_descriptor("net"),
+    @net.extension().command_spec(),
+    "moonbit-community/proton_ext/net",
+    "moonbit-community/proton-net",
+    "net",
+  )
+  assert_metadata_matches_app_command_spec(
     load_descriptor("notification"),
     @notification.extension().command_spec(),
     "moonbit-community/proton_ext/notification",
