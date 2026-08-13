@@ -48,6 +48,7 @@ let default_bridge_startup_timeout_ms = 30000
 priv struct ResolvedAppConfig {
   manifest : @manifest.AppManifest
   permission_base_path : String
+  application_identifier : String?
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]

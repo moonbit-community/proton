@@ -9,6 +9,9 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   let resolved = self.resolved_app_config() catch {
     error => raise ConfigurationError(error)
   }
+  let browser_data_dir = resolve_browser_data_dir(resolved) catch {
+    error => raise ConfigurationError(error)
+  }
   let app_instance = match acquire_app_instance(resolved) {
     Some(@native.AppInstanceAcquire::Forwarded) => return
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
@@ -24,6 +27,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.menu,
     self.bridge_startup_timeout_value_ms,
     self.resolved_headless(),
+    browser_data_dir?,
     app_instance~,
     launch_input_handlers=self.launch_input_handlers,
     planned_views=self.planned_views,
@@ -72,6 +76,7 @@ async fn run_manifest(
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
   headless : Bool,
+  browser_data_dir? : String,
   app_instance? : @native.AppInstance? = None,
   planned_views? : Array[(String, @native.ViewConfig)] = [],
   launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
@@ -119,6 +124,7 @@ async fn run_manifest(
   let forward_menu_events = menu is Some(_)
   let runtime = @native.Runtime::new(
     config=@native.RuntimeConfig::bundled(
+      cache_dir?=browser_data_dir,
       remote_debugging_port=debug_port(manifest.debug),
       headless~,
     ),
@@ -349,6 +355,26 @@ async fn run_manifest(
     Some(error) => raise error
     None => ()
   }
+}
+
+///|
+/// Persistent browser state is only safe when Proton owns the application's
+/// single-instance route. Multi-instance runtimes receive native-owned
+/// temporary profiles instead.
+fn resolve_browser_data_dir(
+  config : ResolvedAppConfig,
+) -> String? raise AppConfigurationError {
+  guard config.instance_identifier is Some(_) else { return None }
+  guard config.application_identifier is Some(identifier) else {
+    raise InvalidSetting(
+      name="identifier",
+      message="is required for persistent browser storage",
+    )
+  }
+  let path = browser_data_dir(identifier) catch {
+    error => raise InvalidSetting(name="identifier", message=error.message())
+  }
+  Some(path)
 }
 
 ///|

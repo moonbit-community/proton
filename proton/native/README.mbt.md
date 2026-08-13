@@ -39,10 +39,11 @@ test "typed runtime config JSON" {
 }
 ```
 
-`persist_session_cookies` defaults to `true`, matching Electron's persistent
-default session. When enabled, session cookies (no expiry) are written to disk
-alongside permanent cookies, so login state survives app restarts. Set it to
-`false` for an incognito-like runtime.
+Omitting `cache_dir` creates an isolated temporary browser profile that is
+removed after native runtime shutdown. A non-empty `cache_dir` must be an
+absolute path owned by one running process; it enables persistent browser state.
+For persistent profiles, `persist_session_cookies` defaults to `true`, so
+session cookies without an expiry are stored alongside permanent cookies.
 
 For packaged Proton runtimes, prefer `RuntimeConfig::bundled()`. It asks
 `proton.dll` to use the install layout beside the loaded DLL, including
