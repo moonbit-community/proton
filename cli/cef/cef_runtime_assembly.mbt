@@ -82,52 +82,38 @@ async fn copy_cef_runtime(
 }
 
 ///|
+async fn create_runtime_staging(runtime_dir : String) -> String {
+  let prefix = runtime_dir + ".staging-" + @async.now().to_string()
+  for index = 0; ; index = index + 1 {
+    let staging = prefix + "-" + index.to_string()
+    try @async_fs.mkdir(staging) catch {
+      error =>
+        if !@fsutil.path_exists(staging) {
+          raise CefFileSystemError::CreateDirectory(
+            path=staging,
+            detail=@debug.render(Repr(error)),
+          )
+        }
+    } noraise {
+      _ => return staging
+    }
+  }
+}
+
+///|
 async fn assemble_runtime(
   cache_root~ : String,
   platform~ : ProtonPlatform,
-  proton_version~ : String,
-  proton_source_hash~ : String,
-  cef_name~ : String,
-  cef_sha256~ : String,
   cef_root~ : String,
   prebuilt_root~ : String,
   runtime_dir~ : String,
 ) -> Unit {
   assert_safe_generated_dir(runtime_dir, cache_root)
-  ensure_dir(@fsutil.path_parent(runtime_dir))
-  let lock_path = runtime_dir + ".lock"
-  let lock_file = @async_fs.open(
-    lock_path,
-    mode=ReadWrite,
-    create_mode=OpenOrCreate,
-  ) catch {
-    error =>
-      raise CefRuntimeError::RuntimeConflict(
-        path=runtime_dir,
-        detail="failed to open cache lock: " + @debug.render(Repr(error)),
-      )
-  }
-  defer lock_file.close()
-  lock_file.lock(Exclusive) catch {
-    error =>
-      raise CefRuntimeError::RuntimeConflict(
-        path=runtime_dir,
-        detail="failed to acquire cache lock: " + @debug.render(Repr(error)),
-      )
-  }
   if @fsutil.path_is_dir(runtime_dir) {
-    validate_runtime_dist(runtime_dir, platform)
-    validate_runtime_metadata(
-      runtime_dir~,
-      proton_version~,
-      proton_source_hash~,
-      platform=platform.id,
-      cef_sha256~,
-    )
     return
   }
-  let staging = runtime_dir + ".staging"
-  remove_tree(staging)
+  ensure_dir(@fsutil.path_parent(runtime_dir))
+  let staging = create_runtime_staging(runtime_dir)
   try {
     @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
     copy_prebuilt_runtime(platform, prebuilt_root, staging)
@@ -137,28 +123,18 @@ async fn assemble_runtime(
       )
     }
     copy_cef_runtime(platform, cef_root, staging)
-    write_runtime_metadata(
-      runtime_dir=staging,
-      proton_version~,
-      proton_source_hash~,
-      platform=platform.id,
-      cef_name~,
-      cef_sha256~,
-    )
     validate_runtime_dist(staging, platform)
-    validate_runtime_metadata(
-      runtime_dir=staging,
-      proton_version~,
-      proton_source_hash~,
-      platform=platform.id,
-      cef_sha256~,
-    )
     @async_fs.rename(staging, runtime_dir, replace=false) catch {
-      error =>
+      error => {
+        if @fsutil.path_is_dir(runtime_dir) {
+          remove_tree(staging)
+          return
+        }
         raise CefRuntimeError::RuntimeConflict(
           path=runtime_dir,
           detail=@debug.render(Repr(error)),
         )
+      }
     }
   } catch {
     error => {

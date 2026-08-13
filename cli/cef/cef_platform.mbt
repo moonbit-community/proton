@@ -157,12 +157,8 @@ fn proton_runtime_id(
   cef_sha256 : String,
 ) -> String {
   let identity = proton_source_hash + "\n" + cef_sha256
-  let bytes : Array[Byte] = []
-  for character in identity {
-    bytes.push(character.to_int().to_byte())
-  }
   let hasher = @crypto.SHA256::new()
-  hasher.update(Bytes::from_array(bytes[:]))
+  hasher.update(@utf8.encode(identity))
   "proton-" +
   proton_version +
   "-" +

@@ -41,45 +41,6 @@ test "public runtime layout lookup follows stable platform ids" {
 }
 
 ///|
-test "runtime manifests separate portable and active metadata" {
-  let source_hash = "sha256:" + "a".repeat(64)
-  let cef_sha256 = "b".repeat(64)
-  let portable = runtime_manifest_json(
-    proton_version="0.1.5",
-    proton_source_hash=source_hash,
-    platform="darwin-arm64",
-    cef_name="cef-test",
-    cef_sha256~,
-    cef_root=None,
-    dist=".",
-  )
-  assert_true(portable.contains("\"schema_version\":1"))
-  let portable_json = @json.parse(portable) catch {
-    _ => abort("expected valid portable runtime manifest")
-  }
-  match portable_json {
-    Object(fields) => assert_eq(fields.get("cef"), None)
-    _ => abort("expected portable runtime manifest object")
-  }
-  let active = runtime_manifest_json(
-    proton_version="0.1.5",
-    proton_source_hash=source_hash,
-    platform="darwin-arm64",
-    cef_name="cef-test",
-    cef_sha256~,
-    cef_root=Some("/Users/test/.proton/cache/cef/darwin-arm64/cef-test"),
-    dist="/Users/test/.proton/runtimes/darwin-arm64/runtime-test",
-  )
-  let active_json = @json.parse(active) catch {
-    _ => abort("expected valid active runtime manifest")
-  }
-  assert_eq(
-    json_string_field(active_json, "cef", "active runtime manifest"),
-    "/Users/test/.proton/cache/cef/darwin-arm64/cef-test",
-  )
-}
-
-///|
 test "runtime cache paths are absolute and user-level by default" {
   let project_root = @fsutil.resolve_path(".", "fixtures/proton-cache-project")
   let home = @fsutil.resolve_path(project_root, "../proton-cache-home")
@@ -156,7 +117,7 @@ test "relative CEF cache overrides resolve from the project root" {
 }
 
 ///|
-async test "runtime metadata does not persist the active CEF cache path" {
+async test "active runtime metadata stores absolute shared paths" {
   let root = @async_fs.tmpdir(prefix="proton-runtime-manifest-")
   let proton_dir = @fsutil.path_join(root, ".proton")
   let runtime_dir = @fsutil.path_join(proton_dir, "runtime")
@@ -164,32 +125,14 @@ async test "runtime metadata does not persist the active CEF cache path" {
   let cef_root = @fsutil.resolve_path(
     root, "../shared-cef/darwin-arm64/cef-test",
   )
-  let source_hash = "sha256:" + "a".repeat(64)
-  let cef_sha256 = "b".repeat(64)
-  write_runtime_metadata(
-    runtime_dir~,
-    proton_version="0.1.5",
-    proton_source_hash=source_hash,
-    platform="darwin-arm64",
-    cef_name="cef-test",
-    cef_sha256~,
-  )
   write_active_runtime_manifest(
     root~,
     proton_version="0.1.5",
-    proton_source_hash=source_hash,
     platform="darwin-arm64",
     cef_name="cef-test",
-    cef_sha256~,
     cef_root~,
     runtime_dir~,
   )
-  let runtime_manifest_path = @fsutil.path_join(runtime_dir, "manifest.json")
-  let runtime_manifest = read_json_file(runtime_manifest_path)
-  match runtime_manifest {
-    Object(fields) => assert_eq(fields.get("cef"), None)
-    _ => abort("expected runtime metadata object")
-  }
   let active_manifest_path = @fsutil.path_join(proton_dir, "runtime.json")
   let active_manifest = read_json_file(active_manifest_path)
   assert_eq(

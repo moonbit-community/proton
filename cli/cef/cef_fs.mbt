@@ -98,11 +98,15 @@ async fn copy_tree(src : String, dest : String) -> Unit {
 async fn ensure_dir(path : String) -> Unit {
   guard !@fsutil.path_exists(path) else { return }
   @async_fs.mkdir(path, recursive=true) catch {
-    err =>
+    err => {
+      if @fsutil.path_is_dir(path) {
+        return
+      }
       raise CefFileSystemError::CreateDirectory(
         path~,
         detail=@debug.render(Repr(err)),
       )
+    }
   }
 }
 

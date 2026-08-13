@@ -82,13 +82,11 @@ async fn setup(
   let sha256 = resolve_cef_archive_sha256(platform, name, url, requested_sha256)
   let root = project_root(cwd)
   let prebuilt_root = find_prebuilt_root(root, platform)
-  let prebuilt = prebuilt_manifest_identity(prebuilt_root)
-  let cef_root = ensure_cef_cache(root~, platform~, name~, url~, sha256~)
-  let runtime_id = proton_runtime_id(
-    prebuilt.version,
-    prebuilt.source_hash,
-    sha256,
+  let (proton_version, proton_source_hash) = prebuilt_manifest_identity(
+    prebuilt_root,
   )
+  let cef_root = ensure_cef_cache(root~, platform~, name~, url~, sha256~)
+  let runtime_id = proton_runtime_id(proton_version, proton_source_hash, sha256)
   let global_cache_root = resolve_global_runtime_cache_root(
     project_root=root,
     configured_root=@env.get_env_var("PROTON_RUNTIME_CACHE"),
@@ -104,10 +102,6 @@ async fn setup(
   assemble_runtime(
     cache_root~,
     platform~,
-    proton_version=prebuilt.version,
-    proton_source_hash=prebuilt.source_hash,
-    cef_name=name,
-    cef_sha256=sha256,
     cef_root~,
     prebuilt_root~,
     runtime_dir~,
@@ -115,26 +109,18 @@ async fn setup(
   ensure_dir(@fsutil.resolve_path(root, ".proton"))
   write_active_runtime_manifest(
     root~,
-    proton_version=prebuilt.version,
-    proton_source_hash=prebuilt.source_hash,
+    proton_version~,
     platform=platform.id,
     cef_name=name,
-    cef_sha256=sha256,
     cef_root~,
     runtime_dir~,
   )
   validate_active_runtime_manifest(
     root~,
     platform=platform.id,
-    proton_version=prebuilt.version,
-    proton_source_hash=prebuilt.source_hash,
-    cef_sha256=sha256,
+    proton_version~,
     cef_root~,
     runtime_dir~,
   )
-  if global_cache_root is Some(_) &&
-    !@fsutil.path_is_within(project_runtime_root, cache_root) {
-    remove_tree(project_runtime_root)
-  }
   println(runtime_dir)
 }
