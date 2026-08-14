@@ -319,10 +319,26 @@ fn WebContentsViewWakeup::close(
 async fn WebContentsViewWakeup::wait(
   self : WebContentsViewWakeup,
 ) -> Result[Unit, String] {
-  match self.reader.read_some(max_len=256) {
-    None => Err("runtime wakeup pipe closed unexpectedly")
-    Some(_) => Ok(())
+  // The wakeup descriptor is non-blocking, so reading it races the runtime
+  // latching the next byte. After the event queue is drained, a read with no
+  // byte pending surfaces EAGAIN, which is transient, not fatal: yield to the
+  // scheduler and retry until the runtime latches the next wakeup byte.
+  let mut woke = false
+  while !woke {
+    try {
+      match self.reader.read_some(max_len=256) {
+        None => return Err("runtime wakeup pipe closed unexpectedly")
+        Some(_) => woke = true
+      }
+    } catch {
+      @os_error.OSError(_, ..) as err if err.is_nonblocking_io_error() => ()
+      error => return Err("runtime wakeup read failed: " + error.to_string())
+    }
+    if !woke {
+      @async.sleep(0)
+    }
   }
+  Ok(())
 }
 
 ///|
