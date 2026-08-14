@@ -267,7 +267,15 @@ async fn build_scenario_app_executable(
   output_root : String,
 ) -> Unit {
   if @path.sep != '\\' {
-    let (code, _) = @process.collect_output_merged(
+    // Redirect the build to a file instead of capturing it through a pipe:
+    // on a loaded macOS runner the async pipe read can surface a transient
+    // EAGAIN that the retry loop then has to absorb on every attempt.
+    let build_log = join_path(output_root, "scenario-app-build.log")
+    let output = @process.redirect_to_file(
+      build_log,
+      create_mode=@fs.CreateOrTruncate,
+    )
+    let code = @process.run(
       "moon",
       [
         "--target-dir",
@@ -285,8 +293,12 @@ async fn build_scenario_app_executable(
       ],
       cwd=root,
       extra_env={ "MOON_CC": "cc" },
+      stdout=output,
+      stderr=output,
     )
-    guard code == 0 else { fail("failed to build the E2E scenario app") }
+    guard code == 0 else {
+      fail("failed to build the E2E scenario app")
+    }
   }
 }
 
