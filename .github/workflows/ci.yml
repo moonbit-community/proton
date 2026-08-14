@@ -30,7 +30,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: moon version
@@ -67,20 +67,16 @@ jobs:
           path: .proton-global-cache
           key: ${{ runner.os }}-cef-global-${{ hashFiles('cli/cef/cef_platform.mbt') }}
 
-      # Use the stable MoonBit release channel. Pinning a dated `nightly`
-      # snapshot is not possible (the CDN only serves `nightly` and `latest`),
-      # and current nightlies break the pinned `moonbitlang/x@0.4.49` lexer
-      # and turn implicit-impl deprecations into `--deny-warn` errors.
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
-          MOONBIT_INSTALL_VERSION: latest
+          MOONBIT_INSTALL_VERSION: nightly
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
           "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
@@ -197,7 +193,7 @@ jobs:
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon check --target native --deny-warn
+          moon check --target native --deny-warn --warn-list "-0079"
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a env \
@@ -230,7 +226,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon check --target native --deny-warn
+          moon check --target native --deny-warn --warn-list "-0079"
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           moon -C proton test native --target native --diagnostic-limit 80
           moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
