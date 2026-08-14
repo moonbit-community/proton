@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proton Desktop Showcase</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --page: #f4f5f2;
+        --surface: #ffffff;
+        --surface-subtle: #f8f9f7;
+        --text: #202520;
+        --muted: #687168;
+        --line: #d9ded8;
+        --green: #176b4a;
+        --green-hover: #10563b;
+        --blue: #245b8a;
+        --amber: #8a5b12;
+        --red: #a23a35;
+        --shadow: rgba(32, 37, 32, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #171a18;
+          --surface: #202421;
+          --surface-subtle: #252a26;
+          --text: #eef2ed;
+          --muted: #abb4ab;
+          --line: #3b433c;
+          --green: #58b88c;
+          --green-hover: #70cba1;
+          --blue: #75a9d8;
+          --amber: #d5a85e;
+          --red: #e08078;
+          --shadow: rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 720px;
+        min-height: 100vh;
+        overflow: hidden;
+        background: var(--page);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 38px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        padding: 8px 13px;
+        background: var(--green);
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 650;
+      }
+
+      button:hover {
+        background: var(--green-hover);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.55;
+      }
+
+      button.secondary {
+        border-color: var(--line);
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      button.secondary:hover {
+        background: var(--surface-subtle);
+      }
+
+      button.danger {
+        border-color: color-mix(in srgb, var(--red) 35%, var(--line));
+        background: var(--surface);
+        color: var(--red);
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        outline: none;
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      input {
+        height: 42px;
+        padding: 0 12px;
+      }
+
+      textarea {
+        min-height: 122px;
+        resize: vertical;
+        padding: 11px 12px;
+        line-height: 1.5;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
+      }
+
+      .app-shell {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        height: 100vh;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 68px;
+        padding: 0 28px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--green);
+        color: #ffffff;
+        font-weight: 800;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.05rem;
+        letter-spacing: 0;
+      }
+
+      .brand p {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .runtime-state {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .runtime-state::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        content: "";
+      }
+
+      .capabilities {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-bottom: 1px solid var(--line);
+        background: var(--surface-subtle);
+      }
+
+      .capability {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        border-right: 1px solid var(--line);
+      }
+
+      .capability:last-child {
+        border-right: 0;
+      }
+
+      .capability-icon {
+        display: grid;
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--blue);
+        box-shadow: inset 0 0 0 1px var(--line);
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
+      .capability strong,
+      .capability span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .capability strong {
+        font-size: 0.84rem;
+      }
+
+      .capability span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(480px, 1.15fr) minmax(320px, 0.85fr);
+        min-height: 0;
+      }
+
+      .controls,
+      .activity {
+        min-height: 0;
+        overflow: auto;
+        padding: 24px 28px 32px;
+      }
+
+      .activity {
+        border-left: 1px solid var(--line);
+        background: var(--surface-subtle);
+      }
+
+      .section + .section {
+        margin-top: 24px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line);
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 14px;
+      }
+
+      .section-heading h2 {
+        margin: 0;
+        font-size: 0.92rem;
+        letter-spacing: 0;
+      }
+
+      .section-heading span {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 650;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 14px;
+      }
+
+      .selection {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .selection strong {
+        color: var(--text);
+      }
+
+      .selection code {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .activity-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .activity-header h2 {
+        margin: 0;
+        font-size: 0.92rem;
+      }
+
+      .activity-header button {
+        min-height: 32px;
+        padding: 5px 10px;
+        font-size: 0.76rem;
+      }
+
+      .notice {
+        margin: 16px 0;
+        border-left: 3px solid var(--green);
+        padding: 12px 14px;
+        background: var(--surface);
+        box-shadow: 0 8px 22px var(--shadow);
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      .notice.error {
+        border-left-color: var(--red);
+        color: var(--red);
+      }
+
+      .event-log {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .event {
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 10px 11px;
+        background: var(--surface);
+      }
+
+      .event-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.78rem;
+      }
+
+      .event-head strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .event-head time {
+        flex: 0 0 auto;
+        color: var(--muted);
+      }
+
+      .event pre {
+        margin: 8px 0 0;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        color: var(--muted);
+        font: 0.72rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .empty-log {
+        padding: 42px 16px;
+        border: 1px dashed var(--line);
+        border-radius: 5px;
+        color: var(--muted);
+        text-align: center;
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 900px) {
+        body {
+          min-width: 0;
+          overflow: auto;
+        }
+
+        .app-shell {
+          height: auto;
+          min-height: 100vh;
+        }
+
+        .capabilities {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .capability:nth-child(2) {
+          border-right: 0;
+        }
+
+        .capability:nth-child(-n + 2) {
+          border-bottom: 1px solid var(--line);
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .activity {
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">P</div>
+          <div>
+            <h1>Proton Desktop Showcase</h1>
+            <p>Native capability console</p>
+          </div>
+        </div>
+        <div class="runtime-state" id="runtime-state">Bridge connected</div>
+      </header>
+
+      <section class="capabilities" aria-label="Native capabilities">
+        <div class="capability">
+          <div class="capability-icon">D</div>
+          <div><strong>Dialog</strong><span id="dialog-state">Ready</span></div>
+        </div>
+        <div class="capability">
+          <div class="capability-icon">C</div>
+          <div><strong>Clipboard</strong><span id="clipboard-state">Ready</span></div>
+        </div>
+        <div class="capability">
+          <div class="capability-icon">N</div>
+          <div><strong>Notification</strong><span id="notification-state">Not requested</span></div>
+        </div>
+        <div class="capability">
+          <div class="capability-icon">T</div>
+          <div><strong>Tray</strong><span id="tray-state">Checking</span></div>
+        </div>
+      </section>
+
+      <main class="workspace">
+        <section class="controls">
+          <div class="section">
+            <div class="section-heading">
+              <h2>Message</h2>
+              <span>Shared content</span>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="title">Title</label>
+                <input id="title" value="Proton desktop integration" />
+              </div>
+              <div class="field">
+                <label for="path">Suggested path</label>
+                <input id="path" value="proton-showcase.txt" />
+              </div>
+              <div class="field full">
+                <label for="message">Message</label>
+                <textarea id="message">Hello from a MoonBit desktop application.</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-heading">
+              <h2>Dialogs and clipboard</h2>
+              <span>Native system surfaces</span>
+            </div>
+            <div class="button-row">
+              <button id="message-dialog">Show Message</button>
+              <button id="confirm-dialog" class="secondary">Confirm</button>
+              <button id="open-file" class="secondary">Open File</button>
+              <button id="save-file" class="secondary">Choose Save Path</button>
+              <button id="copy-text">Copy Text</button>
+              <button id="paste-text" class="secondary">Paste Text</button>
+            </div>
+            <div class="selection">
+              <strong>Last path</strong>
+              <code id="selected-path">No path selected</code>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-heading">
+              <h2>Notification and tray</h2>
+              <span>System-level presence</span>
+            </div>
+            <div class="button-row">
+              <button id="send-notification">Send Notification</button>
+              <button id="show-tray">Show Tray</button>
+              <button id="update-tray" class="secondary">Update Tooltip</button>
+              <button id="hide-tray" class="secondary">Hide Tray</button>
+              <button id="destroy-tray" class="danger">Destroy Tray</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="activity">
+          <div class="activity-header">
+            <h2>Activity</h2>
+            <button id="clear-log" class="secondary">Clear</button>
+          </div>
+          <div class="notice" id="notice">Runtime is ready.</div>
+          <ol class="event-log" id="event-log">
+            <li class="empty-log">No activity yet</li>
+          </ol>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const app = window.__MoonBit__;
+        const titleInput = document.getElementById("title");
+        const messageInput = document.getElementById("message");
+        const pathInput = document.getElementById("path");
+        const selectedPath = document.getElementById("selected-path");
+        const eventLog = document.getElementById("event-log");
+        const notice = document.getElementById("notice");
+        const trayState = document.getElementById("tray-state");
+        const clipboardState = document.getElementById("clipboard-state");
+        const notificationState = document.getElementById("notification-state");
+        const dialogState = document.getElementById("dialog-state");
+
+        function timestamp() {
+          return new Intl.DateTimeFormat(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }).format(new Date());
+        }
+
+        function appendEvent(label, payload) {
+          const empty = eventLog.querySelector(".empty-log");
+          if (empty) {
+            empty.remove();
+          }
+          const item = document.createElement("li");
+          item.className = "event";
+          const head = document.createElement("div");
+          head.className = "event-head";
+          const name = document.createElement("strong");
+          name.textContent = label;
+          const time = document.createElement("time");
+          time.textContent = timestamp();
+          const details = document.createElement("pre");
+          details.textContent = JSON.stringify(payload, null, 2);
+          head.append(name, time);
+          item.append(head, details);
+          eventLog.prepend(item);
+          while (eventLog.children.length > 16) {
+            eventLog.lastElementChild.remove();
+          }
+        }
+
+        function setNotice(message, kind) {
+          notice.textContent = message;
+          notice.className = kind === "error" ? "notice error" : "notice";
+        }
+
+        async function runAction(button, label, action) {
+          button.disabled = true;
+          try {
+            const result = await action();
+            setNotice(label + " completed.");
+            appendEvent(label, result || {});
+            return result;
+          } catch (error) {
+            const detail = String(error);
+            setNotice(label + " failed: " + detail, "error");
+            appendEvent(label + ".failed", { message: detail });
+            throw error;
+          } finally {
+            button.disabled = false;
+          }
+        }
+
+        function trayMenu() {
+          return {
+            items: [
+              { id: "notify", label: "Send Notification", kind: "normal", enabled: true },
+              { id: "copy", label: "Copy Message", kind: "normal", enabled: true },
+              { kind: "separator" },
+              { id: "hide", label: "Hide Tray", kind: "normal", enabled: true },
+            ],
+          };
+        }
+
+        function notificationPayload(source) {
+          return {
+            title: titleInput.value.trim() || "Proton Desktop Showcase",
+            body: messageInput.value.trim() || "Hello from Proton.",
+            level: "info",
+            payload: JSON.stringify({ source }),
+          };
+        }
+
+        function bind(id, label, action) {
+          const button = document.getElementById(id);
+          button.addEventListener("click", () => {
+            runAction(button, label, action).catch(() => {});
+          });
+        }
+
+        app.events.on("dialog.activity", (event) => {
+          dialogState.textContent = "Active";
+          appendEvent("dialog.activity", event);
+        });
+        app.events.on("clipboard.activity", (event) => {
+          clipboardState.textContent = "Active";
+          appendEvent("clipboard.activity", event);
+        });
+        app.events.on("notification.activity", (event) => {
+          notificationState.textContent = "Delivered";
+          appendEvent("notification.activity", event);
+        });
+        app.events.on("notification.click", (event) => {
+          appendEvent("notification.click", event);
+        });
+        app.events.on("tray.activity", (event) => {
+          trayState.textContent = event.payload && event.payload.visible ? "Visible" : "Hidden";
+          appendEvent("tray.activity", event);
+        });
+        app.tray.on("menuItemClick", async (event) => {
+          appendEvent("tray.menuItemClick", event.payload);
+          const itemId = event.payload && event.payload.item_id;
+          try {
+            if (itemId === "notify") {
+              const result = await app.notification.show(notificationPayload("tray"));
+              appendEvent("tray.notification", result);
+            } else if (itemId === "copy") {
+              const result = await app.clipboard.writeText({ text: messageInput.value });
+              appendEvent("tray.clipboard", result);
+            } else if (itemId === "hide") {
+              const result = await app.tray.hide({});
+              appendEvent("tray.hide", result);
+            }
+          } catch (error) {
+            setNotice("Tray action failed: " + String(error), "error");
+            appendEvent("tray.action.failed", { message: String(error) });
+          }
+        });
+
+        bind("message-dialog", "dialog.message", () =>
+          app.dialog.message({
+            title: titleInput.value,
+            message: messageInput.value,
+            level: "info",
+          }),
+        );
+
+        bind("confirm-dialog", "dialog.confirm", async () => {
+          const result = await app.dialog.confirm({
+            title: titleInput.value,
+            message: messageInput.value,
+            level: "warning",
+          });
+          dialogState.textContent = result.confirmed ? "Confirmed" : "Cancelled";
+          return result;
+        });
+
+        bind("open-file", "dialog.openFile", async () => {
+          const result = await app.dialog.openFile({
+            title: "Choose a file",
+            path: pathInput.value,
+          });
+          selectedPath.textContent = result.path || "Cancelled";
+          if (result.path) {
+            pathInput.value = result.path;
+          }
+          return result;
+        });
+
+        bind("save-file", "dialog.saveFile", async () => {
+          const result = await app.dialog.saveFile({
+            title: "Choose a save destination",
+            path: pathInput.value,
+          });
+          selectedPath.textContent = result.path || "Cancelled";
+          if (result.path) {
+            pathInput.value = result.path;
+          }
+          return result;
+        });
+
+        bind("copy-text", "clipboard.writeText", async () => {
+          const result = await app.clipboard.writeText({ text: messageInput.value });
+          clipboardState.textContent = "Copied " + messageInput.value.length + " chars";
+          return result;
+        });
+
+        bind("paste-text", "clipboard.readText", async () => {
+          const result = await app.clipboard.readText({});
+          messageInput.value = result.text || "";
+          clipboardState.textContent = result.text ? "Pasted " + result.text.length + " chars" : "Empty";
+          return result;
+        });
+
+        bind("send-notification", "notification.show", async () => {
+          try {
+            const result = await app.notification.show(notificationPayload("window"));
+            notificationState.textContent = "Delivered";
+            return result;
+          } catch (error) {
+            notificationState.textContent = "Unavailable";
+            throw error;
+          }
+        });
+
+        bind("show-tray", "tray.show", async () => {
+          const result = await app.tray.show({
+            tooltip: titleInput.value.trim() || "Proton Desktop Showcase",
+            menu: trayMenu(),
+          });
+          trayState.textContent = result.visible ? "Visible" : "Hidden";
+          return result;
+        });
+
+        bind("update-tray", "tray.setTooltip", () =>
+          app.tray.setTooltip({
+            tooltip: titleInput.value.trim() || "Proton Desktop Showcase",
+          }),
+        );
+
+        bind("hide-tray", "tray.hide", async () => {
+          const result = await app.tray.hide({});
+          trayState.textContent = "Hidden";
+          return result;
+        });
+
+        bind("destroy-tray", "tray.destroy", async () => {
+          const result = await app.tray.destroy({});
+          trayState.textContent = "Destroyed";
+          return result;
+        });
+
+        document.getElementById("clear-log").addEventListener("click", () => {
+          eventLog.innerHTML = '<li class="empty-log">No activity yet</li>';
+          setNotice("Activity cleared.");
+        });
+
+        app.tray.support({}).then((result) => {
+          trayState.textContent = result.supported ? "Ready" : "Unavailable";
+          appendEvent("tray.support", result);
+        }).catch((error) => {
+          trayState.textContent = "Unavailable";
+          appendEvent("tray.support.failed", { message: String(error) });
+        });
+      })();
+    </script>
+  </body>
+</html>
