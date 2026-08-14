@@ -703,7 +703,7 @@ async fn run_scenario_probe_with_retry(
   defer remove_dev_extension_tree(output_root)
   let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
-  while attempt < 2 {
+  while attempt < 3 {
     let succeeded = try {
       build_scenario_app_executable(root, output_root)
       run_e2e_operation_with_timeout(
@@ -714,10 +714,10 @@ async fn run_scenario_probe_with_retry(
       true
     } catch {
       error => {
-        if attempt == 1 || !retryable_scenario_error(error) {
+        if attempt == 2 || !retryable_scenario_error(error) {
           raise error
         }
-        println("MoonBit " + name + " transient attempt failed; retrying once")
+        println("MoonBit " + name + " transient attempt failed; retrying")
         false
       }
     }
@@ -767,7 +767,7 @@ fn retryable_startup_error(error : Error) -> Bool {
   // settle.
   text.contains("scenario app exited before cdp became ready") ||
   text.contains("cdp endpoint did not start within") ||
-  text.contains("cdp page target did not become ready within") ||
+  text.contains("cdp page target") ||
   text.contains("timed out waiting for navigation to")
 }
 
