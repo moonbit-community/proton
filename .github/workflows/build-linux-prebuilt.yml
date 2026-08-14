@@ -1,10 +1,18 @@
 name: build Linux prebuilt
 
 on:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: Commit to build
+        required: true
+        type: string
   workflow_dispatch:
-  pull_request:
-    types:
-      - labeled
+    inputs:
+      source_sha:
+        description: Commit to build (defaults to the selected ref)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -16,11 +24,10 @@ concurrency:
 env:
   PROTON_NO_UPDATE_CHECK: 1
   PROTON_CEF_CACHE: ${{ github.workspace }}/.proton-global-cache
-  PROTON_PREBUILT_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  PROTON_PREBUILT_SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-prebuilt' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -75,6 +82,7 @@ jobs:
       - name: Stage package prebuilt
         run: |
           destination="$PWD/proton/prebuilt/linux-x64"
+          rm -rf "$destination"
           install -d "$destination/bin" "$destination/include" "$destination/lib"
           install -m 755 "$PROTON_PREBUILT_RUNTIME/bin/cef_process" \
             "$destination/bin/cef_process"
