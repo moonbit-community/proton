@@ -21,6 +21,8 @@ static proton_notification_show_t g_notify_show = NULL;
 static proton_notification_set_timeout_t g_notify_set_timeout = NULL;
 static proton_g_object_unref_t g_g_object_unref = NULL;
 static int32_t g_notify_initialized = 0;
+static int32_t g_notify_probe_attempted = 0;
+static int32_t g_notify_probe_ok = 0;
 
 static void proton_notification_set_message(char *error,
                                             size_t error_len,
@@ -30,7 +32,12 @@ static void proton_notification_set_message(char *error,
   }
 }
 
-static int32_t proton_notification_load_libnotify(char *error,
+// Loads libgobject/libnotify and resolves the required symbols. This does NOT
+// call notify_init, which requires a notification daemon that may be absent in
+// headless/CI environments; loading the libraries is enough to report the
+// capability as supported (notifications are just silently dropped when no
+// daemon is present).
+static int32_t proton_notification_load_libraries(char *error,
                                                   size_t error_len) {
   if (g_notify_lib != NULL) {
     return PROTON_OK;
@@ -75,6 +82,28 @@ static int32_t proton_notification_load_libnotify(char *error,
   if (g_type_init != NULL) {
     g_type_init();
   }
+  return PROTON_OK;
+}
+
+// Runs the capability probe once; subsequent calls return the cached result
+// so is_supported does not re-attempt loading after a failure.
+static int32_t proton_notification_probe_supported(char *error,
+                                                   size_t error_len) {
+  if (g_notify_probe_attempted) {
+    return g_notify_probe_ok ? PROTON_OK : PROTON_ERR_UNSUPPORTED;
+  }
+  g_notify_probe_attempted = 1;
+  int32_t status = proton_notification_load_libraries(error, error_len);
+  g_notify_probe_ok = (status == PROTON_OK);
+  return status;
+}
+
+static int32_t proton_notification_load_libnotify(char *error,
+                                                  size_t error_len) {
+  int32_t status = proton_notification_load_libraries(error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
   if (!g_notify_init("proton")) {
     proton_notification_set_message(error, error_len,
                                     "notify_init failed");
@@ -91,10 +120,15 @@ static int32_t proton_notification_load_libnotify(char *error,
 int32_t proton_engine_notification_is_supported(int32_t *out_supported,
                                                 char *error,
                                                 size_t error_len) {
-  (void)error;
-  (void)error_len;
+  if (g_notify_initialized) {
+    if (out_supported != NULL) {
+      *out_supported = 1;
+    }
+    return PROTON_OK;
+  }
+  int32_t status = proton_notification_probe_supported(error, error_len);
   if (out_supported != NULL) {
-    *out_supported = g_notify_initialized ? 1 : 0;
+    *out_supported = (status == PROTON_OK) ? 1 : 0;
   }
   return PROTON_OK;
 }
