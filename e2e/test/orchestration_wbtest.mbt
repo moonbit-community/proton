@@ -732,9 +732,12 @@ async fn run_scenario_probe_with_retry(
 ///|
 fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
   if name == "52_web_contents_view" {
-    // The view probe has separate startup, target, page, paint, and shutdown
-    // waits.  Its outer guard must cover more than one phase-sized budget.
-    timeout * 2
+    // The view probe has separate startup, target, browser, page, ready,
+    // paint, closed, and shutdown waits.  Its outer guard must cover several
+    // phase-sized budgets: on a loaded CI runner these phases each approach
+    // their own `timeout` while the app and CEF settle, so grant extra
+    // headroom instead of failing the whole probe.
+    timeout * 4
   } else {
     timeout
   }
