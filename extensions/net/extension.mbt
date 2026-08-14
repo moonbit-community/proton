@@ -44,7 +44,7 @@ async fn do_request(
   _context : @proton.CommandContext,
   request : @net_contract.Request,
 ) -> @net_contract.Response {
-  let meth = parse_method(request.method)
+  let meth = parse_method(request.http_method)
   let headers = request.headers
   let body_bytes = request.body.map(fn(s) { @utf8.encode(s) }).unwrap_or(b"")
   // Use top-level functions for GET/POST/PUT (they handle full URL parsing).

@@ -1,7 +1,7 @@
 {
   "platform": "darwin-arm64",
   "proton_version": "0.1.16",
-"source_hash": "sha256:d30f8e445f7e0f35c3070510e17cb627f3ea7a9698939c89297fcbbd5d69892f",
+  "source_hash": "sha256:c20cb6fb25ee825c17afecc07226f581ab20225cd0f06024869bb65fb7c67cb6",
   "artifacts": {
     "shared_lib": "lib/libproton.dylib",
     "helper": "bin/cef_process",

@@ -1,7 +1,7 @@
 ///|
 /// A single HTTP request to make on behalf of the renderer.
 pub(all) struct Request {
-  method : String
+  http_method : String
   url : String
   headers : Map[String, String]
   body : String?

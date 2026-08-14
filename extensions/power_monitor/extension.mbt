@@ -82,6 +82,6 @@ pub fn extension() -> @proton_extension.Extension {
     @power_monitor_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
-    on_destroy=fn() raise { cleanup_power_monitor() },
+    on_destroy=fn() { cleanup_power_monitor() },
   )
 }

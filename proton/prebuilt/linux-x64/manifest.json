@@ -1,7 +1,7 @@
 {
   "platform": "linux-x64",
   "proton_version": "0.1.16",
-  "source_hash": "sha256:1566a8e029faeeef8d8c3308832858dc60a52c6e2066fe0d35941687fee51cbb",
+  "source_hash": "sha256:64d7217c725bbec1a807dfc0df9fad0f04c42822e312816a2a6eb7334f5fd0d9",
   "artifacts": {
     "shared_lib": "lib/libproton.so",
     "helper": "bin/cef_process",
