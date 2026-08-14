@@ -703,7 +703,7 @@ async fn run_scenario_probe_with_retry(
   defer remove_dev_extension_tree(output_root)
   let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
-  while attempt < 3 {
+  while attempt < 4 {
     let succeeded = try {
       build_scenario_app_executable(root, output_root)
       run_e2e_operation_with_timeout(
@@ -714,17 +714,20 @@ async fn run_scenario_probe_with_retry(
       true
     } catch {
       error => {
-        if attempt == 2 || !retryable_scenario_error(error) {
+        if attempt == 3 || !retryable_scenario_error(error) {
           raise error
         }
+        // A transient pipe EAGAIN can recur for one or two attempts on a
+        // loaded shared runner while it catches its breath; back off a little
+        // between attempts so a clean probe has a real chance to run.
         println("MoonBit " + name + " transient attempt failed; retrying")
+        @async.sleep(2000)
         false
       }
     }
     if succeeded {
       return
     }
-    @async.sleep(1000)
     attempt = attempt + 1
   }
 }
