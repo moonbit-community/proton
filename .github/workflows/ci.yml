@@ -30,7 +30,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s 0.1.20260813
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: moon version
@@ -67,20 +67,20 @@ jobs:
           path: .proton-global-cache
           key: ${{ runner.os }}-cef-global-${{ hashFiles('cli/cef/cef_platform.mbt') }}
 
-      # Pin the MoonBit toolchain to a known-good nightly. Newer nightlies
-      # turned `lexscan` into a hard error for `String`/`StringView` inputs,
-      # breaking the pinned `moonbitlang/x@0.4.49` dependency. Bump this only
-      # after moonbitlang/x ships a lexbuf-compatible version.
+      # Use the stable MoonBit release channel. Pinning a dated `nightly`
+      # snapshot is not possible (the CDN only serves `nightly` and `latest`),
+      # and current nightlies break the pinned `moonbitlang/x@0.4.49` lexer
+      # and turn implicit-impl deprecations into `--deny-warn` errors.
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s 0.1.20260813
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
-          MOONBIT_INSTALL_VERSION: 0.1.20260813
+          MOONBIT_INSTALL_VERSION: latest
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
           "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
