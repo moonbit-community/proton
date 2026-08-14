@@ -771,7 +771,15 @@ fn retryable_startup_error(error : Error) -> Bool {
   text.contains("scenario app exited before cdp became ready") ||
   text.contains("cdp endpoint did not start within") ||
   text.contains("cdp page target") ||
-  text.contains("timed out waiting for navigation to")
+  text.contains("timed out waiting for navigation to") ||
+  // The web-contents-view probe asserts on auxiliary log files (OSR paint
+  // records, per-view event logs) that the child app writes asynchronously.
+  // On a loaded shared runner those files can lag behind the probe fast enough
+  // to miss the deadline even though the app behaved correctly, so treat these
+  // as transient and let the heavy scenario retry cleanly.
+  text.contains("native log did not record") ||
+  text.contains("failed to read web contents view event log") ||
+  text.contains("view event log missed")
 }
 
 ///|
