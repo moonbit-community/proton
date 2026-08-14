@@ -701,11 +701,11 @@ async fn run_scenario_probe_with_retry(
 ) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-")
   defer remove_dev_extension_tree(output_root)
-  build_scenario_app_executable(root, output_root)
   let operation_timeout = scenario_operation_timeout(name, timeout)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
+      build_scenario_app_executable(root, output_root)
       run_e2e_operation_with_timeout(
         operation_timeout,
         "E2E scenario " + name,
@@ -745,6 +745,10 @@ fn retryable_scenario_error(error : Error) -> Bool {
   match error {
     E2eOperationError::TimedOut(..) => true
     @io.ReaderClosed => true
+    // A subprocess pipe read can transiently report a non-blocking errno such
+    // as EAGAIN on a loaded CI runner; that is a transport condition, not a
+    // scenario failure, so retry it instead of failing the whole E2E.
+    @os_error.OSError(_, ..) as err => err.is_nonblocking_io_error()
     _ => retryable_startup_error(error)
   }
 }

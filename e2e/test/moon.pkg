@@ -11,6 +11,7 @@ import {
   "moonbitlang/async/fs",
   "moonbitlang/async/http",
   "moonbitlang/async/io",
+  "moonbitlang/async/os_error",
   "moonbitlang/async/process",
   "moonbitlang/async/socket",
   "moonbitlang/core/encoding/base64",
