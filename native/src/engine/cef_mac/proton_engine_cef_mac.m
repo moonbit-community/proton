@@ -73,6 +73,17 @@
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
+/* NSScreen and other AppKit state must be accessed on the main thread.
+   When the ABI is invoked from a worker thread, marshal the wrapped call
+   to the main queue synchronously and return its status. */
+#define PROTON_ENGINE_RETURN_ON_MAIN(body)                     \
+  if (![NSThread isMainThread]) {                              \
+    __block int32_t proton_engine_main_status = PROTON_OK;     \
+    dispatch_sync(dispatch_get_main_queue(), ^{                \
+      proton_engine_main_status = (body);                      \
+    });                                                        \
+    return proton_engine_main_status;                          \
+  }
 typedef struct proton_engine_client proton_engine_client_t;
 
 struct proton_engine_runtime {
