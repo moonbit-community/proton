@@ -296,9 +296,7 @@ async fn build_scenario_app_executable(
       stdout=output,
       stderr=output,
     )
-    guard code == 0 else {
-      fail("failed to build the E2E scenario app")
-    }
+    guard code == 0 else { fail("failed to build the E2E scenario app") }
   }
 }
 
