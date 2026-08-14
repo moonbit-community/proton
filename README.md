@@ -15,9 +15,7 @@ Install the CLI and create a project:
 
 ```sh
 moon install moonbit-community/proton_cli
-proton_cli new my-app \
-  --title "My App" \
-  --identifier "com.example.my-app"
+proton_cli new my-app --yes
 cd my-app
 ```
 
