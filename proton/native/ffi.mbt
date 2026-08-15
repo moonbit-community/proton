@@ -11,6 +11,9 @@ let proton_err_invalid_state = -3
 let proton_err_buffer_too_small = -11
 
 ///|
+let proton_err_pending = -18
+
+///|
 let proton_err_stale_bridge_response = -12
 
 ///|
@@ -531,3 +534,135 @@ extern "C" fn proton_view_browser_command_json_ffi(
   view : Int64,
   command_json : Bytes,
 ) -> Int = "proton_view_browser_command_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_screen_enumerate_json_ffi(
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_screen_enumerate_json"
+
+///|
+#borrow(url_utf8)
+extern "C" fn proton_window_cookie_begin_get_json_ffi(
+  window : Int64,
+  url_utf8 : Bytes,
+  include_http_only : Int,
+) -> Int = "proton_window_cookie_begin_get_json"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_window_cookie_poll_get_json_ffi(
+  window : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_cookie_poll_get_json"
+
+///|
+#borrow(cookie_json)
+extern "C" fn proton_window_cookie_set_json_ffi(
+  window : Int64,
+  cookie_json : Bytes,
+) -> Int = "proton_window_cookie_set_json"
+
+///|
+#borrow(url_utf8, name_utf8)
+extern "C" fn proton_window_cookie_delete_ffi(
+  window : Int64,
+  url_utf8 : Bytes,
+  name_utf8 : Bytes,
+) -> Int = "proton_window_cookie_delete"
+
+///|
+extern "C" fn proton_window_cookie_flush_ffi(window : Int64) -> Int = "proton_window_cookie_flush"
+
+///|
+extern "C" fn proton_window_clear_cache_ffi(window : Int64) -> Int = "proton_window_clear_cache"
+
+///|
+#borrow(out_image)
+extern "C" fn proton_image_create_empty_ffi(out_image : Ref[Int64]) -> Int = "proton_image_create_empty"
+
+///|
+extern "C" fn proton_image_destroy_ffi(image : Int64) -> Int = "proton_image_destroy"
+
+///|
+#borrow(data)
+extern "C" fn proton_image_add_png_ffi(
+  image : Int64,
+  data : Bytes,
+  data_len : Int,
+  scale_factor : Double,
+) -> Int = "proton_image_add_png"
+
+///|
+#borrow(data)
+extern "C" fn proton_image_add_jpeg_ffi(
+  image : Int64,
+  data : Bytes,
+  data_len : Int,
+  scale_factor : Double,
+) -> Int = "proton_image_add_jpeg"
+
+///|
+#borrow(data)
+extern "C" fn proton_image_add_bitmap_ffi(
+  image : Int64,
+  data : Bytes,
+  data_len : Int,
+  width : Int,
+  height : Int,
+  scale_factor : Double,
+) -> Int = "proton_image_add_bitmap"
+
+///|
+extern "C" fn proton_image_is_empty_ffi(image : Int64) -> Int = "proton_image_is_empty"
+
+///|
+#borrow(buffer, out_required_len)
+extern "C" fn proton_image_get_size_json_ffi(
+  image : Int64,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_image_get_size_json"
+
+///|
+#borrow(buffer, out_required_len, out_width, out_height)
+extern "C" fn proton_image_to_png_ffi(
+  image : Int64,
+  scale_factor : Double,
+  with_transparency : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+) -> Int = "proton_image_to_png"
+
+///|
+#borrow(buffer, out_required_len, out_width, out_height)
+extern "C" fn proton_image_to_jpeg_ffi(
+  image : Int64,
+  scale_factor : Double,
+  quality : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+) -> Int = "proton_image_to_jpeg"
+
+///|
+#borrow(buffer, out_required_len, out_width, out_height)
+extern "C" fn proton_image_to_bitmap_ffi(
+  image : Int64,
+  scale_factor : Double,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+) -> Int = "proton_image_to_bitmap"

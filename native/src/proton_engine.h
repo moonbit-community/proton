@@ -363,4 +363,100 @@ int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
 void proton_engine_view_bind_public_id(proton_engine_view_t *view,
                                        proton_view_id_t public_view);
 
+/* Session cookie and cache management. The engine implementation reaches the
+   CEF cookie manager through the window's browser host request context. Cookie
+   get is begin/poll because the CEF visitor fires on the UI thread; set,
+   delete, flush, and clear_cache are fire-and-forget. */
+int32_t proton_engine_window_cookie_begin_get_json(
+    proton_engine_window_t *window, const char *url_utf8,
+    int32_t include_http_only, char *error, size_t error_len);
+int32_t proton_engine_window_cookie_poll_get_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_window_cookie_set_json(
+    proton_engine_window_t *window, const char *cookie_json, char *error,
+    size_t error_len);
+int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
+                                           const char *url_utf8,
+                                           const char *name_utf8,
+                                           char *error, size_t error_len);
+int32_t proton_engine_window_cookie_flush(proton_engine_window_t *window,
+                                          char *error, size_t error_len);
+int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
+                                         char *error, size_t error_len);
+
+/* Releases any pending cookie-get state associated with the window. Called
+   during window destruction so async cookie visits do not outlive their
+   window. Safe to call with NULL. */
+void proton_engine_window_cookie_cleanup(proton_engine_window_t *window);
+
+/* Native image management. Images are standalone CEF image objects not tied
+   to a runtime or window. The engine layer owns the cef_image_t reference
+   count; the state layer stores the raw pointer and treats it as opaque. */
+typedef struct proton_engine_image proton_engine_image_t;
+
+int32_t proton_engine_image_create(proton_engine_image_t **out_image,
+                                   char *error, size_t error_len);
+void proton_engine_image_release(proton_engine_image_t *image);
+int32_t proton_engine_image_add_png(proton_engine_image_t *image,
+                                    const void *data, size_t data_len,
+                                    float scale_factor, char *error,
+                                    size_t error_len);
+int32_t proton_engine_image_add_jpeg(proton_engine_image_t *image,
+                                     const void *data, size_t data_len,
+                                     float scale_factor, char *error,
+                                     size_t error_len);
+int32_t proton_engine_image_add_bitmap(proton_engine_image_t *image,
+                                       const void *data, size_t data_len,
+                                       int32_t width, int32_t height,
+                                       float scale_factor, char *error,
+                                       size_t error_len);
+int32_t proton_engine_image_is_empty(proton_engine_image_t *image,
+                                     int32_t *out_empty, char *error,
+                                     size_t error_len);
+int32_t proton_engine_image_get_size(proton_engine_image_t *image,
+                                     int32_t *out_width, int32_t *out_height,
+                                     char *error, size_t error_len);
+int32_t proton_engine_image_to_png(proton_engine_image_t *image,
+                                   float scale_factor, int32_t with_transparency,
+                                   void *buffer, int32_t buffer_len,
+                                   int32_t *out_required_len,
+                                   int32_t *out_width, int32_t *out_height,
+                                   char *error, size_t error_len);
+int32_t proton_engine_image_to_jpeg(proton_engine_image_t *image,
+                                    float scale_factor, int32_t quality,
+                                    void *buffer, int32_t buffer_len,
+                                    int32_t *out_required_len,
+                                    int32_t *out_width, int32_t *out_height,
+                                    char *error, size_t error_len);
+int32_t proton_engine_image_to_bitmap(proton_engine_image_t *image,
+                                      float scale_factor, void *buffer,
+                                      int32_t buffer_len,
+                                      int32_t *out_required_len,
+                                      int32_t *out_width, int32_t *out_height,
+                                      char *error, size_t error_len);
+
+#define PROTON_ENGINE_MAX_SCREENS 16
+
+typedef struct {
+  int32_t id;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t work_x;
+  int32_t work_y;
+  int32_t work_width;
+  int32_t work_height;
+  int32_t scale_factor_percent;
+  int32_t is_primary;
+} proton_engine_screen_info_t;
+
+int32_t proton_engine_screen_enumerate(
+    proton_engine_screen_info_t *out_screens,
+    int32_t max_screens,
+    int32_t *out_count,
+    char *error,
+    size_t error_len);
+
 #endif

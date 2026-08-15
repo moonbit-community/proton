@@ -18,6 +18,8 @@ members = [
   "./sys/global_hotkey",
   "./sys/keepawake",
   "./sys/microphone",
+  "./sys/power_monitor",
+  "./sys/process",
   "./sys/shell",
   "./sys/tray",
 ]

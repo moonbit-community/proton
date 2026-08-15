@@ -88,8 +88,10 @@
 #if PROTON_WITH_ENGINE && \
     (defined(__APPLE__) || defined(_WIN32) || defined(__linux__))
 #define PROTON_WEB_CONTENTS_VIEW_FEATURE ",\"web_contents_view\""
+#define PROTON_NATIVE_IMAGE_FEATURE ",\"native_image\""
 #else
 #define PROTON_WEB_CONTENTS_VIEW_FEATURE ""
+#define PROTON_NATIVE_IMAGE_FEATURE ""
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
@@ -286,7 +288,8 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_APP_SINGLE_INSTANCE_FEATURE
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
-          PROTON_WEB_CONTENTS_VIEW_FEATURE "]}",
+          PROTON_WEB_CONTENTS_VIEW_FEATURE PROTON_NATIVE_IMAGE_FEATURE
+              "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,
       PROTON_PLATFORM_ID);
@@ -940,6 +943,7 @@ int32_t proton_window_destroy(proton_window_id_t window) {
   }
   proton_destroy_views_for_window(window);
   if (slot->engine_window != NULL) {
+    proton_engine_window_cookie_cleanup(slot->engine_window);
     char engine_error[512] = {0};
     status = proton_engine_window_destroy(slot->engine_window, engine_error,
                                           sizeof(engine_error));
@@ -1225,6 +1229,42 @@ int32_t proton_window_state_json(proton_window_id_t window,
   if (buffer == NULL || buffer_len <= written) {
     return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
                             "window state buffer is too small");
+  }
+  memcpy(buffer, json, (size_t)written + 1);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_screen_enumerate_json(char *buffer,
+                                     int32_t buffer_len,
+                                     int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  *out_required_len = 0;
+
+  proton_engine_screen_info_t screens[PROTON_ENGINE_MAX_SCREENS];
+  int32_t count = 0;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_screen_enumerate(
+      screens, PROTON_ENGINE_MAX_SCREENS, &count, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+
+  char json[4096];
+  int written =
+      proton_format_screen_array_json(screens, count, json, sizeof(json));
+  if (written < 0 || written >= (int)sizeof(json)) {
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "screen enumeration payload is too large");
+  }
+  *out_required_len = written;
+  if (buffer == NULL || buffer_len <= written) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "screen enumeration buffer is too small");
   }
   memcpy(buffer, json, (size_t)written + 1);
   g_last_error[0] = '\0';
@@ -1910,6 +1950,148 @@ int32_t proton_window_poll_dialog_result(
   return status;
 }
 
+int32_t proton_window_cookie_begin_get_json(proton_window_id_t window,
+                                            const char *url_utf8,
+                                            int32_t include_http_only) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "cookie operations require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_cookie_begin_get_json(
+      slot->engine_window, url_utf8, include_http_only, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_cookie_poll_get_json(proton_window_id_t window,
+                                           char *buffer,
+                                           int32_t buffer_len,
+                                           int32_t *out_required_len) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "cookie operations require native engine");
+  }
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_cookie_poll_get_json(
+      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  if (status == PROTON_ERR_PENDING) {
+    return PROTON_ERR_PENDING;
+  }
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_cookie_set_json(proton_window_id_t window,
+                                      const char *cookie_json) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (cookie_json == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "cookie JSON is required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "cookie operations require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_cookie_set_json(slot->engine_window,
+                                                 cookie_json, engine_error,
+                                                 sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_cookie_delete(proton_window_id_t window,
+                                    const char *url_utf8,
+                                    const char *name_utf8) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "cookie operations require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_cookie_delete(slot->engine_window, url_utf8,
+                                              name_utf8, engine_error,
+                                              sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_cookie_flush(proton_window_id_t window) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "cookie operations require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_cookie_flush(slot->engine_window, engine_error,
+                                             sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_clear_cache(proton_window_id_t window) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "cache operations require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_clear_cache(slot->engine_window, engine_error,
+                                            sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_view_create_json(proton_window_id_t window,
                                 const char *config_json,
                                 proton_view_id_t *out_view) {
@@ -2179,6 +2361,260 @@ int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
   memcpy(buffer, state, (size_t)required + 1);
   g_last_error[0] = '\0';
   return PROTON_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* Native image ABI                                                   */
+/* ------------------------------------------------------------------ */
+
+int32_t proton_image_create_empty(proton_image_id_t *out_image) {
+  if (out_image == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_image is required");
+  }
+  *out_image = PROTON_INVALID_HANDLE;
+  char engine_error[512] = {0};
+  proton_engine_image_t *engine_image = NULL;
+  int32_t status = proton_engine_image_create(&engine_image, engine_error,
+                                              sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  proton_image_id_t handle = PROTON_INVALID_HANDLE;
+  status = proton_image_slot_create(engine_image, &handle, NULL);
+  if (status != PROTON_OK) {
+    proton_engine_image_release(engine_image);
+    return status;
+  }
+  *out_image = handle;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_image_destroy(proton_image_id_t image) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_image != NULL) {
+    proton_engine_image_release(slot->engine_image);
+  }
+  proton_image_slot_destroy(slot);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_image_add_png(proton_image_id_t image, const uint8_t *data,
+                             int32_t data_len, float scale_factor) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (data == NULL || data_len <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "png data is required");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_image_add_png(slot->engine_image, data,
+                                       (size_t)data_len, scale_factor,
+                                       engine_error, sizeof(engine_error));
+  return status == PROTON_OK
+             ? (g_last_error[0] = '\0', PROTON_OK)
+             : proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_image_add_jpeg(proton_image_id_t image, const uint8_t *data,
+                              int32_t data_len, float scale_factor) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (data == NULL || data_len <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "jpeg data is required");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_image_add_jpeg(slot->engine_image, data,
+                                        (size_t)data_len, scale_factor,
+                                        engine_error, sizeof(engine_error));
+  return status == PROTON_OK
+             ? (g_last_error[0] = '\0', PROTON_OK)
+             : proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_image_add_bitmap(proton_image_id_t image, const uint8_t *data,
+                                int32_t data_len, int32_t width,
+                                int32_t height, float scale_factor) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (data == NULL || data_len <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bitmap data is required");
+  }
+  if (width <= 0 || height <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bitmap dimensions must be positive");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_image_add_bitmap(slot->engine_image, data,
+                                          (size_t)data_len, width, height,
+                                          scale_factor, engine_error,
+                                          sizeof(engine_error));
+  return status == PROTON_OK
+             ? (g_last_error[0] = '\0', PROTON_OK)
+             : proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_image_is_empty(proton_image_id_t image) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  int32_t empty = 1;
+  char engine_error[512] = {0};
+  status = proton_engine_image_is_empty(slot->engine_image, &empty,
+                                        engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return empty ? 1 : 0;
+}
+
+int32_t proton_image_get_size_json(proton_image_id_t image, char *buffer,
+                                   int32_t buffer_len,
+                                   int32_t *out_required_len) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  int32_t width = 0;
+  int32_t height = 0;
+  char engine_error[512] = {0};
+  status = proton_engine_image_get_size(slot->engine_image, &width, &height,
+                                        engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  char json[64];
+  int required = snprintf(json, sizeof(json), "{\"width\":%d,\"height\":%d}",
+                          width, height);
+  if (required < 0 || required >= (int)sizeof(json)) {
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "image size payload is too large");
+  }
+  if (out_required_len != NULL) {
+    *out_required_len = required;
+  }
+  if (buffer == NULL || buffer_len <= required) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "image size buffer is too small");
+  }
+  memcpy(buffer, json, (size_t)required + 1);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_image_to_png(proton_image_id_t image, float scale_factor,
+                            int32_t with_transparency, uint8_t *buffer,
+                            int32_t buffer_len, int32_t *out_required_len,
+                            int32_t *out_width, int32_t *out_height) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  if (out_width != NULL) {
+    *out_width = 0;
+  }
+  if (out_height != NULL) {
+    *out_height = 0;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_image_to_png(slot->engine_image, scale_factor,
+                                      with_transparency, buffer, buffer_len,
+                                      out_required_len, out_width, out_height,
+                                      engine_error, sizeof(engine_error));
+  if (status == PROTON_ERR_BUFFER_TOO_SMALL) {
+    /* Buffer-too-small is a normal two-call flow: return the status without
+       clobbering last_error so callers can retry. */
+    return status;
+  }
+  return status == PROTON_OK
+             ? (g_last_error[0] = '\0', PROTON_OK)
+             : proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_image_to_jpeg(proton_image_id_t image, float scale_factor,
+                             int32_t quality, uint8_t *buffer,
+                             int32_t buffer_len, int32_t *out_required_len,
+                             int32_t *out_width, int32_t *out_height) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  if (out_width != NULL) {
+    *out_width = 0;
+  }
+  if (out_height != NULL) {
+    *out_height = 0;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_image_to_jpeg(slot->engine_image, scale_factor,
+                                       quality, buffer, buffer_len,
+                                       out_required_len, out_width, out_height,
+                                       engine_error, sizeof(engine_error));
+  if (status == PROTON_ERR_BUFFER_TOO_SMALL) {
+    return status;
+  }
+  return status == PROTON_OK
+             ? (g_last_error[0] = '\0', PROTON_OK)
+             : proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_image_to_bitmap(proton_image_id_t image, float scale_factor,
+                               uint8_t *buffer, int32_t buffer_len,
+                               int32_t *out_required_len,
+                               int32_t *out_width, int32_t *out_height) {
+  proton_image_slot_t *slot = NULL;
+  int32_t status = proton_get_image(image, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  if (out_width != NULL) {
+    *out_width = 0;
+  }
+  if (out_height != NULL) {
+    *out_height = 0;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_image_to_bitmap(
+      slot->engine_image, scale_factor, buffer, buffer_len, out_required_len,
+      out_width, out_height, engine_error, sizeof(engine_error));
+  if (status == PROTON_ERR_BUFFER_TOO_SMALL) {
+    return status;
+  }
+  return status == PROTON_OK
+             ? (g_last_error[0] = '\0', PROTON_OK)
+             : proton_set_engine_status(status, engine_error);
 }
 
 int32_t proton_last_error_message(char *buffer, int32_t buffer_len) {

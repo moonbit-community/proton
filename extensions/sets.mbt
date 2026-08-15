@@ -19,6 +19,9 @@ pub fn all() -> @proton_extension.Extensions {
     @auto_launch.extension(),
     @keepawake.extension(),
     @microphone.extension(),
+    @power_monitor.extension(),
+    @process.extension(),
+    @net.extension(),
   ])
 }
 
@@ -35,5 +38,8 @@ pub fn desktop() -> @proton_extension.Extensions {
     @auto_launch.extension(),
     @keepawake.extension(),
     @microphone.extension(),
+    @power_monitor.extension(),
+    @process.extension(),
+    @net.extension(),
   ])
 }

@@ -46,7 +46,7 @@ test "E2E paths resolve backslash relative runtime directories" {
 
 ///|
 test "scenario retries only startup and closed CDP transports" {
-  assert_eq(scenario_operation_timeout("52_web_contents_view", 60000), 120000)
+  assert_eq(scenario_operation_timeout("52_web_contents_view", 60000), 240000)
   assert_eq(scenario_operation_timeout("41_app_commands", 60000), 120000)
   assert_true(
     retryable_scenario_error(

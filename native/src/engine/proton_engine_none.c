@@ -716,10 +716,147 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
   (void)public_view;
 }
 
+int32_t proton_engine_window_cookie_begin_get_json(
+    proton_engine_window_t *window, const char *url_utf8,
+    int32_t include_http_only, char *error, size_t error_len) {
+  (void)window;
+  (void)url_utf8;
+  (void)include_http_only;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
 /* Refused rather than accepted: a loop that started here would fail on every
    poll instead, and a host that cannot get an engine should learn it while it
    is still the one raising the error. */
 int32_t proton_engine_host_loop_begin(char *error, size_t error_len) {
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_cookie_poll_get_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  (void)window;
+  (void)buffer;
+  (void)buffer_len;
+  if (out_required_len != NULL) {
+    *out_required_len = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_cookie_set_json(
+    proton_engine_window_t *window, const char *cookie_json, char *error,
+    size_t error_len) {
+  (void)window;
+  (void)cookie_json;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
+                                           const char *url_utf8,
+                                           const char *name_utf8,
+                                           char *error, size_t error_len) {
+  (void)window;
+  (void)url_utf8;
+  (void)name_utf8;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_cookie_flush(proton_engine_window_t *window,
+                                          char *error, size_t error_len) {
+  (void)window;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
+                                         char *error, size_t error_len) {
+  (void)window;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+void proton_engine_window_cookie_cleanup(proton_engine_window_t *window) {
+  (void)window;
+}
+
+int32_t proton_engine_screen_enumerate(
+    proton_engine_screen_info_t *out_screens,
+    int32_t max_screens,
+    int32_t *out_count,
+    char *error,
+    size_t error_len) {
+  (void)out_screens;
+  (void)max_screens;
+  if (out_count != NULL) {
+    *out_count = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_create(proton_engine_image_t **out_image,
+                                   char *error, size_t error_len) {
+  (void)out_image;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+void proton_engine_image_release(proton_engine_image_t *image) {
+  (void)image;
+}
+
+int32_t proton_engine_image_add_png(proton_engine_image_t *image,
+                                    const void *data, size_t data_len,
+                                    float scale_factor, char *error,
+                                    size_t error_len) {
+  (void)image;
+  (void)data;
+  (void)data_len;
+  (void)scale_factor;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_add_jpeg(proton_engine_image_t *image,
+                                     const void *data, size_t data_len,
+                                     float scale_factor, char *error,
+                                     size_t error_len) {
+  (void)image;
+  (void)data;
+  (void)data_len;
+  (void)scale_factor;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_add_bitmap(proton_engine_image_t *image,
+                                       const void *data, size_t data_len,
+                                       int32_t width, int32_t height,
+                                       float scale_factor, char *error,
+                                       size_t error_len) {
+  (void)image;
+  (void)data;
+  (void)data_len;
+  (void)width;
+  (void)height;
+  (void)scale_factor;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_is_empty(proton_engine_image_t *image,
+                                     int32_t *out_empty, char *error,
+                                     size_t error_len) {
+  (void)image;
+  if (out_empty != NULL) {
+    *out_empty = 1;
+  }
   return proton_engine_set_error(error, error_len,
                                  proton_engine_unavailable_message());
 }
@@ -732,6 +869,73 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
   if (out_ready_mask != NULL) {
     *out_ready_mask = PROTON_WAIT_NONE;
   }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_get_size(proton_engine_image_t *image,
+                                     int32_t *out_width, int32_t *out_height,
+                                     char *error, size_t error_len) {
+  (void)image;
+  if (out_width != NULL) {
+    *out_width = 0;
+  }
+  if (out_height != NULL) {
+    *out_height = 0;
+  }
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_to_png(proton_engine_image_t *image,
+                                   float scale_factor, int32_t with_transparency,
+                                   void *buffer, int32_t buffer_len,
+                                   int32_t *out_required_len,
+                                   int32_t *out_width, int32_t *out_height,
+                                   char *error, size_t error_len) {
+  (void)image;
+  (void)scale_factor;
+  (void)with_transparency;
+  (void)buffer;
+  (void)buffer_len;
+  (void)out_required_len;
+  (void)out_width;
+  (void)out_height;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_to_jpeg(proton_engine_image_t *image,
+                                    float scale_factor, int32_t quality,
+                                    void *buffer, int32_t buffer_len,
+                                    int32_t *out_required_len,
+                                    int32_t *out_width, int32_t *out_height,
+                                    char *error, size_t error_len) {
+  (void)image;
+  (void)scale_factor;
+  (void)quality;
+  (void)buffer;
+  (void)buffer_len;
+  (void)out_required_len;
+  (void)out_width;
+  (void)out_height;
+  return proton_engine_set_error(error, error_len,
+                                 proton_engine_unavailable_message());
+}
+
+int32_t proton_engine_image_to_bitmap(proton_engine_image_t *image,
+                                      float scale_factor, void *buffer,
+                                      int32_t buffer_len,
+                                      int32_t *out_required_len,
+                                      int32_t *out_width, int32_t *out_height,
+                                      char *error, size_t error_len) {
+  (void)image;
+  (void)scale_factor;
+  (void)buffer;
+  (void)buffer_len;
+  (void)out_required_len;
+  (void)out_width;
+  (void)out_height;
   return proton_engine_set_error(error, error_len,
                                  proton_engine_unavailable_message());
 }

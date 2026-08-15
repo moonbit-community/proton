@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/core/json",
+  "moonbit-community/proton_process" @sys_process,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/process/contract" @process_contract,
+}
+
+supported_targets = "native"
+
+formatter(ignore: [ "extension.g.mbt" ])
+
+options(
+  targets: { "extension.g.mbt": [ "native" ], "extension.mbt": [ "native" ] },
+)

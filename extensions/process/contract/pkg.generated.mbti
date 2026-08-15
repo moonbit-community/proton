@@ -1,0 +1,58 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/process/contract"
+
+import {
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[ProcessActivity]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let kill : @proton_contract.Command[KillRequest, KillReply]
+
+pub let spawn : @proton_contract.Command[SpawnRequest, SpawnReply]
+
+pub let wait : @proton_contract.Command[WaitRequest, WaitReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct KillReply {
+  killed : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct KillRequest {
+  process_id : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct ProcessActivity {
+  operation : String
+  process_id : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SpawnReply {
+  process_id : Int
+  pid : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct SpawnRequest {
+  command : String
+  args : Array[String]
+  cwd : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WaitReply {
+  exit_code : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub(all) struct WaitRequest {
+  process_id : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+// Type aliases
+
+// Traits

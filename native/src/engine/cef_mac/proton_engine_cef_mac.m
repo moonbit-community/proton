@@ -73,6 +73,17 @@
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
+/* NSScreen and other AppKit state must be accessed on the main thread.
+   When the ABI is invoked from a worker thread, marshal the wrapped call
+   to the main queue synchronously and return its status. */
+#define PROTON_ENGINE_RETURN_ON_MAIN(body)                     \
+  if (![NSThread isMainThread]) {                              \
+    __block int32_t proton_engine_main_status = PROTON_OK;     \
+    dispatch_sync(dispatch_get_main_queue(), ^{                \
+      proton_engine_main_status = (body);                      \
+    });                                                        \
+    return proton_engine_main_status;                          \
+  }
 typedef struct proton_engine_client proton_engine_client_t;
 
 struct proton_engine_runtime {
@@ -976,6 +987,10 @@ proton_engine_window_t *proton_engine_window_lookup_native_id(
 proton_engine_window_t *proton_engine_window_lookup_browser(
     cef_browser_t *browser) {
   return proton_engine_window_from_browser(browser);
+}
+
+cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window) {
+  return window != NULL ? window->browser : NULL;
 }
 
 const char *proton_engine_window_html_url(proton_engine_window_t *window) {
@@ -5766,4 +5781,62 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
     proton_view_events_bind(view->events, public_view,
                             proton_engine_window_public_id(view->window));
   }
+}
+
+int32_t proton_engine_screen_enumerate(
+    proton_engine_screen_info_t *out_screens,
+    int32_t max_screens,
+    int32_t *out_count,
+    char *error,
+    size_t error_len) {
+  PROTON_ENGINE_RETURN_ON_MAIN(
+      proton_engine_screen_enumerate(out_screens, max_screens, out_count,
+                                     error, error_len));
+  if (out_screens == NULL || out_count == NULL || max_screens <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "out_screens, out_count are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_count = 0;
+
+  @autoreleasepool {
+    NSArray *screens = [NSScreen screens];
+    NSUInteger count = [screens count];
+    if (count == 0) {
+      return PROTON_OK;
+    }
+    NSScreen *primary = [screens objectAtIndex:0];
+    NSRect primaryFrame = [primary frame];
+
+    int32_t idx = 0;
+    for (NSUInteger i = 0; i < count && idx < max_screens; i++) {
+      NSScreen *screen = [screens objectAtIndex:i];
+      NSRect frame = [screen frame];
+      NSRect visibleFrame = [screen visibleFrame];
+
+      /* macOS uses a bottom-left origin; convert to top-left so the
+         coordinates match Windows/Linux and the rest of the Proton API. */
+      proton_engine_screen_info_t *info = &out_screens[idx];
+      info->id = (int32_t)i;
+      info->x = (int32_t)frame.origin.x;
+      info->y = (int32_t)(primaryFrame.size.height - frame.origin.y -
+                          frame.size.height);
+      info->width = (int32_t)frame.size.width;
+      info->height = (int32_t)frame.size.height;
+      info->work_x = (int32_t)visibleFrame.origin.x;
+      info->work_y = (int32_t)(primaryFrame.size.height -
+                               visibleFrame.origin.y -
+                               visibleFrame.size.height);
+      info->work_width = (int32_t)visibleFrame.size.width;
+      info->work_height = (int32_t)visibleFrame.size.height;
+
+      CGFloat scaleFactor = [screen backingScaleFactor];
+      info->scale_factor_percent = (int32_t)(scaleFactor * 100.0);
+      info->is_primary = (i == 0) ? 1 : 0;
+
+      idx++;
+    }
+    *out_count = idx;
+  }
+  return PROTON_OK;
 }

@@ -10,12 +10,15 @@
 #define PROTON_MAX_RUNTIMES 64
 #define PROTON_MAX_WINDOWS 256
 #define PROTON_MAX_VIEWS 256
+#define PROTON_MAX_IMAGES 256
 /* Type 3 is PROTON_HANDLE_TYPE_UPDATE_STAGE in proton_handle.h. */
 #define PROTON_HANDLE_TYPE_VIEW 4ULL
+#define PROTON_HANDLE_TYPE_IMAGE 5ULL
 
 static proton_runtime_slot_t g_runtimes[PROTON_MAX_RUNTIMES];
 static proton_window_slot_t g_windows[PROTON_MAX_WINDOWS];
 static proton_view_slot_t g_views[PROTON_MAX_VIEWS];
+static proton_image_slot_t g_images[PROTON_MAX_IMAGES];
 
 static proton_thread_id_t proton_current_thread_id(void) {
 #ifdef _WIN32
@@ -50,6 +53,12 @@ static proton_view_id_t proton_make_view_handle(uint32_t generation,
                                                 uint32_t index) {
   return (proton_view_id_t)proton_make_handle(PROTON_HANDLE_TYPE_VIEW,
                                               generation, index);
+}
+
+static proton_image_id_t proton_make_image_handle(uint32_t generation,
+                                                  uint32_t index) {
+  return (proton_image_id_t)proton_make_handle(PROTON_HANDLE_TYPE_IMAGE,
+                                               generation, index);
 }
 
 static void proton_runtime_clear_events(proton_runtime_slot_t *slot) {
@@ -377,6 +386,44 @@ int32_t proton_format_window_state_json(
       state->always_on_top ? "true" : "false", theme);
 }
 
+int32_t proton_format_screen_array_json(
+    const proton_engine_screen_info_t *screens, int32_t count,
+    char *buffer, size_t buffer_len) {
+  if (screens == NULL || buffer == NULL || buffer_len == 0) {
+    return -1;
+  }
+  if (count <= 0) {
+    return snprintf(buffer, buffer_len, "[]");
+  }
+  size_t offset = 0;
+  int written = snprintf(buffer, buffer_len, "[");
+  if (written < 0 || (size_t)written >= buffer_len) {
+    return -1;
+  }
+  offset += (size_t)written;
+  for (int32_t i = 0; i < count; i++) {
+    const proton_engine_screen_info_t *s = &screens[i];
+    written = snprintf(
+        buffer + offset, buffer_len - offset,
+        "%s{\"id\":%d,\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
+        "\"work_x\":%d,\"work_y\":%d,\"work_width\":%d,\"work_height\":%d,"
+        "\"scale_factor_percent\":%d,\"is_primary\":%s}",
+        i == 0 ? "" : ",", s->id, s->x, s->y, s->width, s->height, s->work_x,
+        s->work_y, s->work_width, s->work_height, s->scale_factor_percent,
+        s->is_primary ? "true" : "false");
+    if (written < 0 || (size_t)written >= buffer_len - offset) {
+      return -1;
+    }
+    offset += (size_t)written;
+  }
+  written = snprintf(buffer + offset, buffer_len - offset, "]");
+  if (written < 0 || (size_t)written >= buffer_len - offset) {
+    return -1;
+  }
+  offset += (size_t)written;
+  return (int32_t)offset;
+}
+
 int32_t proton_runtime_sync_engine_window_states(
     proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime) {
@@ -669,4 +716,61 @@ void proton_destroy_views_for_window(proton_window_id_t window) {
       proton_view_slot_destroy(view);
     }
   }
+}
+
+int32_t proton_image_slot_create(proton_engine_image_t *engine_image,
+                                 proton_image_id_t *out_image,
+                                 proton_image_slot_t **out_slot) {
+  for (uint32_t i = 0; i < PROTON_MAX_IMAGES; i++) {
+    proton_image_slot_t *slot = &g_images[i];
+    if (slot->occupied && !slot->destroyed) {
+      continue;
+    }
+    if (slot->generation == 0) {
+      slot->generation = 1;
+    } else if (slot->destroyed) {
+      slot->generation = proton_next_handle_generation(slot->generation);
+    }
+    slot->occupied = true;
+    slot->destroyed = false;
+    slot->engine_image = engine_image;
+    *out_image = proton_make_image_handle(slot->generation, i);
+    if (out_slot != NULL) {
+      *out_slot = slot;
+    }
+    return PROTON_OK;
+  }
+  return proton_set_error(PROTON_ERR_ENGINE, "image registry is full");
+}
+
+void proton_image_slot_destroy(proton_image_slot_t *slot) {
+  slot->destroyed = true;
+  slot->engine_image = NULL;
+}
+
+int32_t proton_get_image(proton_image_id_t handle,
+                         proton_image_slot_t **out_slot) {
+  uint64_t raw = (uint64_t)handle;
+  if (handle == PROTON_INVALID_HANDLE ||
+      proton_handle_type(raw) != PROTON_HANDLE_TYPE_IMAGE) {
+    return proton_set_error(PROTON_ERR_INVALID_HANDLE, "invalid image handle");
+  }
+
+  uint32_t index = proton_handle_index(raw);
+  if (index >= PROTON_MAX_IMAGES) {
+    return proton_set_error(PROTON_ERR_INVALID_HANDLE,
+                            "image handle index is out of range");
+  }
+
+  proton_image_slot_t *slot = &g_images[index];
+  if (!slot->occupied || slot->generation != proton_handle_generation(raw)) {
+    return proton_set_error(PROTON_ERR_INVALID_HANDLE,
+                            "image handle generation is invalid");
+  }
+  if (slot->destroyed) {
+    return proton_set_error(PROTON_ERR_DESTROYED, "image is destroyed");
+  }
+
+  *out_slot = slot;
+  return PROTON_OK;
 }

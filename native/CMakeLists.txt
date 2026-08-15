@@ -18,6 +18,7 @@ set(PROTON_PLATFORM_EVENT_SOURCES src/engine/platform_events_stub.c)
 
 if(PROTON_WITH_ENGINE)
   if(WIN32)
+    set(PROTON_NOTIFICATION_SOURCE src/engine/cef_win/notification.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_win/proton_engine_cef_win.c
       src/engine/cef_win/proton_win_titlebar.c
@@ -35,6 +36,7 @@ if(PROTON_WITH_ENGINE)
       src/engine/cef_mac/menu.m
     )
   elseif(UNIX)
+    set(PROTON_NOTIFICATION_SOURCE src/engine/cef_linux/notification.c)
     set(PROTON_ENGINE_SOURCES
       src/engine/cef_linux/proton_engine_cef_linux.c
       src/engine/cef_linux/proton_linux_menu.c
@@ -47,7 +49,9 @@ if(PROTON_WITH_ENGINE)
     src/engine/cef_common/browser_session.c
     src/engine/cef_common/bridge_policy.c
     src/engine/cef_common/bridge_renderer.c
+    src/engine/cef_common/cookie_cache.c
     src/engine/cef_common/document.c
+    src/engine/cef_common/image.c
     src/engine/cef_common/profile_storage.c
     src/engine/cef_common/scheme.c
     src/engine/cef_common/view_events.c

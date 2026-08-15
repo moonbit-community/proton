@@ -180,12 +180,24 @@ async fn list_processes() -> Array[ProcessRow] {
 
 ///|
 async fn list_unix_processes() -> Array[ProcessRow] {
-  let (code, output) = @process.collect_output_merged("ps", [
-    "-axo", "pid=,ppid=,command=",
-  ])
+  // Redirect `ps` output to a file instead of capturing it through a pipe:
+  // a pipe read can surface a transient EAGAIN on a loaded runner and
+  // truncate the tree, dropping the root process from the snapshot.
+  let tmp_root = @fs.tmpdir(prefix="proton-e2e-ps-")
+  let ps_log = join_path(tmp_root, "ps.out")
+  let output = @process.redirect_to_file(
+    ps_log,
+    create_mode=@fs.CreateOrTruncate,
+  )
+  let code = @process.run(
+    "ps",
+    ["-axo", "pid=,ppid=,command="],
+    stdout=output,
+    stderr=output,
+  )
   guard code == 0 else { fail("failed to inspect the Unix process tree") }
-  let text = output.text() catch {
-    _ => fail("failed to decode Unix process output")
+  let text = @mbfs.read_file_to_string(ps_log, encoding="utf8") catch {
+    _ => fail("failed to read Unix process output")
   }
   let rows : Array[ProcessRow] = []
   for raw_line in text.replace_all(old="\r\n", new="\n").split("\n") {

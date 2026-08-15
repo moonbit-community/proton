@@ -41,6 +41,8 @@ pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 
 pub fn runtime_info_json() -> String raise @native.NativeError
 
+pub fn screens() -> Array[@native.ScreenInfo] raise @native.NativeError
+
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn view(String, width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, background_color? : String) -> @native.ViewConfig
@@ -435,6 +437,8 @@ pub using @native {type RuntimeEvent}
 pub using @native {type RuntimeInfo}
 
 pub using @native {type RuntimeLaunchInput}
+
+pub using @native {type ScreenInfo}
 
 pub using @native {type TitlebarStyle}
 

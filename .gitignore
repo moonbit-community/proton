@@ -33,6 +33,9 @@ Desktop.ini
 *.bak
 *.orig
 
+# Local analysis/progress notes (not part of the repository)
+Proton_*.md
+
 # Frontend package installs
 node_modules/
 
