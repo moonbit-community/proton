@@ -675,11 +675,21 @@ static void proton_app_instance_stop_platform(
     SetEvent(slot->stop_event);
   }
   if (slot->owns_endpoint && slot->thread != NULL) {
-    (void)CancelSynchronousIo(slot->thread);
-    HANDLE wake = CreateFileW(slot->pipe_name, GENERIC_READ | GENERIC_WRITE, 0,
-                              NULL, OPEN_EXISTING, 0, NULL);
-    if (wake != INVALID_HANDLE_VALUE) {
-      CloseHandle(wake);
+    /* CancelSynchronousIo can itself stall against ConnectNamedPipe. The
+       listener may also be between its stop check and CreateNamedPipeW, so
+       retry the pipe wakeup until the thread observes the stop event. */
+    for (;;) {
+      if (WaitForSingleObject(slot->thread, 0) == WAIT_OBJECT_0) {
+        break;
+      }
+      HANDLE wake = CreateFileW(slot->pipe_name, GENERIC_READ | GENERIC_WRITE,
+                                0, NULL, OPEN_EXISTING, 0, NULL);
+      if (wake != INVALID_HANDLE_VALUE) {
+        CloseHandle(wake);
+      }
+      if (WaitForSingleObject(slot->thread, 10) == WAIT_OBJECT_0) {
+        break;
+      }
     }
     WaitForSingleObject(slot->thread, INFINITE);
     CloseHandle(slot->thread);
