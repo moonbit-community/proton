@@ -516,6 +516,101 @@ static bool proton_app_instance_write_exact(HANDLE pipe, const void *buffer,
   return true;
 }
 
+typedef enum proton_app_instance_io_result {
+  PROTON_APP_INSTANCE_IO_COMPLETE = 0,
+  PROTON_APP_INSTANCE_IO_STOPPED = 1,
+  PROTON_APP_INSTANCE_IO_FAILED = 2,
+} proton_app_instance_io_result_t;
+
+// Server operations must remain cancellable so instance destruction can always
+// join the listener thread, regardless of which pipe operation is pending.
+static proton_app_instance_io_result_t proton_app_instance_wait_for_server_io(
+    proton_app_instance_slot_t *slot, HANDLE pipe, OVERLAPPED *operation,
+    DWORD *transferred) {
+  HANDLE events[2] = {slot->stop_event, operation->hEvent};
+  DWORD wait_result = WaitForMultipleObjects(2, events, FALSE, INFINITE);
+  if (wait_result == WAIT_OBJECT_0 + 1) {
+    return GetOverlappedResult(pipe, operation, transferred, FALSE)
+               ? PROTON_APP_INSTANCE_IO_COMPLETE
+               : PROTON_APP_INSTANCE_IO_FAILED;
+  }
+
+  (void)CancelIoEx(pipe, operation);
+  DWORD ignored = 0;
+  (void)GetOverlappedResult(pipe, operation, &ignored, TRUE);
+  return wait_result == WAIT_OBJECT_0 ? PROTON_APP_INSTANCE_IO_STOPPED
+                                     : PROTON_APP_INSTANCE_IO_FAILED;
+}
+
+static proton_app_instance_io_result_t proton_app_instance_server_connect(
+    proton_app_instance_slot_t *slot, HANDLE pipe) {
+  if (WaitForSingleObject(slot->stop_event, 0) == WAIT_OBJECT_0) {
+    return PROTON_APP_INSTANCE_IO_STOPPED;
+  }
+  HANDLE event = CreateEventW(NULL, TRUE, FALSE, NULL);
+  if (event == NULL) {
+    return PROTON_APP_INSTANCE_IO_FAILED;
+  }
+  OVERLAPPED operation = {0};
+  operation.hEvent = event;
+  BOOL connected = ConnectNamedPipe(pipe, &operation);
+  proton_app_instance_io_result_t result = PROTON_APP_INSTANCE_IO_COMPLETE;
+  if (!connected) {
+    DWORD connect_error = GetLastError();
+    if (connect_error == ERROR_IO_PENDING) {
+      DWORD ignored = 0;
+      result = proton_app_instance_wait_for_server_io(
+          slot, pipe, &operation, &ignored);
+    } else if (connect_error != ERROR_PIPE_CONNECTED) {
+      result = PROTON_APP_INSTANCE_IO_FAILED;
+    }
+  }
+  CloseHandle(event);
+  return result;
+}
+
+static proton_app_instance_io_result_t proton_app_instance_server_io_exact(
+    proton_app_instance_slot_t *slot, HANDLE pipe, void *buffer, DWORD length,
+    bool write) {
+  unsigned char *cursor = (unsigned char *)buffer;
+  while (length > 0) {
+    if (WaitForSingleObject(slot->stop_event, 0) == WAIT_OBJECT_0) {
+      return PROTON_APP_INSTANCE_IO_STOPPED;
+    }
+    HANDLE event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (event == NULL) {
+      return PROTON_APP_INSTANCE_IO_FAILED;
+    }
+    OVERLAPPED operation = {0};
+    operation.hEvent = event;
+    BOOL completed = write
+                         ? WriteFile(pipe, cursor, length, NULL, &operation)
+                         : ReadFile(pipe, cursor, length, NULL, &operation);
+    DWORD transferred = 0;
+    proton_app_instance_io_result_t result = PROTON_APP_INSTANCE_IO_COMPLETE;
+    if (completed) {
+      if (!GetOverlappedResult(pipe, &operation, &transferred, FALSE)) {
+        result = PROTON_APP_INSTANCE_IO_FAILED;
+      }
+    } else if (GetLastError() == ERROR_IO_PENDING) {
+      result = proton_app_instance_wait_for_server_io(
+          slot, pipe, &operation, &transferred);
+    } else {
+      result = PROTON_APP_INSTANCE_IO_FAILED;
+    }
+    CloseHandle(event);
+    if (result != PROTON_APP_INSTANCE_IO_COMPLETE) {
+      return result;
+    }
+    if (transferred == 0) {
+      return PROTON_APP_INSTANCE_IO_FAILED;
+    }
+    cursor += transferred;
+    length -= transferred;
+  }
+  return PROTON_APP_INSTANCE_IO_COMPLETE;
+}
+
 static DWORD WINAPI proton_app_instance_server_thread(void *data) {
   proton_app_instance_slot_t *slot = (proton_app_instance_slot_t *)data;
   SECURITY_ATTRIBUTES security = {
@@ -528,28 +623,36 @@ static DWORD WINAPI proton_app_instance_server_thread(void *data) {
       return 0;
     }
     HANDLE pipe = CreateNamedPipeW(
-        slot->pipe_name, PIPE_ACCESS_DUPLEX,
+        slot->pipe_name, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT |
             PIPE_REJECT_REMOTE_CLIENTS,
         1, 16, PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES, 0, &security);
     if (pipe == INVALID_HANDLE_VALUE) {
       return 1;
     }
-    BOOL connected = ConnectNamedPipe(pipe, NULL);
-    if (!connected && GetLastError() != ERROR_PIPE_CONNECTED) {
+    proton_app_instance_io_result_t connect_result =
+        proton_app_instance_server_connect(slot, pipe);
+    if (connect_result != PROTON_APP_INSTANCE_IO_COMPLETE) {
       CloseHandle(pipe);
-      if (WaitForSingleObject(slot->stop_event, 0) == WAIT_OBJECT_0) {
+      if (connect_result == PROTON_APP_INSTANCE_IO_STOPPED) {
         return 0;
       }
       continue;
     }
     uint32_t length = 0;
     unsigned char ack = 0;
-    if (proton_app_instance_read_exact(pipe, &length, sizeof(length)) &&
+    proton_app_instance_io_result_t read_result =
+        proton_app_instance_server_io_exact(
+            slot, pipe, &length, sizeof(length), false);
+    if (read_result == PROTON_APP_INSTANCE_IO_COMPLETE &&
         length > 0 && length < PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES) {
       char *payload = (char *)malloc((size_t)length + 1);
+      if (payload != NULL) {
+        read_result = proton_app_instance_server_io_exact(
+            slot, pipe, payload, length, false);
+      }
       if (payload != NULL &&
-          proton_app_instance_read_exact(pipe, payload, length)) {
+          read_result == PROTON_APP_INSTANCE_IO_COMPLETE) {
         payload[length] = '\0';
         if (proton_app_instance_validate_activation(payload) &&
             proton_app_instance_enqueue_activation(slot, payload, true)) {
@@ -558,8 +661,27 @@ static DWORD WINAPI proton_app_instance_server_thread(void *data) {
       }
       free(payload);
     }
-    (void)proton_app_instance_write_exact(pipe, &ack, sizeof(ack));
-    FlushFileBuffers(pipe);
+    if (read_result == PROTON_APP_INSTANCE_IO_STOPPED) {
+      CloseHandle(pipe);
+      return 0;
+    }
+    proton_app_instance_io_result_t write_result =
+        proton_app_instance_server_io_exact(
+            slot, pipe, &ack, sizeof(ack), true);
+    if (write_result == PROTON_APP_INSTANCE_IO_STOPPED) {
+      CloseHandle(pipe);
+      return 0;
+    }
+    if (write_result == PROTON_APP_INSTANCE_IO_COMPLETE && ack == 1) {
+      unsigned char receipt = 0;
+      proton_app_instance_io_result_t receipt_result =
+          proton_app_instance_server_io_exact(
+              slot, pipe, &receipt, sizeof(receipt), false);
+      if (receipt_result == PROTON_APP_INSTANCE_IO_STOPPED) {
+        CloseHandle(pipe);
+        return 0;
+      }
+    }
     DisconnectNamedPipe(pipe);
     CloseHandle(pipe);
   }
@@ -600,6 +722,10 @@ static int32_t proton_app_instance_forward_windows(
       proton_app_instance_write_exact(pipe, &wire_length, sizeof(wire_length)) &&
       proton_app_instance_write_exact(pipe, activation_json, wire_length) &&
       proton_app_instance_read_exact(pipe, &ack, sizeof(ack)) && ack == 1;
+  if (ok) {
+    unsigned char receipt = 1;
+    (void)proton_app_instance_write_exact(pipe, &receipt, sizeof(receipt));
+  }
   CloseHandle(pipe);
   if (!ok) {
     proton_app_instance_set_message(error, error_len,
@@ -675,22 +801,6 @@ static void proton_app_instance_stop_platform(
     SetEvent(slot->stop_event);
   }
   if (slot->owns_endpoint && slot->thread != NULL) {
-    /* CancelSynchronousIo can itself stall against ConnectNamedPipe. The
-       listener may also be between its stop check and CreateNamedPipeW, so
-       retry the pipe wakeup until the thread observes the stop event. */
-    for (;;) {
-      if (WaitForSingleObject(slot->thread, 0) == WAIT_OBJECT_0) {
-        break;
-      }
-      HANDLE wake = CreateFileW(slot->pipe_name, GENERIC_READ | GENERIC_WRITE,
-                                0, NULL, OPEN_EXISTING, 0, NULL);
-      if (wake != INVALID_HANDLE_VALUE) {
-        CloseHandle(wake);
-      }
-      if (WaitForSingleObject(slot->thread, 10) == WAIT_OBJECT_0) {
-        break;
-      }
-    }
     WaitForSingleObject(slot->thread, INFINITE);
     CloseHandle(slot->thread);
     slot->thread = NULL;
