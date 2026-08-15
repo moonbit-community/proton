@@ -731,9 +731,9 @@ async fn run_scenario_probe_with_retry(
 
 ///|
 fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
-  if name == "52_web_contents_view" {
-    // The view probe has separate startup, target, page, paint, and shutdown
-    // waits.  Its outer guard must cover more than one phase-sized budget.
+  if name == "41_app_commands" || name == "52_web_contents_view" {
+    // These probes have separate startup and OSR paint waits. Their outer
+    // guards must cover more than one phase-sized budget.
     timeout * 2
   } else {
     timeout

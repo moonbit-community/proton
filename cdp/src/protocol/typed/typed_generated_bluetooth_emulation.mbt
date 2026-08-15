@@ -12,6 +12,14 @@ pub(all) struct BluetoothEmulationCentralState {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationCentralState with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationCentralState with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationCentralState as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -46,6 +54,17 @@ pub fn BluetoothEmulationCentralState::from_json(
 pub(all) struct BluetoothEmulationCharacteristicOperationType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationCharacteristicOperationType with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationCharacteristicOperationType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationCharacteristicOperationType as CDP JSON.
@@ -89,6 +108,17 @@ pub(all) struct BluetoothEmulationCharacteristicProperties {
   authenticated_signed_writes : Bool?
   extended_properties : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationCharacteristicProperties with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationCharacteristicProperties with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationCharacteristicProperties as CDP JSON.
@@ -165,6 +195,14 @@ pub(all) struct BluetoothEmulationCharacteristicWriteType {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationCharacteristicWriteType with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationCharacteristicWriteType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationCharacteristicWriteType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -199,6 +237,14 @@ pub fn BluetoothEmulationCharacteristicWriteType::from_json(
 pub(all) struct BluetoothEmulationDescriptorOperationType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationDescriptorOperationType with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationDescriptorOperationType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationDescriptorOperationType as CDP JSON.
@@ -237,6 +283,14 @@ pub(all) struct BluetoothEmulationGATTOperationType {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationGATTOperationType with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationGATTOperationType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationGATTOperationType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -272,6 +326,14 @@ pub(all) struct BluetoothEmulationManufacturerData {
   key : Int
   data : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationManufacturerData with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationManufacturerData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationManufacturerData as CDP JSON.
@@ -314,6 +376,14 @@ pub(all) struct BluetoothEmulationScanEntry {
   rssi : Int
   scan_record : BluetoothEmulationScanRecord
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationScanEntry with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationScanEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationScanEntry as CDP JSON.
@@ -364,6 +434,14 @@ pub(all) struct BluetoothEmulationScanRecord {
   tx_power : Int?
   manufacturer_data : Array[BluetoothEmulationManufacturerData]?
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationScanRecord with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationScanRecord with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationScanRecord as CDP JSON.
@@ -440,6 +518,14 @@ pub(all) struct BluetoothEmulationAddCharacteristicParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationAddCharacteristicParams with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationAddCharacteristicParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationAddCharacteristicParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -463,6 +549,14 @@ pub fn BluetoothEmulationAddCharacteristicParams::to_json(
 pub(all) struct BluetoothEmulationAddCharacteristicResult {
   characteristic_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationAddCharacteristicResult with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationAddCharacteristicResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for BluetoothEmulation.addCharacteristic.
@@ -529,6 +623,14 @@ pub(all) struct BluetoothEmulationAddDescriptorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationAddDescriptorParams with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationAddDescriptorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationAddDescriptorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -551,6 +653,14 @@ pub fn BluetoothEmulationAddDescriptorParams::to_json(
 pub(all) struct BluetoothEmulationAddDescriptorResult {
   descriptor_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationAddDescriptorResult with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationAddDescriptorResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for BluetoothEmulation.addDescriptor.
@@ -617,6 +727,14 @@ pub(all) struct BluetoothEmulationAddServiceParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationAddServiceParams with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationAddServiceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationAddServiceParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -639,6 +757,14 @@ pub fn BluetoothEmulationAddServiceParams::to_json(
 pub(all) struct BluetoothEmulationAddServiceResult {
   service_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationAddServiceResult with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationAddServiceResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for BluetoothEmulation.addService.
@@ -727,6 +853,14 @@ pub(all) struct BluetoothEmulationEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationEnableParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -773,6 +907,17 @@ pub fn bluetooth_emulation_enable_command(
 pub(all) struct BluetoothEmulationRemoveCharacteristicParams {
   characteristic_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationRemoveCharacteristicParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationRemoveCharacteristicParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationRemoveCharacteristicParams as CDP JSON.
@@ -826,6 +971,14 @@ pub(all) struct BluetoothEmulationRemoveDescriptorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationRemoveDescriptorParams with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationRemoveDescriptorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationRemoveDescriptorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -875,6 +1028,14 @@ pub fn bluetooth_emulation_remove_descriptor_command(
 pub(all) struct BluetoothEmulationRemoveServiceParams {
   service_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationRemoveServiceParams with Eq::{not_equal, equal}
+
+///|
+pub extend BluetoothEmulationRemoveServiceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationRemoveServiceParams as CDP JSON.
@@ -928,6 +1089,17 @@ pub(all) struct BluetoothEmulationSetSimulatedCentralStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationSetSimulatedCentralStateParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSetSimulatedCentralStateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationSetSimulatedCentralStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -977,6 +1149,17 @@ pub fn bluetooth_emulation_set_simulated_central_state_command(
 pub(all) struct BluetoothEmulationSimulateAdvertisementParams {
   entry : BluetoothEmulationScanEntry
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationSimulateAdvertisementParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSimulateAdvertisementParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationSimulateAdvertisementParams as CDP JSON.
@@ -1031,6 +1214,17 @@ pub(all) struct BluetoothEmulationSimulateCharacteristicOperationResponseParams 
   code : Int
   data : String?
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationSimulateCharacteristicOperationResponseParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSimulateCharacteristicOperationResponseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationSimulateCharacteristicOperationResponseParams as CDP JSON.
@@ -1092,6 +1286,17 @@ pub(all) struct BluetoothEmulationSimulateDescriptorOperationResponseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationSimulateDescriptorOperationResponseParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSimulateDescriptorOperationResponseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationSimulateDescriptorOperationResponseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1148,6 +1353,17 @@ pub(all) struct BluetoothEmulationSimulateGATTDisconnectionParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationSimulateGATTDisconnectionParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSimulateGATTDisconnectionParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationSimulateGATTDisconnectionParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1199,6 +1415,17 @@ pub(all) struct BluetoothEmulationSimulateGATTOperationResponseParams {
   type_ : BluetoothEmulationGATTOperationType
   code : Int
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationSimulateGATTOperationResponseParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSimulateGATTOperationResponseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationSimulateGATTOperationResponseParams as CDP JSON.
@@ -1255,6 +1482,17 @@ pub(all) struct BluetoothEmulationSimulatePreconnectedPeripheralParams {
   manufacturer_data : Array[BluetoothEmulationManufacturerData]
   known_service_uuids : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationSimulatePreconnectedPeripheralParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationSimulatePreconnectedPeripheralParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationSimulatePreconnectedPeripheralParams as CDP JSON.
@@ -1316,6 +1554,17 @@ pub(all) struct BluetoothEmulationCharacteristicOperationReceivedEventParams {
   data : String?
   write_type : BluetoothEmulationCharacteristicWriteType?
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationCharacteristicOperationReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationCharacteristicOperationReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationCharacteristicOperationReceivedEventParams as CDP JSON.
@@ -1403,6 +1652,17 @@ pub(all) struct BluetoothEmulationDescriptorOperationReceivedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BluetoothEmulationDescriptorOperationReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationDescriptorOperationReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BluetoothEmulationDescriptorOperationReceivedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1477,6 +1737,17 @@ pub(all) struct BluetoothEmulationGattOperationReceivedEventParams {
   address : String
   type_ : BluetoothEmulationGATTOperationType
 } derive(Eq, Debug)
+
+///|
+pub extend BluetoothEmulationGattOperationReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BluetoothEmulationGattOperationReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BluetoothEmulationGattOperationReceivedEventParams as CDP JSON.

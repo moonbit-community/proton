@@ -9,6 +9,15 @@ pub(all) suberror CodegenMetadataError {
 } derive(Debug, Eq)
 
 ///|
+pub extend CodegenMetadataError with Eq::{not_equal, equal}
+
+///|
+pub extend CodegenMetadataError with Debug::{to_repr}
+
+///|
+pub extend CodegenMetadataError with Show::{to_string, output}
+
+///|
 pub fn CodegenMetadataError::message(self : CodegenMetadataError) -> String {
   match self {
     InvalidRoot => "expected a JSON object for proton.ext.json"
@@ -36,12 +45,30 @@ pub(all) suberror CodegenInputError {
 } derive(Debug, Eq)
 
 ///|
+pub extend CodegenInputError with Eq::{not_equal, equal}
+
+///|
+pub extend CodegenInputError with Debug::{to_repr}
+
+///|
+pub extend CodegenInputError with Show::{to_string, output}
+
+///|
 /// Failures while loading the `proton.ext.json` file associated with command codegen.
 pub(all) suberror CodegenMetadataFileError {
   MissingMetadata(path~ : String)
   Syntax(path~ : String, diagnostics~ : String)
   Invalid(path~ : String, error~ : CodegenMetadataError)
 } derive(Debug, Eq)
+
+///|
+pub extend CodegenMetadataFileError with Eq::{not_equal, equal}
+
+///|
+pub extend CodegenMetadataFileError with Debug::{to_repr}
+
+///|
+pub extend CodegenMetadataFileError with Show::{to_string, output}
 
 ///|
 /// Invalid typed command declarations.
@@ -53,6 +80,15 @@ pub(all) suberror CommandCodegenError {
   Duplicate(kind~ : String, name~ : String)
   MissingCommand
 } derive(Debug, Eq)
+
+///|
+pub extend CommandCodegenError with Eq::{not_equal, equal}
+
+///|
+pub extend CommandCodegenError with Debug::{to_repr}
+
+///|
+pub extend CommandCodegenError with Show::{to_string, output}
 
 ///|
 pub fn CodegenInputError::message(self : CodegenInputError) -> String {

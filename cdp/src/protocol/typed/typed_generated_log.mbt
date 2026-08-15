@@ -22,6 +22,12 @@ pub(all) struct LogLogEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend LogLogEntry with Eq::{not_equal, equal}
+
+///|
+pub extend LogLogEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode LogLogEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -109,6 +115,12 @@ pub(all) struct LogViolationSetting {
   name : String
   threshold : Double
 } derive(Eq, Debug)
+
+///|
+pub extend LogViolationSetting with Eq::{not_equal, equal}
+
+///|
+pub extend LogViolationSetting with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode LogViolationSetting as CDP JSON.
@@ -203,6 +215,14 @@ pub(all) struct LogStartViolationsReportParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LogStartViolationsReportParams with Eq::{not_equal, equal}
+
+///|
+pub extend LogStartViolationsReportParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LogStartViolationsReportParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -270,6 +290,14 @@ pub fn log_stop_violations_report_command(
 pub(all) struct LogEntryAddedEventParams {
   entry : LogLogEntry
 } derive(Eq, Debug)
+
+///|
+pub extend LogEntryAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend LogEntryAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode LogEntryAddedEventParams as CDP JSON.

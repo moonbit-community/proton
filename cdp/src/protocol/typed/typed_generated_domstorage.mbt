@@ -12,6 +12,12 @@ pub(all) struct DOMStorageItem {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMStorageItem with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageItem with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMStorageItem as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -45,6 +51,14 @@ pub fn DOMStorageItem::from_json(
 pub(all) struct DOMStorageSerializedStorageKey {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageSerializedStorageKey with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageSerializedStorageKey with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMStorageSerializedStorageKey as CDP JSON.
@@ -83,6 +97,12 @@ pub(all) struct DOMStorageStorageId {
   storage_key : DOMStorageSerializedStorageKey?
   is_local_storage : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageStorageId with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageStorageId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMStorageStorageId as CDP JSON.
@@ -134,6 +154,12 @@ pub fn DOMStorageStorageId::from_json(
 pub(all) struct DOMStorageClearParams {
   storage_id : DOMStorageStorageId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageClearParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageClearParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMStorageClearParams as CDP JSON.
@@ -225,6 +251,14 @@ pub(all) struct DOMStorageGetDOMStorageItemsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMStorageGetDOMStorageItemsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageGetDOMStorageItemsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMStorageGetDOMStorageItemsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -246,6 +280,14 @@ pub fn DOMStorageGetDOMStorageItemsParams::to_json(
 pub(all) struct DOMStorageGetDOMStorageItemsResult {
   entries : Array[DOMStorageItem]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageGetDOMStorageItemsResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageGetDOMStorageItemsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOMStorage.getDOMStorageItems.
@@ -315,6 +357,14 @@ pub(all) struct DOMStorageRemoveDOMStorageItemParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMStorageRemoveDOMStorageItemParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageRemoveDOMStorageItemParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMStorageRemoveDOMStorageItemParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -367,6 +417,14 @@ pub(all) struct DOMStorageSetDOMStorageItemParams {
   key : String
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageSetDOMStorageItemParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageSetDOMStorageItemParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMStorageSetDOMStorageItemParams as CDP JSON.
@@ -422,6 +480,14 @@ pub(all) struct DOMStorageDomStorageItemAddedEventParams {
   key : String
   new_value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageDomStorageItemAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStorageDomStorageItemAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMStorageDomStorageItemAddedEventParams as CDP JSON.
@@ -493,6 +559,17 @@ pub(all) struct DOMStorageDomStorageItemRemovedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMStorageDomStorageItemRemovedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMStorageDomStorageItemRemovedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMStorageDomStorageItemRemovedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -557,6 +634,17 @@ pub fn domstorage_dom_storage_item_removed_event(
 pub(all) struct DOMStorageDomStorageItemsClearedEventParams {
   storage_id : DOMStorageStorageId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageDomStorageItemsClearedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMStorageDomStorageItemsClearedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMStorageDomStorageItemsClearedEventParams as CDP JSON.
@@ -624,6 +712,17 @@ pub(all) struct DOMStorageDomStorageItemUpdatedEventParams {
   old_value : String
   new_value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMStorageDomStorageItemUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMStorageDomStorageItemUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMStorageDomStorageItemUpdatedEventParams as CDP JSON.

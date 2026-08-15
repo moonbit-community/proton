@@ -17,6 +17,12 @@ pub(all) struct ConsoleConsoleMessage {
 } derive(Eq, Debug)
 
 ///|
+pub extend ConsoleConsoleMessage with Eq::{not_equal, equal}
+
+///|
+pub extend ConsoleConsoleMessage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode ConsoleConsoleMessage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -125,6 +131,14 @@ pub fn console_enable_command(
 pub(all) struct ConsoleMessageAddedEventParams {
   message : ConsoleConsoleMessage
 } derive(Eq, Debug)
+
+///|
+pub extend ConsoleMessageAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend ConsoleMessageAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ConsoleMessageAddedEventParams as CDP JSON.

@@ -12,6 +12,14 @@ pub(all) struct CSSComputedStyleExtraFields {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSComputedStyleExtraFields with Eq::{not_equal, equal}
+
+///|
+pub extend CSSComputedStyleExtraFields with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSComputedStyleExtraFields as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -51,6 +59,12 @@ pub(all) struct CSSCSSAnimationStyle {
   name : String?
   style : CSSCSSStyle
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSAnimationStyle with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSAnimationStyle with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSAnimationStyle as CDP JSON.
@@ -98,6 +112,12 @@ pub(all) struct CSSCSSAtRule {
   origin : CSSStyleSheetOrigin
   style : CSSCSSStyle
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSAtRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSAtRule with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSAtRule as CDP JSON.
@@ -165,6 +185,14 @@ pub(all) struct CSSCSSComputedStyleProperty {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSComputedStyleProperty with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSComputedStyleProperty with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSCSSComputedStyleProperty as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -210,6 +238,12 @@ pub(all) struct CSSCSSContainerQuery {
   queries_scroll_state : Bool?
   queries_anchored : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSContainerQuery with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSContainerQuery with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSContainerQuery as CDP JSON.
@@ -296,6 +330,14 @@ pub(all) struct CSSCSSFunctionConditionNode {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSFunctionConditionNode with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSFunctionConditionNode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSCSSFunctionConditionNode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -365,6 +407,12 @@ pub(all) struct CSSCSSFunctionNode {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSFunctionNode with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSFunctionNode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSFunctionNode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -414,6 +462,12 @@ pub(all) struct CSSCSSFunctionParameter {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSFunctionParameter with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSFunctionParameter with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSFunctionParameter as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -454,6 +508,12 @@ pub(all) struct CSSCSSFunctionRule {
   parameters : Array[CSSCSSFunctionParameter]
   children : Array[CSSCSSFunctionNode]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSFunctionRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSFunctionRule with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSFunctionRule as CDP JSON.
@@ -522,6 +582,12 @@ pub(all) struct CSSCSSKeyframeRule {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSKeyframeRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSKeyframeRule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSKeyframeRule as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -576,6 +642,12 @@ pub(all) struct CSSCSSKeyframesRule {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSKeyframesRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSKeyframesRule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSKeyframesRule as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -621,6 +693,12 @@ pub(all) struct CSSCSSLayer {
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSLayer with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSLayer with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSLayer as CDP JSON.
@@ -673,6 +751,12 @@ pub(all) struct CSSCSSLayerData {
   sub_layers : Array[CSSCSSLayerData]?
   order : Double
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSLayerData with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSLayerData with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSLayerData as CDP JSON.
@@ -728,6 +812,12 @@ pub(all) struct CSSCSSMedia {
   style_sheet_id : DOMStyleSheetId?
   media_list : Array[CSSMediaQuery]?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSMedia with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSMedia with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSMedia as CDP JSON.
@@ -804,6 +894,12 @@ pub(all) struct CSSCSSPositionTryRule {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSPositionTryRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSPositionTryRule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSPositionTryRule as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -863,6 +959,12 @@ pub(all) struct CSSCSSProperty {
   range : CSSSourceRange?
   longhand_properties : Array[CSSCSSProperty]?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSProperty with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSProperty with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSProperty as CDP JSON.
@@ -948,6 +1050,14 @@ pub(all) struct CSSCSSPropertyRegistration {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSPropertyRegistration with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSPropertyRegistration with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSCSSPropertyRegistration as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1000,6 +1110,12 @@ pub(all) struct CSSCSSPropertyRule {
   property_name : CSSValue
   style : CSSCSSStyle
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSPropertyRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSPropertyRule with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSPropertyRule as CDP JSON.
@@ -1065,6 +1181,12 @@ pub(all) struct CSSCSSRule {
   rule_types : Array[CSSCSSRuleType]?
   starting_styles : Array[CSSCSSStartingStyle]?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSRule with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSRule as CDP JSON.
@@ -1233,6 +1355,12 @@ pub(all) struct CSSCSSRuleType {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSRuleType with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSRuleType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSRuleType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1267,6 +1395,12 @@ pub(all) struct CSSCSSScope {
   range : CSSSourceRange?
   style_sheet_id : DOMStyleSheetId?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSScope with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSScope with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSScope as CDP JSON.
@@ -1320,6 +1454,12 @@ pub(all) struct CSSCSSStartingStyle {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSStartingStyle with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSStartingStyle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSStartingStyle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1370,6 +1510,12 @@ pub(all) struct CSSCSSStyle {
   css_text : String?
   range : CSSSourceRange?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSStyle with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSStyle with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSStyle as CDP JSON.
@@ -1457,6 +1603,12 @@ pub(all) struct CSSCSSStyleSheetHeader {
   end_column : Double
   loading_failed : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSStyleSheetHeader with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSStyleSheetHeader with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSStyleSheetHeader as CDP JSON.
@@ -1565,6 +1717,12 @@ pub(all) struct CSSCSSSupports {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCSSSupports with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSSupports with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSCSSSupports as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1617,6 +1775,12 @@ pub(all) struct CSSCSSTryRule {
   origin : CSSStyleSheetOrigin
   style : CSSCSSStyle
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCSSTryRule with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCSSTryRule with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSCSSTryRule as CDP JSON.
@@ -1675,6 +1839,12 @@ pub(all) struct CSSFontFace {
   platform_font_family : String
   font_variation_axes : Array[CSSFontVariationAxis]?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSFontFace with Eq::{not_equal, equal}
+
+///|
+pub extend CSSFontFace with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSFontFace as CDP JSON.
@@ -1762,6 +1932,12 @@ pub(all) struct CSSFontVariationAxis {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSFontVariationAxis with Eq::{not_equal, equal}
+
+///|
+pub extend CSSFontVariationAxis with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSFontVariationAxis as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1807,6 +1983,14 @@ pub(all) struct CSSInheritedAnimatedStyleEntry {
   animation_styles : Array[CSSCSSAnimationStyle]?
   transitions_style : CSSCSSStyle?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSInheritedAnimatedStyleEntry with Eq::{not_equal, equal}
+
+///|
+pub extend CSSInheritedAnimatedStyleEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CSSInheritedAnimatedStyleEntry as CDP JSON.
@@ -1864,6 +2048,14 @@ pub(all) struct CSSInheritedPseudoElementMatches {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSInheritedPseudoElementMatches with Eq::{not_equal, equal}
+
+///|
+pub extend CSSInheritedPseudoElementMatches with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSInheritedPseudoElementMatches as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1908,6 +2100,12 @@ pub(all) struct CSSInheritedStyleEntry {
   inline_style : CSSCSSStyle?
   matched_cssrules : Array[CSSRuleMatch]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSInheritedStyleEntry with Eq::{not_equal, equal}
+
+///|
+pub extend CSSInheritedStyleEntry with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSInheritedStyleEntry as CDP JSON.
@@ -1961,6 +2159,12 @@ pub(all) struct CSSMediaQuery {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSMediaQuery with Eq::{not_equal, equal}
+
+///|
+pub extend CSSMediaQuery with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSMediaQuery as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2008,6 +2212,12 @@ pub(all) struct CSSMediaQueryExpression {
   value_range : CSSSourceRange?
   computed_length : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSMediaQueryExpression with Eq::{not_equal, equal}
+
+///|
+pub extend CSSMediaQueryExpression with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSMediaQueryExpression as CDP JSON.
@@ -2066,6 +2276,12 @@ pub(all) struct CSSPlatformFontUsage {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSPlatformFontUsage with Eq::{not_equal, equal}
+
+///|
+pub extend CSSPlatformFontUsage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSPlatformFontUsage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2116,6 +2332,12 @@ pub(all) struct CSSPseudoElementMatches {
   pseudo_identifier : String?
   matches : Array[CSSRuleMatch]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSPseudoElementMatches with Eq::{not_equal, equal}
+
+///|
+pub extend CSSPseudoElementMatches with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSPseudoElementMatches as CDP JSON.
@@ -2170,6 +2392,12 @@ pub(all) struct CSSRuleMatch {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSRuleMatch with Eq::{not_equal, equal}
+
+///|
+pub extend CSSRuleMatch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSRuleMatch as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2222,6 +2450,12 @@ pub(all) struct CSSRuleUsage {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSRuleUsage with Eq::{not_equal, equal}
+
+///|
+pub extend CSSRuleUsage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSRuleUsage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2271,6 +2505,12 @@ pub(all) struct CSSSelectorList {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSelectorList with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSelectorList with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSSelectorList as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2316,6 +2556,12 @@ pub(all) struct CSSShorthandEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSShorthandEntry with Eq::{not_equal, equal}
+
+///|
+pub extend CSSShorthandEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSShorthandEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2359,6 +2605,12 @@ pub(all) struct CSSSourceRange {
   end_line : Int
   end_column : Int
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSourceRange with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSourceRange with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSSourceRange as CDP JSON.
@@ -2407,6 +2659,12 @@ pub(all) struct CSSSpecificity {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSpecificity with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSpecificity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSSpecificity as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2447,6 +2705,12 @@ pub(all) struct CSSStyleDeclarationEdit {
   range : CSSSourceRange
   text : String
 } derive(Eq, Debug)
+
+///|
+pub extend CSSStyleDeclarationEdit with Eq::{not_equal, equal}
+
+///|
+pub extend CSSStyleDeclarationEdit with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSStyleDeclarationEdit as CDP JSON.
@@ -2493,6 +2757,12 @@ pub(all) struct CSSStyleSheetOrigin {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSStyleSheetOrigin with Eq::{not_equal, equal}
+
+///|
+pub extend CSSStyleSheetOrigin with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSStyleSheetOrigin as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2527,6 +2797,12 @@ pub(all) struct CSSValue {
   range : CSSSourceRange?
   specificity : CSSSpecificity?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSValue with Eq::{not_equal, equal}
+
+///|
+pub extend CSSValue with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CSSValue as CDP JSON.
@@ -2582,6 +2858,12 @@ pub(all) struct CSSAddRuleParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSAddRuleParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSAddRuleParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSAddRuleParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2606,6 +2888,12 @@ pub fn CSSAddRuleParams::to_json(self : CSSAddRuleParams) -> Json {
 pub(all) struct CSSAddRuleResult {
   rule : CSSCSSRule
 } derive(Eq, Debug)
+
+///|
+pub extend CSSAddRuleResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSAddRuleResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for CSS.addRule.
@@ -2667,6 +2955,14 @@ pub(all) struct CSSCollectClassNamesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCollectClassNamesParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCollectClassNamesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSCollectClassNamesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2688,6 +2984,14 @@ pub fn CSSCollectClassNamesParams::to_json(
 pub(all) struct CSSCollectClassNamesResult {
   class_names : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCollectClassNamesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCollectClassNamesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.collectClassNames.
@@ -2757,6 +3061,14 @@ pub(all) struct CSSCreateStyleSheetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSCreateStyleSheetParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCreateStyleSheetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSCreateStyleSheetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2781,6 +3093,14 @@ pub fn CSSCreateStyleSheetParams::to_json(
 pub(all) struct CSSCreateStyleSheetResult {
   style_sheet_id : DOMStyleSheetId
 } derive(Eq, Debug)
+
+///|
+pub extend CSSCreateStyleSheetResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSCreateStyleSheetResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.createStyleSheet.
@@ -2879,6 +3199,14 @@ pub(all) struct CSSForcePseudoStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSForcePseudoStateParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSForcePseudoStateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSForcePseudoStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2930,6 +3258,14 @@ pub(all) struct CSSForceStartingStyleParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSForceStartingStyleParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSForceStartingStyleParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSForceStartingStyleParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2978,6 +3314,14 @@ pub(all) struct CSSGetAnimatedStylesForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetAnimatedStylesForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetAnimatedStylesForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetAnimatedStylesForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3001,6 +3345,14 @@ pub(all) struct CSSGetAnimatedStylesForNodeResult {
   transitions_style : CSSCSSStyle?
   inherited : Array[CSSInheritedAnimatedStyleEntry]?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetAnimatedStylesForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetAnimatedStylesForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getAnimatedStylesForNode.
@@ -3087,6 +3439,14 @@ pub(all) struct CSSGetBackgroundColorsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetBackgroundColorsParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetBackgroundColorsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetBackgroundColorsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3110,6 +3470,14 @@ pub(all) struct CSSGetBackgroundColorsResult {
   computed_font_size : String?
   computed_font_weight : String?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetBackgroundColorsResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetBackgroundColorsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getBackgroundColors.
@@ -3188,6 +3556,14 @@ pub(all) struct CSSGetComputedStyleForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetComputedStyleForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetComputedStyleForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetComputedStyleForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3210,6 +3586,14 @@ pub(all) struct CSSGetComputedStyleForNodeResult {
   computed_style : Array[CSSCSSComputedStyleProperty]
   extra_fields : CSSComputedStyleExtraFields
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetComputedStyleForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetComputedStyleForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getComputedStyleForNode.
@@ -3281,6 +3665,14 @@ pub(all) struct CSSGetEnvironmentVariablesResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetEnvironmentVariablesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetEnvironmentVariablesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for CSS.getEnvironmentVariables.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -3338,6 +3730,14 @@ pub(all) struct CSSGetInlineStylesForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetInlineStylesForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetInlineStylesForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetInlineStylesForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3360,6 +3760,14 @@ pub(all) struct CSSGetInlineStylesForNodeResult {
   inline_style : CSSCSSStyle?
   attributes_style : CSSCSSStyle?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetInlineStylesForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetInlineStylesForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getInlineStylesForNode.
@@ -3431,6 +3839,14 @@ pub(all) struct CSSGetLayersForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetLayersForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetLayersForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetLayersForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3452,6 +3868,14 @@ pub fn CSSGetLayersForNodeParams::to_json(
 pub(all) struct CSSGetLayersForNodeResult {
   root_layer : CSSCSSLayerData
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetLayersForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetLayersForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getLayersForNode.
@@ -3514,6 +3938,14 @@ pub(all) struct CSSGetLocationForSelectorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetLocationForSelectorParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetLocationForSelectorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetLocationForSelectorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3536,6 +3968,14 @@ pub fn CSSGetLocationForSelectorParams::to_json(
 pub(all) struct CSSGetLocationForSelectorResult {
   ranges : Array[CSSSourceRange]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetLocationForSelectorResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetLocationForSelectorResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getLocationForSelector.
@@ -3605,6 +4045,14 @@ pub(all) struct CSSGetLonghandPropertiesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetLonghandPropertiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetLonghandPropertiesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetLonghandPropertiesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3627,6 +4075,14 @@ pub fn CSSGetLonghandPropertiesParams::to_json(
 pub(all) struct CSSGetLonghandPropertiesResult {
   longhand_properties : Array[CSSCSSProperty]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetLonghandPropertiesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetLonghandPropertiesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getLonghandProperties.
@@ -3691,6 +4147,14 @@ pub(all) struct CSSGetMatchedStylesForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetMatchedStylesForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetMatchedStylesForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetMatchedStylesForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3725,6 +4189,14 @@ pub(all) struct CSSGetMatchedStylesForNodeResult {
   parent_layout_node_id : DOMNodeId?
   css_function_rules : Array[CSSCSSFunctionRule]?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetMatchedStylesForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetMatchedStylesForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getMatchedStylesForNode.
@@ -3902,6 +4374,14 @@ pub(all) struct CSSGetMediaQueriesResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetMediaQueriesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetMediaQueriesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for CSS.getMediaQueries.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -3962,6 +4442,14 @@ pub(all) struct CSSGetPlatformFontsForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetPlatformFontsForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetPlatformFontsForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetPlatformFontsForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3983,6 +4471,14 @@ pub fn CSSGetPlatformFontsForNodeParams::to_json(
 pub(all) struct CSSGetPlatformFontsForNodeResult {
   fonts : Array[CSSPlatformFontUsage]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetPlatformFontsForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetPlatformFontsForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getPlatformFontsForNode.
@@ -4051,6 +4547,14 @@ pub(all) struct CSSGetStyleSheetTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSGetStyleSheetTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetStyleSheetTextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSGetStyleSheetTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4072,6 +4576,14 @@ pub fn CSSGetStyleSheetTextParams::to_json(
 pub(all) struct CSSGetStyleSheetTextResult {
   text : String
 } derive(Eq, Debug)
+
+///|
+pub extend CSSGetStyleSheetTextResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSGetStyleSheetTextResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.getStyleSheetText.
@@ -4133,6 +4645,12 @@ pub(all) struct CSSResolveValuesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSResolveValuesParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSResolveValuesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSResolveValuesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4162,6 +4680,12 @@ pub fn CSSResolveValuesParams::to_json(self : CSSResolveValuesParams) -> Json {
 pub(all) struct CSSResolveValuesResult {
   results : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSResolveValuesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSResolveValuesResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for CSS.resolveValues.
@@ -4230,6 +4754,14 @@ pub(all) struct CSSSetContainerQueryTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetContainerQueryTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetContainerQueryTextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetContainerQueryTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4253,6 +4785,14 @@ pub fn CSSSetContainerQueryTextParams::to_json(
 pub(all) struct CSSSetContainerQueryTextResult {
   container_query : CSSCSSContainerQuery
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetContainerQueryTextResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetContainerQueryTextResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.setContainerQueryText.
@@ -4320,6 +4860,14 @@ pub(all) struct CSSSetEffectivePropertyValueForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetEffectivePropertyValueForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetEffectivePropertyValueForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetEffectivePropertyValueForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4375,6 +4923,12 @@ pub(all) struct CSSSetKeyframeKeyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetKeyframeKeyParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetKeyframeKeyParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSSetKeyframeKeyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4396,6 +4950,12 @@ pub fn CSSSetKeyframeKeyParams::to_json(self : CSSSetKeyframeKeyParams) -> Json 
 pub(all) struct CSSSetKeyframeKeyResult {
   key_text : CSSValue
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetKeyframeKeyResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetKeyframeKeyResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for CSS.setKeyframeKey.
@@ -4457,6 +5017,14 @@ pub(all) struct CSSSetLocalFontsEnabledParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetLocalFontsEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetLocalFontsEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetLocalFontsEnabledParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4506,6 +5074,12 @@ pub(all) struct CSSSetMediaTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetMediaTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetMediaTextParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSSetMediaTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4527,6 +5101,12 @@ pub fn CSSSetMediaTextParams::to_json(self : CSSSetMediaTextParams) -> Json {
 pub(all) struct CSSSetMediaTextResult {
   media : CSSCSSMedia
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetMediaTextResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetMediaTextResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for CSS.setMediaText.
@@ -4590,6 +5170,14 @@ pub(all) struct CSSSetPropertyRulePropertyNameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetPropertyRulePropertyNameParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetPropertyRulePropertyNameParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetPropertyRulePropertyNameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4613,6 +5201,14 @@ pub fn CSSSetPropertyRulePropertyNameParams::to_json(
 pub(all) struct CSSSetPropertyRulePropertyNameResult {
   property_name : CSSValue
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetPropertyRulePropertyNameResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetPropertyRulePropertyNameResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.setPropertyRulePropertyName.
@@ -4680,6 +5276,14 @@ pub(all) struct CSSSetRuleSelectorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetRuleSelectorParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetRuleSelectorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetRuleSelectorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4703,6 +5307,14 @@ pub fn CSSSetRuleSelectorParams::to_json(
 pub(all) struct CSSSetRuleSelectorResult {
   selector_list : CSSSelectorList
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetRuleSelectorResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetRuleSelectorResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.setRuleSelector.
@@ -4766,6 +5378,12 @@ pub(all) struct CSSSetScopeTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetScopeTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetScopeTextParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSSetScopeTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4787,6 +5405,12 @@ pub fn CSSSetScopeTextParams::to_json(self : CSSSetScopeTextParams) -> Json {
 pub(all) struct CSSSetScopeTextResult {
   scope : CSSCSSScope
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetScopeTextResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetScopeTextResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for CSS.setScopeText.
@@ -4849,6 +5473,14 @@ pub(all) struct CSSSetStyleSheetTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetStyleSheetTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetStyleSheetTextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetStyleSheetTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4871,6 +5503,14 @@ pub fn CSSSetStyleSheetTextParams::to_json(
 pub(all) struct CSSSetStyleSheetTextResult {
   source_map_url : String?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetStyleSheetTextResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetStyleSheetTextResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.setStyleSheetText.
@@ -4933,6 +5573,12 @@ pub(all) struct CSSSetStyleTextsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetStyleTextsParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetStyleTextsParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CSSSetStyleTextsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4955,6 +5601,12 @@ pub fn CSSSetStyleTextsParams::to_json(self : CSSSetStyleTextsParams) -> Json {
 pub(all) struct CSSSetStyleTextsResult {
   styles : Array[CSSCSSStyle]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetStyleTextsResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetStyleTextsResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for CSS.setStyleTexts.
@@ -5021,6 +5673,14 @@ pub(all) struct CSSSetSupportsTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSSetSupportsTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetSupportsTextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSSetSupportsTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5044,6 +5704,14 @@ pub fn CSSSetSupportsTextParams::to_json(
 pub(all) struct CSSSetSupportsTextResult {
   supports : CSSCSSSupports
 } derive(Eq, Debug)
+
+///|
+pub extend CSSSetSupportsTextResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSSetSupportsTextResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.setSupportsText.
@@ -5127,6 +5795,14 @@ pub(all) struct CSSStopRuleUsageTrackingResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSStopRuleUsageTrackingResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSStopRuleUsageTrackingResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for CSS.stopRuleUsageTracking.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -5185,6 +5861,14 @@ pub fn css_stop_rule_usage_tracking_command(
 pub(all) struct CSSTakeComputedStyleUpdatesResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend CSSTakeComputedStyleUpdatesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSTakeComputedStyleUpdatesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.takeComputedStyleUpdates.
@@ -5246,6 +5930,14 @@ pub(all) struct CSSTakeCoverageDeltaResult {
   coverage : Array[CSSRuleUsage]
   timestamp : Double
 } derive(Eq, Debug)
+
+///|
+pub extend CSSTakeCoverageDeltaResult with Eq::{not_equal, equal}
+
+///|
+pub extend CSSTakeCoverageDeltaResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CSS.takeCoverageDelta.
@@ -5311,6 +6003,14 @@ pub(all) struct CSSTrackComputedStyleUpdatesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSTrackComputedStyleUpdatesParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSTrackComputedStyleUpdatesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSTrackComputedStyleUpdatesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5364,6 +6064,14 @@ pub(all) struct CSSTrackComputedStyleUpdatesForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSTrackComputedStyleUpdatesForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSTrackComputedStyleUpdatesForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSTrackComputedStyleUpdatesForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5415,6 +6123,14 @@ pub fn css_track_computed_style_updates_for_node_command(
 pub(all) struct CSSComputedStyleUpdatedEventParams {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend CSSComputedStyleUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSComputedStyleUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CSSComputedStyleUpdatedEventParams as CDP JSON.
@@ -5479,6 +6195,14 @@ pub fn css_computed_style_updated_event(
 pub(all) struct CSSFontsUpdatedEventParams {
   font : CSSFontFace?
 } derive(Eq, Debug)
+
+///|
+pub extend CSSFontsUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSFontsUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CSSFontsUpdatedEventParams as CDP JSON.
@@ -5567,6 +6291,14 @@ pub(all) struct CSSStyleSheetAddedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSStyleSheetAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSStyleSheetAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSStyleSheetAddedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5631,6 +6363,14 @@ pub(all) struct CSSStyleSheetChangedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CSSStyleSheetChangedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSStyleSheetChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CSSStyleSheetChangedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5693,6 +6433,14 @@ pub fn css_style_sheet_changed_event(
 pub(all) struct CSSStyleSheetRemovedEventParams {
   style_sheet_id : DOMStyleSheetId
 } derive(Eq, Debug)
+
+///|
+pub extend CSSStyleSheetRemovedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CSSStyleSheetRemovedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CSSStyleSheetRemovedEventParams as CDP JSON.

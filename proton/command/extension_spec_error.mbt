@@ -6,10 +6,22 @@ pub(all) suberror ExtensionSpecError {
 } derive(Eq)
 
 ///|
+pub extend ExtensionSpecError with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionSpecError with Show::{to_string, output}
+
+///|
 /// A stable validation failure for an extension's renderer permission scope.
 pub(all) suberror PermissionScopeValidationError {
   Invalid(detail~ : String)
 } derive(Eq)
+
+///|
+pub extend PermissionScopeValidationError with Eq::{not_equal, equal}
+
+///|
+pub extend PermissionScopeValidationError with Show::{to_string, output}
 
 ///|
 pub fn ExtensionSpecError::message(self : ExtensionSpecError) -> String {

@@ -11,6 +11,15 @@ pub(all) suberror ProtocolSchemaDiffError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolSchemaDiffError with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolSchemaDiffError with Debug::{to_repr}
+
+///|
+pub extend ProtocolSchemaDiffError with ToJson::{to_json}
+
+///|
 /// One changed command, event, or type in a protocol schema diff.
 ///
 /// `name` is the fully qualified command/event/type name. `details` contains
@@ -20,6 +29,15 @@ pub(all) struct ProtocolSchemaDiffItem {
   name : String
   details : Array[String]
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolSchemaDiffItem with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolSchemaDiffItem with Debug::{to_repr}
+
+///|
+pub extend ProtocolSchemaDiffItem with ToJson::{to_json}
 
 ///|
 /// Counts and domain summaries parsed from a remote protocol schema.
@@ -35,6 +53,15 @@ pub(all) struct ProtocolRemoteSummary {
   type_count : Int
   domains : Array[ProtocolDomainSummary]
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolRemoteSummary with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolRemoteSummary with Debug::{to_repr}
+
+///|
+pub extend ProtocolRemoteSummary with ToJson::{to_json}
 
 ///|
 /// Diff between the bundled protocol schema and a remote `/json/protocol`.
@@ -71,6 +98,15 @@ pub(all) struct ProtocolSchemaDiffReport {
   changed_types : Array[ProtocolSchemaDiffItem]
   compatible : Bool
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolSchemaDiffReport with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolSchemaDiffReport with Debug::{to_repr}
+
+///|
+pub extend ProtocolSchemaDiffReport with ToJson::{to_json}
 
 ///|
 // Parsed remote schema flattened into the same shape as the bundled manifest.

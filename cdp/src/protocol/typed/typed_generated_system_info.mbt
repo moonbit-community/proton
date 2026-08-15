@@ -19,6 +19,12 @@ pub(all) struct SystemInfoGPUDevice {
 } derive(Eq, Debug)
 
 ///|
+pub extend SystemInfoGPUDevice with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoGPUDevice with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode SystemInfoGPUDevice as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -84,6 +90,12 @@ pub(all) struct SystemInfoGPUInfo {
   video_decoding : Array[SystemInfoVideoDecodeAcceleratorCapability]
   video_encoding : Array[SystemInfoVideoEncodeAcceleratorCapability]
 } derive(Eq, Debug)
+
+///|
+pub extend SystemInfoGPUInfo with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoGPUInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode SystemInfoGPUInfo as CDP JSON.
@@ -166,6 +178,12 @@ pub(all) struct SystemInfoImageType {
 } derive(Eq, Debug)
 
 ///|
+pub extend SystemInfoImageType with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoImageType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode SystemInfoImageType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -200,6 +218,12 @@ pub(all) struct SystemInfoProcessInfo {
   id : Int
   cpu_time : Double
 } derive(Eq, Debug)
+
+///|
+pub extend SystemInfoProcessInfo with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoProcessInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode SystemInfoProcessInfo as CDP JSON.
@@ -243,6 +267,12 @@ pub(all) struct SystemInfoSize {
 } derive(Eq, Debug)
 
 ///|
+pub extend SystemInfoSize with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoSize with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode SystemInfoSize as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -281,6 +311,14 @@ pub(all) struct SystemInfoSubsamplingFormat {
 } derive(Eq, Debug)
 
 ///|
+pub extend SystemInfoSubsamplingFormat with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoSubsamplingFormat with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SystemInfoSubsamplingFormat as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -317,6 +355,17 @@ pub(all) struct SystemInfoVideoDecodeAcceleratorCapability {
   max_resolution : SystemInfoSize
   min_resolution : SystemInfoSize
 } derive(Eq, Debug)
+
+///|
+pub extend SystemInfoVideoDecodeAcceleratorCapability with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SystemInfoVideoDecodeAcceleratorCapability with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SystemInfoVideoDecodeAcceleratorCapability as CDP JSON.
@@ -366,6 +415,17 @@ pub(all) struct SystemInfoVideoEncodeAcceleratorCapability {
   max_framerate_numerator : Int
   max_framerate_denominator : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SystemInfoVideoEncodeAcceleratorCapability with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SystemInfoVideoEncodeAcceleratorCapability with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SystemInfoVideoEncodeAcceleratorCapability as CDP JSON.
@@ -422,6 +482,14 @@ pub(all) struct SystemInfoGetFeatureStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SystemInfoGetFeatureStateParams with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoGetFeatureStateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SystemInfoGetFeatureStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -443,6 +511,14 @@ pub fn SystemInfoGetFeatureStateParams::to_json(
 pub(all) struct SystemInfoGetFeatureStateResult {
   feature_enabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend SystemInfoGetFeatureStateResult with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoGetFeatureStateResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for SystemInfo.getFeatureState.
@@ -511,6 +587,12 @@ pub(all) struct SystemInfoGetInfoResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend SystemInfoGetInfoResult with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoGetInfoResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Decode and validate the result object for SystemInfo.getInfo.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -575,6 +657,14 @@ pub fn system_info_get_info_command(
 pub(all) struct SystemInfoGetProcessInfoResult {
   process_info : Array[SystemInfoProcessInfo]
 } derive(Eq, Debug)
+
+///|
+pub extend SystemInfoGetProcessInfoResult with Eq::{not_equal, equal}
+
+///|
+pub extend SystemInfoGetProcessInfoResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for SystemInfo.getProcessInfo.

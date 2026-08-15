@@ -15,6 +15,12 @@ pub(all) struct FetchAuthChallenge {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchAuthChallenge with Eq::{not_equal, equal}
+
+///|
+pub extend FetchAuthChallenge with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FetchAuthChallenge as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -59,6 +65,14 @@ pub(all) struct FetchAuthChallengeResponse {
   username : String?
   password : String?
 } derive(Eq, Debug)
+
+///|
+pub extend FetchAuthChallengeResponse with Eq::{not_equal, equal}
+
+///|
+pub extend FetchAuthChallengeResponse with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FetchAuthChallengeResponse as CDP JSON.
@@ -108,6 +122,12 @@ pub(all) struct FetchHeaderEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchHeaderEntry with Eq::{not_equal, equal}
+
+///|
+pub extend FetchHeaderEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FetchHeaderEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -146,6 +166,12 @@ pub(all) struct FetchRequestId {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchRequestId with Eq::{not_equal, equal}
+
+///|
+pub extend FetchRequestId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FetchRequestId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -180,6 +206,12 @@ pub(all) struct FetchRequestPattern {
   resource_type : NetworkResourceType?
   request_stage : FetchRequestStage?
 } derive(Eq, Debug)
+
+///|
+pub extend FetchRequestPattern with Eq::{not_equal, equal}
+
+///|
+pub extend FetchRequestPattern with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode FetchRequestPattern as CDP JSON.
@@ -236,6 +268,12 @@ pub(all) struct FetchRequestStage {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchRequestStage with Eq::{not_equal, equal}
+
+///|
+pub extend FetchRequestStage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FetchRequestStage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -273,6 +311,14 @@ pub(all) struct FetchContinueRequestParams {
   headers : Array[FetchHeaderEntry]?
   intercept_response : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend FetchContinueRequestParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchContinueRequestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FetchContinueRequestParams as CDP JSON.
@@ -341,6 +387,14 @@ pub(all) struct FetchContinueResponseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchContinueResponseParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchContinueResponseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FetchContinueResponseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -399,6 +453,14 @@ pub(all) struct FetchContinueWithAuthParams {
   request_id : FetchRequestId
   auth_challenge_response : FetchAuthChallengeResponse
 } derive(Eq, Debug)
+
+///|
+pub extend FetchContinueWithAuthParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchContinueWithAuthParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FetchContinueWithAuthParams as CDP JSON.
@@ -468,6 +530,12 @@ pub(all) struct FetchEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FetchEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -519,6 +587,12 @@ pub(all) struct FetchFailRequestParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchFailRequestParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchFailRequestParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FetchFailRequestParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -568,6 +642,14 @@ pub(all) struct FetchFulfillRequestParams {
   body : String?
   response_phrase : String?
 } derive(Eq, Debug)
+
+///|
+pub extend FetchFulfillRequestParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchFulfillRequestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FetchFulfillRequestParams as CDP JSON.
@@ -630,6 +712,14 @@ pub(all) struct FetchGetResponseBodyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchGetResponseBodyParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchGetResponseBodyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FetchGetResponseBodyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -652,6 +742,14 @@ pub(all) struct FetchGetResponseBodyResult {
   body : String
   base64_encoded : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend FetchGetResponseBodyResult with Eq::{not_equal, equal}
+
+///|
+pub extend FetchGetResponseBodyResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Fetch.getResponseBody.
@@ -714,6 +812,14 @@ pub(all) struct FetchTakeResponseBodyAsStreamParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FetchTakeResponseBodyAsStreamParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchTakeResponseBodyAsStreamParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FetchTakeResponseBodyAsStreamParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -735,6 +841,14 @@ pub fn FetchTakeResponseBodyAsStreamParams::to_json(
 pub(all) struct FetchTakeResponseBodyAsStreamResult {
   stream : IOStreamHandle
 } derive(Eq, Debug)
+
+///|
+pub extend FetchTakeResponseBodyAsStreamResult with Eq::{not_equal, equal}
+
+///|
+pub extend FetchTakeResponseBodyAsStreamResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Fetch.takeResponseBodyAsStream.
@@ -802,6 +916,14 @@ pub(all) struct FetchAuthRequiredEventParams {
   resource_type : NetworkResourceType
   auth_challenge : FetchAuthChallenge
 } derive(Eq, Debug)
+
+///|
+pub extend FetchAuthRequiredEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchAuthRequiredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FetchAuthRequiredEventParams as CDP JSON.
@@ -891,6 +1013,14 @@ pub(all) struct FetchRequestPausedEventParams {
   network_id : NetworkRequestId?
   redirected_request_id : FetchRequestId?
 } derive(Eq, Debug)
+
+///|
+pub extend FetchRequestPausedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend FetchRequestPausedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FetchRequestPausedEventParams as CDP JSON.

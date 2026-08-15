@@ -18,6 +18,12 @@ struct RawPackageOptions {
 } derive(Debug, Eq)
 
 ///|
+pub extend RawPackageOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RawPackageOptions with Debug::{to_repr}
+
+///|
 struct PackagePlan {
   root : String
   workspace_root : String
@@ -47,6 +53,12 @@ struct PackagePlan {
 } derive(Debug, Eq)
 
 ///|
+pub extend PackagePlan with Eq::{not_equal, equal}
+
+///|
+pub extend PackagePlan with Debug::{to_repr}
+
+///|
 priv struct StagedArtifact {
   staging : String
   destination : String
@@ -60,6 +72,12 @@ struct MacosCodeSignTarget {
   identifier : String?
   deep : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend MacosCodeSignTarget with Eq::{not_equal, equal}
+
+///|
+pub extend MacosCodeSignTarget with Debug::{to_repr}
 
 ///|
 priv struct MacosHelperSpec {
@@ -240,6 +258,9 @@ pub(all) enum PackageHost {
   Windows
   Linux
 } derive(Eq)
+
+///|
+pub extend PackageHost with Eq::{not_equal, equal}
 
 ///|
 /// The host `package` is running on, which is the platform it can build for.

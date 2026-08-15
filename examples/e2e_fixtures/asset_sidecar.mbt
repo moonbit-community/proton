@@ -5,9 +5,21 @@ struct AssetSidecarAddPayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AssetSidecarAddPayload with ToJson::{to_json}
+
+///|
+pub extend AssetSidecarAddPayload with FromJson::{from_json}
+
+///|
 struct AssetSidecarReportPayload {
   report : String
 } derive(ToJson, FromJson)
+
+///|
+pub extend AssetSidecarReportPayload with ToJson::{to_json}
+
+///|
+pub extend AssetSidecarReportPayload with FromJson::{from_json}
 
 ///|
 let asset_sidecar_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

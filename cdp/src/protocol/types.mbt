@@ -10,6 +10,15 @@ pub(all) struct ProtocolVersion {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolVersion with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolVersion with Debug::{to_repr}
+
+///|
+pub extend ProtocolVersion with ToJson::{to_json}
+
+///|
 /// Per-domain counts and flags from the bundled protocol schema.
 ///
 /// `protocol` identifies the source schema bucket, for example browser or
@@ -24,6 +33,15 @@ pub(all) struct ProtocolDomainSummary {
   experimental : Bool
   deprecated : Bool
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolDomainSummary with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolDomainSummary with Debug::{to_repr}
+
+///|
+pub extend ProtocolDomainSummary with ToJson::{to_json}
 
 ///|
 /// Metadata about one source schema file used to generate the bundled manifest.
@@ -42,6 +60,15 @@ pub(all) struct ProtocolSchemaSource {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolSchemaSource with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolSchemaSource with Debug::{to_repr}
+
+///|
+pub extend ProtocolSchemaSource with ToJson::{to_json}
+
+///|
 /// Compact summary of a command parameter, command return, event parameter, or
 /// type property.
 ///
@@ -56,6 +83,15 @@ pub(all) struct ProtocolFieldSummary {
   experimental : Bool
   deprecated : Bool
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolFieldSummary with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolFieldSummary with Debug::{to_repr}
+
+///|
+pub extend ProtocolFieldSummary with ToJson::{to_json}
 
 ///|
 /// Bundled metadata for one CDP command.
@@ -83,6 +119,15 @@ pub(all) struct ProtocolCommand {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolCommand with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolCommand with Debug::{to_repr}
+
+///|
+pub extend ProtocolCommand with ToJson::{to_json}
+
+///|
 /// Bundled metadata for one CDP event.
 ///
 /// `cdp_method` is the event name received over the wire, for example
@@ -99,6 +144,15 @@ pub(all) struct ProtocolEvent {
   experimental : Bool
   deprecated : Bool
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolEvent with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolEvent with Debug::{to_repr}
+
+///|
+pub extend ProtocolEvent with ToJson::{to_json}
 
 ///|
 /// Bundled metadata for one CDP domain type.
@@ -122,6 +176,15 @@ pub(all) struct ProtocolType {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolType with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolType with Debug::{to_repr}
+
+///|
+pub extend ProtocolType with ToJson::{to_json}
+
+///|
 /// Top-level manifest for the bundled CDP protocol schema.
 ///
 /// Use `protocol_manifest` from the generated manifest file to obtain the
@@ -133,6 +196,15 @@ pub(all) struct ProtocolManifest {
   sources : Array[ProtocolSchemaSource]
   domains : Array[ProtocolDomainSummary]
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolManifest with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolManifest with Debug::{to_repr}
+
+///|
+pub extend ProtocolManifest with ToJson::{to_json}
 
 ///|
 /// Return the number of protocol domains in the manifest.

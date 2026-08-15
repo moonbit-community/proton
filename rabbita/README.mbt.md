@@ -11,9 +11,15 @@ struct PingRequest {
 } derive(ToJson)
 
 ///|
+pub extend PingRequest with ToJson::{to_json}
+
+///|
 struct PingReply {
   value : String
 } derive(FromJson)
+
+///|
+pub extend PingReply with FromJson::{from_json}
 
 ///|
 test {

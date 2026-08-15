@@ -17,6 +17,14 @@ pub(all) struct PerformanceTimelineLargestContentfulPaint {
 } derive(Eq, Debug)
 
 ///|
+pub extend PerformanceTimelineLargestContentfulPaint with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceTimelineLargestContentfulPaint with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PerformanceTimelineLargestContentfulPaint as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -83,6 +91,14 @@ pub(all) struct PerformanceTimelineLayoutShift {
 } derive(Eq, Debug)
 
 ///|
+pub extend PerformanceTimelineLayoutShift with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceTimelineLayoutShift with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PerformanceTimelineLayoutShift as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -136,6 +152,14 @@ pub(all) struct PerformanceTimelineLayoutShiftAttribution {
   current_rect : DOMRect
   node_id : DOMBackendNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend PerformanceTimelineLayoutShiftAttribution with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceTimelineLayoutShiftAttribution with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PerformanceTimelineLayoutShiftAttribution as CDP JSON.
@@ -193,6 +217,14 @@ pub(all) struct PerformanceTimelineTimelineEvent {
   lcp_details : PerformanceTimelineLargestContentfulPaint?
   layout_shift_details : PerformanceTimelineLayoutShift?
 } derive(Eq, Debug)
+
+///|
+pub extend PerformanceTimelineTimelineEvent with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceTimelineTimelineEvent with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PerformanceTimelineTimelineEvent as CDP JSON.
@@ -263,6 +295,14 @@ pub(all) struct PerformanceTimelineEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PerformanceTimelineEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceTimelineEnableParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PerformanceTimelineEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -310,6 +350,17 @@ pub fn performance_timeline_enable_command(
 pub(all) struct PerformanceTimelineTimelineEventAddedEventParams {
   event : PerformanceTimelineTimelineEvent
 } derive(Eq, Debug)
+
+///|
+pub extend PerformanceTimelineTimelineEventAddedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PerformanceTimelineTimelineEventAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PerformanceTimelineTimelineEventAddedEventParams as CDP JSON.

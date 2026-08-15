@@ -35,6 +35,15 @@ pub(all) enum Scope {
 } derive(Debug, Eq)
 
 ///|
+pub extend Scope with Eq::{not_equal, equal}
+
+///|
+pub extend Scope with Debug::{to_repr}
+
+///|
+pub extend Scope with Show::{to_string, output}
+
+///|
 /// Formats a scope using the stable public variant name.
 ///
 /// The rendered form is intentionally identical to the enum case name so logs,

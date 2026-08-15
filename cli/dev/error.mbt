@@ -5,6 +5,15 @@ pub(all) suberror DevUsageError {
 } derive(Debug, Eq)
 
 ///|
+pub extend DevUsageError with Eq::{not_equal, equal}
+
+///|
+pub extend DevUsageError with Debug::{to_repr}
+
+///|
+pub extend DevUsageError with Show::{to_string, output}
+
+///|
 /// Invalid project configuration used by `proton dev`.
 pub(all) suberror DevConfigError {
   NotFound(path~ : String)
@@ -14,6 +23,15 @@ pub(all) suberror DevConfigError {
   BackendDirectoryMissing(path~ : String)
   BackendDirectoryNotDirectory(path~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend DevConfigError with Eq::{not_equal, equal}
+
+///|
+pub extend DevConfigError with Debug::{to_repr}
+
+///|
+pub extend DevConfigError with Show::{to_string, output}
 
 ///|
 /// Failures while locating and validating the native development runtime.
@@ -28,6 +46,15 @@ pub(all) suberror DevRuntimeError {
   HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend DevRuntimeError with Eq::{not_equal, equal}
+
+///|
+pub extend DevRuntimeError with Debug::{to_repr}
+
+///|
+pub extend DevRuntimeError with Show::{to_string, output}
 
 ///|
 /// Invalid frontend URLs and readiness failures.
@@ -45,11 +72,29 @@ pub(all) suberror DevServerError {
 } derive(Debug, Eq)
 
 ///|
+pub extend DevServerError with Eq::{not_equal, equal}
+
+///|
+pub extend DevServerError with Debug::{to_repr}
+
+///|
+pub extend DevServerError with Show::{to_string, output}
+
+///|
 /// Failures while starting or running child processes owned by `proton dev`.
 pub(all) suberror DevProcessError {
   Start(role~ : String, detail~ : String)
   Exit(role~ : String, code~ : Int)
 } derive(Debug, Eq)
+
+///|
+pub extend DevProcessError with Eq::{not_equal, equal}
+
+///|
+pub extend DevProcessError with Debug::{to_repr}
+
+///|
+pub extend DevProcessError with Show::{to_string, output}
 
 ///|
 pub fn DevUsageError::message(self : DevUsageError) -> String {

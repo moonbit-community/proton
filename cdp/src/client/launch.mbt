@@ -11,6 +11,15 @@ pub(all) suberror BrowserLaunchError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend BrowserLaunchError with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserLaunchError with Debug::{to_repr}
+
+///|
+pub extend BrowserLaunchError with ToJson::{to_json}
+
+///|
 /// Options used by `launch_browser`.
 ///
 /// Set `browser_path` to force a specific Chrome or Edge executable, or leave it
@@ -50,6 +59,15 @@ pub(all) struct CdpLaunchOptions {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpLaunchOptions with Eq::{not_equal, equal}
+
+///|
+pub extend CdpLaunchOptions with Debug::{to_repr}
+
+///|
+pub extend CdpLaunchOptions with ToJson::{to_json}
+
+///|
 /// Information about a launched browser process and its CDP endpoint.
 ///
 /// `web_socket_url` is ready to pass to `CdpClient::connect`. `endpoint` is the
@@ -67,6 +85,15 @@ pub(all) struct CdpLaunchInfo {
   web_socket_url : String
   user_data_dir : String
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpLaunchInfo with Eq::{not_equal, equal}
+
+///|
+pub extend CdpLaunchInfo with Debug::{to_repr}
+
+///|
+pub extend CdpLaunchInfo with ToJson::{to_json}
 
 ///|
 // Parsed contents of Chrome's DevToolsActivePort file.

@@ -5,6 +5,15 @@ suberror MicrophoneError {
 } derive(Debug, Eq)
 
 ///|
+pub extend MicrophoneError with Eq::{not_equal, equal}
+
+///|
+pub extend MicrophoneError with Debug::{to_repr}
+
+///|
+pub extend MicrophoneError with Show::{to_string, output}
+
+///|
 fn MicrophoneError::message(self : MicrophoneError) -> String {
   match self {
     UnknownSampleFormat(format~) =>

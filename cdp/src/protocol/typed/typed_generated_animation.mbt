@@ -22,6 +22,12 @@ pub(all) struct AnimationAnimation {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationAnimation with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationAnimation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AnimationAnimation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -110,6 +116,14 @@ pub(all) struct AnimationAnimationEffect {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationAnimationEffect with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationAnimationEffect with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationAnimationEffect as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -183,6 +197,12 @@ pub(all) struct AnimationKeyframesRule {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationKeyframesRule with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationKeyframesRule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AnimationKeyframesRule as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -229,6 +249,12 @@ pub(all) struct AnimationKeyframeStyle {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationKeyframeStyle with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationKeyframeStyle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AnimationKeyframeStyle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -269,6 +295,14 @@ pub(all) struct AnimationViewOrScrollTimeline {
   subject_node_id : DOMBackendNodeId?
   axis : DOMScrollOrientation
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationViewOrScrollTimeline with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationViewOrScrollTimeline with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AnimationViewOrScrollTimeline as CDP JSON.
@@ -377,6 +411,14 @@ pub(all) struct AnimationGetCurrentTimeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationGetCurrentTimeParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationGetCurrentTimeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationGetCurrentTimeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -398,6 +440,14 @@ pub fn AnimationGetCurrentTimeParams::to_json(
 pub(all) struct AnimationGetCurrentTimeResult {
   current_time : Double
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationGetCurrentTimeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationGetCurrentTimeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Animation.getCurrentTime.
@@ -459,6 +509,14 @@ pub(all) struct AnimationGetPlaybackRateResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationGetPlaybackRateResult with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationGetPlaybackRateResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Animation.getPlaybackRate.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -516,6 +574,14 @@ pub(all) struct AnimationReleaseAnimationsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationReleaseAnimationsParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationReleaseAnimationsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationReleaseAnimationsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -569,6 +635,14 @@ pub(all) struct AnimationResolveAnimationParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationResolveAnimationParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationResolveAnimationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationResolveAnimationParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -590,6 +664,14 @@ pub fn AnimationResolveAnimationParams::to_json(
 pub(all) struct AnimationResolveAnimationResult {
   remote_object : RuntimeRemoteObject
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationResolveAnimationResult with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationResolveAnimationResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Animation.resolveAnimation.
@@ -652,6 +734,14 @@ pub(all) struct AnimationSeekAnimationsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationSeekAnimationsParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationSeekAnimationsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationSeekAnimationsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -701,6 +791,14 @@ pub(all) struct AnimationSetPausedParams {
   animations : Array[String]
   paused : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationSetPausedParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationSetPausedParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AnimationSetPausedParams as CDP JSON.
@@ -753,6 +851,14 @@ pub(all) struct AnimationSetPlaybackRateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationSetPlaybackRateParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationSetPlaybackRateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationSetPlaybackRateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -802,6 +908,14 @@ pub(all) struct AnimationSetTimingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationSetTimingParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationSetTimingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationSetTimingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -849,6 +963,14 @@ pub fn animation_set_timing_command(
 pub(all) struct AnimationAnimationCanceledEventParams {
   id : String
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationAnimationCanceledEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationAnimationCanceledEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AnimationAnimationCanceledEventParams as CDP JSON.
@@ -911,6 +1033,14 @@ pub(all) struct AnimationAnimationCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AnimationAnimationCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationAnimationCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AnimationAnimationCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -969,6 +1099,14 @@ pub fn animation_animation_created_event(
 pub(all) struct AnimationAnimationStartedEventParams {
   animation : AnimationAnimation
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationAnimationStartedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationAnimationStartedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AnimationAnimationStartedEventParams as CDP JSON.
@@ -1033,6 +1171,14 @@ pub fn animation_animation_started_event(
 pub(all) struct AnimationAnimationUpdatedEventParams {
   animation : AnimationAnimation
 } derive(Eq, Debug)
+
+///|
+pub extend AnimationAnimationUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AnimationAnimationUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AnimationAnimationUpdatedEventParams as CDP JSON.

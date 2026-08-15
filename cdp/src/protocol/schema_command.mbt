@@ -20,6 +20,15 @@ pub(all) suberror ProtocolSchemaError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolSchemaError with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolSchemaError with Debug::{to_repr}
+
+///|
+pub extend ProtocolSchemaError with ToJson::{to_json}
+
+///|
 /// Stable diagnostic data for a `ProtocolSchemaError`.
 ///
 /// This struct is useful for CLI output, logs, and tests that should not match
@@ -32,6 +41,15 @@ pub(all) struct ProtocolSchemaErrorDiagnostic {
   path : String
   expected_type : String?
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolSchemaErrorDiagnostic with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolSchemaErrorDiagnostic with Debug::{to_repr}
+
+///|
+pub extend ProtocolSchemaErrorDiagnostic with ToJson::{to_json}
 
 ///|
 /// Convert a schema error into structured diagnostic data.
@@ -164,6 +182,15 @@ pub(all) struct ProtocolCoverage {
   type_registry_count : Int
   complete : Bool
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend ProtocolCoverage with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolCoverage with Debug::{to_repr}
+
+///|
+pub extend ProtocolCoverage with ToJson::{to_json}
 
 ///|
 /// Return a compact completeness check for command, event, and type registries.

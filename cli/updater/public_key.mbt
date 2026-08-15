@@ -33,6 +33,15 @@ pub(all) suberror UpdaterUsageError {
 } derive(Debug, Eq)
 
 ///|
+pub extend UpdaterUsageError with Eq::{not_equal, equal}
+
+///|
+pub extend UpdaterUsageError with Debug::{to_repr}
+
+///|
+pub extend UpdaterUsageError with Show::{to_string, output}
+
+///|
 pub fn UpdaterUsageError::message(self : UpdaterUsageError) -> String {
   match self {
     MissingModulus =>

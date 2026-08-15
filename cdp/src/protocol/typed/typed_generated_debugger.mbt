@@ -15,6 +15,12 @@ pub(all) struct DebuggerBreakLocation {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerBreakLocation with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerBreakLocation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerBreakLocation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -67,6 +73,12 @@ pub(all) struct DebuggerBreakpointId {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerBreakpointId with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerBreakpointId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerBreakpointId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -107,6 +119,12 @@ pub(all) struct DebuggerCallFrame {
   return_value : RuntimeRemoteObject?
   can_be_restarted : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerCallFrame with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerCallFrame with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DebuggerCallFrame as CDP JSON.
@@ -190,6 +208,12 @@ pub(all) struct DebuggerCallFrameId {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerCallFrameId with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerCallFrameId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerCallFrameId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -223,6 +247,12 @@ pub(all) struct DebuggerDebugSymbols {
   type_ : String
   external_url : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerDebugSymbols with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerDebugSymbols with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DebuggerDebugSymbols as CDP JSON.
@@ -267,6 +297,12 @@ pub(all) struct DebuggerLocation {
   line_number : Int
   column_number : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerLocation with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerLocation with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DebuggerLocation as CDP JSON.
@@ -319,6 +355,12 @@ pub(all) struct DebuggerLocationRange {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerLocationRange with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerLocationRange with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerLocationRange as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -364,6 +406,14 @@ pub(all) struct DebuggerResolvedBreakpoint {
   breakpoint_id : DebuggerBreakpointId
   location : DebuggerLocation
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerResolvedBreakpoint with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerResolvedBreakpoint with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerResolvedBreakpoint as CDP JSON.
@@ -412,6 +462,12 @@ pub(all) struct DebuggerScope {
   start_location : DebuggerLocation?
   end_location : DebuggerLocation?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerScope with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerScope with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DebuggerScope as CDP JSON.
@@ -472,6 +528,12 @@ pub(all) struct DebuggerScriptLanguage {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerScriptLanguage with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerScriptLanguage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerScriptLanguage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -505,6 +567,12 @@ pub(all) struct DebuggerScriptPosition {
   line_number : Int
   column_number : Int
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerScriptPosition with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerScriptPosition with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DebuggerScriptPosition as CDP JSON.
@@ -550,6 +618,12 @@ pub(all) struct DebuggerSearchMatch {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSearchMatch with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSearchMatch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerSearchMatch as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -591,6 +665,14 @@ pub(all) struct DebuggerWasmDisassemblyChunk {
   lines : Array[String]
   bytecode_offsets : Array[Int]
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerWasmDisassemblyChunk with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerWasmDisassemblyChunk with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerWasmDisassemblyChunk as CDP JSON.
@@ -648,6 +730,14 @@ pub(all) struct DebuggerContinueToLocationParams {
   location : DebuggerLocation
   target_call_frames : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerContinueToLocationParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerContinueToLocationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerContinueToLocationParams as CDP JSON.
@@ -722,6 +812,14 @@ pub(all) struct DebuggerDisassembleWasmModuleParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerDisassembleWasmModuleParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerDisassembleWasmModuleParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerDisassembleWasmModuleParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -746,6 +844,14 @@ pub(all) struct DebuggerDisassembleWasmModuleResult {
   function_body_offsets : Array[Int]
   chunk : DebuggerWasmDisassemblyChunk
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerDisassembleWasmModuleResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerDisassembleWasmModuleResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.disassembleWasmModule.
@@ -827,6 +933,12 @@ pub(all) struct DebuggerEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -848,6 +960,12 @@ pub fn DebuggerEnableParams::to_json(self : DebuggerEnableParams) -> Json {
 pub(all) struct DebuggerEnableResult {
   debugger_id : RuntimeUniqueDebuggerId
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerEnableResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerEnableResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Debugger.enable.
@@ -917,6 +1035,14 @@ pub(all) struct DebuggerEvaluateOnCallFrameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerEvaluateOnCallFrameParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerEvaluateOnCallFrameParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerEvaluateOnCallFrameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -961,6 +1087,14 @@ pub(all) struct DebuggerEvaluateOnCallFrameResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerEvaluateOnCallFrameResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerEvaluateOnCallFrameResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.evaluateOnCallFrame.
@@ -1033,6 +1167,14 @@ pub(all) struct DebuggerGetPossibleBreakpointsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerGetPossibleBreakpointsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetPossibleBreakpointsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerGetPossibleBreakpointsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1060,6 +1202,14 @@ pub fn DebuggerGetPossibleBreakpointsParams::to_json(
 pub(all) struct DebuggerGetPossibleBreakpointsResult {
   locations : Array[DebuggerBreakLocation]
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerGetPossibleBreakpointsResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetPossibleBreakpointsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.getPossibleBreakpoints.
@@ -1128,6 +1278,14 @@ pub(all) struct DebuggerGetScriptSourceParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerGetScriptSourceParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetScriptSourceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerGetScriptSourceParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1150,6 +1308,14 @@ pub(all) struct DebuggerGetScriptSourceResult {
   script_source : String
   bytecode : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerGetScriptSourceResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetScriptSourceResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.getScriptSource.
@@ -1214,6 +1380,14 @@ pub(all) struct DebuggerGetStackTraceParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerGetStackTraceParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetStackTraceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerGetStackTraceParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1235,6 +1409,14 @@ pub fn DebuggerGetStackTraceParams::to_json(
 pub(all) struct DebuggerGetStackTraceResult {
   stack_trace : RuntimeStackTrace
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerGetStackTraceResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetStackTraceResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.getStackTrace.
@@ -1296,6 +1478,14 @@ pub(all) struct DebuggerGetWasmBytecodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerGetWasmBytecodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetWasmBytecodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerGetWasmBytecodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1317,6 +1507,14 @@ pub fn DebuggerGetWasmBytecodeParams::to_json(
 pub(all) struct DebuggerGetWasmBytecodeResult {
   bytecode : String
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerGetWasmBytecodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerGetWasmBytecodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.getWasmBytecode.
@@ -1378,6 +1576,14 @@ pub(all) struct DebuggerNextWasmDisassemblyChunkParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerNextWasmDisassemblyChunkParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerNextWasmDisassemblyChunkParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerNextWasmDisassemblyChunkParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1399,6 +1605,14 @@ pub fn DebuggerNextWasmDisassemblyChunkParams::to_json(
 pub(all) struct DebuggerNextWasmDisassemblyChunkResult {
   chunk : DebuggerWasmDisassemblyChunk
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerNextWasmDisassemblyChunkResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerNextWasmDisassemblyChunkResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.nextWasmDisassemblyChunk.
@@ -1482,6 +1696,14 @@ pub(all) struct DebuggerPauseOnAsyncCallParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerPauseOnAsyncCallParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerPauseOnAsyncCallParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerPauseOnAsyncCallParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1533,6 +1755,14 @@ pub(all) struct DebuggerRemoveBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerRemoveBreakpointParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerRemoveBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerRemoveBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1581,6 +1811,14 @@ pub(all) struct DebuggerRestartFrameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerRestartFrameParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerRestartFrameParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerRestartFrameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1607,6 +1845,14 @@ pub(all) struct DebuggerRestartFrameResult {
   async_stack_trace : RuntimeStackTrace?
   async_stack_trace_id : RuntimeStackTraceId?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerRestartFrameResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerRestartFrameResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.restartFrame.
@@ -1681,6 +1927,12 @@ pub(all) struct DebuggerResumeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerResumeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerResumeParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerResumeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1731,6 +1983,14 @@ pub(all) struct DebuggerSearchInContentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSearchInContentParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSearchInContentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSearchInContentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1759,6 +2019,14 @@ pub fn DebuggerSearchInContentParams::to_json(
 pub(all) struct DebuggerSearchInContentResult {
   result : Array[DebuggerSearchMatch]
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSearchInContentResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSearchInContentResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.searchInContent.
@@ -1823,6 +2091,14 @@ pub(all) struct DebuggerSetAsyncCallStackDepthParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetAsyncCallStackDepthParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetAsyncCallStackDepthParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetAsyncCallStackDepthParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1873,6 +2149,14 @@ pub(all) struct DebuggerSetBlackboxedRangesParams {
   script_id : RuntimeScriptId
   positions : Array[DebuggerScriptPosition]
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetBlackboxedRangesParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBlackboxedRangesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerSetBlackboxedRangesParams as CDP JSON.
@@ -1927,6 +2211,17 @@ pub(all) struct DebuggerSetBlackboxExecutionContextsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetBlackboxExecutionContextsParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DebuggerSetBlackboxExecutionContextsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetBlackboxExecutionContextsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1979,6 +2274,14 @@ pub(all) struct DebuggerSetBlackboxPatternsParams {
   patterns : Array[String]
   skip_anonymous : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetBlackboxPatternsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBlackboxPatternsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerSetBlackboxPatternsParams as CDP JSON.
@@ -2038,6 +2341,14 @@ pub(all) struct DebuggerSetBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetBreakpointParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2063,6 +2374,14 @@ pub(all) struct DebuggerSetBreakpointResult {
   breakpoint_id : DebuggerBreakpointId
   actual_location : DebuggerLocation
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetBreakpointResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.setBreakpoint.
@@ -2132,6 +2451,14 @@ pub(all) struct DebuggerSetBreakpointByUrlParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetBreakpointByUrlParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointByUrlParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetBreakpointByUrlParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2169,6 +2496,14 @@ pub(all) struct DebuggerSetBreakpointByUrlResult {
   breakpoint_id : DebuggerBreakpointId
   locations : Array[DebuggerLocation]
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetBreakpointByUrlResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointByUrlResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.setBreakpointByUrl.
@@ -2241,6 +2576,14 @@ pub(all) struct DebuggerSetBreakpointOnFunctionCallParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetBreakpointOnFunctionCallParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointOnFunctionCallParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetBreakpointOnFunctionCallParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2265,6 +2608,14 @@ pub fn DebuggerSetBreakpointOnFunctionCallParams::to_json(
 pub(all) struct DebuggerSetBreakpointOnFunctionCallResult {
   breakpoint_id : DebuggerBreakpointId
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetBreakpointOnFunctionCallResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointOnFunctionCallResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.setBreakpointOnFunctionCall.
@@ -2330,6 +2681,14 @@ pub(all) struct DebuggerSetBreakpointsActiveParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetBreakpointsActiveParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetBreakpointsActiveParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetBreakpointsActiveParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2381,6 +2740,17 @@ pub(all) struct DebuggerSetInstrumentationBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetInstrumentationBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DebuggerSetInstrumentationBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetInstrumentationBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2402,6 +2772,17 @@ pub fn DebuggerSetInstrumentationBreakpointParams::to_json(
 pub(all) struct DebuggerSetInstrumentationBreakpointResult {
   breakpoint_id : DebuggerBreakpointId
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetInstrumentationBreakpointResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DebuggerSetInstrumentationBreakpointResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.setInstrumentationBreakpoint.
@@ -2467,6 +2848,14 @@ pub(all) struct DebuggerSetPauseOnExceptionsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetPauseOnExceptionsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetPauseOnExceptionsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetPauseOnExceptionsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2516,6 +2905,14 @@ pub fn debugger_set_pause_on_exceptions_command(
 pub(all) struct DebuggerSetReturnValueParams {
   new_value : RuntimeCallArgument
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetReturnValueParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetReturnValueParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerSetReturnValueParams as CDP JSON.
@@ -2568,6 +2965,14 @@ pub(all) struct DebuggerSetScriptSourceParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetScriptSourceParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetScriptSourceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetScriptSourceParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2601,6 +3006,14 @@ pub(all) struct DebuggerSetScriptSourceResult {
   status : String
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerSetScriptSourceResult with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetScriptSourceResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Debugger.setScriptSource.
@@ -2689,6 +3102,14 @@ pub(all) struct DebuggerSetSkipAllPausesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetSkipAllPausesParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetSkipAllPausesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetSkipAllPausesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2743,6 +3164,14 @@ pub(all) struct DebuggerSetVariableValueParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerSetVariableValueParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerSetVariableValueParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DebuggerSetVariableValueParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2792,6 +3221,12 @@ pub(all) struct DebuggerStepIntoParams {
   break_on_async_call : Bool?
   skip_list : Array[DebuggerLocationRange]?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerStepIntoParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerStepIntoParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DebuggerStepIntoParams as CDP JSON.
@@ -2862,6 +3297,12 @@ pub(all) struct DebuggerStepOverParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DebuggerStepOverParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerStepOverParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DebuggerStepOverParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2908,6 +3349,14 @@ pub(all) struct DebuggerBreakpointResolvedEventParams {
   breakpoint_id : DebuggerBreakpointId
   location : DebuggerLocation
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerBreakpointResolvedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerBreakpointResolvedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerBreakpointResolvedEventParams as CDP JSON.
@@ -2982,6 +3431,14 @@ pub(all) struct DebuggerPausedEventParams {
   async_stack_trace_id : RuntimeStackTraceId?
   async_call_stack_trace_id : RuntimeStackTraceId?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerPausedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerPausedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerPausedEventParams as CDP JSON.
@@ -3131,6 +3588,14 @@ pub(all) struct DebuggerScriptFailedToParseEventParams {
   script_language : DebuggerScriptLanguage?
   embedder_name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerScriptFailedToParseEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerScriptFailedToParseEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerScriptFailedToParseEventParams as CDP JSON.
@@ -3287,6 +3752,14 @@ pub(all) struct DebuggerScriptParsedEventParams {
   embedder_name : String?
   resolved_breakpoints : Array[DebuggerResolvedBreakpoint]?
 } derive(Eq, Debug)
+
+///|
+pub extend DebuggerScriptParsedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DebuggerScriptParsedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DebuggerScriptParsedEventParams as CDP JSON.

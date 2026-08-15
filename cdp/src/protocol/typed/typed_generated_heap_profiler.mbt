@@ -12,6 +12,14 @@ pub(all) struct HeapProfilerHeapSnapshotObjectId {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerHeapSnapshotObjectId with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerHeapSnapshotObjectId with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerHeapSnapshotObjectId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -47,6 +55,14 @@ pub(all) struct HeapProfilerSamplingHeapProfile {
   head : HeapProfilerSamplingHeapProfileNode
   samples : Array[HeapProfilerSamplingHeapProfileSample]
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerSamplingHeapProfile with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerSamplingHeapProfile with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerSamplingHeapProfile as CDP JSON.
@@ -97,6 +113,14 @@ pub(all) struct HeapProfilerSamplingHeapProfileNode {
   id : Int
   children : Array[HeapProfilerSamplingHeapProfileNode]
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerSamplingHeapProfileNode with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerSamplingHeapProfileNode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerSamplingHeapProfileNode as CDP JSON.
@@ -152,6 +176,14 @@ pub(all) struct HeapProfilerSamplingHeapProfileSample {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerSamplingHeapProfileSample with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerSamplingHeapProfileSample with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerSamplingHeapProfileSample as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -192,6 +224,14 @@ pub fn HeapProfilerSamplingHeapProfileSample::from_json(
 pub(all) struct HeapProfilerAddInspectedHeapObjectParams {
   heap_object_id : HeapProfilerHeapSnapshotObjectId
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerAddInspectedHeapObjectParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerAddInspectedHeapObjectParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerAddInspectedHeapObjectParams as CDP JSON.
@@ -311,6 +351,14 @@ pub(all) struct HeapProfilerGetHeapObjectIdParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerGetHeapObjectIdParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerGetHeapObjectIdParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerGetHeapObjectIdParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -332,6 +380,14 @@ pub fn HeapProfilerGetHeapObjectIdParams::to_json(
 pub(all) struct HeapProfilerGetHeapObjectIdResult {
   heap_snapshot_object_id : HeapProfilerHeapSnapshotObjectId
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerGetHeapObjectIdResult with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerGetHeapObjectIdResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for HeapProfiler.getHeapObjectId.
@@ -398,6 +454,14 @@ pub(all) struct HeapProfilerGetObjectByHeapObjectIdParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerGetObjectByHeapObjectIdParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerGetObjectByHeapObjectIdParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerGetObjectByHeapObjectIdParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -422,6 +486,14 @@ pub fn HeapProfilerGetObjectByHeapObjectIdParams::to_json(
 pub(all) struct HeapProfilerGetObjectByHeapObjectIdResult {
   result : RuntimeRemoteObject
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerGetObjectByHeapObjectIdResult with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerGetObjectByHeapObjectIdResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for HeapProfiler.getObjectByHeapObjectId.
@@ -487,6 +559,14 @@ pub(all) struct HeapProfilerGetSamplingProfileResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerGetSamplingProfileResult with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerGetSamplingProfileResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for HeapProfiler.getSamplingProfile.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -545,6 +625,14 @@ pub(all) struct HeapProfilerStartSamplingParams {
   include_objects_collected_by_major_gc : Bool?
   include_objects_collected_by_minor_gc : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerStartSamplingParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerStartSamplingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerStartSamplingParams as CDP JSON.
@@ -609,6 +697,17 @@ pub(all) struct HeapProfilerStartTrackingHeapObjectsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerStartTrackingHeapObjectsParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend HeapProfilerStartTrackingHeapObjectsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerStartTrackingHeapObjectsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -660,6 +759,14 @@ pub fn heap_profiler_start_tracking_heap_objects_command(
 pub(all) struct HeapProfilerStopSamplingResult {
   profile : HeapProfilerSamplingHeapProfile
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerStopSamplingResult with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerStopSamplingResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for HeapProfiler.stopSampling.
@@ -720,6 +827,14 @@ pub(all) struct HeapProfilerStopTrackingHeapObjectsParams {
   capture_numeric_value : Bool?
   expose_internals : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerStopTrackingHeapObjectsParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerStopTrackingHeapObjectsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerStopTrackingHeapObjectsParams as CDP JSON.
@@ -787,6 +902,14 @@ pub(all) struct HeapProfilerTakeHeapSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerTakeHeapSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerTakeHeapSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerTakeHeapSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -849,6 +972,17 @@ pub(all) struct HeapProfilerAddHeapSnapshotChunkEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerAddHeapSnapshotChunkEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend HeapProfilerAddHeapSnapshotChunkEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerAddHeapSnapshotChunkEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -907,6 +1041,14 @@ pub fn heap_profiler_add_heap_snapshot_chunk_event(
 pub(all) struct HeapProfilerHeapStatsUpdateEventParams {
   stats_update : Array[Int]
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerHeapStatsUpdateEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerHeapStatsUpdateEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerHeapStatsUpdateEventParams as CDP JSON.
@@ -981,6 +1123,14 @@ pub(all) struct HeapProfilerLastSeenObjectIdEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeapProfilerLastSeenObjectIdEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeapProfilerLastSeenObjectIdEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeapProfilerLastSeenObjectIdEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1049,6 +1199,17 @@ pub(all) struct HeapProfilerReportHeapSnapshotProgressEventParams {
   total : Int
   finished : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend HeapProfilerReportHeapSnapshotProgressEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend HeapProfilerReportHeapSnapshotProgressEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode HeapProfilerReportHeapSnapshotProgressEventParams as CDP JSON.

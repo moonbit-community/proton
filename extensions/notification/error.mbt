@@ -12,6 +12,15 @@ suberror NotificationError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NotificationError with Eq::{not_equal, equal}
+
+///|
+pub extend NotificationError with Debug::{to_repr}
+
+///|
+pub extend NotificationError with Show::{to_string, output}
+
+///|
 fn NotificationError::message(self : NotificationError) -> String {
   match self {
     EmptyBody => "notification body must not be empty"

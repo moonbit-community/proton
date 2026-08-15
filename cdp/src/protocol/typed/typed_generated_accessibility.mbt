@@ -24,6 +24,12 @@ pub(all) struct AccessibilityAXNode {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityAXNode with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXNode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AccessibilityAXNode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -157,6 +163,12 @@ pub(all) struct AccessibilityAXNodeId {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityAXNodeId with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXNodeId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AccessibilityAXNodeId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -190,6 +202,12 @@ pub(all) struct AccessibilityAXProperty {
   name : AccessibilityAXPropertyName
   value : AccessibilityAXValue
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityAXProperty with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXProperty with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AccessibilityAXProperty as CDP JSON.
@@ -234,6 +252,14 @@ pub(all) struct AccessibilityAXPropertyName {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityAXPropertyName with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXPropertyName with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityAXPropertyName as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -270,6 +296,14 @@ pub(all) struct AccessibilityAXRelatedNode {
   idref : String?
   text : String?
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityAXRelatedNode with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXRelatedNode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AccessibilityAXRelatedNode as CDP JSON.
@@ -321,6 +355,12 @@ pub(all) struct AccessibilityAXValue {
   related_nodes : Array[AccessibilityAXRelatedNode]?
   sources : Array[AccessibilityAXValueSource]?
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityAXValue with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXValue with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AccessibilityAXValue as CDP JSON.
@@ -389,6 +429,14 @@ pub(all) struct AccessibilityAXValueNativeSourceType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityAXValueNativeSourceType with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXValueNativeSourceType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityAXValueNativeSourceType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -431,6 +479,14 @@ pub(all) struct AccessibilityAXValueSource {
   invalid : Bool?
   invalid_reason : String?
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityAXValueSource with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXValueSource with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AccessibilityAXValueSource as CDP JSON.
@@ -523,6 +579,14 @@ pub(all) struct AccessibilityAXValueSourceType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityAXValueSourceType with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXValueSourceType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityAXValueSourceType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -557,6 +621,14 @@ pub fn AccessibilityAXValueSourceType::from_json(
 pub(all) struct AccessibilityAXValueType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityAXValueType with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityAXValueType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AccessibilityAXValueType as CDP JSON.
@@ -641,6 +713,14 @@ pub(all) struct AccessibilityGetAXNodeAndAncestorsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityGetAXNodeAndAncestorsParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetAXNodeAndAncestorsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityGetAXNodeAndAncestorsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -670,6 +750,14 @@ pub fn AccessibilityGetAXNodeAndAncestorsParams::to_json(
 pub(all) struct AccessibilityGetAXNodeAndAncestorsResult {
   nodes : Array[AccessibilityAXNode]
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityGetAXNodeAndAncestorsResult with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetAXNodeAndAncestorsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Accessibility.getAXNodeAndAncestors.
@@ -739,6 +827,14 @@ pub(all) struct AccessibilityGetChildAXNodesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityGetChildAXNodesParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetChildAXNodesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityGetChildAXNodesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -763,6 +859,14 @@ pub fn AccessibilityGetChildAXNodesParams::to_json(
 pub(all) struct AccessibilityGetChildAXNodesResult {
   nodes : Array[AccessibilityAXNode]
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityGetChildAXNodesResult with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetChildAXNodesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Accessibility.getChildAXNodes.
@@ -832,6 +936,14 @@ pub(all) struct AccessibilityGetFullAXTreeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityGetFullAXTreeParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetFullAXTreeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityGetFullAXTreeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -858,6 +970,14 @@ pub fn AccessibilityGetFullAXTreeParams::to_json(
 pub(all) struct AccessibilityGetFullAXTreeResult {
   nodes : Array[AccessibilityAXNode]
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityGetFullAXTreeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetFullAXTreeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Accessibility.getFullAXTree.
@@ -929,6 +1049,14 @@ pub(all) struct AccessibilityGetPartialAXTreeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityGetPartialAXTreeParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetPartialAXTreeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityGetPartialAXTreeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -961,6 +1089,14 @@ pub fn AccessibilityGetPartialAXTreeParams::to_json(
 pub(all) struct AccessibilityGetPartialAXTreeResult {
   nodes : Array[AccessibilityAXNode]
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityGetPartialAXTreeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetPartialAXTreeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Accessibility.getPartialAXTree.
@@ -1029,6 +1165,14 @@ pub(all) struct AccessibilityGetRootAXNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityGetRootAXNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetRootAXNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityGetRootAXNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1052,6 +1196,14 @@ pub fn AccessibilityGetRootAXNodeParams::to_json(
 pub(all) struct AccessibilityGetRootAXNodeResult {
   node : AccessibilityAXNode
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityGetRootAXNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityGetRootAXNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Accessibility.getRootAXNode.
@@ -1121,6 +1273,14 @@ pub(all) struct AccessibilityQueryAXTreeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityQueryAXTreeParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityQueryAXTreeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityQueryAXTreeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1156,6 +1316,14 @@ pub fn AccessibilityQueryAXTreeParams::to_json(
 pub(all) struct AccessibilityQueryAXTreeResult {
   nodes : Array[AccessibilityAXNode]
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityQueryAXTreeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityQueryAXTreeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Accessibility.queryAXTree.
@@ -1220,6 +1388,14 @@ pub(all) struct AccessibilityLoadCompleteEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AccessibilityLoadCompleteEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityLoadCompleteEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AccessibilityLoadCompleteEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1282,6 +1458,14 @@ pub fn accessibility_load_complete_event(
 pub(all) struct AccessibilityNodesUpdatedEventParams {
   nodes : Array[AccessibilityAXNode]
 } derive(Eq, Debug)
+
+///|
+pub extend AccessibilityNodesUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityNodesUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AccessibilityNodesUpdatedEventParams as CDP JSON.

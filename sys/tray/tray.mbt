@@ -28,6 +28,12 @@ pub(all) enum TrayMenuItemKind {
 } derive(Debug, Eq)
 
 ///|
+pub extend TrayMenuItemKind with Eq::{not_equal, equal}
+
+///|
+pub extend TrayMenuItemKind with Debug::{to_repr}
+
+///|
 /// One tray context-menu item.
 ///
 /// Use `TrayMenuItem::normal`, `TrayMenuItem::separator`, and
@@ -42,6 +48,12 @@ pub(all) enum TrayMenuItem {
 } derive(Debug, Eq)
 
 ///|
+pub extend TrayMenuItem with Eq::{not_equal, equal}
+
+///|
+pub extend TrayMenuItem with Debug::{to_repr}
+
+///|
 /// Event emitted by the native tray backend.
 pub(all) enum TrayEvent {
   Click
@@ -49,6 +61,12 @@ pub(all) enum TrayEvent {
   DoubleClick
   MenuItemClick(String)
 } derive(Debug, Eq)
+
+///|
+pub extend TrayEvent with Eq::{not_equal, equal}
+
+///|
+pub extend TrayEvent with Debug::{to_repr}
 
 ///|
 /// Builds a normal clickable menu item.

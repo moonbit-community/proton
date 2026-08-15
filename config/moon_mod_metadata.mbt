@@ -12,6 +12,12 @@ pub(all) struct MoonModMetadata {
 } derive(Debug, Eq)
 
 ///|
+pub extend MoonModMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend MoonModMetadata with Debug::{to_repr}
+
+///|
 priv struct MoonModFileMetadata {
   name : String?
   version : String?

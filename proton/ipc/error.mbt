@@ -9,6 +9,15 @@ pub(all) suberror IpcError {
 } derive(Debug, Eq)
 
 ///|
+pub extend IpcError with Eq::{not_equal, equal}
+
+///|
+pub extend IpcError with Debug::{to_repr}
+
+///|
+pub extend IpcError with Show::{to_string, output}
+
+///|
 pub fn IpcError::message(self : IpcError) -> String {
   match self {
     MalformedJson(detail~) => "Invalid IPC JSON: " + detail

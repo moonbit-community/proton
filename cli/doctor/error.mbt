@@ -11,6 +11,15 @@ pub(all) suberror DoctorError {
 } derive(Debug, Eq)
 
 ///|
+pub extend DoctorError with Eq::{not_equal, equal}
+
+///|
+pub extend DoctorError with Debug::{to_repr}
+
+///|
+pub extend DoctorError with Show::{to_string, output}
+
+///|
 fn DoctorRuntimeManifestError::message(
   self : DoctorRuntimeManifestError,
 ) -> String {

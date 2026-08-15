@@ -13,6 +13,12 @@ pub(all) struct TargetFilterEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetFilterEntry with Eq::{not_equal, equal}
+
+///|
+pub extend TargetFilterEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TargetFilterEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -56,6 +62,12 @@ pub(all) struct TargetRemoteLocation {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetRemoteLocation with Eq::{not_equal, equal}
+
+///|
+pub extend TargetRemoteLocation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TargetRemoteLocation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -94,6 +106,12 @@ pub(all) struct TargetSessionID {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetSessionID with Eq::{not_equal, equal}
+
+///|
+pub extend TargetSessionID with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TargetSessionID as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -126,6 +144,12 @@ pub fn TargetSessionID::from_json(
 pub(all) struct TargetTargetFilter {
   value : Array[TargetFilterEntry]
 } derive(Eq, Debug)
+
+///|
+pub extend TargetTargetFilter with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetFilter with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TargetTargetFilter as CDP JSON.
@@ -162,6 +186,12 @@ pub fn TargetTargetFilter::from_json(
 pub(all) struct TargetTargetID {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend TargetTargetID with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetID with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TargetTargetID as CDP JSON.
@@ -206,6 +236,12 @@ pub(all) struct TargetTargetInfo {
   browser_context_id : BrowserBrowserContextID?
   subtype : String?
 } derive(Eq, Debug)
+
+///|
+pub extend TargetTargetInfo with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TargetTargetInfo as CDP JSON.
@@ -290,6 +326,12 @@ pub(all) struct TargetWindowState {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetWindowState with Eq::{not_equal, equal}
+
+///|
+pub extend TargetWindowState with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TargetWindowState as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -322,6 +364,14 @@ pub fn TargetWindowState::from_json(
 pub(all) struct TargetActivateTargetParams {
   target_id : TargetTargetID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetActivateTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetActivateTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TargetActivateTargetParams as CDP JSON.
@@ -369,6 +419,14 @@ pub fn target_activate_target_command(
 pub(all) struct TargetAttachToBrowserTargetResult {
   session_id : TargetSessionID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetAttachToBrowserTargetResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetAttachToBrowserTargetResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.attachToBrowserTarget.
@@ -429,6 +487,14 @@ pub(all) struct TargetAttachToTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetAttachToTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetAttachToTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetAttachToTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -453,6 +519,14 @@ pub fn TargetAttachToTargetParams::to_json(
 pub(all) struct TargetAttachToTargetResult {
   session_id : TargetSessionID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetAttachToTargetResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetAttachToTargetResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.attachToTarget.
@@ -516,6 +590,14 @@ pub(all) struct TargetAutoAttachRelatedParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetAutoAttachRelatedParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetAutoAttachRelatedParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetAutoAttachRelatedParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -569,6 +651,12 @@ pub(all) struct TargetCloseTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetCloseTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetCloseTargetParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TargetCloseTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -588,6 +676,12 @@ pub fn TargetCloseTargetParams::to_json(self : TargetCloseTargetParams) -> Json 
 pub(all) struct TargetCloseTargetResult {
   success : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend TargetCloseTargetResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetCloseTargetResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Target.closeTarget.
@@ -652,6 +746,14 @@ pub(all) struct TargetCreateBrowserContextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetCreateBrowserContextParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetCreateBrowserContextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetCreateBrowserContextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -686,6 +788,14 @@ pub fn TargetCreateBrowserContextParams::to_json(
 pub(all) struct TargetCreateBrowserContextResult {
   browser_context_id : BrowserBrowserContextID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetCreateBrowserContextResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetCreateBrowserContextResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.createBrowserContext.
@@ -763,6 +873,14 @@ pub(all) struct TargetCreateTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetCreateTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetCreateTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetCreateTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -820,6 +938,14 @@ pub fn TargetCreateTargetParams::to_json(
 pub(all) struct TargetCreateTargetResult {
   target_id : TargetTargetID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetCreateTargetResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetCreateTargetResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.createTarget.
@@ -882,6 +1008,14 @@ pub(all) struct TargetDetachFromTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetDetachFromTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetDetachFromTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetDetachFromTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -932,6 +1066,14 @@ pub fn target_detach_from_target_command(
 pub(all) struct TargetDisposeBrowserContextParams {
   browser_context_id : BrowserBrowserContextID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetDisposeBrowserContextParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetDisposeBrowserContextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TargetDisposeBrowserContextParams as CDP JSON.
@@ -985,6 +1127,14 @@ pub(all) struct TargetExposeDevToolsProtocolParams {
   binding_name : String?
   inherit_permissions : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend TargetExposeDevToolsProtocolParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetExposeDevToolsProtocolParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TargetExposeDevToolsProtocolParams as CDP JSON.
@@ -1043,6 +1193,14 @@ pub(all) struct TargetGetBrowserContextsResult {
   browser_context_ids : Array[BrowserBrowserContextID]
   default_browser_context_id : BrowserBrowserContextID?
 } derive(Eq, Debug)
+
+///|
+pub extend TargetGetBrowserContextsResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetBrowserContextsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.getBrowserContexts.
@@ -1110,6 +1268,14 @@ pub(all) struct TargetGetDevToolsTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetGetDevToolsTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetDevToolsTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetGetDevToolsTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1131,6 +1297,14 @@ pub fn TargetGetDevToolsTargetParams::to_json(
 pub(all) struct TargetGetDevToolsTargetResult {
   target_id : TargetTargetID?
 } derive(Eq, Debug)
+
+///|
+pub extend TargetGetDevToolsTargetResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetDevToolsTargetResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.getDevToolsTarget.
@@ -1193,6 +1367,14 @@ pub(all) struct TargetGetTargetInfoParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetGetTargetInfoParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetTargetInfoParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetGetTargetInfoParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1216,6 +1398,14 @@ pub fn TargetGetTargetInfoParams::to_json(
 pub(all) struct TargetGetTargetInfoResult {
   target_info : TargetTargetInfo
 } derive(Eq, Debug)
+
+///|
+pub extend TargetGetTargetInfoResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetTargetInfoResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.getTargetInfo.
@@ -1277,6 +1467,12 @@ pub(all) struct TargetGetTargetsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetGetTargetsParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetTargetsParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TargetGetTargetsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1298,6 +1494,12 @@ pub fn TargetGetTargetsParams::to_json(self : TargetGetTargetsParams) -> Json {
 pub(all) struct TargetGetTargetsResult {
   target_infos : Array[TargetTargetInfo]
 } derive(Eq, Debug)
+
+///|
+pub extend TargetGetTargetsResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetGetTargetsResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Target.getTargets.
@@ -1363,6 +1565,14 @@ pub(all) struct TargetOpenDevToolsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetOpenDevToolsParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetOpenDevToolsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetOpenDevToolsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1387,6 +1597,14 @@ pub fn TargetOpenDevToolsParams::to_json(
 pub(all) struct TargetOpenDevToolsResult {
   target_id : TargetTargetID
 } derive(Eq, Debug)
+
+///|
+pub extend TargetOpenDevToolsResult with Eq::{not_equal, equal}
+
+///|
+pub extend TargetOpenDevToolsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Target.openDevTools.
@@ -1450,6 +1668,14 @@ pub(all) struct TargetSendMessageToTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetSendMessageToTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetSendMessageToTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetSendMessageToTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1510,6 +1736,14 @@ pub(all) struct TargetSetAutoAttachParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetSetAutoAttachParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetSetAutoAttachParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetSetAutoAttachParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1567,6 +1801,14 @@ pub(all) struct TargetSetDiscoverTargetsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetSetDiscoverTargetsParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetSetDiscoverTargetsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetSetDiscoverTargetsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1617,6 +1859,14 @@ pub(all) struct TargetSetRemoteLocationsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetSetRemoteLocationsParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetSetRemoteLocationsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetSetRemoteLocationsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1664,6 +1914,14 @@ pub(all) struct TargetAttachedToTargetEventParams {
   target_info : TargetTargetInfo
   waiting_for_debugger : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend TargetAttachedToTargetEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetAttachedToTargetEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TargetAttachedToTargetEventParams as CDP JSON.
@@ -1739,6 +1997,14 @@ pub(all) struct TargetDetachedFromTargetEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetDetachedFromTargetEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetDetachedFromTargetEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetDetachedFromTargetEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1810,6 +2076,17 @@ pub(all) struct TargetReceivedMessageFromTargetEventParams {
   message : String
   target_id : TargetTargetID?
 } derive(Eq, Debug)
+
+///|
+pub extend TargetReceivedMessageFromTargetEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend TargetReceivedMessageFromTargetEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TargetReceivedMessageFromTargetEventParams as CDP JSON.
@@ -1887,6 +2164,14 @@ pub(all) struct TargetTargetCrashedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetTargetCrashedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetCrashedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetTargetCrashedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1955,6 +2240,14 @@ pub(all) struct TargetTargetCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetTargetCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetTargetCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2019,6 +2312,14 @@ pub(all) struct TargetTargetDestroyedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TargetTargetDestroyedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetDestroyedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TargetTargetDestroyedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2081,6 +2382,14 @@ pub fn target_target_destroyed_event(
 pub(all) struct TargetTargetInfoChangedEventParams {
   target_info : TargetTargetInfo
 } derive(Eq, Debug)
+
+///|
+pub extend TargetTargetInfoChangedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TargetTargetInfoChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TargetTargetInfoChangedEventParams as CDP JSON.

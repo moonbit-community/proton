@@ -6,6 +6,12 @@ struct StartPayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend StartPayload with ToJson::{to_json}
+
+///|
+pub extend StartPayload with FromJson::{from_json}
+
+///|
 struct TickEvent {
   run_id : Int
   index : Int
@@ -14,16 +20,34 @@ struct TickEvent {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend TickEvent with ToJson::{to_json}
+
+///|
+pub extend TickEvent with FromJson::{from_json}
+
+///|
 struct DoneEvent {
   run_id : Int
   total : Int
 } derive(ToJson, FromJson)
 
 ///|
+pub extend DoneEvent with ToJson::{to_json}
+
+///|
+pub extend DoneEvent with FromJson::{from_json}
+
+///|
 struct TickerResult {
   ticks : Array[TickEvent]
   done : DoneEvent
 } derive(ToJson, FromJson)
+
+///|
+pub extend TickerResult with ToJson::{to_json}
+
+///|
+pub extend TickerResult with FromJson::{from_json}
 
 ///|
 let ticker_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

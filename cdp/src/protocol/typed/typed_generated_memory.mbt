@@ -13,6 +13,12 @@ pub(all) struct MemoryDOMCounter {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryDOMCounter with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryDOMCounter with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode MemoryDOMCounter as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -52,6 +58,12 @@ pub(all) struct MemoryModule {
   base_address : String
   size : Double
 } derive(Eq, Debug)
+
+///|
+pub extend MemoryModule with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryModule with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode MemoryModule as CDP JSON.
@@ -98,6 +110,12 @@ pub(all) struct MemoryPressureLevel {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryPressureLevel with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryPressureLevel with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode MemoryPressureLevel as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -131,6 +149,12 @@ pub(all) struct MemorySamplingProfile {
   samples : Array[MemorySamplingProfileNode]
   modules : Array[MemoryModule]
 } derive(Eq, Debug)
+
+///|
+pub extend MemorySamplingProfile with Eq::{not_equal, equal}
+
+///|
+pub extend MemorySamplingProfile with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode MemorySamplingProfile as CDP JSON.
@@ -181,6 +205,14 @@ pub(all) struct MemorySamplingProfileNode {
   total : Double
   stack : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend MemorySamplingProfileNode with Eq::{not_equal, equal}
+
+///|
+pub extend MemorySamplingProfileNode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode MemorySamplingProfileNode as CDP JSON.
@@ -257,6 +289,14 @@ pub(all) struct MemoryGetAllTimeSamplingProfileResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryGetAllTimeSamplingProfileResult with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryGetAllTimeSamplingProfileResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Memory.getAllTimeSamplingProfile.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -317,6 +357,14 @@ pub(all) struct MemoryGetBrowserSamplingProfileResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryGetBrowserSamplingProfileResult with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryGetBrowserSamplingProfileResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Memory.getBrowserSamplingProfile.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -374,6 +422,14 @@ pub(all) struct MemoryGetDOMCountersResult {
   nodes : Int
   js_event_listeners : Int
 } derive(Eq, Debug)
+
+///|
+pub extend MemoryGetDOMCountersResult with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryGetDOMCountersResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Memory.getDOMCounters.
@@ -437,6 +493,17 @@ pub(all) struct MemoryGetDOMCountersForLeakDetectionResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryGetDOMCountersForLeakDetectionResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend MemoryGetDOMCountersForLeakDetectionResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Memory.getDOMCountersForLeakDetection.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -498,6 +565,14 @@ pub fn memory_get_domcounters_for_leak_detection_command(
 pub(all) struct MemoryGetSamplingProfileResult {
   profile : MemorySamplingProfile
 } derive(Eq, Debug)
+
+///|
+pub extend MemoryGetSamplingProfileResult with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryGetSamplingProfileResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Memory.getSamplingProfile.
@@ -579,6 +654,17 @@ pub(all) struct MemorySetPressureNotificationsSuppressedParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemorySetPressureNotificationsSuppressedParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend MemorySetPressureNotificationsSuppressedParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode MemorySetPressureNotificationsSuppressedParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -628,6 +714,14 @@ pub fn memory_set_pressure_notifications_suppressed_command(
 pub(all) struct MemorySimulatePressureNotificationParams {
   level : MemoryPressureLevel
 } derive(Eq, Debug)
+
+///|
+pub extend MemorySimulatePressureNotificationParams with Eq::{not_equal, equal}
+
+///|
+pub extend MemorySimulatePressureNotificationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode MemorySimulatePressureNotificationParams as CDP JSON.
@@ -680,6 +774,14 @@ pub(all) struct MemoryStartSamplingParams {
   sampling_interval : Int?
   suppress_randomness : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend MemoryStartSamplingParams with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryStartSamplingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode MemoryStartSamplingParams as CDP JSON.

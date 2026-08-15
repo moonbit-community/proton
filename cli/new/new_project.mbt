@@ -13,6 +13,12 @@ struct RawNewProjectOptions {
 } derive(Debug, Eq)
 
 ///|
+pub extend RawNewProjectOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RawNewProjectOptions with Debug::{to_repr}
+
+///|
 struct NewProjectOptions {
   cwd : String
   target_dir : String
@@ -28,6 +34,12 @@ struct NewProjectOptions {
   git : Bool?
   dry_run : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend NewProjectOptions with Eq::{not_equal, equal}
+
+///|
+pub extend NewProjectOptions with Debug::{to_repr}
 
 ///|
 /// Creates a project from parsed `proton_cli new` command matches.

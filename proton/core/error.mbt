@@ -8,6 +8,15 @@ pub(all) suberror OpRegistrationError {
 } derive(Debug, Eq)
 
 ///|
+pub extend OpRegistrationError with Eq::{not_equal, equal}
+
+///|
+pub extend OpRegistrationError with Debug::{to_repr}
+
+///|
+pub extend OpRegistrationError with Show::{to_string, output}
+
+///|
 pub fn OpRegistrationError::message(self : OpRegistrationError) -> String {
   match self {
     EmptyName => "op name must not be empty"
@@ -33,6 +42,15 @@ pub(all) suberror OpDispatchError {
 } derive(Debug, Eq)
 
 ///|
+pub extend OpDispatchError with Eq::{not_equal, equal}
+
+///|
+pub extend OpDispatchError with Debug::{to_repr}
+
+///|
+pub extend OpDispatchError with Show::{to_string, output}
+
+///|
 pub fn OpDispatchError::message(self : OpDispatchError) -> String {
   match self {
     InvalidPayload(name~, detail~) =>
@@ -56,6 +74,12 @@ pub(all) suberror CommandPermissionError {
   Missing(extension_id~ : String)
   Foreign(expected~ : String, actual~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend CommandPermissionError with Eq::{not_equal, equal}
+
+///|
+pub extend CommandPermissionError with Debug::{to_repr}
 
 ///|
 pub fn CommandPermissionError::message(self : CommandPermissionError) -> String {

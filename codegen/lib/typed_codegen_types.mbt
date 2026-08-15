@@ -6,6 +6,15 @@ pub(all) struct ProtonCommandCodegenOutput {
 } derive(Eq, Debug, ToJson)
 
 ///|
+pub extend ProtonCommandCodegenOutput with Eq::{not_equal, equal}
+
+///|
+pub extend ProtonCommandCodegenOutput with Debug::{to_repr}
+
+///|
+pub extend ProtonCommandCodegenOutput with ToJson::{to_json}
+
+///|
 priv struct ParsedTypedCommand {
   function_name : String
   receiver_type : String?

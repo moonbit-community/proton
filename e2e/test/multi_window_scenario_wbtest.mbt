@@ -6,6 +6,15 @@ struct MultiWindowResponseProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend MultiWindowResponseProbe with Eq::{not_equal, equal}
+
+///|
+pub extend MultiWindowResponseProbe with Debug::{to_repr}
+
+///|
+pub extend MultiWindowResponseProbe with FromJson::{from_json}
+
+///|
 struct MultiWindowPageProbe {
   url : String
   title : String
@@ -15,10 +24,28 @@ struct MultiWindowPageProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend MultiWindowPageProbe with Eq::{not_equal, equal}
+
+///|
+pub extend MultiWindowPageProbe with Debug::{to_repr}
+
+///|
+pub extend MultiWindowPageProbe with FromJson::{from_json}
+
+///|
 struct MultiWindowProbe {
   a : MultiWindowPageProbe
   b : MultiWindowPageProbe
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend MultiWindowProbe with Eq::{not_equal, equal}
+
+///|
+pub extend MultiWindowProbe with Debug::{to_repr}
+
+///|
+pub extend MultiWindowProbe with FromJson::{from_json}
 
 ///|
 async fn run_multi_window_scenario_probe(

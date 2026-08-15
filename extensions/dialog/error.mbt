@@ -6,6 +6,15 @@ suberror DialogError {
 } derive(Debug, Eq)
 
 ///|
+pub extend DialogError with Eq::{not_equal, equal}
+
+///|
+pub extend DialogError with Debug::{to_repr}
+
+///|
+pub extend DialogError with Show::{to_string, output}
+
+///|
 fn DialogError::message(self : DialogError) -> String {
   match self {
     BeginFailed(kind~, error~) =>

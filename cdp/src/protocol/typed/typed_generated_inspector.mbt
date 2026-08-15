@@ -52,6 +52,14 @@ pub(all) struct InspectorDetachedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InspectorDetachedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InspectorDetachedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InspectorDetachedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command

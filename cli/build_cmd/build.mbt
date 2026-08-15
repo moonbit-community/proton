@@ -10,11 +10,29 @@ pub(all) suberror BuildUsageError {
 } derive(Debug, Eq)
 
 ///|
+pub extend BuildUsageError with Eq::{not_equal, equal}
+
+///|
+pub extend BuildUsageError with Debug::{to_repr}
+
+///|
+pub extend BuildUsageError with Show::{to_string, output}
+
+///|
 pub(all) suberror BuildConfigError {
   NotFound(path~ : String?)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
   InvalidRelease(message~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend BuildConfigError with Eq::{not_equal, equal}
+
+///|
+pub extend BuildConfigError with Debug::{to_repr}
+
+///|
+pub extend BuildConfigError with Show::{to_string, output}
 
 ///|
 pub(all) suberror BuildPathError {
@@ -23,10 +41,28 @@ pub(all) suberror BuildPathError {
 } derive(Debug, Eq)
 
 ///|
+pub extend BuildPathError with Eq::{not_equal, equal}
+
+///|
+pub extend BuildPathError with Debug::{to_repr}
+
+///|
+pub extend BuildPathError with Show::{to_string, output}
+
+///|
 pub(all) suberror BuildProcessError {
   Start(command~ : String, detail~ : String)
   Exit(command~ : String, code~ : Int)
 } derive(Debug, Eq)
+
+///|
+pub extend BuildProcessError with Eq::{not_equal, equal}
+
+///|
+pub extend BuildProcessError with Debug::{to_repr}
+
+///|
+pub extend BuildProcessError with Show::{to_string, output}
 
 ///|
 pub fn BuildUsageError::message(self : BuildUsageError) -> String {
@@ -94,6 +130,12 @@ struct RawBuildOptions {
   run_frontend_build : Bool
   moon_args : Array[String]
 } derive(Debug, Eq)
+
+///|
+pub extend RawBuildOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RawBuildOptions with Debug::{to_repr}
 
 ///|
 priv struct BuildProjectConfig {

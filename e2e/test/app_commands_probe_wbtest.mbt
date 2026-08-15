@@ -6,6 +6,18 @@ struct BridgeContractProbe {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend BridgeContractProbe with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeContractProbe with Debug::{to_repr}
+
+///|
+pub extend BridgeContractProbe with ToJson::{to_json}
+
+///|
+pub extend BridgeContractProbe with FromJson::{from_json}
+
+///|
 struct AppCommandsProbeResult {
   url : String
   title : String
@@ -23,6 +35,18 @@ struct AppCommandsProbeResult {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend AppCommandsProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AppCommandsProbeResult with Debug::{to_repr}
+
+///|
+pub extend AppCommandsProbeResult with ToJson::{to_json}
+
+///|
+pub extend AppCommandsProbeResult with FromJson::{from_json}
+
+///|
 struct QueueFullProbeResult {
   requested : Int
   fulfilled : Int
@@ -30,6 +54,18 @@ struct QueueFullProbeResult {
   full_rejected : Bool
   first_rejected_message : String
 } derive(ToJson, FromJson, Eq, Debug)
+
+///|
+pub extend QueueFullProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend QueueFullProbeResult with Debug::{to_repr}
+
+///|
+pub extend QueueFullProbeResult with ToJson::{to_json}
+
+///|
+pub extend QueueFullProbeResult with FromJson::{from_json}
 
 ///|
 struct ReloadProbeResult {
@@ -41,6 +77,18 @@ struct ReloadProbeResult {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend ReloadProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend ReloadProbeResult with Debug::{to_repr}
+
+///|
+pub extend ReloadProbeResult with ToJson::{to_json}
+
+///|
+pub extend ReloadProbeResult with FromJson::{from_json}
+
+///|
 struct OriginProbeResult {
   url : String
   title : String
@@ -49,11 +97,29 @@ struct OriginProbeResult {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend OriginProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend OriginProbeResult with Debug::{to_repr}
+
+///|
+pub extend OriginProbeResult with ToJson::{to_json}
+
+///|
+pub extend OriginProbeResult with FromJson::{from_json}
+
+///|
 struct ScreenshotProbeResult {
   bytes : Int
   width : Int
   height : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ScreenshotProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend ScreenshotProbeResult with Debug::{to_repr}
 
 ///|
 async fn evaluate_json(
@@ -90,6 +156,7 @@ async fn run_app_commands_full_probe(
   wait_for_ready(page, scenario_ready_expression("41_app_commands"), timeout)
   assert_bridge_contract(page)
   let screenshot = capture_headless_screenshot(page)
+  wait_for_native_osr_paint(native_log_path, timeout)
   assert_app_commands_probe(page)
   let queue = run_queue_full_probe(page)
   run_reload_probe(page, target, timeout)
@@ -604,7 +671,6 @@ fn assert_native_bridge_guards(native_log_path : String) -> Unit raise {
   let mut unknown_enqueued = false
   let mut queue_full_rejected = false
   let mut oversized_pending : String? = None
-  let mut osr_paint_valid = false
   for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
     let line = raw_line.to_owned()
     if line.contains("bridge_reject_op_not_registered") &&
@@ -625,21 +691,6 @@ fn assert_native_bridge_guards(native_log_path : String) -> Unit raise {
         (Some(bytes), Some(pending)) if bytes > 1048576 =>
           oversized_pending = Some(pending)
         _ => ()
-      }
-    }
-    if line.contains("osr_paint") {
-      match log_field(line, "size=") {
-        Some(size) =>
-          match size.split_once("x") {
-            Some((width, height)) =>
-              match (parse_log_int(width), parse_log_int(height)) {
-                (Some(width), Some(height)) if width > 1 && height > 1 =>
-                  osr_paint_valid = true
-                _ => ()
-              }
-            None => ()
-          }
-        None => ()
       }
     }
   }
@@ -669,9 +720,46 @@ fn assert_native_bridge_guards(native_log_path : String) -> Unit raise {
   guard !oversized_crossed_boundary else {
     fail("native log shows oversized payload crossed into the browser queue")
   }
-  guard osr_paint_valid else {
+  guard native_log_has_valid_osr_paint(log) else {
     fail("native log did not contain a valid headless OSR paint")
   }
+}
+
+///|
+async fn wait_for_native_osr_paint(path : String, timeout : Int) -> Unit {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let log = @mbfs.read_file_to_string(path, encoding="utf8") catch { _ => "" }
+    if native_log_has_valid_osr_paint(log) {
+      return
+    }
+    @async.sleep(100)
+    elapsed = elapsed + 100
+  }
+  fail("native log did not contain a valid headless OSR paint")
+}
+
+///|
+fn native_log_has_valid_osr_paint(log : String) -> Bool {
+  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
+    let line = raw_line.to_owned()
+    if line.contains("osr_paint") {
+      match log_field(line, "size=") {
+        Some(size) =>
+          match size.split_once("x") {
+            Some((width, height)) =>
+              match (parse_log_int(width), parse_log_int(height)) {
+                (Some(width), Some(height)) if width > 1 && height > 1 =>
+                  return true
+                _ => ()
+              }
+            None => ()
+          }
+        None => ()
+      }
+    }
+  }
+  false
 }
 
 ///|

@@ -7,6 +7,15 @@ suberror ShellError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ShellError with Eq::{not_equal, equal}
+
+///|
+pub extend ShellError with Debug::{to_repr}
+
+///|
+pub extend ShellError with Show::{to_string, output}
+
+///|
 fn ShellError::message(self : ShellError) -> String {
   match self {
     UnsupportedPlatform =>

@@ -6,9 +6,27 @@ pub(all) suberror CefUsageError {
 } derive(Debug, Eq)
 
 ///|
+pub extend CefUsageError with Eq::{not_equal, equal}
+
+///|
+pub extend CefUsageError with Debug::{to_repr}
+
+///|
+pub extend CefUsageError with Show::{to_string, output}
+
+///|
 pub(all) suberror CefPlatformError {
   Unsupported(platform~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend CefPlatformError with Eq::{not_equal, equal}
+
+///|
+pub extend CefPlatformError with Debug::{to_repr}
+
+///|
+pub extend CefPlatformError with Show::{to_string, output}
 
 ///|
 pub(all) suberror CefFileSystemError {
@@ -23,6 +41,15 @@ pub(all) suberror CefFileSystemError {
 } derive(Debug, Eq)
 
 ///|
+pub extend CefFileSystemError with Eq::{not_equal, equal}
+
+///|
+pub extend CefFileSystemError with Debug::{to_repr}
+
+///|
+pub extend CefFileSystemError with Show::{to_string, output}
+
+///|
 pub(all) suberror CefDownloadError {
   CreateTemporaryDirectory(detail~ : String)
   Start(url~ : String, detail~ : String)
@@ -34,6 +61,15 @@ pub(all) suberror CefDownloadError {
   ExtractedRootNotFound(path~ : String)
   ToolUnavailable(tool~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend CefDownloadError with Eq::{not_equal, equal}
+
+///|
+pub extend CefDownloadError with Debug::{to_repr}
+
+///|
+pub extend CefDownloadError with Show::{to_string, output}
 
 ///|
 pub(all) suberror CefRuntimeError {
@@ -53,6 +89,15 @@ pub(all) suberror CefRuntimeError {
   UnsafeInstallDirectory(path~ : String)
   RuntimeConflict(path~ : String, detail~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend CefRuntimeError with Eq::{not_equal, equal}
+
+///|
+pub extend CefRuntimeError with Debug::{to_repr}
+
+///|
+pub extend CefRuntimeError with Show::{to_string, output}
 
 ///|
 pub fn CefUsageError::message(self : CefUsageError) -> String {

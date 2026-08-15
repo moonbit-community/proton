@@ -5,10 +5,22 @@ struct IdentifyPayload {
 } derive(FromJson, ToJson)
 
 ///|
+pub extend IdentifyPayload with ToJson::{to_json}
+
+///|
+pub extend IdentifyPayload with FromJson::{from_json}
+
+///|
 struct IdentifyReply {
   label : String
   window : String
 } derive(FromJson, ToJson)
+
+///|
+pub extend IdentifyReply with ToJson::{to_json}
+
+///|
+pub extend IdentifyReply with FromJson::{from_json}
 
 ///|
 let multi_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

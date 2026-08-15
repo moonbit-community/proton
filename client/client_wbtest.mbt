@@ -4,14 +4,35 @@ struct EchoRequest {
 } derive(ToJson)
 
 ///|
+pub extend EchoRequest with ToJson::{to_json}
+
+///|
 struct EchoResponse {
   value : String
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend EchoResponse with Eq::{not_equal, equal}
+
+///|
+pub extend EchoResponse with Debug::{to_repr}
+
+///|
+pub extend EchoResponse with FromJson::{from_json}
+
+///|
 struct CountChanged {
   count : Int
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend CountChanged with Eq::{not_equal, equal}
+
+///|
+pub extend CountChanged with Debug::{to_repr}
+
+///|
+pub extend CountChanged with FromJson::{from_json}
 
 ///|
 struct CallbackOutcome {

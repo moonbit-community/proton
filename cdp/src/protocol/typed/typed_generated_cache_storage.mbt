@@ -16,6 +16,12 @@ pub(all) struct CacheStorageCache {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageCache with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageCache with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CacheStorageCache as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -73,6 +79,14 @@ pub(all) struct CacheStorageCachedResponse {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageCachedResponse with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageCachedResponse with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CacheStorageCachedResponse as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -109,6 +123,14 @@ pub(all) struct CacheStorageCachedResponseType {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageCachedResponseType with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageCachedResponseType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CacheStorageCachedResponseType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -143,6 +165,12 @@ pub fn CacheStorageCachedResponseType::from_json(
 pub(all) struct CacheStorageCacheId {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageCacheId with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageCacheId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CacheStorageCacheId as CDP JSON.
@@ -184,6 +212,12 @@ pub(all) struct CacheStorageDataEntry {
   response_type : CacheStorageCachedResponseType
   response_headers : Array[CacheStorageHeader]
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageDataEntry with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageDataEntry with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode CacheStorageDataEntry as CDP JSON.
@@ -263,6 +297,12 @@ pub(all) struct CacheStorageHeader {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageHeader with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageHeader with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CacheStorageHeader as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -299,6 +339,14 @@ pub fn CacheStorageHeader::from_json(
 pub(all) struct CacheStorageDeleteCacheParams {
   cache_id : CacheStorageCacheId
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageDeleteCacheParams with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageDeleteCacheParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CacheStorageDeleteCacheParams as CDP JSON.
@@ -347,6 +395,14 @@ pub(all) struct CacheStorageDeleteEntryParams {
   cache_id : CacheStorageCacheId
   request : String
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageDeleteEntryParams with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageDeleteEntryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CacheStorageDeleteEntryParams as CDP JSON.
@@ -399,6 +455,14 @@ pub(all) struct CacheStorageRequestCachedResponseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageRequestCachedResponseParams with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageRequestCachedResponseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CacheStorageRequestCachedResponseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -424,6 +488,14 @@ pub fn CacheStorageRequestCachedResponseParams::to_json(
 pub(all) struct CacheStorageRequestCachedResponseResult {
   response : CacheStorageCachedResponse
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageRequestCachedResponseResult with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageRequestCachedResponseResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CacheStorage.requestCachedResponse.
@@ -491,6 +563,14 @@ pub(all) struct CacheStorageRequestCacheNamesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageRequestCacheNamesParams with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageRequestCacheNamesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CacheStorageRequestCacheNamesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -520,6 +600,14 @@ pub fn CacheStorageRequestCacheNamesParams::to_json(
 pub(all) struct CacheStorageRequestCacheNamesResult {
   caches : Array[CacheStorageCache]
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageRequestCacheNamesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageRequestCacheNamesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CacheStorage.requestCacheNames.
@@ -591,6 +679,14 @@ pub(all) struct CacheStorageRequestEntriesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CacheStorageRequestEntriesParams with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageRequestEntriesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CacheStorageRequestEntriesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -622,6 +718,14 @@ pub(all) struct CacheStorageRequestEntriesResult {
   cache_data_entries : Array[CacheStorageDataEntry]
   return_count : Double
 } derive(Eq, Debug)
+
+///|
+pub extend CacheStorageRequestEntriesResult with Eq::{not_equal, equal}
+
+///|
+pub extend CacheStorageRequestEntriesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for CacheStorage.requestEntries.

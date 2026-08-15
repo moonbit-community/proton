@@ -16,6 +16,15 @@ pub struct Version {
 } derive(Eq, Debug)
 
 ///|
+pub extend Version with Eq::{not_equal, equal}
+
+///|
+pub extend Version with Debug::{to_repr}
+
+///|
+pub extend Version with Show::{to_string, output}
+
+///|
 pub impl Show for Version with fn output(self, logger) {
   logger.write_string("\{self.major}.\{self.minor}.\{self.patch}")
 }

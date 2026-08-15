@@ -14,6 +14,12 @@ pub(all) struct InputDragData {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputDragData with Eq::{not_equal, equal}
+
+///|
+pub extend InputDragData with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode InputDragData as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -76,6 +82,12 @@ pub(all) struct InputDragDataItem {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputDragDataItem with Eq::{not_equal, equal}
+
+///|
+pub extend InputDragDataItem with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode InputDragDataItem as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -122,6 +134,12 @@ pub(all) struct InputGestureSourceType {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputGestureSourceType with Eq::{not_equal, equal}
+
+///|
+pub extend InputGestureSourceType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode InputGestureSourceType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -156,6 +174,12 @@ pub(all) struct InputMouseButton {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputMouseButton with Eq::{not_equal, equal}
+
+///|
+pub extend InputMouseButton with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode InputMouseButton as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -188,6 +212,12 @@ pub fn InputMouseButton::from_json(
 pub(all) struct InputTimeSinceEpoch {
   value : Double
 } derive(Eq, Debug)
+
+///|
+pub extend InputTimeSinceEpoch with Eq::{not_equal, equal}
+
+///|
+pub extend InputTimeSinceEpoch with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode InputTimeSinceEpoch as CDP JSON.
@@ -232,6 +262,12 @@ pub(all) struct InputTouchPoint {
   twist : Int?
   id : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend InputTouchPoint with Eq::{not_equal, equal}
+
+///|
+pub extend InputTouchPoint with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode InputTouchPoint as CDP JSON.
@@ -338,6 +374,14 @@ pub(all) struct InputDispatchDragEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputDispatchDragEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputDispatchDragEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InputDispatchDragEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -403,6 +447,14 @@ pub(all) struct InputDispatchKeyEventParams {
   location : Int?
   commands : Array[String]?
 } derive(Eq, Debug)
+
+///|
+pub extend InputDispatchKeyEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputDispatchKeyEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode InputDispatchKeyEventParams as CDP JSON.
@@ -509,6 +561,14 @@ pub(all) struct InputDispatchMouseEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputDispatchMouseEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputDispatchMouseEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InputDispatchMouseEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -600,6 +660,14 @@ pub(all) struct InputDispatchTouchEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputDispatchTouchEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputDispatchTouchEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InputDispatchTouchEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -662,6 +730,14 @@ pub(all) struct InputEmulateTouchFromMouseEventParams {
   modifiers : Int?
   click_count : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend InputEmulateTouchFromMouseEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputEmulateTouchFromMouseEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode InputEmulateTouchFromMouseEventParams as CDP JSON.
@@ -737,6 +813,14 @@ pub(all) struct InputImeSetCompositionParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputImeSetCompositionParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputImeSetCompositionParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InputImeSetCompositionParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -792,6 +876,12 @@ pub(all) struct InputInsertTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputInsertTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputInsertTextParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode InputInsertTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -835,6 +925,14 @@ pub fn input_insert_text_command(
 pub(all) struct InputSetIgnoreInputEventsParams {
   ignore : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend InputSetIgnoreInputEventsParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputSetIgnoreInputEventsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode InputSetIgnoreInputEventsParams as CDP JSON.
@@ -888,6 +986,14 @@ pub(all) struct InputSetInterceptDragsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputSetInterceptDragsParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputSetInterceptDragsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InputSetInterceptDragsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -937,6 +1043,14 @@ pub(all) struct InputSynthesizePinchGestureParams {
   relative_speed : Int?
   gesture_source_type : InputGestureSourceType?
 } derive(Eq, Debug)
+
+///|
+pub extend InputSynthesizePinchGestureParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputSynthesizePinchGestureParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode InputSynthesizePinchGestureParams as CDP JSON.
@@ -1007,6 +1121,14 @@ pub(all) struct InputSynthesizeScrollGestureParams {
   repeat_delay_ms : Int?
   interaction_marker_name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend InputSynthesizeScrollGestureParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputSynthesizeScrollGestureParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode InputSynthesizeScrollGestureParams as CDP JSON.
@@ -1095,6 +1217,14 @@ pub(all) struct InputSynthesizeTapGestureParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend InputSynthesizeTapGestureParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputSynthesizeTapGestureParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode InputSynthesizeTapGestureParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1154,6 +1284,14 @@ pub fn input_synthesize_tap_gesture_command(
 pub(all) struct InputDragInterceptedEventParams {
   data : InputDragData
 } derive(Eq, Debug)
+
+///|
+pub extend InputDragInterceptedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend InputDragInterceptedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode InputDragInterceptedEventParams as CDP JSON.

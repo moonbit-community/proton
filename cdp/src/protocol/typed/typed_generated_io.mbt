@@ -12,6 +12,12 @@ pub(all) struct IOStreamHandle {
 } derive(Eq, Debug)
 
 ///|
+pub extend IOStreamHandle with Eq::{not_equal, equal}
+
+///|
+pub extend IOStreamHandle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode IOStreamHandle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -44,6 +50,12 @@ pub fn IOStreamHandle::from_json(
 pub(all) struct IOCloseParams {
   handle : IOStreamHandle
 } derive(Eq, Debug)
+
+///|
+pub extend IOCloseParams with Eq::{not_equal, equal}
+
+///|
+pub extend IOCloseParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode IOCloseParams as CDP JSON.
@@ -93,6 +105,12 @@ pub(all) struct IOReadParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IOReadParams with Eq::{not_equal, equal}
+
+///|
+pub extend IOReadParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode IOReadParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -120,6 +138,12 @@ pub(all) struct IOReadResult {
   data : String
   eof : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend IOReadResult with Eq::{not_equal, equal}
+
+///|
+pub extend IOReadResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for IO.read.
@@ -183,6 +207,12 @@ pub(all) struct IOResolveBlobParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IOResolveBlobParams with Eq::{not_equal, equal}
+
+///|
+pub extend IOResolveBlobParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode IOResolveBlobParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -202,6 +232,12 @@ pub fn IOResolveBlobParams::to_json(self : IOResolveBlobParams) -> Json {
 pub(all) struct IOResolveBlobResult {
   uuid : String
 } derive(Eq, Debug)
+
+///|
+pub extend IOResolveBlobResult with Eq::{not_equal, equal}
+
+///|
+pub extend IOResolveBlobResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for IO.resolveBlob.

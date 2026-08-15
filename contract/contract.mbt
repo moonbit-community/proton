@@ -11,12 +11,36 @@ pub enum ContractScope {
 pub(all) struct EmptyRequest {} derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+pub extend EmptyRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EmptyRequest with Debug::{to_repr}
+
+///|
+pub extend EmptyRequest with ToJson::{to_json}
+
+///|
+pub extend EmptyRequest with FromJson::{from_json}
+
+///|
 /// Standard platform-support probe result, shared by extension `support` commands.
 pub(all) struct SupportReply {
   supported : Bool
   platform : String
   reason : String?
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend SupportReply with Eq::{not_equal, equal}
+
+///|
+pub extend SupportReply with Debug::{to_repr}
+
+///|
+pub extend SupportReply with ToJson::{to_json}
+
+///|
+pub extend SupportReply with FromJson::{from_json}
 
 ///|
 /// An opaque application or extension route carried by a typed descriptor.
@@ -75,6 +99,15 @@ pub(all) suberror ContractDefinitionError {
   EmptyExtensionMember(extension_namespace~ : String)
   DuplicateEventRoute(route~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend ContractDefinitionError with Eq::{not_equal, equal}
+
+///|
+pub extend ContractDefinitionError with Debug::{to_repr}
+
+///|
+pub extend ContractDefinitionError with Show::{to_string, output}
 
 ///|
 /// Creates an application command descriptor.

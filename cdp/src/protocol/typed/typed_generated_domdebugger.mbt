@@ -12,6 +12,14 @@ pub(all) struct DOMDebuggerCSPViolationType {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerCSPViolationType with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerCSPViolationType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerCSPViolationType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -46,6 +54,14 @@ pub fn DOMDebuggerCSPViolationType::from_json(
 pub(all) struct DOMDebuggerDOMBreakpointType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerDOMBreakpointType with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerDOMBreakpointType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDebuggerDOMBreakpointType as CDP JSON.
@@ -91,6 +107,14 @@ pub(all) struct DOMDebuggerEventListener {
   original_handler : RuntimeRemoteObject?
   backend_node_id : DOMBackendNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerEventListener with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerEventListener with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDebuggerEventListener as CDP JSON.
@@ -174,6 +198,14 @@ pub(all) struct DOMDebuggerGetEventListenersParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerGetEventListenersParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerGetEventListenersParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerGetEventListenersParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -201,6 +233,14 @@ pub fn DOMDebuggerGetEventListenersParams::to_json(
 pub(all) struct DOMDebuggerGetEventListenersResult {
   listeners : Array[DOMDebuggerEventListener]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerGetEventListenersResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerGetEventListenersResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOMDebugger.getEventListeners.
@@ -270,6 +310,14 @@ pub(all) struct DOMDebuggerRemoveDOMBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerRemoveDOMBreakpointParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerRemoveDOMBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerRemoveDOMBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -321,6 +369,17 @@ pub(all) struct DOMDebuggerRemoveEventListenerBreakpointParams {
   event_name : String
   target_name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerRemoveEventListenerBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMDebuggerRemoveEventListenerBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDebuggerRemoveEventListenerBreakpointParams as CDP JSON.
@@ -377,6 +436,17 @@ pub(all) struct DOMDebuggerRemoveInstrumentationBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerRemoveInstrumentationBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMDebuggerRemoveInstrumentationBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerRemoveInstrumentationBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -428,6 +498,14 @@ pub(all) struct DOMDebuggerRemoveXHRBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerRemoveXHRBreakpointParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerRemoveXHRBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerRemoveXHRBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -477,6 +555,14 @@ pub fn domdebugger_remove_xhrbreakpoint_command(
 pub(all) struct DOMDebuggerSetBreakOnCSPViolationParams {
   violation_types : Array[DOMDebuggerCSPViolationType]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerSetBreakOnCSPViolationParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerSetBreakOnCSPViolationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDebuggerSetBreakOnCSPViolationParams as CDP JSON.
@@ -533,6 +619,14 @@ pub(all) struct DOMDebuggerSetDOMBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerSetDOMBreakpointParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerSetDOMBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerSetDOMBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -584,6 +678,17 @@ pub(all) struct DOMDebuggerSetEventListenerBreakpointParams {
   event_name : String
   target_name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerSetEventListenerBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMDebuggerSetEventListenerBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDebuggerSetEventListenerBreakpointParams as CDP JSON.
@@ -640,6 +745,17 @@ pub(all) struct DOMDebuggerSetInstrumentationBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDebuggerSetInstrumentationBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMDebuggerSetInstrumentationBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDebuggerSetInstrumentationBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -689,6 +805,14 @@ pub fn domdebugger_set_instrumentation_breakpoint_command(
 pub(all) struct DOMDebuggerSetXHRBreakpointParams {
   url : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDebuggerSetXHRBreakpointParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDebuggerSetXHRBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDebuggerSetXHRBreakpointParams as CDP JSON.

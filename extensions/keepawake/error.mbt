@@ -8,6 +8,15 @@ suberror KeepAwakeError {
 } derive(Debug, Eq)
 
 ///|
+pub extend KeepAwakeError with Eq::{not_equal, equal}
+
+///|
+pub extend KeepAwakeError with Debug::{to_repr}
+
+///|
+pub extend KeepAwakeError with Show::{to_string, output}
+
+///|
 fn KeepAwakeError::message(self : KeepAwakeError) -> String {
   match self {
     UnknownScope(scope~) => "unknown keepAwake scope: " + scope

@@ -14,6 +14,12 @@ pub(all) struct CastSink {
 } derive(Eq, Debug)
 
 ///|
+pub extend CastSink with Eq::{not_equal, equal}
+
+///|
+pub extend CastSink with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CastSink as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -74,6 +80,12 @@ pub(all) struct CastEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CastEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CastEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -121,6 +133,12 @@ pub(all) struct CastSetSinkToUseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CastSetSinkToUseParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastSetSinkToUseParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CastSetSinkToUseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -164,6 +182,14 @@ pub fn cast_set_sink_to_use_command(
 pub(all) struct CastStartDesktopMirroringParams {
   sink_name : String
 } derive(Eq, Debug)
+
+///|
+pub extend CastStartDesktopMirroringParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastStartDesktopMirroringParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CastStartDesktopMirroringParams as CDP JSON.
@@ -217,6 +243,14 @@ pub(all) struct CastStartTabMirroringParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CastStartTabMirroringParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastStartTabMirroringParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode CastStartTabMirroringParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -264,6 +298,12 @@ pub(all) struct CastStopCastingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend CastStopCastingParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastStopCastingParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode CastStopCastingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -307,6 +347,14 @@ pub fn cast_stop_casting_command(
 pub(all) struct CastIssueUpdatedEventParams {
   issue_message : String
 } derive(Eq, Debug)
+
+///|
+pub extend CastIssueUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastIssueUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CastIssueUpdatedEventParams as CDP JSON.
@@ -371,6 +419,14 @@ pub fn cast_issue_updated_event(
 pub(all) struct CastSinksUpdatedEventParams {
   sinks : Array[CastSink]
 } derive(Eq, Debug)
+
+///|
+pub extend CastSinksUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend CastSinksUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode CastSinksUpdatedEventParams as CDP JSON.

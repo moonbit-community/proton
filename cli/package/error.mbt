@@ -4,6 +4,15 @@ pub(all) suberror PackageUsageError {
 } derive(Debug, Eq)
 
 ///|
+pub extend PackageUsageError with Eq::{not_equal, equal}
+
+///|
+pub extend PackageUsageError with Debug::{to_repr}
+
+///|
+pub extend PackageUsageError with Show::{to_string, output}
+
+///|
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
@@ -11,6 +20,15 @@ pub(all) suberror PackageConfigError {
   BundleMissing
   MissingField(field~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend PackageConfigError with Eq::{not_equal, equal}
+
+///|
+pub extend PackageConfigError with Debug::{to_repr}
+
+///|
+pub extend PackageConfigError with Show::{to_string, output}
 
 ///|
 pub(all) suberror PackagePlanError {
@@ -28,6 +46,15 @@ pub(all) suberror PackagePlanError {
 } derive(Debug, Eq)
 
 ///|
+pub extend PackagePlanError with Eq::{not_equal, equal}
+
+///|
+pub extend PackagePlanError with Debug::{to_repr}
+
+///|
+pub extend PackagePlanError with Show::{to_string, output}
+
+///|
 pub(all) suberror PackageRuntimeError {
   ManifestMissing(path~ : String)
   ManifestInvalid(path~ : String, detail~ : String)
@@ -36,6 +63,15 @@ pub(all) suberror PackageRuntimeError {
   DirectoryMissing(path~ : String)
   HelperMissing(path~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend PackageRuntimeError with Eq::{not_equal, equal}
+
+///|
+pub extend PackageRuntimeError with Debug::{to_repr}
+
+///|
+pub extend PackageRuntimeError with Show::{to_string, output}
 
 ///|
 pub(all) suberror PackageFileSystemError {
@@ -48,10 +84,28 @@ pub(all) suberror PackageFileSystemError {
 } derive(Debug, Eq)
 
 ///|
+pub extend PackageFileSystemError with Eq::{not_equal, equal}
+
+///|
+pub extend PackageFileSystemError with Debug::{to_repr}
+
+///|
+pub extend PackageFileSystemError with Show::{to_string, output}
+
+///|
 pub(all) suberror PackageToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int, detail~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend PackageToolError with Eq::{not_equal, equal}
+
+///|
+pub extend PackageToolError with Debug::{to_repr}
+
+///|
+pub extend PackageToolError with Show::{to_string, output}
 
 ///|
 pub(all) suberror MacosSigningError {
@@ -62,6 +116,15 @@ pub(all) suberror MacosSigningError {
 } derive(Debug, Eq)
 
 ///|
+pub extend MacosSigningError with Eq::{not_equal, equal}
+
+///|
+pub extend MacosSigningError with Debug::{to_repr}
+
+///|
+pub extend MacosSigningError with Show::{to_string, output}
+
+///|
 pub(all) suberror WindowsPackagingError {
   InvalidConfiguration(detail~ : String)
   MissingTarget(path~ : String)
@@ -70,12 +133,30 @@ pub(all) suberror WindowsPackagingError {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowsPackagingError with Eq::{not_equal, equal}
+
+///|
+pub extend WindowsPackagingError with Debug::{to_repr}
+
+///|
+pub extend WindowsPackagingError with Show::{to_string, output}
+
+///|
 pub(all) suberror LinuxPackagingError {
   InvalidConfiguration(detail~ : String)
   MissingTarget(path~ : String)
   ToolFailure(stage~ : String, detail~ : String)
   Verification(detail~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend LinuxPackagingError with Eq::{not_equal, equal}
+
+///|
+pub extend LinuxPackagingError with Debug::{to_repr}
+
+///|
+pub extend LinuxPackagingError with Show::{to_string, output}
 
 ///|
 pub fn PackageUsageError::message(self : PackageUsageError) -> String {

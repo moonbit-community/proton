@@ -14,6 +14,14 @@ pub(all) struct HeadlessExperimentalScreenshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeadlessExperimentalScreenshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeadlessExperimentalScreenshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeadlessExperimentalScreenshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -67,6 +75,14 @@ pub(all) struct HeadlessExperimentalBeginFrameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend HeadlessExperimentalBeginFrameParams with Eq::{not_equal, equal}
+
+///|
+pub extend HeadlessExperimentalBeginFrameParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode HeadlessExperimentalBeginFrameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -100,6 +116,14 @@ pub(all) struct HeadlessExperimentalBeginFrameResult {
   has_damage : Bool
   screenshot_data : String?
 } derive(Eq, Debug)
+
+///|
+pub extend HeadlessExperimentalBeginFrameResult with Eq::{not_equal, equal}
+
+///|
+pub extend HeadlessExperimentalBeginFrameResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for HeadlessExperimental.beginFrame.

@@ -12,6 +12,12 @@ pub(all) struct TracingMemoryDumpConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingMemoryDumpConfig with Eq::{not_equal, equal}
+
+///|
+pub extend TracingMemoryDumpConfig with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TracingMemoryDumpConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -40,6 +46,14 @@ pub fn TracingMemoryDumpConfig::from_json(
 pub(all) struct TracingMemoryDumpLevelOfDetail {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend TracingMemoryDumpLevelOfDetail with Eq::{not_equal, equal}
+
+///|
+pub extend TracingMemoryDumpLevelOfDetail with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TracingMemoryDumpLevelOfDetail as CDP JSON.
@@ -78,6 +92,14 @@ pub(all) struct TracingStreamCompression {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingStreamCompression with Eq::{not_equal, equal}
+
+///|
+pub extend TracingStreamCompression with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TracingStreamCompression as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -112,6 +134,12 @@ pub fn TracingStreamCompression::from_json(
 pub(all) struct TracingStreamFormat {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend TracingStreamFormat with Eq::{not_equal, equal}
+
+///|
+pub extend TracingStreamFormat with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TracingStreamFormat as CDP JSON.
@@ -154,6 +182,12 @@ pub(all) struct TracingTraceConfig {
   synthetic_delays : Array[String]?
   memory_dump_config : TracingMemoryDumpConfig?
 } derive(Eq, Debug)
+
+///|
+pub extend TracingTraceConfig with Eq::{not_equal, equal}
+
+///|
+pub extend TracingTraceConfig with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TracingTraceConfig as CDP JSON.
@@ -283,6 +317,12 @@ pub(all) struct TracingTracingBackend {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingTracingBackend with Eq::{not_equal, equal}
+
+///|
+pub extend TracingTracingBackend with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TracingTracingBackend as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -333,6 +373,14 @@ pub fn tracing_end_command(
 pub(all) struct TracingGetCategoriesResult {
   categories : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend TracingGetCategoriesResult with Eq::{not_equal, equal}
+
+///|
+pub extend TracingGetCategoriesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Tracing.getCategories.
@@ -399,6 +447,14 @@ pub(all) struct TracingGetTrackEventDescriptorResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingGetTrackEventDescriptorResult with Eq::{not_equal, equal}
+
+///|
+pub extend TracingGetTrackEventDescriptorResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Tracing.getTrackEventDescriptor.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -456,6 +512,14 @@ pub(all) struct TracingRecordClockSyncMarkerParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingRecordClockSyncMarkerParams with Eq::{not_equal, equal}
+
+///|
+pub extend TracingRecordClockSyncMarkerParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TracingRecordClockSyncMarkerParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -508,6 +572,14 @@ pub(all) struct TracingRequestMemoryDumpParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingRequestMemoryDumpParams with Eq::{not_equal, equal}
+
+///|
+pub extend TracingRequestMemoryDumpParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode TracingRequestMemoryDumpParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -535,6 +607,14 @@ pub(all) struct TracingRequestMemoryDumpResult {
   dump_guid : String
   success : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend TracingRequestMemoryDumpResult with Eq::{not_equal, equal}
+
+///|
+pub extend TracingRequestMemoryDumpResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Tracing.requestMemoryDump.
@@ -605,6 +685,12 @@ pub(all) struct TracingStartParams {
   perfetto_config : String?
   tracing_backend : TracingTracingBackend?
 } derive(Eq, Debug)
+
+///|
+pub extend TracingStartParams with Eq::{not_equal, equal}
+
+///|
+pub extend TracingStartParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TracingStartParams as CDP JSON.
@@ -678,6 +764,14 @@ pub(all) struct TracingBufferUsageEventParams {
   event_count : Double?
   value : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend TracingBufferUsageEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TracingBufferUsageEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TracingBufferUsageEventParams as CDP JSON.
@@ -755,6 +849,14 @@ pub(all) struct TracingDataCollectedEventParamsValueItem {
 } derive(Eq, Debug)
 
 ///|
+pub extend TracingDataCollectedEventParamsValueItem with Eq::{not_equal, equal}
+
+///|
+pub extend TracingDataCollectedEventParamsValueItem with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Convert TracingDataCollectedEventParamsValueItem back to the JSON value expected by CDP.
 pub fn TracingDataCollectedEventParamsValueItem::to_json(
   self : TracingDataCollectedEventParamsValueItem,
@@ -779,6 +881,14 @@ pub fn TracingDataCollectedEventParamsValueItem::from_json(
 pub(all) struct TracingDataCollectedEventParams {
   value : Array[TracingDataCollectedEventParamsValueItem]
 } derive(Eq, Debug)
+
+///|
+pub extend TracingDataCollectedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TracingDataCollectedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TracingDataCollectedEventParams as CDP JSON.
@@ -849,6 +959,14 @@ pub(all) struct TracingTracingCompleteEventParams {
   trace_format : TracingStreamFormat?
   stream_compression : TracingStreamCompression?
 } derive(Eq, Debug)
+
+///|
+pub extend TracingTracingCompleteEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TracingTracingCompleteEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TracingTracingCompleteEventParams as CDP JSON.

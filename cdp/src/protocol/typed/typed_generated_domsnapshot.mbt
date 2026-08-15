@@ -12,6 +12,14 @@ pub(all) struct DOMSnapshotArrayOfStrings {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotArrayOfStrings with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotArrayOfStrings with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSnapshotArrayOfStrings as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -48,6 +56,14 @@ pub fn DOMSnapshotArrayOfStrings::from_json(
 pub(all) struct DOMSnapshotComputedStyle {
   properties : Array[DOMSnapshotNameValue]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotComputedStyle with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotComputedStyle with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotComputedStyle as CDP JSON.
@@ -107,6 +123,14 @@ pub(all) struct DOMSnapshotDocumentSnapshot {
   content_width : Double?
   content_height : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotDocumentSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotDocumentSnapshot with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotDocumentSnapshot as CDP JSON.
@@ -238,6 +262,12 @@ pub(all) struct DOMSnapshotDOMNode {
   scroll_offset_x : Double?
   scroll_offset_y : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotDOMNode with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotDOMNode with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMSnapshotDOMNode as CDP JSON.
@@ -466,6 +496,14 @@ pub(all) struct DOMSnapshotInlineTextBox {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotInlineTextBox with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotInlineTextBox with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSnapshotInlineTextBox as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -520,6 +558,14 @@ pub(all) struct DOMSnapshotLayoutTreeNode {
   paint_order : Int?
   is_stacking_context : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotLayoutTreeNode with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotLayoutTreeNode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotLayoutTreeNode as CDP JSON.
@@ -610,6 +656,14 @@ pub(all) struct DOMSnapshotLayoutTreeSnapshot {
   blended_background_colors : Array[DOMSnapshotStringIndex]?
   text_color_opacities : Array[Double]?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotLayoutTreeSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotLayoutTreeSnapshot with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotLayoutTreeSnapshot as CDP JSON.
@@ -772,6 +826,12 @@ pub(all) struct DOMSnapshotNameValue {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotNameValue with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotNameValue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMSnapshotNameValue as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -824,6 +884,14 @@ pub(all) struct DOMSnapshotNodeTreeSnapshot {
   current_source_url : DOMSnapshotRareStringData?
   origin_url : DOMSnapshotRareStringData?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotNodeTreeSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotNodeTreeSnapshot with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotNodeTreeSnapshot as CDP JSON.
@@ -1020,6 +1088,14 @@ pub(all) struct DOMSnapshotRareBooleanData {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotRareBooleanData with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotRareBooleanData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSnapshotRareBooleanData as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1064,6 +1140,14 @@ pub(all) struct DOMSnapshotRareIntegerData {
   index : Array[Int]
   value : Array[Int]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotRareIntegerData with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotRareIntegerData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotRareIntegerData as CDP JSON.
@@ -1121,6 +1205,14 @@ pub(all) struct DOMSnapshotRareStringData {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotRareStringData with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotRareStringData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSnapshotRareStringData as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1173,6 +1265,12 @@ pub(all) struct DOMSnapshotRectangle {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotRectangle with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotRectangle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMSnapshotRectangle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1206,6 +1304,12 @@ pub fn DOMSnapshotRectangle::from_json(
 pub(all) struct DOMSnapshotStringIndex {
   value : Int
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotStringIndex with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotStringIndex with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMSnapshotStringIndex as CDP JSON.
@@ -1250,6 +1354,14 @@ pub(all) struct DOMSnapshotTextBoxSnapshot {
   start : Array[Int]
   length : Array[Int]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotTextBoxSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotTextBoxSnapshot with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSnapshotTextBoxSnapshot as CDP JSON.
@@ -1328,6 +1440,14 @@ pub(all) struct DOMSnapshotCaptureSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotCaptureSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotCaptureSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSnapshotCaptureSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1364,6 +1484,14 @@ pub(all) struct DOMSnapshotCaptureSnapshotResult {
   documents : Array[DOMSnapshotDocumentSnapshot]
   strings : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotCaptureSnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotCaptureSnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOMSnapshot.captureSnapshot.
@@ -1487,6 +1615,14 @@ pub(all) struct DOMSnapshotGetSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSnapshotGetSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotGetSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSnapshotGetSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1521,6 +1657,14 @@ pub(all) struct DOMSnapshotGetSnapshotResult {
   layout_tree_nodes : Array[DOMSnapshotLayoutTreeNode]
   computed_styles : Array[DOMSnapshotComputedStyle]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSnapshotGetSnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSnapshotGetSnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOMSnapshot.getSnapshot.
