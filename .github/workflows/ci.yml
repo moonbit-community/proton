@@ -129,7 +129,7 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon -C cli run . -- -C .. cef setup
-          runtime="$PWD/$(node -p "require('./.proton/runtime.json').dist")"
+          runtime="$RUNNER_TEMP/proton-runtime"
           cef_root=$(node -p "require('./.proton/runtime.json').cef")
           cmake -S native -B native/build-engine \
             -DCMAKE_INSTALL_PREFIX="$runtime" \
@@ -158,7 +158,7 @@ jobs:
             throw "missing .proton\runtime.json"
           }
           $manifest = Get-Content .proton\runtime.json | ConvertFrom-Json
-          $runtime = Join-Path $PWD $manifest.dist
+          $runtime = Join-Path $env:RUNNER_TEMP "proton-runtime"
           $cefRoot = $manifest.cef
           cmake -S native -B native\build-engine `
             "-DCMAKE_INSTALL_PREFIX=$runtime" `
