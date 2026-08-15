@@ -12,6 +12,15 @@ pub(all) suberror ProtocolDecodeError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolDecodeError with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolDecodeError with Debug::{to_repr}
+
+///|
+pub extend ProtocolDecodeError with ToJson::{to_json}
+
+///|
 /// Outgoing CDP command envelope.
 ///
 /// `method_name` is the fully-qualified CDP method such as
@@ -28,6 +37,15 @@ pub(all) struct CdpCommandMessage {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpCommandMessage with Eq::{not_equal, equal}
+
+///|
+pub extend CdpCommandMessage with Debug::{to_repr}
+
+///|
+pub extend CdpCommandMessage with ToJson::{to_json}
+
+///|
 /// Error object returned by a failed CDP command response.
 ///
 /// `code` and `message` are required by CDP. `data` is browser/domain-specific
@@ -37,6 +55,15 @@ pub(all) struct CdpError {
   message : String
   data : Json?
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpError with Eq::{not_equal, equal}
+
+///|
+pub extend CdpError with Debug::{to_repr}
+
+///|
+pub extend CdpError with ToJson::{to_json}
 
 ///|
 /// Incoming CDP command response envelope.
@@ -55,6 +82,15 @@ pub(all) struct CdpResponseMessage {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpResponseMessage with Eq::{not_equal, equal}
+
+///|
+pub extend CdpResponseMessage with Debug::{to_repr}
+
+///|
+pub extend CdpResponseMessage with ToJson::{to_json}
+
+///|
 /// Incoming CDP event envelope.
 ///
 /// Events do not carry a command id. Target session events include `session_id`.
@@ -66,6 +102,15 @@ pub(all) struct CdpEventMessage {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpEventMessage with Eq::{not_equal, equal}
+
+///|
+pub extend CdpEventMessage with Debug::{to_repr}
+
+///|
+pub extend CdpEventMessage with ToJson::{to_json}
+
+///|
 /// Parsed incoming CDP WebSocket message.
 ///
 /// CDP distinguishes responses and events by the presence of an `id` field.
@@ -75,6 +120,15 @@ pub(all) enum CdpIncomingMessage {
   Response(CdpResponseMessage)
   Event(CdpEventMessage)
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpIncomingMessage with Eq::{not_equal, equal}
+
+///|
+pub extend CdpIncomingMessage with Debug::{to_repr}
+
+///|
+pub extend CdpIncomingMessage with ToJson::{to_json}
 
 ///|
 /// Build a CDP command envelope.

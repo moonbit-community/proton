@@ -5,9 +5,15 @@ struct AddRequest {
 } derive(FromJson)
 
 ///|
+pub extend AddRequest with FromJson::{from_json}
+
+///|
 struct AddResponse {
   total : Int
 } derive(ToJson)
+
+///|
+pub extend AddResponse with ToJson::{to_json}
 
 ///|
 async test "typed registrar binds descriptor identity and codecs" {

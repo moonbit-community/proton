@@ -12,6 +12,14 @@ pub(all) struct SecurityCertificateErrorAction {
 } derive(Eq, Debug)
 
 ///|
+pub extend SecurityCertificateErrorAction with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityCertificateErrorAction with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SecurityCertificateErrorAction as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -46,6 +54,12 @@ pub fn SecurityCertificateErrorAction::from_json(
 pub(all) struct SecurityCertificateId {
   value : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SecurityCertificateId with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityCertificateId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode SecurityCertificateId as CDP JSON.
@@ -104,6 +118,14 @@ pub(all) struct SecurityCertificateSecurityState {
   obsolete_ssl_cipher : Bool
   obsolete_ssl_signature : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend SecurityCertificateSecurityState with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityCertificateSecurityState with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecurityCertificateSecurityState as CDP JSON.
@@ -229,6 +251,14 @@ pub(all) struct SecurityInsecureContentStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend SecurityInsecureContentStatus with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityInsecureContentStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SecurityInsecureContentStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -297,6 +327,14 @@ pub(all) struct SecurityMixedContentType {
 } derive(Eq, Debug)
 
 ///|
+pub extend SecurityMixedContentType with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityMixedContentType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SecurityMixedContentType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -332,6 +370,12 @@ pub(all) struct SecuritySafetyTipInfo {
   safety_tip_status : SecuritySafetyTipStatus
   safe_url : String?
 } derive(Eq, Debug)
+
+///|
+pub extend SecuritySafetyTipInfo with Eq::{not_equal, equal}
+
+///|
+pub extend SecuritySafetyTipInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode SecuritySafetyTipInfo as CDP JSON.
@@ -376,6 +420,12 @@ pub(all) struct SecuritySafetyTipStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend SecuritySafetyTipStatus with Eq::{not_equal, equal}
+
+///|
+pub extend SecuritySafetyTipStatus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode SecuritySafetyTipStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -408,6 +458,12 @@ pub fn SecuritySafetyTipStatus::from_json(
 pub(all) struct SecuritySecurityState {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend SecuritySecurityState with Eq::{not_equal, equal}
+
+///|
+pub extend SecuritySecurityState with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode SecuritySecurityState as CDP JSON.
@@ -448,6 +504,14 @@ pub(all) struct SecuritySecurityStateExplanation {
   certificate : Array[String]
   recommendations : Array[String]?
 } derive(Eq, Debug)
+
+///|
+pub extend SecuritySecurityStateExplanation with Eq::{not_equal, equal}
+
+///|
+pub extend SecuritySecurityStateExplanation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecuritySecurityStateExplanation as CDP JSON.
@@ -532,6 +596,14 @@ pub(all) struct SecurityVisibleSecurityState {
   safety_tip_info : SecuritySafetyTipInfo?
   security_state_issue_ids : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend SecurityVisibleSecurityState with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityVisibleSecurityState with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecurityVisibleSecurityState as CDP JSON.
@@ -639,6 +711,14 @@ pub(all) struct SecurityHandleCertificateErrorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SecurityHandleCertificateErrorParams with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityHandleCertificateErrorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SecurityHandleCertificateErrorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -689,6 +769,14 @@ pub fn security_handle_certificate_error_command(
 pub(all) struct SecuritySetIgnoreCertificateErrorsParams {
   ignore : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend SecuritySetIgnoreCertificateErrorsParams with Eq::{not_equal, equal}
+
+///|
+pub extend SecuritySetIgnoreCertificateErrorsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecuritySetIgnoreCertificateErrorsParams as CDP JSON.
@@ -742,6 +830,17 @@ pub(all) struct SecuritySetOverrideCertificateErrorsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SecuritySetOverrideCertificateErrorsParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SecuritySetOverrideCertificateErrorsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SecuritySetOverrideCertificateErrorsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -793,6 +892,14 @@ pub(all) struct SecurityCertificateErrorEventParams {
   error_type : String
   request_url : String
 } derive(Eq, Debug)
+
+///|
+pub extend SecurityCertificateErrorEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend SecurityCertificateErrorEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecurityCertificateErrorEventParams as CDP JSON.
@@ -867,6 +974,14 @@ pub(all) struct SecuritySecurityStateChangedEventParams {
   insecure_content_status : SecurityInsecureContentStatus
   summary : String?
 } derive(Eq, Debug)
+
+///|
+pub extend SecuritySecurityStateChangedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend SecuritySecurityStateChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecuritySecurityStateChangedEventParams as CDP JSON.
@@ -952,6 +1067,17 @@ pub fn security_security_state_changed_event(
 pub(all) struct SecurityVisibleSecurityStateChangedEventParams {
   visible_security_state : SecurityVisibleSecurityState
 } derive(Eq, Debug)
+
+///|
+pub extend SecurityVisibleSecurityStateChangedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SecurityVisibleSecurityStateChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SecurityVisibleSecurityStateChangedEventParams as CDP JSON.

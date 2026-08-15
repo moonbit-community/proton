@@ -18,6 +18,15 @@ struct AssetSidecarScenarioProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend AssetSidecarScenarioProbe with Eq::{not_equal, equal}
+
+///|
+pub extend AssetSidecarScenarioProbe with Debug::{to_repr}
+
+///|
+pub extend AssetSidecarScenarioProbe with FromJson::{from_json}
+
+///|
 async fn run_asset_sidecar_scenario_page_probe(
   app : SpawnedScenarioApp,
   target : String,

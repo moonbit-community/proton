@@ -34,6 +34,17 @@ pub(all) struct EventBreakpointsRemoveInstrumentationBreakpointParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EventBreakpointsRemoveInstrumentationBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EventBreakpointsRemoveInstrumentationBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EventBreakpointsRemoveInstrumentationBreakpointParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -83,6 +94,17 @@ pub fn event_breakpoints_remove_instrumentation_breakpoint_command(
 pub(all) struct EventBreakpointsSetInstrumentationBreakpointParams {
   event_name : String
 } derive(Eq, Debug)
+
+///|
+pub extend EventBreakpointsSetInstrumentationBreakpointParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EventBreakpointsSetInstrumentationBreakpointParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EventBreakpointsSetInstrumentationBreakpointParams as CDP JSON.

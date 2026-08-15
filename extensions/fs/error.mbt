@@ -20,6 +20,15 @@ suberror FsError {
 } derive(Debug, Eq)
 
 ///|
+pub extend FsError with Eq::{not_equal, equal}
+
+///|
+pub extend FsError with Debug::{to_repr}
+
+///|
+pub extend FsError with Show::{to_string, output}
+
+///|
 fn FsError::message(self : FsError) -> String {
   match self {
     InvalidPermissionScope(detail) =>

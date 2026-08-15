@@ -8,6 +8,15 @@ suberror GlobalHotkeyError {
 } derive(Debug, Eq)
 
 ///|
+pub extend GlobalHotkeyError with Eq::{not_equal, equal}
+
+///|
+pub extend GlobalHotkeyError with Debug::{to_repr}
+
+///|
+pub extend GlobalHotkeyError with Show::{to_string, output}
+
+///|
 fn GlobalHotkeyError::message(self : GlobalHotkeyError) -> String {
   match self {
     Unsupported(detail~) => "global hotkeys are unavailable: " + detail

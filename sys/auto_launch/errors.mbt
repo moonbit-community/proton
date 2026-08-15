@@ -23,6 +23,15 @@ pub enum AutoLaunchError {
 } derive(Debug, Eq)
 
 ///|
+pub extend AutoLaunchError with Eq::{not_equal, equal}
+
+///|
+pub extend AutoLaunchError with Debug::{to_repr}
+
+///|
+pub extend AutoLaunchError with Show::{to_string, output}
+
+///|
 pub impl Show for AutoLaunchError with fn output(self : AutoLaunchError, logger) {
   match self {
     EmptyName => logger.write_string("EmptyName")

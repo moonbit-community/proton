@@ -14,6 +14,12 @@ pub(all) struct DOMBackendNode {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMBackendNode with Eq::{not_equal, equal}
+
+///|
+pub extend DOMBackendNode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMBackendNode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -54,6 +60,12 @@ pub fn DOMBackendNode::from_json(
 pub(all) struct DOMBackendNodeId {
   value : Int
 } derive(Eq, Debug)
+
+///|
+pub extend DOMBackendNodeId with Eq::{not_equal, equal}
+
+///|
+pub extend DOMBackendNodeId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMBackendNodeId as CDP JSON.
@@ -101,6 +113,12 @@ pub(all) struct DOMBoxModel {
   height : Int
   shape_outside : DOMShapeOutsideInfo?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMBoxModel with Eq::{not_equal, equal}
+
+///|
+pub extend DOMBoxModel with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMBoxModel as CDP JSON.
@@ -164,6 +182,12 @@ pub(all) struct DOMCompatibilityMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMCompatibilityMode with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCompatibilityMode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMCompatibilityMode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -197,6 +221,14 @@ pub(all) struct DOMCSSComputedStyleProperty {
   name : String
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMCSSComputedStyleProperty with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCSSComputedStyleProperty with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMCSSComputedStyleProperty as CDP JSON.
@@ -238,6 +270,12 @@ pub(all) struct DOMDetachedElementInfo {
   tree_node : DOMNode
   retained_node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDetachedElementInfo with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDetachedElementInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMDetachedElementInfo as CDP JSON.
@@ -285,6 +323,12 @@ pub fn DOMDetachedElementInfo::from_json(
 pub(all) struct DOMLogicalAxes {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMLogicalAxes with Eq::{not_equal, equal}
+
+///|
+pub extend DOMLogicalAxes with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMLogicalAxes as CDP JSON.
@@ -353,6 +397,12 @@ pub(all) struct DOMNode {
   adopted_style_sheets : Array[DOMStyleSheetId]?
   is_ad_related : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMNode with Eq::{not_equal, equal}
+
+///|
+pub extend DOMNode with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMNode as CDP JSON.
@@ -624,6 +674,12 @@ pub(all) struct DOMNodeId {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMNodeId with Eq::{not_equal, equal}
+
+///|
+pub extend DOMNodeId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMNodeId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -665,6 +721,12 @@ pub(all) struct DOMPhysicalAxes {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMPhysicalAxes with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPhysicalAxes with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMPhysicalAxes as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -699,6 +761,12 @@ pub(all) struct DOMPseudoType {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMPseudoType with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPseudoType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMPseudoType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -731,6 +799,12 @@ pub fn DOMPseudoType::from_json(
 pub(all) struct DOMQuad {
   value : Array[Double]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMQuad with Eq::{not_equal, equal}
+
+///|
+pub extend DOMQuad with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMQuad as CDP JSON.
@@ -769,6 +843,12 @@ pub(all) struct DOMRect {
   width : Double
   height : Double
 } derive(Eq, Debug)
+
+///|
+pub extend DOMRect with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRect with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMRect as CDP JSON.
@@ -816,6 +896,12 @@ pub(all) struct DOMRGBA {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMRGBA with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRGBA with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMRGBA as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -860,6 +946,12 @@ pub(all) struct DOMScrollOrientation {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMScrollOrientation with Eq::{not_equal, equal}
+
+///|
+pub extend DOMScrollOrientation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMScrollOrientation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -892,6 +984,12 @@ pub fn DOMScrollOrientation::from_json(
 pub(all) struct DOMShadowRootType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMShadowRootType with Eq::{not_equal, equal}
+
+///|
+pub extend DOMShadowRootType with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMShadowRootType as CDP JSON.
@@ -928,6 +1026,12 @@ pub(all) struct DOMShapeOutsideInfo {
   shape : Json
   margin_shape : Json
 } derive(Eq, Debug)
+
+///|
+pub extend DOMShapeOutsideInfo with Eq::{not_equal, equal}
+
+///|
+pub extend DOMShapeOutsideInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMShapeOutsideInfo as CDP JSON.
@@ -972,6 +1076,12 @@ pub(all) struct DOMStyleSheetId {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMStyleSheetId with Eq::{not_equal, equal}
+
+///|
+pub extend DOMStyleSheetId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMStyleSheetId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1006,6 +1116,14 @@ pub(all) struct DOMCollectClassNamesFromSubtreeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMCollectClassNamesFromSubtreeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCollectClassNamesFromSubtreeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMCollectClassNamesFromSubtreeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1027,6 +1145,14 @@ pub fn DOMCollectClassNamesFromSubtreeParams::to_json(
 pub(all) struct DOMCollectClassNamesFromSubtreeResult {
   class_names : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMCollectClassNamesFromSubtreeResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCollectClassNamesFromSubtreeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.collectClassNamesFromSubtree.
@@ -1101,6 +1227,12 @@ pub(all) struct DOMCopyToParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMCopyToParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCopyToParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMCopyToParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1124,6 +1256,12 @@ pub fn DOMCopyToParams::to_json(self : DOMCopyToParams) -> Json {
 pub(all) struct DOMCopyToResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMCopyToResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCopyToResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.copyTo.
@@ -1189,6 +1327,12 @@ pub(all) struct DOMDescribeNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDescribeNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDescribeNodeParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMDescribeNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1222,6 +1366,12 @@ pub fn DOMDescribeNodeParams::to_json(self : DOMDescribeNodeParams) -> Json {
 pub(all) struct DOMDescribeNodeResult {
   node : DOMNode
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDescribeNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDescribeNodeResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.describeNode.
@@ -1301,6 +1451,14 @@ pub(all) struct DOMDiscardSearchResultsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMDiscardSearchResultsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDiscardSearchResultsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMDiscardSearchResultsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1346,6 +1504,12 @@ pub fn dom_discard_search_results_command(
 pub(all) struct DOMEnableParams {
   include_whitespace : String?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMEnableParams as CDP JSON.
@@ -1395,6 +1559,12 @@ pub(all) struct DOMFocusParams {
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMFocusParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMFocusParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMFocusParams as CDP JSON.
@@ -1451,6 +1621,14 @@ pub(all) struct DOMForceShowPopoverParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMForceShowPopoverParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMForceShowPopoverParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMForceShowPopoverParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1473,6 +1651,14 @@ pub fn DOMForceShowPopoverParams::to_json(
 pub(all) struct DOMForceShowPopoverResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMForceShowPopoverResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMForceShowPopoverResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.forceShowPopover.
@@ -1538,6 +1724,14 @@ pub(all) struct DOMGetAnchorElementParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetAnchorElementParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetAnchorElementParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetAnchorElementParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1562,6 +1756,14 @@ pub fn DOMGetAnchorElementParams::to_json(
 pub(all) struct DOMGetAnchorElementResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetAnchorElementResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetAnchorElementResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getAnchorElement.
@@ -1623,6 +1825,12 @@ pub(all) struct DOMGetAttributesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetAttributesParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetAttributesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMGetAttributesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1642,6 +1850,12 @@ pub fn DOMGetAttributesParams::to_json(self : DOMGetAttributesParams) -> Json {
 pub(all) struct DOMGetAttributesResult {
   attributes : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetAttributesResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetAttributesResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.getAttributes.
@@ -1712,6 +1926,12 @@ pub(all) struct DOMGetBoxModelParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetBoxModelParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetBoxModelParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMGetBoxModelParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1739,6 +1959,12 @@ pub fn DOMGetBoxModelParams::to_json(self : DOMGetBoxModelParams) -> Json {
 pub(all) struct DOMGetBoxModelResult {
   model : DOMBoxModel
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetBoxModelResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetBoxModelResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.getBoxModel.
@@ -1805,6 +2031,14 @@ pub(all) struct DOMGetContainerForNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetContainerForNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetContainerForNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetContainerForNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1841,6 +2075,14 @@ pub fn DOMGetContainerForNodeParams::to_json(
 pub(all) struct DOMGetContainerForNodeResult {
   node_id : DOMNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetContainerForNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetContainerForNodeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getContainerForNode.
@@ -1905,6 +2147,14 @@ pub(all) struct DOMGetContentQuadsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetContentQuadsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetContentQuadsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetContentQuadsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1934,6 +2184,14 @@ pub fn DOMGetContentQuadsParams::to_json(
 pub(all) struct DOMGetContentQuadsResult {
   quads : Array[DOMQuad]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetContentQuadsResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetContentQuadsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getContentQuads.
@@ -1998,6 +2256,14 @@ pub(all) struct DOMGetDetachedDomNodesResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetDetachedDomNodesResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetDetachedDomNodesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for DOM.getDetachedDomNodes.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -2059,6 +2325,12 @@ pub(all) struct DOMGetDocumentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetDocumentParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetDocumentParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMGetDocumentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2083,6 +2355,12 @@ pub fn DOMGetDocumentParams::to_json(self : DOMGetDocumentParams) -> Json {
 pub(all) struct DOMGetDocumentResult {
   root : DOMNode
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetDocumentResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetDocumentResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.getDocument.
@@ -2145,6 +2423,14 @@ pub(all) struct DOMGetElementByRelationParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetElementByRelationParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetElementByRelationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetElementByRelationParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2167,6 +2453,14 @@ pub fn DOMGetElementByRelationParams::to_json(
 pub(all) struct DOMGetElementByRelationResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetElementByRelationResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetElementByRelationResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getElementByRelation.
@@ -2228,6 +2522,12 @@ pub(all) struct DOMGetFileInfoParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetFileInfoParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetFileInfoParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMGetFileInfoParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2247,6 +2547,12 @@ pub fn DOMGetFileInfoParams::to_json(self : DOMGetFileInfoParams) -> Json {
 pub(all) struct DOMGetFileInfoResult {
   path : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetFileInfoResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetFileInfoResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.getFileInfo.
@@ -2305,6 +2611,14 @@ pub(all) struct DOMGetFlattenedDocumentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetFlattenedDocumentParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetFlattenedDocumentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetFlattenedDocumentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2331,6 +2645,14 @@ pub fn DOMGetFlattenedDocumentParams::to_json(
 pub(all) struct DOMGetFlattenedDocumentResult {
   nodes : Array[DOMNode]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetFlattenedDocumentResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetFlattenedDocumentResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getFlattenedDocument.
@@ -2395,6 +2717,12 @@ pub(all) struct DOMGetFrameOwnerParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetFrameOwnerParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetFrameOwnerParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMGetFrameOwnerParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2415,6 +2743,12 @@ pub(all) struct DOMGetFrameOwnerResult {
   backend_node_id : DOMBackendNodeId
   node_id : DOMNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetFrameOwnerResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetFrameOwnerResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.getFrameOwner.
@@ -2483,6 +2817,14 @@ pub(all) struct DOMGetNodeForLocationParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetNodeForLocationParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetNodeForLocationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetNodeForLocationParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2513,6 +2855,14 @@ pub(all) struct DOMGetNodeForLocationResult {
   frame_id : PageFrameId
   node_id : DOMNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetNodeForLocationResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetNodeForLocationResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getNodeForLocation.
@@ -2583,6 +2933,14 @@ pub(all) struct DOMGetNodesForSubtreeByStyleParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetNodesForSubtreeByStyleParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetNodesForSubtreeByStyleParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetNodesForSubtreeByStyleParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2610,6 +2968,14 @@ pub fn DOMGetNodesForSubtreeByStyleParams::to_json(
 pub(all) struct DOMGetNodesForSubtreeByStyleResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetNodesForSubtreeByStyleResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetNodesForSubtreeByStyleResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getNodesForSubtreeByStyle.
@@ -2678,6 +3044,14 @@ pub(all) struct DOMGetNodeStackTracesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetNodeStackTracesParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetNodeStackTracesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetNodeStackTracesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2699,6 +3073,14 @@ pub fn DOMGetNodeStackTracesParams::to_json(
 pub(all) struct DOMGetNodeStackTracesResult {
   creation : RuntimeStackTrace?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetNodeStackTracesResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetNodeStackTracesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getNodeStackTraces.
@@ -2764,6 +3146,12 @@ pub(all) struct DOMGetOuterHTMLParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetOuterHTMLParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetOuterHTMLParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMGetOuterHTMLParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2794,6 +3182,12 @@ pub fn DOMGetOuterHTMLParams::to_json(self : DOMGetOuterHTMLParams) -> Json {
 pub(all) struct DOMGetOuterHTMLResult {
   outer_html : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetOuterHTMLResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetOuterHTMLResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.getOuterHTML.
@@ -2855,6 +3249,17 @@ pub(all) struct DOMGetQueryingDescendantsForContainerParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetQueryingDescendantsForContainerParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMGetQueryingDescendantsForContainerParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetQueryingDescendantsForContainerParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2876,6 +3281,17 @@ pub fn DOMGetQueryingDescendantsForContainerParams::to_json(
 pub(all) struct DOMGetQueryingDescendantsForContainerResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetQueryingDescendantsForContainerResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMGetQueryingDescendantsForContainerResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getQueryingDescendantsForContainer.
@@ -2944,6 +3360,14 @@ pub(all) struct DOMGetRelayoutBoundaryParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetRelayoutBoundaryParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetRelayoutBoundaryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetRelayoutBoundaryParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2965,6 +3389,14 @@ pub fn DOMGetRelayoutBoundaryParams::to_json(
 pub(all) struct DOMGetRelayoutBoundaryResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetRelayoutBoundaryResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetRelayoutBoundaryResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getRelayoutBoundary.
@@ -3028,6 +3460,14 @@ pub(all) struct DOMGetSearchResultsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMGetSearchResultsParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetSearchResultsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMGetSearchResultsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3051,6 +3491,14 @@ pub fn DOMGetSearchResultsParams::to_json(
 pub(all) struct DOMGetSearchResultsResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetSearchResultsResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetSearchResultsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getSearchResults.
@@ -3113,6 +3561,14 @@ pub fn dom_get_search_results_command(
 pub(all) struct DOMGetTopLayerElementsResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMGetTopLayerElementsResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMGetTopLayerElementsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.getTopLayerElements.
@@ -3265,6 +3721,12 @@ pub(all) struct DOMMoveToParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMMoveToParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMMoveToParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMMoveToParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3288,6 +3750,12 @@ pub fn DOMMoveToParams::to_json(self : DOMMoveToParams) -> Json {
 pub(all) struct DOMMoveToResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMMoveToResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMMoveToResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.moveTo.
@@ -3350,6 +3818,12 @@ pub(all) struct DOMPerformSearchParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMPerformSearchParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPerformSearchParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMPerformSearchParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3373,6 +3847,12 @@ pub(all) struct DOMPerformSearchResult {
   search_id : String
   result_count : Int
 } derive(Eq, Debug)
+
+///|
+pub extend DOMPerformSearchResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPerformSearchResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.performSearch.
@@ -3437,6 +3917,14 @@ pub(all) struct DOMPushNodeByPathToFrontendParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMPushNodeByPathToFrontendParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPushNodeByPathToFrontendParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMPushNodeByPathToFrontendParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3458,6 +3946,14 @@ pub fn DOMPushNodeByPathToFrontendParams::to_json(
 pub(all) struct DOMPushNodeByPathToFrontendResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMPushNodeByPathToFrontendResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPushNodeByPathToFrontendResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.pushNodeByPathToFrontend.
@@ -3523,6 +4019,14 @@ pub(all) struct DOMPushNodesByBackendIdsToFrontendParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMPushNodesByBackendIdsToFrontendParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPushNodesByBackendIdsToFrontendParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMPushNodesByBackendIdsToFrontendParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3546,6 +4050,14 @@ pub fn DOMPushNodesByBackendIdsToFrontendParams::to_json(
 pub(all) struct DOMPushNodesByBackendIdsToFrontendResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMPushNodesByBackendIdsToFrontendResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPushNodesByBackendIdsToFrontendResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.pushNodesByBackendIdsToFrontend.
@@ -3615,6 +4127,12 @@ pub(all) struct DOMQuerySelectorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMQuerySelectorParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMQuerySelectorParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMQuerySelectorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3635,6 +4153,12 @@ pub fn DOMQuerySelectorParams::to_json(self : DOMQuerySelectorParams) -> Json {
 pub(all) struct DOMQuerySelectorResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMQuerySelectorResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMQuerySelectorResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.querySelector.
@@ -3697,6 +4221,14 @@ pub(all) struct DOMQuerySelectorAllParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMQuerySelectorAllParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMQuerySelectorAllParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMQuerySelectorAllParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3719,6 +4251,14 @@ pub fn DOMQuerySelectorAllParams::to_json(
 pub(all) struct DOMQuerySelectorAllResult {
   node_ids : Array[DOMNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMQuerySelectorAllResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMQuerySelectorAllResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for DOM.querySelectorAll.
@@ -3802,6 +4342,14 @@ pub(all) struct DOMRemoveAttributeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMRemoveAttributeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRemoveAttributeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMRemoveAttributeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3850,6 +4398,12 @@ pub(all) struct DOMRemoveNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMRemoveNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRemoveNodeParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMRemoveNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3895,6 +4449,14 @@ pub(all) struct DOMRequestChildNodesParams {
   depth : Int?
   pierce : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMRequestChildNodesParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRequestChildNodesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMRequestChildNodesParams as CDP JSON.
@@ -3950,6 +4512,12 @@ pub(all) struct DOMRequestNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMRequestNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRequestNodeParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMRequestNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3969,6 +4537,12 @@ pub fn DOMRequestNodeParams::to_json(self : DOMRequestNodeParams) -> Json {
 pub(all) struct DOMRequestNodeResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMRequestNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMRequestNodeResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.requestNode.
@@ -4033,6 +4607,12 @@ pub(all) struct DOMResolveNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMResolveNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMResolveNodeParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMResolveNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4063,6 +4643,12 @@ pub fn DOMResolveNodeParams::to_json(self : DOMResolveNodeParams) -> Json {
 pub(all) struct DOMResolveNodeResult {
   object : RuntimeRemoteObject
 } derive(Eq, Debug)
+
+///|
+pub extend DOMResolveNodeResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMResolveNodeResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.resolveNode.
@@ -4125,6 +4711,14 @@ pub(all) struct DOMScrollIntoViewIfNeededParams {
   object_id : RuntimeRemoteObjectId?
   rect : DOMRect?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMScrollIntoViewIfNeededParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMScrollIntoViewIfNeededParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMScrollIntoViewIfNeededParams as CDP JSON.
@@ -4191,6 +4785,14 @@ pub(all) struct DOMSetAttributesAsTextParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSetAttributesAsTextParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetAttributesAsTextParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSetAttributesAsTextParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4244,6 +4846,14 @@ pub(all) struct DOMSetAttributeValueParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSetAttributeValueParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetAttributeValueParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSetAttributeValueParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4294,6 +4904,14 @@ pub(all) struct DOMSetFileInputFilesParams {
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSetFileInputFilesParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetFileInputFilesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSetFileInputFilesParams as CDP JSON.
@@ -4352,6 +4970,14 @@ pub(all) struct DOMSetInspectedNodeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSetInspectedNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetInspectedNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSetInspectedNodeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4400,6 +5026,12 @@ pub(all) struct DOMSetNodeNameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSetNodeNameParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetNodeNameParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMSetNodeNameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4420,6 +5052,12 @@ pub fn DOMSetNodeNameParams::to_json(self : DOMSetNodeNameParams) -> Json {
 pub(all) struct DOMSetNodeNameResult {
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSetNodeNameResult with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetNodeNameResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for DOM.setNodeName.
@@ -4481,6 +5119,14 @@ pub(all) struct DOMSetNodeStackTracesEnabledParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSetNodeStackTracesEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetNodeStackTracesEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMSetNodeStackTracesEnabledParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4533,6 +5179,12 @@ pub(all) struct DOMSetNodeValueParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMSetNodeValueParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetNodeValueParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DOMSetNodeValueParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4578,6 +5230,12 @@ pub(all) struct DOMSetOuterHTMLParams {
   node_id : DOMNodeId
   outer_html : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSetOuterHTMLParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetOuterHTMLParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode DOMSetOuterHTMLParams as CDP JSON.
@@ -4643,6 +5301,14 @@ pub(all) struct DOMAdoptedStyleSheetsModifiedEventParams {
   node_id : DOMNodeId
   adopted_style_sheets : Array[DOMStyleSheetId]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMAdoptedStyleSheetsModifiedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMAdoptedStyleSheetsModifiedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMAdoptedStyleSheetsModifiedEventParams as CDP JSON.
@@ -4719,6 +5385,14 @@ pub(all) struct DOMAdRelatedStateUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMAdRelatedStateUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMAdRelatedStateUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMAdRelatedStateUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4786,6 +5460,17 @@ pub(all) struct DOMAffectedByStartingStylesFlagUpdatedEventParams {
   node_id : DOMNodeId
   affected_by_starting_styles : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend DOMAffectedByStartingStylesFlagUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DOMAffectedByStartingStylesFlagUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMAffectedByStartingStylesFlagUpdatedEventParams as CDP JSON.
@@ -4863,6 +5548,14 @@ pub(all) struct DOMAttributeModifiedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMAttributeModifiedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMAttributeModifiedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMAttributeModifiedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4932,6 +5625,14 @@ pub(all) struct DOMAttributeRemovedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMAttributeRemovedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMAttributeRemovedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMAttributeRemovedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4997,6 +5698,14 @@ pub(all) struct DOMCharacterDataModifiedEventParams {
   node_id : DOMNodeId
   character_data : String
 } derive(Eq, Debug)
+
+///|
+pub extend DOMCharacterDataModifiedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMCharacterDataModifiedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMCharacterDataModifiedEventParams as CDP JSON.
@@ -5068,6 +5777,14 @@ pub(all) struct DOMChildNodeCountUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMChildNodeCountUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMChildNodeCountUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMChildNodeCountUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5136,6 +5853,14 @@ pub(all) struct DOMChildNodeInsertedEventParams {
   previous_node_id : DOMNodeId
   node : DOMNode
 } derive(Eq, Debug)
+
+///|
+pub extend DOMChildNodeInsertedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMChildNodeInsertedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMChildNodeInsertedEventParams as CDP JSON.
@@ -5209,6 +5934,14 @@ pub(all) struct DOMChildNodeRemovedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMChildNodeRemovedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMChildNodeRemovedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMChildNodeRemovedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5276,6 +6009,14 @@ pub(all) struct DOMDistributedNodesUpdatedEventParams {
   insertion_point_id : DOMNodeId
   distributed_nodes : Array[DOMBackendNode]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMDistributedNodesUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMDistributedNodesUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMDistributedNodesUpdatedEventParams as CDP JSON.
@@ -5367,6 +6108,14 @@ pub(all) struct DOMInlineStyleInvalidatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMInlineStyleInvalidatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMInlineStyleInvalidatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMInlineStyleInvalidatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5433,6 +6182,14 @@ pub(all) struct DOMPseudoElementAddedEventParams {
   parent_id : DOMNodeId
   pseudo_element : DOMNode
 } derive(Eq, Debug)
+
+///|
+pub extend DOMPseudoElementAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPseudoElementAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMPseudoElementAddedEventParams as CDP JSON.
@@ -5504,6 +6261,14 @@ pub(all) struct DOMPseudoElementRemovedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMPseudoElementRemovedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMPseudoElementRemovedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMPseudoElementRemovedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5573,6 +6338,14 @@ pub(all) struct DOMScrollableFlagUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMScrollableFlagUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMScrollableFlagUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMScrollableFlagUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5640,6 +6413,14 @@ pub(all) struct DOMSetChildNodesEventParams {
   parent_id : DOMNodeId
   nodes : Array[DOMNode]
 } derive(Eq, Debug)
+
+///|
+pub extend DOMSetChildNodesEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMSetChildNodesEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMSetChildNodesEventParams as CDP JSON.
@@ -5714,6 +6495,14 @@ pub(all) struct DOMShadowRootPoppedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DOMShadowRootPoppedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMShadowRootPoppedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DOMShadowRootPoppedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5781,6 +6570,14 @@ pub(all) struct DOMShadowRootPushedEventParams {
   host_id : DOMNodeId
   root : DOMNode
 } derive(Eq, Debug)
+
+///|
+pub extend DOMShadowRootPushedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend DOMShadowRootPushedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DOMShadowRootPushedEventParams as CDP JSON.

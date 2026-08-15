@@ -7,10 +7,28 @@ struct DevTickReplyProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend DevTickReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend DevTickReplyProbe with Debug::{to_repr}
+
+///|
+pub extend DevTickReplyProbe with FromJson::{from_json}
+
+///|
 struct DevDoneReplyProbe {
   run_id : Int
   total : Int
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend DevDoneReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend DevDoneReplyProbe with Debug::{to_repr}
+
+///|
+pub extend DevDoneReplyProbe with FromJson::{from_json}
 
 ///|
 struct DevTickerReplyProbe {
@@ -19,12 +37,30 @@ struct DevTickerReplyProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend DevTickerReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend DevTickerReplyProbe with Debug::{to_repr}
+
+///|
+pub extend DevTickerReplyProbe with FromJson::{from_json}
+
+///|
 struct DevEventProbe {
   kind : String
   run_id : Int
   index : Int?
   total : Int
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend DevEventProbe with Eq::{not_equal, equal}
+
+///|
+pub extend DevEventProbe with Debug::{to_repr}
+
+///|
+pub extend DevEventProbe with FromJson::{from_json}
 
 ///|
 struct DevExtensionProbe {
@@ -41,6 +77,15 @@ struct DevExtensionProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend DevExtensionProbe with Eq::{not_equal, equal}
+
+///|
+pub extend DevExtensionProbe with Debug::{to_repr}
+
+///|
+pub extend DevExtensionProbe with FromJson::{from_json}
+
+///|
 struct DevExtensionReloadProbe {
   url : String
   origin : String
@@ -52,6 +97,15 @@ struct DevExtensionReloadProbe {
   reply : DevTickerReplyProbe
   events : Array[DevEventProbe]
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend DevExtensionReloadProbe with Eq::{not_equal, equal}
+
+///|
+pub extend DevExtensionReloadProbe with Debug::{to_repr}
+
+///|
+pub extend DevExtensionReloadProbe with FromJson::{from_json}
 
 ///|
 async fn run_dev_extension_page_probe(

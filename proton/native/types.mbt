@@ -10,6 +10,15 @@ pub(all) suberror NativeError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NativeError with Eq::{not_equal, equal}
+
+///|
+pub extend NativeError with Debug::{to_repr}
+
+///|
+pub extend NativeError with Show::{to_string, output}
+
+///|
 pub fn NativeError::status(self : NativeError) -> Int {
   match self {
     Status(status~, ..) => status
@@ -70,6 +79,12 @@ pub(all) enum ProcessResult {
 } derive(Debug, Eq)
 
 ///|
+pub extend ProcessResult with Eq::{not_equal, equal}
+
+///|
+pub extend ProcessResult with Debug::{to_repr}
+
+///|
 pub(all) struct RuntimeInfo {
   abi_version : Int
   runtime_available : Bool
@@ -82,9 +97,24 @@ pub(all) struct RuntimeInfo {
 } derive(Debug, Eq, FromJson)
 
 ///|
+pub extend RuntimeInfo with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeInfo with Debug::{to_repr}
+
+///|
+pub extend RuntimeInfo with FromJson::{from_json}
+
+///|
 pub(all) struct RuntimeWaitReady {
   mask : Int
 } derive(Debug, Eq)
+
+///|
+pub extend RuntimeWaitReady with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeWaitReady with Debug::{to_repr}
 
 ///|
 /// Inputs forwarded by a second operating-system application instance.
@@ -94,6 +124,15 @@ pub(all) struct AppActivation {
   files : Array[String]
   reopen : Bool
 } derive(Debug, Eq, ToJson)
+
+///|
+pub extend AppActivation with Eq::{not_equal, equal}
+
+///|
+pub extend AppActivation with Debug::{to_repr}
+
+///|
+pub extend AppActivation with ToJson::{to_json}
 
 ///|
 /// Result of claiming an operating-system application identity.
@@ -138,6 +177,12 @@ struct RuntimeEvent {
 } derive(Debug, Eq)
 
 ///|
+pub extend RuntimeEvent with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeEvent with Debug::{to_repr}
+
+///|
 /// A macOS application activation delivered by Launch Services or the Dock.
 pub(all) enum RuntimeLaunchInput {
   OpenUrls(Array[String])
@@ -146,10 +191,22 @@ pub(all) enum RuntimeLaunchInput {
 } derive(Debug, Eq)
 
 ///|
+pub extend RuntimeLaunchInput with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeLaunchInput with Debug::{to_repr}
+
+///|
 pub(all) enum NativeNotificationResult {
   Delivered
   Failed(String)
 } derive(Debug, Eq)
+
+///|
+pub extend NativeNotificationResult with Eq::{not_equal, equal}
+
+///|
+pub extend NativeNotificationResult with Debug::{to_repr}
 
 ///|
 pub(all) enum NativeBrowserRequest {
@@ -177,6 +234,12 @@ pub(all) enum NativeBrowserRequest {
 } derive(Debug, Eq)
 
 ///|
+pub extend NativeBrowserRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NativeBrowserRequest with Debug::{to_repr}
+
+///|
 pub(all) struct NativeDownloadUpdate {
   download_id : Int
   state : String
@@ -184,6 +247,12 @@ pub(all) struct NativeDownloadUpdate {
   total_bytes : Int64
   percent : Int
 } derive(Debug, Eq)
+
+///|
+pub extend NativeDownloadUpdate with Eq::{not_equal, equal}
+
+///|
+pub extend NativeDownloadUpdate with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeLifecycleState {
@@ -194,6 +263,15 @@ pub(all) struct BridgeLifecycleState {
   url : String
   failure_pending : Bool
 } derive(Debug, Eq, FromJson)
+
+///|
+pub extend BridgeLifecycleState with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeLifecycleState with Debug::{to_repr}
+
+///|
+pub extend BridgeLifecycleState with FromJson::{from_json}
 
 ///|
 pub(all) struct BridgeDiagnostic {
@@ -214,6 +292,15 @@ pub(all) struct BridgeDiagnostic {
 } derive(Debug, Eq, FromJson)
 
 ///|
+pub extend BridgeDiagnostic with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeDiagnostic with Debug::{to_repr}
+
+///|
+pub extend BridgeDiagnostic with FromJson::{from_json}
+
+///|
 pub(all) struct BridgeRequest {
   request_id : Int64
   window : Int64
@@ -224,10 +311,16 @@ pub(all) struct BridgeRequest {
 } derive(Debug)
 
 ///|
+pub extend BridgeRequest with Debug::{to_repr}
+
+///|
 pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
   Err(request_id~ : Int64, code~ : String, message~ : String)
 } derive(Debug)
+
+///|
+pub extend BridgeResponse with Debug::{to_repr}
 
 ///|
 pub(all) enum DialogLevel {
@@ -237,10 +330,22 @@ pub(all) enum DialogLevel {
 } derive(Debug, Eq)
 
 ///|
+pub extend DialogLevel with Eq::{not_equal, equal}
+
+///|
+pub extend DialogLevel with Debug::{to_repr}
+
+///|
 pub(all) enum DialogPollResult {
   Pending
   Ready(String)
 } derive(Debug, Eq)
+
+///|
+pub extend DialogPollResult with Eq::{not_equal, equal}
+
+///|
+pub extend DialogPollResult with Debug::{to_repr}
 
 ///|
 /// Geometry and scaling information for the monitor containing a window.
@@ -255,6 +360,15 @@ pub(all) struct WindowMonitor {
   work_height : Int
   scale_factor_percent : Int
 } derive(Debug, Eq, FromJson)
+
+///|
+pub extend WindowMonitor with Eq::{not_equal, equal}
+
+///|
+pub extend WindowMonitor with Debug::{to_repr}
+
+///|
+pub extend WindowMonitor with FromJson::{from_json}
 
 ///|
 /// A point-in-time native window state snapshot.
@@ -291,11 +405,26 @@ pub(all) struct ScreenInfo {
 } derive(Debug, Eq, FromJson)
 
 ///|
+pub extend WindowState with Eq::{not_equal, equal}
+
+///|
+pub extend WindowState with Debug::{to_repr}
+
+///|
+pub extend WindowState with FromJson::{from_json}
+
+///|
 /// A native notification activation, optionally carrying its application
 /// payload.
 pub(all) struct NativeNotificationClick {
   payload : String?
 } derive(Debug, Eq)
+
+///|
+pub extend NativeNotificationClick with Eq::{not_equal, equal}
+
+///|
+pub extend NativeNotificationClick with Debug::{to_repr}
 
 ///|
 /// An application-level native menu bar.
@@ -305,11 +434,23 @@ struct MenuBar {
 } derive(Debug, Eq)
 
 ///|
+pub extend MenuBar with Eq::{not_equal, equal}
+
+///|
+pub extend MenuBar with Debug::{to_repr}
+
+///|
 /// A top-level native menu and its items.
 struct Menu {
   label : String
   items : Array[MenuItem]
 } derive(Debug, Eq)
+
+///|
+pub extend Menu with Eq::{not_equal, equal}
+
+///|
+pub extend Menu with Debug::{to_repr}
 
 ///|
 /// A command, separator, or platform role in a native menu.
@@ -322,11 +463,23 @@ struct MenuItem {
 } derive(Debug, Eq)
 
 ///|
+pub extend MenuItem with Eq::{not_equal, equal}
+
+///|
+pub extend MenuItem with Debug::{to_repr}
+
+///|
 pub(all) struct BridgeConfig {
   raw_json : String?
   max_payload_bytes : Int
   grants : Array[BridgeGrantConfig]
 } derive(Debug, Eq)
+
+///|
+pub extend BridgeConfig with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeConfig with Debug::{to_repr}
 
 ///|
 /// Renderer capabilities granted to one canonical source in one window.
@@ -338,11 +491,23 @@ pub(all) struct BridgeGrantConfig {
 } derive(Debug, Eq)
 
 ///|
+pub extend BridgeGrantConfig with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeGrantConfig with Debug::{to_repr}
+
+///|
 /// One JavaScript namespace installed by the renderer bootstrap.
 pub(all) struct BridgeExtensionConfig {
   js_namespace : String
   apis : Array[String]
 } derive(Debug, Eq)
+
+///|
+pub extend BridgeExtensionConfig with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeExtensionConfig with Debug::{to_repr}
 
 ///|
 /// One ordered JavaScript initialization unit owned by an extension.
@@ -351,6 +516,12 @@ pub(all) struct BridgeInitializationUnit {
   name : String
   source : String
 } derive(Debug, Eq)
+
+///|
+pub extend BridgeInitializationUnit with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeInitializationUnit with Debug::{to_repr}
 
 ///|
 pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
@@ -384,6 +555,12 @@ pub(all) struct ViewEventInfo {
   error_code : Int?
   error_text : String?
 } derive(Debug, Eq)
+
+///|
+pub extend ViewEventInfo with Eq::{not_equal, equal}
+
+///|
+pub extend ViewEventInfo with Debug::{to_repr}
 
 ///|
 /// Returns the view event payload when this event carries one.
@@ -658,10 +835,22 @@ struct ImageSize {
 } derive(FromJson, ToJson)
 
 ///|
+pub extend WindowRef with Eq::{not_equal, equal}
+
+///|
+pub extend WindowRef with Debug::{to_repr}
+
+///|
 pub(all) enum TitlebarStyle {
   Default
   Overlay
 } derive(Debug, Eq)
+
+///|
+pub extend TitlebarStyle with Eq::{not_equal, equal}
+
+///|
+pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
 /// Process-wide cache for `runtime_info`: the loaded runtime's identity and
@@ -700,11 +889,23 @@ pub(all) enum WindowSizeHint {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowSizeHint with Eq::{not_equal, equal}
+
+///|
+pub extend WindowSizeHint with Debug::{to_repr}
+
+///|
 pub(all) enum BrowserPolicyMode {
   Allow
   Deny
   Ask
 } derive(Debug, Eq)
+
+///|
+pub extend BrowserPolicyMode with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPolicyMode with Debug::{to_repr}
 
 ///|
 pub(all) struct BrowserPolicy {
@@ -715,6 +916,12 @@ pub(all) struct BrowserPolicy {
   media : BrowserPolicyMode
   devtools : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend BrowserPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPolicy with Debug::{to_repr}
 
 ///|
 pub fn BrowserPolicy::new(
@@ -755,6 +962,12 @@ struct RuntimeConfig {
 } derive(Debug, Eq)
 
 ///|
+pub extend RuntimeConfig with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeConfig with Debug::{to_repr}
+
+///|
 struct WindowConfig {
   raw_json : String?
   title : String
@@ -766,6 +979,12 @@ struct WindowConfig {
   browser : BrowserPolicy
   bridge : BridgeConfig?
 } derive(Debug, Eq)
+
+///|
+pub extend WindowConfig with Eq::{not_equal, equal}
+
+///|
+pub extend WindowConfig with Debug::{to_repr}
 
 ///|
 /// Builds an explicit native runtime configuration.
@@ -1233,6 +1452,12 @@ struct ViewRef {
 } derive(Debug, Eq)
 
 ///|
+pub extend ViewRef with Eq::{not_equal, equal}
+
+///|
+pub extend ViewRef with Debug::{to_repr}
+
+///|
 /// A point-in-time web contents view state snapshot. Bounds use a top-left
 /// origin in the owning window's content coordinate space.
 pub(all) struct ViewState {
@@ -1243,6 +1468,15 @@ pub(all) struct ViewState {
   visible : Bool
   z_order : Int
 } derive(Debug, Eq, FromJson)
+
+///|
+pub extend ViewState with Eq::{not_equal, equal}
+
+///|
+pub extend ViewState with Debug::{to_repr}
+
+///|
+pub extend ViewState with FromJson::{from_json}
 
 ///|
 /// Native configuration for one web contents view. `width` and `height` are
@@ -1261,6 +1495,12 @@ struct ViewConfig {
   initial_url : String
   background_color : String?
 } derive(Debug, Eq)
+
+///|
+pub extend ViewConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ViewConfig with Debug::{to_repr}
 
 ///|
 pub fn ViewConfig::new(

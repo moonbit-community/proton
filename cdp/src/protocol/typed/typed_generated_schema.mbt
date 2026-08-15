@@ -13,6 +13,12 @@ pub(all) struct SchemaDomain {
 } derive(Eq, Debug)
 
 ///|
+pub extend SchemaDomain with Eq::{not_equal, equal}
+
+///|
+pub extend SchemaDomain with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode SchemaDomain as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -49,6 +55,12 @@ pub fn SchemaDomain::from_json(
 pub(all) struct SchemaGetDomainsResult {
   domains : Array[SchemaDomain]
 } derive(Eq, Debug)
+
+///|
+pub extend SchemaGetDomainsResult with Eq::{not_equal, equal}
+
+///|
+pub extend SchemaGetDomainsResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Schema.getDomains.

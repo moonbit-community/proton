@@ -15,6 +15,15 @@ pub(all) suberror NewProjectInputError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NewProjectInputError with Eq::{not_equal, equal}
+
+///|
+pub extend NewProjectInputError with Debug::{to_repr}
+
+///|
+pub extend NewProjectInputError with Show::{to_string, output}
+
+///|
 /// Conflicts or filesystem inspection failures at the requested target.
 pub(all) suberror NewProjectTargetError {
   NotDirectory(path~ : String)
@@ -24,10 +33,28 @@ pub(all) suberror NewProjectTargetError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NewProjectTargetError with Eq::{not_equal, equal}
+
+///|
+pub extend NewProjectTargetError with Debug::{to_repr}
+
+///|
+pub extend NewProjectTargetError with Show::{to_string, output}
+
+///|
 /// Internal failures while rendering the built-in project templates.
 pub(all) suberror NewProjectTemplateError {
   UnresolvedPlaceholder(template~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend NewProjectTemplateError with Eq::{not_equal, equal}
+
+///|
+pub extend NewProjectTemplateError with Debug::{to_repr}
+
+///|
+pub extend NewProjectTemplateError with Show::{to_string, output}
 
 ///|
 /// Failures while materializing the planned project tree.
@@ -39,6 +66,15 @@ pub(all) suberror NewProjectWriteError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NewProjectWriteError with Eq::{not_equal, equal}
+
+///|
+pub extend NewProjectWriteError with Debug::{to_repr}
+
+///|
+pub extend NewProjectWriteError with Show::{to_string, output}
+
+///|
 /// Failures from optional external tools run before project publication.
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
@@ -46,6 +82,15 @@ pub(all) suberror NewProjectToolError {
   RegistryDependenciesUnavailable(code~ : Int, project~ : String)
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend NewProjectToolError with Eq::{not_equal, equal}
+
+///|
+pub extend NewProjectToolError with Debug::{to_repr}
+
+///|
+pub extend NewProjectToolError with Show::{to_string, output}
 
 ///|
 pub fn NewProjectInputError::message(self : NewProjectInputError) -> String {

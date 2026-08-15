@@ -39,6 +39,17 @@ pub(all) struct DeviceOrientationSetDeviceOrientationOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DeviceOrientationSetDeviceOrientationOverrideParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DeviceOrientationSetDeviceOrientationOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DeviceOrientationSetDeviceOrientationOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command

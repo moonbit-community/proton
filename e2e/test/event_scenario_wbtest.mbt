@@ -7,10 +7,28 @@ struct EventTickReplyProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend EventTickReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend EventTickReplyProbe with Debug::{to_repr}
+
+///|
+pub extend EventTickReplyProbe with FromJson::{from_json}
+
+///|
 struct EventDoneReplyProbe {
   run_id : Int
   total : Int
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend EventDoneReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend EventDoneReplyProbe with Debug::{to_repr}
+
+///|
+pub extend EventDoneReplyProbe with FromJson::{from_json}
 
 ///|
 struct EventTickerReplyProbe {
@@ -19,12 +37,30 @@ struct EventTickerReplyProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend EventTickerReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend EventTickerReplyProbe with Debug::{to_repr}
+
+///|
+pub extend EventTickerReplyProbe with FromJson::{from_json}
+
+///|
 struct EventCaptureProbe {
   kind : String
   run_id : Int
   index : Int?
   total : Int
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend EventCaptureProbe with Eq::{not_equal, equal}
+
+///|
+pub extend EventCaptureProbe with Debug::{to_repr}
+
+///|
+pub extend EventCaptureProbe with FromJson::{from_json}
 
 ///|
 struct EventScenarioProbe {
@@ -38,6 +74,15 @@ struct EventScenarioProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend EventScenarioProbe with Eq::{not_equal, equal}
+
+///|
+pub extend EventScenarioProbe with Debug::{to_repr}
+
+///|
+pub extend EventScenarioProbe with FromJson::{from_json}
+
+///|
 struct EventReloadScenarioProbe {
   url : String
   title : String
@@ -48,6 +93,15 @@ struct EventReloadScenarioProbe {
   reply : EventTickerReplyProbe
   events : Array[EventCaptureProbe]
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend EventReloadScenarioProbe with Eq::{not_equal, equal}
+
+///|
+pub extend EventReloadScenarioProbe with Debug::{to_repr}
+
+///|
+pub extend EventReloadScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_event_scenario_page_probe(

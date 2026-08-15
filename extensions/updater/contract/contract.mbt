@@ -13,11 +13,35 @@ pub(all) struct UpdateStatus {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+pub extend UpdateStatus with Eq::{not_equal, equal}
+
+///|
+pub extend UpdateStatus with Debug::{to_repr}
+
+///|
+pub extend UpdateStatus with ToJson::{to_json}
+
+///|
+pub extend UpdateStatus with FromJson::{from_json}
+
+///|
 /// What taking an update did.
 pub(all) struct UpdateInstalled {
   version : String
   changed : Bool
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend UpdateInstalled with Eq::{not_equal, equal}
+
+///|
+pub extend UpdateInstalled with Debug::{to_repr}
+
+///|
+pub extend UpdateInstalled with ToJson::{to_json}
+
+///|
+pub extend UpdateInstalled with FromJson::{from_json}
 
 ///|
 /// How much of the artifact has arrived.
@@ -28,6 +52,18 @@ pub(all) struct UpdateProgress {
   received : Int64
   total : Int64
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend UpdateProgress with Eq::{not_equal, equal}
+
+///|
+pub extend UpdateProgress with Debug::{to_repr}
+
+///|
+pub extend UpdateProgress with ToJson::{to_json}
+
+///|
+pub extend UpdateProgress with FromJson::{from_json}
 
 ///|
 /// Asks whether a newer release is on offer.

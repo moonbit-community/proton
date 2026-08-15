@@ -17,6 +17,15 @@ pub(all) suberror BrowserError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend BrowserError with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserError with Debug::{to_repr}
+
+///|
+pub extend BrowserError with ToJson::{to_json}
+
+///|
 /// Basic target metadata returned by `Target.getTargets`.
 ///
 /// `target_id` is the value used by `Target.attachToTarget` and
@@ -37,6 +46,15 @@ pub(all) struct CdpTargetInfo {
   attached : Bool
   browser_context_id : String?
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpTargetInfo with Eq::{not_equal, equal}
+
+///|
+pub extend CdpTargetInfo with Debug::{to_repr}
+
+///|
+pub extend CdpTargetInfo with ToJson::{to_json}
 
 ///|
 /// Lists targets using the browser-level `Target.getTargets` command.

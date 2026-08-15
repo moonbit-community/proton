@@ -6,6 +6,12 @@ pub(all) enum PermissionOrigin {
 } derive(Eq, Debug)
 
 ///|
+pub extend PermissionOrigin with Eq::{not_equal, equal}
+
+///|
+pub extend PermissionOrigin with Debug::{to_repr}
+
+///|
 /// Grants one extension to one trusted source in one application window.
 ///
 /// Extension registration and permission grants are deliberately separate:

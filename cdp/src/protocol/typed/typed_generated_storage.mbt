@@ -15,6 +15,17 @@ pub(all) struct StorageAttributionReportingAggregatableDebugReportingConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingAggregatableDebugReportingConfig with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableDebugReportingConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingAggregatableDebugReportingConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -76,6 +87,17 @@ pub(all) struct StorageAttributionReportingAggregatableDebugReportingData {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingAggregatableDebugReportingData with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableDebugReportingData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingAggregatableDebugReportingData as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -128,6 +150,17 @@ pub(all) struct StorageAttributionReportingAggregatableDedupKey {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingAggregatableDedupKey with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableDedupKey with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingAggregatableDedupKey as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -175,6 +208,17 @@ pub(all) struct StorageAttributionReportingAggregatableResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingAggregatableResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingAggregatableResult as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -211,6 +255,17 @@ pub(all) struct StorageAttributionReportingAggregatableTriggerData {
   source_keys : Array[String]
   filters : StorageAttributionReportingFilterPair
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingAggregatableTriggerData with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableTriggerData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingAggregatableTriggerData as CDP JSON.
@@ -270,6 +325,17 @@ pub(all) struct StorageAttributionReportingAggregatableValueDictEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingAggregatableValueDictEntry with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableValueDictEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingAggregatableValueDictEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -313,6 +379,17 @@ pub(all) struct StorageAttributionReportingAggregatableValueEntry {
   values : Array[StorageAttributionReportingAggregatableValueDictEntry]
   filters : StorageAttributionReportingFilterPair
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingAggregatableValueEntry with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregatableValueEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingAggregatableValueEntry as CDP JSON.
@@ -365,6 +442,17 @@ pub(all) struct StorageAttributionReportingAggregationKeysEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingAggregationKeysEntry with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingAggregationKeysEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingAggregationKeysEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -407,6 +495,17 @@ pub(all) struct StorageAttributionReportingEventLevelResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingEventLevelResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingEventLevelResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingEventLevelResult as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -442,6 +541,17 @@ pub(all) struct StorageAttributionReportingEventReportWindows {
   start : Int
   ends : Array[Int]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingEventReportWindows with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingEventReportWindows with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingEventReportWindows as CDP JSON.
@@ -492,6 +602,17 @@ pub(all) struct StorageAttributionReportingEventTriggerData {
   dedup_key : StorageUnsignedInt64AsBase10?
   filters : StorageAttributionReportingFilterPair
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingEventTriggerData with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingEventTriggerData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingEventTriggerData as CDP JSON.
@@ -550,6 +671,14 @@ pub(all) struct StorageAttributionReportingFilterConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingFilterConfig with Eq::{not_equal, equal}
+
+///|
+pub extend StorageAttributionReportingFilterConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingFilterConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -602,6 +731,17 @@ pub(all) struct StorageAttributionReportingFilterDataEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingFilterDataEntry with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingFilterDataEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingFilterDataEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -648,6 +788,14 @@ pub(all) struct StorageAttributionReportingFilterPair {
   filters : Array[StorageAttributionReportingFilterConfig]
   not_filters : Array[StorageAttributionReportingFilterConfig]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingFilterPair with Eq::{not_equal, equal}
+
+///|
+pub extend StorageAttributionReportingFilterPair with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingFilterPair as CDP JSON.
@@ -703,6 +851,17 @@ pub(all) struct StorageAttributionReportingNamedBudgetCandidate {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingNamedBudgetCandidate with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingNamedBudgetCandidate with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingNamedBudgetCandidate as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -748,6 +907,14 @@ pub(all) struct StorageAttributionReportingNamedBudgetDef {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingNamedBudgetDef with Eq::{not_equal, equal}
+
+///|
+pub extend StorageAttributionReportingNamedBudgetDef with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingNamedBudgetDef as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -786,6 +953,14 @@ pub fn StorageAttributionReportingNamedBudgetDef::from_json(
 pub(all) struct StorageAttributionReportingReportResult {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingReportResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageAttributionReportingReportResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingReportResult as CDP JSON.
@@ -843,6 +1018,17 @@ pub(all) struct StorageAttributionReportingSourceRegistration {
   debug_reporting : Bool
   event_level_epsilon : Double
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingSourceRegistration with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingSourceRegistration with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingSourceRegistration as CDP JSON.
@@ -1010,6 +1196,17 @@ pub(all) struct StorageAttributionReportingSourceRegistrationResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingSourceRegistrationResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingSourceRegistrationResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingSourceRegistrationResult as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1044,6 +1241,17 @@ pub fn StorageAttributionReportingSourceRegistrationResult::from_json(
 pub(all) struct StorageAttributionReportingSourceRegistrationTimeConfig {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingSourceRegistrationTimeConfig with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingSourceRegistrationTimeConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingSourceRegistrationTimeConfig as CDP JSON.
@@ -1082,6 +1290,14 @@ pub(all) struct StorageAttributionReportingSourceType {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingSourceType with Eq::{not_equal, equal}
+
+///|
+pub extend StorageAttributionReportingSourceType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingSourceType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1116,6 +1332,17 @@ pub fn StorageAttributionReportingSourceType::from_json(
 pub(all) struct StorageAttributionReportingTriggerDataMatching {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingTriggerDataMatching with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingTriggerDataMatching with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingTriggerDataMatching as CDP JSON.
@@ -1169,6 +1396,17 @@ pub(all) struct StorageAttributionReportingTriggerRegistration {
   scopes : Array[String]
   named_budgets : Array[StorageAttributionReportingNamedBudgetCandidate]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingTriggerRegistration with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingTriggerRegistration with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingTriggerRegistration as CDP JSON.
@@ -1314,6 +1552,14 @@ pub(all) struct StorageAttributionScopesData {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionScopesData with Eq::{not_equal, equal}
+
+///|
+pub extend StorageAttributionScopesData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionScopesData as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1365,6 +1611,14 @@ pub(all) struct StorageInterestGroupAccessType {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageInterestGroupAccessType with Eq::{not_equal, equal}
+
+///|
+pub extend StorageInterestGroupAccessType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageInterestGroupAccessType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1399,6 +1653,14 @@ pub fn StorageInterestGroupAccessType::from_json(
 pub(all) struct StorageInterestGroupAuctionEventType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageInterestGroupAuctionEventType with Eq::{not_equal, equal}
+
+///|
+pub extend StorageInterestGroupAuctionEventType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageInterestGroupAuctionEventType as CDP JSON.
@@ -1437,6 +1699,14 @@ pub(all) struct StorageInterestGroupAuctionFetchType {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageInterestGroupAuctionFetchType with Eq::{not_equal, equal}
+
+///|
+pub extend StorageInterestGroupAuctionFetchType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageInterestGroupAuctionFetchType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1471,6 +1741,14 @@ pub fn StorageInterestGroupAuctionFetchType::from_json(
 pub(all) struct StorageInterestGroupAuctionId {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageInterestGroupAuctionId with Eq::{not_equal, equal}
+
+///|
+pub extend StorageInterestGroupAuctionId with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageInterestGroupAuctionId as CDP JSON.
@@ -1509,6 +1787,14 @@ pub(all) struct StorageRelatedWebsiteSet {
   associated_sites : Array[String]
   service_sites : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageRelatedWebsiteSet with Eq::{not_equal, equal}
+
+///|
+pub extend StorageRelatedWebsiteSet with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageRelatedWebsiteSet as CDP JSON.
@@ -1580,6 +1866,14 @@ pub(all) struct StorageSerializedStorageKey {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSerializedStorageKey with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSerializedStorageKey with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSerializedStorageKey as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1614,6 +1908,14 @@ pub fn StorageSerializedStorageKey::from_json(
 pub(all) struct StorageSharedStorageAccessMethod {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStorageAccessMethod with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageAccessMethod with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStorageAccessMethod as CDP JSON.
@@ -1666,6 +1968,14 @@ pub(all) struct StorageSharedStorageAccessParams {
   batch_update_id : String?
   batch_size : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStorageAccessParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageAccessParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStorageAccessParams as CDP JSON.
@@ -1804,6 +2114,14 @@ pub(all) struct StorageSharedStorageAccessScope {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSharedStorageAccessScope with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageAccessScope with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSharedStorageAccessScope as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1839,6 +2157,14 @@ pub(all) struct StorageSharedStorageEntry {
   key : String
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStorageEntry with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageEntry with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStorageEntry as CDP JSON.
@@ -1882,6 +2208,14 @@ pub(all) struct StorageSharedStorageMetadata {
   remaining_budget : Double
   bytes_used : Int
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStorageMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStorageMetadata as CDP JSON.
@@ -1933,6 +2267,17 @@ pub(all) struct StorageSharedStoragePrivateAggregationConfig {
   filtering_id_max_bytes : Int
   max_contributions : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStoragePrivateAggregationConfig with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSharedStoragePrivateAggregationConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStoragePrivateAggregationConfig as CDP JSON.
@@ -1996,6 +2341,14 @@ pub(all) struct StorageSharedStorageReportingMetadata {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSharedStorageReportingMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageReportingMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSharedStorageReportingMetadata as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2039,6 +2392,14 @@ pub(all) struct StorageSharedStorageUrlWithMetadata {
   url : String
   reporting_metadata : Array[StorageSharedStorageReportingMetadata]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStorageUrlWithMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageUrlWithMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStorageUrlWithMetadata as CDP JSON.
@@ -2088,6 +2449,14 @@ pub(all) struct StorageSignedInt64AsBase10 {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSignedInt64AsBase10 with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSignedInt64AsBase10 with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSignedInt64AsBase10 as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2123,6 +2492,12 @@ pub(all) struct StorageStorageBucket {
   storage_key : StorageSerializedStorageKey
   name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageStorageBucket with Eq::{not_equal, equal}
+
+///|
+pub extend StorageStorageBucket with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode StorageStorageBucket as CDP JSON.
@@ -2170,6 +2545,14 @@ pub(all) struct StorageStorageBucketInfo {
   persistent : Bool
   durability : StorageStorageBucketsDurability
 } derive(Eq, Debug)
+
+///|
+pub extend StorageStorageBucketInfo with Eq::{not_equal, equal}
+
+///|
+pub extend StorageStorageBucketInfo with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageStorageBucketInfo as CDP JSON.
@@ -2228,6 +2611,14 @@ pub(all) struct StorageStorageBucketsDurability {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageStorageBucketsDurability with Eq::{not_equal, equal}
+
+///|
+pub extend StorageStorageBucketsDurability with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageStorageBucketsDurability as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2264,6 +2655,12 @@ pub(all) struct StorageStorageType {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageStorageType with Eq::{not_equal, equal}
+
+///|
+pub extend StorageStorageType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode StorageStorageType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2297,6 +2694,12 @@ pub(all) struct StorageTrustTokens {
   issuer_origin : String
   count : Double
 } derive(Eq, Debug)
+
+///|
+pub extend StorageTrustTokens with Eq::{not_equal, equal}
+
+///|
+pub extend StorageTrustTokens with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode StorageTrustTokens as CDP JSON.
@@ -2339,6 +2742,14 @@ pub(all) struct StorageUnsignedInt128AsBase16 {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageUnsignedInt128AsBase16 with Eq::{not_equal, equal}
+
+///|
+pub extend StorageUnsignedInt128AsBase16 with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageUnsignedInt128AsBase16 as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2373,6 +2784,14 @@ pub fn StorageUnsignedInt128AsBase16::from_json(
 pub(all) struct StorageUnsignedInt64AsBase10 {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageUnsignedInt64AsBase10 with Eq::{not_equal, equal}
+
+///|
+pub extend StorageUnsignedInt64AsBase10 with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageUnsignedInt64AsBase10 as CDP JSON.
@@ -2410,6 +2829,12 @@ pub(all) struct StorageUsageForType {
   storage_type : StorageStorageType
   usage : Double
 } derive(Eq, Debug)
+
+///|
+pub extend StorageUsageForType with Eq::{not_equal, equal}
+
+///|
+pub extend StorageUsageForType with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode StorageUsageForType as CDP JSON.
@@ -2450,6 +2875,14 @@ pub fn StorageUsageForType::from_json(
 pub(all) struct StorageClearCookiesParams {
   browser_context_id : BrowserBrowserContextID?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageClearCookiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageClearCookiesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageClearCookiesParams as CDP JSON.
@@ -2500,6 +2933,14 @@ pub(all) struct StorageClearDataForOriginParams {
   origin : String
   storage_types : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageClearDataForOriginParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageClearDataForOriginParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageClearDataForOriginParams as CDP JSON.
@@ -2555,6 +2996,14 @@ pub(all) struct StorageClearDataForStorageKeyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageClearDataForStorageKeyParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageClearDataForStorageKeyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageClearDataForStorageKeyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2605,6 +3054,14 @@ pub fn storage_clear_data_for_storage_key_command(
 pub(all) struct StorageClearSharedStorageEntriesParams {
   owner_origin : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageClearSharedStorageEntriesParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageClearSharedStorageEntriesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageClearSharedStorageEntriesParams as CDP JSON.
@@ -2658,6 +3115,14 @@ pub(all) struct StorageClearTrustTokensParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageClearTrustTokensParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageClearTrustTokensParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageClearTrustTokensParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2679,6 +3144,14 @@ pub fn StorageClearTrustTokensParams::to_json(
 pub(all) struct StorageClearTrustTokensResult {
   did_delete_tokens : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend StorageClearTrustTokensResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageClearTrustTokensResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.clearTrustTokens.
@@ -2741,6 +3214,14 @@ pub(all) struct StorageDeleteSharedStorageEntryParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageDeleteSharedStorageEntryParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageDeleteSharedStorageEntryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageDeleteSharedStorageEntryParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2791,6 +3272,14 @@ pub fn storage_delete_shared_storage_entry_command(
 pub(all) struct StorageDeleteStorageBucketParams {
   bucket : StorageStorageBucket
 } derive(Eq, Debug)
+
+///|
+pub extend StorageDeleteStorageBucketParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageDeleteStorageBucketParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageDeleteStorageBucketParams as CDP JSON.
@@ -2845,6 +3334,17 @@ pub(all) struct StorageGetAffectedUrlsForThirdPartyCookieMetadataParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetAffectedUrlsForThirdPartyCookieMetadataParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageGetAffectedUrlsForThirdPartyCookieMetadataParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetAffectedUrlsForThirdPartyCookieMetadataParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2869,6 +3369,17 @@ pub fn StorageGetAffectedUrlsForThirdPartyCookieMetadataParams::to_json(
 pub(all) struct StorageGetAffectedUrlsForThirdPartyCookieMetadataResult {
   matched_urls : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetAffectedUrlsForThirdPartyCookieMetadataResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageGetAffectedUrlsForThirdPartyCookieMetadataResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getAffectedUrlsForThirdPartyCookieMetadata.
@@ -2941,6 +3452,12 @@ pub(all) struct StorageGetCookiesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetCookiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetCookiesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode StorageGetCookiesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2962,6 +3479,12 @@ pub fn StorageGetCookiesParams::to_json(self : StorageGetCookiesParams) -> Json 
 pub(all) struct StorageGetCookiesResult {
   cookies : Array[NetworkCookie]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetCookiesResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetCookiesResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Storage.getCookies.
@@ -3027,6 +3550,14 @@ pub(all) struct StorageGetInterestGroupDetailsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetInterestGroupDetailsParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetInterestGroupDetailsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetInterestGroupDetailsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3049,6 +3580,14 @@ pub fn StorageGetInterestGroupDetailsParams::to_json(
 pub(all) struct StorageGetInterestGroupDetailsResult {
   details : Json
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetInterestGroupDetailsResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetInterestGroupDetailsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getInterestGroupDetails.
@@ -3108,6 +3647,14 @@ pub fn storage_get_interest_group_details_command(
 pub(all) struct StorageGetRelatedWebsiteSetsResult {
   sets : Array[StorageRelatedWebsiteSet]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetRelatedWebsiteSetsResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetRelatedWebsiteSetsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getRelatedWebsiteSets.
@@ -3170,6 +3717,14 @@ pub(all) struct StorageGetSharedStorageEntriesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetSharedStorageEntriesParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetSharedStorageEntriesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetSharedStorageEntriesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3191,6 +3746,14 @@ pub fn StorageGetSharedStorageEntriesParams::to_json(
 pub(all) struct StorageGetSharedStorageEntriesResult {
   entries : Array[StorageSharedStorageEntry]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetSharedStorageEntriesResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetSharedStorageEntriesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getSharedStorageEntries.
@@ -3259,6 +3822,14 @@ pub(all) struct StorageGetSharedStorageMetadataParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetSharedStorageMetadataParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetSharedStorageMetadataParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetSharedStorageMetadataParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3280,6 +3851,14 @@ pub fn StorageGetSharedStorageMetadataParams::to_json(
 pub(all) struct StorageGetSharedStorageMetadataResult {
   metadata : StorageSharedStorageMetadata
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetSharedStorageMetadataResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetSharedStorageMetadataResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getSharedStorageMetadata.
@@ -3345,6 +3924,14 @@ pub(all) struct StorageGetStorageKeyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetStorageKeyParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetStorageKeyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetStorageKeyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3368,6 +3955,14 @@ pub fn StorageGetStorageKeyParams::to_json(
 pub(all) struct StorageGetStorageKeyResult {
   storage_key : StorageSerializedStorageKey
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetStorageKeyResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetStorageKeyResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getStorageKey.
@@ -3429,6 +4024,14 @@ pub(all) struct StorageGetStorageKeyForFrameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetStorageKeyForFrameParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetStorageKeyForFrameParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetStorageKeyForFrameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3450,6 +4053,14 @@ pub fn StorageGetStorageKeyForFrameParams::to_json(
 pub(all) struct StorageGetStorageKeyForFrameResult {
   storage_key : StorageSerializedStorageKey
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetStorageKeyForFrameResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetStorageKeyForFrameResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getStorageKeyForFrame.
@@ -3515,6 +4126,14 @@ pub(all) struct StorageGetTrustTokensResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetTrustTokensResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetTrustTokensResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Storage.getTrustTokens.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -3575,6 +4194,14 @@ pub(all) struct StorageGetUsageAndQuotaParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageGetUsageAndQuotaParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetUsageAndQuotaParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageGetUsageAndQuotaParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3599,6 +4226,14 @@ pub(all) struct StorageGetUsageAndQuotaResult {
   override_active : Bool
   usage_breakdown : Array[StorageUsageForType]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageGetUsageAndQuotaResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageGetUsageAndQuotaResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.getUsageAndQuota.
@@ -3669,6 +4304,14 @@ pub(all) struct StorageOverrideQuotaForOriginParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageOverrideQuotaForOriginParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageOverrideQuotaForOriginParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageOverrideQuotaForOriginParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3723,6 +4366,14 @@ pub(all) struct StorageResetSharedStorageBudgetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageResetSharedStorageBudgetParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageResetSharedStorageBudgetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageResetSharedStorageBudgetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3772,6 +4423,14 @@ pub fn storage_reset_shared_storage_budget_command(
 pub(all) struct StorageRunBounceTrackingMitigationsResult {
   deleted_sites : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageRunBounceTrackingMitigationsResult with Eq::{not_equal, equal}
+
+///|
+pub extend StorageRunBounceTrackingMitigationsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Storage.runBounceTrackingMitigations.
@@ -3841,6 +4500,17 @@ pub(all) struct StorageSendPendingAttributionReportsResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSendPendingAttributionReportsResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSendPendingAttributionReportsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Storage.sendPendingAttributionReports.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -3901,6 +4571,17 @@ pub(all) struct StorageSetAttributionReportingLocalTestingModeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSetAttributionReportingLocalTestingModeParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSetAttributionReportingLocalTestingModeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSetAttributionReportingLocalTestingModeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3950,6 +4631,17 @@ pub fn storage_set_attribution_reporting_local_testing_mode_command(
 pub(all) struct StorageSetAttributionReportingTrackingParams {
   enable : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSetAttributionReportingTrackingParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSetAttributionReportingTrackingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSetAttributionReportingTrackingParams as CDP JSON.
@@ -4004,6 +4696,12 @@ pub(all) struct StorageSetCookiesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSetCookiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSetCookiesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode StorageSetCookiesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4050,6 +4748,17 @@ pub fn storage_set_cookies_command(
 pub(all) struct StorageSetInterestGroupAuctionTrackingParams {
   enable : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSetInterestGroupAuctionTrackingParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSetInterestGroupAuctionTrackingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSetInterestGroupAuctionTrackingParams as CDP JSON.
@@ -4103,6 +4812,14 @@ pub(all) struct StorageSetInterestGroupTrackingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSetInterestGroupTrackingParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSetInterestGroupTrackingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSetInterestGroupTrackingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4154,6 +4871,17 @@ pub(all) struct StorageSetProtectedAudienceKAnonymityParams {
   name : String
   hashes : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSetProtectedAudienceKAnonymityParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSetProtectedAudienceKAnonymityParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSetProtectedAudienceKAnonymityParams as CDP JSON.
@@ -4212,6 +4940,14 @@ pub(all) struct StorageSetSharedStorageEntryParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSetSharedStorageEntryParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSetSharedStorageEntryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSetSharedStorageEntryParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4268,6 +5004,14 @@ pub(all) struct StorageSetSharedStorageTrackingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSetSharedStorageTrackingParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSetSharedStorageTrackingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSetSharedStorageTrackingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4318,6 +5062,14 @@ pub(all) struct StorageSetStorageBucketTrackingParams {
   storage_key : String
   enable : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSetStorageBucketTrackingParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSetStorageBucketTrackingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSetStorageBucketTrackingParams as CDP JSON.
@@ -4372,6 +5124,14 @@ pub(all) struct StorageTrackCacheStorageForOriginParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageTrackCacheStorageForOriginParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageTrackCacheStorageForOriginParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageTrackCacheStorageForOriginParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4421,6 +5181,17 @@ pub fn storage_track_cache_storage_for_origin_command(
 pub(all) struct StorageTrackCacheStorageForStorageKeyParams {
   storage_key : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageTrackCacheStorageForStorageKeyParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageTrackCacheStorageForStorageKeyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageTrackCacheStorageForStorageKeyParams as CDP JSON.
@@ -4474,6 +5245,14 @@ pub(all) struct StorageTrackIndexedDBForOriginParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageTrackIndexedDBForOriginParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageTrackIndexedDBForOriginParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageTrackIndexedDBForOriginParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4523,6 +5302,14 @@ pub fn storage_track_indexed_dbfor_origin_command(
 pub(all) struct StorageTrackIndexedDBForStorageKeyParams {
   storage_key : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageTrackIndexedDBForStorageKeyParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageTrackIndexedDBForStorageKeyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageTrackIndexedDBForStorageKeyParams as CDP JSON.
@@ -4576,6 +5363,14 @@ pub(all) struct StorageUntrackCacheStorageForOriginParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageUntrackCacheStorageForOriginParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageUntrackCacheStorageForOriginParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageUntrackCacheStorageForOriginParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4625,6 +5420,17 @@ pub fn storage_untrack_cache_storage_for_origin_command(
 pub(all) struct StorageUntrackCacheStorageForStorageKeyParams {
   storage_key : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageUntrackCacheStorageForStorageKeyParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageUntrackCacheStorageForStorageKeyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageUntrackCacheStorageForStorageKeyParams as CDP JSON.
@@ -4678,6 +5484,14 @@ pub(all) struct StorageUntrackIndexedDBForOriginParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageUntrackIndexedDBForOriginParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageUntrackIndexedDBForOriginParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageUntrackIndexedDBForOriginParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4727,6 +5541,17 @@ pub fn storage_untrack_indexed_dbfor_origin_command(
 pub(all) struct StorageUntrackIndexedDBForStorageKeyParams {
   storage_key : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageUntrackIndexedDBForStorageKeyParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageUntrackIndexedDBForStorageKeyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageUntrackIndexedDBForStorageKeyParams as CDP JSON.
@@ -4783,6 +5608,17 @@ pub(all) struct StorageAttributionReportingReportSentEventParams {
   net_error_name : String?
   http_status_code : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingReportSentEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingReportSentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingReportSentEventParams as CDP JSON.
@@ -4873,6 +5709,17 @@ pub(all) struct StorageAttributionReportingSourceRegisteredEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingSourceRegisteredEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingSourceRegisteredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageAttributionReportingSourceRegisteredEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4944,6 +5791,17 @@ pub(all) struct StorageAttributionReportingTriggerRegisteredEventParams {
   event_level : StorageAttributionReportingEventLevelResult
   aggregatable : StorageAttributionReportingAggregatableResult
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingTriggerRegisteredEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingTriggerRegisteredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingTriggerRegisteredEventParams as CDP JSON.
@@ -5020,6 +5878,17 @@ pub(all) struct StorageAttributionReportingVerboseDebugReportSentEventParamsBody
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Convert StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem back to the JSON value expected by CDP.
 pub fn StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem::to_json(
   self : StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem,
@@ -5050,6 +5919,17 @@ pub(all) struct StorageAttributionReportingVerboseDebugReportSentEventParams {
   net_error_name : String?
   http_status_code : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageAttributionReportingVerboseDebugReportSentEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageAttributionReportingVerboseDebugReportSentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageAttributionReportingVerboseDebugReportSentEventParams as CDP JSON.
@@ -5150,6 +6030,17 @@ pub(all) struct StorageCacheStorageContentUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageCacheStorageContentUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageCacheStorageContentUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageCacheStorageContentUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5224,6 +6115,14 @@ pub(all) struct StorageCacheStorageListUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageCacheStorageListUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageCacheStorageListUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageCacheStorageListUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5294,6 +6193,14 @@ pub(all) struct StorageIndexedDBContentUpdatedEventParams {
   database_name : String
   object_store_name : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageIndexedDBContentUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageIndexedDBContentUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageIndexedDBContentUpdatedEventParams as CDP JSON.
@@ -5374,6 +6281,14 @@ pub(all) struct StorageIndexedDBListUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageIndexedDBListUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageIndexedDBListUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageIndexedDBListUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5447,6 +6362,14 @@ pub(all) struct StorageInterestGroupAccessedEventParams {
   bid_currency : String?
   unique_auction_id : StorageInterestGroupAuctionId?
 } derive(Eq, Debug)
+
+///|
+pub extend StorageInterestGroupAccessedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageInterestGroupAccessedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageInterestGroupAccessedEventParams as CDP JSON.
@@ -5550,6 +6473,17 @@ pub(all) struct StorageInterestGroupAuctionEventOccurredEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageInterestGroupAuctionEventOccurredEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageInterestGroupAuctionEventOccurredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageInterestGroupAuctionEventOccurredEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5638,6 +6572,17 @@ pub(all) struct StorageInterestGroupAuctionNetworkRequestCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageInterestGroupAuctionNetworkRequestCreatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageInterestGroupAuctionNetworkRequestCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageInterestGroupAuctionNetworkRequestCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5720,6 +6665,14 @@ pub(all) struct StorageSharedStorageAccessedEventParams {
   owner_site : String
   params : StorageSharedStorageAccessParams
 } derive(Eq, Debug)
+
+///|
+pub extend StorageSharedStorageAccessedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageSharedStorageAccessedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageSharedStorageAccessedEventParams as CDP JSON.
@@ -5816,6 +6769,17 @@ pub(all) struct StorageSharedStorageWorkletOperationExecutionFinishedEventParams
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageSharedStorageWorkletOperationExecutionFinishedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageSharedStorageWorkletOperationExecutionFinishedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageSharedStorageWorkletOperationExecutionFinishedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5907,6 +6871,17 @@ pub(all) struct StorageStorageBucketCreatedOrUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend StorageStorageBucketCreatedOrUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend StorageStorageBucketCreatedOrUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode StorageStorageBucketCreatedOrUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5972,6 +6947,14 @@ pub fn storage_storage_bucket_created_or_updated_event(
 pub(all) struct StorageStorageBucketDeletedEventParams {
   bucket_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend StorageStorageBucketDeletedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend StorageStorageBucketDeletedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode StorageStorageBucketDeletedEventParams as CDP JSON.

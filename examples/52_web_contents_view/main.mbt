@@ -10,15 +10,33 @@ struct NavigatePayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend NavigatePayload with ToJson::{to_json}
+
+///|
+pub extend NavigatePayload with FromJson::{from_json}
+
+///|
 struct NavigateReply {
   ok : Bool
   url : String
 } derive(ToJson, FromJson)
 
 ///|
+pub extend NavigateReply with ToJson::{to_json}
+
+///|
+pub extend NavigateReply with FromJson::{from_json}
+
+///|
 struct SimpleReply {
   ok : Bool
 } derive(ToJson, FromJson)
+
+///|
+pub extend SimpleReply with ToJson::{to_json}
+
+///|
+pub extend SimpleReply with FromJson::{from_json}
 
 ///|
 let browser_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

@@ -13,6 +13,12 @@ pub(all) struct AuditsAdAncestry {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsAdAncestry with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAdAncestry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsAdAncestry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -64,6 +70,14 @@ pub(all) struct AuditsAdScriptIdentifier {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsAdScriptIdentifier with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAdScriptIdentifier with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsAdScriptIdentifier as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -112,6 +126,12 @@ pub(all) struct AuditsAffectedCookie {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsAffectedCookie with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAffectedCookie with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsAffectedCookie as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -152,6 +172,12 @@ pub(all) struct AuditsAffectedFrame {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsAffectedFrame with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAffectedFrame with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsAffectedFrame as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -189,6 +215,12 @@ pub(all) struct AuditsAffectedRequest {
   request_id : NetworkRequestId?
   url : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsAffectedRequest with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAffectedRequest with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AuditsAffectedRequest as CDP JSON.
@@ -235,6 +267,14 @@ pub(all) struct AuditsAttributionReportingIssueDetails {
   violating_node_id : DOMBackendNodeId?
   invalid_parameter : String?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsAttributionReportingIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAttributionReportingIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsAttributionReportingIssueDetails as CDP JSON.
@@ -297,6 +337,14 @@ pub(all) struct AuditsAttributionReportingIssueType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsAttributionReportingIssueType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsAttributionReportingIssueType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsAttributionReportingIssueType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -334,6 +382,14 @@ pub(all) struct AuditsBlockedByResponseIssueDetails {
   blocked_frame : AuditsAffectedFrame?
   reason : AuditsBlockedByResponseReason
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsBlockedByResponseIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsBlockedByResponseIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsBlockedByResponseIssueDetails as CDP JSON.
@@ -394,6 +450,14 @@ pub(all) struct AuditsBlockedByResponseReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsBlockedByResponseReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsBlockedByResponseReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsBlockedByResponseReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -428,6 +492,14 @@ pub fn AuditsBlockedByResponseReason::from_json(
 pub(all) struct AuditsBounceTrackingIssueDetails {
   tracking_sites : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsBounceTrackingIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsBounceTrackingIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsBounceTrackingIssueDetails as CDP JSON.
@@ -478,6 +550,14 @@ pub(all) struct AuditsClientHintIssueDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsClientHintIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsClientHintIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsClientHintIssueDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -522,6 +602,14 @@ pub(all) struct AuditsClientHintIssueReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsClientHintIssueReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsClientHintIssueReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsClientHintIssueReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -556,6 +644,14 @@ pub fn AuditsClientHintIssueReason::from_json(
 pub(all) struct AuditsConnectionAllowlistError {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsConnectionAllowlistError with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsConnectionAllowlistError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsConnectionAllowlistError as CDP JSON.
@@ -593,6 +689,14 @@ pub(all) struct AuditsConnectionAllowlistIssueDetails {
   error : AuditsConnectionAllowlistError
   request : AuditsAffectedRequest
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsConnectionAllowlistIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsConnectionAllowlistIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsConnectionAllowlistIssueDetails as CDP JSON.
@@ -643,6 +747,14 @@ pub(all) struct AuditsContentSecurityPolicyIssueDetails {
   source_code_location : AuditsSourceCodeLocation?
   violating_node_id : DOMBackendNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsContentSecurityPolicyIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsContentSecurityPolicyIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsContentSecurityPolicyIssueDetails as CDP JSON.
@@ -723,6 +835,14 @@ pub(all) struct AuditsContentSecurityPolicyViolationType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsContentSecurityPolicyViolationType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsContentSecurityPolicyViolationType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsContentSecurityPolicyViolationType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -760,6 +880,17 @@ pub(all) struct AuditsCookieDeprecationMetadataIssueDetails {
   is_opt_out_top_level : Bool
   operation : AuditsCookieOperation
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsCookieDeprecationMetadataIssueDetails with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend AuditsCookieDeprecationMetadataIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsCookieDeprecationMetadataIssueDetails as CDP JSON.
@@ -821,6 +952,14 @@ pub(all) struct AuditsCookieExclusionReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsCookieExclusionReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCookieExclusionReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsCookieExclusionReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -863,6 +1002,14 @@ pub(all) struct AuditsCookieIssueDetails {
   request : AuditsAffectedRequest?
   insight : AuditsCookieIssueInsight?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsCookieIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCookieIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsCookieIssueDetails as CDP JSON.
@@ -963,6 +1110,14 @@ pub(all) struct AuditsCookieIssueInsight {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsCookieIssueInsight with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCookieIssueInsight with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsCookieIssueInsight as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1009,6 +1164,12 @@ pub(all) struct AuditsCookieOperation {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsCookieOperation with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCookieOperation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsCookieOperation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1041,6 +1202,14 @@ pub fn AuditsCookieOperation::from_json(
 pub(all) struct AuditsCookieWarningReason {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsCookieWarningReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCookieWarningReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsCookieWarningReason as CDP JSON.
@@ -1083,6 +1252,12 @@ pub(all) struct AuditsCorsIssueDetails {
   resource_ipaddress_space : NetworkIPAddressSpace?
   client_security_state : NetworkClientSecurityState?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsCorsIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCorsIssueDetails with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AuditsCorsIssueDetails as CDP JSON.
@@ -1160,6 +1335,14 @@ pub(all) struct AuditsDeprecationIssueDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsDeprecationIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsDeprecationIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsDeprecationIssueDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1209,6 +1392,14 @@ pub(all) struct AuditsElementAccessibilityIssueDetails {
   element_accessibility_issue_reason : AuditsElementAccessibilityIssueReason
   has_disallowed_attributes : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsElementAccessibilityIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsElementAccessibilityIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsElementAccessibilityIssueDetails as CDP JSON.
@@ -1263,6 +1454,14 @@ pub(all) struct AuditsElementAccessibilityIssueReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsElementAccessibilityIssueReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsElementAccessibilityIssueReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsElementAccessibilityIssueReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1299,6 +1498,12 @@ pub(all) struct AuditsFailedRequestInfo {
   failure_message : String
   request_id : NetworkRequestId?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsFailedRequestInfo with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsFailedRequestInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AuditsFailedRequestInfo as CDP JSON.
@@ -1348,6 +1553,14 @@ pub(all) struct AuditsFederatedAuthRequestIssueDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsFederatedAuthRequestIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsFederatedAuthRequestIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsFederatedAuthRequestIssueDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1390,6 +1603,14 @@ pub(all) struct AuditsFederatedAuthRequestIssueReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsFederatedAuthRequestIssueReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsFederatedAuthRequestIssueReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsFederatedAuthRequestIssueReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1424,6 +1645,17 @@ pub fn AuditsFederatedAuthRequestIssueReason::from_json(
 pub(all) struct AuditsFederatedAuthUserInfoRequestIssueDetails {
   federated_auth_user_info_request_issue_reason : AuditsFederatedAuthUserInfoRequestIssueReason
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsFederatedAuthUserInfoRequestIssueDetails with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend AuditsFederatedAuthUserInfoRequestIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsFederatedAuthUserInfoRequestIssueDetails as CDP JSON.
@@ -1468,6 +1700,17 @@ pub(all) struct AuditsFederatedAuthUserInfoRequestIssueReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsFederatedAuthUserInfoRequestIssueReason with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend AuditsFederatedAuthUserInfoRequestIssueReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsFederatedAuthUserInfoRequestIssueReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1506,6 +1749,14 @@ pub(all) struct AuditsGenericIssueDetails {
   violating_node_attribute : String?
   request : AuditsAffectedRequest?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsGenericIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsGenericIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsGenericIssueDetails as CDP JSON.
@@ -1575,6 +1826,14 @@ pub(all) struct AuditsGenericIssueErrorType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsGenericIssueErrorType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsGenericIssueErrorType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsGenericIssueErrorType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1611,6 +1870,14 @@ pub(all) struct AuditsHeavyAdIssueDetails {
   reason : AuditsHeavyAdReason
   frame : AuditsAffectedFrame
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsHeavyAdIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsHeavyAdIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsHeavyAdIssueDetails as CDP JSON.
@@ -1661,6 +1928,12 @@ pub(all) struct AuditsHeavyAdReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsHeavyAdReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsHeavyAdReason with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsHeavyAdReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1693,6 +1966,14 @@ pub fn AuditsHeavyAdReason::from_json(
 pub(all) struct AuditsHeavyAdResolutionStatus {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsHeavyAdResolutionStatus with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsHeavyAdResolutionStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsHeavyAdResolutionStatus as CDP JSON.
@@ -1731,6 +2012,12 @@ pub(all) struct AuditsInsightType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsInsightType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsInsightType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsInsightType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1765,6 +2052,12 @@ pub(all) struct AuditsInspectorIssue {
   details : AuditsInspectorIssueDetails
   issue_id : AuditsIssueId?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsInspectorIssue with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsInspectorIssue with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AuditsInspectorIssue as CDP JSON.
@@ -1814,6 +2107,14 @@ pub fn AuditsInspectorIssue::from_json(
 pub(all) struct AuditsInspectorIssueCode {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsInspectorIssueCode with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsInspectorIssueCode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsInspectorIssueCode as CDP JSON.
@@ -1879,6 +2180,14 @@ pub(all) struct AuditsInspectorIssueDetails {
   performance_issue_details : AuditsPerformanceIssueDetails?
   selective_permissions_intervention_issue_details : AuditsSelectivePermissionsInterventionIssueDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsInspectorIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsInspectorIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsInspectorIssueDetails as CDP JSON.
@@ -2172,6 +2481,12 @@ pub(all) struct AuditsIssueId {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsIssueId with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsIssueId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AuditsIssueId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2210,6 +2525,14 @@ pub(all) struct AuditsLowTextContrastIssueDetails {
   font_size : String
   font_weight : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsLowTextContrastIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsLowTextContrastIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsLowTextContrastIssueDetails as CDP JSON.
@@ -2277,6 +2600,14 @@ pub(all) struct AuditsMixedContentIssueDetails {
   request : AuditsAffectedRequest?
   frame : AuditsAffectedFrame?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsMixedContentIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsMixedContentIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsMixedContentIssueDetails as CDP JSON.
@@ -2348,6 +2679,14 @@ pub(all) struct AuditsMixedContentResolutionStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsMixedContentResolutionStatus with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsMixedContentResolutionStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsMixedContentResolutionStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2382,6 +2721,14 @@ pub fn AuditsMixedContentResolutionStatus::from_json(
 pub(all) struct AuditsMixedContentResourceType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsMixedContentResourceType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsMixedContentResourceType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsMixedContentResourceType as CDP JSON.
@@ -2419,6 +2766,14 @@ pub(all) struct AuditsNavigatorUserAgentIssueDetails {
   url : String
   location : AuditsSourceCodeLocation?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsNavigatorUserAgentIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsNavigatorUserAgentIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsNavigatorUserAgentIssueDetails as CDP JSON.
@@ -2466,6 +2821,14 @@ pub(all) struct AuditsPartitioningBlobURLInfo {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsPartitioningBlobURLInfo with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPartitioningBlobURLInfo with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsPartitioningBlobURLInfo as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2501,6 +2864,14 @@ pub(all) struct AuditsPartitioningBlobURLIssueDetails {
   url : String
   partitioning_blob_urlinfo : AuditsPartitioningBlobURLInfo
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsPartitioningBlobURLIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPartitioningBlobURLIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsPartitioningBlobURLIssueDetails as CDP JSON.
@@ -2544,6 +2915,14 @@ pub(all) struct AuditsPerformanceIssueDetails {
   performance_issue_type : AuditsPerformanceIssueType
   source_code_location : AuditsSourceCodeLocation?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsPerformanceIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPerformanceIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsPerformanceIssueDetails as CDP JSON.
@@ -2594,6 +2973,14 @@ pub(all) struct AuditsPerformanceIssueType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsPerformanceIssueType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPerformanceIssueType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsPerformanceIssueType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2635,6 +3022,14 @@ pub(all) struct AuditsPermissionElementIssueDetails {
   occluder_parent_node_info : String?
   disable_reason : String?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsPermissionElementIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPermissionElementIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsPermissionElementIssueDetails as CDP JSON.
@@ -2716,6 +3111,14 @@ pub(all) struct AuditsPermissionElementIssueType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsPermissionElementIssueType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPermissionElementIssueType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsPermissionElementIssueType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2752,6 +3155,14 @@ pub(all) struct AuditsPropertyRuleIssueDetails {
   property_rule_issue_reason : AuditsPropertyRuleIssueReason
   property_value : String?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsPropertyRuleIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPropertyRuleIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsPropertyRuleIssueDetails as CDP JSON.
@@ -2804,6 +3215,14 @@ pub(all) struct AuditsPropertyRuleIssueReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsPropertyRuleIssueReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsPropertyRuleIssueReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsPropertyRuleIssueReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2842,6 +3261,14 @@ pub(all) struct AuditsQuirksModeIssueDetails {
   frame_id : PageFrameId
   loader_id : NetworkLoaderId
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsQuirksModeIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsQuirksModeIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsQuirksModeIssueDetails as CDP JSON.
@@ -2900,6 +3327,17 @@ pub(all) struct AuditsSelectivePermissionsInterventionIssueDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsSelectivePermissionsInterventionIssueDetails with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend AuditsSelectivePermissionsInterventionIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsSelectivePermissionsInterventionIssueDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2951,6 +3389,14 @@ pub(all) struct AuditsSharedArrayBufferIssueDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsSharedArrayBufferIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSharedArrayBufferIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsSharedArrayBufferIssueDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2997,6 +3443,14 @@ pub(all) struct AuditsSharedArrayBufferIssueType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsSharedArrayBufferIssueType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSharedArrayBufferIssueType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsSharedArrayBufferIssueType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3031,6 +3485,14 @@ pub fn AuditsSharedArrayBufferIssueType::from_json(
 pub(all) struct AuditsSharedDictionaryError {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsSharedDictionaryError with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSharedDictionaryError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsSharedDictionaryError as CDP JSON.
@@ -3068,6 +3530,14 @@ pub(all) struct AuditsSharedDictionaryIssueDetails {
   shared_dictionary_error : AuditsSharedDictionaryError
   request : AuditsAffectedRequest
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsSharedDictionaryIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSharedDictionaryIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsSharedDictionaryIssueDetails as CDP JSON.
@@ -3115,6 +3585,14 @@ pub(all) struct AuditsSourceCodeLocation {
   line_number : Int
   column_number : Int
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsSourceCodeLocation with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSourceCodeLocation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsSourceCodeLocation as CDP JSON.
@@ -3170,6 +3648,14 @@ pub(all) struct AuditsSRIMessageSignatureError {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsSRIMessageSignatureError with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSRIMessageSignatureError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsSRIMessageSignatureError as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3207,6 +3693,14 @@ pub(all) struct AuditsSRIMessageSignatureIssueDetails {
   integrity_assertions : Array[String]
   request : AuditsAffectedRequest
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsSRIMessageSignatureIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsSRIMessageSignatureIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsSRIMessageSignatureIssueDetails as CDP JSON.
@@ -3272,6 +3766,14 @@ pub(all) struct AuditsStylesheetLoadingIssueDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsStylesheetLoadingIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsStylesheetLoadingIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsStylesheetLoadingIssueDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3324,6 +3826,14 @@ pub(all) struct AuditsStyleSheetLoadingIssueReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsStyleSheetLoadingIssueReason with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsStyleSheetLoadingIssueReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsStyleSheetLoadingIssueReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3358,6 +3868,14 @@ pub fn AuditsStyleSheetLoadingIssueReason::from_json(
 pub(all) struct AuditsUnencodedDigestError {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsUnencodedDigestError with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsUnencodedDigestError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsUnencodedDigestError as CDP JSON.
@@ -3395,6 +3913,14 @@ pub(all) struct AuditsUnencodedDigestIssueDetails {
   error : AuditsUnencodedDigestError
   request : AuditsAffectedRequest
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsUnencodedDigestIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsUnencodedDigestIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsUnencodedDigestIssueDetails as CDP JSON.
@@ -3441,6 +3967,14 @@ pub(all) struct AuditsUserReidentificationIssueDetails {
   request : AuditsAffectedRequest?
   source_code_location : AuditsSourceCodeLocation?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsUserReidentificationIssueDetails with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsUserReidentificationIssueDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsUserReidentificationIssueDetails as CDP JSON.
@@ -3498,6 +4032,14 @@ pub(all) struct AuditsUserReidentificationIssueType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsUserReidentificationIssueType with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsUserReidentificationIssueType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsUserReidentificationIssueType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3532,6 +4074,14 @@ pub fn AuditsUserReidentificationIssueType::from_json(
 pub(all) struct AuditsCheckContrastParams {
   report_aaa : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsCheckContrastParams with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCheckContrastParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsCheckContrastParams as CDP JSON.
@@ -3581,6 +4131,14 @@ pub fn audits_check_contrast_command(
 pub(all) struct AuditsCheckFormsIssuesResult {
   form_issues : Array[AuditsGenericIssueDetails]
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsCheckFormsIssuesResult with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsCheckFormsIssuesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Audits.checkFormsIssues.
@@ -3682,6 +4240,14 @@ pub(all) struct AuditsGetEncodedResponseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AuditsGetEncodedResponseParams with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsGetEncodedResponseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AuditsGetEncodedResponseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3712,6 +4278,14 @@ pub(all) struct AuditsGetEncodedResponseResult {
   original_size : Int
   encoded_size : Int
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsGetEncodedResponseResult with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsGetEncodedResponseResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Audits.getEncodedResponse.
@@ -3775,6 +4349,14 @@ pub fn audits_get_encoded_response_command(
 pub(all) struct AuditsIssueAddedEventParams {
   issue : AuditsInspectorIssue
 } derive(Eq, Debug)
+
+///|
+pub extend AuditsIssueAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AuditsIssueAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AuditsIssueAddedEventParams as CDP JSON.

@@ -14,6 +14,12 @@ pub(all) struct ProfilerCoverageRange {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerCoverageRange with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerCoverageRange with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode ProfilerCoverageRange as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -56,6 +62,14 @@ pub(all) struct ProfilerFunctionCoverage {
   ranges : Array[ProfilerCoverageRange]
   is_block_coverage : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerFunctionCoverage with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerFunctionCoverage with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ProfilerFunctionCoverage as CDP JSON.
@@ -110,6 +124,14 @@ pub(all) struct ProfilerPositionTickInfo {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerPositionTickInfo with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerPositionTickInfo with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ProfilerPositionTickInfo as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -152,6 +174,12 @@ pub(all) struct ProfilerProfile {
   samples : Array[Int]?
   time_deltas : Array[Int]?
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerProfile with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerProfile with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode ProfilerProfile as CDP JSON.
@@ -236,6 +264,12 @@ pub(all) struct ProfilerProfileNode {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerProfileNode with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerProfileNode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode ProfilerProfileNode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -313,6 +347,12 @@ pub(all) struct ProfilerScriptCoverage {
   url : String
   functions : Array[ProfilerFunctionCoverage]
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerScriptCoverage with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerScriptCoverage with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode ProfilerScriptCoverage as CDP JSON.
@@ -398,6 +438,14 @@ pub(all) struct ProfilerGetBestEffortCoverageResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerGetBestEffortCoverageResult with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerGetBestEffortCoverageResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Profiler.getBestEffortCoverage.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -456,6 +504,14 @@ pub fn profiler_get_best_effort_coverage_command(
 pub(all) struct ProfilerSetSamplingIntervalParams {
   interval : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerSetSamplingIntervalParams with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerSetSamplingIntervalParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ProfilerSetSamplingIntervalParams as CDP JSON.
@@ -529,6 +585,14 @@ pub(all) struct ProfilerStartPreciseCoverageParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerStartPreciseCoverageParams with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerStartPreciseCoverageParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ProfilerStartPreciseCoverageParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -558,6 +622,14 @@ pub fn ProfilerStartPreciseCoverageParams::to_json(
 pub(all) struct ProfilerStartPreciseCoverageResult {
   timestamp : Double
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerStartPreciseCoverageResult with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerStartPreciseCoverageResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Profiler.startPreciseCoverage.
@@ -621,6 +693,12 @@ pub fn profiler_start_precise_coverage_command(
 pub(all) struct ProfilerStopResult {
   profile : ProfilerProfile
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerStopResult with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerStopResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Profiler.stop.
@@ -699,6 +777,14 @@ pub(all) struct ProfilerTakePreciseCoverageResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerTakePreciseCoverageResult with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerTakePreciseCoverageResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Profiler.takePreciseCoverage.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -763,6 +849,14 @@ pub(all) struct ProfilerConsoleProfileFinishedEventParams {
   profile : ProfilerProfile
   title : String?
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerConsoleProfileFinishedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerConsoleProfileFinishedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ProfilerConsoleProfileFinishedEventParams as CDP JSON.
@@ -841,6 +935,14 @@ pub(all) struct ProfilerConsoleProfileStartedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProfilerConsoleProfileStartedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend ProfilerConsoleProfileStartedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ProfilerConsoleProfileStartedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -911,6 +1013,17 @@ pub(all) struct ProfilerPreciseCoverageDeltaUpdateEventParams {
   occasion : String
   result : Array[ProfilerScriptCoverage]
 } derive(Eq, Debug)
+
+///|
+pub extend ProfilerPreciseCoverageDeltaUpdateEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ProfilerPreciseCoverageDeltaUpdateEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ProfilerPreciseCoverageDeltaUpdateEventParams as CDP JSON.

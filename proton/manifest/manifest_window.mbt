@@ -8,12 +8,30 @@ pub(all) enum WindowSizeHint {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowSizeHint with Eq::{not_equal, equal}
+
+///|
+pub extend WindowSizeHint with Debug::{to_repr}
+
+///|
+pub extend WindowSizeHint with Show::{to_string, output}
+
+///|
 /// Controls whether web content remains below or extends beneath the native
 /// titlebar. Platforms without overlay support keep the default titlebar.
 pub(all) enum TitlebarStyle {
   Default
   Overlay
 } derive(Debug, Eq)
+
+///|
+pub extend TitlebarStyle with Eq::{not_equal, equal}
+
+///|
+pub extend TitlebarStyle with Debug::{to_repr}
+
+///|
+pub extend TitlebarStyle with Show::{to_string, output}
 
 ///|
 pub impl Show for TitlebarStyle with fn output(self, logger) {
@@ -44,6 +62,15 @@ pub struct WindowManifest {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowManifest with Eq::{not_equal, equal}
+
+///|
+pub extend WindowManifest with Debug::{to_repr}
+
+///|
+pub extend WindowManifest with Show::{to_string, output}
+
+///|
 pub impl Show for WindowManifest with fn output(self, logger) {
   logger.write_string("WindowManifest::{ title: ")
   logger.write_object(self.title)
@@ -66,6 +93,15 @@ pub struct AppWindowManifest {
   entry : AppEntry
   open_on_start : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend AppWindowManifest with Eq::{not_equal, equal}
+
+///|
+pub extend AppWindowManifest with Debug::{to_repr}
+
+///|
+pub extend AppWindowManifest with Show::{to_string, output}
 
 ///|
 pub impl Show for AppWindowManifest with fn output(self, logger) {

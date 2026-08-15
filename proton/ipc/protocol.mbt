@@ -17,6 +17,18 @@ pub(all) struct IpcOpRequest {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend IpcOpRequest with Eq::{not_equal, equal}
+
+///|
+pub extend IpcOpRequest with Debug::{to_repr}
+
+///|
+pub extend IpcOpRequest with ToJson::{to_json}
+
+///|
+pub extend IpcOpRequest with FromJson::{from_json}
+
+///|
 /// One operation completion sent from the user process back to JavaScript.
 ///
 /// `status == 0` means success. Any non-zero status means `body` contains a JSON
@@ -29,6 +41,18 @@ pub(all) struct IpcOpResponse {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend IpcOpResponse with Eq::{not_equal, equal}
+
+///|
+pub extend IpcOpResponse with Debug::{to_repr}
+
+///|
+pub extend IpcOpResponse with ToJson::{to_json}
+
+///|
+pub extend IpcOpResponse with FromJson::{from_json}
+
+///|
 /// One extension event sent from the user process to JavaScript.
 pub(all) struct IpcExtensionEvent {
   version : Int
@@ -38,10 +62,34 @@ pub(all) struct IpcExtensionEvent {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend IpcExtensionEvent with Eq::{not_equal, equal}
+
+///|
+pub extend IpcExtensionEvent with Debug::{to_repr}
+
+///|
+pub extend IpcExtensionEvent with ToJson::{to_json}
+
+///|
+pub extend IpcExtensionEvent with FromJson::{from_json}
+
+///|
 /// One JavaScript-facing API exposed for a remote extension namespace.
 pub(all) struct IpcExtensionApi {
   api_name : String
 } derive(ToJson, FromJson, Eq, Debug)
+
+///|
+pub extend IpcExtensionApi with Eq::{not_equal, equal}
+
+///|
+pub extend IpcExtensionApi with Debug::{to_repr}
+
+///|
+pub extend IpcExtensionApi with ToJson::{to_json}
+
+///|
+pub extend IpcExtensionApi with FromJson::{from_json}
 
 ///|
 /// JavaScript bridge metadata for one remote extension.
@@ -51,6 +99,18 @@ pub(all) struct IpcExtensionDescriptor {
   apis : Array[IpcExtensionApi]
   scripts : Array[String]
 } derive(ToJson, FromJson, Eq, Debug)
+
+///|
+pub extend IpcExtensionDescriptor with Eq::{not_equal, equal}
+
+///|
+pub extend IpcExtensionDescriptor with Debug::{to_repr}
+
+///|
+pub extend IpcExtensionDescriptor with ToJson::{to_json}
+
+///|
+pub extend IpcExtensionDescriptor with FromJson::{from_json}
 
 ///|
 /// Creates one operation request frame.

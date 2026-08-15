@@ -16,6 +16,12 @@ pub(all) struct ExtensionsExtensionInfo {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionsExtensionInfo with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsExtensionInfo with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode ExtensionsExtensionInfo as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -60,6 +66,12 @@ pub(all) struct ExtensionsStorageArea {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionsStorageArea with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsStorageArea with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode ExtensionsStorageArea as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -93,6 +105,14 @@ pub(all) struct ExtensionsClearStorageItemsParams {
   id : String
   storage_area : ExtensionsStorageArea
 } derive(Eq, Debug)
+
+///|
+pub extend ExtensionsClearStorageItemsParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsClearStorageItemsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ExtensionsClearStorageItemsParams as CDP JSON.
@@ -145,6 +165,14 @@ pub fn extensions_clear_storage_items_command(
 pub(all) struct ExtensionsGetExtensionsResult {
   extensions : Array[ExtensionsExtensionInfo]
 } derive(Eq, Debug)
+
+///|
+pub extend ExtensionsGetExtensionsResult with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsGetExtensionsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Extensions.getExtensions.
@@ -209,6 +237,14 @@ pub(all) struct ExtensionsGetStorageItemsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionsGetStorageItemsParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsGetStorageItemsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ExtensionsGetStorageItemsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -234,6 +270,14 @@ pub fn ExtensionsGetStorageItemsParams::to_json(
 pub(all) struct ExtensionsGetStorageItemsResult {
   data : Json
 } derive(Eq, Debug)
+
+///|
+pub extend ExtensionsGetStorageItemsResult with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsGetStorageItemsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Extensions.getStorageItems.
@@ -296,6 +340,14 @@ pub(all) struct ExtensionsLoadUnpackedParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionsLoadUnpackedParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsLoadUnpackedParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ExtensionsLoadUnpackedParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -320,6 +372,14 @@ pub fn ExtensionsLoadUnpackedParams::to_json(
 pub(all) struct ExtensionsLoadUnpackedResult {
   id : String
 } derive(Eq, Debug)
+
+///|
+pub extend ExtensionsLoadUnpackedResult with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsLoadUnpackedResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Extensions.loadUnpacked.
@@ -379,6 +439,14 @@ pub(all) struct ExtensionsRemoveStorageItemsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionsRemoveStorageItemsParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsRemoveStorageItemsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ExtensionsRemoveStorageItemsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -432,6 +500,14 @@ pub(all) struct ExtensionsSetStorageItemsParams {
   storage_area : ExtensionsStorageArea
   values : Json
 } derive(Eq, Debug)
+
+///|
+pub extend ExtensionsSetStorageItemsParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsSetStorageItemsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ExtensionsSetStorageItemsParams as CDP JSON.
@@ -488,6 +564,14 @@ pub(all) struct ExtensionsTriggerActionParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionsTriggerActionParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsTriggerActionParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ExtensionsTriggerActionParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -534,6 +618,14 @@ pub fn extensions_trigger_action_command(
 pub(all) struct ExtensionsUninstallParams {
   id : String
 } derive(Eq, Debug)
+
+///|
+pub extend ExtensionsUninstallParams with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionsUninstallParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ExtensionsUninstallParams as CDP JSON.

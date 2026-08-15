@@ -95,6 +95,12 @@ pub enum UpdateInstallOutcome {
 } derive(Debug, Eq)
 
 ///|
+pub extend UpdateInstallOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend UpdateInstallOutcome with Debug::{to_repr}
+
+///|
 /// Reads a C string out of a fixed buffer the native side wrote into.
 ///
 /// The buffer is sized for the longest value the native side may produce, so

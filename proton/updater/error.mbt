@@ -31,6 +31,15 @@ pub(all) suberror UpdateError {
 } derive(Debug, Eq)
 
 ///|
+pub extend UpdateError with Eq::{not_equal, equal}
+
+///|
+pub extend UpdateError with Debug::{to_repr}
+
+///|
+pub extend UpdateError with Show::{to_string, output}
+
+///|
 pub fn UpdateError::message(self : UpdateError) -> String {
   match self {
     FetchFailed(url~, detail~) => "cannot fetch \{url}: \{detail}"

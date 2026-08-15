@@ -17,6 +17,12 @@ struct FileEntry {
 } derive(Debug, Eq)
 
 ///|
+pub extend FileEntry with Eq::{not_equal, equal}
+
+///|
+pub extend FileEntry with Debug::{to_repr}
+
+///|
 /// Stores the normalized auto-launch configuration for one application.
 ///
 /// `AutoLaunch` values are created through [`new`](../auto_launch.mbt) after

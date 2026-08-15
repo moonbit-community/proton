@@ -1,4 +1,33 @@
 ///|
+/// Strips explicit trait-promotion `extend` declarations before parsing.
+///
+/// `moonbitlang/parser@0.3.13` does not yet understand the
+/// `pub extend Type with Trait::{...}` declaration, so the codegen parser would
+/// reject source files that use it. The declarations only promote trait methods
+/// to regular methods and carry no command-contract information, so they are
+/// safe to drop before parsing.
+fn strip_extend_declarations(source : String) -> String {
+  let lines = source.split("\n").collect()
+  let kept : Array[String] = []
+  for line in lines {
+    let line_str = line.to_owned()
+    if !is_extend_promotion(line_str) {
+      kept.push(line_str)
+    }
+  }
+  kept.join("\n")
+}
+
+///|
+fn is_extend_promotion(line : String) -> Bool {
+  let trimmed = line.trim().to_owned()
+  if !(trimmed.has_prefix("extend ") || trimmed.has_prefix("pub extend ")) {
+    return false
+  }
+  trimmed.contains(" with ") && trimmed.contains("::{")
+}
+
+///|
 /// Generates one typed package registrar from explicit MoonBit source inputs.
 pub fn generate_typed_commands_from_sources(
   sources : Array[(String, String)],
@@ -13,7 +42,7 @@ pub fn generate_typed_commands_from_sources(
   let commands : Array[ParsedTypedCommand] = []
   for source_entry in sources {
     let (path, source) = source_entry
-    let (ast, reports) = @parser.parse_string(source)
+    let (ast, reports) = @parser.parse_string(strip_extend_declarations(source))
     guard reports.is_empty() else {
       raise CodegenInputError::SourceParse(path~)
     }

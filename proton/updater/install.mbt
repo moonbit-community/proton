@@ -13,6 +13,12 @@ pub enum InstallOutcome {
 } derive(Debug, Eq)
 
 ///|
+pub extend InstallOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend InstallOutcome with Debug::{to_repr}
+
+///|
 async fn coordinate_install(
   target_revision : UInt64,
   current_revision : () -> UInt64 raise UpdateError,

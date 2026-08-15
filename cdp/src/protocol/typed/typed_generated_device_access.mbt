@@ -12,6 +12,12 @@ pub(all) struct DeviceAccessDeviceId {
 } derive(Eq, Debug)
 
 ///|
+pub extend DeviceAccessDeviceId with Eq::{not_equal, equal}
+
+///|
+pub extend DeviceAccessDeviceId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DeviceAccessDeviceId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -45,6 +51,14 @@ pub(all) struct DeviceAccessPromptDevice {
   id : DeviceAccessDeviceId
   name : String
 } derive(Eq, Debug)
+
+///|
+pub extend DeviceAccessPromptDevice with Eq::{not_equal, equal}
+
+///|
+pub extend DeviceAccessPromptDevice with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DeviceAccessPromptDevice as CDP JSON.
@@ -89,6 +103,12 @@ pub(all) struct DeviceAccessRequestId {
 } derive(Eq, Debug)
 
 ///|
+pub extend DeviceAccessRequestId with Eq::{not_equal, equal}
+
+///|
+pub extend DeviceAccessRequestId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode DeviceAccessRequestId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -121,6 +141,14 @@ pub fn DeviceAccessRequestId::from_json(
 pub(all) struct DeviceAccessCancelPromptParams {
   id : DeviceAccessRequestId
 } derive(Eq, Debug)
+
+///|
+pub extend DeviceAccessCancelPromptParams with Eq::{not_equal, equal}
+
+///|
+pub extend DeviceAccessCancelPromptParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DeviceAccessCancelPromptParams as CDP JSON.
@@ -215,6 +243,14 @@ pub(all) struct DeviceAccessSelectPromptParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend DeviceAccessSelectPromptParams with Eq::{not_equal, equal}
+
+///|
+pub extend DeviceAccessSelectPromptParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode DeviceAccessSelectPromptParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -262,6 +298,17 @@ pub(all) struct DeviceAccessDeviceRequestPromptedEventParams {
   id : DeviceAccessRequestId
   devices : Array[DeviceAccessPromptDevice]
 } derive(Eq, Debug)
+
+///|
+pub extend DeviceAccessDeviceRequestPromptedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend DeviceAccessDeviceRequestPromptedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode DeviceAccessDeviceRequestPromptedEventParams as CDP JSON.

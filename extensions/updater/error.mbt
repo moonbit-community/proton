@@ -8,6 +8,12 @@ suberror UpdaterError {
 } derive(Debug)
 
 ///|
+pub extend UpdaterError with Debug::{to_repr}
+
+///|
+pub extend UpdaterError with Show::{to_string, output}
+
+///|
 impl Show for UpdaterError with fn output(self, logger) {
   match self {
     NothingOffered =>

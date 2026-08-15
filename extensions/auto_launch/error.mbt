@@ -8,6 +8,15 @@ suberror AutoLaunchError {
 } derive(Debug, Eq)
 
 ///|
+pub extend AutoLaunchError with Eq::{not_equal, equal}
+
+///|
+pub extend AutoLaunchError with Debug::{to_repr}
+
+///|
+pub extend AutoLaunchError with Show::{to_string, output}
+
+///|
 fn AutoLaunchError::message(self : AutoLaunchError) -> String {
   match self {
     InvalidConfiguration(detail~) =>

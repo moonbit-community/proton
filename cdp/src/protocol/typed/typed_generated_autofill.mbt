@@ -12,6 +12,12 @@ pub(all) struct AutofillAddress {
 } derive(Eq, Debug)
 
 ///|
+pub extend AutofillAddress with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillAddress with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AutofillAddress as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -54,6 +60,12 @@ pub(all) struct AutofillAddressField {
 } derive(Eq, Debug)
 
 ///|
+pub extend AutofillAddressField with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillAddressField with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode AutofillAddressField as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -90,6 +102,12 @@ pub fn AutofillAddressField::from_json(
 pub(all) struct AutofillAddressFields {
   fields : Array[AutofillAddressField]
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillAddressFields with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillAddressFields with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AutofillAddressFields as CDP JSON.
@@ -131,6 +149,12 @@ pub fn AutofillAddressFields::from_json(
 pub(all) struct AutofillAddressUI {
   address_fields : Array[AutofillAddressFields]
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillAddressUI with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillAddressUI with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AutofillAddressUI as CDP JSON.
@@ -178,6 +202,12 @@ pub(all) struct AutofillCreditCard {
   expiry_year : String
   cvc : String
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillCreditCard with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillCreditCard with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AutofillCreditCard as CDP JSON.
@@ -233,6 +263,12 @@ pub(all) struct AutofillFilledField {
   frame_id : PageFrameId
   field_id : DOMBackendNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillFilledField with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillFilledField with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AutofillFilledField as CDP JSON.
@@ -291,6 +327,12 @@ pub fn AutofillFilledField::from_json(
 pub(all) struct AutofillFillingStrategy {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillFillingStrategy with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillFillingStrategy with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AutofillFillingStrategy as CDP JSON.
@@ -363,6 +405,14 @@ pub(all) struct AutofillSetAddressesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend AutofillSetAddressesParams with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillSetAddressesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode AutofillSetAddressesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -411,6 +461,12 @@ pub(all) struct AutofillTriggerParams {
   card : AutofillCreditCard?
   address : AutofillAddress?
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillTriggerParams with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillTriggerParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode AutofillTriggerParams as CDP JSON.
@@ -466,6 +522,14 @@ pub(all) struct AutofillAddressFormFilledEventParams {
   filled_fields : Array[AutofillFilledField]
   address_ui : AutofillAddressUI
 } derive(Eq, Debug)
+
+///|
+pub extend AutofillAddressFormFilledEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend AutofillAddressFormFilledEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode AutofillAddressFormFilledEventParams as CDP JSON.

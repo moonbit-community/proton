@@ -4,9 +4,15 @@ struct EchoResponse {
 } derive(FromJson)
 
 ///|
+pub extend EchoResponse with FromJson::{from_json}
+
+///|
 struct CountChanged {
   count : Int
 } derive(FromJson)
+
+///|
+pub extend CountChanged with FromJson::{from_json}
 
 ///|
 struct TestScheduler {

@@ -16,6 +16,12 @@ pub(all) struct BrowserBounds {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserBounds with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserBounds with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode BrowserBounds as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -73,6 +79,12 @@ pub(all) struct BrowserBrowserCommandId {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserBrowserCommandId with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserBrowserCommandId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode BrowserBrowserCommandId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -105,6 +117,12 @@ pub fn BrowserBrowserCommandId::from_json(
 pub(all) struct BrowserBrowserContextID {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserBrowserContextID with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserBrowserContextID with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode BrowserBrowserContextID as CDP JSON.
@@ -141,6 +159,12 @@ pub(all) struct BrowserBucket {
   high : Int
   count : Int
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserBucket with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserBucket with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode BrowserBucket as CDP JSON.
@@ -184,6 +208,12 @@ pub(all) struct BrowserHistogram {
   count : Int
   buckets : Array[BrowserBucket]
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserHistogram with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserHistogram with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode BrowserHistogram as CDP JSON.
@@ -236,6 +266,14 @@ pub(all) struct BrowserPermissionDescriptor {
   allow_without_gesture : Bool?
   pan_tilt_zoom : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserPermissionDescriptor with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPermissionDescriptor with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserPermissionDescriptor as CDP JSON.
@@ -304,6 +342,14 @@ pub(all) struct BrowserPermissionSetting {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserPermissionSetting with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPermissionSetting with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserPermissionSetting as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -340,6 +386,12 @@ pub(all) struct BrowserPermissionType {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserPermissionType with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPermissionType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode BrowserPermissionType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -372,6 +424,14 @@ pub fn BrowserPermissionType::from_json(
 pub(all) struct BrowserPrivacySandboxAPI {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserPrivacySandboxAPI with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPrivacySandboxAPI with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserPrivacySandboxAPI as CDP JSON.
@@ -408,6 +468,12 @@ pub fn BrowserPrivacySandboxAPI::from_json(
 pub(all) struct BrowserWindowID {
   value : Int
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserWindowID with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserWindowID with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode BrowserWindowID as CDP JSON.
@@ -451,6 +517,12 @@ pub(all) struct BrowserWindowState {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserWindowState with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserWindowState with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode BrowserWindowState as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -486,6 +558,17 @@ pub(all) struct BrowserAddPrivacySandboxCoordinatorKeyConfigParams {
   key_config : String
   browser_context_id : BrowserBrowserContextID?
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserAddPrivacySandboxCoordinatorKeyConfigParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BrowserAddPrivacySandboxCoordinatorKeyConfigParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserAddPrivacySandboxCoordinatorKeyConfigParams as CDP JSON.
@@ -544,6 +627,17 @@ pub(all) struct BrowserAddPrivacySandboxEnrollmentOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserAddPrivacySandboxEnrollmentOverrideParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BrowserAddPrivacySandboxEnrollmentOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserAddPrivacySandboxEnrollmentOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -594,6 +688,14 @@ pub(all) struct BrowserCancelDownloadParams {
   guid : String
   browser_context_id : BrowserBrowserContextID?
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserCancelDownloadParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserCancelDownloadParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserCancelDownloadParams as CDP JSON.
@@ -704,6 +806,14 @@ pub(all) struct BrowserExecuteBrowserCommandParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserExecuteBrowserCommandParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserExecuteBrowserCommandParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserExecuteBrowserCommandParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -753,6 +863,14 @@ pub fn browser_execute_browser_command_command(
 pub(all) struct BrowserGetBrowserCommandLineResult {
   arguments : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserGetBrowserCommandLineResult with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetBrowserCommandLineResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Browser.getBrowserCommandLine.
@@ -818,6 +936,14 @@ pub(all) struct BrowserGetHistogramParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserGetHistogramParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetHistogramParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserGetHistogramParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -842,6 +968,14 @@ pub fn BrowserGetHistogramParams::to_json(
 pub(all) struct BrowserGetHistogramResult {
   histogram : BrowserHistogram
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserGetHistogramResult with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetHistogramResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Browser.getHistogram.
@@ -904,6 +1038,14 @@ pub(all) struct BrowserGetHistogramsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserGetHistogramsParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetHistogramsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserGetHistogramsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -930,6 +1072,14 @@ pub fn BrowserGetHistogramsParams::to_json(
 pub(all) struct BrowserGetHistogramsResult {
   histograms : Array[BrowserHistogram]
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserGetHistogramsResult with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetHistogramsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Browser.getHistograms.
@@ -996,6 +1146,12 @@ pub(all) struct BrowserGetVersionResult {
   user_agent : String
   js_version : String
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserGetVersionResult with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetVersionResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Browser.getVersion.
@@ -1067,6 +1223,14 @@ pub(all) struct BrowserGetWindowBoundsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserGetWindowBoundsParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetWindowBoundsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserGetWindowBoundsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1088,6 +1252,14 @@ pub fn BrowserGetWindowBoundsParams::to_json(
 pub(all) struct BrowserGetWindowBoundsResult {
   bounds : BrowserBounds
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserGetWindowBoundsResult with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetWindowBoundsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Browser.getWindowBounds.
@@ -1149,6 +1321,14 @@ pub(all) struct BrowserGetWindowForTargetParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserGetWindowForTargetParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetWindowForTargetParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserGetWindowForTargetParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1173,6 +1353,14 @@ pub(all) struct BrowserGetWindowForTargetResult {
   window_id : BrowserWindowID
   bounds : BrowserBounds
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserGetWindowForTargetResult with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGetWindowForTargetResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Browser.getWindowForTarget.
@@ -1243,6 +1431,14 @@ pub(all) struct BrowserGrantPermissionsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserGrantPermissionsParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserGrantPermissionsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserGrantPermissionsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1298,6 +1494,14 @@ pub(all) struct BrowserResetPermissionsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserResetPermissionsParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserResetPermissionsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserResetPermissionsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1347,6 +1551,14 @@ pub(all) struct BrowserSetContentsSizeParams {
   width : Int?
   height : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserSetContentsSizeParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserSetContentsSizeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserSetContentsSizeParams as CDP JSON.
@@ -1403,6 +1615,14 @@ pub(all) struct BrowserSetDockTileParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserSetDockTileParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserSetDockTileParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserSetDockTileParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1456,6 +1676,14 @@ pub(all) struct BrowserSetDownloadBehaviorParams {
   download_path : String?
   events_enabled : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserSetDownloadBehaviorParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserSetDownloadBehaviorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserSetDownloadBehaviorParams as CDP JSON.
@@ -1522,6 +1750,14 @@ pub(all) struct BrowserSetPermissionParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserSetPermissionParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserSetPermissionParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserSetPermissionParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1580,6 +1816,14 @@ pub(all) struct BrowserSetWindowBoundsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BrowserSetWindowBoundsParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserSetWindowBoundsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BrowserSetWindowBoundsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1630,6 +1874,14 @@ pub(all) struct BrowserDownloadProgressEventParams {
   state : String
   file_path : String?
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserDownloadProgressEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserDownloadProgressEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserDownloadProgressEventParams as CDP JSON.
@@ -1709,6 +1961,14 @@ pub(all) struct BrowserDownloadWillBeginEventParams {
   url : String
   suggested_filename : String
 } derive(Eq, Debug)
+
+///|
+pub extend BrowserDownloadWillBeginEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserDownloadWillBeginEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BrowserDownloadWillBeginEventParams as CDP JSON.

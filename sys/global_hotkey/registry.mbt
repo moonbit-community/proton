@@ -6,11 +6,23 @@ struct RegisterPlan {
 } derive(Debug, Eq)
 
 ///|
+pub extend RegisterPlan with Eq::{not_equal, equal}
+
+///|
+pub extend RegisterPlan with Debug::{to_repr}
+
+///|
 /// Captures the work needed to unregister one previously normalized shortcut.
 struct UnregisterPlan {
   id : Int
   normalized : String
 } derive(Debug, Eq)
+
+///|
+pub extend UnregisterPlan with Eq::{not_equal, equal}
+
+///|
+pub extend UnregisterPlan with Debug::{to_repr}
 
 ///|
 /// Stores the MoonBit-side registration bookkeeping that mirrors the native backend.

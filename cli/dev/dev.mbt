@@ -30,6 +30,12 @@ struct RawDevOptions {
 } derive(Debug, Eq)
 
 ///|
+pub extend RawDevOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RawDevOptions with Debug::{to_repr}
+
+///|
 struct DevRuntime {
   root : String
   bin_dir : String
@@ -38,11 +44,23 @@ struct DevRuntime {
 } derive(Debug, Eq)
 
 ///|
+pub extend DevRuntime with Eq::{not_equal, equal}
+
+///|
+pub extend DevRuntime with Debug::{to_repr}
+
+///|
 struct DevUrlEndpoint {
   url : String
   host : String
   port : Int
 } derive(Debug, Eq)
+
+///|
+pub extend DevUrlEndpoint with Eq::{not_equal, equal}
+
+///|
+pub extend DevUrlEndpoint with Debug::{to_repr}
 
 ///|
 /// Returns the declarative `proton_cli dev` command specification.

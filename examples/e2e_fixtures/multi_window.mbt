@@ -24,6 +24,9 @@ struct MultiWindowIdentifyPayload {
 } derive(FromJson)
 
 ///|
+pub extend MultiWindowIdentifyPayload with FromJson::{from_json}
+
+///|
 async fn run_multi_window_bridge() -> Result[Unit, String] {
   let runtime = match
     multi_window_native_result("create runtime", () => {

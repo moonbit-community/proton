@@ -5,6 +5,12 @@ pub(all) suberror ExtensionAdapterError {
 } derive(Debug)
 
 ///|
+pub extend ExtensionAdapterError with Debug::{to_repr}
+
+///|
+pub extend ExtensionAdapterError with Show::{to_string, output}
+
+///|
 pub fn ExtensionAdapterError::message(self : ExtensionAdapterError) -> String {
   match self {
     TypedSpecInvalid(extension_id~, detail~) =>

@@ -13,6 +13,15 @@ pub(all) suberror ManifestError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ManifestError with Eq::{not_equal, equal}
+
+///|
+pub extend ManifestError with Debug::{to_repr}
+
+///|
+pub extend ManifestError with Show::{to_string, output}
+
+///|
 pub fn ManifestError::message(self : ManifestError) -> String {
   match self {
     NotJson => "manifest is not valid JSON"

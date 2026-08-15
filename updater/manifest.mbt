@@ -16,6 +16,12 @@ pub struct PlatformUpdate {
 } derive(Eq, Debug)
 
 ///|
+pub extend PlatformUpdate with Eq::{not_equal, equal}
+
+///|
+pub extend PlatformUpdate with Debug::{to_repr}
+
+///|
 pub fn PlatformUpdate::url(self : PlatformUpdate) -> String {
   self.url
 }

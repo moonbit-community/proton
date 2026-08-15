@@ -4,11 +4,23 @@ struct DoublePayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend DoublePayload with ToJson::{to_json}
+
+///|
+pub extend DoublePayload with FromJson::{from_json}
+
+///|
 struct DoubleReply {
   value : Int
   doubled : Int
   source : String
 } derive(ToJson, FromJson)
+
+///|
+pub extend DoubleReply with ToJson::{to_json}
+
+///|
+pub extend DoubleReply with FromJson::{from_json}
 
 ///|
 let sync_math_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

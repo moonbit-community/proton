@@ -5,9 +5,21 @@ struct AddReply {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AddReply with ToJson::{to_json}
+
+///|
+pub extend AddReply with FromJson::{from_json}
+
+///|
 struct AddFinished {
   total : Int
 } derive(ToJson, FromJson)
+
+///|
+pub extend AddFinished with ToJson::{to_json}
+
+///|
+pub extend AddFinished with FromJson::{from_json}
 
 ///|
 struct AddRequest {
@@ -15,6 +27,12 @@ struct AddRequest {
   right : Int
   delay_ms : Int?
 } derive(ToJson, FromJson)
+
+///|
+pub extend AddRequest with ToJson::{to_json}
+
+///|
+pub extend AddRequest with FromJson::{from_json}
 
 ///|
 let attribute_codegen_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

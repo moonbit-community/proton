@@ -45,6 +45,15 @@ pub(all) struct ProtocolTypedCoverageReport {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend ProtocolTypedCoverageReport with Eq::{not_equal, equal}
+
+///|
+pub extend ProtocolTypedCoverageReport with Debug::{to_repr}
+
+///|
+pub extend ProtocolTypedCoverageReport with ToJson::{to_json}
+
+///|
 /// Return detailed generated typed protocol coverage counters.
 ///
 /// `complete` is true only when every bundled command, event, type, and typed

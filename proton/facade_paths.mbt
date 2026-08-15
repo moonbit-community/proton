@@ -7,6 +7,12 @@ pub(all) suberror AppPathError {
 } derive(Debug, Eq)
 
 ///|
+pub extend AppPathError with Eq::{not_equal, equal}
+
+///|
+pub extend AppPathError with Debug::{to_repr}
+
+///|
 pub fn AppPathError::message(self : AppPathError) -> String {
   match self {
     InvalidIdentifier(identifier~) =>

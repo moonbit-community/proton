@@ -7,6 +7,12 @@ struct ParsedGlobalHotkey {
 } derive(Debug, Eq)
 
 ///|
+pub extend ParsedGlobalHotkey with Eq::{not_equal, equal}
+
+///|
+pub extend ParsedGlobalHotkey with Debug::{to_repr}
+
+///|
 /// Tracks which modifier families have already been seen while parsing.
 priv struct ModifierSet {
   mut control : Bool

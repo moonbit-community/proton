@@ -5,6 +5,12 @@ struct SlowAddRequest {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend SlowAddRequest with ToJson::{to_json}
+
+///|
+pub extend SlowAddRequest with FromJson::{from_json}
+
+///|
 let slow_add_command : @proton_contract.Command[SlowAddRequest, Int] = generated_extension_contract.command(
   "slowAdd",
 )

@@ -12,6 +12,12 @@ pub(all) struct PreloadPrefetchStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadPrefetchStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPrefetchStatus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PreloadPrefetchStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -47,6 +53,14 @@ pub(all) struct PreloadPreloadingAttemptKey {
   url : String
   target_hint : PreloadSpeculationTargetHint?
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadPreloadingAttemptKey with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPreloadingAttemptKey with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadPreloadingAttemptKey as CDP JSON.
@@ -102,6 +116,14 @@ pub(all) struct PreloadPreloadingAttemptSource {
   rule_set_ids : Array[PreloadRuleSetId]
   node_ids : Array[DOMBackendNodeId]
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadPreloadingAttemptSource with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPreloadingAttemptSource with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadPreloadingAttemptSource as CDP JSON.
@@ -160,6 +182,12 @@ pub(all) struct PreloadPreloadingStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadPreloadingStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPreloadingStatus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PreloadPreloadingStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -192,6 +220,14 @@ pub fn PreloadPreloadingStatus::from_json(
 pub(all) struct PreloadPreloadPipelineId {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadPreloadPipelineId with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPreloadPipelineId with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadPreloadPipelineId as CDP JSON.
@@ -230,6 +266,14 @@ pub(all) struct PreloadPrerenderFinalStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadPrerenderFinalStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPrerenderFinalStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PreloadPrerenderFinalStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -266,6 +310,14 @@ pub(all) struct PreloadPrerenderMismatchedHeaders {
   initial_value : String?
   activation_value : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadPrerenderMismatchedHeaders with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPrerenderMismatchedHeaders with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadPrerenderMismatchedHeaders as CDP JSON.
@@ -326,6 +378,12 @@ pub(all) struct PreloadRuleSet {
   error_message : String?
   tag : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadRuleSet with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadRuleSet with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PreloadRuleSet as CDP JSON.
@@ -409,6 +467,12 @@ pub(all) struct PreloadRuleSetErrorType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadRuleSetErrorType with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadRuleSetErrorType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PreloadRuleSetErrorType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -441,6 +505,12 @@ pub fn PreloadRuleSetErrorType::from_json(
 pub(all) struct PreloadRuleSetId {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadRuleSetId with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadRuleSetId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PreloadRuleSetId as CDP JSON.
@@ -477,6 +547,14 @@ pub(all) struct PreloadSpeculationAction {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadSpeculationAction with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadSpeculationAction with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PreloadSpeculationAction as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -511,6 +589,14 @@ pub fn PreloadSpeculationAction::from_json(
 pub(all) struct PreloadSpeculationTargetHint {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadSpeculationTargetHint with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadSpeculationTargetHint with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadSpeculationTargetHint as CDP JSON.
@@ -589,6 +675,14 @@ pub(all) struct PreloadPrefetchStatusUpdatedEventParams {
   prefetch_status : PreloadPrefetchStatus
   request_id : NetworkRequestId
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadPrefetchStatusUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPrefetchStatusUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadPrefetchStatusUpdatedEventParams as CDP JSON.
@@ -683,6 +777,17 @@ pub(all) struct PreloadPreloadEnabledStateUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadPreloadEnabledStateUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PreloadPreloadEnabledStateUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PreloadPreloadEnabledStateUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -770,6 +875,17 @@ pub(all) struct PreloadPreloadingAttemptSourcesUpdatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadPreloadingAttemptSourcesUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PreloadPreloadingAttemptSourcesUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PreloadPreloadingAttemptSourcesUpdatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -849,6 +965,14 @@ pub(all) struct PreloadPrerenderStatusUpdatedEventParams {
   disallowed_mojo_interface : String?
   mismatched_headers : Array[PreloadPrerenderMismatchedHeaders]?
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadPrerenderStatusUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadPrerenderStatusUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadPrerenderStatusUpdatedEventParams as CDP JSON.
@@ -948,6 +1072,14 @@ pub(all) struct PreloadRuleSetRemovedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PreloadRuleSetRemovedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadRuleSetRemovedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PreloadRuleSetRemovedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1010,6 +1142,14 @@ pub fn preload_rule_set_removed_event(
 pub(all) struct PreloadRuleSetUpdatedEventParams {
   rule_set : PreloadRuleSet
 } derive(Eq, Debug)
+
+///|
+pub extend PreloadRuleSetUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PreloadRuleSetUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PreloadRuleSetUpdatedEventParams as CDP JSON.

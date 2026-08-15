@@ -5,9 +5,21 @@ struct AddRequest {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AddRequest with ToJson::{to_json}
+
+///|
+pub extend AddRequest with FromJson::{from_json}
+
+///|
 struct ReportProbeRequest {
   report : String
 } derive(ToJson, FromJson)
+
+///|
+pub extend ReportProbeRequest with ToJson::{to_json}
+
+///|
+pub extend ReportProbeRequest with FromJson::{from_json}
 
 ///|
 let add_command : @proton_contract.Command[AddRequest, Int] = generated_extension_contract.command(

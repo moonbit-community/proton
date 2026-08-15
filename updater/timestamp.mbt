@@ -13,6 +13,15 @@ pub struct Timestamp {
 } derive(Eq, Debug)
 
 ///|
+pub extend Timestamp with Eq::{not_equal, equal}
+
+///|
+pub extend Timestamp with Debug::{to_repr}
+
+///|
+pub extend Timestamp with Show::{to_string, output}
+
+///|
 pub impl Show for Timestamp with fn output(self, logger) {
   logger.write_string(self.text)
 }

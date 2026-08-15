@@ -7,10 +7,22 @@ pub(all) enum ProjectWindowSizeHint {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProjectWindowSizeHint with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectWindowSizeHint with Debug::{to_repr}
+
+///|
 pub(all) enum ProjectTitlebarStyle {
   TitlebarDefault
   TitlebarOverlay
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectTitlebarStyle with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectTitlebarStyle with Debug::{to_repr}
 
 ///|
 pub(all) enum ProjectEntry {
@@ -19,6 +31,12 @@ pub(all) enum ProjectEntry {
   File(String)
   Asset(String)
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectEntry with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectEntry with Debug::{to_repr}
 
 ///|
 pub(all) struct ProjectWindowConfig {
@@ -30,12 +48,24 @@ pub(all) struct ProjectWindowConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProjectWindowConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectWindowConfig with Debug::{to_repr}
+
+///|
 pub(all) struct ProjectAppWindowConfig {
   id : String
   window : ProjectWindowConfig
   entry : ProjectEntry
   open_on_start : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectAppWindowConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectAppWindowConfig with Debug::{to_repr}
 
 ///|
 /// One renderer capability grant from `proton.project.json`.
@@ -49,6 +79,12 @@ pub(all) struct ProjectPermissionGrant {
   extension : String
   scope : Json
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectPermissionGrant with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectPermissionGrant with Debug::{to_repr}
 
 ///|
 pub fn ProjectPermissionGrant::new(
@@ -91,6 +127,12 @@ pub(all) struct ProjectMetadata {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProjectMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectMetadata with Debug::{to_repr}
+
+///|
 pub fn ProjectMetadata::new(
   product_name : String,
   identifier? : String? = None,
@@ -106,6 +148,12 @@ pub(all) struct ProjectBackendConfig {
   path : String
   app_package : String
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectBackendConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectBackendConfig with Debug::{to_repr}
 
 ///|
 pub fn ProjectBackendConfig::new(
@@ -133,6 +181,12 @@ pub(all) struct ProjectFrontendConfig {
   before_build : String?
   path : String?
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectFrontendConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectFrontendConfig with Debug::{to_repr}
 
 ///|
 pub fn ProjectFrontendConfig::new(
@@ -181,6 +235,12 @@ pub(all) struct ProjectSignConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProjectSignConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectSignConfig with Debug::{to_repr}
+
+///|
 /// Creates signing settings for package-relative resource binaries.
 pub fn ProjectSignConfig::new(
   binaries? : Array[String] = [],
@@ -207,11 +267,23 @@ pub(all) struct ProjectBundleConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProjectBundleConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectBundleConfig with Debug::{to_repr}
+
+///|
 pub(all) struct ProjectDocumentType {
   name : String
   extensions : Array[String]
   role : String
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectDocumentType with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectDocumentType with Debug::{to_repr}
 
 ///|
 pub fn ProjectDocumentType::new(
@@ -277,6 +349,12 @@ pub(all) struct ProjectConfig {
   debug : Int
   single_instance : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectConfig with Debug::{to_repr}
 
 ///|
 pub fn ProjectConfig::new(
@@ -400,6 +478,12 @@ pub(all) struct LoadedProjectConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend LoadedProjectConfig with Eq::{not_equal, equal}
+
+///|
+pub extend LoadedProjectConfig with Debug::{to_repr}
+
+///|
 pub fn LoadedProjectConfig::new(
   config : ProjectConfig,
   warnings? : Array[String] = [],
@@ -432,6 +516,12 @@ pub(all) struct ProjectUpdaterConfig {
   check_on_launch : Bool
   freshness_days : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ProjectUpdaterConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectUpdaterConfig with Debug::{to_repr}
 
 ///|
 pub fn ProjectUpdaterConfig::new(

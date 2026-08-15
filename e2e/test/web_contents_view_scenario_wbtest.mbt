@@ -6,6 +6,15 @@ struct WebContentsViewPageProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend WebContentsViewPageProbe with Eq::{not_equal, equal}
+
+///|
+pub extend WebContentsViewPageProbe with Debug::{to_repr}
+
+///|
+pub extend WebContentsViewPageProbe with FromJson::{from_json}
+
+///|
 async fn run_web_contents_view_scenario_probe(
   app : SpawnedScenarioApp,
   target : String,

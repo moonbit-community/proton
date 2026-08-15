@@ -592,6 +592,8 @@ function emitAnonymousArrayItem(out, name) {
     `pub(all) struct ${name} {`,
     "  value : Json",
     "} derive(Eq, Debug)",
+    `pub extend ${name} with Eq::{not_equal, equal}`,
+    `pub extend ${name} with @moonbitlang/core/debug.Debug::{to_repr}`,
     "",
     "///|",
   );
@@ -638,6 +640,9 @@ function emitStruct(out, name, fields, useRefs = false) {
     );
   }
   out.push("} derive(Eq, Debug)", "");
+  out.push(`pub extend ${name} with Eq::{not_equal, equal}`);
+  out.push(`pub extend ${name} with @moonbitlang/core/debug.Debug::{to_repr}`);
+  out.push("");
 }
 
 function emitToJson(out, structNameValue, fields, options = {}) {

@@ -77,6 +77,12 @@ pub enum CheckOutcome {
 } derive(Eq, Debug)
 
 ///|
+pub extend CheckOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend CheckOutcome with Debug::{to_repr}
+
+///|
 /// A release that passed every check short of being downloaded.
 pub struct AvailableUpdate {
   version : @manifest.Version
@@ -87,6 +93,12 @@ pub struct AvailableUpdate {
   sha256_hex : String
   signature_hex : String
 } derive(Eq, Debug)
+
+///|
+pub extend AvailableUpdate with Eq::{not_equal, equal}
+
+///|
+pub extend AvailableUpdate with Debug::{to_repr}
 
 ///|
 pub fn AvailableUpdate::version(self : AvailableUpdate) -> @manifest.Version {

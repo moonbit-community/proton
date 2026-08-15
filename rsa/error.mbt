@@ -13,6 +13,15 @@ pub(all) suberror KeyError {
 } derive(Debug, Eq)
 
 ///|
+pub extend KeyError with Eq::{not_equal, equal}
+
+///|
+pub extend KeyError with Debug::{to_repr}
+
+///|
+pub extend KeyError with Show::{to_string, output}
+
+///|
 pub fn KeyError::message(self : KeyError) -> String {
   match self {
     UnknownAlgorithm(tag~) => "unknown public key algorithm: \{tag}"
