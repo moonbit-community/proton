@@ -405,6 +405,15 @@ pub(all) struct ScreenInfo {
 } derive(Debug, Eq, FromJson)
 
 ///|
+pub extend ScreenInfo with Eq::{not_equal, equal}
+
+///|
+pub extend ScreenInfo with Debug::{to_repr}
+
+///|
+pub extend ScreenInfo with FromJson::{from_json}
+
+///|
 pub extend WindowState with Eq::{not_equal, equal}
 
 ///|
@@ -833,6 +842,12 @@ struct ImageSize {
   width : Int
   height : Int
 } derive(FromJson, ToJson)
+
+///|
+pub extend ImageSize with ToJson::{to_json}
+
+///|
+pub extend ImageSize with FromJson::{from_json}
 
 ///|
 pub extend WindowRef with Eq::{not_equal, equal}

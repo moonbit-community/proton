@@ -5,6 +5,12 @@ pub(all) suberror PowerMonitorError {
 } derive(Eq)
 
 ///|
+pub extend PowerMonitorError with Eq::{not_equal, equal}
+
+///|
+pub extend PowerMonitorError with Show::{to_string, output}
+
+///|
 fn PowerMonitorError::message(self : PowerMonitorError) -> String {
   match self {
     BackendUnavailable(detail~) =>

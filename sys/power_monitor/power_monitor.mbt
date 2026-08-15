@@ -6,10 +6,22 @@ pub(all) enum PowerSource {
 } derive(Debug, Eq)
 
 ///|
+pub extend PowerSource with Eq::{not_equal, equal}
+
+///|
+pub extend PowerSource with Debug::{to_repr}
+
+///|
 pub(all) struct PowerSourceInfo {
   source : PowerSource
   battery_percent : Int?
 } derive(Debug, Eq)
+
+///|
+pub extend PowerSourceInfo with Eq::{not_equal, equal}
+
+///|
+pub extend PowerSourceInfo with Debug::{to_repr}
 
 ///|
 pub struct PowerMonitor {

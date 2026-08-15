@@ -193,7 +193,7 @@ jobs:
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon check --target native --deny-warn --warn-list "-0079"
+          moon check --target native --deny-warn
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a env \
@@ -226,7 +226,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon check --target native --deny-warn --warn-list "-0079"
+          moon check --target native --deny-warn
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           moon -C proton test native --target native --diagnostic-limit 80
           moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80

@@ -7,6 +7,15 @@ suberror NetError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NetError with Eq::{not_equal, equal}
+
+///|
+pub extend NetError with Debug::{to_repr}
+
+///|
+pub extend NetError with Show::{to_string, output}
+
+///|
 fn NetError::message(self : NetError) -> String {
   match self {
     RequestFailed(detail~) => "HTTP request failed: " + detail

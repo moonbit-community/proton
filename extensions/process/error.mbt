@@ -8,6 +8,15 @@ suberror ProcessExtensionError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ProcessExtensionError with Eq::{not_equal, equal}
+
+///|
+pub extend ProcessExtensionError with Debug::{to_repr}
+
+///|
+pub extend ProcessExtensionError with Show::{to_string, output}
+
+///|
 fn ProcessExtensionError::message(self : ProcessExtensionError) -> String {
   match self {
     SpawnFailed(detail~) => "failed to spawn process: " + detail
