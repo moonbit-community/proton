@@ -11,15 +11,11 @@ pub fn command() -> @argparse.Command {
 
 ///|
 fn setup_command() -> @argparse.Command {
-  @argparse.Command(
-    "setup",
-    about="Install the Proton CEF runtime into .proton",
-    options=[
-      OptionArg("name", about="CEF binary directory/archive name"),
-      OptionArg("url", about="Full CEF archive URL"),
-      OptionArg("sha256", about="Expected SHA-256 for a custom CEF archive"),
-    ],
-  )
+  @argparse.Command("setup", about="Prepare the shared Proton CEF runtime", options=[
+    OptionArg("name", about="CEF binary directory/archive name"),
+    OptionArg("url", about="Full CEF archive URL"),
+    OptionArg("sha256", about="Expected SHA-256 for a custom CEF archive"),
+  ])
 }
 
 ///|
@@ -86,20 +82,45 @@ async fn setup(
   let sha256 = resolve_cef_archive_sha256(platform, name, url, requested_sha256)
   let root = project_root(cwd)
   let prebuilt_root = find_prebuilt_root(root, platform)
-  let proton_version = prebuilt_manifest_version(prebuilt_root)
+  let (proton_version, proton_source_hash) = prebuilt_manifest_identity(
+    prebuilt_root,
+  )
   let cef_root = ensure_cef_cache(root~, platform~, name~, url~, sha256~)
-  let relative_dist = relative_runtime_dist(proton_version, platform, name)
-  let runtime_dir = @fsutil.path_join(root, relative_dist)
+  let runtime_id = proton_runtime_id(proton_version, proton_source_hash, sha256)
+  let global_cache_root = resolve_global_runtime_cache_root(
+    project_root=root,
+    configured_root=@env.get_env_var("PROTON_RUNTIME_CACHE"),
+    home=home_directory(),
+  )
+  let project_runtime_root = @fsutil.resolve_path(root, ".proton/runtimes")
+  let cache_root = global_cache_root.unwrap_or(project_runtime_root)
+  let runtime_dir = @fsutil.path_join(
+    @fsutil.path_join(cache_root, platform.id),
+    runtime_id,
+  )
   validate_cef_root(cef_root, platform)
   assemble_runtime(
-    root~,
+    cache_root~,
     platform~,
-    proton_version~,
-    cef_name=name,
     cef_root~,
     prebuilt_root~,
     runtime_dir~,
-    relative_dist~,
+  )
+  ensure_dir(@fsutil.resolve_path(root, ".proton"))
+  write_active_runtime_manifest(
+    root~,
+    proton_version~,
+    platform=platform.id,
+    cef_name=name,
+    cef_root~,
+    runtime_dir~,
+  )
+  validate_active_runtime_manifest(
+    root~,
+    platform=platform.id,
+    proton_version~,
+    cef_root~,
+    runtime_dir~,
   )
   println(runtime_dir)
 }

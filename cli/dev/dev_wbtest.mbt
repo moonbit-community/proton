@@ -403,6 +403,34 @@ async test "read dev runtime honors PROTON_NATIVE_DIST override" {
 }
 
 ///|
+async test "read dev runtime accepts an absolute shared runtime" {
+  let root = @async_fs.tmpdir(prefix="proton-dev-shared-runtime-")
+  let project = @fsutil.path_join(root, "project")
+  let runtime = create_fake_dev_runtime(@fsutil.path_join(root, "shared-cache"))
+  ensure_dev_test_dir(project)
+  ensure_dev_test_dir(@fsutil.path_join(project, ".proton"))
+  write_dev_test_file(
+    @fsutil.path_join(@fsutil.path_join(project, ".proton"), "runtime.json"),
+    Json::object({
+      "schema_version": Json::number(1.0, repr="1"),
+      "platform": @cef.current_platform_id(),
+      "dist": runtime,
+    }).stringify(),
+  )
+  let previous = @env.get_env_var("PROTON_NATIVE_DIST")
+  defer (match previous {
+    Some(value) => @env.set_env_var("PROTON_NATIVE_DIST", value)
+    None => @env.unset_env_var("PROTON_NATIVE_DIST")
+  })
+  @env.unset_env_var("PROTON_NATIVE_DIST")
+  let loaded = read_dev_runtime(project)
+  assert_eq(
+    normalize_dev_test_slashes(loaded.root),
+    normalize_dev_test_slashes(runtime),
+  )
+}
+
+///|
 async test "resolve path accepts Windows backslash relative input" {
   if @path.sep == '\\' {
     let dir = @async_fs.tmpdir(prefix="proton-dev-path-")

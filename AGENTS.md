@@ -67,7 +67,8 @@ developer must perform them.
   put CEF runtime files here.
 - `lib/`, `build/`, `_build/`, `native/build*`, `native/dist/`: generated or
   vendored artifacts. Packaged application artifacts are written to `dist/`.
-- `.proton/`: generated project runtime cache created by `proton_cli cef setup`.
+- `.proton/`: generated project runtime selection created by
+  `proton_cli cef setup`; assembled runtimes are cached at user level.
 
 ## Build And Test
 - Native engine build:
@@ -202,8 +203,8 @@ native checks before handing off larger refactors.
 - There is one runtime route: CMake builds the native Proton dynamic library and
   helper executable; MoonBit links only the Proton library/import library.
 - Published packages ship `proton/prebuilt/<platform>/` Proton artifacts only.
-  CEF is installed by `proton_cli cef setup`, which writes `.proton/runtime.json`
-  and assembles `.proton/runtimes/<platform>/...`.
+  `proton_cli cef setup` assembles immutable runtimes in the user-level cache
+  and writes the selected absolute runtime path to `.proton/runtime.json`.
 - Keep platform-specific setup decisions centralized in the CLI/native platform
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
   and `linux-x64` (the shipped prebuilt set); add `darwin-x64` only when it
@@ -303,8 +304,8 @@ native checks before handing off larger refactors.
   platform needs one, helper executable, public header, and manifest. Do not put
   CEF runtime files in that directory.
 - `proton_cli cef setup` owns runtime assembly. It may download/reuse CEF and
-  combine it with Proton prebuilt artifacts under `.proton/runtimes/<platform>/`,
-  then write `.proton/runtime.json`.
+  combine it with Proton prebuilt artifacts under the user-level runtime cache,
+  then write `.proton/runtime.json` in the project.
 - Keep `cef_process.exe` or the platform equivalent as a native packaged helper
   built by CMake. It is part of the runtime layout, not a MoonBit executable.
 - CEF internal logging is disabled by default. Use `PROTON_CEF_LOG` only as a

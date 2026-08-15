@@ -1,10 +1,10 @@
 ///|
 fn assert_safe_generated_dir(
   generated_dir : String,
-  root : String,
+  cache_root : String,
 ) -> Unit raise CefRuntimeError {
   let normalized_generated = @fsutil.resolve_path(".", generated_dir)
-  let normalized_root = @fsutil.resolve_path(".", root)
+  let normalized_root = @fsutil.resolve_path(".", cache_root)
   if generated_dir == "" ||
     normalized_generated == normalized_root ||
     !@fsutil.path_is_within(normalized_root, normalized_generated) {
@@ -82,47 +82,66 @@ async fn copy_cef_runtime(
 }
 
 ///|
+async fn create_runtime_staging(runtime_dir : String) -> String {
+  let prefix = runtime_dir + ".staging-" + @async.now().to_string()
+  for index = 0; ; index = index + 1 {
+    let staging = prefix + "-" + index.to_string()
+    try @async_fs.mkdir(staging) catch {
+      error =>
+        if !@fsutil.path_exists(staging) {
+          raise CefFileSystemError::CreateDirectory(
+            path=staging,
+            detail=@debug.render(Repr(error)),
+          )
+        }
+    } noraise {
+      _ => return staging
+    }
+  }
+}
+
+///|
 async fn assemble_runtime(
-  root~ : String,
+  cache_root~ : String,
   platform~ : ProtonPlatform,
-  proton_version~ : String,
-  cef_name~ : String,
   cef_root~ : String,
   prebuilt_root~ : String,
   runtime_dir~ : String,
-  relative_dist~ : String,
 ) -> Unit {
-  assert_safe_generated_dir(runtime_dir, root)
-  remove_tree(runtime_dir)
-  @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
-  copy_prebuilt_runtime(platform, prebuilt_root, runtime_dir)
-  if platform.id != "win32-x64" {
-    make_executable(
-      @fsutil.path_join(@fsutil.path_join(runtime_dir, "bin"), "cef_process"),
-    )
+  assert_safe_generated_dir(runtime_dir, cache_root)
+  if @fsutil.path_is_dir(runtime_dir) {
+    return
   }
-  copy_cef_runtime(platform, cef_root, runtime_dir)
-  write_runtime_metadata(
-    runtime_dir~,
-    proton_version~,
-    platform=platform.id,
-    cef_name~,
-    relative_dist~,
-  )
-  validate_runtime_dist(runtime_dir, platform)
-  write_active_runtime_manifest(
-    root~,
-    proton_version~,
-    platform=platform.id,
-    cef_name~,
-    cef_root~,
-    relative_dist~,
-  )
-  validate_active_runtime_manifest(
-    root~,
-    platform=platform.id,
-    proton_version~,
-    cef_root~,
-    relative_dist~,
-  )
+  ensure_dir(@fsutil.path_parent(runtime_dir))
+  let staging = create_runtime_staging(runtime_dir)
+  try {
+    @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
+    copy_prebuilt_runtime(platform, prebuilt_root, staging)
+    if platform.id != "win32-x64" {
+      make_executable(
+        @fsutil.path_join(@fsutil.path_join(staging, "bin"), "cef_process"),
+      )
+    }
+    copy_cef_runtime(platform, cef_root, staging)
+    validate_runtime_dist(staging, platform)
+    @async_fs.rename(staging, runtime_dir, replace=false) catch {
+      error => {
+        if @fsutil.path_is_dir(runtime_dir) {
+          remove_tree(staging)
+          return
+        }
+        raise CefRuntimeError::RuntimeConflict(
+          path=runtime_dir,
+          detail=@debug.render(Repr(error)),
+        )
+      }
+    }
+  } catch {
+    error => {
+      remove_tree(staging) catch {
+        _ => ()
+      }
+      raise error
+    }
+  }
 }

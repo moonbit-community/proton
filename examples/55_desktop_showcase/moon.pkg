@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/async",
+  "moonbit-community/proton_ext/clipboard",
+  "moonbit-community/proton_ext/dialog",
+  "moonbit-community/proton_ext/notification",
+  "moonbit-community/proton_ext/tray",
+  "moonbit-community/proton",
+}
+
+supported_targets = "native"
+
+dev_build(rule: "embed", input: "app.html", output: "app.mbt")
+
+formatter(ignore: [ "app.mbt" ])
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "main.mbt": [ "native" ] },
+)

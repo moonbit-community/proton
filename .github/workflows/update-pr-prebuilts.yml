@@ -1,0 +1,114 @@
+name: update PR prebuilts
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+concurrency:
+  group: update-pr-prebuilts-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    if: ${{ github.event.label.name == 'build-prebuilt' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require a branch in this repository
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPOSITORY" != "$REPOSITORY" ]; then
+            echo "build-prebuilt can only update branches in $REPOSITORY" >&2
+            exit 1
+          fi
+
+  macos:
+    needs: authorize
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-macos-prebuilt.yml
+    with:
+      source_sha: ${{ github.event.pull_request.head.sha }}
+
+  linux:
+    needs: authorize
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-linux-prebuilt.yml
+    with:
+      source_sha: ${{ github.event.pull_request.head.sha }}
+
+  windows:
+    needs: authorize
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-windows-prebuilt.yml
+    with:
+      source_sha: ${{ github.event.pull_request.head.sha }}
+
+  update-branch:
+    needs:
+      - macos
+      - linux
+      - windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 1
+
+      - name: Download platform prebuilts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: proton-prebuilt-*-${{ env.SOURCE_SHA }}
+          path: ${{ runner.temp }}/proton-prebuilts
+          merge-multiple: true
+
+      - name: Install platform prebuilts
+        run: |
+          artifact_root="$RUNNER_TEMP/proton-prebuilts"
+          rm -rf \
+            proton/prebuilt/darwin-arm64 \
+            proton/prebuilt/linux-x64 \
+            proton/prebuilt/win32-x64
+          tar -C proton/prebuilt -xzf \
+            "$artifact_root/proton-prebuilt-darwin-arm64-$SOURCE_SHA.tar.gz"
+          tar -C proton/prebuilt -xzf \
+            "$artifact_root/proton-prebuilt-linux-x64-$SOURCE_SHA.tar.gz"
+          unzip -q \
+            "$artifact_root/proton-prebuilt-win32-x64-$SOURCE_SHA.zip" \
+            -d proton/prebuilt
+
+      - name: Verify staged prebuilts
+        run: |
+          node scripts/prebuilt_source_hash.mjs --verify
+          node scripts/verify_prebuilt_abi.mjs --metadata-only
+
+      - name: Commit prebuilts to the PR branch
+        run: |
+          current_sha=$(git ls-remote --exit-code origin "refs/heads/$HEAD_REF" | cut -f1)
+          if [ "$current_sha" != "$SOURCE_SHA" ]; then
+            echo "PR head changed from $SOURCE_SHA to $current_sha; add the label again to rebuild." >&2
+            exit 1
+          fi
+
+          git add proton/prebuilt
+          if git diff --cached --quiet; then
+            echo "Prebuilts already match $SOURCE_SHA."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build(native): update prebuilts"
+          git push origin "HEAD:refs/heads/$HEAD_REF"

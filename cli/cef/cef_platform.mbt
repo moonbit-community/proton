@@ -4,7 +4,6 @@ let default_cef_base_url = "https://cef-builds.spotifycdn.com"
 ///|
 priv struct ProtonPlatform {
   id : String
-  cef_suffix : String
   default_cef_name : String
   default_cef_sha256 : String
   supported : Bool
@@ -110,7 +109,6 @@ async fn is_macos_host() -> Bool {
 fn win32_x64_platform() -> ProtonPlatform {
   {
     id: "win32-x64",
-    cef_suffix: "_windows64_minimal",
     default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal",
     default_cef_sha256: "c105f69c0d4dc14331be12cee967eeb73fa4897a6ecde244051318491cd381c7",
     supported: true,
@@ -121,7 +119,6 @@ fn win32_x64_platform() -> ProtonPlatform {
 fn darwin_arm64_platform() -> ProtonPlatform {
   {
     id: "darwin-arm64",
-    cef_suffix: "_macosarm64_minimal",
     default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
     default_cef_sha256: "02d8e0d53efe11bae97c101193cffcb5b6f899d1015908609db381ff6f96633a",
     supported: true,
@@ -132,7 +129,6 @@ fn darwin_arm64_platform() -> ProtonPlatform {
 fn darwin_x64_platform() -> ProtonPlatform {
   {
     id: "darwin-x64",
-    cef_suffix: "_macosx64_minimal",
     default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosx64_minimal",
     default_cef_sha256: "",
     supported: false,
@@ -143,7 +139,6 @@ fn darwin_x64_platform() -> ProtonPlatform {
 fn linux_x64_platform() -> ProtonPlatform {
   {
     id: "linux-x64",
-    cef_suffix: "_linux64_minimal",
     default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
     default_cef_sha256: "a2cef000527e9952bae470a292f12384c790523dadcbbcbee807743a539c6de0",
     supported: true,
@@ -152,37 +147,22 @@ fn linux_x64_platform() -> ProtonPlatform {
 
 ///|
 fn unsupported_platform(id : String) -> ProtonPlatform {
-  {
-    id,
-    cef_suffix: "",
-    default_cef_name: "",
-    default_cef_sha256: "",
-    supported: false,
-  }
+  { id, default_cef_name: "", default_cef_sha256: "", supported: false }
 }
 
 ///|
 fn proton_runtime_id(
   proton_version : String,
-  platform : ProtonPlatform,
-  cef_name : String,
+  proton_source_hash : String,
+  cef_sha256 : String,
 ) -> String {
-  let cef_version = cef_name
-    .replace(old="cef_binary_", new="")
-    .replace(old=platform.cef_suffix, new="")
-  "proton-" + proton_version + "_cef-" + cef_version
-}
-
-///|
-fn relative_runtime_dist(
-  proton_version : String,
-  platform : ProtonPlatform,
-  cef_name : String,
-) -> String {
-  @fsutil.path_join(
-    @fsutil.path_join(@fsutil.path_join(".proton", "runtimes"), platform.id),
-    proton_runtime_id(proton_version, platform, cef_name),
-  )
+  let identity = proton_source_hash + "\n" + cef_sha256
+  let hasher = @crypto.SHA256::new()
+  hasher.update(@utf8.encode(identity))
+  "proton-" +
+  proton_version +
+  "-" +
+  @crypto.bytes_to_hex_string(hasher.finalize())
 }
 
 ///|

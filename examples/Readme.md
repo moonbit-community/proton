@@ -12,7 +12,7 @@ $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 
 ```sh
 moon -C cli run . -- -C .. cef setup
-runtime="$PWD/$(node -p "JSON.parse(require('fs').readFileSync('.proton/runtime.json', 'utf8')).dist")"
+runtime="$(node -e "const path=require('path');const value=JSON.parse(require('fs').readFileSync('.proton/runtime.json','utf8')).dist;process.stdout.write(path.resolve(value))")"
 export PATH="$runtime/bin:$PATH"
 ```
 
@@ -86,6 +86,8 @@ moon -C examples run 01_run --target native
   `with_view` plus `@proton.view`, no lifecycle hooks required.
 - `54_devtools`: opens CEF DevTools programmatically through
   `BrowserHandle::open_devtools` and closes it with the window lifecycle.
+- `55_desktop_showcase`: presentation-ready macOS desktop capability console
+  combining native dialogs, clipboard access, notifications, and tray menus.
 
 All runnable examples should import `moonbit-community/proton`. `proton.project.json`
 configures app settings such as window, entry, debug, frontend, and bundle

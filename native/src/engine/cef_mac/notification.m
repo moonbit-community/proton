@@ -107,6 +107,17 @@ static void proton_notification_reveal_app(void) {
 @implementation ProtonNotificationDelegate
 
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       willPresentNotification:(UNNotification *)notification
+         withCompletionHandler:(void (^)(UNNotificationPresentationOptions))
+                                   completionHandler {
+  (void)center;
+  (void)notification;
+  completionHandler(UNNotificationPresentationOptionBanner |
+                    UNNotificationPresentationOptionList |
+                    UNNotificationPresentationOptionSound);
+}
+
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
     didReceiveNotificationResponse:(UNNotificationResponse *)response
              withCompletionHandler:(void (^)(void))completionHandler {
   (void)center;
